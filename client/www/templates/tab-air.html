@@ -39,24 +39,32 @@
                     <span class="icon-left ion-chevron-left"></span>
                 </div>
                 <div class="main-box" ng-if="airInfo" ng-style="{'color': grade2Color(airCodeGrade)}">
-                    <div class="main-box-air-title" ng-style="{'border-color': grade2Color(airCodeGrade, 'white')}">
-                        {{airCodeName|translate}}
+                    <div class="main-box-air-title" ng-style="{'border-color': grade2Color(airCodeGrade)}">
+                        {{mainName|translate}}
                     </div>
                     <div class="main-box-air-content">
-                        {{airCodeValue}}<span>{{getAirCodeUnit(aqiCode)}}</span>
+                        {{mainInfo}}<span>{{getAirCodeUnit(aqiCode)}}</span>
                     </div>
                     <div class="main-box-summary">
                         {{airCodeStr}}
                         <i class="material-icons" ng-bind-html="getSentimentIcon(airCodeGrade)"></i>
                         <span ng-if="airCodeActionGuide">{{airCodeActionGuide}}</span>
                     </div>
+                    <!--<div class="main-box-summary" style="color:#444; display: inline-flex;">-->
+                        <!--<div style="margin: auto">-->
+                            <!--<img id="imgBigSkyStateSize" style="height: 24px" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">-->
+                        <!--</div>-->
+                        <!--<div style="font-size: 24px">-->
+                            <!--{{currentWeather.t1h}}<span ng-if="currentWeather" style="font-slize:12px">˚</span>-->
+                        <!--</div>-->
+                    <!--</div>-->
                 </div>
                 <div class="main-box-arrow" ng-click="onSwipeLeft()" ng-if="cityCount > 1">
                     <span class="icon-right ion-chevron-right"></span>
                 </div>
             </div>
             <div class="air-std-table">
-                <div class="air-label"
+                <div id="aqistd-label" class="air-label"
                      ng-style="{'left':getLabelPosition(airCodeGrade, airCodeValue)+'px'}">
                     <div class="outline"
                          ng-style="{'border-color': grade2Color(airCodeGrade, 'white'), 'color': grade2Color(airCodeGrade, 'white')}">
@@ -73,18 +81,25 @@
                 </div>
             </div>
         </div>
-        <div class="card" ng-if="hourlyForecast && hourlyForecast.length > 1">
-            <div class="card-title">{{'LOC_HOURLY_AQI_FORECAST'|translate}} (beta)</div>
-            <div class="card-scroll">
-                <table class="rowgroup-vspacing-aqi-box">
-                    <tr>
-                        <td ng-repeat="obj in hourlyForecast" style="min-width: 48px;">
-                            <p>{{obj.date.substr(11,2)}}{{'LOC_HOUR'|translate}}</p>
-                            <i ng-bind-html="getSentimentIcon(obj.grade)" class="material-icons" ng-style="{'color': grade2Color(obj.grade)}"></i><br>
-                            <span ng-style="{'color': grade2Color(obj.grade)}">{{obj.val == undefined?"-":obj.val}}</span>
-                        </td>
-                    </tr>
-                </table>
+        <div class="card row" ng-if="currentWeather" ng-click="goWeather()">
+            <div class="col" style="color:#444; display: inline-flex;">
+                <div style="margin: auto 0">
+                    <img id="imgBigSkyStateSize" style="height: 36px" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
+                </div>
+                <div style="font-size: 36px; margin-left: 4px">
+                    {{currentWeather.t1h}}<span ng-if="currentWeather" style="font-slize:12px">˚</span>
+                </div>
+            </div>
+            <div class="col">
+                {{"LOC_HIGHEST"|translate}} {{currentWeather.today.tmx}}˚ {{"LOC_LOWEST"|translate}} {{currentWeather.today.tmn}}˚
+                <br>
+                {{"LOC_PROBABILITY_OF_PRECIPITATION"|translate}} {{currentWeather.today.pop}}%
+            </div>
+        </div>
+        <div class="card" ng-if="airChart && airChart.data && airChart.data.length > 1">
+            <div class="card-title">{{hourlyChartTitle|translate}} (beta)</div>
+            <div id="chartScroll" class="chart-scroll">
+                <div ng-air-chart class="chart-content" ng-style="{'height':chartAirHeight+'px'}"></div>
             </div>
         </div>
         <div class="card" ng-if="dayForecast && dayForecast.length">
@@ -92,9 +107,9 @@
             <table class="rowgroup-vspacing-aqi-box">
                 <tr>
                     <td ng-repeat="day in dayForecast">
-                        <p>{{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
-                        <i ng-bind-html="getSentimentIcon(day.maxGrade)" class="material-icons" ng-style="{'color': grade2Color(day.maxGrade, 'white')}"></i><br>
-                        <span ng-style="{'color': grade2Color(day.maxGrade, 'white')}">{{day.maxStr}}</span>
+                        <p>{{convertDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(day.grade)" class="material-icons" ng-style="{'color': grade2Color(day.grade, 'white')}"></i><br>
+                        <span ng-style="{'color': grade2Color(day.grade, 'white')}">{{day.str}}</span>
                     </td>
                 </tr>
             </table>
@@ -114,7 +129,7 @@
                 </table>
             </div>
         </div>
-        <div class="card" ng-if="airInfo">
+        <div class="card" ng-if="airInfo && airInfo.dataTime">
             <table class="colgroup-box">
                 <tr ng-if="airInfo.stationName">
                     <td>
@@ -134,15 +149,6 @@
                         <span>{{airInfo.dataTime}}</span>
                     </td>
                 </tr>
-                <tr ng-if="forecastPubdate">
-                    <td>
-                        <span>{{"LOC_FORECAST"|translate}}</span>
-                    </td>
-                    <td>
-                        <i class="material-icons">&#xE192;</i>
-                        <span>{{forecastPubdate}}</span>
-                    </td>
-                </tr>
                 <tr ng-click="goUnitsPage()">
                     <td>
                         <span>{{"LOC_AIR_QUALITY_INDEX_UNIT"|translate}}</span>
@@ -152,7 +158,45 @@
                         <a>{{getCurrentAirUnitStr()|translate}} </a>
                     </td>
                 </tr>
+                <tr ng-if="forecastPubdate">
+                    <td>
+                        <span>{{"LOC_FORECAST"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE192;</i>
+                        <span>{{forecastPubdate}}</span>
+                    </td>
+                </tr>
+                <tr ng-if="forecastSource" ng-click="popUpAirForecastInfo(forecastSource)">
+                    <td>
+                        <span>{{"LOC_AIR_FORECAST_SOURCE"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE88F;</i>
+                        <a>{{forecastSource.toUpperCase()}} </a>
+                    </td>
+                </tr>
             </table>
+        </div>
+
+        <div class="card" ng-if="stnList">
+            <div class="card-title">{{"LOC_STATION"|translate}}({{airCodeName|translate}})</div>
+            <div class="card-scroll">
+                <table class="rowgroup-hspacing-box">
+                    <tr>
+                        <td ng-repeat="last in stnList"
+                            ng-class="{selected:$index===stnIndex}"
+                            ng-click="setStation($index)" style="width: 110px;">
+                            <p>{{last.stationName}}</p>
+                            <i ng-bind-html="getSentimentIcon(last.grade)"
+                               class="material-icons"
+                               ng-style="{'color': grade2Color(last.grade)}"></i>
+                            <br>
+                            <span ng-style="{'color': grade2Color(last.grade)}">{{aqiCode==='aqi'?last.str:last.value}}</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </ion-content>
 </ion-view>

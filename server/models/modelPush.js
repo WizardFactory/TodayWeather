@@ -25,11 +25,13 @@ var pushSchema = new mongoose.Schema({
         pressureUnit: String,   //hPa, mbar, ..
         distanceUnit: String,   //km, miles
         precipitationUnit: String, //mm, inches
-        airUnit: String //airkorea, airkorea_who, airnow, aqicn
+        airUnit: String, //airkorea, airkorea_who, airnow, aqicn
+        airForecastSource: String //airkorea, kaq, aqicn, ...
     },
     updatedAt: Date,
     timezoneOffset: Number, //mins +9h -> +540
     dayOfWeek: [Boolean], // Sunday - Saturday : 0 - 6 [false, true, true, true, true, true, false]
+    package: String, //todayWeather, todayAir
 });
 
 pushSchema.index({alarmTime:1});

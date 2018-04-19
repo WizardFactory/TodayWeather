@@ -10,8 +10,10 @@
   "LOC_AIR_QUALITY_INDEX": "Air Quality Index",
   "LOC_DAILY_AQI_FORECAST": "Tägliche Atmosphären-Vorhersage",
   "LOC_HOURLY_AQI_FORECAST": "Stündliche Atmosphären-Vorhersage",
+  "LOC_HOURLY_AQI_INFORMATION" : "Stündliche Atmosphären",
   "LOC_AIR_INFORMATION" : "AQI",
   "LOC_AQI": "AQI",
+  "LOC_AIR_STATUS" : "Air Quality",
   "LOC_PM10": "PM10",
   "LOC_PM25": "PM2.5",
   "LOC_O3": "Ozon",
@@ -295,5 +297,13 @@
   "LOC_ALARM_DESCRIPTION": "Der Alarm gibt Wetter-information zur bestimmten Zeit, die ein Nutzer selber eingestellt hat.",
   "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP" : "Benachrichtigung ist deaktiviert. Bitte erlauben Sie die Verwendung von Benachrichtigungen für diese App.",
   "LOC_SAVE" : "Sparen",
-  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "Die Funktion einer Unwetterwarnung ist hinzugefügt!\nNehmen Sie die Warnung über das Gebiet für einen Wetteralarm."
+  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "Die Funktion einer Unwetterwarnung ist hinzugefügt!\nNehmen Sie die Warnung über das Gebiet für einen Wetteralarm.",
+  "LOC_AIR_FORECAST_SOURCE" : "Prognosequelle",
+  "LOC_KAQ_DESCRIPTION": "Atmospheric quality forecasting data is provided by Anyang University Climate Energy Environment Convergence Research Institute (abbreviated name: Anyang University, Climate Convergence Research Institute, Director: Professor of Environmental Energy Engineering)",
+  "LOC_AIRKOREA_DESCRIPTION": "The Ministry of Environment of Korea is predicting the air pollution concentration to minimize the public health damage caused by air pollution.",
+  "LOC_SHOW_WEATHER_PHOTOS": "Wetter Fotos",
+  "LOC_OFF": "aus",
+  "LOC_ON": "auf",
+  "LOC_AIR_QUALITY_IS_GOOD" : "Die Luftqualität wird als gut bewertet",
+  "LOC_AIR_QUALITY_IS_MODERATE" : "Die Luftqualität wird als befriedigend bewertet"
 }

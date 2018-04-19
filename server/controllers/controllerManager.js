@@ -34,6 +34,7 @@ var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
 var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
 var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
 var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
+var KmaForecastZoneCode = require('./kma/kma.forecast.zone.controller');
 
 /*********************/
 
@@ -926,50 +927,42 @@ Manager.prototype.saveMid = function(db, newData, callback){
 };
 
 Manager.prototype.saveMidForecast = function(newData, callback) {
-    this.saveMid(modelMidForecast, newData[0], callback);
-    // if(config.db.version === '2.0'){
-    this.kmaTownMid.saveMid('modelMidForecast', newData[0], this.saveOnlyLastOne, function(err){
-        if (err) {
-            log.error(err);
-        }
-    });
-    // }
+    if(config.db.version === '1.0') {
+        this.saveMid(modelMidForecast, newData[0], callback);
+    }
+    else if(config.db.version === '2.0'){
+        this.kmaTownMid.saveMid('modelMidForecast', newData[0], this.saveOnlyLastOne, callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidLand = function(newData, callback) {
-    this.saveMid(modelMidLand, newData[0], callback);
-    // if(config.db.version === '2.0') {
-    this.kmaTownMid.saveMid('modelMidLand', newData[0], this.saveOnlyLastOne, function(err){
-        if (err) {
-            log.error(err);
-        }
-    });
-    // }
+    if(config.db.version === '1.0') {
+        this.saveMid(modelMidLand, newData[0], callback);
+    }
+    else if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidLand', newData[0], this.saveOnlyLastOne, callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidTemp = function(newData, callback) {
-    this.saveMid(modelMidTemp, newData[0], callback);
-    // if(config.db.version === '2.0') {
-    this.kmaTownMid.saveMid('modelMidTemp', newData[0], this.saveOnlyLastOne, function(err){
-        if (err) {
-            log.error(err);
-        }
-    });
-    // }
+    if(config.db.version === '1.0') {
+        this.saveMid(modelMidTemp, newData[0], callback);
+    }
+    else if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidTemp', newData[0], this.saveOnlyLastOne, callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidSea = function(newData, callback) {
-    this.saveMid(modelMidSea, newData[0], callback);
-    // if(config.db.version === '2.0') {
-    this.kmaTownMid.saveMid('modelMidSea', newData[0], this.saveOnlyLastOne, function(err) {
-        if (err) {
-            log.error(err);
-        }
-    });
-    // }
+    if(config.db.version === '1.0') {
+        this.saveMid(modelMidSea, newData[0], callback);
+    }
+    else if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidSea', newData[0], this.saveOnlyLastOne, callback);
+    }
     return this;
 };
 
@@ -1048,12 +1041,18 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 }
 
                 if (failedList.length) {
-                    return self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback);
+                    setTimeout(function() {
+                        self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback);
+                    }, 0);
+                    return;
                 }
 
                 if(invalidList.length){
                     var adjustedDateString = self.getShortestQueryTime(8);
-                    return self._recursiveRequestData(invalidList, dataType, key, adjustedDateString, --retryCount, undefined, callback);
+                    setTimeout(function() {
+                        self._recursiveRequestData(invalidList, dataType, key, adjustedDateString, --retryCount, undefined, callback);
+                    }, 0);
+                    return;
                 }
                 log.info('received All ', dataTypeName, ' of ', dateString);
                 if (callback) {
@@ -1320,41 +1319,16 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
             return this;
         }
 
-        var checkPubDate = self._checkPubDate;
-        if(config.db.version === '2.0'){
-            checkPubDate = self.kmaTownShort.checkPubDate;
-        }
-        checkPubDate(modelShort, listTownDb, dateString, function (err, srcList) {
-            if (err) {
-                if (callback) {
-                    callback(err);
-                }
-                else {
-                    log.error(err);
-                }
-                return;
+        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_SHORT, key, dateString, 20, undefined, function (err, results) {
+            log.info('S> save OK');
+            if (callback) {
+                return callback(err, results);
             }
-            if (srcList.length === 0) {
-                log.info('S> All data was already updated');
-                if (callback) {
-                    callback(undefined, []);
-                }
-                return;
+            if (err)  {
+                return log.error(err);
             }
-            else {
-                log.info('S> srcList length=', srcList.length);
-            }
-
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORT, key, dateString, 20, undefined, function (err, results) {
-                log.info('S> save OK');
-                if (callback) {
-                    return callback(err, results);
-                }
-                if (err)  {
-                    return log.error(err);
-                }
-            });
         });
+
         return this;
     });
 
@@ -1381,41 +1355,15 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
             }
             return this;
         }
-        var checkPubDate = self._checkPubDate;
-        if(config.db.version === '2.0'){
-            checkPubDate = self.kmaTownShortest.checkPubDate;
-        }
-        checkPubDate(modelShortest, listTownDb, dateString, function (err, srcList) {
-            if (err) {
-                if (callback) {
-                    callback(err);
-                }
-                else {
-                    log.error(err);
-                }
-                return;
+        //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
+        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 20, undefined, function (err, results) {
+            log.info('ST> save OK');
+            if (callback) {
+                return callback(err, results);
             }
-            if (srcList.length === 0) {
-                log.info('ST> All shortest was already updated');
-                if (callback) {
-                    callback(undefined, []);
-                }
-                return;
+            if (err)  {
+                return log.error(err);
             }
-            else {
-                log.info('ST> srcList',srcList.length);
-            }
-
-            //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 20, undefined, function (err, results) {
-                log.info('ST> save OK');
-                if (callback) {
-                    return callback(err, results);
-                }
-                if (err)  {
-                    return log.error(err);
-                }
-            });
         });
 
         return this;
@@ -1667,7 +1615,140 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
     return this;
 };
 
+Manager.prototype.getMidTempByForecastZone = function(gmt, key, callback) {
+     var self = this;
+
+    var currentDate = self.getWorldTime(gmt);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: currentDate.slice(8,10) + '00'
+    };
+
+    if(parseInt(dateString.time) < 800){
+        currentDate = self.getWorldTime(gmt - 24);
+        dateString.date = currentDate.slice(0, 8);
+        dateString.time = '1800';
+    }
+    else if(parseInt(dateString.time) < 2000){
+        dateString.time = '0600';
+    }
+    else {
+        dateString.time = '1800';
+    }
+
+    // check weather today or previous day
+    var today = self.getWorldTime(9);
+    today = today.slice(0, 8);
+    if(today > dateString.date){
+        dateString.time = '1800';
+    }
+
+    log.info('+++ GET MID TEMP Forecast by zone code : ', dateString);
+
+    async.waterfall([
+            function (callback) {
+                var kmaForcastZoneCode = new KmaForecastZoneCode(key);
+                //C:도시
+                kmaForcastZoneCode.findForecastZoneCode({regSp:"C"})
+                    .exec(function (err, result) {
+                        if (err) {
+                            return callback(err);
+                        }
+                        result = result.map(function (obj){
+                            obj.code = obj.regId;
+                            return obj;
+                        });
+                        callback(err, result);
+                    });
+            },
+            function (regIdList, callback) {
+                //filter invalid id;
+                var unsupportList = [
+                    {"regName":"연평도","regId":"11A00102"},
+                    {"regName":"소청도","regId":"11A00103"},
+                    {"regName":"안흥","regId":"11C20105"},
+                    {"regName":"치악","regId":"11D10403"},
+                    {"regName":"봉평","regId":"11D10504"},
+                    {"regName":"설악","regId":"11D20101"},
+                    {"regName":"진부","regId":"11D20202"},
+                    {"regName":"묵호","regId":"11D20603"},
+                    {"regName":"완도항","regId":"11F20305"},
+                    {"regName":"여수항","regId":"11F20406"},
+                    {"regName":"녹동항","regId":"11F20407"},
+                    {"regName":"제주항","regId":"11G00202"},
+                    {"regName":"하동(해안)","regId":"11H20406"},
+                    {"regName":"하동(내륙)","regId":"11H20702"},
+                    {"regName":"해남(화원)","regId":"21F20202"},
+                    {"regName":"벽파","regId":"21F20203"}];
+
+                regIdList = regIdList.filter(function (obj) {
+                    var a = unsupportList.find(function (unObj) {
+                       return unObj.regId === obj.regId;
+                    });
+                    return a == undefined ? true : false;
+                });
+
+                callback(null, regIdList);
+            },
+            function (reqIdList, callback) {
+                var fnCheckPubDate = self._checkPubDate;
+                if(config.db.version === '2.0'){
+                    fnCheckPubDate = self.kmaTownMid.checkTempPubDate;
+                }
+                fnCheckPubDate(modelMidTemp, reqIdList, dateString, function (err, srcList) {
+                    if (err) {
+                        if (callback) {
+                            callback(err);
+                        }
+                        else {
+                            log.error(err);
+                        }
+                        return;
+                    }
+                    if (srcList.length === 0) {
+                        log.info('MT> All current was already updated');
+                        if (callback) {
+                            callback('skip');
+                        }
+                        return;
+                    }
+                    else {
+                        log.info('MT> srcList length=', srcList.length);
+                    }
+                    callback(err, srcList);
+                });
+            },
+            function (srcList, callback) {
+                self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 20,
+                    undefined,
+                    function (err, results) {
+                        log.info('MT> save OK');
+                        if (callback) {
+                            return callback(err, results);
+                        }
+                        if (err) {
+                            return log.error(err);
+                    }
+                });
+            }
+        ],
+        function (err, result) {
+            if (err === 'skip') {
+                err = null;
+            }
+            callback(err, result);
+        });
+};
+
+
 // get middle range temperature data from data.org by using collectTownForecast.js
+/**
+ * getMidTempByForecastZone 사용하고 이 함수는 폐지 예정.
+ * @param gmt
+ * @param key
+ * @param callback
+ * @returns {Manager}
+ */
 Manager.prototype.getMidTemp = function(gmt, key, callback) {
     var self = this;
 
@@ -1697,6 +1778,7 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
     }
 
     log.info('+++ GET MID TEMP Forecast : ', dateString);
+
     var fnCheckPubDate = self._checkPubDate;
     if(config.db.version === '2.0'){
         fnCheckPubDate = self.kmaTownMid.checkTempPubDate;
@@ -1891,36 +1973,30 @@ Manager.prototype.getSaveFunc = function(value) {
     switch (value) {
         case this.DATA_TYPE.TOWN_CURRENT:
             return function saveCurrent(newData, callback) {
-                this.saveCurrent(newData, callback);
-                // if(config.db.version === '2.0'){
-                kmaTownCurrent.saveCurrent(newData, function(err) {
-                    if (err) {
-                        log.error(err);
-                    }
-                });
-                // }
+                if(config.db.version === '1.0') {
+                    this.saveCurrent(newData, callback);
+                }
+                else if(config.db.version === '2.0'){
+                    kmaTownCurrent.saveCurrent(newData, callback);
+                }
             };
         case this.DATA_TYPE.TOWN_SHORTEST:
             return function saveShortest(newData, callback) {
-                this.saveShortest(newData, callback);
-                // if(config.db.version === '2.0'){
-                kmaTownShortest.saveShortest(newData, function(err) {
-                    if (err) {
-                        log.error(err);
-                    }
-                });
-                // }
+                if(config.db.version === '1.0') {
+                    this.saveShortest(newData, callback);
+                }
+                else if(config.db.version === '2.0'){
+                    kmaTownShortest.saveShortest(newData, callback);
+                }
             };
         case this.DATA_TYPE.TOWN_SHORT:
             return function saveShort(newData, callback) {
-               this.saveShort(newData, callback);
-               // if(config.db.version === '2.0'){
-               kmaTownShort.saveShort(newData, function(err) {
-                   if (err) {
-                       log.error(err);
-                   }
-               })
-               // }
+                if(config.db.version === '1.0') {
+                    this.saveShort(newData, callback);
+                }
+                else if(config.db.version === '2.0'){
+                    kmaTownShort.saveShort(newData, callback);
+                }
             };
         case this.DATA_TYPE.MID_FORECAST:
             return this.saveMidForecast;
@@ -1961,152 +2037,6 @@ Manager.prototype.task = function(callback) {
         }
     });
 };
-
-//It is unused.
-//Manager.prototype.checkTimeAndPushTask = function (putAll) {
-//    var self = this;
-//    var time = (new Date()).getUTCMinutes();
-//
-//    var server_key = config.keyString.cert_key;
-//    var normal_key = config.keyString.normal;
-//
-//    log.info('check time and push task');
-//
-//    if (time === 1 || putAll) {
-//        //short rss
-//        log.info('push short rss');
-//        self.asyncTasks.push(function (callback) {
-//            //need to update sync
-//            townRss.mainTask(function(){
-//                log.info('Rss>complete mainTask for Rss');
-//                callback();
-//            });
-//        //    setTimeout(function () {
-//       //         log.info('Finished ShortRss '+new Date());
-//       //         callback();
-//       //     }, 1000*60); //1min
-//        });
-//        log.info('push mid rss');
-//        self.asyncTasks.push(function (callback) {
-//            midRssKmaRequester.mainProcess(midRssKmaRequester, function (self, err) {
-//                log.info('Finished MidRss '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    if (time === 2 || putAll) {
-//        log.info('push MidTemp');
-//        self.asyncTasks.push(function (callback) {
-//            self.getMidTemp(9, normal_key, function (err) {
-//                log.info('Finished MidTemp '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//        log.info('push MidLand');
-//        self.asyncTasks.push(function (callback) {
-//            self.getMidLand(9, normal_key, function (err) {
-//                log.info('Finished MidLand '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//        log.info('push MidForecast');
-//        self.asyncTasks.push(function (callback) {
-//            self.getMidForecast(9, normal_key, function (err) {
-//                log.info('Finished MidForecast '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//        log.info('push MidSea');
-//        self.asyncTasks.push(function (callback) {
-//            self.getMidSea(9, normal_key, function (err) {
-//                log.info('Finished MidSea '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    if (time === 10 || putAll) {
-//        log.info('push PastConditionGather');
-//        self.asyncTasks.push(function (callback) {
-//            var pastGather = new PastConditionGather();
-//
-//            pastGather.start(1, server_key, function (err) {
-//                log.info('Finished PastConditionGather '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    //1:06분 일부만 업데이트 됨. 20분에 대부분 갱신됨.
-//    if (time === 20 || putAll) {
-//        log.info('push keco main process');
-//        self.asyncTasks.push(function (callback) {
-//            keco.cbKmaIndexProcess(keco, function (err) {
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    if (time === 31 || putAll) {
-//        log.info('push Short');
-//        self.asyncTasks.push(function (callback) {
-//            self.getTownShortData(9, server_key, function (err) {
-//                log.info('Finished Short '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    if (time === 41 || putAll) {
-//        log.info('push Shortest');
-//        self.asyncTasks.push(function (callback) {
-//            self.getTownShortestData(9, server_key, function (err) {
-//                log.info('Finished Shortest '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//        log.info('push Current');
-//        self.asyncTasks.push(function (callback) {
-//            self.getTownCurrentData(9, server_key, function (err) {
-//                log.info('Finished Current '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    log.info('wait '+self.asyncTasks.length+' tasks');
-//};
 
 /**
  *
@@ -2160,6 +2090,21 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     var hours = (new Date()).getUTCHours();
 
     log.verbose('check time and request task');
+
+    if (time === 7 || putAll) {
+        if (hours === 7 || hours === 8 || hours === 9 || hours === 10 ||
+            hours === 19 || hours === 20 || hours === 21 || hours === 22 || putAll) {
+            log.info('push kaq hourly forecast');
+            self.asyncTasks.push(function getKaqHourlyForecast(callback) {
+                var KaqHourlyForecast = require('./kaq.hourly.forecast.controller');
+                var ctrl = new KaqHourlyForecast();
+                ctrl.do(new Date(), err=> {
+                    log.info('kaq hourly forecast done');
+                    callback();
+                });
+            });
+        }
+    }
 
     if (time === 2 || putAll) {
         //spend long time
@@ -2239,15 +2184,21 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     if (time === 10 || putAll) {
         log.info('push life index');
         self.asyncTasks.push(function LifeIndex(callback) {
-            self._requestApi("lifeindex", callback);
+            self._requestApi("lifeindex", function () {
+                log.info('lifeindex done');
+                callback();
+            });
         });
     }
 
-    if (time === 11 || putAll) {
+    if (time === 13 || putAll) {
         log.info('push short');
-        self.asyncTasks.push(function Short(callback) {
-            self._requestApi("short", callback);
-        });
+        // self.asyncTasks.push(function Short(callback) {
+            self._requestApi("short", function () {
+                log.info('short done');
+                // callback();
+            });
+        // });
     }
 
     if (time === 2 || time === 12 || time === 22 || time === 32 || time === 42 || time === 52 || putAll) {
@@ -2261,14 +2212,14 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         //});
     }
 
-    if (time === 47 || putAll) {
+    if (time === 48 || time === 54 || time === 4 || time === 14 || putAll) {
         log.info('push shortest');
-        self.asyncTasks.push(function Shortest(callback) {
+        // self.asyncTasks.push(function Shortest(callback) {
             self._requestApi("shortest", function () {
                 log.info('shortest done');
-                callback();
+                // callback();
             });
-        });
+        // });
     }
 
     if(time === 50) {
@@ -2343,6 +2294,12 @@ Manager.prototype.startManager = function(){
     taskKmaIndexService.setNextGetTime('fsn', new Date());
     taskKmaIndexService.setNextGetTime('ultrv', new Date());
     self.taskKmaIndexService = taskKmaIndexService;
+
+    var kmaForecastZoneCode = new KmaForecastZoneCode(config.keyString.test_normal);
+    kmaForecastZoneCode.getFromKma()
+        .catch(function (err) {
+            log.error(err);
+        });
 
     async.parallel([
         function (callback) {

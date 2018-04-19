@@ -1,10 +1,18 @@
 angular.module('service.storage', [])
     .factory('TwStorage', function($q, Util) {
         var obj = {};
-        var suiteName = 'group.net.wizardfactory.todayweather';
+        var suiteName;
         var oldSuiteName = 'net.wizardfactory.todayweather_preferences'; // only android
         var suitePrefs = null;
         var oldSuitePrefs = null;
+
+        if (clientConfig.package) {
+            suiteName = 'group.net.wizardfactory' + '.' + clientConfig.package.toLowerCase();
+            console.info(suiteName);
+        }
+        else {
+            console.error('unknown package:'+clientConfig.package);
+        }
 
         function _hasAppPreferences() {
             if (window.plugins == undefined || plugins.appPreferences == undefined) {
@@ -144,6 +152,16 @@ angular.module('service.storage', [])
             }
         }
 
+        obj.setForwardCompatibility = function () {
+            var that = this;
+
+            var settingsInfo = that.get("settingsInfo");
+            if (settingsInfo !== null && settingsInfo.showWeatherPhotos == undefined) {
+                settingsInfo.showWeatherPhotos = '0'; //꺼짐
+                that.set("settingsInfo", settingsInfo);
+            }
+        };
+
         obj.get = function (name) {
             var value;
             try {
@@ -174,7 +192,6 @@ angular.module('service.storage', [])
         obj.init = function () {
             var that = this;
             var deferred = $q.defer();
-            var promises = [];
 
             if (_hasAppPreferences()) {
                 suitePrefs = plugins.appPreferences.suite(suiteName);
@@ -182,6 +199,7 @@ angular.module('service.storage', [])
                 // localStorage가 clear 된 경우 appPreference의 data를 localStorage로 update
                 if (localStorage.length === 0) {
                     _appPref2localStorage().finally(function () {
+                        that.setForwardCompatibility();
                         deferred.resolve();
                     })
                 } else {
@@ -197,10 +215,12 @@ angular.module('service.storage', [])
                     _appPref2appPref().finally(function () {
                         // localStorage에 저장된 data를 appPreference로 update
                         _localStorage2appPref();
+                        that.setForwardCompatibility();
                         deferred.resolve();
                     });
                 }
             } else {
+                that.setForwardCompatibility();
                 deferred.resolve();
             }
 

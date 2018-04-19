@@ -18,31 +18,43 @@ class KaqDustImageController{
         };
         this.value_pos = {
             PM10 : [50, 59, 68, 77, 86, 95, 100, 109, 118, 127, 136, 145, 152, 161, 170, 179, 188, 197, 205, 214, 223, 232, 241, 250, 257, 266, 275, 284, 293, 302, 311, 320],
-            PM25 : [50, 62, 76, 90, 102, 114, 128, 140, 152, 164, 178, 190, 204, 216, 228, 240, 254, 268, 280, 292, 304, 318]
+            // PM25 : [50, 62, 76, 90, 102, 114, 128, 140, 152, 164, 178, 190, 204, 216, 228, 240, 254, 268, 280, 292, 304, 318]
+            PM25 : [48, 58, 68, 79, 89, 99,     //+10.3
+                        110, 120, 130, 141, 151,
+                        162, 172, 183, 193, 203,
+                        214, 224, 235, 245, 255,
+                        266, 276, 286, 297, 307,
+                        318]
         };
         this.value = {
-            PM10 : [999, 120, 116, 112, 108, 104, 100, 96, 92, 88, 84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0],
-            PM25 : [999, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0]
+            PM10 : [150, 120, 116, 112, 108, 104, 100, 96, 92, 88, 84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0],
+            // PM25 : [100, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0]
+            PM25 : [60, 50, 48, 46, 44, 42,
+                        40, 38, 36, 34, 32,
+                        30, 28, 26, 24, 22,
+                        20, 18, 16, 14, 12,
+                        10, 8, 6, 4, 2, 0,
+                        0]
         };
         this.parser = new libKaqImageParser();
         this.imagePixels = {};
-        this.coordinate = this.parser.getDefaultCoordi();
+        this.coordinate = this.parser.getDefaultCoordi('CASE4');
         return this;
     }
 
     /**
      *
      * @param path
-     * @param type
+     * @param format
      * @param callback
      * @returns {*}
      */
-    parseMapImage(path, type, callback){
+    parseMapImage(path, format, callback){
         if(this.parser === undefined){
             return callback(new Error('Need to init KaqDustImageController'));
         }
 
-        this.parser.getPixelMap(path, type, this.coordinate, (err, pixelMap)=>{
+        this.parser.getPixelMap(path, 'CASE4', format, this.coordinate, (err, pixelMap)=>{
             if(err){
                 return callback(err);
             }
@@ -151,24 +163,15 @@ class KaqDustImageController{
             }
         }
 
-        //log.info('KAQ Image > result = ', JSON.stringify(result));
-
-        var pubDateStr = kmaTimeLib.convertYYYY_MM_DD_HHStr2YYYY_MM_DD_HHoZZ(this.imagePixels[type].pubDate);
-        var pubDate = new Date(pubDateStr);
-        var forecastDate = kmaTimeLib.toTimeZone(9);
-        //17시, 23시 데이터는 다음날 부터 시작하고, 그 다음날 5시까지 사용되어야 하므로, 현재 시간도 함께 비교
-        if (pubDate.getHours() >= 17 && pubDate.getDate() === forecastDate.getDate()) {
-            forecastDate.setDate(forecastDate.getDate()+1);
-        }
+        //이미지의 시작 시간은 발표시간 20시간전부터임. TW-184
+        //한시간을 더 빼서, 한시간씩 증가시키면서 기록함.
+        var forecastDate = new Date(this.imagePixels[type].pubDate);
+        forecastDate.setHours(forecastDate.getHours()-21);
 
         var forecast = [];
         for(i=0 ; i<137 ; i++){
             var item = {};
-            if(i != 0 && (i% 24) === 0){
-                forecastDate.setDate(forecastDate.getDate()+1);
-            }
-            forecastDate.setHours(i%24);
-            forecastDate.setMinutes(0);
+            forecastDate.setHours(forecastDate.getHours()+1);
             item.date = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(forecastDate);
             if (result[i] !== -1) {
                 item.val = result[i];
@@ -376,11 +379,12 @@ class KaqDustImageController{
      */
     getDustImage(imgPaths, callback) {
         log.info('KAQ Image > get dust image -----------');
-        async.applyEach(
+        async.waterfall(
             [
                 (cb)=>{
                     if (imgPaths.pm10 == undefined) {
-                        return cb();
+                        log.error('KAQ PM10 Image > image path is undefined');
+                        return cb(null);
                     }
                     log.info("KAQ Image > pm10 path: "+imgPaths.pm10);
                     this.parseMapImage(imgPaths.pm10, 'image/gif', (err, pixelMap)=>{
@@ -392,22 +396,27 @@ class KaqDustImageController{
                         this.imagePixels.PM10 = {};
                         this.imagePixels.PM10.pubDate = imgPaths.pubDate;
                         this.imagePixels.PM10.data = pixelMap;
-                        return cb();
+                        return cb(null, pixelMap);
                     });
                 },
                 (pixelMap, cb)=>{
+                    if (pixelMap  == undefined) {
+                        log.error('KAQ PM10 Image > pixelMap is undefined');
+                        return cb(null);
+                    }
                     this.makeColorTable('PM10', pixelMap, (err)=>{
                         if(err){
-                            log.error('KAQ Image > Failed to get Grade Table');
+                            log.error('KAQ PM10 Image > Failed to get Grade Table');
                             return cb(err);
                         }
 
-                        return cb();
+                        return cb(null);
                     });
                 },
                 (cb)=>{
                     if (imgPaths.pm25 == undefined) {
-                        return cb();
+                        log.error('KAQ PM25 Image > image path is undefined');
+                        return cb(null);
                     }
                     log.info("KAQ Image > pm25 path: "+imgPaths.pm25);
                     this.parseMapImage(imgPaths.pm25, 'image/gif', (err, pixelMap)=>{
@@ -418,17 +427,21 @@ class KaqDustImageController{
                         this.imagePixels.PM25 = {};
                         this.imagePixels.PM25.pubDate = imgPaths.pubDate;
                         this.imagePixels.PM25.data = pixelMap;
-                        return cb();
+                        return cb(null, pixelMap);
                     });
                 },
                 (pixelMap, cb)=>{
+                    if (pixelMap  == undefined) {
+                        log.error('KAQ PM25 Image > pixelMap is undefined');
+                        return cb(null);
+                    }
                     this.makeColorTable('PM25', pixelMap, (err)=>{
                         if(err){
                             log.error('KAQ Image > Failed to get PM25 Grade Table');
                             return cb(err);
                         }
 
-                        return cb();
+                        return cb(null);
                     });
                 }
             ],

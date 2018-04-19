@@ -410,9 +410,9 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
                             cityWeather[propertyName[i]] = self._convertKrToEng(tdText);
                         }
                         else {
-                            if (tdText.length != 0) {
-                                cityWeather[propertyName[i]] = tdText;
-                            }
+                            //weather(현재일기)가 없는 경우도 특이사항없다는 정보임
+                            //DB상에서는 city weather stn만이 weather값을 가짐
+                            cityWeather[propertyName[i]] = tdText;
                         }
                     }
                     i++;
@@ -955,7 +955,7 @@ KmaScraper.prototype.getStnMinuteWeather = function (callback) {
             });
         },
         function (results, cb) {
-            self._removeBefore10days("Minute");
+            self._removeOldData("Minute");
             cb(null, results);
         }
     ], function (err, results) {
@@ -1000,21 +1000,21 @@ KmaScraper.prototype.getStnPastHourlyWeather = function (days, callback) {
     return this;
 };
 
-
-KmaScraper.prototype._removeBefore10days = function (name, callback) {
+KmaScraper.prototype._removeOldData = function (name, callback) {
     var removeDate = new Date();
-    removeDate.setDate(removeDate.getDate()-10);
     if (name == 'Hourly') {
-       KmaStnHourly2.remove({"date": {$lt:removeDate} }, function (err) {
-           log.info('removed stn '+name+' date from date : '+removeDate);
-           if (callback)callback(err);
-       });
+        removeDate.setDate(removeDate.getDate()-10);
+        KmaStnHourly2.remove({"date": {$lt:removeDate} }, function (err) {
+            log.info('removed stn '+name+' date from date : '+removeDate);
+            if (callback)callback(err);
+        });
     }
     else {
-       KmaStnMinute2.remove({"date": {$lt:removeDate} }, function(err){
-           log.info('removed stn '+name+' date from date : '+removeDate);
-           if (callback)callback(err);
-       });
+        removeDate.setDate(removeDate.getDate()-1);
+        KmaStnMinute2.remove({"date": {$lt:removeDate} }, function(err){
+            log.info('removed stn '+name+' date from date : '+removeDate);
+            if (callback)callback(err);
+        });
     }
 };
 
@@ -1104,7 +1104,7 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                 return cb(err, results);
             });},
         function (results, cb) {
-            self._removeBefore10days("Hourly");
+            self._removeOldData("Hourly");
             cb(null, results);
         }
     ], function (err, results) {

@@ -21,8 +21,13 @@ angular.module('controller.settingctrl', [])
             if (settingsInfo === null) {
                 settingsInfo = {
                     startupPage: "0", //시간별날씨
-                    refreshInterval: "0" //수동
+                    refreshInterval: "0", //수동
+                    showWeatherPhotos: '1' //켜짐
                 };
+                if (clientConfig.package === 'todayAir') {
+                    settingsInfo.startupPage = "3"; //대기정보
+                    settingsInfo.showWeatherPhotos = "0"; //off
+                }
                 TwStorage.set("settingsInfo", settingsInfo);
             }
 
@@ -145,7 +150,13 @@ angular.module('controller.settingctrl', [])
             var list;
             if (name === 'startupPage') {
                 title = 'LOC_STARTUP_PAGE';
-                list = ['0', '1', '2', '3'].map(function (value) {
+                if (clientConfig.package === 'todayWeather') {
+                    list = ['0', '1', '2', '3']
+                }
+                if (clientConfig.package === 'todayAir') {
+                   list = ['3', '4', '2']
+                }
+                list = list.map(function (value) {
                     return {label: $scope.getStartupPageValueStr(value), value: value};
                 });
             }
@@ -153,6 +164,12 @@ angular.module('controller.settingctrl', [])
                 title = 'LOC_REFRESH_INTERVAL';
                 list = ['0', '30', '60', '180', '360', '720'].map(function (value) {
                     return {label: $scope.getRefreshIntervalValueStr(value), value: value};
+                });
+            }
+            else if (name === 'showWeatherPhotos') {
+                title = 'LOC_SHOW_WEATHER_PHOTOS';
+                list = ['0', '1'].map(function (value) {
+                    return {label: $scope.getShowWeatherPhotosValueStr(value), value: value};
                 });
             }
             console.info(JSON.stringify({name: name, title: title, value: $rootScope.settingsInfo[name], list: list}));
@@ -174,6 +191,8 @@ angular.module('controller.settingctrl', [])
                     return 'LOC_SAVED_LOCATIONS';
                 case '3':
                     return 'LOC_AIR_INFORMATION';
+                case '4':
+                    return 'LOC_WEATHER';
             }
             return 'N/A'
         };
@@ -193,6 +212,17 @@ angular.module('controller.settingctrl', [])
                     return 'LOC_6_HOURS';
                 case '720':
                     return 'LOC_12_HOURS';
+            }
+            return 'N/A'
+        };
+
+        $scope.getShowWeatherPhotosValueStr = function (value) {
+            //console.log('getShowWeatherPhotosValueStr v='+value);
+            switch(value) {
+                case '0':
+                    return 'LOC_OFF';
+                case '1':
+                    return 'LOC_ON';
             }
             return 'N/A'
         };

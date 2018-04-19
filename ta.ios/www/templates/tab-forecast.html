@@ -1,0 +1,314 @@
+<ion-view>
+    <ion-nav-buttons side="left">
+        <button menu-toggle="left" class="button button-icon button-positive icon ion-navicon"></button>
+    </ion-nav-buttons>
+    <ion-nav-title>
+        <p class="title forecast-header">
+            <span>{{address}}</span>
+            <i class="material-icons" ng-if="currentPosition && showLoadingIndicator != true"
+               ng-click="switchToLocationSettings()">{{isLocationEnabled()?'&#xE0C8;':'&#xE0C7;'}}</i>
+            <ion-spinner icon="bubbles" ng-if="showLoadingIndicator"></ion-spinner>
+        </p>
+    </ion-nav-title>
+    <ion-nav-buttons side="right">
+        <button class="button button-icon button-positive icon"
+                ng-class="hasPush?'ion-ios-bell':'ion-ios-bell-outline'"
+                ng-if="!isAndroid()"
+                ng-click="goPushPage()"
+                style="padding: 0 4px"></button>
+        <button class="button button-icon button-positive icon"
+                ng-class="hasPush?'ion-android-notifications':'ion-android-notifications-none'"
+                ng-if="isAndroid()"
+                ng-click="goPushPage()"
+                style="padding: 0 4px"></button>
+        <button class="button button-icon button-positive icon ion-ios-upload-outline"
+                ng-if="!isAndroid()"
+                ng-click="doTabShare()"
+                style="padding: 0 4px;margin-right: 4px"></button>
+        <button class="button button-icon button-positive icon ion-android-share-alt"
+                ng-if="isAndroid()"
+                ng-click="doTabShare()"
+                style="padding: 0 4px;margin-right: 4px"></button>
+    </ion-nav-buttons>
+    <ion-content delegate-handle="body" direction="y" zooming="false" scrollbar-x="false" scrollbar-y="false"
+                 has-bouncing="false" tabs-shrink class="main-content">
+        <div class="card">
+            <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()" class="row row-no-padding"
+                 ng-style="{'height':headerHeight+'px'}">
+                <div class="main-box-arrow" ng-click="onSwipeRight()" ng-if="cityCount > 1">
+                    <span class="icon-left ion-chevron-left"></span>
+                </div>
+                <div class="main-box" ng-if="currentWeather">
+                    <div class="main-box-forecast-content">
+                        <div ng-style="::{'font-size':bigDigitSize+'px'}">
+                            {{getTemp(currentWeather.t1h)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}">˚</span>
+                        </div>
+                        <div style="margin: auto">
+                            <img id="imgBigSkyStateSize" ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
+                        </div>
+                    </div>
+                    <div class="main-box-summary">
+                        {{summary}}<br ng-if="summaryAir">
+                        <span ng-if="summaryAir" ng-click="goAirInfoPage('aqi')">{{summaryAir}}</span>
+                    </div>
+                </div>
+                <div class="main-box-arrow" ng-click="onSwipeLeft()" ng-if="cityCount > 1">
+                    <span class="icon-right ion-chevron-right"></span>
+                </div>
+            </div>
+            <div style="position: relative" ng-if="timeWidth">
+                <div id="chartScroll" class="chart-scroll">
+                    <div ng-style="{'width':timeWidth +'px'}">
+                        <div class="chart-header" ng-if="timeTable">
+                            <div class="row row-no-padding day-title-list">
+                                <!--마지막 0시에 대한 날짜는 표기 하지 않음, 오른쪽에 최소 120px(날짜정보 2칸)이 있을 경우 표시.-->
+                                <div class="day-title" ng-style="{'left': getDayPosition(value, $index)+'px'}"
+                                     ng-if="$index < timeTable.length-2 && isNextDay(value, $index)"
+                                     ng-repeat="value in timeTable">
+                                    {{getDayString(value.fromToday)|translate}} {{value.date.substr(4,2) + '.' + value.date.substr(6,2)}}
+                                </div>
+                            </div>
+                            <div class="row row-no-padding">
+                                <div class="chart-title" ng-repeat="value in timeTable">
+                                    {{value.time+strHour}}
+                                </div>
+                            </div>
+                        </div>
+                        <div ng-short-chart class="chart-content" ng-style="{'height':chartShortHeight+'px'}"></div>
+                    </div>
+                </div>
+                <div class="chart-label" ng-if="timeChart">
+                    <div class="chart-label-yesterday"></div> <span>{{"LOC_PREVIOUS_DAY_TEMP"|translate}}</span><br/>
+                    <div class="chart-label-today"></div> <span>{{"LOC_THIS_DAY_TEMP"|translate}}</span>
+                </div>
+            </div>
+        </div>
+        <div class="card" ng-if="showDetailWeather && showHourlyAqiForecast()">
+            <div class="card-title">{{'LOC_HOURLY_AQI_FORECAST'|translate}} (beta)</div>
+            <table class="rowgroup-vspacing-aqi-box" ng-click="goAirInfoPage('aqi')">
+                <tr>
+                    <td ng-repeat="obj in hourlyAqiForecast">
+                        <p>{{obj.date.substr(11,2)}}{{'LOC_HOUR'|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(obj.grade)" class="material-icons" ng-style="{'color': grade2Color(obj.grade)}"></i><br>
+                        <span ng-style="{'color': grade2Color(obj.grade)}">{{obj.str == undefined?"-":obj.str}}</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="card" ng-if="showDetailWeather && !showHourlyAqiForecast() && currentWeather.arpltn">
+            <table class="rowgroup-vspacing-aqi-box">
+                <tr>
+                    <td ng-if="currentWeather.arpltn.pm25Value" ng-click="goAirInfoPage('pm25')">
+                        <p>{{"LOC_PM25"|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(currentWeather.arpltn.pm25Grade)" class="material-icons" ng-style="{'color': grade2Color(currentWeather.arpltn.pm25Grade)}"></i><br>
+                        <span ng-style="{'color': grade2Color(currentWeather.arpltn.pm25Grade)}">{{currentWeather.arpltn.pm25Str}}</span><br>
+                        <span class="sub-text">{{currentWeather.arpltn.pm25Value.toFixed(0)}}<small>㎍/㎥</small></span>
+                    </td>
+                    <td ng-if="currentWeather.arpltn.pm10Value" ng-click="goAirInfoPage('pm10')">
+                        <p>{{"LOC_PM10"|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(currentWeather.arpltn.pm10Grade)" class="material-icons" ng-style="{'color': grade2Color(currentWeather.arpltn.pm10Grade)}"></i><br>
+                        <span ng-style="{'color': grade2Color(currentWeather.arpltn.pm10Grade)}">{{currentWeather.arpltn.pm10Str}}</span><br>
+                        <span class="sub-text">{{currentWeather.arpltn.pm10Value.toFixed(0)}}<small>㎍/㎥</small></span>
+                    </td>
+                    <td ng-if="currentWeather.arpltn.aqiValue" ng-click="goAirInfoPage('aqi')">
+                        <p>{{"LOC_AQI"|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(currentWeather.arpltn.aqiGrade)" class="material-icons" ng-style="{'color': grade2Color(currentWeather.arpltn.aqiGrade)}"></i><br>
+                        <span ng-style="{'color': grade2Color(currentWeather.arpltn.aqiGrade)}">{{currentWeather.arpltn.aqiStr}}</span><br>
+                        <span class="sub-text">{{currentWeather.arpltn.aqiValue.toFixed(0)}}</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="card" ng-if="showDetailWeather">
+            <div class="card-title">{{"LOC_DETAIL_WEATHER"|translate}}</div>
+            <table class="colgroup-box">
+                <tr ng-if="!(currentWeather.weatherType == undefined)">
+                    <td>
+                        <img ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
+                        <span>{{'LOC_WEATHER'|translate}} {{currentWeather.weather}}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/temp_50.png">
+                        <span>{{diffTempStr}}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/humidity_{{currentWeather.reh?currentWeather.reh - currentWeather.reh%10:'00'}}.png">
+                        <span>{{'LOC_HUMIDITY'|translate}} {{currentWeather.reh}}<small>%</small></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/wind.png">
+                        <span>{{'LOC_WIND'|translate}} {{currentWeather.wdd}} {{currentWeather.wsd}}<small>{{getWindSpdUnit()}}</small></span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.visibility > 0">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/visibility.png">
+                        <span>{{'LOC_VISIBILITY'|translate}} {{currentWeather.visibility}}<small>{{getDistanceUnit()}}</small></span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.hPa">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/pressure.png">
+                        <span>{{'LOC_PRESSURE'|translate}} {{currentWeather.hPa}}<small>{{getPressUnit()}}</small></span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.dspls && currentWeather.dspls > 60">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/discomport_index.png">
+                        <span>{{'LOC_DISCOMFORT_INDEX'|translate}} {{currentWeather.dsplsStr}}
+                            <span>({{currentWeather.dspls}})</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.sensorytem">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/feels_like.png">
+                        <span>{{'LOC_FEELS_LIKE'|translate}} {{getTemp(currentWeather.sensorytem)}}˚</span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.rn1">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/precipitation.png">
+                        <span>{{'LOC_HOURLY_PRECIPITATION'|translate}} {{currentWeather.rn1}}<small>{{getPrecipUnit()}}</small></span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.today.sunrise">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/sunrise.png">
+                        <span>{{'LOC_SUNRISE'|translate}} {{currentWeather.today.sunrise.split(' ')[1]}}</span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.today.sunset">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/sunset.png">
+                        <span>{{'LOC_SUNSET'|translate}} {{currentWeather.today.sunset.split(' ')[1]}}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/time.png">
+                        <span>{{updateTime}}</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="card" ng-if="showDetailWeather && currentWeather.arpltn">
+            <div class="card-title">{{"LOC_DETAIL_AQI"|translate}}</div>
+            <table class="colgroup-box">
+                <tr ng-if="currentWeather.arpltn.pm25Value != undefined">
+                    <td>
+                        <span>{{"LOC_PM25"|translate}}</span>
+                    </td>
+                    <td>
+                        <i ng-bind-html="getSentimentIcon(currentWeather.arpltn.pm25Grade)" class="material-icons" ng-style="{'color': grade2Color(currentWeather.arpltn.pm25Grade)}"></i>
+                        <span ng-style="{'color': grade2Color(currentWeather.arpltn.pm25Grade)}">{{currentWeather.arpltn.pm25Str}}
+                            <span class="sub-text">({{currentWeather.arpltn.pm25Value.toFixed(0)}}㎍/㎥{{currentWeather.arpltn.pm25StationName?" "+currentWeather.arpltn.pm25StationName:""}})</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.arpltn.pm10Value != undefined">
+                    <td>
+                        <span>{{"LOC_PM10"|translate}}</span>
+                    </td>
+                    <td>
+                        <i ng-bind-html="getSentimentIcon(currentWeather.arpltn.pm10Grade)" class="material-icons" ng-style="{'color': grade2Color(currentWeather.arpltn.pm10Grade)}"></i>
+                        <span ng-style="{'color': grade2Color(currentWeather.arpltn.pm10Grade)}">{{currentWeather.arpltn.pm10Str}}
+                            <span class="sub-text">({{currentWeather.arpltn.pm10Value.toFixed(0)}}㎍/㎥{{currentWeather.arpltn.pm10StationName?" "+currentWeather.arpltn.pm10StationName:""}})</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.arpltn.o3Value != undefined">
+                    <td>
+                        <span>{{"LOC_O3"|translate}}</span>
+                    </td>
+                    <td>
+                        <i ng-bind-html="getSentimentIcon(currentWeather.arpltn.o3Grade)" class="material-icons" ng-style="{'color': grade2Color(currentWeather.arpltn.o3Grade)}"></i>
+                        <span ng-style="{'color': grade2Color(currentWeather.arpltn.o3Grade)}">{{currentWeather.arpltn.o3Str}}
+                            <span class="sub-text">({{currentWeather.arpltn.o3Value.toFixed(3)}}ppm{{currentWeather.arpltn.o3StationName?" "+currentWeather.arpltn.o3StationName:""}})</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.arpltn.no2Value != undefined">
+                    <td>
+                        <span>{{"LOC_NO2"|translate}}</span>
+                    </td>
+                    <td>
+                        <i ng-bind-html="getSentimentIcon(currentWeather.arpltn.no2Grade)" class="material-icons" ng-style="{'color': grade2Color(currentWeather.arpltn.no2Grade)}"></i>
+                        <span ng-style="{'color': grade2Color(currentWeather.arpltn.no2Grade)}">{{currentWeather.arpltn.no2Str}}
+                            <span class="sub-text">({{currentWeather.arpltn.no2Value.toFixed(3)}}ppm{{currentWeather.arpltn.no2StationName?" "+currentWeather.arpltn.no2StationName:""}})</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.arpltn.coValue != undefined">
+                    <td>
+                        <span>{{"LOC_CO"|translate}}</span>
+                    </td>
+                    <td>
+                        <i ng-bind-html="getSentimentIcon(currentWeather.arpltn.coGrade)" class="material-icons" ng-style="{'color': grade2Color(currentWeather.arpltn.coGrade)}"></i>
+                        <span ng-style="{'color': grade2Color(currentWeather.arpltn.coGrade)}">{{currentWeather.arpltn.coStr}}
+                            <span class="sub-text">({{currentWeather.arpltn.coValue.toFixed(3)}}ppm{{currentWeather.arpltn.coStationName?" "+currentWeather.arpltn.coStationName:""}})</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.arpltn.so2Value != undefined">
+                    <td>
+                        <span>{{"LOC_SO2"|translate}}</span>
+                    </td>
+                    <td>
+                        <i ng-bind-html="getSentimentIcon(currentWeather.arpltn.so2Grade)" class="material-icons" ng-style="{'color': grade2Color(currentWeather.arpltn.so2Grade)}"></i>
+                        <span ng-style="{'color': grade2Color(currentWeather.arpltn.so2Grade)}">{{currentWeather.arpltn.so2Str}}
+                            <span class="sub-text">({{currentWeather.arpltn.so2Value.toFixed(3)}}ppm{{currentWeather.arpltn.so2StationName?" "+currentWeather.arpltn.so2StationName:""}})</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.arpltn.khaiValue != undefined">
+                    <td>
+                        <span>{{"LOC_AQI"|translate}}</span>
+                    </td>
+                    <td>
+                        <i ng-bind-html="getSentimentIcon(currentWeather.arpltn.khaiGrade)" class="material-icons" ng-style="{'color': grade2Color(currentWeather.arpltn.khaiGrade)}"></i>
+                        <span ng-style="{'color': grade2Color(currentWeather.arpltn.khaiGrade)}">{{currentWeather.arpltn.khaiStr}}
+                            <span class="sub-text" ng-if="currentWeather.arpltn.khaiValue && currentWeather.arpltn.khaiValue != -1">({{currentWeather.arpltn.khaiValue.toFixed(0)}})</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.arpltn.stationName">
+                    <td>
+                        <span>{{"LOC_STATION"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE55C</i>
+                        <span>{{currentWeather.arpltn.stationName}}</span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.arpltn.dataTime">
+                    <td>
+                        <span>{{"LOC_PUBLIC"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE192;</i>
+                        <span>{{currentWeather.arpltn.dataTime}}</span>
+                    </td>
+                </tr>
+                <tr ng-click="goUnitsPage()">
+                    <td>
+                        <span>{{"LOC_AIR_QUALITY_INDEX_UNIT"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE88F;</i>
+                        <a>{{getCurrentAirUnitStr()|translate}} </a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div ng-if="showDetailWeather && source == 'DSF'" style="text-align: center;">
+            <img src="img/poweredby_darksky.png" width="160px" ng-click="openUrl('https://darksky.net/poweredby')">
+        </div>
+    </ion-content>
+</ion-view>

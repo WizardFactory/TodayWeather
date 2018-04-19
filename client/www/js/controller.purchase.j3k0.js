@@ -16,7 +16,7 @@ angular.module('controller.purchase', [])
         obj.hasInAppPurchase = false;
         obj.paidAppUrl='';
 
-        if (twClientConfig.isPaidApp) {
+        if (clientConfig.isPaidApp) {
             obj.accountLevel = obj.ACCOUNT_LEVEL_PAID;
             TwAds.setEnableAds(false);
         }
@@ -110,7 +110,7 @@ angular.module('controller.purchase', [])
             //store.verbosity = store.DEBUG;
 
             // Enable remote receipt validation
-            store.validator = twClientConfig.serverUrl+"/v000705"+"/check-purchase";
+            store.validator = clientConfig.serverUrl+"/v000705"+"/check-purchase";
 
             store.register({
                 id: self.productId,
@@ -239,6 +239,13 @@ angular.module('controller.purchase', [])
             }
 
             $scope.listWidth = window.innerWidth;
+
+            if (clientConfig.package === 'todayWeather') {
+                $scope.imgAppIcon = 'img/app_icon.png';
+            }
+            else if (clientConfig.package === 'todayAir') {
+                $scope.imgAppIcon = 'img/ta_app_icon.png';
+            }
         }
 
         init();

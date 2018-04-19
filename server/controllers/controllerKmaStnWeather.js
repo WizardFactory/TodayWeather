@@ -22,7 +22,12 @@ function controllerKmaStnWeather() {
 
 controllerKmaStnWeather.updateWeather = function (current) {
     if (current.pty >= 1) {
-       switch (current.weatherType) {
+        if (current.weatherType == undefined) {
+            log.warn('weather type is undefined so set by pty');
+            current.weatherType = 0;
+        }
+
+        switch (current.weatherType) {
            case 0:
            case 1:
            case 2:
@@ -83,6 +88,30 @@ controllerKmaStnWeather.updateWeather = function (current) {
        }
     }
     else if (current.pty === 0) {
+        if (current.weatherType == undefined) {
+            switch (current.sky) {
+                case 0:
+                case 1:
+                    current.weather = '맑음';
+                    current.weatherType = 0;
+                    break;
+                case 2:
+                    current.weather = '구름조금';
+                    current.weatherType = 1;
+                    break;
+                case 3:
+                    current.weather = '구름많음';
+                    current.weatherType = 2;
+                    break;
+                case 4:
+                    current.weather = '흐림';
+                    current.weatherType = 3;
+                    break;
+                default:
+                    log.error('unknown sky:', current.sky);
+                    break;
+            }
+        }
         switch (current.weatherType) {
             //비/눈/진눈깨비는 변경
             case 14:
@@ -399,9 +428,53 @@ controllerKmaStnWeather._getStnMinute = function (stnInfo, dateTime, callback) {
 
 };
 
+controllerKmaStnWeather._findRainStnMinuteList = function (stnList, stnWeatherList) {
+    var rainStnList = [];
+    var date;
+    for (var i=0; i<stnWeatherList.length; i++) {
+        var minWeather = stnWeatherList[i];
+        if (rainStnList.length === 0) {
+            date = minWeather.date;
+        }
+        if ((minWeather.rs15m > 0 && minWeather.date === date)
+            || minWeather.rns === true)
+        {
+            var obj = rainStnList.find(function (obj) {
+                return obj.stnId === minWeather.stnId
+            });
+            if (!obj) {
+                rainStnList.push(minWeather);
+            }
+        }
+
+        if (rainStnList.length >= 2) {
+            break;
+        }
+    }
+
+    if (rainStnList.length < 2) {
+        return;
+    }
+
+    var stnWeather;
+    //find nearest stn
+    for (i=0; i<stnList.length; i++) {
+        stnWeather = rainStnList.find(function (obj) {
+            return obj.stnId == stnList[i].stnId;
+        });
+        if (stnWeather) {
+            break;
+        }
+    }
+
+    stnWeather.date = kmaTimeLib.convertDateToYYYYoMMoDDoHHoMM(stnWeather.date);
+
+    return stnWeather;
+};
+
 /**
- * 10min내에 n개의 stn에서 비가 왔는지 확인, 측정된 stnId는 랜덤임.
- * n개의 stn중에서 2개 이상이어야 true로 반환
+ * 15min내에 n개의 stn에서 비가 왔는지 확인(가장 최근에 측정된 시간에 rs15m이 0보다 크던가, rns가 true인경우)
+ * n개의 stn중에서 2개 이상이면 가장 가까운 측정소 정보를 반환
  * @param stnList
  * @param dateTime
  * @param callback
@@ -416,14 +489,16 @@ controllerKmaStnWeather._checkPrecipFromStnMinuteList = function (stnList, dateT
         return this;
     }
 
-    //10min - data자체가 3분정도 딜레이가 있음.
+    //15min - data자체가 3분정도 딜레이가 있음.
     var limitTime = new Date(dateTime);
-    limitTime.setMinutes(limitTime.getMinutes() - 10);
+    limitTime.setMinutes(limitTime.getMinutes() - 15);
 
     var query;
     var array = [];
     stnList.forEach(function (stnInfo) {
-        var q = {stnId: parseInt(stnInfo.stnId), date: {$gt: limitTime}, rns: true};
+        // var q = {stnId: parseInt(stnInfo.stnId), date: {$gt: limitTime}, $or: [{rns: true}, {rs15m:{$gt:0}}]};
+        // var q = {stnId: parseInt(stnInfo.stnId), date: {$gt: limitTime}, rns:true};
+        var q = {stnId: parseInt(stnInfo.stnId), date: {$gt: limitTime}};
         array.push(q);
     });
     query = {$or: array};
@@ -437,31 +512,14 @@ controllerKmaStnWeather._checkPrecipFromStnMinuteList = function (stnList, dateT
             return callback(undefined, undefined);
         }
 
-        var stnList = [];
-        for (var i=0; i<stnWeatherList.length; i++) {
-            if (stnList.length == 0) {
-                stnList.push(stnWeatherList[i].stnId);
-                continue;
-            }
-            for (var j=0; j<stnList.length; j++) {
-                if (stnWeatherList[i].stnId != stnList[j]) {
-                    stnList.push(stnWeatherList[i].stnId);
-                    break;
-                }
-            }
-            if (stnList.length >= 2) {
-                break;
-            }
+        var stnWeather;
+        try {
+            stnWeather = self._findRainStnMinuteList(stnList, stnWeatherList);
         }
-
-        if (stnList.length >= 2) {
-            var stnWeather = stnWeatherList[0];
-            stnWeather.date = kmaTimeLib.convertDateToYYYYoMMoDDoHHoMM(stnWeather.date);
-            return callback(undefined, stnWeather);
+        catch (err) {
+            return callback(err);
         }
-        else {
-            return callback(undefined, undefined);
-        }
+        return callback(undefined, stnWeather);
     });
 };
 
@@ -1062,7 +1120,12 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
                     for (var key in hourlyWeather) {
                         stnWeather[key] = hourlyWeather[key];
                     }
+                    if (stnWeather.rns === false && stnWeather.rs15m > 0) {
+                        stnWeather.rns = true;
+                        stnWeather.rnsSource = 'rs15m';
+                    }
                     log.debug("stnWeather="+JSON.stringify(stnWeather));
+                    stnWeather.cityHourAws = hourlyWeather;
                     return pCallback(err, stn);
                 });
             },
@@ -1076,37 +1139,60 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
                     for (var key in minuteWeather) {
                         stnWeather[key] = minuteWeather[key];
                     }
+                    if (stnWeather.rns === false && stnWeather.rs15m > 0) {
+                        stnWeather.rns = true;
+                        stnWeather.rnsSource = 'rs15m';
+                    }
+                    stnWeather.cityMinAws = minuteWeather;
                     return pCallback(err);
                 });
             },
             function (pCallback) {
-                self.getStnList(coords, 0.1, undefined, 5, function (err, kmaStnList) {
+                self.getStnList(coords, 0.2, undefined, 5, function (err, kmaStnList) {
+                    //error가 발생해도, 기존 정보로 cover하므로 skip함.
                     if (err) {
-                        return pCallback(err);
+                        log.error(err);
+                        kmaStnList = [];
                     }
-                    return pCallback(err, kmaStnList);
+                    return pCallback(null, kmaStnList);
                 });
             },
             function (stnList, aCallback) {
-                if (stnWeather.rns == true) {
-                   //skip
+                if (stnList.length < 2) {
+                    log.warn('Fail to find local stn townInfo:', JSON.stringify(townInfo));
                     return aCallback();
                 }
 
                 self._checkPrecipFromStnMinuteList(stnList, stnDateTime, function (err, result) {
                     if (err) {
-                        return aCallback(err);
+                        log.error(err);
                     }
 
                     if (result == undefined) {
                         //no precip
+                        if (stnWeather.rns === true || stnWeather.rs15m > 0) {
+                            log.info('CheckWeather : city rns/rs15m is true but local rns/rs15m is false stnList:',
+                                JSON.stringify(stnList));
+                        }
                         return aCallback();
                     }
+                    else {
+                        if (stnWeather.rns === false && stnWeather.rs15m === 0) {
+                            log.info('CheckWeather : city rns/rs1m is false but local rns/rs15m is true result: ',
+                                JSON.stringify(result));
+                        }
+                    }
 
-                    stnWeather.rns = true;
+                    stnWeather.rns = result.rns;
+                    stnWeather.rs15m = result.rs15m;
                     stnWeather.rnsStnId = result.stnId;
                     stnWeather.rnsStnName = result.stnName;
                     stnWeather.rnsDate = result.date;
+                    if (stnWeather.rns === false && stnWeather.rs15m > 0) {
+                        stnWeather.rns = true;
+                        stnWeather.rnsSource = 'rs15m';
+                    }
+                    stnWeather.localMinAws = result;
                     aCallback();
                 });
             }

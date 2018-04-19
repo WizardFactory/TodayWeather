@@ -10,8 +10,10 @@
   "LOC_AIR_QUALITY_INDEX" : "統計空氣指數",
   "LOC_DAILY_AQI_FORECAST" : "每日空氣預報",
   "LOC_HOURLY_AQI_FORECAST" : "每時間空氣預報",
+  "LOC_HOURLY_AQI_INFORMATION" : "每時間空氣",
   "LOC_AIR_INFORMATION" : "空氣指數",
   "LOC_AQI" : "空氣指數",
+  "LOC_AIR_STATUS" : "空氣質量",
   "LOC_PM10" : "細塵",
   "LOC_PM25" : "超小細塵",
   "LOC_O3" : "臭氧",
@@ -289,6 +291,20 @@
   "LOC_IT_WILL_BE_SNOWY_FROM_H": "預計%d點開始下雪。",
   "LOC_IT_WILL_BE_SLEETING_FROM_H": "預計%d點開始會下雪或雨。",
   "LOC_H_POLLUTANT_IS_GRADE": "%d點 %s是%s.",
-  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "預計%d點開始%s‘%s’程度。"
+  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "預計%d點開始%s‘%s’程度。",
+  "LOC_WEATHER_ALERT": "天氣警報",
+  "LOC_ALERT_DESCRIPTION": "天氣預警會在下雪/雨或霧霾嚴重時發出通知。或者近期有雪/雨預報，嚴重霧霾時發出通知。",
+  "LOC_ALARM_DESCRIPTION": "天氣預警會在用戶設置的時間發送天氣信息。",
+  "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP": "已關閉通知。請允許app的通知權限。",
+  "LOC_SAVE" : "商店",
+  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "已添加恶劣天气警报功能！\n请收到天气提醒的地区接收警报。",
+  "LOC_AIR_FORECAST_SOURCE" : "預測材料",
+  "LOC_KAQ_DESCRIPTION": "Atmospheric quality forecasting data is provided by Anyang University Climate Energy Environment Convergence Research Institute (abbreviated name: Anyang University, Climate Convergence Research Institute, Director: Professor of Environmental Energy Engineering)",
+  "LOC_AIRKOREA_DESCRIPTION": "The Ministry of Environment of Korea is predicting the air pollution concentration to minimize the public health damage caused by air pollution.",
+  "LOC_SHOW_WEATHER_PHOTOS": "天氣照片",
+  "LOC_OFF": "離",
+  "LOC_ON": "上",
+  "LOC_AIR_QUALITY_IS_GOOD" : "空氣狀況好",
+  "LOC_AIR_QUALITY_IS_MODERATE" : "空氣狀況一般"
 }
 

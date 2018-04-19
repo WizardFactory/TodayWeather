@@ -12,6 +12,7 @@ var async = require('async');
 var req = require('request');
 var ControllerTown24h = require('./controllerTown24h');
 var cTown = new ControllerTown24h();
+var UnitConverter = require('../lib/unitConverter');
 
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
@@ -256,16 +257,16 @@ ControllerPush.prototype._getAqiStr = function (arpltn, trans) {
         return 0;
     });
 
-    if (priorityArray[0] === 'pm25') {
+    if (priorityArray[0] === 'pm25' && arpltn.pm25Str) {
         str = trans.__("LOC_PM25")+" "+ arpltn.pm25Str;
     }
-    else if (priorityArray[0] === 'pm10') {
+    else if (priorityArray[0] === 'pm10' && arpltn.pm10Str) {
         str = trans.__("LOC_PM10")+" "+ arpltn.pm10Str;
     }
-    else if (priorityArray[0] === 'o3') {
+    else if (priorityArray[0] === 'o3' && arpltn.o3Str) {
         str = trans.__("LOC_O3")+" "+ arpltn.o3Str;
     }
-    else if (priorityArray[0] === 'khai') {
+    else if (priorityArray[0] === 'khai' && arpltn.khaiStr) {
         str = trans.__("LOC_AQI")+" "+ arpltn.khaiStr;
     }
 
@@ -351,10 +352,17 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
     var dailySummary = "";
     var current = weatherInfo.current;
 
-    var time = current.time;
+    var time;
     var theDay;
     var today;
     var preDay;
+    var fromToday = 0;
+    if (current.dateObj) {
+        time =  new Date(current.dateObj).getHours();
+    }
+    else if (current.time) {
+        time = current.time;
+    }
 
     today = weatherInfo.midData.dailyData.find(function (dayInfo) {
         if (dayInfo.fromToday === 0) {
@@ -363,6 +371,7 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
     });
 
     if (time < 18) {
+        fromToday = 0;
         theDay = today;
         dailySummary += trans.__("LOC_TODAY")+": ";
         preDay = weatherInfo.midData.dailyData.find(function (dayInfo) {
@@ -372,6 +381,7 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
         });
     }
     else {
+        fromToday = 1;
         theDay = weatherInfo.midData.dailyData.find(function (dayInfo) {
             if (dayInfo.fromToday === 1) {
                 return dayInfo;
@@ -383,10 +393,12 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
 
     var str;
     if (theDay.skyAm && theDay.skyPm) {
+        var wfAm = theDay.wfAm.replace('흐리고 ', '').replace('구름적고 ', '').replace('구름많고 ', '');
+        var wfPm = theDay.wfPm.replace('흐리고 ', '').replace('구름적고 ', '').replace('구름많고 ', '');
         str = "";
-        str += theDay.wfAm+cTown._getWeatherEmoji(theDay.skyAm);
+        str += wfAm+cTown._getWeatherEmoji(theDay.skyAm);
         str += cTown._getEmoji("RightwardsArrow");
-        str += theDay.wfPm+cTown._getWeatherEmoji(theDay.skyPm);
+        str += wfPm+cTown._getWeatherEmoji(theDay.skyPm);
         dailyArray.push(str);
     }
     else if (theDay.skyIcon) {
@@ -419,6 +431,34 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
 
         if (df.o3Str) {
             dailyArray.push(trans.__("LOC_O3") + " "+ df.o3Str);
+        }
+    }
+    else if (weatherInfo.airInfo && weatherInfo.airInfo.pollutants) {
+        var dayAirInfo;
+        var pollutants = weatherInfo.airInfo.pollutants;
+        ['aqi', 'pm25', 'pm10', 'o3'].forEach(function (name) {
+            if (dayAirInfo == undefined && pollutants[name] && pollutants[name].daily) {
+                dayAirInfo = pollutants[name].daily.find(function(obj) {
+                    return obj.fromToday === fromToday;
+                });
+                if (dayAirInfo) {
+                    dayAirInfo.pollutant = name;
+                }
+            }
+        });
+        if (dayAirInfo) {
+            if (dayAirInfo.pollutant === 'aqi')  {
+                dailyArray.push(trans.__("LOC_AIR_STATUS") + " "+ dayAirInfo.str);
+            }
+            else if (dayAirInfo.pollutant === 'pm25')  {
+                dailyArray.push(trans.__("LOC_PM25") + " "+ dayAirInfo.str);
+            }
+            else if (dayAirInfo.pollutant === 'pm10')  {
+                dailyArray.push(trans.__("LOC_PM10") + " "+ dayAirInfo.str);
+            }
+            else if (dayAirInfo.pollutant === 'o3')  {
+                dailyArray.push(trans.__("LOC_O3") + " "+ dayAirInfo.str);
+            }
         }
     }
 
@@ -801,16 +841,7 @@ ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
         pushInfo.lang = 'ko';
     }
 
-    if (pushInfo.units == undefined) {
-        var obj = {};
-        obj.temperatureUnit = "C";
-        obj.windSpeedUnit = "m/s";
-        obj.pressureUnit = "hPa";
-        obj.distanceUnit = "km";
-        obj.precipitationUnit = "mm";
-        obj.airUnit = "airkorea";
-        pushInfo.units = obj;
-    }
+    pushInfo.units = UnitConverter.initUnits(pushInfo.units);
 
     //check source
     if (pushInfo.source == undefined || pushInfo.source === 'KMA') {

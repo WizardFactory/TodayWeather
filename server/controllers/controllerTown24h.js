@@ -14,6 +14,7 @@ var UnitConverter = require('../lib/unitConverter');
 var AqiConverter = require('../lib/aqi.converter');
 var KecoController = require('../controllers/kecoController');
 var AirkoreaHourlyForecastCtrl = require('../controllers/airkorea.hourly.forecast.controller');
+var KaqHourlyForecastCtrl = require('../controllers/kaq.hourly.forecast.controller');
 
 var config = require('../config/config');
 
@@ -30,7 +31,8 @@ function ControllerTown24h() {
         /**
          *
          * temperatureUnit(C,F), windSpeedUnit(mph,km/h,m/s,bft,kr), pressureUnit(mmHg,inHg,hPa,mb),
-         * distanceUnit(km,mi), precipitationUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aqicn)
+         * distanceUnit(km,mi), precipitationUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aqicn),
+         * airForecastSource(kaq, airkorea)
          */
         if(!req.hasOwnProperty('query')) {
             req.query = {};
@@ -55,6 +57,10 @@ function ControllerTown24h() {
                     req.query[value] = UnitConverter.getDefaultValue(value);
                 }
             });
+
+            if (!req.query.hasOwnProperty('airForecastSource') || req.query.airForecastSource == '(null)') {
+                req.query.airForecastSource = 'airkorea';
+            }
 
             log.info({sId:req.sessionID, reqQuery: req.query});
         }
@@ -748,10 +754,7 @@ function ControllerTown24h() {
        return true;
     }
 
-    this._insertForecastPollutants = function (req, hourlyForecasts, source, airUnit) {
-
-        var airInfo = self._getAirInfo(req);
-
+    this._insertForecastPollutants = function (airInfo, hourlyForecasts, source, airUnit) {
         var latestPastDate = '1970-01-01';
 
         if (airInfo.last && airInfo.last.dataTime) {
@@ -772,8 +775,15 @@ function ControllerTown24h() {
         airInfo.forecastSource = source;
         airInfo.forecastPubDate = hourlyForecasts[hourlyForecasts.length-1].pubDate;
 
+        var endForecastDate = new Date(latestPastDate);
+        endForecastDate.setDate(endForecastDate.getDate()+1);
+        endForecastDate = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(endForecastDate);
+
         hourlyForecasts.forEach(function (forecast) {
             if (forecast == null) {
+                return;
+            }
+            if (forecast.dataTime <= latestPastDate || forecast.dataTime > endForecastDate) {
                 return;
             }
 
@@ -792,7 +802,7 @@ function ControllerTown24h() {
             }
 
             var hourlyData = pollutant.hourly.find(function (hourlyObj) {
-                return hourlyObj.date === forecast.dataTime || forecast.dataTime <= latestPastDate;
+                return hourlyObj.date === forecast.dataTime;
             });
 
             if (hourlyData) {
@@ -810,6 +820,85 @@ function ControllerTown24h() {
                 grade: AqiConverter.value2grade(airUnit, 'aqi', aqiVal)};
             _insertHourlyAqiData(airInfo, aqiData);
         });
+
+
+        if (source === 'kaq') {
+            //make daily forecast
+            var dailyArray = [];
+            hourlyForecasts.forEach(function (forecast) {
+                var day = forecast.dataTime.slice(0, 10);
+                var dayForecast = self._createOrGetDaySummaryList(dailyArray, day);
+                if (dayForecast[forecast.code] == undefined) {
+                    dayForecast[forecast.code] = {};
+                }
+                if (dayForecast[forecast.code].hourly == undefined) {
+                    dayForecast[forecast.code].hourly = [];
+                }
+                dayForecast[forecast.code].hourly.push(forecast.val);
+            });
+
+            //remove old data and last it does not have full time
+            let strToday = latestPastDate.slice(0, 10);
+            dailyArray = dailyArray.filter(obj => {
+               return obj.date >= strToday;
+            });
+            dailyArray.pop();
+
+            dailyArray.forEach(function (dayForecast) {
+                var date = dayForecast.date;
+               ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (code) {
+
+                   var forecast = dayForecast[code];
+                   if (forecast == undefined) {
+                       return;
+                   }
+
+                   var pollutant = airInfo.pollutants[code];
+                   if (pollutant == undefined) {
+                       pollutant = airInfo.pollutants[code] = {};
+                   }
+                   if (pollutant.daily == undefined) {
+                       pollutant.daily = [];
+                   }
+
+                   var dayData = pollutant.daily.find(function (hourlyObj) {
+                       return hourlyObj.date === date;
+                   });
+                   if (dayData == undefined) {
+                       dayData = {};
+                       pollutant.daily.push(dayData);
+                   }
+
+                   /**
+                    * 평균이 중요한게 아니라, 각 grade를 넘어서는 경우가 몇번인가로 구분해야 한다.
+                    * 최악을 12번이상 넘긴다면 최악, 최악이 1~12번이다 한때 최악
+                    * 매우나쁨을 12번이상 넘긴다면 매우나쁨, 매우나쁨이 1~12번이다 한때 매우나쁨
+                    */
+                   dayData.date = date;
+                   dayData.maxVal = self._max(forecast.hourly, -1);
+                   dayData.minVal = self._min(forecast.hourly, -1);
+                   dayData.val = self._average(forecast.hourly, -1, 0);
+                   dayData.grade = AqiConverter.value2grade(airUnit, code, dayData.val);
+                   dayData.maxGrade = AqiConverter.value2grade(airUnit, code, dayData.maxVal);
+                   dayData.minGrade = AqiConverter.value2grade(airUnit, code, dayData.minVal);
+                   //forecast.overUnhealthyCount = self._countOverLimit()
+
+                   var aqiVal = AqiConverter.value2index(airUnit, code, dayData.val);
+                   var aqiMinVal = AqiConverter.value2index(airUnit, code, dayData.minVal);
+                   var aqiMaxVal = AqiConverter.value2index(airUnit, code, dayData.maxVal);
+                   var aqiData = {date: dayData.date, code: code,
+                       val: aqiVal,
+                       minVal: aqiMinVal,
+                       maxVal: aqiMaxVal,
+                       grade: AqiConverter.value2grade(airUnit, 'aqi', aqiVal),
+                       minGrade: AqiConverter.value2grade(airUnit, 'aqi', aqiMinVal),
+                       maxGrade: AqiConverter.value2grade(airUnit, 'aqi', aqiMaxVal)};
+                   _insertDailyAqiData(airInfo, aqiData);
+               });
+            });
+            log.info(JSON.stringify(airInfo));
+            //_insertDailyAqiData(airInfo, aqiData);
+        }
     };
 
     this._insertEmptyPollutantHourlyObj = function (lastDataTime) {
@@ -892,9 +981,21 @@ function ControllerTown24h() {
         return obj;
     }
 
+    /**
+     * val(평균)우선하고, 없는 경우 maxVal사용함.
+     * @param airInfo
+     * @param newData
+     * @returns {boolean}
+     * @private
+     */
     function _insertDailyAqiData(airInfo, newData) {
         var obj = _getDailyAqiData(airInfo, newData.date);
-        if (obj.hasOwnProperty('maxVal')) {
+        if (obj.hasOwnProperty('val')) {
+            if (obj.val >= newData.val) {
+                return false;
+            }
+        }
+        else if (obj.hasOwnProperty('maxVal')) {
             if (obj.maxVal >= newData.maxVal) {
                 return false;
             }
@@ -936,15 +1037,19 @@ function ControllerTown24h() {
                 var grade = dayObj.dustForecast[propertyName.toUpperCase()+"Grade"]+1;
                 dailyData.minVal = AqiConverter.grade2minMaxValue('airkorea', propertyName, grade).min;
                 dailyData.maxVal = AqiConverter.grade2minMaxValue('airkorea', propertyName, grade).max;
+                dailyData.val = Math.round((dailyData.maxVal+dailyData.minVal)/2);
                 dailyData.minGrade = AqiConverter.value2grade(airUnit, propertyName, dailyData.minVal);
                 dailyData.maxGrade = AqiConverter.value2grade(airUnit, propertyName, dailyData.maxVal);
+                dailyData.grade = AqiConverter.value2grade(airUnit, propertyName, dailyData.val);
                 pollutant.daily.push(dailyData);
 
                 var aqiMinVal = AqiConverter.value2index(airUnit, propertyName, dailyData.minVal);
                 var aqiMaxVal = AqiConverter.value2index(airUnit, propertyName, dailyData.maxVal);
-                var aqiData = {date: dailyData.date, code: propertyName,
+                var aqiVal = Math.round((aqiMinVal+aqiMaxVal)/2);
+                var aqiData = {date: dailyData.date, code: propertyName, val: aqiVal,
                             minVal: aqiMinVal,
                             maxVal: aqiMaxVal,
+                            grade: AqiConverter.value2grade(airUnit, 'aqi', aqiVal),
                             minGrade: AqiConverter.value2grade(airUnit, 'aqi', aqiMinVal),
                             maxGrade: AqiConverter.value2grade(airUnit, 'aqi', aqiMaxVal)};
                 _insertDailyAqiData(airInfo, aqiData);
@@ -992,34 +1097,120 @@ function ControllerTown24h() {
         return this;
     };
 
-    this.AirkoreaForecast = function (req, res, next) {
-        var ctrl;
-        var stnName;
+    /**
+     * make 3 objects
+     * @param req
+     * @param res
+     * @param next
+     * @returns {ControllerTown24h}
+     */
+    this.makeAirInfoList = function (req, res, next) {
         try {
-            stnName = req.airInfo.last.stationName;
-            ctrl = new AirkoreaHourlyForecastCtrl();
+            var airUnit = req.query.airUnit || 'airkorea';
+            if(req.arpltnStnList) {
+                var airInfoList = [];
+                for (var i=0; i<req.arpltnStnList.length; i++) {
+                    var arpltnList = req.arpltnStnList[i];
+                    var airInfo = {source: "airkorea"};
+                    airInfo.last = arpltnList[0];
+                    airInfo.pollutants = {};
+                    self._insertHourlyPollutants(airInfo.pollutants, arpltnList, airUnit, airInfo.last.dataTime);
+
+                    /**
+                     * airkorea의 경우 예보가 측정소별이 아니라 시/도 단위이므로,
+                     * 첫번째 측정소를 제외하고는 거리가 너무 멀 경우 예보가 측정소 위치랑 맞지 않을 수 있음
+                     */
+                    if ( req.midData && Array.isArray(req.midData.dailyData) ) {
+                        var dailyList = req.midData.dailyData.filter(function (value) {
+                            return value.hasOwnProperty('dustForecast');
+                        });
+
+                        if (dailyList && dailyList.length > 0) {
+                            airInfo.pollutants = airInfo.pollutants || {};
+                            self._insertDailyPollutants(airInfo, dailyList, airUnit);
+                        }
+                    }
+                    airInfoList.push(airInfo);
+                }
+                if (airInfoList.length > 0) {
+                    req.airInfoList = airInfoList;
+                }
+                else {
+                    log.error('fail to make air info list');
+                }
+            }
+            else {
+                log.error('arpltnList is undefined');
+            }
         }
         catch (err) {
             log.error(err);
-            return next();
         }
+        next();
+        return this;
+    };
+
+    this._getAirForecast = function(airInfo, forecastSource, airUnit, callback) {
+        var ctrl;
+        var stnName;
+        try {
+            stnName = airInfo.last.stationName;
+            if (forecastSource === 'kaq') {
+                ctrl = new KaqHourlyForecastCtrl();
+            }
+            else if (forecastSource === 'airkorea') {
+                ctrl = new AirkoreaHourlyForecastCtrl();
+            }
+            else {
+                throw new Error('Unknown air forecast source=' + forecastSource);
+            }
+        }
+        catch (err) {
+            return callback(err);
+        }
+
         ctrl.getForecast(stnName, function (err, results) {
             if (err) {
-                log.error(err);
-                return next();
+                return callback(err);
             }
             try {
                 if (results.length <= 0) {
-                    log.warn("Fail to get forecast stnName="+stnName);
-                    return next();
+                    throw new Error("Fail to get forecast stnName="+stnName);
                 }
-                self._insertForecastPollutants(req, results, "airkorea", req.query.airUnit);
+                self._insertForecastPollutants(airInfo, results, forecastSource, airUnit);
             }
             catch(err) {
+                return callback(err);
+            }
+            callback(null, airInfo);
+        });
+    };
+
+    this.AirForecast = function (req, res, next) {
+        var forecastSource = req.query.airForecastSource;
+        var airInfo = self._getAirInfo(req);
+
+        self._getAirForecast(airInfo, forecastSource, req.query.airUnit, function (err) {
+            if (err) {
                 log.error(err);
             }
             next();
         });
+    };
+
+    this.AirForecastList = function (req, res, next) {
+        var forecastSource = req.query.airForecastSource;
+        var airUnit = req.query.airUnit;
+        async.map(req.airInfoList,
+            function (airInfo, callback) {
+               self._getAirForecast(airInfo, forecastSource, airUnit, callback)
+            },
+            function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                next();
+            });
     };
 
     this.sendDailySummaryResult = function (req, res) {
@@ -1104,68 +1295,74 @@ function ControllerTown24h() {
         var str = "";
         var item;
         var itemList = [];
-        var tmpGrade;
-        var ts = res;
-
+        var ts = res || global;
         var airInfo = current.arpltn || current;
         airInfo.aqiValue = airInfo.khaiValue || airInfo.aqiValue;
         airInfo.aqiGrade = airInfo.khaiGrade || airInfo.aqiGrade;
         airInfo.aqiStr = airInfo.khaiStr || airInfo.aqiStr;
 
+        //find over moderate pollutants
+        var maxGrade = 0;
+        for (var key in airInfo) {
+            if (key.indexOf('Grade') >= 0) {
+                if (key.indexOf('Grade24') >= 0) {
+                    continue;
+                }
+                if (airInfo[key] > maxGrade) {
+                    maxGrade = airInfo[key];
+                }
+            }
+        }
+        if (maxGrade <= 0) {
+           log.error("airInfo is invalid! ", {airInfo: airInfo});
+           return "";
+        }
+        else if (maxGrade === 1) {
+            //대기상태가 좋아요
+            return ts.__('LOC_AIR_QUALITY_IS_GOOD');
+        }
+        else if (maxGrade === 2) {
+            //대기상태는 보통입니다
+            return ts.__('LOC_AIR_QUALITY_IS_MODERATE');
+        }
+        //grade가 3(민감군주의or나쁨)이상인 경우 오염물질 표시
+
         var locStr;
-        tmpGrade = 0;
         if (airInfo.pm25Value) {
             locStr = ts.__('LOC_PM25');
-            tmpGrade = airInfo.pm25Value/25;
             str = locStr + " " + airInfo.pm25Value + " " + airInfo.pm25Str;
-            item = {str: str, grade: tmpGrade};
+            item = {str: str, grade: airInfo.pm25Index};
             itemList.push(item);
         }
         if (airInfo.pm10Value) {
             locStr = ts.__('LOC_PM10');
-            tmpGrade = airInfo.pm10Value/50;
             str = locStr + " " + airInfo.pm10Value + " " + airInfo.pm10Str;
-            item = {str: str, grade: tmpGrade};
+            item = {str: str, grade: airInfo.pm10Index};
             itemList.push(item);
         }
         if (airInfo.o3Value) {
             locStr = ts.__('LOC_O3');
-            tmpGrade = airInfo.o3Value/0.06;
             str = locStr + " " + airInfo.o3Value + " " + airInfo.o3Str;
-            item = {str: str, grade: tmpGrade};
+            item = {str: str, grade: airInfo.o3Index};
             itemList.push(item);
         }
-
-        if (itemList.length === 0) {
-            tmpGrade = 0;
-            if (airInfo.aqiGrade) {
-                locStr = ts.__('LOC_AQI');
-                tmpGrade = airInfo.aqiGrade;
-                str = locStr + " " + airInfo.aqiValue + " " + airInfo.aqiStr;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
-            else if (airInfo.coGrade && tmpGrade < airInfo.coGrade) {
-                locStr = ts.__('LOC_CO');
-                tmpGrade = airInfo.coGrade;
-                str = locStr + " " + airInfo.coValue + " " + airInfo.coStr;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
-            else if (airInfo.no2Grade && tmpGrade < airInfo.no2Grade) {
-                locStr = ts.__('LOC_NO2');
-                tmpGrade = airInfo.no2Grade;
-                str = locStr + " " + airInfo.no2Value + " " + airInfo.no2Str;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
-            else if (airInfo.so2Grade && tmpGrade < airInfo.so2Grade) {
-                locStr = ts.__('LOC_SO2');
-                tmpGrade = airInfo.so2Grade;
-                str = locStr + " " + airInfo.so2Value + " " + airInfo.so2Str;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
+        if (airInfo.no2Grade) {
+            locStr = ts.__('LOC_NO2');
+            str = locStr + " " + airInfo.no2Value + " " + airInfo.no2Str;
+            item = {str: str, grade: airInfo.no2Index};
+            itemList.push(item);
+        }
+        if (airInfo.so2Grade) {
+            locStr = ts.__('LOC_SO2');
+            str = locStr + " " + airInfo.so2Value + " " + airInfo.so2Str;
+            item = {str: str, grade: airInfo.so2Index};
+            itemList.push(item);
+        }
+        if (airInfo.coGrade) {
+            locStr = ts.__('LOC_CO');
+            str = locStr + " " + airInfo.coValue + " " + airInfo.coStr;
+            item = {str: str, grade: airInfo.coIndex};
+            itemList.push(item);
         }
 
         itemList.sort(function (a, b) {
@@ -1197,14 +1394,20 @@ function ControllerTown24h() {
         var tmpGrade;
         var ts = res;
 
+        /**
+         * diff temp와 weather가 2.5로 특별한 날씨가 정보가 없으면 온도차와 날씨를 표시
+         */
         if (current.hasOwnProperty('t1h') && yesterday && yesterday.hasOwnProperty('t1h')) {
             var obj = self._diffTodayYesterday(current, yesterday, ts);
+            if (obj.grade <= 2) {
+                obj.grade = 2.5;
+            }
             item = {str: obj.str, grade: obj.grade};
             itemList.push(item);
         }
 
         if (current.hasOwnProperty('weatherType')) {
-            tmpGrade = 1;
+            tmpGrade = 2.5;
             if (current.weatherType > 3) {
                 tmpGrade = 3;
             }
@@ -1246,10 +1449,13 @@ function ControllerTown24h() {
             itemList.push(item);
         }
 
-        if (current.ultrv && Number(current.time) < 1800) {
+        if (current.ultrv && current.time <= 15) {
             tmpGrade = current.ultrvGrade;
+            if (current.time >= 11) {
+                tmpGrade++;
+            }
             str = ts.__('LOC_UV') +' '+current.ultrvStr;
-            item = {str:str, grade: tmpGrade+1};
+            item = {str:str, grade: tmpGrade};
             itemList.push(item);
         }
 
@@ -1259,12 +1465,12 @@ function ControllerTown24h() {
             itemList.push(item);
         }
 
-        if (current.fsnGrade && current.fsnStr) {
-            //주의(1)를 보통으로 보고 보정 1함.
-            str = ts.__('LOC_FOOD_POISONING') + ' ' + current.fsnStr;
-            item = {str: str, grade: current.fsnGrade+1};
-            itemList.push(item);
-        }
+        // if (current.fsnGrade && current.fsnStr) {
+        //     //주의(1)를 보통으로 보고 보정 1함.
+        //     str = ts.__('LOC_FOOD_POISONING') + ' ' + current.fsnStr;
+        //     item = {str: str, grade: current.fsnGrade+1};
+        //     itemList.push(item);
+        // }
 
         //감기
 
@@ -1364,7 +1570,9 @@ function ControllerTown24h() {
                 result.shortestPubDate = req.shortestPubDate;
             }
             if(req.shortest) {
-                result.shortest = req.shortest;
+                result.shortest = req.shortest.filter(function (shortest) {
+                    return shortest.pubDate === result.shortestPubDate;
+                });
             }
             if(req.currentPubDate) {
                 result.currentPubDate = req.currentPubDate;
@@ -1400,7 +1608,10 @@ function ControllerTown24h() {
             if (req.dailySummary) {
                 result.dailySummary = req.dailySummary;
             }
-            if (req.airInfo){
+            if (req.airInfoList) {
+                result.airInfoList = req.airInfoList;
+            }
+            else if (req.airInfo) {
                 result.airInfo = req.airInfo;
             }
             result.source = "KMA";
@@ -1427,6 +1638,23 @@ function ControllerTown24h() {
     this.sendResult = function (req, res) {
         log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
         res.json(req.result);
+    };
+
+    this._convertAirInfo = function (airInfo, airUnit, currentDate) {
+        if (airInfo.hasOwnProperty('last')) {
+            KecoController.recalculateValue(airInfo.last, airUnit);
+        }
+        if (airInfo.hasOwnProperty('pollutants')) {
+            var pollutants = airInfo.pollutants;
+            for (var pollutantName in pollutants) {
+                if (pollutants[pollutantName].hasOwnProperty('daily')) {
+                    pollutants[pollutantName].daily.forEach(function (value) {
+                        value.fromToday = kmaTimeLib.getDiffDays(value.date, currentDate);
+                        value.dayOfWeek = (new Date(value.date)).getDay();
+                    });
+                }
+            }
+        }
     };
 
     this.convertUnits = function (req, res, next) {
@@ -1513,22 +1741,13 @@ function ControllerTown24h() {
             if (req.current.hasOwnProperty('arpltn')) {
                 KecoController.recalculateValue(req.current.arpltn, req.query.airUnit);
             }
-            if (req.hasOwnProperty('airInfo')) {
-                var airInfo = req.airInfo;
-                if (airInfo.hasOwnProperty('last')) {
-                    KecoController.recalculateValue(airInfo.last, req.query.airUnit);
-                }
-                if (airInfo.hasOwnProperty('pollutants')) {
-                    var pollutants = airInfo.pollutants;
-                    for (var pollutantName in pollutants) {
-                        if (pollutants[pollutantName].hasOwnProperty('daily')) {
-                            pollutants[pollutantName].daily.forEach(function (value) {
-                                value.fromToday = kmaTimeLib.getDiffDays(value.date, currentDate);
-                                value.dayOfWeek = (new Date(value.date)).getDay();
-                            });
-                        }
-                    }
-                }
+            if (req.hasOwnProperty('airInfoList')) {
+                req.airInfoList.forEach(function (airInfo) {
+                    self._convertAirInfo(airInfo, req.query.airUnit, currentDate);
+                });
+            }
+            else if (req.hasOwnProperty('airInfo')) {
+                self._convertAirInfo(req.airInfo, req.query.airUnit, currentDate);
             }
         }
         catch (err) {

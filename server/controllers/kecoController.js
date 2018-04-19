@@ -55,21 +55,23 @@ arpltnController.recalculateValue = function (arpltn, airUnit) {
         }
     });
 
+    //aqicn은 가산점 줘야 하는지 확인 필요.
+    //summaryAir에서 xxIndex 사용.
+    var aqiValue = -1;
+    ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (name) {
+        if (!arpltn.hasOwnProperty(name+'Index')) {
+            arpltn[name+'Index'] = AqiConverter.value2index(airUnit, name, arpltn[name+'Value']);
+        }
+        if (arpltn[name+'Index'] > aqiValue) {
+            aqiValue = arpltn[name+'Index'];
+        }
+    });
+
     if (airUnit === 'airkorea' && arpltn.khaiValue && arpltn.khaiValue !== -1) {
         arpltn.aqiIndex = arpltn.aqiValue = arpltn.khaiValue;
         arpltn.aqiGrade = arpltn.hasOwnProperty('khaiGrade')?arpltn.khaiGrade: AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
     }
     else {
-        //aqicn은 가산점 줘야 하는지 확인 필요.
-        var aqiValue = -1;
-        ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (name) {
-            if (!arpltn.hasOwnProperty(name+'Index')) {
-                arpltn[name+'Index'] = AqiConverter.value2index(airUnit, name, arpltn[name+'Value']);
-            }
-            if (arpltn[name+'Index'] > aqiValue) {
-                aqiValue = arpltn[name+'Index'];
-            }
-        });
         arpltn.khaiValue = arpltn.aqiIndex = arpltn.aqiValue = aqiValue;
         arpltn.khaiGrade = arpltn.aqiGrade = AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
     }
@@ -387,7 +389,7 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
     async.waterfall([
             function(cb) {
                 var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
-                MsrStn.find({geo: {$near:coords, $maxDistance: 1}}).limit(10).lean().exec(function (err, msrStnList) {
+                MsrStn.find({geo: {$near:coords, $maxDistance: 1}}).limit(6).lean().exec(function (err, msrStnList) {
                     if (err) {
                         return cb(err);
                     }
@@ -405,7 +407,9 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
             function (arpltnList, cb) {
                 //arpltn = [가장 가까운 10개][최근 24시간]
                 var arpltn = self._mergeArpltnList(arpltnList, dateTime);
-                return cb(undefined, {arpltn:arpltn, list: arpltnList[0]});
+                //6개중에 데이터 있는 3개만 리스트로 생성
+                arpltnList = arpltnList.slice(0,3);
+                return cb(undefined, {arpltn:arpltn, list: arpltnList[0], stnList: arpltnList});
             }],
         function(err, arpltnObj) {
             if (err)  {

@@ -7,7 +7,7 @@ angular.module('service.push', [])
         var obj = {};
         obj.config = {
             "android": {
-                "senderID": twClientConfig.googleSenderId
+                "senderID": clientConfig.googleSenderId
                 //"icon": "TodayWeather",
                 //"iconColor": "blue"
                 //"forceShow": true,
@@ -21,8 +21,8 @@ angular.module('service.push', [])
             "windows": {}
         };
 
-        obj.pushUrl = twClientConfig.serverUrl + '/v000902'+'/push';
-        obj.pushListUrl = twClientConfig.serverUrl + '/v000902'+'/push-list';
+        obj.pushUrl = clientConfig.serverUrl + '/v000902'+'/push';
+        obj.pushListUrl = clientConfig.serverUrl + '/v000902'+'/push-list';
 
         /**
          *
@@ -129,6 +129,9 @@ angular.module('service.push', [])
             var postObj;
 
             console.log(pushInfo);
+            var units = Units.getAllUnits();
+            units.airForecastSource = 'kaq';
+
             /**
              * 기존 호환성때문에 cityIndex로 되어 있지만, alert지원부터 registrationId내에서 유일한 ID임.
              */
@@ -143,8 +146,9 @@ angular.module('service.push', [])
                 location: pushInfo.location,       //lat, long
                 town: pushInfo.town,               //first, second, third
                 source: pushInfo.source,           //KMA or DSF, ...
-                units: Units.getAllUnits(),
-                timezoneOffset: new Date().getTimezoneOffset()*-1   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
+                units: units,
+                timezoneOffset: new Date().getTimezoneOffset()*-1,   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
+                package: clientConfig.package
             };
 
             if (pushInfo.category === 'alarm') {
@@ -162,6 +166,7 @@ angular.module('service.push', [])
                     postObj.airAlertsBreakPoint = 4;
                 }
             }
+            console.log({postObj: postObj});
             return postObj;
         };
 
@@ -481,20 +486,40 @@ angular.module('service.push', [])
          * @param {number} cityIndex
          */
         obj.updateCityInfo = function (cityIndex) {
+            var self = this;
             var pushList = this.pushData.pushList;
             var list = pushList.filter(function (obj) {
                return obj.cityIndex === cityIndex;
             });
 
+            var needToUpdate = false;
+
             list.forEach(function (pushInfo) {
-               var city  = this._getSimpleCityInfo(cityIndex);
+                var city  = self._getSimpleCityInfo(cityIndex);
+                if (city.source == undefined || city.source.length === 0) {
+                    return;
+                }
                 for (var key in city) {
+                    if (key == 'location') {
+                       if (pushInfo.location.lat === city.location.lat &&
+                        pushInfo.location.long === city.location.long)  {
+                           needToUpdate = false;
+                       }
+                       else {
+                           needToUpdate = true;
+                       }
+                    }
+                    else if (pushInfo[key] !== city[key]) {
+                       needToUpdate = true;
+                    }
                     pushInfo[key] = city[key];
                 }
             });
 
-            this._postPushList(list);
-            this.savePushInfo();
+            if (needToUpdate) {
+                this._postPushList(list);
+                this.savePushInfo();
+            }
         };
 
         /**

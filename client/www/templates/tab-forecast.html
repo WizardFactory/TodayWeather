@@ -1,6 +1,6 @@
 <ion-view>
     <ion-nav-buttons side="left">
-        <button menu-toggle="left" class="button button-icon button-positive icon ion-navicon"></button>
+        <button menu-toggle="left" class="button button-icon icon ion-navicon"></button>
     </ion-nav-buttons>
     <ion-nav-title>
         <p class="title forecast-header">
@@ -11,30 +11,31 @@
         </p>
     </ion-nav-title>
     <ion-nav-buttons side="right">
-        <button class="button button-icon button-positive icon"
+        <button class="button button-icon icon"
                 ng-class="hasPush?'ion-ios-bell':'ion-ios-bell-outline'"
                 ng-if="!isAndroid()"
                 ng-click="goPushPage()"
                 style="padding: 0 4px"></button>
-        <button class="button button-icon button-positive icon"
+        <button class="button button-icon icon"
                 ng-class="hasPush?'ion-android-notifications':'ion-android-notifications-none'"
                 ng-if="isAndroid()"
                 ng-click="goPushPage()"
                 style="padding: 0 4px"></button>
-        <button class="button button-icon button-positive icon ion-ios-upload-outline"
+        <button class="button button-icon icon ion-ios-upload-outline"
                 ng-if="!isAndroid()"
                 ng-click="doTabShare()"
                 style="padding: 0 4px;margin-right: 4px"></button>
-        <button class="button button-icon button-positive icon ion-android-share-alt"
+        <button class="button button-icon icon ion-android-share-alt"
                 ng-if="isAndroid()"
                 ng-click="doTabShare()"
                 style="padding: 0 4px;margin-right: 4px"></button>
     </ion-nav-buttons>
     <ion-content delegate-handle="body" direction="y" zooming="false" scrollbar-x="false" scrollbar-y="false"
-                 has-bouncing="false" tabs-shrink class="main-content">
+                 has-bouncing="false" tabs-shrink bar-scrolled class="main-content">
         <div class="card">
             <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()" class="row row-no-padding"
-                 ng-style="{'min-height':headerHeight+'px'}">
+                 ng-class="photo?'photo':'no-photo'" ng-style="{'min-height':headerHeight+'px'}">
+                <div class="photo-box" ng-style="{'background-image': 'linear-gradient(to bottom, rgba(255,255,255,0) 100%, rgba(255,255,255,1)), url('+photo+')'}"></div>
                 <div class="main-box-arrow" ng-click="onSwipeRight()" ng-if="cityCount > 1">
                     <span class="icon-left ion-chevron-left"></span>
                 </div>
@@ -57,7 +58,7 @@
                 </div>
             </div>
             <div style="position: relative" ng-if="timeWidth">
-                <div id="chartScroll" class="chart-scroll">
+                <div id="chartShortScroll" class="chart-scroll">
                     <div ng-style="{'width':timeWidth +'px'}">
                         <div class="chart-header" ng-if="timeTable">
                             <div class="row row-no-padding day-title-list">
@@ -95,7 +96,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card" ng-if="showDetailWeather && !showHourlyAqiForecast() && currentWeather.arpltn">
+        <div class="card" ng-if="showDetailWeather && !showHourlyAqiForecast() && currentWeather.arpltn && currentWeather.arpltn.dataTime">
             <table class="rowgroup-vspacing-aqi-box">
                 <tr>
                     <td ng-if="currentWeather.arpltn.pm25Value" ng-click="goAirInfoPage('pm25')">
@@ -198,7 +199,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card" ng-if="showDetailWeather && currentWeather.arpltn">
+        <div class="card" ng-if="showDetailWeather && currentWeather.arpltn && currentWeather.arpltn.dataTime">
             <div class="card-title">{{"LOC_DETAIL_AQI"|translate}}</div>
             <table class="colgroup-box">
                 <tr ng-if="currentWeather.arpltn.pm25Value != undefined">
@@ -303,6 +304,24 @@
                     <td>
                         <i class="material-icons">&#xE88F;</i>
                         <a>{{getCurrentAirUnitStr()|translate}} </a>
+                    </td>
+                </tr>
+                <tr ng-if="airForecastPubdate">
+                    <td>
+                        <span>{{"LOC_FORECAST"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE192;</i>
+                        <span>{{airForecastPubdate}}</span>
+                    </td>
+                </tr>
+                <tr ng-if="airForecastSource" ng-click="popUpAirForecastInfo(airForecastSource)">
+                    <td>
+                        <span>{{"LOC_AIR_FORECAST_SOURCE"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE88F;</i>
+                        <a>{{airForecastSource.toUpperCase()}} </a>
                     </td>
                 </tr>
             </table>

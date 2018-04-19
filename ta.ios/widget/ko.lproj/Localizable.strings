@@ -1,0 +1,25 @@
+/*
+ Localizable.strings .strings
+ TodayWeather
+ 
+ Created by KwangHo Kim on 2017. 1. 30..
+ 
+ */
+// Korean
+
+// "Key"					= "Value"
+
+// Widget
+"LOC_UPDATE"						= "업데이트";
+
+"LOC_YESTERDAY"                     = "어제";
+"LOC_TODAY"                         = "오늘";
+"LOC_TOMORROW"                      = "내일";
+
+"LOC_AQI"                           = "통합대기";
+"LOC_PM10"                          = "미세먼지";
+"LOC_PM25"                          = "초미세먼지";
+
+"LOC_PROBABILITY_OF_PRECIPITATION"  = "강수확률";
+"LOC_TODAYAIR"                  = "오늘미세";
+"LOC_PLEASE_EXECUTE_MAIN_APP"       = "오늘미세앱을 실행하여 도시목록을 생성하여 주세요";

@@ -27,7 +27,7 @@ kmaTownShortController.prototype.saveShort = function(newData, callback){
             function(item, cb){
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
                 var newItem = {mCoord: coord, pubDate: pubDate, fcsDate: fcsDate, shortData: item};
-                log.info('KMA Town S> item : ', JSON.stringify(newItem));
+                log.debug('KMA Town S> item : ', JSON.stringify(newItem));
 
                 modelKmaTownShort.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
@@ -40,7 +40,7 @@ kmaTownShortController.prototype.saveShort = function(newData, callback){
                 });
             },
             function(err){
-                log.info('KMA Town S> finished to save town.short data');
+                log.debug('KMA Town S> finished to save town.short data');
                 callback(err);
             }
         );
@@ -118,21 +118,24 @@ kmaTownShortController.prototype.checkPubDate = function(model, srcList, dateStr
     try{
         async.mapSeries(srcList,
             function(src,cb){
-                modelKmaTownShort.find({'mCoord.mx': src.mx, 'mCoord.my': src.my}, {_id: 0, mCoord:1, pubDate:1}).sort({"pubDate":1}).lean().exec(function(err, dbList){
-                    if(err){
-                        log.info('KMA Town S> There is no data matached to : ', src);
-                        return cb(null, src);
-                    }
-
-                    for(var i=0 ; i<dbList.length ; i++){
-                        if(dbList[i].pubDate.getTime() === pubDate.getTime()){
-                            log.info('KMA Town S> Already updated : ', src, dateString);
-                            return cb(null);
+                modelKmaTownShort.find({'mCoord.mx': src.mx, 'mCoord.my': src.my}, {_id: 0, mCoord:1, pubDate:1})
+                    .sort({"pubDate":1})
+                    .lean()
+                    .exec(function(err, dbList) {
+                        if(err){
+                            log.info('KMA Town S> There is no data matached to : ', src);
+                            return cb(null, src);
                         }
-                    }
 
-                    cb(null, src);
-                });
+                        for(var i=0 ; i<dbList.length ; i++){
+                            if(dbList[i].pubDate.getTime() === pubDate.getTime()){
+                                log.info('KMA Town S> Already updated : ', src, dateString);
+                                return cb(null);
+                            }
+                        }
+
+                        cb(null, src);
+                    });
             },
             function(err, result){
                 result = result.filter(function(item){
@@ -167,4 +170,3 @@ kmaTownShortController.prototype.remove = function (pubDate) {
 };
 
 module.exports = kmaTownShortController;
-

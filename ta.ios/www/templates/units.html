@@ -1,0 +1,20 @@
+<ion-view>
+    <ion-nav-buttons side="left">
+        <button class="button button-icon button-positive icon"
+                ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" ng-click="onClose()">
+        </button>
+    </ion-nav-buttons>
+    <ion-nav-title>
+        <p class="title">
+            <span style="vertical-align: middle">{{'LOC_UNITS'|translate}}</span>
+        </p>
+    </ion-nav-title>
+    <ion-content scroll="false" style="background-color: #F5F5F5;">
+        <div class="list">
+            <label class="item" ng-repeat="unit in units" ng-click="settingRadio(unit)">
+                {{getUnitNameStr(unit.name)|translate}}
+                <span style="float: right">{{getUnitValueStr(unit)|translate}}</span>
+            </label>
+        </div>
+    </ion-content>
+</ion-view>

@@ -58,16 +58,7 @@ class AlertPushController {
             pushInfo.lang = 'ko';
         }
 
-        if (pushInfo.units == undefined) {
-            let obj = {};
-            obj.temperatureUnit = "C";
-            obj.windSpeedUnit = "m/s";
-            obj.pressureUnit = "hPa";
-            obj.distanceUnit = "km";
-            obj.precipitationUnit = "mm";
-            obj.airUnit = "airkorea";
-            pushInfo.units = obj;
-        }
+        pushInfo.units = UnitConverter.initUnits(pushInfo.units);
 
         let apiVersion = 'v000902';
         let url = config.serviceServer.url;
@@ -137,6 +128,9 @@ class AlertPushController {
         }
         else if (resData.source === 'DSF') {
             current = resData.thisTime[1];
+            if (current.pty > 0) {
+                current.rns = true;
+            }
         }
         else {
             throw new Error("Unknown source "+JSON.stringify({resData:resData}));
@@ -146,16 +140,40 @@ class AlertPushController {
             throw new Error("data current is undefined "+JSON.stringify({resData:resData}));
         }
 
+        infoObj.name = resData.name;
+        if (infoObj.name == undefined) {
+            if (resData.townName && resData.townName.length > 0) {
+                infoObj.name = resData.townName;
+            }
+            else if (resData.cityName && resData.cityName.length > 0) {
+                infoObj.name = resData.cityName;
+            }
+        }
+
         let weather = infoObj.weather = {};
 
         weather.pty = current.pty || 0;
+        weather.rns = current.rns || false;
         weather.desc = current.weather;
 
-        if (current.hasOwnProperty('ptyStationName')) {
-            weather.stationName = current.ptyStationName;
+        if (current.pty > 0 && current.rns === false) {
+            // if (current.pty === 3) {
+            //     if (resData.shortest &&
+            //         resData.shortest[0] &&
+            //         resData.shortest[0].pty === 3)
+            //     {
+            //         //It is snow but too late to send push
+            //     }
+            // }
+            log.error('rns and pty are different.',
+                JSON.stringify(alertPush.geo), JSON.stringify({current: current}));
         }
-        else if (current.hasOwnProperty('stationName')) {
-            weather.stationName = current.stationName;
+
+        if (current.hasOwnProperty('rnsStnName')) {
+            weather.stnName = current.rnsStnName;
+        }
+        else if (current.hasOwnProperty('stnName')) {
+            weather.stnName = current.stnName;
         }
 
         if (current.hasOwnProperty('dateObj')) {
@@ -170,7 +188,7 @@ class AlertPushController {
         log.debug({mins: mins});
 
         if (current.pty === 0) { //맑음
-            if (mins === 15) {
+            if (mins < 30) {
                if (resData.hasOwnProperty('shortest'))  {
                    let forecastIndex = resData.shortest.findIndex((obj) => {
                       return obj.dateObj === strForecastTime;
@@ -179,21 +197,26 @@ class AlertPushController {
                        let shortest1 = resData.shortest[forecastIndex];
                        let shortest2 = resData.shortest[forecastIndex+1];
                        let forecastObj = {pty: 0, pubDate: resData.shortestPubDate};
-                       if (shortest1.pty > 0) {
-                           if (shortest2 != undefined) {
-                               if (shortest2.pty > 0) {
-                                   forecastObj.pty = shortest1.pty;
+                       if (shortest1 && shortest1.pty > 0) {
+                           if (shortest2 && shortest2.pty > 0) {
+                               for(let key in shortest1) {
+                                   forecastObj[key] = shortest1[key];
                                }
+                               log.info(JSON.stringify({shortestPubDate: resData.shortestPubDate,
+                                   shortest:resData.shortest}));
                            }
                            else {
-                               forecastObj.pty = shortest1.pty;
+                               log.info('parseWeatherAirData : only shortest1 pty is '+shortest1.pty);
                            }
+                       }
+                       else if (shortest1 == undefined) {
+                           log.error('parseWeatherAirData : shortest1 is undefined');
                        }
 
                        weather.forecast = forecastObj;
                    }
                    else {
-                       log.warn("Fail to find shortest date="+strForecastTime);
+                       log.error("parseWeatherAirData : Fail to find shortest date="+strForecastTime);
                    }
                }
                //didn't find forecast from short
@@ -236,10 +259,8 @@ class AlertPushController {
             if (weather.forecast) {
                 if (weather.forecast.pty > 0) {
                     log.info('send weather forecast alert '+JSON.stringify(weather));
-                    //for slack
-                    log.error('send weather forecast weather:'+JSON.stringify(weather)+' alert:'+JSON.stringify(alertPush));
                 }
-                delete weather.forecast;
+                // delete weather.forecast;
             }
         }
 
@@ -258,23 +279,28 @@ class AlertPushController {
 
         let airList = [];
         ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(name => {
-          airList.push({name:name, grade:airInfo[name+'Grade'], value: airInfo[name+'Value']});
+            if (airInfo[name+'Grade']) {
+                airList.push({name:name, grade:airInfo[name+'Grade'], value: airInfo[name+'Value']});
+            }
         });
-        airList = AqiConverter.sortByGrade(airList);
-        if (airList[0].grade) {
-            air.name = airList[0].name;
-            air.grade = airList[0].grade;
-            air.value = airList[0].value;
-            air.str = airInfo[air.name+'Str'];
+        if (airList.length > 0) {
+            airList = AqiConverter.sortByGrade(airList);
+            if (airList[0].grade) {
+                air.name = airList[0].name;
+                air.grade = airList[0].grade;
+                air.value = airList[0].value;
+                air.str = airInfo[air.name+'Str'];
+                air.stationName = airInfo.stationName;
+            }
+            air.dataTime = airInfo.dataTime;
         }
-        air.dataTime = airInfo.dataTime;
 
         forecastTime.setMinutes(0);
         let strCurrentTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(currentTime);
         let strAirForecastTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(forecastTime);
 
         if (!air.hasOwnProperty('grade') || air.grade < alertPush.airAlertsBreakPoint ) {
-           if (mins >= 40 && resData.hasOwnProperty('airInfo') &&
+           if (mins > 30 && resData.hasOwnProperty('airInfo') &&
                resData.airInfo.hasOwnProperty('pollutants'))
            {
                let pollutants = resData.airInfo.pollutants;
@@ -332,10 +358,8 @@ class AlertPushController {
     _updateDb(alertPush, callback) {
         log.info(JSON.stringify({alertPush: alertPush}));
         AlertPush.update(
-            {type: alertPush.type, registrationId: alertPush.registrationId,
-                cityIndex: alertPush.cityIndex, id: alertPush.id},
-            alertPush,
-            {upsert : true},
+            {_id: alertPush._id},
+            {$set: {"airAlerts": alertPush.airAlerts, "precipAlerts": alertPush.precipAlerts}},
             function (err, result) {
                 if (err) {
                     return callback(err);
@@ -436,25 +460,24 @@ class AlertPushController {
         log.info(JSON.stringify({alertPush: alertPush}));
         log.info(JSON.stringify({infoObj: infoObj}));
 
-        if (alertPush.startTime === this.time ||
-            alertPush.precipAlerts == undefined ||
-            alertPush.precipAlerts.lastState == undefined) {
-            return send;
-        }
-
         if (infoObj == undefined) {
             throw new Error('info obj is undefined on compare with last info');
         }
 
         limitPushTime.setHours(limitPushTime.getHours()-6);
-        let precipAlerts = alertPush.precipAlerts;
+
+        let precipAlerts = alertPush.precipAlerts || {};
         if (!precipAlerts.hasOwnProperty('pushTime') || precipAlerts.pushTime < limitPushTime) {
            //check weather
             if (infoObj.hasOwnProperty('weather')) {
                 let weather = infoObj.weather;
 
-                if (precipAlerts.lastState === 0) {
-                    if (weather.pty > 0)  {
+                if (precipAlerts.lastState === 0 || precipAlerts.lastState == undefined) {
+                    /**
+                     * TW-165 pty는 확실한 비이지만, 동네 실황은 너무 늦기 때문에 보수적인 접근으로 rns도 true인 경우에는만 Push전송
+                     * lastState는 pty로 변경함
+                     */
+                    if (weather.pty > 0 && weather.rns)  {
                         send = 'weather';
                     }
                     else if (weather.hasOwnProperty('forecast')) {
@@ -466,20 +489,17 @@ class AlertPushController {
             }
         }
 
-        if (alertPush.airAlerts) {
-            let airAlerts = alertPush.airAlerts;
-            if (!airAlerts.hasOwnProperty('pushTime') || airAlerts.pushTime < limitPushTime )
-            {
-                if (infoObj.hasOwnProperty('air')) {
-                    let air = infoObj.air;
-                    if (airAlerts.lastGrade < alertPush.airAlertsBreakPoint) {
-                        if (air.grade >= alertPush.airAlertsBreakPoint) {
+        let airAlerts = alertPush.airAlerts || {};
+        if (!airAlerts.hasOwnProperty('pushTime') || airAlerts.pushTime < limitPushTime ) {
+            if (infoObj.hasOwnProperty('air')) {
+                let air = infoObj.air;
+                if (airAlerts.lastGrade < alertPush.airAlertsBreakPoint || airAlerts.lastGrade == undefined) {
+                    if (air.grade >= alertPush.airAlertsBreakPoint) {
+                        send = send === 'weather'?'all':'air';
+                    }
+                    else if (air.hasOwnProperty('forecast')) {
+                        if (air.forecast.grade >= alertPush.airAlertsBreakPoint) {
                             send = send === 'weather'?'all':'air';
-                        }
-                        else if (air.hasOwnProperty('forecast')) {
-                            if (air.forecast.grade >= alertPush.airAlertsBreakPoint) {
-                                send = send === 'weather'?'all':'air';
-                            }
                         }
                     }
                 }
@@ -517,32 +537,39 @@ class AlertPushController {
         //잠실본동 날씨예보
         //1시부터 비,눈,진눈깨비가 내릴 예정입니다.
         //잠실본동 대기정보
-        //12시 미세먼지/초미세먼지/오존/이산화질소/일산화탄소/아황산가스/통합대기가 나쁨입니다. 외부활동에 주의하세요.
+        //12시부터 미세먼지/초미세먼지/오존/이산화질소/일산화탄소/아황산가스/통합대기가 나쁨입니다. 외부활동에 주의하세요.
         //잠실본동 대기예보
         //13시부터 미세먼지/초미세먼지/오존/통합대기가 ‘보통’ 수준을 나타낼 것으로 예상됩니다. 외부활동에 주의하세요.
+        //12:35
+        //stnName 비가 내리고 있습니다.
+        //대기정보 | 대기예보
+        //복정동 12시부터 미세먼지가 나쁨/32입니다.
 
-        let title = pushInfo.name;
-        let text ="";
+        let cityName = pushInfo.name || infoObj.name || "";
+        let title = "";
+        let text = "";
         let hasWeather = false;
+
+        title += cityName + " ";
         if (infoObj.hasOwnProperty('weather')) {
             let weather = infoObj.weather;
             if (weather.pty > 0) {
-                title += " " + weather.dateObj.substr(11,5);
+                title += weather.dateObj.substr(11,5);
                 if (weather.pty === 1) {
-                    text = trans.__("LOC_IT_IS_RAINING");
+                    text += trans.__("LOC_IT_IS_RAINING");
                 }
                 else if (weather.pty === 2) {
-                    text = trans.__("LOC_IT_IS_SLEETING");
+                    text += trans.__("LOC_IT_IS_SLEETING");
                 }
                 else if (weather.pty === 3) {
-                    text = trans.__("LOC_IT_IS_SNOWING");
+                    text += trans.__("LOC_IT_IS_SNOWING");
                 }
                 hasWeather = true;
             }
             else if (weather.forecast && weather.forecast.pty > 0) {
                 let forecast = weather.forecast;
                 let forecastTime = (new Date(forecast.dateObj)).getHours();
-                title += " " + trans.__("LOC_FORECAST");
+                title += trans.__("LOC_FORECAST");
 
                 let str;
                 if (forecast.pty === 1) {
@@ -560,21 +587,26 @@ class AlertPushController {
         }
         if (infoObj.hasOwnProperty('air')) {
             let air = infoObj.air;
+
+            if (title.length === 0) {
+                title += air.stationName + " ";
+            }
+
             if (air.grade >= pushInfo.airAlertsBreakPoint) {
                 if (hasWeather) {
-                    text += " "+trans.__('LOC_AIR_INFORMATION');
+                    text += " ";
                 }
                 else {
-                    title += " "+trans.__('LOC_AIR_INFORMATION');
+                    title += trans.__('LOC_AIR_INFORMATION') + " ";
                 }
 
                 let str = trans.__('LOC_H_POLLUTANT_IS_GRADE');
                 let dataTime = (new Date(air.dataTime)).getHours();
                 let name = trans.__(AqiConverter.name2string(air.name));
-                if (hasWeather) {
-                    text += " ";
+                if (name.indexOf('오존')>=0) {
+                    str = str.replace('가', '이');
                 }
-                text += sprintf(str, dataTime,  name, air.str);
+                text += sprintf(str, dataTime,  name, air.str || air.value);
             }
             else if (air.hasOwnProperty('forecast') && air.forecast.grade >= pushInfo.airAlertsBreakPoint) {
                 let strAirForecast = '';
@@ -586,20 +618,20 @@ class AlertPushController {
 
                 }
                 if (hasWeather)  {
-                    text += " " + strAirForecast;
+                    text += " " + strAirForecast + " ";
                 }
                 else {
-                    title += " "+ strAirForecast;
+                    title += strAirForecast;
                 }
 
                 let forecast = air.forecast;
 
                 let str = trans.__('LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H');
                 let dataTime = (new Date(forecast.date)).getHours();
-                if (hasWeather) {
-                    text += " ";
-                }
                 let name = trans.__(AqiConverter.name2string(forecast.name));
+                if (name.indexOf('오존')>=0) {
+                    str = str.replace('가', '이');
+                }
                 text += sprintf(str, dataTime, name, forecast.str);
             }
         }
@@ -666,9 +698,6 @@ class AlertPushController {
                     });
 
                     log.info({send:send, registrationId: alertPush.registrationId});
-                    if (send !== 'none') {
-                        log.error({send:send, infoObj:infoObj, alertPush: alertPush});
-                    }
                     callback(null, {send:send, data: infoObj});
                 },
                 (pushWithWeather, callback) => {
@@ -679,6 +708,8 @@ class AlertPushController {
                     let notification;
                     try {
                         notification = this._convertToNotification(alertPush, pushWithWeather.data);
+                        log.error({send:pushWithWeather.send, notification: notification,
+                            infoObj:pushWithWeather.data, alertPush: alertPush});
                     }
                     catch(err) {
                         return callback(err);
@@ -698,7 +729,7 @@ class AlertPushController {
     }
 
     _streamAlertPush (list, callback) {
-        async.mapLimit(list, 10,
+        async.mapLimit(list, 6,
             (alertPush, callback) => {
                 this._sendAlertPush(alertPush, (err, result) =>{
                     if (err) {
@@ -761,7 +792,7 @@ class AlertPushController {
         queryList.push(queryN);
         queryList.push(queryR);
         let query = {$or: queryList};
-        AlertPush.find(query, {_id: 0}).$where(checkUpdateInterval).lean().exec( (err, list) => {
+        AlertPush.find(query).$where(checkUpdateInterval).lean().exec( (err, list) => {
             if (err) {
                 return callback(err);
             }
@@ -802,7 +833,10 @@ class AlertPushController {
                else {
                    log.debug(result);
                }
-               log.info('end send alert push list time:'+time);
+               let date = new Date();
+               let timeUTC = date.getUTCHours() * 3600 + date.getUTCMinutes() * 60;
+               log.info('end send alert push list time:'+time+' spent secs:'+(timeUTC-time));
+
                if (callback) {
                    callback();
                }
@@ -825,7 +859,9 @@ class AlertPushController {
         setInterval( () => {
             let date = new Date();
             let min = date.getUTCMinutes();
-            if (min === 0 || min === 15 || min === 30 || min === 45) {
+            //7 - 도시별날씨가 6분에 갱신
+            //17 - 대기정보가 갱신된 시간
+            if (min === 7 || min === 17 || min === 35 || min === 50) {
                 let timeUTC = date.getUTCHours() * 3600 + date.getUTCMinutes() * 60;
                 this.sendAlertPushList(timeUTC);
                 this._removeOldList();

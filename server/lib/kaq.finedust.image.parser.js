@@ -6,6 +6,7 @@
 const getPixels = require('get-pixels');
 //const fs = require('fs');
 const kaqDustImage = require('../config/config').image.kaq_korea_image;
+const kaqModelingImage = require('../config/config').image.kaq_korea_modeling_image;
 
 
 
@@ -14,8 +15,12 @@ class KaqImageParser{
         return this;
     }
 
-    getImagePos() {
+
+    getImagePos(type) {
         var pos = kaqDustImage.pixel_pos;
+        if(type === 'modeling'){
+            pos = kaqModelingImage.pixel_pos;
+        }
         return {
             left: parseInt(pos.left),
             right: parseInt(pos.right),
@@ -24,8 +29,12 @@ class KaqImageParser{
         }
     }
 
-    getDefaultCoordi() {
+    getDefaultCoordi(type) {
         var coordi = kaqDustImage.coordi;
+        if(type === 'modeling'){
+            coordi = kaqModelingImage.coordi;
+        }
+
         return {
             top_left:{
                 lat: parseFloat(coordi.top_lat),
@@ -47,28 +56,33 @@ class KaqImageParser{
     }
 
 
-    _isValidImage(width, height){
+    _isValidImage(type, width, height){
         var size = {
             width : parseInt(kaqDustImage.size.width),
             height: parseInt(kaqDustImage.size.height)
         };
 
+        if(type === 'modeling'){
+            size.width = parseInt(kaqModelingImage.size.width);
+            size.height = parseInt(kaqModelingImage.size.height);
+        }
+
         return (size.width === width && size.height === height);
     }
 
-    getPixelMap(path, type, coordnate, callback){
-        getPixels(path, type, (err, pixels)=>{
+    getPixelMap(path, type, format, coordnate, callback){
+        getPixels(path, format, (err, pixels)=>{
             if(err){
                 log.error('KaqImgParser> Fail to get pixels info : ', err);
                 return callback(err);
             }
 
-            if(!this._isValidImage(pixels.shape[1], pixels.shape[2])){
+            if(!this._isValidImage(type, pixels.shape[1], pixels.shape[2])){
                 log.error('KaqImgParser> Invalid Image size :', pixels.shape[1], pixels.shape[2]);
                 return callback('INVALID_IMAGE');
             }
 
-            var map_area = this.getImagePos();
+            var map_area = this.getImagePos(type);
             var result = {
                 image_count: pixels.shape[0],
                 image_width: pixels.shape[1],
@@ -83,7 +97,7 @@ class KaqImageParser{
 
             log.info('KaqImgParser> image count : ', pixels.shape[0]);
 
-            var default_coordinate = this.getDefaultCoordi();
+            var default_coordinate = this.getDefaultCoordi(type);
             // map's width&height (count of pixels)
             result.map_width = map_area.right - map_area.left;
             result.map_height = map_area.bottom - map_area.top;

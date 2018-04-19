@@ -315,9 +315,10 @@ angular.module('controller.push', [])
                         updated = true;
 
                         var selectedTime = Push.secs2date(val);
+                        console.log({val:val, selectedTime: selectedTime});
 
                         if (index === pushInfo.alarmList.length) {
-                            var alarmInfo = Push.newPushAlarm(id, cityIndex, selectedTime, pushInfo.dayOfWeek);
+                            var alarmInfo = Push.newPushAlarm(id, cityIndex, val, pushInfo.dayOfWeek);
                             pushInfo.alarmList.push(alarmInfo);
                         }
                         else {

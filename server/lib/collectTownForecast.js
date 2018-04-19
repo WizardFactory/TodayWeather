@@ -85,14 +85,15 @@ function CollectData(options, callback){
             {name: '강릉', code: '11D20501'}, // 강원 동부
 
             {name: '대전', code: '11C20401'}, // 충남
+            {name: '세종', code: '11C20404'}, // 충남
             {name: '서산', code: '11C20101'}, // 충남 서부
+            {name: '홍성', code: '11C20104'}, // 충남북부서해안
 
             {name: '청주', code: '11C10301'}, // 충북
-            {name: '세종', code: '11C20404'}, // 충북 서부
 
             {name: '광주', code: '11F20501'}, // 전남 북부
-            {name: '여수', code: '11F20401'}, // 전남 남부
             {name: '목포', code: '21F20801'}, // 전남 서부
+            {name: '여수', code: '11F20401'}, // 전남 남부
 
             {name: '군산', code: '21F10501'}, // 전북 서부
             {name: '전주', code: '11F10201'}, // 전북
@@ -120,7 +121,11 @@ function CollectData(options, callback){
             {name: '제주도 ', code: '12B10500'},
             {name: '동해남부 ', code: '12C10000'},
             {name: '동해중부 ', code: '12C20000'},
-            {name: '동해북부 ', code: '12C30000'}
+            {name: '동해북부 ', code: '12C30000'},
+            {name: '대화퇴', code: '12D00000'},
+            {name: '동중국해', code: '12E00000'},
+            {name: '규슈', code: '12F00000'},
+            {name: '연해주', code: '12G00000'},
         ]
     );
 
@@ -330,11 +335,11 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
 
     req.get(url, {timeout: 1000*10}, function(err, response, body){
         if(err) {
-            if (err.code == "ETIMEDOUT") {
+            if (err.code === "ETIMEDOUT" || err.code === "ESOCKETTIMEDOUT" || err.code === "ECONNRESET") {
                 log.debug(err);
             }
             else {
-                log.warn(err);
+                log.warn(`err.code=${err.code}`);
             }
             //log.error('#', meta);
 

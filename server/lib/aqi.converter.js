@@ -6,7 +6,7 @@
 
 const air_pollutants_breakpoints = {
     "airkorea" : {
-        "pm25" : [0, 15, 50, 100, 500],     //ug/m3 (avg 24h)
+        "pm25" : [0, 15, 35, 75, 500],     //ug/m3 (avg 24h)
         "pm10" : [0, 30, 80, 150, 600],     //ug/m3 (avg 24h)
         "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm   (avg 1h)
         "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm   (avg 1h)
@@ -407,7 +407,7 @@ class AqiConverter {
      */
     static index2Grade(airUnit, index){
         if(index === undefined) {
-            log.warn('_getAqiGrade : invalid parameter');
+            log.warn('index to grade : invalid parameter');
             return -1;
         }
 

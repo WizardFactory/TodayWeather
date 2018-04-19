@@ -44,18 +44,18 @@ angular.module('starter', [
             else {
                 console.log('util or util.ga is undefined');
             }
-            if (twClientConfig && twClientConfig.debug) {
+            if (clientConfig && clientConfig.debug) {
                 alert("ERROR in " + exception);
             }
         }
     })
-    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase) {
-        if (twClientConfig.debug) {
+    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase, WeatherUtil) {
+        if (clientConfig.debug) {
             Util.ga.debugMode();
         }
 
         if (ionic.Platform.isIOS()) {
-            Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
+            Util.ga.startTrackerWithId(clientConfig.gaIOSKey);
 
             // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
@@ -66,7 +66,7 @@ angular.module('starter', [
                 });
             }
         } else if (ionic.Platform.isAndroid()) {
-            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey, 30);
+            Util.ga.startTrackerWithId(clientConfig.gaAndroidKey, 30);
 
             // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
@@ -164,7 +164,7 @@ angular.module('starter', [
             var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
             Util.ga.trackEvent('window', 'error', errorMsg);
             Util.ga.trackException(errorMsg, true);
-            if (twClientConfig && twClientConfig.debug) {
+            if (clientConfig && clientConfig.debug) {
                 alert("ERROR in " + url + " (line #" + line + "): " + msg);
             }
             return false; //suppress Error Alert;
@@ -177,7 +177,6 @@ angular.module('starter', [
             Util.ga.trackEvent('app', 'status', 'pause');
         }, false);
 
-        WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
             $rootScope.$broadcast('reloadEvent', 'resume');
         });
@@ -228,30 +227,52 @@ angular.module('starter', [
         });
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
-            var headerbar = angular.element(document.querySelectorAll('ion-header-bar'));
-            headerbar.removeClass('bar-search');
-            headerbar.removeClass('bar-forecast');
-            headerbar.removeClass('bar-dailyforecast');
-            headerbar.removeClass('bar-air');
-            headerbar.removeClass('bar-hidden');
+            var headerbars = angular.element(document.querySelectorAll('ion-header-bar'));
+            headerbars.removeClass('bar-search');
+            headerbars.removeClass('bar-forecast');
+            headerbars.removeClass('bar-dailyforecast');
+            headerbars.removeClass('bar-air');
+            headerbars.removeClass('bar-clear');
+            headerbars.removeClass('bar-dark');
+
+            for (var i = 0; i < headerbars.length; i++) {
+                headerbars[i].style.backgroundImage = "";
+            }
 
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-search');
+                headerbars.addClass('bar-search');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'tab.forecast') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-forecast');
+                headerbars.addClass('bar-forecast');
+                if ($rootScope.settingsInfo.showWeatherPhotos === '1') {
+                    headerbars.addClass('bar-clear');
+                } else {
+                    headerbars.addClass('bar-dark');
+                }
             } else if (toState.name === 'tab.dailyforecast') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-dailyforecast');
+                headerbars.addClass('bar-dailyforecast');
+                if ($rootScope.settingsInfo.showWeatherPhotos === '1') {
+                    headerbars.addClass('bar-clear');
+                } else {
+                    headerbars.addClass('bar-dark');
+                }
             } else if (toState.name === 'tab.air') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-air');
-            } else if (toState.name === 'start') {
+                headerbars.addClass('bar-air');
+                headerbars.addClass('bar-dark');
+            } else if (toState.name === 'tab.weather') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-hidden');
+                headerbars.addClass('bar-forecast');
+                headerbars.addClass('bar-dark');
+            } else if (toState.name === 'start') {
+                $rootScope.viewColor = '#fefefe';
+                headerbars.addClass('bar-clear');
             } else {
                 $rootScope.viewColor = '#F5F5F5';
+                headerbars.addClass('bar-dark');
             }
 
             Util.ga.trackView(toState.name);
@@ -282,6 +303,8 @@ angular.module('starter', [
         }
 
         TwStorage.init().finally(function() {
+            return WeatherUtil.loadWeatherPhotos();
+        }).finally(function () {
             $rootScope.iconsImgPath = window.theme.icons;
             $rootScope.weatherImgPath = window.theme.weather;
 
@@ -297,8 +320,8 @@ angular.module('starter', [
             Units.loadUnits();
 
             var daumServiceKeys = TwStorage.get("daumServiceKeys");
-            if (daumServiceKeys == undefined || daumServiceKeys.length != twClientConfig.daumServiceKeys.length) {
-                TwStorage.set("daumServiceKeys", twClientConfig.daumServiceKeys);
+            if (daumServiceKeys == undefined || daumServiceKeys.length != clientConfig.daumServiceKeys.length) {
+                TwStorage.set("daumServiceKeys", clientConfig.daumServiceKeys);
             }
 
             var startVersion = TwStorage.get("startVersion");
@@ -316,14 +339,31 @@ angular.module('starter', [
 
             Util.ga.trackEvent('app', 'startupPage', startupPage);
 
-            if (startupPage === "1") { //일별날씨
-                $state.go('tab.dailyforecast');
-            } else if (startupPage === "2") { //즐겨찾기
-                $state.go('tab.search');
-            } else if (startupPage === "3") { //미세먼지
-                $state.go('tab.air');
-            } else { //시간별날씨
-                $state.go('tab.forecast');
+            if (clientConfig.package === 'todayWeather') {
+                if (startupPage === "0") { //일별날씨
+                    $state.go('tab.forecast');
+                } else if (startupPage === "1") { //일별날씨
+                    $state.go('tab.dailyforecast');
+                } else if (startupPage === "2") { //즐겨찾기
+                    $state.go('tab.search');
+                } else if (startupPage === "3") { //미세먼지
+                    $state.go('tab.air');
+                } else {
+                    console.error('unknown page:'+startupPage);
+                    $state.go('tab.forecast');
+                }
+            }
+            else if (clientConfig.package === 'todayAir') {
+                if (startupPage === "2") { //즐겨찾기
+                    $state.go('tab.search');
+                } else if (startupPage === "3") { //대기정보
+                    $state.go('tab.air');
+                } else if (startupPage === "4") { //날씨
+                    $state.go('tab.weather');
+                } else { //대기정보
+                    console.error('unknown page:'+startupPage);
+                    $state.go('tab.air');
+                }
             }
 
             function showUpdateInfo(triggerTime) {
@@ -382,7 +422,7 @@ angular.module('starter', [
             .determinePreferredLanguage()
             .useSanitizeValueStrategy('escapeParameters');
 
-        //$compileProvider.debugInfoEnabled(twClientConfig.debug);
+        //$compileProvider.debugInfoEnabled(clientConfig.debug);
         $compileProvider.debugInfoEnabled(false);
 
         $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto):/);
@@ -1315,6 +1355,171 @@ angular.module('starter', [
             };
         });
 
+        $compileProvider.directive('ngAirChart', function() {
+            return {
+                restrict: 'A',
+                transclude: true,
+                link: function (scope, iElement) {
+                    var margin = {top: -5, right: 5, bottom: 35, left: 5};
+                    var width, height, x, y;
+                    var svg;
+
+                    function initSvg() {
+                        x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                        y = d3.scale.linear().range([height - margin.bottom, margin.top]);
+
+                        if (svg != undefined) {
+                            svg.selectAll("*").remove();
+                            svg.attr('width', width)
+                                .attr('height', height);
+                        }
+                        else {
+                            svg = d3.select(iElement[0]).append('svg')
+                                .attr('width', width)
+                                .attr('height', height);
+                        }
+                    }
+
+                    scope.$watch(function () {
+                        return iElement[0].getBoundingClientRect().height;
+                    }, function(newValue) {
+                        if (newValue === 0 || height === newValue) {
+                            return;
+                        }
+                        width = iElement[0].getBoundingClientRect().width;
+                        height = iElement[0].getBoundingClientRect().height;
+
+                        console.log("air scope watch");
+
+                        if (!(scope.airChart == undefined)) {
+                            initSvg();
+                            chart();
+                        }
+                    });
+
+                    var chart = function () {
+                        var data = scope.airChart.data;
+                        if (x == undefined || y == undefined || svg == undefined || data == undefined) {
+                            return;
+                        }
+
+                        // aqiStandard의 max와 data의 (max+여백) 중 큰 값으로 사용
+                        var maxValue = d3.max(data, function (d) { return d.val + d.val/10;});
+                        if (scope.airChart.maxValue) {
+                            maxValue = Math.max(scope.airChart.maxValue, maxValue);
+                        }
+                        x.domain(data.map(function(d) { return d.date; }));
+                        y.domain([0, maxValue]).nice();
+
+                        var xAxis = d3.svg.axis()
+                            .tickFormat(function(d, i) {
+                                var hour = parseInt(d.substr(11,2));
+                                if (hour === 0 || hour % 3 === 0) {
+                                    return hour + scope.strHour;
+                                }
+                                return "";
+                            })
+                            .outerTickSize(0)
+                            .scale(x)
+                            .orient('bottom');
+
+                        d3.svg.axis()
+                            .outerTickSize(0)
+                            .scale(y)
+                            .orient('left');
+
+                        var bottom = height - margin.bottom;
+                        var x_axis = svg.append('g')
+                            .attr('class', 'x-axis')
+                            .attr('transform', 'translate(0,' + bottom + ')')
+                            .call(xAxis);
+
+                        x_axis.selectAll('.x-axis .tick line')
+                            .call(function(t) {
+                                t.each(function (d, i) {
+                                    if (i === 12) {
+                                        var self = d3.select(this);
+                                        self.attr('y1', -bottom)
+                                            .attr('stroke', '#000')
+                                            .attr('stroke-width', '2px');
+                                    }
+                                })
+                            });
+                        x_axis.selectAll('.x-axis .tick text')
+                            .call(function(t) {
+                                t.each(function (d) {
+                                    var hour = parseInt(d.substr(11,2));
+                                    if (hour === 0) {
+                                        var self = d3.select(this);
+                                        self.append('tspan')
+                                            .attr('x', function (d, i) {
+                                                return x.rangeBand() * i;
+                                            })
+                                            .attr('dy', parseFloat(self.attr('dy')) * 1.5 + 'em')
+                                            .text(d.substr(5,2)+'.'+d.substr(8,2));
+                                    }
+                                })
+                            });
+
+                        var rects = svg.selectAll('.rect')
+                            .data(data);
+
+                        rects.enter().append('rect')
+                            .attr('class', 'chart-bar');
+
+                        rects.exit().remove();
+
+                        rects.attr('x', function (d, i) {
+                                return x.rangeBand() * i + 1 + margin.left;
+                            })
+                            .attr('width', x.rangeBand() - 2)
+                            .attr('y', 0)
+                            .attr('height', 0)
+                            .style('fill', function (d) {
+                                return scope.grade2Color(d.grade);
+                            })
+                            .style('fill-opacity', function (d, i) {
+                                if (i === 12) {
+                                    return 1.0;
+                                }
+                                return 0.6;
+                            })
+                            .attr('y', function (d) {
+                                if (d.val == undefined) {
+                                    return y(0);
+                                }
+                                return y(d.val);
+                            })
+                            .attr('height', function (d) {
+                                if (d.val == undefined) {
+                                    return 0;
+                                }
+                                return y(0) - y(d.val);
+                            });
+                    };
+
+                    scope.$watch('airWidth', function(newValue) {
+                        if (newValue == undefined || newValue == width) {
+                            console.log('new value is undefined or already set same width='+width);
+                            return;
+                        }
+                        console.log('update airWidth='+newValue);
+                        width = newValue;
+                        return;
+                    });
+
+                    scope.$watch('airChart', function (newVal) {
+                        if (newVal == undefined) {
+                            return;
+                        }
+                        console.log("update airChart");
+                        initSvg();
+                        chart();
+                    });
+                }
+            };
+        });
+
         $compileProvider.directive('tabsShrink', function($document) {
             return {
                 restrict: 'A',
@@ -1374,6 +1579,35 @@ angular.module('starter', [
             }
         });
 
+        $compileProvider.directive('barScrolled', function($document) {
+            return {
+                restrict: 'A',
+                link: function($scope, $element, $attr) {
+                    function onScroll(e) {
+                        if ($scope == undefined || $scope.$root == undefined) {
+                            return;
+                        }
+
+                        var headerbars = angular.element($document[0].querySelectorAll('ion-header-bar'));
+                        if (e.target.scrollTop < 44) {
+                            for (var i = 0; i < headerbars.length; i++) {
+                                headerbars[i].style.backgroundImage = "";
+                            }
+                        } else {
+                            var start = Math.min(1.0, (e.target.scrollTop - 44) / 88);
+                            var end = start / 2;
+                            for (var i = 0; i < headerbars.length; i++) {
+                                headerbars[i].style.backgroundImage
+                                    = "linear-gradient(to bottom, rgba(68,68,68," + start + ") 50%, rgba(68,68,68," + end + ") 100%)";
+                            }
+                        }
+                    }
+
+                    $element.bind('scroll', onScroll);
+                }
+            }
+        });
+
         // Ionic uses AngularUI Router which uses the concept of states
         // Learn more here: https://github.com/angular-ui/ui-router
         // Set up the various states which the app can be in.
@@ -1424,10 +1658,15 @@ angular.module('starter', [
                 url: '/tab',
                 abstract: true,
                 templateUrl: function () {
-                    if (ionic.Platform.isAndroid()) {
-                        return  'templates/tabs-android.html';
+                    if (clientConfig.package === 'todayWeather') {
+                        if (ionic.Platform.isAndroid()) {
+                            return  'templates/tabs-android.html';
+                        }
+                        return 'templates/tabs.html';
                     }
-                    return 'templates/tabs.html';
+                    else if (clientConfig.package === 'todayAir') {
+                        return 'templates/ta-tabs.html';
+                    }
                 },
                 controller: 'TabCtrl'
             })
@@ -1443,26 +1682,6 @@ angular.module('starter', [
                     }
                 }
             })
-            .state('tab.forecast', {
-                url: '/forecast?fav',
-                cache: false,
-                views: {
-                    'tab-forecast': {
-                        templateUrl: 'templates/tab-forecast.html',
-                        controller: 'ForecastCtrl'
-                    }
-                }
-            })
-            .state('tab.dailyforecast', {
-                url: '/dailyforecast?fav',
-                cache: false,
-                views: {
-                    'tab-dailyforecast': {
-                        templateUrl: 'templates/tab-dailyforecast.html',
-                        controller: 'ForecastCtrl'
-                    }
-                }
-            })
             .state('tab.air', {
                 url: '/air?fav&code',
                 cache: false,
@@ -1473,6 +1692,43 @@ angular.module('starter', [
                     }
                 }
             });
+
+        if (clientConfig.package === 'todayWeather') {
+          $stateProvider
+            .state('tab.forecast', {
+              url: '/forecast?fav',
+              cache: false,
+              views: {
+                'tab-forecast': {
+                  templateUrl: 'templates/tab-forecast.html',
+                  controller: 'ForecastCtrl'
+                }
+              }
+            })
+            .state('tab.dailyforecast', {
+              url: '/dailyforecast?fav',
+              cache: false,
+              views: {
+                'tab-dailyforecast': {
+                  templateUrl: 'templates/tab-dailyforecast.html',
+                  controller: 'ForecastCtrl'
+                }
+              }
+            });
+        }
+        else if (clientConfig.package === 'todayAir') {
+          $stateProvider
+            .state('tab.weather', {
+              url: '/weather?fav',
+              cache: false,
+              views: {
+                'tab-weather': {
+                  templateUrl: 'templates/ta-tab-weather.html',
+                  controller: 'ForecastCtrl'
+                }
+              }
+            });
+        }
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
@@ -1486,6 +1742,7 @@ angular.module('starter', [
         // Enable Native Scrolling on Android
         $ionicConfigProvider.platform.android.scrolling.jsScrolling(false);
         $ionicConfigProvider.platform.ios.scrolling.jsScrolling(false);
+        $ionicConfigProvider.views.swipeBackEnabled(false);
 
         ionicTimePickerProvider.configTimePicker({
             format: 12,

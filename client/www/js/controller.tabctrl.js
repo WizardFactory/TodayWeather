@@ -13,13 +13,22 @@ angular.module('controller.tabctrl', [])
                 "color": ['#32a1ff', '#00c73c', '#fd9b5a', '#ff5959'],
                 "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY'],
                 "value": {
-                    "pm25" : [0, 15, 50, 100, 500],     //ug/m3 (avg 24h)
+                    "pm25" : [0, 15, 35, 75, 500],     //ug/m3 (avg 24h)
                     "pm10" : [0, 30, 80, 150, 600],     //ug/m3 (avg 24h)
                     "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm   (avg 1h)
                     "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm   (avg 1h)
                     "co" : [0, 2, 9, 15, 50],           //ppm   (avg 1h)
                     "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm   (avg 1h)
                     "aqi" : [0, 50, 100, 250, 500]      //index
+                },
+                "maxValue": {
+                    "pm25" : 100,
+                    "pm10" : 150,
+                    "o3" : 0.15,
+                    "no2" : 0.2,
+                    "co" : 9,
+                    "so2" : 0.05,
+                    "aqi" : 250
                 }
             },
             "airkorea_who": {
@@ -33,6 +42,15 @@ angular.module('controller.tabctrl', [])
                     "co" : [0, 2, 9, 15, 50],           //ppm
                     "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm
                     "aqi" : [0, 50, 100, 250, 500]      //ppm
+                },
+                "maxValue": {
+                    "pm25" : 100,
+                    "pm10" : 150,
+                    "o3" : 0.15,
+                    "no2" : 0.2,
+                    "co" : 9,
+                    "so2" : 0.05,
+                    "aqi" : 250
                 }
             },
             "airnow": {
@@ -52,6 +70,15 @@ angular.module('controller.tabctrl', [])
                     //"o3" : [0, 54, 124, 164, 204, 404, 604],              //ppb (avg 8h, 1h)
                     //"no2" : [0, 53, 100, 360, 649, 1249, 2049],           //ppb (avg 1h)
                     //"so2" : [0, 35, 75, 185, 304, 604, 1004],             //ppb (avg 1h, 24h)
+                },
+                "maxValue": {
+                    "pm25" : 100,
+                    "pm10" : 150,
+                    "o3" : 0.164,
+                    "no2" : 0.36,
+                    "co" : 12.4,
+                    "so2" : 0.185,
+                    "aqi" : 200
                 }
             },
             "aqicn": {
@@ -63,7 +90,7 @@ angular.module('controller.tabctrl', [])
                 "value": {
                     "pm25" : [0, 35, 75, 115, 150, 250, 500],               //ug/m3 (avg 1h)
                     "pm10" : [0, 50, 150, 250, 350, 420, 600],              //ug/m3 (avg 1h)
-                    "o3" : [0, 0.075, 0.093, 0.14, 0.187, 0.374 ,0.56],     //ppm (avg 1h)
+                    "o3" : [0, 0.075, 0.093, 0.14, 0.187, 0.374, 0.56],     //ppm (avg 1h)
                     "no2" : [0, 0.049, 0.097, 0.341, 0.584, 1.14, 1.87],    //ppm (avg 1h)
                     "co" : [0, 4, 8, 28, 48, 72, 120],                      //ppm (avg 1h)
                     "so2":[0, 0.052, 0.175, 0.227, 0.28, 0.56, 0.916],      //ppm (avg 1h)
@@ -72,6 +99,15 @@ angular.module('controller.tabctrl', [])
                     // "no2" : [0, 100, 200, 700, 1200, 2340, 3840], //ug/m3 (avg 1h)
                     // "co" : [0, 5, 10, 35, 60, 90, 150],          //mg/m3 (avg 1h)
                     // "so2" : [0, 150, 500, 650, 800, 1600, 2620],  //ug/m3
+                },
+                "maxValue": {
+                    "pm25" : 100,
+                    "pm10" : 150,
+                    "o3" : 0.14,
+                    "no2" : 0.341,
+                    "co" : 28,
+                    "so2" : 0.227,
+                    "aqi" : 200
                 }
             }
         };
@@ -142,6 +178,15 @@ angular.module('controller.tabctrl', [])
                     Util.ga.trackEvent('action', 'tab', 'reload');
                 }
             }
+            else if ($location.path() === '/tab/weather' && forecastType === 'weather') {
+                if (gap <= 700) {
+                    console.warn('skip reload event on tab!!');
+                }
+                else {
+                    $scope.$broadcast('reloadEvent', 'tab');
+                    Util.ga.trackEvent('action', 'tab', 'reload');
+                }
+            }
             else {
                 if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
                     if (cordova.plugins.Keyboard.isVisible) {
@@ -155,6 +200,9 @@ angular.module('controller.tabctrl', [])
                             }
                             else if (forecastType === 'air') {
                                 $location.path('/tab/air');
+                            }
+                            else if (forecastType === 'weather') {
+                                $location.path('/tab/weather');
                             }
                             else {
                                 $location.path('/tab/forecast');
@@ -173,9 +221,20 @@ angular.module('controller.tabctrl', [])
                 else if (forecastType === 'air') {
                     $location.path('/tab/air');
                 }
+                else if (forecastType === 'weather') {
+                    $location.path('/tab/weather');
+                }
                 else {
                     Util.ga.trackEvent('action', 'error', 'unknownForecastType');
-                    $location.path('/tab/forecast');
+                    if (clientConfig.package === 'todayWeather') {
+                        $location.path('/tab/forecast');
+                    }
+                    else if (clientConfig.package === 'todayAir') {
+                        $location.path('/tab/air');
+                    }
+                    else {
+                        console.error('unknown package='+clientConfig.package);
+                    }
                 }
             }
         };
@@ -306,11 +365,16 @@ angular.module('controller.tabctrl', [])
                     if (res === true) { // autoSearch
                         Util.ga.trackEvent('action', 'click', 'auto search');
                         WeatherInfo.disableCity(false);
-                        if ($location.path() === '/tab/forecast') {
+
+                        var path = '/tab/forecast';
+                        if (clientConfig.package === 'todayAir') {
+                           path =  '/tab/air';
+                        }
+                        if ($location.path() === path) {
                             $scope.$broadcast('reloadEvent', 'startPopup');
                         }
                         else {
-                            $location.path('/tab/forecast');
+                            $location.path(path);
                         }
                     } else {
                         Util.ga.trackEvent('action', 'click', 'city search');
@@ -578,6 +642,13 @@ angular.module('controller.tabctrl', [])
         $scope.convertMMDD = function (value) {
             if (typeof value == 'string') {
                 return value.substr(5,2)+'/'+value.substr(8,2);
+            }
+            return value;
+        };
+
+        $scope.convertDD = function (value) {
+            if (typeof value == 'string') {
+                return value.substr(8,2);
             }
             return value;
         };
@@ -1181,6 +1252,7 @@ angular.module('controller.tabctrl', [])
                 }
 
                 $scope.aqiStandard = list;
+                $scope.aqiMaxValue = aqiStandard[airUnit].maxValue;
                 console.info($scope.aqiStandard);
             }
             catch (err) {
@@ -1188,9 +1260,21 @@ angular.module('controller.tabctrl', [])
             }
         }
 
+        /**
+         * iOS의 경우 title이 없음.
+         */
         $scope.$on('notificationEvent', function(event, data) {
             console.log('got notification event');
-            var template = data.title+'<br>'+data.message;
+            var template = '';
+            if (data.title) {
+                template += data.title;
+            }
+            if (data.message) {
+                if (template.length > 0) {
+                    template += '<br>';
+                }
+                template += data.message;
+            }
             $ionicPopup.show({
                 title: strWeather||'Notification',
                 template: template,
@@ -1248,6 +1332,84 @@ angular.module('controller.tabctrl', [])
                     });
                 });
         });
+
+        $scope.popUpAirForecastInfo = function (airForecastSource) {
+            var strKaqDescription = "";
+            var strAirKoreaDescription = "";
+            $translate(['LOC_KAQ_DESCRIPTION', 'LOC_AIRKOREA_DESCRIPTION'])
+                .then(function (translations) {
+                    strKaqDescription = translations.LOC_KAQ_DESCRIPTION;
+                    strAirKoreaDescription = translations.LOC_AIRKOREA_DESCRIPTION;
+                })
+                .finally(function () {
+                    var str;
+                    if (airForecastSource === 'kaq') {
+                        str = strKaqDescription;
+                    }
+                    else if (airForecastSource === 'airkorea') {
+                        str = strAirKoreaDescription;
+                    }
+                    else {
+                        return;
+                    }
+                    $ionicPopup.alert({
+                        template: str,
+                        buttons:[{
+                            text: strClose||'Close'
+                        }]
+                    });
+                });
+        };
+
+        $scope.initSize = function () {
+            $scope.tabletWidth = 640;
+
+            if (window.screen.height) {
+                $scope.bodyHeight = window.screen.height;
+                $scope.bodyWidth = window.screen.width;
+            }
+            else if (window.innerHeight) {
+                //crosswalk에서 늦게 올라옴.
+                $scope.bodyHeight = window.innerHeight;
+                $scope.bodyWidth = window.innerWidth;
+            }
+            else if (window.outerHeight) {
+                //ios에서는 outer가 없음.
+                $scope.bodyHeight = window.outerHeight;
+                $scope.bodyWidth = window.outerWidth;
+            }
+            else {
+                console.log("Fail to get window width, height");
+                $scope.bodyHeight = 640;
+                $scope.bodyWidth = 360;
+            }
+
+            var headerRatio = 0.4;
+            var contentRatio = 0.6;
+            if ($scope.bodyWidth >= $scope.tabletWidth && $scope.bodyWidth < $scope.bodyHeight) {
+                headerRatio = 0.4;
+                contentRatio = 0.6;
+            }
+            else if ($scope.bodyHeight >= 730) {
+                //note5, nexus5x, iphone 5+
+                if (ionic.Platform.isIOS()) {
+                    headerRatio = 0.40;
+                    contentRatio = 0.60;
+                }
+                else {
+                    headerRatio = 0.32;
+                    contentRatio = 0.68;
+                }
+            }
+            else {
+                headerRatio = 0.32;
+                contentRatio = 0.68;
+            }
+
+            //빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
+            $scope.headerHeight = $scope.bodyHeight * headerRatio + 44;
+            $scope.mainHeight = $scope.bodyHeight * contentRatio;
+        };
 
         var strWeather = "Weather";
         var strOkay = "OK";

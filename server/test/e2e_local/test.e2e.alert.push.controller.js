@@ -35,6 +35,27 @@ describe('unit test - alert push controller', function() {
         });
     });
 
+    // it ('find duplicate alert', function (done) {
+    //     this.timeout(10*60*1000);
+    //
+    //     const AlertPush = require('../../models/alert.push.model');
+    //     AlertPush.find().lean().exec((err, list) => {
+    //        if (err)  {
+    //            return console.error(err);
+    //        }
+    //        console.info('list.length=',list.length);
+    //        list.forEach(obj => {
+    //            var sameObjList = list.filter(b=>{
+    //                return obj.registrationId === b.registrationId && obj.cityIndex === b.cityIndex;
+    //            });
+    //            if (sameObjList.length > 1) {
+    //                console.info(JSON.stringify(obj));
+    //            }
+    //        });
+    //        done();
+    //     });
+    // });
+
     var pushInfo1 = {
         registrationId: 'push1',
         startTime: 79200,    //7H to utc 22h

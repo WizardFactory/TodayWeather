@@ -489,7 +489,7 @@ TownRss.prototype.saveShortRssNewForm = function(index, newData, callback){
             function(item, cb){
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date);
                 var newItem = {mCoord: newData.mCoord, pubDate: pubDate, fcsDate: fcsDate, shortData: item};
-                log.info('KMA Town S-RSS> item : ', JSON.stringify(newItem));
+                log.debug('KMA Town S-RSS> item : ', JSON.stringify(newItem));
 
                 modelKmaTownShortRss.update({mCoord: newData.mCoord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
@@ -502,7 +502,7 @@ TownRss.prototype.saveShortRssNewForm = function(index, newData, callback){
                 });
             },
             function(err){
-                log.info('KMA Town S-RSS> finished to save town.short.rss data');
+                log.debug('KMA Town S-RSS> finished to save town.short.rss data');
                 callback(err);
             }
         );
@@ -637,34 +637,34 @@ TownRss.prototype.getData = function(index, item, cb){
                 return;
             }
 
-            self.saveShortRss(index, result, function (err) {
-                if (err) {
-                    log.error('failed to save the data to DB');
-                    if (cb) {
-                        cb(err);
+            if(config.db.version === '1.0') {
+                self.saveShortRss(index, result, function (err) {
+                    if (err) {
+                        log.error('failed to save the data to DB');
+                        if (cb) {
+                            cb(err);
+                        }
+                        return;
                     }
-                    return;
-                }
-
-                if (cb) {
-                    cb();
-                }
-            });
-
-            // if(config.db.version === '2.0'){
-            self.saveShortRssNewForm(index, result, function (err) {
-                if (err) {
-                    log.error('failed to save the data to DB');
-                    // if(cb) {
-                    //     cb(err);
-                    // }
-                    // return;
-                }
-                // if(cb) {
-                //     cb();
-                // }
-            });
-            // }
+                    if (cb) {
+                        cb();
+                    }
+                });
+            }
+            else if(config.db.version === '2.0') {
+                self.saveShortRssNewForm(index, result, function (err) {
+                    if (err) {
+                        log.error('failed to save the data to DB');
+                        if(cb) {
+                            cb(err);
+                        }
+                        return;
+                    }
+                    if(cb) {
+                        cb();
+                    }
+                });
+            }
         });
     });
 };
@@ -674,24 +674,27 @@ TownRss.prototype.checkPubDate = function(item, dateString, index, callback){
 
     if(config.db.version === '2.0'){
         var lastestPubDate = kmaTimelib.getKoreaDateObj(dateString);
-        modelKmaTownShortRss.find({'mCoord.mx': item.mCoord.mx, 'mCoord.my': item.mCoord.my}, {_id: 0, mCoord:1, pubDate:1}).sort({"pubDate":1}).lean().exec(function(err, dbList){
-            if(err
-                || (dbList.length === 0)
-                || (dbList[0].pubDate === undefined)){
-                log.info('KMA Town S-RSS> There is no data matached to : ', item);
-                log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                return callback(errCode);
-            }
-
-            for(var i=0 ; i<dbList.length ; i++){
-                if(dbList[i].pubDate.getTime() === lastestPubDate.getTime()){
-                    log.info('KMA Town S-RSS> Already updated : ', item, dateString);
-                    errCode = 1;
+        modelKmaTownShortRss.find({'mCoord.mx': item.mCoord.mx, 'mCoord.my': item.mCoord.my}, {_id: 0, mCoord:1, pubDate:1})
+            .sort({"pubDate":1})
+            .lean()
+            .exec(function(err, dbList) {
+                if(err
+                    || (dbList.length === 0)
+                    || (dbList[0].pubDate === undefined)){
+                    log.info('KMA Town S-RSS> There is no data matached to : ', item);
+                    log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
                     return callback(errCode);
                 }
-            }
 
-            return callback(errCode);
+                for(var i=0 ; i<dbList.length ; i++){
+                    if(dbList[i].pubDate.getTime() === lastestPubDate.getTime()){
+                        log.info('KMA Town S-RSS> Already updated : ', item, dateString);
+                        errCode = 1;
+                        return callback(errCode);
+                    }
+                }
+
+                return callback(errCode);
         });
     }else{
         shortRssDb.find({'mCoord.my' :item.mCoord.my, 'mCoord.mx':item.mCoord.mx}, function(err, list) {
@@ -766,7 +769,7 @@ TownRss.prototype.mainTask = function(completionCallback){
                         function(cb) {
                             self.checkPubDate(item, lastestPubDate, index, function(err, type){
                                 if(err){
-                                    log.info('shortRss : already latest data');
+                                    log.debug('shortRss : already latest data');
                                     return cb(err, undefined);
                                 }
                                 index++;
