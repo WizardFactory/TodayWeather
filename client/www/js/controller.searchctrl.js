@@ -1,7 +1,7 @@
 angular.module('controller.searchctrl', [])
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading,
-                                        $translate, $ocLazyLoad) {
+                                        $translate, $ocLazyLoad, TwStorage) {
         $scope.search = {};
         $scope.searchResults = [];
         $scope.searchResults2 = [];
@@ -63,6 +63,35 @@ angular.module('controller.searchctrl', [])
                 $scope.searchResults2 = predictions;
             });
         };
+
+        function goPage() {
+            var startupPage;
+            var settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo !== null) {
+                startupPage = settingsInfo.startupPage;
+            }
+
+            if (startupPage === "1") { //일별날씨
+                $location.path('/tab/dailyforecast');
+            }
+            else if (startupPage === "3") { //대기정보
+                $location.path('/tab/air');
+            }
+            else if (startupPage === "4") { //대기정보
+                $location.path('/tab/weather');
+            }
+            else { //시간별날씨
+                if (clientConfig.package === 'todayWeather') {
+                    $location.path('/tab/forecast');
+                }
+                else if (clientConfig.package === 'todayAir') {
+                    $location.path('/tab/air');
+                }
+                else {
+                    console.error('unknown package='+clientConfig.package);
+                }
+            }
+        }
 
         function init() {
             $ionicHistory.clearHistory();
@@ -126,7 +155,7 @@ angular.module('controller.searchctrl', [])
                     var indexOfCurrentPositionCity = i;
                     updateCurrentPosition().then(function(geoInfo) {
                         console.info(JSON.stringify({'newGeoInfo':geoInfo}));
-                        WeatherInfo.updateCity(indexOfCurrentPositionCity, geoInfo);
+                        // WeatherInfo.updateCity(indexOfCurrentPositionCity, geoInfo);
                         WeatherInfo.reloadCity(indexOfCurrentPositionCity);
                         loadWeatherData(indexOfCurrentPositionCity);
                     });
@@ -368,7 +397,7 @@ angular.module('controller.searchctrl', [])
                         Util.ga.trackEvent('city', 'add', address, WeatherInfo.getCityCount() - 1);
 
                         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-                        $location.path('/tab/forecast');
+                        goPage();
                     }
                     $ionicLoading.hide();
                 }, function (error) {
@@ -426,7 +455,7 @@ angular.module('controller.searchctrl', [])
                             else {
                                 Util.ga.trackEvent('city', 'add', result.description, WeatherInfo.getCityCount() - 1);
                                 WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-                                $location.path('/tab/forecast');
+                                goPage();
                             }
                             $ionicLoading.hide();
                         }, function (err) {
@@ -450,7 +479,7 @@ angular.module('controller.searchctrl', [])
                     else {
                         Util.ga.trackEvent('city', 'add', geoInfo.address, WeatherInfo.getCityCount() - 1);
                         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-                        $location.path('/tab/forecast');
+                        goPage();
                     }
                 }, function (err) {
                     Util.ga.trackEvent('weather', 'error', err);
@@ -473,14 +502,37 @@ angular.module('controller.searchctrl', [])
             }
 
             WeatherInfo.setCityIndex(index);
-            $location.path('/tab/forecast');
+
+            var startupPage;
+            var settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo !== null) {
+                startupPage = settingsInfo.startupPage;
+            }
+
+            if (startupPage === "1") { //일별날씨
+                $location.path('/tab/dailyforecast');
+            }
+            else if (startupPage === "3") { //대기정보
+                $location.path('/tab/air');
+            }
+            else { //시간별날씨
+                if (clientConfig.package === 'todayWeather') {
+                    $location.path('/tab/forecast');
+                }
+                else if (clientConfig.package === 'todayAir') {
+                    $location.path('/tab/air');
+                }
+                else {
+                    $location.path('/tab/forecast');
+                }
+            }
         };
 
         function updateCurrentPositionWeather() {
             showLoadingIndicator();
             updateCurrentPosition().then(function(geoInfo) {
                 console.log('updated current position');
-                WeatherInfo.updateCity(0, geoInfo);
+                //WeatherInfo.updateCity(0, geoInfo);
                 updateWeatherData(0).then(function (city) {
                     var index = WeatherInfo.getIndexOfCity(city);
                     if (index !== -1) {

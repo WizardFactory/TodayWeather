@@ -147,7 +147,8 @@ angular.module('service.push', [])
                 town: pushInfo.town,               //first, second, third
                 source: pushInfo.source,           //KMA or DSF, ...
                 units: units,
-                timezoneOffset: new Date().getTimezoneOffset()*-1   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
+                timezoneOffset: new Date().getTimezoneOffset()*-1,   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
+                package: clientConfig.package
             };
 
             if (pushInfo.category === 'alarm') {
@@ -491,15 +492,34 @@ angular.module('service.push', [])
                return obj.cityIndex === cityIndex;
             });
 
+            var needToUpdate = false;
+
             list.forEach(function (pushInfo) {
-               var city  = self._getSimpleCityInfo(cityIndex);
+                var city  = self._getSimpleCityInfo(cityIndex);
+                if (city.source == undefined || city.source.length === 0) {
+                    return;
+                }
                 for (var key in city) {
+                    if (key == 'location') {
+                       if (pushInfo.location.lat === city.location.lat &&
+                        pushInfo.location.long === city.location.long)  {
+                           needToUpdate = false;
+                       }
+                       else {
+                           needToUpdate = true;
+                       }
+                    }
+                    else if (pushInfo[key] !== city[key]) {
+                       needToUpdate = true;
+                    }
                     pushInfo[key] = city[key];
                 }
             });
 
-            this._postPushList(list);
-            this.savePushInfo();
+            if (needToUpdate) {
+                this._postPushList(list);
+                this.savePushInfo();
+            }
         };
 
         /**

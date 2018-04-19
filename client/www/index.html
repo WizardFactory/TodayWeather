@@ -87,7 +87,7 @@
         </header>
         <ion-content class="has-header menu-content">
             <div class="list">
-                <label class="item" ng-click="clickMenu('nation')" ng-if="getRegion() === 'KR'">
+                <label class="item" ng-click="clickMenu('nation')" ng-if="getRegion() === 'KR' && clientConfig.package === 'todayWeather'">
                     {{'LOC_NATIONAL_WEATHER'|translate}}
                     <i class="icon ion-chevron-right" style="float: right"></i>
                 </label>
@@ -103,7 +103,7 @@
                     {{'LOC_REFRESH_INTERVAL'|translate}}
                     <span style="float: right">{{getRefreshIntervalValueStr(settingsInfo.refreshInterval)|translate}}</span>
                 </label>
-                <label class="item" ng-click="settingRadio('showWeatherPhotos')">
+                <label class="item" ng-click="settingRadio('showWeatherPhotos')" ng-if="clientConfig.package === 'todayWeather'">
                     {{'LOC_SHOW_WEATHER_PHOTOS'|translate}}
                     <span style="float: right">{{getShowWeatherPhotosValueStr(settingsInfo.showWeatherPhotos)|translate}}</span>
                 </label>

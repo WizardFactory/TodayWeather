@@ -8,11 +8,14 @@ angular.module('controller.forecastctrl', [])
         if ($location.path() === '/tab/dailyforecast') {
             $scope.forecastType = "mid"; //mid, detail(aqi)
         }
+        else if (clientConfig.package === 'todayAir') {
+            $scope.forecastType = "weather"; //mid, detail(aqi)
+        }
         else {
             $scope.forecastType = "short"; //mid, detail(aqi)
         }
 
-        if ($scope.forecastType == 'mid') {
+        if ($scope.forecastType === 'mid' || $scope.forecastType === 'weather' ) {
             $scope.hasDustForecast = function () {
                 if ($scope.dailyAqiForecast) {
                     return true;
@@ -81,7 +84,7 @@ angular.module('controller.forecastctrl', [])
             }
         }
 
-        if ($scope.forecastType == 'short') {
+        if ($scope.forecastType === 'short' || $scope.forecastType === 'weather') {
             var preDayInHourlyTable;
             $scope.isNextDay = function(weatherData, index) {
                 if (weatherData.time == 24 && index == 0) {
@@ -424,24 +427,30 @@ angular.module('controller.forecastctrl', [])
                 $scope.airForecastPubdate = undefined;
                 $scope.airForecastSource = undefined;
 
-                if (cityData.airInfo &&
-                    cityData.airInfo.pollutants &&
-                    cityData.airInfo.pollutants.aqi) {
+                var airInfo;
+                if (cityData.airInfoList) {
+                    airInfo = cityData.airInfoList[0];
+                }
+                else if (cityData.airInfoList) {
+                    airInfo = cityData.airInfo;
+                }
 
-                    $scope.airForecastPubdate = cityData.airInfo.forecastPubDate;
-                    $scope.airForecastSource = cityData.airInfo.forecastSource;
-                    var latestAirInfo =  cityData.airInfo.last || cityData.currentWeather.arpltn;
-                    if (cityData.airInfo.pollutants.aqi.hourly) {
-                        $scope.hourlyAqiForecast = cityData.airInfo.pollutants.aqi.hourly.filter(function (obj) {
+                if (airInfo && airInfo.pollutants && airInfo.pollutants.aqi) {
+
+                    $scope.airForecastPubdate = airInfo.forecastPubDate;
+                    $scope.airForecastSource = airInfo.forecastSource;
+                    var latestAirInfo =  airInfo.last || cityData.currentWeather.arpltn;
+                    if (airInfo.pollutants.aqi.hourly) {
+                        $scope.hourlyAqiForecast = airInfo.pollutants.aqi.hourly.filter(function (obj) {
                             return obj.date >= latestAirInfo.dataTime;
                         }).slice(0, 4);
                     }
-                    if (cityData.airInfo.pollutants.aqi.daily) {
+                    if (airInfo.pollutants.aqi.daily) {
                         if ($scope.bodyWidth < 360) {
-                            $scope.dailyAqiForecast = cityData.airInfo.pollutants.aqi.daily.slice(0,4);
+                            $scope.dailyAqiForecast = airInfo.pollutants.aqi.daily.slice(0,4);
                         }
                         else {
-                            $scope.dailyAqiForecast = cityData.airInfo.pollutants.aqi.daily;
+                            $scope.dailyAqiForecast = airInfo.pollutants.aqi.daily;
                         }
                     }
                 }
@@ -513,11 +522,11 @@ angular.module('controller.forecastctrl', [])
                     padding += 36;
                 }
 
-                if ($scope.forecastType == 'short') {
+                if ($scope.forecastType === 'short' || $scope.forecastType === 'weather' ) {
                     var chartShortHeight = $scope.mainHeight - (143 + padding);
                     $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
                 }
-                else {
+                if ($scope.forecastType === 'mid' || $scope.forecastType === 'weather' ) {
                     var chartMidHeight = $scope.mainHeight - (136 + padding);
                     $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
                 }
@@ -537,11 +546,11 @@ angular.module('controller.forecastctrl', [])
                 }
 
                 _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
-                if ($scope.forecastType == 'short') {
+                if ($scope.forecastType === 'short' || $scope.forecastType === 'weather') {
                     $scope.timeTable = cityData.timeTable;
                     $scope.timeChart = cityData.timeChart;
                 }
-                else {
+                if ($scope.forecastType === 'mid' || $scope.forecastType === 'weather') {
                     $scope.dayChart = cityData.dayChart;
                 }
             }
@@ -553,9 +562,17 @@ angular.module('controller.forecastctrl', [])
 
             //많은 이슈가 있음. https://github.com/WizardFactory/TodayWeather/issues/1777
             setTimeout(function () {
-                var el = document.getElementById('chartScroll');
+                var el = document.getElementById('chartShortScroll');
                 if (el) {
-                    el.scrollLeft = getTodayPosition();
+                    el.scrollLeft = getTodayPosition('short');
+                }
+                else {
+                    console.error('chart scroll is null');
+                }
+
+                el = document.getElementById('chartMidScroll');
+                if (el) {
+                    el.scrollLeft = getTodayPosition('mid');
                 }
                 else {
                     console.error('chart scroll is null');
@@ -563,11 +580,11 @@ angular.module('controller.forecastctrl', [])
             }, 300);
         }
 
-        function getTodayPosition() {
+        function getTodayPosition(chartType) {
             var index = 0;
             var i;
 
-            if ($scope.forecastType === 'short') {
+            if (chartType === 'short') {
                 if ($scope.timeChart == undefined || $scope.timeChart.length <= 1) {
                     console.log("time chart is undefined");
                     return 0;
@@ -588,7 +605,7 @@ angular.module('controller.forecastctrl', [])
 
                 return colWidth*index;
             }
-            else if ($scope.forecastType === 'mid') {
+            else if (chartType === 'mid') {
                 //large tablet
                 if ($scope.bodyWidth >= $scope.tabletWidth) {
                     return 0;

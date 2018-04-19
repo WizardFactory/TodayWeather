@@ -127,11 +127,19 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     };
 
     function close() {
-
         TwStorage.set("startVersion", Util.startVersion);
         _setShowAds(true);
         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-        $location.path('/tab/forecast');
+
+        if (clientConfig.package === 'todayWeather') {
+            $location.path('/tab/forecast');
+        }
+        else if (clientConfig.package === 'todayAir') {
+            $location.path('/tab/air');
+        }
+        else {
+            console.error('unknown package='+clientConfig.package);
+        }
     }
 
     function _makeFavoriteList() {
@@ -193,6 +201,13 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     function init() {
         _setShowAds(false);
         _makeFavoriteList();
+
+        if (clientConfig.package === 'todayWeather') {
+            $scope.imgAppIcon = 'img/app_icon.png';
+        }
+        else if (clientConfig.package === 'todayAir') {
+            $scope.imgAppIcon = 'img/ta_app_icon.png';
+        }
     }
 
     $scope.OnSelectResult = function(result) {
