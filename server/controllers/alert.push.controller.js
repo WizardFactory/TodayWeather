@@ -833,7 +833,10 @@ class AlertPushController {
                else {
                    log.debug(result);
                }
-               log.info('end send alert push list time:'+time);
+               let date = new Date();
+               let timeUTC = date.getUTCHours() * 3600 + date.getUTCMinutes() * 60;
+               log.info('end send alert push list time:'+time+' spent secs:'+(timeUTC-time));
+
                if (callback) {
                    callback();
                }

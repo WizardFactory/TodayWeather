@@ -1574,6 +1574,7 @@ function controllerWorldWeather() {
 
     self.mergeDsfHourlyData = function(req, res, next){
         var meta = {};
+        meta.geocode = req.geocode;
         meta.sID = req.sessionID;
 
         if(req.DSF && req.DSF.data){
@@ -1694,7 +1695,7 @@ function controllerWorldWeather() {
             });
 
             if (!foundYesterday) {
-                log.error("Fail to find yesterday data!");
+                log.error("Fail to find yesterday data!", meta);
                 var yesterdayObj = {date: yesterdayDate};
                 req.result.thisTime.push(yesterdayObj);
             }

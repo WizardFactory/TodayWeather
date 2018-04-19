@@ -75,6 +75,17 @@ router.post('/', function(req, res) {
             pushInfo.source = "KMA"
         }
 
+        if (pushInfo.category == undefined) {
+            log.error('pushInfo category is undefined');
+            pushInfo.category = 'alarm';
+        }
+
+        if (pushInfo.package == undefined) {
+            log.error('pushInfo package is undefined');
+            pushInfo.package = 'todayWeather';
+        }
+
+
         log.info('pushInfo : '+ JSON.stringify(pushInfo));
     }
     catch (err) {
