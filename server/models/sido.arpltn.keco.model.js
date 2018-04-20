@@ -22,8 +22,11 @@ var sidoArpltnSchema = new mongoose.Schema({
     khaiValue: Number      //통합대기환경 평균수치
 });
 
-sidoArpltnSchema.index({sidocityName: 'hashed'});
 sidoArpltnSchema.index({cityName: 'text'}, { default_language: 'none' });
+sidoArpltnSchema.index({sidocityName: 'hashed'});
+sidoArpltnSchema.index({"date": -1});
+sidoArpltnSchema.index({"cityName": 1, "date": -1});
+sidoArpltnSchema.index({"sidocityName": 1, "date": 1});
 
 sidoArpltnSchema.statics = {
     getKeyList: function () {

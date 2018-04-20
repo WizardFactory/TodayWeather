@@ -17,7 +17,7 @@ var townMidForecastSchema = mongoose.Schema({
 });
 
 townMidForecastSchema.index({regId: "hashed"});
-townMidForecastSchema.index({pubDate: 1});
-townMidForecastSchema.index({fcsDate: 1});
+townMidForecastSchema.index({regId: "hashed", pubDate: 1});
+townMidForecastSchema.index({regId: "hashed", fcsDate: 1});
 
 module.exports = mongoose.model('kma.town.mid.forecast', townMidForecastSchema);
