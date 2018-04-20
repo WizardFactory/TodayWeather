@@ -29,7 +29,7 @@ var ksmwSchema2 = new mongoose.Schema({
 });
 
 ksmwSchema2.index({stnId: 1});
-ksmwSchema2.index({stnId: 1, date: -1});
 ksmwSchema2.index({stnId: 1, date: 1});
+ksmwSchema2.index({stnId: 1, date: -1});
 
 module.exports = mongoose.model('KmaStnMinute2', ksmwSchema2);

@@ -31,14 +31,7 @@ else {
     global.log  = new Logger(__dirname + "/debug.log");
 }
 
-// Bootstrap db connection
-//log.info(config.db.path);
-
-var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
-                replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
-
-mongoose.Promise = global.Promise;
-mongoose.connect(config.db.path, options, function(err) {
+mongoose.connect(config.db.path, {dbName: config.db.database}, function(err) {
     if (err) {
         log.error('Could not connect to MongoDB! ' + config.db.path);
         log.error(err);
