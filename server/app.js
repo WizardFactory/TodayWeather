@@ -31,12 +31,23 @@ else {
     global.log  = new Logger(__dirname + "/debug.log");
 }
 
-mongoose.connect(config.db.path, {dbName: config.db.database}, function(err) {
-    if (err) {
-        log.error('Could not connect to MongoDB! ' + config.db.path);
-        log.error(err);
-    }
-});
+if (config.db.path.indexOf('srv') >= 0) {
+    mongoose.connect(config.db.path, {dbName: config.db.database}, function(err) {
+        if (err) {
+            log.error('Could not connect to MongoDB! ' + config.db.path);
+            log.error(err);
+        }
+    });
+}
+else {
+    //release를 원활히 하기 위한 부분으로 추후 삭제
+    mongoose.connect(config.db.path, function(err) {
+        if (err) {
+            log.error('Could not connect to MongoDB! ' + config.db.path);
+            log.error(err);
+        }
+    });
+}
 
 var app = express();
 var session = require('express-session');
