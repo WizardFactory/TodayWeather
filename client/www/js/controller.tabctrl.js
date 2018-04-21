@@ -1,7 +1,6 @@
 angular.module('controller.tabctrl', [])
-    .controller('TabCtrl', function($scope, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce,
-                                    Push, Units, $q) {
+    .controller('TabCtrl', function($scope, $ionicPlatform, $ionicHistory, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
+                                    $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce, Push, Units, $q) {
         var currentTime;
         var lastClickTime = 0;
         var refreshTimer = null;
@@ -133,6 +132,34 @@ angular.module('controller.tabctrl', [])
             //        $scope.currentTimeString = WeatherUtil.convertTimeString(currentTime);
             //    }
             //}, 1000);
+
+            if (ionic.Platform.isAndroid()) {
+                $ionicPlatform.registerBackButtonAction(function (event) {
+                    if ($location.path() === '/tab/search'
+                        || $location.path() === '/tab/dailyforecast'
+                        || $location.path() === '/tab/forecast'
+                        || $location.path() === '/tab/air'
+                        || $location.path() === '/tab/weather'
+                    ) {
+                        $ionicPopup.show({
+                            template: strDoYouWantToExit,
+                            buttons: [
+                                {
+                                    text: strCancel
+                                },
+                                {
+                                    text: strOkay,
+                                    onTap: function() {
+                                        ionic.Platform.exitApp();
+                                    }
+                                }
+                            ]
+                        });
+                    } else {
+                        $ionicHistory.goBack();
+                    }
+                }, 100);
+            }
 
             setAirUnit();
             TwAds.init();
@@ -1422,11 +1449,13 @@ angular.module('controller.tabctrl', [])
         var strFailToGetCurrentPosition = "Fail to find your current location";
         var strFailToGetWeatherInfo = "Fail to get weather info.";
         var strPleaseTurnOnLocationWiFi = "Please turn on location and Wi-FI";
+        var strDoYouWantToExit = "Do you want to exit?";
         $scope.strHour = "h";
 
         $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS', 'LOC_HOUR', 'LOC_CLOSE', 'LOC_RETRY',
             'LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
-            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_OK', 'LOC_CANCEL', 'LOC_WEATHER'])
+            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_OK', 'LOC_CANCEL',
+            'LOC_WEATHER', 'LOC_DO_YOU_WANT_TO_EXIT'])
             .then(function (translations) {
                     strError = translations.LOC_ERROR;
                     strAddLocation = translations.LOC_ADD_LOCATIONS;
@@ -1439,6 +1468,7 @@ angular.module('controller.tabctrl', [])
                     strOkay = translations.LOC_OK;
                     strCancel = translations.LOC_CANCEL;
                     strWeather = translations.LOC_WEATHER;
+                    strDoYouWantToExit = translations.LOC_DO_YOU_WANT_TO_EXIT;
                     $scope.strHour = translations.LOC_HOUR;
                 },
                 function (translationIds) {
