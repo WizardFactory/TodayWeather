@@ -201,9 +201,6 @@ angular.module('controller.purchase', [])
 
         $scope.$on('$ionicView.enter', function() {
             TwAds.setShowAds(false);
-            if (window.StatusBar) {
-                StatusBar.backgroundColorByHexString('#0288D1');
-            }
         });
 
         function init() {
