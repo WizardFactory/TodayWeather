@@ -1038,11 +1038,10 @@ angular.module('controller.tabctrl', [])
         function setRefreshTimer() {
             clearTimeout(refreshTimer);
 
-            var settingsInfo = TwStorage.get("settingsInfo");
-            if (settingsInfo != null && settingsInfo.refreshInterval !== "0") {
+            if ($rootScope.settingsInfo != null && $rootScope.settingsInfo.refreshInterval !== "0") {
                 refreshTimer = setTimeout(function () {
                     $scope.$broadcast('reloadEvent', 'refreshTimer');
-                }, parseInt(settingsInfo.refreshInterval)*60*1000);
+                }, parseInt($rootScope.settingsInfo.refreshInterval)*60*1000);
             }
         }
 

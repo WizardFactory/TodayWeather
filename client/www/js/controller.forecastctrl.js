@@ -1,6 +1,6 @@
 angular.module('controller.forecastctrl', [])
     .controller('ForecastCtrl', function ($scope, WeatherInfo, WeatherUtil, Util, Purchase, $stateParams,
-                                          $location, $ionicHistory, $translate, Units, Push) {
+                                          $rootScope, $location, $ionicHistory, $translate, Units, Push) {
         var ASPECT_RATIO_16_9 = 1.7;
         var colWidth;
 
@@ -411,8 +411,8 @@ angular.module('controller.forecastctrl', [])
                 if (cityData.source) {
                     $scope.source = cityData.source;
                 }
-                if ($scope.settingsInfo.showWeatherPhotos == '1') {
-                    $scope.photo = cityData.photo || 'img/bg.png'; //이전에 저장된 cityData의 경우 photo가 없을 수 있음
+                if ($rootScope.settingsInfo.theme == 'photo') {
+                    $scope.photo = 'linear-gradient(to bottom, rgba(0,0,0,0.3) 95%, rgba(255,255,255,0.9)), url('+cityData.photo+'), url(img/bg.png)';
                 }
 
                 dayTable = cityData.dayChart[0].values;
@@ -744,6 +744,29 @@ angular.module('controller.forecastctrl', [])
         $scope.$on('applyEvent', function(event, sender) {
             Util.ga.trackEvent('apply', 'sender', sender);
             applyWeatherData();
+        });
+
+        $scope.$on('loadWeatherPhotosEvent', function(event, sender) {
+            Util.ga.trackEvent('loadWeatherPhotos', 'sender', sender);
+
+            try {
+                if ($rootScope.settingsInfo.theme == 'photo') {
+                    var cityIndex = WeatherInfo.getCityIndex();
+                    var cityData = WeatherInfo.getCityOfIndex(cityIndex);
+                    if (cityData === null || cityData.address === null || cityData.dayChart == null) {
+                        Util.ga.trackEvent('weather', 'error', 'fail to getCityOfIndex', cityIndex);
+                        console.log("fail to getCityOfIndex");
+                        return;
+                    }
+
+                    $scope.photo = 'linear-gradient(to bottom, rgba(0,0,0,0.3) 95%, rgba(255,255,255,0.9)), url('+cityData.photo+'), url(img/bg.png)';
+                }
+            }
+            catch(err) {
+                Util.ga.trackEvent('weather', 'error', err.toString());
+                Util.ga.trackException(err, false);
+                return;
+            }
         });
 
         var strOkay = "OK";

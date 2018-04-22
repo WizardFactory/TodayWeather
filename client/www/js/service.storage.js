@@ -1,5 +1,5 @@
 angular.module('service.storage', [])
-    .factory('TwStorage', function($q, Util) {
+    .factory('TwStorage', function($rootScope, $q, Util) {
         var obj = {};
         var suiteName;
         var oldSuiteName = 'net.wizardfactory.todayweather_preferences'; // only android
@@ -156,9 +156,14 @@ angular.module('service.storage', [])
             var that = this;
 
             var settingsInfo = that.get("settingsInfo");
-            if (settingsInfo !== null && settingsInfo.showWeatherPhotos == undefined) {
-                settingsInfo.showWeatherPhotos = '0'; //꺼짐
-                that.set("settingsInfo", settingsInfo);
+            if (settingsInfo !== null) {
+                if (settingsInfo.theme == undefined) {
+                    settingsInfo.theme = 'light'; //밝은 테마
+                    that.set("settingsInfo", settingsInfo);
+                }
+                $rootScope.settingsInfo = settingsInfo; // 저장된 설정값으로 업데이트
+            } else {
+                that.set("settingsInfo", $rootScope.settingsInfo); // 초기값 저장
             }
         };
 
@@ -192,6 +197,21 @@ angular.module('service.storage', [])
         obj.init = function () {
             var that = this;
             var deferred = $q.defer();
+
+            // settingInfo 초기값을 rootScope에 저장
+            if (clientConfig.package === 'todayAir') {
+                $rootScope.settingsInfo = {
+                    startupPage: "3", //대기정보
+                    refreshInterval: "0", //수동
+                    theme: "light" //밝은 테마
+                };
+            } else {
+                $rootScope.settingsInfo = {
+                    startupPage: "0", //시간별날씨
+                    refreshInterval: "0", //수동
+                    theme: "photo" //날씨 사진 테마
+                };
+            }
 
             if (_hasAppPreferences()) {
                 suitePrefs = plugins.appPreferences.suite(suiteName);

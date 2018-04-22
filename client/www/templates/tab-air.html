@@ -178,20 +178,15 @@
                 </tr>
             </table>
         </div>
-
         <div class="card" ng-if="stnList">
-            <div class="card-title">{{"LOC_STATION"|translate}}({{airCodeName|translate}})</div>
+            <div class="card-title">{{"LOC_STATION"|translate}} ({{airCodeName|translate}})</div>
             <div class="card-scroll">
                 <table class="rowgroup-hspacing-box">
                     <tr>
-                        <td ng-repeat="last in stnList"
-                            ng-class="{selected:$index===stnIndex}"
+                        <td ng-repeat="last in stnList" ng-class="{selected:$index===stnIndex}"
                             ng-click="setStation($index)" style="width: 110px;">
                             <p>{{last.stationName}}</p>
-                            <i ng-bind-html="getSentimentIcon(last.grade)"
-                               class="material-icons"
-                               ng-style="{'color': grade2Color(last.grade)}"></i>
-                            <br>
+                            <i ng-bind-html="getSentimentIcon(last.grade)" class="material-icons" ng-style="{'color': grade2Color(last.grade)}"></i><br>
                             <span ng-style="{'color': grade2Color(last.grade)}">{{aqiCode==='aqi'?last.str:last.value}}</span>
                         </td>
                     </tr>
