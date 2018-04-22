@@ -67,14 +67,17 @@ arpltnController.recalculateValue = function (arpltn, airUnit) {
         }
     });
 
-    if (airUnit === 'airkorea' && arpltn.khaiValue && arpltn.khaiValue !== -1) {
-        arpltn.aqiIndex = arpltn.aqiValue = arpltn.khaiValue;
-        arpltn.aqiGrade = arpltn.hasOwnProperty('khaiGrade')?arpltn.khaiGrade: AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
-    }
-    else {
-        arpltn.khaiValue = arpltn.aqiIndex = arpltn.aqiValue = aqiValue;
-        arpltn.khaiGrade = arpltn.aqiGrade = AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
-    }
+    // TW-248 사용자들이 통합대기가 24시간 평균으로 동작하면서 혼란스러워 함.
+    // if (airUnit === 'airkorea' && arpltn.khaiValue && arpltn.khaiValue !== -1) {
+    //     arpltn.aqiIndex = arpltn.aqiValue = arpltn.khaiValue;
+    //     arpltn.aqiGrade = arpltn.hasOwnProperty('khaiGrade')?arpltn.khaiGrade: AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
+    // }
+    // else {
+    //     arpltn.khaiValue = arpltn.aqiIndex = arpltn.aqiValue = aqiValue;
+    //     arpltn.khaiGrade = arpltn.aqiGrade = AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
+    // }
+    arpltn.khaiValue = arpltn.aqiIndex = arpltn.aqiValue = aqiValue;
+    arpltn.khaiGrade = arpltn.aqiGrade = AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
 
     if (arpltn.aqiGrade === -1) {
         delete  arpltn.aqiGrade;
