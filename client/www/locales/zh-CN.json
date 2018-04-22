@@ -305,5 +305,6 @@
   "LOC_OFF": "离",
   "LOC_ON": "上",
   "LOC_AIR_QUALITY_IS_GOOD" : "空气状况好",
-  "LOC_AIR_QUALITY_IS_MODERATE" : "空气状况一般"
+  "LOC_AIR_QUALITY_IS_MODERATE" : "空气状况一般",
+  "LOC_DO_YOU_WANT_TO_EXIT": "Do you want to exit?"
 }
