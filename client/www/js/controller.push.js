@@ -54,6 +54,11 @@ angular.module('controller.push', [])
 
             startTime = Push.date2localSecs(pushInfo.alert.startTime)/3600;
             endTime = Push.date2localSecs(pushInfo.alert.endTime)/3600;
+            if (endTime === 0) {
+                if (pushInfo.alert.endTime.getDate() > pushInfo.alert.startTime.getDate()) {
+                    endTime = 24;
+                }
+            }
 
             $("#example_id").ionRangeSlider({
                 hide_min_max: true,
@@ -254,8 +259,34 @@ angular.module('controller.push', [])
         };
 
         $scope.onOkay = function () {
+            if (startTime === endTime) {
+                var strClose = "Close";
+                var strMsg = "Start time and end time can not be the same time.";
+
+                $translate(['LOC_CLOSE', 'LOC_START_TIME_AND_END_TIME_CAN_NOT_BE_THE_SAME_TIME'])
+                    .then(
+                        function (translations) {
+                            strClose = translations.LOC_CLOSE;
+                            strMsg = translations.LOC_START_TIME_AND_END_TIME_CAN_NOT_BE_THE_SAME_TIME;
+                        },
+                        function (translationIds) {
+                            console.error("Fail to translate "+ JSON.stringify(translationIds));
+                        })
+                    .finally(function () {
+                        $ionicPopup.alert({
+                            template: strMsg,
+                            buttons:[{
+                                text: strClose
+                            }]
+                        });
+                });
+                return;
+            }
+
             if (!window.PushNotification) {
                 Util.ga.trackEvent('push', 'error', 'loadPlugin');
+                _savePushInfo();
+                $ionicHistory.goBack();
                 return;
             }
 

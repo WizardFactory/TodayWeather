@@ -305,5 +305,7 @@
   "LOC_OFF": "aus",
   "LOC_ON": "auf",
   "LOC_AIR_QUALITY_IS_GOOD" : "Die Luftqualität wird als gut bewertet",
-  "LOC_AIR_QUALITY_IS_MODERATE" : "Die Luftqualität wird als befriedigend bewertet"
+  "LOC_AIR_QUALITY_IS_MODERATE" : "Die Luftqualität wird als befriedigend bewertet",
+  "LOC_DO_YOU_WANT_TO_EXIT": "Do you want to exit?",
+  "LOC_START_TIME_AND_END_TIME_CAN_NOT_BE_THE_SAME_TIME" : "Start time and end time can not be the same time."
 }
