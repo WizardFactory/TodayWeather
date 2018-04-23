@@ -1,4 +1,10 @@
 window.theme = {
-    icons: 'img/icons_default',
-    weather: 'img/weather_default'
+    'photo': {
+        icons: 'img/icons_default',
+        weather: 'img/weather_default'
+    },
+    'light': {
+        icons: 'img/icons_default',
+        weather: 'img/weather_default'
+    }
 };

@@ -65,22 +65,21 @@ angular.module('controller.searchctrl', [])
         };
 
         function goPage() {
-            var startupPage;
-            var settingsInfo = TwStorage.get("settingsInfo");
-            if (settingsInfo !== null) {
-                startupPage = settingsInfo.startupPage;
-            }
+            var startupPage = $rootScope.settingsInfo.startupPage;
 
-            if (startupPage === "1") { //일별날씨
+            if (startupPage === "0") { //시간별날씨
+                $location.path('/tab/forecast');
+            }
+            else if (startupPage === "1") { //일별날씨
                 $location.path('/tab/dailyforecast');
             }
             else if (startupPage === "3") { //대기정보
                 $location.path('/tab/air');
             }
-            else if (startupPage === "4") { //대기정보
+            else if (startupPage === "4") { //날씨
                 $location.path('/tab/weather');
             }
-            else { //시간별날씨
+            else {
                 if (clientConfig.package === 'todayWeather') {
                     $location.path('/tab/forecast');
                 }
@@ -502,30 +501,7 @@ angular.module('controller.searchctrl', [])
             }
 
             WeatherInfo.setCityIndex(index);
-
-            var startupPage;
-            var settingsInfo = TwStorage.get("settingsInfo");
-            if (settingsInfo !== null) {
-                startupPage = settingsInfo.startupPage;
-            }
-
-            if (startupPage === "1") { //일별날씨
-                $location.path('/tab/dailyforecast');
-            }
-            else if (startupPage === "3") { //대기정보
-                $location.path('/tab/air');
-            }
-            else { //시간별날씨
-                if (clientConfig.package === 'todayWeather') {
-                    $location.path('/tab/forecast');
-                }
-                else if (clientConfig.package === 'todayAir') {
-                    $location.path('/tab/air');
-                }
-                else {
-                    $location.path('/tab/forecast');
-                }
-            }
+            goPage();
         };
 
         function updateCurrentPositionWeather() {
