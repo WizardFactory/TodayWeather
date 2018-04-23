@@ -1432,7 +1432,10 @@ ConCollector.prototype.getPastDsfData = function(geocode, dateList, timeOffset, 
 
                 //log.info(JSON.stringify(result));
                 //log.info('Req Dsf> : ', date.toString());
-                self.saveDSForecast(geocode, date, timeOffset, result, function(err, savedData){
+                // Second parameter of saveDSForecast denote pubDate, which means that it should be current time.
+                var curTime = new Date();
+                var cDate = parseInt(curTime.getTime() / 1000);
+                self.saveDSForecast(geocode, cDate, timeOffset, result, function(err, savedData){
                     return cb(null, savedData);
                 });
             });
@@ -1525,9 +1528,9 @@ ConCollector.prototype.arrangDsfData = function(geocode, timeOffset, DsfData){
     return res;
 };
 
-ConCollector.prototype._isSameDay = function(date, timeOffset){
+ConCollector.prototype._isSameDay = function(cDate, date, timeOffset){
     let timeOffset_ms = timeOffset * 60 * 60 * 1000; /* ms */
-    let curDate = new Date();
+    let curDate = new Date(cDate);
     let targetDate = new Date(date.getTime() + timeOffset_ms);
 
     curDate.setTime(curDate.getTime() + timeOffset_ms);
@@ -1565,14 +1568,22 @@ ConCollector.prototype._removeDsfDb = function(geocode, callback){
             return self.removeAllDsfDb(geocode, callback);
         }
 
-        log.info('Req Dsf> [0] : ', dsfData[0].current.dateObj.toString(), ' | ', dsfData[0].current.date);
-        log.info('Req Dsf> [1] : ', dsfData[1].current.dateObj.toString(), ' | ', dsfData[1].current.date);
-        log.info('Req Dsf> [2] : ', dsfData[2].current.dateObj.toString(), ' | ', dsfData[2].current.date);
+        log.info('Req Dsf> [0] : ', dsfData[0].current.dateObj.toString(), ' | ', dsfData[0].current.date, ' | Offset:', timeOffset);
+        log.info('Req Dsf> [1] : ', dsfData[1].current.dateObj.toString(), ' | ', dsfData[1].current.date, ' | Offset:', timeOffset);
+        log.info('Req Dsf> [2] : ', dsfData[2].current.dateObj.toString(), ' | ', dsfData[2].current.date, ' | Offset:', timeOffset);
 
+        var cDate = new Date();
         // check date of db's data,
         // if it's not the same as current date, it would remove all db data and receive all again.
-        if(!self._isSameDay(dsfData[2].current.dateObj, timeOffset)) {
+        if(!self._isSameDay(cDate.getTime(), dsfData[2].current.dateObj, timeOffset)) {
             log.info('Req Dsf> It is not same date!');
+            return self.removeAllDsfDb(geocode, callback);
+        }
+
+        // check yesterday of db's data
+        cDate.setDate(cDate.getDate() - 1);
+        if(!self._isSameDay(cDate.getTime(), dsfData[0].current.dateObj, timeOffset)) {
+            log.info('Req Dsf> It is too old data');
             return self.removeAllDsfDb(geocode, callback);
         }
 
@@ -1683,7 +1694,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
                     // 3. try to get past-data
                     var reqTime = self._getLocalLast0H(todayData.timeOffset * 60);
                     //day light saving위해 1시간 margin을 둠.
-                    reqTime.setUTCHours(reqTime.getUTCHours() + 1);
+                    //reqTime.setUTCHours(reqTime.getUTCHours() + 1);
                     for (var i = From; i < To; i++) {
                         reqTime.setUTCDate(reqTime.getUTCDate() - i);
                         //log.info("reqTime="+reqTime.toISOString());
