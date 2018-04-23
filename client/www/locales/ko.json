@@ -308,5 +308,7 @@
   "LOC_DARK_THEME": "어두운 테마",
   "LOC_AIR_QUALITY_IS_GOOD" : "대기상태가 좋아요",
   "LOC_AIR_QUALITY_IS_MODERATE" : "대기상태는 보통입니다",
-  "LOC_DO_YOU_WANT_TO_EXIT": "종료하시겠습니까?"
+  "LOC_DO_YOU_WANT_TO_EXIT": "종료하시겠습니까?",
+  "LOC_START_TIME_AND_END_TIME_CAN_NOT_BE_THE_SAME_TIME" : "시작시간과 종료시간을 같은 시간으로 할 수 없습니다.",
+  "LOC_AVERAGE": "평균"
 }
