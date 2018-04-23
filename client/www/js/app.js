@@ -1614,6 +1614,33 @@ angular.module('starter', [
             }
         });
 
+        $compileProvider.directive("photoUrl", [function () {
+            return {
+                restrict: "A",
+                scope: {
+                    photoUrl: '='
+                },
+                link: function (scope, element, attributes) {
+                    scope.$watch('photoUrl', function(newValue) {
+                        if (newValue == undefined) {
+                            return;
+                        }
+
+                        var image = new Image();
+                        image.onload = function () {
+                            scope.$apply(function () {
+                                element.css({ backgroundImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 95%, rgba(255,255,255,0.9)), url("' + newValue + '")' });
+                            });
+                        };
+                        image.onerror = function () {
+                            element.css({ backgroundImage: 'url("img/bg.png")' });
+                        };
+                        image.src = newValue;
+                    });
+                }
+            };
+        }]);
+
         // Ionic uses AngularUI Router which uses the concept of states
         // Learn more here: https://github.com/angular-ui/ui-router
         // Set up the various states which the app can be in.

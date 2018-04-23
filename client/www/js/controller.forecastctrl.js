@@ -412,7 +412,7 @@ angular.module('controller.forecastctrl', [])
                     $scope.source = cityData.source;
                 }
                 if ($rootScope.settingsInfo.theme == 'photo') {
-                    $scope.photo = 'linear-gradient(to bottom, rgba(0,0,0,0.3) 95%, rgba(255,255,255,0.9)), url('+cityData.photo+'), url(img/bg.png)';
+                    $scope.photo = cityData.photo;
                 }
 
                 dayTable = cityData.dayChart[0].values;
@@ -759,7 +759,7 @@ angular.module('controller.forecastctrl', [])
                         return;
                     }
 
-                    $scope.photo = 'linear-gradient(to bottom, rgba(0,0,0,0.3) 95%, rgba(255,255,255,0.9)), url('+cityData.photo+'), url(img/bg.png)';
+                    $scope.photo = cityData.photo;
                 }
             }
             catch(err) {
