@@ -103,9 +103,9 @@
                     {{'LOC_REFRESH_INTERVAL'|translate}}
                     <span style="float: right">{{getRefreshIntervalValueStr(settingsInfo.refreshInterval)|translate}}</span>
                 </label>
-                <label class="item" ng-click="settingRadio('showWeatherPhotos')" ng-if="clientConfig.package === 'todayWeather'">
-                    {{'LOC_SHOW_WEATHER_PHOTOS'|translate}}
-                    <span style="float: right">{{getShowWeatherPhotosValueStr(settingsInfo.showWeatherPhotos)|translate}}</span>
+                <label class="item" ng-click="settingRadio('theme')">
+                    {{'LOC_THEME_SETTING'|translate}}
+                    <span style="float: right">{{getThemeValueStr(settingsInfo.theme)|translate}}</span>
                 </label>
                 <label class="item" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
                     {{'LOC_REMOVE_ADS'|translate}}
