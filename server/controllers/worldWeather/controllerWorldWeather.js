@@ -1943,7 +1943,7 @@ function controllerWorldWeather() {
             });
 
             if(req.result.thisTime.length === errPrint.length) {
-                log.error('Fail to find matched AQI Data : ', JSON.stringify(errPrint));
+                log.warn('Fail to find matched AQI Data : ', JSON.stringify(errPrint));
             }
         }
 
