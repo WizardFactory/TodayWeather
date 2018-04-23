@@ -305,5 +305,6 @@
   "LOC_OFF": "Off",
   "LOC_ON": "On",
   "LOC_AIR_QUALITY_IS_GOOD" : "Air quality is good",
-  "LOC_AIR_QUALITY_IS_MODERATE" : "Air quality is moderate"
+  "LOC_AIR_QUALITY_IS_MODERATE" : "Air quality is moderate",
+  "LOC_AVERAGE": "Average"
 }
