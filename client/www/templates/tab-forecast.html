@@ -35,7 +35,7 @@
         <div class="card">
             <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()" class="row row-no-padding"
                  ng-style="{'min-height':headerHeight+'px'}">
-                <div class="photo-box" ng-style="{'background-image': photo}"></div>
+                <div class="photo-box" photo-url="photo"></div>
                 <div class="main-box-arrow" ng-click="onSwipeRight()" ng-if="cityCount > 1">
                     <span class="icon-left ion-chevron-left"></span>
                 </div>
