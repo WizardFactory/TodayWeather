@@ -70,7 +70,12 @@ angular.module('controller.air', [])
         };
 
         $scope.goWeather = function () {
-            $location.path('/tab/forecast');
+            if (clientConfig.package === 'todayWeather') {
+                $location.path('/tab/forecast');
+            }
+            else if (clientConfig.package === 'todayAir') {
+                $location.path('/tab/weather');
+            }
         };
 
         function _getDustForecast(dayWeatherList) {

@@ -118,6 +118,21 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
           vertical-align: bottom;
         }
       }
+      .main-box-air-summary {
+        color:#444;
+        font-size: 21px;
+        line-height: 21px;
+        i {
+          font-size: 24px;
+          vertical-align: bottom;
+        }
+        img {
+          height: 24px;
+        }
+        div {
+          margin: auto;
+        }
+      }
     }
     .main-box-arrow {
       width: 10%;
