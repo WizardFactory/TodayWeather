@@ -21,6 +21,7 @@
  Definitions
  ********************************************************************/
 #define USE_DEBUG                       0
+#define EMUL_TEST                       1
 
 #define STR_GOOGLE_COORD2ADDR_URL       @"https://maps.googleapis.com/maps/api/geocode/json?latlng="
 #define STR_GOOGLE_ADDR2COORD_URL       @"https://maps.googleapis.com/maps/api/geocode/json?address="
@@ -178,7 +179,7 @@ static TodayViewController *todayVC = nil;
     if(nsOSVer.majorVersion >= 10)
     {
         // Add the iOS 10 Show More ability
-        NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
+        NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayair"];
         NSString *cityList = [sharedUserDefaults objectForKey:@"cityList"];
 
                 dispatch_async(dispatch_get_main_queue(), ^{
@@ -198,7 +199,7 @@ static TodayViewController *todayVC = nil;
     {
         dispatch_async(dispatch_get_main_queue(), ^{
             addressLabel.textColor  = [UIColor lightGrayColor];
-            curTempLabel.textColor  = [UIColor lightGrayColor];
+            curAirLabel.textColor  = [UIColor lightGrayColor];
             todayMaxMinTempLabel.textColor = [UIColor lightGrayColor];
             noLocationLabel.textColor = [UIColor lightGrayColor];
             showMoreView.hidden = YES;
@@ -345,6 +346,12 @@ static TodayViewController *todayVC = nil;
     todayWSM = [[TodayWeatherShowMore alloc] init];
     todayUtil = [[TodayWeatherUtil alloc] init];
     
+    todayWSM.curAirDataDict = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
+                               @"", @"airTitle",
+                               @"", @"pm10Color",
+                               @"", @"pm25Color",
+                               @"", @"o3Color",
+                               nil];
     //NSLog(@"width : %f", self.view.bounds.size.width);
     
     
@@ -353,7 +360,7 @@ static TodayViewController *todayVC = nil;
     //[twAppBtn sizeToFit];
     noLocationLabel.text     = LSTR_PLEASE_EXECUTE_MAIN_APP;
 
-    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
+    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayair"];
     NSString *cityList = [sharedUserDefaults objectForKey:@"cityList"];
     NSString *nssUnits = [sharedUserDefaults objectForKey:@"units"];
     
@@ -417,11 +424,19 @@ static TodayViewController *todayVC = nil;
         if (cityList == nil) {
             //You have to run todayweather for add citylist
             NSLog(@"show no location view");
-            
+
+#if EMUL_TEST
             noLocationView.hidden   = FALSE;
             locationView.hidden     = TRUE;
             showMoreView.hidden     = TRUE;
             return;
+#else
+            noLocationView.hidden = TRUE;
+            locationView.hidden = FALSE;
+            addressLabel.text   = currentCity.name;
+            
+            [self initWidgetViews];
+#endif
         }
         else {
             noLocationView.hidden = TRUE;
@@ -444,7 +459,7 @@ static TodayViewController *todayVC = nil;
     NSData *tmpDataWD = nil;
     
     // User Defaults WD
-    NSUserDefaults *sharedUserDefaultsWD = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather.weatherdata"];
+    NSUserDefaults *sharedUserDefaultsWD = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayair.weatherdata"];
     NSString *nssWeatherList = [sharedUserDefaultsWD objectForKey:@"weatherDataList"];
 //    NSLog(@"[loadWeatherData] nssWeatherList: %@", nssWeatherList);
     tmpDataWD = [nssWeatherList dataUsingEncoding:NSUTF8StringEncoding];
@@ -498,7 +513,7 @@ static TodayViewController *todayVC = nil;
 - (void) saveWeatherInfo:(NSDictionary *)dict
 {
     NSError *error = nil;
-    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather.weatherdata"];
+    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayair.weatherdata"];
     
     NSNumber    *nsnIdx = nil;
     
@@ -618,7 +633,7 @@ static TodayViewController *todayVC = nil;
  ********************************************************************/
 - (void) updateCurLocation:(NSDictionary *)nsdLocation
 {
-    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
+    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayair"];
     NSError *error = nil;
     
     NSMutableDictionary* nsdCurCity = [mCityDictList objectAtIndex:mCurrentCityIdx];
@@ -719,7 +734,7 @@ static TodayViewController *todayVC = nil;
     NSString *nssAddr3 = nil;
     NSString *nssReqURL = nil;
     
-    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
+    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayair"];
     
     NSLog(@"userDefaultsDidChange Enter");
     
@@ -784,7 +799,7 @@ static TodayViewController *todayVC = nil;
  ********************************************************************/
 - (IBAction) editWidget:(id)sender
 {
-    NSURL *pjURL = [NSURL URLWithString:@"todayweather://"];
+    NSURL *pjURL = [NSURL URLWithString:@"todayair://"];
     NSLog(@"pjURL : %@", pjURL);
     [self.extensionContext openURL:pjURL completionHandler:^(BOOL success) {
         NSLog(@"fun=%s after completion. success=%d", __func__, success);
@@ -865,7 +880,7 @@ static TodayViewController *todayVC = nil;
 - (IBAction)moveMainApp:(id)sender;
 {
     NSLog(@"move Main Appication!!!");
-    NSString *nssURL = [NSString stringWithFormat:@"todayweather://%d", mCurrentCity.index];
+    NSString *nssURL = [NSString stringWithFormat:@"todayair://%d", mCurrentCity.index];
     
     NSLog(@"mCurrentCity.index : %d", mCurrentCity.index);
     
@@ -1726,23 +1741,22 @@ static TodayViewController *todayVC = nil;
         
         if( (idT1h == nil) || [idT1h isEqualToString:@"(null)"] )
         {
-           curTempLabel.text       = @"";
+           curAirLabel.text       = @"";
         }
         else
         {
             if(tempUnit == TEMP_UNIT_FAHRENHEIT)
             {
-                curTempLabel.text       = [NSString stringWithFormat:@"%d˚", (int)currentTemp];
+                curAirLabel.text       = [NSString stringWithFormat:@"%d˚", (int)currentTemp];
             }
             else
             {
-                curTempLabel.text       = [NSString stringWithFormat:@"%.01f˚", currentTemp];
+                curAirLabel.text       = [NSString stringWithFormat:@"%.01f˚", currentTemp];
             }
         }
         
         if(nsmasAirState)
-            //curDustLabel.text       = nssAirState;
-            [curDustLabel setAttributedText:nsmasAirState];
+            [sumAirLabel setAttributedText:nsmasAirState];
         
         if(nssTodPop)
         {
@@ -1947,17 +1961,17 @@ static TodayViewController *todayVC = nil;
         
         if( (idT1h == nil) || [idT1h isEqualToString:@"(null)"] )
         {
-            curTempLabel.text       = @"";
+            curAirLabel.text       = @"";
         }
         else
         {
             if(tempUnit == TEMP_UNIT_FAHRENHEIT)
             {
-                curTempLabel.text       = [NSString stringWithFormat:@"%d˚", (int)currentTemp];
+                curAirLabel.text       = [NSString stringWithFormat:@"%d˚", (int)currentTemp];
             }
             else
             {
-                curTempLabel.text       = [NSString stringWithFormat:@"%.01f˚", currentTemp];
+                curAirLabel.text       = [NSString stringWithFormat:@"%.01f˚", currentTemp];
             }
         }
         
@@ -1970,15 +1984,15 @@ static TodayViewController *todayVC = nil;
             
             if(todPop == 0)
             {
-                curDustLabel.font           = [UIFont systemFontOfSize:16.0];
-                curDustLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
+                sumAirLabel.font           = [UIFont systemFontOfSize:16.0];
+                sumAirLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
                 
                 todayMaxMinTempLabel.text  = [NSString stringWithFormat:@"%d˚/ %d˚", todayMinTemp, todayMaxTemp];
             }
             else
             {
-                curDustLabel.font           = [UIFont systemFontOfSize:16.0];
-                curDustLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
+                sumAirLabel.font           = [UIFont systemFontOfSize:16.0];
+                sumAirLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
                 
                 todayMaxMinTempLabel.font   = [UIFont systemFontOfSize:16.0];
                 todayMaxMinTempLabel.text   = [NSString stringWithFormat:@"%d˚/ %d˚", todayMinTemp, todayMaxTemp];
@@ -1988,8 +2002,8 @@ static TodayViewController *todayVC = nil;
         {
             int todPop = 0;
             
-            curDustLabel.font           = [UIFont systemFontOfSize:16.0];
-            curDustLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
+            sumAirLabel.font           = [UIFont systemFontOfSize:16.0];
+            sumAirLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
 
             todayMaxMinTempLabel.text = [NSString stringWithFormat:@"%d˚/%d˚", todayMinTemp, todayMaxTemp];
         }
@@ -2235,8 +2249,8 @@ static TodayViewController *todayVC = nil;
     updateTimeLabel.text    = @"";
     
     curWTIconIV.image       = [UIImage imageNamed:@""];
-    curTempLabel.text       = @"";
-    curDustLabel.text       = @"";
+    curAirLabel.text       = @"";
+    sumAirLabel.text       = @"";
     todayMaxMinTempLabel.text   = @"";
     
     time1Label.text         = @"";
@@ -2349,6 +2363,11 @@ static TodayViewController *todayVC = nil;
             lng = [[nextCity.location objectForKey:@"long"] floatValue];
         }
 
+#if EMUL_TEST
+#else
+        lat = 11;
+        lng = 11;
+#endif
         if (!(lat == 0 && lng == 0)) {
             [self getWeatherByCoord:lat longitude:lng];
         }
@@ -2370,7 +2389,7 @@ static TodayViewController *todayVC = nil;
         }
     }
     
-    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
+    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayair"];
     NSData *archivedObject = [NSKeyedArchiver archivedDataWithRootObject: nextCity];
     [sharedUserDefaults setObject:archivedObject forKey:@"currentCity"];
     [sharedUserDefaults synchronize];
@@ -2466,8 +2485,11 @@ static TodayViewController *todayVC = nil;
     NSString *nssAirUnits = [nssUnits objectForKey:@"airUnit"];
     
     NSString *nssQueryParams = [NSString stringWithFormat:@"temperatureUnit=%@&windSpeedUnit=%@&pressureUnit=%@&distanceUnit=%@&precipitationUnit=%@&airUnit=%@", nssTempUnits, nssWindUnits, nssPressUnits, nssDistUnits, nssPrecipUnits, nssAirUnits];
-
+#if EMUL_TEST
     NSString *nssURL = [NSString stringWithFormat:@"%@/%@/%.3f,%.3f?%@", TODAYWEATHER_URL, COORD_2_WEATHER_API_URL, latitude, longitude, nssQueryParams];
+#else
+    NSString *nssURL = [NSString stringWithFormat:@"%@/%@/37.558,127.185?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea", TODAYWEATHER_URL, COORD_2_WEATHER_API_URL];
+#endif
     
     NSLog(@"[getByCoord] url : %@", nssURL);
     
@@ -2605,6 +2627,25 @@ static TodayViewController *todayVC = nil;
     nsmasAirState       = [todayWSM getChangedColorAirState:nssAirState];
     
     NSLog(@"[ByCoord] nsmasAirState : %@",nsmasAirState);
+    
+    NSString *nssSummaryAir = [currentDict objectForKey:@"summaryAir"];
+    NSLog(@"[ByCoord] summaryAir : %@",nssSummaryAir);
+    
+    unsigned int pm10Value     = [[currentArpltnDict objectForKey:@"pm10Value"] unsignedIntValue];
+    unsigned int pm25Value     = [[currentArpltnDict objectForKey:@"pm25Value"] unsignedIntValue];
+    float o3Value       = [[currentArpltnDict objectForKey:@"o3Value"] floatValue];
+    
+    NSString *nssPM10Str        = [currentArpltnDict objectForKey:@"pm10Str"];
+    NSString *nssPM25Str        = [currentArpltnDict objectForKey:@"pm25Str"];
+    NSString *nssO3Str        = [currentArpltnDict objectForKey:@"o3Str"];
+    
+    NSLog(@"[ByCoord] nssPM10Str : %@", nssPM10Str);
+    NSLog(@"[ByCoord] nssPM25Str : %@", nssPM25Str);
+    NSLog(@"[ByCoord] nssO3Str : %@", nssO3Str);
+    
+    UIColor *uicPM10           = [todayWSM getColorAirState:nssPM10Str];
+    UIColor *uicPM25           = [todayWSM getColorAirState:nssPM25Str];
+    UIColor *uicO3           = [todayWSM getColorAirState:nssO3Str];
 
     // Processing current temperature
     idT1h    = [NSString stringWithFormat:@"%@", [currentDict valueForKey:@"t1h"]];
@@ -2660,47 +2701,46 @@ static TodayViewController *todayVC = nil;
             addressLabel.text       = nssName;
         }
         
+        NSLog(@"[ByCoord] =>  nssCurImgName : %@", nssCurImgName);
         if(nssCurImgName)
         {
-            curWTIconIV.image       = [UIImage imageNamed:nssCurImgName];
-            curWTIconIV.image = [TodayWeatherUtil renderImageFromView:curWTIconIV withRect:curWTIconIV.bounds transparentInsets:UIEdgeInsetsZero];
+            NSLog(@"[ByCoord] =>  nssCurImgName : %@", nssCurImgName);
+            //curAirIconIV.image       = [UIImage imageNamed:nssCurImgName];
+            curAirIconIV.image       = [UIImage imageNamed:@"Moon.png"];
+            curAirIconIV.image = [TodayWeatherUtil renderImageFromView:curWTIconIV withRect:curWTIconIV.bounds transparentInsets:UIEdgeInsetsZero];
             
         }
         
-        curTempLabel.numberOfLines = 1;
+        curAirLabel.numberOfLines = 1;
+        sumAirLabel.numberOfLines = 1;
         
-        if( (idT1h == nil) || [idT1h isEqualToString:@"(null)"] )
+#if 0
+        if(nsmasAirState)
+            [curAirLabel setAttributedText:nsmasAirState];
+#else
+        NSString *nssAirStatus = [todayWSM.curAirDataDict objectForKey:@"airTitle"];
+        curAirLabel.text = [NSString stringWithFormat:@"%@", nssAirStatus];
+#endif
+        
+        if( (nssSummaryAir == nil) || [nssSummaryAir isEqualToString:@"(null)"] )
         {
-            curTempLabel.text       = @"";
+            sumAirLabel.text       = @"";
         }
         else
         {
-            if(tempUnit == TEMP_UNIT_FAHRENHEIT)
-            {
-                curTempLabel.text       = [NSString stringWithFormat:@"%d˚", (int)currentTemp];
-            }
-            else
-            {
-                curTempLabel.text       = [NSString stringWithFormat:@"%.01f˚", currentTemp];
-            }
+            sumAirLabel.text       = [NSString stringWithFormat:@"%@", nssSummaryAir];
         }
         
-        if(nsmasAirState)
-            //curDustLabel.text       = nssAirState;
-            [curDustLabel setAttributedText:nsmasAirState];
+        pm25Lbl.text                = [NSString stringWithFormat:@"%d", pm25Value];
+        pm10Lbl.text                = [NSString stringWithFormat:@"%d", pm10Value];
+        o3Lbl.text                  = [NSString stringWithFormat:@"%.3f", o3Value];
         
-        if(nssTodPop)
-        {
-            int todPop = [nssTodPop intValue]; //todPop = 50;
-            if(todPop == 0)
-            {
-                todayMaxMinTempLabel.text  = [NSString stringWithFormat:@"%ld˚/ %ld˚", (long)todayMinTemp, (long)todayMaxTemp];
-            }
-            else
-            {
-                todayMaxMinTempLabel.text  = [NSString stringWithFormat:@"%ld˚/ %ld˚   %@ %d%%", (long)todayMinTemp, (long)todayMaxTemp, LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
-            }
-        }
+        
+        
+        pm25Btn.backgroundColor     = uicPM25;
+        pm10Btn.backgroundColor     = uicPM10;
+        o3Btn.backgroundColor       = uicO3;
+        
         
         locationView.hidden = false;
         //        self.view.hidden = false;
@@ -2723,9 +2763,9 @@ static TodayViewController *todayVC = nil;
     dispatch_async(dispatch_get_main_queue(), ^{
         NSInteger errCode = error.code;
         updateTimeLabel.text = @"";
-        curDustLabel.text = [NSString stringWithFormat:@"Server Error %ld", (long)errCode];
+        sumAirLabel.text = [NSString stringWithFormat:@"Server Error %ld", (long)errCode];
         todayMaxMinTempLabel.text = @"";
-        curTempLabel.text = @"";
+        curAirLabel.text = @"";
         addressLabel.text = @"Error";
         curWTIconIV.image = [UIImage imageNamed:@"empty"];
         
