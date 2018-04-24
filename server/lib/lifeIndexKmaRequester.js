@@ -1021,7 +1021,7 @@ KmaIndexService.prototype.parseLifeIndex2 = function(indexName, data) {
  * @returns {KmaIndexService}
  */
 KmaIndexService.prototype.saveLifeIndex2 = function(indexName, results, callback) {
-    async.map(results,
+    async.mapSeries(results,
         function (result, callback) {
             var query = {date: result.date, areaNo: result.areaNo, indexType: result.indexType};
             LifeIndexKma2.update(query, result, {upsert:true}, function (err) {

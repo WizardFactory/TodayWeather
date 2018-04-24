@@ -13,6 +13,7 @@ var req = require('request');
 var ControllerTown24h = require('./controllerTown24h');
 var cTown = new ControllerTown24h();
 var UnitConverter = require('../lib/unitConverter');
+var AqiConverter = require('../lib/aqi.converter');
 
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
@@ -315,39 +316,124 @@ ControllerPush.prototype._makeStrTmnTmx = function (theDay, preDay, trans) {
  *
  * @param pushInfo
  * @param weatherInfo
- * @returns {string}
  * @private
  */
-ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) {
-    var pushMsg;
+ControllerPush.prototype._makePushAirMessage = function (pushInfo, weatherInfo, ts) {
+    var current = weatherInfo.current || weatherInfo.thisTime[1];
+    var time;
 
-    var trans = {};
-    i18n.configure({
-        // setup some locales - other locales default to en silently
-        locales: ['en', 'ko', 'ja', 'zh-CN', 'de', 'zh-TW'],
-        // where to store json files - defaults to './locales'
-        directory: __dirname + '/../locales',
-        register: trans
-    });
+    if (weatherInfo.airInfo == undefined) {
+        throw new Error('airInfo is invalid');
+        return null;
+    }
 
-    trans.setLocale(pushInfo.lang);
+    if (current.dateObj) {
+        time =  new Date(current.dateObj).getHours();
+    }
+    else if (current.time) {
+        time = current.time;
+    }
 
-    var location = "";
-    if (pushInfo.name) {
-        location = pushInfo.name + " ";
+    var fromToday = time < 18 ? 0 : 1;
+    var currentSummary;
+    if (current.summaryAir) {
+        currentSummary = ts.__('LOC_CURRENT')+": "+current.summaryAir;
+    }
+
+    var airUnit = weatherInfo.units.airUnit;
+    var pollutants = weatherInfo.airInfo.pollutants;
+    if (pollutants == undefined) {
+        log.warn('daily forecast is invalid');
+        return {title:'', text: currentSummary};
+    }
+
+    var dayInfo = {};
+
+    for (var name in pollutants) {
+        if (pollutants[name] && pollutants[name].daily) {
+            var dayObj = pollutants[name].daily.find(function (obj) {
+                return obj.fromToday === fromToday;
+            });
+            if (dayObj && name !== 'aqi') {
+                dayInfo[name] = dayObj;
+                dayInfo[name].index = AqiConverter.value2index(airUnit, name, dayObj.val);
+            }
+        }
+    }
+
+    var maxGrade = 0;
+    var maxIndex = 0;
+    var maxIndexPollutant;
+    for (var name in dayInfo) {
+       if (dayInfo[name].grade > maxGrade)  {
+           maxGrade = dayInfo[name].grade;
+       }
+       if (dayInfo[name].index > maxIndex) {
+          maxIndex = dayInfo[name].index;
+          maxIndexPollutant = name;
+       }
+    }
+
+    if (maxGrade === 0) {
+        log.warn('daily forecast is invalid');
+        return {title:'', text: currentSummary};
+    }
+
+    var daySummary = '';
+
+    if (maxGrade <= 1) {
+        daySummary = ts.__('LOC_AIR_QUALITY_IS_GOOD');
+    }
+    else if (maxGrade == 2) {
+        //moderate
+        if (dayInfo.pm25 && dayInfo.pm25.grade >= 2) {
+            //pm2.5 평균 30 보통
+            daySummary += ts.__('LOC_PM25') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm25.value + ' ' + dayInfo.pm25.str;
+        }
+        if (dayInfo.pm10 && dayInfo.pm10.grade >= 2) {
+            //pm10 평균 30 보통
+            if (daySummary.length > 0) {
+                daySummary += ', ';
+            }
+            daySummary += ts.__('LOC_PM10') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm10.value + ' ' + dayInfo.pm10.str;
+        }
+        if (daySummary.length === 0) {
+            daySummary = ts.__('LOC_AIR_QUALITY_IS_MODERATE');
+        }
     }
     else {
-        if (weatherInfo.townName) {
-            location = weatherInfo.townName + ' ';
+        if (dayInfo.pm25 && dayInfo.pm25.grade >= 3) {
+            daySummary += ts.__('LOC_PM25') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm25.value + ' ' + dayInfo.pm25.str;
         }
-        else if (weatherInfo.cityName) {
-            location = weatherInfo.cityName + ' ';
+        if (dayInfo.pm10 && dayInfo.pm10.grade >= 3) {
+            if (daySummary.length > 0) {
+                daySummary += ', ';
+            }
+            daySummary += ts.__('LOC_PM10') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm10.value + ' ' + dayInfo.pm10.str;
         }
-        else if (weatherInfo.regionName) {
-            location = weatherInfo.regionName + ' ';
+        if (daySummary.length === 0) {
+            daySummary += ts.__(AqiConverter.name2string(maxIndexPollutant));
+            daySummary += ' ' + ts.__('LOC_AVERAGE') + dayInfo[maxIndexPollutant].value;
+            daySummary += ' ' + dayInfo[maxIndexPollutant].str;
         }
     }
 
+    if (fromToday === 0) {
+        daySummary = ts.__("LOC_TODAY")+": " + daySummary;
+    }
+    else {
+        daySummary = ts.__("LOC_TOMORROW")+": " + daySummary;
+    }
+
+    var text;
+    if (currentSummary) {
+        text = currentSummary + '\n' + daySummary;
+    }
+
+    return {title:'', text: text};
+};
+
+ControllerPush.prototype._makeKmaPushWeatherMessage = function (pushInfo, weatherInfo, trans) {
     var dailyArray = [];
     var dailySummary = "";
     var current = weatherInfo.current;
@@ -409,10 +495,11 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
         str = this._makeStrTmnTmx(theDay, preDay, trans);
         dailyArray.push(str);
     }
+
     if (theDay.pty && theDay.pty > 0) {
         if (theDay.pop && current.pty <= 0) {
             if(theDay.date === today.date && current.pty <= 0) {
-               //It's raining or snowing so we didn't show pop
+                //It's raining or snowing so we didn't show pop
             }
             else {
                 dailyArray.push(trans.__("LOC_PROBABILITY_OF_PRECIPITATION")+" "+theDay.pop+"%");
@@ -492,13 +579,63 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
     hourlySummary += hourlyArray.toString();
     //불쾌지수
 
-    pushMsg = {title: location+hourlySummary, text: dailySummary};
+    hourlySummary = trans.__('LOC_CURRENT') + ': ' + hourlySummary;
+
+    return {title: hourlySummary, text: dailySummary};
+};
+
+/**
+ *
+ * @param pushInfo
+ * @param weatherInfo
+ * @returns {string}
+ * @private
+ */
+ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) {
+    var pushMsg;
+
+    var trans = {};
+    i18n.configure({
+        // setup some locales - other locales default to en silently
+        locales: ['en', 'ko', 'ja', 'zh-CN', 'de', 'zh-TW'],
+        // where to store json files - defaults to './locales'
+        directory: __dirname + '/../locales',
+        register: trans
+    });
+
+    trans.setLocale(pushInfo.lang);
+
+    var location = "";
+    if (pushInfo.name) {
+        location = pushInfo.name + " ";
+    }
+    else {
+        if (weatherInfo.townName) {
+            location = weatherInfo.townName + ' ';
+        }
+        else if (weatherInfo.cityName) {
+            location = weatherInfo.cityName + ' ';
+        }
+        else if (weatherInfo.regionName) {
+            location = weatherInfo.regionName + ' ';
+        }
+    }
+
+    if (pushInfo.package === 'todayWeather') {
+        var weatherSummary = this._makeKmaPushWeatherMessage(pushInfo, weatherInfo, trans);
+        pushMsg = {title: location+weatherSummary.title, text: weatherSummary.text};
+    }
+    else if (pushInfo.package === 'todayAir') {
+        var airSummary = this._makePushAirMessage(pushInfo, weatherInfo, trans);
+        pushMsg = {title: location+airSummary.title, text: airSummary.text};
+    }
+
     return pushMsg;
 };
 
 ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback) {
     var self = this;
-    var apiVersion = "v000901";
+    var apiVersion = "v000902";
     var url;
     var town = pushInfo.town;
 
@@ -594,83 +731,8 @@ ControllerPush.prototype._pty2str = function (pty, translate) {
     return "";
 };
 
-ControllerPush.prototype._parseWorldSkyState = function(precType, cloud, isNight) {
-    var skyIconName = "";
-
-    if (isNight) {
-        skyIconName = "Moon";
-    }
-    else {
-        skyIconName = "Sun";
-    }
-
-    if (!(cloud == undefined)) {
-        if (cloud <= 20) {
-            skyIconName += "";
-        }
-        else if (cloud <= 50) {
-            skyIconName += "SmallCloud";
-        }
-        else if (cloud <= 80) {
-            skyIconName += "BigCloud";
-        }
-        else {
-            skyIconName = "Cloud";
-        }
-    }
-    else {
-        if (precType > 0)  {
-            skyIconName = "Cloud";
-        }
-    }
-
-    switch (precType) {
-        case 0:
-            skyIconName += "";
-            break;
-        case 1:
-            skyIconName += "Rain";
-            break;
-        case 2:
-            skyIconName += "Snow";
-            break;
-        case 3:
-            skyIconName += "RainSnow";
-            break;
-        case 4: //우박
-            skyIconName += "RainSnow";
-            break;
-        default:
-            console.log('Fail to parse precType='+precType);
-            break;
-    }
-
-    //if (lgt === 1) {
-    //    skyIconName += "Lightning";
-    //}
-
-    return skyIconName;
-};
-
-
-ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherData) {
+ControllerPush.prototype._makeDsfPushWeatherMessage = function(pushInfo, worldWeatherData, trans) {
     var self = this;
-    var pushMsg;
-    var trans = {};
-    i18n.configure({
-        // setup some locales - other locales default to en silently
-        locales: ['en', 'ko', 'ja', 'zh-CN', 'de', 'zh-TW'],
-        // where to store json files - defaults to './locales'
-        directory: __dirname + '/../locales',
-        register: trans
-    });
-    trans.setLocale(pushInfo.lang);
-
-    var location = "";
-    if (pushInfo.name) {
-        location = pushInfo.name + " ";
-    }
-
     var dailyArray = [];
     var dailySummary = "";
     var current = worldWeatherData.thisTime[1];
@@ -759,8 +821,36 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
     }
 
     hourlySummary += hourlyArray.toString();
+    hourlySummary = trans.__('LOC_CURRENT') + ': ' + hourlySummary;
 
-    pushMsg = {title: location+hourlySummary, text: dailySummary};
+    return {title: hourlySummary, text: dailySummary};
+};
+
+ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherData) {
+    var pushMsg;
+    var trans = {};
+    i18n.configure({
+        // setup some locales - other locales default to en silently
+        locales: ['en', 'ko', 'ja', 'zh-CN', 'de', 'zh-TW'],
+        // where to store json files - defaults to './locales'
+        directory: __dirname + '/../locales',
+        register: trans
+    });
+    trans.setLocale(pushInfo.lang);
+
+    var location = "";
+    if (pushInfo.name) {
+        location = pushInfo.name + " ";
+    }
+
+    if (pushInfo.package === 'todayWeather') {
+        var weatherSummary = this._makeDsfPushWeatherMessage(pushInfo, worldWeatherData, trans);
+        pushMsg = {title: location+weatherSummary.title, text: weatherSummary.text};
+    }
+    else if (pushInfo.package === 'todayAir') {
+        var airSummary = this._makePushAirMessage(pushInfo, worldWeatherData, trans);
+        pushMsg = {title: location+airSummary.title, text: airSummary.text};
+    }
 
     return pushMsg;
 };
@@ -775,7 +865,7 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
 ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback) {
     var self = this;
     //v000902로 업데이트 하는 경우 _getWeatherEmoji 수정해야 함.
-    var url = self.url+"/v000901/dsf/coord/";
+    var url = self.url+"/v000902/dsf/coord/";
     url += pushInfo.geo[1]+","+pushInfo.geo[0];
 
     var count = 0;
@@ -842,6 +932,7 @@ ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
     }
 
     pushInfo.units = UnitConverter.initUnits(pushInfo.units);
+    pushInfo.package = pushInfo.package || 'todayWeather';
 
     //check source
     if (pushInfo.source == undefined || pushInfo.source === 'KMA') {

@@ -120,7 +120,8 @@ angular.module('service.push', [])
         };
 
         /**
-         *
+         * alert의 경우 startTime과 endTime이 동일하면 endTime을 1분 뺀다.
+         * 지금 one-way sync이기 때문에 문제가 없지만 two-way sync하면 문제가 됨.
          * @param {{id:number, name:string, location: number[], town: {}, source: string, time: date, startTime: date, endTime: date}} pushInfo
          * @returns {{registrationId: string, type: string, cityIndex: number, id: number, name: string, location: number[], town: object, source: string, units: {temperatureUnit, windSpeedUnit, pressureUnit, distanceUnit, precipitationUnit, airUnit}}}
          * @private
@@ -157,7 +158,12 @@ angular.module('service.push', [])
             }
             else if (pushInfo.category === 'alert') {
                 postObj.startTime = this.date2utcSecs(pushInfo.startTime);
-                postObj.endTime = this.date2utcSecs(pushInfo.endTime) ;
+                postObj.endTime = this.date2utcSecs(pushInfo.endTime);
+                if (postObj.startTime === postObj.endTime) {
+                    var endTimeObj = new Date(pushInfo.endTime.getTime());
+                    endTimeObj.setMinutes(endTimeObj.getMinutes()-1);
+                    postObj.endTime = this.date2utcSecs(endTimeObj);
+                }
                 //set unhealthy
                 if (postObj.units.airUnit === 'airkorea' || postObj.units.airUnit === 'airkorea_who') {
                     postObj.airAlertsBreakPoint = 3;
@@ -180,15 +186,18 @@ angular.module('service.push', [])
             var postList = [];
 
             try {
-                if (this.pushData.registrationId == undefined || this.pushData.registrationId.length == 0) {
-                    throw new Error("You have to register before post");
-                }
                 pushList.forEach(function (pushInfo) {
                     postList.push(self._makePostObj(pushInfo));
                 });
             }
             catch(err) {
                 console.log(err);
+                return;
+            }
+
+            if (this.pushData.registrationId == undefined || this.pushData.registrationId.length == 0) {
+                console.error("You have to register before post");
+                console.log(JSON.stringify(postList));
                 return;
             }
 

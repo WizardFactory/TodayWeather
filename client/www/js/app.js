@@ -239,6 +239,9 @@ angular.module('starter', [
                 headerbars[i].style.backgroundImage = "";
             }
 
+            var contents = angular.element(document.querySelectorAll('ion-content'));
+            contents.removeClass('photo');
+
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#F5F5F5';
                 headerbars.addClass('bar-search');
@@ -246,7 +249,7 @@ angular.module('starter', [
             } else if (toState.name === 'tab.forecast') {
                 $rootScope.viewColor = '#F5F5F5';
                 headerbars.addClass('bar-forecast');
-                if ($rootScope.settingsInfo.showWeatherPhotos === '1') {
+                if ($rootScope.settingsInfo.theme === 'photo') {
                     headerbars.addClass('bar-clear');
                 } else {
                     headerbars.addClass('bar-dark');
@@ -254,7 +257,7 @@ angular.module('starter', [
             } else if (toState.name === 'tab.dailyforecast') {
                 $rootScope.viewColor = '#F5F5F5';
                 headerbars.addClass('bar-dailyforecast');
-                if ($rootScope.settingsInfo.showWeatherPhotos === '1') {
+                if ($rootScope.settingsInfo.theme === 'photo') {
                     headerbars.addClass('bar-clear');
                 } else {
                     headerbars.addClass('bar-dark');
@@ -303,12 +306,14 @@ angular.module('starter', [
         }
 
         TwStorage.init().finally(function() {
-            return WeatherUtil.loadWeatherPhotos();
-        }).finally(function () {
-            $rootScope.iconsImgPath = window.theme.icons;
-            $rootScope.weatherImgPath = window.theme.weather;
+            $rootScope.iconsImgPath = window.theme[$rootScope.settingsInfo.theme].icons;
+            $rootScope.weatherImgPath = window.theme[$rootScope.settingsInfo.theme].weather;
 
             WeatherInfo.loadCities();
+            WeatherUtil.loadWeatherPhotos().finally(function () {
+                WeatherInfo.updatePhotos();
+                $rootScope.$broadcast('loadWeatherPhotosEvent');
+            });
             if (Push.init() === true) {
                 //show notify alert info popup
                 setTimeout(function () {
@@ -331,37 +336,25 @@ angular.module('starter', [
                 return;
             }
 
-            var startupPage;
-            var settingsInfo = TwStorage.get("settingsInfo");
-            if (settingsInfo !== null) {
-                startupPage = settingsInfo.startupPage;
-            }
-
+            var startupPage = $rootScope.settingsInfo.startupPage;
             Util.ga.trackEvent('app', 'startupPage', startupPage);
 
-            if (clientConfig.package === 'todayWeather') {
-                if (startupPage === "0") { //일별날씨
-                    $state.go('tab.forecast');
-                } else if (startupPage === "1") { //일별날씨
-                    $state.go('tab.dailyforecast');
-                } else if (startupPage === "2") { //즐겨찾기
-                    $state.go('tab.search');
-                } else if (startupPage === "3") { //미세먼지
-                    $state.go('tab.air');
-                } else {
-                    console.error('unknown page:'+startupPage);
+            if (startupPage === "0") { //시간별날씨
+                $state.go('tab.forecast');
+            } else if (startupPage === "1") { //일별날씨
+                $state.go('tab.dailyforecast');
+            } else if (startupPage === "2") { //즐겨찾기
+                $state.go('tab.search');
+            } else if (startupPage === "3") { //대기정보
+                $state.go('tab.air');
+            } else if (startupPage === "4") { //날씨
+                $state.go('tab.weather');
+            } else {
+                console.error('unknown page:'+startupPage);
+                if (clientConfig.package === 'todayWeather') {
                     $state.go('tab.forecast');
                 }
-            }
-            else if (clientConfig.package === 'todayAir') {
-                if (startupPage === "2") { //즐겨찾기
-                    $state.go('tab.search');
-                } else if (startupPage === "3") { //대기정보
-                    $state.go('tab.air');
-                } else if (startupPage === "4") { //날씨
-                    $state.go('tab.weather');
-                } else { //대기정보
-                    console.error('unknown page:'+startupPage);
+                else if (clientConfig.package === 'todayAir') {
                     $state.go('tab.air');
                 }
             }
@@ -1535,7 +1528,7 @@ angular.module('starter', [
                         }
 
                         var top = y + amount;
-                        tabs.style[ionic.CSS.TRANSFORM] = 'translate3d(0, ' + top + 'px, 0)';
+                        tabs.style[ionic.CSS.TRANSFORM] = 'translate3d(20px, ' + top + 'px, 0)';
 
                         $scope.$root.tabsTop = top;
                         $scope.$root.$apply();
@@ -1603,10 +1596,50 @@ angular.module('starter', [
                         }
                     }
 
-                    $element.bind('scroll', onScroll);
+                    if ($scope.$root.settingsInfo.theme === 'photo') {
+                        $element.bind('scroll', onScroll);
+                    }
                 }
             }
         });
+
+        $compileProvider.directive('themeApply', function($document) {
+            return {
+                restrict: 'A',
+                link: function($scope, $element, $attr) {
+                    if ($scope.$root.settingsInfo.theme === 'photo') {
+                        $element.addClass('photo');
+                    }
+                }
+            }
+        });
+
+        $compileProvider.directive("photoUrl", [function () {
+            return {
+                restrict: "A",
+                scope: {
+                    photoUrl: '='
+                },
+                link: function (scope, element, attributes) {
+                    scope.$watch('photoUrl', function(newValue) {
+                        if (newValue == undefined) {
+                            return;
+                        }
+
+                        var image = new Image();
+                        image.onload = function () {
+                            scope.$apply(function () {
+                                element.css({ backgroundImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 95%, rgba(255,255,255,0.9)), url("' + newValue + '")' });
+                            });
+                        };
+                        image.onerror = function () {
+                            element.css({ backgroundImage: 'url("img/bg.png")' });
+                        };
+                        image.src = newValue;
+                    });
+                }
+            };
+        }]);
 
         // Ionic uses AngularUI Router which uses the concept of states
         // Learn more here: https://github.com/angular-ui/ui-router
