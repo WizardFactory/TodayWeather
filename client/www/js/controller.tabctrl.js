@@ -848,13 +848,15 @@ angular.module('controller.tabctrl', [])
             var version = '';
 
             try {
-                if (!Array.isArray(window.updateInfo)) {
+                var updateInfoObj = window[clientConfig.package].updateInfo;
+
+                if (!Array.isArray(updateInfoObj)) {
                     throw new Error("update info is not array");
                 }
 
                 lang = Util.language.split('-')[0];
 
-                updateInfo = window.updateInfo.find(function (value) {
+                updateInfo = updateInfoObj.find(function (value) {
                     if (value.lang === lang) {
                         return true;
                     }
@@ -863,7 +865,7 @@ angular.module('controller.tabctrl', [])
 
                 if (updateInfo == undefined) {
                     //en
-                    updateInfo = window.updateInfo[0];
+                    updateInfo = updateInfoObj[0];
                 }
 
                 console.info(updateInfo);
