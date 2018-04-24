@@ -364,8 +364,11 @@ angular.module('starter', [
                 if (lastAppVersion != Util.version) {
                     var logMsg = 'from '+lastAppVersion+' to '+Util.version;
                     Util.ga.trackEvent('app', 'update', logMsg);
-                    TwStorage.set('disableUpdateInfo', false);
                     TwStorage.set('appVersion', Util.version);
+                    if (window[clientConfig.package].enablePopup === true) {
+                        console.log('disable update info ');
+                        TwStorage.set('disableUpdateInfo', false);
+                    }
                 }
 
                 if (TwStorage.get('disableUpdateInfo') !== true) {
