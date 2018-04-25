@@ -98,7 +98,7 @@ angular.module('controller.purchase', [])
                 console.log('load purchase info');
             });
 
-            self.productId = 'tw1year';
+            self.productId = clientConfig.package === 'todayWeather' ? 'tw1year' : 'ta1year';
 
             if (!window.store) {
                 Util.ga.trackEvent('purchase', 'error', 'uninstalled');
