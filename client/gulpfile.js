@@ -11,7 +11,8 @@ var shell = require('gulp-shell');
 
 var deleteLines = require('gulp-delete-lines');
 
-var json = JSON.parse(fs.readFileSync('./tw.package.json'));
+var twJson = JSON.parse(fs.readFileSync('./tw.package.json'));
+var taJson = JSON.parse(fs.readFileSync('./ta.package.json'));
 
 var BILLING_KEY = process.env.BILLING_KEY || '111';
 var SENDER_ID = process.env.SENDER_ID || '111';
@@ -109,7 +110,7 @@ gulp.task('release-tw-android-min20-nonpaid', shell.task([
   'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
   'cp tw.config-androidsdk20.xml config.xml',
   'ionic build android --release',
-  'cp platforms/android/build/outputs/apk/android-release.apk ./TodayWeather_ads_playstore_v'+json.version+'_min20.apk'
+  'cp platforms/android/build/outputs/apk/android-release.apk ./TodayWeather_ads_playstore_v'+twJson.version+'_min20.apk'
 ]));
 
 gulp.task('release-tw-android-min16-nonpaid', shell.task([
@@ -130,7 +131,7 @@ gulp.task('release-tw-android-min16-nonpaid', shell.task([
   'cp tw.config-androidsdk16.xml config.xml',
   'cordova plugin add cordova-plugin-crosswalk-webview',
   'ionic build android --release',
-  'cp -a platforms/android/build/outputs/apk/android-armv7-release.apk ./TodayWeather_ads_playstore_v'+json.version+'_min16.apk'
+  'cp -a platforms/android/build/outputs/apk/android-armv7-release.apk ./TodayWeather_ads_playstore_v'+twJson.version+'_min16.apk'
 ]));
 
 gulp.task('release-tw-ios-nonpaid', shell.task([
@@ -208,7 +209,7 @@ gulp.task('release-ta-android-nonpaid', shell.task([
   'gulp sass',
   'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
   'ionic build android --release',
-  'cp platforms/android/build/outputs/apk/android-release.apk ./TodayWeather_ads_playstore_v'+json.version+'_min20.apk'
+  'cp platforms/android/build/outputs/apk/android-release.apk ./TodayAir_ads_playstore_v'+taJson.version+'_min20.apk'
 ]));
 
 gulp.task('release-ta-ios-nonpaid', shell.task([
