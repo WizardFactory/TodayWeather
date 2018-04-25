@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width, viewport-fit=cover">
     <meta http-equiv="Content-Security-Policy">
-    <title translate="LOC_TODAYWEATHER"></title>
+    <title>{{title|translate}}</title>
 
     <!-- compiled css output -->
     <link href="css/ionic.app.css" rel="stylesheet">
@@ -83,7 +83,7 @@
             <button class="button button-icon button-positive icon"
                     ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" menu-toggle>
             </button>
-            <h1 class="title">{{'LOC_TODAYWEATHER'|translate}}</h1>
+            <h1 class="title">{{title|translate}}</h1>
         </header>
         <ion-content class="has-header menu-content">
             <div class="list">
@@ -103,7 +103,7 @@
                     {{'LOC_REFRESH_INTERVAL'|translate}}
                     <span style="float: right">{{getRefreshIntervalValueStr(settingsInfo.refreshInterval)|translate}}</span>
                 </label>
-                <label class="item" ng-click="settingRadio('theme')">
+                <label class="item" ng-if="clientConfig.package === 'todayWeather'" ng-click="settingRadio('theme')">
                     {{'LOC_THEME_SETTING'|translate}}
                     <span style="float: right">{{getThemeValueStr(settingsInfo.theme)|translate}}</span>
                 </label>
