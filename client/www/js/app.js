@@ -54,6 +54,8 @@ angular.module('starter', [
             Util.ga.debugMode();
         }
 
+        $rootScope.title = clientConfig.package === 'todayWeather' ? 'LOC_TODAYWEATHER' : 'LOC_TODAYAIR';
+
         if (ionic.Platform.isIOS()) {
             Util.ga.startTrackerWithId(clientConfig.gaIOSKey);
 
