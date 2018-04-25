@@ -29,7 +29,7 @@ window.todayWeather.updateInfo = [
     }
 ];
 
-window.todayAir = {appVersion: '0.9.90', enablePopup: true};
+window.todayAir = {appVersion: '0.1.0', enablePopup: true};
 window.todayAir.updateInfo = [
     {
         lang: 'en',
