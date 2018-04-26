@@ -1314,7 +1314,7 @@ function ControllerTown24h() {
             }
         }
         if (maxGrade <= 0) {
-           log.error("airInfo is invalid! ", {airInfo: airInfo});
+           log.warn("airInfo is invalid! ", {airInfo: airInfo});
            return "";
         }
         else if (maxGrade === 1) {
