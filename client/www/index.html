@@ -107,7 +107,7 @@
                     {{'LOC_THEME_SETTING'|translate}}
                     <span style="float: right">{{getThemeValueStr(settingsInfo.theme)|translate}}</span>
                 </label>
-                <label class="item" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
+                <label class="item" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase() && package === 'todayWeather'">
                     {{'LOC_REMOVE_ADS'|translate}}
                     <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
                 </label>
