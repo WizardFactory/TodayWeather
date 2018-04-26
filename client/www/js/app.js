@@ -54,6 +54,7 @@ angular.module('starter', [
             Util.ga.debugMode();
         }
 
+        $rootScope.package = clientConfig.package;
         $rootScope.title = clientConfig.package === 'todayWeather' ? 'LOC_TODAYWEATHER' : 'LOC_TODAYAIR';
 
         if (ionic.Platform.isIOS()) {
