@@ -365,6 +365,9 @@ function controllerWorldWeather() {
         var sDate = new Date(secondStr);
         var diffTime = fDate.getTime() - sDate.getTime();
         var diffHour  = diffTime/(1000*60*60);
+        if(fDate.getUTCDate() != sDate.getUTCDate()){
+            return false;
+        }
         return diffHour <= diff;
     };
 
@@ -1831,20 +1834,16 @@ function controllerWorldWeather() {
                     var time = new Date();
                     time.setTime(new Date(aqiItem.dateObj).getTime() + req.result.timezone.ms);
                     aqiItem.date = self._convertTimeString(time);
-
-                    var dateForThistime = new Date();
-                    dateForThistime.setTime(new Date(thisTime.date).getTime() + req.result.timezone.ms)
-
+                    
                     if (thisTime.date != undefined
-                        && self._compareDate(dateForThistime, aqiItem.mTime, 6)){
-                        errPrint = false;
+                        && self._compareDate(thisTime.date, aqiItem.mTime, 6)){
 
                         thisTime.mTime = aqiItem.mTime || undefined;
                         thisTime.mCity = aqiItem.mCity || undefined;
                         thisTime.t = aqiItem.t;
                         thisTime.h = aqiItem.h;
                         thisTime.p = aqiItem.p;
-                        log.info('Aqi Unit : ', req.query.airUnit);
+                        log.info('Aqi Unit : ', req.query.airUnit, 'Date:', thisTime.date, ' | ', aqiItem.mTime);
 
                         var indexList = [];
                         var iaqiCode = '';
