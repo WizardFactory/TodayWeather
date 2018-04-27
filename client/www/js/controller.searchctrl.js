@@ -522,7 +522,7 @@ angular.module('controller.searchctrl', [])
             showLoadingIndicator();
             updateCurrentPosition().then(function(geoInfo) {
                 console.log('updated current position');
-                //WeatherInfo.updateCity(0, geoInfo);
+                WeatherInfo.updateCity(0, geoInfo);
                 updateWeatherData(0).then(function (city) {
                     var index = WeatherInfo.getIndexOfCity(city);
                     if (index !== -1) {
@@ -542,6 +542,19 @@ angular.module('controller.searchctrl', [])
                         data.t1h = city.currentWeather.t1h;
                         data.tmn = todayData.tmn;
                         data.tmx = todayData.tmx;
+
+                        var airInfo = {};
+                        if (city.airInfoList) {
+                            airInfo = city.airInfoList[0].last;
+                        }
+                        else if (city.airInfo) {
+                            airInfo = city.airInfo.last;
+                        }
+                        else if (city.currentWeather && city.currentWeather.arpltn) {
+                            airInfo = city.currentWeather.arpltn;
+                        }
+                        data.weather =  city.currentWeather.weather;
+                        data.airInfo = airInfo;
                     }
                 }).finally(function () {
                     hideLoadingIndicator();
@@ -825,6 +838,19 @@ angular.module('controller.searchctrl', [])
                         data.t1h = city.currentWeather.t1h;
                         data.tmn = todayData.tmn;
                         data.tmx = todayData.tmx;
+
+                        var airInfo = {};
+                        if (city.airInfoList) {
+                            airInfo = city.airInfoList[0].last;
+                        }
+                        else if (city.airInfo) {
+                            airInfo = city.airInfo.last;
+                        }
+                        else if (city.currentWeather && city.currentWeather.arpltn) {
+                            airInfo = city.currentWeather.arpltn;
+                        }
+                        data.weather =  city.currentWeather.weather;
+                        data.airInfo = airInfo;
                     }
                 });
             }
