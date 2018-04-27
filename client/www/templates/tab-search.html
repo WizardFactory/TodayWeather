@@ -89,8 +89,8 @@
                         <i class="material-icons" ng-bind-html="getSentimentIcon(city.airInfo.aqiGrade)"></i>
                     </div>
                     <div class="col search-item search-name" style="margin: auto 0;" ng-click="OnSelectCity($index)" >
-                        {{city.airInfo.aqiStr}}
-                        <br>{{city.airInfo.aqiActionGuide}}
+                        {{'LOC_AIR_STATUS'|translate}} {{city.airInfo.aqiStr}}
+                        <br>{{city.airInfo.aqiValue}}
                     </div>
                     <div class="search-item last-item" ng-show="!isEditing" ng-click="OnOpenSettingPush($index)">
                         <a class="icon" ng-class="city.hasPush?'ion-android-notifications':'ion-android-notifications-none'"></a>
