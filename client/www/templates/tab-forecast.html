@@ -179,6 +179,18 @@
                         <span>{{'LOC_HOURLY_PRECIPITATION'|translate}} {{currentWeather.rn1}}<small>{{getPrecipUnit()}}</small></span>
                     </td>
                 </tr>
+                <tr ng-if="currentWeather.today.ultrvGrade != undefined">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/ultrv.png">
+                        <span>{{"LOC_UV"|translate}} {{currentWeather.today.ultrv}} {{currentWeather.today.ultrvStr}}</span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.today.fsnGrade != undefined">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/food_poisoning.png">
+                        <span>{{"LOC_FOOD_POISONING"|translate}} {{currentWeather.today.fsnStr}}</span>
+                    </td>
+                </tr>
                 <tr ng-if="currentWeather.today.sunrise">
                     <td>
                         <img ng-src="{{::iconsImgPath}}/sunrise.png">
