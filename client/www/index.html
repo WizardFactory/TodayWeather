@@ -64,7 +64,7 @@
         }, false);
     </script>
 </head>
-<body style="background-color: #F5F5F5; line-height: normal;" ng-style="{'background-color': viewColor}">
+<body style="background-color: #03a9f4; line-height: normal;" ng-style="{'background-color': viewColor}">
 <!--
   The nav bar that will be updated as we navigate between views.
 -->
@@ -79,8 +79,8 @@
 <ion-side-menus>
     <!-- Left menu -->
     <ion-side-menu side="left" ng-controller="SettingCtrl" ng-class="isMenuOpen() ? 'menu-open' : ''" class="menu menu-left">
-        <header class="bar bar-dark bar-header">
-            <button class="button button-icon button-positive icon"
+        <header class="bar bar-stable bar-header">
+            <button class="button button-icon icon"
                     ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" menu-toggle>
             </button>
             <h1 class="title">{{title|translate}}</h1>

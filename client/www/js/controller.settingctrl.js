@@ -151,7 +151,7 @@ angular.module('controller.settingctrl', [])
             }
             else if (name === 'theme') {
                 title = 'LOC_THEME_SETTING';
-                list = ['photo', 'light'].map(function (value) {
+                list = ['photo', 'light', 'blue'].map(function (value) {
                     return {label: $scope.getThemeValueStr(value), value: value};
                 });
             }
@@ -206,6 +206,8 @@ angular.module('controller.settingctrl', [])
                     return 'LOC_WEATHER_PHOTO_THEME';
                 case 'light':
                     return 'LOC_LIGHT_THEME';
+                case 'blue':
+                    return 'LOC_BLUE_THEME';
             }
             return 'N/A'
         };
