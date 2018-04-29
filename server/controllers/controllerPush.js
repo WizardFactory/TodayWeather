@@ -388,14 +388,14 @@ ControllerPush.prototype._makePushAirMessage = function (pushInfo, weatherInfo, 
         //moderate
         if (dayInfo.pm25 && dayInfo.pm25.grade >= 2) {
             //pm2.5 평균 30 보통
-            daySummary += ts.__('LOC_PM25') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm25.value + ' ' + dayInfo.pm25.str;
+            daySummary += ts.__('LOC_PM25') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm25.val + ' ' + dayInfo.pm25.str;
         }
         if (dayInfo.pm10 && dayInfo.pm10.grade >= 2) {
             //pm10 평균 30 보통
             if (daySummary.length > 0) {
                 daySummary += ', ';
             }
-            daySummary += ts.__('LOC_PM10') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm10.value + ' ' + dayInfo.pm10.str;
+            daySummary += ts.__('LOC_PM10') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm10.val + ' ' + dayInfo.pm10.str;
         }
         if (daySummary.length === 0) {
             daySummary = ts.__('LOC_AIR_QUALITY_IS_MODERATE');
@@ -403,17 +403,17 @@ ControllerPush.prototype._makePushAirMessage = function (pushInfo, weatherInfo, 
     }
     else {
         if (dayInfo.pm25 && dayInfo.pm25.grade >= 3) {
-            daySummary += ts.__('LOC_PM25') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm25.value + ' ' + dayInfo.pm25.str;
+            daySummary += ts.__('LOC_PM25') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm25.val + ' ' + dayInfo.pm25.str;
         }
         if (dayInfo.pm10 && dayInfo.pm10.grade >= 3) {
             if (daySummary.length > 0) {
                 daySummary += ', ';
             }
-            daySummary += ts.__('LOC_PM10') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm10.value + ' ' + dayInfo.pm10.str;
+            daySummary += ts.__('LOC_PM10') + ' ' + ts.__('LOC_AVERAGE') + dayInfo.pm10.val + ' ' + dayInfo.pm10.str;
         }
         if (daySummary.length === 0) {
             daySummary += ts.__(AqiConverter.name2string(maxIndexPollutant));
-            daySummary += ' ' + ts.__('LOC_AVERAGE') + dayInfo[maxIndexPollutant].value;
+            daySummary += ' ' + ts.__('LOC_AVERAGE') + dayInfo[maxIndexPollutant].val;
             daySummary += ' ' + dayInfo[maxIndexPollutant].str;
         }
     }
