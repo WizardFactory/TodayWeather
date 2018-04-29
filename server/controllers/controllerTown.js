@@ -140,7 +140,7 @@ function ControllerTown() {
                 async.parallel([
                     function(callback){
                         // get town weather
-                        async.map(townArray,
+                        async.mapSeries(townArray,
                             function(item, cb){
                                 var Db20Collections = ['modelCurrent', 'modelShort', 'modelShortRss', 'modelShortest'];
                                 if(config.db.version === '2.0' && Db20Collections.indexOf(item.name) != -1){
@@ -198,7 +198,7 @@ function ControllerTown() {
                             }
 
                             log.silly('point number : ', code);
-                            async.map(midArray,
+                            async.mapSeries(midArray,
                                 function (item, cb) {
                                     var parm;
                                     if(item.db === modelMidForecast){
