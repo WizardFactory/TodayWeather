@@ -282,7 +282,16 @@ function ControllerTown() {
         });
     };
 
+    /**
+     * TW-277 DB에서 데이터 못 읽어오는 이슈 때문에 이 부분 사용하지 않고, 이후에 DB에 데이터 요청을 한 번 더 하게 함.
+     * @param req
+     * @param res
+     * @param next
+     */
     this.checkDBValidation = function(req, res, next) {
+        log.warn('called unused function');
+        return next();
+
         var funcArray = [];
         if (req.modelCurrent == undefined) {
             funcArray.push(function (callback) {
