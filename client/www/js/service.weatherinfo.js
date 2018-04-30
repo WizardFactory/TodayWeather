@@ -17,9 +17,11 @@ angular.module('service.weatherinfo', [])
                 city.dayTable = null;
                 city.dayChart = null;
                 city.disable = true; // 현재 위치 off
+                city.photo = null;
             } else {
                 city = item;
                 city.disable = item.disable === undefined ? false : item.disable;
+                city.photo = item.photo === undefined ? null : item.photo;
             }
             city.loadTime = null;
             cities.push(city);
@@ -148,6 +150,7 @@ angular.module('service.weatherinfo', [])
             if (that.getIndexOfCity(city) === -1) {
                 city.disable = false;
                 city.loadTime = new Date();
+                city.photo = WeatherUtil.findWeatherPhoto(city.currentWeather);
                 cities.push(city);
                 that.saveCities();
                 return true;
@@ -253,6 +256,17 @@ angular.module('service.weatherinfo', [])
             city.loadTime = new Date();
             city.photo = WeatherUtil.findWeatherPhoto(city.currentWeather);
 
+            that.saveCities();
+        };
+
+        obj.updatePhotos = function () {
+            var that = this;
+
+            for (var i = 0; i < cities.length; i += 1) {
+                if (cities[i].photo === null) {
+                    cities[i].photo = WeatherUtil.findWeatherPhoto(cities[i].currentWeather);
+                }
+            }
             that.saveCities();
         };
 

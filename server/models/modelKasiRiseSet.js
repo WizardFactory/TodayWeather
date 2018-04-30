@@ -65,7 +65,7 @@ kasiRiseSetSchema.statics = {
     }
 };
 
-kasiRiseSetSchema.index({locdate: 1});
 kasiRiseSetSchema.index({location: 'text'}, { default_language: 'none' });
+kasiRiseSetSchema.index({locdate: 1, location: 1, date: -1});
 
 module.exports = mongoose.model('kasiRiseSet', kasiRiseSetSchema);

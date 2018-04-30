@@ -98,7 +98,7 @@ angular.module('controller.purchase', [])
                 console.log('load purchase info');
             });
 
-            self.productId = 'tw1year';
+            self.productId = clientConfig.package === 'todayWeather' ? 'tw1year' : 'ta1year';
 
             if (!window.store) {
                 Util.ga.trackEvent('purchase', 'error', 'uninstalled');
@@ -201,9 +201,6 @@ angular.module('controller.purchase', [])
 
         $scope.$on('$ionicView.enter', function() {
             TwAds.setShowAds(false);
-            if (window.StatusBar) {
-                StatusBar.backgroundColorByHexString('#0288D1');
-            }
         });
 
         function init() {

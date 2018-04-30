@@ -45,9 +45,18 @@
     IBOutlet UILabel        *updateTimeLabel;
     IBOutlet UIActivityIndicatorView    *loadingIV;
     
-    IBOutlet UILabel        *curTempLabel;              // current temperature title
-    IBOutlet UILabel        *curDustLabel;            // current Dust
+    IBOutlet UILabel        *curAirLabel;              // current air status
+    IBOutlet UILabel        *sumAirLabel;            // current Dust summaryAir
 
+    __weak IBOutlet UILabel *pm25Lbl;
+    __weak IBOutlet UILabel *pm10Lbl;
+    __weak IBOutlet UILabel *o3Lbl;
+    
+    __weak IBOutlet UIButton *pm25Btn;
+    __weak IBOutlet UIButton *pm10Btn;
+    __weak IBOutlet UIButton *o3Btn;
+    
+    __weak IBOutlet UIImageView *curAirIconIV;
     IBOutlet UIImageView    *curWTIconIV;            // current weather status
     
     IBOutlet UILabel        *todayMaxMinTempLabel;         // today Max/Min Temperature
@@ -89,6 +98,7 @@
     
     TodayWeatherShowMore        *todayWSM;
     TodayWeatherUtil            *todayUtil;
+    
     NSMutableDictionary                *curJsonDict;
     
 @public

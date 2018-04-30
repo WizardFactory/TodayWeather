@@ -144,7 +144,9 @@ controllerAqi.prototype._parseAQIData = function(data){
 
     var aqi = data.data;
     var timeOffset = 0;
-    if(aqi.time != undefined && aqi.time.tz != undefined && aqi.time.tz.length > 5){
+    if(aqi.time != undefined && aqi.time.utc != undefined && aqi.time.utc.tz != undefined && aqi.time.utc.tz.length > 5){
+        timeOffset = parseInt(aqi.time.utc.tz.slice(0, 3));
+    }else if(aqi.time != undefined && aqi.time.tz != undefined && aqi.time.tz.length > 5){
         timeOffset = parseInt(aqi.time.tz.slice(0, 3));
     }
 
@@ -177,7 +179,10 @@ controllerAqi.prototype._parseAQIData = function(data){
         ret.t = self._getItemValue(iaqi, 't');
     }
 
-    if(aqi.time != undefined && aqi.time.s != undefined && aqi.time.s.length > 5){
+    if(aqi.time != undefined && aqi.time.utc != undefined && aqi.time.utc.s != undefined && aqi.time.utc.s.length > 5){
+        ret.mTime = aqi.time.utc.s;
+    }
+    else if(aqi.time != undefined && aqi.time.s != undefined && aqi.time.s.length > 5){
         ret.mTime = aqi.time.s;
     }
     if(aqi.city != undefined && aqi.city.name != undefined){
@@ -384,7 +389,7 @@ controllerAqi.prototype.requestAqiData = function(geocode, From, To, timeOffset,
 
     var reqTime = self._getLocalLast0H(timeOffset*60);
     //day light saving위해 1시간 margin을 둠.
-    reqTime.setUTCHours(reqTime.getUTCHours()+1);
+    //reqTime.setUTCHours(reqTime.getUTCHours()+1);
     for(var i=From ; i<To ; i++){
         reqTime.setUTCDate(reqTime.getUTCDate()-i);
         //log.info("reqTime="+reqTime.toISOString());

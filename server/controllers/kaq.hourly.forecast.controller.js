@@ -84,7 +84,9 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                 });
 
                 let folderName = folderList[folderList.length-1];
-                ['modelimg', 'modelimg_CASE2', 'modelimg_CASE4', 'modelimg_CASE5'].forEach(mapCase => {
+                // let modelList = ['modelimg', 'modelimg_CASE2', 'modelimg_CASE4', 'modelimg_CASE5'];
+                let modelList = ['modelimg', 'modelimg_CASE4'];
+                modelList.forEach(mapCase => {
                     let imgPaths = {};
                     ['pm10', 'pm25'].forEach(value => {
                         let name = value.toUpperCase();
@@ -286,9 +288,9 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                 callback => {
                     this._getModelImgList(dataTime, callback);
                 },
-                (modelImgList, callback) => {
-                    this._existAllModelimg(modelImgList, callback);
-                },
+                // (modelImgList, callback) => {
+                //     this._existAllModelimg(modelImgList, callback);
+                // },
                 (modelImgList, callback) => {
                     this._updateModelImgList(modelImgList, callback);
                 }

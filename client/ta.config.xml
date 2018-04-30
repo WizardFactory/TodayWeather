@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="net.wizardfactory.todayair" version="0.9.83" android-versionCode="9839" xmlns="http://www.w3.org/ns/widgets">
+<widget id="net.wizardfactory.todayair" version="0.1.3" android-versionCode="1039" xmlns="http://www.w3.org/ns/widgets">
     <name>TodayAir</name>
     <description>
         Today air quality information.

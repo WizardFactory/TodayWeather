@@ -44,7 +44,7 @@
                 <img src="img/powered_by_google_on_white.png" width="144px">
             </div>
         </div>
-        <div class="list card" ng-if="isSearching===false">
+        <div class="list card" ng-if="isSearching===false && package === 'todayWeather'">
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
                     <div class="col search-item search-name" ng-class="{'col-40': city.t1h != '-'}" style="margin: auto 0;" ng-click="OnSelectCity($index)" >
@@ -57,6 +57,40 @@
                     <div class="search-item" ng-if="city.t1h != '-'" style="text-align: center;" ng-click="OnSelectCity($index)">
                         <span>{{city.t1h.toFixed(0)}}˚</span><br>
                         <span style="font-size: 12px;">{{city.tmn.toFixed(0)}}˚/{{city.tmx.toFixed(0)}}˚</span>
+                    </div>
+                    <div class="search-item last-item" ng-show="!isEditing" ng-click="OnOpenSettingPush($index)">
+                        <a class="icon" ng-class="city.hasPush?'ion-android-notifications':'ion-android-notifications-none'"></a>
+                    </div>
+                    <div class="search-item last-item" ng-show="isEditing && city.currentPosition">
+                        <label class="toggle toggle-search">
+                            <input type="checkbox" ng-model="city.disable" ng-true-value="false" ng-false-value="true" ng-change="OnDisableCity()">
+                            <div class="track">
+                                <div class="handle"></div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="search-item last-item" ng-show="isEditing && !city.currentPosition" ng-click="OnDeleteCity($index)">
+                        <a class="icon ion-ios-close-outline"></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="list card" ng-if="isSearching===false && package === 'todayAir'">
+            <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
+                <div class="row row-no-padding">
+                    <div class="col search-item search-name col-25" style="margin: auto 0;" ng-click="OnSelectCity($index)" >
+                        <!--location_on-->
+                        <i ng-if="city.currentPosition"
+                           class="material-icons">&#xE0C8;
+                        </i>{{city.address[0]}}<br ng-if="city.address[1]">
+                        {{city.address[1]}}
+                    </div>
+                    <div class="search-item air-item" ng-click="OnOpenSettingPush($index)">
+                        <i class="material-icons" ng-bind-html="getSentimentIcon(city.airInfo.aqiGrade)"></i>
+                    </div>
+                    <div class="col search-item search-name" style="margin: auto 0;" ng-click="OnSelectCity($index)" >
+                        {{'LOC_AIR_STATUS'|translate}} {{city.airInfo.aqiStr}}
+                        <br>{{city.airInfo.aqiValue}}
                     </div>
                     <div class="search-item last-item" ng-show="!isEditing" ng-click="OnOpenSettingPush($index)">
                         <a class="icon" ng-class="city.hasPush?'ion-android-notifications':'ion-android-notifications-none'"></a>

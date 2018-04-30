@@ -65,22 +65,21 @@ angular.module('controller.searchctrl', [])
         };
 
         function goPage() {
-            var startupPage;
-            var settingsInfo = TwStorage.get("settingsInfo");
-            if (settingsInfo !== null) {
-                startupPage = settingsInfo.startupPage;
-            }
+            var startupPage = $rootScope.settingsInfo.startupPage;
 
-            if (startupPage === "1") { //일별날씨
+            if (startupPage === "0") { //시간별날씨
+                $location.path('/tab/forecast');
+            }
+            else if (startupPage === "1") { //일별날씨
                 $location.path('/tab/dailyforecast');
             }
             else if (startupPage === "3") { //대기정보
                 $location.path('/tab/air');
             }
-            else if (startupPage === "4") { //대기정보
+            else if (startupPage === "4") { //날씨
                 $location.path('/tab/weather');
             }
-            else { //시간별날씨
+            else {
                 if (clientConfig.package === 'todayWeather') {
                     $location.path('/tab/forecast');
                 }
@@ -139,16 +138,30 @@ angular.module('controller.searchctrl', [])
                     todayData = [{tmn:'-', tmx:'-'}];
                 }
 
+                var airInfo = {};
+                if (city.airInfoList) {
+                   airInfo = city.airInfoList[0].last;
+                }
+                else if (city.airInfo) {
+                    airInfo = city.airInfo.last;
+                }
+                else if (city.currentWeather && city.currentWeather.arpltn) {
+                    airInfo = city.currentWeather.arpltn;
+                }
+
                 var data = {
                     address: address,
                     currentPosition: city.currentPosition,
                     disable: city.disable,
                     skyIcon: city.currentWeather.skyIcon,
                     t1h: city.currentWeather.t1h,
+                    weather: city.currentWeather.weather,
                     tmn: todayData.tmn,
                     tmx: todayData.tmx,
+                    airInfo: airInfo,
                     hasPush: Push.hasPushInfo(i)
                 };
+
                 $scope.cityList.push(data);
                 loadWeatherData(i);
                 if (city.currentPosition && city.disable !== true) {
@@ -502,37 +515,14 @@ angular.module('controller.searchctrl', [])
             }
 
             WeatherInfo.setCityIndex(index);
-
-            var startupPage;
-            var settingsInfo = TwStorage.get("settingsInfo");
-            if (settingsInfo !== null) {
-                startupPage = settingsInfo.startupPage;
-            }
-
-            if (startupPage === "1") { //일별날씨
-                $location.path('/tab/dailyforecast');
-            }
-            else if (startupPage === "3") { //대기정보
-                $location.path('/tab/air');
-            }
-            else { //시간별날씨
-                if (clientConfig.package === 'todayWeather') {
-                    $location.path('/tab/forecast');
-                }
-                else if (clientConfig.package === 'todayAir') {
-                    $location.path('/tab/air');
-                }
-                else {
-                    $location.path('/tab/forecast');
-                }
-            }
+            goPage();
         };
 
         function updateCurrentPositionWeather() {
             showLoadingIndicator();
             updateCurrentPosition().then(function(geoInfo) {
                 console.log('updated current position');
-                //WeatherInfo.updateCity(0, geoInfo);
+                WeatherInfo.updateCity(0, geoInfo);
                 updateWeatherData(0).then(function (city) {
                     var index = WeatherInfo.getIndexOfCity(city);
                     if (index !== -1) {
@@ -552,6 +542,19 @@ angular.module('controller.searchctrl', [])
                         data.t1h = city.currentWeather.t1h;
                         data.tmn = todayData.tmn;
                         data.tmx = todayData.tmx;
+
+                        var airInfo = {};
+                        if (city.airInfoList) {
+                            airInfo = city.airInfoList[0].last;
+                        }
+                        else if (city.airInfo) {
+                            airInfo = city.airInfo.last;
+                        }
+                        else if (city.currentWeather && city.currentWeather.arpltn) {
+                            airInfo = city.currentWeather.arpltn;
+                        }
+                        data.weather =  city.currentWeather.weather;
+                        data.airInfo = airInfo;
                     }
                 }).finally(function () {
                     hideLoadingIndicator();
@@ -835,6 +838,19 @@ angular.module('controller.searchctrl', [])
                         data.t1h = city.currentWeather.t1h;
                         data.tmn = todayData.tmn;
                         data.tmx = todayData.tmx;
+
+                        var airInfo = {};
+                        if (city.airInfoList) {
+                            airInfo = city.airInfoList[0].last;
+                        }
+                        else if (city.airInfo) {
+                            airInfo = city.airInfo.last;
+                        }
+                        else if (city.currentWeather && city.currentWeather.arpltn) {
+                            airInfo = city.currentWeather.arpltn;
+                        }
+                        data.weather =  city.currentWeather.weather;
+                        data.airInfo = airInfo;
                     }
                 });
             }

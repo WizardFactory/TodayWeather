@@ -1314,7 +1314,7 @@ function ControllerTown24h() {
             }
         }
         if (maxGrade <= 0) {
-           log.error("airInfo is invalid! ", {airInfo: airInfo});
+           log.warn("airInfo is invalid! ", {airInfo: airInfo});
            return "";
         }
         else if (maxGrade === 1) {
@@ -1945,31 +1945,33 @@ ControllerTown24h.prototype._getEmoji = function (name) {
 };
 
 ControllerTown24h.prototype._getWeatherEmoji = function (skyIcon) {
-    if (skyIcon.indexOf('Lightning') != -1) {
+    var icon = skyIcon.toLowerCase();
+
+    if (icon.indexOf('lightning') != -1) {
         return '\u26c8';
     }
-    else if (skyIcon.indexOf('RainSnow') != -1) {
+    else if (icon.indexOf('rainsnow') != -1) {
         return '\u2614\u2603';
     }
-    else if (skyIcon.indexOf('Rain') != -1) {
+    else if (icon.indexOf('rain') != -1) {
         return '\u2614';
     }
-    else if (skyIcon.indexOf('Snow') != -1) {
+    else if (icon.indexOf('snow') != -1) {
         return '\u2603';
     }
-    else if (skyIcon.indexOf('Cloud') != -1) {
-        if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+    else if (icon.indexOf('cloud') != -1) {
+        if (icon.indexOf('sun') != -1 || icon.indexOf('moon') != -1) {
             return '\u26c5';
         }
         else {
             return '\u2601';
         }
     }
-    else if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+    else if (icon.indexOf('sun') != -1 || icon.indexOf('moon') != -1) {
         return '\ud83c\udf1e';
     }
 
-    log.error('Fail to find emoji skyIcon='+skyIcon);
+    log.error('Fail to find emoji icon='+icon);
     return '';
 };
 

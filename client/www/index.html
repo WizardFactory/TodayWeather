@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width, viewport-fit=cover">
     <meta http-equiv="Content-Security-Policy">
-    <title translate="LOC_TODAYWEATHER"></title>
+    <title>{{title|translate}}</title>
 
     <!-- compiled css output -->
     <link href="css/ionic.app.css" rel="stylesheet">
@@ -83,11 +83,11 @@
             <button class="button button-icon button-positive icon"
                     ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" menu-toggle>
             </button>
-            <h1 class="title">{{'LOC_TODAYWEATHER'|translate}}</h1>
+            <h1 class="title">{{title|translate}}</h1>
         </header>
         <ion-content class="has-header menu-content">
             <div class="list">
-                <label class="item" ng-click="clickMenu('nation')" ng-if="getRegion() === 'KR' && clientConfig.package === 'todayWeather'">
+                <label class="item" ng-click="clickMenu('nation')" ng-if="getRegion() === 'KR' && package === 'todayWeather'">
                     {{'LOC_NATIONAL_WEATHER'|translate}}
                     <i class="icon ion-chevron-right" style="float: right"></i>
                 </label>
@@ -103,11 +103,11 @@
                     {{'LOC_REFRESH_INTERVAL'|translate}}
                     <span style="float: right">{{getRefreshIntervalValueStr(settingsInfo.refreshInterval)|translate}}</span>
                 </label>
-                <label class="item" ng-click="settingRadio('showWeatherPhotos')" ng-if="clientConfig.package === 'todayWeather'">
-                    {{'LOC_SHOW_WEATHER_PHOTOS'|translate}}
-                    <span style="float: right">{{getShowWeatherPhotosValueStr(settingsInfo.showWeatherPhotos)|translate}}</span>
+                <label class="item" ng-if="package === 'todayWeather'" ng-click="settingRadio('theme')">
+                    {{'LOC_THEME_SETTING'|translate}}
+                    <span style="float: right">{{getThemeValueStr(settingsInfo.theme)|translate}}</span>
                 </label>
-                <label class="item" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
+                <label class="item" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase() && package === 'todayWeather'">
                     {{'LOC_REMOVE_ADS'|translate}}
                     <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
                 </label>

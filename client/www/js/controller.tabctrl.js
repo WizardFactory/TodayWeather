@@ -1,7 +1,6 @@
 angular.module('controller.tabctrl', [])
-    .controller('TabCtrl', function($scope, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce,
-                                    Push, Units, $q) {
+    .controller('TabCtrl', function($scope, $ionicPlatform, $ionicHistory, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
+                                    $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce, Push, Units, $q) {
         var currentTime;
         var lastClickTime = 0;
         var refreshTimer = null;
@@ -134,6 +133,34 @@ angular.module('controller.tabctrl', [])
             //    }
             //}, 1000);
 
+            if (ionic.Platform.isAndroid()) {
+                $ionicPlatform.registerBackButtonAction(function (event) {
+                    if ($location.path() === '/tab/search'
+                        || $location.path() === '/tab/dailyforecast'
+                        || $location.path() === '/tab/forecast'
+                        || $location.path() === '/tab/air'
+                        || $location.path() === '/tab/weather'
+                    ) {
+                        $ionicPopup.show({
+                            template: strDoYouWantToExit,
+                            buttons: [
+                                {
+                                    text: strCancel
+                                },
+                                {
+                                    text: strOkay,
+                                    onTap: function() {
+                                        ionic.Platform.exitApp();
+                                    }
+                                }
+                            ]
+                        });
+                    } else {
+                        $ionicHistory.goBack();
+                    }
+                }, 100);
+            }
+
             setAirUnit();
             TwAds.init();
             $scope.$broadcast('reloadEvent', 'init');
@@ -239,6 +266,57 @@ angular.module('controller.tabctrl', [])
             }
         };
 
+        function _makeMessageForTodayWeather(obj) {
+            var currentWeather = obj.currentWeather;
+            var strCurrent = obj.strCurrent;
+            var strHighest = obj.strHighest;
+            var strLowest = obj.strLowest;
+            var t1h = currentWeather.t1h;
+            var emoji = WeatherUtil.getWeatherEmoji(currentWeather.skyIcon);
+            var tmx;
+            var tmn;
+            var summary;
+
+            if (currentWeather.today) {
+                tmx = currentWeather.today.tmx;
+                tmn = currentWeather.today.tmn;
+            }
+            if (currentWeather.hasOwnProperty('summaryWeather')) {
+               summary =  currentWeather.summaryWeather;
+               if (currentWeather.hasOwnProperty('summaryAir')) {
+                   summary += "\n" + currentWeather.summaryAir;
+               }
+            }
+            else if (currentWeather.hasOwnProperty('summary')) {
+                summary = currentWeather.summary;
+            }
+
+            var message = "";
+            message += strCurrent+' '+t1h+'˚ ';
+            message += emoji+'\n';
+            message += strHighest+' '+tmx+'˚, '+strLowest+' '+tmn+'˚\n';
+            if (summary) {
+                message += summary+'\n';
+            }
+
+            return message;
+        }
+
+        function _makeMessageForTodayAir(obj) {
+            var currentWeather = obj.currentWeather;
+            var strCurrent = obj.strCurrent;
+            var strWeather = obj.strWeather;
+            var t1h = currentWeather.t1h;
+            var message = "";
+            if (currentWeather.hasOwnProperty('summaryAir')) {
+                message += strCurrent + " " + currentWeather.summaryAir;
+            }
+            message += '\n';
+            message += strWeather + " " + currentWeather.weather + " " + t1h + "˚";
+
+            return message;
+        }
+
         $scope.doTabShare = function() {
             if (!(window.plugins && window.plugins.socialsharing)) {
                 console.log('plugins socialsharing is undefined');
@@ -259,39 +337,49 @@ angular.module('controller.tabctrl', [])
                 cityName = WeatherUtil.getShortenAddress(cityData.address);
             }
             var currentWeather = cityData.currentWeather;
-            var t1h = currentWeather.t1h;
-            var emoji = WeatherUtil.getWeatherEmoji(currentWeather.skyIcon);
-            var tmx;
-            var tmn;
-            var summary;
-            var shareUrl = 'http://abr.ge/mxld';
-            if (currentWeather.today) {
-                tmx = currentWeather.today.tmx;
-                tmn = currentWeather.today.tmn;
+
+            var shareUrl;
+            if (clientConfig.package === 'todayWeather') {
+                if (Util.language.indexOf("ko") != -1) {
+                    shareUrl = "https://twa.app.link/wgVmUTfVoM";
+                }
+                else {
+                    shareUrl = "https://twa.app.link/II1JstpVoM";
+                }
             }
-            if (currentWeather.hasOwnProperty('summaryWeather')) {
-               summary =  currentWeather.summaryWeather;
-               if (currentWeather.hasOwnProperty('summaryAir')) {
-                   summary += " " + currentWeather.summaryAir;
-               }
+            else if (clientConfig.package === 'todayAir') {
+                if (Util.language.indexOf("ko") != -1) {
+                    shareUrl = "https://ta.app.link/cgFJXnSUoM";
+                }
+                else {
+                   shareUrl = "https://ta.app.link/0fdwClTVoM";
+                }
             }
-            else if (currentWeather.hasOwnProperty('summary')) {
-                summary = currentWeather.summary;
+            else {
+                shareUrl = "https://twa.app.link/II1JstpVoM";
             }
 
             var message = '';
-            $translate(['LOC_CURRENT', 'LOC_HIGHEST', 'LOC_LOWEST', 'LOC_TODAYWEATHER']).then(function (translations) {
+            $translate(['LOC_CURRENT', 'LOC_HIGHEST', 'LOC_LOWEST', 'LOC_WEATHER', $rootScope.title]).then(function (translations) {
                 message += cityName+'\n';
-                message += translations.LOC_CURRENT+' '+t1h+'˚ ';
-                message += emoji+'\n';
-                message += translations.LOC_HIGHEST+' '+tmx+'˚, '+translations.LOC_LOWEST+' '+tmn+'˚\n';
-                if (summary) {
-                    message += summary+'\n';
+                if (clientConfig.package === 'todayWeather') {
+                    message += _makeMessageForTodayWeather({
+                        currentWeather: currentWeather,
+                        strCurrent: translations.LOC_CURRENT,
+                        strHighest: translations.LOC_HIGHEST,
+                        strLowest: translations.LOC_LOWEST});
                 }
+                else if (clientConfig.package === 'todayWeather') {
+                    message += _makeMessageForTodayAir({currentWeather: currentWeather,
+                        strCurrent: translations.LOC_CURRENT,
+                        strWeather: translations.LOC_WEATHER});
+                }
+
                 message += '\n';
-                message += translations.LOC_TODAYWEATHER + ' ' + shareUrl;
+                message += translations[$rootScope.title] + ' ' + shareUrl;
             }, function (translationIds) {
                 Util.ga.trackEvent('action', 'error', 'fail to translate for sharing');
+                message += shareUrl;
             }).finally(function () {
                 window.plugins.socialsharing.share(message, null, null, null);
             });
@@ -333,9 +421,9 @@ angular.module('controller.tabctrl', [])
             var strUseYourCurrentLocation;
             var strFindLocationByName;
 
-            $translate(['LOC_TODAYWEATHER', 'LOC_OK',
+            $translate([$rootScope.title, 'LOC_OK',
                 'LOC_USE_YOUR_CURRENT_LOCATION', 'LOC_FIND_LOCATION_BY_NAME']).then(function (translations) {
-                strTodayWeather = translations.LOC_TODAYWEATHER;
+                strTodayWeather = translations[$rootScope.title];
                 strOkay = translations.LOC_OK;
                 strUseYourCurrentLocation = translations.LOC_USE_YOUR_CURRENT_LOCATION;
                 strFindLocationByName = translations.LOC_FIND_LOCATION_BY_NAME;
@@ -821,13 +909,15 @@ angular.module('controller.tabctrl', [])
             var version = '';
 
             try {
-                if (!Array.isArray(window.updateInfo)) {
+                var updateInfoObj = window[clientConfig.package].updateInfo;
+
+                if (!Array.isArray(updateInfoObj)) {
                     throw new Error("update info is not array");
                 }
 
                 lang = Util.language.split('-')[0];
 
-                updateInfo = window.updateInfo.find(function (value) {
+                updateInfo = updateInfoObj.find(function (value) {
                     if (value.lang === lang) {
                         return true;
                     }
@@ -836,7 +926,7 @@ angular.module('controller.tabctrl', [])
 
                 if (updateInfo == undefined) {
                     //en
-                    updateInfo = window.updateInfo[0];
+                    updateInfo = updateInfoObj[0];
                 }
 
                 console.info(updateInfo);
@@ -1038,11 +1128,10 @@ angular.module('controller.tabctrl', [])
         function setRefreshTimer() {
             clearTimeout(refreshTimer);
 
-            var settingsInfo = TwStorage.get("settingsInfo");
-            if (settingsInfo != null && settingsInfo.refreshInterval !== "0") {
+            if ($rootScope.settingsInfo != null && $rootScope.settingsInfo.refreshInterval !== "0") {
                 refreshTimer = setTimeout(function () {
                     $scope.$broadcast('reloadEvent', 'refreshTimer');
-                }, parseInt(settingsInfo.refreshInterval)*60*1000);
+                }, parseInt($rootScope.settingsInfo.refreshInterval)*60*1000);
             }
         }
 
@@ -1422,11 +1511,13 @@ angular.module('controller.tabctrl', [])
         var strFailToGetCurrentPosition = "Fail to find your current location";
         var strFailToGetWeatherInfo = "Fail to get weather info.";
         var strPleaseTurnOnLocationWiFi = "Please turn on location and Wi-FI";
+        var strDoYouWantToExit = "Do you want to exit?";
         $scope.strHour = "h";
 
         $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS', 'LOC_HOUR', 'LOC_CLOSE', 'LOC_RETRY',
             'LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
-            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_OK', 'LOC_CANCEL', 'LOC_WEATHER'])
+            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_OK', 'LOC_CANCEL',
+            'LOC_WEATHER', 'LOC_DO_YOU_WANT_TO_EXIT'])
             .then(function (translations) {
                     strError = translations.LOC_ERROR;
                     strAddLocation = translations.LOC_ADD_LOCATIONS;
@@ -1439,6 +1530,7 @@ angular.module('controller.tabctrl', [])
                     strOkay = translations.LOC_OK;
                     strCancel = translations.LOC_CANCEL;
                     strWeather = translations.LOC_WEATHER;
+                    strDoYouWantToExit = translations.LOC_DO_YOU_WANT_TO_EXIT;
                     $scope.strHour = translations.LOC_HOUR;
                 },
                 function (translationIds) {

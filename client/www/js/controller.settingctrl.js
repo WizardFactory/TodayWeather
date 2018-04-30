@@ -16,23 +16,6 @@ angular.module('controller.settingctrl', [])
             if (ionic.Platform.isIOS()) {
                 menuContent = angular.element(document.getElementsByClassName('menu-content')[0]);
             }
-
-            var settingsInfo = TwStorage.get("settingsInfo");
-            if (settingsInfo === null) {
-                settingsInfo = {
-                    startupPage: "0", //시간별날씨
-                    refreshInterval: "0", //수동
-                    showWeatherPhotos: '1' //켜짐
-                };
-                if (clientConfig.package === 'todayAir') {
-                    settingsInfo.startupPage = "3"; //대기정보
-                    settingsInfo.showWeatherPhotos = "0"; //off
-                }
-                TwStorage.set("settingsInfo", settingsInfo);
-            }
-
-            console.info(settingsInfo);
-            $rootScope.settingsInfo = settingsInfo;
         }
 
         $scope.clickMenu = function (menu) {
@@ -62,15 +45,15 @@ angular.module('controller.settingctrl', [])
         var openInfo = function() {
             var strTitle = "TodayWeather";
             var strMsg;
-            $translate(['LOC_TODAYWEATHER','LOC_WEATHER_INFORMATION', 'LOC_KOREA_METEOROLOGICAL_ADMINISTRATION', 'LOC_AQI_INFORMATION', 'LOC_KOREA_ENVIRONMENT_CORPORATION', 'LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS']).then(function (translations) {
-                strTitle = translations.LOC_TODAYWEATHER;
+            $translate([$rootScope.title,'LOC_WEATHER_INFORMATION', 'LOC_KOREA_METEOROLOGICAL_ADMINISTRATION', 'LOC_AQI_INFORMATION', 'LOC_KOREA_ENVIRONMENT_CORPORATION', 'LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS']).then(function (translations) {
+                strTitle = translations[$rootScope.title];
                 strMsg = translations.LOC_WEATHER_INFORMATION + " : "  + translations.LOC_KOREA_METEOROLOGICAL_ADMINISTRATION;
                 strMsg += "<br>";
                 strMsg += translations.LOC_AQI_INFORMATION + " : " + translations.LOC_KOREA_ENVIRONMENT_CORPORATION;
                 strMsg += "<br>";
                 strMsg += translations.LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS;
             }, function (translationIds) {
-                strTitle = translationIds.LOC_TODAYWEATHER;
+                strTitle = translationIds[$rootScope.title];
                 strMsg = translationIds.LOC_WEATHER_INFORMATION + " : "  + translationIds.LOC_KOREA_METEOROLOGICAL_ADMINISTRATION;
                 strMsg += "<br>";
                 strMsg += translationIds.LOC_AQI_INFORMATION + " : " + translationIds.LOC_KOREA_ENVIRONMENT_CORPORATION;
@@ -166,10 +149,10 @@ angular.module('controller.settingctrl', [])
                     return {label: $scope.getRefreshIntervalValueStr(value), value: value};
                 });
             }
-            else if (name === 'showWeatherPhotos') {
-                title = 'LOC_SHOW_WEATHER_PHOTOS';
-                list = ['0', '1'].map(function (value) {
-                    return {label: $scope.getShowWeatherPhotosValueStr(value), value: value};
+            else if (name === 'theme') {
+                title = 'LOC_THEME_SETTING';
+                list = ['photo', 'light'].map(function (value) {
+                    return {label: $scope.getThemeValueStr(value), value: value};
                 });
             }
             console.info(JSON.stringify({name: name, title: title, value: $rootScope.settingsInfo[name], list: list}));
@@ -216,13 +199,13 @@ angular.module('controller.settingctrl', [])
             return 'N/A'
         };
 
-        $scope.getShowWeatherPhotosValueStr = function (value) {
-            //console.log('getShowWeatherPhotosValueStr v='+value);
+        $scope.getThemeValueStr = function (value) {
+            //console.log('getThemeValueStr v='+value);
             switch(value) {
-                case '0':
-                    return 'LOC_OFF';
-                case '1':
-                    return 'LOC_ON';
+                case 'photo':
+                    return 'LOC_WEATHER_PHOTO_THEME';
+                case 'light':
+                    return 'LOC_LIGHT_THEME';
             }
             return 'N/A'
         };

@@ -32,6 +32,9 @@ var aSchema = new mongoose.Schema({
 });
 
 aSchema.index({stationName: 'text'}, { default_language: 'none' });
+aSchema.index({stationName: 1, date: -1});
+aSchema.index({stationName: 1, date: 1});
+aSchema.index({dataTime: -1});
 
 aSchema.statics = {
     getKeyList: function () {

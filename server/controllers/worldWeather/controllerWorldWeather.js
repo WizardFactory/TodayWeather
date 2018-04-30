@@ -324,6 +324,25 @@ function controllerWorldWeather() {
         return true;
     };
 
+    self._isSameDay = function(cDate, date, mins){
+        let timeOffset_ms = mins * 60 * 1000; /* ms */
+        let curDate = new Date(cDate);
+        let targetDate = new Date(date.getTime() + timeOffset_ms);
+
+        curDate.setTime(curDate.getTime() + timeOffset_ms);
+
+        if(curDate.getUTCFullYear() != targetDate.getUTCFullYear()){
+            return false;
+        }
+        if(curDate.getUTCMonth() != targetDate.getUTCMonth()){
+            return false
+        }
+        if(curDate.getUTCDate() != targetDate.getUTCDate()){
+            return false;
+        }
+
+        return true;
+    };
     /**
      * compare until hour
      * @param first
@@ -346,6 +365,9 @@ function controllerWorldWeather() {
         var sDate = new Date(secondStr);
         var diffTime = fDate.getTime() - sDate.getTime();
         var diffHour  = diffTime/(1000*60*60);
+        if(fDate.getUTCDate() != sDate.getUTCDate()){
+            return false;
+        }
         return diffHour <= diff;
     };
 
@@ -361,7 +383,7 @@ function controllerWorldWeather() {
 
         // YYYY.mm.dd HH:MM
         if(current.slice(0, 10) === target.slice(0, 10)){
-            if(targetDate.getHours() === 1 && targetDate.getMinutes() === 0){
+            if(targetDate.getHours() === 0 && targetDate.getMinutes() === 0){
                 return true;
             }
         }
@@ -434,8 +456,9 @@ function controllerWorldWeather() {
                         log.info('cDate : ', cDate.toString());
                         log.info('DSF DB Date : ', req.DSF.dateObj.toString());
 
-                        //업데이트 시간이 15분을 넘어가면 어제,오늘,예보 갱신.
-                        if (!self.checkValidDate(cDate, req.DSF.dateObj, 15)) {
+                        //업데이트 시간이 15분을 넘어가거나 현재 날짜가 바뀌는경우 어제,오늘,예보 갱신.
+                        if (!self._isSameDay(cDate, req.DSF.dateObj, req.result.timezone.min) ||
+                            !self.checkValidDate(cDate, req.DSF.dateObj, 15)) {
                             log.info('TWW> Invaild DSF data', meta);
                             log.info('TWW> DSF CurDate : ', cDate.toString(), meta);
                             log.info('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
@@ -758,8 +781,9 @@ function controllerWorldWeather() {
                         log.info('cDate : ', cDate.toString());
                         log.info('DSF DB Date : ', req.DSF.dateObj.toString());
 
-                        //업데이트 시간이 15분을 넘어가면 어제,오늘,예보 갱신.
-                        if(!self.checkValidDate(cDate, req.DSF.dateObj, 15)) {
+                        //업데이트 시간이 15분을 넘어가거나 날짜가 바뀌면 어제,오늘,예보 갱신.
+                        if(!self._isSameDay(cDate, req.DSF.dateObj, req.result.timezone.min) ||
+                            !self.checkValidDate(cDate, req.DSF.dateObj, 15)) {
                             log.info('TWW> Invaild DSF data', meta);
                             log.info('TWW> DSF CurDate : ', cDate.toString(), meta);
                             log.info('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
@@ -1796,6 +1820,7 @@ function controllerWorldWeather() {
      */
     self.mergeAqi = function(req, res, next) {
         var meta = {};
+        var errPrint = [];
         meta.sID = req.sessionID;
 
         if (req.AQI && req.AQI.data) {
@@ -1809,7 +1834,7 @@ function controllerWorldWeather() {
                     var time = new Date();
                     time.setTime(new Date(aqiItem.dateObj).getTime() + req.result.timezone.ms);
                     aqiItem.date = self._convertTimeString(time);
-
+                    
                     if (thisTime.date != undefined
                         && self._compareDate(thisTime.date, aqiItem.mTime, 6)){
 
@@ -1818,7 +1843,7 @@ function controllerWorldWeather() {
                         thisTime.t = aqiItem.t;
                         thisTime.h = aqiItem.h;
                         thisTime.p = aqiItem.p;
-                        log.info('Aqi Unit : ', req.query.airUnit);
+                        log.info('Aqi Unit : ', req.query.airUnit, 'Date:', thisTime.date, ' | ', aqiItem.mTime);
 
                         var indexList = [];
                         var iaqiCode = '';
@@ -1911,10 +1936,14 @@ function controllerWorldWeather() {
                         }
                     }
                     else {
-                       log.error(`mismatch time thisTime: ${thisTime.date}, aqi: ${aqiItem.date}`);
+                       errPrint.push({error : `mismatch time thisTime: ${thisTime.date}, aqi: ${aqiItem.mTime}, timeOffset: ${req.result.timezone.ms}`});
                     }
                 });
             });
+
+            if(req.result.thisTime.length === errPrint.length) {
+                log.warn('Fail to find matched AQI Data : ', JSON.stringify(errPrint));
+            }
         }
 
         next();

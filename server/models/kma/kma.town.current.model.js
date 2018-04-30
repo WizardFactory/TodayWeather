@@ -29,9 +29,9 @@ var townCurrentSchema = new mongoose.Schema({
     }
 });
 
-townCurrentSchema.index({fcsDate:1});
-townCurrentSchema.index({pubDate:1});
-townCurrentSchema.index({mCoord:1});
-townCurrentSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1});
+townCurrentSchema.index({"fcsDate": 1});
+townCurrentSchema.index({"mCoord.mx": 1, "mCoord.my": 1, "fcsDate": -1});
+townCurrentSchema.index({"mCoord.mx": 1, "mCoord.my": 1, "fcsDate": 1});
+townCurrentSchema.index({"mCoord.mx": 1, "mCoord.my": 1, "pubDate": 1});
 
 module.exports = mongoose.model('kma.town.current', townCurrentSchema);

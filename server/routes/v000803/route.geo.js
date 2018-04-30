@@ -23,7 +23,7 @@ router.use(function timestamp(req, res, next){
     next();
 });
 
-var kmaRouterList = [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort,
+var kmaRouterList = [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.getShort,
     cTown.getShortRss, cTown.getShortest, cTown.getCurrent, cTown.updateCurrentListForValidation,
     cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather, cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
     cTown.mergeByShortest, cTown.adjustShort, cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo,
