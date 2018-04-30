@@ -1,0 +1,42 @@
+<!--
+Create tabs with an icon and label, using the tabs-positive style.
+Each tab's child <ion-nav-view> directive will have its own
+navigation history that also transitions its views in and out.
+-->
+<ion-view hide-nav-bar="true">
+    <ion-content scroll="false" style="background-color: #03A9F4; color: white">
+        <ion-slide-box on-slide-changed="onSlideChanged(index)" style="height: 100%;">
+            <ion-slide>
+                <div class="guide-content" ng-style="::{'background-image':'url('+getGuideImg(1)+')'}">
+                    <a class="icon ion-ios-close-outline guide-close" ng-click="onClose()"></a>
+                    <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
+                    <p ng-style="{'font-size': bigFont-6+'px'}" class="guide-content-head" translate="LOC_TODAY_THAN_YESTERDAY?"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_COMPARE_THE_GRAPH_WITH_YESTERDAY_AT_A_GLANCE"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_COMPARE_YESTERDAY_TODAY_TOMORROW"></p>
+                </div>
+            </ion-slide>
+            <ion-slide>
+                <div class="guide-content" ng-style="::{'background-image':'url('+getGuideImg(2)+')'}">
+                    <a class="icon ion-ios-close-outline guide-close" ng-click="onClose()"></a>
+                    <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
+                    <p ng-style="{'font-size': bigFont-6+'px'}" class="guide-content-head" translate="LOC_FROM_LAST_WEEK_TO_NEXT_WEEK"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_CHECK_THE_CHANGES_IN_ONE_WEEK"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_COMPARE_LAST_WEEKEND_WITH_THIS_WEEKEND"></p>
+                </div>
+            </ion-slide>
+            <ion-slide>
+                <div class="guide-content" ng-style="::{'background-image':'url('+getGuideImg(4)+')'}">
+                    <a class="icon ion-ios-close-outline guide-close" ng-click="onClose()"></a>
+                    <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
+                    <p ng-style="{'font-size': bigFont-6+'px'}" class="guide-content-head" translate="LOC_WEATHER_ALARM"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_SET_ALARM_IN_YOUR_FAVORITE_LOCATION"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_GET_WEATHER_INFO_AT_THE_TIME_YOU_SET"></p>
+                </div>
+            </ion-slide>
+        </ion-slide-box>
+        <div class="guide-pager">
+            <span ng-click="onLeftClick()" class="guide-pager-left">{{leftText}}</span>
+            <span ng-click="onRightClick()" class="guide-pager-right">{{rightText}}</span>
+        </div>
+    </ion-content>
+</ion-view>

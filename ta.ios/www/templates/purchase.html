@@ -1,0 +1,48 @@
+<ion-view>
+    <ion-nav-buttons side="left">
+        <button class="button button-icon button-positive icon"
+                ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" ng-click="onClose()">
+        </button>
+    </ion-nav-buttons>
+    <ion-nav-title>
+        <p class="title">
+            <span style="vertical-align: middle">{{'LOC_REMOVE_ADS'|translate}}</span>
+        </p>
+    </ion-nav-title>
+    <ion-content class="purchase-content" scroll="false" ng-if="accountLevel != 'premium'">
+        <div style="margin-top: 72px;">
+            <img class="item-center" width="96px" src="img/app_icon.png" style="margin-bottom: 16px">
+            <div ng-style="::{'width':listWidth+'px'}" ng-if="product != undefined"
+                 style="padding: 16px; border-width: 1px; border-color:#ddd; border-style: solid;">
+                <h4 style="opacity: 0.87">{{product.description}}</h4>
+                <button class="button button-outline button-positive item-center" ng-click="order()">
+                    {{'LOC_BUY'|translate}} {{product.price}}
+                </button>
+            </div>
+            <div class="item item-button-right" ng-style="::{'width':listWidth+'px'}"
+                 style="opacity: 0.56; background-color: inherit">
+                {{'LOC_PAID_APP'|translate}}
+                <button class="button button-outline button-positive" disabled="true" translate="LOC_BUY"></button>
+            </div>
+        </div>
+        <div style="position: absolute; bottom: 16px; width: 100%" ng-if="product != undefined">
+            <button class="button button-outline button-positive item-center" ng-click="restore()" translate="LOC_RESTORE_PURCHASES">
+            </button>
+        </div>
+    </ion-content>
+    <ion-content class="purchase-content" scroll="false" ng-if="accountLevel == 'premium'">
+        <div style="margin-top: 72px;">
+            <img class="item-center" width="96px" src="img/app_icon.png">
+            <div  ng-style="::{'width':listWidth+'px'}" style="padding: 16px;">
+                <h4 style="opacity: 0.87; text-align: center" translate="LOC_THANK_YOU_FOR_USING_TODAYWEATHER"></h4>
+                <button class="button button-outline button-dark item-center" disabled="true" style="opacity: 0.84">
+                    {{product.title}} {{'LOC_EXPIRY_DATE'|translate}} : {{expirationDate}}
+                </button>
+            </div>
+        </div>
+        <div style="position: absolute; bottom: 16px; width: 100%" ng-if="showRenew == true">
+            <button class="button button-outline button-positive item-center" style="opacity: 0.84" ng-click="order()" translate="LOC_RENEW">
+            </button>
+        </div>
+    </ion-content>
+</ion-view>

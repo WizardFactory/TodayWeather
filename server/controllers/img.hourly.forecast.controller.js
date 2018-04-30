@@ -44,7 +44,7 @@ class ImgHourlyForecastController {
     }
 
     _updateForecastList(forecastsObj, callback) {
-        async.map(forecastsObj.hourly,
+        async.mapSeries(forecastsObj.hourly,
             (hourData, callback) => {
                 var hourForecast;
                 try {

@@ -28,7 +28,7 @@ var kshwSchema2 = new mongoose.Schema({
     rns: Boolean //rain,snow or not pty와 비슷하지만, on/off만 있음. property가 없으면, 동작하지 않거나, 정보 없음.
 });
 
-kshwSchema2.index({stnId: 1});
-kshwSchema2.index({date: 1});
+kshwSchema2.index({stnId: 1, date: 1});
+kshwSchema2.index({date: -1});
 
 module.exports = mongoose.model('KmaStnHourly2', kshwSchema2);

@@ -31,20 +31,23 @@ else {
     global.log  = new Logger(__dirname + "/debug.log");
 }
 
-// Bootstrap db connection
-//log.info(config.db.path);
-
-var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
-                replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } },
-                mongos: true };
-
-mongoose.Promise = global.Promise;
-mongoose.connect(config.db.path, options, function(err) {
-    if (err) {
-        log.error('Could not connect to MongoDB! ' + config.db.path);
-        log.error(err);
-    }
-});
+if (config.db.path.indexOf('srv') >= 0) {
+    mongoose.connect(config.db.path, {dbName: config.db.database}, function(err) {
+        if (err) {
+            log.error('Could not connect to MongoDB! ' + config.db.path);
+            log.error(err);
+        }
+    });
+}
+else {
+    //release를 원활히 하기 위한 부분으로 추후 삭제
+    mongoose.connect(config.db.path, function(err) {
+        if (err) {
+            log.error('Could not connect to MongoDB! ' + config.db.path);
+            log.error(err);
+        }
+    });
+}
 
 var app = express();
 var session = require('express-session');
@@ -91,6 +94,7 @@ app.use('/v000705', require('./routes/v000705'));
 app.use('/v000803', require('./routes/v000803'));
 app.use('/v000901', require('./routes/v000901'));
 app.use('/v000902', require('./routes/v000902'));
+app.use('/v000903', require('./routes/v000903'));
 app.use('/ww', require('./routes/worldweather/routeWeather'));
 app.use('/req', require('./routes/worldweather/routeRequester'));
 app.get('/health', function (req, res) {

@@ -60,77 +60,89 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 // Include all of Ionic
 @import "www/lib/ionic/scss/ionic";
 
-[md-page-header] {
-  padding: 0 0 5px 0;
-  //height: auto;
-  color: #444;
-  background-color: #fff;
-  margin: auto;
-  //background-position: 50% 50%;
-  //background-size: 100%;
-  //background-image: initial;
-
-  .main-box {
-    width: 80%;
-    margin: auto;
-    text-align: center;
-    .main-box-forecast-content {
-      margin: auto;
-      font-weight: 300;
-      display: inline-flex;
-      span {
-        vertical-align: super;
-      }
-    }
-    .main-box-air-title {
-      margin: auto;
-      padding: 0 12px;
-      font-size:17px;
-      font-weight: 500;
-      border-radius: 4px;
-      border: 1px solid #444;
-      display: inline-flex;;
-    }
-    .main-box-air-content {
-      margin: auto;
-      font-size: 64px;
-      i, span {
-        font-size: 32px;
-      }
-    }
-    .main-box-summary {
-      font-size: 21px;
-      line-height: 21px;
-      i {
-        font-size: 24px;
-        vertical-align: bottom;
-      }
-    }
-  }
-  .main-box-arrow {
-    width: 10%;
-    padding-bottom: 7%;
-    padding-top: 7%;
-    margin: auto;
-    text-align: center;
-  }
-}
-
-[md-header-picture] {
-  //  position: relative;
-  //  width: 100%;
-  //  height: 0;
-  //  /* Simple trick to keep a 16:9 ratio on your background image (height=0;padding-bottom=56.25%) */
-  //  padding-bottom: 56.25%;
-  //  overflow: hidden;
-  //  background-size: 160%;
-  //  /* You can override this value if your picture has a weird ratio */
-  background-position: 50% 50%;
-}
-
 .main-content {
   color: #000;
   width: 100%;
+  top: 0;
+  [md-page-header] {
+    color: #444;
+    background-color: #fff;
+    padding: 44px 0 5px 0;
+    margin: 0 auto 5px auto;
+    position: relative;
+    .photo-box {
+      background-repeat: no-repeat;
+      background-size: cover;
+      opacity: 0.8;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    .main-box {
+      width: 80%;
+      margin: auto;
+      text-align: center;
+      z-index: 1;
+      .main-box-forecast-content {
+        margin: auto;
+        font-weight: 300;
+        display: inline-flex;
+        span {
+          vertical-align: super;
+        }
+      }
+      .main-box-air-title {
+        margin: auto;
+        padding: 0 12px;
+        font-size:17px;
+        font-weight: 500;
+        border-radius: 4px;
+        border: 1px solid #444;
+        display: inline-flex;;
+      }
+      .main-box-air-content {
+        margin: auto;
+        font-size: 64px;
+        i, span {
+          font-size: 32px;
+        }
+      }
+      .main-box-summary {
+        font-size: 21px;
+        line-height: 21px;
+        i {
+          font-size: 24px;
+          vertical-align: bottom;
+        }
+      }
+      .main-box-air-summary {
+        color:#444;
+        font-size: 21px;
+        line-height: 21px;
+        i {
+          font-size: 24px;
+          vertical-align: bottom;
+        }
+        img {
+          height: 24px;
+        }
+        div {
+          margin: auto;
+        }
+      }
+    }
+    .main-box-arrow {
+      width: 10%;
+      padding-bottom: 7%;
+      padding-top: 7%;
+      margin: auto;
+      text-align: center;
+      z-index: 1;
+    }
+  }
   .card {
     background-color: #fff;
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
@@ -261,6 +273,92 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
       }
       .chart-content {
         width: 100%;
+        .chart-text {
+          fill: #444;
+          font-size: 15px;
+          text-anchor: middle;
+        }
+        .chart-sub-text {
+          fill: #444;
+          font-size: 13px;
+          text-anchor: middle;
+          letter-spacing: 0px;
+        }
+        .chart-unit-text {
+          fill: #444;
+          font-size: 10px;
+        }
+        .chart-bar {
+          fill: #7aa4d1;
+        }
+        .guide-vivid-line {
+          stroke: #c0d6f0;
+          stroke-width: 1;
+          stroke-opacity: 0.6;
+        }
+        .guide-line {
+          stroke: #d9e5f2;
+          stroke-width: 1;
+          stroke-opacity: 0.4;
+        }
+        .current-rect {
+          stroke: #d9e5f2;
+          fill: #d9e5f2;
+        }
+        .line-today {
+          stroke: #7aa4d1;
+          stroke-width: 2px;
+          fill: none;
+        }
+        .line-yesterday {
+          stroke: #9e9e9e;
+          stroke-width: 1px;
+          fill: none;
+        }
+        .circle-today {
+          stroke: #7aa4d1;
+          stroke-width: 1px;
+          fill: #7aa4d1;
+        }
+        .circle-yesterday {
+          stroke: #9e9e9e;
+          stroke-width: 1px;
+          fill: #9e9e9e;
+        }
+        .circle-today-current {
+          stroke: #FF5252;
+          stroke-width: 2px;
+          fill: #FF5252;
+        }
+        .circle-yesterday-current {
+          stroke: #9e9e9e;
+          stroke-width: 2px;
+          fill: #9e9e9e;
+        }
+        .text-today {
+          fill: #ffffff;
+          font-size: 15px;
+          text-anchor: middle;
+        }
+        .text-yesterday {
+          fill: #ffffff;
+          font-size: 15px;
+          text-anchor: middle;
+        }
+        .circle-hidden, .text-hidden {
+          visibility: hidden;
+        }
+        .x-axis {
+          path, line {
+            stroke: #666666;
+            shape-rendering: crispEdges;
+          }
+          text {
+            stroke-width: 0px;
+            fill: #444;
+            font-size: 13px;
+          }
+        }
       }
     }
     .chart-label {
@@ -283,6 +381,40 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
         height: 13px;
       }
     }
+    .air-std-table {
+      margin: 0 4px;
+      font-size: 15px;
+      .air-label {
+        position: relative;
+        display: inline-block;
+        .outline {
+          border-radius: 4px;
+          border: 1px solid #444;
+          font-weight: 700;
+          padding: 0 10px;
+        }
+        .line {
+          max-width: 50%;
+          height: 8px;
+          border-right: 1px solid #444;
+          margin: 0 1px;
+        }
+      }
+      .air-std-box {
+        display: flex;
+        .air-std {
+          flex-basis: 100%;
+          margin: 0 1px;
+          text-overflow:ellipsis;
+          overflow:hidden;
+          white-space:nowrap;
+          border-top: 2px solid #444;
+        }
+      }
+    }
+  }
+  .card:first-child {
+    padding: 0 0 10px 0;
   }
   .card-scroll {
     overflow: auto;
@@ -296,140 +428,25 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   }
 }
 
-/* air standard table */
-.air-std-table {
-  margin: 0 4px;
-  font-size: 15px;
-  .air-label {
-    position: relative;
-    display: inline-block;
-    .outline {
-      border-radius: 4px;
-      border: 1px solid #444;
-      font-weight: 700;
-      padding: 0 10px;
-    }
-    .line {
-      max-width: 50%;
-      height: 8px;
-      border-right: 1px solid #444;
-      margin: 0 1px;
-    }
-  }
-  .air-std-box {
-    display: flex;
-    .air-std {
-      flex-basis: 100%;
-      margin: 0 1px;
-      text-overflow:ellipsis;
-      overflow:hidden;
-      white-space:nowrap;
-      border-top: 2px solid #444;
-    }
+.main-content.photo {
+  [md-page-header] {
+    color: #fff;
+    text-shadow: -0.5px -0.5px 0 #8f8f8f, 0.5px -0.5px 0 #8f8f8f, -0.5px 0.5px 0 #8f8f8f, 0.5px 0.5px 0 #8f8f8f;
+    padding: 44px 0 22px 0;
   }
 }
 
-/* chart style */
-.chart-text {
-  fill: #444;
-  font-size: 15px;
-  text-anchor: middle;
-}
-
-.chart-sub-text {
-  fill: #444;
-  font-size: 13px;
-  text-anchor: middle;
-  letter-spacing: 0px;
-}
-
-.chart-unit-text {
-  fill: #444;
-  font-size: 10px;
-}
-
-.chart-bar {
-  fill: #7aa4d1;
-}
-
-.guide-vivid-line {
-  stroke: #c0d6f0;
-  stroke-width: 1;
-  stroke-opacity: 0.6;
-}
-
-.guide-line {
-  stroke: #d9e5f2;
-  stroke-width: 1;
-  stroke-opacity: 0.4;
-}
-
-.current-rect {
-  stroke: #d9e5f2;
-  fill: #d9e5f2;
-}
-
-.line-today {
-  stroke: #7aa4d1;
-  stroke-width: 2px;
-  fill: none;
-}
-
-.line-yesterday {
-  stroke: #9e9e9e;
-  stroke-width: 1px;
-  fill: none;
-}
-
-.circle-today {
-  stroke: #7aa4d1;
-  stroke-width: 1px;
-  fill: #7aa4d1;
-}
-
-.circle-yesterday {
-  stroke: #9e9e9e;
-  stroke-width: 1px;
-  fill: #9e9e9e;
-}
-
-.circle-today-current {
-  stroke: #FF5252;
-  stroke-width: 2px;
-  fill: #FF5252;
-}
-
-.circle-yesterday-current {
-  stroke: #9e9e9e;
-  stroke-width: 2px;
-  fill: #9e9e9e;
-}
-
-.text-today {
-  fill: #ffffff;
-  font-size: 15px;
-  text-anchor: middle;
-}
-
-.text-yesterday {
-  fill: #ffffff;
-  font-size: 15px;
-  text-anchor: middle;
-}
-
-.circle-hidden, .text-hidden {
-  visibility: hidden;
-}
-
-.x-axis {
-  path, line {
-    stroke: #666666;
-    shape-rendering: crispEdges;
+.platform-ios.platform-cordova {
+  .main-content {
+    top: 0 !important;
+    [md-page-header] {
+      padding: 64px 0 5px 0;
+    }
   }
-  text {
-    stroke-width: 0px;
-    fill: #444;
-    font-size: 13px;
+  .main-content.photo {
+    [md-page-header] {
+      padding: 64px 0 22px 0;
+    }
   }
 }
 
@@ -446,10 +463,11 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   right: 0px !important;
 }
 
-.bar-hidden {
-  border: none !important;
-  background: none !important;
-  color: #fff !important;
+.bar-clear {
+  text-shadow: -0.5px -0.5px 0 #8f8f8f, 0.5px -0.5px 0 #8f8f8f, -0.5px 0.5px 0 #8f8f8f, 0.5px 0.5px 0 #8f8f8f;
+  .button, .title {
+    text-shadow: -0.5px -0.5px 0 #8f8f8f, 0.5px -0.5px 0 #8f8f8f, -0.5px 0.5px 0 #8f8f8f, 0.5px 0.5px 0 #8f8f8f;
+  }
 }
 
 [nav-bar-transition="android"] .title,
@@ -539,15 +557,6 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   left: 0px;
 }
 
-.menu-left .menu-content i {
-  padding-right: 16px;
-  padding-top: 10px;
-  position: absolute;
-  right: 0;
-  color: #333;
-  font-size: 14px;
-}
-
 /* start page */
 .start-content .item-input {
   padding-right: 16px;
@@ -622,6 +631,13 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin: auto 0;
 }
 
+.search-item.air-item {
+  width: 48px;
+  text-align: center;
+  font-size: 32px;
+  margin: auto 0;
+}
+
 .search-item img {
   display: block;
   margin: auto;
@@ -664,11 +680,11 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   top: auto;
   bottom: auto;
   margin-top: -3px;
-  background-color: white;
+  background-color: #fff;
 }
 
 .toggle.toggle-search input:checked + .track .handle {
-  background-color: white;
+  background-color: #fff;
   left: auto;
   right: 25px;
 }
@@ -938,7 +954,7 @@ ion-side-menu-content > ion-nav-view {
 }
 
 .setting-push button {
-  color: white;
+  color: #fff;
 }
 
 //iphone 4

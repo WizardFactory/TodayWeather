@@ -64,8 +64,9 @@ var townShortRssSchema = new mongoose.Schema({
     }
 });
 
-townShortRssSchema.index({mCoord:1});
-townShortRssSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1});
+townShortRssSchema.index({fcsDate:1});
+townShortRssSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1, "fcsDate" : 1});
+townShortRssSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1, "pubDate" : 1});
 
 module.exports = mongoose.model('kma.town.short.rss', townShortRssSchema);
 

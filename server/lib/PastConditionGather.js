@@ -7,6 +7,8 @@ var req = require('request');
 
 var town = require('../models/town');
 var modelCurrent = require('../models/modelCurrent');
+var KmaTownCurrent = require('../models/kma/kma.town.current.model');
+
 var config = require('../config/config');
 
 function PastConditionGather() {
@@ -66,6 +68,64 @@ PastConditionGather.prototype.getCoordList = function (callback) {
     });
 
     return this;
+};
+
+/**
+ *
+ * @param pubDate
+ * @param list
+ * @private
+ */
+PastConditionGather.prototype._isInvalid = function (pubDate, list) {
+    var current = list.find(function (obj) {
+        return obj.currentData.date === pubDate.date && obj.currentData.time === pubDate.time;
+    });
+    if (!current) {
+        return true;
+    }
+    if (current.currentData.t1h === -50 || current.currentData.reh === -1) {
+        log.info('baseTime='+JSON.stringify(pubDate)+' data is invalid. so retry!');
+        return true;
+    }
+    else {
+        log.debug('baseTime='+JSON.stringify(pubDate)+' is skipped');
+    }
+    return false;
+};
+
+/**
+ * for DB 2.0
+ * @param callback
+ * @private
+ */
+PastConditionGather.prototype._checkBaseTimeByCoord2 = function (callback) {
+    var self = this;
+
+    async.mapLimit(self.mCoordList, 400,
+        function(mCoord, cb) {
+            var query = {"mCoord.mx":mCoord.mx, "mCoord.my":mCoord.my};
+            KmaTownCurrent.find(query, {_id:0}).sort({fcsDate: -1}).limit(24).lean()
+                .exec(function (err, list) {
+                    if (err) {
+                        return cb(err);
+                    }
+
+                    var updateObject = {mCoord: mCoord};
+                    updateObject.baseTimeList = self.pubDateList.filter(function (pubDate) {
+                        return self._isInvalid(pubDate, list);
+                    });
+                    if (updateObject.baseTimeList.length) {
+                        self.updateList.push(updateObject);
+                    }
+                    else {
+                        log.debug('mCoord='+JSON.stringify(updateObject.mCoord)+' is already updated');
+                    }
+                    cb();
+                });
+        },
+        function(err) {
+            callback(err);
+        });
 };
 
 PastConditionGather.prototype._checkBaseTimeByCoord = function (callback) {
@@ -173,9 +233,16 @@ PastConditionGather.prototype.start = function (days, key, callback) {
             });
         },
         function (callback) {
-            self._checkBaseTimeByCoord(function (err) {
-                callback(err);
-            });
+            if(config.db.version === '1.0') {
+                self._checkBaseTimeByCoord(function (err) {
+                    callback(err);
+                });
+            }
+            else if(config.db.version === '2.0') {
+                self._checkBaseTimeByCoord2(function (err) {
+                    callback(err);
+                });
+            }
         },
         //function (callback) {
         //    self._checkBaseTime(function (err) {

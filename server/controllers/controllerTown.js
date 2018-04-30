@@ -140,7 +140,7 @@ function ControllerTown() {
                 async.parallel([
                     function(callback){
                         // get town weather
-                        async.map(townArray,
+                        async.mapSeries(townArray,
                             function(item, cb){
                                 var Db20Collections = ['modelCurrent', 'modelShort', 'modelShortRss', 'modelShortest'];
                                 if(config.db.version === '2.0' && Db20Collections.indexOf(item.name) != -1){
@@ -198,7 +198,7 @@ function ControllerTown() {
                             }
 
                             log.silly('point number : ', code);
-                            async.map(midArray,
+                            async.mapSeries(midArray,
                                 function (item, cb) {
                                     var parm;
                                     if(item.db === modelMidForecast){
@@ -282,7 +282,16 @@ function ControllerTown() {
         });
     };
 
+    /**
+     * TW-277 DB에서 데이터 못 읽어오는 이슈 때문에 이 부분 사용하지 않고, 이후에 DB에 데이터 요청을 한 번 더 하게 함.
+     * @param req
+     * @param res
+     * @param next
+     */
     this.checkDBValidation = function(req, res, next) {
+        log.warn('called unused function');
+        return next();
+
         var funcArray = [];
         if (req.modelCurrent == undefined) {
             funcArray.push(function (callback) {
@@ -1957,14 +1966,20 @@ function ControllerTown() {
         var tmpGrade;
         var ts = res;
 
+        /**
+         * diff temp와 weather가 2.5로 특별한 날씨가 정보가 없으면 온도차와 날씨를 표시
+         */
         if (current.hasOwnProperty('t1h') && yesterday && yesterday.hasOwnProperty('t1h')) {
             var obj = self._diffTodayYesterday(current, yesterday, ts);
+            if (obj.grade <= 2) {
+                obj.grade = 2.5;
+            }
             item = {str: obj.str, grade: obj.grade};
             itemList.push(item);
         }
 
         if (current.hasOwnProperty('weatherType')) {
-            tmpGrade = 1;
+            tmpGrade = 2.5;
             if (current.weatherType > 3) {
                 tmpGrade = 3;
             }
@@ -2033,10 +2048,21 @@ function ControllerTown() {
             itemList.push(item);
         }
 
-        if (current.ultrv && Number(current.time) < 1800) {
+        var time = 24;
+        if (typeof current.time === 'string') {
+            time =  Number(current.time)/100;
+        }
+        else {
+            time = current.time;
+        }
+
+        if (current.ultrv && time <= 15) {
             tmpGrade = current.ultrvGrade;
+            if (current.time >= 11) {
+                tmpGrade++;
+            }
             str = ts.__('LOC_UV') +' '+current.ultrvStr;
-            item = {str:str, grade: tmpGrade+1};
+            item = {str:str, grade: tmpGrade};
             itemList.push(item);
         }
 
@@ -2046,12 +2072,12 @@ function ControllerTown() {
             itemList.push(item);
         }
 
-        if (current.fsnGrade && current.fsnStr) {
-            //주의(1)를 보통으로 보고 보정 1함.
-            str = ts.__('LOC_FOOD_POISONING') + ' ' + current.fsnStr;
-            item = {str: str, grade: current.fsnGrade+1};
-            itemList.push(item);
-        }
+        // if (current.fsnGrade && current.fsnStr) {
+        //     //주의(1)를 보통으로 보고 보정 1함.
+        //     str = ts.__('LOC_FOOD_POISONING') + ' ' + current.fsnStr;
+        //     item = {str: str, grade: current.fsnGrade+1};
+        //     itemList.push(item);
+        // }
 
         //감기
 
@@ -2269,6 +2295,7 @@ function ControllerTown() {
                     }
                     req.current.arpltn = arpltnObj.arpltn;
                     req.arpltnList = arpltnObj.list;
+                    req.arpltnStnList = arpltnObj.stnList;
                     next();
                 });
             });
@@ -2842,6 +2869,47 @@ function ControllerTown() {
         return this;
     };
 
+    this._insertAirInfoStr = function (airInfo, airUnit, res) {
+        if (airInfo.last) {
+            var last = airInfo.last;
+            self._makeArpltnStr(last, airUnit, res);
+            ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
+                if (last.hasOwnProperty(propertyName+'Grade')) {
+                    last[propertyName+'ActionGuide'] =
+                        AqiConverter.getActionGuide(airUnit, propertyName, last[propertyName+'Grade'], res);
+                }
+            });
+        }
+        if (airInfo.pollutants) {
+            ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
+                var pollutant = airInfo.pollutants[propertyName];
+                if (pollutant) {
+                    if (pollutant.hourly) {
+                        pollutant.hourly.forEach(function (item) {
+                            if (item.hasOwnProperty('grade')) {
+                                item.str = UnitConverter.airGrade2Str(airUnit, item.grade, res);
+                            }
+                        });
+                    }
+
+                    if (pollutant.daily) {
+                        pollutant.daily.forEach(function (item) {
+                            if (item.hasOwnProperty('grade')) {
+                                item.str = UnitConverter.airGrade2Str(airUnit, item.grade, res);
+                            }
+                            if (item.hasOwnProperty('minGrade')) {
+                                item.minStr = UnitConverter.airGrade2Str(airUnit, item.minGrade, res);
+                            }
+                            if (item.hasOwnProperty('maxGrade')) {
+                                item.maxStr = UnitConverter.airGrade2Str(airUnit, item.maxGrade, res);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    };
+
     this.insertStrForData = function (req, res, next) {
         if(req.short){
             req.short.forEach(function (data) {
@@ -2869,45 +2937,13 @@ function ControllerTown() {
             });
         }
 
-        if (req.airInfo) {
-            if (req.airInfo.last) {
-                var last = req.airInfo.last;
-                self._makeArpltnStr(last, airUnit, res);
-                ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
-                    if (last.hasOwnProperty(propertyName+'Grade')) {
-                        last[propertyName+'ActionGuide'] =
-                            AqiConverter.getActionGuide(airUnit, propertyName, last[propertyName+'Grade'], res);
-                    }
-                });
-            }
-            if (req.airInfo.pollutants) {
-                ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
-                    var pollutant = req.airInfo.pollutants[propertyName];
-                    if (pollutant) {
-                        if (pollutant.hourly) {
-                            pollutant.hourly.forEach(function (item) {
-                                if (item.hasOwnProperty('grade')) {
-                                    item.str = UnitConverter.airGrade2Str(airUnit, item.grade, res);
-                                }
-                            });
-                        }
-
-                        if (pollutant.daily) {
-                            pollutant.daily.forEach(function (item) {
-                                if (item.hasOwnProperty('grade')) {
-                                    item.str = UnitConverter.airGrade2Str(airUnit, item.grade, res);
-                                }
-                                if (item.hasOwnProperty('minGrade')) {
-                                    item.minStr = UnitConverter.airGrade2Str(airUnit, item.minGrade, res);
-                                }
-                                if (item.hasOwnProperty('maxGrade')) {
-                                    item.maxStr = UnitConverter.airGrade2Str(airUnit, item.maxGrade, res);
-                                }
-                            });
-                        }
-                    }
-                });
-            }
+        if (req.airInfoList) {
+            req.airInfoList.forEach(function (airInfo) {
+                self._insertAirInfoStr(airInfo, airUnit, res) ;
+            });
+        }
+        else if (req.airInfo) {
+           self._insertAirInfoStr(req.airInfo, airUnit, res) ;
         }
 
         next();

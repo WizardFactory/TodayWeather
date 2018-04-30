@@ -32,7 +32,8 @@ var townShortSchema = new mongoose.Schema({
     }
 });
 
-townShortSchema.index({mCoord:1});
-townShortSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1});
+townShortSchema.index({fcsDate:1});
+townShortSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1, "fcsDate" : 1});
+townShortSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1, "pubDate" : 1});
 
 module.exports = mongoose.model('kma.town.short', townShortSchema);

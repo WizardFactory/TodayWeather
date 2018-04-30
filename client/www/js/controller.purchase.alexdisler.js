@@ -19,7 +19,7 @@ angular.module('controller.purchase', [])
         obj.hasInAppPurchase = false;
         obj.paidAppUrl='';
 
-        if (twClientConfig.isPaidApp) {
+        if (clientConfig.isPaidApp) {
             obj.accountLevel = obj.ACCOUNT_LEVEL_PAID;
             TwAds.setEnableAds(false);
         }
@@ -43,7 +43,7 @@ angular.module('controller.purchase', [])
         };
 
         obj.checkReceiptValidation = function(storeReceipt, callback) {
-            var url = twClientConfig.serverUrl  + '/v000705' + '/check-purchase';
+            var url = clientConfig.serverUrl  + '/v000705' + '/check-purchase';
             $http({
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
@@ -227,10 +227,10 @@ angular.module('controller.purchase', [])
             }
 
             if (ionic.Platform.isIOS()) {
-                self.paidAppUrl = twClientConfig.iOSPaidAppUrl;
+                self.paidAppUrl = clientConfig.iOSPaidAppUrl;
             }
             else if (ionic.Platform.isAndroid()) {
-                self.paidAppUrl = twClientConfig.androidPaidAppUrl;
+                self.paidAppUrl = clientConfig.androidPaidAppUrl;
             }
 
             if (!window.inAppPurchase) {
@@ -246,7 +246,7 @@ angular.module('controller.purchase', [])
                 return;
             }
 
-            self.productId = 'tw1year';
+            self.productId = clientConfig.package === 'todayWeather' ? 'tw1year' : 'ta1year';
             console.log('productId='+self.productId);
 
             self.hasInAppPurchase = true;
@@ -425,9 +425,6 @@ angular.module('controller.purchase', [])
 
         $scope.$on('$ionicView.enter', function() {
             TwAds.setShowAds(false);
-            if (window.StatusBar) {
-                StatusBar.backgroundColorByHexString('#0288D1');
-            }
         });
 
         function init() {
@@ -467,6 +464,13 @@ angular.module('controller.purchase', [])
             }
 
             $scope.listWidth = window.innerWidth;
+
+            if (clientConfig.package === 'todayWeather') {
+                $scope.imgAppIcon = 'img/app_icon.png';
+            }
+            else if (clientConfig.package === 'todayAir') {
+                $scope.imgAppIcon = 'img/ta_app_icon.png';
+            }
         }
 
         init();

@@ -16,18 +16,6 @@ angular.module('controller.settingctrl', [])
             if (ionic.Platform.isIOS()) {
                 menuContent = angular.element(document.getElementsByClassName('menu-content')[0]);
             }
-
-            var settingsInfo = TwStorage.get("settingsInfo");
-            if (settingsInfo === null) {
-                settingsInfo = {
-                    startupPage: "0", //시간별날씨
-                    refreshInterval: "0" //수동
-                };
-                TwStorage.set("settingsInfo", settingsInfo);
-            }
-
-            console.info(settingsInfo);
-            $rootScope.settingsInfo = settingsInfo;
         }
 
         $scope.clickMenu = function (menu) {
@@ -57,15 +45,15 @@ angular.module('controller.settingctrl', [])
         var openInfo = function() {
             var strTitle = "TodayWeather";
             var strMsg;
-            $translate(['LOC_TODAYWEATHER','LOC_WEATHER_INFORMATION', 'LOC_KOREA_METEOROLOGICAL_ADMINISTRATION', 'LOC_AQI_INFORMATION', 'LOC_KOREA_ENVIRONMENT_CORPORATION', 'LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS']).then(function (translations) {
-                strTitle = translations.LOC_TODAYWEATHER;
+            $translate([$rootScope.title,'LOC_WEATHER_INFORMATION', 'LOC_KOREA_METEOROLOGICAL_ADMINISTRATION', 'LOC_AQI_INFORMATION', 'LOC_KOREA_ENVIRONMENT_CORPORATION', 'LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS']).then(function (translations) {
+                strTitle = translations[$rootScope.title];
                 strMsg = translations.LOC_WEATHER_INFORMATION + " : "  + translations.LOC_KOREA_METEOROLOGICAL_ADMINISTRATION;
                 strMsg += "<br>";
                 strMsg += translations.LOC_AQI_INFORMATION + " : " + translations.LOC_KOREA_ENVIRONMENT_CORPORATION;
                 strMsg += "<br>";
                 strMsg += translations.LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS;
             }, function (translationIds) {
-                strTitle = translationIds.LOC_TODAYWEATHER;
+                strTitle = translationIds[$rootScope.title];
                 strMsg = translationIds.LOC_WEATHER_INFORMATION + " : "  + translationIds.LOC_KOREA_METEOROLOGICAL_ADMINISTRATION;
                 strMsg += "<br>";
                 strMsg += translationIds.LOC_AQI_INFORMATION + " : " + translationIds.LOC_KOREA_ENVIRONMENT_CORPORATION;
@@ -145,7 +133,13 @@ angular.module('controller.settingctrl', [])
             var list;
             if (name === 'startupPage') {
                 title = 'LOC_STARTUP_PAGE';
-                list = ['0', '1', '2', '3'].map(function (value) {
+                if (clientConfig.package === 'todayWeather') {
+                    list = ['0', '1', '2', '3']
+                }
+                if (clientConfig.package === 'todayAir') {
+                   list = ['3', '4', '2']
+                }
+                list = list.map(function (value) {
                     return {label: $scope.getStartupPageValueStr(value), value: value};
                 });
             }
@@ -153,6 +147,12 @@ angular.module('controller.settingctrl', [])
                 title = 'LOC_REFRESH_INTERVAL';
                 list = ['0', '30', '60', '180', '360', '720'].map(function (value) {
                     return {label: $scope.getRefreshIntervalValueStr(value), value: value};
+                });
+            }
+            else if (name === 'theme') {
+                title = 'LOC_THEME_SETTING';
+                list = ['photo', 'light'].map(function (value) {
+                    return {label: $scope.getThemeValueStr(value), value: value};
                 });
             }
             console.info(JSON.stringify({name: name, title: title, value: $rootScope.settingsInfo[name], list: list}));
@@ -174,6 +174,8 @@ angular.module('controller.settingctrl', [])
                     return 'LOC_SAVED_LOCATIONS';
                 case '3':
                     return 'LOC_AIR_INFORMATION';
+                case '4':
+                    return 'LOC_WEATHER';
             }
             return 'N/A'
         };
@@ -193,6 +195,17 @@ angular.module('controller.settingctrl', [])
                     return 'LOC_6_HOURS';
                 case '720':
                     return 'LOC_12_HOURS';
+            }
+            return 'N/A'
+        };
+
+        $scope.getThemeValueStr = function (value) {
+            //console.log('getThemeValueStr v='+value);
+            switch(value) {
+                case 'photo':
+                    return 'LOC_WEATHER_PHOTO_THEME';
+                case 'light':
+                    return 'LOC_LIGHT_THEME';
             }
             return 'N/A'
         };

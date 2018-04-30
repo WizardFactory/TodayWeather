@@ -1,4 +1,5 @@
 {
+  "LOC_TODAYAIR": "今日空気",
   "LOC_WIZARDFACTORY": "ウィザードファクトリー",
   "LOC_TODAYWEATHER" : "今日天気",
   "LOC_TODAY_THAN_YESTERDAY?": "今日は昨日より？",
@@ -301,6 +302,14 @@
   "LOC_AIR_FORECAST_SOURCE" : "予報資料",
   "LOC_KAQ_DESCRIPTION": "Atmospheric quality forecasting data is provided by Anyang University Climate Energy Environment Convergence Research Institute (abbreviated name: Anyang University, Climate Convergence Research Institute, Director: Professor of Environmental Energy Engineering)",
   "LOC_AIRKOREA_DESCRIPTION": "The Ministry of Environment of Korea is predicting the air pollution concentration to minimize the public health damage caused by air pollution.",
-  "LOC_AIR_QUALITY_IS_GOOD" : "Air quality is good",
-  "LOC_AIR_QUALITY_IS_MODERATE" : "Air quality is moderate"
+  "LOC_THEME_SETTING": "Theme setting",
+  "LOC_WEATHER_PHOTO_THEME": "Weather photo theme",
+  "LOC_LIGHT_THEME": "Light theme",
+  "LOC_BLUE_THEME": "Blue theme",
+  "LOC_DARK_THEME": "Dark theme",
+  "LOC_AIR_QUALITY_IS_GOOD" : "大気の状態が良いです",
+  "LOC_AIR_QUALITY_IS_MODERATE" : "大気の状態は普通です",
+  "LOC_DO_YOU_WANT_TO_EXIT": "Do you want to exit?",
+  "LOC_START_TIME_AND_END_TIME_CAN_NOT_BE_THE_SAME_TIME" : "Start time and end time can not be the same time.",
+  "LOC_AVERAGE": "平均"
 }

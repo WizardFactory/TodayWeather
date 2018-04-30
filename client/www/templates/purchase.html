@@ -11,7 +11,7 @@
     </ion-nav-title>
     <ion-content class="purchase-content" scroll="false" ng-if="accountLevel != 'premium'">
         <div style="margin-top: 72px;">
-            <img class="item-center" width="96px" src="img/app_icon.png" style="margin-bottom: 16px">
+            <img class="item-center" width="96px" ng-src="{{imgAppIcon}}" style="margin-bottom: 16px">
             <div ng-style="::{'width':listWidth+'px'}" ng-if="product != undefined"
                  style="padding: 16px; border-width: 1px; border-color:#ddd; border-style: solid;">
                 <h4 style="opacity: 0.87">{{product.description}}</h4>

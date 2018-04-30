@@ -67,7 +67,7 @@ router.get('/shortrss', function(req, res) {
 });
 
 router.get('/midrss', function(req, res) {
-    manager.midRssKmaRequester.mainProcess(manager.midRssKmaRequester, function (self, err) {
+    manager.midRssKmaRequester.mainProcessM(manager.midRssKmaRequester, function (err) {
         if (err) {
             log.error(err);
         }
@@ -76,7 +76,7 @@ router.get('/midrss', function(req, res) {
 });
 
 router.get('/midtemp', function(req, res) {
-    manager.getMidTemp(9, normal_key, function (err) {
+    manager.getMidTempByForecastZone(9, normal_key, function (err) {
         if (err) {
             log.error(err);
         }

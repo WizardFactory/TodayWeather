@@ -40,7 +40,7 @@ router.get('/', [cTown.getSummary], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort, cTown.getShortRss, cTown.getShortest,
+router.get('/:region', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
@@ -49,7 +49,7 @@ router.get('/:region', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTow
                                     cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
                                     cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
-router.get('/:region/:city', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort, cTown.getShortRss, cTown.getShortest,
+router.get('/:region/:city', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
@@ -62,7 +62,7 @@ router.get('/:region/:city', [cTown.checkParamValidation, cTown.getAllDataFromDb
  * getCurrent가는 getShortest, getShort보다 앞에 올 수 없음.
  * getSummary는 getShortest, getCurrent보다 앞에 올수 없음.
  */
-router.get('/:region/:city/:town', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort, cTown.getShortRss, cTown.getShortest,
+router.get('/:region/:city/:town', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,

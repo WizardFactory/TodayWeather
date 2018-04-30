@@ -7,7 +7,7 @@ angular.module('service.push', [])
         var obj = {};
         obj.config = {
             "android": {
-                "senderID": twClientConfig.googleSenderId
+                "senderID": clientConfig.googleSenderId
                 //"icon": "TodayWeather",
                 //"iconColor": "blue"
                 //"forceShow": true,
@@ -21,8 +21,8 @@ angular.module('service.push', [])
             "windows": {}
         };
 
-        obj.pushUrl = twClientConfig.serverUrl + '/v000902'+'/push';
-        obj.pushListUrl = twClientConfig.serverUrl + '/v000902'+'/push-list';
+        obj.pushUrl = clientConfig.serverUrl + '/v000902'+'/push';
+        obj.pushListUrl = clientConfig.serverUrl + '/v000902'+'/push-list';
 
         /**
          *
@@ -120,7 +120,8 @@ angular.module('service.push', [])
         };
 
         /**
-         *
+         * alert의 경우 startTime과 endTime이 동일하면 endTime을 1분 뺀다.
+         * 지금 one-way sync이기 때문에 문제가 없지만 two-way sync하면 문제가 됨.
          * @param {{id:number, name:string, location: number[], town: {}, source: string, time: date, startTime: date, endTime: date}} pushInfo
          * @returns {{registrationId: string, type: string, cityIndex: number, id: number, name: string, location: number[], town: object, source: string, units: {temperatureUnit, windSpeedUnit, pressureUnit, distanceUnit, precipitationUnit, airUnit}}}
          * @private
@@ -130,8 +131,7 @@ angular.module('service.push', [])
 
             console.log(pushInfo);
             var units = Units.getAllUnits();
-            // Delete temporarily TW-181
-            // units.airForecastSource = 'kaq';
+            units.airForecastSource = 'kaq';
 
             /**
              * 기존 호환성때문에 cityIndex로 되어 있지만, alert지원부터 registrationId내에서 유일한 ID임.
@@ -147,8 +147,9 @@ angular.module('service.push', [])
                 location: pushInfo.location,       //lat, long
                 town: pushInfo.town,               //first, second, third
                 source: pushInfo.source,           //KMA or DSF, ...
-                units: Units.getAllUnits(),
-                timezoneOffset: new Date().getTimezoneOffset()*-1   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
+                units: units,
+                timezoneOffset: new Date().getTimezoneOffset()*-1,   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
+                package: clientConfig.package
             };
 
             if (pushInfo.category === 'alarm') {
@@ -157,7 +158,12 @@ angular.module('service.push', [])
             }
             else if (pushInfo.category === 'alert') {
                 postObj.startTime = this.date2utcSecs(pushInfo.startTime);
-                postObj.endTime = this.date2utcSecs(pushInfo.endTime) ;
+                postObj.endTime = this.date2utcSecs(pushInfo.endTime);
+                if (postObj.startTime === postObj.endTime) {
+                    var endTimeObj = new Date(pushInfo.endTime.getTime());
+                    endTimeObj.setMinutes(endTimeObj.getMinutes()-1);
+                    postObj.endTime = this.date2utcSecs(endTimeObj);
+                }
                 //set unhealthy
                 if (postObj.units.airUnit === 'airkorea' || postObj.units.airUnit === 'airkorea_who') {
                     postObj.airAlertsBreakPoint = 3;
@@ -166,6 +172,7 @@ angular.module('service.push', [])
                     postObj.airAlertsBreakPoint = 4;
                 }
             }
+            console.log({postObj: postObj});
             return postObj;
         };
 
@@ -179,15 +186,18 @@ angular.module('service.push', [])
             var postList = [];
 
             try {
-                if (this.pushData.registrationId == undefined || this.pushData.registrationId.length == 0) {
-                    throw new Error("You have to register before post");
-                }
                 pushList.forEach(function (pushInfo) {
                     postList.push(self._makePostObj(pushInfo));
                 });
             }
             catch(err) {
                 console.log(err);
+                return;
+            }
+
+            if (this.pushData.registrationId == undefined || this.pushData.registrationId.length == 0) {
+                console.error("You have to register before post");
+                console.log(JSON.stringify(postList));
                 return;
             }
 
@@ -491,15 +501,34 @@ angular.module('service.push', [])
                return obj.cityIndex === cityIndex;
             });
 
+            var needToUpdate = false;
+
             list.forEach(function (pushInfo) {
-               var city  = self._getSimpleCityInfo(cityIndex);
+                var city  = self._getSimpleCityInfo(cityIndex);
+                if (city.source == undefined || city.source.length === 0) {
+                    return;
+                }
                 for (var key in city) {
+                    if (key == 'location') {
+                       if (pushInfo.location.lat === city.location.lat &&
+                        pushInfo.location.long === city.location.long)  {
+                           needToUpdate = false;
+                       }
+                       else {
+                           needToUpdate = true;
+                       }
+                    }
+                    else if (pushInfo[key] !== city[key]) {
+                       needToUpdate = true;
+                    }
                     pushInfo[key] = city[key];
                 }
             });
 
-            this._postPushList(list);
-            this.savePushInfo();
+            if (needToUpdate) {
+                this._postPushList(list);
+                this.savePushInfo();
+            }
         };
 
         /**

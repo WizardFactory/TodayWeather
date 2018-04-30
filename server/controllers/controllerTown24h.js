@@ -754,10 +754,7 @@ function ControllerTown24h() {
        return true;
     }
 
-    this._insertForecastPollutants = function (req, hourlyForecasts, source, airUnit) {
-
-        var airInfo = self._getAirInfo(req);
-
+    this._insertForecastPollutants = function (airInfo, hourlyForecasts, source, airUnit) {
         var latestPastDate = '1970-01-01';
 
         if (airInfo.last && airInfo.last.dataTime) {
@@ -840,8 +837,12 @@ function ControllerTown24h() {
                 dayForecast[forecast.code].hourly.push(forecast.val);
             });
 
-            //remove first and last it does not have full time
-            dailyArray = dailyArray.slice(1, dailyArray.length-1);
+            //remove old data and last it does not have full time
+            let strToday = latestPastDate.slice(0, 10);
+            dailyArray = dailyArray.filter(obj => {
+               return obj.date >= strToday;
+            });
+            dailyArray.pop();
 
             dailyArray.forEach(function (dayForecast) {
                 var date = dayForecast.date;
@@ -1096,12 +1097,64 @@ function ControllerTown24h() {
         return this;
     };
 
-    this.AirForecast = function (req, res, next) {
-        var forecastSource = req.query.airForecastSource;
+    /**
+     * make 3 objects
+     * @param req
+     * @param res
+     * @param next
+     * @returns {ControllerTown24h}
+     */
+    this.makeAirInfoList = function (req, res, next) {
+        try {
+            var airUnit = req.query.airUnit || 'airkorea';
+            if(req.arpltnStnList) {
+                var airInfoList = [];
+                for (var i=0; i<req.arpltnStnList.length; i++) {
+                    var arpltnList = req.arpltnStnList[i];
+                    var airInfo = {source: "airkorea"};
+                    airInfo.last = arpltnList[0];
+                    airInfo.pollutants = {};
+                    self._insertHourlyPollutants(airInfo.pollutants, arpltnList, airUnit, airInfo.last.dataTime);
+
+                    /**
+                     * airkorea의 경우 예보가 측정소별이 아니라 시/도 단위이므로,
+                     * 첫번째 측정소를 제외하고는 거리가 너무 멀 경우 예보가 측정소 위치랑 맞지 않을 수 있음
+                     */
+                    if ( req.midData && Array.isArray(req.midData.dailyData) ) {
+                        var dailyList = req.midData.dailyData.filter(function (value) {
+                            return value.hasOwnProperty('dustForecast');
+                        });
+
+                        if (dailyList && dailyList.length > 0) {
+                            airInfo.pollutants = airInfo.pollutants || {};
+                            self._insertDailyPollutants(airInfo, dailyList, airUnit);
+                        }
+                    }
+                    airInfoList.push(airInfo);
+                }
+                if (airInfoList.length > 0) {
+                    req.airInfoList = airInfoList;
+                }
+                else {
+                    log.error('fail to make air info list');
+                }
+            }
+            else {
+                log.error('arpltnList is undefined');
+            }
+        }
+        catch (err) {
+            log.error(err);
+        }
+        next();
+        return this;
+    };
+
+    this._getAirForecast = function(airInfo, forecastSource, airUnit, callback) {
         var ctrl;
         var stnName;
         try {
-            stnName = req.airInfo.last.stationName;
+            stnName = airInfo.last.stationName;
             if (forecastSource === 'kaq') {
                 ctrl = new KaqHourlyForecastCtrl();
             }
@@ -1109,31 +1162,55 @@ function ControllerTown24h() {
                 ctrl = new AirkoreaHourlyForecastCtrl();
             }
             else {
-                log.error('Unknown air forecast source', forecastSource);
-                return next();
+                throw new Error('Unknown air forecast source=' + forecastSource);
             }
         }
         catch (err) {
-            log.error(err);
-            return next();
+            return callback(err);
         }
+
         ctrl.getForecast(stnName, function (err, results) {
             if (err) {
-                log.error(err);
-                return next();
+                return callback(err);
             }
             try {
                 if (results.length <= 0) {
-                    log.warn("Fail to get forecast stnName="+stnName);
-                    return next();
+                    throw new Error("Fail to get forecast stnName="+stnName);
                 }
-                self._insertForecastPollutants(req, results, forecastSource, req.query.airUnit);
+                self._insertForecastPollutants(airInfo, results, forecastSource, airUnit);
             }
             catch(err) {
+                return callback(err);
+            }
+            callback(null, airInfo);
+        });
+    };
+
+    this.AirForecast = function (req, res, next) {
+        var forecastSource = req.query.airForecastSource;
+        var airInfo = self._getAirInfo(req);
+
+        self._getAirForecast(airInfo, forecastSource, req.query.airUnit, function (err) {
+            if (err) {
                 log.error(err);
             }
             next();
         });
+    };
+
+    this.AirForecastList = function (req, res, next) {
+        var forecastSource = req.query.airForecastSource;
+        var airUnit = req.query.airUnit;
+        async.map(req.airInfoList,
+            function (airInfo, callback) {
+               self._getAirForecast(airInfo, forecastSource, airUnit, callback)
+            },
+            function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                next();
+            });
     };
 
     this.sendDailySummaryResult = function (req, res) {
@@ -1218,7 +1295,6 @@ function ControllerTown24h() {
         var str = "";
         var item;
         var itemList = [];
-        var tmpGrade;
         var ts = res || global;
         var airInfo = current.arpltn || current;
         airInfo.aqiValue = airInfo.khaiValue || airInfo.aqiValue;
@@ -1238,7 +1314,8 @@ function ControllerTown24h() {
             }
         }
         if (maxGrade <= 0) {
-           log.error("airInfo is invalid! ", {airInfo: airInfo});
+           log.warn("airInfo is invalid! ", {airInfo: airInfo});
+           return "";
         }
         else if (maxGrade === 1) {
             //대기상태가 좋아요
@@ -1248,61 +1325,44 @@ function ControllerTown24h() {
             //대기상태는 보통입니다
             return ts.__('LOC_AIR_QUALITY_IS_MODERATE');
         }
+        //grade가 3(민감군주의or나쁨)이상인 경우 오염물질 표시
 
         var locStr;
-        tmpGrade = 0;
         if (airInfo.pm25Value) {
             locStr = ts.__('LOC_PM25');
-            tmpGrade = airInfo.pm25Value/25;
             str = locStr + " " + airInfo.pm25Value + " " + airInfo.pm25Str;
-            item = {str: str, grade: tmpGrade};
+            item = {str: str, grade: airInfo.pm25Index};
             itemList.push(item);
         }
         if (airInfo.pm10Value) {
             locStr = ts.__('LOC_PM10');
-            tmpGrade = airInfo.pm10Value/50;
             str = locStr + " " + airInfo.pm10Value + " " + airInfo.pm10Str;
-            item = {str: str, grade: tmpGrade};
+            item = {str: str, grade: airInfo.pm10Index};
             itemList.push(item);
         }
         if (airInfo.o3Value) {
             locStr = ts.__('LOC_O3');
-            tmpGrade = airInfo.o3Value/0.06;
             str = locStr + " " + airInfo.o3Value + " " + airInfo.o3Str;
-            item = {str: str, grade: tmpGrade};
+            item = {str: str, grade: airInfo.o3Index};
             itemList.push(item);
         }
-
-        if (itemList.length === 0) {
-            tmpGrade = 0;
-            if (airInfo.aqiGrade) {
-                locStr = ts.__('LOC_AQI');
-                tmpGrade = airInfo.aqiGrade;
-                str = locStr + " " + airInfo.aqiValue + " " + airInfo.aqiStr;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
-            else if (airInfo.coGrade && tmpGrade < airInfo.coGrade) {
-                locStr = ts.__('LOC_CO');
-                tmpGrade = airInfo.coGrade;
-                str = locStr + " " + airInfo.coValue + " " + airInfo.coStr;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
-            else if (airInfo.no2Grade && tmpGrade < airInfo.no2Grade) {
-                locStr = ts.__('LOC_NO2');
-                tmpGrade = airInfo.no2Grade;
-                str = locStr + " " + airInfo.no2Value + " " + airInfo.no2Str;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
-            else if (airInfo.so2Grade && tmpGrade < airInfo.so2Grade) {
-                locStr = ts.__('LOC_SO2');
-                tmpGrade = airInfo.so2Grade;
-                str = locStr + " " + airInfo.so2Value + " " + airInfo.so2Str;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
+        if (airInfo.no2Grade) {
+            locStr = ts.__('LOC_NO2');
+            str = locStr + " " + airInfo.no2Value + " " + airInfo.no2Str;
+            item = {str: str, grade: airInfo.no2Index};
+            itemList.push(item);
+        }
+        if (airInfo.so2Grade) {
+            locStr = ts.__('LOC_SO2');
+            str = locStr + " " + airInfo.so2Value + " " + airInfo.so2Str;
+            item = {str: str, grade: airInfo.so2Index};
+            itemList.push(item);
+        }
+        if (airInfo.coGrade) {
+            locStr = ts.__('LOC_CO');
+            str = locStr + " " + airInfo.coValue + " " + airInfo.coStr;
+            item = {str: str, grade: airInfo.coIndex};
+            itemList.push(item);
         }
 
         itemList.sort(function (a, b) {
@@ -1334,14 +1394,20 @@ function ControllerTown24h() {
         var tmpGrade;
         var ts = res;
 
+        /**
+         * diff temp와 weather가 2.5로 특별한 날씨가 정보가 없으면 온도차와 날씨를 표시
+         */
         if (current.hasOwnProperty('t1h') && yesterday && yesterday.hasOwnProperty('t1h')) {
             var obj = self._diffTodayYesterday(current, yesterday, ts);
+            if (obj.grade <= 2) {
+                obj.grade = 2.5;
+            }
             item = {str: obj.str, grade: obj.grade};
             itemList.push(item);
         }
 
         if (current.hasOwnProperty('weatherType')) {
-            tmpGrade = 1;
+            tmpGrade = 2.5;
             if (current.weatherType > 3) {
                 tmpGrade = 3;
             }
@@ -1383,10 +1449,13 @@ function ControllerTown24h() {
             itemList.push(item);
         }
 
-        if (current.ultrv && Number(current.time) < 1800) {
+        if (current.ultrv && current.time <= 15) {
             tmpGrade = current.ultrvGrade;
+            if (current.time >= 11) {
+                tmpGrade++;
+            }
             str = ts.__('LOC_UV') +' '+current.ultrvStr;
-            item = {str:str, grade: tmpGrade+1};
+            item = {str:str, grade: tmpGrade};
             itemList.push(item);
         }
 
@@ -1396,12 +1465,12 @@ function ControllerTown24h() {
             itemList.push(item);
         }
 
-        if (current.fsnGrade && current.fsnStr) {
-            //주의(1)를 보통으로 보고 보정 1함.
-            str = ts.__('LOC_FOOD_POISONING') + ' ' + current.fsnStr;
-            item = {str: str, grade: current.fsnGrade+1};
-            itemList.push(item);
-        }
+        // if (current.fsnGrade && current.fsnStr) {
+        //     //주의(1)를 보통으로 보고 보정 1함.
+        //     str = ts.__('LOC_FOOD_POISONING') + ' ' + current.fsnStr;
+        //     item = {str: str, grade: current.fsnGrade+1};
+        //     itemList.push(item);
+        // }
 
         //감기
 
@@ -1501,7 +1570,9 @@ function ControllerTown24h() {
                 result.shortestPubDate = req.shortestPubDate;
             }
             if(req.shortest) {
-                result.shortest = req.shortest;
+                result.shortest = req.shortest.filter(function (shortest) {
+                    return shortest.pubDate === result.shortestPubDate;
+                });
             }
             if(req.currentPubDate) {
                 result.currentPubDate = req.currentPubDate;
@@ -1537,7 +1608,10 @@ function ControllerTown24h() {
             if (req.dailySummary) {
                 result.dailySummary = req.dailySummary;
             }
-            if (req.airInfo){
+            if (req.airInfoList) {
+                result.airInfoList = req.airInfoList;
+            }
+            else if (req.airInfo) {
                 result.airInfo = req.airInfo;
             }
             result.source = "KMA";
@@ -1564,6 +1638,23 @@ function ControllerTown24h() {
     this.sendResult = function (req, res) {
         log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
         res.json(req.result);
+    };
+
+    this._convertAirInfo = function (airInfo, airUnit, currentDate) {
+        if (airInfo.hasOwnProperty('last')) {
+            KecoController.recalculateValue(airInfo.last, airUnit);
+        }
+        if (airInfo.hasOwnProperty('pollutants')) {
+            var pollutants = airInfo.pollutants;
+            for (var pollutantName in pollutants) {
+                if (pollutants[pollutantName].hasOwnProperty('daily')) {
+                    pollutants[pollutantName].daily.forEach(function (value) {
+                        value.fromToday = kmaTimeLib.getDiffDays(value.date, currentDate);
+                        value.dayOfWeek = (new Date(value.date)).getDay();
+                    });
+                }
+            }
+        }
     };
 
     this.convertUnits = function (req, res, next) {
@@ -1650,22 +1741,13 @@ function ControllerTown24h() {
             if (req.current.hasOwnProperty('arpltn')) {
                 KecoController.recalculateValue(req.current.arpltn, req.query.airUnit);
             }
-            if (req.hasOwnProperty('airInfo')) {
-                var airInfo = req.airInfo;
-                if (airInfo.hasOwnProperty('last')) {
-                    KecoController.recalculateValue(airInfo.last, req.query.airUnit);
-                }
-                if (airInfo.hasOwnProperty('pollutants')) {
-                    var pollutants = airInfo.pollutants;
-                    for (var pollutantName in pollutants) {
-                        if (pollutants[pollutantName].hasOwnProperty('daily')) {
-                            pollutants[pollutantName].daily.forEach(function (value) {
-                                value.fromToday = kmaTimeLib.getDiffDays(value.date, currentDate);
-                                value.dayOfWeek = (new Date(value.date)).getDay();
-                            });
-                        }
-                    }
-                }
+            if (req.hasOwnProperty('airInfoList')) {
+                req.airInfoList.forEach(function (airInfo) {
+                    self._convertAirInfo(airInfo, req.query.airUnit, currentDate);
+                });
+            }
+            else if (req.hasOwnProperty('airInfo')) {
+                self._convertAirInfo(req.airInfo, req.query.airUnit, currentDate);
             }
         }
         catch (err) {
@@ -1863,31 +1945,33 @@ ControllerTown24h.prototype._getEmoji = function (name) {
 };
 
 ControllerTown24h.prototype._getWeatherEmoji = function (skyIcon) {
-    if (skyIcon.indexOf('Lightning') != -1) {
+    var icon = skyIcon.toLowerCase();
+
+    if (icon.indexOf('lightning') != -1) {
         return '\u26c8';
     }
-    else if (skyIcon.indexOf('RainSnow') != -1) {
+    else if (icon.indexOf('rainsnow') != -1) {
         return '\u2614\u2603';
     }
-    else if (skyIcon.indexOf('Rain') != -1) {
+    else if (icon.indexOf('rain') != -1) {
         return '\u2614';
     }
-    else if (skyIcon.indexOf('Snow') != -1) {
+    else if (icon.indexOf('snow') != -1) {
         return '\u2603';
     }
-    else if (skyIcon.indexOf('Cloud') != -1) {
-        if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+    else if (icon.indexOf('cloud') != -1) {
+        if (icon.indexOf('sun') != -1 || icon.indexOf('moon') != -1) {
             return '\u26c5';
         }
         else {
             return '\u2601';
         }
     }
-    else if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+    else if (icon.indexOf('sun') != -1 || icon.indexOf('moon') != -1) {
         return '\ud83c\udf1e';
     }
 
-    log.error('Fail to find emoji skyIcon='+skyIcon);
+    log.error('Fail to find emoji icon='+icon);
     return '';
 };
 

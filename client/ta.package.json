@@ -1,0 +1,88 @@
+{
+  "name": "TodayAir",
+  "version": "0.1.2",
+  "description": "Today air quality information",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/WizardFactory/TodayWeather.git"
+  },
+  "bugs": {
+    "url": "http://github.com/WizardFactory/TodayWeather/issues"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "gulp": "^3.5.6",
+    "gulp-sass": "^3.1.0",
+    "gulp-clean-css": "^3.9.0",
+    "gulp-rename": "^1.2.0",
+    "cordova-uglify": "^0.3.0"
+  },
+  "devDependencies": {
+    "bower": "^1.8.2",
+    "gulp-delete-lines": "0.0.7",
+    "gulp-shell": "^0.6.3",
+    "gulp-util": "^3.0.8"
+  },
+  "cordovaPlugins": [
+    "cordova-plugin-device",
+    "cordova-plugin-console",
+    "cordova-plugin-splashscreen",
+    "ionic-plugin-keyboard",
+    "cordova-plugin-geolocation",
+    "cordova-plugin-statusbar",
+    "cordova-plugin-inappbrowser",
+    "cordova-plugin-x-socialsharing",
+    "cordova-plugin-whitelist",
+    {
+      "locator": "https://github.com/WizardFactory/google-analytics-plugin.git",
+      "id": "cordova-plugin-google-analytics"
+    },
+    "cordova-plugin-app-version",
+    {
+      "locator": "https://github.com/WizardFactory/admob-google-cordova-clean.git",
+      "id": "cordova-admob"
+    },
+    {
+      "locator": "https://github.com/phonegap/phonegap-mobile-accessibility.git",
+      "id": "phonegap-plugin-mobile-accessibility"
+    },
+    {
+      "id": "ionic-plugin-deeplinks",
+      "locator": "ionic-plugin-deeplinks",
+      "variables": {
+        "URL_SCHEME": "todayair",
+        "DEEPLINK_SCHEME": "http",
+        "DEEPLINK_HOST": "net.wizardfactory.todayair",
+        "ANDROID_PATH_PREFIX": "/"
+      }
+    },
+    "cordova-plugin-globalization",
+    "cordova.plugins.diagnostic@3.1.1",
+    {
+      "locator": "https://github.com/WizardFactory/cordova-plugin-request-location-accuracy.git",
+      "id": "cordova-plugin-request-location-accuracy"
+    },
+    {
+      "locator": "https://github.com/WizardFactory/cordova-plugin-todayair-android-widget.git",
+      "id": "cordova-plugin-todayair-android-widget"
+    },
+    {
+      "locator": "https://github.com/WizardFactory/cordova-plugin-todayweather-config.git",
+      "id": "cordova-plugin-todayweather-config"
+    },
+    "cordova-plugin-app-preferences",
+    "cordova-plugin-ionic-webview"
+  ],
+  "cordovaPlatforms": [
+    {
+      "platform": "android",
+      "version": "",
+      "locator": "android"
+    },
+    {
+      "platform": "ios",
+      "version": "",
+      "locator": "ios"
+    }
+  ]
+}

@@ -1,0 +1,201 @@
+<ion-view>
+    <ion-nav-buttons side="left">
+        <button menu-toggle="left" class="button button-icon icon ion-navicon"></button>
+    </ion-nav-buttons>
+    <ion-nav-title>
+        <p class="title forecast-header">
+            <span>{{address}}</span>
+            <i class="material-icons" ng-if="currentPosition && showLoadingIndicator != true"
+               ng-click="switchToLocationSettings()">{{isLocationEnabled()?'&#xE0C8;':'&#xE0C7;'}}</i>
+            <ion-spinner icon="bubbles" ng-if="showLoadingIndicator"></ion-spinner>
+        </p>
+    </ion-nav-title>
+    <ion-nav-buttons side="right">
+        <button class="button button-icon icon"
+                ng-class="hasPush?'ion-ios-bell':'ion-ios-bell-outline'"
+                ng-if="!isAndroid()"
+                ng-click="goPushPage()"
+                style="padding: 0 4px"></button>
+        <button class="button button-icon icon"
+                ng-class="hasPush?'ion-android-notifications':'ion-android-notifications-none'"
+                ng-if="isAndroid()"
+                ng-click="goPushPage()"
+                style="padding: 0 4px"></button>
+        <button class="button button-icon icon ion-ios-upload-outline"
+                ng-if="!isAndroid()"
+                ng-click="doTabShare()"
+                style="padding: 0 4px;margin-right: 4px"></button>
+        <button class="button button-icon icon ion-android-share-alt"
+                ng-if="isAndroid()"
+                ng-click="doTabShare()"
+                style="padding: 0 4px;margin-right: 4px"></button>
+    </ion-nav-buttons>
+    <ion-content delegate-handle="body" direction="y" zooming="false" scrollbar-x="false" scrollbar-y="false"
+                 has-bouncing="false" tabs-shrink bar-scrolled class="main-content">
+        <div class="card">
+            <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()" class="row row-no-padding"
+                 ng-class="photo?'photo':'no-photo'" ng-style="{'min-height':headerHeight+'px'}">
+                <div class="photo-box" ng-style="{'background-image': 'linear-gradient(to bottom, rgba(255,255,255,0) 100%, rgba(255,255,255,1)), url('+photo+')'}"></div>
+                <div class="main-box-arrow" ng-click="onSwipeRight()" ng-if="cityCount > 1">
+                    <span class="icon-left ion-chevron-left"></span>
+                </div>
+                <div class="main-box" ng-if="currentWeather">
+                    <div class="main-box-forecast-content">
+                        <div ng-style="::{'font-size':bigDigitSize+'px'}">
+                            {{getTemp(currentWeather.t1h)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}">˚</span>
+                        </div>
+                        <div style="margin: auto">
+                            <img id="imgBigSkyStateSize" ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
+                        </div>
+                    </div>
+                    <div class="main-box-summary">
+                        {{summary}}<br ng-if="summaryAir">
+                        <span ng-if="summaryAir" ng-click="goAirInfoPage('aqi')">{{summaryAir}}</span>
+                    </div>
+                </div>
+                <div class="main-box-arrow" ng-click="onSwipeLeft()" ng-if="cityCount > 1">
+                    <span class="icon-right ion-chevron-right"></span>
+                </div>
+            </div>
+            <div style="position: relative" ng-if="timeWidth">
+                <div id="chartShortScroll" class="chart-scroll">
+                    <div ng-style="{'width':timeWidth +'px'}">
+                        <div class="chart-header" ng-if="timeTable">
+                            <div class="row row-no-padding day-title-list">
+                                <!--마지막 0시에 대한 날짜는 표기 하지 않음, 오른쪽에 최소 120px(날짜정보 2칸)이 있을 경우 표시.-->
+                                <div class="day-title" ng-style="{'left': getDayPosition(value, $index)+'px'}"
+                                     ng-if="$index < timeTable.length-2 && isNextDay(value, $index)"
+                                     ng-repeat="value in timeTable">
+                                    {{getDayString(value.fromToday)|translate}} {{value.date.substr(4,2) + '.' + value.date.substr(6,2)}}
+                                </div>
+                            </div>
+                            <div class="row row-no-padding">
+                                <div class="chart-title" ng-repeat="value in timeTable">
+                                    {{value.time+strHour}}
+                                </div>
+                            </div>
+                        </div>
+                        <div ng-short-chart class="chart-content" ng-style="{'height':chartShortHeight+'px'}"></div>
+                    </div>
+                </div>
+                <div class="chart-label" ng-if="timeChart">
+                    <div class="chart-label-today">{{"LOC_THIS_DAY_TEMP"|translate}}</div>
+                    <div class="chart-label-yesterday">{{"LOC_PREVIOUS_DAY_TEMP"|translate}}</div>
+                </div>
+            </div>
+          </div>
+          <div class="card">
+            <div id="chartMidScroll" class="chart-scroll">
+                <div ng-style="{'width':dayWidth +'px'}">
+                    <div class="chart-header" ng-if="dayChart[0].values">
+                        <div class="row row-no-padding">
+                            <div class="chart-small-title" ng-repeat="value in dayChart[0].values">
+                                {{dayToString(value.dayOfWeek)|translate}}
+                            </div>
+                        </div>
+                        <div class="row row-no-padding">
+                            <div class="chart-title" ng-repeat="value in dayChart[0].values">
+                                {{value.date.substr(6,2)}}
+                            </div>
+                        </div>
+                    </div>
+                    <div ng-mid-chart class="chart-content" ng-style="{'height':chartMidHeight+'px'}"></div>
+                </div>
+            </div>
+          </div>
+          <div class="card" ng-if="showDetailWeather">
+            <div class="card-title">{{"LOC_DETAIL_WEATHER"|translate}}</div>
+            <table class="colgroup-box">
+                <tr ng-if="!(currentWeather.weatherType == undefined)">
+                    <td>
+                        <img ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
+                        <span>{{'LOC_WEATHER'|translate}} {{currentWeather.weather}}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/temp_50.png">
+                        <span>{{diffTempStr}}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/humidity_{{currentWeather.reh?currentWeather.reh - currentWeather.reh%10:'00'}}.png">
+                        <span>{{'LOC_HUMIDITY'|translate}} {{currentWeather.reh}}<small>%</small></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/wind.png">
+                        <span>{{'LOC_WIND'|translate}} {{currentWeather.wdd}} {{currentWeather.wsd}}<small>{{getWindSpdUnit()}}</small></span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.visibility > 0">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/visibility.png">
+                        <span>{{'LOC_VISIBILITY'|translate}} {{currentWeather.visibility}}<small>{{getDistanceUnit()}}</small></span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.hPa">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/pressure.png">
+                        <span>{{'LOC_PRESSURE'|translate}} {{currentWeather.hPa}}<small>{{getPressUnit()}}</small></span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.dspls && currentWeather.dspls > 60">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/discomport_index.png">
+                        <span>{{'LOC_DISCOMFORT_INDEX'|translate}} {{currentWeather.dsplsStr}}
+                            <span>({{currentWeather.dspls}})</span>
+                        </span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.sensorytem">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/feels_like.png">
+                        <span>{{'LOC_FEELS_LIKE'|translate}} {{getTemp(currentWeather.sensorytem)}}˚</span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.rn1">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/precipitation.png">
+                        <span>{{'LOC_HOURLY_PRECIPITATION'|translate}} {{currentWeather.rn1}}<small>{{getPrecipUnit()}}</small></span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.today.ultrvGrade != undefined">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/ultrv.png">
+                        <span>{{"LOC_UV"|translate}} {{currentWeather.today.ultrv}} {{currentWeather.today.ultrvStr}}</span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.today.fsnGrade != undefined">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/food_poisoning.png">
+                        <span>{{"LOC_FOOD_POISONING"|translate}} {{currentWeather.today.fsnStr}}</span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.today.sunrise">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/sunrise.png">
+                        <span>{{'LOC_SUNRISE'|translate}} {{currentWeather.today.sunrise.split(' ')[1]}}</span>
+                    </td>
+                </tr>
+                <tr ng-if="currentWeather.today.sunset">
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/sunset.png">
+                        <span>{{'LOC_SUNSET'|translate}} {{currentWeather.today.sunset.split(' ')[1]}}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img ng-src="{{::iconsImgPath}}/time.png">
+                        <span>{{updateTime}}</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div ng-if="showDetailWeather && source == 'DSF'" style="text-align: center;">
+            <img src="img/poweredby_darksky.png" width="160px" ng-click="openUrl('https://darksky.net/poweredby')">
+        </div>
+    </ion-content>
+</ion-view>

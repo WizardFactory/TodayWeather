@@ -45,10 +45,18 @@
                     <div class="main-box-air-content">
                         {{mainInfo}}<span>{{getAirCodeUnit(aqiCode)}}</span>
                     </div>
-                    <div class="main-box-summary">
+                    <div class="main-box-air-summary">
                         {{airCodeStr}}
                         <i class="material-icons" ng-bind-html="getSentimentIcon(airCodeGrade)"></i>
                         <span ng-if="airCodeActionGuide">{{airCodeActionGuide}}</span>
+                    </div>
+                    <div class="main-box-air-summary" style="display: inline-flex; margin-top: 4px" ng-click="goWeather()">
+                        <div>
+                            <img id="imgBigSkyStateSize" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
+                        </div>
+                        <div>
+                            {{currentWeather.weather}} {{currentWeather.t1h}}<span ng-if="currentWeather">˚</span>
+                        </div>
                     </div>
                 </div>
                 <div class="main-box-arrow" ng-click="onSwipeLeft()" ng-if="cityCount > 1">
@@ -154,6 +162,21 @@
                     </td>
                 </tr>
             </table>
+        </div>
+        <div class="card" ng-if="stnList">
+            <div class="card-title">{{"LOC_STATION"|translate}} ({{airCodeName|translate}})</div>
+            <div class="card-scroll">
+                <table class="rowgroup-hspacing-box">
+                    <tr>
+                        <td ng-repeat="last in stnList" ng-class="{selected:$index===stnIndex}"
+                            ng-click="setStation($index)" style="width: 110px;">
+                            <p>{{last.stationName}}</p>
+                            <i ng-bind-html="getSentimentIcon(last.grade)" class="material-icons" ng-style="{'color': grade2Color(last.grade)}"></i><br>
+                            <span ng-style="{'color': grade2Color(last.grade)}">{{aqiCode==='aqi'?last.str:last.value}}</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </ion-content>
 </ion-view>

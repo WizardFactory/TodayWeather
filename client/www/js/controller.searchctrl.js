@@ -1,7 +1,7 @@
 angular.module('controller.searchctrl', [])
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading,
-                                        $translate, $ocLazyLoad) {
+                                        $translate, $ocLazyLoad, TwStorage) {
         $scope.search = {};
         $scope.searchResults = [];
         $scope.searchResults2 = [];
@@ -9,7 +9,6 @@ angular.module('controller.searchctrl', [])
         $scope.isEditing = false;
         $scope.isSearching = false;
 
-        var towns = WeatherInfo.towns;
         var searchIndex = -1;
         var isLoadingIndicator = false;
 
@@ -65,6 +64,34 @@ angular.module('controller.searchctrl', [])
             });
         };
 
+        function goPage() {
+            var startupPage = $rootScope.settingsInfo.startupPage;
+
+            if (startupPage === "0") { //시간별날씨
+                $location.path('/tab/forecast');
+            }
+            else if (startupPage === "1") { //일별날씨
+                $location.path('/tab/dailyforecast');
+            }
+            else if (startupPage === "3") { //대기정보
+                $location.path('/tab/air');
+            }
+            else if (startupPage === "4") { //날씨
+                $location.path('/tab/weather');
+            }
+            else {
+                if (clientConfig.package === 'todayWeather') {
+                    $location.path('/tab/forecast');
+                }
+                else if (clientConfig.package === 'todayAir') {
+                    $location.path('/tab/air');
+                }
+                else {
+                    console.error('unknown package='+clientConfig.package);
+                }
+            }
+        }
+
         function init() {
             $ionicHistory.clearHistory();
 
@@ -111,23 +138,37 @@ angular.module('controller.searchctrl', [])
                     todayData = [{tmn:'-', tmx:'-'}];
                 }
 
+                var airInfo = {};
+                if (city.airInfoList) {
+                   airInfo = city.airInfoList[0].last;
+                }
+                else if (city.airInfo) {
+                    airInfo = city.airInfo.last;
+                }
+                else if (city.currentWeather && city.currentWeather.arpltn) {
+                    airInfo = city.currentWeather.arpltn;
+                }
+
                 var data = {
                     address: address,
                     currentPosition: city.currentPosition,
                     disable: city.disable,
                     skyIcon: city.currentWeather.skyIcon,
                     t1h: city.currentWeather.t1h,
+                    weather: city.currentWeather.weather,
                     tmn: todayData.tmn,
                     tmx: todayData.tmx,
+                    airInfo: airInfo,
                     hasPush: Push.hasPushInfo(i)
                 };
+
                 $scope.cityList.push(data);
                 loadWeatherData(i);
                 if (city.currentPosition && city.disable !== true) {
                     var indexOfCurrentPositionCity = i;
                     updateCurrentPosition().then(function(geoInfo) {
                         console.info(JSON.stringify({'newGeoInfo':geoInfo}));
-                        WeatherInfo.updateCity(indexOfCurrentPositionCity, geoInfo);
+                        // WeatherInfo.updateCity(indexOfCurrentPositionCity, geoInfo);
                         WeatherInfo.reloadCity(indexOfCurrentPositionCity);
                         loadWeatherData(indexOfCurrentPositionCity);
                     });
@@ -242,8 +283,8 @@ angular.module('controller.searchctrl', [])
 
         $scope.OnScrollResults = function() {
             if ($scope.search.word !== undefined && searchIndex !== -1) {
-                for (var i = searchIndex; i < towns.length; i++) {
-                    var town = towns[i];
+                for (var i = searchIndex; i < window.towns.length; i++) {
+                    var town = window.towns[i];
                     if (town.first.indexOf($scope.search.word) >= 0 || town.second.indexOf($scope.search.word) >= 0
                         || town.third.indexOf($scope.search.word) >= 0) {
                         $scope.searchResults.push(town);
@@ -369,7 +410,7 @@ angular.module('controller.searchctrl', [])
                         Util.ga.trackEvent('city', 'add', address, WeatherInfo.getCityCount() - 1);
 
                         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-                        $location.path('/tab/forecast');
+                        goPage();
                     }
                     $ionicLoading.hide();
                 }, function (error) {
@@ -427,7 +468,7 @@ angular.module('controller.searchctrl', [])
                             else {
                                 Util.ga.trackEvent('city', 'add', result.description, WeatherInfo.getCityCount() - 1);
                                 WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-                                $location.path('/tab/forecast');
+                                goPage();
                             }
                             $ionicLoading.hide();
                         }, function (err) {
@@ -451,7 +492,7 @@ angular.module('controller.searchctrl', [])
                     else {
                         Util.ga.trackEvent('city', 'add', geoInfo.address, WeatherInfo.getCityCount() - 1);
                         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-                        $location.path('/tab/forecast');
+                        goPage();
                     }
                 }, function (err) {
                     Util.ga.trackEvent('weather', 'error', err);
@@ -474,7 +515,7 @@ angular.module('controller.searchctrl', [])
             }
 
             WeatherInfo.setCityIndex(index);
-            $location.path('/tab/forecast');
+            goPage();
         };
 
         function updateCurrentPositionWeather() {
@@ -501,6 +542,19 @@ angular.module('controller.searchctrl', [])
                         data.t1h = city.currentWeather.t1h;
                         data.tmn = todayData.tmn;
                         data.tmx = todayData.tmx;
+
+                        var airInfo = {};
+                        if (city.airInfoList) {
+                            airInfo = city.airInfoList[0].last;
+                        }
+                        else if (city.airInfo) {
+                            airInfo = city.airInfo.last;
+                        }
+                        else if (city.currentWeather && city.currentWeather.arpltn) {
+                            airInfo = city.currentWeather.arpltn;
+                        }
+                        data.weather =  city.currentWeather.weather;
+                        data.airInfo = airInfo;
                     }
                 }).finally(function () {
                     hideLoadingIndicator();
@@ -784,6 +838,19 @@ angular.module('controller.searchctrl', [])
                         data.t1h = city.currentWeather.t1h;
                         data.tmn = todayData.tmn;
                         data.tmx = todayData.tmx;
+
+                        var airInfo = {};
+                        if (city.airInfoList) {
+                            airInfo = city.airInfoList[0].last;
+                        }
+                        else if (city.airInfo) {
+                            airInfo = city.airInfo.last;
+                        }
+                        else if (city.currentWeather && city.currentWeather.arpltn) {
+                            airInfo = city.currentWeather.arpltn;
+                        }
+                        data.weather =  city.currentWeather.weather;
+                        data.airInfo = airInfo;
                     }
                 });
             }

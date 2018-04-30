@@ -8,6 +8,7 @@ var req = require('request');
 var async = require('async');
 var keys = require('../../config/config').keyString;
 
+var axios = require('axios');
 
 function aqiRequester(){
     var self = this;
@@ -37,6 +38,23 @@ aqiRequester.prototype.getAqiData = function(geocode, key, callback){
         callback(err, res);
         return;
     });
+};
+
+/**
+ * feed의 경우 request, https를 사용하면 옛날데이터가 받아짐
+ * @param url
+ * @param callback
+ */
+aqiRequester.prototype.getDataByAxios = function(url, callback) {
+    log.info('AQI> url:'+url);
+    axios.get(url)
+        .then(function(response) {
+            callback(null, response.data.rxs);
+        })
+        .catch(function(err) {
+            log.warn(err);
+            callback(err);
+        });
 };
 
 aqiRequester.prototype.getData = function(url, retryCount, callback){

@@ -1,0 +1,28 @@
+<!--
+Create tabs with an icon and label, using the tabs-positive style.
+Each tab's child <ion-nav-view> directive will have its own
+navigation history that also transitions its views in and out.
+-->
+<ion-tabs class="tabs-icon-top">
+
+    <!-- Search Tab -->
+    <ion-tab  title="{{'LOC_SAVED_LOCATIONS'|translate}}" icon-off="ion-ios-star" icon-on="ion-ios-star" href="#/tab/search">
+        <ion-nav-view name="tab-search"></ion-nav-view>
+    </ion-tab>
+
+    <!-- Forecast/Reload Tab -->
+    <ion-tab title="{{'LOC_HOURLY_FORECAST'|translate}}" icon-off="ion-ios-clock-outline" icon-on="ion-ios-reload" ng-click="doTabForecast('forecast')">
+        <ion-nav-view name="tab-forecast"></ion-nav-view>
+    </ion-tab>
+
+    <!-- Forecast/Reload Tab -->
+    <ion-tab title="{{'LOC_DAILY_FORECAST'|translate}}" icon-off="ion-ios-calendar-outline" icon-on="ion-ios-reload" ng-click="doTabForecast('dailyforecast')">
+        <ion-nav-view name="tab-dailyforecast"></ion-nav-view>
+    </ion-tab>
+
+    <!-- AQI tab-->
+    <ion-tab title="{{'LOC_AIR_INFORMATION'|translate}}" icon-off="ion-ios-cloud-outline" icon-on="ion-ios-reload" ng-click="doTabForecast('air')">
+        <ion-nav-view name="tab-air"></ion-nav-view>
+    </ion-tab>
+
+</ion-tabs>

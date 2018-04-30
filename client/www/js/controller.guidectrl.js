@@ -54,9 +54,9 @@ angular.module('controller.guidectrl', [])
             $scope.bigFont = (bodyHeight - 56) * 0.0512;
             $scope.smallFont = (bodyHeight - 56) * 0.0299;
 
-            $translate(['LOC_TODAYWEATHER', 'LOC_CLOSE', 'LOC_SKIP', 'LOC_CANCEL', 'LOC_OK',
+            $translate([$rootScope.title, 'LOC_CLOSE', 'LOC_SKIP', 'LOC_CANCEL', 'LOC_OK',
                 'LOC_USE_YOUR_CURRENT_LOCATION', 'LOC_FIND_LOCATION_BY_NAME']).then(function (translations) {
-                strTodayWeather = translations.LOC_TODAYWEATHER;
+                strTodayWeather = translations[$rootScope.title];
                 strClose = translations.LOC_CLOSE;
                 strSkip = translations.LOC_SKIP;
                 strCancel = translations.LOC_CANCEL;

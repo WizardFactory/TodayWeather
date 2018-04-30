@@ -37,20 +37,15 @@ angular.module('controller.setting.radio', [])
                     }
                 }
             }
-            else if (this.type === 'startupPage' || this.type === 'refreshInterval') {
-                var settingsInfo = TwStorage.get("settingsInfo");
-                if (settingsInfo === null) {
-                    settingsInfo = {
-                        startupPage: "0", //시간별날씨
-                        refreshInterval: "0" //수동
-                    };
-                }
-                settingsInfo[this.type] = value;
-                TwStorage.set("settingsInfo", settingsInfo);
-                $rootScope.settingsInfo = settingsInfo;
+            else if (this.type === 'startupPage' || this.type === 'refreshInterval' || this.type === 'theme') {
+                $rootScope.settingsInfo[this.type] = value;
+                TwStorage.set("settingsInfo", $rootScope.settingsInfo);
 
                 if (this.type === 'refreshInterval') {
                     $rootScope.$broadcast('reloadEvent', 'setRefreshInterval');
+                } else if (this.type === 'theme') {
+                    $rootScope.iconsImgPath = window.theme[$rootScope.settingsInfo.theme].icons;
+                    $rootScope.weatherImgPath = window.theme[$rootScope.settingsInfo.theme].weather;
                 }
             }
             else {

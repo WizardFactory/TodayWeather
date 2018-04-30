@@ -29,7 +29,7 @@ dsfRequester.prototype.getForecast = function(geocode, date, key, callback){
         url += ',' + date;
     }
 
-    log.info(url);
+    log.info('DFS> get data :', url);
     self.getData(url, self.defRetryCount, function(err, res){
         if(err){
             callback(err, {isSuccess: false});
@@ -96,10 +96,13 @@ dsfRequester.prototype.getData = function(url, retryCount, callback){
     log.silly('DFS> get data : ', url);
     self.get(url, {timeout: 1000 * 5, agentOptions: agentOptions}, function(err, response, body){
         if(err) {
-            log.warn(err);
             if((err.code === "ECONNRESET" || err.code === "ETIMEDOUT") && retryCount > 0){
-                log.warn('DFS> 1. Retry to get caused by' + err.code + ' : ', retryCount);
+                log.warn('DFS> 1. Retry to get caused by ' + err.code + ' : ', retryCount, ', url:'+url);
                 return self.getData(url, retryCount-- , callback);
+            }
+            else {
+                err.message += ' url:'+url;
+                log.warn(err);
             }
             if(callback){
                 callback(err);
@@ -130,7 +133,7 @@ dsfRequester.prototype.getData = function(url, retryCount, callback){
             }
             return;
         }
-        log.info(result);
+        // log.info(result);
         if(callback){
             callback(err, result);
         }
