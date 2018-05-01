@@ -1,6 +1,6 @@
 {
   "name": "TodayAir",
-  "version": "0.9.83",
+  "version": "0.1.2",
   "description": "Today air quality information",
   "repository": {
     "type": "git",
@@ -77,7 +77,7 @@
     {
       "platform": "android",
       "version": "",
-      "locator": "android@6.2.3"
+      "locator": "android"
     },
     {
       "platform": "ios",

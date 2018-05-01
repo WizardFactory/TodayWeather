@@ -31,20 +31,29 @@ else {
     global.log  = new Logger(__dirname + "/debug.log");
 }
 
+var options = { keepAlive: 120, poolSize: 10};
+
 if (config.db.path.indexOf('srv') >= 0) {
-    mongoose.connect(config.db.path, {dbName: config.db.database}, function(err) {
+    options.dbName = config.db.database;
+    mongoose.connect(config.db.path, options, function(err, result) {
         if (err) {
             log.error('Could not connect to MongoDB! ' + config.db.path);
             log.error(err);
+        }
+        else {
+            log.info('Connect to MongoDB! ' + result.name);
         }
     });
 }
 else {
     //release를 원활히 하기 위한 부분으로 추후 삭제
-    mongoose.connect(config.db.path, function(err) {
+    mongoose.connect(config.db.path, options, function(err, result) {
         if (err) {
             log.error('Could not connect to MongoDB! ' + config.db.path);
             log.error(err);
+        }
+        else {
+            log.info('Connect to MongoDB! ' + result.name);
         }
     });
 }

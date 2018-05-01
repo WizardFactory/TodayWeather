@@ -138,16 +138,30 @@ angular.module('controller.searchctrl', [])
                     todayData = [{tmn:'-', tmx:'-'}];
                 }
 
+                var airInfo = {};
+                if (city.airInfoList) {
+                   airInfo = city.airInfoList[0].last;
+                }
+                else if (city.airInfo) {
+                    airInfo = city.airInfo.last;
+                }
+                else if (city.currentWeather && city.currentWeather.arpltn) {
+                    airInfo = city.currentWeather.arpltn;
+                }
+
                 var data = {
                     address: address,
                     currentPosition: city.currentPosition,
                     disable: city.disable,
                     skyIcon: city.currentWeather.skyIcon,
                     t1h: city.currentWeather.t1h,
+                    weather: city.currentWeather.weather,
                     tmn: todayData.tmn,
                     tmx: todayData.tmx,
+                    airInfo: airInfo,
                     hasPush: Push.hasPushInfo(i)
                 };
+
                 $scope.cityList.push(data);
                 loadWeatherData(i);
                 if (city.currentPosition && city.disable !== true) {
@@ -508,7 +522,7 @@ angular.module('controller.searchctrl', [])
             showLoadingIndicator();
             updateCurrentPosition().then(function(geoInfo) {
                 console.log('updated current position');
-                //WeatherInfo.updateCity(0, geoInfo);
+                WeatherInfo.updateCity(0, geoInfo);
                 updateWeatherData(0).then(function (city) {
                     var index = WeatherInfo.getIndexOfCity(city);
                     if (index !== -1) {
@@ -528,6 +542,19 @@ angular.module('controller.searchctrl', [])
                         data.t1h = city.currentWeather.t1h;
                         data.tmn = todayData.tmn;
                         data.tmx = todayData.tmx;
+
+                        var airInfo = {};
+                        if (city.airInfoList) {
+                            airInfo = city.airInfoList[0].last;
+                        }
+                        else if (city.airInfo) {
+                            airInfo = city.airInfo.last;
+                        }
+                        else if (city.currentWeather && city.currentWeather.arpltn) {
+                            airInfo = city.currentWeather.arpltn;
+                        }
+                        data.weather =  city.currentWeather.weather;
+                        data.airInfo = airInfo;
                     }
                 }).finally(function () {
                     hideLoadingIndicator();
@@ -811,6 +838,19 @@ angular.module('controller.searchctrl', [])
                         data.t1h = city.currentWeather.t1h;
                         data.tmn = todayData.tmn;
                         data.tmx = todayData.tmx;
+
+                        var airInfo = {};
+                        if (city.airInfoList) {
+                            airInfo = city.airInfoList[0].last;
+                        }
+                        else if (city.airInfo) {
+                            airInfo = city.airInfo.last;
+                        }
+                        else if (city.currentWeather && city.currentWeather.arpltn) {
+                            airInfo = city.currentWeather.arpltn;
+                        }
+                        data.weather =  city.currentWeather.weather;
+                        data.airInfo = airInfo;
                     }
                 });
             }

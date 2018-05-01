@@ -22,6 +22,7 @@
 
 @implementation TodayWeatherShowMore
 @synthesize curCountry;
+@synthesize curAirDataDict;
 
 /********************************************************************
  *
@@ -273,6 +274,7 @@
     
     NSString *nssResults        = nil;
     
+    
     //NSLog(@"All air state is same!!! khaiGrade(%d), pm10Grade(%d), pm25Grade(%d)", khaiGrade, pm10Grade, pm25Grade);
     
 
@@ -382,6 +384,9 @@
     TodayWeatherUtil *todayUtil = [[TodayWeatherUtil alloc] init];
     NSDictionary *nssUnits = [todayUtil getUnits];
     NSString *nssAirUnits = [nssUnits objectForKey:@"airUnit"];
+    
+    NSString *nssCurAirStats  = @"";
+    
     NSLog(@"[ByCoord] nssAirUnits: %@", nssAirUnits);
     
     if( [nssAirUnits isEqualToString:@"airnow"] || [nssAirUnits isEqualToString:@"aqicn"] )
@@ -395,6 +400,8 @@
             //stateColor = UIColorFromRGB(0x00c73c);           // 녹색
         else
             stateColor = UIColorFromRGB(0x32a1ff);           // 파랑
+        
+        nssCurAirStats = [NSString stringWithFormat:@"좋음"];
     }
     else if([nssAirState hasSuffix:@"보통"])
     {
@@ -404,6 +411,8 @@
             //stateColor = UIColorFromRGB(0xd2d211);              // 노랑
         else
             stateColor = UIColorFromRGB(0x339933);              // 녹색
+        
+        nssCurAirStats = [NSString stringWithFormat:@"보통"];
     }
     else if([nssAirState hasSuffix:@"민감군주의"])
     {
@@ -413,6 +422,8 @@
             //stateColor = UIColorFromRGB(0xff6f00);                // 주황
         else
             stateColor = UIColorFromRGB(0xfd934c);                // 주황 나쁨과 동일
+        
+        nssCurAirStats = [NSString stringWithFormat:@"민감군주의"];
     }
     else if([nssAirState hasSuffix:@"매우나쁨"])
     {
@@ -423,6 +434,7 @@
         else
             stateColor = UIColorFromRGB(0xff7070);              // 빨강
         
+        nssCurAirStats = [NSString stringWithFormat:@"매우나쁨"];
     }
     else if([nssAirState hasSuffix:@"나쁨"])
     {
@@ -432,6 +444,8 @@
             //stateColor = UIColorFromRGB(0xff0000);             // 빨강
         else
             stateColor = UIColorFromRGB(0xfd934c);                // 주황 나쁨과 동일
+        
+        nssCurAirStats = [NSString stringWithFormat:@"나쁨"];
     }
     else if([nssAirState hasSuffix:@"위험"])
     {
@@ -442,12 +456,14 @@
         else
             stateColor = UIColorFromRGB(0xff7070);           // 빨강
         
-        
+        nssCurAirStats = [NSString stringWithFormat:@"위험"];
     }
     else
     {
         sRange.location = NSNotFound;
         stateColor = [UIColor blackColor];
+        
+        nssCurAirStats = [NSString stringWithFormat:@""];
         
         return String;
     }
@@ -466,10 +482,100 @@
     [String addAttribute:NSForegroundColorAttributeName value:stateColor range:sRange];     //attString의 Range위치에 있는 "Nice"의 글자의
     [String addAttribute:NSFontAttributeName value:font range:sRange];     //attString의 Range위치에 있는 "Nice"의 글자의색상을 변경
     
+    NSLog(@"nssCurAirStats : %@", nssCurAirStats);
+    [curAirDataDict setValue:nssCurAirStats forKey:@"airTitle"];
+    NSLog(@"[getChangedColorAirState] curAirDataDict : %@", curAirDataDict);
+    
     return String;
 }
 
-
+/********************************************************************
+ *
+ * Name            : getColorAirState
+ * Description    : get color by air status
+ * Returns        : UIColor *
+ * Side effects :
+ * Date            : 2018. 04. 19
+ * Author        : SeanKim
+ * History        : 20170419 SeanKim Create function
+ * Grade4       : "color": ['#32a1ff', '#00c73c', '#fd9b5a', '#ff5959']
+ *  좋음 : 파랑
+ *  보통 : 녹색
+ *  민감군주의 : 주황
+ *  나쁨 : 주황
+ *  매우나쁨 : 빨강
+ *  위험 : 빨강
+ * Grade 6      : "color": ['#00c73c', '#d2d211', '#ff6f00', '#FF0000', '#b4004b', '#940021']
+ *  좋음 : 녹색
+ *  보통 : 노랑
+ *  민감군주의 : 주황
+ *  나쁨 : 빨강
+ *  매우나쁨 : 보라
+ *  위험 : 갈색
+ ********************************************************************/
+- (UIColor *) getColorAirState:(NSString *)nssAirState
+{
+    UIColor *stateColor = nil;
+    BOOL isGrade6 = FALSE;
+    
+    TodayWeatherUtil *todayUtil = [[TodayWeatherUtil alloc] init];
+    NSDictionary *nssUnits = [todayUtil getUnits];
+    NSString *nssAirUnits = [nssUnits objectForKey:@"airUnit"];
+    
+    NSLog(@"[ByCoord] nssAirUnits: %@", nssAirUnits);
+    
+    if( [nssAirUnits isEqualToString:@"airnow"] || [nssAirUnits isEqualToString:@"aqicn"] )
+        isGrade6       = TRUE;
+    
+    if([nssAirState hasSuffix:@"좋음"])
+    {
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0x339933);           // 기존녹색
+        else
+            stateColor = UIColorFromRGB(0x32a1ff);           // 파랑
+    }
+    else if([nssAirState hasSuffix:@"보통"])
+    {
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0xffff33);              // 기존노랑
+        else
+            stateColor = UIColorFromRGB(0x339933);              // 녹색
+    }
+    else if([nssAirState hasSuffix:@"민감군주의"])
+    {
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0xfd934c);                // 기존주황
+        else
+            stateColor = UIColorFromRGB(0xfd934c);                // 주황 나쁨과 동일
+    }
+    else if([nssAirState hasSuffix:@"매우나쁨"])
+    {
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0x540099);              // 기존보라
+        else
+            stateColor = UIColorFromRGB(0xff7070);              // 빨강
+    }
+    else if([nssAirState hasSuffix:@"나쁨"])
+    {
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0xff7070);             // 기존빨강
+        else
+            stateColor = UIColorFromRGB(0xfd934c);                // 주황 나쁨과 동일
+    }
+    else if([nssAirState hasSuffix:@"위험"])
+    {
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0x800000);           // 기존갈색
+        else
+            stateColor = UIColorFromRGB(0xff7070);           // 빨강
+    }
+    else
+    {
+        stateColor = [UIColor blackColor];
+    }
+    
+    return stateColor;
+}
 
 /********************************************************************
  *

@@ -246,7 +246,7 @@ angular.module('controller.purchase', [])
                 return;
             }
 
-            self.productId = 'tw1year';
+            self.productId = clientConfig.package === 'todayWeather' ? 'tw1year' : 'ta1year';
             console.log('productId='+self.productId);
 
             self.hasInAppPurchase = true;

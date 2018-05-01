@@ -140,7 +140,7 @@ function ControllerTown() {
                 async.parallel([
                     function(callback){
                         // get town weather
-                        async.map(townArray,
+                        async.mapSeries(townArray,
                             function(item, cb){
                                 var Db20Collections = ['modelCurrent', 'modelShort', 'modelShortRss', 'modelShortest'];
                                 if(config.db.version === '2.0' && Db20Collections.indexOf(item.name) != -1){
@@ -198,7 +198,7 @@ function ControllerTown() {
                             }
 
                             log.silly('point number : ', code);
-                            async.map(midArray,
+                            async.mapSeries(midArray,
                                 function (item, cb) {
                                     var parm;
                                     if(item.db === modelMidForecast){
@@ -282,7 +282,16 @@ function ControllerTown() {
         });
     };
 
+    /**
+     * TW-277 DB에서 데이터 못 읽어오는 이슈 때문에 이 부분 사용하지 않고, 이후에 DB에 데이터 요청을 한 번 더 하게 함.
+     * @param req
+     * @param res
+     * @param next
+     */
     this.checkDBValidation = function(req, res, next) {
+        log.warn('called unused function');
+        return next();
+
         var funcArray = [];
         if (req.modelCurrent == undefined) {
             funcArray.push(function (callback) {

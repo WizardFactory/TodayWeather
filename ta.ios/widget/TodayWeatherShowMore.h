@@ -23,12 +23,15 @@
 @interface TodayWeatherShowMore : NSObject
 {
     NSString *curCountry;
+    
+    NSMutableDictionary    *curAirDataDict;
 }
 
 /********************************************************************
  Declare Class properties
  ********************************************************************/
 @property (retain, nonatomic) NSString *curCountry;
+@property (retain, nonatomic) NSMutableDictionary    *curAirDataDict;
 
 /********************************************************************
  Declare Class functions
@@ -37,6 +40,7 @@
 - (void) processByTimeData:(NSDictionary *)jsonDict type:(TYPE_REQUEST)reqType;
 - (NSString *) getAirState:(NSDictionary *)currentArpltnDict;
 - (NSMutableAttributedString *) getChangedColorAirState:(NSString *)nssAirState;
+- (UIColor *) getColorAirState:(NSString *)nssAirState;
 
 - (void) transitView:(UIView *)curView
           transition:(UIViewAnimationTransition)transiton

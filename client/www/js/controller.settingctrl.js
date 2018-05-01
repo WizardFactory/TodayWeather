@@ -45,15 +45,15 @@ angular.module('controller.settingctrl', [])
         var openInfo = function() {
             var strTitle = "TodayWeather";
             var strMsg;
-            $translate(['LOC_TODAYWEATHER','LOC_WEATHER_INFORMATION', 'LOC_KOREA_METEOROLOGICAL_ADMINISTRATION', 'LOC_AQI_INFORMATION', 'LOC_KOREA_ENVIRONMENT_CORPORATION', 'LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS']).then(function (translations) {
-                strTitle = translations.LOC_TODAYWEATHER;
+            $translate([$rootScope.title,'LOC_WEATHER_INFORMATION', 'LOC_KOREA_METEOROLOGICAL_ADMINISTRATION', 'LOC_AQI_INFORMATION', 'LOC_KOREA_ENVIRONMENT_CORPORATION', 'LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS']).then(function (translations) {
+                strTitle = translations[$rootScope.title];
                 strMsg = translations.LOC_WEATHER_INFORMATION + " : "  + translations.LOC_KOREA_METEOROLOGICAL_ADMINISTRATION;
                 strMsg += "<br>";
                 strMsg += translations.LOC_AQI_INFORMATION + " : " + translations.LOC_KOREA_ENVIRONMENT_CORPORATION;
                 strMsg += "<br>";
                 strMsg += translations.LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS;
             }, function (translationIds) {
-                strTitle = translationIds.LOC_TODAYWEATHER;
+                strTitle = translationIds[$rootScope.title];
                 strMsg = translationIds.LOC_WEATHER_INFORMATION + " : "  + translationIds.LOC_KOREA_METEOROLOGICAL_ADMINISTRATION;
                 strMsg += "<br>";
                 strMsg += translationIds.LOC_AQI_INFORMATION + " : " + translationIds.LOC_KOREA_ENVIRONMENT_CORPORATION;
@@ -151,7 +151,7 @@ angular.module('controller.settingctrl', [])
             }
             else if (name === 'theme') {
                 title = 'LOC_THEME_SETTING';
-                list = ['photo', 'light'].map(function (value) {
+                list = ['photo', 'light', 'blue'].map(function (value) {
                     return {label: $scope.getThemeValueStr(value), value: value};
                 });
             }
@@ -206,6 +206,8 @@ angular.module('controller.settingctrl', [])
                     return 'LOC_WEATHER_PHOTO_THEME';
                 case 'light':
                     return 'LOC_LIGHT_THEME';
+                case 'blue':
+                    return 'LOC_BLUE_THEME';
             }
             return 'N/A'
         };

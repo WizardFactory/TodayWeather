@@ -299,48 +299,43 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
         .guide-line {
           stroke: #d9e5f2;
           stroke-width: 1;
-          stroke-opacity: 0.4;
+          stroke-opacity: 0.3;
         }
         .current-rect {
-          stroke: #d9e5f2;
-          fill: #d9e5f2;
+          fill: transparent;
+          stroke: transparent;
         }
         .line-today {
+          fill: none;
           stroke: #7aa4d1;
           stroke-width: 2px;
-          fill: none;
         }
         .line-yesterday {
+          fill: none;
           stroke: #9e9e9e;
           stroke-width: 1px;
-          fill: none;
         }
         .circle-today {
-          stroke: #7aa4d1;
-          stroke-width: 1px;
           fill: #7aa4d1;
+          stroke: #7aa4d1;
+          stroke-width: 2px;
         }
         .circle-yesterday {
-          stroke: #9e9e9e;
-          stroke-width: 1px;
           fill: #9e9e9e;
+          stroke: #9e9e9e;
+          stroke-width: 2px;
         }
         .circle-today-current {
-          stroke: #FF5252;
+          fill: #ff5252;
+          stroke: #ff5252;
           stroke-width: 2px;
-          fill: #FF5252;
         }
         .circle-yesterday-current {
+          fill: #9e9e9e;
           stroke: #9e9e9e;
           stroke-width: 2px;
-          fill: #9e9e9e;
         }
-        .text-today {
-          fill: #ffffff;
-          font-size: 15px;
-          text-anchor: middle;
-        }
-        .text-yesterday {
+        .text-today, .text-today-current, .text-yesterday, .text-yesterday-current {
           fill: #ffffff;
           font-size: 15px;
           text-anchor: middle;
@@ -354,8 +349,8 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
             shape-rendering: crispEdges;
           }
           text {
-            stroke-width: 0px;
             fill: #444;
+            stroke-width: 0px;
             font-size: 13px;
           }
         }
@@ -436,6 +431,100 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   }
 }
 
+.main-content.blue {
+  color: #fff;
+  background-color: #03a9f4;
+  [md-page-header] {
+    color: #fff;
+    background-color: #03a9f4;
+  }
+  .card {
+    background-color: #03a9f4;
+    .card-title {
+      color: #fff;
+    }
+    .colgroup-box {
+      i, span, a {
+        color: #fff !important;
+      }
+    }
+    .rowgroup-vspacing-aqi-box {
+      i, span {
+        color: #fff !important;
+      }
+      div {
+        border-right: 1px #fff solid;
+      }
+    }
+    .sub-text {
+      color: #fff;
+    }
+    .chart-scroll {
+      .chart-content {
+        .chart-text {
+          fill: #fff;
+        }
+        .chart-sub-text {
+          fill: #fff;
+        }
+        .chart-unit-text {
+          fill: #fff;
+        }
+        .chart-bar {
+          fill: #fff;
+        }
+        .guide-vivid-line {
+          stroke: #fff;
+        }
+        .guide-line {
+          stroke: #fff;
+        }
+        .current-rect {
+          fill: #039be5;
+          stroke: #039be5;
+        }
+        .line-today {
+          stroke: #fff;
+        }
+        .line-yesterday {
+          stroke: #d0d0d0;
+        }
+        .circle-today {
+          fill: #fff;
+          stroke: #fff;
+        }
+        .circle-yesterday {
+          fill: #d0d0d0;
+          stroke: #d0d0d0;
+        }
+        .circle-today-current {
+          fill: #ff5252;
+          stroke: #fff;
+        }
+        .circle-yesterday-current {
+          fill: #d0d0d0;
+          stroke: #d0d0d0;
+        }
+        .text-today, .text-yesterday, .text-yesterday-current {
+          fill: #0288d1;
+        }
+        .text-today-current {
+          fill: #fefefe;
+        }
+      }
+    }
+    .chart-label {
+      background: rgba(0, 0, 0, 0.4);
+      .chart-label-today {
+        border-left: 13px solid #fff;
+      }
+      .chart-label-yesterday {
+        border-left: 13px solid #d0d0d0;
+      }
+    }
+  }
+}
+
 .platform-ios.platform-cordova {
   .main-content {
     top: 0 !important;
@@ -454,7 +543,13 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 .tabs {
   color: #000000;
   background-image: linear-gradient(0deg, #b2b2b2, #b2b2b2 50%, transparent 70%);
-  background-color: #FFFFFF;
+  background-color: #f8f8f8;
+}
+
+.tabs-blue {
+  color: #fff;
+  background-image: linear-gradient(0deg, #0288d1, #0288d1 50%, transparent 70%);
+  background-color:#03a9f4;
 }
 
 /* header bar */
@@ -464,9 +559,25 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .bar-clear {
-  text-shadow: -0.5px -0.5px 0 #8f8f8f, 0.5px -0.5px 0 #8f8f8f, -0.5px 0.5px 0 #8f8f8f, 0.5px 0.5px 0 #8f8f8f;
   .button, .title {
     text-shadow: -0.5px -0.5px 0 #8f8f8f, 0.5px -0.5px 0 #8f8f8f, -0.5px 0.5px 0 #8f8f8f, 0.5px 0.5px 0 #8f8f8f;
+  }
+}
+
+.bar-stable {
+  .button, .title {
+    text-shadow: none;
+  }
+}
+
+.bar-blue {
+  border-color: #0288d1;
+  background-color:#03a9f4;
+  background-image: linear-gradient(0deg, #0288d1, #0288d1 50%, transparent 50%);
+  color: #fff;
+  .button, .title {
+    color: #fff;
+    text-shadow: none;
   }
 }
 
@@ -574,8 +685,6 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin-left: 40px !important;
   margin-right: 0px !important;
   padding: 5px 0px 5px 0px;
-  background-color: #444;
-  background-image: none;
   display: flex !important;
   flex: 1 0;
 }
@@ -628,6 +737,13 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   width: 48px;
   text-align: center;
   font-size: 28px;
+  margin: auto 0;
+}
+
+.search-item.air-item {
+  width: 48px;
+  text-align: center;
+  font-size: 32px;
   margin: auto 0;
 }
 
@@ -747,7 +863,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 
 /* purchase */
 .purchase-content {
-  background-color: #F5F5F5;
+  background-color: #f5f5f5;
 }
 
 /* nation */
@@ -775,7 +891,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   position: absolute;
   padding: 0 4px;
   font-size: 20px;
-  color: whitesmoke;
+  color: #f5f5f5;
   margin-bottom: 5px;
 }
 
@@ -813,7 +929,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .ionic_popup .button_cancel, .ionic_popup .button_close {
-  background-color: #03A9F4;
+  background-color: #03a9f4;
   color: #ffffff;
 }
 
@@ -864,27 +980,27 @@ ion-side-menu-content > ion-nav-view {
 
 //healthy color
 .good {
-  color: #448AFF;
+  color: #448aff;
   opacity: 0.87;
 }
 
 .moderate {
-  color: #00E676;
+  color: #00e676;
   opacity: 0.87;
 }
 
 .unhealthy-for-sensitive {
-  color: #FFD600;
+  color: #ffd600;
   opacity: 0.87;
 }
 
 .unhealthy {
-  color: #FF6D00;
+  color: #ff6d00;
   opacity: 0.87;
 }
 
 .very-unhealthy {
-  color: #FF1744;
+  color: #ff1744;
   opacity: 0.87;
 }
 

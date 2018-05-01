@@ -50,7 +50,7 @@ router.get('/', function(req, res) {
  * insrtStr은 convertUnits 후에 불러야함.
  * v000901에서는 makeResult에서 location 정보를 추가함.
  */
-var routerList = [cTown.checkQueryValidation, cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort,
+var routerList = [cTown.checkQueryValidation, cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.getShort,
     cTown.getShortRss, cTown.getShortest, cTown.getCurrent, cTown.updateCurrentListForValidation,
     cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather, cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
     cTown.mergeByShortest, cTown.adjustShort, cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo,
