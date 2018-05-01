@@ -22,7 +22,7 @@ describe('Test - Airkorea Image parser ', function(){
         var parser = new (require('../../lib/airkorea.finedust.image.parser'))();
 
         //var image_url = './test/testImageParser/dust_test_image.png';
-        var image_url = './test/testImageParser/image_pm10.gif';
+        var image_url = './test/testImageParser/airkorea_image_pm10.gif';
         var imageData = {
             width: parseInt(airkoreaImage.size.width),
             height: parseInt(airkoreaImage.size.height),
@@ -89,8 +89,8 @@ describe('Test - Airkorea Image parser ', function(){
 */
     it('dust image', function(done){
         var controller = new (require('../../controllers/airkorea.dust.image.controller'))();
-        var image_pm10_url = './test/testImageParser/image_pm10.gif';
-        var image_pm25_url = './test/testImageParser/image_pm25.gif';
+        var image_pm10_url = './test/testImageParser/airkorea_image_pm10.gif';
+        var image_pm25_url = './test/testImageParser/airkorea_image_pm25.gif';
         var geocode = {lat: 35.8927778, lon : 129.4949194};
         /*
         var expectedRes = [
@@ -217,7 +217,7 @@ describe('Test - Airkorea Image parser ', function(){
             {"r":100,"g":175,"b":240,"val":12},{"r":152,"g":201,"b":228,"val":6},
             {"r":170,"g":210,"b":225,"val":0}];
         var parser = new (require('../../lib/airkorea.finedust.image.parser'))();
-        var image_url = './test/testImageParser/image_pm10.gif';
+        var image_url = './test/testImageParser/airkorea_image_pm10.gif';
 
         var imageData = {
             width: parseInt(airkoreaImage.size.width),
@@ -292,7 +292,7 @@ describe('Test - Airkorea Image parser ', function(){
             {"r":170,"g":209,"b":224,"val":0}];
 
         var parser = new (require('../../lib/airkorea.finedust.image.parser'))();
-        var image_url = './test/testImageParser/image_pm25.gif';
+        var image_url = './test/testImageParser/airkorea_image_pm25.gif';
         var imageData = {
             width: parseInt(airkoreaImage.size.width),
             height: parseInt(airkoreaImage.size.width),
@@ -329,8 +329,8 @@ describe('Test - Airkorea Image parser ', function(){
 
     it('invalid area', function(done){
         var controller = new (require('../../controllers/airkorea.dust.image.controller'))();
-        var image_pm10_url = './test/testImageParser/image_pm10.gif';
-        var image_pm25_url = './test/testImageParser/image_pm25.gif';
+        var image_pm10_url = './test/testImageParser/airkorea_image_pm10.gif';
+        var image_pm25_url = './test/testImageParser/airkorea_image_pm25.gif';
         var geocode = {lat: 37.5081798, lon : 130.8217127}; // 경상북도 울릉군 서면태하
 
         var controllerManager = require('../../controllers/controllerManager');

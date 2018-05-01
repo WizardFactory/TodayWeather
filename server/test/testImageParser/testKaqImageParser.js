@@ -12,7 +12,7 @@ var util = require('util');
 var async = require('async');
 var convert = require('../../utils/coordinate2xy');
 var kaqImage = config.image.kaq_korea_image;
-var kaqModelingImage = config.image.kaq_korea_modeling_image;
+var kaqModelimg = config.image.kaq_korea_modelimg_image;
 
 global.log  = new Logger(__dirname + "/debug.log");
 
@@ -21,7 +21,7 @@ var town = require('../../models/town');
 describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
     it('get pm10 map pixels', function(done){
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/PM2_5_Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_case4_PM2_5_Animation.gif';
         var imageData = {
             width: parseInt(kaqImage.size.width),
             height: parseInt(kaqImage.size.height),
@@ -55,29 +55,17 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
 
     it('dust image', function(done){
         var controller = new (require('../../controllers/kaq.dust.image.controller'))();
-        var image_pm10_url = './test/testImageParser/PM10_Animation.gif';
-        var image_pm25_url = './test/testImageParser/PM2_5_Animation.gif';
+        var image_pm10_url = './test/testImageParser/kma_modelimg_case4_PM10_Animation.gif';
+        var image_pm25_url = './test/testImageParser/kma_modelimg_case4_PM2_5_Animation.gif';
         //var geocode = {lat: 35.8927778, lon : 129.4949194};
         //var geocode = {lat : 35.1569750, lon : 126.8533639}; // 광주광역시
         //var geocode = {lat : 37.7491361, lon : 128.8784972};    //강릉시
         //var geocode = {lat : 35.8685417, lon : 128.6035528}; // 대구광역시
         var geocode = {lat : 37.5635694, lon : 126.9800083}; // 서울특별시
 
-        var expectedColorValue_pm10 = [
-            112,104,96,80,56,44,52,44,44,36,
-            28,36,36,32,32,32,32,32,32,32,40,
-            44,60,44,56,44,36,28,32,28,28,24,
-            24,28,36,36,44,44,40,36,32,32,36,
-            32,28,16,8,12,4,8,16,12,40,28,36,
-            36,28,24,24,32,32,24,4,4,4,4,8,8,
-            12,16,16,16,16,16,16,16,16,12,12,
-            12,12,12,12,12,12,16,16,20,20,24,
-            24,24,24,28,36,40,32,28,24,24,24,
-            20,16,16,20,24,32,32,28,28,28,32,
-            28,24,28,24,28,32,36,44,44,36,28,
-            32,24,24,20,20,20,20,16,16,12,12,12,12,12];
+        var expectedColorValue_pm10 = [100,112,116,60,36,64,68,56,52,24,24,40,36,40,48,32,36,36,36,36,32,48,68,56,48,40,32,28,28,28,24,24,24,28,36,40,44,36,40,36,36,36,32,32,28,16,8,12,8,12,40,8,40,40,40,36,40,36,28,32,32,28,12,4,4,4,4,8,12,16,20,20,20,20,16,16,20,20,16,16,16,16,16,16,16,16,20,24,24,24,24,28,32,36,48,44,32,28,24,24,24,20,20,20,20,28,40,40,32,32,32,32,36,36,36,32,32,40,52,56,56,null,36,36,32,28,24,20,28,32,36,16,12,12,12,12,12];
 
-        var expectedColorValue_pm25 = [44,38,32,24,18,16,18,12,12,10,12,10,10,10,12,12,12,16,16,16,16,18,22,22,18,16,16,12,12,12,10,10,10,12,16,18,20,20,20,18,16,16,18,18,16,8,2,6,6,2,6,8,10,12,16,16,18,8,12,16,18,16,2,2,2,2,2,2,6,6,6,6,6,6,6,4,6,6,4,6,4,8,8,8,8,8,8,10,10,12,12,12,16,12,18,18,16,12,10,10,12,10,8,8,10,10,12,16,12,12,16,16,16,12,16,12,16,16,20,18,18,16,16,16,12,12,10,10,10,10,8,8,4,4,6,6,6];
+        var expectedColorValue_pm25 = [42,44,32,18,18,12,12,18,16,12,16,16,10,12,12,16,10,18,18,18,18,20,22,22,18,18,16,12,12,10,10,10,10,12,18,20,20,20,18,18,18,18,18,18,16,8,8,8,8,8,10,10,10,16,18,18,18,16,12,16,18,16,8,2,2,2,2,2,4,4,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,10,10,12,12,12,12,12,16,16,18,18,16,12,12,12,12,10,8,8,10,12,16,16,16,16,16,16,18,18,18,16,18,20,28,26,26,20,20,18,18,16,10,10,10,12,12,8,8,8,8,6,6];
 
         var controllerManager = require('../../controllers/controllerManager');
         global.manager = new controllerManager();
@@ -103,6 +91,9 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
                 }
 
                 //log.info(JSON.stringify(result));
+                var list = [];
+                result.hourly.forEach((item)=>{list.push(item.val)});
+                log.info(JSON.stringify(list));
                 log.info('PM10 pubDate : ', result.pubDate);
                 for(var i = 0 ; i<expectedColorValue_pm10.length ; i++){
                     assert.equal(result.hourly[i].val, expectedColorValue_pm10[i], '1 No matched PM10 color value : '+i);
@@ -160,7 +151,7 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
             {"r":1,"g":69,"b":253,"val":4},{"r":0,"g":48,"b":255,"val":0}];
 
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/PM10_Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_case4_PM10_Animation.gif';
 
         parser.getPixelMap(image_url, 'CASE4', 'image/gif', null, function(err, pixels){
             if(err){
@@ -223,7 +214,7 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
             {"r":0,"g":50,"b":253,"val":4},{"r":0,"g":50,"b":253,"val":0}];
 
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/PM2_5_Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_case4_PM2_5_Animation.gif';
 
         parser.getPixelMap(image_url, 'CASE4', 'image/gif', null, function(err, pixels){
             if(err){
@@ -254,8 +245,8 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
 
     it('invalid area', function(done){
         var controller = new (require('../../controllers/kaq.dust.image.controller'))();
-        var image_pm10_url = './test/testImageParser/PM10_Animation.gif';
-        var image_pm25_url = './test/testImageParser/PM2_5_Animation.gif';
+        var image_pm10_url = './test/testImageParser/kma_modelimg_case4_PM10_Animation.gif';
+        var image_pm25_url = './test/testImageParser/kma_modelimg_case4_PM2_5_Animation.gif';
         var geocode = {lat: 37.5081798, lon : 130.8217127};
 
         var controllerManager = require('../../controllers/controllerManager');
@@ -294,15 +285,15 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
 
     it('get map pixels', function(done){
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modeling_NO2.09KM.Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_NO2.09KM.Animation.gif';
         var imageData = {
-            width: parseInt(kaqModelingImage.size.width),
-            height: parseInt(kaqModelingImage.size.height),
-            map_width: parseInt(kaqModelingImage.pixel_pos.right) - parseInt(kaqModelingImage.pixel_pos.left),
-            map_height: parseInt(kaqModelingImage.pixel_pos.bottom) - parseInt(kaqModelingImage.pixel_pos.top)
+            width: parseInt(kaqModelimg.size.width),
+            height: parseInt(kaqModelimg.size.height),
+            map_width: parseInt(kaqModelimg.pixel_pos.right) - parseInt(kaqModelimg.pixel_pos.left),
+            map_height: parseInt(kaqModelimg.pixel_pos.bottom) - parseInt(kaqModelimg.pixel_pos.top)
         };
 
-        parser.getPixelMap(image_url, 'modeling', 'image/gif', null, function(err, pixels){
+        parser.getPixelMap(image_url, 'modelimg', 'image/gif', null, function(err, pixels){
             if(err){
                 log.error('Error !! : ', err);
                 assert.equal(null, imageData, 'Fail to get pixels data');
@@ -327,12 +318,12 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
     });
 
     it('dust image', function(done){
-        var controller = new (require('../../controllers/kaq.modeling.image.controller'))();
-        var image_pm10_url = './test/testImageParser/kma_modeling_pm10_Animation.gif';
-        var image_pm25_url = './test/testImageParser/kma_modeling_pm25_Animation.gif';
-        var image_no2_url = './test/testImageParser/kma_modeling_NO2.09KM.Animation.gif';
-        var image_o3_url = './test/testImageParser/kma_modeling_O3.09KM.Animation.gif';
-        var image_so2_url = './test/testImageParser/kma_modeling_SO2.09KM.Animation.gif';
+        var controller = new (require('../../controllers/kaq.modelimg.controller'))();
+        var image_pm10_url = './test/testImageParser/kma_modelimg_pm10_Animation.gif';
+        var image_pm25_url = './test/testImageParser/kma_modelimg_pm25_Animation.gif';
+        var image_no2_url = './test/testImageParser/kma_modelimg_NO2.09KM.Animation.gif';
+        var image_o3_url = './test/testImageParser/kma_modelimg_O3.09KM.Animation.gif';
+        var image_so2_url = './test/testImageParser/kma_modelimg_SO2.09KM.Animation.gif';
         //var geocode = {lat: 35.8927778, lon : 129.4949194};
         //var geocode = {lat : 35.1569750, lon : 126.8533639}; // 광주광역시
         //var geocode = {lat : 37.7491361, lon : 128.8784972};    //강릉시
@@ -691,7 +682,7 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
     });
 
     it('invalid area', function(done){
-        var controller = new (require('../../controllers/kaq.modeling.image.controller'))();
+        var controller = new (require('../../controllers/kaq.modelimg.controller.js'))();
         var image_pm10_url = './test/testImageParser/kma_modeling_pm10_Animation.gif';
         var image_pm25_url = './test/testImageParser/kma_modeling_pm25_Animation.gif';
         var geocode = {lat: 37.5081798, lon : 130.8217127};
@@ -705,7 +696,7 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
             return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_pm25_url});
         };
 
-        controller.startModelingImageMgr(function(err, pixel){
+        controller.startModelimgMgr(function(err, pixel){
             if(err){
                 log.info('1. ERROR!!!');
                 assert.fail();
