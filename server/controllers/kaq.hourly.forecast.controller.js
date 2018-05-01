@@ -10,7 +10,7 @@ const reqeust = require('request');
 const kmaTimeLib = require('../lib/kmaTimeLib');
 const config = require('../config/config');
 
-const ModelimgCase4DustImageController = require('./kaq.dust.image.controller');
+const ModelimgCase4DustImageController = require('./kaq.modelimg.case.controller.js');
 const ModelimgDustImageController = require('./kaq.modeimg.controller');
 const ModelHourlyForecast = require('../models/kaq.hourly.forecast.model');
 const ModelMapCase = require('../models/kaq.map.case.model');

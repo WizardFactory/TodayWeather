@@ -136,7 +136,7 @@ class KaqDustImageController{
         log.info('KAQ Modelimg > x: ', x, 'y: ',y);
 
         if(!this._isValidPos(x, y)){
-            return callback(new Error('KAQ Modeling Image > 4. Invalid X, Y : ', x, y));
+            return callback(new Error('KAQ Modelimg > 4. Invalid X, Y : ', x, y));
         }
 
         var result = [];
@@ -220,15 +220,15 @@ class KaqDustImageController{
 
         // TODO : This is only for Testing, Need to implement!!!!!!
         if(type === 'PM10'){
-            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/PM10_Animation.gif'});
+            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modelimg_PM10.09KM.Animation.gif'});
         }else if(type === 'PM25') {
-            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/PM2_5_Animation.gif'});
+            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modelimg_PM2_5.09KM.Animation.gif'});
         }else if(type === 'NO2'){
-            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modeling_NO2.09KM.Animation.fig'});
+            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modelimg_NO2.09KM.Animation.fig'});
         }else if(type === 'O3'){
-            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modeling_O3.09KM.Animation.gif'});
+            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modelimg_O3.09KM.Animation.gif'});
         }else{
-            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modeling_SO2.09KM.Animation.gif'});
+            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modelimg_SO2.09KM.Animation.gif'});
         }
 
     }

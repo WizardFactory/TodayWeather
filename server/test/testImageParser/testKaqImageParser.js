@@ -54,7 +54,7 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
     });
 
     it('dust image', function(done){
-        var controller = new (require('../../controllers/kaq.dust.image.controller'))();
+        var controller = new (require('../../controllers/kaq.modelimg.case.controller.js'))();
         var image_pm10_url = './test/testImageParser/kma_modelimg_case4_PM10.09KM.Animation.gif';
         var image_pm25_url = './test/testImageParser/kma_modelimg_case4_PM2_5.09KM.Animation.gif';
         //var geocode = {lat: 35.8927778, lon : 129.4949194};
@@ -212,7 +212,7 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
     });
 
     it('invalid area', function(done){
-        var controller = new (require('../../controllers/kaq.dust.image.controller'))();
+        var controller = new (require('../../controllers/kaq.modelimg.case.controller.js'))();
         var image_pm10_url = './test/testImageParser/kma_modelimg_case4_PM10.09KM.Animation.gif';
         var image_pm25_url = './test/testImageParser/kma_modelimg_case4_PM2_5.09KM.Animation.gif';
         var geocode = {lat: 37.5081798, lon : 130.8217127};
@@ -287,8 +287,8 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
 
     it('dust image', function(done){
         var controller = new (require('../../controllers/kaq.modelimg.controller'))();
-        var image_pm10_url = './test/testImageParser/kma_modelimg_pm10_Animation.gif';
-        var image_pm25_url = './test/testImageParser/kma_modelimg_pm25_Animation.gif';
+        var image_pm10_url = './test/testImageParser/kma_modelimg_PM10.09KM.Animation.gif';
+        var image_pm25_url = './test/testImageParser/kma_modelimg_PM2_5.09KM.Animation.gif';
         var image_no2_url = './test/testImageParser/kma_modelimg_NO2.09KM.Animation.gif';
         var image_o3_url = './test/testImageParser/kma_modelimg_O3.09KM.Animation.gif';
         var image_so2_url = './test/testImageParser/kma_modelimg_SO2.09KM.Animation.gif';
@@ -461,7 +461,7 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
             {"r":4,"g":71,"b":251,"val":4},{"r":1,"g":53,"b":251,"val":0}];
 
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modelimg_pm10_Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_PM10.09KM.Animation.gif';
 
         parser.getPixelMap(image_url, 'modelimg', 'image/gif', null, function(err, pixels){
             if(err){
@@ -515,7 +515,7 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
             {"r":0,"g":83,"b":255,"val":4},{"r":0,"g":46,"b":255,"val":0}];
 
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modelimg_pm25_Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_PM2_5.09KM.Animation.gif';
 
         parser.getPixelMap(image_url, 'modelimg', 'image/gif', null, function(err, pixels){
             if(err){
@@ -651,8 +651,8 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
 
     it('invalid area', function(done){
         var controller = new (require('../../controllers/kaq.modelimg.controller.js'))();
-        var image_pm10_url = './test/testImageParser/kma_modelimg_pm10_Animation.gif';
-        var image_pm25_url = './test/testImageParser/kma_modelimg_pm25_Animation.gif';
+        var image_pm10_url = './test/testImageParser/kma_modelimg_PM10.09KM.Animation.gif';
+        var image_pm25_url = './test/testImageParser/kma_modelimg_PM2_5.09KM.Animation.gif';
         var geocode = {lat: 37.5081798, lon : 130.8217127};
 
         var controllerManager = require('../../controllers/controllerManager');
