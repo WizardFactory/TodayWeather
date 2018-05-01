@@ -408,85 +408,66 @@ class KaqDustImageController{
      * @param callback
      */
     getDustImage(imgPaths, callback) {
-        log.info('KAQ Modelimg > get modeling image -----------');
-        async.waterfall(
-            [
-                (cb)=>{
-                    if (imgPaths.pm10 == undefined) {
-                        log.error('KAQ Modelimg PM10 Image > image path is undefined');
-                        return cb(null);
-                    }
-                    log.info("KAQ Modelimg > pm10 path: "+imgPaths.pm10);
-                    this.parseMapImage(imgPaths.pm10, 'image/gif', (err, pixelMap)=>{
-                        if(err){
-                            return cb(err);
-                        }
+        log.info('KAQ ModelImg Case > get dust image -----------');
 
-                        log.info('KAQ Modelimg > Got pixel info for PM10');
-                        this.imagePixels.PM10 = {};
-                        this.imagePixels.PM10.pubDate = imgPaths.pubDate;
-                        this.imagePixels.PM10.data = pixelMap;
-                        return cb(null, pixelMap);
-                    });
-                },
-                (pixelMap, cb)=>{
-                    if (pixelMap  == undefined) {
-                        log.error('KAQ Modelimg PM10 Image > pixelMap is undefined');
-                        return cb(null);
-                    }
-                    this.makeColorTable('PM10', pixelMap, (err)=>{
-                        if(err){
-                            log.error('KAQ Modelimg PM10 Image > Failed to get Grade Table');
-                            return cb(err);
-                        }
-
-                        return cb(null);
-                    });
-                },
-                (cb)=>{
-                    if (imgPaths.pm25 == undefined) {
-                        log.error('KAQ Modelimg PM25 Image > image path is undefined');
-                        return cb(null);
-                    }
-                    log.info("KAQ Modelimg > pm25 path: "+imgPaths.pm25);
-                    this.parseMapImage(imgPaths.pm25, 'image/gif', (err, pixelMap)=>{
-                        if(err){
-                            return cb(err);
-                        }
-                        log.info('KAQ Modelimg > Got pixel info for PM25');
-                        this.imagePixels.PM25 = {};
-                        this.imagePixels.PM25.pubDate = imgPaths.pubDate;
-                        this.imagePixels.PM25.data = pixelMap;
-                        return cb(null, pixelMap);
-                    });
-                },
-                (pixelMap, cb)=>{
-                    if (pixelMap  == undefined) {
-                        log.error('KAQ Modelimg PM25 Image > pixelMap is undefined');
-                        return cb(null);
-                    }
-                    this.makeColorTable('PM25', pixelMap, (err)=>{
-                        if(err){
-                            log.error('KAQ Modelimg Image > Failed to get PM25 Grade Table');
-                            return cb(err);
-                        }
-
-                        return cb(null);
-                    });
-                }
-            ],
-            (err)=>{
-                if(err){
-                    log.error('KAQ Modelimg > fail to load image');
+        async.mapSeries(
+            ['NO2', 'O3', 'PM10', 'PM25', 'SO2'],
+            (imgType, cb)=>{
+                if(imgPaths[imgType] === undefined){
+                    log.info('KAQ ModelImg > No property :', imgType);
+                    return cb(null);
                 }
 
-                if(callback){
-                    callback(err, this.imagePixels);
-                }
+                async.waterfall([
+                        (cb)=>{
+                            this.parseMapImage(imgType, imgPaths[imgType], 'image/gif', (err, pixelMap)=>{
+                                if(err){
+                                    return cb(err);
+                                }
+
+                                log.info('KAQ Modelimg > Got pixel info for ', imgType);
+                                this.imagePixels[imgType] = {};
+                                this.imagePixels[imgType].pubDate = imgPaths.pubDate;
+                                this.imagePixels[imgType].data = pixelMap;
+                                return cb(null, pixelMap);
+                            });
+                        },
+                        (pixelMap, cb)=>{
+                            if (pixelMap  == undefined) {
+                                log.error('KAQ Modelimg > pixelMap is undefined');
+                                return cb(null);
+                            }
+                            this.makeColorTable(imgType, pixelMap, (err)=>{
+                                if(err){
+                                    log.error('KAQ Modelimg > Failed to get Grade Table:', imgType);
+                                    return cb(err);
+                                }
+
+                                return cb(null);
+                            });
+                        }
+                    ],
+                    (err)=>{
+                        if(err){
+                            log.error('KAQ Modelimg > Fail to load image : ', imgType);
+                            return cb(null);
+                        }
+                        cb(null, this.imagePixels[imgType]);
+                    }
+                );
+            },
+            (err, results)=>{
+                log.info('KAQ ModelImage Count :', results.length);
+                return callback(err, this.imagePixels);
             }
         );
     };
 
+    /**
+     *
+     * @param imgType
+     * @param callback
+     */
     getImage(imgType, callback) {
         log.info('KAQ Modelimg > get image ----------- : ', imgType);
         async.waterfall(
@@ -551,6 +532,10 @@ class KaqDustImageController{
         );
     };
 
+    /**
+     *
+     * @param callback
+     */
     taskModelImgMgr(callback){
         log.info('KAQ ModelImg > taskModelImgMgr -----------');
         async.mapSeries(

@@ -20,7 +20,7 @@ class KaqImageParser{
         var pos = kaqDustImage.pixel_pos;
         if(type === 'modelimg'){
             pos = kaqModelimg.pixel_pos;
-        }else if(type === 'so2_model_case'){
+        }else if(type === 'CASE4_SO2'){
             pos = kaqDustImage.so2_pixel_pos;
         }
         return {

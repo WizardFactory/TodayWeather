@@ -57,6 +57,9 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
         var controller = new (require('../../controllers/kaq.modelimg.case.controller.js'))();
         var image_pm10_url = './test/testImageParser/kma_modelimg_case4_PM10.09KM.Animation.gif';
         var image_pm25_url = './test/testImageParser/kma_modelimg_case4_PM2_5.09KM.Animation.gif';
+        var image_NO2_url = './test/testImageParser/kma_modelimg_case4_NO2.09KM.Animation.gif';
+        var image_O3_url = './test/testImageParser/kma_modelimg_case4_O3.09KM.Animation.gif';
+        var image_SO2_url = './test/testImageParser/kma_modelimg_case4_SO2.09KM.Animation.gif';
         //var geocode = {lat: 35.8927778, lon : 129.4949194};
         //var geocode = {lat : 35.1569750, lon : 126.8533639}; // 광주광역시
         //var geocode = {lat : 37.7491361, lon : 128.8784972};    //강릉시
@@ -66,17 +69,32 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
         var expectedColorValue_pm10 = [96,104,96,76,76,76,96,100,112,96,84,84,76,88,84,68,76,80,104,104,108,120,150,150,150,108,88,76,72,64,60,56,52,52,56,52,64,68,68,76,76,76,68,80,80,92,100,72,null,60,40,52,52,36,44,16,12,4,4,4,4,4,4,4,4,4,4,4,8,12,24,16,16,16,12,8,8,8,8,8,12,12,20,24,32,28,24,24,28,32,36,36,40,48,44,44,36,28,20,20,24,24,28,32,40,48,60,88,92,76,76,88,104,116,112,116,108,150,96,76,52,36,32,28,28,28,28,28,28,28,28,32,32,32,32,32,32];
 
         var expectedColorValue_pm25 = [60,60,60,42,48,40,60,44,60,48,46,50,50,32,38,44,48,26,60,60,60,60,60,60,60,60,60,60,60,46,42,40,42,40,44,42,50,60,60,60,60,60,60,60,60,60,60,50,null,24,16,40,42,30,32,10,16,4,4,4,2,2,2,2,2,4,4,4,4,6,8,8,8,8,6,6,4,4,4,6,8,10,14,18,22,22,22,22,24,26,28,30,32,34,32,32,28,20,16,14,16,18,20,24,30,38,60,60,60,60,60,60,60,60,60,60,60,60,60,60,38,26,24,22,22,22,22,22,24,22,22,24,24,22,20,20,22];
+        var expectedColorValue_no2 = [0.0433,0.0532,0.0299,0.0299,0.0332,0.0332,0.0365,0.04,0.0466,0.0299,0.0433,0.0365,0.0433,0.0466,0.0466,0.0466,0.0433,0.0332,0.0699,0.0699,0.0699,0.0666,0.0666,0.0633,0.0666,0.0532,0.0365,0.0165,0.02,0.02,0.0165,0.02,0.0433,0.0433,0.0466,0.0866,0.0666,0.0633,0.0633,0.0565,0.0532,0.0466,0.0499,0.0466,0.0466,0.0633,0.0765,0.08,0.0633,0.0499,0.0266,0.0299,0.0332,0.0433,0.02,0.0233,0.0266,0.0266,0.0266,0.0165,0.0132,0.0099,0.0099,0.0099,0.0132,0.0132,0.0165,0.02,0.0299,0.0266,0.0332,0.0365,0.0299,0.0266,0.02,0.02,0.0132,0.0132,0.0099,0.0099,0.0132,0.0266,0.0565,0.0633,0.0499,0.0433,0.0299,0.02,0.02,0.02,0.0266,0.0299,0.0365,0.0433,0.0332,0.0233,0.02,0.0132,0.0099,0.0066,0.0066,0.0099,0.0099,0.0132,0.0165,0.0266,0.0499,0.0532,0.0433,0.0365,0.0332,0.0365,0.02,0.0299,0.0299,0.0299,0.0365,0.0466,0.0299,0.0266,0.0165,0.0132,0.0099,0.0066,0.0066,0.0066,0.0099,0.0099,0.0132,0.0165,0.0266,0.0299,0.0266,0.02,0.0165,0.0165,0.0233];
+        var expectedColorValue_o3 = [0.024,0.078,0.036,0.078,0.078,0.078,0.078,0.09,0.078,0.06,0.036,0.06,0.042,0.03,0.018,0.024,0.018,0.03,0.006,0.012,0,0,0,0.006,0.012,0.018,0.036,0.048,0.06,0.072,0.072,0.072,0.066,0.06,0.03,0.006,0.018,0.018,0.03,0.03,0.03,0.042,0.048,0.036,0.036,0.024,0.018,0.018,0.036,0.048,0.078,0.072,0.072,0.084,0.09,0.084,0.072,0.048,0.03,0.036,0.042,0.042,0.042,0.042,0.042,0.036,0.036,0.03,0.03,0.018,0.024,0.018,0.006,0.03,0.036,0.036,0.036,0.042,0.048,0.048,0.042,0.006,0.006,0.018,0.006,0.006,0.048,0.048,0.042,0.042,0.036,0.03,0.018,0.006,0.024,0.03,0.036,0.048,0.054,0.054,0.054,0.06,0.06,0.06,0.054,0.054,0.03,0.024,0.03,0.042,0.042,0.036,0.036,0.03,0.03,0.024,0.036,0.018,0.036,0.054,0.066,0.066,0.072,0.072,0.072,0.066,0.066,0.066,0.06,0.054,0.042,0.036,0.036,0.042,0.042,0.042,0.03];
+        var expectedColorValue_so2 = [0.0065,0.0075,0.0045,0.0065,0.0045,0.0055,0.005,0.0055,0.0065,0.006,0.007,0.0055,0.0045,0.0045,0.004,0.0045,0.0045,0.0045,0.0095,0.007,0.007,0.0075,0.009,0.0075,0.0065,0.005,0.0035,0.0025,0.002,0.0015,0.0015,0.0015,0.0025,0.0015,0.004,0.003,0.0035,0.003,0.0015,0.0015,0.005,0.002,0.0015,0.0035,0.0055,0.0015,0.003,0.0015,0.0015,0.001,0.0005,0.001,0.001,0.001,0.001,0.001,0.0005,0.0005,0.0005,0.0005,0.0005,0.0005,0.0005,0.001,0.0015,0.0005,0.002,0.001,0.001,0.001,0.0005,0.0005,0.001,0.001,0.0005,0.0005,0.0005,0.0005,0.0005,0.0005,0.001,0.0015,0.0015,0.0025,0.003,0.0025,0.003,0.0025,0.0035,0.003,0.0035,0.0035,0.0035,0.0035,0.003,0.003,0.003,0.003,0.0025,0.002,0.0025,0.0025,0.003,0.0035,0.0045,0.006,0.011,0.013,0.012,0.009,0.0075,0.0065,0.008,0.0065,0.008,0.0085,0.0065,0.008,0.0065,0.0065,0.006,0.0045,0.0045,0.004,0.0035,0.003,0.0035,0.003,0.003,0.003,0.003,0.0035,0.004,0.0035,0.004,0.0045,0.0045];
+
 
         var controllerManager = require('../../controllers/controllerManager');
         global.manager = new controllerManager();
         controller.getImaggPath = function(type, callback){
             if(type === 'PM10'){
                 return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_pm10_url});
+            }else if(type === 'PM25') {
+                return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_pm25_url});
+            }else if(type === 'NO2'){
+                return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_NO2_url});
+            }else if(type === 'O3'){
+                return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_O3_url});
+            }else if(type === 'SO2'){
+                return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_SO2_url});
+
+            }else{
+                log.info('KAQ Modelimg Case > woring type : ', type);
+                return '_no_image_url_';
             }
-            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_pm25_url});
         };
 
-        controller.startDustImageMgr(function(err, pixel){
+        controller.taskModelImgCaseMgr(function(err, pixel){
             if(err){
                 log.info('1. ERROR!!!');
                 assert.fail();
@@ -113,7 +131,67 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
                     for(var i = 0 ; i<expectedColorValue_pm25.length ; i++){
                         assert.equal(result.hourly[i].val, expectedColorValue_pm25[i], '2 No matched PM 25 color value : '+i);
                     }
-                    done();
+
+
+                    controller.getDustInfo(geocode.lat, geocode.lon, 'NO2', 'airkorea', function(err, result) {
+                        if (err) {
+                            log.info('4. ERROR!!!!');
+                            assert.fail();
+                            return done();
+                        }
+
+                        //log.info(JSON.stringify(result));
+                        log.info('NO2 pubDate : ', result.pubDate);
+                        var list = [];
+                        result.hourly.forEach((item)=> {
+                            list.push(item.val)
+                        });
+                        log.info(JSON.stringify(list));
+                        for (var i = 0; i < expectedColorValue_no2.length; i++) {
+                            assert.equal(result.hourly[i].val, expectedColorValue_no2[i], '3 No matched NO2 color value : ' + i);
+                        }
+
+                        controller.getDustInfo(geocode.lat, geocode.lon, 'O3', 'airkorea', function(err, result) {
+                            if (err) {
+                                log.info('5. ERROR!!!!');
+                                assert.fail();
+                                return done();
+                            }
+
+                            //log.info(JSON.stringify(result));
+                            log.info('O3 pubDate : ', result.pubDate);
+                            var list = [];
+                            result.hourly.forEach((item)=> {
+                                list.push(item.val)
+                            });
+                            log.info(JSON.stringify(list));
+                            for (var i = 0; i < expectedColorValue_o3.length; i++) {
+                                assert.equal(result.hourly[i].val, expectedColorValue_o3[i], '4 No matched O3 color value : ' + i);
+                            }
+
+                            controller.getDustInfo(geocode.lat, geocode.lon, 'SO2', 'airkorea', function(err, result) {
+                                if (err) {
+                                    log.info('6. ERROR!!!!');
+                                    assert.fail();
+                                    return done();
+                                }
+
+                                //log.info(JSON.stringify(result));
+                                log.info('SO2 pubDate : ', result.pubDate);
+                                var list = [];
+                                result.hourly.forEach((item)=> {
+                                    list.push(item.val)
+                                });
+                                log.info(JSON.stringify(list));
+                                for (var i = 0; i < expectedColorValue_so2.length; i++) {
+                                    assert.equal(result.hourly[i].val, expectedColorValue_so2[i], '5 No matched SO2 color value : ' + i);
+                                }
+
+                                done();
+                            });
+
+                        });
+                    });
                 });
             });
         });
@@ -226,7 +304,7 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
             return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_pm25_url});
         };
 
-        controller.startDustImageMgr(function(err, pixel){
+        controller.taskModelImgCaseMgr(function(err, pixel){
             if(err){
                 log.info('1. ERROR!!!');
                 assert.fail();
