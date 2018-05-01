@@ -236,49 +236,60 @@ angular.module('starter', [
             headerbars.removeClass('bar-dailyforecast');
             headerbars.removeClass('bar-air');
             headerbars.removeClass('bar-clear');
-            headerbars.removeClass('bar-dark');
+            headerbars.removeClass('bar-stable');
+            headerbars.removeClass('bar-blue');
 
             for (var i = 0; i < headerbars.length; i++) {
                 headerbars[i].style.backgroundImage = "";
             }
 
-            var contents = angular.element(document.querySelectorAll('ion-content'));
-            contents.removeClass('photo');
+            var tabs = angular.element(document.querySelectorAll('.tab-nav'));
+            tabs.removeClass('tabs-blue');
 
             if (toState.name === 'tab.search') {
-                $rootScope.viewColor = '#F5F5F5';
+                $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-search');
-                headerbars.addClass('bar-dark');
+                headerbars.addClass('bar-stable');
             } else if (toState.name === 'tab.forecast') {
-                $rootScope.viewColor = '#F5F5F5';
                 headerbars.addClass('bar-forecast');
                 if ($rootScope.settingsInfo.theme === 'photo') {
+                    $rootScope.viewColor = '#f5f5f5';
                     headerbars.addClass('bar-clear');
+                } else if ($rootScope.settingsInfo.theme === 'blue') {
+                    $rootScope.viewColor = '#03a9f4';
+                    headerbars.addClass('bar-blue');
+                    tabs.addClass('tabs-blue');
                 } else {
-                    headerbars.addClass('bar-dark');
+                    $rootScope.viewColor = '#f5f5f5';
+                    headerbars.addClass('bar-stable');
                 }
             } else if (toState.name === 'tab.dailyforecast') {
-                $rootScope.viewColor = '#F5F5F5';
                 headerbars.addClass('bar-dailyforecast');
                 if ($rootScope.settingsInfo.theme === 'photo') {
+                    $rootScope.viewColor = '#f5f5f5';
                     headerbars.addClass('bar-clear');
+                } else if ($rootScope.settingsInfo.theme === 'blue') {
+                    $rootScope.viewColor = '#03a9f4';
+                    headerbars.addClass('bar-blue');
+                    tabs.addClass('tabs-blue');
                 } else {
-                    headerbars.addClass('bar-dark');
+                    $rootScope.viewColor = '#f5f5f5';
+                    headerbars.addClass('bar-stable');
                 }
             } else if (toState.name === 'tab.air') {
-                $rootScope.viewColor = '#F5F5F5';
+                $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-air');
-                headerbars.addClass('bar-dark');
+                headerbars.addClass('bar-stable');
             } else if (toState.name === 'tab.weather') {
-                $rootScope.viewColor = '#F5F5F5';
+                $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-forecast');
-                headerbars.addClass('bar-dark');
+                headerbars.addClass('bar-stable');
             } else if (toState.name === 'start') {
                 $rootScope.viewColor = '#fefefe';
                 headerbars.addClass('bar-clear');
             } else {
-                $rootScope.viewColor = '#F5F5F5';
-                headerbars.addClass('bar-dark');
+                $rootScope.viewColor = '#f5f5f5';
+                headerbars.addClass('bar-stable');
             }
 
             Util.ga.trackView(toState.name);
@@ -559,6 +570,25 @@ angular.module('starter', [
                             .scale(y)
                             .orient('left');
 
+                        var currentRect = svg.selectAll('.current-rect').data(function () {
+                            return [data[1].currentIndex];
+                        });
+
+                        currentRect.enter().append('rect')
+                            .attr('class', 'current-rect');
+
+                        currentRect
+                            .attr('x', function (index) {
+                                return x.rangeBand() * index + x.rangeBand() / 2 + 0.5;
+                            })
+                            .attr('y', function () {
+                                return 0;
+                            })
+                            .attr('width', x.rangeBand() - 0.5)
+                            .attr('height', height);
+
+                        currentRect.exit().remove();
+
                         // draw guideLine
                         var guideLines = svg.selectAll('.guide-line')
                             .data(function () {
@@ -583,25 +613,6 @@ angular.module('starter', [
                             .attr('y2', height);
 
                         guideLines.exit().remove();
-
-                        // var currentRect = svg.selectAll('.current-rect').data(function () {
-                        //    return [data[1].currentIndex];
-                        // });
-                        //
-                        // currentRect.enter().append('rect')
-                        //     .attr('class', 'current-rect');
-                        //
-                        // currentRect
-                        //     .attr('x', function (index) {
-                        //         return x.rangeBand() * index + x.rangeBand() / 2 + 0.5;
-                        //     })
-                        //     .attr('y', function () {
-                        //         return 0;
-                        //     })
-                        //     .attr('width', x.rangeBand() - 0.5)
-                        //     .attr('height', height);
-                        //
-                        // currentRect.exit().remove();
 
                         var hourlyTables = svg.selectAll('.hourly-table')
                             .data(function () {
@@ -763,7 +774,7 @@ angular.module('starter', [
                             })
                             .attr('r', function () {
                                 if (sharp === true) {
-                                    return 11;
+                                    return 10;
                                 } else {
                                     return 5;
                                 }
@@ -787,7 +798,7 @@ angular.module('starter', [
                             })
                             .attr('r', function () {
                                 if (sharp === true) {
-                                    return 11;
+                                    return 10;
                                 } else {
                                     return 5;
                                 }
@@ -840,19 +851,6 @@ angular.module('starter', [
                             .data(function (d) {
                                 return d.values;
                             })
-                            .style("fill", function (d) {
-                                if (d.name == "today") {
-                                    if (d.value.time === currentTime && d.value.date === scope.currentWeather.date) {
-                                        if (sharp === true) {
-                                            return '#fff';
-                                        }
-                                        else {
-                                            return '#fff';
-                                        }
-                                    }
-                                }
-                                return '#fff';
-                            })
                             .attr('y', height - margin.bottom + margin.textTop)
                             .text(function (d) {
                                 return Math.round(d.value.t3h);
@@ -860,21 +858,11 @@ angular.module('starter', [
 
                         texts.enter()
                             .append('text')
-                            .attr('class', function (d) {
-                                return 'text-' + d.name;
-                            })
-                            .style("fill", function (d) {
-                                if (d.name == "today") {
-                                    if (d.value.time === currentTime && d.value.date === scope.currentWeather.date) {
-                                        if (sharp === true) {
-                                            return '#fff';
-                                        }
-                                        else {
-                                            return '#fff';
-                                        }
-                                    }
+                            .attr('class', function (d, i) {
+                                if (sharp === true && i === data[1].currentIndex + 1) {
+                                    return 'text-' + d.name + '-current';
                                 }
-                                return '#fff';
+                                return 'text-' + d.name;
                             })
                             .attr('dy', margin.top)
                             .attr('x', function (d, i) {
@@ -1019,25 +1007,25 @@ angular.module('starter', [
                             .scale(y)
                             .orient('left');
 
-                        // var currentRect = svg.selectAll('.current-rect').data(data);
-                        //
-                        // currentRect.enter().append('rect')
-                        //     .attr('class', 'current-rect')
-                        //     .attr('x', function (d) {
-                        //         for (var i = 0; i < d.values.length; i++) {
-                        //             if (d.values[i].fromToday === 0) {
-                        //                 return x.rangeBand() * i;
-                        //             }
-                        //         }
-                        //         return 0;
-                        //     })
-                        //     .attr('y', function () {
-                        //         return 0;
-                        //     })
-                        //     .attr('width', x.rangeBand() - 0.5)
-                        //     .attr('height', height);
-                        //
-                        // currentRect.exit().remove();
+                        var currentRect = svg.selectAll('.current-rect').data(data);
+
+                        currentRect.enter().append('rect')
+                            .attr('class', 'current-rect')
+                            .attr('x', function (d) {
+                                for (var i = 0; i < d.values.length; i++) {
+                                    if (d.values[i].fromToday === 0) {
+                                        return x.rangeBand() * i;
+                                    }
+                                }
+                                return 0;
+                            })
+                            .attr('y', function () {
+                                return 0;
+                            })
+                            .attr('width', x.rangeBand() - 0.5)
+                            .attr('height', height);
+
+                        currentRect.exit().remove();
 
                         // draw bar
                         var group = svg.selectAll('.bar-group')
@@ -1310,7 +1298,7 @@ angular.module('starter', [
                             .attr('cy', function (d) {
                                 return y(d.temp);
                             })
-                            .attr('r', 3);
+                            .attr('r', 5);
                     };
 
                     scope.$watch('dayWidth', function(newValue) {
@@ -1613,9 +1601,7 @@ angular.module('starter', [
             return {
                 restrict: 'A',
                 link: function($scope, $element, $attr) {
-                    if ($scope.$root.settingsInfo.theme === 'photo') {
-                        $element.addClass('photo');
-                    }
+                    $element.addClass($scope.$root.settingsInfo.theme);
                 }
             }
         });
