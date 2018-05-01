@@ -11,7 +11,7 @@ const kmaTimeLib = require('../lib/kmaTimeLib');
 const config = require('../config/config');
 
 const ModelimgCase4DustImageController = require('./kaq.modelimg.case.controller.js');
-const ModelimgDustImageController = require('./kaq.modeimg.controller');
+const ModelimgDustImageController = require('./kaq.modelimg.controller');
 const ModelHourlyForecast = require('../models/kaq.hourly.forecast.model');
 const ModelMapCase = require('../models/kaq.map.case.model');
 
