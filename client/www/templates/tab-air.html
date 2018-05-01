@@ -1,6 +1,6 @@
 <ion-view>
     <ion-nav-buttons side="left">
-        <button menu-toggle="left" class="button button-icon button-positive icon ion-navicon"></button>
+        <button menu-toggle="left" class="button button-icon icon ion-navicon"></button>
     </ion-nav-buttons>
     <ion-nav-title>
         <p class="title air-header">
@@ -11,21 +11,21 @@
         </p>
     </ion-nav-title>
     <ion-nav-buttons side="right">
-        <button class="button button-icon button-positive icon"
+        <button class="button button-icon icon"
                 ng-class="hasPush?'ion-ios-bell':'ion-ios-bell-outline'"
                 ng-if="!isAndroid()"
                 ng-click="goPushPage()"
                 style="padding: 0 4px"></button>
-        <button class="button button-icon button-positive icon"
+        <button class="button button-icon icon"
                 ng-class="hasPush?'ion-android-notifications':'ion-android-notifications-none'"
                 ng-if="isAndroid()"
                 ng-click="goPushPage()"
                 style="padding: 0 4px"></button>
-        <button class="button button-icon button-positive icon ion-ios-upload-outline"
+        <button class="button button-icon icon ion-ios-upload-outline"
                 ng-if="!isAndroid()"
                 ng-click="doTabShare()"
                 style="padding: 0 4px;margin-right: 4px"></button>
-        <button class="button button-icon button-positive icon ion-android-share-alt"
+        <button class="button button-icon icon ion-android-share-alt"
                 ng-if="isAndroid()"
                 ng-click="doTabShare()"
                 style="padding: 0 4px;margin-right: 4px"></button>
