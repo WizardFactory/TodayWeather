@@ -6,7 +6,7 @@
 const getPixels = require('get-pixels');
 //const fs = require('fs');
 const kaqDustImage = require('../config/config').image.kaq_korea_image;
-const kaqModelimg = require('../config/config').image.kaq_korea_modelimg;
+const kaqModelimg = require('../config/config').image.kaq_korea_modelimg_image;
 
 
 

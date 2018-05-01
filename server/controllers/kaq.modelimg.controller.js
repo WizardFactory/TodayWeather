@@ -55,7 +55,7 @@ class KaqDustImageController{
             return callback(new Error('Need to init KaqModelimgController'));
         }
 
-        this.parser.getPixelMap(path, 'modeling', format, this.coordinate, (err, pixelMap)=>{
+        this.parser.getPixelMap(path, 'modelimg', format, this.coordinate, (err, pixelMap)=>{
             if(err){
                 return callback(err);
             }
@@ -126,7 +126,7 @@ class KaqDustImageController{
         //log.info('Gap H:', parseInt(ModelingImageInfo.size.gap_height));
         //log.info('step Y: ', parseInt((rotated_x / ModelingImageInfo.size.gradient_step_height)));
 
-        let x = rotated_x - (parseInt(ModelimgInfo.size.gap_width) - parseInt((rotated_y / ModelingImageInfo.size.gradient_step_width)));
+        let x = rotated_x - (parseInt(ModelimgInfo.size.gap_width) - parseInt((rotated_y / ModelimgInfo.size.gradient_step_width)));
         let y = rotated_y - (parseInt((rotated_x / ModelimgInfo.size.gradient_step_height)));
         x = x + parseInt(ModelimgInfo.pixel_pos.left);
         y = y + parseInt(ModelimgInfo.pixel_pos.top);

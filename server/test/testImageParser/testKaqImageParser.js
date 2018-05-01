@@ -21,7 +21,7 @@ var town = require('../../models/town');
 describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
     it('get pm10 map pixels', function(done){
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modelimg_case4_PM2_5_Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_case4_PM2_5.09KM.Animation.gif';
         var imageData = {
             width: parseInt(kaqImage.size.width),
             height: parseInt(kaqImage.size.height),
@@ -55,17 +55,17 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
 
     it('dust image', function(done){
         var controller = new (require('../../controllers/kaq.dust.image.controller'))();
-        var image_pm10_url = './test/testImageParser/kma_modelimg_case4_PM10_Animation.gif';
-        var image_pm25_url = './test/testImageParser/kma_modelimg_case4_PM2_5_Animation.gif';
+        var image_pm10_url = './test/testImageParser/kma_modelimg_case4_PM10.09KM.Animation.gif';
+        var image_pm25_url = './test/testImageParser/kma_modelimg_case4_PM2_5.09KM.Animation.gif';
         //var geocode = {lat: 35.8927778, lon : 129.4949194};
         //var geocode = {lat : 35.1569750, lon : 126.8533639}; // 광주광역시
         //var geocode = {lat : 37.7491361, lon : 128.8784972};    //강릉시
         //var geocode = {lat : 35.8685417, lon : 128.6035528}; // 대구광역시
         var geocode = {lat : 37.5635694, lon : 126.9800083}; // 서울특별시
 
-        var expectedColorValue_pm10 = [100,112,116,60,36,64,68,56,52,24,24,40,36,40,48,32,36,36,36,36,32,48,68,56,48,40,32,28,28,28,24,24,24,28,36,40,44,36,40,36,36,36,32,32,28,16,8,12,8,12,40,8,40,40,40,36,40,36,28,32,32,28,12,4,4,4,4,8,12,16,20,20,20,20,16,16,20,20,16,16,16,16,16,16,16,16,20,24,24,24,24,28,32,36,48,44,32,28,24,24,24,20,20,20,20,28,40,40,32,32,32,32,36,36,36,32,32,40,52,56,56,null,36,36,32,28,24,20,28,32,36,16,12,12,12,12,12];
+        var expectedColorValue_pm10 = [96,104,96,76,76,76,96,100,112,96,84,84,76,88,84,68,76,80,104,104,108,120,150,150,150,108,88,76,72,64,60,56,52,52,56,52,64,68,68,76,76,76,68,80,80,92,100,72,null,60,40,52,52,36,44,16,12,4,4,4,4,4,4,4,4,4,4,4,8,12,24,16,16,16,12,8,8,8,8,8,12,12,20,24,32,28,24,24,28,32,36,36,40,48,44,44,36,28,20,20,24,24,28,32,40,48,60,88,92,76,76,88,104,116,112,116,108,150,96,76,52,36,32,28,28,28,28,28,28,28,28,32,32,32,32,32,32];
 
-        var expectedColorValue_pm25 = [42,44,32,18,18,12,12,18,16,12,16,16,10,12,12,16,10,18,18,18,18,20,22,22,18,18,16,12,12,10,10,10,10,12,18,20,20,20,18,18,18,18,18,18,16,8,8,8,8,8,10,10,10,16,18,18,18,16,12,16,18,16,8,2,2,2,2,2,4,4,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,10,10,12,12,12,12,12,16,16,18,18,16,12,12,12,12,10,8,8,10,12,16,16,16,16,16,16,18,18,18,16,18,20,28,26,26,20,20,18,18,16,10,10,10,12,12,8,8,8,8,6,6];
+        var expectedColorValue_pm25 = [60,60,60,42,48,40,60,44,60,48,46,50,50,32,38,44,48,26,60,60,60,60,60,60,60,60,60,60,60,46,42,40,42,40,44,42,50,60,60,60,60,60,60,60,60,60,60,50,null,24,16,40,42,30,32,10,16,4,4,4,2,2,2,2,2,4,4,4,4,6,8,8,8,8,6,6,4,4,4,6,8,10,14,18,22,22,22,22,24,26,28,30,32,34,32,32,28,20,16,14,16,18,20,24,30,38,60,60,60,60,60,60,60,60,60,60,60,60,60,60,38,26,24,22,22,22,22,22,24,22,22,24,24,22,20,20,22];
 
         var controllerManager = require('../../controllers/controllerManager');
         global.manager = new controllerManager();
@@ -132,26 +132,10 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
             84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40,
             36, 32, 28, 24, 20, 16, 12, 8, 4, 0];
 
-        var expectedRes_pm10 = [
-            {"r":254,"g":2,"b":0,"val":999},{"r":253,"g":19,"b":3,"val":120},
-            {"r":254,"g":52,"b":1,"val":116},{"r":254,"g":71,"b":1,"val":112},
-            {"r":251,"g":86,"b":4,"val":108},{"r":254,"g":123,"b":1,"val":104},
-            {"r":253,"g":155,"b":2,"val":100},{"r":253,"g":155,"b":2,"val":96},
-            {"r":254,"g":196,"b":1,"val":92},{"r":253,"g":213,"b":2,"val":88},
-            {"r":254,"g":227,"b":1,"val":84},{"r":241,"g":251,"b":18,"val":80},
-            {"r":241,"g":251,"b":18,"val":76},{"r":216,"g":254,"b":43,"val":72},
-            {"r":179,"g":255,"b":79,"val":68},{"r":163,"g":255,"b":95,"val":64},
-            {"r":143,"g":255,"b":115,"val":60},{"r":127,"g":254,"b":131,"val":56},
-            {"r":91,"g":255,"b":167,"val":52},{"r":75,"g":255,"b":183,"val":48},
-            {"r":55,"g":255,"b":203,"val":44},{"r":23,"g":255,"b":236,"val":40},
-            {"r":4,"g":254,"b":255,"val":36},{"r":1,"g":243,"b":255,"val":32},
-            {"r":0,"g":207,"b":255,"val":28},{"r":0,"g":191,"b":255,"val":24},
-            {"r":0,"g":171,"b":255,"val":20},{"r":0,"g":135,"b":255,"val":16},
-            {"r":0,"g":118,"b":255,"val":12},{"r":0,"g":103,"b":255,"val":8},
-            {"r":1,"g":69,"b":253,"val":4},{"r":0,"g":48,"b":255,"val":0}];
+        var expectedRes_pm10 = [{"r":255,"g":11,"b":1,"val":999},{"r":253,"g":42,"b":7,"val":120},{"r":255,"g":51,"b":0,"val":116},{"r":255,"g":70,"b":0,"val":112},{"r":254,"g":87,"b":1,"val":108},{"r":254,"g":122,"b":1,"val":104},{"r":254,"g":138,"b":1,"val":100},{"r":252,"g":166,"b":4,"val":96},{"r":255,"g":195,"b":1,"val":92},{"r":255,"g":211,"b":1,"val":88},{"r":255,"g":227,"b":1,"val":84},{"r":251,"g":255,"b":6,"val":80},{"r":231,"g":255,"b":27,"val":76},{"r":215,"g":255,"b":43,"val":72},{"r":179,"g":255,"b":79,"val":68},{"r":163,"g":255,"b":95,"val":64},{"r":143,"g":255,"b":115,"val":60},{"r":122,"g":244,"b":125,"val":56},{"r":91,"g":255,"b":167,"val":52},{"r":75,"g":255,"b":183,"val":48},{"r":55,"g":255,"b":203,"val":44},{"r":23,"g":255,"b":236,"val":40},{"r":3,"g":255,"b":255,"val":36},{"r":1,"g":243,"b":255,"val":32},{"r":1,"g":207,"b":255,"val":28},{"r":1,"g":191,"b":255,"val":24},{"r":1,"g":171,"b":255,"val":20},{"r":0,"g":135,"b":255,"val":16},{"r":0,"g":119,"b":255,"val":12},{"r":0,"g":103,"b":255,"val":8},{"r":0,"g":67,"b":255,"val":4},{"r":0,"g":48,"b":255,"val":0}];
 
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modelimg_case4_PM10_Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_case4_PM10.09KM.Animation.gif';
 
         parser.getPixelMap(image_url, 'CASE4', 'image/gif', null, function(err, pixels){
             if(err){
@@ -195,26 +179,10 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
             36, 32, 28, 24, 20, 16, 12, 8, 4, 0];
 
 
-        var expectedRes_pm25 =[
-            {"r":255,"g":2,"b":0,"val":999},{"r":254,"g":19,"b":2,"val":120},
-            {"r":254,"g":19,"b":2,"val":116},{"r":254,"g":71,"b":1,"val":112},
-            {"r":254,"g":87,"b":2,"val":108},{"r":250,"g":112,"b":7,"val":104},
-            {"r":254,"g":139,"b":1,"val":100},{"r":255,"g":158,"b":0,"val":96},
-            {"r":255,"g":158,"b":0,"val":92},{"r":254,"g":213,"b":2,"val":88},
-            {"r":255,"g":227,"b":1,"val":84},{"r":255,"g":227,"b":1,"val":80},
-            {"r":231,"g":255,"b":27,"val":76},{"r":215,"g":255,"b":43,"val":72},
-            {"r":218,"g":255,"b":44,"val":68},{"r":163,"g":255,"b":95,"val":64},
-            {"r":143,"g":255,"b":115,"val":60},{"r":106,"g":252,"b":155,"val":56},
-            {"r":91,"g":255,"b":167,"val":52},{"r":75,"g":255,"b":183,"val":48},
-            {"r":23,"g":255,"b":236,"val":44},{"r":23,"g":255,"b":236,"val":40},
-            {"r":3,"g":255,"b":255,"val":36},{"r":0,"g":207,"b":255,"val":32},
-            {"r":0,"g":207,"b":255,"val":28},{"r":0,"g":191,"b":255,"val":24},
-            {"r":0,"g":135,"b":255,"val":20},{"r":1,"g":137,"b":255,"val":16},
-            {"r":0,"g":119,"b":255,"val":12},{"r":0,"g":67,"b":255,"val":8},
-            {"r":0,"g":50,"b":253,"val":4},{"r":0,"g":50,"b":253,"val":0}];
+        var expectedRes_pm25 =[{"r":255,"g":0,"b":0,"val":999},{"r":255,"g":20,"b":1,"val":120},{"r":255,"g":51,"b":2,"val":116},{"r":255,"g":87,"b":1,"val":112},{"r":255,"g":123,"b":1,"val":108},{"r":255,"g":123,"b":1,"val":104},{"r":255,"g":139,"b":1,"val":100},{"r":255,"g":159,"b":0,"val":96},{"r":255,"g":195,"b":1,"val":92},{"r":255,"g":195,"b":1,"val":88},{"r":253,"g":232,"b":10,"val":84},{"r":251,"g":255,"b":6,"val":80},{"r":231,"g":255,"b":27,"val":76},{"r":215,"g":255,"b":43,"val":72},{"r":179,"g":255,"b":79,"val":68},{"r":175,"g":254,"b":105,"val":64},{"r":169,"g":255,"b":101,"val":60},{"r":127,"g":255,"b":131,"val":56},{"r":91,"g":255,"b":167,"val":52},{"r":76,"g":254,"b":185,"val":48},{"r":55,"g":255,"b":203,"val":44},{"r":23,"g":255,"b":236,"val":40},{"r":1,"g":243,"b":255,"val":36},{"r":11,"g":244,"b":251,"val":32},{"r":0,"g":207,"b":255,"val":28},{"r":1,"g":191,"b":255,"val":24},{"r":1,"g":171,"b":255,"val":20},{"r":2,"g":137,"b":255,"val":16},{"r":3,"g":105,"b":254,"val":12},{"r":3,"g":105,"b":254,"val":8},{"r":1,"g":68,"b":255,"val":4},{"r":1,"g":49,"b":255,"val":0}];
 
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modelimg_case4_PM2_5_Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_case4_PM2_5.09KM.Animation.gif';
 
         parser.getPixelMap(image_url, 'CASE4', 'image/gif', null, function(err, pixels){
             if(err){
@@ -245,8 +213,8 @@ describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
 
     it('invalid area', function(done){
         var controller = new (require('../../controllers/kaq.dust.image.controller'))();
-        var image_pm10_url = './test/testImageParser/kma_modelimg_case4_PM10_Animation.gif';
-        var image_pm25_url = './test/testImageParser/kma_modelimg_case4_PM2_5_Animation.gif';
+        var image_pm10_url = './test/testImageParser/kma_modelimg_case4_PM10.09KM.Animation.gif';
+        var image_pm25_url = './test/testImageParser/kma_modelimg_case4_PM2_5.09KM.Animation.gif';
         var geocode = {lat: 37.5081798, lon : 130.8217127};
 
         var controllerManager = require('../../controllers/controllerManager');
@@ -493,9 +461,9 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
             {"r":4,"g":71,"b":251,"val":4},{"r":1,"g":53,"b":251,"val":0}];
 
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modeling_pm10_Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_pm10_Animation.gif';
 
-        parser.getPixelMap(image_url, 'modeling', 'image/gif', null, function(err, pixels){
+        parser.getPixelMap(image_url, 'modelimg', 'image/gif', null, function(err, pixels){
             if(err){
                 log.error('Error !! : ', err);
                 assert.fail();
@@ -547,9 +515,9 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
             {"r":0,"g":83,"b":255,"val":4},{"r":0,"g":46,"b":255,"val":0}];
 
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modeling_pm25_Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_pm25_Animation.gif';
 
-        parser.getPixelMap(image_url, 'modeling', 'image/gif', null, function(err, pixels){
+        parser.getPixelMap(image_url, 'modelimg', 'image/gif', null, function(err, pixels){
             if(err){
                 log.error('Error !! : ', err);
                 assert.fail();
@@ -582,9 +550,9 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
         var dustValue_pm25 = [0.12, 0.1, 0.0965, 0.0932, 0.0899, 0.0866, 0.0833, 0.08, 0.0765, 0.0732, 0.0699, 0.0666, 0.0633, 0.06, 0.0565, 0.0532, 0.0499, 0.0466, 0.0433, 0.04, 0.0365, 0.0332, 0.0299, 0.0266, 0.0233, 0.020, 0.0165, 0.0132, 0.0099, 0.0066, 0.0033,0];
         var expectedRes_pm25 =[{"r":255,"g":11,"b":1,"val":0.12},{"r":255,"g":20,"b":2,"val":0.1},{"r":255,"g":51,"b":1,"val":0.0965},{"r":255,"g":51,"b":1,"val":0.0932},{"r":255,"g":87,"b":1,"val":0.0899},{"r":255,"g":122,"b":1,"val":0.0866},{"r":255,"g":139,"b":1,"val":0.0833},{"r":253,"g":169,"b":7,"val":0.08},{"r":254,"g":197,"b":2,"val":0.0765},{"r":255,"g":211,"b":1,"val":0.0732},{"r":255,"g":227,"b":1,"val":0.0699},{"r":250,"g":254,"b":8,"val":0.0666},{"r":232,"g":255,"b":27,"val":0.0633},{"r":216,"g":255,"b":43,"val":0.06},{"r":181,"g":255,"b":78,"val":0.0565},{"r":142,"g":255,"b":116,"val":0.0532},{"r":142,"g":255,"b":116,"val":0.0499},{"r":127,"g":255,"b":132,"val":0.0466},{"r":91,"g":255,"b":168,"val":0.0433},{"r":75,"g":255,"b":184,"val":0.04},{"r":56,"g":255,"b":203,"val":0.0365},{"r":24,"g":255,"b":236,"val":0.0332},{"r":3,"g":254,"b":255,"val":0.0299},{"r":2,"g":243,"b":255,"val":0.0266},{"r":1,"g":206,"b":255,"val":0.0233},{"r":1,"g":191,"b":255,"val":0.02},{"r":1,"g":171,"b":255,"val":0.0165},{"r":0,"g":135,"b":255,"val":0.0132},{"r":0,"g":119,"b":255,"val":0.0099},{"r":0,"g":103,"b":255,"val":0.0066},{"r":0,"g":67,"b":255,"val":0.0033},{"r":0,"g":46,"b":255,"val":0}];
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modeling_NO2.09KM.Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_NO2.09KM.Animation.gif';
 
-        parser.getPixelMap(image_url, 'modeling', 'image/gif', null, function(err, pixels){
+        parser.getPixelMap(image_url, 'modelimg', 'image/gif', null, function(err, pixels){
             if(err){
                 log.error('Error !! : ', err);
                 assert.fail();
@@ -617,9 +585,9 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
         var dustValue_pm25 = [0.2, 0.18, 0.174, 0.168, 0.162, 0.156, 0.15, 0.144, 0.138, 0.132, 0.126, 0.12, 0.114, 0.108, 0.102, 0.096, 0.09, 0.084, 0.078, 0.072, 0.066, 0.06, 0.054, 0.048, 0.042, 0.036, 0.03, 0.024, 0.018, 0.012, 0.006, 0];
         var expectedRes_pm25 = [{"r":255,"g":11,"b":3,"val":0.2},{"r":255,"g":11,"b":3,"val":0.18},{"r":255,"g":52,"b":1,"val":0.174},{"r":255,"g":72,"b":1,"val":0.168},{"r":255,"g":87,"b":1,"val":0.162},{"r":255,"g":123,"b":1,"val":0.156},{"r":255,"g":139,"b":1,"val":0.15},{"r":255,"g":153,"b":1,"val":0.144},{"r":255,"g":200,"b":2,"val":0.138},{"r":253,"g":214,"b":3,"val":0.132},{"r":253,"g":214,"b":3,"val":0.126},{"r":242,"g":242,"b":17,"val":0.12},{"r":242,"g":242,"b":17,"val":0.114},{"r":215,"g":255,"b":44,"val":0.108},{"r":181,"g":255,"b":78,"val":0.102},{"r":168,"g":255,"b":90,"val":0.096},{"r":145,"g":255,"b":113,"val":0.09},{"r":125,"g":255,"b":133,"val":0.084},{"r":91,"g":255,"b":167,"val":0.078},{"r":75,"g":255,"b":183,"val":0.072},{"r":55,"g":255,"b":203,"val":0.066},{"r":23,"g":255,"b":236,"val":0.06},{"r":3,"g":255,"b":255,"val":0.054},{"r":1,"g":243,"b":255,"val":0.048},{"r":1,"g":207,"b":255,"val":0.042},{"r":1,"g":191,"b":255,"val":0.036},{"r":1,"g":171,"b":255,"val":0.03},{"r":0,"g":135,"b":255,"val":0.024},{"r":0,"g":119,"b":255,"val":0.018},{"r":0,"g":103,"b":255,"val":0.012},{"r":0,"g":67,"b":255,"val":0.006},{"r":0,"g":46,"b":255,"val":0}];
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modeling_O3.09KM.Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_O3.09KM.Animation.gif';
 
-        parser.getPixelMap(image_url, 'modeling', 'image/gif', null, function(err, pixels){
+        parser.getPixelMap(image_url, 'modelimg', 'image/gif', null, function(err, pixels){
             if(err){
                 log.error('Error !! : ', err);
                 assert.fail();
@@ -652,9 +620,9 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
         var dustValue_pm25 = [0.0160, 0.0150, 0.0145, 0.0140, 0.0135, 0.0130, 0.0125, 0.0120, 0.0115, 0.0110, 0.0105, 0.0100, 0.0095, 0.0090, 0.0085, 0.0080, 0.0075, 0.0070, 0.0065, 0.0060, 0.0055, 0.0050, 0.0045, 0.0040, 0.0035, 0.0030, 0.0025, 0.0020, 0.0015, 0.0010, 0.0005, 0];
         var expectedRes_pm25 = [{"r":255,"g":255,"b":255,"val":0.016},{"r":255,"g":255,"b":255,"val":0.015},{"r":255,"g":255,"b":255,"val":0.0145},{"r":255,"g":255,"b":255,"val":0.014},{"r":255,"g":255,"b":255,"val":0.0135},{"r":255,"g":255,"b":255,"val":0.013},{"r":255,"g":255,"b":255,"val":0.0125},{"r":255,"g":255,"b":255,"val":0.012},{"r":255,"g":255,"b":255,"val":0.0115},{"r":255,"g":255,"b":255,"val":0.011},{"r":255,"g":255,"b":255,"val":0.0105},{"r":255,"g":255,"b":255,"val":0.01},{"r":255,"g":255,"b":255,"val":0.0095},{"r":255,"g":255,"b":255,"val":0.009},{"r":255,"g":255,"b":255,"val":0.0085},{"r":255,"g":255,"b":255,"val":0.008},{"r":255,"g":255,"b":255,"val":0.0075},{"r":255,"g":255,"b":255,"val":0.007},{"r":255,"g":255,"b":255,"val":0.0065},{"r":255,"g":255,"b":255,"val":0.006},{"r":255,"g":255,"b":255,"val":0.0055},{"r":255,"g":255,"b":255,"val":0.005},{"r":255,"g":255,"b":255,"val":0.0045},{"r":255,"g":255,"b":255,"val":0.004},{"r":255,"g":255,"b":255,"val":0.0035},{"r":255,"g":255,"b":255,"val":0.003},{"r":255,"g":255,"b":255,"val":0.0025},{"r":255,"g":255,"b":255,"val":0.002},{"r":255,"g":255,"b":255,"val":0.0015},{"r":255,"g":255,"b":255,"val":0.001},{"r":255,"g":255,"b":255,"val":0.0005},{"r":255,"g":255,"b":255,"val":0},{"r":255,"g":255,"b":255}];
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
-        var image_url = './test/testImageParser/kma_modeling_SO2.09KM.Animation.gif';
+        var image_url = './test/testImageParser/kma_modelimg_SO2.09KM.Animation.gif';
 
-        parser.getPixelMap(image_url, 'modeling', 'image/gif', null, function(err, pixels){
+        parser.getPixelMap(image_url, 'modelimg', 'image/gif', null, function(err, pixels){
             if(err){
                 log.error('Error !! : ', err);
                 assert.fail();
@@ -683,8 +651,8 @@ describe('Test - NO2, O3, SO2 modelimg  parser ', function(){
 
     it('invalid area', function(done){
         var controller = new (require('../../controllers/kaq.modelimg.controller.js'))();
-        var image_pm10_url = './test/testImageParser/kma_modeling_pm10_Animation.gif';
-        var image_pm25_url = './test/testImageParser/kma_modeling_pm25_Animation.gif';
+        var image_pm10_url = './test/testImageParser/kma_modelimg_pm10_Animation.gif';
+        var image_pm25_url = './test/testImageParser/kma_modelimg_pm25_Animation.gif';
         var geocode = {lat: 37.5081798, lon : 130.8217127};
 
         var controllerManager = require('../../controllers/controllerManager');
