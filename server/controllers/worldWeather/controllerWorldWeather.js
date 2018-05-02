@@ -409,7 +409,7 @@ function controllerWorldWeather() {
             return false;
         }
 
-        if (currentDate.getTime()-MS_15MINS < targetDate.getTime()) {
+        if (currentDate.getTime()-MS_15MINS <= targetDate.getTime()) {
             return true;
         }
         return false;
