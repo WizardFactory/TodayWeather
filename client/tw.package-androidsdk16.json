@@ -1,7 +1,7 @@
 {
-  "name": "TodayAir",
-  "version": "0.1.2",
-  "description": "Today air quality information",
+  "name": "TodayWeather",
+  "version": "0.9.95",
+  "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
     "url": "git://github.com/WizardFactory/TodayWeather.git"
@@ -50,9 +50,9 @@
       "id": "ionic-plugin-deeplinks",
       "locator": "ionic-plugin-deeplinks",
       "variables": {
-        "URL_SCHEME": "todayair",
+        "URL_SCHEME": "todayweather",
         "DEEPLINK_SCHEME": "http",
-        "DEEPLINK_HOST": "net.wizardfactory.todayair",
+        "DEEPLINK_HOST": "net.wizardfactory.todayweather",
         "ANDROID_PATH_PREFIX": "/"
       }
     },
@@ -63,8 +63,8 @@
       "id": "cordova-plugin-request-location-accuracy"
     },
     {
-      "locator": "https://github.com/WizardFactory/cordova-plugin-todayair-android-widget.git",
-      "id": "cordova-plugin-todayair-android-widget"
+      "locator": "https://github.com/WizardFactory/cordova-plugin-todayweather-android-widget.git",
+      "id": "cordova-plugin-todayweather-android-widget"
     },
     {
       "locator": "https://github.com/WizardFactory/cordova-plugin-todayweather-config.git",
@@ -77,7 +77,7 @@
     {
       "platform": "android",
       "version": "",
-      "locator": "android@6.3.0"
+      "locator": "android"
     },
     {
       "platform": "ios",
