@@ -6,7 +6,7 @@
 const getPixels = require('get-pixels');
 //const fs = require('fs');
 const kaqDustImage = require('../config/config').image.kaq_korea_image;
-const kaqModelingImage = require('../config/config').image.kaq_korea_modeling_image;
+const kaqModelimg = require('../config/config').image.kaq_korea_modelimg_image;
 
 
 
@@ -18,8 +18,10 @@ class KaqImageParser{
 
     getImagePos(type) {
         var pos = kaqDustImage.pixel_pos;
-        if(type === 'modeling'){
-            pos = kaqModelingImage.pixel_pos;
+        if(type === 'modelimg'){
+            pos = kaqModelimg.pixel_pos;
+        }else if(type === 'CASE4_SO2'){
+            pos = kaqDustImage.so2_pixel_pos;
         }
         return {
             left: parseInt(pos.left),
@@ -31,8 +33,8 @@ class KaqImageParser{
 
     getDefaultCoordi(type) {
         var coordi = kaqDustImage.coordi;
-        if(type === 'modeling'){
-            coordi = kaqModelingImage.coordi;
+        if(type === 'modelimg'){
+            coordi = kaqModelimg.coordi;
         }
 
         return {
@@ -62,9 +64,9 @@ class KaqImageParser{
             height: parseInt(kaqDustImage.size.height)
         };
 
-        if(type === 'modeling'){
-            size.width = parseInt(kaqModelingImage.size.width);
-            size.height = parseInt(kaqModelingImage.size.height);
+        if(type === 'modelimg'){
+            size.width = parseInt(kaqModelimg.size.width);
+            size.height = parseInt(kaqModelimg.size.height);
         }
 
         return (size.width === width && size.height === height);
