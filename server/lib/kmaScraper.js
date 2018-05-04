@@ -25,6 +25,9 @@ var Town = require('../models/town');
 var convertGeocode = require('../utils/convertGeocode');
 var Convert = require('../utils/coordinate2xy');
 
+var config = require('../config/config');
+var CtrlS3 = require('../s3/controller.s3');
+
 var dnscache = require('dnscache')({
     "enable" : true,
     "ttl" : 300,
@@ -1018,6 +1021,19 @@ KmaScraper.prototype._removeOldData = function (name, callback) {
     }
 };
 
+KmaScraper.prototype._uploadS3 = function(obj, callback) {
+    var ctrlS3 = new CtrlS3(config.s3.region, config.s3.bucketName);
+    var s3Path = obj.prefix;
+    var dataString = JSON.stringify(obj.data, null, 2);
+    ctrlS3.uploadData(dataString, s3Path)
+        .then(function (result) {
+           callback(null, result);
+        })
+        .catch(function (err) {
+            callback(err);
+        });
+};
+
 /**
  *
  * @param day
@@ -1084,7 +1100,21 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                 //   log.info(JSON.stringify(awsInfo)) ;
                 //});
                 cb(err, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
-            })},
+            });
+        },
+        function (weatherList, cb) {
+            var prefix = 'kma/aws/hourly/' + weatherList.pubDate + '-kmaAwsHourly.json';
+            self._uploadS3({prefix:prefix, data: weatherList}, function (err, result) {
+                if (err) {
+                    log.error(err);
+                }
+                else {
+                    log.debug(result);
+                }
+            });
+
+            cb(null, weatherList);
+        },
         //function (weatherList, cb) {
         //    log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
         //    self._saveKmaStnHourlyList(weatherList, function (err, results) {
@@ -1102,7 +1132,8 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                     return cb(err);
                 }
                 return cb(err, results);
-            });},
+            });
+        },
         function (results, cb) {
             self._removeOldData("Hourly");
             cb(null, results);
