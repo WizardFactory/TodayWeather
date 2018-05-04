@@ -49,8 +49,8 @@ class KaqDustImageController{
      */
     parseMapImage(imgType, path, format, callback){
         let type = 'CASE4';
-        if(imgType === 'NO2'){
-            type = 'CASE4_NO2';
+        if(imgType === 'SO2'){
+            type = 'CASE4_SO2';
         }
         if(this.parser === undefined){
             return callback(new Error('Need to init kaq.modelimg.case.controller'));
