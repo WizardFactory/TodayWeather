@@ -403,6 +403,10 @@ Keco.prototype.getMsrstnList = function(callback) {
 };
 
 Keco.prototype._uploadS3 = function(obj, callback) {
+    if (config.s3 == undefined || config.s3.bucketName == undefined || config.s3.bucketName.length === 0) {
+        return callback(new Error('undefined s3 information'));
+    }
+
     var ctrlS3 = new CtrlS3(config.s3.region, config.s3.bucketName);
     var s3Path = obj.prefix;
     var dataString = JSON.stringify(obj.data, null, 2);
