@@ -35,6 +35,34 @@ class ControllerS3 {
         return this.s3.getObject({Key: key}).promise();
     }
 
+    copy(key, source) {
+        return this.s3.copyObject({CopySource: source, Key: key}).promise();
+    }
+
+    uploadData(body, s3Path) {
+        let key = s3Path;
+        console.info({s3Path: s3Path});
+
+        let self = this;
+
+        return new Promise((resolve, reject) => {
+            self.s3.putObject({
+                    // Bucket: process.env.S3_BUCKET,
+                    Key: key,
+                    ContentType: "application/json",
+                    ACL: 'public-read',
+                    Body: body
+                },
+                (e, data) => {
+                    if (e) {
+                        return reject(e);
+                    }
+
+                    resolve(data);
+                });
+        });
+    }
+
     upload(url, s3Path) {
         let key = s3Path;
         console.info({url:url, s3Path: s3Path});
