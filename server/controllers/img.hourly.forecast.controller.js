@@ -96,10 +96,10 @@ class ImgHourlyForecastController {
             callback);
     }
 
-    _updateHourlyForecast(stnList, callback) {
+    _updateHourlyForecast(pollutants, stnList, callback) {
         log.info('update hourly forecast stnList:'+stnList.length);
 
-        async.mapSeries(['pm10', 'pm25'],
+        async.mapSeries(pollutants,
             (code, callback) => {
                 this._updateHourlyForecastEach(stnList, code, callback);
             },
