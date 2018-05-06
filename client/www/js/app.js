@@ -236,7 +236,7 @@ angular.module('starter', [
             headerbars.removeClass('bar-dailyforecast');
             headerbars.removeClass('bar-air');
             headerbars.removeClass('bar-clear');
-            headerbars.removeClass('bar-stable');
+            headerbars.removeClass('bar-dark');
             headerbars.removeClass('bar-blue');
 
             for (var i = 0; i < headerbars.length; i++) {
@@ -249,7 +249,7 @@ angular.module('starter', [
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-search');
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'tab.forecast') {
                 headerbars.addClass('bar-forecast');
                 if ($rootScope.settingsInfo.theme === 'photo') {
@@ -261,7 +261,7 @@ angular.module('starter', [
                     tabs.addClass('tabs-blue');
                 } else {
                     $rootScope.viewColor = '#f5f5f5';
-                    headerbars.addClass('bar-stable');
+                    headerbars.addClass('bar-dark');
                 }
             } else if (toState.name === 'tab.dailyforecast') {
                 headerbars.addClass('bar-dailyforecast');
@@ -274,22 +274,22 @@ angular.module('starter', [
                     tabs.addClass('tabs-blue');
                 } else {
                     $rootScope.viewColor = '#f5f5f5';
-                    headerbars.addClass('bar-stable');
+                    headerbars.addClass('bar-dark');
                 }
             } else if (toState.name === 'tab.air') {
                 $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-air');
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'tab.weather') {
                 $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-forecast');
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'start') {
                 $rootScope.viewColor = '#fefefe';
                 headerbars.addClass('bar-clear');
             } else {
                 $rootScope.viewColor = '#f5f5f5';
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             }
 
             Util.ga.trackView(toState.name);
