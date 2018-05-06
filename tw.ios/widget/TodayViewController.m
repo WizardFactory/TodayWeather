@@ -457,7 +457,7 @@ static TodayViewController *todayVC = nil;
     tmpDataWD = [nssWeatherList dataUsingEncoding:NSUTF8StringEncoding];
     if(tmpDataWD)
         jsonDictWD = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpDataWD options:0 error:&errorWD];
-    NSLog(@"User Default WD: %@", jsonDictWD);
+    //NSLog(@"User Default WD: %@", jsonDictWD);
     
     mWeatherDataList    = [NSMutableArray array];
     for (NSDictionary *weatherDict in jsonDictWD[@"weatherDataList"]) {
@@ -482,7 +482,7 @@ static TodayViewController *todayVC = nil;
         }
     }
     
-    NSLog(@"[loadWeatherData] mWeatherDataList : %@", mWeatherDataList);
+    //NSLog(@"[loadWeatherData] mWeatherDataList : %@", mWeatherDataList);
 }
 
 /********************************************************************
@@ -2190,7 +2190,7 @@ static TodayViewController *todayVC = nil;
     // idx가 count보다 높은 경우는 return함. mWeatherDataList가 null일때도 리턴함. 근본 원인을 밝혀야함
     NSMutableDictionary *nsdWeatherInfo    = [mWeatherDataList objectAtIndex:idx];
     NSMutableDictionary *nsdWeatherData    = [nsdWeatherInfo objectForKey:@"weatherData"];
-    NSLog(@"nsdWeatherData : %@", nsdWeatherData);
+    //NSLog(@"nsdWeatherData : %@", nsdWeatherData);
     if( (nsdWeatherData == nil) || ([nsdWeatherData isEqual:@""]) )
     {
         NSLog(@"nsdWeatherData is NULL!!!");
