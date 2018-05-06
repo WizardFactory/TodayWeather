@@ -18,6 +18,10 @@ var BILLING_KEY = process.env.BILLING_KEY || '111';
 var SENDER_ID = process.env.SENDER_ID || '111';
 var FABRIC_API_KEY = process.env.FABRIC_API_KEY || '111';
 var FABRIC_API_SECRET = process.env.FABRIC_API_SECRET || '111';
+var FACEBOOK_TW_APP_ID = process.env.FACEBOOK_TW_APP_ID || '111';
+var FACEBOOK_TW_APP_NAME = process.env.FACEBOOK_TW_APP_NAME || '111';
+var FACEBOOK_TA_APP_ID = process.env.FACEBOOK_TA_APP_ID || '111';
+var FACEBOOK_TA_APP_NAME = process.env.FACEBOOK_TA_APP_NAME || '111';
 
 var paths = {
   sass: ['./scss/**/*.scss']
@@ -104,6 +108,7 @@ gulp.task('release-tw-android-min20-nonpaid', shell.task([
   'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="'+SENDER_ID+'"',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
   'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
+  'cordova plugin add https://github.com/WizardFactory/cordova-plugin-facebook4 --variable APP_ID="'+FACEBOOK_TW_APP_ID+'" --variable APP_NAME="'+FACEBOOK_TW_APP_NAME+'"',
   'yarn install',
   'bower install',
   'gulp sass',
@@ -114,7 +119,7 @@ gulp.task('release-tw-android-min20-nonpaid', shell.task([
 ]));
 
 gulp.task('release-tw-android-min16-nonpaid', shell.task([
-  'cp tw.package.json package.json',
+  'cp tw.package-androidsdk16.json package.json',
   'cp tw.config.xml config.xml',
   'cp ../tw.ads.client.config.js www/client.config.js',
   'rm -rf resources;cp -a tw.resources resources',
@@ -148,6 +153,7 @@ gulp.task('release-tw-ios-nonpaid', shell.task([
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="'+SENDER_ID+'"',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
+  'cordova plugin add https://github.com/WizardFactory/cordova-plugin-facebook4 --variable APP_ID="'+FACEBOOK_TW_APP_ID+'" --variable APP_NAME="'+FACEBOOK_TW_APP_NAME+'"',
   'cordova plugin add cordova-plugin-inapppurchase',
   'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'yarn install',
@@ -204,6 +210,7 @@ gulp.task('release-ta-android-nonpaid', shell.task([
   'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="'+SENDER_ID+'"',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
   'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
+  'cordova plugin add https://github.com/WizardFactory/cordova-plugin-facebook4 --variable APP_ID="'+FACEBOOK_TA_APP_ID+'" --variable APP_NAME="'+FACEBOOK_TA_APP_NAME+'"',
   'yarn install',
   'bower install',
   'gulp sass',
@@ -226,6 +233,7 @@ gulp.task('release-ta-ios-nonpaid', shell.task([
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="'+SENDER_ID+'"',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
+  'cordova plugin add https://github.com/WizardFactory/cordova-plugin-facebook4 --variable APP_ID="'+FACEBOOK_TA_APP_ID+'" --variable APP_NAME="'+FACEBOOK_TA_APP_NAME+'"',
   'cordova plugin add cordova-plugin-inapppurchase',
   'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'yarn install',

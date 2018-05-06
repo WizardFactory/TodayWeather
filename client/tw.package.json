@@ -77,7 +77,7 @@
     {
       "platform": "android",
       "version": "",
-      "locator": "android"
+      "locator": "android@6.3.0"
     },
     {
       "platform": "ios",

@@ -997,7 +997,7 @@ function ControllerTown() {
                 }
             }
             else if (weather.indexOf("뇌우끝,비") >= 0) {
-                weatherPty =  2;
+                weatherPty =  1;
             }
             else if (weather.indexOf("뇌우끝,눈") >= 0) {
                 weatherPty =  3;

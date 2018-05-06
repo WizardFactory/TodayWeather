@@ -10,8 +10,8 @@ const reqeust = require('request');
 const kmaTimeLib = require('../lib/kmaTimeLib');
 const config = require('../config/config');
 
-const ModelimgCase4DustImageController = require('./kaq.dust.image.controller');
-const ModelimgDustImageController = require('./kaq.modeling.image.controller');
+const ModelimgCase4DustImageController = require('./kaq.modelimg.case.controller.js');
+const ModelimgDustImageController = require('./kaq.modelimg.controller');
 const ModelHourlyForecast = require('../models/kaq.hourly.forecast.model');
 const ModelMapCase = require('../models/kaq.map.case.model');
 
@@ -27,6 +27,10 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
         this.bucketName = config.image.kaq_korea_image.bucketName;
         this.s3 = new S3(this.region, this.bucketName);
         this.s3Url = 'https://s3.'+this.region+'.amazonaws.com/'+this.bucketName+'/';
+
+        //this.modelList = ['modelimg', 'modelimg_CASE2', 'modelimg_CASE4', 'modelimg_CASE5'];
+        this.modelList = ['modelimg_CASE4', 'modelimg'];
+        this.pollutants = ['pm10', 'pm25', 'o3', 'no2', 'so2'];
     }
 
     _updateDustInfo(stn, code, callback) {
@@ -57,7 +61,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
             ],
             (err)=>{
                 if(err) {
-                    log.warn('Invalid geocode for dust forecast:', stn.geo[1], stn.geo[0]);
+                    log.warn(err.message);
                 }
                 callback();
             });
@@ -84,11 +88,9 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                 });
 
                 let folderName = folderList[folderList.length-1];
-                // let modelList = ['modelimg', 'modelimg_CASE2', 'modelimg_CASE4', 'modelimg_CASE5'];
-                let modelList = ['modelimg', 'modelimg_CASE4'];
-                modelList.forEach(mapCase => {
+                this.modelList.forEach(mapCase => {
                     let imgPaths = {};
-                    ['pm10', 'pm25'].forEach(value => {
+                    this.pollutants.forEach(value => {
                         let name = value.toUpperCase();
                         name = name === 'PM25'?'PM2_5':name;
                         imgPaths[value] = this.s3Url+folderName+mapCase+'.'+name+'.09KM.animation.gif';
@@ -208,7 +210,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                     this._getMsrStn(callback);
                 },
                 (stnList, callback) => {
-                    this._updateHourlyForecast(stnList, callback);
+                    this._updateHourlyForecast(this.pollutants, stnList, callback);
                 }
             ],
             (err, result)=> {
@@ -227,7 +229,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
      * @private
      */
     _updateModelImgList(modelImgList, callback) {
-        log.info(`modelImgList:${modelImgList}`);
+        log.info(`modelImgList:${JSON.stringify(modelImgList)}`);
         async.mapSeries(modelImgList,
             (modelImg, callback)=> {
                 this.mapCase = modelImg.mapCase;

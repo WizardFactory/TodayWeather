@@ -377,8 +377,9 @@ angular.module('controller.tabctrl', [])
                         strHighest: translations.LOC_HIGHEST,
                         strLowest: translations.LOC_LOWEST});
                 }
-                else if (clientConfig.package === 'todayWeather') {
-                    message += _makeMessageForTodayAir({currentWeather: currentWeather,
+                else if (clientConfig.package === 'todayAir') {
+                    message += _makeMessageForTodayAir({
+                        currentWeather: currentWeather,
                         strCurrent: translations.LOC_CURRENT,
                         strWeather: translations.LOC_WEATHER});
                 }
