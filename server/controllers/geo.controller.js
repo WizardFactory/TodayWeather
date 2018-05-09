@@ -72,7 +72,7 @@ GeoController.prototype._request = function(url, callback) {
  */
 GeoController.prototype._isKoreaArea = function (lat, lon) {
     return 39.3769 >= lat && lat >=32.6942 &&
-        130.6741 >= lon && lon >= 123.9523;
+        131.88 >= lon && lon >= 123.9523;
 };
 
 GeoController.prototype._parseAddressFromDaum = function (result) {
