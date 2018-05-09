@@ -54,6 +54,11 @@ var midArray = [
     {db:modelMidTemp, name:'modelMidTemp'}
 ];
 
+function _isKoreaArea(lat, lon) {
+    var geo = new GeoController();
+    return geo._isKoreaArea(lat, lon);
+};
+
 /**
  * router callback에서 getShort 호출시에, this는 undefined되기 때문에, 생성시에 getShort를 만들어주고, self는 생성자에서 만들어준다.
  * @constructor
@@ -131,6 +136,13 @@ function ControllerTown() {
                 }
 
                 log.silly('GaD> coord : ', coord);
+
+                if (!_isKoreaArea(gCoord.lat, gCoord.lon)) {
+                    var url = self._getUrlWithCoord(gCoord.lat, gCoord.lon, req.query);
+                    log.error('This area is not in Korea. redirect='+url, '>sID=', req.sessionID);
+                    return res.redirect(url);
+                }
+
                 //townInfo를 통째로 달고 싶지만, 아쉽.
                 req.coord = coord;
                 if (gCoord) {
@@ -3900,6 +3912,10 @@ ControllerTown.prototype._findTown = function(list, region, city, town, cb) {
                     }
                 };
 
+                if (!_isKoreaArea(result.lat, result.lon)) {
+                    return callback('goto exit', newTown);
+                }
+
                 var i;
                 var townObj;
                 for(i=0; i<list.length; i++) {
@@ -5379,6 +5395,19 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
     });
 
     return daySummaryList;
+};
+
+ControllerTown.prototype._getUrlWithCoord = function (lat, lon, queries) {
+    var url = config.apiServer.url + '/weather/coord/' + lat + ',' + lon;
+    var count = 0;
+
+    for (let key in queries) {
+        url += count === 0? '?':'&';
+        url += key+'='+queries[key];
+        count ++;
+    }
+
+    return url;
 };
 
 module.exports = ControllerTown;
