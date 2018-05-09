@@ -16,6 +16,7 @@ angular.module('starter', [
     'service.twads',
     'service.push',
     'service.storage',
+    'service.branch',
     'controller.tabctrl',
     'controller.forecastctrl',
     'controller.air',
@@ -49,7 +50,8 @@ angular.module('starter', [
             }
         }
     })
-    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase, WeatherUtil) {
+    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push,
+        Branch, Purchase, WeatherUtil) {
         if (clientConfig.debug) {
             Util.ga.debugMode();
         }
@@ -180,7 +182,12 @@ angular.module('starter', [
             Util.ga.trackEvent('app', 'status', 'pause');
         }, false);
 
+        $ionicPlatform.on("deviceready", function() {
+            Branch.branchInit();
+        });
+
         $ionicPlatform.on('resume', function(){
+            Branch.branchInit();
             $rootScope.$broadcast('reloadEvent', 'resume');
         });
 
@@ -294,30 +301,6 @@ angular.module('starter', [
 
             Util.ga.trackView(toState.name);
         });
-
-        if (window.IonicDeeplink) {
-            IonicDeeplink.route({
-                '/:fav': {
-                    target: 'tab.forecast',
-                    parent: 'tab.forecast'
-                }
-            }, function(match) {
-                console.log(match.$route.parent + ', ' + match.$args.fav);
-                if (match.$args.fav) {
-                    Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch '+match.$args.fav);
-                    $state.transitionTo(match.$route.parent, match.$args, { reload: true });
-                }
-                else {
-                    Util.ga.trackEvent('plugin', 'info', 'deepLinkNoFav');
-                }
-            }, function(nomatch) {
-                console.log('No match', nomatch);
-                Util.ga.trackEvent('plugin', 'info', 'deepLinkNoMatch');
-            });
-        }
-        else {
-            Util.ga.trackException('Fail to find ionic deep link plugin', false);
-        }
 
         TwStorage.init().finally(function() {
             $rootScope.iconsImgPath = window.theme[$rootScope.settingsInfo.theme].icons;
