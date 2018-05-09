@@ -52,8 +52,11 @@ aqiRequester.prototype.getDataByAxios = function(url, callback) {
             callback(null, response.data.rxs);
         })
         .catch(function(err) {
-            log.warn(err);
-            callback(err);
+            //error is circular structure so you have to solve circular
+            // const CircularJSON = require('circular-json');
+            // let errStr = CircularJSON.stringify(err);
+            // log.warn(errStr);
+            callback(new Error("Fail to get data"));
         });
 };
 
