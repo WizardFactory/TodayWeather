@@ -1028,7 +1028,7 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
         },
         function(err, results) {
             if(err) {
-                if (err.statusCode == 503) {
+                if (err.statusCode == 503 || err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
                     log.warn(err);
                 }
                 else {
