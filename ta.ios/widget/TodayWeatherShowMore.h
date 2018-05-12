@@ -41,6 +41,7 @@
 - (NSString *) getAirState:(NSDictionary *)currentArpltnDict;
 - (NSMutableAttributedString *) getChangedColorAirState:(NSString *)nssAirState;
 - (UIColor *) getColorAirState:(NSString *)nssAirState;
+- (UIColor *) getColorAirStateByGrade:(unsigned int)grade rcvAirUnit:(NSString *)rcvAirUnit;
 
 - (void) transitView:(UIView *)curView
           transition:(UIViewAnimationTransition)transiton
