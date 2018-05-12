@@ -154,7 +154,9 @@ static TodayViewController *todayVC = nil;
      
     [self processRequestIndicator:TRUE];
     [self initWidgetDatas];
-    [self processShowMore];
+    //[self processShowMore];
+    self.extensionContext.widgetLargestAvailableDisplayMode = NCWidgetDisplayModeCompact;
+    showMoreView.hidden = true;
 }
 
 /********************************************************************
@@ -226,6 +228,7 @@ static TodayViewController *todayVC = nil;
  * History		: 20161229 SeanKim Create function
  *
  ********************************************************************/
+#if 0
 - (void)widgetActiveDisplayModeDidChange:(NCWidgetDisplayMode)activeDisplayMode withMaximumSize:(CGSize)maxSize
 {
     if (activeDisplayMode == NCWidgetDisplayModeCompact){
@@ -243,7 +246,7 @@ static TodayViewController *todayVC = nil;
         NSLog(@"expanded height : %f", self.preferredContentSize.height);
     }
 }
-
+#endif
 /********************************************************************
  *
  * Name            : viewWillAppear
@@ -1079,7 +1082,7 @@ static TodayViewController *todayVC = nil;
                                        // Do stuff with the data
                                        //NSLog(@"data : %@", data);
                                        [self makeJSONWithData:data reqType:type];
-                                       [self processShowMore];
+                                       //[self processShowMore];
                                        
                                    } else {
                                        NSLog(@"Failed to fetch %@: %@", url, error);
@@ -2556,6 +2559,10 @@ static TodayViewController *todayVC = nil;
     
     nssSource = [jsonDict objectForKey:@"source"];
     
+    NSDictionary *rcvUnits = [jsonDict objectForKey:@"units"];
+    NSString     *rcvAirUnit = [rcvUnits objectForKey:@"airUnit"];
+    NSLog(@"rcvAirUnit : %@", rcvAirUnit);
+    
     NSMutableDictionary* nsdCurCity = nil;
     if (0 <= mCurrentCityIdx && mCurrentCityIdx < [mCityDictList count]) {
         nsdCurCity = [mCityDictList objectAtIndex:mCurrentCityIdx];
@@ -2634,18 +2641,34 @@ static TodayViewController *todayVC = nil;
     unsigned int pm10Value     = [[currentArpltnDict objectForKey:@"pm10Value"] unsignedIntValue];
     unsigned int pm25Value     = [[currentArpltnDict objectForKey:@"pm25Value"] unsignedIntValue];
     float o3Value       = [[currentArpltnDict objectForKey:@"o3Value"] floatValue];
-    
+
+    unsigned int pm10Grade     = [[currentArpltnDict objectForKey:@"pm10Grade"] unsignedIntValue];
+    unsigned int pm25Grade     = [[currentArpltnDict objectForKey:@"pm25Grade"] unsignedIntValue];
+    unsigned int o3Grade       = [[currentArpltnDict objectForKey:@"o3Grade"] unsignedIntValue];
+
+#if 0
     NSString *nssPM10Str        = [currentArpltnDict objectForKey:@"pm10Str"];
     NSString *nssPM25Str        = [currentArpltnDict objectForKey:@"pm25Str"];
     NSString *nssO3Str        = [currentArpltnDict objectForKey:@"o3Str"];
-    
+
+
     NSLog(@"[ByCoord] nssPM10Str : %@", nssPM10Str);
     NSLog(@"[ByCoord] nssPM25Str : %@", nssPM25Str);
     NSLog(@"[ByCoord] nssO3Str : %@", nssO3Str);
     
     UIColor *uicPM10           = [todayWSM getColorAirState:nssPM10Str];
     UIColor *uicPM25           = [todayWSM getColorAirState:nssPM25Str];
-    UIColor *uicO3           = [todayWSM getColorAirState:nssO3Str];
+    UIColor *uicO3             = [todayWSM getColorAirState:nssO3Str];
+#else
+    NSLog(@"[ByCoord] pm10Grade : %d", pm10Grade);
+    NSLog(@"[ByCoord] pm25Grade : %d", pm25Grade);
+    NSLog(@"[ByCoord] o3Grade : %d", o3Grade);
+    
+    UIColor *uicPM10           = [todayWSM getColorAirStateByGrade:pm10Grade rcvAirUnit:rcvAirUnit];
+    UIColor *uicPM25           = [todayWSM getColorAirStateByGrade:pm25Grade rcvAirUnit:rcvAirUnit];
+    UIColor *uicO3             = [todayWSM getColorAirStateByGrade:o3Grade rcvAirUnit:rcvAirUnit];
+
+#endif
 
     // Processing current temperature
     idT1h    = [NSString stringWithFormat:@"%@", [currentDict valueForKey:@"t1h"]];

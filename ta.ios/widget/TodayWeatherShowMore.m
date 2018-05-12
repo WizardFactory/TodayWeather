@@ -577,6 +577,87 @@
     return stateColor;
 }
 
+- (UIColor *) getColorAirStateByGrade:(unsigned int)grade rcvAirUnit:(NSString *)rcvAirUnit
+{
+    UIColor *stateColor = nil;
+    BOOL isGrade6 = FALSE;
+    
+    TodayWeatherUtil *todayUtil = [[TodayWeatherUtil alloc] init];
+    NSDictionary *nssUnits = [todayUtil getUnits];
+    NSString *nssAirUnits = [nssUnits objectForKey:@"airUnit"];
+    
+    NSLog(@"[ByCoord] nssAirUnits: %@", nssAirUnits);
+    
+    // NSDefault is NULL (currnet position ???)
+    if( [nssAirUnits isEqualToString:@"(null)"] || [nssAirUnits isEqualToString:@""] )
+    {
+        // Received airUnits
+        if( [rcvAirUnit isEqualToString:@"airnow"] || [rcvAirUnit isEqualToString:@"aqicn"] )
+            isGrade6       = TRUE;
+        else
+            isGrade6       = FALSE;
+    }
+    else
+    {
+        if( [nssAirUnits isEqualToString:@"airnow"] || [nssAirUnits isEqualToString:@"aqicn"] )
+            isGrade6       = TRUE;
+        else
+            isGrade6       = FALSE;
+    }
+    
+    
+    if(isGrade6 == TRUE)
+    {
+        switch(grade)
+        {
+            case 1 :    // 좋음
+                stateColor = UIColorFromRGB(0x339933);           // 기존녹색
+                break;
+            case 2 :    // 보통
+                stateColor = UIColorFromRGB(0xffff33);              // 기존노랑
+                break;
+            case 3 :    // 민감군주의
+                stateColor = UIColorFromRGB(0xfd934c);             // 기존주황
+                break;
+            case 4 :    // 나쁨
+                stateColor = UIColorFromRGB(0xff7070);              // 기존빨강
+                break;
+            case 5 :    // 매우 나쁨
+                stateColor = UIColorFromRGB(0x540099);              // 기존보라
+                break;
+            case 6 :    // 위험
+                stateColor = UIColorFromRGB(0x800000);              // 기존갈색
+                break;
+            default :
+                stateColor = [UIColor blackColor];
+                break;
+        }
+    }
+    else        // grade is 4
+    {
+        switch(grade)
+        {
+            case 1 :    // 좋음
+                stateColor = UIColorFromRGB(0x32a1ff);           // 파랑
+                break;
+            case 2 :    // 보통
+                stateColor = UIColorFromRGB(0x339933);              // 녹색
+                break;
+            case 3 :    // 나쁨
+                stateColor = UIColorFromRGB(0xfd934c);             // 기존주황
+                break;
+            case 4 :    // 매우나쁨
+                stateColor = UIColorFromRGB(0xff7070);              // 빨강
+                break;
+            default :
+                stateColor = [UIColor blackColor];
+                break;
+        }
+    }
+    
+    return stateColor;
+}
+
 /********************************************************************
  *
  * Name			: transitView
