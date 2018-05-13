@@ -46,16 +46,6 @@
       "locator": "https://github.com/phonegap/phonegap-mobile-accessibility.git",
       "id": "phonegap-plugin-mobile-accessibility"
     },
-    {
-      "id": "ionic-plugin-deeplinks",
-      "locator": "ionic-plugin-deeplinks",
-      "variables": {
-        "URL_SCHEME": "todayweather",
-        "DEEPLINK_SCHEME": "http",
-        "DEEPLINK_HOST": "net.wizardfactory.todayweather",
-        "ANDROID_PATH_PREFIX": "/"
-      }
-    },
     "cordova-plugin-globalization",
     "cordova.plugins.diagnostic@3.1.1",
     {
