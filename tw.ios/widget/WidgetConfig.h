@@ -33,5 +33,10 @@ typedef enum _TYPE_REQUEST_
     TYPE_REQUEST_MAX,
 } TYPE_REQUEST;
 
+#if DEBUG == 0
+#define DebugLog(...)
+#elif DEBUG == 1
+#define DebugLog(...) NSLog(__VA_ARGS__)
+#endif
 
 #endif /* WidgetConfig_h */
