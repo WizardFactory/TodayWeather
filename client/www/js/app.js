@@ -182,6 +182,9 @@ angular.module('starter', [
             Util.ga.trackEvent('app', 'status', 'pause');
         }, false);
 
+        /**
+         * branchInit의 경우 run() function에서 실행하면 resume에서 충돌나서 따로 잡음 TW-261
+         */
         $ionicPlatform.on("deviceready", function() {
             Branch.branchInit();
         });
