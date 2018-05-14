@@ -311,5 +311,6 @@
   "LOC_AIR_QUALITY_IS_MODERATE" : "空气状况一般",
   "LOC_DO_YOU_WANT_TO_EXIT": "Do you want to exit?",
   "LOC_START_TIME_AND_END_TIME_CAN_NOT_BE_THE_SAME_TIME" : "Start time and end time can not be the same time.",
-  "LOC_AVERAGE": "平均"
+  "LOC_AVERAGE": "平均",
+  "LOC_SAVE_CHANGES": "保存更改？"
 }
