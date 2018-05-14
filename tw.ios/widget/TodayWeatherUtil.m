@@ -170,7 +170,7 @@ TEMP_UNIT    gTemperatureUnit;
         yesterdayDate   = [self getYYYYMMDDFromUTCTime:[nsdYesteray timeIntervalSince1970]];
         cntArrDaily     = (int)[arrDailyData count];
     
-        NSLog(@"yesterdayDate : %d", yesterdayDate);
+        DebugLog(@"yesterdayDate : %d", yesterdayDate);
         
         for(int i = 0; i < cntArrDaily; i++)
         {
@@ -180,7 +180,7 @@ TEMP_UNIT    gTemperatureUnit;
             
             if(date >= yesterdayDate)
             {
-                //NSLog(@"date : %d", date);
+                //DebugLog(@"date : %d", date);
                 [arrDaysData addObject:nsdDailyData];
                 
                 cntFounded++;
@@ -222,7 +222,7 @@ TEMP_UNIT    gTemperatureUnit;
         }
     }
 
-    //NSLog(@"arrDaysData : %@", arrDaysData);
+    //DebugLog(@"arrDaysData : %@", arrDaysData);
     
     return arrDaysData;
 }
@@ -263,8 +263,8 @@ TEMP_UNIT    gTemperatureUnit;
         currentDateTime            = [nssDateTime longLongValue];
         arrHourlyData = [jsonDict objectForKey:@"short"];
         
-        //NSLog(@"getByTimeArray jsonDict : %@", jsonDict);
-        //NSLog(@"getByTimeArray arrHourlyData : %@", arrHourlyData);
+        //DebugLog(@"getByTimeArray jsonDict : %@", jsonDict);
+        //DebugLog(@"getByTimeArray arrHourlyData : %@", arrHourlyData);
     
         for(int i = 0; i < [arrHourlyData count]; i++)
         {
@@ -277,7 +277,7 @@ TEMP_UNIT    gTemperatureUnit;
             
             if(currentDateTime < hourlyDateTime)
             {
-                NSLog(@"nssDate : %@, time : %@, currentDateTime: %lld, shortDateTime: %lld", nssDate, nssTime, currentDateTime, hourlyDateTime);
+                DebugLog(@"nssDate : %@, time : %@, currentDateTime: %lld, shortDateTime: %lld", nssDate, nssTime, currentDateTime, hourlyDateTime);
                 [arrByTimeData addObject:dictShort];
                 
                 cntFounded++;
@@ -315,7 +315,7 @@ TEMP_UNIT    gTemperatureUnit;
         
         arrHourlyData               = [jsonDict objectForKey:@"hourly"];
         
-        //NSLog(@"[getByTimeArray] arrHourlyData : %@", arrHourlyData);
+        //DebugLog(@"[getByTimeArray] arrHourlyData : %@", arrHourlyData);
         
         for(int i = 0; i < [arrHourlyData count]; i++)
         {
@@ -341,7 +341,7 @@ TEMP_UNIT    gTemperatureUnit;
                         
             if(currentDateTime <= hourlyDateTime)
             {
-                NSLog(@"nssDate : %@, time : %@, currentDateTime: %lld, shortDateTime: %lld", nssDate, nssTime, currentDateTime, hourlyDateTime);
+                DebugLog(@"nssDate : %@, time : %@, currentDateTime: %lld, shortDateTime: %lld", nssDate, nssTime, currentDateTime, hourlyDateTime);
                 [arrByTimeData addObject:dictShort];
                 
                 cntFounded++;
@@ -375,7 +375,7 @@ TEMP_UNIT    gTemperatureUnit;
     NSMutableArray  *dailyDataArr   = [midDict objectForKey:@"dailyData"];
     NSMutableDictionary    *todayDict     = [[NSMutableDictionary alloc] init];
     
-    //NSLog(@"getTodayArray nssCurrentDate : %@", nssCurrentDate);
+    //DebugLog(@"getTodayArray nssCurrentDate : %@", nssCurrentDate);
     
     for(int i = 0; i < [dailyDataArr count]; i++)
     {
@@ -384,14 +384,14 @@ TEMP_UNIT    gTemperatureUnit;
         
         if([nssCurrentDate isEqualToString:nssDailyDate])
         {
-            //NSLog(@"nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+            //DebugLog(@"nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
             todayDict = [NSMutableDictionary dictionaryWithDictionary:dailyDataDict];
             
             break;
         }
     }
     
-    //NSLog(@"todayDict: %@", todayDict);
+    //DebugLog(@"todayDict: %@", todayDict);
     
     return todayDict;
 }
@@ -422,7 +422,7 @@ TEMP_UNIT    gTemperatureUnit;
     NSMutableArray  *dailyDataArr         = [jsonDict objectForKey:@"daily"];
     NSMutableDictionary    *todayDict     = [[NSMutableDictionary alloc] init];
     
-    //NSLog(@"[getTodayDictionaryInGlobal] nssCurrentDate : %@", nssCurrentDate);
+    //DebugLog(@"[getTodayDictionaryInGlobal] nssCurrentDate : %@", nssCurrentDate);
     
     for(int i = 0; i < [dailyDataArr count]; i++)
     {
@@ -430,17 +430,17 @@ TEMP_UNIT    gTemperatureUnit;
         NSString *nssDate       = [dailyDataDict objectForKey:@"date"];
         NSString *nssDailyDate  = [nssDate substringToIndex:10];
         
-        //NSLog(@"[getTodayDictionaryInGlobal] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+        //DebugLog(@"[getTodayDictionaryInGlobal] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
         if([nssCurrentDate isEqualToString:nssDailyDate])
         {
-            //NSLog(@"[getTodayDictionaryInGlobal] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+            //DebugLog(@"[getTodayDictionaryInGlobal] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
             todayDict = [NSMutableDictionary dictionaryWithDictionary:dailyDataDict];
             
             break;
         }
     }
     
-    //NSLog(@"todayDict: %@", todayDict);
+    //DebugLog(@"todayDict: %@", todayDict);
     
     return todayDict;
 }
@@ -460,7 +460,7 @@ TEMP_UNIT    gTemperatureUnit;
 {
     if(nssUnits == nil)
     {
-        NSLog(@"nssUnits is null!!!");
+        DebugLog(@"nssUnits is null!!!");
         return;
     }
     
@@ -471,7 +471,7 @@ TEMP_UNIT    gTemperatureUnit;
     {
         NSDictionary *jsonUnitDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpUnitData options:0 error:&error];
         NSString    *nsdTempUnit    = [jsonUnitDict objectForKey:@"temperatureUnit"];
-        NSLog(@"nsdTempUnit : %@", nsdTempUnit);
+        DebugLog(@"nsdTempUnit : %@", nsdTempUnit);
         
         if([nsdTempUnit isEqualToString:@"F"])
         {
@@ -502,7 +502,7 @@ TEMP_UNIT    gTemperatureUnit;
  ********************************************************************/
 + (TEMP_UNIT) getTemperatureUnit
 {
-    NSLog(@"gTemperatureUnit : %d", gTemperatureUnit);
+    DebugLog(@"gTemperatureUnit : %d", gTemperatureUnit);
     return gTemperatureUnit;
 }
 
@@ -543,15 +543,15 @@ TEMP_UNIT    gTemperatureUnit;
     
     if(nssSrcStr == nil)
     {
-        NSLog(@"[processLocationStr] nssSrcStr is nil!!!");
+        DebugLog(@"[processLocationStr] nssSrcStr is nil!!!");
         return nil;
     }
 
-    NSLog(@"[processLocationStr] nssSrcStr : %@", nssSrcStr);
+    DebugLog(@"[processLocationStr] nssSrcStr : %@", nssSrcStr);
     
     NSArray *arrSrc     = [nssSrcStr componentsSeparatedByString:@"."];
     NSString *nssFirst  = [arrSrc objectAtIndex:0];
-    //NSLog(@"[processLocationStr] nssFirst : %@", nssFirst);
+    //DebugLog(@"[processLocationStr] nssFirst : %@", nssFirst);
     NSString *nssTmp    = [arrSrc objectAtIndex:1];
     
     NSString *nssSecond = nil;
@@ -572,7 +572,7 @@ TEMP_UNIT    gTemperatureUnit;
         }
     }
     
-    NSLog(@"[processLocationStr] nssDstStr : %@", nssDstStr);
+    DebugLog(@"[processLocationStr] nssDstStr : %@", nssDstStr);
     
     return nssDstStr;
 }
@@ -616,7 +616,7 @@ TEMP_UNIT    gTemperatureUnit;
         jsonUnitsDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpUnitData options:0 error:&error];
     }
     else {
-        NSLog(@"nssNewUnits is null!!!");
+        DebugLog(@"nssNewUnits is null!!!");
     }
 }
 
@@ -678,7 +678,7 @@ TEMP_UNIT    gTemperatureUnit;
         dailyDataArr   = [jsonDict objectForKey:@"daily"];
     }
     
-    //NSLog(@"[todayDictByCoord] nssCurrentDate : %@", nssCurrentDate);
+    //DebugLog(@"[todayDictByCoord] nssCurrentDate : %@", nssCurrentDate);
     
     for(int i = 0; i < [dailyDataArr count]; i++)
     {
@@ -686,17 +686,17 @@ TEMP_UNIT    gTemperatureUnit;
         NSString *nssDate       = [dailyDataDict objectForKey:@"date"];
         //NSString *nssDailyDate  = [nssDate substringToIndex:10];
         
-        //NSLog(@"[todayDictByCoord] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+        //DebugLog(@"[todayDictByCoord] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
         if([nssDate isEqualToString:nssCurrentDate])
         {
-            //NSLog(@"[todayDictByCoord] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+            //DebugLog(@"[todayDictByCoord] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
             todayDict = [NSMutableDictionary dictionaryWithDictionary:dailyDataDict];
             
             break;
         }
     }
     
-    //NSLog(@"todayDictByCoord: %@", todayDict);
+    //DebugLog(@"todayDictByCoord: %@", todayDict);
     
     return todayDict;
 }
