@@ -163,7 +163,7 @@ angular.module('controller.searchctrl', [])
                 };
 
                 $scope.cityList.push(data);
-                loadWeatherData(i);
+                // loadWeatherData(i);
                 if (city.currentPosition && city.disable !== true) {
                     var indexOfCurrentPositionCity = i;
                     updateCurrentPosition().then(function(geoInfo) {
@@ -174,7 +174,7 @@ angular.module('controller.searchctrl', [])
                     });
                 }
             }
-          
+
             window.addEventListener('native.keyboardshow', function () {
                 // Describe your logic which will be run each time when keyboard is about to be shown.
                 Util.ga.trackEvent('window', 'show', 'keyboard');
@@ -187,6 +187,8 @@ angular.module('controller.searchctrl', [])
             if (WeatherInfo.getEnabledCityCount() == 0) {
                 $scope.$broadcast('setInputFocus');
             }
+
+            $scope.$broadcast('updateCityEvent', 0);
         }
 
         $scope.OnChangeSearchWord = function() {
@@ -817,7 +819,7 @@ angular.module('controller.searchctrl', [])
             }
         }
 
-        function loadWeatherData(index) {
+        function loadWeatherData(index, callback) {
             if (WeatherInfo.canLoadCity(index) === true) {
                 updateWeatherData(index).then(function (city) {
                     index = WeatherInfo.getIndexOfCity(city);
@@ -851,6 +853,9 @@ angular.module('controller.searchctrl', [])
                         }
                         data.weather =  city.currentWeather.weather;
                         data.airInfo = airInfo;
+                    }
+                    if (callback) {
+                        callback(city);
                     }
                 });
             }
@@ -908,6 +913,15 @@ angular.module('controller.searchctrl', [])
 
             return deferred.promise;
         }
+
+        $scope.$on('updateCityEvent', function(event, index) {
+            console.log("update city event index:", index);
+            loadWeatherData(index, function() {
+                if (index < $scope.cityList.length) {
+                    $scope.$broadcast('updateCityEvent', ++index);
+                }
+            });
+        });
 
         $scope.$on('setInputFocus', function(event) {
             console.log("set input focus event="+event);
