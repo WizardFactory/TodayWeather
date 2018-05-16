@@ -820,8 +820,15 @@ angular.module('controller.searchctrl', [])
         }
 
         function loadWeatherData(index, callback) {
-            if (WeatherInfo.canLoadCity(index) === true) {
-                updateWeatherData(index).then(function (city) {
+            if (WeatherInfo.canLoadCity(index) != true) {
+                if (callback) {
+                    callback();
+                }
+                return;
+            }
+
+            updateWeatherData(index).then(
+                function (city) {
                     index = WeatherInfo.getIndexOfCity(city);
                     if (index !== -1) {
                         WeatherInfo.updateCity(index, city);
@@ -857,8 +864,13 @@ angular.module('controller.searchctrl', [])
                     if (callback) {
                         callback(city);
                     }
+                },
+                function(err) {
+                    console.log(err);
+                    if (callback) {
+                        callback();
+                    }
                 });
-            }
         }
 
         /**
@@ -915,11 +927,12 @@ angular.module('controller.searchctrl', [])
         }
 
         $scope.$on('updateCityEvent', function(event, index) {
+            if (index >= $scope.cityList.length) {
+                return;
+            }
             console.log("update city event index:", index);
             loadWeatherData(index, function() {
-                if (index < $scope.cityList.length) {
-                    $scope.$broadcast('updateCityEvent', ++index);
-                }
+                $scope.$broadcast('updateCityEvent', ++index);
             });
         });
 
