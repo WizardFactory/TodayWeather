@@ -82,17 +82,16 @@ angular.module('controller.push', [])
             $scope.alarmList = pushInfo.alarmList;
             $scope.dayOfWeek = pushInfo.dayOfWeek;
 
-            if (!window.PushNotification) {
+            if (!Push.inited) {
                 Util.ga.trackEvent('push', 'error', 'loadPlugin');
                 return;
             }
 
-            if (!window.push) {
+            if (!Push.pushData.fcmToken) {
                 Push.register();
             }
             else {
-                PushNotification.hasPermission(function(data) {
-                    console.log('Push.isEnabled:'+data.isEnabled);
+                Push.hasPermission(function(data) {
                     Push.isEnabled = data.isEnabled;
                     if (data.isEnabled === false) {
                         _showPermissionPopUp();
@@ -283,15 +282,15 @@ angular.module('controller.push', [])
                 return;
             }
 
-            if (!window.PushNotification) {
+            if (!Push.inited) {
                 Util.ga.trackEvent('push', 'error', 'loadPlugin');
                 _savePushInfo();
                 $ionicHistory.goBack();
                 return;
             }
 
-            PushNotification.hasPermission(function(data) {
-                console.log('Push.isEnabled:'+data.isEnabled);
+            Push.hasPermission(function (data) {
+                console.log('Push.isEnabled:' + data.isEnabled);
                 Push.isEnabled = data.isEnabled;
                 if (data.isEnabled) {
                     _savePushInfo();
