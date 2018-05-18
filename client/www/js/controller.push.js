@@ -240,8 +240,58 @@ angular.module('controller.push', [])
         };
 
         $scope.onClose = function() {
-            Util.ga.trackEvent('action', 'click', 'units back');
-            $ionicHistory.goBack();
+            Util.ga.trackEvent('action', 'click', 'arrow back');
+
+            if (!updated) {
+                return $ionicHistory.goBack();
+            }
+
+            var strMsg = 'Save changes?';
+            var strSave = 'Save';
+            var strClose = 'Close';
+            $translate(['LOC_SAVE_CHANGES', 'LOC_SAVE', 'LOC_CLOSE'])
+                .then(
+                    function (translations) {
+                        strMsg = translations.LOC_SAVE_CHANGES;
+                        strSave = translations.LOC_SAVE;
+                        strClose = translations.LOC_CLOSE;
+                    },
+                    function (translationIds) {
+                        console.error("Fail to translate " + JSON.stringify(translationIds));
+                    })
+                .finally(function () {
+                    var buttons = [];
+                    buttons.push({
+                        text: strClose,
+                        onTap: function () {
+                            return 'close';
+                        }
+                    });
+                    buttons.push({
+                        text: strSave,
+                        type: 'button-dark',
+                        onTap: function () {
+                            return 'save';
+                        }
+                    });
+
+                    var confirmPopup = $ionicPopup.show({
+                        title: "Save",
+                        template: strMsg,
+                        buttons: buttons
+                    });
+
+                    confirmPopup
+                        .then(function (res) {
+                            if (res == 'save') {
+                                $scope.onOkay();
+                            }
+                            else {
+                                Util.ga.trackEvent('action', 'click', 'close');
+                                $ionicHistory.goBack();
+                            }
+                        })
+                });
         };
 
         $scope.secs2dateStr = function (date) {
