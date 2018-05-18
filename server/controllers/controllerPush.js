@@ -5,8 +5,6 @@
 "use strict";
 
 var admin = require("firebase-admin");
-var twServiceAccount = require("../config/admob-app-id-6159460161-firebase-adminsdk-r2shn-9e77fbe119.json");
-var taServiceAccount = require("../config/todayair-74958-firebase-adminsdk-2n8hn-68ad361049.json");
 var apn = require('apn');
 var gcm = require('node-gcm');
 var config = require('../config/config');
@@ -53,13 +51,8 @@ var sender = new gcm.Sender(server_access_key);
 
 var i18n = require('i18n');
 
-var twFirebaseAdmin = admin.initializeApp({
-    credential: admin.credential.cert(twServiceAccount),
-}, 'todayWeather');
-
-var taFirebaseAdmin = admin.initializeApp({
-    credential: admin.credential.cert(taServiceAccount),
-}, 'todayAir');
+var twFirebaseAdmin;
+var taFirebaseAdmin;
 
 function ControllerPush() {
     this.timeInterval = 60*1000; //1min
@@ -78,6 +71,24 @@ function ControllerPush() {
             }
         });
     });
+
+    try {
+        if (twFirebaseAdmin == undefined) {
+            var twServiceAccount = require("../config/admob-app-id-6159460161-firebase-adminsdk-r2shn-9e77fbe119.json");
+            twFirebaseAdmin = admin.initializeApp({
+                credential: admin.credential.cert(twServiceAccount),
+            }, 'todayWeather');
+        }
+        if (taFirebaseAdmin == undefined) {
+            var taServiceAccount = require("../config/todayair-74958-firebase-adminsdk-2n8hn-68ad361049.json");
+            taFirebaseAdmin = admin.initializeApp({
+                credential: admin.credential.cert(taServiceAccount),
+            }, 'todayAir');
+        }
+    }
+    catch (err) {
+       log.error(err);
+    }
 }
 
 ControllerPush.prototype.updateRegistrationId = function (newId, oldId, callback) {
