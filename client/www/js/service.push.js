@@ -496,34 +496,45 @@ angular.module('service.push', [])
          */
         obj.updateCityInfo = function (cityIndex) {
             var self = this;
-            var pushList = this.pushData.pushList;
-            var list = pushList.filter(function (obj) {
-               return obj.cityIndex === cityIndex;
-            });
-
             var needToUpdate = false;
+            var list;
+            var pushList;
 
-            list.forEach(function (pushInfo) {
-                var city  = self._getSimpleCityInfo(cityIndex);
-                if (city.source == undefined || city.source.length === 0) {
-                    return;
-                }
-                for (var key in city) {
-                    if (key == 'location') {
-                       if (pushInfo.location.lat === city.location.lat &&
-                        pushInfo.location.long === city.location.long)  {
-                           needToUpdate = false;
-                       }
-                       else {
-                           needToUpdate = true;
-                       }
+            try {
+                pushList = this.pushData.pushList;
+                list = pushList.filter(function (obj) {
+                    return obj.cityIndex === cityIndex;
+                });
+
+                list.forEach(function (pushInfo) {
+                    var city = self._getSimpleCityInfo(cityIndex);
+                    if (city.source == undefined || city.source.length === 0) {
+                        return;
                     }
-                    else if (pushInfo[key] !== city[key]) {
-                       needToUpdate = true;
+                    for (var key in city) {
+                        if (key == 'location') {
+                            if (pushInfo.location == undefined) {
+                                needToUpdate = true;
+                            }
+                            else if (pushInfo.location.lat === city.location.lat &&
+                                pushInfo.location.long === city.location.long) {
+                                needToUpdate = false;
+                            }
+                            else {
+                                needToUpdate = true;
+                            }
+                        }
+                        else if (pushInfo[key] !== city[key]) {
+                            needToUpdate = true;
+                        }
+                        pushInfo[key] = city[key];
                     }
-                    pushInfo[key] = city[key];
-                }
-            });
+                });
+            }
+            catch (err) {
+                Util.ga.trackException(err, false);
+                return;
+            }
 
             if (needToUpdate) {
                 this._postPushList(list);
