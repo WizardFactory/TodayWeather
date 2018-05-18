@@ -95,16 +95,17 @@ router.post('/', function(req, res) {
     var pushList = req.body;
     try {
         pushList.forEach(function (obj) {
-           if (!obj.hasOwnProperty('registrationId') ||
-               !obj.hasOwnProperty('type') )
+           if (!obj.hasOwnProperty('type') || obj.type.length === 0)
            {
-               throw new Error('invalid push info registrationId/type');
+               throw new Error('invalid push info type');
            }
 
-           if (obj.registrationId.length === 0 ||
-               obj.type.length === 0)
+           if (!obj.hasOwnProperty('fcmToken') || obj.fcmToken.length === 0)
            {
-               throw new Error('invalid push info registrationId/type');
+               if (!obj.hasOwnProperty('registrationId') || obj.registrationId.length === 0) 
+               {
+                   throw new Error('invalid push info registrationId and fcmToken');
+               }
            }
 
            if (!obj.hasOwnProperty('location') && !obj.hasOwnProperty('town')) {

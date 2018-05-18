@@ -8,6 +8,7 @@ var mongoose = require("mongoose");
 var alertPushSchema = new mongoose.Schema({
     type: String, //ios, android, windows, amazon ..
     registrationId: String,
+    fcmToken: String,
     cityIndex: Number, //index of city in client
     id: Number,                 //city안의 id임
     startTime: Number,          //UTChours*60*60 + UTCMinutes*60
