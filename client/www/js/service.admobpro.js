@@ -7,7 +7,15 @@ angular.module('service.admobpro', [])
         var obj = {};
 
         obj.createBannerView = function(success, error) {
-            AdMob.createBanner(this.options.bannerAdUnit, success, error);
+            var opt =  {
+                adId: this.options.bannerAdUnit
+            };
+
+            if (clientConfig.admobProLicense) {
+                opt.license = clientConfig.admobProLicense;
+            }
+
+            AdMob.createBanner(opt, success, error);
         };
 
         obj.destroyBannerView = function (success, error) {
