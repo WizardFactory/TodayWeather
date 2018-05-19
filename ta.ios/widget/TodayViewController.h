@@ -175,6 +175,6 @@
 - (void) updateCurCityInfo:nssName address:nssAddress country:nssCountryName;
 - (void) updateCurLocation:(NSDictionary *)nsdLocation;
 
-
+- (void) printCurrentAppGroupData;
 
 @end
