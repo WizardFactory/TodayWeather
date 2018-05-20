@@ -89,7 +89,7 @@ faRequester.prototype.getData = function(url, retryCount, callback){
             log.warn(err);
             if((err.code === "ECONNRESET" || err.code === "ETIMEDOUT") && retryCount > 0){
                 log.warn('FC> Retry to get caused by' + err.code + ' : ', retryCount);
-                return self.getData(url, retryCount-- , callback);
+                return self.getData(url, --retryCount, callback);
             }
             if(callback){
                 callback(err);
