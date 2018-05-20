@@ -387,10 +387,12 @@ static TodayViewController *todayVC = nil;
         city.currentPosition = [cityDict[@"currentPosition"] boolValue];
         city.address = cityDict[@"address"];
         city.index = index++;
+        city.appIndex = [cityDict[@"index"] intValue];
         city.name = cityDict[@"name"];
         city.country = cityDict[@"country"];
         city.location = cityDict[@"location"];
-        DebugLog(@"current position : %@ address %@, name : %@, country : %@", city.currentPosition?@"true":@"false", city.address, city.name, city.country);
+        DebugLog(@"index : %d, appIndex : %d, current position : %@ address %@, name : %@, country : %@",
+                 city.index, city.appIndex, city.currentPosition?@"true":@"false", city.address, city.name, city.country);
         //DebugLog(@"location : %@", city.location);
         
         //cityData.location = {"lat": coords.latitude, "long": coords.longitude};
@@ -825,9 +827,9 @@ static TodayViewController *todayVC = nil;
 - (IBAction)moveMainApp:(id)sender;
 {
     DebugLog(@"move Main Appication!!!");
-    NSString *nssURL = [NSString stringWithFormat:@"todayweather://%d", mCurrentCity.index];
+    NSString *nssURL = [NSString stringWithFormat:@"todayweather://%d", mCurrentCity.appIndex];
     
-    DebugLog(@"mCurrentCity.index : %d", mCurrentCity.index);
+    DebugLog(@"mCurrentCity.index : %d", mCurrentCity.appIndex);
     
     NSURL *pjURL = [NSURL URLWithString:nssURL];
     DebugLog(@"pjURL : %@", pjURL);
