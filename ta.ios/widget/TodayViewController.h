@@ -24,7 +24,8 @@
 @property (nonatomic) id identifier;
 @property (nonatomic) NSString *address;
 @property (nonatomic) BOOL currentPosition;
-@property (nonatomic) int index;
+@property (nonatomic) int index;                       // for drawing data in dictionary
+@property (nonatomic) int appIndex;                    // for moving main app
 @property (nonatomic) NSString *name;
 @property (nonatomic) NSString *country;
 @property (nonatomic) NSDictionary *location;

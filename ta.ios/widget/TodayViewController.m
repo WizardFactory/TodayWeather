@@ -376,6 +376,7 @@ static TodayViewController *todayVC = nil;
         jsonDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpData options:0 error:&error];
     //DebugLog(@"User Default : %@", jsonDict);
 
+    int index = 0;
     mCityList           = [NSMutableArray array];
     mCityDictList       = [NSMutableArray array];
     
@@ -383,12 +384,13 @@ static TodayViewController *todayVC = nil;
         CityInfo *city = [[CityInfo alloc] init];
         city.currentPosition = [cityDict[@"currentPosition"] boolValue];
         city.address = cityDict[@"address"];
-        city.index = [cityDict[@"index"] intValue];
+        city.index = index++;
+        city.appIndex = [cityDict[@"index"] intValue];
         city.name = cityDict[@"name"];
         city.country = cityDict[@"country"];
         city.location = cityDict[@"location"];
-        DebugLog(@"index : %d, current position : %@ address %@, name : %@, country : %@",
-              city.index, city.currentPosition?@"true":@"false", city.address, city.name, city.country);
+        DebugLog(@"index : %d, appIndex : %d, current position : %@ address %@, name : %@, country : %@",
+              city.index, city.appIndex, city.currentPosition?@"true":@"false", city.address, city.name, city.country);
         //DebugLog(@"location : %@", city.location);
         
         //cityData.location = {"lat": coords.latitude, "long": coords.longitude};
@@ -875,9 +877,9 @@ static TodayViewController *todayVC = nil;
 - (IBAction)moveMainApp:(id)sender;
 {
     DebugLog(@"move Main Appication!!!");
-    NSString *nssURL = [NSString stringWithFormat:@"todayair://%d", mCurrentCity.index];
+    NSString *nssURL = [NSString stringWithFormat:@"todayair://%d", mCurrentCity.appIndex];
     
-    DebugLog(@"mCurrentCity.index : %d", mCurrentCity.index);
+    DebugLog(@"mCurrentCity.index : %d", mCurrentCity.appIndex);
     
     NSURL *pjURL = [NSURL URLWithString:nssURL];
     DebugLog(@"pjURL : %@", pjURL);
