@@ -403,7 +403,7 @@ class DsfController {
                 res.geocode = {lat: item.geo[1], lon: item.geo[0]};
                 res.address = item.address;
                 res.dateObj = item.dateObj;
-                res.date = item.date;
+                res.date = item.date || item.data.current.date;
                 res.timeOffset = item.timeOffset;
                 res.data.push(item.data);
             }
