@@ -90,7 +90,7 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
 
     var table = $('table table');
 
-    var propertyName = ['stnId', 'stnName', 'altitude', 'rns', 'rs15m', 'rs1h', 'rs6h', 'rs12h', 'rs1d', 't1h',
+    var propertyName = ['stnId', 'stnName', 'altitude', 'rns', 'rs15m', 'rs1h', 'rs3h', 'rs6h', 'rs12h', 'rs1d', 't1h',
                         'vec1', 'wdd1', 'wsd1', 'vec', 'wdd', 'wsd', 'reh', 'hPa', 'addr'];
     var stnIndex = 0;
     table.children('tr').each(function () {
@@ -148,8 +148,11 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
             }
             pIndex++;
         });
-        //log.info(JSON.stringify(stnMinInfo));
-        if (stnMinInfo.t1h === 0 && stnMinInfo.vec === 0 && stnMinInfo.wsd === 0 && stnMinInfo.vec1 === 0) {
+
+        if (pIndex > propertyName.length) {
+            log.error('stnMinInfo is invalid format !! '+JSON.stringify(stnMinInfo));
+        }
+        else if (stnMinInfo.t1h === 0 && stnMinInfo.vec === 0 && stnMinInfo.wsd === 0 && stnMinInfo.vec1 === 0) {
            log.warn('stnMinInfo is invalid info'+JSON.stringify(stnMinInfo));
         }
         else {
