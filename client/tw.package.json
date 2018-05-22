@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.9.95",
+  "version": "1.0.0",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -29,6 +29,10 @@
     "cordova-plugin-google-analytics",
     "cordova-plugin-request-location-accuracy",
     "cordova.plugins.diagnostic",
+    {
+      "locator": "https://github.com/chancezeus/cordova-plugin-jumbomode.git",
+      "id": "cordova-plugin-jumbomode"
+    },
     "cordova-plugin-device",
     "cordova-plugin-console",
     "cordova-plugin-splashscreen",

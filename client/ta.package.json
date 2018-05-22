@@ -1,6 +1,6 @@
 {
   "name": "TodayAir",
-  "version": "0.1.2",
+  "version": "0.1.8",
   "description": "Today air quality information",
   "repository": {
     "type": "git",
@@ -24,6 +24,15 @@
     "gulp-util": "^3.0.8"
   },
   "cordovaPlugins": [
+    "cordova-plugin-admobpro-firebase",
+    "cordova-plugin-firebase",
+    "cordova-plugin-google-analytics",
+    "cordova-plugin-request-location-accuracy",
+    "cordova.plugins.diagnostic",
+    {
+      "locator": "https://github.com/chancezeus/cordova-plugin-jumbomode.git",
+      "id": "cordova-plugin-jumbomode"
+    },
     "cordova-plugin-device",
     "cordova-plugin-console",
     "cordova-plugin-splashscreen",
@@ -33,25 +42,12 @@
     "cordova-plugin-inappbrowser",
     "cordova-plugin-x-socialsharing",
     "cordova-plugin-whitelist",
-    {
-      "locator": "https://github.com/WizardFactory/google-analytics-plugin.git",
-      "id": "cordova-plugin-google-analytics"
-    },
     "cordova-plugin-app-version",
-    {
-      "locator": "https://github.com/WizardFactory/admob-google-cordova-clean.git",
-      "id": "cordova-admob"
-    },
     {
       "locator": "https://github.com/phonegap/phonegap-mobile-accessibility.git",
       "id": "phonegap-plugin-mobile-accessibility"
     },
     "cordova-plugin-globalization",
-    "cordova.plugins.diagnostic@3.1.1",
-    {
-      "locator": "https://github.com/WizardFactory/cordova-plugin-request-location-accuracy.git",
-      "id": "cordova-plugin-request-location-accuracy"
-    },
     {
       "locator": "https://github.com/WizardFactory/cordova-plugin-todayair-android-widget.git",
       "id": "cordova-plugin-todayair-android-widget"
