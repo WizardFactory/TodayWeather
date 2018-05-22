@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="net.wizardfactory.todayweather" version="0.9.95" android-versionCode="9959" xmlns="http://www.w3.org/ns/widgets">
+<widget id="net.wizardfactory.todayweather" version="1.0.0" android-versionCode="100009" xmlns="http://www.w3.org/ns/widgets">
     <name>TodayWeather</name>
     <description>
         Inform how warm or cold it is today than yesterday.
@@ -87,4 +87,5 @@
         <splash height="480" src="resources/ios/splash/Default~iphone.png" width="320" />
         <splash height="2732" src="resources/ios/splash/Default@2x~universal~anyany.png" width="2732" />
     </platform>
+  <!-- Branch -->
 </widget>
