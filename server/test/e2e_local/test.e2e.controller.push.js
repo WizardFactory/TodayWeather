@@ -245,5 +245,27 @@ describe('e2e local test - controller push', function() {
             done();
         });
     });
+
+    it('test fcm notification', function(done) {
+        var co = new ControllerPush();
+        var pushInfo = {
+            fcmToken: "fj_EjaTlsig:APA91bFiNPVQAA6vpF5-EX1U9EaFMjGSaH_L_8EjsvCcns2PIWokwWGPOe5t-PAbzRTz2BLi_yFn3ddDbFeubkYjbl-oJgMplyg_Pr0nVgI5XD-rprN12yq0Rz5sGjjRLhokQgvDBpsY",
+            cityIndex: 0,
+            package: "todayWeather"
+        };
+        var notification = {
+            title: 'fcm test',
+            text: 'fcm send test'
+        };
+        co.sendAndroidNotification(pushInfo, notification, function(err, result){
+            if (err) {
+                console.error(err);
+            }
+            else {
+                console.info(result);
+            }
+            done();
+        });
+    });
 });
 

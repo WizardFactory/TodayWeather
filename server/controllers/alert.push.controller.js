@@ -719,6 +719,7 @@ class AlertPushController {
             ],
             (err, result) => {
                 if (err) {
+                    err.message += ' geoInfo:' + alertPush.geo[1]+','+alertPush.geo[0];
                     log.error(err);
                 }
                 log.debug(result);
@@ -912,6 +913,22 @@ class AlertPushController {
                 }
                 log.info(result.toString());
                 callback(undefined, result.toString());
+            });
+    }
+
+    updateRegistrationId(newId, oldId, callback) {
+        AlertPush.update({registrationId: oldId},
+            {$set: {registrationId: newId}},
+            function (err, result) {
+                return callback(err, result);
+            });
+    }
+
+    updateFcmToken (newId, oldId, callback) {
+        AlertPush.update({fcmToken: oldId},
+            {$set : {fcmToken: newId}},
+            function (err, result) {
+                callback(err, result);
             });
     }
 }

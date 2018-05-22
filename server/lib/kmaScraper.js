@@ -42,15 +42,15 @@ function KmaScraper() {
     this.MAX_HOURLY_COUNT = 192; //8days * 24hours
     this.domain = "www.weather.go.kr";
 
-    var domain = this.domain;
-    dnscache.lookup(domain, function(err, result) {
-        if (err) {
-            console.error(err);
-        }
-        else {
-            console.info('kmascrape cached domain:', domain, ', result:', result);
-        }
-    });
+    // var domain = this.domain;
+    // dnscache.lookup(domain, function(err, result) {
+    //     if (err) {
+    //         console.error(err);
+    //     }
+    //     else {
+    //         console.info('kmascrape cached domain:', domain, ', result:', result);
+    //     }
+    // });
 }
 
 /**
@@ -90,7 +90,7 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
 
     var table = $('table table');
 
-    var propertyName = ['stnId', 'stnName', 'altitude', 'rns', 'rs15m', 'rs1h', 'rs6h', 'rs12h', 'rs1d', 't1h',
+    var propertyName = ['stnId', 'stnName', 'altitude', 'rns', 'rs15m', 'rs1h', 'rs3h', 'rs6h', 'rs12h', 'rs1d', 't1h',
                         'vec1', 'wdd1', 'wsd1', 'vec', 'wdd', 'wsd', 'reh', 'hPa', 'addr'];
     var stnIndex = 0;
     table.children('tr').each(function () {
@@ -148,8 +148,11 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
             }
             pIndex++;
         });
-        //log.info(JSON.stringify(stnMinInfo));
-        if (stnMinInfo.t1h === 0 && stnMinInfo.vec === 0 && stnMinInfo.wsd === 0 && stnMinInfo.vec1 === 0) {
+
+        if (pIndex > propertyName.length) {
+            log.error('stnMinInfo is invalid format !! '+JSON.stringify(stnMinInfo));
+        }
+        else if (stnMinInfo.t1h === 0 && stnMinInfo.vec === 0 && stnMinInfo.wsd === 0 && stnMinInfo.vec1 === 0) {
            log.warn('stnMinInfo is invalid info'+JSON.stringify(stnMinInfo));
         }
         else {
@@ -273,7 +276,6 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
     log.info(url);
     req(url, {timeout: 30000, encoding: 'binary'}, function (err, response, body) {
         if (err) {
-            log.error(err);
             return callback(err);
         }
 
@@ -443,32 +445,18 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
  * @returns {KmaScraper}
  * @private
  */
-// KmaScraper.prototype._checkPubdate = function(date, callback)  {
-//     KmaStnHourly.find({}).limit(1).lean().exec(function (err, stnHourlyList) {
-//         if (err) {
-//             return callback(err);
-//         }
-//         if (stnHourlyList.length === 0) {
-//             return  callback(err, false);
-//         }
-//
-//         for (var i=0; i<stnHourlyList.length; i++) {
-//             var hourlyData = stnHourlyList[i].hourlyData;
-//             for (var j=0; j<hourlyData.length; j++) {
-//                 var hourlyObj = hourlyData[j];
-//                 if (date == hourlyObj.date) {
-//                     log.info('stnId=' + stnHourlyList[i].stnId + ' pubDate=' + stnHourlyList[i].pubDate + ' current=' + date);
-//                     return  callback(err, true);
-//                 }
-//             }
-//         }
-//
-//         //log.debug('check pub date : kma stn weather already updated');
-//         return callback(err, false);
-//     });
-//
-//     return this;
-// };
+KmaScraper.prototype._checkPubdate = function(date, callback)  {
+    KmaStnHourly2.find({date:date}).limit(1).lean().exec(function (err, stnHourlyList) {
+        if (err) {
+            return callback(err);
+        }
+        if (stnHourlyList.length === 0) {
+            return  callback(err, false);
+        }
+        return callback(err, true);
+    });
+    return this;
+};
 
 /**
  *
@@ -820,22 +808,25 @@ KmaScraper.prototype._saveStnHourly = function (stnWeatherInfo, pubDate, callbac
 KmaScraper.prototype._saveKmaStnHourly2List = function (weatherList, callback) {
     var self = this;
     async.map(weatherList.stnList, function (stnWeatherInfo, mapCallback) {
-
-        async.waterfall([function (wfCallback) {
-            self._saveStnInfo(stnWeatherInfo, function (err) {
-                if (err) {
-                    return wfCallback(err);
+        async.waterfall([
+                function (wfCallback) {
+                    self._saveStnInfo(stnWeatherInfo, function (err) {
+                        if (err) {
+                            return wfCallback(err);
+                        }
+                        wfCallback(err);
+                    });
+                },
+                function (wfCallback) {
+                    self._saveStnHourly2(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
+                        if (err) {
+                            return wfCallback(err);
+                        }
+                        wfCallback(err, savedList);
+                    });
                 }
-                wfCallback(err);
-            });
-        }, function (wfCallback) {
-            self._saveStnHourly2(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
-                if (err) {
-                    return wfCallback(err);
-                }
-                wfCallback(err, savedList);
-            });
-        }], function (err, savedList) {
+            ],
+            function (err, savedList) {
             if (err) {
                 return mapCallback(err);
             }
@@ -986,19 +977,21 @@ KmaScraper.prototype.getStnPastHourlyWeather = function (days, callback) {
         pubDateList.push(new Date(date));
     }
     //log.info(pubDateList);
-    async.mapSeries(pubDateList, function (pubDate, aCallback) {
-       self.getStnHourlyWeather(pubDate, function (err, results) {
-           if (err == 'skip') {
-              return aCallback(undefined, results);
-           }
-           aCallback(err, results);
-       });
-    }, function (err, results) {
-       if (err)  {
-           return callback(err);
-       }
-       callback(err, results);
-    });
+    async.mapLimit(pubDateList, 3,
+        function (pubDate, aCallback) {
+            self.getStnHourlyWeather(pubDate, function (err, results) {
+                if (err == 'skip') {
+                    return aCallback(undefined, results);
+                }
+                aCallback(err, results);
+            });
+        },
+        function (err, results) {
+            if (err)  {
+                return callback(err);
+            }
+            callback(err, results);
+        });
 
     return this;
 };
@@ -1047,7 +1040,7 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
     var self = this;
     var pubDate = kmaTimeLib.convertDateToYYYYoMMoDDoHHoZZ(day);
 
-    log.info('get stn hourly weather pubdate='+pubDate);
+    log.info('get stn hourly weather pubdate='+pubDate, 'day='+day);
 
     async.waterfall([
         //skip check pubdate to overwrite new data
@@ -1090,21 +1083,24 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
             });
         },
         function (awsWeatherList, cb) {
-            self.getCityWeather(pubDate, function (err, cityWeatherList) {
-                if (err) {
-                    return cb(err);
-                }
-                if (awsWeatherList.pubDate != cityWeatherList.pubDate) {
-                    log.error("pubdate is different aws.pubDate=", awsWeatherList.pubDate,
-                        " city.pubDate=", cityWeatherList.pubDate);
-                }
+            async.retry({times:10, interval:1000},
+                function (callback) {
+                    self.getCityWeather(pubDate, function (err, cityWeatherList) {
+                        callback(err, cityWeatherList);
+                    });
+                },
+                function (err, cityWeatherList) {
+                    if (awsWeatherList.pubDate != cityWeatherList.pubDate) {
+                        log.error("pubdate is different aws.pubDate=", awsWeatherList.pubDate,
+                            " city.pubDate=", cityWeatherList.pubDate);
+                    }
 
-                var weatherList = self._mergeAWSandCity(awsWeatherList.stnList, cityWeatherList.cityList);
-                //weatherList.forEach(function (awsInfo) {
-                //   log.info(JSON.stringify(awsInfo)) ;
-                //});
-                cb(err, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
-            });
+                    var weatherList = self._mergeAWSandCity(awsWeatherList.stnList, cityWeatherList.cityList);
+                    //weatherList.forEach(function (awsInfo) {
+                    //   log.info(JSON.stringify(awsInfo)) ;
+                    //});
+                    cb(err, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
+                });
         },
         function (weatherList, cb) {
             var prefix = 'kma/aws/hourly/' + weatherList.pubDate + '-kmaAwsHourly.json';

@@ -7,6 +7,7 @@ var mongoose = require("mongoose");
 var pushSchema = new mongoose.Schema({
     type: String, //ios, android, windows, amazon ..
     registrationId: String,
+    fcmToken: String,
     cityIndex: Number, //index of city in client
     id: Number,         //이미 등록된 요청은 id가 없음 18.2.14, city안의 id임
     pushTime: Number, //UTChours*60*60 + UTCMinutes*60

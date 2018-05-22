@@ -13,9 +13,13 @@ angular.module('starter', [
     'service.weatherinfo',
     'service.weatherutil',
     'service.util',
+    'service.admobclean',
+    'service.admobpro',
     'service.twads',
     'service.push',
     'service.storage',
+    'service.branch',
+    'service.firebase',
     'controller.tabctrl',
     'controller.forecastctrl',
     'controller.air',
@@ -49,7 +53,8 @@ angular.module('starter', [
             }
         }
     })
-    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase, WeatherUtil) {
+    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push,
+        Branch, Purchase, WeatherUtil) {
         if (clientConfig.debug) {
             Util.ga.debugMode();
         }
@@ -180,7 +185,15 @@ angular.module('starter', [
             Util.ga.trackEvent('app', 'status', 'pause');
         }, false);
 
+        /**
+         * branchInit의 경우 run() function에서 실행하면 resume에서 충돌나서 따로 잡음 TW-261
+         */
+        $ionicPlatform.on("deviceready", function() {
+            Branch.branchInit();
+        });
+
         $ionicPlatform.on('resume', function(){
+            Branch.branchInit();
             $rootScope.$broadcast('reloadEvent', 'resume');
         });
 
@@ -236,7 +249,7 @@ angular.module('starter', [
             headerbars.removeClass('bar-dailyforecast');
             headerbars.removeClass('bar-air');
             headerbars.removeClass('bar-clear');
-            headerbars.removeClass('bar-stable');
+            headerbars.removeClass('bar-dark');
             headerbars.removeClass('bar-blue');
 
             for (var i = 0; i < headerbars.length; i++) {
@@ -249,7 +262,7 @@ angular.module('starter', [
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-search');
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'tab.forecast') {
                 headerbars.addClass('bar-forecast');
                 if ($rootScope.settingsInfo.theme === 'photo') {
@@ -261,7 +274,7 @@ angular.module('starter', [
                     tabs.addClass('tabs-blue');
                 } else {
                     $rootScope.viewColor = '#f5f5f5';
-                    headerbars.addClass('bar-stable');
+                    headerbars.addClass('bar-dark');
                 }
             } else if (toState.name === 'tab.dailyforecast') {
                 headerbars.addClass('bar-dailyforecast');
@@ -274,50 +287,26 @@ angular.module('starter', [
                     tabs.addClass('tabs-blue');
                 } else {
                     $rootScope.viewColor = '#f5f5f5';
-                    headerbars.addClass('bar-stable');
+                    headerbars.addClass('bar-dark');
                 }
             } else if (toState.name === 'tab.air') {
                 $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-air');
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'tab.weather') {
                 $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-forecast');
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'start') {
                 $rootScope.viewColor = '#fefefe';
                 headerbars.addClass('bar-clear');
             } else {
                 $rootScope.viewColor = '#f5f5f5';
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             }
 
             Util.ga.trackView(toState.name);
         });
-
-        if (window.IonicDeeplink) {
-            IonicDeeplink.route({
-                '/:fav': {
-                    target: 'tab.forecast',
-                    parent: 'tab.forecast'
-                }
-            }, function(match) {
-                console.log(match.$route.parent + ', ' + match.$args.fav);
-                if (match.$args.fav) {
-                    Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch '+match.$args.fav);
-                    $state.transitionTo(match.$route.parent, match.$args, { reload: true });
-                }
-                else {
-                    Util.ga.trackEvent('plugin', 'info', 'deepLinkNoFav');
-                }
-            }, function(nomatch) {
-                console.log('No match', nomatch);
-                Util.ga.trackEvent('plugin', 'info', 'deepLinkNoMatch');
-            });
-        }
-        else {
-            Util.ga.trackException('Fail to find ionic deep link plugin', false);
-        }
 
         TwStorage.init().finally(function() {
             $rootScope.iconsImgPath = window.theme[$rootScope.settingsInfo.theme].icons;

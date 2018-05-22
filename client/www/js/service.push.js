@@ -3,32 +3,33 @@
  */
 
 angular.module('service.push', [])
-    .factory('Push', function($http, TwStorage, Util, WeatherUtil, WeatherInfo, $location, Units, $rootScope) {
+    .factory('Push', function($http, TwStorage, Util, WeatherUtil, WeatherInfo, $location, Units, $rootScope, Firebase) {
         var obj = {};
-        obj.config = {
-            "android": {
-                "senderID": clientConfig.googleSenderId
-                //"icon": "TodayWeather",
-                //"iconColor": "blue"
-                //"forceShow": true,
-            },
-            "ios": {
-                "alert": "true",
-                "badge": "true",
-                "sound": "true",
-                "clearBadge": "true"
-            },
-            "windows": {}
-        };
+        // obj.config = {
+        //     "android": {
+        //         "senderID": clientConfig.googleSenderId
+        //         //"icon": "TodayWeather",
+        //         //"iconColor": "blue"
+        //         //"forceShow": true,
+        //     },
+        //     "ios": {
+        //         "alert": "true",
+        //         "badge": "true",
+        //         "sound": "true",
+        //         "clearBadge": "true"
+        //     },
+        //     "windows": {}
+        // };
 
+        obj.inited = false;
         obj.pushUrl = clientConfig.serverUrl + '/v000902'+'/push';
         obj.pushListUrl = clientConfig.serverUrl + '/v000902'+'/push-list';
 
         /**
-         *
+         * type is 'android' or 'ios'
          * @type {{registrationId: string, type: string, category: string, pushList: Array}}
          */
-        obj.pushData = {registrationId: '', type: '', category:'', pushList: []};
+        obj.pushData = {registrationId: null, type: '', category:'', fcmToken: null, pushList: []};
 
         /**
          * units 변경시에 push 갱신 #1845
@@ -88,6 +89,7 @@ angular.module('service.push', [])
             var pushData = TwStorage.get("pushData2");
             if (pushData != null) {
                 self.pushData.registrationId = pushData.registrationId;
+                self.pushData.fcmToken = pushData.fcmToken;
                 self.pushData.type = pushData.type;
                 self.pushData.pushList = pushData.pushList;
                 self.pushData.pushList.forEach(function (pushInfo) {
@@ -138,7 +140,6 @@ angular.module('service.push', [])
              */
             postObj  = {
                 type: this.pushData.type,
-                registrationId: this.pushData.registrationId,
                 cityIndex: pushInfo.cityIndex,
                 id: pushInfo.id,
                 category: pushInfo.category,
@@ -151,6 +152,12 @@ angular.module('service.push', [])
                 timezoneOffset: new Date().getTimezoneOffset()*-1,   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
                 package: clientConfig.package
             };
+            if (this.pushData.registrationId) {
+                postObj.registrationId = this.pushData.registrationId;
+            }
+            if (this.pushData.fcmToken) {
+                postObj.fcmToken = this.pushData.fcmToken;
+            }
 
             if (pushInfo.category === 'alarm') {
                 postObj.pushTime = this.date2utcSecs(pushInfo.time);
@@ -195,7 +202,7 @@ angular.module('service.push', [])
                 return;
             }
 
-            if (this.pushData.registrationId == undefined || this.pushData.registrationId.length == 0) {
+            if (this.pushData.fcmToken == undefined || this.pushData.fcmToken.length === 0) {
                 console.error("You have to register before post");
                 console.log(JSON.stringify(postList));
                 return;
@@ -232,10 +239,18 @@ angular.module('service.push', [])
             var self = this;
             var pushObj = {
                 type: self.pushData.type,
-                registrationId: self.pushData.registrationId,
                 cityIndex: pushInfo.cityIndex,
                 id: pushInfo.id,
                 category: pushInfo.category };
+            if (self.pushData.fcmToken) {
+                pushObj.fcmToken = self.pushData.fcmToken;
+            }
+            else if (self.pushData.registrationId) {
+                pushObj.registrationId = self.pushData.registrationId;
+            }
+            else {
+                console.error('push info does not have fcmToken or regstrationId');
+            }
 
             $http({
                 method: 'DELETE',
@@ -257,6 +272,31 @@ angular.module('service.push', [])
                     console.log(err);
                     //callback(err);
                 });
+        };
+
+        obj._updateFcmToken = function(token) {
+            var self = this;
+            //update registration id on server
+            $http({
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Device-Id': Util.uuid },
+                url: self.pushUrl,
+                data: { newToken: token, oldToken: self.pushData.fcmToken },
+                timeout: 10 * 1000
+            })
+                .success(function (data) {
+                    //callback(undefined, result.data);
+                    console.log(data);
+                })
+                .error(function (data, status) {
+                    console.log(status + ":" + data);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
+                    console.log(err);
+                    //callback(err);
+                });
+            self.pushData.fcmToken = token;
         };
 
         /**
@@ -289,11 +329,32 @@ angular.module('service.push', [])
             self.pushData.registrationId = registrationId;
         };
 
+        obj.fcmRegister = function (callback) {
+            var self = this;
+            if (self.inited === false) {
+                Util.ga.trackEvent('push', 'error', 'loadPlugin');
+            }
+
+            if (self.pushData.fcmToken == null) {
+                Firebase.getToken(function(token) {
+                    self.pushData.fcmToken = token;
+                });
+            }
+
+            /**
+             * WeatherInfo 와 circular dependency 제거용.
+             * @param {number} cityIndex
+             */
+            window.updateCityInfo = function (cityIndex) {
+                return self.updateCityInfo(cityIndex);
+            }
+        };
+
         /**
          *
          * @param {function} callback
          */
-        obj.register = function (callback) {
+        obj.gcmRegister = function (callback) {
             var self = this;
 
             if (!window.PushNotification) {
@@ -374,9 +435,13 @@ angular.module('service.push', [])
              * WeatherInfo 와 circular dependency 제거용.
              * @param {number} cityIndex
              */
-            window.push.updateCityInfo = function (cityIndex) {
+            window.updateCityInfo = function (cityIndex) {
                 return self.updateCityInfo(cityIndex);
             }
+        };
+
+        obj.register = function (callback) {
+            this.fcmRegister(callback);
         };
 
         obj.unregister = function () {
@@ -390,6 +455,8 @@ angular.module('service.push', [])
             //    console.log('error push unregister');
             //    console.log(e);
             //});
+
+            Firebase.unregister();
         };
 
         /**
@@ -496,34 +563,45 @@ angular.module('service.push', [])
          */
         obj.updateCityInfo = function (cityIndex) {
             var self = this;
-            var pushList = this.pushData.pushList;
-            var list = pushList.filter(function (obj) {
-               return obj.cityIndex === cityIndex;
-            });
-
             var needToUpdate = false;
+            var list;
+            var pushList;
 
-            list.forEach(function (pushInfo) {
-                var city  = self._getSimpleCityInfo(cityIndex);
-                if (city.source == undefined || city.source.length === 0) {
-                    return;
-                }
-                for (var key in city) {
-                    if (key == 'location') {
-                       if (pushInfo.location.lat === city.location.lat &&
-                        pushInfo.location.long === city.location.long)  {
-                           needToUpdate = false;
-                       }
-                       else {
-                           needToUpdate = true;
-                       }
+            try {
+                pushList = this.pushData.pushList;
+                list = pushList.filter(function (obj) {
+                    return obj.cityIndex === cityIndex;
+                });
+
+                list.forEach(function (pushInfo) {
+                    var city = self._getSimpleCityInfo(cityIndex);
+                    if (city.source == undefined || city.source.length === 0) {
+                        return;
                     }
-                    else if (pushInfo[key] !== city[key]) {
-                       needToUpdate = true;
+                    for (var key in city) {
+                        if (key == 'location') {
+                            if (pushInfo.location == undefined) {
+                                needToUpdate = true;
+                            }
+                            else if (pushInfo.location.lat === city.location.lat &&
+                                pushInfo.location.long === city.location.long) {
+                                needToUpdate = false;
+                            }
+                            else {
+                                needToUpdate = true;
+                            }
+                        }
+                        else if (pushInfo[key] !== city[key]) {
+                            needToUpdate = true;
+                        }
+                        pushInfo[key] = city[key];
                     }
-                    pushInfo[key] = city[key];
-                }
-            });
+                });
+            }
+            catch (err) {
+                Util.ga.trackException(err, false);
+                return;
+            }
 
             if (needToUpdate) {
                 this._postPushList(list);
@@ -648,6 +726,18 @@ angular.module('service.push', [])
             this.savePushInfo();
         };
 
+        // obj._tokenFreshCallback = function(err, token) {
+        //     var self = this;
+        //             };
+
+        // obj._notificationCallback = function(err, result) {
+        //     console.log(JSON.stringify({ "notification": result }));
+        // };
+
+        obj.hasPermission = function(callback) {
+            Firebase.hasPermission(callback);
+        };
+
         obj.init = function () {
             var self = this;
             var showAlertInfo = false;
@@ -659,10 +749,68 @@ angular.module('service.push', [])
                 }
             }
 
-            if (!window.PushNotification) {
+            function _tokenFreshCallback(err, token) {
+                if (err) {
+                    console.error(err);
+                    return;
+                }
+                console.log(JSON.stringify({ "tokenFresh": token }));
+                if (self.pushData.fcmToken != token) {
+                    self._updateFcmToken(token);
+                }
+            }
+
+            function _notificationCallback(err, result) {
+                console.log(JSON.stringify({ "notification": result }));
+                if (result['google.sent_time']) {
+                    //background
+                    if (result.tap === true) {
+                        if (result.cityIndex != undefined) {
+                            var url = '/tab/forecast?fav=' + result.cityIndex;
+                            //setCityIndex 와 url fav 까지 해야 이동됨 on ios
+                            var fav = parseInt(result.cityIndex);
+                            if (!isNaN(fav)) {
+                                if (fav === 0) {
+                                    var city = WeatherInfo.getCityOfIndex(0);
+                                    if (city !== null && !city.disable) {
+                                        WeatherInfo.setCityIndex(fav);
+                                    }
+                                } else {
+                                    WeatherInfo.setCityIndex(fav);
+                                }
+                            }
+                            console.log('clicked: ' + result.cityIndex + ' url=' + url);
+                            $location.url(url);
+                            Util.ga.trackEvent('action', 'click', 'push url=' + url);
+                        }
+                        else {
+                            console.log('city index is undefined');
+                        }
+                    }
+                    else {
+                        console.log('tap is false');
+                    }
+                }
+                else {
+                    //foreground
+                    result.message = result.body;
+                    $rootScope.$broadcast('notificationEvent', result);
+                    Util.ga.trackEvent('action', 'broadcast', 'notificationEvent');
+                }
+            }
+
+            Firebase.init(_tokenFreshCallback, _notificationCallback);
+            if (!Firebase.inited) {
                 Util.ga.trackEvent('push', 'error', 'loadPlugin');
                 return showAlertInfo;
             }
+
+            self.inited = true;
+
+            // if (!window.PushNotification) {
+            //     Util.ga.trackEvent('push', 'error', 'loadPlugin');
+            //     return showAlertInfo;
+            // }
 
             if (ionic.Platform.isIOS()) {
                 self.pushData.type = 'ios';
@@ -671,21 +819,25 @@ angular.module('service.push', [])
                 self.pushData.type = 'android';
             }
 
-            //if push is on, call register
-            if (self.pushData.pushList.length > 0) {
-                PushNotification.hasPermission(function(data) {
-                    self.isEnabled = data.isEnabled;
-                    console.log('Push.isEnabled:'+self.isEnabled);
-                });
+            // //if push is on, get token
+            // if (self.pushData.pushList.length > 0) {
+            //     Firebase.hasPermission(function(data) {
+            //         self.isEnabled = data.isEnabled;
+            //         console.log('Push.isEnabled:'+self.isEnabled);
+            //     });
 
-                if (window.push) {
-                    console.log('Already set push notification');
-                    return showAlertInfo;
-                }
-                self.register(function (err, registrationId) {
-                    console.log('start push registrationId='+registrationId);
-                });
-            }
+            //     // if (window.push) {
+            //     //     console.log('Already set push notification');
+            //     //     return showAlertInfo;
+            //     // }
+            //     // self.register(function (err, registrationId) {
+            //     //     console.log('start push registrationId='+registrationId);
+            //     // });
+
+            //     Firebase.getToken(function(token) {
+            //         self._updateFcmToken(token);
+            //     });
+            // }
 
             return showAlertInfo;
         };
