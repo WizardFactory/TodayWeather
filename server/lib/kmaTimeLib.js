@@ -464,4 +464,18 @@ kmaTimeLib.toLocalTime = function (offset, date) {
     return date;
 };
 
+kmaTimeLib.convertDatetoString = function(src){
+    var date = new Date();
+    date.setTime(src);
+
+    var result =
+        kmaTimeLib.leadingZeros(date.getFullYear(), 4) +
+        kmaTimeLib.leadingZeros(date.getMonth() + 1, 2) +
+        kmaTimeLib.leadingZeros(date.getDate(), 2) +
+        kmaTimeLib.leadingZeros(date.getHours(), 2) +
+        kmaTimeLib.leadingZeros(date.getMinutes(), 2);
+
+    return result;
+};
+
 module.exports = kmaTimeLib;
