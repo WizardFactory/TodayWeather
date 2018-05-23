@@ -149,11 +149,11 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
         id: pushInfo.id
     };
 
-    if (pushInfo.fcmToken) {
-        query.fcmToken = pushInfo.fcmToken;
-    }
-    else if (pushInfo.registrationId) {
+    if (pushInfo.registrationId) {
         query.registrationId = pushInfo.registrationId;
+    }
+    else if (pushInfo.fcmToken) {
+        query.fcmToken = pushInfo.fcmToken;
     }
 
     PushInfo.update(
@@ -1170,11 +1170,71 @@ ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
     });
 };
 
+/**
+ * (fcmToken or registration id) + cityIndex + id가 중복된 경우 updatedAt이 오래된 데이터 삭제
+ * db.pushes.aggregate([{$group: {_id: {registrationId: "$registrationId", cityIndex:"$cityIndex", id:"$id"}, updatedAts:{$addToSet: "$updatedAt"}, count:{$sum:1}}}, {$match:{count:{"$gt":1}}}]);
+ * @param callback
+ * @private
+ */
+ControllerPush.prototype._removeDuplicates = function(callback) {
+    var query = [
+        {
+            $group: {
+                _id: {registrationId: "$registrationId", cityIndex:"$cityIndex", id:"$id"},
+                updatedAts:{"$addToSet": {updatedAt: "$updatedAt"}},
+                count:{"$sum": 1}
+            }
+        },
+        {
+            $match:{count:{"$gt":1}}
+        }];
+    PushInfo.aggregate(query).exec(function(err, results) {
+        if (err) {
+            log.error(err);
+            return callback(null);
+        }
+        results = results.filter(function (obj) {
+            return obj._id.registrationId != undefined;
+        });
+
+        log.info(`pushDuplicates:${results.length}`);
+        if (results.length <=0 ) {
+            return callback(null);
+        }
+        log.info('duplicates:',JSON.stringify(results));
+
+        async.mapSeries(results,
+            function (obj, callback) {
+                if (obj._id.registrationId == undefined) {
+                    log.info('skip ', obj);
+                    return callback(null);
+                }
+                var updatedAt = obj.updatedAts[0].updatedAt < obj.updatedAts[1].updatedAt ? obj.updatedAts[0].updatedAt : obj.updatedAts[1].updatedAt;
+                var removeQuery = {
+                    registrationId: obj._id.registrationId,
+                    cityIndex: obj._id.cityIndex,
+                    id: obj._id.id,
+                    updatedAt: updatedAt
+                };
+                PushInfo.remove(removeQuery).exec(callback);
+            },
+            function (err, result) {
+                if (err) {
+                    log.error(err);
+                }
+                callback(null);
+            });
+    });
+};
+
 ControllerPush.prototype.sendPush = function (time, callback) {
     var self = this;
 
     log.info('send push time='+time);
     async.waterfall([
+            function (callback) {
+                self._removeDuplicates(callback);
+            },
             function (callback) {
                 self.getPushByTime(time, function (err, pushList) {
                     if (err) {
