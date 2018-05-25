@@ -396,7 +396,7 @@ class DsfController {
                         output.result.timezone = {};
                     }
                     output.result.timezone.min = item.timeOffset;
-                    output.result.timezone.ms = output.result.timezone.min * 1000;
+                    output.result.timezone.ms = output.result.timezone.min * 60 *1000;
                 }
                 // update data
                 //log.info(JSON.stringify(item));
@@ -637,6 +637,7 @@ class DsfController {
                     log.error('cDFS > Fail to collect DFS data');
                 }
 
+                req.cDate = cDate;
                 return callback(err, this._makeOutputFormat(result, req));
             }
         );

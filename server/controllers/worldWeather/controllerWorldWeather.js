@@ -664,6 +664,54 @@ function controllerWorldWeather() {
             });
     };
 
+
+    self.queryTwoDaysWeatherNewForm = function(req, res, next) {
+        var cDate = new Date();
+        var meta = {};
+        meta.method = 'queryTwoDaysWeather2';
+        meta.sID = req.sessionID;
+
+        var errMsg;
+        if (!req.validVersion) {
+            errMsg = 'TWW> invalid version : ' + req.validVersion;
+            log.error(errMsg, meta);
+            return res.status(400).send(errMsg);
+        }
+
+        if (!self.isValidCategory(req)) {
+            return next();
+        }
+
+        self.getCode(req);
+        self.getCountry(req);
+        self.getCity(req);
+
+        if (!req.geocode && !req.city) {
+            errMsg = 'It is not valid request';
+            log.error(errMsg, meta);
+            return res.status(400).send(errMsg);
+        }
+
+        log.info('TWW> geocode : ', req.geocode, meta);
+
+        async.parallel([
+                function(callback) {
+                    let dsfController = new (require('./dsf.controller'));
+
+                    dsfController.getDsfData(req, cDate, callback);
+                },
+                function(callback) {
+                    self._getWaqiFromAll(req, cDate, callback);
+                }
+            ],
+            function(err) {
+                if(err){
+                    log.info('TWW2 > : ', err, meta);
+                }
+                next();
+            });
+    };
+
     /**
      *
      * @param req
@@ -996,12 +1044,15 @@ function controllerWorldWeather() {
         return zero + n;
     };
 
-    self._getTimeString = function(tzOffset) {
+    self._getTimeString = function(tzOffset, cDate) {
         var self = this;
         var now = new Date();
         var result;
         var offset;
 
+        if(cDate){
+            now.setTime(cDate.getTime());
+        }
         if(tzOffset === undefined){
             offset = 9 * 60;
         }else{
@@ -1046,7 +1097,7 @@ function controllerWorldWeather() {
      *   WU Util
      ***********************************************************/
     self.mergeWuForecastData = function(req, res, next){
-        var dateString = self._getTimeString((0 - 24) * 60).slice(0,14) + '00';
+        var dateString = self._getTimeString((0 - 24) * 60, req.cDate).slice(0,14) + '00';
         var startDate = self._getDateObj(dateString);
 
         if(req.hasOwnProperty('WU') && req.WU.forecast){
@@ -1128,7 +1179,7 @@ function controllerWorldWeather() {
 
     self.mergeWuCurrentDataToHourly = function(req, res, next){
         if(req.hasOwnProperty('WU') && req.WU.current && req.WU.current.dataList){
-            var dateString = self._getTimeString((0 - 48) * 60).slice(0,14) + '00';
+            var dateString = self._getTimeString((0 - 48) * 60, req.cDate).slice(0,14) + '00';
             var startDate = self._getDateObj(dateString);
 
             var list = req.WU.current.dataList;
@@ -1454,12 +1505,14 @@ function controllerWorldWeather() {
         if(req.DSF && req.result.hasOwnProperty('timezone')){
             var dsf = req.DSF;
 
+            log.info('cervert DSF LocalTime > Timeoffset : ', req.result.timezone.ms)
             dsf.data.forEach(function(dsfItem){
                 if(dsfItem.current){
                     var time = new Date();
-                    log.info('convert DSF LocalTime > current', meta, dsfItem.current.dateObj.toString());
+                    log.info('convert DSF LocalTime > current Before :', meta, dsfItem.current.dateObj.toString());
                     time.setTime(new Date(dsfItem.current.dateObj).getTime() + req.result.timezone.ms);
                     dsfItem.current.dateObj = self._convertTimeString(time);
+                    log.info('convert DSF LocalTime > current After : ', meta, dsfItem.current.dateObj.toString());
                 }
 
                 if(dsfItem.hourly){
@@ -1538,8 +1591,8 @@ function controllerWorldWeather() {
 
         if(req.DSF && req.DSF.data){
             var timeOffset = req.result.timezone.min;
-            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset).slice(0,14) + '00';
-            var curDate = self._getTimeString(timeOffset).slice(0,14) + '00';
+            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, req.cDate).slice(0,14) + '00';
+            var curDate = self._getTimeString(timeOffset, req.cDate).slice(0,14) + '00';
 
             if(req.result === undefined){
                 req.result = {};
@@ -1603,9 +1656,9 @@ function controllerWorldWeather() {
 
         if(req.DSF && req.DSF.data){
             var timeOffset = req.result.timezone.min;
-            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset).slice(0,14) + '00';
-            var yesterdayDate = self._getTimeString((0 - 24) * 60 + timeOffset).slice(0, 14) + '00';
-            var curDate = self._getTimeString(timeOffset).slice(0, 14) + '00';
+            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, req.cDate).slice(0,14) + '00';
+            var yesterdayDate = self._getTimeString((0 - 24) * 60 + timeOffset, req.cDate).slice(0, 14) + '00';
+            var curDate = self._getTimeString(timeOffset, req.cDate).slice(0, 14) + '00';
 
             if(req.result === undefined){
                 req.result = {};
@@ -1733,8 +1786,8 @@ function controllerWorldWeather() {
 
         if (req.DSF && req.DSF.data) {
             var timeOffset = req.result.timezone.min;
-            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset).slice(0,14) + '00';
-            var curDate = self._getTimeString(timeOffset);
+            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, req.cDate).slice(0,14) + '00';
+            var curDate = self._getTimeString(timeOffset, req.cDate);
 
             if (req.result === undefined) {
                 req.result = {};
