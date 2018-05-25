@@ -27,13 +27,27 @@ angular.module('service.firebase', [])
                 console.error(err);
                 callback(err);
             });
-        }
+        };
 
         obj.hasPermission = function(callback) {
-            window.FirebasePlugin.hasPermission(function(data){
-                console.log(data.isEnabled);
-                callback(data);
-            });
+            window.FirebasePlugin.hasPermission(
+                function (data) {
+                    console.log(data.isEnabled);
+                    callback(data);
+                },
+                function (err) {
+                    console.log(err) ;
+                });
+        };
+
+        obj.grantPermission = function(callback) {
+            window.FirebasePlugin.grantPermission(
+                function (data) {
+                    callback(null, data);
+                },
+                function (err) {
+                    callback(err);
+                });
         };
 
         obj.unregister = function() {
@@ -45,15 +59,15 @@ angular.module('service.firebase', [])
          */
         obj.logEvent = function(name, params) {
             window.FirebasePlugin.logEvent(name, params);
-        }
+        };
 
         obj.setScreenName = function(name) {
             window.FirebasePlugin.setScreenName(name);
-        }
+        };
 
         obj.setUserId = function(id) {
             window.FirebasePlugin.setUserId(id);
-        }
+        };
 
         /**
          * 
@@ -84,7 +98,7 @@ angular.module('service.firebase', [])
                 console.error(err);
                 notificationCallback(err);
             });
-        }
+        };
 
         return obj;
     });
