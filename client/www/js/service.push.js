@@ -329,26 +329,26 @@ angular.module('service.push', [])
             self.pushData.registrationId = registrationId;
         };
 
-        obj.fcmRegister = function (callback) {
-            var self = this;
-            if (self.inited === false) {
-                Util.ga.trackEvent('push', 'error', 'loadPlugin');
-            }
-
-            if (self.pushData.fcmToken == null) {
-                Firebase.getToken(function(token) {
-                    self.pushData.fcmToken = token;
-                });
-            }
-
-            /**
-             * WeatherInfo 와 circular dependency 제거용.
-             * @param {number} cityIndex
-             */
-            window.updateCityInfo = function (cityIndex) {
-                return self.updateCityInfo(cityIndex);
-            }
-        };
+        // obj.fcmRegister = function (callback) {
+        //     var self = this;
+        //     if (self.inited === false) {
+        //         Util.ga.trackEvent('push', 'error', 'loadPlugin');
+        //     }
+        //
+        //     if (self.pushData.fcmToken == null) {
+        //         Firebase.getToken(function(token) {
+        //             self.pushData.fcmToken = token;
+        //         });
+        //     }
+        //
+        //     /**
+        //      * WeatherInfo 와 circular dependency 제거용.
+        //      * @param {number} cityIndex
+        //      */
+        //     window.updateCityInfo = function (cityIndex) {
+        //         return self.updateCityInfo(cityIndex);
+        //     }
+        // };
 
         /**
          *
@@ -440,9 +440,9 @@ angular.module('service.push', [])
             }
         };
 
-        obj.register = function (callback) {
-            this.fcmRegister(callback);
-        };
+        // obj.register = function (callback) {
+        //     this.fcmRegister(callback);
+        // };
 
         obj.unregister = function () {
             console.log('we do not use unregister');
@@ -736,6 +736,10 @@ angular.module('service.push', [])
 
         obj.hasPermission = function(callback) {
             Firebase.hasPermission(callback);
+        };
+
+        obj.grantPermission = function(callback) {
+            Firebase.grantPermission(callback);
         };
 
         obj.init = function () {

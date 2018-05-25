@@ -4,7 +4,7 @@ window.todayWeather.updateInfo = [
         lang: 'en',
         all: [
             '* Popup for checking alarm setting',
-            '* Fix push notification error'
+            '* Fix push notification error',
             'have a nice day!'
         ],
         android: [],
@@ -35,7 +35,7 @@ window.todayAir.updateInfo = [
             'have a nice day!'
         ],
         android: [
-            '* Fix push notification error'
+            '* Fix push notification error',
             '* Fix some bugs'
 	],
         ios: [
@@ -48,7 +48,7 @@ window.todayAir.updateInfo = [
             '즐거운 하루 되세요. ^^'
         ],
         android: [
-            '* 알림 오류 수정'
+            '* 알림 오류 수정',
             '* 버그 수정 및 안정화'
 	],
         ios: [
