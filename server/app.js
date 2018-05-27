@@ -136,9 +136,6 @@ global.townRss = new controllerShortRss();
 
 if (config.mode === 'gather' || config.mode === 'local') {
     manager.startManager();
-
-    let dsfController = new (require('./controllers/worldWeather/dsf.controller'));
-    dsfController.maintainDB();
 }
 
 if (config.mode === 'push') {
