@@ -59,6 +59,7 @@ class DsfController {
         log.error("controllerCollector : Invalid time");
         return 0;
     };
+
     _getLocalLast0H(timeOffset_MIN) {
         var utcTime = new Date();
         var localTime = new Date();
@@ -205,6 +206,7 @@ class DsfController {
         let days = (limit === undefined)? 2:limit;
         twoDaysAgo.setDate(twoDaysAgo.getDate()- days);
 
+        log.info('cDSF > Remove DB Data which is received more than 2 days : ', twoDaysAgo.toString());
         // remove data which was received more than two day ago.
         dsfModel.remove({dateObj: {$lt: twoDaysAgo}}).exec((err)=>{
             if(err){
@@ -644,9 +646,10 @@ class DsfController {
     }
 
     maintainDB(callback){
+        log.info('cDSF > Start DB maintain');
         setInterval(()=>{
             this._removePastData(2, ()=>{
-                log.info('cDsf > remove past data : ', new Date().toString());
+                //log.info('cDsf > remove past data : ', new Date().toString());
                 if(callback) callback();
             });
         }, this._interval);
