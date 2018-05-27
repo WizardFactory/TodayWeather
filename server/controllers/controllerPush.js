@@ -280,15 +280,15 @@ ControllerPush.prototype.sendFcmNotification = function(pushInfo, notification, 
         admin = twFirebaseAdmin;
     }
 
-    console.log(admin.name);
+    log.info('fcm admin name:', admin.name);
 
     admin.messaging().send(message)
         .then(function (response) {
-            console.log('Successfully sent message:', response);
+            log.info('Successfully sent message:', response);
             callback(null, response);
         })
         .catch(function (err) {
-            console.log('Error sending message:', err);
+            log.error('Error sending message:', err);
             callback(err);
         });
 };
@@ -314,17 +314,25 @@ ControllerPush.prototype.sendAndroidNotification = function (pushInfo, notificat
  */
 ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification, callback) {
     log.info('send ios notification pushInfo='+JSON.stringify(pushInfo)+ ' notification='+JSON.stringify(notification));
-    var myDevice = new apn.Device(pushInfo.registrationId);
 
-    var note = new apn.Notification();
-    //note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
-    //note.badge = 1;
-    note.sound = "ping.aiff";
-    note.alert = notification.title+'\n'+notification.text;
-    //note.contentAvailable = true;
-    note.payload = {cityIndex: pushInfo.cityIndex};
-    apnConnection.pushNotification(note, myDevice);
-    callback(undefined, 'sent');
+    if (pushInfo.fcmToken) {
+        this.sendFcmNotification(pushInfo, notification, callback);
+    }
+    else if (pushInfo.registrationId) {
+        var myDevice = new apn.Device(pushInfo.registrationId);
+        var note = new apn.Notification();
+        //note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
+        //note.badge = 1;
+        note.sound = "ping.aiff";
+        note.alert = notification.title+'\n'+notification.text;
+        //note.contentAvailable = true;
+        note.payload = {cityIndex: pushInfo.cityIndex};
+        apnConnection.pushNotification(note, myDevice);
+        callback(undefined, 'sent');
+    }
+    else {
+        log.error(pushInfo);
+    }
     return this;
 };
 
@@ -1261,7 +1269,9 @@ ControllerPush.prototype.sendPush = function (time, callback) {
                 async.mapSeries(pushList, function (pushInfo, mCallback) {
                     self.sendNotification(pushInfo, function (err, result) {
                         if (err) {
-                            return mCallback(err);
+                            err.message += ' ' + JSON.stringify(pushInfo);
+                            log.error(err);
+                            //return mCallback(err);
                         }
                         mCallback(undefined, result);
                     });

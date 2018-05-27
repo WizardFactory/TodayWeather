@@ -697,7 +697,7 @@ class AlertPushController {
                         log.verbose(result);
                     });
 
-                    log.info({send:send, registrationId: alertPush.registrationId});
+                    log.info({send:send, fcmToken: alertPush.fcmToken, registrationId: alertPush.registrationId});
                     callback(null, {send:send, data: infoObj});
                 },
                 (pushWithWeather, callback) => {
