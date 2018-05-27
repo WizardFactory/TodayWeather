@@ -840,27 +840,27 @@ angular.module('service.weatherutil', [])
          * @returns {string}
          */
         obj.getWeatherEmoji = function (skyIcon) {
-            if (skyIcon.indexOf('Lightning') != -1) {
+            if (skyIcon.indexOf('lightning') != -1) {
                 return '\u26c8';
             }
-            else if (skyIcon.indexOf('RainSnow') != -1) {
+            else if (skyIcon.indexOf('rainsnow') != -1) {
                 return '\u2614\u2603';
             }
-            else if (skyIcon.indexOf('Rain') != -1) {
+            else if (skyIcon.indexOf('rain') != -1) {
                 return '\u2614';
             }
-            else if (skyIcon.indexOf('Snow') != -1) {
+            else if (skyIcon.indexOf('snow') != -1) {
                 return '\u2603';
             }
-            else if (skyIcon.indexOf('Cloud') != -1) {
-                if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+            else if (skyIcon.indexOf('cloud') != -1) {
+                if (skyIcon.indexOf('sun') != -1 || skyIcon.indexOf('moon') != -1) {
                     return '\u26c5';
                 }
                 else {
                     return '\u2601';
                 }
             }
-            else if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+            else if (skyIcon.indexOf('sun') != -1 || skyIcon.indexOf('moon') != -1) {
                 return '\ud83c\udf1e';
             }
 
