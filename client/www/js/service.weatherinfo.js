@@ -1,7 +1,8 @@
 angular.module('service.weatherinfo', [])
-    .factory('WeatherInfo', function (WeatherUtil, TwStorage, Util) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, TwStorage, Util) {
         var cities = [];
         var cityIndex = -1;
+        var loadingWeatherPhotos = false;
         var obj = {};
 
         var createCity = function (item) {
@@ -150,7 +151,7 @@ angular.module('service.weatherinfo', [])
             if (that.getIndexOfCity(city) === -1) {
                 city.disable = false;
                 city.loadTime = new Date();
-                city.photo = WeatherUtil.findWeatherPhoto(city.currentWeather);
+                city.photo = that._getPhoto(city.currentWeather);
                 cities.push(city);
                 that.saveCities();
                 return true;
@@ -254,20 +255,30 @@ angular.module('service.weatherinfo', [])
             }
 
             city.loadTime = new Date();
-            city.photo = WeatherUtil.findWeatherPhoto(city.currentWeather);
+            city.photo = that._getPhoto(city.currentWeather);
 
             that.saveCities();
         };
 
-        obj.updatePhotos = function () {
+        obj.loadWeatherPhotos = function () {
             var that = this;
 
-            for (var i = 0; i < cities.length; i += 1) {
-                if (cities[i].photo === null) {
-                    cities[i].photo = WeatherUtil.findWeatherPhoto(cities[i].currentWeather);
-                }
+            if (loadingWeatherPhotos === true || window.weatherPhotos != undefined) {
+                return;
             }
-            that.saveCities();
+
+            loadingWeatherPhotos = true;
+            WeatherUtil.loadWeatherPhotos().then(function () {
+                for (var i = 0; i < cities.length; i += 1) {
+                    if (cities[i].photo === null) {
+                        cities[i].photo = WeatherUtil.findWeatherPhoto(cities[i].currentWeather);
+                    }
+                }
+                that.saveCities();
+                $rootScope.$broadcast('loadWeatherPhotosEvent');
+            }).finally(function () {
+                loadingWeatherPhotos = false;
+            });
         };
 
         obj.loadCities = function() {
@@ -303,6 +314,9 @@ angular.module('service.weatherinfo', [])
             else {
                 Util.ga.trackEvent('city', 'load', 'index', cityIndex);
             }
+
+            // load weather photos
+            that.loadWeatherPhotos();
         };
 
         obj._saveCitiesPreference = function (cities) {
@@ -333,6 +347,16 @@ angular.module('service.weatherinfo', [])
             } else {
                 callback(undefined, cityList);
             }
+        };
+
+        obj._getPhoto = function (currentWeather) {
+            var that = this;
+
+            if (window.weatherPhotos == undefined) {
+                that.loadWeatherPhotos();
+                return null;
+            }
+            return WeatherUtil.findWeatherPhoto(currentWeather);
         };
 
         obj.saveCities = function() {
