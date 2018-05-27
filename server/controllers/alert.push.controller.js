@@ -719,6 +719,7 @@ class AlertPushController {
             ],
             (err, result) => {
                 if (err) {
+                    err.message += ' geoInfo:' + alertPush.geo[1]+','+alertPush.geo[0];
                     log.error(err);
                 }
                 log.debug(result);
@@ -800,11 +801,65 @@ class AlertPushController {
         });
     }
 
+    _removeDuplicates(callback) {
+        var query = [
+            {
+                $group: {
+                    _id: {registrationId: "$registrationId", cityIndex:"$cityIndex", id:"$id"},
+                    updatedAts:{"$addToSet": {updatedAt: "$updatedAt"}},
+                    count:{"$sum": 1}
+                }
+            },
+            {
+                $match:{count:{"$gt":1}}
+            }];
+        AlertPush.aggregate(query).exec((err, results) => {
+            if (err) {
+                log.error(err);
+                return callback(null);
+            }
+            results = results.filter((obj) => {
+                return obj._id.registrationId != undefined;
+            });
+
+            log.info(`alertPushDuplicates:${results.length}`);
+            if (results.length <=0 ) {
+                return callback(null);
+            }
+            log.info('duplicates:',JSON.stringify(results));
+
+            async.mapSeries(results,
+                (obj, callback) => {
+                    if (obj._id.registrationId == undefined) {
+                        log.info('skip ', obj);
+                        return callback(null);
+                    }
+                    var updatedAt = obj.updatedAts[0].updatedAt < obj.updatedAts[1].updatedAt ? obj.updatedAts[0].updatedAt : obj.updatedAts[1].updatedAt;
+                    var removeQuery = {
+                        registrationId: obj._id.registrationId,
+                        cityIndex: obj._id.cityIndex,
+                        id: obj._id.id,
+                        updatedAt: updatedAt
+                    };
+                    AlertPush.remove(removeQuery).exec(callback);
+                },
+                (err) => {
+                    if (err) {
+                        log.error(err);
+                    }
+                    callback(null);
+                });
+        });
+    }
+
     sendAlertPushList(time, callback) {
         log.info('try to send alert push list time:'+time);
         this.time = time;
 
         async.waterfall([
+                (callback) => {
+                    this._removeDuplicates(callback);
+                },
                 (callback) => {
                     this._getAlertPushByTime(time, (err, list) => {
                         if (err) {
@@ -873,9 +928,20 @@ class AlertPushController {
     updateAlertPush(alertPush, callback) {
         alertPush.updatedAt = new Date();
         alertPush.reverseTime = alertPush.startTime > alertPush.endTime;
-        AlertPush.find({
-            type: alertPush.type, registrationId: alertPush.registrationId,
-            cityIndex: alertPush.cityIndex, id: alertPush.id})
+
+        let query = {
+            type: alertPush.type,
+            cityIndex: alertPush.cityIndex,
+            id: alertPush.id};
+
+        if (alertPush.registrationId) {
+           query.registrationId = alertPush.registrationId;
+        }
+        else if (alertPush.fcmToken) {
+            query.fcmToken = alertPush.fcmToken;
+        }
+
+        AlertPush.find(query)
             .exec((err, list) => {
                 if (err) {
                     return callback(err);
@@ -912,6 +978,22 @@ class AlertPushController {
                 }
                 log.info(result.toString());
                 callback(undefined, result.toString());
+            });
+    }
+
+    updateRegistrationId(newId, oldId, callback) {
+        AlertPush.update({registrationId: oldId},
+            {$set: {registrationId: newId}},
+            function (err, result) {
+                return callback(err, result);
+            });
+    }
+
+    updateFcmToken (newId, oldId, callback) {
+        AlertPush.update({fcmToken: oldId},
+            {$set : {fcmToken: newId}},
+            function (err, result) {
+                callback(err, result);
             });
     }
 }

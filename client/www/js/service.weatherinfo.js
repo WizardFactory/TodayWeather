@@ -248,9 +248,9 @@ angular.module('service.weatherinfo', [])
                 }
             }
 
-            if (window.push) {
+            if (window.updateCityInfo) {
                 console.info('update city info for push');
-                window.push.updateCityInfo(index);
+                window.updateCityInfo(index);
             }
 
             city.loadTime = new Date();

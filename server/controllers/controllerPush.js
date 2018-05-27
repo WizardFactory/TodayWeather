@@ -4,6 +4,7 @@
 
 "use strict";
 
+var admin = require("firebase-admin");
 var apn = require('apn');
 var gcm = require('node-gcm');
 var config = require('../config/config');
@@ -50,6 +51,9 @@ var sender = new gcm.Sender(server_access_key);
 
 var i18n = require('i18n');
 
+var twFirebaseAdmin;
+var taFirebaseAdmin;
+
 function ControllerPush() {
     this.timeInterval = 60*1000; //1min
 
@@ -67,30 +71,48 @@ function ControllerPush() {
             }
         });
     });
+
+    try {
+        if (twFirebaseAdmin == undefined) {
+            var twServiceAccount = require("../config/admob-app-id-6159460161-firebase-adminsdk-r2shn-9e77fbe119.json");
+            twFirebaseAdmin = admin.initializeApp({
+                credential: admin.credential.cert(twServiceAccount),
+            }, 'todayWeather');
+        }
+        if (taFirebaseAdmin == undefined) {
+            var taServiceAccount = require("../config/todayair-74958-firebase-adminsdk-2n8hn-68ad361049.json");
+            taFirebaseAdmin = admin.initializeApp({
+                credential: admin.credential.cert(taServiceAccount),
+            }, 'todayAir');
+        }
+    }
+    catch (err) {
+       log.error(err);
+    }
 }
 
 ControllerPush.prototype.updateRegistrationId = function (newId, oldId, callback) {
-    PushInfo.find({registrationId: oldId}, function (err, pushList) {
-        if (err) {
-            return callback(err);
-        }
-        if (pushList.length == 0) {
-            log.info("no registrationId="+oldId);
-            return callback(undefined, 'not found oldRegId='+oldId);
-        }
-
-        pushList.forEach(function (push) {
-            push.registrationId = newId;
-            push.save(function (err) {
-                if (err) {
-                    log.error(err);
-                }
-            });
+    PushInfo.update({registrationId: oldId},
+        {$set: {registrationId: newId}},
+        function (err, result) {
+            return callback(err, result);
         });
-        return callback(undefined, 'We will change itmes='+pushList.length+' regid to '+newId);
-    });
 
     return this;
+};
+
+/**
+ * todo 
+ * @param {string} newId 
+ * @param {string} oldId 
+ * @param {string} callback 
+ */
+ControllerPush.prototype.updateFcmToken = function (newId, oldId, callback) {
+    PushInfo.update({fcmToken: oldId},
+        {$set : {fcmToken: newId}},
+        function (err, result) {
+            callback(err, result);
+        });
 };
 
 ControllerPush.prototype._getCurrentTime = function () {
@@ -121,9 +143,21 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
         pushInfo.id = pushInfo.cityIndex;
     }
 
+    var query = {
+        type: pushInfo.type, 
+        cityIndex: pushInfo.cityIndex, 
+        id: pushInfo.id
+    };
+
+    if (pushInfo.registrationId) {
+        query.registrationId = pushInfo.registrationId;
+    }
+    else if (pushInfo.fcmToken) {
+        query.fcmToken = pushInfo.fcmToken;
+    }
+
     PushInfo.update(
-        {type:pushInfo.type, registrationId: pushInfo.registrationId,
-            cityIndex:pushInfo.cityIndex, id: pushInfo.id},
+        query,
         pushInfo,
         {upsert : true},
         function (err, result) {
@@ -137,7 +171,18 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
 };
 
 ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
-    var query = {type:pushInfo.type, registrationId: pushInfo.registrationId, cityIndex: pushInfo.cityIndex};
+    var query = {type:pushInfo.type, cityIndex: pushInfo.cityIndex};
+    if (pushInfo.fcmToken) {
+        query.fcmToken = pushInfo.fcmToken;
+    }
+    else if (pushInfo.registrationId) {
+        query.registrationId = pushInfo.registrationId;
+    }
+    else {
+        log.error('unknown fcm token or registrationId');
+        return this;
+    }
+
     if (pushInfo.id) {
         query.id = pushInfo.id;
     }
@@ -185,10 +230,7 @@ ControllerPush.prototype.getPushByTime = function (time, callback) {
  * @param callback
  * @returns {ControllerPush}
  */
-ControllerPush.prototype.sendAndroidNotification = function (pushInfo, notification, callback) {
-    log.info('send android notification pushInfo='+JSON.stringify(pushInfo)+
-                ' notification='+JSON.stringify(notification));
-
+ControllerPush.prototype.sendGcmAndroidNotification = function (pushInfo, notification, callback) {
     var data = {
         title: notification.title,
         body: notification.text,
@@ -216,6 +258,53 @@ ControllerPush.prototype.sendAndroidNotification = function (pushInfo, notificat
     });
 
     return this;
+};
+
+ControllerPush.prototype.sendFcmNotification = function(pushInfo, notification, callback) {
+    var message = {
+        notification: {
+            title: notification.title,
+            body: notification.text
+        },
+        data: {
+            cityIndex: ""+pushInfo.cityIndex
+        },
+        token: pushInfo.fcmToken
+    };
+
+    var admin;
+    if (pushInfo.package === 'todayAir') {
+        admin = taFirebaseAdmin;
+    }
+    else {
+        admin = twFirebaseAdmin;
+    }
+
+    console.log(admin.name);
+
+    admin.messaging().send(message)
+        .then(function (response) {
+            console.log('Successfully sent message:', response);
+            callback(null, response);
+        })
+        .catch(function (err) {
+            console.log('Error sending message:', err);
+            callback(err);
+        });
+};
+
+ControllerPush.prototype.sendAndroidNotification = function (pushInfo, notification, callback) {
+    log.info('send android notification pushInfo='+JSON.stringify(pushInfo)+
+                ' notification='+JSON.stringify(notification));
+    if (pushInfo.fcmToken) {
+        this.sendFcmNotification(pushInfo, notification, callback);
+    }
+    else if (pushInfo.registrationId) {
+        this.sendGcmAndroidNotification(pushInfo, notification, callback);
+    }
+    else {
+        log.error(pushInfo);
+    }
 };
 
 /**
@@ -1081,11 +1170,71 @@ ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
     });
 };
 
+/**
+ * (fcmToken or registration id) + cityIndex + id가 중복된 경우 updatedAt이 오래된 데이터 삭제
+ * db.pushes.aggregate([{$group: {_id: {registrationId: "$registrationId", cityIndex:"$cityIndex", id:"$id"}, updatedAts:{$addToSet: "$updatedAt"}, count:{$sum:1}}}, {$match:{count:{"$gt":1}}}]);
+ * @param callback
+ * @private
+ */
+ControllerPush.prototype._removeDuplicates = function(callback) {
+    var query = [
+        {
+            $group: {
+                _id: {registrationId: "$registrationId", cityIndex:"$cityIndex", id:"$id"},
+                updatedAts:{"$addToSet": {updatedAt: "$updatedAt"}},
+                count:{"$sum": 1}
+            }
+        },
+        {
+            $match:{count:{"$gt":1}}
+        }];
+    PushInfo.aggregate(query).exec(function(err, results) {
+        if (err) {
+            log.error(err);
+            return callback(null);
+        }
+        results = results.filter(function (obj) {
+            return obj._id.registrationId != undefined;
+        });
+
+        log.info(`pushDuplicates:${results.length}`);
+        if (results.length <=0 ) {
+            return callback(null);
+        }
+        log.info('duplicates:',JSON.stringify(results));
+
+        async.mapSeries(results,
+            function (obj, callback) {
+                if (obj._id.registrationId == undefined) {
+                    log.info('skip ', obj);
+                    return callback(null);
+                }
+                var updatedAt = obj.updatedAts[0].updatedAt < obj.updatedAts[1].updatedAt ? obj.updatedAts[0].updatedAt : obj.updatedAts[1].updatedAt;
+                var removeQuery = {
+                    registrationId: obj._id.registrationId,
+                    cityIndex: obj._id.cityIndex,
+                    id: obj._id.id,
+                    updatedAt: updatedAt
+                };
+                PushInfo.remove(removeQuery).exec(callback);
+            },
+            function (err, result) {
+                if (err) {
+                    log.error(err);
+                }
+                callback(null);
+            });
+    });
+};
+
 ControllerPush.prototype.sendPush = function (time, callback) {
     var self = this;
 
     log.info('send push time='+time);
     async.waterfall([
+            function (callback) {
+                self._removeDuplicates(callback);
+            },
             function (callback) {
                 self.getPushByTime(time, function (err, pushList) {
                     if (err) {

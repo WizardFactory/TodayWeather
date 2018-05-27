@@ -412,6 +412,16 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
                 var arpltn = self._mergeArpltnList(arpltnList, dateTime);
                 //6개중에 데이터 있는 3개만 리스트로 생성
                 arpltnList = arpltnList.slice(0,3);
+                arpltnList = arpltnList.sort(function (a, b) {
+                    if (a[0].khaiValue == undefined && a[0].pm10Value == undefined) {
+                        return 1;
+                    }
+                    if (a[0].mangName === '도시대기') {
+                        return -1;
+                    }
+                    return 0;
+                });
+
                 return cb(undefined, {arpltn:arpltn, list: arpltnList[0], stnList: arpltnList});
             }],
         function(err, arpltnObj) {

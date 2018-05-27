@@ -98,7 +98,7 @@ dsfRequester.prototype.getData = function(url, retryCount, callback){
         if(err) {
             if((err.code === "ECONNRESET" || err.code === "ETIMEDOUT") && retryCount > 0){
                 log.warn('DFS> 1. Retry to get caused by ' + err.code + ' : ', retryCount, ', url:'+url);
-                return self.getData(url, retryCount-- , callback);
+                return self.getData(url, --retryCount, callback);
             }
             else {
                 err.message += ' url:'+url;
@@ -123,9 +123,9 @@ dsfRequester.prototype.getData = function(url, retryCount, callback){
             var result = JSON.parse(body);
         }catch(e){
             log.warn('DSF> Wong JSON : ', body);
-            if(retryCount > 0){
+            if (retryCount > 0) {
                 log.warn('DFS> 2. Retry to get caused by wrong JSON, retrycount(', retryCount, ')');
-                return self.getData(url, retryCount-- , callback);
+                return self.getData(url, --retryCount, callback);
             }
 
             if(callback){
