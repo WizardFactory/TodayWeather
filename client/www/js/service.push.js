@@ -766,40 +766,44 @@ angular.module('service.push', [])
 
             function _notificationCallback(err, result) {
                 console.log(JSON.stringify({ "notification": result }));
-                if (result['google.sent_time']) {
+                if (result.tap === true) {
                     //background
-                    if (result.tap === true) {
-                        if (result.cityIndex != undefined) {
-                            var url = '/tab/forecast?fav=' + result.cityIndex;
-                            //setCityIndex 와 url fav 까지 해야 이동됨 on ios
-                            var fav = parseInt(result.cityIndex);
-                            if (!isNaN(fav)) {
-                                if (fav === 0) {
-                                    var city = WeatherInfo.getCityOfIndex(0);
-                                    if (city !== null && !city.disable) {
-                                        WeatherInfo.setCityIndex(fav);
-                                    }
-                                } else {
+                    if (result.cityIndex != undefined) {
+                        var url = '/tab/forecast?fav=' + result.cityIndex;
+                        //setCityIndex 와 url fav 까지 해야 이동됨 on ios
+                        var fav = parseInt(result.cityIndex);
+                        if (!isNaN(fav)) {
+                            if (fav === 0) {
+                                var city = WeatherInfo.getCityOfIndex(0);
+                                if (city !== null && !city.disable) {
                                     WeatherInfo.setCityIndex(fav);
                                 }
+                            } else {
+                                WeatherInfo.setCityIndex(fav);
                             }
-                            console.log('clicked: ' + result.cityIndex + ' url=' + url);
-                            $location.url(url);
-                            Util.ga.trackEvent('action', 'click', 'push url=' + url);
                         }
-                        else {
-                            console.log('city index is undefined');
-                        }
+                        console.log('clicked: ' + result.cityIndex + ' url=' + url);
+                        $location.url(url);
+                        Util.ga.trackEvent('action', 'click', 'push url=' + url);
                     }
                     else {
-                        console.log('tap is false');
+                        console.log('city index is undefined');
                     }
                 }
-                else {
+                else if (result.tap === false) {
                     //foreground
-                    result.message = result.body;
+                    if (result.aps) {
+                        result.title = result.aps.alert.title;
+                        result.message = result.aps.alert.body;
+                    }
+                    else {
+                        result.message = result.body;
+                    }
                     $rootScope.$broadcast('notificationEvent', result);
                     Util.ga.trackEvent('action', 'broadcast', 'notificationEvent');
+                }
+                else {
+                    Util.ga.trackException(new Error('unknown tap info'), false);
                 }
             }
 
