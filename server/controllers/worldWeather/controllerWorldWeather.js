@@ -343,6 +343,17 @@ function controllerWorldWeather() {
 
         return true;
     };
+
+    self._isSameDayString = function(current, target){
+        log.info('_isSameDayString', current, target);
+        // YYYY.mm.dd HH:MM
+        if(current.slice(0, 10) === target.slice(0, 10)){
+            return true;
+        }
+
+        return false;
+    };
+
     /**
      * compare until hour
      * @param first
@@ -1510,13 +1521,18 @@ function controllerWorldWeather() {
 
         if(req.DSF && req.result.hasOwnProperty('timezone')){
             var dsf = req.DSF;
+            let timeOffset = req.result.timezone.ms;
 
-            log.info('cervert DSF LocalTime > Timeoffset : ', req.result.timezone.ms)
+            log.info('cervert DSF LocalTime > root Timeoffset : ', timeOffset);
             dsf.data.forEach(function(dsfItem){
                 if(dsfItem.current){
+                    if(dsfItem.current.timeOffset){
+                        timeOffset = dsfItem.current.timeOffset * 60 * 1000;
+                        log.info('DSF LocalTime > overwrite timeoffset to : ', dsfItem.current.timeOffset);
+                    }
                     var time = new Date();
                     log.info('convert DSF LocalTime > current Before :', meta, dsfItem.current.dateObj.toString());
-                    time.setTime(new Date(dsfItem.current.dateObj).getTime() + req.result.timezone.ms);
+                    time.setTime(new Date(dsfItem.current.dateObj).getTime() + timeOffset);
                     dsfItem.current.dateObj = self._convertTimeString(time);
                     log.info('convert DSF LocalTime > current After : ', meta, dsfItem.current.dateObj.toString());
                 }
@@ -1525,7 +1541,7 @@ function controllerWorldWeather() {
                     log.info('convert DSF LocalTime > hourly', meta);
                     dsfItem.hourly.data.forEach(function(hourlyItem){
                         var time = new Date();
-                        time.setTime(new Date(hourlyItem.dateObj).getTime() + req.result.timezone.ms);
+                        time.setTime(new Date(hourlyItem.dateObj).getTime() + timeOffset);
                         hourlyItem.dateObj = self._convertTimeString(time);
                     });
                 }
@@ -1534,13 +1550,13 @@ function controllerWorldWeather() {
                     log.info('convert DSF LocalTime > daily', meta);
                     dsfItem.daily.data.forEach(function(dailyItem){
                         var time = new Date();
-                        time.setTime(new Date(dailyItem.dateObj).getTime() + req.result.timezone.ms);
+                        time.setTime(new Date(dailyItem.dateObj).getTime() + timeOffset);
                         dailyItem.dateObj = self._convertTimeString(time);
 
-                        time.setTime(new Date(dailyItem.sunrise).getTime() + req.result.timezone.ms);
+                        time.setTime(new Date(dailyItem.sunrise).getTime() + timeOffset);
                         dailyItem.sunrise = self._convertTimeString(time);
 
-                        time.setTime(new Date(dailyItem.sunset).getTime() + req.result.timezone.ms);
+                        time.setTime(new Date(dailyItem.sunset).getTime() + timeOffset);
                         dailyItem.sunset = self._convertTimeString(time);
 
                         //mint, maxt, pre_intmaxt
@@ -1912,12 +1928,14 @@ function controllerWorldWeather() {
                 if(self._getUntil15Mins(curDate, item.current.dateObj)){
                     req.result.thisTime.forEach(function(thisTime, index) {
                         if(thisTime.date != undefined){
-                            if(self._compareDate(item.current.dateObj, thisTime.date)){
-                                log.info('DSF current > update data from : ',thisTime.date, ' -->  To :',  item.current.dateObj);
-                                var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
-                                var isNight = self._isNight(curDate, item.daily.data);
-                                current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
-                                req.result.thisTime[index] = current;
+                            if(self._isSameDayString(item.current.dateObj, thisTime.date)){
+                                if(self._compareDate(item.current.dateObj, thisTime.date)) {
+                                    log.info('DSF current > update data from : ', thisTime.date, ' -->  To :', item.current.dateObj);
+                                    var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
+                                    var isNight = self._isNight(curDate, item.daily.data);
+                                    current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
+                                    req.result.thisTime[index] = current;
+                                }
                                 isExist = true;
                             }
                         }

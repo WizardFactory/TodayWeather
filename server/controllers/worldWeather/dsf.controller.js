@@ -407,6 +407,7 @@ class DsfController {
                 res.dateObj = item.dateObj;
                 res.date = item.date || item.data.current.date;
                 res.timeOffset = item.timeOffset;
+                item.data.current.timeOffset = item.timeOffset;
                 res.data.push(item.data);
             }
         });
