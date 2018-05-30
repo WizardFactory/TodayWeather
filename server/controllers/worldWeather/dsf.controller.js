@@ -470,9 +470,6 @@ class DsfController {
 
                             let curData = {};
                             try{
-                                // refresh date because current time need to be the same as receive time
-                                cDate = new Date();
-
                                 curData = this._makeDbFormat(geo, cDate, timeOffset, this._parseData(result));
                                 log.info(JSON.stringify(curData));
                                 if(timeOffset != 1440 && curData.timeOffset != timeOffset){
