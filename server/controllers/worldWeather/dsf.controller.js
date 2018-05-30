@@ -470,8 +470,16 @@ class DsfController {
 
                             let curData = {};
                             try{
+                                // refresh date because current time need to be the same as receive time
+                                cDate = new Date();
+                                
                                 curData = this._makeDbFormat(geo, cDate, undefined, this._parseData(result));
                                 log.info(JSON.stringify(curData));
+                                if(timeOffset != 1440 && curData.timeOffset != timeOffset){
+                                    // For notifying
+                                    log.error('cDSF > !!! 1. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset);
+                                }
+
                                 output.current = curData;
                                 curRenewal = true;
                             }catch(e){
@@ -508,6 +516,11 @@ class DsfController {
                         }
 
                         if(timeOffset_MIN != undefined){
+                            if(curData.timeOffset != timeOffset_MIN){
+                                // For notifying
+                                log.error('cDSF > !!! 2. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset_MIN);
+                            }
+
                             timeOffset = curData.timeOffset = timeOffset_MIN;
                         }else{
                             timeOffset = curData.timeOffset || 0;

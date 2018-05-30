@@ -374,7 +374,9 @@ function controllerWorldWeather() {
     self._compareDate = function(firstStr, secondStr){
         var fDate = new Date(firstStr);
         var sDate = new Date(secondStr);
-        return fDate > sDate;
+
+        log.info('_compareDate > :', fDate.toString(), sDate.toString());
+        return fDate.getTime() > sDate.getTime();
     };
 
     self._compareDate = function(firstStr, secondStr, diff){
