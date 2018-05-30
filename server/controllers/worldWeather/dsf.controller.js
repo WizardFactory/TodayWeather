@@ -357,7 +357,7 @@ class DsfController {
             },
             pubDate: cDate,
             dateObj: newData.current.dateObj,
-            timeOffset: timeOffset || newData.timeOffset,
+            timeOffset: (timeOffset!= 1440)? timeOffset:newData.timeOffset,
             data:{
                 current: newData.current,
                 hourly: newData.hourly,
@@ -472,8 +472,8 @@ class DsfController {
                             try{
                                 // refresh date because current time need to be the same as receive time
                                 cDate = new Date();
-                                
-                                curData = this._makeDbFormat(geo, cDate, undefined, this._parseData(result));
+
+                                curData = this._makeDbFormat(geo, cDate, timeOffset, this._parseData(result));
                                 log.info(JSON.stringify(curData));
                                 if(timeOffset != 1440 && curData.timeOffset != timeOffset){
                                     // For notifying
