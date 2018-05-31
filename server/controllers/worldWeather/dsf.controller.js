@@ -357,7 +357,7 @@ class DsfController {
             },
             pubDate: cDate,
             dateObj: newData.current.dateObj,
-            timeOffset: timeOffset || newData.timeOffset,
+            timeOffset: (timeOffset!= 1440)? timeOffset:newData.timeOffset,
             data:{
                 current: newData.current,
                 hourly: newData.hourly,
@@ -470,8 +470,13 @@ class DsfController {
 
                             let curData = {};
                             try{
-                                curData = this._makeDbFormat(geo, cDate, undefined, this._parseData(result));
+                                curData = this._makeDbFormat(geo, cDate, timeOffset, this._parseData(result));
                                 log.info(JSON.stringify(curData));
+                                if(timeOffset != 1440 && curData.timeOffset != timeOffset){
+                                    // For notifying
+                                    log.error('cDSF > !!! 1. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset);
+                                }
+
                                 output.current = curData;
                                 curRenewal = true;
                             }catch(e){
@@ -508,6 +513,11 @@ class DsfController {
                         }
 
                         if(timeOffset_MIN != undefined){
+                            if(curData.timeOffset != timeOffset_MIN){
+                                // For notifying
+                                log.error('cDSF > !!! 2. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset_MIN);
+                            }
+
                             timeOffset = curData.timeOffset = timeOffset_MIN;
                         }else{
                             timeOffset = curData.timeOffset || 0;
