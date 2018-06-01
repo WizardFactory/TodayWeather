@@ -100,6 +100,17 @@ angular.module('service.push', [])
                         pushInfo.startTime = new Date(pushInfo.startTime);
                         pushInfo.endTime = new Date(pushInfo.endTime);
                     }
+                    if (pushInfo.cityIndex === 0) {
+                        try {
+                            var city = self._getSimpleCityInfo(pushInfo.cityIndex);
+                            for (var key in city) {
+                                pushInfo[key] = city[key];
+                            }
+                        }
+                        catch (err) {
+                           Util.ga.trackException(err, false);
+                        }
+                    }
                 });
 
                 //update alarmInfo to server for sync
@@ -469,27 +480,27 @@ angular.module('service.push', [])
             var simpleInfo;
             var city = WeatherInfo.getCityOfIndex(cityIndex);
             if (city == undefined) {
-                console.log("Fail to find city cityIndex="+cityIndex);
-                return;
+                throw new Error('Fail to find cityIndex:'+cityIndex);
             }
 
             simpleInfo = {name: city.name, source: city.source};
+
             if (city.location) {
                 simpleInfo.location = city.location;
             }
-            else if (city.address) {
+
+            if (city.source === 'KMA' && city.address) {
                 var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(city.address));
                 if (town && !(town.first=="" && town.second=="" && town.third=="")) {
                     simpleInfo.town = town;
                 }
                 else {
                     console.log("Fail to get town info city:"+JSON.stringify((city)));
-                    return;
                 }
             }
-            else {
-                console.log("Fail to find location or address city:"+JSON.stringify((city)));
-                return;
+
+            if (simpleInfo.location == undefined && simpleInfo.town == undefined) {
+                throw new Error("Fail to find location or address city:"+JSON.stringify((city)));
             }
 
             return simpleInfo;
@@ -504,23 +515,25 @@ angular.module('service.push', [])
          * @returns {{id: number, cityIndex: number, startTime: date, endTime: date, enable: boolean, category: string}}
          */
         obj.newPushAlert = function (id, cityIndex, startTime, endTime) {
-            var pushInfo = {
-                cityIndex: cityIndex,
-                id: id,
-                startTime: this.secs2date(startTime*3600),
-                endTime: this.secs2date(endTime*3600),
-                enable: true,
-                category: 'alert'
-            };
+            var pushInfo;
+            try {
+                pushInfo = {
+                    cityIndex: cityIndex,
+                    id: id,
+                    startTime: this.secs2date(startTime*3600),
+                    endTime: this.secs2date(endTime*3600),
+                    enable: true,
+                    category: 'alert'
+                };
 
-            var city = this._getSimpleCityInfo(cityIndex);
-            if (city == undefined) {
-                console.log(new Error("Fail to get city information index: "+cityIndex));
-            }
-            else {
+                var city = this._getSimpleCityInfo(cityIndex);
+
                 for (var key in city) {
                     pushInfo[key] = city[key];
                 }
+            }
+            catch (err) {
+               Util.ga.trackException(err, false) ;
             }
 
             return pushInfo;
@@ -535,23 +548,24 @@ angular.module('service.push', [])
          * @returns {{id: *, cityIndex: *, time, dayOfWeek: *, enable: boolean, category: string}}
          */
         obj.newPushAlarm = function (id, cityIndex, secs, dayOfWeek) {
-            var pushInfo = {
-                cityIndex: cityIndex,
-                id: id,
-                time: this.secs2date(secs),
-                dayOfWeek: dayOfWeek,
-                enable: true,
-                category: 'alarm'
-            };
+            var pushInfo;
+            try {
+                pushInfo = {
+                    cityIndex: cityIndex,
+                    id: id,
+                    time: this.secs2date(secs),
+                    dayOfWeek: dayOfWeek,
+                    enable: true,
+                    category: 'alarm'
+                };
 
-            var city = this._getSimpleCityInfo(cityIndex);
-            if (city == undefined) {
-                console.log(new Error("Fail to get city information index: "+cityIndex));
-            }
-            else {
+                var city = this._getSimpleCityInfo(cityIndex);
                 for (var key in city) {
                     pushInfo[key] = city[key];
                 }
+            }
+            catch (err) {
+               Util.ga.trackException(err, false) ;
             }
 
             return pushInfo;
@@ -575,9 +589,6 @@ angular.module('service.push', [])
 
                 list.forEach(function (pushInfo) {
                     var city = self._getSimpleCityInfo(cityIndex);
-                    if (city.source == undefined || city.source.length === 0) {
-                        return;
-                    }
                     for (var key in city) {
                         if (key == 'location') {
                             if (pushInfo.location == undefined) {
@@ -846,6 +857,14 @@ angular.module('service.push', [])
             //         self._updateFcmToken(token);
             //     });
             // }
+
+            /**
+             * WeatherInfo 와 circular dependency 제거용.
+             * @param {number} cityIndex
+             */
+            window.updateCityInfo = function (cityIndex) {
+                return self.updateCityInfo(cityIndex);
+            };
 
             return showAlertInfo;
         };

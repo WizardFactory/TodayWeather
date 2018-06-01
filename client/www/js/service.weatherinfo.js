@@ -253,6 +253,9 @@ angular.module('service.weatherinfo', [])
                 console.info('update city info for push');
                 window.updateCityInfo(index);
             }
+            else {
+                Util.ta.trackException(new Error("updateCityInfo is undefined"), false);
+            }
 
             city.loadTime = new Date();
             city.photo = that._getPhoto(city.currentWeather);
