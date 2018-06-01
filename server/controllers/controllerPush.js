@@ -56,21 +56,7 @@ var taFirebaseAdmin;
 
 function ControllerPush() {
     this.timeInterval = 60*1000; //1min
-
-    this.domain = config.apiServer.url.replace('http://', '').replace('https://', '');
-    this.url = config.apiServer.url;
-
-    [apnGateway, this.domain].forEach(function (value) {
-        var domain = value;
-        dnscache.lookup(domain, function(err, result) {
-            if (err) {
-                console.error(err);
-            }
-            else {
-                console.info('pushctrl cached domain:', domain, ', result:', result);
-            }
-        });
-    });
+    this.url = config.serviceServer.url;
 
     try {
         if (twFirebaseAdmin == undefined) {
@@ -736,11 +722,7 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
     var url;
     var town = pushInfo.town;
 
-    if (pushInfo.geo) {
-        url = self.url+'/weather/coord';
-        url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
-    }
-    else if (pushInfo.town) {
+    if (pushInfo.town &&  pushInfo.town.first && pushInfo.town.first != '') {
         url = self.url+"/"+apiVersion+"/kma/addr";
         if (town.first) {
             url += '/'+ encodeURIComponent(town.first);
@@ -751,6 +733,10 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
         if (town.third) {
             url += '/' + encodeURIComponent(town.third);
         }
+    }
+    else if (pushInfo.geo) {
+        url = self.url+'/weather/coord';
+        url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
     }
     else {
         callback(new Error("Fail to find geo or town info"));
@@ -1015,6 +1001,53 @@ ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback)
     });
 };
 
+ControllerPush.prototype._requestGeoInfo = function (pushInfo, callback) {
+    var url;
+    url = config.apiServer.url + '/geocode/coord/';
+    url += pushInfo.geo[1]+","+pushInfo.geo[0];
+
+    log.info('request url:'+url);
+    var options = {
+        url : url,
+        json:true
+    };
+
+    req(options, function(err, response, body) {
+        log.info('Finished ' + url + ' ' + new Date());
+        if (err) {
+            return callback(err);
+        }
+
+        if (response.statusCode >= 400) {
+            err = new Error("response.statusCode=" + response.statusCode);
+            return callback(err)
+        }
+        callback(undefined, body);
+    });
+};
+
+ControllerPush.prototype._geoInfo2pushInfo = function (pushInfo, geoInfo) {
+    var success = false;
+    if (geoInfo.kmaAddress &&
+        geoInfo.kmaAddress.name1 &&
+        geoInfo.kmaAddress.name1.length > 1) {
+        pushInfo.town = {first: geoInfo.kmaAddress.name1};
+        if (geoInfo.kmaAddress.name2) {
+            pushInfo.town.second = geoInfo.kmaAddress.name2;
+        }
+        if (geoInfo.kmaAddress.name3) {
+            pushInfo.town.third = geoInfo.kmaAddress.name3;
+        }
+        success = true;
+    }
+    if (geoInfo.location) {
+        pushInfo.geo = [geoInfo.location.long, geoInfo.location.lat];
+        success = true;
+    }
+
+    return success;
+};
+
 /**
  * convert rest api to function call
  * use default for old push db
@@ -1031,22 +1064,37 @@ ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
     pushInfo.units = UnitConverter.initUnits(pushInfo.units);
     pushInfo.package = pushInfo.package || 'todayWeather';
 
-    //check source
-    if (pushInfo.source == undefined || pushInfo.source === 'KMA') {
-        self._requestKmaDailySummary(pushInfo, function (err, results) {
-            if (err) {
-                return callback(err);
-            }
-            return callback(undefined, results);
-        });
+    if ( pushInfo.source === 'KMA' ||
+         (pushInfo.town && pushInfo.town.first && pushInfo.town.first.length > 0) )
+    {
+        self._requestKmaDailySummary(pushInfo, callback);
     }
     else if (pushInfo.source == 'DSF') {
-       self._requestDsfDailySummary(pushInfo, function (err, results) {
-           if (err)  {
-               return callback(err);
-           }
-           return callback(undefined, results);
-       });
+       self._requestDsfDailySummary(pushInfo, callback);
+    }
+    else if (pushInfo.geo) {
+        async.waterfall(
+            [
+                function (callback) {
+                    self._requestGeoInfo(pushInfo, callback);
+                },
+                function (geoInfo, callback) {
+                    if (geoInfo.country === 'KR') {
+                        //copy geoInfo to push info
+                        if (self._geoInfo2pushInfo(pushInfo, geoInfo) === false) {
+                           return callback(new Error('INVALID GEOINFO '+JSON.stringify(geoInfo)));
+                        }
+                        self._requestKmaDailySummary(pushInfo, callback);
+                    }
+                    else {
+                        self._requestDsfDailySummary(pushInfo, callback);
+                    }
+                }
+            ],
+            callback);
+    }
+    else {
+       return callback(new Error('INVALID PUSHINFO '+JSON.stringify(pushInfo)));
     }
 
     return this;
@@ -1266,7 +1314,7 @@ ControllerPush.prototype.sendPush = function (time, callback) {
                 callback(undefined, filteredList);
             },
             function(pushList, callback) {
-                async.mapSeries(pushList, function (pushInfo, mCallback) {
+                async.mapLimit(pushList, 6, function (pushInfo, mCallback) {
                     self.sendNotification(pushInfo, function (err, result) {
                         if (err) {
                             err.message += ' ' + JSON.stringify(pushInfo);
