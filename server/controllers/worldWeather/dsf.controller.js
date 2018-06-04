@@ -478,6 +478,9 @@ class DsfController {
                                 }
 
                                 output.current = curData;
+                                log.info('cDSF > 1. cur Date : ', cDate.toString());
+                                output.updatedDate = new Date(curData.data.current.dateObj);
+                                log.info('cDSF > 2. updated cur Date : ', output.updatedDate.toString());
                                 curRenewal = true;
                             }catch(e){
                                 log.error('cDsf > wrong data : ', e, JSON.stringify(result));
@@ -650,7 +653,8 @@ class DsfController {
                     log.error('cDFS > Fail to collect DFS data');
                 }
 
-                req.cDate = cDate;
+                req.cDate = result.updatedDate || cDate;
+                log.info('cDSF > cDate  : ', req.cDate.toString());
                 return callback(err, this._makeOutputFormat(result, req));
             }
         );
