@@ -1566,6 +1566,8 @@ function controllerWorldWeather() {
                     });
                 }
             });
+
+            log.info(JSON.stringify(req.DSF));
         }
         next();
     };

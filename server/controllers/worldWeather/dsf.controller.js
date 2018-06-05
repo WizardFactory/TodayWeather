@@ -169,7 +169,7 @@ class DsfController {
             let ret = {};
             list.forEach((item)=>{
                 //log.info(JSON.stringify(item));
-                log.info('---> ', item.dateObj, item.timeOffset);
+                //log.info('---> ', item.dateObj, item.timeOffset);
                 if(this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
                     ret['yesterday'] = item;
                 }else if(this._checkDate(cDate, item.dateObj, item.timeOffset, 'today')){
@@ -474,7 +474,7 @@ class DsfController {
                                 log.info(JSON.stringify(curData));
                                 if(timeOffset != 1440 && curData.timeOffset != timeOffset){
                                     // For notifying
-                                    log.error('cDSF > !!! 1. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset);
+                                    log.error('cDSF > !!! 1. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset, 'geo:', geo));
                                 }
 
                                 output.current = curData;
@@ -518,7 +518,7 @@ class DsfController {
                         if(timeOffset_MIN != undefined){
                             if(curData.timeOffset != timeOffset_MIN){
                                 // For notifying
-                                log.error('cDSF > !!! 2. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset_MIN);
+                                log.error('cDSF > !!! 2. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset_MIN, ' | ', timeOffset, 'geo:', geo);
                             }
 
                             timeOffset = curData.timeOffset = timeOffset_MIN;
