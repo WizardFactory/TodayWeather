@@ -117,7 +117,7 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
        }
     }
     else if (pushInfo.hasOwnProperty('town')) {
-        if (!pushInfo.town.hasOwnProperty('first')) {
+        if (!pushInfo.town.hasOwnProperty('first') || pushInfo.town.first.length < 1) {
             return callback(new Error('invalid town info pushInfo:'+JSON.stringify(pushInfo)));
         }
     }
@@ -274,7 +274,8 @@ ControllerPush.prototype.sendFcmNotification = function(pushInfo, notification, 
             callback(null, response);
         })
         .catch(function (err) {
-            log.error('Error sending message:', err);
+            err.message += ' fcmToken:' + pushInfo.fcmToken;
+            log.error(err);
             callback(err);
         });
 };
@@ -734,10 +735,6 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
             url += '/' + encodeURIComponent(town.third);
         }
     }
-    else if (pushInfo.geo) {
-        url = self.url+'/weather/coord';
-        url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
-    }
     else {
         callback(new Error("Fail to find geo or town info"));
         return this;
@@ -1064,13 +1061,13 @@ ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
     pushInfo.units = UnitConverter.initUnits(pushInfo.units);
     pushInfo.package = pushInfo.package || 'todayWeather';
 
-    if ( pushInfo.source === 'KMA' ||
-         (pushInfo.town && pushInfo.town.first && pushInfo.town.first.length > 0) )
+    //현재위치의 이동으로 DSF이면서 town이 있는 경우가 생김
+    if (pushInfo.source == 'DSF') {
+        self._requestDsfDailySummary(pushInfo, callback);
+    }
+    else if (pushInfo.town && pushInfo.town.first && pushInfo.town.first.length > 0)
     {
         self._requestKmaDailySummary(pushInfo, callback);
-    }
-    else if (pushInfo.source == 'DSF') {
-       self._requestDsfDailySummary(pushInfo, callback);
     }
     else if (pushInfo.geo) {
         async.waterfall(
@@ -1390,9 +1387,6 @@ ControllerPush.prototype.updatePushInfoList = function (language, pushList, call
                 if (pushInfo.location) {
                     pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
                 }
-                if (pushInfo.source == undefined) {
-                    pushInfo.source = "KMA"
-                }
 
                 log.info('pushInfo : '+ JSON.stringify(pushInfo));
             }
@@ -1401,7 +1395,10 @@ ControllerPush.prototype.updatePushInfoList = function (language, pushList, call
             }
 
             self.updatePushInfo(pushInfo, function (err, result) {
-                callback(err, result);
+                if (err) {
+                    log.error(err);
+                }
+                callback(undefined, result);
             });
         },
         function (err, results) {
