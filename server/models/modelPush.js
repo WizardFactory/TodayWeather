@@ -33,6 +33,8 @@ var pushSchema = new mongoose.Schema({
     timezoneOffset: Number, //mins +9h -> +540
     dayOfWeek: [Boolean], // Sunday - Saturday : 0 - 6 [false, true, true, true, true, true, false]
     package: String, //todayWeather, todayAir
+    uuid: String,
+    appVersion: String,
 });
 
 pushSchema.index({alarmTime:1});
