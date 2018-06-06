@@ -195,7 +195,7 @@ ControllerPush.prototype.getPushByTime = function (time, callback) {
         return this.enable !== false;
     }
 
-    PushInfo.find({pushTime: time}).$where(enable).lean().exec(function (err, pushList) {
+    PushInfo.find({pushTime: time}, {__v: 0}).$where(enable).lean().exec(function (err, pushList) {
         if (err) {
             return callback(err);
         }
