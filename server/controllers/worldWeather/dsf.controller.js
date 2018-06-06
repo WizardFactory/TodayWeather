@@ -474,7 +474,7 @@ class DsfController {
                                 log.info(JSON.stringify(curData));
                                 if(timeOffset != 1440 && curData.timeOffset != timeOffset){
                                     // For notifying
-                                    log.error('cDSF > !!! 1. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset, 'geo:', geo));
+                                    log.error('cDSF > !!! 1. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset, 'geo:', geo);
                                 }
 
                                 output.current = curData;
