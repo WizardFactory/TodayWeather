@@ -136,7 +136,7 @@ class DsfController {
             }
         }
 
-        log.info('S : ', startTime.toString(),'T : ', targetDate.toString(), 'E : ', endTime.toString());
+        log.debug('_checkDate S : ', startTime.toString(),'T : ', targetDate.toString(), 'E : ', endTime.toString());
         // check vaild range
         if(targetDate.getTime() >= startTime.getTime() && targetDate.getTime() <= endTime.getTime()){
             return true;
@@ -179,7 +179,7 @@ class DsfController {
                 }
             });
 
-            log.info(JSON.stringify(ret));
+            log.debug('_findFromDB', JSON.stringify(ret));
 
             return callback(null, ret);
         });
@@ -422,7 +422,7 @@ class DsfController {
             return 0;
         });
 
-        log.info(JSON.stringify(res));
+        log.debug('_makeOutputFormat', JSON.stringify(res));
         output.DSF = res;
 
         return res;
@@ -471,7 +471,7 @@ class DsfController {
                             let curData = {};
                             try{
                                 curData = this._makeDbFormat(geo, cDate, timeOffset, this._parseData(result));
-                                log.info(JSON.stringify(curData));
+                                log.debug('_requestDatas', JSON.stringify(curData));
                                 if(timeOffset != 1440 && curData.timeOffset != timeOffset){
                                     // For notifying
                                     log.error('cDSF > !!! 1. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset, 'geo:', geo);
