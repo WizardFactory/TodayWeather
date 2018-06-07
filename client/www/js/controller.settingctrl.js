@@ -80,6 +80,10 @@ angular.module('controller.settingctrl', [])
             return ionic.Platform.isAndroid();
         };
 
+        $rootScope.isIOS = function () {
+            return ionic.Platform.isIOS();
+        };
+
         $rootScope.isMenuOpen = function() {
             var isOpen = $ionicSideMenuDelegate.isOpen();
 
