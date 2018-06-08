@@ -111,6 +111,8 @@ function getWeather(req, res, next) {
                 if (err) {
                     return callback(err);
                 }
+                delete weatherInfo.airInfo;
+                delete weatherInfo.airInfoList;
                 callback(undefined, weatherInfo);
             });
         },
