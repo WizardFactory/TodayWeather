@@ -88,15 +88,31 @@ angular.module('controller.push', [])
             }
 
             if (!Push.pushData.fcmToken) {
-                Push.register();
+                console.log('fcmToken is null !!');
             }
             else {
-                Push.hasPermission(function(data) {
-                    Push.isEnabled = data.isEnabled;
-                    if (data.isEnabled === false) {
-                        _showPermissionPopUp();
-                    }
-                });
+                console.log('fcmToken:'+Push.pushData.fcmToken);
+                if (ionic.Platform.isIOS()) {
+                    Push.grantPermission(
+                        function () {
+                            Push.hasPermission(function(data) {
+                                Push.isEnabled = data.isEnabled;
+                                console.log('push is enabled:'+Push.isEnabled);
+                                if (data.isEnabled === false) {
+                                    _showPermissionPopUp();
+                                }
+                            });
+                        });
+                }
+                else {
+                    Push.hasPermission(function(data) {
+                        Push.isEnabled = data.isEnabled;
+                        console.log('push is enabled:'+Push.isEnabled);
+                        if (data.isEnabled === false) {
+                            _showPermissionPopUp();
+                        }
+                    });
+                }
             }
         }
 

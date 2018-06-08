@@ -33,6 +33,8 @@ var alertPushSchema = new mongoose.Schema({
         airForecastSource: String //airkorea, kaq, aqicn, ...
     },
     package: String, //todayWeather, todayAir
+    uuid: String,
+    appVersion: String,
     updatedAt: Date,
     timezoneOffset: Number, //mins +9h -> +540 for filtering day of week
     dayOfWeek: [Boolean], // Sunday - Saturday : 0 - 6 [false, true, true, true, true, true, false]

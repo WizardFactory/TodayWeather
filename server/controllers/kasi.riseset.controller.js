@@ -57,7 +57,7 @@ kasiRiseSet._makeAreaApiUrl = function (location, date) {
 };
 
 kasiRiseSet._requestRiseSetFromApi = function (url, callback) {
-    log.info('request rise set from api url='+url);
+    log.debug('request rise set from api url='+url);
 
     req(url, {json: true, timeout: 5000}, function(err, response, body) {
         if (err) {

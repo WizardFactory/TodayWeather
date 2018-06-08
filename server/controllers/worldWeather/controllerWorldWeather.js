@@ -678,7 +678,7 @@ function controllerWorldWeather() {
             ],
             function(err) {
                 if(err){
-                    log.info('TWW2 > : ', err, meta);
+                    log.warn('TWW2 > : ', err, meta);
                 }
                 next();
             });
@@ -1361,7 +1361,7 @@ function controllerWorldWeather() {
                 var result = JSON.parse(body);
                 var geocode = {};
 
-                log.info(JSON.stringify(result));
+                log.debug('getGeocodeByAddr', JSON.stringify(result));
                 if(result.hasOwnProperty('results')){
                     if(Array.isArray(result.results)
                         && result.results[0].hasOwnProperty('geometry')){
@@ -1567,7 +1567,7 @@ function controllerWorldWeather() {
                 }
             });
 
-            log.info(JSON.stringify(req.DSF));
+            log.debug('convertDsfLocalTime', JSON.stringify(req.DSF));
         }
         next();
     };

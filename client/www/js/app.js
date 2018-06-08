@@ -61,33 +61,64 @@ angular.module('starter', [
 
         $rootScope.package = clientConfig.package;
         $rootScope.title = clientConfig.package === 'todayWeather' ? 'LOC_TODAYWEATHER' : 'LOC_TODAYAIR';
-
         if (ionic.Platform.isIOS()) {
             Util.ga.startTrackerWithId(clientConfig.gaIOSKey);
-
-            // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
-            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
-                cordova.plugins.diagnostic.isLocationEnabled(function (enabled) {
-                    console.log("Location setting is " + (enabled ? "enabled" : "disabled"));
-                }, function (error) {
-                    console.error("Error getting for location enabled status: " + error);
-                });
-            }
-        } else if (ionic.Platform.isAndroid()) {
+        }
+        else if (ionic.Platform.isAndroid()) {
             Util.ga.startTrackerWithId(clientConfig.gaAndroidKey, 30);
+        }
 
-            // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
-            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
-                cordova.plugins.diagnostic.getLocationMode(function(locationMode) {
-                    Util.locationStatus = locationMode;
-                }, function(error) {
-                    console.error("Error getting for location mode: " + error);
-                });
+        function checkLocationMode() {
+            if (ionic.Platform.isIOS()) {
+
+                // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
+                if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                    cordova.plugins.diagnostic.isLocationEnabled(function (enabled) {
+                        console.log("Location setting is " + (enabled ? "enabled" : "disabled"));
+                        //TW,TA는 GRANTED_WHEN_IN_USE만 사용하고 있음
+                        if (enabled) {
+                            cordova.plugins.diagnostic.getLocationAuthorizationStatus(function(status){
+                                Util.locationStatus = status;
+                                switch(status){
+                                    case cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED:
+                                        console.log("Permission not requested");
+                                        break;
+                                    case cordova.plugins.diagnostic.permissionStatus.DENIED:
+                                        console.log("Permission denied");
+                                        break;
+                                    case cordova.plugins.diagnostic.permissionStatus.GRANTED:
+                                        console.log("Permission granted always");
+                                        break;
+                                    case cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE:
+                                        console.log("Permission granted only when in use");
+                                        break;
+                                }
+                            }, function(error){
+                                console.error("The following error occurred: "+error);
+                            });
+                        }
+                    }, function (error) {
+                        console.error("Error getting for location enabled status: " + error);
+                    });
+                }
+            }
+            else if (ionic.Platform.isAndroid()) {
+                // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
+                if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                    cordova.plugins.diagnostic.getLocationMode(function(locationMode) {
+                        Util.locationStatus = locationMode;
+                    }, function(error) {
+                        console.error("Error getting for location mode: " + error);
+                    });
+                }
+            }
+            else {
+                console.log("Error : Unknown platform");
             }
         }
-        else {
-            console.log("Error : Unknown platform");
-        }
+
+        checkLocationMode();
+
         Util.ga.platformReady();
 
         Util.ga.enableUncaughtExceptionReporting(true);
@@ -132,8 +163,7 @@ angular.module('starter', [
         }
         else {
             //getAppVersion plugin이 없으면 update.info.js 사용함.
-            $rootScope.version = window.appVersion;
-            Util.version = window.appVersion;
+            $rootScope.version = Util.version = window[clientConfig.package].appVersion;
         }
 
         Util.ga.trackEvent('app', 'language', Util.language);
@@ -180,6 +210,7 @@ angular.module('starter', [
 
         document.addEventListener("resume", function() {
             Util.ga.trackEvent('app', 'status', 'resume');
+            checkLocationMode();
         }, false);
         document.addEventListener("pause", function() {
             Util.ga.trackEvent('app', 'status', 'pause');
@@ -313,10 +344,6 @@ angular.module('starter', [
             $rootScope.weatherImgPath = window.theme[$rootScope.settingsInfo.theme].weather;
 
             WeatherInfo.loadCities();
-            WeatherUtil.loadWeatherPhotos().finally(function () {
-                WeatherInfo.updatePhotos();
-                $rootScope.$broadcast('loadWeatherPhotosEvent');
-            });
             if (Push.init() === true) {
                 //show notify alert info popup
                 setTimeout(function () {
@@ -326,6 +353,10 @@ angular.module('starter', [
             }
             Purchase.init();
             Units.loadUnits();
+
+            window.addEventListener('online',  function () {
+                WeatherInfo.loadWeatherPhotos();
+            });
 
             var daumServiceKeys = TwStorage.get("daumServiceKeys");
             if (daumServiceKeys == undefined || daumServiceKeys.length != clientConfig.daumServiceKeys.length) {
@@ -368,7 +399,7 @@ angular.module('starter', [
                     var logMsg = 'from '+lastAppVersion+' to '+Util.version;
                     Util.ga.trackEvent('app', 'update', logMsg);
                     TwStorage.set('appVersion', Util.version);
-                    if (window[clientConfig.package].enablePopup === true) {
+                    if (window[clientConfig.package] && window[clientConfig.package].enablePopup === true) {
                         console.log('disable update info ');
                         TwStorage.set('disableUpdateInfo', false);
                     }

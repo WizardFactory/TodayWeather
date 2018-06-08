@@ -697,7 +697,7 @@ class AlertPushController {
                         log.verbose(result);
                     });
 
-                    log.info({send:send, registrationId: alertPush.registrationId});
+                    log.info({send:send, fcmToken: alertPush.fcmToken, registrationId: alertPush.registrationId});
                     callback(null, {send:send, data: infoObj});
                 },
                 (pushWithWeather, callback) => {
@@ -801,11 +801,65 @@ class AlertPushController {
         });
     }
 
+    _removeDuplicates(callback) {
+        var query = [
+            {
+                $group: {
+                    _id: {registrationId: "$registrationId", cityIndex:"$cityIndex", id:"$id"},
+                    updatedAts:{"$addToSet": {updatedAt: "$updatedAt"}},
+                    count:{"$sum": 1}
+                }
+            },
+            {
+                $match:{count:{"$gt":1}}
+            }];
+        AlertPush.aggregate(query).exec((err, results) => {
+            if (err) {
+                log.error(err);
+                return callback(null);
+            }
+            results = results.filter((obj) => {
+                return obj._id.registrationId != undefined;
+            });
+
+            log.info(`alertPushDuplicates:${results.length}`);
+            if (results.length <=0 ) {
+                return callback(null);
+            }
+            log.info('duplicates:',JSON.stringify(results));
+
+            async.mapSeries(results,
+                (obj, callback) => {
+                    if (obj._id.registrationId == undefined) {
+                        log.info('skip ', obj);
+                        return callback(null);
+                    }
+                    var updatedAt = obj.updatedAts[0].updatedAt < obj.updatedAts[1].updatedAt ? obj.updatedAts[0].updatedAt : obj.updatedAts[1].updatedAt;
+                    var removeQuery = {
+                        registrationId: obj._id.registrationId,
+                        cityIndex: obj._id.cityIndex,
+                        id: obj._id.id,
+                        updatedAt: updatedAt
+                    };
+                    AlertPush.remove(removeQuery).exec(callback);
+                },
+                (err) => {
+                    if (err) {
+                        log.error(err);
+                    }
+                    callback(null);
+                });
+        });
+    }
+
     sendAlertPushList(time, callback) {
         log.info('try to send alert push list time:'+time);
         this.time = time;
 
         async.waterfall([
+                (callback) => {
+                    this._removeDuplicates(callback);
+                },
                 (callback) => {
                     this._getAlertPushByTime(time, (err, list) => {
                         if (err) {
@@ -870,13 +924,43 @@ class AlertPushController {
         }, this.timeInterval );
     }
 
-    //update from client
+    /**
+     * update from client
+     * @param alertPush
+     * @param callback
+     * @returns {*}
+     */
     updateAlertPush(alertPush, callback) {
+        if (alertPush.hasOwnProperty('geo')) {
+            if (typeof alertPush.geo[0] !== 'number' || typeof alertPush.geo[1] !== 'number')  {
+                return callback(new Error('invalid geo info alertPush:'+JSON.stringify(alertPush)));
+            }
+        }
+        else if (alertPush.hasOwnProperty('town')) {
+            if (!alertPush.town.hasOwnProperty('first') || alertPush.town.first.length < 1) {
+                return callback(new Error('invalid town info alertPush:'+JSON.stringify(alertPush)));
+            }
+        }
+        else {
+            return callback(new Error('invalid info alertPush:'+JSON.stringify(alertPush)));
+        }
+
         alertPush.updatedAt = new Date();
         alertPush.reverseTime = alertPush.startTime > alertPush.endTime;
-        AlertPush.find({
-            type: alertPush.type, registrationId: alertPush.registrationId,
-            cityIndex: alertPush.cityIndex, id: alertPush.id})
+
+        let query = {
+            type: alertPush.type,
+            cityIndex: alertPush.cityIndex,
+            id: alertPush.id};
+
+        if (alertPush.registrationId) {
+           query.registrationId = alertPush.registrationId;
+        }
+        else if (alertPush.fcmToken) {
+            query.fcmToken = alertPush.fcmToken;
+        }
+
+        AlertPush.find(query)
             .exec((err, list) => {
                 if (err) {
                     return callback(err);
