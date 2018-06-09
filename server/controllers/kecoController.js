@@ -585,23 +585,42 @@ arpltnController.appendData = function(town, current, callback) {
     });
 };
 
+/**
+ * 적절한 db query를 찾아야 함.
+ * @param callback
+ */
 arpltnController.getSidoArpltn = function (callback) {
-    SidoArpltn.find({"cityName" : ""}).sort({date:-1}).limit(20).lean().exec(function (err, list) {
-        if (err) {
-            return callback(err);
-        }
-        if (list.length === 0) {
-            return callback(new Error("Fail to find sido arpltn"));
-        }
-        var last = list[0].date;
-        list = list.filter(function (obj) {
-            return obj.date.getTime() === last.getTime();
+    var sidoList = Arpltn.getCtprvnSidoList();
+
+    async.map(sidoList,
+        function (sido, callback) {
+            SidoArpltn.find({sidoName:sido, cityName: ""}, {_id:0, __v:0})
+                .sort({date:-1})
+                .limit(1).lean()
+                .exec(
+                    function (err, list) {
+                        if (err) {
+                            log.error(err);
+                            return callback(undefined, undefined);
+                        }
+                        if (list.length === 0) {
+                            log.error(new Error("Fail to find sido arpltn sido:"+sido));
+                            return callback(undefined, undefined);
+                        }
+                        callback(null, list[0]);
+                    });
+        },
+        function (err, list) {
+            if (err) {
+                return callback(err);
+            }
+            list = list.filter(function (obj) {
+               return obj != undefined
+            });
+            callback(null, list);
         });
-        if (list.length < 17) {
-            log.error("Fail to get full sido arpltn");
-        }
-        callback(null, list);
-    });
+
+    return this;
 };
 
 module.exports = arpltnController;

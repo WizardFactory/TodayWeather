@@ -127,7 +127,7 @@ angular.module('controller.searchctrl', [])
                     city.currentWeather = {};
                 }
                 if (!city.currentWeather.skyIcon) {
-                    city.currentWeather.skyIcon = 'Sun';
+                    city.currentWeather.skyIcon = 'sun';
                 }
                 if (city.currentWeather.t1h === undefined) {
                     city.currentWeather.t1h = '-';

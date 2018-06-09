@@ -54,12 +54,6 @@ router.post('/', function(req, res) {
     try {
         pushInfo = req.body;
 
-        if (!pushInfo.hasOwnProperty('registrationId') ||
-            pushInfo.type.length === 0 )
-        {
-            throw new Error('invalid push info type');
-        }
-
         if (!pushInfo.hasOwnProperty('fcmToken') || pushInfo.fcmToken.length === 0)
         {
             if (!pushInfo.hasOwnProperty('registrationId') || pushInfo.registrationId.length === 0)
@@ -78,19 +72,18 @@ router.post('/', function(req, res) {
         }
 
         if (pushInfo.source == undefined) {
-            pushInfo.source = "KMA"
+            log.warn(`pushInfo source is undefined fcmToken:${pushInfo.fcmToken}, regId:${pushInfo.registrationId}`);
         }
 
         if (pushInfo.category == undefined) {
-            log.error('pushInfo category is undefined');
+            log.warn(`pushInfo category is undefined fcmToken:${pushInfo.fcmToken}, regId:${pushInfo.registrationId}`);
             pushInfo.category = 'alarm';
         }
 
         if (pushInfo.package == undefined) {
-            log.error('pushInfo package is undefined');
+            log.warn(`pushInfo package is undefined fcmToken:${pushInfo.fcmToken}, regId:${pushInfo.registrationId}`);
             pushInfo.package = 'todayWeather';
         }
-
 
         log.info('pushInfo : '+ JSON.stringify(pushInfo));
     }

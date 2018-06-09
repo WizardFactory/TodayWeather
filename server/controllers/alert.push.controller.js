@@ -697,7 +697,7 @@ class AlertPushController {
                         log.verbose(result);
                     });
 
-                    log.info({send:send, registrationId: alertPush.registrationId});
+                    log.info({send:send, fcmToken: alertPush.fcmToken, registrationId: alertPush.registrationId});
                     callback(null, {send:send, data: infoObj});
                 },
                 (pushWithWeather, callback) => {
@@ -924,8 +924,27 @@ class AlertPushController {
         }, this.timeInterval );
     }
 
-    //update from client
+    /**
+     * update from client
+     * @param alertPush
+     * @param callback
+     * @returns {*}
+     */
     updateAlertPush(alertPush, callback) {
+        if (alertPush.hasOwnProperty('geo')) {
+            if (typeof alertPush.geo[0] !== 'number' || typeof alertPush.geo[1] !== 'number')  {
+                return callback(new Error('invalid geo info alertPush:'+JSON.stringify(alertPush)));
+            }
+        }
+        else if (alertPush.hasOwnProperty('town')) {
+            if (!alertPush.town.hasOwnProperty('first') || alertPush.town.first.length < 1) {
+                return callback(new Error('invalid town info alertPush:'+JSON.stringify(alertPush)));
+            }
+        }
+        else {
+            return callback(new Error('invalid info alertPush:'+JSON.stringify(alertPush)));
+        }
+
         alertPush.updatedAt = new Date();
         alertPush.reverseTime = alertPush.startTime > alertPush.endTime;
 

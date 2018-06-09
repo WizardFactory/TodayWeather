@@ -116,7 +116,7 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
         }
 
         if(req != undefined && req[type] != undefined){
-            log.info('KMA Town M> return existed data : ', type, JSON.stringify(req[type]));
+            log.debug('KMA Town M> return existed data : ', type, JSON.stringify(req[type]));
             callback(undefined, req[type]);
             return req[type];
         }

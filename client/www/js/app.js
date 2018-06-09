@@ -344,10 +344,6 @@ angular.module('starter', [
             $rootScope.weatherImgPath = window.theme[$rootScope.settingsInfo.theme].weather;
 
             WeatherInfo.loadCities();
-            WeatherUtil.loadWeatherPhotos().finally(function () {
-                WeatherInfo.updatePhotos();
-                $rootScope.$broadcast('loadWeatherPhotosEvent');
-            });
             if (Push.init() === true) {
                 //show notify alert info popup
                 setTimeout(function () {
@@ -357,6 +353,10 @@ angular.module('starter', [
             }
             Purchase.init();
             Units.loadUnits();
+
+            window.addEventListener('online',  function () {
+                WeatherInfo.loadWeatherPhotos();
+            });
 
             var daumServiceKeys = TwStorage.get("daumServiceKeys");
             if (daumServiceKeys == undefined || daumServiceKeys.length != clientConfig.daumServiceKeys.length) {

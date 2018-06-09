@@ -169,6 +169,50 @@ describe('e2e local test - controller push', function() {
     //     });
     // });
 
+    // it('test request daily summary without source', function(done) {
+    //     this.timeout(20*1000);
+    //     var pushInfo4 = { "id":3, "cityIndex" : 3,
+    //         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+    //         "pushTime" : 82900,
+    //         "enable" : false,
+    //         "category" : "alarm",
+    //         "type" : "ios", "source" : "DSF", "lang" : "ko",
+    //         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+    //             "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
+    //         "geo" : [ -79.936, 40.461 ],
+    //         "name" : "New York", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
+    //     pushInfo4.package = 'todayWeather';
+    //
+    //     var co = new ControllerPush();
+    //     co.requestDailySummary(pushInfo4, function (err, result) {
+    //         assert.equal(err, null, err);
+    //         console.log(result);
+    //         done();
+    //     });
+    // });
+
+    // it('test request daily summary without source', function(done) {
+    //     this.timeout(20*1000);
+    //     var pushInfo2 = { "id":2, "cityIndex" : 2,
+    //         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+    //         "pushTime" : 82800,
+    //         "enable" : true,
+    //         "category" : "alarm",
+    //         "type" : "ios", "lang" : "ko",
+    //         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+    //             "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm", "airForecastSource" : "kaq"},
+    //         "geo" : [ 127.086, 37.503 ],
+    //         "name" : "잠실본동", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
+    //     pushInfo2.package = 'todayWeather';
+    //
+    //     var co = new ControllerPush();
+    //     co.requestDailySummary(pushInfo2, function (err, result) {
+    //         assert.equal(err, null, err);
+    //         console.log(result);
+    //         done();
+    //     });
+    // });
+
     before(function (done) {
         this.timeout(10*1000);
         mongoose.Promise = global.Promise;
@@ -190,11 +234,38 @@ describe('e2e local test - controller push', function() {
 
     it ('test remove RegistrationId Changed To Fcm', function (done) {
         this.timeout(60*1000);
+
+        var pushInfo2 = { "id":2, "cityIndex" : 2,
+            "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+            "pushTime" : 82800,
+            "enable" : true,
+            "category" : "alarm",
+            "type" : "ios", "lang" : "ko",
+            "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+                "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm", "airForecastSource" : "kaq"},
+            "town" : { "first" : "", "second" : "", "third" : "" },
+            // "geo" : [ 127.086, 37.503 ],
+            "name" : "잠실본동", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
+        pushInfo2.package = 'todayWeather';
+        pushInfo2.uuid = 'D75BA057-AD34-4A9F-A18A-C804291F2443';
+        pushInfo2.appVersion = '1.0.0';
+
         var ctrl = new ControllerPush();
-        ctrl._removeDuplicates(function (err, results) {
+        ctrl.updatePushInfo(pushInfo2, function (err, results) {
+            if (err) {
+                log.error(err);
+            }
             done();
         });
     });
+
+    // it ('test remove RegistrationId Changed To Fcm', function (done) {
+    //     this.timeout(60*1000);
+    //     var ctrl = new ControllerPush();
+    //     ctrl._removeDuplicates(function (err, results) {
+    //         done();
+    //     });
+    // });
 
     // it ('test remove old list', function (done) {
     //     var ctrl = new ControllerPush();

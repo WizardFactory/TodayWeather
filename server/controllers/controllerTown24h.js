@@ -936,7 +936,7 @@ function ControllerTown24h() {
 
             ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
                 if (arpltn[propertyName+"Value"] == undefined)  {
-                    log.warn("Fail to find "+propertyName+"Value");
+                    log.debug("Fail to find "+propertyName+"Value");
                     return;
                 }
 

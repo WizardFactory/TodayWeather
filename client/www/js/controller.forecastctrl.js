@@ -577,7 +577,7 @@ angular.module('controller.forecastctrl', [])
                     el.scrollLeft = getTodayPosition('short');
                 }
                 else {
-                    console.error('chart scroll is null');
+                    //console.error('chart scroll is null');
                 }
 
                 el = document.getElementById('chartMidScroll');
@@ -585,7 +585,7 @@ angular.module('controller.forecastctrl', [])
                     el.scrollLeft = getTodayPosition('mid');
                 }
                 else {
-                    console.error('chart scroll is null');
+                    //console.error('chart scroll is null');
                 }
             }, 300);
         }
