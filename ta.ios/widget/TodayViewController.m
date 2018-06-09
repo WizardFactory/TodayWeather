@@ -21,7 +21,7 @@
  Definitions
  ********************************************************************/
 #define USE_DEBUG                       0
-#define EMUL_TEST                       1
+#define EMUL_TEST                       0
 
 #define STR_GOOGLE_COORD2ADDR_URL       @"https://maps.googleapis.com/maps/api/geocode/json?latlng="
 #define STR_GOOGLE_ADDR2COORD_URL       @"https://maps.googleapis.com/maps/api/geocode/json?address="
@@ -432,16 +432,16 @@ static TodayViewController *todayVC = nil;
             DebugLog(@"show no location view");
 
 #if EMUL_TEST
+            noLocationView.hidden = FALSE;
+            locationView.hidden = TRUE;
+            addressLabel.text   = currentCity.name;
+            
+            [self initWidgetViews];
+#else
             noLocationView.hidden   = FALSE;
             locationView.hidden     = TRUE;
             showMoreView.hidden     = TRUE;
             return;
-#else
-            noLocationView.hidden = TRUE;
-            locationView.hidden = FALSE;
-            addressLabel.text   = currentCity.name;
-            
-            [self initWidgetViews];
 #endif
         }
         else {
@@ -2355,9 +2355,10 @@ static TodayViewController *todayVC = nil;
         }
 
 #if EMUL_TEST
-#else
         lat = 11;
         lng = 11;
+#else
+        
 #endif
         if (!(lat == 0 && lng == 0)) {
             [self getWeatherByCoord:lat longitude:lng];
@@ -2508,9 +2509,9 @@ static TodayViewController *todayVC = nil;
     
     NSString *nssQueryParams = [NSString stringWithFormat:@"temperatureUnit=%@&windSpeedUnit=%@&pressureUnit=%@&distanceUnit=%@&precipitationUnit=%@&airUnit=%@", nssTempUnits, nssWindUnits, nssPressUnits, nssDistUnits, nssPrecipUnits, nssAirUnits];
 #if EMUL_TEST
-    NSString *nssURL = [NSString stringWithFormat:@"%@/%@/%.3f,%.3f?%@", TODAYWEATHER_URL, COORD_2_WEATHER_API_URL, latitude, longitude, nssQueryParams];
-#else
     NSString *nssURL = [NSString stringWithFormat:@"%@/%@/37.558,127.185?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea", TODAYWEATHER_URL, COORD_2_WEATHER_API_URL];
+#else
+    NSString *nssURL = [NSString stringWithFormat:@"%@/%@/%.3f,%.3f?%@", TODAYWEATHER_URL, COORD_2_WEATHER_API_URL, latitude, longitude, nssQueryParams];
 #endif
     
     DebugLog(@"[getByCoord] url : %@", nssURL);
