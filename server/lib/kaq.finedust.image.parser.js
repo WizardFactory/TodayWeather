@@ -105,7 +105,7 @@ class KaqImageParser{
                 pixels: pixels
             };
 
-            log.info('KaqImgParser> image count : ', pixels.shape[0]);
+            log.debug('KaqImgParser> image count : ', pixels.shape[0]);
 
             var default_coordinate = this.getDefaultCoordi(type);
             // map's width&height (count of pixels)
@@ -120,9 +120,9 @@ class KaqImageParser{
             }
 
             if(callback){
-                log.info('KaqImgParser> Image W: ', result.image_width, 'H: ', result.image_height);
-                log.info('KaqImgParser> Map W: ', result.map_width, 'H: ', result.map_height);
-                log.info('KaqImgParser> One pixel size W: ', result.map_pixel_distance_width, 'H: ', result.map_pixel_distance_height);
+                log.debug('KaqImgParser> Image W: ', result.image_width, 'H: ', result.image_height);
+                log.debug('KaqImgParser> Map W: ', result.map_width, 'H: ', result.map_height);
+                log.debug('KaqImgParser> One pixel size W: ', result.map_pixel_distance_width, 'H: ', result.map_pixel_distance_height);
                 callback(null, result);
             }
         });

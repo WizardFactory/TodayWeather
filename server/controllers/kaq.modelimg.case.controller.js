@@ -9,6 +9,7 @@ var async = require('async');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 var libKaqImageParser = require('../lib/kaq.finedust.image.parser.js');
 var AqiConverter = require('../lib/aqi.converter');
+const ModelimgCaseInfo = require('../config/config.js').image.kaq_korea_image;
 
 class KaqDustImageController{
     constructor(){
@@ -60,7 +61,12 @@ class KaqDustImageController{
             if(err){
                 return callback(err);
             }
-            log.info('KAQ ModelImg Case > get Image Pixel map');
+            log.debug('KAQ ModelImg Case > get Image Pixel map');
+            pixelMap.map_width = ModelimgCaseInfo.size.map_width;
+            pixelMap.map_height = ModelimgCaseInfo.size.map_height;
+            pixelMap.map_pixel_distance_width = parseFloat((this.coordinate.top_right.lon - this.coordinate.top_left.lon) / pixelMap.map_width);
+            pixelMap.map_pixel_distance_height = parseFloat((this.coordinate.top_left.lat - this.coordinate.bottom_left.lat) / pixelMap.map_height);
+            log.debug('KAQ ModelImg Case > Distance W:', pixelMap.map_pixel_distance_width, ' H:', pixelMap.map_pixel_distance_height);
             return callback(null, pixelMap);
         });
     }
@@ -103,6 +109,15 @@ class KaqDustImageController{
         }
 
         let pixels = this.imagePixels[type].data;
+        let rotated_x = parseInt((lon - this.coordinate.top_left.lon) / pixels.map_pixel_distance_width);
+        let rotated_y = parseInt((this.coordinate.top_left.lat - lat) / pixels.map_pixel_distance_height);
+
+        let x = rotated_x - (parseInt(ModelimgCaseInfo.size.gap_width) - parseInt((rotated_y / ModelimgCaseInfo.size.gradient_step_width)));
+        let y = rotated_y - (parseInt((rotated_x / ModelimgCaseInfo.size.gradient_step_height)));
+        x = x + parseInt(ModelimgCaseInfo.pixel_pos.left);
+        y = y + parseInt(ModelimgCaseInfo.pixel_pos.top);
+        /*
+        let pixels = this.imagePixels[type].data;
         let x = parseInt((lon - this.coordinate.top_left.lon) / pixels.map_pixel_distance_width) + pixels.map_area.left;
         let y = parseInt((this.coordinate.top_left.lat - lat) / pixels.map_pixel_distance_height) + pixels.map_area.top;
 
@@ -117,9 +132,10 @@ class KaqDustImageController{
         }else{
             y += 3;
         }
+        */
         log.debug('KAQ ModelImg Case > lat: ', lat, 'lon: ', lon);
         log.debug('KAQ ModelImg Case > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height);
-        log.debug('KAQ ModelImg Case > x: ', x, 'y: ',y);
+        log.info('KAQ ModelImg Case > x: ', x, 'y:     ',y);
 
         var result = [];
         var colorTable = this.colorTable[type];
@@ -262,7 +278,7 @@ class KaqDustImageController{
             }
         }
 
-        log.info('KAQ ModelImg Case> Color Table count : ', this.colorTable[type].length);
+        log.debug('KAQ ModelImg Case> Color Table count : ', this.colorTable[type].length);
         //log.info('KAQ Modelimg Case> Color Table : ', JSON.stringify(this.colorTable[type]));
 
 
@@ -298,7 +314,7 @@ class KaqDustImageController{
      * @param callback
      */
     getDustImage(imgPaths, callback) {
-        log.info('KAQ ModelImg Case > get dust image -----------');
+        log.debug('KAQ ModelImg Case > get dust image -----------');
 
         async.mapSeries(
             ['NO2', 'O3', 'PM10', 'PM25', 'SO2'],
@@ -315,7 +331,7 @@ class KaqDustImageController{
                                     return cb(err);
                                 }
 
-                                log.info('KAQ Modelimg Case > Got pixel info for ', imgType);
+                                log.debug('KAQ Modelimg Case > Got pixel info for ', imgType);
                                 this.imagePixels[imgType] = {};
                                 this.imagePixels[imgType].pubDate = imgPaths.pubDate;
                                 this.imagePixels[imgType].data = pixelMap;
@@ -347,7 +363,7 @@ class KaqDustImageController{
                 );
             },
             (err, results)=>{
-                log.info('KAQ ModelImage Case Count :', results.length);
+                log.debug('KAQ ModelImage Case Count :', results.length);
                 return callback(err, this.imagePixels);
             }
         );
@@ -372,7 +388,7 @@ class KaqDustImageController{
                             log.error('KAQ Modelimg Case > Failed to get', imgType, 'image : ', err);
                             return cb(err);
                         }
-                        log.info('KAQ Modelimg Case > img Path : ', imgPath.path);
+                        log.debug('KAQ Modelimg Case > img Path : ', imgPath.path);
                         this.imagePixels[imgType] = undefined;
                         return cb(undefined, imgPath);
                     });
@@ -388,7 +404,7 @@ class KaqDustImageController{
                             return cb(err);
                         }
 
-                        log.info('KAQ Modelimg Case > Got pixel info for ', imgType);
+                        log.debug('KAQ Modelimg Case > Got pixel info for ', imgType);
                         this.imagePixels[imgType] = {};
                         this.imagePixels[imgType].pubDate = imgPath.pubDate;
                         this.imagePixels[imgType].data = pixelMap;
@@ -434,7 +450,7 @@ class KaqDustImageController{
                 this.getImage(dataType, cb);
             },
             (err, results)=>{
-                log.info('KAQ ModelImage Count :', results.length);
+                log.debug('KAQ ModelImage Count :', results.length);
                 callback(err, this.imagePixels);
             }
         );
