@@ -22,8 +22,8 @@ router.get('/:version/:category', [worldWeather.checkApiVersion, worldWeather.qu
 
 // temporary
 router.get('/:version/:category/:days', worldWeather.checkApiVersion,
-    worldWeather.queryTwoDaysWeather, worldWeather.convertDsfLocalTime,
-    worldWeather.mergeDsfDailyData, worldWeather.mergeDsfCurrentData, worldWeather.mergeDsfHourlyData,
+    worldWeather.queryTwoDaysWeatherNewForm, worldWeather.convertDsfLocalTime,
+    worldWeather.mergeDsfDailyData, worldWeather.mergeDsfCurrentDataNewForm, worldWeather.mergeDsfHourlyData,
     worldWeather.mergeAqi, worldWeather.dataSort, worldWeather.sendResult);
 
 module.exports = router;

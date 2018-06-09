@@ -31,8 +31,8 @@ function convertParamAndQuery(req, res, next) {
 }
 
 router.get('/:loc', ctrlUnits.checkQueryValidation, convertParamAndQuery,
-    worldWeather.queryTwoDaysWeather, worldWeather.convertDsfLocalTime,
-    worldWeather.mergeDsfDailyData, worldWeather.mergeDsfCurrentData,
+    worldWeather.queryTwoDaysWeatherNewForm, worldWeather.convertDsfLocalTime,
+    worldWeather.mergeDsfDailyData, worldWeather.mergeDsfCurrentDataNewForm,
     worldWeather.mergeDsfHourlyData, worldWeather.mergeAqi, worldWeather.dataSort,
     ctrlUnits.convertUnits, worldWeather.makeAirInfo, ctrlUnits.makeSummary, worldWeather.sendResult);
 
