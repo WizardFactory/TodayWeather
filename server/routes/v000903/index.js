@@ -42,6 +42,6 @@ router.post('/', function(req,res) {
 
 router.use('/test', require('../v000803/route.test'));
 
-router.use('/geo', require('../v000803/route.geo'));
+router.use('/geo', require('./route.geo.v000903'));
 
 module.exports = router;

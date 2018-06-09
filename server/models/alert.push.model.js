@@ -8,6 +8,7 @@ var mongoose = require("mongoose");
 var alertPushSchema = new mongoose.Schema({
     type: String, //ios, android, windows, amazon ..
     registrationId: String,
+    fcmToken: String,
     cityIndex: Number, //index of city in client
     id: Number,                 //city안의 id임
     startTime: Number,          //UTChours*60*60 + UTCMinutes*60
@@ -32,6 +33,8 @@ var alertPushSchema = new mongoose.Schema({
         airForecastSource: String //airkorea, kaq, aqicn, ...
     },
     package: String, //todayWeather, todayAir
+    uuid: String,
+    appVersion: String,
     updatedAt: Date,
     timezoneOffset: Number, //mins +9h -> +540 for filtering day of week
     dayOfWeek: [Boolean], // Sunday - Saturday : 0 - 6 [false, true, true, true, true, true, false]

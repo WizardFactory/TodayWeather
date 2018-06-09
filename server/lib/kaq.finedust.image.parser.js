@@ -5,7 +5,15 @@
 
 const getPixels = require('get-pixels');
 //const fs = require('fs');
+/**
+ * modelimg_CASE4
+ * @type {module.exports.image.kaq_korea_image|{coordi, size, pixel_pos, so2_pixel_pos, region, bucketName}}
+ */
 const kaqDustImage = require('../config/config').image.kaq_korea_image;
+/**
+ * modelimg
+ * @type {module.exports.image.kaq_korea_modelimg_image|{coordi, size, pixel_pos}}
+ */
 const kaqModelimg = require('../config/config').image.kaq_korea_modelimg_image;
 
 

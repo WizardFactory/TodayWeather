@@ -105,15 +105,15 @@ class KaqDustImageController{
      */
     getDustInfo(lat, lon, type, aqiUnit, callback){
         if(this.imagePixels[type] === undefined){
-            return callback(new Error('KAQ Modelimg > 1. There is no image information : ', type));
+            return callback(new Error('KAQ Modelimg > 1. There is no image information : ' + type));
         }
 
         if(!this._isValidGeocode(lat, lon)){
-            return callback(new Error('KAQ Modelimg > 2. Invalid geocode :', lat, lon));
+            return callback(new Error('KAQ Modelimg > 2. Invalid geocode :' + lat + ',' + lon));
         }
 
         if(this.colorTable[type] === undefined){
-            return callback(new Error('KAQ Modelimg > 3. Invalid color grade table :', lat, lon));
+            return callback(new Error('KAQ Modelimg > 3. Invalid color grade table :' + lat + ',' + lon));
         }
 
         let pixels = this.imagePixels[type].data;
@@ -413,14 +413,14 @@ class KaqDustImageController{
         async.mapSeries(
             ['NO2', 'O3', 'PM10', 'PM25', 'SO2'],
             (imgType, cb)=>{
-                if(imgPaths[imgType] === undefined){
+                if(imgPaths[imgType.toLowerCase()] === undefined){
                     log.info('KAQ ModelImg > No property :', imgType);
                     return cb(null);
                 }
 
                 async.waterfall([
                         (cb)=>{
-                            this.parseMapImage(imgType, imgPaths[imgType], 'image/gif', (err, pixelMap)=>{
+                            this.parseMapImage(imgPaths[imgType.toLowerCase()], 'image/gif', (err, pixelMap)=>{
                                 if(err){
                                     return cb(err);
                                 }

@@ -42,6 +42,11 @@ aSchema.statics = {
             'pm10Value24', 'pm25Value', 'pm25Value24', 'khaiValue', 'khaiGrade', 'so2Grade', 'coGrade', 'o3Grade',
             'no2Grade', 'pm10Grade', 'pm25Grade', 'pm10Grade1h', 'pm25Grade1h'];
 
+    },
+    getCtprvnSidoList: function() {
+        return ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '경기', '강원', '충북', '충남', '전북', '전남', '경북',
+            '경남', '제주', '세종'
+        ];
     }
 };
 

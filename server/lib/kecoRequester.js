@@ -17,6 +17,9 @@ var AirkoreaHourlyForecastCtrl = require('../controllers/airkorea.hourly.forecas
 
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
+var config = require('../config/config');
+var CtrlS3 = require('../s3/controller.s3');
+
 var AIRKOREA_DOMAIN = 'openapi.airkorea.or.kr';
 var DOMAIN_ARPLTN_KECO = 'http://'+AIRKOREA_DOMAIN+'/openapi/services/rest';
 
@@ -93,9 +96,7 @@ Keco.prototype.setServiceKeys = function(keys) {
 Keco.prototype.getCtprvnSidoList = function() {
 
     //get from town.js
-    this._sidoList = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '경기', '강원', '충북', '충남', '전북', '전남', '경북',
-        '경남', '제주', '세종'
-    ];
+    this._sidoList = Arpltn.getCtprvnSidoList();
 
     return this._sidoList;
 };
@@ -320,6 +321,25 @@ Keco.prototype.parseRLTMCtprvn = function (data, callback) {
         return callback(err);
     }
 
+    var prefix;
+    try {
+        prefix = 'airkorea/ctprvn/'+data.list[0].dataTime+'-'+data.parm.sidoName+'-rltmCtprvn.json';
+    }
+    catch(err) {
+        log.error(err);
+    }
+
+    if (prefix) {
+        this._uploadS3({prefix:prefix, data:data.list}, function (err, result) {
+            if (err) {
+                log.error(err);
+            }
+            else {
+                log.debug(result);
+            }
+        });
+    }
+
     callback(undefined, arpltnList);
 };
 
@@ -380,6 +400,23 @@ Keco.prototype.getMsrstnList = function(callback) {
     return this;
 };
 
+Keco.prototype._uploadS3 = function(obj, callback) {
+    if (config.s3 == undefined || config.s3.bucketName == undefined || config.s3.bucketName.length === 0) {
+        return callback(new Error('undefined s3 information'));
+    }
+
+    var ctrlS3 = new CtrlS3(config.s3.region, config.s3.bucketName);
+    var s3Path = obj.prefix;
+    var dataString = JSON.stringify(obj.data, null, 2);
+    ctrlS3.uploadData(dataString, s3Path)
+        .then(function (result) {
+           callback(null, result);
+        })
+        .catch(function (err) {
+            callback(err);
+        });
+};
+
 /**
  *
  * @param MsrStnList
@@ -414,6 +451,16 @@ Keco.prototype.parseMsrstnList = function(MsrStnList) {
         parsedMsrStn.photo = msrStn.photo;
         parsedMsrStn.year = msrStn.year;
         parsedMsrStnList.push(parsedMsrStn);
+    });
+
+    var prefix = 'airkorea/msrstn/'+new Date().toISOString() +'-msrStn.json';
+    this._uploadS3({prefix:prefix, data: MsrStnList}, function (err, result) {
+        if (err) {
+            log.error(err);
+        }
+        else {
+            log.debug(result);
+        }
     });
 
     log.info('parsed msr stn list length=', parsedMsrStnList.length);
@@ -979,7 +1026,7 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
         },
         function(err, results) {
             if(err) {
-                if (err.statusCode == 503) {
+                if (err.statusCode == 503 || err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
                     log.warn(err);
                 }
                 else {

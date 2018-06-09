@@ -152,11 +152,11 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
     var self = this;
 
     if(self.imagePixels[type] === undefined){
-        return callback(new Error('1. There is no image information : ', type));
+        return callback(new Error('1. There is no image information : ' + type));
     }
 
     if(!self._isValidGeocode(lat, lon)){
-        return callback(new Error('2. Invalid geocode :', lat, lon));
+        return callback(new Error('2. Invalid geocode :' + lat + ',' + lon));
     }
 
     var pixels = self.imagePixels[type].data;

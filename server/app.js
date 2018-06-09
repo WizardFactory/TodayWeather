@@ -31,7 +31,11 @@ else {
     global.log  = new Logger(__dirname + "/debug.log");
 }
 
-var options = { keepAlive: 120, poolSize: 10};
+//var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
+//     replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
+//var options = { keepAlive: 1, poolSize: 30, connectTimeoutMS : 30000};
+//var options = { keepAlive: 120, poolSize: 10};
+var options = { poolSize: 10};
 
 if (config.db.path.indexOf('srv') >= 0) {
     options.dbName = config.db.database;
@@ -53,6 +57,8 @@ else {
             log.error(err);
         }
         else {
+            //old mongoose didn't have result
+            result = result || {};
             log.info('Connect to MongoDB! ' + result.name);
         }
     });

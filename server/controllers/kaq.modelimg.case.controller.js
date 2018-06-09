@@ -91,15 +91,15 @@ class KaqDustImageController{
      */
     getDustInfo(lat, lon, type, aqiUnit, callback){
         if(this.imagePixels[type] === undefined){
-            return callback(new Error('KAQ ModelImg Case > 1. There is no image information : ', type));
+            return callback(new Error('KAQ ModelImg Case > 1. There is no image information : ' + type));
         }
 
         if(!this._isValidGeocode(lat, lon)){
-            return callback(new Error('KAQ ModelImg Case > 2. Invalid geocode :', lat, lon));
+            return callback(new Error('KAQ ModelImg Case > 2. Invalid geocode :' + lat + ',' + lon));
         }
 
         if(this.colorTable[type] === undefined){
-            return callback(new Error('KAQ ModelImg Case > 3. Invalid color grade table :', lat, lon));
+            return callback(new Error('KAQ ModelImg Case > 3. Invalid color grade table :' + lat + ',' + lon));
         }
 
         let pixels = this.imagePixels[type].data;
@@ -183,7 +183,7 @@ class KaqDustImageController{
             forecast.push(item);
         }
 
-        log.info('KAQ ModelImg Case > result = ', JSON.stringify(forecast));
+        log.debug('KAQ ModelImg Case > result = ', JSON.stringify(forecast));
 
         if(callback){
             callback(null, {pubDate: this.imagePixels[type].pubDate, hourly: forecast});
@@ -303,14 +303,14 @@ class KaqDustImageController{
         async.mapSeries(
             ['NO2', 'O3', 'PM10', 'PM25', 'SO2'],
             (imgType, cb)=>{
-                if(imgPaths[imgType] === undefined){
+                if(imgPaths[imgType.toLowerCase()] === undefined) {
                     log.info('KAQ ModelImg Case > No property :', imgType);
                     return cb(null);
                 }
 
                 async.waterfall([
                         (cb)=>{
-                            this.parseMapImage(imgType, imgPaths[imgType], 'image/gif', (err, pixelMap)=>{
+                            this.parseMapImage(imgType, imgPaths[imgType.toLowerCase()], 'image/gif', (err, pixelMap)=>{
                                 if(err){
                                     return cb(err);
                                 }

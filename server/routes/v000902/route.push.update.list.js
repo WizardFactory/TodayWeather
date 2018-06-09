@@ -24,15 +24,14 @@ function updatePushInfoList(language, pushList, callback) {
                     pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
                 }
                 if (pushInfo.source == undefined) {
-                    log.error('pushInfo source is undefined');
-                    pushInfo.source = "KMA"
+                    log.warn(`pushInfo source is undefined fcmToken:${pushInfo.fcmToken}, regId:${pushInfo.registrationId}`);
                 }
                 if (pushInfo.category == undefined) {
-                    log.error('pushInfo category is undefined');
+                    log.warn(`pushInfo category is undefined fcmToken:${pushInfo.fcmToken}, regId:${pushInfo.registrationId}`);
                     pushInfo.category = 'alarm';
                 }
                 if (pushInfo.package == undefined) {
-                    log.error('pushInfo package is undefined');
+                    log.warn(`pushInfo package is undefined fcmToken:${pushInfo.fcmToken}, regId:${pushInfo.registrationId}`);
                     pushInfo.package = 'todayWeather';
                 }
 
@@ -46,13 +45,19 @@ function updatePushInfoList(language, pushList, callback) {
             if (pushInfo.category === 'alarm') {
                 var co = new ControllerPush();
                 co.updatePushInfo(pushInfo, function (err, result) {
-                    callback(err, result);
+                    if (err) {
+                        log.error(err);
+                    }
+                    callback(undefined, result);
                 });
             }
             else if (pushInfo.category === 'alert') {
                 var ca = new AlertPushController();
                 ca.updateAlertPush(pushInfo, function (err, result) {
-                   callback(err, result) ;
+                    if (err) {
+                        log.error(err)
+                    }
+                   callback(undefined, result) ;
                 })
             }
         },
@@ -95,16 +100,17 @@ router.post('/', function(req, res) {
     var pushList = req.body;
     try {
         pushList.forEach(function (obj) {
-           if (!obj.hasOwnProperty('registrationId') ||
-               !obj.hasOwnProperty('type') )
+           if (!obj.hasOwnProperty('type') || obj.type.length === 0)
            {
-               throw new Error('invalid push info registrationId/type');
+               throw new Error('invalid push info type');
            }
 
-           if (obj.registrationId.length === 0 ||
-               obj.type.length === 0)
+           if (!obj.hasOwnProperty('fcmToken') || obj.fcmToken.length === 0)
            {
-               throw new Error('invalid push info registrationId/type');
+               if (!obj.hasOwnProperty('registrationId') || obj.registrationId.length === 0) 
+               {
+                   throw new Error('invalid push info registrationId and fcmToken');
+               }
            }
 
            if (!obj.hasOwnProperty('location') && !obj.hasOwnProperty('town')) {

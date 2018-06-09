@@ -80,6 +80,10 @@ angular.module('controller.settingctrl', [])
             return ionic.Platform.isAndroid();
         };
 
+        $rootScope.isIOS = function () {
+            return ionic.Platform.isIOS();
+        };
+
         $rootScope.isMenuOpen = function() {
             var isOpen = $ionicSideMenuDelegate.isOpen();
 
@@ -151,7 +155,9 @@ angular.module('controller.settingctrl', [])
             }
             else if (name === 'theme') {
                 title = 'LOC_THEME_SETTING';
-                list = ['photo', 'light', 'blue'].map(function (value) {
+                // var themeList = ['photo', 'light', 'blue'];
+                var themeList = ['photo', 'light'];
+                list = themeList.map(function (value) {
                     return {label: $scope.getThemeValueStr(value), value: value};
                 });
             }

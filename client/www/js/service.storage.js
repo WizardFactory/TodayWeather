@@ -209,7 +209,7 @@ angular.module('service.storage', [])
                 $rootScope.settingsInfo = {
                     startupPage: "0", //시간별날씨
                     refreshInterval: "0", //수동
-                    theme: "photo" //날씨 사진 테마
+                    theme: "light" //밝은 테마
                 };
             }
 
