@@ -80,14 +80,14 @@ controllerAqi.prototype._getLocalLast0H = function (timeOffset) {
 
     var diffDate = this._getDiffDate(utcTime, localTime);
     if (diffDate == 0) {
-        log.info('C Aqi> same day');
+        log.debug('C Aqi> same day');
     }
     else if (diffDate == 1) {
-        log.info('C Aqi> next day');
+        log.debug('C Aqi> next day');
         utcTime.setUTCDate(utcTime.getUTCDate()+1);
     }
     else if (diffDate == -1) {
-        log.info('C Aqi> previous day');
+        log.debug('C Aqi> previous day');
         utcTime.setUTCDate(utcTime.getUTCDate()-1);
     }
     utcTime.setUTCHours(0);
@@ -118,7 +118,7 @@ controllerAqi.prototype.removeAqiDb = function(geocode, callback) {
             log.error('Aqi DB> fail to get db data', err);
             return callback(err);
         }
-        log.info('Aqi DB > remove data from:'+twoDaysAgo);
+        log.debug('Aqi DB > remove data from:'+twoDaysAgo);
         callback(undefined);
     });
 };
@@ -204,7 +204,7 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
             log.error('AQI> Invalid AQI Data: ', JSON.stringify(newData));
         }
 
-        log.info('AQI> New Data : ', newData);
+        log.debug('AQI> New Data : ', newData);
         res = {
             geo: [],
             address: {},
@@ -233,7 +233,7 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
         res.geo.push(parseFloat(geocode.lon));
         res.geo.push(parseFloat(geocode.lat));
 
-        log.info('Aqi> res : ', res);
+        log.debug('Aqi> res : ', res);
 
         query = {geo: res.geo, mTime: res.mTime};
     }
@@ -333,7 +333,7 @@ controllerAqi.prototype.requestAqiDataFromFeed = function(geocode, idx, timeOffs
             function (result, callback) {
                 var curTime = new Date();
                 var date = parseInt(curTime.getTime() / 1000);
-                log.info('Req AqiFromFeed > cur : ', date.toString());
+                log.debug('Req AqiFromFeed > cur : ', date.toString());
                 self._saveAQI(geocode, date, result, function(err, savedData) {
                     return callback(null, savedData);
                 });
@@ -406,7 +406,7 @@ controllerAqi.prototype.requestAqiData = function(geocode, From, To, timeOffset,
                 date = undefined;
             }
             else {
-                log.info('date : ', (new Date(date*1000)).toISOString());
+                log.debug('date : ', (new Date(date*1000)).toISOString());
             }
 
             requester.getAqiData(geocode, key, function(err, result){
@@ -420,7 +420,7 @@ controllerAqi.prototype.requestAqiData = function(geocode, From, To, timeOffset,
                 if(date === undefined){
                     var curTime = new Date();
                     date = parseInt(curTime.getTime() / 1000);
-                    log.info('Req Aqi> cur : ', date.toString());
+                    log.debug('Req Aqi> cur : ', date.toString());
                 }
 
                 self._saveAQI(geocode, date, result, function(err, savedData){

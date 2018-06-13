@@ -28,7 +28,7 @@ aqiRequester.prototype.getAqiData = function(geocode, key, callback){
 
     var url = self.base_url + 'geo:' + geocode.lat + ';' + geocode.lon + '/?token=' + key;
 
-    log.info('AQI> url : ', url);
+    log.debug('AQI> url : ', url);
 
     self.getData(url, self.aqiRetryCount, function(err, res){
         if(err){
@@ -93,7 +93,7 @@ aqiRequester.prototype.getData = function(url, retryCount, callback){
         var result;
         try {
             result = JSON.parse(body);
-            log.info(result);
+            log.debug(result);
         }
         catch (err) {
             return callback(err);

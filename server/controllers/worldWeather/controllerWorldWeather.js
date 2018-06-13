@@ -572,19 +572,19 @@ function controllerWorldWeather() {
                             return;
                         }
 
-                        log.info('cDate : ', cDate.toString());
-                        log.info('AQI DB Date : ', req.AQI.dateObj.toString());
+                        log.debug('cDate : ', cDate.toString());
+                        log.debug('AQI DB Date : ', req.AQI.dateObj.toString());
 
                         //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
                         if (!self.checkValidDate(cDate, req.AQI.dateObj, 60)) {
-                            log.info('TWW> Invaild AQI data', meta);
-                            log.info('TWW> AQI CurDate : ', cDate.toString(), meta);
-                            log.info('TWW> AQI DB Date : ', req.AQI.dateObj.toString(), meta);
+                            log.debug('TWW> Invaild AQI data', meta);
+                            log.debug('TWW> AQI CurDate : ', cDate.toString(), meta);
+                            log.debug('TWW> AQI DB Date : ', req.AQI.dateObj.toString(), meta);
                             callback(null, 'err_exit_notValid');
                             return;
                         }
 
-                        log.info('TWW> get AQI data', meta);
+                        log.debug('TWW> get AQI data', meta);
                         callback(null, null);
                     });
                 },
@@ -3211,7 +3211,7 @@ function controllerWorldWeather() {
             }
 
             if(list.length === 0){
-                log.warn('gAQI> There is no AQI data for ', geo, meta);
+                log.warn('gAQI> There is no AQI data of DB for ', geo, meta);
                 callback('No Data');
                 return;
             }
