@@ -100,6 +100,10 @@
                     {{'LOC_NATIONAL_AIR'|translate}}
                     <i class="icon ion-chevron-right" style="float: right"></i>
                 </label>
+                <label class="item" ng-click="clickMenu('nullschool')" ng-if="getRegion() === 'KR'" >
+                    {{'LOC_NULLSCHOOL_WIND'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right"></i>
+                </label>
                 <label class="item" ng-click="clickMenu('units')">
                     {{'LOC_UNITS'|translate}}
                     <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
