@@ -1670,6 +1670,12 @@ angular.module('starter', [
                 templateUrl: 'templates/nation.html',
                 controller: 'NationCtrl'
             })
+            .state('nation-air', {
+                url: '/nation-air',
+                cache: false,
+                templateUrl: 'templates/nation-air.html',
+                controller: 'NationAirCtrl'
+            })
             .state('start', {
                 url: '/start',
                 cache: false,

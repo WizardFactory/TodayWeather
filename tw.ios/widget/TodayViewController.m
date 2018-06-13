@@ -1027,7 +1027,7 @@ static TodayViewController *todayVC = nil;
                                        //DebugLog(@"data : %@", data);
                                        [self makeJSONWithData:data reqType:type];
                                        [self processShowMore];
-                                       
+
                                    } else {
                                        DebugLog(@"Failed to fetch %@: %@", url, error);
                                        [self processErrorStatus:error];
@@ -2623,10 +2623,10 @@ static TodayViewController *todayVC = nil;
     dispatch_async(dispatch_get_main_queue(), ^{
         NSInteger errCode = error.code;
         updateTimeLabel.text = @"";
-        curDustLabel.text = [NSString stringWithFormat:@"Server Error %ld", (long)errCode];
+        curDustLabel.text = [error localizedDescription];
         todayMaxMinTempLabel.text = @"";
         curTempLabel.text = @"";
-        addressLabel.text = @"Error";
+        addressLabel.text = [NSString stringWithFormat:@"Error %ld", (long)errCode];
         curWTIconIV.image = [UIImage imageNamed:@"empty"];
         
         if(nsOSVer.majorVersion >= 10)
