@@ -29,7 +29,7 @@ dsfRequester.prototype.getForecast = function(geocode, date, key, callback){
         url += ',' + date;
     }
 
-    log.info('DFS> get data :', url);
+    log.debug('DFS> get data :', url);
     self.getData(url, self.defRetryCount, function(err, res){
         if(err){
             callback(err, {isSuccess: false});

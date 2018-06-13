@@ -60,11 +60,11 @@ class TimezoneController{
 
                     this._getTimezoneOffsetFromDB(this.timezone, (err, timezoneOffset)=>{
                         if(err){
-                            log.info(this.timezone);
+                            log.debug('TZ > Need to request timeoffset : ', this.timezone);
                             return cb(null, this.timezone);
                         }
 
-                        log.info('TZ > TimezoneOffset from DB:', timezoneOffset);
+                        log.debug('TZ > TimezoneOffset from DB:', timezoneOffset);
                         return cb('FOUND_TIMEOFFSET', timezoneOffset);
                     });
                 },
@@ -165,7 +165,7 @@ class TimezoneController{
 
         modelTimezone.find({timezone:timezone}, {_id:0}).limit(1).lean().exec((err, result)=>{
             if(err || result.length === 0){
-                log.info('TZ > there is no timezone in DB :', err);
+                log.debug('TZ > there is no timezone in DB :', err);
                 return callback('NO_DATA_IN_DB');
             }
 
@@ -207,7 +207,7 @@ class TimezoneController{
     _getTimezoneList(callback){
         modelTimezone.find().lean().exec((err, list)=>{
             if(err || list.length == 0){
-                log.info('TZ > There is no timezone info to DB');
+                log.debug('TZ > There is no timezone info to DB : ', err);
                 return callback('NO_DATA_IN_DB');
             }
             return callback(undefined, list);
@@ -228,7 +228,7 @@ class TimezoneController{
         };
         this.updatedAt = newItem.updatedAt;
 
-        log.info('updateTimezone :', JSON.stringify(newItem));
+        log.debug('updateTimezone :', JSON.stringify(newItem));
         modelTimezone.update({timezone: newItem.timezone},
             newItem,
             {upsert : true},
@@ -264,7 +264,7 @@ class TimezoneController{
     _getGeoByTimezone(timezone, callback){
         let encodedUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address='+timezone+'&language=en&key=' + this._googleKey;
         encodedUrl = encodeURI(encodedUrl);
-        log.info(encodedUrl);
+        log.debug(encodedUrl);
 
         request.get(encodedUrl, {json:true, timeout: 1000 * 10}, (err, response, body)=>{
             if(err) {
@@ -295,7 +295,7 @@ class TimezoneController{
                     }
                 }
 
-                log.info('converted geocode : ', JSON.stringify(geocode));
+                log.debug('converted geocode : ', JSON.stringify(geocode));
 
                 return callback(null, this.geo = geocode);
             }
@@ -321,21 +321,21 @@ class TimezoneController{
         encodedUrl += '&timestamp=' + Math.floor((new Date().getTime())/1000);
         encodedUrl += '&key=' + this._googleKey;
         encodedUrl = encodeURI(encodedUrl);
-        log.info('TZ > URL for TimezoneOffset :', encodedUrl);
+        log.debug('TZ > URL for TimezoneOffset :', encodedUrl);
 
         request.get(encodedUrl, {json:true, timeout: 1000 * 10}, (err, response, body)=>{
             if(err) {
-                log.error('TZ > Fail!! _getTimozoneOffsetByGeo : ', err);
+                log.error('TZ > Fail!! _getTimozoneOffsetByGeo : ', err, geo);
                 return callback(err);
             }
 
             if(response.statusCode >= 400){
-                err = new Error("response.statusCode="+statusCode);
+                err = new Error("response.statusCode="+statusCode, geo);
                 return callback(err);
             }
 
             try {
-                log.info(body);
+                log.debug(body);
                 if(body.status != 'OK')
                 {
                     log.warn('Cannot get timezone from Google : ', geo);
