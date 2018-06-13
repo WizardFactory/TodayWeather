@@ -904,6 +904,18 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   font-size:12px;
 }
 
+.nation-air-label {
+  width: 70px;
+  position: absolute;
+  top:0;
+  right:10px;
+}
+
+.nation-air-label .item {
+  padding: 8px;
+  font-size: 16px;
+}
+
 /* popup */
 .ionic_popup .popup {
   background-color: #ffffff;

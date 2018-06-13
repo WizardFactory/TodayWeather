@@ -65,6 +65,10 @@ class AlertPushController {
         let town = pushInfo.town;
         let source = pushInfo.source.toLowerCase();
 
+        if (source == undefined || source == '') {
+            log.error('unknown source pushInfo:'+JSON.stringify(pushInfo));
+        }
+
         if (pushInfo.geo) {
             url += '/'+apiVersion+'/'+source+'/coord';
             url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
