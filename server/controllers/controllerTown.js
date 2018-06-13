@@ -175,7 +175,7 @@ function ControllerTown() {
                                             return cb(err);
                                         }
                                         req[item.name] = data;
-                                        log.info('T DATA[' + item.name + '] sID=', req.sessionID);
+                                        log.debug('T DATA[' + item.name + '] sID=', req.sessionID);
                                         log.silly('T DATA[' + item.name + '] : ', req[item.name]);
                                         cb(null);
                                     });
@@ -186,7 +186,7 @@ function ControllerTown() {
                                             return cb(err);
                                         }
                                         req[item.name] = data;
-                                        log.info('T DATA[' + item.name + '] sID=', req.sessionID);
+                                        log.debug('T DATA[' + item.name + '] sID=', req.sessionID);
                                         log.silly('T DATA[' + item.name + '] : ', req[item.name]);
                                         cb(null);
                                     });
@@ -238,7 +238,7 @@ function ControllerTown() {
                                             return cb(err);
                                         }
                                         req[item.name] = midData;
-                                        log.info('M DATA[' + item.name + '] sID=',req.sessionID);
+                                        log.debug('M DATA[' + item.name + '] sID=',req.sessionID);
                                         log.silly('M DATA[' + item.name + '] : ', req[item.name]);
                                         cb(null);
                                     });
@@ -258,7 +258,7 @@ function ControllerTown() {
                         if(err){
                             log.error(new Error('Gad> something is wrong to get weather data : ' + err.message));
                         }
-                        log.info('>sID=',req.sessionID, 'go next');
+                        log.debug('>sID=',req.sessionID, 'go next');
                         next();
                     }
                 );
@@ -280,9 +280,9 @@ function ControllerTown() {
         var req = require('request');
         var url = "http://"+config.ipAddress+":"+config.port+"/gather/";
 
-        log.info('Start url='+url+apiName);
+        log.debug('Start url='+url+apiName);
         req(url+apiName, {json: true}, function(err, response, body) {
-            log.info('Finished '+apiName+' '+new Date());
+            log.debug('Finished '+apiName+' '+new Date());
             if (err) {
                 log.error(err);
                 return callback();
@@ -377,7 +377,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         try{
             /*
@@ -438,13 +438,14 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         self._getCoord(regionName, cityName, townName, function(err, coord) {
             if(err) {
                 log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                 return next();
             }
+
 
             // req.short 데이터가 없을 경우 만들어준다.
             if(!req.hasOwnProperty('short')) {
@@ -480,10 +481,10 @@ function ControllerTown() {
                         break;
                     }
                 }
-                
+
                 //동일한 경우뿐만 아니라 동일한 경우 없이 바로 적은 경우에도 해당하는 인덱스 다음부터 사용해야 함.
                 i = i+1;
-                
+
                 var j;
                 var found;
                 var overwrite = false;
@@ -575,7 +576,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         try{
             self._getCoord(regionName, cityName, townName, function(err, coord){
@@ -636,7 +637,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         try{
             self._getCoord(regionName, cityName, townName, function(err, coord) {
@@ -993,7 +994,7 @@ function ControllerTown() {
         var weatherType = stnWeatherInfo.weatherType;
 
         if (stnWeatherInfo.rnsSource) {
-            log.info('CheckWeather : rns set by '+stnWeatherInfo.rnsSource);
+            log.debug('CheckWeather : rns set by '+stnWeatherInfo.rnsSource);
         }
 
         if (weather !== undefined) {
@@ -1155,7 +1156,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
             controllerKmaStnWeather.getCityHourlyList(townInfo,  function (err, stnWeatherInfo) {
@@ -1233,7 +1234,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         var currentTime = self._getCurrentTimeValue(9);
 
@@ -1429,7 +1430,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         var currentTime = self._getCurrentTimeValue(9);
 
@@ -1483,7 +1484,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         if (!req.current)  {
             req.current={};
@@ -1505,7 +1506,7 @@ function ControllerTown() {
 
                 var date = kmaTimeLib.convertDateToYYYYMMDD(now);
                 var time = kmaTimeLib.convertDateToHHZZ(now);
-                log.info(date+time, meta);
+                log.debug(date+time, meta);
                 controllerKmaStnWeather.getStnHourly(townInfo, date+time, req.current.t1h, function (err, stnWeatherInfo) {
                     if (err) {
                         log.error(err);
@@ -1518,11 +1519,11 @@ function ControllerTown() {
                     var currentTime = kmaTimeLib.convertStringToDate(req.current.date+req.current.time);
 
                     if (currentTime.getTime() >= stnWeatherInfoTime.getTime()) {
-                        log.info('use api first, just append new data of stn hourly weather info');
+                        log.debug('use api first, just append new data of stn hourly weather info');
                         stnHourlyFirst = false;
                     }
                     else {
-                        log.info('overwrite all data');
+                        log.debug('getKmaStnHourlyWeather > overwrite all data');
                     }
 
                     //체크 가능한 값이 아래 3가지뿐임. t1h는 실제로 0도일 수 있지만, 에러인 경우에도 0으로 옴.
@@ -1610,7 +1611,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('In > sID=',req.sessionID, meta);
 
         if (!req.current)  {
             req.current={};
@@ -1631,11 +1632,11 @@ function ControllerTown() {
 
             var date = kmaTimeLib.convertDateToYYYYMMDD(now);
             var time = kmaTimeLib.convertDateToHHMM(now);
-            log.info('>sID=', req.sessionID, 'dateTime:', date+time);
+            log.debug('> sID=', req.sessionID, 'dateTime:', date+time);
 
             var reqCurrent = req.current;
 
-            log.info('>sID=', req.sessionID, 'req.current:', JSON.stringify(reqCurrent));
+            log.debug('> sID=', req.sessionID, 'req.current:', JSON.stringify(reqCurrent));
 
             controllerKmaStnWeather.getStnHourlyAndMinRns(townInfo, date+time, reqCurrent, function (err, stnWeatherInfo) {
                 if (err) {
@@ -1651,7 +1652,7 @@ function ControllerTown() {
                     return;
                 }
 
-                log.info('>sID=', req.sessionID, 'stnWeatherInfo:', JSON.stringify(stnWeatherInfo));
+                log.debug('> sID=', req.sessionID, 'stnWeatherInfo:', JSON.stringify(stnWeatherInfo));
 
                 try {
                     var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
@@ -1661,12 +1662,12 @@ function ControllerTown() {
 
                         if (currentTime.getTime() >= stnWeatherInfoTime.getTime()) {
 
-                            log.info('>sID=',req.sessionID,
+                            log.debug('> sID=',req.sessionID,
                                 'use api first, just append new data of stn hourly weather info');
                             stnFirst = false;
                         }
                         else {
-                            log.debug('>sID=',req.sessionID, 'overwrite all data');
+                            log.debug('> sID=',req.sessionID, 'overwrite all data');
                         }
                     }
 
@@ -1716,7 +1717,7 @@ function ControllerTown() {
                     reqCurrent.weather = ControllerWeatherDesc.getWeatherStr(reqCurrent.weatherType, res);
                     self._updateCurrentFromMinWeather(req.currentList, reqCurrent);
 
-                    log.info('>sID=', req.sessionID, 'reqCurrent:', JSON.stringify(reqCurrent));
+                    log.debug('> sID=', req.sessionID, 'reqCurrent:', JSON.stringify(reqCurrent));
                 }
                 catch(err) {
                     log.error(err);
@@ -1740,7 +1741,7 @@ function ControllerTown() {
         meta.method = 'convertMidKorStrToSkyInfo';
         meta.region = regionName;
         meta.city = cityName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('midData')) {
             log.warn("mid data is undefined", meta);
@@ -1832,7 +1833,7 @@ function ControllerTown() {
         meta.method = 'getMidRss';
         meta.region = regionName;
         meta.city = cityName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('midData')) {
             req.midData = {};
@@ -1881,7 +1882,7 @@ function ControllerTown() {
         meta.method = 'getMid';
         meta.region = regionName;
         meta.city = cityName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         try{
             manager.getRegIdByTown(regionName, cityName, function(err, code){
@@ -2103,7 +2104,7 @@ function ControllerTown() {
             return 0;
         });
 
-        log.info(JSON.stringify(itemList));
+        log.debug('makeSummary> ', JSON.stringify(itemList));
 
         if (itemList.length == 0) {
             log.error("Fail to make summary");
@@ -2130,7 +2131,7 @@ function ControllerTown() {
             meta.region = req.params.region;
             meta.city = req.params.city;
             meta.town = req.params.town;
-            log.info('>sID=',req.sessionID, meta);
+            log.debug('> sID=',req.sessionID, meta);
 
             if (!req.current || !req.currentList)  {
                 log.warn(new Error("Fail to find current weather or current list "+JSON.stringify(meta)));
@@ -2222,7 +2223,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         if (!req.short && !req.midData) {
             var err = new Error("Fail to find short, mid weather");
@@ -2285,7 +2286,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('> sID=',req.sessionID, meta);
 
         if (!req.current)  {
             req.current={};
@@ -2330,12 +2331,12 @@ function ControllerTown() {
         meta.town = req.params.town;
 
         if (req.query.airForecastSource !== 'airkorea') {
-            log.info('>sID=',req.sessionID,
+            log.debug('>sID=',req.sessionID,
                 'skip get keco dust forecast air forecast source='+req.query.airForecastSource, meta);
             return next();
         }
 
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('>sID=',req.sessionID, meta);
 
         if (!req.midData)  {
             var err = new Error("Fail to find midData weather "+JSON.stringify(meta));
@@ -2394,7 +2395,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('>sID=',req.sessionID, meta);
 
         var townName = {
             first: req.params.region? req.params.region:'',
@@ -2421,7 +2422,7 @@ function ControllerTown() {
                 },
                 function(cb){
                     // find areaNo from areaNo DB
-                    log.info('Try to find areaNo from AreaNoDB', townName);
+                    log.debug('Try to find areaNo from AreaNoDB', townName);
 
                     modelAreaNo.find({town:townName}, function(err, areaList){
                         if(err || areaList.length === 0){
@@ -2429,22 +2430,22 @@ function ControllerTown() {
                         }
 
                         var item = areaList[0];
-                        log.info('AreaNo Item : ', item.geo);
+                        log.debug('AreaNo Item : ', item.geo);
                         townGeocode = item.geo;
 
-                        log.info('Try to find Health data by AreaNo which comes from AreaNoDB');
+                        log.debug('Try to find Health data by AreaNo which comes from AreaNoDB');
 
                         modelHealthDay.find({areaNo:parseInt(item.areaNo)}).lean().exec(function(err, res) {
                             if(err || res.length === 0){
                                 return cb(null);
                             }
-                            log.info('success_byAreaNoDB');
+                            log.debug('success_byAreaNoDB');
                             return cb('success_byAreaNoDB', res);
                         });
                     });
                 },
                 function(cb){
-                    log.info('Try to find near AreaNo by geocode');
+                    log.debug('Try to find near AreaNo by geocode');
 
                     if(townGeocode.length === 0){
                         if(req.geocode){
@@ -2454,7 +2455,7 @@ function ControllerTown() {
                             return cb('fail to get AreaNo data', undefined);
                         }
                     }
-                    log.info('center geocode : ', townGeocode);
+                    log.debug('center geocode : ', townGeocode);
                     // There is no areaNo in the DB
                     modelAreaNo.find({geo: {$near:townGeocode, $maxDistance: 0.3}}).limit(3).lean().exec(function (err, areaNoList) {
                         if(err || areaNoList.length == 0){
@@ -2462,16 +2463,16 @@ function ControllerTown() {
                             return cb('fail to get areaNo', undefined);
                         }
 
-                        log.info('Get AreaNo which is near by townName');
+                        log.debug('Get AreaNo which is near by townName');
                         async.mapSeries(areaNoList,
                             function(areaNo, callback){
-                                log.info('AreaNo : ', areaNo.areaNo);
+                                log.debug('AreaNo : ', areaNo.areaNo);
                                 modelHealthDay.find({areaNo:parseInt(areaNo.areaNo)}).lean().exec(function(err, res) {
                                     if(err || res.length === 0){
                                         log.warn('Health> cannot fild areaNo near by geocode, goto next : ', townGeocode, areaNo.areaNo);
                                         return callback(null);
                                     }
-                                    log.info('succes HealthDay : ', res.length, areaNo.areaNo);
+                                    log.debug('succes HealthDay : ', res.length, areaNo.areaNo);
                                     cb('find by near AreaNo', res);
                                     return callback('success_byNearbyGeocode');
                                 });
@@ -2554,7 +2555,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('>sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('midData')) {
             req.midData = {};
@@ -2627,7 +2628,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('>sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('midData')) {
             req.midData = {};
@@ -2687,7 +2688,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('>sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('short')) {
             log.error("Short forecast data hasn't attached on req");
@@ -3067,7 +3068,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.debug('>sID=',req.sessionID, meta);
 
         if(req.midData == undefined || req.midData.dailyData == undefined || !Array.isArray(req.midData.dailyData)) {
             log.error("daily data is undefined");
@@ -3590,7 +3591,7 @@ ControllerTown.prototype._getTimeTable = function () {
         return listResult;
     }
 
-    log.info('make time table');
+    log.debug('make time table');
     listResult.push(JSON.parse(JSON.stringify(dateString)));
     for(var i=0 ; i<45 ; i++){
         if(dateString.time === '2100'){
@@ -3620,7 +3621,7 @@ ControllerTown.prototype._getTimeTable = function () {
         listResult.push(JSON.parse(JSON.stringify(dateString)));
     }
 
-    log.info(listResult);
+    log.debug(listResult);
     return listResult;
 };
 
@@ -3639,7 +3640,7 @@ ControllerTown.prototype._getShortFromDB = function(regionName, cityName, townNa
 
     var self = this;
 
-    log.info('list length : ', listTownData.length);
+    log.debug('list length : ', listTownData.length);
 
     for(var i in listTownData){
         var townData = listTownData[i];
@@ -3947,7 +3948,7 @@ ControllerTown.prototype._findTown = function(list, region, city, town, cb) {
                         log.error('towns> fail to save to DB :', JSON.stringify(newTown));
                     }
                     else {
-                        log.info('towns> save to DB :', JSON.stringify(newTown));
+                        log.debug('towns> save to DB :', JSON.stringify(newTown));
                     }
                 });
 
@@ -4187,7 +4188,7 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
                     });
                 }
                 else{
-                    log.info('~> what???');
+                    log.error('~> what???');
                     log.error(JSON.stringify(meta));
                     cb(new Error(JSON.stringify(meta)));
                     return [];

@@ -39,7 +39,7 @@ function GeoController(lat, lon, lang, country) {
                 console.error(err);
             }
             else {
-                console.info('geoctrl cached domain:', domain, ', result:', result);
+                console.debug('geoctrl cached domain:', domain, ', result:', result);
             }
         });
 
