@@ -42,15 +42,20 @@
     <script src="js/controller.purchase.js"></script>
     <script src="js/controller.units.js"></script>
     <script src="js/controller.nation.js"></script>
+    <script src="js/controller.nation.air.js"></script>
     <script src="js/controller.setting.radio.js"></script>
     <script src="js/controller.air.js"></script>
     <script src="js/controller.push.js"></script>
 
     <script src="js/service.twads.js"></script>
+    <script src="js/service.admobclean.js"></script>
+    <script src="js/service.admobpro.js"></script>
     <script src="js/service.weatherinfo.js"></script>
     <script src="js/service.weatherutil.js"></script>
     <script src="js/service.util.js"></script>
     <script src="js/service.push.js"></script>
+    <script src="js/service.branch.js"></script>
+    <script src="js/service.firebase.js"></script>
 
     <script src="js/service.storage.js"></script>
     <script src="client.config.js"></script>
@@ -79,7 +84,7 @@
 <ion-side-menus>
     <!-- Left menu -->
     <ion-side-menu side="left" ng-controller="SettingCtrl" ng-class="isMenuOpen() ? 'menu-open' : ''" class="menu menu-left">
-        <header class="bar bar-stable bar-header">
+        <header class="bar bar-dark bar-header">
             <button class="button button-icon icon"
                     ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" menu-toggle>
             </button>
@@ -89,6 +94,14 @@
             <div class="list">
                 <label class="item" ng-click="clickMenu('nation')" ng-if="getRegion() === 'KR' && package === 'todayWeather'">
                     {{'LOC_NATIONAL_WEATHER'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right"></i>
+                </label>
+                <label class="item" ng-click="clickMenu('nation-air')" ng-if="getRegion() === 'KR'">
+                    {{'LOC_NATIONAL_AIR'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right"></i>
+                </label>
+                <label class="item" ng-click="clickMenu('nullschool')" ng-if="getRegion() === 'KR'" >
+                    {{'LOC_NULLSCHOOL_WIND'|translate}}
                     <i class="icon ion-chevron-right" style="float: right"></i>
                 </label>
                 <label class="item" ng-click="clickMenu('units')">
@@ -107,7 +120,7 @@
                     {{'LOC_THEME_SETTING'|translate}}
                     <span style="float: right">{{getThemeValueStr(settingsInfo.theme)|translate}}</span>
                 </label>
-                <label class="item" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase() && package === 'todayWeather'">
+                <label class="item" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
                     {{'LOC_REMOVE_ADS'|translate}}
                     <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
                 </label>

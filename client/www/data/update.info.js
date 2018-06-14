@@ -1,47 +1,58 @@
-window.todayWeather = {appVersion: '0.9.95', enablePopup: true};
+window.todayWeather = {appVersion: '1.0.0', enablePopup: false};
 window.todayWeather.updateInfo = [
     {
         lang: 'en',
         all: [
-            '* new Weahter Picture Theme',
+            '* Popup for checking alarm setting',
+            '* Fix push notification error',
             'have a nice day!'
         ],
         android: [],
-        ios: []
+        ios: [
+            '* Fix some bugs'
+	]
     },
     {
         lang: 'ko',
         all: [
-            '* new 날씨 사진 테마',
-            '* 대기정보페이지에 날씨 요약추가',
-            '* 대기정보페이지에 인근측정소정보 추가',
+            '* 알림설정개선',
+            '* 알림오류수정',
             '즐거운 하루 되세요. ^^'
         ],
         android: [
-            '* new back key 종료방지'
         ],
-        ios: []
+        ios: [
+            '* 위젯오류개선',
+	]
     }
 ];
 
-window.todayAir = {appVersion: '0.1.3', enablePopup: true};
+window.todayAir = {appVersion: '0.1.8', enablePopup: false};
 window.todayAir.updateInfo = [
     {
         lang: 'en',
         all: [
-            '* new today air app!',
             'have a nice day!'
         ],
-        android: [],
-        ios: []
+        android: [
+            '* Fix push notification error',
+            '* Fix some bugs'
+	],
+        ios: [
+            '* new today air!'
+	]
     },
     {
         lang: 'ko',
         all: [
-            '* 오늘미세 출시!',
             '즐거운 하루 되세요. ^^'
         ],
-        android: [],
-        ios: []
+        android: [
+            '* 알림 오류 수정',
+            '* 버그 수정 및 안정화'
+	],
+        ios: [
+            '* 오늘미세 출시!',
+	]
     }
 ];

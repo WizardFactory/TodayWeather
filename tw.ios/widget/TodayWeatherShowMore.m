@@ -49,7 +49,7 @@
     TEMP_UNIT       tempUnit = TEMP_UNIT_CELSIUS;
     NSString        *nssCountry = nil;
     
-    NSLog(@"[proDailyData] reqType : %d", reqType);
+    DebugLog(@"[proDailyData] reqType : %d", reqType);
     
     TodayViewController *TVC = [TodayViewController sharedInstance];
 
@@ -58,7 +58,7 @@
     nssCountry          = [self getCurCountry];
     tempUnit            = [TodayWeatherUtil getTemperatureUnit];
     
-    NSLog(@"[proDailyData] country : %@", nssCountry);
+    DebugLog(@"[proDailyData] country : %@", nssCountry);
     
     for(int i = 0 ; i < [arrDaysData count]; i++)
     {
@@ -104,7 +104,7 @@
         nssTempMaxMin       = [NSString stringWithFormat:@"%d˚/%d˚", taMin, taMax];
         
         nssSkyIcon          = [[arrDaysData objectAtIndex:i] objectForKey:@"skyIcon"];
-        NSLog(@"[proDailyData] nssTempMaxMin : %@", nssTempMaxMin);
+        DebugLog(@"[proDailyData] nssTempMaxMin : %@", nssTempMaxMin);
         
         dispatch_async(dispatch_get_main_queue(), ^{
             switch (i) {
@@ -192,14 +192,14 @@
     //TEMP_UNIT tempUnit            = [TodayWeatherUtil getTemperatureUnit];
     TodayViewController *TVC = [TodayViewController sharedInstance];
     
-    NSLog(@"[proByTimeData] reqType : %d", reqType);
-    //NSLog(@"[processByTimeData] dict : %@", dict);
+    DebugLog(@"[proByTimeData] reqType : %d", reqType);
+    //DebugLog(@"[processByTimeData] dict : %@", dict);
     arrTimeData = [TodayWeatherUtil getByTimeArray:dict type:reqType];
-    NSLog(@"[proByTimeData] arrTimeData count : %lu", (unsigned long)[arrTimeData count]);
+    DebugLog(@"[proByTimeData] arrTimeData count : %lu", (unsigned long)[arrTimeData count]);
     
     for(int i = 0 ; i < [arrTimeData count]; i++)
     {
-        //NSLog(@"[processByTimeData] i : %d", i);
+        //DebugLog(@"[processByTimeData] i : %d", i);
         int       temperature     = 0;
 
 //        '시'가 아니라 다국어 지원이 필요함
@@ -217,7 +217,7 @@
         nssTempByTime       = [NSString stringWithFormat:@"%d˚", (int)temperature];
         nssSkyIcon          = [[arrTimeData objectAtIndex:i] objectForKey:@"skyIcon"];
         
-        NSLog(@"nssTempMaxMin : %@", nssTempByTime);
+        DebugLog(@"nssTempMaxMin : %@", nssTempByTime);
         
         dispatch_async(dispatch_get_main_queue(), ^{
             switch (i) {
@@ -306,7 +306,7 @@
     
     NSString *nssResults        = nil;
     
-    //NSLog(@"All air state is same!!! khaiGrade(%d), pm10Grade(%d), pm25Grade(%d)", khaiGrade, pm10Grade, pm25Grade);
+    //DebugLog(@"All air state is same!!! khaiGrade(%d), pm10Grade(%d), pm25Grade(%d)", khaiGrade, pm10Grade, pm25Grade);
     
 
     // Grade가 동일하면 통합대기 값을 전달, 동일할때 우선순위 통합대기 > 미세먼지 > 초미세먼지
@@ -314,7 +314,7 @@
     {
         if( (khaiGrade == 0) && (pm10Grade == 0) && (pm25Grade == 0) )
         {
-            NSLog(@"All air state is zero !!!");
+            DebugLog(@"All air state is zero !!!");
         }
         else
         {
@@ -510,7 +510,7 @@
 - (void) showDailyWeatherAsWidth
 {
     TodayViewController *TVC = [TodayViewController sharedInstance];
-    NSLog(@"[showDailyWeatherAsWidth] TVC.view.bounds.size.width :%f", TVC.view.bounds.size.width);
+    DebugLog(@"[showDailyWeatherAsWidth] TVC.view.bounds.size.width :%f", TVC.view.bounds.size.width);
     // actual width is 304, margin is 16
     if(TVC.view.bounds.size.width <= 320.00)
     {

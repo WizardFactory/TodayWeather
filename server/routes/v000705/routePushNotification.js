@@ -3,6 +3,8 @@
  */
 
 var express = require('express');
+var async = require('async');
+
 var router = express.Router();
 var config = require('../../config/config');
 var ControllerPush = require('../../controllers/controllerPush');
@@ -52,16 +54,14 @@ router.post('/', function(req, res) {
     try {
         pushInfo = req.body;
 
-        if (!pushInfo.hasOwnProperty('registrationId') ||
-            !pushInfo.hasOwnProperty('type') )
+        if (!pushInfo.hasOwnProperty('fcmToken') || pushInfo.fcmToken.length === 0)
         {
-            throw new Error('invalid push info registrationId/type');
+            if (!pushInfo.hasOwnProperty('registrationId') || pushInfo.registrationId.length === 0)
+            {
+                throw new Error('invalid push info registrationId and fcmToken');
+            }
         }
-        if (pushInfo.registrationId.length === 0 ||
-            pushInfo.type.length === 0)
-        {
-            throw new Error('invalid push info registrationId/type');
-        }
+
         if (!pushInfo.hasOwnProperty('location') && !pushInfo.hasOwnProperty('town')) {
             throw new Error('invalid push info location or town is empty');
         }
@@ -72,19 +72,18 @@ router.post('/', function(req, res) {
         }
 
         if (pushInfo.source == undefined) {
-            pushInfo.source = "KMA"
+            log.warn(`pushInfo source is undefined fcmToken:${pushInfo.fcmToken}, regId:${pushInfo.registrationId}`);
         }
 
         if (pushInfo.category == undefined) {
-            log.error('pushInfo category is undefined');
+            log.warn(`pushInfo category is undefined fcmToken:${pushInfo.fcmToken}, regId:${pushInfo.registrationId}`);
             pushInfo.category = 'alarm';
         }
 
         if (pushInfo.package == undefined) {
-            log.error('pushInfo package is undefined');
+            log.warn(`pushInfo package is undefined fcmToken:${pushInfo.fcmToken}, regId:${pushInfo.registrationId}`);
             pushInfo.package = 'todayWeather';
         }
-
 
         log.info('pushInfo : '+ JSON.stringify(pushInfo));
     }
@@ -109,14 +108,47 @@ router.post('/', function(req, res) {
 router.put('/', function(req, res) {
     log.info('put : '+ JSON.stringify(req.body));
     var co = new ControllerPush();
-    co.updateRegistrationId(req.body.newRegId, req.body.oldRegId, function (err, result) {
-        if (err) {
-            log.error(err);
-            //return  res error
-            return res.status(500).send(err.message);
-        }
-        return res.send(result);
-    });
+    var alert = new CtrlAlertPush();
+
+    if (req.body.newToken && req.body.oldToken) {
+        async.parallel([
+                function (callback) {
+                    co.updateFcmToken(req.body.newToken, req.body.oldToken, callback);
+                },
+                function (callback) {
+                    alert.updateFcmToken(req.body.newToken, req.body.oldToken, callback)
+                }
+            ],
+            function (err, result) {
+                if (err) {
+                    log.error(err);
+                    //return  res error
+                    return res.status(500).send(err.message);
+                }
+                return res.send(result);
+            });
+    }
+    else if (req.body.newRegId && req.body.oldRegId) {
+        async.parallel([
+                function (callback) {
+                    co.updateRegistrationId(req.body.newRegId, req.body.oldRegId, callback);
+                },
+                function (callback) {
+                    alert.updateRegistrationId(req.body.newRegId, req.body.oldRegId, callback);
+                }
+            ],
+            function (err, result) {
+                if (err) {
+                    log.error(err);
+                    //return  res error
+                    return res.status(500).send(err.message);
+                }
+                return res.send(result);
+            });
+    }
+    else {
+        return res.status(403).send('invalid body');
+    }
 });
 
 /**

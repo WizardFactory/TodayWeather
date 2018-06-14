@@ -28,12 +28,30 @@ angular.module('controller.settingctrl', [])
             if (menu === 'sendMail') {
                 $ionicSideMenuDelegate.toggleLeft();
                 Util.sendMail($translate);
-            } else if (menu === 'openMarket') {
+            }
+            else if (menu === 'openMarket') {
                 $ionicSideMenuDelegate.toggleLeft();
                 Util.openMarket();
-            } else if (menu === 'openInfo') {
+            }
+            else if (menu === 'openInfo') {
                 openInfo();
-            } else {
+            }
+            else if (menu === 'nullschool') {
+                Util.ga.trackEvent('action', 'click', 'open nullschool');
+                var src = "https://earth.nullschool.net/#current/wind/surface/level/orthographic=-233.36,38.96,3000";
+                if (window.cordova && cordova.InAppBrowser) {
+                    cordova.InAppBrowser.open(src, "_system");
+                }
+                else {
+                    var options = {
+                        location: "yes",
+                        clearcache: "yes",
+                        toolbar: "no"
+                    };
+                    window.open(src, "_blank", options);
+                }
+            }
+            else {
                 $ionicSideMenuDelegate.toggleLeft();
                 $location.path('/' + menu);
             }
@@ -78,6 +96,10 @@ angular.module('controller.settingctrl', [])
 
         $rootScope.isAndroid = function () {
             return ionic.Platform.isAndroid();
+        };
+
+        $rootScope.isIOS = function () {
+            return ionic.Platform.isIOS();
         };
 
         $rootScope.isMenuOpen = function() {
@@ -151,7 +173,9 @@ angular.module('controller.settingctrl', [])
             }
             else if (name === 'theme') {
                 title = 'LOC_THEME_SETTING';
-                list = ['photo', 'light', 'blue'].map(function (value) {
+                // var themeList = ['photo', 'light', 'blue'];
+                var themeList = ['photo', 'light'];
+                list = themeList.map(function (value) {
                     return {label: $scope.getThemeValueStr(value), value: value};
                 });
             }

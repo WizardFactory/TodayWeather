@@ -32,12 +32,17 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
         async.mapSeries(newData,
             function(item, cb){
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
+                if ( pubDate == null || isNaN(pubDate.getTime()) ) {
+                    log.warn('pubDate is null, so copy from fcsDate');
+                    pubDate = fcsDate;
+                }
                 var newItem = {mCoord: coord, pubDate: pubDate, fcsDate: fcsDate, currentData: item};
                 log.debug('KMA Town C> item : ', JSON.stringify(newItem));
 
                 modelKmaTownCurrent.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
                         log.error('KMA Town C> Fail to update current item');
+                        log.error(err);
                         log.info(JSON.stringify(newItem));
                         return cb();
                     }

@@ -2301,6 +2301,9 @@ Manager.prototype.startManager = function(){
             log.error(err);
         });
 
+    let dsfController = new (require('./worldWeather/dsf.controller'));
+    dsfController.maintainDB();
+
     async.parallel([
         function (callback) {
             keco.getAllMsrStnInfo(function (err) {

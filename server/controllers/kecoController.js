@@ -412,6 +412,16 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
                 var arpltn = self._mergeArpltnList(arpltnList, dateTime);
                 //6개중에 데이터 있는 3개만 리스트로 생성
                 arpltnList = arpltnList.slice(0,3);
+                arpltnList = arpltnList.sort(function (a, b) {
+                    if (a[0].khaiValue == undefined && a[0].pm10Value == undefined) {
+                        return 1;
+                    }
+                    if (a[0].mangName === '도시대기') {
+                        return -1;
+                    }
+                    return 0;
+                });
+
                 return cb(undefined, {arpltn:arpltn, list: arpltnList[0], stnList: arpltnList});
             }],
         function(err, arpltnObj) {
@@ -575,23 +585,42 @@ arpltnController.appendData = function(town, current, callback) {
     });
 };
 
+/**
+ * 적절한 db query를 찾아야 함.
+ * @param callback
+ */
 arpltnController.getSidoArpltn = function (callback) {
-    SidoArpltn.find({"cityName" : ""}).sort({date:-1}).limit(20).lean().exec(function (err, list) {
-        if (err) {
-            return callback(err);
-        }
-        if (list.length === 0) {
-            return callback(new Error("Fail to find sido arpltn"));
-        }
-        var last = list[0].date;
-        list = list.filter(function (obj) {
-            return obj.date.getTime() === last.getTime();
+    var sidoList = Arpltn.getCtprvnSidoList();
+
+    async.map(sidoList,
+        function (sido, callback) {
+            SidoArpltn.find({sidoName:sido, cityName: ""}, {_id:0, __v:0})
+                .sort({date:-1})
+                .limit(1).lean()
+                .exec(
+                    function (err, list) {
+                        if (err) {
+                            log.error(err);
+                            return callback(undefined, undefined);
+                        }
+                        if (list.length === 0) {
+                            log.error(new Error("Fail to find sido arpltn sido:"+sido));
+                            return callback(undefined, undefined);
+                        }
+                        callback(null, list[0]);
+                    });
+        },
+        function (err, list) {
+            if (err) {
+                return callback(err);
+            }
+            list = list.filter(function (obj) {
+               return obj != undefined
+            });
+            callback(null, list);
         });
-        if (list.length < 17) {
-            log.error("Fail to get full sido arpltn");
-        }
-        callback(null, list);
-    });
+
+    return this;
 };
 
 module.exports = arpltnController;

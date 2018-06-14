@@ -908,6 +908,7 @@ KmaIndexService.prototype.getLifeIndex2 = function (indexName, callback) {
 KmaIndexService.prototype._parseDailyLifeIndex2 = function (indexModel) {
 
     var lastUpdateDate = ''+indexModel.date;
+    lastUpdateDate = lastUpdateDate.slice(0,8);
 
     var today = kmaTimeLib.convertStringToDate(lastUpdateDate);
     var tomorrow = new Date(today);

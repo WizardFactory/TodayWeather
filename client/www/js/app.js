@@ -13,9 +13,13 @@ angular.module('starter', [
     'service.weatherinfo',
     'service.weatherutil',
     'service.util',
+    'service.admobclean',
+    'service.admobpro',
     'service.twads',
     'service.push',
     'service.storage',
+    'service.branch',
+    'service.firebase',
     'controller.tabctrl',
     'controller.forecastctrl',
     'controller.air',
@@ -49,40 +53,72 @@ angular.module('starter', [
             }
         }
     })
-    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase, WeatherUtil) {
+    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push,
+        Branch, Purchase, WeatherUtil) {
         if (clientConfig.debug) {
             Util.ga.debugMode();
         }
 
         $rootScope.package = clientConfig.package;
         $rootScope.title = clientConfig.package === 'todayWeather' ? 'LOC_TODAYWEATHER' : 'LOC_TODAYAIR';
-
         if (ionic.Platform.isIOS()) {
             Util.ga.startTrackerWithId(clientConfig.gaIOSKey);
-
-            // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
-            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
-                cordova.plugins.diagnostic.isLocationEnabled(function (enabled) {
-                    console.log("Location setting is " + (enabled ? "enabled" : "disabled"));
-                }, function (error) {
-                    console.error("Error getting for location enabled status: " + error);
-                });
-            }
-        } else if (ionic.Platform.isAndroid()) {
+        }
+        else if (ionic.Platform.isAndroid()) {
             Util.ga.startTrackerWithId(clientConfig.gaAndroidKey, 30);
+        }
 
-            // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
-            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
-                cordova.plugins.diagnostic.getLocationMode(function(locationMode) {
-                    Util.locationStatus = locationMode;
-                }, function(error) {
-                    console.error("Error getting for location mode: " + error);
-                });
+        function checkLocationMode() {
+            if (ionic.Platform.isIOS()) {
+
+                // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
+                if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                    cordova.plugins.diagnostic.isLocationEnabled(function (enabled) {
+                        console.log("Location setting is " + (enabled ? "enabled" : "disabled"));
+                        //TW,TA는 GRANTED_WHEN_IN_USE만 사용하고 있음
+                        if (enabled) {
+                            cordova.plugins.diagnostic.getLocationAuthorizationStatus(function(status){
+                                Util.locationStatus = status;
+                                switch(status){
+                                    case cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED:
+                                        console.log("Permission not requested");
+                                        break;
+                                    case cordova.plugins.diagnostic.permissionStatus.DENIED:
+                                        console.log("Permission denied");
+                                        break;
+                                    case cordova.plugins.diagnostic.permissionStatus.GRANTED:
+                                        console.log("Permission granted always");
+                                        break;
+                                    case cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE:
+                                        console.log("Permission granted only when in use");
+                                        break;
+                                }
+                            }, function(error){
+                                console.error("The following error occurred: "+error);
+                            });
+                        }
+                    }, function (error) {
+                        console.error("Error getting for location enabled status: " + error);
+                    });
+                }
+            }
+            else if (ionic.Platform.isAndroid()) {
+                // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
+                if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                    cordova.plugins.diagnostic.getLocationMode(function(locationMode) {
+                        Util.locationStatus = locationMode;
+                    }, function(error) {
+                        console.error("Error getting for location mode: " + error);
+                    });
+                }
+            }
+            else {
+                console.log("Error : Unknown platform");
             }
         }
-        else {
-            console.log("Error : Unknown platform");
-        }
+
+        checkLocationMode();
+
         Util.ga.platformReady();
 
         Util.ga.enableUncaughtExceptionReporting(true);
@@ -127,8 +163,7 @@ angular.module('starter', [
         }
         else {
             //getAppVersion plugin이 없으면 update.info.js 사용함.
-            $rootScope.version = window.appVersion;
-            Util.version = window.appVersion;
+            $rootScope.version = Util.version = window[clientConfig.package].appVersion;
         }
 
         Util.ga.trackEvent('app', 'language', Util.language);
@@ -175,12 +210,21 @@ angular.module('starter', [
 
         document.addEventListener("resume", function() {
             Util.ga.trackEvent('app', 'status', 'resume');
+            checkLocationMode();
         }, false);
         document.addEventListener("pause", function() {
             Util.ga.trackEvent('app', 'status', 'pause');
         }, false);
 
+        /**
+         * branchInit의 경우 run() function에서 실행하면 resume에서 충돌나서 따로 잡음 TW-261
+         */
+        $ionicPlatform.on("deviceready", function() {
+            Branch.branchInit();
+        });
+
         $ionicPlatform.on('resume', function(){
+            Branch.branchInit();
             $rootScope.$broadcast('reloadEvent', 'resume');
         });
 
@@ -236,7 +280,7 @@ angular.module('starter', [
             headerbars.removeClass('bar-dailyforecast');
             headerbars.removeClass('bar-air');
             headerbars.removeClass('bar-clear');
-            headerbars.removeClass('bar-stable');
+            headerbars.removeClass('bar-dark');
             headerbars.removeClass('bar-blue');
 
             for (var i = 0; i < headerbars.length; i++) {
@@ -249,7 +293,7 @@ angular.module('starter', [
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-search');
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'tab.forecast') {
                 headerbars.addClass('bar-forecast');
                 if ($rootScope.settingsInfo.theme === 'photo') {
@@ -261,7 +305,7 @@ angular.module('starter', [
                     tabs.addClass('tabs-blue');
                 } else {
                     $rootScope.viewColor = '#f5f5f5';
-                    headerbars.addClass('bar-stable');
+                    headerbars.addClass('bar-dark');
                 }
             } else if (toState.name === 'tab.dailyforecast') {
                 headerbars.addClass('bar-dailyforecast');
@@ -274,60 +318,32 @@ angular.module('starter', [
                     tabs.addClass('tabs-blue');
                 } else {
                     $rootScope.viewColor = '#f5f5f5';
-                    headerbars.addClass('bar-stable');
+                    headerbars.addClass('bar-dark');
                 }
             } else if (toState.name === 'tab.air') {
                 $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-air');
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'tab.weather') {
                 $rootScope.viewColor = '#f5f5f5';
                 headerbars.addClass('bar-forecast');
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'start') {
                 $rootScope.viewColor = '#fefefe';
                 headerbars.addClass('bar-clear');
             } else {
                 $rootScope.viewColor = '#f5f5f5';
-                headerbars.addClass('bar-stable');
+                headerbars.addClass('bar-dark');
             }
 
             Util.ga.trackView(toState.name);
         });
-
-        if (window.IonicDeeplink) {
-            IonicDeeplink.route({
-                '/:fav': {
-                    target: 'tab.forecast',
-                    parent: 'tab.forecast'
-                }
-            }, function(match) {
-                console.log(match.$route.parent + ', ' + match.$args.fav);
-                if (match.$args.fav) {
-                    Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch '+match.$args.fav);
-                    $state.transitionTo(match.$route.parent, match.$args, { reload: true });
-                }
-                else {
-                    Util.ga.trackEvent('plugin', 'info', 'deepLinkNoFav');
-                }
-            }, function(nomatch) {
-                console.log('No match', nomatch);
-                Util.ga.trackEvent('plugin', 'info', 'deepLinkNoMatch');
-            });
-        }
-        else {
-            Util.ga.trackException('Fail to find ionic deep link plugin', false);
-        }
 
         TwStorage.init().finally(function() {
             $rootScope.iconsImgPath = window.theme[$rootScope.settingsInfo.theme].icons;
             $rootScope.weatherImgPath = window.theme[$rootScope.settingsInfo.theme].weather;
 
             WeatherInfo.loadCities();
-            WeatherUtil.loadWeatherPhotos().finally(function () {
-                WeatherInfo.updatePhotos();
-                $rootScope.$broadcast('loadWeatherPhotosEvent');
-            });
             if (Push.init() === true) {
                 //show notify alert info popup
                 setTimeout(function () {
@@ -337,6 +353,10 @@ angular.module('starter', [
             }
             Purchase.init();
             Units.loadUnits();
+
+            window.addEventListener('online',  function () {
+                WeatherInfo.loadWeatherPhotos();
+            });
 
             var daumServiceKeys = TwStorage.get("daumServiceKeys");
             if (daumServiceKeys == undefined || daumServiceKeys.length != clientConfig.daumServiceKeys.length) {
@@ -379,7 +399,7 @@ angular.module('starter', [
                     var logMsg = 'from '+lastAppVersion+' to '+Util.version;
                     Util.ga.trackEvent('app', 'update', logMsg);
                     TwStorage.set('appVersion', Util.version);
-                    if (window[clientConfig.package].enablePopup === true) {
+                    if (window[clientConfig.package] && window[clientConfig.package].enablePopup === true) {
                         console.log('disable update info ');
                         TwStorage.set('disableUpdateInfo', false);
                     }
@@ -1649,6 +1669,12 @@ angular.module('starter', [
                 cache: false,
                 templateUrl: 'templates/nation.html',
                 controller: 'NationCtrl'
+            })
+            .state('nation-air', {
+                url: '/nation-air',
+                cache: false,
+                templateUrl: 'templates/nation-air.html',
+                controller: 'NationAirCtrl'
             })
             .state('start', {
                 url: '/start',

@@ -7,6 +7,7 @@ var mongoose = require("mongoose");
 var pushSchema = new mongoose.Schema({
     type: String, //ios, android, windows, amazon ..
     registrationId: String,
+    fcmToken: String,
     cityIndex: Number, //index of city in client
     id: Number,         //이미 등록된 요청은 id가 없음 18.2.14, city안의 id임
     pushTime: Number, //UTChours*60*60 + UTCMinutes*60
@@ -32,6 +33,8 @@ var pushSchema = new mongoose.Schema({
     timezoneOffset: Number, //mins +9h -> +540
     dayOfWeek: [Boolean], // Sunday - Saturday : 0 - 6 [false, true, true, true, true, true, false]
     package: String, //todayWeather, todayAir
+    uuid: String,
+    appVersion: String,
 });
 
 pushSchema.index({alarmTime:1});

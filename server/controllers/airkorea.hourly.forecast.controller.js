@@ -20,6 +20,7 @@ class AirkoreaHourlyForecastController extends ImgHourlyForecastController {
         // noinspection JSAnnotator
         super(imgPaths, ArpltnHourlyForecast);
         this.airkoreaDustImageMgr;
+        this.pollutants = ['pm10', 'pm25'];
     }
 
     /**
@@ -112,7 +113,7 @@ class AirkoreaHourlyForecastController extends ImgHourlyForecastController {
                     this._getMsrStn(callback);
                 },
                 (stnList, callback) => {
-                    this._updateHourlyForecast(stnList, callback);
+                    this._updateHourlyForecast(this.pollutants, stnList, callback);
                 }
             ],
             (err) => {

@@ -52,8 +52,11 @@ aqiRequester.prototype.getDataByAxios = function(url, callback) {
             callback(null, response.data.rxs);
         })
         .catch(function(err) {
-            log.warn(err);
-            callback(err);
+            //error is circular structure so you have to solve circular
+            // const CircularJSON = require('circular-json');
+            // let errStr = CircularJSON.stringify(err);
+            // log.warn(errStr);
+            callback(new Error("Fail to get data"));
         });
 };
 
@@ -70,7 +73,7 @@ aqiRequester.prototype.getData = function(url, retryCount, callback){
             log.warn(err);
             if((err.code === "ECONNRESET" || err.code === "ETIMEDOUT") && retryCount > 0){
                 log.warn('AQI> Retry to get caused by' + err.code + ' : ', retryCount);
-                return self.getData(url, retryCount-- , callback);
+                return self.getData(url, --retryCount, callback);
             }
             if(callback){
                 callback(err);

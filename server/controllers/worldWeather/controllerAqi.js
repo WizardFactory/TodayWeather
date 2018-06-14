@@ -314,7 +314,8 @@ controllerAqi.prototype._getFeed = function(idx, callback) {
                 function(err, result) {
                     if (err) {
                         log.warn(err);
-                        log.warn(JSON.stringify({url: url, invalidFeed:result}));
+                        log.warn('url:'+url);
+                        log.warn(result);
                     }
                     callback(err, result);
                 });

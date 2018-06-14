@@ -20,7 +20,8 @@ angular.module('controller.forecastctrl', [])
                 if ($scope.dailyAqiForecast) {
                     return true;
                 }
-                if ($scope.dayChart == undefined) {
+                if (!Array.isArray($scope.dayChart) || $scope.dayChart[0] == undefined) {
+                    Util.ga.trackException(new Error('invalid day chart in has dust forecast'), false);
                     return false;
                 }
                 for (var i=$scope.dayChart[0].values.length-1; i>=0; i--) {
@@ -58,6 +59,12 @@ angular.module('controller.forecastctrl', [])
                     var todayIndex = $scope.currentWeather.today.index;
                     if (todayIndex == undefined) {
                         console.log("today index is undefined, daily list has not today data");
+                        return false;
+                    }
+                    if ( !Array.isArray($scope.dayChart) || 
+                        $scope.dayChart[0] == undefined ) 
+                    {
+                        Util.ga.trackException(new Error('invalid day chart on has property in three days'), false);
                         return false;
                     }
 
@@ -394,9 +401,12 @@ angular.module('controller.forecastctrl', [])
             try {
                 cityIndex = WeatherInfo.getCityIndex();
                 cityData = WeatherInfo.getCityOfIndex(cityIndex);
-                if (cityData === null || cityData.address === null || cityData.dayChart == null) {
-                    Util.ga.trackEvent('weather', 'error', 'fail to getCityOfIndex', cityIndex);
-                    console.log("fail to getCityOfIndex");
+                if (cityData === null || 
+                    cityData.address === null ||
+                    !Array.isArray(cityData.dayChart) ||
+                    cityData.dayChart[0] == undefined) 
+                {
+                    Util.ga.trackException(new Error('fail to getCityOfIndex'), false);
                     return;
                 }
 
@@ -567,7 +577,7 @@ angular.module('controller.forecastctrl', [])
                     el.scrollLeft = getTodayPosition('short');
                 }
                 else {
-                    console.error('chart scroll is null');
+                    //console.error('chart scroll is null');
                 }
 
                 el = document.getElementById('chartMidScroll');
@@ -575,7 +585,7 @@ angular.module('controller.forecastctrl', [])
                     el.scrollLeft = getTodayPosition('mid');
                 }
                 else {
-                    console.error('chart scroll is null');
+                    //console.error('chart scroll is null');
                 }
             }, 300);
         }
@@ -610,6 +620,13 @@ angular.module('controller.forecastctrl', [])
                 if ($scope.bodyWidth >= $scope.tabletWidth) {
                     return 0;
                 }
+                if (!Array.isArray($scope.dayChart) || 
+                    $scope.dayChart[0] == undefined) 
+                {
+                    Util.ga.trackException(new Error('Invalid day chart on get today position'), false);
+                    return 0;
+                }
+
                 var dayTable = $scope.dayChart[0].values;
                 if (dayTable == undefined) {
                     console.log("day table is undefined");
@@ -755,7 +772,7 @@ angular.module('controller.forecastctrl', [])
                     var cityData = WeatherInfo.getCityOfIndex(cityIndex);
                     if (cityData === null || cityData.address === null || cityData.dayChart == null) {
                         Util.ga.trackEvent('weather', 'error', 'fail to getCityOfIndex', cityIndex);
-                        console.log("fail to getCityOfIndex");
+                        Util.ga.trackException(new Error('fail to getCityOfIndex'), false);
                         return;
                     }
 

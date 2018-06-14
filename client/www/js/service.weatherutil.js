@@ -840,27 +840,27 @@ angular.module('service.weatherutil', [])
          * @returns {string}
          */
         obj.getWeatherEmoji = function (skyIcon) {
-            if (skyIcon.indexOf('Lightning') != -1) {
+            if (skyIcon.indexOf('lightning') != -1) {
                 return '\u26c8';
             }
-            else if (skyIcon.indexOf('RainSnow') != -1) {
+            else if (skyIcon.indexOf('rainsnow') != -1) {
                 return '\u2614\u2603';
             }
-            else if (skyIcon.indexOf('Rain') != -1) {
+            else if (skyIcon.indexOf('rain') != -1) {
                 return '\u2614';
             }
-            else if (skyIcon.indexOf('Snow') != -1) {
+            else if (skyIcon.indexOf('snow') != -1) {
                 return '\u2603';
             }
-            else if (skyIcon.indexOf('Cloud') != -1) {
-                if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+            else if (skyIcon.indexOf('cloud') != -1) {
+                if (skyIcon.indexOf('sun') != -1 || skyIcon.indexOf('moon') != -1) {
                     return '\u26c5';
                 }
                 else {
                     return '\u2601';
                 }
             }
-            else if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+            else if (skyIcon.indexOf('sun') != -1 || skyIcon.indexOf('moon') != -1) {
                 return '\ud83c\udf1e';
             }
 
@@ -935,38 +935,43 @@ angular.module('service.weatherutil', [])
                     };
 
                     for (var i = 0; i < data.data.length; i++) {
-                        if (data.data[i].tags.includes("lightning")) {
+                        if (angular.isArray(data.data[i].tags) === false) {
+                            continue;
+                        }
+
+                        var tag = data.data[i].tags.join('_');
+                        if (tag.indexOf("lightning") != -1) {
                             window.weatherPhotos.lightning.push(data.data[i]);
                         }
-                        else if (data.data[i].tags.includes("rain")) {
+                        else if (tag.indexOf("rain") != -1) {
                             window.weatherPhotos.rain.push(data.data[i]);
                         }
-                        else if (data.data[i].tags.includes("snow")) {
+                        else if (tag.indexOf("snow") != -1) {
                             window.weatherPhotos.snow.push(data.data[i]);
                         }
-                        else if (data.data[i].tags.includes("sun")) {
-                            if (data.data[i].tags.includes("smallcloud")) {
+                        else if (tag.indexOf("sun") != -1) {
+                            if (tag.indexOf("smallcloud") != -1) {
                                 window.weatherPhotos.sun_smallcloud.push(data.data[i]);
                             }
-                            else if (data.data[i].tags.includes("bigcloud")) {
+                            else if (tag.indexOf("bigcloud") != -1) {
                                 window.weatherPhotos.sun_bigcloud.push(data.data[i]);
                             }
                             else {
                                 window.weatherPhotos.sun.push(data.data[i]);
                             }
                         }
-                        else if (data.data[i].tags.includes("moon")) {
-                            if (data.data[i].tags.includes("smallcloud")) {
+                        else if (tag.indexOf("moon") != -1) {
+                            if (tag.indexOf("smallcloud") != -1) {
                                 window.weatherPhotos.moon_smallcloud.push(data.data[i]);
                             }
-                            else if (data.data[i].tags.includes("bigcloud")) {
+                            else if (tag.indexOf("bigcloud") != -1) {
                                 window.weatherPhotos.moon_bigcloud.push(data.data[i]);
                             }
                             else {
                                 window.weatherPhotos.moon.push(data.data[i]);
                             }
                         }
-                        else if (data.data[i].tags.includes("cloud")) {
+                        else if (tag.indexOf("cloud") != -1) {
                             window.weatherPhotos.cloud.push(data.data[i]);
                         }
                     }
@@ -988,18 +993,121 @@ angular.module('service.weatherutil', [])
             if (currentWeather && currentWeather.skyIcon) {
                 var keys = ['lightning', 'rain', 'snow', 'sun_smallcloud', 'sun_bigcloud', 'sun',
                     'moon_smallcloud', 'moon_bigcloud', 'moon', 'cloud'];
-                var tag = keys.find(function (key) {
-                    if (currentWeather.skyIcon.indexOf(key) != -1) {
-                        return true;
-                    }
-                });
 
-                var photos = window.weatherPhotos[tag];
-                if (photos && photos.length > 0) {
-                    return photos[Math.floor(Math.random() * (photos.length - 1))].twUrls.regular;
+                for (var i = 0; i < keys.length; i++) {
+                    if (currentWeather.skyIcon.indexOf(keys[i]) != -1) {
+                        var photos = window.weatherPhotos[keys[i]];
+                        if (photos && photos.length > 0) {
+                            return photos[Math.floor(Math.random() * (photos.length - 1))].twUrls.regular;
+                        }
+                    }
                 }
             }
             return null;
+        };
+
+        obj.aqiStandard = {
+            "airkorea": {
+                "color": ['#32a1ff', '#00c73c', '#fd9b5a', '#ff5959'],
+                "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY'],
+                "value": {
+                    "pm25" : [0, 15, 35, 75, 500],     //ug/m3 (avg 24h)
+                    "pm10" : [0, 30, 80, 150, 600],     //ug/m3 (avg 24h)
+                    "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm   (avg 1h)
+                    "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm   (avg 1h)
+                    "co" : [0, 2, 9, 15, 50],           //ppm   (avg 1h)
+                    "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm   (avg 1h)
+                    "aqi" : [0, 50, 100, 250, 500]      //index
+                },
+                "maxValue": {
+                    "pm25" : 100,
+                    "pm10" : 150,
+                    "o3" : 0.15,
+                    "no2" : 0.2,
+                    "co" : 9,
+                    "so2" : 0.05,
+                    "aqi" : 250
+                }
+            },
+            "airkorea_who": {
+                "color": ['#32a1ff', '#00c73c', '#fd9b5a', '#ff5959'],
+                "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY'],
+                "value": {
+                    "pm25" : [0, 15, 25, 50, 500],      //ug/m3
+                    "pm10" : [0, 30, 50, 100, 600],     //ug/m3
+                    "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm
+                    "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm
+                    "co" : [0, 2, 9, 15, 50],           //ppm
+                    "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm
+                    "aqi" : [0, 50, 100, 250, 500]      //ppm
+                },
+                "maxValue": {
+                    "pm25" : 100,
+                    "pm10" : 150,
+                    "o3" : 0.15,
+                    "no2" : 0.2,
+                    "co" : 9,
+                    "so2" : 0.05,
+                    "aqi" : 250
+                }
+            },
+            "airnow": {
+                "color": ['#00c73c', '#d2d211',
+                    '#ff6f00', '#FF0000',
+                    '#b4004b', '#940021'],
+                "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS',
+                    'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS'],
+                "value": {
+                    "pm25" : [0, 12.0, 35.4, 55.4, 150.4, 250.4, 500.4],    //ug/m3 (avg 24h)
+                    "pm10" : [0, 54, 154, 254, 354, 424, 604],              //ug/m3 (avg 24h)
+                    "o3" : [0, 0.054, 0.124, 0.164, 0.204, 0.404, 0.604],   //ppm (avg 8h, 1h)
+                    "no2" : [0, 0.053, 0.1, 0.36, 0.649, 1.249, 2.049],     //ppm (avg 1h)
+                    "co" : [0, 4.4, 9.4, 12.4, 15.4, 30.4, 50.4],           //ppm (avg 8h)
+                    "so2" : [0, 0.035, 0.75, 0.185, 0.304, 0.604, 1.004],   //ppm (avg 1h, 24h)
+                    "aqi" : [0, 50, 100, 150, 200, 300, 500]                //index
+                    //"o3" : [0, 54, 124, 164, 204, 404, 604],              //ppb (avg 8h, 1h)
+                    //"no2" : [0, 53, 100, 360, 649, 1249, 2049],           //ppb (avg 1h)
+                    //"so2" : [0, 35, 75, 185, 304, 604, 1004],             //ppb (avg 1h, 24h)
+                },
+                "maxValue": {
+                    "pm25" : 100,
+                    "pm10" : 150,
+                    "o3" : 0.164,
+                    "no2" : 0.36,
+                    "co" : 12.4,
+                    "so2" : 0.185,
+                    "aqi" : 200
+                }
+            },
+            "aqicn": {
+                "color": ['#00c73c', '#d2d211',
+                    '#ff6f00', '#FF0000',
+                    '#b4004b', '#940021'],
+                "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS',
+                    'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS'],
+                "value": {
+                    "pm25" : [0, 35, 75, 115, 150, 250, 500],               //ug/m3 (avg 1h)
+                    "pm10" : [0, 50, 150, 250, 350, 420, 600],              //ug/m3 (avg 1h)
+                    "o3" : [0, 0.075, 0.093, 0.14, 0.187, 0.374, 0.56],     //ppm (avg 1h)
+                    "no2" : [0, 0.049, 0.097, 0.341, 0.584, 1.14, 1.87],    //ppm (avg 1h)
+                    "co" : [0, 4, 8, 28, 48, 72, 120],                      //ppm (avg 1h)
+                    "so2":[0, 0.052, 0.175, 0.227, 0.28, 0.56, 0.916],      //ppm (avg 1h)
+                    "aqi" : [0, 50, 100, 150, 200, 300, 500]                //index
+                    // "o3" : [0, 160, 200, 300, 400, 800, 1200],    //ug/m3 (avg 1h)
+                    // "no2" : [0, 100, 200, 700, 1200, 2340, 3840], //ug/m3 (avg 1h)
+                    // "co" : [0, 5, 10, 35, 60, 90, 150],          //mg/m3 (avg 1h)
+                    // "so2" : [0, 150, 500, 650, 800, 1600, 2620],  //ug/m3
+                },
+                "maxValue": {
+                    "pm25" : 100,
+                    "pm10" : 150,
+                    "o3" : 0.14,
+                    "no2" : 0.341,
+                    "co" : 28,
+                    "so2" : 0.227,
+                    "aqi" : 200
+                }
+            }
         };
 
         return obj;
