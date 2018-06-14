@@ -1800,6 +1800,8 @@ function controllerWorldWeather() {
 
             if (!foundYesterday) {
                 log.error("Fail to find yesterday data!", meta);
+                log.info('==> Hourly Item List : ', JSON.stringify(hourlyList));
+                log.info('==> Thistime List : ', JSON.stringify(req.result.thisTime));
                 var yesterdayObj = {date: yesterdayDate};
                 req.result.thisTime.push(yesterdayObj);
             }
