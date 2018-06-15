@@ -2,7 +2,7 @@
  * Created by aleckim on 2018. 6. 12..
  */
 
-var start = angular.module('controller.nation', []);
+var start = angular.module('controller.nation.air', []);
 
 start.controller('NationAirCtrl', function($scope, Util, WeatherUtil, $ionicHistory, $ionicLoading, Units) {
 
