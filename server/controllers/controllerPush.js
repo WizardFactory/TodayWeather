@@ -717,14 +717,25 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
     return pushMsg;
 };
 
+/**
+ * town은 old version of client용으로 마지막 보류임
+ * @param pushInfo
+ * @param callback
+ * @returns {ControllerPush}
+ * @private
+ */
 ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback) {
     var self = this;
-    var apiVersion = "v000902";
+    var apiVersion = 'v000902';
     var url;
     var town = pushInfo.town;
 
-    if (pushInfo.town &&  pushInfo.town.first && pushInfo.town.first != '') {
-        url = self.url+"/"+apiVersion+"/kma/addr";
+    if (pushInfo.geo) {
+        url = self.url+'/'+apiVersion+'/kma/coord';
+        url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
+    }
+    else if (pushInfo.town &&  pushInfo.town.first && pushInfo.town.first != '') {
+        url = self.url+'/'+apiVersion+'/kma/addr';
         if (town.first) {
             url += '/'+ encodeURIComponent(town.first);
         }
@@ -1045,6 +1056,29 @@ ControllerPush.prototype._geoInfo2pushInfo = function (pushInfo, geoInfo) {
     return success;
 };
 
+ControllerPush.prototype._requestDailySummaryByGeo = function(pushInfo, callback) {
+    var self = this;
+    async.waterfall(
+        [
+            function (callback) {
+                self._requestGeoInfo(pushInfo, callback);
+            },
+            function (geoInfo, callback) {
+                if (geoInfo.country === 'KR') {
+                    //copy geoInfo to push info
+                    if (self._geoInfo2pushInfo(pushInfo, geoInfo) === false) {
+                        return callback(new Error('INVALID GEOINFO '+JSON.stringify(geoInfo)));
+                    }
+                    self._requestKmaDailySummary(pushInfo, callback);
+                }
+                else {
+                    self._requestDsfDailySummary(pushInfo, callback);
+                }
+            }
+        ],
+        callback);
+};
+
 /**
  * convert rest api to function call
  * use default for old push db
@@ -1061,34 +1095,25 @@ ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
     pushInfo.units = UnitConverter.initUnits(pushInfo.units);
     pushInfo.package = pushInfo.package || 'todayWeather';
 
-    //현재위치의 이동으로 DSF이면서 town이 있는 경우가 생김
-    if (pushInfo.source == 'DSF') {
+    if (pushInfo.cityIndex === 0 && pushInfo.geo) {
+        //source 지정방식으로 변경되면 삭제되어야 함
+        log.warn('cityIndex is 0, so request daily summary by geo'+JSON.stringify(pushInfo));
+        self._requestDailySummaryByGeo(pushInfo, callback);
+    }
+    else if (pushInfo.source == 'DSF') {
         self._requestDsfDailySummary(pushInfo, callback);
     }
-    else if (pushInfo.town && pushInfo.town.first && pushInfo.town.first.length > 0)
-    {
+    else if (pushInfo.source == 'KMA') {
         self._requestKmaDailySummary(pushInfo, callback);
     }
     else if (pushInfo.geo) {
-        async.waterfall(
-            [
-                function (callback) {
-                    self._requestGeoInfo(pushInfo, callback);
-                },
-                function (geoInfo, callback) {
-                    if (geoInfo.country === 'KR') {
-                        //copy geoInfo to push info
-                        if (self._geoInfo2pushInfo(pushInfo, geoInfo) === false) {
-                           return callback(new Error('INVALID GEOINFO '+JSON.stringify(geoInfo)));
-                        }
-                        self._requestKmaDailySummary(pushInfo, callback);
-                    }
-                    else {
-                        self._requestDsfDailySummary(pushInfo, callback);
-                    }
-                }
-            ],
-            callback);
+        log.error('unknown source pushInfo:'+JSON.stringify(pushInfo));
+        self._requestDailySummaryByGeo(pushInfo, callback);
+    }
+    else if (pushInfo.town && pushInfo.town.first && pushInfo.town.first.length > 0)
+    {
+        //for old client version
+        self._requestKmaDailySummary(pushInfo, callback);
     }
     else {
        return callback(new Error('INVALID PUSHINFO '+JSON.stringify(pushInfo)));

@@ -30,211 +30,169 @@ global.i18n = i18n;
 
 describe('e2e local test - controller push', function() {
 
-    // var pushInfo1 = { "id":1, "cityIndex" : 1,
-    //     "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
-    //     "pushTime" : 82800,
-    //     "enable" : true,
-    //     "category" : "alarm",
-    //     "type" : "ios", "source" : "KMA", "lang" : "ko",
-    //     "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
-    //         "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
-    //     "geo" : [ 127.37, 36.3 ],
-    //     "name" : "정림동1", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540 };
+    var pushInfo1 = { "id":1, "cityIndex" : 0,
+        "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+        "pushTime" : 82800,
+        "enable" : true,
+        "category" : "alarm",
+        "type" : "ios", "source" : "KMA", "lang" : "ko",
+        "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+            "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
+        "geo" : [ 127.37, 36.3 ],
+        "name" : "정림동1", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540 };
 
-    // var pushInfo2 = { "id":2, "cityIndex" : 2,
-    //     "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
-    //     "town" : { "first" : "대구광역시", "second" : "달서구", "third" : "송현1동" },
-    //     "pushTime" : 82800,
-    //     "enable" : true,
-    //     "category" : "alarm",
-    //     "type" : "ios", "source" : "KMA", "lang" : "ko",
-    //     "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
-    //         "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm", "airForecastSource" : "kaq"},
-    //     "name" : "송현1동", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
+    var pushInfo2 = { "id":2, "cityIndex" : 2,
+        "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+        "town" : { "first" : "대구광역시", "second" : "달서구", "third" : "송현1동" },
+        "pushTime" : 82800,
+        "enable" : true,
+        "category" : "alarm",
+        "type" : "ios", "source" : "KMA", "lang" : "ko",
+        "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+            "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm", "airForecastSource" : "kaq"},
+        "name" : "송현1동", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
 
-    // var pushInfo3 = { "id":3, "cityIndex" : 2,
-    //     "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
-    //     "town" : { "first" : "대전광역시", "second" : "서구", "third" : "정림동" },
-    //     "pushTime" : 82900,
-    //     "enable" : false,
-    //     "category" : "alarm",
-    //     "type" : "ios", "source" : "KMA", "lang" : "ko",
-    //     "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
-    //         "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
-    //     "name" : "정림동3", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
+    var pushInfo3 = { "id":3, "cityIndex" : 2,
+        "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+        "town" : { "first" : "대전광역시", "second" : "서구", "third" : "정림동" },
+        "pushTime" : 82900,
+        "enable" : false,
+        "category" : "alarm",
+        "type" : "ios", "source" : "KMA", "lang" : "ko",
+        "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+            "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
+        "name" : "정림동3", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
 
-    // var pushInfo4 = { "id":3, "cityIndex" : 3,
-    //     "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
-    //     "pushTime" : 82900,
-    //     "enable" : false,
-    //     "category" : "alarm",
-    //     "type" : "ios", "source" : "DSF", "lang" : "ko",
-    //     "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
-    //         "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
-    //     "geo" : [ -79.936, 40.461 ],
-    //     "name" : "New York", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
+    var pushInfo4 = { "id":3, "cityIndex" : 3,
+        "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+        "pushTime" : 82900,
+        "enable" : false,
+        "category" : "alarm",
+        "type" : "ios", "source" : "DSF", "lang" : "ko",
+        "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+            "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
+        "geo" : [ -79.936, 40.461 ],
+        "name" : "New York", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
 
-    // var pushInfo5 = { "id":4, "cityIndex" : 4,
-    //     "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
-    //     "pushTime" : 82900,
-    //     "enable" : false,
-    //     "category" : "alarm",
-    //     "type" : "ios", "source" : "DSF", "lang" : "ko",
-    //     "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
-    //         "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
-    //     "geo" : [ 85.324, 27.717 ],
-    //     "name" : "Kathmandu", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
+    var pushInfo5 = { "id":4, "cityIndex" : 4,
+        "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+        "pushTime" : 82900,
+        "enable" : false,
+        "category" : "alarm",
+        "type" : "ios", "source" : "DSF", "lang" : "ko",
+        "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+            "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
+        "geo" : [ 85.324, 27.717 ],
+        "name" : "Kathmandu", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
 
-    // it('test request daily summary without town', function(done) {
-    //     this.timeout(20*1000);
-    //     var co = new ControllerPush();
-    //     co.requestDailySummary(pushInfo1, function (err, result) {
-    //         assert.equal(err, null, err);
-    //         console.log(result);
-    //         done();
-    //     });
-    // });
-
-    // it('test request daily summary for air without town', function(done) {
-    //     this.timeout(20*1000);
-    //     pushInfo1.package = 'todayAir';
-    //     var co = new ControllerPush();
-    //     co.requestDailySummary(pushInfo1, function (err, result) {
-    //         assert.equal(err, null, err);
-    //         console.log(result);
-    //         done();
-    //     });
-    // });
-
-    // it('test request daily summary without geo', function(done) {
-    //     this.timeout(20*1000);
-    //     var co = new ControllerPush();
-    //     co.requestDailySummary(pushInfo2, function (err, result) {
-    //         assert.equal(err, null, err);
-    //         console.log(result);
-    //         done();
-    //     });
-    // });
-
-    // it('test request daily summary for air', function(done) {
-    //     this.timeout(20*1000);
-    //     pushInfo2.package = 'todayAir';
-    //     var co = new ControllerPush();
-    //     co.requestDailySummary(pushInfo2, function (err, result) {
-    //         assert.equal(err, null, err);
-    //         console.log(result);
-    //         done();
-    //     });
-    // });
-
-    // it('test request daily summary without geo', function(done) {
-    //     this.timeout(20*1000);
-    //     var co = new ControllerPush();
-    //     co.requestDailySummary(pushInfo4, function (err, result) {
-    //         assert.equal(err, null, err);
-    //         console.log(result);
-    //         done();
-    //     });
-    // });
-
-    // it('test request daily summary for air', function(done) {
-    //     this.timeout(20*1000);
-    //     pushInfo4.package = 'todayAir';
-    //     var co = new ControllerPush();
-    //     co.requestDailySummary(pushInfo4, function (err, result) {
-    //         assert.equal(err, null, err);
-    //         console.log(result);
-    //         done();
-    //     });
-    // });
-
-    // it('test request daily summary without geo', function(done) {
-    //     this.timeout(20*1000);
-    //     var co = new ControllerPush();
-    //     co.requestDailySummary(pushInfo5, function (err, result) {
-    //         assert.equal(err, null, err);
-    //         console.log(result);
-    //         done();
-    //     });
-    // });
-
-    // it('test request daily summary for air', function(done) {
-    //     this.timeout(20*1000);
-    //     pushInfo5.package = 'todayAir';
-    //     var co = new ControllerPush();
-    //     co.requestDailySummary(pushInfo5, function (err, result) {
-    //         assert.equal(err, null, err);
-    //         console.log(result);
-    //         done();
-    //     });
-    // });
-
-    // it('test request daily summary without source', function(done) {
-    //     this.timeout(20*1000);
-    //     var pushInfo4 = { "id":3, "cityIndex" : 3,
-    //         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
-    //         "pushTime" : 82900,
-    //         "enable" : false,
-    //         "category" : "alarm",
-    //         "type" : "ios", "source" : "DSF", "lang" : "ko",
-    //         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
-    //             "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
-    //         "geo" : [ -79.936, 40.461 ],
-    //         "name" : "New York", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
-    //     pushInfo4.package = 'todayWeather';
-    //
-    //     var co = new ControllerPush();
-    //     co.requestDailySummary(pushInfo4, function (err, result) {
-    //         assert.equal(err, null, err);
-    //         console.log(result);
-    //         done();
-    //     });
-    // });
-
-    // it('test request daily summary without source', function(done) {
-    //     this.timeout(20*1000);
-    //     var pushInfo2 = { "id":2, "cityIndex" : 2,
-    //         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
-    //         "pushTime" : 82800,
-    //         "enable" : true,
-    //         "category" : "alarm",
-    //         "type" : "ios", "lang" : "ko",
-    //         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
-    //             "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm", "airForecastSource" : "kaq"},
-    //         "geo" : [ 127.086, 37.503 ],
-    //         "name" : "잠실본동", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
-    //     pushInfo2.package = 'todayWeather';
-    //
-    //     var co = new ControllerPush();
-    //     co.requestDailySummary(pushInfo2, function (err, result) {
-    //         assert.equal(err, null, err);
-    //         console.log(result);
-    //         done();
-    //     });
-    // });
-
-    before(function (done) {
-        this.timeout(10*1000);
-        mongoose.Promise = global.Promise;
-        // let path = 'mongodb://alec:wzd0417@cluster0-shard-00-00-krcxi.mongodb.net:27017,cluster0-shard-00-01-krcxi.mongodb.net:27017,cluster0-shard-00-02-krcxi.mongodb.net:27017/todayweather?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin';
-        let path = 'mongodb://localhost/todayweather';
-        mongoose.connect(path, function(err) {
-            if (err) {
-                console.error('Could not connect to MongoDB!');
-            }
+    it('test request daily summary without town', function(done) {
+        this.timeout(20*1000);
+        var co = new ControllerPush();
+        co.requestDailySummary(pushInfo1, function (err, result) {
+            assert.equal(err, null, err);
+            console.log(result);
             done();
-        });
-        mongoose.connection.on('error', function(err) {
-            if (err) {
-                console.error('MongoDB connection error: ' + err);
-                done();
-            }
         });
     });
 
-    it ('test remove RegistrationId Changed To Fcm', function (done) {
-        this.timeout(60*1000);
+    it('test request daily summary for air without town', function(done) {
+        this.timeout(20*1000);
+        pushInfo1.package = 'todayAir';
+        var co = new ControllerPush();
+        co.requestDailySummary(pushInfo1, function (err, result) {
+            assert.equal(err, null, err);
+            console.log(result);
+            done();
+        });
+    });
 
+    it('test request daily summary without geo', function(done) {
+        this.timeout(20*1000);
+        var co = new ControllerPush();
+        co.requestDailySummary(pushInfo2, function (err, result) {
+            assert.equal(err, null, err);
+            console.log(result);
+            done();
+        });
+    });
+
+    it('test request daily summary for air', function(done) {
+        this.timeout(20*1000);
+        pushInfo2.package = 'todayAir';
+        var co = new ControllerPush();
+        co.requestDailySummary(pushInfo2, function (err, result) {
+            assert.equal(err, null, err);
+            console.log(result);
+            done();
+        });
+    });
+
+    it('test request daily summary without geo', function(done) {
+        this.timeout(20*1000);
+        var co = new ControllerPush();
+        co.requestDailySummary(pushInfo4, function (err, result) {
+            assert.equal(err, null, err);
+            console.log(result);
+            done();
+        });
+    });
+
+    it('test request daily summary for air', function(done) {
+        this.timeout(20*1000);
+        pushInfo4.package = 'todayAir';
+        var co = new ControllerPush();
+        co.requestDailySummary(pushInfo4, function (err, result) {
+            assert.equal(err, null, err);
+            console.log(result);
+            done();
+        });
+    });
+
+    it('test request daily summary without geo', function(done) {
+        this.timeout(20*1000);
+        var co = new ControllerPush();
+        co.requestDailySummary(pushInfo5, function (err, result) {
+            assert.equal(err, null, err);
+            console.log(result);
+            done();
+        });
+    });
+
+    it('test request daily summary for air', function(done) {
+        this.timeout(20*1000);
+        pushInfo5.package = 'todayAir';
+        var co = new ControllerPush();
+        co.requestDailySummary(pushInfo5, function (err, result) {
+            assert.equal(err, null, err);
+            console.log(result);
+            done();
+        });
+    });
+
+    it('test request daily summary without source', function(done) {
+        this.timeout(20*1000);
+        var pushInfo4 = { "id":3, "cityIndex" : 3,
+            "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+            "pushTime" : 82900,
+            "enable" : false,
+            "category" : "alarm",
+            "type" : "ios", "source" : "DSF", "lang" : "ko",
+            "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+                "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
+            "geo" : [ -79.936, 40.461 ],
+            "name" : "New York", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
+        pushInfo4.package = 'todayWeather';
+
+        var co = new ControllerPush();
+        co.requestDailySummary(pushInfo4, function (err, result) {
+            assert.equal(err, null, err);
+            console.log(result);
+            done();
+        });
+    });
+
+    it('test request daily summary without source', function(done) {
+        this.timeout(20*1000);
         var pushInfo2 = { "id":2, "cityIndex" : 2,
             "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
             "pushTime" : 82800,
@@ -243,21 +201,63 @@ describe('e2e local test - controller push', function() {
             "type" : "ios", "lang" : "ko",
             "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
                 "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm", "airForecastSource" : "kaq"},
-            "town" : { "first" : "", "second" : "", "third" : "" },
-            // "geo" : [ 127.086, 37.503 ],
+            "geo" : [ 127.086, 37.503 ],
             "name" : "잠실본동", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
         pushInfo2.package = 'todayWeather';
-        pushInfo2.uuid = 'D75BA057-AD34-4A9F-A18A-C804291F2443';
-        pushInfo2.appVersion = '1.0.0';
 
-        var ctrl = new ControllerPush();
-        ctrl.updatePushInfo(pushInfo2, function (err, results) {
-            if (err) {
-                log.error(err);
-            }
+        var co = new ControllerPush();
+        co.requestDailySummary(pushInfo2, function (err, result) {
+            assert.equal(err, null, err);
+            console.log(result);
             done();
         });
     });
+
+    // before(function (done) {
+    //     this.timeout(10*1000);
+    //     mongoose.Promise = global.Promise;
+    //     // let path = 'mongodb://alec:wzd0417@cluster0-shard-00-00-krcxi.mongodb.net:27017,cluster0-shard-00-01-krcxi.mongodb.net:27017,cluster0-shard-00-02-krcxi.mongodb.net:27017/todayweather?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin';
+    //     let path = 'mongodb://localhost/todayweather';
+    //     mongoose.connect(path, function(err) {
+    //         if (err) {
+    //             console.error('Could not connect to MongoDB!');
+    //         }
+    //         done();
+    //     });
+    //     mongoose.connection.on('error', function(err) {
+    //         if (err) {
+    //             console.error('MongoDB connection error: ' + err);
+    //             done();
+    //         }
+    //     });
+    // });
+    //
+    // it ('test remove RegistrationId Changed To Fcm', function (done) {
+    //     this.timeout(60*1000);
+    //
+    //     var pushInfo2 = { "id":2, "cityIndex" : 2,
+    //         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+    //         "pushTime" : 82800,
+    //         "enable" : true,
+    //         "category" : "alarm",
+    //         "type" : "ios", "lang" : "ko",
+    //         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+    //             "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm", "airForecastSource" : "kaq"},
+    //         "town" : { "first" : "", "second" : "", "third" : "" },
+    //         // "geo" : [ 127.086, 37.503 ],
+    //         "name" : "잠실본동", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
+    //     pushInfo2.package = 'todayWeather';
+    //     pushInfo2.uuid = 'D75BA057-AD34-4A9F-A18A-C804291F2443';
+    //     pushInfo2.appVersion = '1.0.0';
+    //
+    //     var ctrl = new ControllerPush();
+    //     ctrl.updatePushInfo(pushInfo2, function (err, results) {
+    //         if (err) {
+    //             log.error(err);
+    //         }
+    //         done();
+    //     });
+    // });
 
     // it ('test remove RegistrationId Changed To Fcm', function (done) {
     //     this.timeout(60*1000);

@@ -490,8 +490,10 @@ angular.module('service.push', [])
             if (city.location) {
                 simpleInfo.location = city.location;
             }
-
-            if (city.source === 'KMA' && city.address) {
+            else if (city.source === 'KMA' && city.address) {
+                //old version용으로 마지막 보류임
+                //naton이 없는 address에서 오류 발생함 (TW-340)
+                //한국어 아닌 국내 address도 오류 발생함
                 var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(city.address));
                 if (town && !(town.first=="" && town.second=="" && town.third=="")) {
                     simpleInfo.town = town;
