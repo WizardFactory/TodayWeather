@@ -67,14 +67,14 @@ class DsfController {
 
         var diffDate = this._getDiffDate(utcTime, localTime);
         if (diffDate == 0) {
-            log.info('cDSF > _getLocalLast0H : same day');
+            log.debug('cDSF > _getLocalLast0H : same day');
         }
         else if (diffDate == 1) {
-            log.info('cDSF > _getLocalLast0H : next day');
+            log.debug('cDSF > _getLocalLast0H : next day');
             utcTime.setUTCDate(utcTime.getUTCDate()+1);
         }
         else if (diffDate == -1) {
-            log.info('cDSF > _getLocalLast0H : previous day');
+            log.debug('cDSF > _getLocalLast0H : previous day');
             utcTime.setUTCDate(utcTime.getUTCDate()-1);
         }
         utcTime.setUTCHours(0);
@@ -163,7 +163,7 @@ class DsfController {
             }
 
             if(list.length < 3){
-                log.info('cDsf > There are few datas : ', list.length);
+                log.debug('cDsf > There are less datas : ', list.length);
             }
 
             let ret = {};
@@ -246,7 +246,7 @@ class DsfController {
         // get timezone
         if(src.timezone){
             result['timezone'] = src.timezone;
-            log.info('cDSF >  parse timezone :', result.timezone);
+            log.debug('cDSF >  parse timezone :', result.timezone);
         }
 
         // get timeoffset
@@ -478,9 +478,9 @@ class DsfController {
                                 }
 
                                 output.current = curData;
-                                log.info('cDSF > 1. cur Date : ', cDate.toString());
+                                log.debug('cDSF > 1. cur Date : ', cDate.toString());
                                 output.updatedDate = new Date(curData.data.current.dateObj);
-                                log.info('cDSF > 2. updated cur Date : ', output.updatedDate.toString());
+                                log.debug('cDSF > 2. updated cur Date : ', output.updatedDate.toString());
                                 curRenewal = true;
                             }catch(e){
                                 log.error('cDsf > wrong data : ', e, JSON.stringify(result));
@@ -495,10 +495,11 @@ class DsfController {
                 (curData, cb)=>{
                     // 2. check timezone
                     if(timeOffset != 1440){
-                        log.info('No need to receive timezone');
+                        log.debug('No need to receive timezone');
                         return cb(null, curData);
                     }
-                    if(curData.address.country === undefined){
+
+                    if(curData.address === undefined || curData.address.country === undefined){
                         log.warn('cDSF > There is no timezone string');
                         if(timeOffset === 1440 && curData.timeOffset === undefined){
                             return cb('2. No TIMEZONE INFO');
@@ -533,7 +534,7 @@ class DsfController {
                     if(curRenewal){
                         this._saveData(geo, curData, (err)=>{
                             if(err){
-                                log.warn('cDSF > Fail to save current Data to DB, ', err);
+                                log.error('cDSF > Fail to save current Data to DB, ', err);
                             }
 
                             return cb(null);
@@ -636,7 +637,7 @@ class DsfController {
                         }
                     });
 
-                    log.info('timeoffset :', timeOffset);
+                    log.debug('timeoffset :', timeOffset);
                     this._requestDatas(geo, res, cDate, timeOffset, (err, result)=>{
                         if(err){
                             log.error('cDsf > something wrong to get DSF data ', err);
@@ -654,7 +655,7 @@ class DsfController {
                 }
 
                 req.cDate = result.updatedDate || cDate;
-                log.info('cDSF > cDate  : ', req.cDate.toString());
+                log.debug('cDSF > cDate  : ', req.cDate.toString());
                 return callback(err, this._makeOutputFormat(result, req));
             }
         );

@@ -144,7 +144,7 @@ function controllerWorldWeather() {
 
         req.version = req.params.version;
 
-        log.info("WW>",meta);
+        log.debug("WW>",meta);
 
         // todo: To check all version and make way to alternate route.
         if(req.version !== '010000') {
@@ -153,7 +153,7 @@ function controllerWorldWeather() {
             req.error = 'WW> It is not valid version : ' + req.version;
             next();
         }else{
-            log.info('WW> go to next step', meta);
+            log.debug('WW> go to next step', meta);
             req.validVersion = true;
             next();
         }
@@ -345,7 +345,7 @@ function controllerWorldWeather() {
     };
 
     self._isSameDayString = function(current, target){
-        log.info('_isSameDayString', current, target);
+        log.debug('_isSameDayString', current, target);
         // YYYY.mm.dd HH:MM
         if(current.slice(0, 10) === target.slice(0, 10)){
             return true;
@@ -375,7 +375,7 @@ function controllerWorldWeather() {
         var fDate = new Date(firstStr);
         var sDate = new Date(secondStr);
 
-        log.info('_compareDate > :', fDate.toString(), sDate.toString());
+        log.debug('_compareDate > :', fDate.toString(), sDate.toString());
         return fDate.getTime() > sDate.getTime();
     };
 
@@ -418,7 +418,7 @@ function controllerWorldWeather() {
      * @private
      */
     self._getUntil15Mins = function(current, target){
-        log.info('Compare Date', current, target);
+        log.debug('Compare Date', current, target);
         var currentDate = new Date(current);
         var targetDate = new Date(target);
         var MS_15MINS = 1000*60*16; // 15 mins means is from 15:00:00 ~ 15:59:99
@@ -572,19 +572,19 @@ function controllerWorldWeather() {
                             return;
                         }
 
-                        log.info('cDate : ', cDate.toString());
-                        log.info('AQI DB Date : ', req.AQI.dateObj.toString());
+                        log.debug('cDate : ', cDate.toString());
+                        log.debug('AQI DB Date : ', req.AQI.dateObj.toString());
 
                         //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
                         if (!self.checkValidDate(cDate, req.AQI.dateObj, 60)) {
-                            log.info('TWW> Invaild AQI data', meta);
-                            log.info('TWW> AQI CurDate : ', cDate.toString(), meta);
-                            log.info('TWW> AQI DB Date : ', req.AQI.dateObj.toString(), meta);
+                            log.debug('TWW> Invaild AQI data', meta);
+                            log.debug('TWW> AQI CurDate : ', cDate.toString(), meta);
+                            log.debug('TWW> AQI DB Date : ', req.AQI.dateObj.toString(), meta);
                             callback(null, 'err_exit_notValid');
                             return;
                         }
 
-                        log.info('TWW> get AQI data', meta);
+                        log.debug('TWW> get AQI data', meta);
                         callback(null, null);
                     });
                 },
@@ -712,7 +712,7 @@ function controllerWorldWeather() {
             return res.status(400).send(errMsg);
         }
 
-        log.info('TWW> geocode : ', req.geocode, meta);
+        log.debug('TWW> geocode : ', req.geocode, meta);
 
         async.parallel([
                 function(callback) {
@@ -1526,22 +1526,22 @@ function controllerWorldWeather() {
             var dsf = req.DSF;
             let timeOffset = req.result.timezone.ms;
 
-            log.info('cervert DSF LocalTime > root Timeoffset : ', timeOffset);
+            log.debug('cervert DSF LocalTime > root Timeoffset : ', timeOffset);
             dsf.data.forEach(function(dsfItem){
                 if(dsfItem.current){
                     if(dsfItem.current.timeOffset){
                         timeOffset = dsfItem.current.timeOffset * 60 * 1000;
-                        log.info('DSF LocalTime > overwrite timeoffset to : ', dsfItem.current.timeOffset);
+                        log.debug('DSF LocalTime > overwrite timeoffset to : ', dsfItem.current.timeOffset);
                     }
                     var time = new Date();
-                    log.info('convert DSF LocalTime > current Before :', meta, dsfItem.current.dateObj.toString());
+                    log.debug('convert DSF LocalTime > current Before :', meta, dsfItem.current.dateObj.toString());
                     time.setTime(new Date(dsfItem.current.dateObj).getTime() + timeOffset);
                     dsfItem.current.dateObj = self._convertTimeString(time);
-                    log.info('convert DSF LocalTime > current After : ', meta, dsfItem.current.dateObj.toString());
+                    log.debug('convert DSF LocalTime > current After : ', meta, dsfItem.current.dateObj.toString());
                 }
 
                 if(dsfItem.hourly){
-                    log.info('convert DSF LocalTime > hourly', meta);
+                    log.debug('convert DSF LocalTime > hourly', meta);
                     dsfItem.hourly.data.forEach(function(hourlyItem){
                         var time = new Date();
                         time.setTime(new Date(hourlyItem.dateObj).getTime() + timeOffset);
@@ -1550,7 +1550,7 @@ function controllerWorldWeather() {
                 }
 
                 if(dsfItem.daily){
-                    log.info('convert DSF LocalTime > daily', meta);
+                    log.debug('convert DSF LocalTime > daily', meta);
                     dsfItem.daily.data.forEach(function(dailyItem){
                         var time = new Date();
                         time.setTime(new Date(dailyItem.dateObj).getTime() + timeOffset);
@@ -1650,8 +1650,8 @@ function controllerWorldWeather() {
                 req.result.daily = [];
             }
 
-            log.info('DSF Daily> SDate : ', startDate, meta);
-            log.info('DSF Daily> CDdate : ', curDate, meta);
+            log.debug('DSF Daily> SDate : ', startDate, meta);
+            log.debug('DSF Daily> CDdate : ', curDate, meta);
 
             dsf.data.forEach(function(item){
                 item.daily.data.forEach(function(dbItem){
@@ -1721,9 +1721,9 @@ function controllerWorldWeather() {
                 req.result.thisTime = [];
             }
 
-            log.info('DSF Hourly> SDate : ', startDate, meta);
-            log.info('DSF Hourly> yesterday : ', yesterdayDate, meta);
-            log.info('DSF Hourly> CDate : ', curDate, meta);
+            log.debug('DSF Hourly> SDate : ', startDate, meta);
+            log.debug('DSF Hourly> yesterday : ', yesterdayDate, meta);
+            log.debug('DSF Hourly> CDate : ', curDate, meta);
             //data안의 hourly가 0h~23h 까지이므로, 22,23,0를 묶기위해서 houryList에 모두합침.
             var hourlyList = [];
             dsf.data.forEach(function(item) {
@@ -1764,7 +1764,7 @@ function controllerWorldWeather() {
                     });
 
                     if(!isExist){
-                        log.info('DSF yesterday > Found yesterday data', dbItem.dateObj, meta);
+                        log.debug('DSF yesterday > Found yesterday data', dbItem.dateObj, meta);
                         req.result.thisTime.push(self._makeCurrentDataFromDSFCurrent(dbItem, res));
                     }
                     foundYesterday = true;
@@ -1926,8 +1926,8 @@ function controllerWorldWeather() {
                 req.result.thisTime = [];
             }
 
-            log.info('DSF current> SDate : ', startDate, meta);
-            log.info('DSF current> CDdate : ', curDate, meta);
+            log.debug('DSF current> SDate : ', startDate, meta);
+            log.debug('DSF current> CDdate : ', curDate, meta);
 
             dsf.data.forEach(function (item, index) {
                 //log.info('index : ', index, ' dateOBj : ', item.current.dateObj);
@@ -1937,7 +1937,7 @@ function controllerWorldWeather() {
                         if(thisTime.date != undefined){
                             if(self._isSameDayString(item.current.dateObj, thisTime.date)){
                                 if(self._compareDate(item.current.dateObj, thisTime.date)) {
-                                    log.info('DSF current > update data from : ', thisTime.date, ' -->  To :', item.current.dateObj);
+                                    log.debug('DSF current > update data from : ', thisTime.date, ' -->  To :', item.current.dateObj);
                                     var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
                                     var isNight = self._isNight(curDate, item.daily.data);
                                     current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
@@ -1949,7 +1949,7 @@ function controllerWorldWeather() {
                     });
 
                     if(!isExist){
-                        log.info('DSF current > Found current data', item.current.dateObj.toString(), meta);
+                        log.debug('DSF current > Found current data', item.current.dateObj.toString(), meta);
                         var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
                         var isNight = self._isNight(curDate, item.daily.data);
                         current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
@@ -1959,6 +1959,7 @@ function controllerWorldWeather() {
             });
             if (req.result.thisTime.length === 0) {
                 log.error('DSF current > Fail to find current data', curDate, meta);
+                log.info('dsf.data > ', JSON.stringify(dsf.data));
             }
         }
 
@@ -1994,7 +1995,7 @@ function controllerWorldWeather() {
                     var time = new Date();
                     time.setTime(new Date(aqiItem.dateObj).getTime() + req.result.timezone.ms);
                     aqiItem.date = self._convertTimeString(time);
-                    
+
                     if (thisTime.date != undefined
                         && self._compareDate(thisTime.date, aqiItem.mTime, 6)){
 
@@ -2003,7 +2004,7 @@ function controllerWorldWeather() {
                         thisTime.t = aqiItem.t;
                         thisTime.h = aqiItem.h;
                         thisTime.p = aqiItem.p;
-                        log.info('Aqi Unit : ', req.query.airUnit, 'Date:', thisTime.date, ' | ', aqiItem.mTime);
+                        log.debug('Aqi Unit : ', req.query.airUnit, 'Date:', thisTime.date, ' | ', aqiItem.mTime);
 
                         var indexList = [];
                         var iaqiCode = '';
@@ -2046,8 +2047,8 @@ function controllerWorldWeather() {
                             gradeList.push(thisTime[code + 'Grade']);
                         });
 
-                        log.info('Grade List :', JSON.stringify(gradeList));
-                        log.info('Index List :', JSON.stringify(indexList));
+                        log.debug('Grade List :', JSON.stringify(gradeList));
+                        log.debug('Index List :', JSON.stringify(indexList));
 
                         // IAQI
                         if(req.query.airUnit === 'airnow') {
@@ -2081,7 +2082,7 @@ function controllerWorldWeather() {
                             }else if(additionalPoint >= 2){
                                 thisTime.aqiValue += 50;
                             }
-                            log.info('additionalPoint : ', additionalPoint);
+                            log.debug('additionalPoint : ', additionalPoint);
                             // get grade as index.
                             thisTime.aqiGrade = aqiConverter.index2Grade(req.query.airUnit, thisTime.aqiValue);
                             thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
@@ -3213,7 +3214,7 @@ function controllerWorldWeather() {
             }
 
             if(list.length === 0){
-                log.warn('gAQI> There is no AQI data for ', geo, meta);
+                log.warn('gAQI> There is no AQI data of DB for ', geo, meta);
                 callback('No Data');
                 return;
             }

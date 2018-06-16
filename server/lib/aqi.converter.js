@@ -395,7 +395,7 @@ class AqiConverter {
         }else{
             result = parseFloat(result.toFixed(3));
         }
-        log.info('Extra type: ', type, 'Value :', result, ' index : ', Cp);
+        log.debug('Extra type: ', type, 'Value :', result, ' index : ', Cp);
         return result;
     }
 

@@ -32,7 +32,7 @@ kmaTownShortController.prototype.saveShort = function(newData, callback){
                 modelKmaTownShort.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
                         log.error('KMA Town S> Fail to update short item');
-                        log.info(JSON.stringify(newItem));
+                        // log.info(JSON.stringify(newItem));
                         return cb();
                     }
 
@@ -80,7 +80,7 @@ kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord, 
             var ret = [];
             var pubDate = kmaTimelib.getKoreaTimeString(result[result.length-1].pubDate);
 
-            log.info('KMA Town S> get Data : ', result.length);
+            log.debug('KMA Town S> get Data : ', result.length);
             result.forEach(function(item){
                 var newItem = {};
                 var shortData = item.shortData;
@@ -95,7 +95,7 @@ kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord, 
                 ret.push(newItem);
             });
 
-            log.info('KMA Town S> pubDate : ', pubDate);
+            log.debug('KMA Town S> pubDate : ', pubDate);
             callback(errorNo, {pubDate: pubDate, ret:ret});
         });
 
@@ -114,7 +114,7 @@ kmaTownShortController.prototype.checkPubDate = function(model, srcList, dateStr
     var pubDate = kmaTimelib.getKoreaDateObj(''+ dateString.date + dateString.time);
     var errCode = 0;
 
-    log.info('KMA Town S> pubDate : ', pubDate.toString());
+    log.debug('KMA Town S> pubDate : ', pubDate.toString());
     try{
         async.mapSeries(srcList,
             function(src,cb){
@@ -129,7 +129,7 @@ kmaTownShortController.prototype.checkPubDate = function(model, srcList, dateStr
 
                         for(var i=0 ; i<dbList.length ; i++){
                             if(dbList[i].pubDate.getTime() === pubDate.getTime()){
-                                log.info('KMA Town S> Already updated : ', src, dateString);
+                                log.debug('KMA Town S> Already updated : ', src, dateString);
                                 return cb(null);
                             }
                         }
@@ -145,8 +145,8 @@ kmaTownShortController.prototype.checkPubDate = function(model, srcList, dateStr
                     return true;
                 });
 
-                log.info('KMA Town S> Count of the list for the updating : ', result.length);
-                log.info('KMA Town S> ', JSON.stringify(result));
+                log.debug('KMA Town S> Count of the list for the updating : ', result.length);
+                log.debug('KMA Town S> ', JSON.stringify(result));
 
                 return callback(errCode, result);
             }

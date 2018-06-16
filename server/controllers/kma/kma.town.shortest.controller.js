@@ -79,7 +79,7 @@ kmaTownShortestController.prototype.getShortestFromDB = function(modelCurrent, c
             var ret = [];
             var pubDate = kmaTimelib.getKoreaTimeString(result[result.length-1].pubDate);
 
-            log.info('KMA Town ST> get Data : ', result.length);
+            log.debug('KMA Town ST> get Data : ', result.length);
             result.forEach(function(item){
                 var newItem = {};
                 var shortestData = item.shortestData;
@@ -113,7 +113,7 @@ kmaTownShortestController.prototype.checkPubDate = function(model, srcList, date
     var pubDate = kmaTimelib.getKoreaDateObj(''+ dateString.date + dateString.time);
     var errCode = 0;
 
-    log.info('KMA Town ST> pubDate : ', pubDate.toString());
+    log.debug('KMA Town ST> pubDate : ', pubDate.toString());
     try{
         async.mapSeries(srcList,
             function(src,cb){
@@ -128,7 +128,7 @@ kmaTownShortestController.prototype.checkPubDate = function(model, srcList, date
 
                         for(var i=0 ; i<dbList.length ; i++){
                             if(dbList[i].pubDate.getTime() === pubDate.getTime()){
-                                log.info('KMA Town ST> Already updated : ', src, dateString);
+                                log.debug('KMA Town ST> Already updated : ', src, dateString);
                                 return cb(null);
                             }
                         }
@@ -144,8 +144,8 @@ kmaTownShortestController.prototype.checkPubDate = function(model, srcList, date
                     return true;
                 });
 
-                log.info('KMA Town ST> Count of the list for the updating : ', result.length);
-                log.info('KMA Town ST> ', JSON.stringify(result));
+                log.debug('KMA Town ST> Count of the list for the updating : ', result.length);
+                log.debug('KMA Town ST> ', JSON.stringify(result));
 
                 return callback(errCode, result);
             }

@@ -58,7 +58,7 @@ function TownRss(){
         self.receivedCount++;
 
         if(self.receivedCount == self.coordDb.length){
-            log.info('receive complete! : count=', self.receivedCount);
+            log.debug('receive complete! : count=', self.receivedCount);
         }
     });
 
@@ -91,7 +91,7 @@ TownRss.prototype.loadList = function(completionCallback){
                 self.coordDb.push(item);
             });
 
-            log.info('ShortRSS> coord count : ', self.coordDb.length);
+            log.debug('ShortRSS> coord count : ', self.coordDb.length);
         }
 
         if(completionCallback) {
@@ -236,7 +236,7 @@ TownRss.prototype.convertWeatherString = function(string){
         case 'W':
             return 8;
         default:
-            log.info('convert : ', string);
+            log.warn('convertWeatherString > convert : ', string);
             return -1;
     }
 };
@@ -480,7 +480,7 @@ TownRss.prototype.saveShortRss = function(index, newData, cb){
 TownRss.prototype.saveShortRssNewForm = function(index, newData, callback){
 
     var pubDate = kmaTimelib.getKoreaDateObj(newData.pubDate);
-    log.info('KMA Town S-RSS> pubDate :', pubDate.toString());
+    log.debug('KMA Town S-RSS> pubDate :', pubDate.toString());
     //log.info('KMA Town S-RSS> db find :', coord);
 
 
@@ -494,7 +494,7 @@ TownRss.prototype.saveShortRssNewForm = function(index, newData, callback){
                 modelKmaTownShortRss.update({mCoord: newData.mCoord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
                         log.error('KMA Town S-RSS> Fail to update current item');
-                        log.info(JSON.stringify(newItem));
+                        // log.info(JSON.stringify(newItem));
                         return cb();
                     }
 
@@ -527,7 +527,7 @@ TownRss.prototype.getShortRssFromDB = function(model, coord, req, callback) {
 
         modelKmaTownShortRss.find({'mCoord.mx': coord.mx, 'mCoord.my': coord.my}, {_id: 0}).sort({"fcsDate":1}).lean().exec(function(err, result){
             if(err){
-                log.info('KMA Town S-RSS> Fail to file&get short data from DB');
+                log.debug('KMA Town S-RSS> Fail to file&get short data from DB');
                 log.warn('KMA Town S-RSS> Fail to file&get short data from DB');
                 return callback(err);
             }
@@ -542,7 +542,7 @@ TownRss.prototype.getShortRssFromDB = function(model, coord, req, callback) {
                 var ret = [];
                 var pubDate = kmaTimelib.getKoreaTimeString(result[result.length-1].pubDate);
 
-                log.info('KMA Town S-RSS> get Data : ', result.length);
+                log.debug('KMA Town S-RSS> get Data : ', result.length);
                 result.forEach(function(item){
                     var newItem = {};
                     var shortData = item.shortData;
@@ -555,7 +555,7 @@ TownRss.prototype.getShortRssFromDB = function(model, coord, req, callback) {
                     ret.push(newItem);
                 });
 
-                log.info('KMA Town S-RSS> result : ', pubDate);
+                log.debug('KMA Town S-RSS> result : ', pubDate);
                 callback(errorNo, {pubDate: pubDate, ret:ret});
             }catch(e){
                 if (callback) {
@@ -681,14 +681,14 @@ TownRss.prototype.checkPubDate = function(item, dateString, index, callback){
                 if(err
                     || (dbList.length === 0)
                     || (dbList[0].pubDate === undefined)){
-                    log.info('KMA Town S-RSS> There is no data matached to : ', item);
-                    log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
+                    log.debug('KMA Town S-RSS> There is no data matached to : ', item);
+                    log.debug('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
                     return callback(errCode);
                 }
 
                 for(var i=0 ; i<dbList.length ; i++){
                     if(dbList[i].pubDate.getTime() === lastestPubDate.getTime()){
-                        log.info('KMA Town S-RSS> Already updated : ', item, dateString);
+                        log.debug('KMA Town S-RSS> Already updated : ', item, dateString);
                         errCode = 1;
                         return callback(errCode);
                     }

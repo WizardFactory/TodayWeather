@@ -22,7 +22,7 @@ class KmaForecastZoneController {
     }
 
     _request(url) {
-        log.info({kmaForecastZoneCodeUrl: url});
+        log.debug({kmaForecastZoneCodeUrl: url});
         return new Promise((resolve, reject) => {
             let options = {json:true, timeout: 3000};
             async.retry(3,

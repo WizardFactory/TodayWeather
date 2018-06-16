@@ -39,37 +39,37 @@ function ControllerKeys() {
         keys: []
     };
 
-    log.info('loging keys.....');
-    log.info('------------------------------------');
+    log.debug('loging keys.....');
+    log.debug('------------------------------------');
     if(keyBox.owm_keys){
         keyBox.owm_keys.forEach(function(item){
             self.owm_keys.keys.push(item);
         });
-        log.info('OpenWeatherMap : key count(%d)', self.owm_keys.keys.length);
+        log.debug('OpenWeatherMap : key count(%d)', self.owm_keys.keys.length);
     }
 
     if(keyBox.wu_keys){
         keyBox.wu_keys.forEach(function(item){
             self.wu_keys.keys.push(item);
         });
-        log.info('WeatherUnloched : key count(%d)', self.wu_keys.keys.length);
+        log.debug('WeatherUnloched : key count(%d)', self.wu_keys.keys.length);
     }
 
     if(keyBox.dsf_keys){
         keyBox.dsf_keys.forEach(function(item){
             self.dsf_keys.keys.push(item);
         });
-        log.info('DarkSkyForecast : key count(%d)', self.dsf_keys.keys.length);
+        log.debug('DarkSkyForecast : key count(%d)', self.dsf_keys.keys.length);
     }
 
     if(keyBox.aqi_keys){
         keyBox.aqi_keys.forEach(function(item){
             self.aqi_keys.keys.push(item);
         });
-        log.info('AQI : key count(%d)', self.aqi_keys.keys.length);
+        log.debug('AQI : key count(%d)', self.aqi_keys.keys.length);
     }
-    log.info('------------------------------------');
-    log.info('Keys have been loaded');
+    log.debug('------------------------------------');
+    log.debug('Keys have been loaded');
 }
 
 ControllerKeys.prototype.addKey = function(type, key){
@@ -120,7 +120,7 @@ ControllerKeys.prototype.getOwmKey = function(){
 
         if (self.owm_keys.curIndex >= self.owm_keys.keys.length) {
             // no more keys.
-            log.info('OWM key : There is no more available key');
+            log.warn('OWM key : There is no more available key');
             return '';
         }
     }
@@ -147,7 +147,7 @@ ControllerKeys.prototype.getWuKey = function(){
 
         if (self.wu_keys.curIndex >= self.wu_keys.keys.length) {
             // no more keys.
-            log.info('WU key : There is no more available key');
+            log.warn('WU key : There is no more available key');
             return '';
         }
     }
@@ -174,7 +174,7 @@ ControllerKeys.prototype.getDsfKey = function(){
 
         if (self.dsf_keys.curIndex >= self.dsf_keys.keys.length) {
             // no more keys.
-            log.info('DSF key : There is no more available key');
+            log.warn('DSF key : There is no more available key');
             return '';
         }
         self.dsf_keys.usedCount = 0;
@@ -202,7 +202,7 @@ ControllerKeys.prototype.getAqiKey = function(){
 
         if (self.aqi_keys.curIndex >= self.aqi_keys.keys.length) {
             // no more keys.
-            log.info('AQI key : There is no more available key');
+            log.warn('AQI key : There is no more available key');
             return '';
         }
         self.aqi_keys.usedCount = 0;

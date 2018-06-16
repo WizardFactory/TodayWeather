@@ -41,9 +41,8 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
 
                 modelKmaTownCurrent.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
-                        log.error('KMA Town C> Fail to update current item');
-                        log.error(err);
-                        log.info(JSON.stringify(newItem));
+                        log.error('KMA Town C> Fail to update current item', err);
+                        // log.info(JSON.stringify(newItem));
                         return cb();
                     }
 
@@ -100,12 +99,12 @@ kmaTownCurrentController.prototype.getCurrentFromDB = function(modelCurrent, coo
             var ret = [];
             var pubDate = kmaTimelib.getKoreaTimeString(result[result.length-1].pubDate);
 
-            log.info('KMA Town C> get Data : ', result.length);
+            log.debug('KMA Town C> get Data : ', result.length);
             result.forEach(function(item){
                 var newItem = {};
                 var curData = item.currentData;
 
-                //log.info(JSON.stringify(item));
+                //log.debug(JSON.stringify(item));
                 commonString.forEach(function(string){
                     newItem[string] = curData[string];
                 });
@@ -133,7 +132,7 @@ kmaTownCurrentController.prototype.checkPubDate = function(model, srcList, dateS
     var pubDate = kmaTimelib.getKoreaDateObj(''+ dateString.date + dateString.time);
     var errCode = 0;
 
-    log.info('KMA Town C> checkPubDate pubDate : ', pubDate.toString());
+    log.debug('KMA Town C> checkPubDate pubDate : ', pubDate.toString());
     try{
         async.mapSeries(srcList,
             function(src,cb){
@@ -145,7 +144,7 @@ kmaTownCurrentController.prototype.checkPubDate = function(model, srcList, dateS
 
                     for(var i=0 ; i<dbList.length ; i++){
                         if(dbList[i].pubDate.getTime() === pubDate.getTime()){
-                            log.info('KMA Town C> Already updated : ', src, dateString);
+                            log.debug('KMA Town C> Already updated : ', src, dateString);
                             return cb(null);
                         }
                     }
@@ -161,8 +160,8 @@ kmaTownCurrentController.prototype.checkPubDate = function(model, srcList, dateS
                     return true;
                 });
 
-                log.info('KMA Town C> Count of the list for the updating : ', result.length);
-                log.info(JSON.stringify(result));
+                log.debug('KMA Town C> Count of the list for the updating : ', result.length);
+                log.debug(JSON.stringify(result));
 
                 return callback(errCode, result);
             }
