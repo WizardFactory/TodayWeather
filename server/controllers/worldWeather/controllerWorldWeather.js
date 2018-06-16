@@ -1957,6 +1957,7 @@ function controllerWorldWeather() {
             });
             if (req.result.thisTime.length === 0) {
                 log.error('DSF current > Fail to find current data', curDate, meta);
+                log.info('dsf.data > ', JSON.stringify(dsf.data));
             }
         }
 
@@ -1992,7 +1993,7 @@ function controllerWorldWeather() {
                     var time = new Date();
                     time.setTime(new Date(aqiItem.dateObj).getTime() + req.result.timezone.ms);
                     aqiItem.date = self._convertTimeString(time);
-                    
+
                     if (thisTime.date != undefined
                         && self._compareDate(thisTime.date, aqiItem.mTime, 6)){
 
