@@ -30,6 +30,7 @@ var pushSchema = new mongoose.Schema({
         airForecastSource: String //airkorea, kaq, aqicn, ...
     },
     updatedAt: Date,
+    updatedBy: String, //user, push
     timezoneOffset: Number, //mins +9h -> +540
     dayOfWeek: [Boolean], // Sunday - Saturday : 0 - 6 [false, true, true, true, true, true, false]
     package: String, //todayWeather, todayAir
