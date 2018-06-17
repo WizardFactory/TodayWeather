@@ -101,7 +101,14 @@ angular.module('controller.units', [])
                 "airUnit"
             ].forEach(function (value) {
                 if (savedUnits && savedUnits.hasOwnProperty(value)) {
-                    self[value] = savedUnits[value]
+                    //TW-344 aircn에 대한 오류 처리
+                    if (savedUnits[value] === 'aircn') {
+                        self[value] = defaultUnits[value];
+                        isUpdated = true;
+                    }
+                    else {
+                        self[value] = savedUnits[value]
+                    }
                 }
                 else {
                     self[value] = defaultUnits[value];
