@@ -783,7 +783,7 @@ angular.module('controller.tabctrl', [])
                 return;
             }
 
-            if (sender === 'resume') {
+            if (sender === 'resume' || sender === 'search') {
                 if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === false) {
                     Util.ga.trackEvent('reload', 'warn', 'load city', 0);
                     return;
