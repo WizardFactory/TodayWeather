@@ -77,6 +77,19 @@ function ControllerPush() {
     }
 }
 
+/**
+ * disable alarm push
+ * @param fcmToken
+ * @param callback
+ */
+ControllerPush.prototype.disableByFcm = function (fcmToken, callback) {
+    PushInfo.update({fcmToken: fcmToken},
+        {$set : {enable: false, updatedAt: this._getCurrentTime(), updatedBy: 'push'}},
+        function (err, result) {
+            callback(err, result);
+        });
+};
+
 ControllerPush.prototype.updateRegistrationId = function (newId, oldId, callback) {
     PushInfo.update({registrationId: oldId},
         {$set: {registrationId: newId}},
@@ -110,6 +123,7 @@ ControllerPush.prototype._getCurrentTime = function () {
  */
 ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
     pushInfo.updatedAt = this._getCurrentTime();
+    pushInfo.updatedBy = 'user';
 
     if (pushInfo.hasOwnProperty('geo')) {
        if (typeof pushInfo.geo[0] !== 'number' || typeof pushInfo.geo[1] !== 'number')  {
@@ -1146,6 +1160,15 @@ ControllerPush.prototype.sendNotification = function (pushInfo, callback) {
         if (pushInfo.type == 'ios') {
             self.sendIOSNotification(pushInfo, notification, function (err, result) {
                 if (err) {
+                    if (err.errorInfo &&
+                        err.errorInfo.code === 'messaging/registration-token-not-registered') {
+                        log.warn('disable this fcm token ', pushInfo.fcmToken);
+                        self.disableByFcm(pushInfo.fcmToken, function(err) {
+                            if (err) {
+                                log.error(err)
+                            }
+                        });
+                    }
                     return callback(err);
                 }
                 callback(undefined, result);
@@ -1154,6 +1177,15 @@ ControllerPush.prototype.sendNotification = function (pushInfo, callback) {
         else if (pushInfo.type == 'android') {
             self.sendAndroidNotification(pushInfo, notification, function (err, result) {
                 if (err) {
+                    if (err.errorInfo &&
+                        err.errorInfo.code === 'messaging/registration-token-not-registered') {
+                        log.warn('disable this fcm token', pushInfo.fcmToken);
+                        self.disableByFcm(pushInfo.fcmToken, function(err) {
+                            if (err) {
+                                log.error(err)
+                            }
+                        });
+                    }
                     return callback(err);
                 }
                 callback(undefined, result);
