@@ -171,7 +171,23 @@ class DsfController {
                 //log.info(JSON.stringify(item));
                 //log.info('---> ', item.dateObj, item.timeOffset);
                 if(this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
-                    ret['yesterday'] = item;
+                    let yDate = new Date(cDate.getTime() + item.timeOffset);
+                    yDate.setUTCDate(yDate.getUTCDate() - 1);
+
+                    let yesterdayData = item.data.hourly.data.filter((v)=>{
+                        return (yDate.getUTCFullYear() === v.dateObj.getUTCFullYear() &&
+                            yDate.getUTCMonth() === v.dateObj.getUTCMonth() &&
+                            yDate.getUTCDate() === v.dateObj.getUTCDate() &&
+                            yDate.getUTCHours() === v.dateObj.getUTCHours());
+                    });
+
+
+                    if(yesterdayData){
+                        ret['yesterday'] = item;
+                    }else {
+                        log.info('cDsf> Finding yesterday : ', yDate.toString(), yDate.toUTCString());
+                        log.info('cDsf> Data : ', JSON.stringify(item));
+                    }
                 }else if(this._checkDate(cDate, item.dateObj, item.timeOffset, 'today')){
                     ret['today'] = item;
                 }else if(this._checkDate(cDate, item.dateObj, item.timeOffset, 15)){
