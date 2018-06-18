@@ -2558,11 +2558,21 @@ function controllerWorldWeather() {
         day.precType = self._getPrecType(summary.icon, summary.pre_pro, summary.pre_type);
 
         if(summary.pre_pro){
-            day.precProb = Math.round(summary.pre_pro * 100);
+            if (summary.pre_pro > 0) {
+                day.precProb = Math.round(summary.pre_pro * 100);
+            }
+            else {
+                day.precProb = 0;
+            }
         }
         if(summary.pre_int){
             //inches per hourly to mm per daily
-            day.precip = parseFloat((summary.pre_int*25.4*24).toFixed(2));
+            if (summary.pre_int > 0) {
+                day.precip = parseFloat((summary.pre_int*25.4*24).toFixed(2));
+            }
+            else {
+                day.precip = 0;
+            }
         }
         if(summary.humid){
             day.humid = Math.round(summary.humid * 100);
