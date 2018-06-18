@@ -170,10 +170,18 @@ class DsfController {
             list.forEach((item)=>{
                 //log.info(JSON.stringify(item));
                 //log.info('---> ', item.dateObj, item.timeOffset);
+
+                /**
+                 * Try to find yesterday's data which are array from yesterday 00:00 to 24:00
+                 */
                 if(this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
                     let yDate = new Date(cDate.getTime() + item.timeOffset);
                     yDate.setUTCDate(yDate.getUTCDate() - 1);
 
+                    /**
+                     * To find if yesterday's data has Thistime's yesterday data.
+                     * If there is no Thistime's yesterday data, it would be ignored
+                     */
                     let yesterdayData = item.data.hourly.data.filter((v)=>{
                         return (yDate.getUTCFullYear() === v.dateObj.getUTCFullYear() &&
                             yDate.getUTCMonth() === v.dateObj.getUTCMonth() &&
