@@ -9,8 +9,18 @@
             <span style="vertical-align: middle">{{getNationName()|translate}}</span>
         </p>
     </ion-nav-title>
-    <ion-content direction="y" zooming="false" scrollbar-x="false" scrollbar-y="false"
-                 has-bouncing="false" style="background-color: #F5F5F5; position: relative;">
+    <ion-content zooming="false" scrollbar-x="false" scrollbar-y="false"
+                 has-bouncing="false" style="background-color: #F5F5F5;">
+        <ion-scroll direction="x" scrollbar-x="false">
+            <div class="button-bar nation-air-label">
+                <a class="item"
+                   ng-class="name===airType?'item-dark':''"
+                   ng-click="changeAirType(name)"
+                   ng-repeat="name in airTypeList">
+                    {{name.toUpperCase()}}
+                </a>
+            </div>
+        </ion-scroll>
         <div class="nation" style="width: 330px; height: 485px;" ng-style="{'background-image':'url(./img/kr.png)'}">
             <div class="nation-label" ng-style="{'top': city.top+'px', 'left':city.left+'px', 'background': grade2Color(city.name)}"
                  ng-repeat="city in cityList">
@@ -21,14 +31,6 @@
                     <!--<div ng-if="getText2(city.name) !== undefined">{{getText2(city.name)}}<span>{{getText2Unit()}}</span></div>-->
                 </div>
             </div>
-        </div>
-        <div class="list nation-air-label">
-            <a class="item"
-               ng-class="name===airType?'item-dark':''"
-               ng-click="changeAirType(name)"
-               ng-repeat="name in airTypeList">
-                {{name.toUpperCase()}}
-            </a>
         </div>
     </ion-content>
 </ion-view>
