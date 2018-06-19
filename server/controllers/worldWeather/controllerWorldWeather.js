@@ -2715,20 +2715,44 @@ function controllerWorldWeather() {
         }
 
         var list = [];
-        list.push(summary.cloud);
-        list.push(summary2.cloud);
-        list.push(summary1.cloud);
-        hourly.cloud = Math.round(self._avg(list) * 100);
+        if (summary.cloud > 0) {
+            list.push(summary.cloud);
+        }
+        if (summary2.cloud > 0) {
+            list.push(summary2.cloud);
+        }
+        if (summary1.cloud > 0) {
+            list.push(summary1.cloud);
+        }
+        if (list.length > 0) {
+            hourly.cloud = Math.round(self._avg(list) * 100);
+        }
+        else {
+            hourly.cloud = 0;
+        }
 
         if(summary.windspd){
-            hourly.windSpd_mh = summary.windspd;
-            hourly.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
+            if (summary.windspd > 0) {
+                hourly.windSpd_mh = summary.windspd;
+                hourly.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
+            }
+            else {
+                hourly.windSpd_mh = 0;
+                hourly.windSpd_ms = 0;
+            }
         }
+
         if(summary.winddir){
             hourly.windDir = summary.winddir;
         }
+
         if(summary.humid){
-            hourly.humid = Math.round(summary.humid * 100);
+            if (summary.humid > 0) {
+                hourly.humid = Math.round(summary.humid * 100);
+            }
+            else {
+                hourly.humid = 0;
+            }
         }
 
         var precType = self._getPrecType(summary.icon, summary.pre_pro, summary.pre_type);
@@ -2824,36 +2848,74 @@ function controllerWorldWeather() {
             current.ftemp_c = parseFloat(((summary.ftemp - 32) / (9/5)).toFixed(1));
             current.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
+
         if(summary.cloud){
-            current.cloud = Math.round(summary.cloud * 100);
+            if (summary.cloud > 0) {
+                current.cloud = Math.round(summary.cloud * 100);
+            }
+            else {
+                current.cloud = 0;
+            }
         }
+
         if(summary.windspd){
-            current.windSpd_mh = summary.windspd;
-            current.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
+            if (summary.windspd > 0) {
+                current.windSpd_mh = summary.windspd;
+                current.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
+            }
+            else {
+                current.windSpd_mh = 0;
+                current.windSpd_ms = 0;
+            }
         }
+
         if(summary.winddir){
             current.windDir = summary.winddir;
         }
+
         if(summary.humid){
-            current.humid = Math.round(summary.humid * 100);
+            if (summary.humid > 0) {
+                current.humid = Math.round(summary.humid * 100);
+            }
+            else {
+                current.humid = 0;
+            }
         }
 
         current.precType = self._getPrecType(summary.icon, summary.pre_pro, summary.pre_type);
 
         if(summary.pre_pro){
-            current.precProb = parseFloat((summary.pre_pro * 100).toFixed(2));
+            if (summary.pre_pro > 0) {
+                current.precProb = parseFloat((summary.pre_pro * 100).toFixed(2));
+            }
+            else {
+                current.precProb = 0;
+            }
         }
 
         if(summary.pre_int){
-            current.precip = parseFloat((summary.pre_int*25.4).toFixed(1));
+            if (summary.pre_int > 0) {
+                current.precip = parseFloat((summary.pre_int*25.4).toFixed(1));
+            }
+            else {
+                current.precip = 0;
+            }
         }
+
         if(summary.vis){
-            //miles -> km
-            current.vis = Math.round(summary.vis * 1.609344);
+            if (summary.vis > 0) {
+                //miles -> km
+                current.vis = Math.round(summary.vis * 1.609344);
+            }
+            else {
+                current.vis = 0;
+            }
         }
+
         if(summary.pres){
             current.press = summary.pres;
         }
+
         if(summary.oz){
             current.oz = summary.oz;
         }
