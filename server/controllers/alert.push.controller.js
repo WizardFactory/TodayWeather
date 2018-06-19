@@ -718,7 +718,19 @@ class AlertPushController {
                     catch(err) {
                         return callback(err);
                     }
-                    this._sendNotification(alertPush, notification, callback);
+
+                    this._sendNotification(alertPush, notification, (err, result)=> {
+                        if (err) {
+                            if (err.errorInfo &&
+                                err.errorInfo.code === 'messaging/registration-token-not-registered') {
+                               //disable by push
+                                this._disableByFcm(alertPush.fcmToken, (err)=> {
+                                    log.error(err);
+                                });
+                            }
+                        }
+                        callback(err, result);
+                    });
                 }
             ],
             (err, result) => {
@@ -950,6 +962,7 @@ class AlertPushController {
         }
 
         alertPush.updatedAt = new Date();
+        alertPush.updatedBy = 'user';
         alertPush.reverseTime = alertPush.startTime > alertPush.endTime;
 
         let query = {
@@ -1007,17 +1020,25 @@ class AlertPushController {
     updateRegistrationId(newId, oldId, callback) {
         AlertPush.update({registrationId: oldId},
             {$set: {registrationId: newId}},
-            function (err, result) {
-                return callback(err, result);
-            });
+            callback);
     }
 
-    updateFcmToken (newId, oldId, callback) {
+    updateFcmToken(newId, oldId, callback) {
         AlertPush.update({fcmToken: oldId},
             {$set : {fcmToken: newId}},
-            function (err, result) {
-                callback(err, result);
-            });
+            callback);
+    }
+
+    /**
+     *
+     * @param fcmToken
+     * @param callback
+     * @private
+     */
+    _disableByFcm(fcmToken, callback) {
+        AlertPush.update({fcmToken: fcmToken},
+            {$set : {enable: false, updatedAt: new Date(), updatedBy: 'push'}},
+            callback);
     }
 }
 

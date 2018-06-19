@@ -36,6 +36,7 @@ var alertPushSchema = new mongoose.Schema({
     uuid: String,
     appVersion: String,
     updatedAt: Date,
+    updatedBy: String, //user, push
     timezoneOffset: Number, //mins +9h -> +540 for filtering day of week
     dayOfWeek: [Boolean], // Sunday - Saturday : 0 - 6 [false, true, true, true, true, true, false]
     airAlertsBreakPoint: Number, //사용자 설정한 기준값 민감군주의, 나쁨, 매우나쁨,...기본 나쁨

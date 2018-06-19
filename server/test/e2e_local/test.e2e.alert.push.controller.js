@@ -35,13 +35,53 @@ describe('unit test - alert push controller', function() {
         });
     });
 
-    it ('test remove RegistrationId Changed To Fcm', function (done) {
-        this.timeout(60*1000);
+    it('disable by fcm', function (done) {
+        var pushInfo2 = {
+            fcmToken: "cueGIoY15Lc:APA91bEm3iNk8HoC9M-KBIP84vuhS04VGOUjVjIk5XI-sOGlKD_JVL_yKgYvZYOOLNHpGHqJNk--tEKhZFsXhOVUqxemBrHf-RCsi7Ij-h0LkCnOpfW5KMyBPRF7VB6lHMP-exp_iXcv",
+            startTime: 3600,     //10H to utc 1H
+            endTime: 46800,      //22H to utc 13H
+            cityIndex: 1,
+            type: 'ios',
+            town: {first: '', second: '', third: ''},
+            geo: [139.6917064, 35.6894875],
+            lang: 'en',
+            name: 'Tokyo',
+            source: 'DSF',
+            units: {
+                temperatureUnit: "F",
+                windSpeedUnit: "mph",
+                pressureUnit: "mbar",
+                distanceUnit: "miles",
+                precipitationUnit: "inch"
+            },
+            dayOfWeek: [false, true, true, true, true, true, false],
+            timezoneOffset: 540,
+            airAlertsBreakPoint: 2
+        };
         let ctrlAlertPush = new AlertPushController();
-        ctrlAlertPush._removeDuplicates(function (err, results) {
-            done();
+        ctrlAlertPush.updateAlertPush(pushInfo2, (err, result)=> {
+            if (err) {
+                console.error(err);
+            }
+            console.log(result);
+
+            ctrlAlertPush._disableByFcm(pushInfo2.fcmToken, (err, result)=> {
+                if (err) {
+                    console.error(err);
+                }
+                console.log(result);
+                done();
+            });
         });
     });
+
+    // it ('test remove RegistrationId Changed To Fcm', function (done) {
+    //     this.timeout(60*1000);
+    //     let ctrlAlertPush = new AlertPushController();
+    //     ctrlAlertPush._removeDuplicates(function (err, results) {
+    //         done();
+    //     });
+    // });
 
     // it ('find duplicate alert', function (done) {
     //     this.timeout(10*60*1000);
