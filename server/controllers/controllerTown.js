@@ -2231,42 +2231,120 @@ function ControllerTown() {
             return this;
         }
 
-        try {
-            self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
-                if (err) {
-                    log.error(err) ;
-                    next();
-                    return;
-                }
-
-                if (!townInfo.hasOwnProperty('areaNo')) {
-                    throw new Error('There is not areaNo '+JSON.stringify(townInfo));
-                }
-
-                req.params.areaNo = townInfo.areaNo;
-                req.geocode = {
-                    lat: townInfo.gCoord.lat,
-                    lon: townInfo.gCoord.lon
-                };
-
-                LifeIndexKmaController.appendData(townInfo, req.short, req.midData.dailyData, function (err) {
-                    if (err) {
-                        log.error(err);
+        var gAreaInfo;
+        async.waterfall([
+                function findAreaNo(callback) {
+                    var query = {
+                        "town.first": req.params.region,
+                        "town.second": req.params.city,
+                        "town.third" : req.params.town
+                    };
+                    modelAreaNo.find(query).limit(1).lean().exec(function(err, areaList) {
+                        if (err) {
+                            log.warn(err);
+                            return callback(null, null);
+                        }
+                        if (areaList.length < 1) {
+                            err = new Error('Fail to get area no query:'+JSON.stringify(query));
+                            log.warn(err);
+                            return callback(null, null);
+                        }
+                        callback(null, areaList[0]);
+                    });
+                },
+                function appendLifeIndex(areaInfo, callback) {
+                    if (areaInfo == undefined) {
+                        return callback(null, null);
                     }
+
+                    gAreaInfo = areaInfo;
+                    req.params.areaNo = areaInfo.areaNo;
+                    //getAllDataFromDb에서 req.gCoord를 생성하는데 동일한 내용임
+                    req.geocode = {
+                        lat: areaInfo.geo[1],
+                        lon: areaInfo.geo[0]
+                    };
+
+                    LifeIndexKmaController.appendData2(areaInfo.areaNo, req.midData.dailyData, function (err, result) {
+                        if (err) {
+                            log.warn(err);
+                            return callback(null, null);
+                        }
+                        callback('skip', result);
+                    });
+                },
+                function findNearAreaNo(result, callback) {
+                    //result is null
+                    //case 1: there is not area no
+                    //case 2: there is not life index at area no
+                    if (result) {
+                        //already get data
+                        return callback(null, result);
+                    }
+
+                    var gcoord;
+                    if (req.gCoord) {
+                        gcoord = [req.gCoord.lon, req.gCoord.lat];
+                        req.geocode = req.gCoord;
+                    }
+                    else if (gAreaInfo) {
+                        //get near areaNo
+                        gcoord = gAreaInfo.geo;
+                        req.geocode = {
+                            lat: gAreaInfo.geo[1],
+                            lon: gAreaInfo.geo[0]
+                        };
+                    }
+                    else {
+                        var err = new Error("geo location info is not valid");
+                        return callback(err);
+                    }
+
+                    modelAreaNo.find({geo: {$near:gcoord, $maxDistance: 0.3}}).limit(3).lean().exec(
+                        function (err, areaNoList) {
+                            if (err) {
+                                return callback(err);
+                            }
+                            if (gAreaInfo) {
+                               areaNoList = areaNoList.filter(function(areaInfo) {
+                                   return areaInfo.areaNo != gAreaInfo.areaNo;
+                               });
+                            }
+                            if (areaNoList.length < 1) {
+                                err = new Error('Fail to get area no query:'+JSON.stringify(query));
+                                return callback(err);
+                            }
+                            callback(null, areaNoList[0]);
+                        });
+                },
+                function appendNearLifeIndex(areaInfo, callback) {
+                    if (areaInfo == undefined) {
+                        var err = new Error("area info is not valid");
+                        return callback(err);
+                    }
+                    //get lifeindex by near area no
+                    LifeIndexKmaController.appendData2(areaInfo.areaNo, req.midData.dailyData, function (err, result) {
+                        if (err) {
+                            log.warn(err);
+                            return callback(null, null);
+                        }
+                        callback(err, result);
+                    });
+                }
+            ],
+            function(err, result) {
+                if (err && err !== 'skip') {
+                    log.error(err);
+                }
+                if (result) {
                     //add lifeIndex to current
                     if (req.hasOwnProperty('current')) {
                         self._appendLifeIndexToCurrent(req.current, req.short, req.midData.dailyData);
                     }
-                    next();
-                });
+                }
+                next();
             });
-        }
-        catch(e) {
-            if (e) {
-                log.error(e);
-            }
-            next();
-        }
+
         return this;
     };
 

@@ -317,7 +317,7 @@ LifeIndexKmaController.appendData2 = function (areaNo, midList, callback) {
                 catch (err) {
                     return callback(err);
                 }
-                callback();
+                callback(null, lifeIndexList);
             }
         ],
         function (err, result) {
