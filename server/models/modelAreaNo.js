@@ -13,7 +13,8 @@ var areaNoSchema = new mongoose.Schema({
     geo: {
         type: [Number],     // [<longitude(dmY)>, <latitude(dmX)>]
         index: '2d'         // create the geospatial index
-    }
+    },
+    updatedAt: String
 });
 
 areaNoSchema.index({areaNo: 1});
