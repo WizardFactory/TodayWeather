@@ -2285,10 +2285,15 @@ function ControllerTown() {
                     var gcoord;
                     if (req.gCoord) {
                         gcoord = [req.gCoord.lon, req.gCoord.lat];
+                        req.geocode = req.gCoord;
                     }
                     else if (gAreaInfo) {
                         //get near areaNo
                         gcoord = gAreaInfo.geo;
+                        req.geocode = {
+                            lat: gAreaInfo.geo[1],
+                            lon: gAreaInfo.geo[0]
+                        };
                     }
                     else {
                         var err = new Error("geo location info is not valid");
