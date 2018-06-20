@@ -896,7 +896,7 @@ function ControllerTown24h() {
                    _insertDailyAqiData(airInfo, aqiData);
                });
             });
-            log.info(JSON.stringify(airInfo));
+            log.debug('_insertForecastPollutants', JSON.stringify(airInfo));
             //_insertDailyAqiData(airInfo, aqiData);
         }
     };
@@ -1171,15 +1171,22 @@ function ControllerTown24h() {
 
         ctrl.getForecast(stnName, function (err, results) {
             if (err) {
+                err.message += ' stnName:'+stnName;
                 return callback(err);
             }
             try {
                 if (results.length <= 0) {
-                    throw new Error("Fail to get forecast stnName="+stnName);
+                    //울릉도 태하리는 아직 예보를 제공하지 않음.
+                    if (stnName === '태하리') {
+                       log.warn("Fail to get forecast stnName="+stnName);
+                       return callback(null, airInfo);
+                    }
+                    throw new Error("Fail to get forecast");
                 }
                 self._insertForecastPollutants(airInfo, results, forecastSource, airUnit);
             }
             catch(err) {
+                err.message += ' stnName:'+stnName;
                 return callback(err);
             }
             callback(null, airInfo);
@@ -1756,9 +1763,13 @@ function ControllerTown24h() {
         return next();
     };
 
-    function _request(url, callback) {
+    function _request(url, lang, callback) {
         console.info({_request:{url:url}});
-        request(url, {json: true, timeout: 3000}, (err, response, body) => {
+        let options = {json: true, timeout: 3000};
+        if (lang) {
+           options.headers =  {'Accept-Language' : lang};
+        }
+        request(url, options, (err, response, body) => {
             if (err) {
                 return callback(err);
             }
@@ -1773,7 +1784,7 @@ function ControllerTown24h() {
     function _retryRequest(url, callback) {
         async.retry(3,
             (cb) => {
-                _request(url, (err, result) => {
+                _request(url, lang, (err, result) => {
                     if (err) {
                         return cb(err);
                     }
@@ -1794,8 +1805,13 @@ function ControllerTown24h() {
            throw new Error("Invalid loc");
         }
 
+        var lang;
+        if (req.headers['accept-language']) {
+            lang = req.headers['accept-language'];
+        }
+
         var url = config.apiServer.url + '/geocode/coord/'+loc;
-        _retryRequest(url, (err, geoInfo)=> {
+        _retryRequest(url, lang, (err, geoInfo)=> {
             if (err) {
                 return next(err);
             }
