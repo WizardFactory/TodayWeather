@@ -1781,7 +1781,7 @@ function ControllerTown24h() {
         });
     }
 
-    function _retryRequest(url, callback) {
+    function _retryRequest(url, lang, callback) {
         async.retry(3,
             (cb) => {
                 _request(url, lang, (err, result) => {
