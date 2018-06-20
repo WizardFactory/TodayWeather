@@ -213,54 +213,54 @@ describe('e2e local test - controller push', function() {
     //     });
     // });
 
-    before(function (done) {
-        this.timeout(10*1000);
-        mongoose.Promise = global.Promise;
-        // let path = 'mongodb://alec:wzd0417@cluster0-shard-00-00-krcxi.mongodb.net:27017,cluster0-shard-00-01-krcxi.mongodb.net:27017,cluster0-shard-00-02-krcxi.mongodb.net:27017/todayweather?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin';
-        let path = 'mongodb://localhost/todayweather';
-        mongoose.connect(path, function(err) {
-            if (err) {
-                console.error('Could not connect to MongoDB!');
-            }
-            done();
-        });
-        mongoose.connection.on('error', function(err) {
-            if (err) {
-                console.error('MongoDB connection error: ' + err);
-                done();
-            }
-        });
-    });
-
-    it ('test disable by Fcm', function (done) {
-        var pushInfo2 = { "id":2, "cityIndex" : 2,
-            "fcmToken": "cueGIoY15Lc:APA91bEm3iNk8HoC9M-KBIP84vuhS04VGOUjVjIk5XI-sOGlKD_JVL_yKgYvZYOOLNHpGHqJNk--tEKhZFsXhOVUqxemBrHf-RCsi7Ij-h0LkCnOpfW5KMyBPRF7VB6lHMP-exp_iXcv",
-            "pushTime" : 82800,
-            "enable" : true,
-            "category" : "alarm",
-            "type" : "ios", "lang" : "ko",
-            "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
-                "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm", "airForecastSource" : "kaq"},
-            "geo" : [ 127.086, 37.503 ],
-            "name" : "잠실본동", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
-        pushInfo2.package = 'todayWeather';
-        pushInfo2.uuid = 'D75BA057-AD34-4A9F-A18A-C804291F2443';
-        pushInfo2.appVersion = '1.0.0';
-
-        var ctrl = new ControllerPush();
-        ctrl.updatePushInfo(pushInfo2, function (err, results) {
-            if (err) {
-                log.error(err);
-            }
-
-            ctrl.disableByFcm(pushInfo2.fcmToken, function(err, result) {
-                if (err) {
-                    log.error(err);
-                }
-                done();
-            });
-        });
-    });
+    // before(function (done) {
+    //     this.timeout(10*1000);
+    //     mongoose.Promise = global.Promise;
+    //     // let path = 'mongodb://alec:wzd0417@cluster0-shard-00-00-krcxi.mongodb.net:27017,cluster0-shard-00-01-krcxi.mongodb.net:27017,cluster0-shard-00-02-krcxi.mongodb.net:27017/todayweather?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin';
+    //     let path = 'mongodb://localhost/todayweather';
+    //     mongoose.connect(path, function(err) {
+    //         if (err) {
+    //             console.error('Could not connect to MongoDB!');
+    //         }
+    //         done();
+    //     });
+    //     mongoose.connection.on('error', function(err) {
+    //         if (err) {
+    //             console.error('MongoDB connection error: ' + err);
+    //             done();
+    //         }
+    //     });
+    // });
+    //
+    // it ('test disable by Fcm', function (done) {
+    //     var pushInfo2 = { "id":2, "cityIndex" : 2,
+    //         "fcmToken": "cueGIoY15Lc:APA91bEm3iNk8HoC9M-KBIP84vuhS04VGOUjVjIk5XI-sOGlKD_JVL_yKgYvZYOOLNHpGHqJNk--tEKhZFsXhOVUqxemBrHf-RCsi7Ij-h0LkCnOpfW5KMyBPRF7VB6lHMP-exp_iXcv",
+    //         "pushTime" : 82800,
+    //         "enable" : true,
+    //         "category" : "alarm",
+    //         "type" : "ios", "lang" : "ko",
+    //         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+    //             "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm", "airForecastSource" : "kaq"},
+    //         "geo" : [ 127.086, 37.503 ],
+    //         "name" : "잠실본동", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
+    //     pushInfo2.package = 'todayWeather';
+    //     pushInfo2.uuid = 'D75BA057-AD34-4A9F-A18A-C804291F2443';
+    //     pushInfo2.appVersion = '1.0.0';
+    //
+    //     var ctrl = new ControllerPush();
+    //     ctrl.updatePushInfo(pushInfo2, function (err, results) {
+    //         if (err) {
+    //             log.error(err);
+    //         }
+    //
+    //         ctrl.disableByFcm(pushInfo2.fcmToken, function(err, result) {
+    //             if (err) {
+    //                 log.error(err);
+    //             }
+    //             done();
+    //         });
+    //     });
+    // });
 
     // it ('test update RegistrationId Changed To Fcm', function (done) {
     //     this.timeout(60*1000);
@@ -357,51 +357,51 @@ describe('e2e local test - controller push', function() {
     //     });
     // });
 
-    // it('test tw alarm fcm notification', function(done) {
-    //     var co = new ControllerPush();
-    //     var pushInfo = {
-    //         fcmToken: "cueGIoY15Lc:APA91bEm3iNk8HoC9M-KBIP84vuhS04VGOUjVjIk5XI-sOGlKD_JVL_yKgYvZYOOLNHpGHqJNk--tEKhZFsXhOVUqxemBrHf-RCsi7Ij-h0LkCnOpfW5KMyBPRF7VB6lHMP-exp_iXcv",
-    //         cityIndex: 0,
-    //         package: "todayWeather"
-    //     };
-    //     var notification = {
-    //         title: 'tw alarm fcm test',
-    //         text: 'tw alarm fcm send test'
-    //     };
-    //     co.sendAndroidNotification(pushInfo, notification, function(err, result){
-    //         if (err) {
-    //             if (err.errorInfo && err.errorInfo.code === 'messaging/registration-token-not-registered') {
-    //                 console.error('have to disable this token');
-    //             }
-    //             console.error(err);
-    //         }
-    //         else {
-    //             console.info(result);
-    //         }
-    //         done();
-    //     });
-    // });
+    it('test tw alarm fcm notification', function(done) {
+        var co = new ControllerPush();
+        var pushInfo = {
+            fcmToken: "cueGIoY15Lc:APA91bEm3iNk8HoC9M-KBIP84vuhS04VGOUjVjIk5XI-sOGlKD_JVL_yKgYvZYOOLNHpGHqJNk--tEKhZFsXhOVUqxemBrHf-RCsi7Ij-h0LkCnOpfW5KMyBPRF7VB6lHMP-exp_iXcv",
+            cityIndex: 0,
+            package: "todayWeather"
+        };
+        var notification = {
+            title: 'tw alarm fcm test',
+            text: 'tw alarm fcm send test'
+        };
+        co.sendFcmNotification(pushInfo, notification, function(err, result){
+            if (err) {
+                if (err.errorInfo && err.errorInfo.code === 'messaging/registration-token-not-registered') {
+                    console.error('have to disable this token');
+                }
+                console.error(err);
+            }
+            else {
+                console.info(result);
+            }
+            done();
+        });
+    });
 
-    // it('test ta alarm fcm notification', function(done) {
-    //     var co = new ControllerPush();
-    //     var pushInfo = {
-    //         fcmToken: "eiz96kEmVLk:APA91bGoM1W2g6UMrG5eE3rBrMrmNLx20Co6u6IAYyP39u0FX9sZAuWwZsShQ7ZB8M4s4XBLqKDvfTBoeLN9D2yVcQkefEfDClhHAtHKiLDmBZ8Z3IQ28O5XrfnKwZJXzsbT1Zgj2Kml",
-    //         cityIndex: 0,
-    //         package: "todayAir"
-    //     };
-    //     var notification = {
-    //         title: 'ta alarm fcm test',
-    //         text: 'ta alarm fcm send test'
-    //     };
-    //     co.sendAndroidNotification(pushInfo, notification, function(err, result){
-    //         if (err) {
-    //             console.error(err);
-    //         }
-    //         else {
-    //             console.info(result);
-    //         }
-    //         done();
-    //     });
-    // });
+    it('test ta alarm fcm notification', function(done) {
+        var co = new ControllerPush();
+        var pushInfo = {
+            fcmToken: "eiz96kEmVLk:APA91bGoM1W2g6UMrG5eE3rBrMrmNLx20Co6u6IAYyP39u0FX9sZAuWwZsShQ7ZB8M4s4XBLqKDvfTBoeLN9D2yVcQkefEfDClhHAtHKiLDmBZ8Z3IQ28O5XrfnKwZJXzsbT1Zgj2Kml",
+            cityIndex: 0,
+            package: "todayAir"
+        };
+        var notification = {
+            title: 'ta alarm fcm test',
+            text: 'ta alarm fcm send test'
+        };
+        co.sendFcmNotification(pushInfo, notification, function(err, result){
+            if (err) {
+                console.error(err);
+            }
+            else {
+                console.info(result);
+            }
+            done();
+        });
+    });
 });
 

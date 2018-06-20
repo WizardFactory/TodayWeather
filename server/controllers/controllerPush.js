@@ -288,8 +288,6 @@ ControllerPush.prototype.sendFcmNotification = function(pushInfo, notification, 
             callback(null, response);
         })
         .catch(function (err) {
-            err.message += ' fcmToken:' + pushInfo.fcmToken;
-            log.error(err);
             callback(err);
         });
 };
@@ -297,14 +295,12 @@ ControllerPush.prototype.sendFcmNotification = function(pushInfo, notification, 
 ControllerPush.prototype.sendAndroidNotification = function (pushInfo, notification, callback) {
     log.info('send android notification pushInfo='+JSON.stringify(pushInfo)+
                 ' notification='+JSON.stringify(notification));
-    if (pushInfo.fcmToken) {
-        this.sendFcmNotification(pushInfo, notification, callback);
-    }
-    else if (pushInfo.registrationId) {
+    if (pushInfo.registrationId) {
         this.sendGcmAndroidNotification(pushInfo, notification, callback);
     }
     else {
-        log.error(pushInfo);
+        var err = new Error('GCM registration id is invalid pushInfo:'+JSON.stringify(pushInfo));
+        callback(err);
     }
 };
 
@@ -316,10 +312,7 @@ ControllerPush.prototype.sendAndroidNotification = function (pushInfo, notificat
 ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification, callback) {
     log.info('send ios notification pushInfo='+JSON.stringify(pushInfo)+ ' notification='+JSON.stringify(notification));
 
-    if (pushInfo.fcmToken) {
-        this.sendFcmNotification(pushInfo, notification, callback);
-    }
-    else if (pushInfo.registrationId) {
+    if (pushInfo.registrationId) {
         var myDevice = new apn.Device(pushInfo.registrationId);
         var note = new apn.Notification();
         //note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
@@ -332,7 +325,8 @@ ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification,
         callback(undefined, 'sent');
     }
     else {
-        log.error(pushInfo);
+        var err = new Error('APN registration id is invalid pushInfo:'+JSON.stringify(pushInfo));
+        callback(err);
     }
     return this;
 };
@@ -1157,8 +1151,8 @@ ControllerPush.prototype.sendNotification = function (pushInfo, callback) {
 
         var notification = self.convertToNotification(dailySummary);
 
-        if (pushInfo.type == 'ios') {
-            self.sendIOSNotification(pushInfo, notification, function (err, result) {
+        if (pushInfo.fcmToken) {
+            self.sendFcmNotification(pushInfo, notification, function (err, result) {
                 if (err) {
                     if (err.errorInfo &&
                         err.errorInfo.code === 'messaging/registration-token-not-registered') {
@@ -1168,28 +1162,18 @@ ControllerPush.prototype.sendNotification = function (pushInfo, callback) {
                                 log.error(err)
                             }
                         });
+                        return callback(null);
                     }
                     return callback(err);
                 }
                 callback(undefined, result);
             });
         }
+        else if (pushInfo.type == 'ios') {
+            self.sendIOSNotification(pushInfo, notification, callback);
+        }
         else if (pushInfo.type == 'android') {
-            self.sendAndroidNotification(pushInfo, notification, function (err, result) {
-                if (err) {
-                    if (err.errorInfo &&
-                        err.errorInfo.code === 'messaging/registration-token-not-registered') {
-                        log.warn('disable this fcm token', pushInfo.fcmToken);
-                        self.disableByFcm(pushInfo.fcmToken, function(err) {
-                            if (err) {
-                                log.error(err)
-                            }
-                        });
-                    }
-                    return callback(err);
-                }
-                callback(undefined, result);
-            });
+            self.sendAndroidNotification(pushInfo, notification, callback);
         }
         else {
             err = new Error('Unknown type='+pushInfo.type);
