@@ -646,21 +646,29 @@ class AlertPushController {
     _sendNotification(pushInfo, notification, callback) {
         let ctrlPush = new ControllerPush();
 
-        if (pushInfo.type == 'ios') {
-            ctrlPush.sendIOSNotification(pushInfo, notification, function (err, result) {
+        if (pushInfo.fcmToken) {
+            ctrlPush.sendFcmNotification(pushInfo, notification, (err, result)=> {
                 if (err) {
+                    if (err.errorInfo &&
+                        err.errorInfo.code === 'messaging/registration-token-not-registered') {
+                        log.warn('disable this fcm token ', pushInfo.fcmToken);
+                        this._disableByFcm(pushInfo.fcmToken, (err)=> {
+                            if (err) {
+                                log.error(err);
+                            }
+                        });
+                        return callback(null);
+                    }
                     return callback(err);
                 }
                 callback(undefined, result);
             });
         }
+        else if (pushInfo.type == 'ios') {
+            ctrlPush.sendIOSNotification(pushInfo, notification, callback);
+        }
         else if (pushInfo.type == 'android') {
-            ctrlPush.sendAndroidNotification(pushInfo, notification, function (err, result) {
-                if (err) {
-                    return callback(err);
-                }
-                callback(undefined, result);
-            });
+            ctrlPush.sendAndroidNotification(pushInfo, notification, callback);
         }
         else {
             let err = new Error('Unknown type='+pushInfo.type);
@@ -719,18 +727,7 @@ class AlertPushController {
                         return callback(err);
                     }
 
-                    this._sendNotification(alertPush, notification, (err, result)=> {
-                        if (err) {
-                            if (err.errorInfo &&
-                                err.errorInfo.code === 'messaging/registration-token-not-registered') {
-                               //disable by push
-                                this._disableByFcm(alertPush.fcmToken, (err)=> {
-                                    log.error(err);
-                                });
-                            }
-                        }
-                        callback(err, result);
-                    });
+                    this._sendNotification(alertPush, notification, callback);
                 }
             ],
             (err, result) => {
