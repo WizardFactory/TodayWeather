@@ -1,7 +1,7 @@
 
 
 angular.module('service.branch', [])
-    .factory('Branch', function($rootScope, $state, Util) {
+    .factory('Branch', function($rootScope, Util, WeatherInfo) {
         var obj = {};
 
         function _createContentReference(callback) {
@@ -163,15 +163,14 @@ angular.module('service.branch', [])
                     self.inited = true;
                     console.log('fav:',fav);
                     if (fav) {
-                        var page = getDefaultPage();
-                        console.log({page:page, fav:fav});
+                        WeatherInfo.setCityIndex(fav);
+                        $rootScope.$broadcast('reloadEvent', 'deeplink');
+                        console.log({deepLinkFav:fav});
                         Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch '+fav);
-                        $state.transitionTo(page, {fav:fav}, { reload: true });
                     }
                 })
                 .catch(function error(err) {
                     Util.ga.trackException(err.message, false);
-                    alert(JSON.stringify(err));
                 });
 
             // var self = this;
@@ -215,7 +214,7 @@ angular.module('service.branch', [])
                     console.log("set identity Response: " + JSON.stringify(res));
                 })
                 .catch(function(err) {
-                    alert("track user Error: " + JSON.stringify(err.message));
+                    Util.ga.trackException(err.message, false);
                 });
         };
 
@@ -230,7 +229,7 @@ angular.module('service.branch', [])
                     console.log("Response: " + JSON.stringify(res));
                 })
                 .catch(function(err) {
-                    alert("track event Error: " + JSON.stringify(err.message));
+                    Util.ga.trackException(err.message, false);
                 });
         };
 
