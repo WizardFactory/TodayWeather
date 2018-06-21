@@ -175,7 +175,7 @@ class DsfController {
                  * Try to find yesterday's data which are array from yesterday 00:00 to 24:00
                  */
                 if(this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
-                    let yDate = new Date(cDate.getTime() + item.timeOffset);
+                    let yDate = new Date(cDate.getTime() + (item.timeOffset * 60 * 1000));
                     yDate.setUTCDate(yDate.getUTCDate() - 1);
 
                     /**
