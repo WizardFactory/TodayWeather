@@ -1175,7 +1175,7 @@ function ControllerTown24h() {
                 return callback(err);
             }
             try {
-                if (results.length <= 0) {
+                if (results == undefined || results.length <= 0) {
                     //울릉도 태하리는 아직 예보를 제공하지 않음.
                     if (stnName === '태하리') {
                        log.warn("Fail to get forecast stnName="+stnName);
