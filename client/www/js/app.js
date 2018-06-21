@@ -30,6 +30,7 @@ angular.module('starter', [
     'controller.units',
     'controller.start',
     'controller.nation',
+    'controller.nation.air',
     'controller.setting.radio',
     'controller.push'
 ])

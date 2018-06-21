@@ -90,6 +90,8 @@ angular.module('controller.searchctrl', [])
                     console.error('unknown package='+clientConfig.package);
                 }
             }
+
+            $rootScope.$broadcast('reloadEvent', 'search');
         }
 
         function init() {
@@ -517,6 +519,7 @@ angular.module('controller.searchctrl', [])
             }
 
             WeatherInfo.setCityIndex(index);
+
             goPage();
         };
 

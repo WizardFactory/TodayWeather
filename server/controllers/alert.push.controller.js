@@ -646,21 +646,29 @@ class AlertPushController {
     _sendNotification(pushInfo, notification, callback) {
         let ctrlPush = new ControllerPush();
 
-        if (pushInfo.type == 'ios') {
-            ctrlPush.sendIOSNotification(pushInfo, notification, function (err, result) {
+        if (pushInfo.fcmToken) {
+            ctrlPush.sendFcmNotification(pushInfo, notification, (err, result)=> {
                 if (err) {
+                    if (err.errorInfo &&
+                        err.errorInfo.code === 'messaging/registration-token-not-registered') {
+                        log.warn('disable this fcm token ', pushInfo.fcmToken);
+                        this._disableByFcm(pushInfo.fcmToken, (err)=> {
+                            if (err) {
+                                log.error(err);
+                            }
+                        });
+                        return callback(null);
+                    }
                     return callback(err);
                 }
                 callback(undefined, result);
             });
         }
+        else if (pushInfo.type == 'ios') {
+            ctrlPush.sendIOSNotification(pushInfo, notification, callback);
+        }
         else if (pushInfo.type == 'android') {
-            ctrlPush.sendAndroidNotification(pushInfo, notification, function (err, result) {
-                if (err) {
-                    return callback(err);
-                }
-                callback(undefined, result);
-            });
+            ctrlPush.sendAndroidNotification(pushInfo, notification, callback);
         }
         else {
             let err = new Error('Unknown type='+pushInfo.type);
@@ -718,6 +726,7 @@ class AlertPushController {
                     catch(err) {
                         return callback(err);
                     }
+
                     this._sendNotification(alertPush, notification, callback);
                 }
             ],
@@ -950,6 +959,7 @@ class AlertPushController {
         }
 
         alertPush.updatedAt = new Date();
+        alertPush.updatedBy = 'user';
         alertPush.reverseTime = alertPush.startTime > alertPush.endTime;
 
         let query = {
@@ -1007,17 +1017,25 @@ class AlertPushController {
     updateRegistrationId(newId, oldId, callback) {
         AlertPush.update({registrationId: oldId},
             {$set: {registrationId: newId}},
-            function (err, result) {
-                return callback(err, result);
-            });
+            callback);
     }
 
-    updateFcmToken (newId, oldId, callback) {
+    updateFcmToken(newId, oldId, callback) {
         AlertPush.update({fcmToken: oldId},
             {$set : {fcmToken: newId}},
-            function (err, result) {
-                callback(err, result);
-            });
+            callback);
+    }
+
+    /**
+     *
+     * @param fcmToken
+     * @param callback
+     * @private
+     */
+    _disableByFcm(fcmToken, callback) {
+        AlertPush.update({fcmToken: fcmToken},
+            {$set : {enable: false, updatedAt: new Date(), updatedBy: 'push'}},
+            callback);
     }
 }
 
