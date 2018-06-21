@@ -2304,6 +2304,9 @@ Manager.prototype.startManager = function(){
     let dsfController = new (require('./worldWeather/dsf.controller'));
     dsfController.maintainDB();
 
+    let timezoneController = new (require('./timezone.controller'));
+    timezoneController.maintain();
+
     async.parallel([
         function (callback) {
             keco.getAllMsrStnInfo(function (err) {
