@@ -195,7 +195,7 @@ class AlertPushController {
             if (mins < 30) {
                if (resData.hasOwnProperty('shortest'))  {
                    let forecastIndex = resData.shortest.findIndex((obj) => {
-                      return obj.dateObj === strForecastTime;
+                      return new Date(obj.dateObj).getTime() === new Date(strForecastTime).getTime();
                    });
                    if (forecastIndex >= 0) {
                        let shortest1 = resData.shortest[forecastIndex];
@@ -220,7 +220,9 @@ class AlertPushController {
                        weather.forecast = forecastObj;
                    }
                    else {
-                       log.error("parseWeatherAirData : Fail to find shortest date="+strForecastTime);
+                       log.error("parseWeatherAirData : Fail to find shortest",
+                           strForecastTime,
+                           JSON.stringify(alertPush.geo));
                    }
                }
                //didn't find forecast from short
