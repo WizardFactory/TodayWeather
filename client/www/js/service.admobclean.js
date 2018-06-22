@@ -20,7 +20,7 @@ angular.module('service.admobclean', [])
 
         obj.init = function (options, success, error) {
             if ( !(window.admob) ) {
-                error('there is not admob clean');
+                console.log('there is not admob clean');
                 return -1;
             }
 
