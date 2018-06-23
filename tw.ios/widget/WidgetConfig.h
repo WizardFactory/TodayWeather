@@ -36,6 +36,9 @@ typedef enum _TYPE_REQUEST_
 #if DEBUG == 0
 #define DebugLog(...)
 #elif DEBUG == 1
+//#define NSLog( s, ... ) NSLog( @"<%p %@:(%d)> %@", self, [[NSString stringWithUTF8String:__FILE__] lastPathComponent], __LINE__, [NSString stringWithFormat:(s), ##__VA_ARGS__] )
+#define NSLog( s, ... ) NSLog( @"[%@:%d] %@", [[NSString stringWithUTF8String:__FILE__] lastPathComponent], __LINE__, [NSString stringWithFormat:(s), ##__VA_ARGS__] )
+
 #define DebugLog(...) NSLog(__VA_ARGS__)
 #endif
 
