@@ -33,19 +33,17 @@ angular.module('service.admobpro', [])
 
         obj.init = function (options, success, error) {
             if ( !(window.AdMob) ) {
-                error('there is not admob pro');
+                console.log('there is not admob pro');
                 return -1;
             }
             options.adSize = ionic.Platform.isIOS()?'SMART_BANNER':'BANNER';
+            options.position = AdMob.AD_POSITION.BOTTOM_CENTER;
+            options.overlap = false;
+            options.isTesting = clientConfig.debug;
+            options.autoShow = true;
             this.options = options;
 
-            AdMob.setOptions({
-                adSize:         options.adSize,
-                position: AdMob.AD_POSITION.BOTTOM_CENTER,
-                overlap:        false,
-                isTesting:  clientConfig.debug,
-                autoShow: true
-            }, success, error);
+            AdMob.setOptions(options, success, error);
 
             document.addEventListener('onAdFailLoad',function(message){
                 console.log('on banner Failed Receive Ad');
