@@ -1027,7 +1027,6 @@ static TodayViewController *todayVC = nil;
                                        //DebugLog(@"data : %@", data);
                                        [self makeJSONWithData:data reqType:type];
                                        [self processShowMore];
-
                                    } else {
                                        DebugLog(@"Failed to fetch %@: %@", url, error);
                                        [self processErrorStatus:error];
@@ -2123,7 +2122,6 @@ static TodayViewController *todayVC = nil;
               newLocation.coordinate.longitude);
         
         [self getWeatherByCoord:gMylatitude longitude:gMylongitude];
-        
     }
 }
 
@@ -2157,10 +2155,41 @@ static TodayViewController *todayVC = nil;
         
         // just test - delete me
         //[self getAddressFromDaum:gMylatitude longitude:gMylongitude];
+        [self processLocationFail];
     }
 
     [self processRequestIndicator:TRUE];
     [locationManager stopUpdatingLocation];
+}
+
+- (void) processLocationFail
+{
+    NSMutableDictionary *dict = nil;
+    float lat = 0;
+    float lng = 0;
+    
+    for(int i = 0; i < [mCityDictList count]; i++)
+    {
+        dict = [mCityDictList objectAtIndex:i];
+        BOOL currentPostion = [dict objectForKey:@"currentPosition"];
+        DebugLog(@"[%d] currentPostion : %d", i, currentPostion);
+        if(currentPostion == true)
+        {
+            NSMutableDictionary *locDict = [dict objectForKey:@"location"];
+            if (locDict) {
+                lat = [[locDict objectForKey:@"lat"] floatValue];
+                lng = [[locDict objectForKey:@"long"] floatValue];
+            }
+            
+            if (!(lat == 0 && lng == 0))
+            {
+                DebugLog(@"lat : %f, lng : %f", lat, lng);
+                [self getWeatherByCoord:lat longitude:lng];
+            }
+                
+            break;
+        }
+    }
 }
 
 /********************************************************************
