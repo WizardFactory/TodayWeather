@@ -502,9 +502,8 @@ class DsfController {
                                 }
 
                                 output.current = curData;
-                                log.info('cDSF > 1. cur Date : ', cDate.toString());
-                                output.updatedDate = new Date(curData.data.current.dateObj);
-                                log.info('cDSF > 2. updated cur Date : ', output.updatedDate.toString());
+                                log.info('cDSF > 1. system cur Date : ', cDate.toString());
+                                log.info('cDSF > 2. data cur Date : ', curData.data.current.dateObj);
                                 curRenewal = true;
                             }catch(e){
                                 log.error('cDsf > wrong data : ', e, JSON.stringify(result));
@@ -643,6 +642,12 @@ class DsfController {
         );
     }
 
+    /**
+     * req.cDate set to current time of saved data.
+     * @param {Object} req
+     * @param {Date} cDate - system time
+     * @param {Function} callback
+     */
     getDsfData(req, cDate, callback){
         let meta = {
             method : 'getDsfData',
@@ -665,7 +670,7 @@ class DsfController {
                         }
                     });
 
-                    log.info('timeoffset :', timeOffset);
+                    log.info('dsf timeoffset :', timeOffset);
                     this._requestDatas(geo, res, cDate, timeOffset, (err, result)=>{
                         if(err){
                             log.error('cDsf > something wrong to get DSF data ', err);
@@ -679,10 +684,17 @@ class DsfController {
             ],
             (err, result)=>{
                 if(err){
-                    log.error('cDFS > Fail to collect DFS data');
+                    log.error('cDSF > Fail to collect DFS data');
                 }
 
-                req.cDate = result.updatedDate || cDate;
+                try {
+                    req.cDate = new Date(result.current.data.current.dateObj);
+                }
+                catch (err) {
+                    log.warn(err);
+                    req.cDate = cDate;
+                }
+
                 log.info('cDSF > cDate  : ', req.cDate.toString());
                 return callback(err, this._makeOutputFormat(result, req));
             }
