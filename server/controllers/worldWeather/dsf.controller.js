@@ -489,7 +489,7 @@ class DsfController {
                         this._reqData(geo, undefined, (err, result)=>{
                             if(err){
                                 log.error('cDsf > Failed to get current data :', geo);
-                                return cb(null, {});
+                                return cb(err);
                             }
 
                             let curData = {};
@@ -680,6 +680,7 @@ class DsfController {
             (err, result)=>{
                 if(err){
                     log.error('cDFS > Fail to collect DFS data');
+                    return callback(err);
                 }
 
                 req.cDate = result.updatedDate || cDate;
