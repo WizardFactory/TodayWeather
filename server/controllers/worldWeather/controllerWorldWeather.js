@@ -1794,7 +1794,7 @@ function controllerWorldWeather() {
                 }
 
                 if (dbItem.dateObj > curDate && shortest.length < 3) {
-                    shortest.push(dbItem);
+                    shortest.push(self._makeCurrentDataFromDSFCurrent(dbItem, res));
                 }
             });
 
@@ -2519,12 +2519,13 @@ function controllerWorldWeather() {
     self._makeDailyDataFromDSF = function(summary){
         var day = {};
 
-        if(summary.date){
-            day.date = summary.date;
-        }
         if(summary.dateObj){
             day.date = summary.dateObj;
         }
+        else if(summary.date){
+            day.date = summary.date;
+        }
+
         if(summary.summary){
             day.desc = summary.summary;
         }
@@ -2689,12 +2690,13 @@ function controllerWorldWeather() {
             summary1 = {};
         }
 
-        if(summary.date){
-            hourly.date = summary.date;
-        }
         if(summary.dateObj){
             hourly.date = summary.dateObj;
         }
+        else if(summary.date){
+            hourly.date = summary.date;
+        }
+
         if(summary.temp){
             hourly.temp_c = parseFloat(((summary.temp - 32) / (9/5)).toFixed(1));
             hourly.temp_f = parseFloat(summary.temp.toFixed(1));
@@ -2829,12 +2831,13 @@ function controllerWorldWeather() {
     self._makeCurrentDataFromDSFCurrent = function(summary, ts) {
         var current = {};
 
-        if(summary.date){
-            current.date = summary.date;
-        }
         if(summary.dateObj){
             current.date = summary.dateObj;
         }
+        else if(summary.date){
+            current.date = summary.date;
+        }
+
         if(summary.summary){
             current.desc = summary.summary;
             current.weatherType = ControllerWeatherDesc.makeWeatherType(summary.summary);

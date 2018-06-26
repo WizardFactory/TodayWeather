@@ -58,7 +58,6 @@ angular.module('service.twads', [])
                 },
                 function (e) {
                     console.log('Fail to create banner view');
-                    Util.ga.trackEvent('plugin', 'error', 'admobCreateBanner');
                     Util.ga.trackException(e, false);
                 });
         };
@@ -87,7 +86,6 @@ angular.module('service.twads', [])
                 self.admob.destroyBannerView(function () {
                     console.log('destroy banner view');
                 }, function (e) {
-                    Util.ga.trackEvent('plugin', 'error', 'admobDestroyBanner');
                     Util.ga.trackException(e, false);
                 });
 
@@ -135,24 +133,12 @@ angular.module('service.twads', [])
             self.admob.showBannerAd(show, function () {
                 console.log('show/hide about ad mob show='+show);
             }, function (e) {
-                Util.ga.trackEvent('plugin', 'error', 'admobShowBanner');
                 Util.ga.trackException(e, false);
             });
         };
 
         obj.init = function () {
             var self = this;
-
-            // if ( !(window.admob) ) {
-            //     console.log('ad mob plugin not ready');
-            //     //for ads app without inapp and paid app
-            //     if (self.requestEnable != undefined) {
-            //         console.log('set requestEnable='+self.requestEnable);
-            //         self.setShowAds(self.requestEnable);
-            //     }
-            //     Util.ga.trackEvent('plugin', 'error', 'loadAdmob');
-            //     return;
-            // }
 
             if (ionic.Platform.isIOS()) {
                 self.bannerAdUnit = clientConfig.admobIOSBannerAdUnit;
@@ -171,7 +157,6 @@ angular.module('service.twads', [])
                     self.loadTwAdsInfo();
                 },
                 function (e) {
-                    Util.ga.trackException('setAdmobOptions', 'error', e);
                     Util.ga.trackException(e, false);
                 });
 
@@ -184,8 +169,7 @@ angular.module('service.twads', [])
                     self.loadTwAdsInfo();
                 },
                 function (e) {
-                    Util.ga.trackException('setAdmobOptions', 'error', e);
-                    Util.ga.trackException(e, false);
+                    // Util.ga.trackException(e, false);
                 });
         };
         return obj;

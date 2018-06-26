@@ -3,7 +3,9 @@
  */
 
 angular.module('service.push', [])
-    .factory('Push', function($http, TwStorage, Util, WeatherUtil, WeatherInfo, $location, Units, $rootScope, Firebase) {
+    .factory('Push', function($http, TwStorage, Util, WeatherUtil, WeatherInfo, Units,
+                              $rootScope, Firebase)
+    {
         var obj = {};
         // obj.config = {
         //     "android": {
@@ -410,24 +412,13 @@ angular.module('service.push', [])
                         //ios의 경우 badge 업데이트
                         //현재위치의 경우 데이타 업데이트 가능? 체크
 
-
-                        //if have additionalData go to index page
-                        var url = '/tab/forecast?fav=' + data.additionalData.cityIndex;
-                        //setCityIndex 와 url fav 까지 해야 이동됨 on ios
-                        var fav = parseInt(data.additionalData.cityIndex);
+                        var fav = data.additionalData.cityIndex;
                         if (!isNaN(fav)) {
-                            if (fav === 0) {
-                                var city = WeatherInfo.getCityOfIndex(0);
-                                if (city !== null && !city.disable) {
-                                    WeatherInfo.setCityIndex(fav);
-                                }
-                            } else {
-                                WeatherInfo.setCityIndex(fav);
-                            }
+                            console.log('clicked: ' + fav);
+                            WeatherInfo.setCityIndex(fav);
+                            $rootScope.$broadcast('reloadEvent', 'push');
                         }
-                        console.log('clicked: ' + data.additionalData.cityIndex + ' url=' + url);
-                        $location.url(url);
-                        Util.ga.trackEvent('action', 'click', 'push url=' + url);
+                        Util.ga.trackEvent('action', 'click', 'push fav=' + fav);
                     }
                     else if (data.additionalData.foreground === true) {
                         $rootScope.$broadcast('notificationEvent', data);
@@ -784,22 +775,11 @@ angular.module('service.push', [])
                 if (result.tap === true) {
                     //background
                     if (result.cityIndex != undefined) {
-                        var url = '/tab/forecast?fav=' + result.cityIndex;
-                        //setCityIndex 와 url fav 까지 해야 이동됨 on ios
-                        var fav = parseInt(result.cityIndex);
-                        if (!isNaN(fav)) {
-                            if (fav === 0) {
-                                var city = WeatherInfo.getCityOfIndex(0);
-                                if (city !== null && !city.disable) {
-                                    WeatherInfo.setCityIndex(fav);
-                                }
-                            } else {
-                                WeatherInfo.setCityIndex(fav);
-                            }
-                        }
-                        console.log('clicked: ' + result.cityIndex + ' url=' + url);
-                        $location.url(url);
-                        Util.ga.trackEvent('action', 'click', 'push url=' + url);
+                        var fav = result.cityIndex;
+                        console.log({notificationFav:fav});
+                        Util.ga.trackEvent('plugin', 'info', 'pushLinkMatch '+fav);
+                        WeatherInfo.setCityIndex(fav);
+                        $rootScope.$broadcast('reloadEvent', 'push');
                     }
                     else {
                         console.log('city index is undefined');

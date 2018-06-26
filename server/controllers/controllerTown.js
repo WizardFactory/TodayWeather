@@ -41,6 +41,8 @@ var AqiConverter = require('../lib/aqi.converter');
 
 var ControllerWeatherDesc = require('./controller.weather.desc');
 
+var KmaForecastZoneCode = require('./kma/kma.forecast.zone.controller');
+
 var townArray = [
     {db:modelShort, name:'modelShort'},
     {db:modelCurrent, name:'modelCurrent'},
@@ -228,7 +230,34 @@ function ControllerTown() {
                                             areaCode = code.cityCode.slice(0, 4) + '0000';
                                         }
                                         parm = areaCode;
-                                    }else{
+                                    }
+                                    else if(item.db === modelMidTemp) {
+                                        parm = code.cityCode;
+                                        self._findForecastZoneByName(regionName, cityName,
+                                            function (err, result) {
+                                                if (err) {
+                                                    log.error(err);
+                                                }
+                                                else {
+                                                    req['regId'] = parm = result;
+                                                    log.info('M DATA[' + item.name + '] KmaForecastZoneId=',result, 'sID=',req.sessionID);
+                                                }
+
+                                                self._getMidDataFromDB(item.db, parm, undefined,
+                                                    function (err, midData) {
+                                                        if (err) {
+                                                            log.error(new Error('GaD> error to get midData : '+ err.message));
+                                                            return cb(err);
+                                                        }
+                                                        req[item.name] = midData;
+                                                        log.info('M DATA[' + item.name + '] sID=',req.sessionID);
+                                                        log.silly('M DATA[' + item.name + '] : ', req[item.name]);
+                                                        cb(null);
+                                                    });
+                                            });
+                                        return;
+                                    }
+                                    else {
                                         parm = code.cityCode
                                     }
 
@@ -1883,81 +1912,111 @@ function ControllerTown() {
         meta.city = cityName;
         log.info('>sID=',req.sessionID, meta);
 
-        try{
-            manager.getRegIdByTown(regionName, cityName, function(err, code){
-                if(err){
-                    log.error(new Error('RM> there is no code '+ err.message));
-                    return next();
-                }
+        async.waterfall(
+            [
+                function (callback) {
+                    manager.getRegIdByTown(regionName, cityName, function (err, code) {
+                        if (err) {
+                            return callback(err);
+                        }
+                        callback(err, code);
+                    });
+                },
+                function (code, callback) {
+                    self._getMidDataFromDB(modelMidForecast, code.pointNumber, req, function (err, forecastInfo) {
+                        if (err) {
+                            return callback(err);
+                        }
 
-                self._getMidDataFromDB(modelMidForecast, code.pointNumber, req, function(err, forecastInfo){
-                    if(err){
-                        log.error('RM> no forecast data '+err.message);
-                        return next();
+                        var forecastList = forecastInfo.ret;
+                        //log.info(forecastList);
+                        req.midData = {};
+                        req.midData.forecast = forecastList[forecastList.length - 1];
+
+                        var areaCode = code.cityCode.slice(0, 3);
+                        if (areaCode === '11B') {
+                            areaCode = '11B00000';
+                        }
+                        else if (areaCode === '21F') {
+                            areaCode = '11F10000';
+                        }
+                        else {
+                            areaCode = code.cityCode.slice(0, 4) + '0000';
+                        }
+                        callback(err, {code:code, areaCode:areaCode});
+                    });
+                },
+                function (regInfo, callback) {
+                    self._getMidDataFromDB(modelMidLand, regInfo.areaCode, req, function(err, landInfo) {
+                        if (err) {
+                            return callback(err);
+                        }
+                        regInfo.landInfo = landInfo;
+                        callback(err, regInfo);
+                    });
+                },
+                function (regInfo, callback) {
+                    if (req.regId != undefined) {
+                        regInfo.code.cityCode = req.regId;
+                        return callback(null, regInfo);
                     }
 
-                    var forecastList = forecastInfo.ret;
-                    //log.info(forecastList);
-                    req.midData = {};
-                    req.midData.forecast = forecastList[forecastList.length - 1];
-
-                    var areaCode = code.cityCode.slice(0, 3);
-                    if(areaCode === '11B'){
-                        areaCode = '11B00000';
-                    }
-                    else if(areaCode === '21F'){
-                        areaCode = '11F10000';
-                    }
-                    else{
-                        areaCode = code.cityCode.slice(0, 4) + '0000';
-                    }
-
-                    self._getMidDataFromDB(modelMidLand, areaCode, req, function(err, landInfo){
-                        if(err){
-                            log.error('RM> no land data ' + err.message);
+                    self._findForecastZoneByName(regionName, cityName,
+                        function (err, result) {
+                            if (err) {
+                                log.error(err);
+                            }
+                            else {
+                                regInfo.code.cityCode = result;
+                            }
+                            callback(null, regInfo);
+                        });
+                },
+                function (regInfo, callback) {
+                    self._getMidDataFromDB(modelMidTemp, regInfo.code.cityCode, req, function (err, tempInfo) {
+                        if (err) {
+                            log.error('RM> no temp data ' + err.message + ' cityCode:'+ regInfo.code.cityCode);
+                            log.error(meta);
                             return next();
                         }
-                        var landList = landInfo.ret;
-                        //log.info(landList);
-                        self._getMidDataFromDB(modelMidTemp, code.cityCode, req, function(err, tempInfo){
-                            if(err){
-                                log.error('RM> no temp data ' + err.message);
-                                log.error(meta);
-                                return next();
-                            }
-                            var tempList = tempInfo.ret;
-                            //log.info(tempList);
-                            if(config.db.version == '2.0'){
-                                if (landInfo.pubDate.getTime() != tempInfo.pubDate.getTime()) {
-                                    log.error('RM> publishing date of land and temp are different');
-                                }
-                            }else{
-                                if (landInfo.pubDate != tempInfo.pubDate) {
-                                    log.error('RM> publishing date of land and temp are different');
-                                }
-                            }
-
-                            self._mergeLandWithTemp(landList, tempList, function(err, dataList){
-                                if(err){
-                                    log.error('RM> failed to merge land and temp');
-                                    log.error(meta);
-                                    return next();
-                                }
-                                //log.info(dataList);
-                                req.midData.dailyData = dataList;
-                                req.midData.landPubDate = landInfo.pubDate;
-                                req.midData.tempPubDate = tempInfo.pubDate;
-                                next();
-                            });
-                        });
+                        regInfo.tempInfo = tempInfo;
+                        callback(err, regInfo);
                     });
-                })
+                },
+                function (regInfo, callback) {
+                    var landInfo = regInfo.landInfo;
+                    var tempInfo = regInfo.tempInfo;
+
+                    if(config.db.version == '2.0'){
+                        if (landInfo.pubDate.getTime() != tempInfo.pubDate.getTime()) {
+                            log.error('RM> publishing date of land and temp are different');
+                        }
+                    }
+                    else{
+                        if (landInfo.pubDate != tempInfo.pubDate) {
+                            log.error('RM> publishing date of land and temp are different');
+                        }
+                    }
+
+                    self._mergeLandWithTemp(landInfo.ret, tempInfo.ret, function(err, dataList) {
+                        if(err){
+                            return callback(err);
+                        }
+                        //log.info(dataList);
+                        req.midData.dailyData = dataList;
+                        req.midData.landPubDate = landInfo.pubDate;
+                        req.midData.tempPubDate = tempInfo.pubDate;
+                        callback(err, dataList);
+                    });
+                }
+            ],
+            function(err) {
+                if (err) {
+                    err.message += meta.toString();
+                    log.error(err);
+                }
+                next();
             });
-        }catch(e){
-            log.error('ERROR>>', meta);
-            log.error(e);
-            next();
-        }
 
         return this;
     };
@@ -4286,6 +4345,27 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
     }
 
     return [];
+};
+
+ControllerTown.prototype._findForecastZoneByName = function(regionName, cityName, callback) {
+    var kmaForecastZoneCode = new KmaForecastZoneCode();
+    kmaForecastZoneCode.findForecastZoneByName(regionName, cityName)
+        .exec(function (err, results) {
+            if (err) {
+                return callback(err);
+            }
+            if (results.length === 0) {
+                err = (new Error('GaD> error to get forecast zone ' + regionName + ' ' + cityName));
+            }
+            else if (results.length > 1) {
+                err = (new Error('GaD> forecast zone is duplicated' + regionName + ' ' + cityName));
+            }
+            else {
+                return callback(err, results[0].regId);
+            }
+
+            return callback(err);
+        });
 };
 
 /**

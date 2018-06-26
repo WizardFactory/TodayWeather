@@ -175,7 +175,7 @@ class DsfController {
                  * Try to find yesterday's data which are array from yesterday 00:00 to 24:00
                  */
                 if(this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
-                    let yDate = new Date(cDate.getTime() + item.timeOffset);
+                    let yDate = new Date(cDate.getTime() + (item.timeOffset * 60 * 1000));
                     yDate.setUTCDate(yDate.getUTCDate() - 1);
 
                     /**
@@ -498,7 +498,7 @@ class DsfController {
                                 log.debug('_requestDatas', JSON.stringify(curData));
                                 if(timeOffset != 1440 && curData.timeOffset != timeOffset){
                                     // For notifying
-                                    log.error('cDSF > !!! 1. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset, 'geo:', geo);
+                                    log.warn('cDSF > !!! 1. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset, 'geo:', geo);
                                 }
 
                                 output.current = curData;
@@ -518,10 +518,15 @@ class DsfController {
                 },
                 (curData, cb)=>{
                     // 2. check timezone
+
+                    /*
+                    Try to find timeoffset from DB data even though curData has it because it can be updated by DayLightSaving
                     if(timeOffset != 1440){
                         log.info('No need to receive timezone');
                         return cb(null, curData);
                     }
+                    */
+
                     if(curData.address.country === undefined){
                         log.warn('cDSF > There is no timezone string');
                         if(timeOffset === 1440 && curData.timeOffset === undefined){
@@ -542,7 +547,7 @@ class DsfController {
                         if(timeOffset_MIN != undefined){
                             if(curData.timeOffset != timeOffset_MIN){
                                 // For notifying
-                                log.error('cDSF > !!! 2. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset_MIN, ' | ', timeOffset, 'geo:', geo);
+                                log.warn('cDSF > !!! 2. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset_MIN, ' | ', timeOffset, 'geo:', geo);
                             }
 
                             timeOffset = curData.timeOffset = timeOffset_MIN;
