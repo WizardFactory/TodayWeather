@@ -171,6 +171,17 @@ angular.module('service.twads', [])
                 function (e) {
                     // Util.ga.trackException(e, false);
                 });
+
+            window.addEventListener("orientationchange", function(){
+                console.log('orientationType', screen.orientation.type); // e.g. portrait
+                if (self.enableAds === true) {
+                    self.admob.destroyBannerView(function () {
+                        self.admob.createBannerView(function () {
+                            self.admob.showBannerAd(self.showAds);
+                        });
+                    });
+                }
+            });
         };
         return obj;
     });

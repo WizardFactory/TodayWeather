@@ -57,7 +57,8 @@
       "id": "cordova-plugin-todayweather-config"
     },
     "cordova-plugin-app-preferences",
-    "cordova-plugin-ionic-webview"
+    "cordova-plugin-ionic-webview",
+    "cordova-plugin-screen-orientation"
   ],
   "cordovaPlatforms": [
     {
