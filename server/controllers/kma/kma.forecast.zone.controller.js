@@ -105,6 +105,35 @@ class KmaForecastZoneController {
         return KmaForecastZoneModel.find(query, {_id: 0}).lean();
     }
 
+    findForecastZoneByName(regionName, cityName) {
+        let regionType = ['특별시', '광역시', '특별자치시'].find((name)=> {
+            return regionName.indexOf(name) >= 0;
+        });
+        let regName;
+        if (regionType) {
+           regName = regionName.replace(regionType, '') ;
+           if (regName === '인천') {
+               if (cityName === '강화군') {
+                   regName = '강화';
+               }
+           }
+        }
+        else if (regionName === '이어도') {
+            regName = regionName;
+        }
+        else {
+            if (cityName.lastIndexOf('구') == 0) {
+                let siIndex = cityName.lastIndexOf('시');
+                regName = cityName.slice(0, cityName.length-siIndex);
+            }
+            else {
+                regName = cityName.slice(0, cityName.length-1);
+            }
+        }
+
+        return this.findForecastZoneCode({regName:regName});
+    }
+
     /**
      *
      * @param loc

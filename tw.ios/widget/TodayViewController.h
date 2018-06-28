@@ -161,7 +161,7 @@
 - (void) setCurJsonDict:(NSDictionary *)dict;
 - (void) updateCurCityInfo:nssName address:nssAddress country:nssCountryName;
 - (void) updateCurLocation:(NSDictionary *)nsdLocation;
-
+- (void) getWeatherByCoord:(float)latitude longitude:(float)longitude;
 
 
 @end
