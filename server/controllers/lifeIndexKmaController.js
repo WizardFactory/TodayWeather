@@ -265,13 +265,19 @@ LifeIndexKmaController.needToUpdate = function(indexData) {
  * @private
  */
 LifeIndexKmaController._fromLifeIndexDb2 = function (areaNo, callback) {
-    LifeIndexKma2.find({'areaNo':areaNo}).lean().exec(function (err, indexDataList) {
-        if (err || indexDataList.length === 0 || !(indexDataList[0].lastUpdateDate)) {
-            err = new Error("it is not invalid areaNo="+areaNo);
-            return callback(err);
-        }
-        callback(null, indexDataList);
-    });
+    LifeIndexKma2.find({'areaNo':areaNo})
+        .batchSize(30)
+        .lean()
+        .exec(function (err, indexDataList) {
+            if (err) {
+                return callback(err);
+            }
+            if (indexDataList.length === 0 || !(indexDataList[0].lastUpdateDate)) {
+                err = new Error("it is not invalid areaNo="+areaNo);
+                return callback(err);
+            }
+            callback(null, indexDataList);
+        });
 };
 
 LifeIndexKmaController._addIndexData2 = function (midList, lifeIndexList) {
@@ -328,7 +334,7 @@ LifeIndexKmaController.appendData2 = function (areaNo, midList, callback) {
 };
 
 /**
- *
+ * 더 이상 사용하지 않음.
  * @param town
  * @param shortList
  * @param midList
