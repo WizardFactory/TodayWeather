@@ -122,16 +122,16 @@ class KmaForecastZoneController {
             regName = regionName;
         }
         else {
-            if (cityName.lastIndexOf('구') == 0) {
+            if (cityName.lastIndexOf('구') === cityName.length-1) {
                 let siIndex = cityName.lastIndexOf('시');
-                regName = cityName.slice(0, cityName.length-siIndex);
+                regName = cityName.slice(0, siIndex);
             }
             else {
                 regName = cityName.slice(0, cityName.length-1);
             }
         }
 
-        return this.findForecastZoneCode({regName:regName});
+        return this.findForecastZoneCode({regName:regName, regSp:"C"});
     }
 
     /**
