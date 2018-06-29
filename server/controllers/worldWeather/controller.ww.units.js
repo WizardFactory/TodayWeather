@@ -70,6 +70,15 @@ function ControllerWWUnits() {
                 }
                 self._convertHourlyWeather(value, req.query, currentDate);
             });
+
+            var shortest = req.result.shortest;
+            if (Array.isArray(shortest) && shortest.length > 1) {
+                shortest.forEach(function (value) {
+                    value.time = new Date(value.date).getHours();
+                    value.weather = value.desc;
+                    self._convertThisTimeWeather(value, req.query);
+                });
+            }
         }
         catch (err) {
             err.message += ' ' + JSON.stringify(req.geocode);
