@@ -489,7 +489,7 @@ class DsfController {
                         this._reqData(geo, undefined, (err, result)=>{
                             if(err){
                                 log.error('cDsf > Failed to get current data :', geo);
-                                return cb(null, {});
+                                return cb(err);
                             }
 
                             let curData = {};
@@ -643,7 +643,6 @@ class DsfController {
     }
 
     /**
-     * req.cDate set to current time of saved data.
      * @param {Object} req
      * @param {Date} cDate - system time
      * @param {Function} callback
@@ -686,16 +685,6 @@ class DsfController {
                 if(err){
                     log.error('cDSF > Fail to collect DFS data');
                 }
-
-                try {
-                    req.cDate = new Date(result.current.data.current.dateObj);
-                }
-                catch (err) {
-                    log.warn(err);
-                    req.cDate = cDate;
-                }
-
-                log.info('cDSF > cDate  : ', req.cDate.toString());
                 return callback(err, this._makeOutputFormat(result, req));
             }
         );

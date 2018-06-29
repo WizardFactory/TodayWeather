@@ -1105,6 +1105,13 @@ function ControllerTown24h() {
      * @returns {ControllerTown24h}
      */
     this.makeAirInfoList = function (req, res, next) {
+        var meta = {};
+        meta.method = 'make air info list';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info('>sID=',req.sessionID, meta);
+
         try {
             var airUnit = req.query.airUnit || 'airkorea';
             if(req.arpltnStnList) {
@@ -1206,6 +1213,13 @@ function ControllerTown24h() {
     };
 
     this.AirForecastList = function (req, res, next) {
+        var meta = {};
+        meta.method = 'air forecast list';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info('>sID=',req.sessionID, meta);
+
         var forecastSource = req.query.airForecastSource;
         var airUnit = req.query.airUnit;
         async.map(req.airInfoList,
