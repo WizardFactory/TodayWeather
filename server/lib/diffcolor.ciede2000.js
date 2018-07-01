@@ -92,17 +92,7 @@ class ColorDiff {
         else if((Math.abs(h1p-h2p) > 180) && ((h1p+h2p) >= 360)) return (h1p+h2p-360)/2.0;
         else                                                throw(new Error());
     }
-
-
-    _rgba_to_lab(c, bc)
-    {
-        let bc = typeof bc !== 'undefined' ? bc : {r: 255, g: 255, b:255};
-        let new_c = {r: bc.r + (c.r - bc.r) * c.a,
-            g: bc.g + (c.g - bc.g) * c.a,
-            b: bc.b + (c.b - bc.b) * c.a};
-        return this._rgb_to_lab(new_c)
-    }
-
+    
     _rgb_to_lab(c)
     {
         return this._xyz_to_lab(this._rgb_to_xyz(c))
