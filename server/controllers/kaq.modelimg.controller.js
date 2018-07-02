@@ -237,7 +237,7 @@ class KaqDustImageController{
         }
         let XY = this._getXY(lat, lon, type);
         if(!this._isValidPos(XY.x, XY.y)){
-            return callback(new Error('KAQ Modelimg > 4. Invalid X, Y : ', x, y));
+            return callback(new Error('KAQ Modelimg > 4. Invalid X, Y : ' + XY.x + ',' + XY.y + ',' + type));
         }
 
         let forecast = [];
@@ -343,7 +343,7 @@ class KaqDustImageController{
         log.info('KAQ Modelimg > x: ', x, 'y: ',y);
 
         if(!this._isValidPos(x, y)){
-            return callback(new Error('KAQ Modelimg > 4. Invalid X, Y : ', x, y));
+            return callback(new Error('KAQ Modelimg > 4. Invalid X, Y : ' + x + ',' + y));
         }
 
         var result = [];
