@@ -2013,7 +2013,7 @@ function ControllerTown() {
             ],
             function(err) {
                 if (err) {
-                    err.message += meta.toString();
+                    err.message += ' ' + JSON.stringify(meta);
                     log.error(err);
                 }
                 next();
