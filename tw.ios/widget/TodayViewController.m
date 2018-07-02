@@ -540,10 +540,15 @@ static TodayViewController *todayVC = nil;
     }
     
     DebugLog(@"count : %ld, idx : %d ", (long)[mWeatherDataList count], mCurrentCityIdx);
-    if([mWeatherDataList count] > 0)
+    if(([mWeatherDataList count] > 0) && ([mWeatherDataList count] > mCurrentCityIdx))
     {
         DebugLog(@"%d update !!!", mCurrentCityIdx);
         [mWeatherDataList setObject:nsdTmpDict atIndexedSubscript:mCurrentCityIdx];
+    }
+    else
+    {
+        DebugLog(@"Invalid currentCity Idx %d!!!", mCurrentCityIdx);
+        return;
     }
     
     // city list array consisted of dictionary make

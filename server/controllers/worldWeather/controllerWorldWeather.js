@@ -688,7 +688,7 @@ function controllerWorldWeather() {
     self.queryTwoDaysWeatherNewForm = function(req, res, next) {
         var cDate = new Date();
         var meta = {};
-        meta.method = 'queryTwoDaysWeather2';
+        meta.method = 'queryTwoDaysWeatherNewForm';
         meta.sID = req.sessionID;
 
         var errMsg;
@@ -712,12 +712,13 @@ function controllerWorldWeather() {
             return res.status(400).send(errMsg);
         }
 
+        req.cDate = cDate;
         log.info('TWW> geocode : ', req.geocode, meta);
+        log.info('TWW> system cur date : ', req.cDate, meta);
 
         async.parallel([
                 function(callback) {
                     let dsfController = new (require('./dsf.controller'));
-
                     dsfController.getDsfData(req, cDate, callback);
                 },
                 function(callback) {
@@ -1618,8 +1619,10 @@ function controllerWorldWeather() {
 
         if(req.DSF && req.DSF.data){
             var timeOffset = req.result.timezone.min;
-            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, req.cDate).slice(0,14) + '00';
-            var curDate = self._getTimeString(timeOffset, req.cDate).slice(0,14) + '00';
+            //current date of data
+            var cWeatherDate = req.cWeatherDate;
+            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, cWeatherDate).slice(0,14) + '00';
+            var curDate = self._getTimeString(timeOffset, cWeatherDate).slice(0,14) + '00';
 
             if(req.result === undefined){
                 req.result = {};
@@ -1683,9 +1686,9 @@ function controllerWorldWeather() {
 
         if(req.DSF && req.DSF.data){
             var timeOffset = req.result.timezone.min;
-            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, req.cDate).slice(0,14) + '00';
-            var yesterdayDate = self._getTimeString((0 - 24) * 60 + timeOffset, req.cDate).slice(0, 14) + '00';
-            var curDate = self._getTimeString(timeOffset, req.cDate).slice(0, 14) + '00';
+            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, req.cWeatherDate).slice(0,14) + '00';
+            var yesterdayDate = self._getTimeString((0 - 24) * 60 + timeOffset, req.cWeatherDate).slice(0, 14) + '00';
+            var curDate = self._getTimeString(timeOffset, req.cWeatherDate).slice(0, 14) + '00';
 
             if(req.result === undefined){
                 req.result = {};
@@ -1879,6 +1882,7 @@ function controllerWorldWeather() {
                     }
                 }
             });
+
             if (req.result.thisTime.length === 0) {
                 log.error('DSF current > Fail to find current data', curDate, meta);
             }
@@ -1893,8 +1897,7 @@ function controllerWorldWeather() {
 
         if (req.DSF && req.DSF.data) {
             var timeOffset = req.result.timezone.min;
-            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, req.cDate).slice(0,14) + '00';
-            var curDate = self._getTimeString(timeOffset, req.cDate);
+            var curDate = self._getTimeString(timeOffset, req.cWeatherDate);
 
             if (req.result === undefined) {
                 req.result = {};
@@ -1926,37 +1929,19 @@ function controllerWorldWeather() {
                 req.result.thisTime = [];
             }
 
-            log.info('DSF current> SDate : ', startDate, meta);
-            log.info('DSF current> CDdate : ', curDate, meta);
-
-            dsf.data.forEach(function (item, index) {
-                //log.info('index : ', index, ' dateOBj : ', item.current.dateObj);
-                var isExist = false;
-                if(self._getUntil15Mins(curDate, item.current.dateObj)){
-                    req.result.thisTime.forEach(function(thisTime, index) {
-                        if(thisTime.date != undefined){
-                            if(self._isSameDayString(item.current.dateObj, thisTime.date)){
-                                if(self._compareDate(item.current.dateObj, thisTime.date)) {
-                                    log.info('DSF current > update data from : ', thisTime.date, ' -->  To :', item.current.dateObj);
-                                    var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
-                                    var isNight = self._isNight(curDate, item.daily.data);
-                                    current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
-                                    req.result.thisTime[index] = current;
-                                }
-                                isExist = true;
-                            }
-                        }
-                    });
-
-                    if(!isExist){
-                        log.info('DSF current > Found current data', item.current.dateObj.toString(), meta);
-                        var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
-                        var isNight = self._isNight(curDate, item.daily.data);
-                        current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
-                        req.result.thisTime.push(current);
-                    }
+            log.info('DSF current> CDate : ', curDate, meta);
+            for (var i=0; i<dsf.data.length; i++) {
+                var item = dsf.data[i];
+                if (curDate === item.current.dateObj) {
+                    log.info('DSF current> Found current data', item.current.dateObj, meta);
+                    var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
+                    var isNight = self._isNight(curDate, item.daily.data);
+                    current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
+                    req.result.thisTime.push(current);
+                    break;
                 }
-            });
+            }
+
             if (req.result.thisTime.length === 0) {
                 log.error('DSF current > Fail to find current data', curDate, meta);
             }
