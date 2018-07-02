@@ -110,6 +110,7 @@ class KmaForecastZoneController {
             return regionName.indexOf(name) >= 0;
         });
         let regName;
+        let query = {regSp:"C"};
         if (regionType) {
            regName = regionName.replace(regionType, '') ;
            if (regName === '인천') {
@@ -117,21 +118,37 @@ class KmaForecastZoneController {
                    regName = '강화';
                }
            }
+           else if (regName === '광주') {  //광주광역시
+              query.regId = "11F20501";
+           }
         }
         else if (regionName === '이어도') {
             regName = regionName;
         }
         else {
-            if (cityName.lastIndexOf('구') == 0) {
+            if (cityName.lastIndexOf('구') === cityName.length-1) {
                 let siIndex = cityName.lastIndexOf('시');
-                regName = cityName.slice(0, cityName.length-siIndex);
+                regName = cityName.slice(0, siIndex);
             }
             else {
                 regName = cityName.slice(0, cityName.length-1);
             }
+            if (regName === '광주') {
+                query.regId = '11B20702';
+            }
+            if (regName === '고성') {
+               if (regionName.indexOf('강원') >= 0) {
+                   query.regId = '11D20402';
+               }
+               else if (regionName.indexOf('경상남') >= 0) {
+                   query.regId = '11H20404';
+               }
+            }
         }
 
-        return this.findForecastZoneCode({regName:regName});
+        query.regName = regName;
+
+        return this.findForecastZoneCode(query);
     }
 
     /**

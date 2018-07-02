@@ -190,7 +190,7 @@ class DsfController {
                     });
 
 
-                    if(yesterdayData){
+                    if(yesterdayData.length > 0){
                         ret['yesterday'] = item;
                     }else {
                         log.info('cDsf> Finding yesterday : ', yDate.toString(), yDate.toUTCString());
