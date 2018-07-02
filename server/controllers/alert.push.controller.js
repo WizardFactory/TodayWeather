@@ -223,6 +223,7 @@ class AlertPushController {
                        log.error("parseWeatherAirData : Fail to find shortest",
                            strForecastTime,
                            JSON.stringify(alertPush.geo));
+                       log.error(JSON.stringify({currentTime: weather.dateObj, shortest: resData.shortest}));
                    }
                }
                //didn't find forecast from short
