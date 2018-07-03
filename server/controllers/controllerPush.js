@@ -171,7 +171,8 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
 };
 
 ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
-    var query = {type:pushInfo.type, cityIndex: pushInfo.cityIndex};
+    var query = {};
+
     if (pushInfo.fcmToken) {
         query.fcmToken = pushInfo.fcmToken;
     }
@@ -179,13 +180,18 @@ ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
         query.registrationId = pushInfo.registrationId;
     }
     else {
-        log.error('unknown fcm token or registrationId');
-        return this;
+        return callback(new Error(`unknown fcm token or registrationId pushInfo:${JSON.stringify(pushInfo)}`));
     }
 
-    if (pushInfo.id) {
-        query.id = pushInfo.id;
+    if (pushInfo.cityIndex) {
+        query.cityIndex = pushInfo.cityIndex;
+
+        if (pushInfo.id) {
+            query.id = pushInfo.id;
+        }
     }
+
+    log.info(`remove alarm push ${JSON.stringify(query)}`);
 
     PushInfo.remove(query,
         function (err, result) {
@@ -193,10 +199,10 @@ ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
                 return callback(err);
             }
             if (!result) {
-                return callback(new Error('Fail to get result'));
+                return callback(new Error(`Fail to get alarm result query:${JSON.stringify(query)}`));
             }
-            log.info(result.toString());
-            callback(undefined, result.toString());
+            log.debug(`remove alarm result ${JSON.stringify(result)}`);
+            callback(undefined, result);
         });
 
     return this;
