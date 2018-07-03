@@ -133,10 +133,14 @@ class KmaForecastZoneController {
             else {
                 regName = cityName.slice(0, cityName.length-1);
             }
+
             if (regName === '광주') {
                 query.regId = '11B20702';
             }
-            if (regName === '고성') {
+            else if (regName === '울릉') {
+                regName = '울릉도';
+            }
+            else if (regName === '고성') {
                if (regionName.indexOf('강원') >= 0) {
                    query.regId = '11D20402';
                }
