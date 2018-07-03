@@ -163,10 +163,15 @@ angular.module('service.branch', [])
                     self.inited = true;
                     console.log('fav:',fav);
                     if (fav) {
-                        WeatherInfo.setCityIndex(fav);
-                        $rootScope.$broadcast('reloadEvent', 'deeplink');
-                        console.log({deepLinkFav:fav});
-                        Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch '+fav);
+                        var cityIndex = parseInt(fav);
+                        if (!isNaN(cityIndex)) {
+                            WeatherInfo.setCityIndex(cityIndex);
+                            $rootScope.$broadcast('reloadEvent', 'deeplink');
+                            Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch ' + cityIndex);
+                        }
+                        else {
+                            Util.ga.trackException(new Error('invalid fav:'+fav), false);
+                        }
                     }
                 })
                 .catch(function error(err) {

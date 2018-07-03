@@ -79,6 +79,10 @@ angular.module('service.weatherinfo', [])
             return cityIndex;
         };
 
+        /**
+         *
+         * @param {number} index
+         */
         obj.setCityIndex = function (index) {
             if (index >= -1 && index < cities.length) {
                 cityIndex = index;
@@ -131,18 +135,19 @@ angular.module('service.weatherinfo', [])
         };
 
         obj.canLoadCity = function (index) {
-            if (index === -1) {
-                return false;
+            if (index >= -1 && index < cities.length) {
+                var city = cities[index];
+
+                if (city.disable === true) {
+                    return false;
+                }
+
+                var time = new Date();
+                return !!(city.loadTime === null || time.getTime() - city.loadTime.getTime() > (10 * 60 * 1000));
             }
-
-            var city = cities[index];
-
-            if (city.disable === true) {
-                return false;
+            else {
+                Util.ga.trackException(new Error('invalid city index='+index), false);
             }
-
-            var time = new Date();
-            return !!(city.loadTime === null || time.getTime() - city.loadTime.getTime() > (10 * 60 * 1000));
         };
 
         obj.addCity = function (city) {
