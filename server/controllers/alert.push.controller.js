@@ -1000,20 +1000,38 @@ class AlertPushController {
     }
 
     removeAlertPush(pushInfo, callback) {
-        AlertPush.remove({
-                type:pushInfo.type,
-                registrationId: pushInfo.registrationId,
-                cityIndex: pushInfo.cityIndex,
-                id: pushInfo.id},
+        let query = {};
+
+        if (pushInfo.fcmToken) {
+            query.fcmToken = pushInfo.fcmToken;
+        }
+        else if (pushInfo.registrationId) {
+            query.registrationId = pushInfo.registrationId;
+        }
+        else {
+            return callback(new Error(`unknown fcm token or registrationId pushInfo:${JSON.stringify(pushInfo)}`));
+        }
+
+        if (pushInfo.cityIndex) {
+            query.cityIndex = pushInfo.cityIndex;
+
+            if (pushInfo.id) {
+                query.id = pushInfo.id;
+            }
+        }
+
+        log.info(`remove alert push ${JSON.stringify(query)}`);
+
+        AlertPush.remove(query,
             function (err, result) {
                 if (err) {
                     return callback(err);
                 }
                 if (!result) {
-                    return callback(new Error('Fail to get result'));
+                    return callback(new Error(`Fail to get alert result query:${JSON.stringify(query)}`));
                 }
-                log.info(result.toString());
-                callback(undefined, result.toString());
+                log.debug(`remove alert result ${JSON.stringify(result)}`);
+                callback(undefined, result);
             });
     }
 
