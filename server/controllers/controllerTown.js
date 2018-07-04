@@ -1185,15 +1185,22 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
+        meta.sid = req.sessionID;
         log.info('>sID=',req.sessionID, meta);
 
         self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
             controllerKmaStnWeather.getCityHourlyList(townInfo,  function (err, stnWeatherInfo) {
-                if (stnWeatherInfo == undefined) {
-                    log.error("Fail to find stnWeatherInfo");
-                    next();
-                    return;
+                if (err) {
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
+                    return next();
                 }
+
+                if (stnWeatherInfo == undefined) {
+                    log.error("Fail to find stnWeatherInfo", meta);
+                    return next();
+                }
+
                 var hourlyList = stnWeatherInfo;
                 req.currentList.forEach(function (current) {
                     if (current.t1h != -50) {
