@@ -31,19 +31,6 @@ function GeoController(lat, lon, lang, country) {
     this.name = "";
     this.daumUrl = 'https://'+API_DAUM_DOMAIN;
     this.googleUrl = 'https://'+MAPS_GOOGLEAPIS_DOMAIN;
-
-    [API_DAUM_DOMAIN, MAPS_GOOGLEAPIS_DOMAIN].forEach(function (value) {
-        var domain = value;
-        dnscache.lookup(domain, function(err, result) {
-            if (err) {
-                console.error(err);
-            }
-            else {
-                console.info('geoctrl cached domain:', domain, ', result:', result);
-            }
-        });
-
-    });
 }
 
 GeoController.prototype.setGoogleApiKey = function (key) {
