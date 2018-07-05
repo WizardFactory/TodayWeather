@@ -59,7 +59,7 @@ router.use(function checkAuthorization(req, res, next) {
                     }
 
                     idBearerToken[req.body.id] = 'TodayWeather';
-                    console.log(token);
+                    log.debug(token);
 
                     res.status = 200;
                     res.send(token);
@@ -86,13 +86,13 @@ router.use(function checkAuthorization(req, res, next) {
             }
 
             if(idBearerToken[decode.id] === decode.app) {
-                console.log(decode.app);
+                log.debug(decode.app);
                 next();
             }
             else {
                 err = new Error('App name is invalid.');
 
-                console.log(decode.id);
+                log.debug(decode.id);
 
                 res.status(err.status || 500);
                 res.render('error', {

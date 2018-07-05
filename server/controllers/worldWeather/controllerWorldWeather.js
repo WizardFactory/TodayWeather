@@ -2490,7 +2490,7 @@ function controllerWorldWeather() {
                 skyIconName += "RainSnow";
                 break;
             default:
-                console.log('Fail to parse precType='+precType);
+                log.warn('Fail to parse precType='+precType);
                 break;
         }
 

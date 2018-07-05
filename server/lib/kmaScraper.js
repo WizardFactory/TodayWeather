@@ -41,16 +41,6 @@ var dnscache = require('dnscache')({
 function KmaScraper() {
     this.MAX_HOURLY_COUNT = 192; //8days * 24hours
     this.domain = "www.weather.go.kr";
-
-    // var domain = this.domain;
-    // dnscache.lookup(domain, function(err, result) {
-    //     if (err) {
-    //         console.error(err);
-    //     }
-    //     else {
-    //         console.info('kmascrape cached domain:', domain, ', result:', result);
-    //     }
-    // });
 }
 
 /**

@@ -62,15 +62,6 @@ function TownRss(){
         }
     });
 
-    var domain = WWW_KMA_GO_DOMAIN;
-    dnscache.lookup(domain, function(err, result) {
-        if (err) {
-            console.error(err);
-        }
-        else {
-            console.info('shortrss cached domain:', domain, ', result:', result);
-        }
-    });
     return self;
 }
 

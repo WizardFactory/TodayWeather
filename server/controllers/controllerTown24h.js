@@ -589,7 +589,7 @@ function ControllerTown24h() {
         var sunset = 1800;
 
         if (dayInfo == undefined) {
-            console.error({func:"isnight", msg:"Fail to find date="+date});
+            log.error({func:"isnight", msg:"Fail to find date="+date});
         }
         else {
             if (dayInfo.hasOwnProperty('sunrise')) {
@@ -1778,7 +1778,7 @@ function ControllerTown24h() {
     };
 
     function _request(url, lang, callback) {
-        console.info({_request:{url:url}});
+        log.info({_request:{url:url}});
         let options = {json: true, timeout: 3000};
         if (lang) {
            options.headers =  {'Accept-Language' : lang};

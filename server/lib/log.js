@@ -9,25 +9,24 @@ require('winston-logentries');
 
 //silly, debug, verbose, info, warn, error
 
-var LogentriesToken;
-if (config.mode === 'gather') {
-    LogentriesToken = config.logToken.gather;
-}
-else if (config.mode === 'service') {
-   LogentriesToken = config.logToken.service;
-}
+var LogentriesToken = config.logToken[config.mode];
 
 module.exports = function(filename) {
     var transports = [];
-    transports.push(new winston.transports.Console({
-                level      : 'info',
-                colorize   : true
-            }));
 
-    transports.push(new winston.transports.Logentries({
-        level: 'info',
-        token: LogentriesToken
-    }));
+    var options = {level: 'info', colorize: true};
+    if (process.env.NODE_ENV === 'production') {
+       options.level = 'error';
+    }
+
+    transports.push(new winston.transports.Console(options));
+
+    if (LogentriesToken && LogentriesToken.length > 0) {
+        transports.push(new winston.transports.Logentries({
+            level: 'info',
+            token: LogentriesToken
+        }));
+    }
 
     if (filename) {
         transports.push(new winston.transports.File({
