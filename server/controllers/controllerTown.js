@@ -1181,12 +1181,12 @@ function ControllerTown() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
+        meta.sID = req.sessionID;
         meta.method = 'mergeCurrentByStnHourly';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        meta.sid = req.sessionID;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
             controllerKmaStnWeather.getCityHourlyList(townInfo,  function (err, stnWeatherInfo) {
