@@ -24,15 +24,6 @@ var dnscache = require('dnscache')({
 });
 
 function kasiRiseSet() {
-    var domain = APIS_DATA_GO_DOMAIN;
-    dnscache.lookup(domain, function(err, result) {
-        if (err) {
-            console.error(err);
-        }
-        else {
-            console.info('kasi cached domain:', domain, ', result:', result);
-        }
-    });
 }
 
 kasiRiseSet._makeLocationApiUrl = function (geocode, date) {

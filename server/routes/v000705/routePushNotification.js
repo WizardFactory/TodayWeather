@@ -152,38 +152,64 @@ router.put('/', function(req, res) {
 });
 
 /**
- * remove
+ * remove all(alert and alarm) or alert or alarm
  */
 router.delete('/', function(req, res) {
-    log.info('delete : '+ JSON.stringify(req.body));
+    log.info('delete push : '+ JSON.stringify(req.body));
 
     var pushInfo = req.body;
+    var tasks = [];
 
-    if (pushInfo.category === 'alert') {
-        var ctrlAlertPush = new CtrlAlertPush();
-        ctrlAlertPush.removeAlertPush(pushInfo, function (err, result) {
-            if (err) {
-                log.error(err);
-                //return  res error
-                return res.status(500).send(err.message);
+    try {
+        if (!pushInfo.hasOwnProperty('fcmToken') || pushInfo.fcmToken.length === 0)
+        {
+            if (!pushInfo.hasOwnProperty('registrationId') || pushInfo.registrationId.length === 0)
+            {
+                throw new Error('invalid push info registrationId and fcmToken');
             }
-            return res.send(result.toString());
+        }
+
+        if (!pushInfo.hasOwnProperty('cityIndex')) {
+            log.info('delete all data of pushInfo:'+JSON.stringify(pushInfo));
+        }
+
+        if (!pushInfo.hasOwnProperty('id')) {
+            log.info('delete city push of pushInfo:'+JSON.stringify(pushInfo));
+        }
+        if (!pushInfo.hasOwnProperty('category')) {
+            log.info('delete alert and alarm of pushInfo:'+JSON.stringify(pushInfo));
+        }
+    }
+    catch (err) {
+        log.error(err);
+        return res.status(403).send(err.message);
+    }
+
+    if (pushInfo.category == undefined || pushInfo.category === 'alert') {
+        tasks.push(function (callback) {
+            var ctrlAlertPush = new CtrlAlertPush();
+            ctrlAlertPush.removeAlertPush(pushInfo,callback);
         });
     }
-    else if (pushInfo.category === 'alarm') {
-        var co = new ControllerPush();
-        co.removePushInfo(pushInfo, function (err, result) {
-            if (err) {
-                log.error(err);
-                //return  res error
-                return res.status(500).send(err.message);
-            }
-            return res.send(result.toString());
+    if (pushInfo.category == undefined || pushInfo.category === 'alarm') {
+        tasks.push(function (callback) {
+            var co = new ControllerPush();
+            co.removePushInfo(pushInfo, callback);
         });
     }
-    else {
-        log.error('unknown category, pushInfo:'+JSON.stringify(pushInfo));
+    if (tasks.length <= 0) {
+        var err = new Error('invalid push info for deleting pushInfo:'+JSON.stringify(pushInfo));
+        log.error(err.message);
+        return res.status(403).send(err.message);
     }
+
+    async.parallel(tasks, function (err, results) {
+      if (err) {
+          log.error(err.message);
+          return res.status(501).send(results);
+      }
+      res.send(results);
+    });
 });
 
 module.exports = router;

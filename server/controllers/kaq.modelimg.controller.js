@@ -12,6 +12,8 @@ var async = require('async');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 var libKaqImageParser = require('../lib/kaq.finedust.image.parser.js');
 var AqiConverter = require('../lib/aqi.converter');
+const colorDiff = require('../lib/diffcolor.ciede2000');
+
 const ModelimgInfo = require('../config/config.js').image.kaq_korea_modelimg_image;
 
 class KaqDustImageController{
@@ -41,6 +43,234 @@ class KaqDustImageController{
         this.imagePixels = {};
         this.coordinate = this.parser.getDefaultCoordi('modelimg');
         return this;
+    }
+
+    /**
+     *
+     * @param lat
+     * @param lon
+     * @returns {boolean}
+     * @private
+     */
+    _isValidGeocode(lat, lon){
+        if(lat > this.coordinate.top_left.lat) return false;
+        if(lat < this.coordinate.bottom_left.lat) return false;
+        if(lon < this.coordinate.top_left.lon) return false;
+        if(lon > this.coordinate.top_right.lon) return false;
+        return true;
+    }
+
+    _isValidPos(x,y){
+        if(x < ModelimgInfo.pixel_pos.left) return false;
+        if(x > ModelimgInfo.pixel_pos.right) return false;
+        if(y < ModelimgInfo.pixel_pos.top) return false;
+        if(y > ModelimgInfo.pixel_pos.bottom) return false;
+        return true;
+    }
+
+
+    /**
+     *
+     * @param type
+     * @returns {*}
+     * @private
+     */
+    _getPixelsInfo(type) {
+        return this.imagePixels[type];
+    }
+
+    /**
+     *
+     * @param type
+     * @returns {*}
+     * @private
+     */
+    _getColorTable(type){
+        return this.colorTable[type];
+    }
+
+    /**
+     *
+     * @param lat
+     * @param lon
+     * @param type
+     * @returns {{x: number, y: number}}
+     * @private
+     */
+    _getXY(lat, lon, type){
+
+        let pixels = this.imagePixels[type].data;
+        let rotated_x = parseInt((lon - this.coordinate.top_left.lon) / pixels.map_pixel_distance_width);
+        let rotated_y = parseInt((this.coordinate.top_left.lat - lat) / pixels.map_pixel_distance_height);
+
+        let x = rotated_x - (parseInt(ModelimgInfo.size.gap_width) - parseInt((rotated_y / ModelimgInfo.size.gradient_step_width)));
+        let y = rotated_y - (parseInt((rotated_x / ModelimgInfo.size.gradient_step_height)));
+        x = x + parseInt(ModelimgInfo.pixel_pos.left);
+        y = y + parseInt(ModelimgInfo.pixel_pos.top);
+
+        log.debug('KAQ Modelimg > lat: ', lat, 'lon: ', lon);
+        log.debug('KAQ Modelimg > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height);
+        log.info('KAQ Modelimg > x: ', x, 'y: ',y);
+
+        return {x, y};
+    }
+
+    /**
+     *
+     * @param pos
+     * @returns {Array}
+     * @private
+     */
+    _getLocationArray(pos) {
+        let res = [];
+
+        // To extend position from x, y.
+        for(let i = 0 ; i < 7 ; i++){
+            for(let j = 0 ; j < 7 ; j++){
+                let w = (i===0)? 0:(parseInt((i+1)/2)) * ((i%2)? -1:1); // -1, 1, -2, 2, -3, 3
+                let h = (j===0)? 0:(parseInt((j+1)/2)) * ((j%2)? -1:1);
+                res.push({x:pos.x + w, y:pos.y+h});
+            }
+        }
+
+        log.debug(`KAQ ModelImg > Location Array = ${JSON.stringify(res)}`);
+        return res;
+    }
+
+    /**
+     *
+     * @param pixelsInfo
+     * @param idx
+     * @param locations
+     * @returns {Array}
+     * @private
+     */
+    _getRgbArray(pixelsInfo, idx, locations){
+        let pixels = pixelsInfo.data.pixels;
+        let res = [];
+        locations.forEach((v)=>{
+            let rgb = {
+                r: pixels.get(idx, v.x, v.y, 0),
+                g: pixels.get(idx, v.x, v.y, 1),
+                b: pixels.get(idx, v.x, v.y, 2)
+            };
+            res.push(rgb);
+        });
+
+        return res;
+    }
+
+    /**
+     *
+     * @param rgbArray
+     * @param colorTable
+     * @returns {*}
+     * @private
+     */
+    _findMatchedVal(rgbArray, colorTable){
+        let closest = {val: 9999.9, rgb: {}, tableIdx: 0};
+        let countFnCall = 0;
+
+        let compareRgb = (rgbIdx, tableIdx)=>{
+            countFnCall++;  // To check how many recursive function called
+            if(rgbIdx === rgbArray.length || tableIdx === colorTable.length){
+                return -1;
+            }
+
+            let res = 0;
+            let check = (a, b)=>{return (a.r === b.r && a.g === b.g && a.b === b.b)};
+            if(check(rgbArray[rgbIdx], colorTable[tableIdx])){
+                // If it has found exactly same value between one of rgb array and one of colortable, it should return that value immediately.
+                log.debug(`KAQ ModelImg > Hit same color = ${JSON.stringify(colorTable[tableIdx])}, rgbIdx=${rgbIdx}, tableIdx=${tableIdx}`);
+                return colorTable[tableIdx].val;
+            }else{
+                // It's not same with colorTable's one, so it would try to compare how difference between rgb array's one and color table's one.
+                let diff = (new colorDiff()).setRgbColor(rgbArray[rgbIdx],colorTable[tableIdx]).convertRgbToLab().getDiff();;
+                if(diff < closest.val){
+                    closest.val = diff;
+                    closest.rgb = colorTable[tableIdx];
+                    closest.tableIdx = tableIdx;
+                }
+
+                // try to compare next colorTable's one if there are data remained to colorTable
+                if(tableIdx < colorTable.length){
+                    res = compareRgb(rgbIdx, tableIdx+1);
+                }
+                // try to compare next rgb array's one if there are data remained to rgbArray
+                if(res === -1 && tableIdx === 0 && rgbIdx < rgbArray.length){
+                    res = compareRgb(rgbIdx+1, tableIdx);
+                }
+
+                return res;
+            }
+        }
+
+
+        let matchedVal = compareRgb(0, 0);  // worst cast it would run rgbArray * colorTable count. approximately 49 * 679 = 33271
+        log.debug(`KAQ ModelImg > call of recursive function count = ${countFnCall}`);
+        if(matchedVal === -1){
+            log.info(`KAQ ModelImg > There is no matched value to colorTable, closest val=${JSON.stringify(closest)}`);
+            return (closest.val < 2.6)? closest.rgb.val:-1; // if color diff is lower than 2.6, it can not be recognized by human.
+        }
+
+        return matchedVal;
+    }
+
+    /**
+     *
+     * @param lat
+     * @param lon
+     * @param type
+     * @param aqiUnit
+     * @param callback
+     * @returns {*}
+     */
+    getDustInfo(lat, lon, type, aqiUnit, callback){
+        if(this._getPixelsInfo(type) === undefined){
+            return callback(new Error('KAQ Modelimg > 1. There is no image information : ' + type));
+        }
+        if(!this._isValidGeocode(lat, lon)){
+            return callback(new Error('KAQ Modelimg > 2. Invalid geocode :' + lat + ',' + lon));
+        }
+        if(this._getColorTable(type) === undefined){
+            return callback(new Error('KAQ Modelimg > 3. Invalid color grade table :' + lat + ',' + lon));
+        }
+        let XY = this._getXY(lat, lon, type);
+        if(!this._isValidPos(XY.x, XY.y)){
+            return callback(new Error('KAQ Modelimg > 4. Invalid X, Y : ' + XY.x + ',' + XY.y + ',' + type));
+        }
+
+        let forecast = [];
+        let locationArray = this._getLocationArray(XY);
+        let forecastDate = new Date(this._getPixelsInfo(type).pubDate);
+        forecastDate.setHours(forecastDate.getHours()-21);//이미지의 시작 시간은 발표시간 20시간전부터임. TW-184. 한시간을 더 빼서, 한시간씩 증가시키면서 기록함.
+
+        // Try to search dust value from all image of animation gif. usually it has 137 images.
+        for(let idx = 0 ; idx < this._getPixelsInfo(type).data.image_count ; idx++){
+            let item = {};
+
+            // To get array of rgb matched with lat, lon from image.
+            // usually it'll take 49 rgb datas(7 * 7) which is not exactly same to geocode due to black/gray color on the map.
+            let rgbArray = this._getRgbArray(this._getPixelsInfo(type), idx, locationArray);
+            // To get value of colorTable matched rgb
+            let matchedVal = this._findMatchedVal(rgbArray, this.colorTable[type]);
+
+            forecastDate.setHours(forecastDate.getHours()+1);
+            item.date = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(forecastDate);
+            if (matchedVal !== -1) {
+                item.val = matchedVal;
+                item.grade = AqiConverter.value2grade(aqiUnit, type.toLowerCase(), matchedVal);
+            }
+
+            forecast.push(item);
+        }
+        log.debug('KAQ ModelImg > result = ', JSON.stringify(forecast));
+
+        if(callback){
+            callback(null, {pubDate: this.imagePixels[type].pubDate, hourly: forecast});
+        }
+
+        return forecast;
     }
 
     /**
@@ -75,35 +305,12 @@ class KaqDustImageController{
      *
      * @param lat
      * @param lon
-     * @returns {boolean}
-     * @private
-     */
-    _isValidGeocode(lat, lon){
-        if(lat > this.coordinate.top_left.lat) return false;
-        if(lat < this.coordinate.bottom_left.lat) return false;
-        if(lon < this.coordinate.top_left.lon) return false;
-        if(lon > this.coordinate.top_right.lon) return false;
-        return true;
-    }
-
-    _isValidPos(x,y){
-        if(x < ModelimgInfo.pixel_pos.left) return false;
-        if(x > ModelimgInfo.pixel_pos.right) return false;
-        if(y < ModelimgInfo.pixel_pos.top) return false;
-        if(y > ModelimgInfo.pixel_pos.bottom) return false;
-        return true;
-    }
-
-    /**
-     *
-     * @param lat
-     * @param lon
      * @param type
      * @param aqiUnit
      * @param callback
      * @returns {*}
      */
-    getDustInfo(lat, lon, type, aqiUnit, callback){
+    getDustInfo_old(lat, lon, type, aqiUnit, callback){
         if(this.imagePixels[type] === undefined){
             return callback(new Error('KAQ Modelimg > 1. There is no image information : ' + type));
         }
@@ -136,7 +343,7 @@ class KaqDustImageController{
         log.info('KAQ Modelimg > x: ', x, 'y: ',y);
 
         if(!this._isValidPos(x, y)){
-            return callback(new Error('KAQ Modelimg > 4. Invalid X, Y : ', x, y));
+            return callback(new Error('KAQ Modelimg > 4. Invalid X, Y : ' + x + ',' + y));
         }
 
         var result = [];

@@ -330,10 +330,13 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                     let query = {stationName: stationName, mapCase: mapCase, date: {$gt: date}};
                     // let query = {stationName: stationName, mapCase: mapCase};
                     this.collection.find(query)
+                        .batchSize(30)
                         .lean()
                         .sort({date:1})
                         .exec(function (err, results) {
                             if (err) {
+                                err.message = err.message || '';
+                                err.message += ' query:'+JSON.stringify(query);
                                 log.warn(err);
                                 return callback(null, !err);
                             }

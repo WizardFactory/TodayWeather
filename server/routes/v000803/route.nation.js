@@ -78,13 +78,18 @@ function getSidoArpltn(req, res, next) {
     KecoCtrl.getSidoArpltn(function (err, arpltnList) {
         if (err) {
             log.error(err);
-            return next();
+            return next(err);
         }
 
-        arpltnList.forEach(function (arpltn) {
-            KecoCtrl.recalculateValue(arpltn, airUnit);
-        });
-        req.air = arpltnList;
+        try {
+            arpltnList.forEach(function (arpltn) {
+                KecoCtrl.recalculateValue(arpltn, airUnit);
+            });
+            req.air = arpltnList;
+        }
+        catch (err) {
+           return next(err);
+        }
         next();
     });
 }

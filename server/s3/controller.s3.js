@@ -41,7 +41,7 @@ class ControllerS3 {
 
     uploadData(body, s3Path) {
         let key = s3Path;
-        console.info({s3Path: s3Path});
+        log.info({s3Path: s3Path});
 
         let self = this;
 
@@ -65,7 +65,7 @@ class ControllerS3 {
 
     upload(url, s3Path) {
         let key = s3Path;
-        console.info({url:url, s3Path: s3Path});
+        log.info({url:url, s3Path: s3Path});
 
         let self = this;
 

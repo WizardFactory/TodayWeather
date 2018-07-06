@@ -171,10 +171,11 @@ function ControllerTown() {
                                         log.error('GaD> Unknown type of data : ', item.name);
                                     }
 
+                                    //특정 데이터를 못 가지고 와도 계속 진행시키고, 뒷단 개별로 받는 곳에서 에러가 나면 error 처리 TW-277
                                     fnGetDataFromDb(item.db, coord, undefined, function (err, data) {
                                         if (err) {
-                                            log.error(new Error('GaD> error to get data : ' + err.message + ' name=' + item.name));
-                                            return cb(err);
+                                            log.warn('GaD> error to get data : ' + err.message + ' name=' + item.name);
+                                            return cb(null);
                                         }
                                         req[item.name] = data;
                                         log.info('T DATA[' + item.name + '] sID=', req.sessionID);
@@ -184,8 +185,8 @@ function ControllerTown() {
                                 }else {
                                     self._getTownDataFromDB(item.db, coord, undefined, function (err, data) {
                                         if (err) {
-                                            log.error(new Error('GaD> error to get data : ' + err.message + ' name=' + item.name));
-                                            return cb(err);
+                                            log.warn('GaD> error to get data : ' + err.message + ' name=' + item.name);
+                                            return cb(null);
                                         }
                                         req[item.name] = data;
                                         log.info('T DATA[' + item.name + '] sID=', req.sessionID);
@@ -1180,19 +1181,26 @@ function ControllerTown() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
+        meta.sID = req.sessionID;
         meta.method = 'mergeCurrentByStnHourly';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
             controllerKmaStnWeather.getCityHourlyList(townInfo,  function (err, stnWeatherInfo) {
-                if (stnWeatherInfo == undefined) {
-                    log.error("Fail to find stnWeatherInfo");
-                    next();
-                    return;
+                if (err) {
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
+                    return next();
                 }
+
+                if (stnWeatherInfo == undefined) {
+                    log.error("Fail to find stnWeatherInfo", meta);
+                    return next();
+                }
+
                 var hourlyList = stnWeatherInfo;
                 req.currentList.forEach(function (current) {
                     if (current.t1h != -50) {
@@ -2012,7 +2020,7 @@ function ControllerTown() {
             ],
             function(err) {
                 if (err) {
-                    err.message += meta.toString();
+                    err.message += ' ' + JSON.stringify(meta);
                     log.error(err);
                 }
                 next();
@@ -2326,6 +2334,8 @@ function ControllerTown() {
 
                     LifeIndexKmaController.appendData2(areaInfo.areaNo, req.midData.dailyData, function (err, result) {
                         if (err) {
+                            err.message = err.message || '';
+                            err.message += ' areaNo:'+ areaInfo.areaNo + ' at ' + meta.method;
                             log.warn(err);
                             return callback(null, null);
                         }
@@ -2384,8 +2394,9 @@ function ControllerTown() {
                     //get lifeindex by near area no
                     LifeIndexKmaController.appendData2(areaInfo.areaNo, req.midData.dailyData, function (err, result) {
                         if (err) {
-                            log.warn(err);
-                            return callback(null, null);
+                            err.message = err.message || '';
+                            err.message += ' areaNo:'+ areaInfo.areaNo + ' at ' + meta.method;
+                            return callback(err, null);
                         }
                         callback(err, result);
                     });
@@ -2393,7 +2404,7 @@ function ControllerTown() {
             ],
             function(err, result) {
                 if (err && err !== 'skip') {
-                    log.error(err);
+                    log.warn(err);
                 }
                 if (result) {
                     //add lifeIndex to current
@@ -2903,6 +2914,12 @@ function ControllerTown() {
      * @param next
      */
     this.insertIndex = function (req, res, next) {
+        var meta = {};
+        meta.method = 'insert kma index';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info('>sID=',req.sessionID, meta);
 
         if (req.current) {
             if (req.current.t1h != undefined) {

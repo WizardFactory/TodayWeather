@@ -218,16 +218,6 @@ function CollectData(options, callback){
     });
 
     //log.info('The list was created for the weather data');
-
-    var domain = NEWSKY2_KMA_GO_DOMAIN;
-    dnscache.lookup(domain, function(err, result) {
-        if (err) {
-            console.error(err);
-        }
-        else {
-            console.info('collecttown cached domain:', domain, ', result:', result);
-        }
-    });
     return self;
 }
 
