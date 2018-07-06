@@ -153,7 +153,6 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
                 } else {
                     err = new Error('KMA Town M> ~> what is it???'+JSON.stringify(result[0].data));
                     log.error(err);
-                    log.error(meta);
                     callback(err);
                     return [];
                 }

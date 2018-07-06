@@ -1252,7 +1252,7 @@ KmaScraper.prototype._updateRnsHitRate = function(stnInfo, callback) {
                 log.info('Update stnId='+stnInfo.stnId+" rnsHit="+stnInfo.rnsHit+" rnsCount="+stnInfo.rnsCount);
                 stnInfo.save(function (err) {
                     if (err) {
-                        log.error (err);
+                        log.error(err);
                     }
                 });
 

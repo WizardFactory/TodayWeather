@@ -20,9 +20,10 @@ var kmaTimeLib = require('../lib/kmaTimeLib');
 
 //var config = require('../config/config');
 
-//var DOMAIN_KMA_INDEX_SERVICE = "http://openapi.kma.go.kr";
 var DOMAIN_KMA_INDEX_SERVICE = "http://203.247.66.146";
 var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
+// var DOMAIN_KMA_INDEX_SERVICE = "http://newsky2.kma.go.kr";
+// var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService3";
 
 /**
  * fsn 식중독지수, rot 부패지수, Sensorytem 체감온도, Frostbite 동상가능 지수, Heat 열, Dspls 불쾌
