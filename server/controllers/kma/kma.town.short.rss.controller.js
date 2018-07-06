@@ -516,7 +516,8 @@ TownRss.prototype.getShortRssFromDB = function(model, coord, req, callback) {
             return callback(errorNo, req['modelShortRss']);
         }
 
-        modelKmaTownShortRss.find({'mCoord.mx': coord.mx, 'mCoord.my': coord.my}, {_id: 0}).sort({"fcsDate":1}).lean().exec(function(err, result){
+        var query = {'mCoord.mx': coord.mx, 'mCoord.my': coord.my};
+        modelKmaTownShortRss.find(query, {_id: 0}).sort({"fcsDate":1}).batchSize(30).lean().exec(function(err, result){
             if(err){
                 log.info('KMA Town S-RSS> Fail to file&get short data from DB');
                 log.warn('KMA Town S-RSS> Fail to file&get short data from DB');
