@@ -74,7 +74,7 @@ kasiRiseSet._checkDataValid = function (result) {
             err = new Error(result.response.header.resultMsg);
         }
         else {
-            log.error(result);
+            log.error({func:'_checkDataValid', result: result});
             err = new Error("header is invalid");
             err.code = 100;
         }
