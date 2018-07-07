@@ -48,16 +48,6 @@ function Keco() {
     this._currentRltmIndex = 0;
     this._currentSidoIndex = 0;
     this._daumApiKeys = '';  //for convert x,y
-
-    var domain = AIRKOREA_DOMAIN;
-    dnscache.lookup(domain, function(err, result) {
-        if (err) {
-            console.error(err);
-        }
-        else {
-            console.info('keco cached domain:', domain, ', result:', result);
-        }
-    });
 }
 
 /**

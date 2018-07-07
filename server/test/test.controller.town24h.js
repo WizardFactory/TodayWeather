@@ -214,6 +214,7 @@ describe('unit test - controller town 24h', function() {
                 "civile":"2017.12.21 17:46","nautm":"2017.12.21 06:40","naute":"2017.12.21 18:19",
                 "astm":"2017.12.21 06:08","aste":"2017.12.21 18:51","fsnStr":"주의","wsdGrade":1,"wsdStr":"바람약함",
                 "skyIcon":"SunSmallCloud","skyAmIcon":"SunSmallCloud","skyPmIcon":"Sun"}];
+        req.params = {region:"서울특별시", city:"", town:""};
 
         cTown24h.convertUnits(req, null, function () {
            //console.info(JSON.stringify({req:req}));

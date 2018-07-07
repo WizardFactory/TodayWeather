@@ -122,18 +122,20 @@ function ControllerTown() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
+        meta.sID = req.sessionID;
         meta.method = 'get AllDataFromDb';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
 
         log.info('## + ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         try{
             self._getCoord(regionName, cityName, townName, function(err, coord, gCoord) {
                 if (err) {
-                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
                     return next();
                 }
 
@@ -152,149 +154,149 @@ function ControllerTown() {
                 }
 
                 async.parallel([
-                    function(callback){
-                        // get town weather
-                        async.mapSeries(townArray,
-                            function(item, cb){
-                                var Db20Collections = ['modelCurrent', 'modelShort', 'modelShortRss', 'modelShortest'];
-                                if(config.db.version === '2.0' && Db20Collections.indexOf(item.name) != -1){
-                                    var fnGetDataFromDb = function(){};
-                                    if(item.name == 'modelCurrent'){
-                                        fnGetDataFromDb = kmaTownCurrent.getCurrentFromDB;
-                                    }else if(item.name == 'modelShort'){
-                                        fnGetDataFromDb = kmaTownShort.getShortFromDB;
-                                    }else if(item.name == 'modelShortRss'){
-                                        fnGetDataFromDb = kmaTownShortRss.getShortRssFromDB;
-                                    }else if(item.name == 'modelShortest'){
-                                        fnGetDataFromDb = kmaTownShortest.getShortestFromDB;
-                                    }else{
-                                        log.error('GaD> Unknown type of data : ', item.name);
-                                    }
+                        function(callback){
+                            // get town weather
+                            async.mapSeries(townArray,
+                                function(item, cb){
+                                    var Db20Collections = ['modelCurrent', 'modelShort', 'modelShortRss', 'modelShortest'];
+                                    if(config.db.version === '2.0' && Db20Collections.indexOf(item.name) != -1){
+                                        var fnGetDataFromDb = function(){};
+                                        if(item.name == 'modelCurrent'){
+                                            fnGetDataFromDb = kmaTownCurrent.getCurrentFromDB;
+                                        }else if(item.name == 'modelShort'){
+                                            fnGetDataFromDb = kmaTownShort.getShortFromDB;
+                                        }else if(item.name == 'modelShortRss'){
+                                            fnGetDataFromDb = kmaTownShortRss.getShortRssFromDB;
+                                        }else if(item.name == 'modelShortest'){
+                                            fnGetDataFromDb = kmaTownShortest.getShortestFromDB;
+                                        }else {
+                                            fnGetDataFromDb = function(modelCurrent, coord, req, callback) {
+                                                callback(new Error('unknown type of data : '+ item.name));
+                                            };
+                                        }
 
-                                    //특정 데이터를 못 가지고 와도 계속 진행시키고, 뒷단 개별로 받는 곳에서 에러가 나면 error 처리 TW-277
-                                    fnGetDataFromDb(item.db, coord, undefined, function (err, data) {
-                                        if (err) {
-                                            log.warn('GaD> error to get data : ' + err.message + ' name=' + item.name);
-                                            return cb(null);
-                                        }
-                                        req[item.name] = data;
-                                        log.info('T DATA[' + item.name + '] sID=', req.sessionID);
-                                        log.silly('T DATA[' + item.name + '] : ', req[item.name]);
-                                        cb(null);
-                                    });
-                                }else {
-                                    self._getTownDataFromDB(item.db, coord, undefined, function (err, data) {
-                                        if (err) {
-                                            log.warn('GaD> error to get data : ' + err.message + ' name=' + item.name);
-                                            return cb(null);
-                                        }
-                                        req[item.name] = data;
-                                        log.info('T DATA[' + item.name + '] sID=', req.sessionID);
-                                        log.silly('T DATA[' + item.name + '] : ', req[item.name]);
-                                        cb(null);
-                                    });
-                                }
-                            },
-                            function(err){
-                                if(err){
-                                    log.error(new Error('Gad> something is wrong on the townWeather'));
-                                    return callback(err);
-                                }
-                                callback(null);
-                            }
-                        );
-                    },
-                    function(callback) {
-                        // get mid weather
-                        manager.getRegIdByTown(regionName, cityName, function (err, code) {
-                            if (err) {
-                                log.error(new Error('GaD> error to get pointnumber : ' + err.message));
-                                return callback(err);
-                            }
-
-                            log.silly('point number : ', code);
-                            async.mapSeries(midArray,
-                                function (item, cb) {
-                                    var parm;
-                                    if(item.db === modelMidForecast){
-                                        parm = code.pointNumber;
+                                        //특정 데이터를 못 가지고 와도 계속 진행시키고, 뒷단 개별로 받는 곳에서 에러가 나면 error 처리 TW-277
+                                        fnGetDataFromDb(item.db, coord, undefined, function (err, data) {
+                                            if (err) {
+                                                log.warn('GaD> error to get data : ' + err.message + ' name=' + item.name);
+                                                return cb(null);
+                                            }
+                                            req[item.name] = data;
+                                            log.info('T DATA[' + item.name + '] sID=', req.sessionID);
+                                            log.silly('T DATA[' + item.name + '] : ', req[item.name]);
+                                            cb(null);
+                                        });
+                                    }else {
+                                        self._getTownDataFromDB(item.db, coord, undefined, function (err, data) {
+                                            if (err) {
+                                                log.warn('GaD> error to get data : ' + err.message + ' name=' + item.name);
+                                                return cb(null);
+                                            }
+                                            req[item.name] = data;
+                                            log.info('T DATA[' + item.name + '] sID=', req.sessionID);
+                                            log.silly('T DATA[' + item.name + '] : ', req[item.name]);
+                                            cb(null);
+                                        });
                                     }
-                                    else if(item.db === modelMidLand){
-                                        var areaCode = code.cityCode.slice(0, 3);
-                                        if(areaCode === '11B'){
-                                            areaCode = '11B00000';
-                                        }
-                                        else if(areaCode === '21F'){
-                                            areaCode = '11F10000';
-                                        }
-                                        else{
-                                            areaCode = code.cityCode.slice(0, 4) + '0000';
-                                        }
-                                        parm = areaCode;
-                                    }
-                                    else if(item.db === modelMidTemp) {
-                                        parm = code.cityCode;
-                                        self._findForecastZoneByName(regionName, cityName,
-                                            function (err, result) {
-                                                if (err) {
-                                                    log.error(err);
-                                                }
-                                                else {
-                                                    req['regId'] = parm = result;
-                                                    log.info('M DATA[' + item.name + '] KmaForecastZoneId=',result, 'sID=',req.sessionID);
-                                                }
-
-                                                self._getMidDataFromDB(item.db, parm, undefined,
-                                                    function (err, midData) {
-                                                        if (err) {
-                                                            log.error(new Error('GaD> error to get midData : '+ err.message));
-                                                            return cb(err);
-                                                        }
-                                                        req[item.name] = midData;
-                                                        log.info('M DATA[' + item.name + '] sID=',req.sessionID);
-                                                        log.silly('M DATA[' + item.name + '] : ', req[item.name]);
-                                                        cb(null);
-                                                    });
-                                            });
-                                        return;
-                                    }
-                                    else {
-                                        parm = code.cityCode
-                                    }
-
-                                    self._getMidDataFromDB(item.db, parm, undefined, function (err, midData) {
-                                        if (err) {
-                                            log.error(new Error('GaD> error to get midData : '+ err.message));
-                                            return cb(err);
-                                        }
-                                        req[item.name] = midData;
-                                        log.info('M DATA[' + item.name + '] sID=',req.sessionID);
-                                        log.silly('M DATA[' + item.name + '] : ', req[item.name]);
-                                        cb(null);
-                                    });
                                 },
-                                function (err) {
-                                    if (err) {
-                                        log.error(new Error('Gad> something is wrong on the Mid : ' + err.message));
+                                function(err){
+                                    if(err){
                                         return callback(err);
                                     }
                                     callback(null);
                                 }
                             );
-                        });
-                    }
+                        },
+                        function(callback) {
+                            // get mid weather
+                            manager.getRegIdByTown(regionName, cityName, function (err, code) {
+                                if (err) {
+                                    return callback(err);
+                                }
+
+                                log.silly('point number : ', code);
+                                async.mapSeries(midArray,
+                                    function (item, cb) {
+                                        var parm;
+                                        if(item.db === modelMidForecast){
+                                            parm = code.pointNumber;
+                                        }
+                                        else if(item.db === modelMidLand){
+                                            var areaCode = code.cityCode.slice(0, 3);
+                                            if(areaCode === '11B'){
+                                                areaCode = '11B00000';
+                                            }
+                                            else if(areaCode === '21F'){
+                                                areaCode = '11F10000';
+                                            }
+                                            else{
+                                                areaCode = code.cityCode.slice(0, 4) + '0000';
+                                            }
+                                            parm = areaCode;
+                                        }
+                                        else if(item.db === modelMidTemp) {
+                                            parm = code.cityCode;
+                                            self._findForecastZoneByName(regionName, cityName,
+                                                function (err, result) {
+                                                    if (err) {
+                                                        err.message += ' ' + JSON.stringify(meta);
+                                                        log.error(err);
+                                                    }
+                                                    else {
+                                                        req['regId'] = parm = result;
+                                                        log.info('M DATA[' + item.name + '] KmaForecastZoneId=',result, 'sID=',req.sessionID);
+                                                    }
+
+                                                    self._getMidDataFromDB(item.db, parm, undefined,
+                                                        function (err, midData) {
+                                                            if (err) {
+                                                                return cb(err);
+                                                            }
+                                                            req[item.name] = midData;
+                                                            log.info('M DATA[' + item.name + '] sID=',req.sessionID);
+                                                            log.silly('M DATA[' + item.name + '] : ', req[item.name]);
+                                                            cb(null);
+                                                        });
+                                                });
+                                            return;
+                                        }
+                                        else {
+                                            parm = code.cityCode
+                                        }
+
+                                        self._getMidDataFromDB(item.db, parm, undefined, function (err, midData) {
+                                            if (err) {
+                                                return cb(err);
+                                            }
+                                            req[item.name] = midData;
+                                            log.info('M DATA[' + item.name + '] sID=',req.sessionID);
+                                            log.silly('M DATA[' + item.name + '] : ', req[item.name]);
+                                            cb(null);
+                                        });
+                                    },
+                                    function (err) {
+                                        if (err) {
+                                            return callback(err);
+                                        }
+                                        callback(null);
+                                    }
+                                );
+                            });
+                        }
                     ],
                     function(err){
-                        if(err){
-                            log.error(new Error('Gad> something is wrong to get weather data : ' + err.message));
+                        if(err) {
+                            err.message += ' ' + JSON.stringify(meta);
+                            log.error(err);
                         }
                         log.info('>sID=',req.sessionID, 'go next');
                         next();
                     }
                 );
             });
-        }catch(e){
-            log.error('ERROR>>', meta);
+        }
+        catch (e) {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
             next();
         }
@@ -314,8 +316,7 @@ function ControllerTown() {
         req(url+apiName, {json: true}, function(err, response, body) {
             log.info('Finished '+apiName+' '+new Date());
             if (err) {
-                log.error(err);
-                return callback();
+                return callback(err);
             }
             if (response.statusCode >= 400) {
                 err = new Error("api="+apiName+" statusCode="+response.statusCode);
@@ -403,11 +404,12 @@ function ControllerTown() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
+        meta.sID = req.sessionID;
         meta.method = 'getShort';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         try{
             /*
@@ -418,7 +420,8 @@ function ControllerTown() {
 
             self._getCoord(regionName, cityName, townName, function(err, coord){
                 if (err) {
-                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
                     return next();
                 }
                 log.silly('S> coord : ',coord);
@@ -429,7 +432,8 @@ function ControllerTown() {
                 }
                 getShortDataFromDb(modelShort, coord, req, function(err, shortInfo){
                     if (err) {
-                        log.error(new Error('error to get short '+ err.message));
+                        err.message += ' ' + JSON.stringify(meta);
+                        log.error(err);
                         return next();
                     }
 
@@ -445,8 +449,9 @@ function ControllerTown() {
                     next();
                 });
             });
-        } catch(e){
-            log.error('ERROR>>', meta);
+        }
+        catch (e) {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
             next();
         }
@@ -464,15 +469,17 @@ function ControllerTown() {
         var townName = req.params.town;
 
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'getShortRss';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         self._getCoord(regionName, cityName, townName, function(err, coord) {
             if(err) {
-                log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                err.message += ' ' + JSON.stringify(meta);
+                log.error(err);
                 return next();
             }
 
@@ -488,12 +495,13 @@ function ControllerTown() {
             // modelShortRss에서 coord에 해당하는 날씨 데이터를 가져온다.
             getShortrssDataFromDb(modelShortRss, coord, req, function(err, shortRssInfo) {
                 if(err) {
-                    log.error(new Error('error to get short RSS '+ err.message));
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
                     return next();
                 }
 
                 if (parseInt(shortRssInfo.pubDate) < parseInt(req.shortPubDate)) {
-                    log.warn('short rss was updated yet!! rss pubDate=', shortRssInfo.pubDate);
+                    log.warn('short rss was updated yet!! rss pubDate=', shortRssInfo.pubDate, meta);
                     return next();
                 }
 
@@ -601,16 +609,18 @@ function ControllerTown() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
+        meta.sID = req.sessionID;
         meta.method = 'getShortest';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         try{
             self._getCoord(regionName, cityName, townName, function(err, coord){
                 if (err) {
-                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
                     return next();
                 }
                 var getShortestDataFromDb = self._getTownDataFromDB;
@@ -619,7 +629,8 @@ function ControllerTown() {
                 }
                 getShortestDataFromDb(modelShortest, coord, req, function(err, shortestInfo){
                     if (err) {
-                        log.error(new Error('error to get shortest '+ err.message));
+                        err.message += ' ' + JSON.stringify(meta);
+                        log.error(err);
                         return next();
                     }
 
@@ -639,8 +650,9 @@ function ControllerTown() {
                     next();
                 });
             });
-        } catch(e){
-            log.error('ERROR >>', meta);
+        }
+        catch (e) {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
             next();
         }
@@ -662,16 +674,18 @@ function ControllerTown() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
+        meta.sID = req.sessionID;
         meta.method = 'getCurrent';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         try{
             self._getCoord(regionName, cityName, townName, function(err, coord) {
                 if (err) {
-                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
                     return next();
                 }
 
@@ -684,7 +698,8 @@ function ControllerTown() {
 
                 getTownCurrentFromDb(modelCurrent, coord, req, function(err, currentInfo) {
                     if (err) {
-                        log.error(new Error('error to get current ' + err.message));
+                        err.message += ' ' + JSON.stringify(meta);
+                        log.error(err);
                         return next();
                     }
 
@@ -794,8 +809,9 @@ function ControllerTown() {
                     next();
                 });
             });
-        } catch(e){
-            log.error('ERROR>>', meta);
+        }
+        catch (e) {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
             next();
         }
@@ -848,14 +864,22 @@ function ControllerTown() {
      * @returns {*}
      */
     this.mergeShortWithCurrentList = function (req, res, next) {
+        var meta = {};
+        meta.sID = req.sessionID;
+        meta.method = 'mergeShortWithCurrentList';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info(meta);
 
         if (req.currentList == undefined || req.short == undefined) {
-            log.error("You have to need current list and short");
+            log.error("You have to need current list and short", meta);
             return next();
         }
 
         self._mergeShortWithCurrent(req.short, req.currentList, function(err, resultShortList) {
             if (err) {
+                err.message += ' ' + JSON.stringify(meta);
                 log.error(err);
                 return next();
             }
@@ -1181,19 +1205,26 @@ function ControllerTown() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
+        meta.sID = req.sessionID;
         meta.method = 'mergeCurrentByStnHourly';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
             controllerKmaStnWeather.getCityHourlyList(townInfo,  function (err, stnWeatherInfo) {
-                if (stnWeatherInfo == undefined) {
-                    log.error("Fail to find stnWeatherInfo");
-                    next();
-                    return;
+                if (err) {
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
+                    return next();
                 }
+
+                if (stnWeatherInfo == undefined) {
+                    log.error("Fail to find stnWeatherInfo", meta);
+                    return next();
+                }
+
                 var hourlyList = stnWeatherInfo;
                 req.currentList.forEach(function (current) {
                     if (current.t1h != -50) {
@@ -1259,11 +1290,12 @@ function ControllerTown() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
+        meta.sID = req.sessionID;
         meta.method = 'mergeCurrentByShortest';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         var currentTime = self._getCurrentTimeValue(9);
 
@@ -1277,7 +1309,8 @@ function ControllerTown() {
         else {
             self._getCoord(regionName, cityName, townName, function(err, coord){
                 if (err) {
-                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
                     return next();
                 }
                 var getShortestDataFromDb = self._getTownDataFromDB;
@@ -1286,7 +1319,8 @@ function ControllerTown() {
                 }
                 getShortestDataFromDb(modelShortest, coord, req, function(err, shortestInfo) {
                     if (err) {
-                        log.error(new Error('error to get shortest for merge' + err.message));
+                        err.message += ' ' + JSON.stringify(meta);
+                        log.error(err);
                         return next();
                     }
 
@@ -1455,11 +1489,12 @@ function ControllerTown() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
+        meta.sID = req.sessionID;
         meta.method = 'mergeByShortest';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         var currentTime = self._getCurrentTimeValue(9);
 
@@ -1471,7 +1506,8 @@ function ControllerTown() {
 
             self._getCoord(regionName, cityName, townName, function(err, coord){
                 if (err) {
-                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
                     return next();
                 }
                 var getShortestDataFromDb = self._getTownDataFromDB;
@@ -1480,7 +1516,8 @@ function ControllerTown() {
                 }
                 getShortestDataFromDb(modelShortest, coord, req, function(err, shortestInfo) {
                     if (err) {
-                        log.error(new Error('error to get shortest for merge'+err.message));
+                        err.message += ' ' + JSON.stringify(meta);
+                        log.error(err);
                         return next();
                     }
 
@@ -1509,11 +1546,12 @@ function ControllerTown() {
      */
     this.getKmaStnHourlyWeather = function (req, res, next) {
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'getKmaStnHourlyWeather';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         if (!req.current)  {
             req.current={};
@@ -1525,6 +1563,7 @@ function ControllerTown() {
         try {
             self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
                 if (err) {
+                    err.message += ' ' + JSON.stringify(meta);
                     log.error(err);
                     next();
                     return;
@@ -1538,6 +1577,7 @@ function ControllerTown() {
                 log.info(date+time, meta);
                 controllerKmaStnWeather.getStnHourly(townInfo, date+time, req.current.t1h, function (err, stnWeatherInfo) {
                     if (err) {
+                        err.message += ' ' + JSON.stringify(meta);
                         log.error(err);
                         next();
                         return;
@@ -1592,6 +1632,7 @@ function ControllerTown() {
         }
         catch(e) {
             if (e) {
+                e.message += ' ' + JSON.stringify(meta);
                 log.warn(e);
             }
             next();
@@ -1636,11 +1677,12 @@ function ControllerTown() {
      */
     this.getKmaStnMinuteWeather = function (req, res, next) {
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'getKmaStnMinuteWeather';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         if (!req.current)  {
             req.current={};
@@ -1651,6 +1693,7 @@ function ControllerTown() {
 
         self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
             if (err) {
+                err.message += ' ' + JSON.stringify(meta);
                 log.error(err);
                 next();
                 return;
@@ -1669,6 +1712,7 @@ function ControllerTown() {
 
             controllerKmaStnWeather.getStnHourlyAndMinRns(townInfo, date+time, reqCurrent, function (err, stnWeatherInfo) {
                 if (err) {
+                    err.message += ' ' + JSON.stringify(meta);
                     log.error(err);
                     next();
                     return;
@@ -1749,6 +1793,7 @@ function ControllerTown() {
                     log.info('>sID=', req.sessionID, 'reqCurrent:', JSON.stringify(reqCurrent));
                 }
                 catch(err) {
+                    err.message += ' ' + JSON.stringify(meta);
                     log.error(err);
                 }
                 next();
@@ -1859,10 +1904,11 @@ function ControllerTown() {
         var cityName = req.params.city;
 
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'getMidRss';
         meta.region = regionName;
         meta.city = cityName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         if (!req.hasOwnProperty('midData')) {
             req.midData = {};
@@ -1874,13 +1920,15 @@ function ControllerTown() {
         try {
             manager.getRegIdByTown(regionName, cityName, function(err, code) {
                 if (err) {
-                    log.error(new Error("Fail to get mid RSS "+ err.message));
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
                     return next();
                 }
 
                 var midRssKmaController = require('./kma/kma.town.mid.rss.controller');
                 midRssKmaController.overwriteData(req.midData, code.cityCode, function (err) {
                     if (err) {
+                        err.message += ' ' + JSON.stringify(meta);
                         log.error(err);
                     }
                     next();
@@ -1888,6 +1936,7 @@ function ControllerTown() {
             });
         }
         catch(e) {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
             next();
         }
@@ -1908,10 +1957,11 @@ function ControllerTown() {
         var regionName = req.params.region;
         var cityName = req.params.city;
 
+        meta.sID = req.sessionID;
         meta.method = 'getMid';
         meta.region = regionName;
         meta.city = cityName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         async.waterfall(
             [
@@ -1965,6 +2015,7 @@ function ControllerTown() {
                     self._findForecastZoneByName(regionName, cityName,
                         function (err, result) {
                             if (err) {
+                                err.message += ' ' + JSON.stringify(meta);
                                 log.error(err);
                             }
                             else {
@@ -1976,9 +2027,7 @@ function ControllerTown() {
                 function (regInfo, callback) {
                     self._getMidDataFromDB(modelMidTemp, regInfo.code.cityCode, req, function (err, tempInfo) {
                         if (err) {
-                            log.error('RM> no temp data ' + err.message + ' cityCode:'+ regInfo.code.cityCode);
-                            log.error(meta);
-                            return next();
+                            return callback(err);
                         }
                         regInfo.tempInfo = tempInfo;
                         callback(err, regInfo);
@@ -1990,12 +2039,12 @@ function ControllerTown() {
 
                     if(config.db.version == '2.0'){
                         if (landInfo.pubDate.getTime() != tempInfo.pubDate.getTime()) {
-                            log.error('RM> publishing date of land and temp are different');
+                            log.error('RM> publishing date of land and temp are different', meta);
                         }
                     }
                     else{
                         if (landInfo.pubDate != tempInfo.pubDate) {
-                            log.error('RM> publishing date of land and temp are different');
+                            log.error('RM> publishing date of land and temp are different', meta);
                         }
                     }
 
@@ -2184,16 +2233,18 @@ function ControllerTown() {
      * @returns {ControllerTown}
      */
     this.getSummary = function(req, res, next){
+        var meta = {};
+        meta.sID = req.sessionID;
+        meta.method = 'getSummary';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info(meta);
+
         try {
-            var meta = {};
-            meta.method = 'getSummary';
-            meta.region = req.params.region;
-            meta.city = req.params.city;
-            meta.town = req.params.town;
-            log.info('>sID=',req.sessionID, meta);
 
             if (!req.current || !req.currentList)  {
-                log.warn(new Error("Fail to find current weather or current list "+JSON.stringify(meta)));
+                log.warn("Fail to find current weather or current list", meta);
                 next();
                 return this;
             }
@@ -2223,11 +2274,12 @@ function ControllerTown() {
                 req.current.summary = self.makeSummary(req.current, yesterdayItem, req.query, res);
             }
             else {
-                log.error('Fail to gt yesterday weather info');
+                log.error('Fail to gt yesterday weather info', meta);
                 req.current.summary = '';
             }
         }
         catch (err) {
+            err.message += ' ' + JSON.stringify(meta);
             log.error(err);
             req.current.summary = '';
         }
@@ -2278,15 +2330,15 @@ function ControllerTown() {
         //add life index of kma info
 
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'getLifeIndexKma';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         if (!req.short && !req.midData) {
-            var err = new Error("Fail to find short, mid weather");
-            log.error(err);
+            log.error("Fail to find short, mid weather", meta);
             next();
             return this;
         }
@@ -2301,12 +2353,12 @@ function ControllerTown() {
                     };
                     modelAreaNo.find(query).limit(1).lean().exec(function(err, areaList) {
                         if (err) {
+                            err.message += ' ' + JSON.stringify(meta);
                             log.warn(err);
                             return callback(null, null);
                         }
                         if (areaList.length < 1) {
-                            err = new Error('Fail to get area no query:'+JSON.stringify(query));
-                            log.warn(err);
+                            log.warn('Fail to get area no', meta);
                             return callback(null, null);
                         }
                         callback(null, areaList[0]);
@@ -2327,8 +2379,7 @@ function ControllerTown() {
 
                     LifeIndexKmaController.appendData2(areaInfo.areaNo, req.midData.dailyData, function (err, result) {
                         if (err) {
-                            err.message = err.message || '';
-                            err.message += ' areaNo:'+ areaInfo.areaNo + ' at ' + meta.method;
+                            err.message += ' areaNo:'+ areaInfo.areaNo + ' ' + JSON.stringify(meta) ;
                             log.warn(err);
                             return callback(null, null);
                         }
@@ -2397,6 +2448,7 @@ function ControllerTown() {
             ],
             function(err, result) {
                 if (err && err !== 'skip') {
+                    err.message += ' ' + JSON.stringify(meta);
                     log.warn(err);
                 }
                 if (result) {
@@ -2422,28 +2474,31 @@ function ControllerTown() {
 
         var meta = {};
 
+        meta.sID = req.sessionID;
         meta.method = 'getKeco';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
-
-        if (!req.current)  {
-            req.current={};
-            var nowDate = self._getCurrentTimeValue(+9);
-            req.current.time = nowDate.time;
-            req.current.date = nowDate.date;
-        }
+        log.info(meta);
 
         try {
+            if (!req.current)  {
+                req.current={};
+                var nowDate = self._getCurrentTimeValue(+9);
+                req.current.time = nowDate.time;
+                req.current.date = nowDate.date;
+            }
+
             self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
                 if (err) {
+                    err.message += ' ' + JSON.stringify(meta);
                     log.error(err);
                     next();
                     return;
                 }
                 KecoController.getArpLtnInfo(townInfo, new Date(), function (err, arpltnObj) {
                     if (err) {
+                        err.message += ' ' + JSON.stringify(meta);
                         log.error(err);
                     }
                     req.current.arpltn = arpltnObj.arpltn;
@@ -2454,9 +2509,8 @@ function ControllerTown() {
             });
         }
         catch(e) {
-            if (e) {
-                log.warn(e);
-            }
+            e.message += ' ' + JSON.stringify(meta);
+            log.warn(e);
             next();
         }
 
@@ -2465,18 +2519,17 @@ function ControllerTown() {
 
     this.getKecoDustForecast = function (req, res, next) {
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'getKecoDustForecast';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
+        log.info(meta);
 
         if (req.query.airForecastSource !== 'airkorea') {
-            log.info('>sID=',req.sessionID,
-                'skip get keco dust forecast air forecast source='+req.query.airForecastSource, meta);
+            log.info('skip get keco dust forecast air forecast source='+req.query.airForecastSource, meta);
             return next();
         }
-
-        log.info('>sID=',req.sessionID, meta);
 
         if (!req.midData)  {
             var err = new Error("Fail to find midData weather "+JSON.stringify(meta));
@@ -2504,6 +2557,7 @@ function ControllerTown() {
             var date = self._getCurrentTimeValue(+9).date;
             KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, date, function (err, results) {
                 if (err) {
+                    err.message += ' ' + JSON.stringify(meta);
                     log.error(err);
                     next();
                     return;
@@ -2531,11 +2585,12 @@ function ControllerTown() {
      */
     this.getHealthDay = function (req, res, next) {
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'getHealthDay';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         var townName = {
             first: req.params.region? req.params.region:'',
@@ -2547,13 +2602,13 @@ function ControllerTown() {
         async.waterfall([
                 function(cb){
                     if (req.params.areaNo == undefined) {
-                        log.warn('Heath> There is no areaNo, goto finding areaNo');
+                        log.warn('Heath> There is no areaNo, goto finding areaNo', meta);
                         return cb(null);
                     }
 
                     modelHealthDay.find({areaNo:parseInt(req.params.areaNo)}).lean().exec(function(err, res) {
                         if(err || res.length === 0){
-                            log.info('No areaNo from Health DB : ', req.params.areaNo);
+                            log.info('No areaNo from Health DB : ', req.params.areaNo, meta);
                             cb(null);
                             return;
                         }
@@ -2562,7 +2617,7 @@ function ControllerTown() {
                 },
                 function(cb){
                     // find areaNo from areaNo DB
-                    log.info('Try to find areaNo from AreaNoDB', townName);
+                    log.info('Try to find areaNo from AreaNoDB', townName, meta);
 
                     modelAreaNo.find({town:townName}, function(err, areaList){
                         if(err || areaList.length === 0){
@@ -2570,56 +2625,57 @@ function ControllerTown() {
                         }
 
                         var item = areaList[0];
-                        log.info('AreaNo Item : ', item.geo);
+                        log.info('AreaNo Item : ', item.geo, meta);
                         townGeocode = item.geo;
 
-                        log.info('Try to find Health data by AreaNo which comes from AreaNoDB');
+                        log.info('Try to find Health data by AreaNo which comes from AreaNoDB', meta);
 
                         modelHealthDay.find({areaNo:parseInt(item.areaNo)}).lean().exec(function(err, res) {
                             if(err || res.length === 0){
                                 return cb(null);
                             }
-                            log.info('success_byAreaNoDB');
+                            log.info('success_byAreaNoDB', meta);
                             return cb('success_byAreaNoDB', res);
                         });
                     });
                 },
                 function(cb){
-                    log.info('Try to find near AreaNo by geocode');
+                    log.info('Try to find near AreaNo by geocode', meta);
 
                     if(townGeocode.length === 0){
                         if(req.geocode){
                             townGeocode = [req.geocode.lon, req.geocode.lat];
                         }else{
-                            log.error('Health> 1. Cannot find any areaNo data :', townName);
+                            log.error('Health> 1. Cannot find any areaNo data :', townName, meta);
                             return cb('fail to get AreaNo data', undefined);
                         }
                     }
-                    log.info('center geocode : ', townGeocode);
+                    log.info('center geocode : ', townGeocode, meta);
                     // There is no areaNo in the DB
                     modelAreaNo.find({geo: {$near:townGeocode, $maxDistance: 0.3}}).limit(3).lean().exec(function (err, areaNoList) {
                         if(err || areaNoList.length == 0){
-                            log.error('Health> 2. cannot get areaNo near by ', townName, townGeocode, err);
+                            log.error('Health> 2. cannot get areaNo near by ', townName, townGeocode, err, meta);
                             return cb('fail to get areaNo', undefined);
                         }
 
-                        log.info('Get AreaNo which is near by townName');
+                        log.info('Get AreaNo which is near by townName', meta);
                         async.mapSeries(areaNoList,
                             function(areaNo, callback){
                                 log.info('AreaNo : ', areaNo.areaNo);
                                 modelHealthDay.find({areaNo:parseInt(areaNo.areaNo)}).lean().exec(function(err, res) {
                                     if(err || res.length === 0){
-                                        log.warn('Health> cannot fild areaNo near by geocode, goto next : ', townGeocode, areaNo.areaNo);
+                                        log.warn('Health> cannot fild areaNo near by geocode, goto next : ',
+                                            townGeocode, areaNo.areaNo, meta);
                                         return callback(null);
                                     }
-                                    log.info('succes HealthDay : ', res.length, areaNo.areaNo);
+                                    log.info('success HealthDay : ', res.length, areaNo.areaNo, meta);
                                     cb('find by near AreaNo', res);
                                     return callback('success_byNearbyGeocode');
                                 });
                             },
-                            function(err, result){
+                            function(err, result) {
                                 if(!err){
-                                    log.error('Heath> 3. Cannot Find Heath Data');
+                                    log.error('Heath> 3. Cannot Find Heath Data', meta);
                                     return cb('fail to find by near AreaNo', undefined);
                                 }
                             }
@@ -2691,11 +2747,12 @@ function ControllerTown() {
         var townName = req.params.town;
 
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'getPastMid';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         if (!req.hasOwnProperty('midData')) {
             req.midData = {};
@@ -2711,6 +2768,7 @@ function ControllerTown() {
                 self._mergeMidByCurrent(req.midData.dailyData, req.currentList, requestTime);
             }
             catch(e) {
+                e.message += ' ' + JSON.stringify(meta);
                 log.error(e);
             }
             next();
@@ -2718,7 +2776,8 @@ function ControllerTown() {
         else {
             self._getCoord(regionName, cityName, townName, function(err, coord) {
                 if (err) {
-                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                    err.message += ' ' + JSON.stringify(meta);
+                    log.error(err);
                     return next();
                 }
                 var fnGetCurrentDataFromDb = self._getTownDataFromDB;
@@ -2728,7 +2787,8 @@ function ControllerTown() {
 
                 fnGetCurrentDataFromDb(modelCurrent, coord, req, function (err, currentInfo) {
                     if (err) {
-                        log.error(new Error('error to get current for past' + err.message));
+                        err.message += ' ' + JSON.stringify(meta);
+                        log.error(err);
                         return next();
                     }
 
@@ -2741,6 +2801,7 @@ function ControllerTown() {
                         self._mergeMidByCurrent(req.midData.dailyData, req.currentList, requestTime);
                     }
                     catch (e) {
+                        e.message += ' ' + JSON.stringify(meta);
                         log.error(e);
                     }
                     return next();
@@ -2764,11 +2825,12 @@ function ControllerTown() {
         var townName = req.params.town;
 
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'mergeMidWithShort';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         if (!req.hasOwnProperty('midData')) {
             req.midData = {};
@@ -2785,18 +2847,27 @@ function ControllerTown() {
                 self._mergeList(req.midData.dailyData, daySummaryList);
             }
             catch(e) {
+                e.message += ' ' + JSON.stringify(meta);
                 log.error(e);
             }
             next();
         }
         else {
-            log.error('You have to getShort before mergeMid');
+            log.error('You have to getShort before mergeMid', meta);
             next();
         }
         return this;
     };
 
     this.updateMidTempMaxMin = function (req, res, next) {
+        var meta = {};
+        meta.sID = req.sessionID;
+        meta.method = 'mergeMidWithShort';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info(meta);
+
         try {
             var todayStr = req.current.date;
             var currentTemp = req.current.t1h;
@@ -2811,6 +2882,7 @@ function ControllerTown() {
             }
         }
         catch(e) {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
         }
 
@@ -2824,14 +2896,15 @@ function ControllerTown() {
         var townName = req.params.town;
 
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'adjustShort';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         if (!req.hasOwnProperty('short')) {
-            log.error("Short forecast data hasn't attached on req");
+            log.error("Short forecast data hasn't attached on req", meta);
             next();
             return this;
         }
@@ -2875,7 +2948,7 @@ function ControllerTown() {
             daySum.taMax = daySum.taMax === undefined ? -50:daySum.taMax;
             daySum.taMin = daySum.taMin === undefined ? -50:daySum.taMin;
             if (daySum.taMax === -50 || daySum.taMin === -50) {
-                log.warn("short date:"+short.date+" fail to get daySummary");
+                log.warn("short date:"+short.date+" fail to get daySummary", meta);
                 return;
             }
             if (short.time === "0600") {
@@ -2908,11 +2981,12 @@ function ControllerTown() {
      */
     this.insertIndex = function (req, res, next) {
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'insert kma index';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         if (req.current) {
             if (req.current.t1h != undefined) {
@@ -3210,14 +3284,15 @@ function ControllerTown() {
 
     this.getRiseSetInfo = function (req, res, next) {
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'get rise set info';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         if(req.midData == undefined || req.midData.dailyData == undefined || !Array.isArray(req.midData.dailyData)) {
-            log.error("daily data is undefined");
+            log.error("daily data is undefined", meta);
             return next();
         }
 
@@ -3274,6 +3349,7 @@ function ControllerTown() {
             ],
             function (err) {
                 if (err) {
+                    e.message += ' ' + JSON.stringify(meta);
                     log.error(err);
                 }
                 next();
@@ -4036,7 +4112,7 @@ ControllerTown.prototype._findTown = function(list, region, city, town, cb) {
             callback(null);
         },
         function(callback){
-            log.silly('get getcode');
+            log.silly('get geocode');
             convertGeocode(region, city, town, function (err, result) {
                 if(err){
                     log.error('_findTown : Cannot get mx, my ' + region + city + town + " "+err.message);
@@ -4133,7 +4209,7 @@ ControllerTown.prototype._getTownInfo = function(region, city, town, cb) {
         else {
             dbTown.find({}, {_id:0}).lean().exec(function (err, tList) {
                 if(err){
-                    log.error('~> _getCoord : fail to find db item');
+                    log.error('~> _getCoord : fail to find db item', meta);
                     if(cb){
                         cb(err);
                     }
@@ -4141,7 +4217,7 @@ ControllerTown.prototype._getTownInfo = function(region, city, town, cb) {
                 }
 
                 if(tList.length === 0){
-                    log.error('~> there is no data', tList.length);
+                    log.error('~> there is no data', tList.length, meta);
                     if(cb){
                         cb(new Error("there is no data"));
                     }
@@ -4154,11 +4230,13 @@ ControllerTown.prototype._getTownInfo = function(region, city, town, cb) {
             });
             return this;
         }
-    }catch(e){
+    }
+    catch (e) {
         if (cb) {
             cb(e);
         }
         else {
+            e.message += '' + JSON.stringify(meta);
             log.error(e);
         }
     }
@@ -4199,7 +4277,7 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
         else {
             dbTown.find({}, {_id:0}).lean().exec(function (err, tList) {
                 if(err){
-                    log.error('~> _getCoord : fail to find db item');
+                    log.error('~> _getCoord : fail to find db item', meta);
                     if(cb){
                         cb(err);
                     }
@@ -4207,7 +4285,7 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
                 }
 
                 if(tList.length === 0){
-                    log.error('~> there is no data', tList.length);
+                    log.error('~> there is no data', tList.length, meta);
                     if(cb){
                         cb(new Error("there is no data"));
                     }
@@ -4223,11 +4301,13 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
             });
             return this;
         }
-    }catch(e){
+    }
+    catch (e) {
         if (cb) {
             cb(e);
         }
         else {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
         }
     }
@@ -4264,7 +4344,7 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
 
         db.find({'mCoord.mx': indicator.mx, 'mCoord.my': indicator.my}, {_id: 0}).limit(1).lean().exec(function(err, result){
             if(err){
-                log.error('~> getDataFromDB : fail to find db item');
+                log.error('~> getDataFromDB : fail to find db item', meta);
                 if(cb){
                     cb(err);
                 }
@@ -4279,7 +4359,7 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
                 return;
             }
             if(result.length > 1){
-                log.error('~> getDataFromDB : what happened??', result.length);
+                log.error('~> getDataFromDB : what happened??', result.length, meta);
             }
 
             log.debug(JSON.stringify(result));
@@ -4333,23 +4413,20 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
                         ret.push(newItem);
                     });
                 }
-                else{
-                    log.info('~> what???');
-                    log.error(JSON.stringify(meta));
-                    cb(new Error(JSON.stringify(meta)));
-                    return [];
+                else {
+                    return cb(new Error('~> what???' + JSON.stringify(meta)));
                 }
                 //log.info(ret);
                 cb(0, {pubDate: result[0].pubDate, ret:ret});
             }
-            return result[0];
         });
-    }catch(e){
-        log.error(meta);
+    }
+    catch (e) {
         if (cb) {
             cb(e);
         }
         else {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
         }
     }
@@ -4402,7 +4479,8 @@ ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb) {
         }
 
         return kmaTownMid.getMidFromDB(type, indicator, req, cb);
-    }else{
+    }
+    else {
         try{
             if(req != undefined){
                 for (var i=0; i<midArray.length; i++) {
@@ -4417,21 +4495,19 @@ ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb) {
 
             db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
                 if(err){
-                    log.error('~> _getMidDataFromDB : fail to find db item');
                     if(cb){
                         cb(err);
                     }
                     return;
                 }
                 if(result.length === 0){
-                    log.error('~> _getMidDataFromDB : there is no data');
                     if(cb){
                         cb(new Error("there is no data regId="+indicator));
                     }
                     return;
                 }
                 if(result.length > 1){
-                    log.error('~> _getMidDataFromDB : what happened?? ' + result.length + ' regId='+indicator);
+                    log.error('what happened?? ' + result.length, meta);
                 }
 
                 if(cb){
@@ -4447,10 +4523,7 @@ ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb) {
                         privateString = landString;
                     } else {
                         err = new Error('~> what is it???'+JSON.stringify(result[0].data[0]));
-                        log.error(err);
-                        log.error(meta);
-                        cb(err);
-                        return [];
+                        return cb(err);
                     }
 
                     result[0].data.forEach(function(item){
@@ -4469,12 +4542,13 @@ ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb) {
                 }
                 return result[0];
             });
-        }catch(e){
-            log.error(meta);
+        }
+        catch (e) {
             if (cb) {
                 cb(e);
             }
             else {
+                e.message += ' ' + JSON.stringify(meta);
                 log.error(e);
             }
         }
@@ -4710,12 +4784,12 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
             cb(0, shortList);
         }
     }
-    catch(e){
-        log.error(meta);
+    catch (e) {
         if (cb) {
             cb(e)
         }
         else {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
         }
         return [];
@@ -4802,12 +4876,12 @@ ControllerTown.prototype._mergeShortWithRSS = function(shortList, rssList, cb){
             cb(0, shortList);
         }
     }
-    catch(e) {
-        log.error(meta);
+    catch (e) {
         if (cb) {
             cb(e);
         }
         else {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
         }
         return [];
@@ -4936,13 +5010,13 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
             cb(0, result);
         }
 
-    } catch(e){
-        log.error('> something wrong : ', e);
-        log.error(meta);
+    }
+    catch (e) {
         if (cb) {
             cb(e);
         }
         else {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
         }
         return [];
@@ -5218,7 +5292,7 @@ ControllerTown.prototype._convertSkyToKorStr = function(sky, pty) {
             case 3: return str+'눈';
         }
     }
-    log.error(new Error("Unknown state sky="+sky+" pty="+pty));
+    log.error("Unknown state sky="+sky+" pty="+pty);
     return str;
 };
 
@@ -5290,7 +5364,7 @@ ControllerTown.prototype._convertKorStrToSky = function (skyKorStr) {
             pty = 2;
             break;
         default :
-            log.error("Fail to convert skystring="+skyKorStr);
+            log.error("Fail to convert sky string="+skyKorStr);
             return undefined;
     }
     return  {sky: sky, pty: pty, lgt: lgt};

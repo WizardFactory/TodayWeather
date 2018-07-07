@@ -55,7 +55,7 @@ function updatePushInfoList(language, pushList, callback) {
                 var ca = new AlertPushController();
                 ca.updateAlertPush(pushInfo, function (err, result) {
                     if (err) {
-                        log.error(err)
+                        log.error(err);
                     }
                    callback(undefined, result) ;
                 })

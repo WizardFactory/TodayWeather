@@ -73,23 +73,42 @@ function requestApi(cityName, version, query, lang, callback) {
 }
 
 function getSidoArpltn(req, res, next) {
+    var meta = {};
+    meta.sID = req.sessionID;
+    meta.method = 'getSidoArpltn';
+    meta.region = req.params.region;
+    meta.city = req.params.city;
+    meta.town = req.params.town;
+    log.info(meta);
+
     var airUnit = req.query.airUnit;
 
     KecoCtrl.getSidoArpltn(function (err, arpltnList) {
         if (err) {
+            err.message += ' ' + JSON.stringify(meta);
             log.error(err);
-            return next();
+            return next(err);
         }
 
-        arpltnList.forEach(function (arpltn) {
-            KecoCtrl.recalculateValue(arpltn, airUnit);
-        });
-        req.air = arpltnList;
+        try {
+            arpltnList.forEach(function (arpltn) {
+                KecoCtrl.recalculateValue(arpltn, airUnit);
+            });
+            req.air = arpltnList;
+        }
+        catch (err) {
+           return next(err);
+        }
         next();
     });
 }
 
 function getWeather(req, res, next) {
+    var meta = {};
+    meta.sID = req.sessionID;
+    meta.method = 'getWeather';
+    log.info(meta);
+
     //서울(서울경기), 춘천(강원도), 부산(경남), 대구(경북), 제주(제주), 광주(전남), 대전(충남), 청주(충북), 전주(전북), 강릉,
     //수원, 인천, 안동, 울릉도/독도, 목표, 여수, 울산, 백령도, 창원
     var cityArray = ["서울특별시", "강원도/춘천시", "부산광역시", "대구광역시", "제주특별자치도/제주시", "광주광역시", "대전광역시",
@@ -118,8 +137,9 @@ function getWeather(req, res, next) {
         },
         function (err, weatherList) {
             if (err) {
+                err.message += ' ' + JSON.stringify(meta);
                 log.error(err);
-                return next();
+                return next(err);
             }
             req.weather = weatherList;
 

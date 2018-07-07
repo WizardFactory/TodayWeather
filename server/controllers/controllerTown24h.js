@@ -28,6 +28,9 @@ function ControllerTown24h() {
     ControllerTown.call(this);
 
     this.checkQueryValidation = function(req, res, next) {
+        var meta = {};
+        meta.sID = req.sessionID;
+
         /**
          *
          * temperatureUnit(C,F), windSpeedUnit(mph,km/h,m/s,bft,kr), pressureUnit(mmHg,inHg,hPa,mb),
@@ -65,7 +68,8 @@ function ControllerTown24h() {
             log.info({sId:req.sessionID, reqQuery: req.query});
         }
         catch(err) {
-           log.error(err);
+            err.message += ' ' + JSON.stringify(meta);
+            log.error(err);
         }
 
         next();
@@ -84,14 +88,15 @@ function ControllerTown24h() {
         var townName = req.params.town;
 
         var meta = {};
+        meta.sID = req.sessionID;
         meta.method = 'adjustShort';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         if (!req.hasOwnProperty('short')) {
-            log.error("Short forecast data hasn't attached on req");
+            log.error("Short forecast data hasn't attached on req", meta);
             next();
             return this;
         }
@@ -589,7 +594,7 @@ function ControllerTown24h() {
         var sunset = 1800;
 
         if (dayInfo == undefined) {
-            console.error({func:"isnight", msg:"Fail to find date="+date});
+            log.error({func:"isnight", msg:"Fail to find date="+date});
         }
         else {
             if (dayInfo.hasOwnProperty('sunrise')) {
@@ -1065,6 +1070,14 @@ function ControllerTown24h() {
     };
 
     this.makeAirInfo = function (req, res, next) {
+        var meta = {};
+        meta.sID = req.sessionID;
+        meta.method = 'makeAirInfo';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info(meta);
+
         try {
             var airInfo;
             var airUnit = req.query.airUnit || 'airkorea';
@@ -1091,6 +1104,7 @@ function ControllerTown24h() {
             }
         }
         catch (err) {
+            err.message += ' ' + JSON.stringify(meta);
             log.error(err);
         }
         next();
@@ -1106,11 +1120,12 @@ function ControllerTown24h() {
      */
     this.makeAirInfoList = function (req, res, next) {
         var meta = {};
-        meta.method = 'make air info list';
+        meta.sID = req.sessionID;
+        meta.method = 'makeAirInfoList';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         try {
             var airUnit = req.query.airUnit || 'airkorea';
@@ -1143,14 +1158,15 @@ function ControllerTown24h() {
                     req.airInfoList = airInfoList;
                 }
                 else {
-                    log.error('fail to make air info list');
+                    log.error('fail to make air info list', meta);
                 }
             }
             else {
-                log.error('arpltnList is undefined');
+                log.error('arpltnList is undefined', meta);
             }
         }
         catch (err) {
+            err.message += ' ' + JSON.stringify(meta);
             log.error(err);
         }
         next();
@@ -1201,11 +1217,20 @@ function ControllerTown24h() {
     };
 
     this.AirForecast = function (req, res, next) {
+        var meta = {};
+        meta.sID = req.sessionID;
+        meta.method = 'AirForecast';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info(meta);
+
         var forecastSource = req.query.airForecastSource;
         var airInfo = self._getAirInfo(req);
 
         self._getAirForecast(airInfo, forecastSource, req.query.airUnit, function (err) {
             if (err) {
+                err.message += ' ' + JSON.stringify(meta);
                 log.error(err);
             }
             next();
@@ -1214,11 +1239,12 @@ function ControllerTown24h() {
 
     this.AirForecastList = function (req, res, next) {
         var meta = {};
-        meta.method = 'air forecast list';
+        meta.sID = req.sessionID;
+        meta.method = 'AirForecastList';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+        log.info(meta);
 
         var forecastSource = req.query.airForecastSource;
         var airUnit = req.query.airUnit;
@@ -1228,6 +1254,7 @@ function ControllerTown24h() {
             },
             function (err) {
                 if (err) {
+                    err.message += ' ' + JSON.stringify(meta);
                     log.error(err);
                 }
                 next();
@@ -1258,16 +1285,17 @@ function ControllerTown24h() {
     };
 
     this.setYesterday = function (req, res, next) {
-        try {
-            var meta = {};
-            meta.method = 'setYesterday';
-            meta.region = req.params.region;
-            meta.city = req.params.city;
-            meta.town = req.params.town;
-            log.info('>sID=',req.sessionID, meta);
+        var meta = {};
+        meta.sID = req.sessionID;
+        meta.method = 'setYesterday';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info(meta);
 
+        try {
             if (!req.current || !req.currentList)  {
-                log.warn(new Error("Fail to find current weather or current list "+JSON.stringify(meta)));
+                log.warn("Fail to find current weather or current list", meta);
                 next();
                 return this;
             }
@@ -1296,10 +1324,11 @@ function ControllerTown24h() {
                 req.current.yesterday = yesterdayItem;
             }
             else {
-                log.error('Fail to gt yesterday weather info');
+                log.error('Fail to gt yesterday weather info', meta);
             }
         }
         catch (err) {
+            err.message += ' ' + JSON.stringify(meta);
             log.error(err);
         }
         next();
@@ -1513,7 +1542,8 @@ function ControllerTown24h() {
         }
         else if(itemList.length > 1) {
             return itemList[0].str+", "+itemList[1].str;
-        } else {
+        }
+        else {
             return itemList[0].str;
         }
     };
@@ -1526,16 +1556,17 @@ function ControllerTown24h() {
      * @returns {ControllerTown24h}
      */
     this.getSummaryAfterUnitConverter = function(req, res, next){
-        try {
-            var meta = {};
-            meta.method = 'getSummaryAfterUnitConverter';
-            meta.region = req.params.region;
-            meta.city = req.params.city;
-            meta.town = req.params.town;
-            log.info('>sID=',req.sessionID, meta);
+        var meta = {};
+        meta.sID = req.sessionID;
+        meta.method = 'getSummaryAfterUnitConverter';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info(meta);
 
+        try {
             if (!req.current || !req.currentList)  {
-                log.warn(new Error("Fail to find current weather or current list "+JSON.stringify(meta)));
+                log.warn("Fail to find current weather or current list", meta);
                 next();
                 return this;
             }
@@ -1546,6 +1577,7 @@ function ControllerTown24h() {
             current.summary = self.makeSummary(current, current.yesterday, req.query, res);
         }
         catch (err) {
+            err.message += ' ' + JSON.stringify(meta);
             log.error(err);
             req.current.summary = '';
         }
@@ -1561,7 +1593,8 @@ function ControllerTown24h() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
-        meta.method = '/:region/:city/:town';
+        meta.sID = req.sessionID;
+        meta.method = 'makeResult';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
@@ -1583,7 +1616,7 @@ function ControllerTown24h() {
             }
             if(req.short) {
                 if (req.short == undefined || req.short.length == undefined || req.short.length < 33) {
-                    log.error("Short is invalid >sID=",req.sessionID, meta)
+                    log.error("short is invalid", meta);
                 }
                 result.short = req.short;
             }
@@ -1600,14 +1633,14 @@ function ControllerTown24h() {
             }
             if(req.current) {
                 if (req.current == undefined || req.current.t1h == undefined || req.current.yesterday == undefined) {
-                    log.error("Current is invalid >sID=",req.sessionID, meta)
+                    log.error("current is invalid", meta);
                 }
                 result.current = req.current;
             }
             if(req.midData) {
                 if (req.midData.dailyData == undefined || req.midData.dailyData.length == undefined
                     || req.midData.dailyData.length < 17) {
-                    log.error("daily Data is invalid >sID=",req.sessionID, meta)
+                    log.error("daily data is invalid", meta);
                 }
 
                 //#2013 check date
@@ -1615,12 +1648,12 @@ function ControllerTown24h() {
                 for (var i=0; i<daily.length-1; i++) {
                     if (daily[i].date === daily[i+1].date) {
                         var resInfo = {index: i, date: daily[i].date, regionName: regionName, cityName: cityName, townName: townName};
-                        log.error('Same date in dailyData', JSON.stringify(resInfo));
+                        log.error('Same date in dailyData', JSON.stringify(resInfo), meta);
                     }
 
                     if (daily[i].dayOfWeek != undefined && daily[i].dayOfWeek === daily[i+1].dayOfWeek) {
                         resInfo = {index: i, date: daily[i].date, regionName: regionName, cityName: cityName, townName: townName};
-                        log.error('Same day of week in dailyData', JSON.stringify(resInfo));
+                        log.error('Same day of week in dailyData', JSON.stringify(resInfo), meta);
                     }
                 }
 
@@ -1648,6 +1681,8 @@ function ControllerTown24h() {
             }
         }
         catch(err) {
+            err.message += ' ' + JSON.stringify(meta);
+            log.error(err);
             next(err);
             return this;
         }
@@ -1679,6 +1714,14 @@ function ControllerTown24h() {
     };
 
     this.convertUnits = function (req, res, next) {
+        var meta = {};
+        meta.sID = req.sessionID;
+        meta.method = 'convertUnits';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info(meta);
+
         try {
             var current = req.current;
             var currentDate;
@@ -1772,13 +1815,14 @@ function ControllerTown24h() {
             }
         }
         catch (err) {
+            err.message += ' ' + JSON.stringify(meta);
             log.error(err);
         }
         return next();
     };
 
     function _request(url, lang, callback) {
-        console.info({_request:{url:url}});
+        log.info({_request:{url:url}});
         let options = {json: true, timeout: 3000};
         if (lang) {
            options.headers =  {'Accept-Language' : lang};
@@ -2077,6 +2121,5 @@ ControllerTown24h.prototype._convertWeatherData = function(wData, query) {
         wData.visibility = unitConverter.convertUnits(defaultValueList['distanceUnit'], toDistUnit, wData.visibility);
     }
 };
-
 
 module.exports = ControllerTown24h;

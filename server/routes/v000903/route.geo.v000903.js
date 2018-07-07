@@ -13,7 +13,7 @@ var async = require('async');
 var router = require('express').Router();
 
 function _request(url, callback) {
-    console.info({_request:{url:url}});
+    log.info({_request:{url:url}});
     request(url, {json: true, timeout: 3000}, (err, response, body) => {
         if (err) {
             return callback(err);

@@ -31,7 +31,7 @@ router.get('/special', function (req, res, next) {
     scrape.gatherSpecialWeatherSituation(function (err, result) {
         if (err) {
             log.error(err);
-            return res.send(err);
+            return res.status(501).send(err.message);
         }
         res.send(result);
     });
@@ -43,7 +43,7 @@ router.get('/gatherKasiRiseSet', function (req, res, next) {
     KasiRiseSet.gatherAreaRiseSetFromApi(function (err, result) {
         if (err) {
             log.error(err);
-            return res.status(500).send(err);
+            return res.status(500).send(err.message);
         }
         res.send(result);
     });
