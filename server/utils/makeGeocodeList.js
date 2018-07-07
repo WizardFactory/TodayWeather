@@ -58,7 +58,7 @@ function convertGeocodeByGoogle(first, second, callback) {
                 geocode.lon = parseFloat(result.GeocodeResponse.result[0].geometry[0].location[0].lng[0]);
             }
             catch(e){
-                log.error('## Error!!!', meta);
+                e.message += ', first:'+first+', second:'+second;
                 log.error(e);
             }
             finally{

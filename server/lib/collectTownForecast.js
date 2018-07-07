@@ -370,8 +370,10 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
                 if(err || (result.response.header[0].resultCode[0] !== '0000') ||
                     (result.response.body[0].totalCount[0] === '0')) {
                     // there is error code or totalcount is zero as no valid data.
-                    log.warn('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
-                    log.warn(meta);
+                    log.warn('There are no data',
+                        result.response.header[0].resultCode[0],
+                        result.response.body[0].totalCount[0],
+                        meta);
                     self.emit('recvFail', index);
                 }
                 else{
@@ -404,7 +406,8 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
                 }
             }
             catch(e){
-                log.error('& Error!!!', meta);
+                e.message += ' ' + JSON.stringify(meta);
+                log.error(meta);
                 self.emit('recvFail', index);
             }
             finally{
@@ -927,7 +930,7 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
     }
     catch(e){
         log.error('Error!! organizeTempData : failed data organized');
-        log.error(e.toString());
+        log.error(e);
         self.emit('recvFail', index);
     }
 };
@@ -1120,7 +1123,6 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
     var self = this;
     var meta = {};
 
-
     meta.method = 'requestData';
     meta.dataType = dataType;
     meta.key = key;
@@ -1133,6 +1135,7 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
             callback(err);
         }
         else {
+            err.message += ' ' + JSON.stringify(meta);
             log.error(err);
         }
         return this;
@@ -1153,11 +1156,11 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
                     callback(self.recvFailed, self.resultList);
                 }
             }
-            catch(e){
+            catch (e) {
                 //callback 안에서 error가 발생하면 이쪽으로 타기 때문에 여기서 error를 callback으로 넘지면 안됨
                 log.error("requestData : ERROR !!! in event dataCompleted");
+                e.message += ' ' + JSON.stringify(meta);
                 log.error(e);
-                log.error('#', meta);
             }
         });
     }
@@ -1184,6 +1187,7 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
             callback(e);
         }
         else {
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
         }
     }
