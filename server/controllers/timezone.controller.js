@@ -36,6 +36,44 @@ class TimezoneController{
             });
         }, this._interval);
     }
+
+    /**
+     * Description : request Timezone Offset by using Geocode
+     * Caution : In this case, it's possible to change geocode of DB's data, but it doesn't impact to
+     * @param geo
+     * @param callback
+     * @returns {TimezoneController}
+     */
+    requestTimezoneOffsetByGeo(geo, timezone, callback){
+        async.waterfall([
+            (cb)=>{
+                this._getTimozoneOffsetByGeo(geo, (err, tzOffset)=>{
+                    if(err){
+                            return cb('Fail');
+                    }
+                    return cb(null, tzOffset);
+                });
+            },
+            (timezoneOffset,cb)=>{
+                this._updateTimezone({timezone, geo, timezoneOffset}, (err)=>{
+                    if(err){
+                        log.error('TZ > requestTimezoneOffsetByGeo > Fail to Save : ', {timezone, geo, timezoneOffset});
+                    }
+                });
+
+                // to reduce response time
+                return cb(null, timezoneOffset);
+            }
+            ],
+            (err, tzOffset)=>{
+                if(tzOffset === undefined){
+                    log.warn('TZ> Fail to get Timezoneoffset by geocode : ', err);
+                }
+                return callback(err, tzOffset);
+            }
+        );
+    }
+
     /**
      *
      * @param timezone
@@ -90,7 +128,7 @@ class TimezoneController{
                     // 4. store timeoffset to DB
                     this._updateTimezone({timezone, geo, timezoneOffset}, (err)=>{
                         if(err){
-                            log.error('TZ > Fail to Save : ', {timezone, geo, timezoneOffset});
+                            log.error('TZ > requestTimezoneOffset > Fail to Save : ', {timezone, geo, timezoneOffset});
                             return;
                         }
                     });
@@ -101,7 +139,7 @@ class TimezoneController{
             ],
             (err, timezoneOffset)=>{
                 if(err && timezoneOffset === undefined){
-                    log.error('TZ> Fail to get Timezoneoffset : ', err);
+                    log.warn('TZ> Fail to get Timezoneoffset by timezone string : ', err);
                     return callback('FAIL');
                 }
 
@@ -325,7 +363,7 @@ class TimezoneController{
 
         request.get(encodedUrl, {json:true, timeout: 1000 * 10}, (err, response, body)=>{
             if(err) {
-                log.error('TZ > Fail!! _getTimozoneOffsetByGeo : ', err);
+                log.warn('TZ > Fail!! _getTimozoneOffsetByGeo : ', err);
                 return callback(err);
             }
 

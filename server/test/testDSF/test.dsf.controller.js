@@ -99,6 +99,37 @@ describe('DSF Controller', function() {
             });
         });
     });
+
+    it('To test get timeoffset with unknown timezone', function(done){
+        let dsf = new dsfController;
+
+        dsf._getTimeOffset('ETC/GMT-9', [51.5007,-0.1288], (err, tzOffset)=>{
+            if(err){
+                assert.fail();
+                done();
+            }
+
+            log.info(tzOffset);
+            assert.equal(tzOffset, 540, 'Time Offset should be 9');
+
+            done();
+        });
+    });
+
+    it('To test get timeoffset by using geocode', function(done){
+        let dsf = new dsfController;
+        dsf._getTimeOffset('ETC/GMT-1', [127.2025, 37.3914], (err, tzOffset)=>{
+            if(err){
+                assert.fail();
+                return done();
+            }
+
+            log.info(tzOffset);
+            assert.equal(tzOffset, 540, 'Time Offset should be 9');
+
+            done();
+        });
+    });
 });
 
 

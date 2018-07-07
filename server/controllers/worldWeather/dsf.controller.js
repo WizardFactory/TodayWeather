@@ -475,9 +475,52 @@ class DsfController {
         });
     }
 
-    _getTimeOffset(timezone, callback){
+    /**
+     * Description : To retrieve Timezone offset sequentially.
+     *                  1st. By using timezone string.
+     *                  2nd. By using geo directly
+     *                  3rd. if the Timezone string has  "GMT-", it would be use timeoffset directly.
+     * @param timezone
+     * @param geo
+     * @param callback
+     * @private
+     */
+    _getTimeOffset(timezone, geo, callback){
         let tz = new timezoneController(timezone);
-        return tz.requestTimezoneOffset(undefined, 'get', callback);
+        let first = (cb)=> {
+            tz.requestTimezoneOffset(undefined, 'get', (err, tzOffset) => {
+                if (err) {
+                    return cb(null);
+                }
+                return cb('1. Found timezone Offset', tzOffset);
+            });
+        };
+        let second = (cb)=>{
+            tz.requestTimezoneOffsetByGeo({lat: geo[1], lon:geo[0]}, timezone, (err, tzOffset)=>{
+                if(err){
+                    return cb(null);
+                }
+                return cb('2. Found timezone Offset', tzOffset);
+            });
+        };
+        let third = (cb)=>{
+            let tzOffset = timezone.match(/\d+/g).map(Number);  // extract number from timezone string
+            log.debug(`cDsf> TZ Offset : ${tzOffset[0]}`);
+            if(tzOffset.length > 0 && tzOffset[0] >= 0 && tzOffset[0] < 24){
+                return cb('3. Found timezone Offset', tzOffset[0] * 60 /* to make Minute*/);
+            }
+            return cb(null);
+        };
+
+        async.waterfall([first, second, third],
+            (err, tzOffset)=>{
+                if(tzOffset === undefined){
+                    log.error(`cDsf > Fail to get timezone!! tz[${timezone}], geo[${geo[0]}, ${geo[1]}`);
+                    return callback('FAIL');
+                }
+                return callback(undefined, tzOffset);
+            }
+        );
     }
 
     _requestDatas(geo, output, cDate, timeOffset, callback){
@@ -536,7 +579,7 @@ class DsfController {
                         return cb(null, curData);
                     }
 
-                    this._getTimeOffset(curData.address.country, (err, timeOffset_MIN)=>{
+                    this._getTimeOffset(curData.address.country, geo, (err, timeOffset_MIN)=>{
                         if(err && curData.timeOffset === undefined){
                             log.warn('cDSF > Fail to get timeOffset : ', err);
                             timeOffset = 0;
