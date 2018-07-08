@@ -398,13 +398,16 @@ angular.module('service.push', [])
                         //ios의 경우 badge 업데이트
                         //현재위치의 경우 데이타 업데이트 가능? 체크
 
-                        var fav = data.additionalData.cityIndex;
+                        var fav = parseInt(data.additionalData.cityIndex);
                         if (!isNaN(fav)) {
                             console.log('clicked: ' + fav);
                             WeatherInfo.setCityIndex(fav);
                             $rootScope.$broadcast('reloadEvent', 'push');
+                            Util.ga.trackEvent('action', 'click', 'push fav=' + fav);
                         }
-                        Util.ga.trackEvent('action', 'click', 'push fav=' + fav);
+                        else {
+                            Util.ga.trackException(new Error('invalid fav:'+fav), false);
+                        }
                     }
                     else if (data.additionalData.foreground === true) {
                         $rootScope.$broadcast('notificationEvent', data);
@@ -767,11 +770,15 @@ angular.module('service.push', [])
                 if (result.tap === true) {
                     //background
                     if (result.cityIndex != undefined) {
-                        var fav = result.cityIndex;
-                        console.log({notificationFav:fav});
-                        Util.ga.trackEvent('plugin', 'info', 'pushLinkMatch '+fav);
-                        WeatherInfo.setCityIndex(fav);
-                        $rootScope.$broadcast('reloadEvent', 'push');
+                        var fav = parseInt(result.cityIndex);
+                        if (!isNaN(fav)) {
+                            Util.ga.trackEvent('plugin', 'info', 'pushLinkMatch ' + fav);
+                            WeatherInfo.setCityIndex(fav);
+                            $rootScope.$broadcast('reloadEvent', 'push');
+                        }
+                        else {
+                            Util.ga.trackException(new Error('invalid fav:'+fav), false);
+                        }
                     }
                     else {
                         console.log('city index is undefined');
