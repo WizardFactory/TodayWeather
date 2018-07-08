@@ -57,7 +57,8 @@ class TimezoneController{
             (timezoneOffset,cb)=>{
                 this._updateTimezone({timezone, geo, timezoneOffset}, (err)=>{
                     if(err){
-                        log.error('TZ > requestTimezoneOffsetByGeo > Fail to Save : ', {timezone, geo, timezoneOffset});
+                        err.message += '' + JSON.stringify({timezone, geo, timezoneOffset});
+                        log.error('TZ > requestTimezoneOffsetByGeo > Fail to Save', err);
                     }
                 });
 
