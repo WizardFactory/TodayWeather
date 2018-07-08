@@ -252,26 +252,12 @@ angular.module('service.push', [])
          */
         obj._deletePushInfo = function (pushInfo) {
             var self = this;
-            var pushObj = {
-                type: self.pushData.type,
-                cityIndex: pushInfo.cityIndex,
-                id: pushInfo.id,
-                category: pushInfo.category };
-            if (self.pushData.fcmToken) {
-                pushObj.fcmToken = self.pushData.fcmToken;
-            }
-            else if (self.pushData.registrationId) {
-                pushObj.registrationId = self.pushData.registrationId;
-            }
-            else {
-                console.error('push info does not have fcmToken or regstrationId');
-            }
 
             $http({
                 method: 'DELETE',
                 headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
                 url: self.pushUrl,
-                data: pushObj,
+                data: pushInfo,
                 timeout: 10*1000
             })
                 .success(function (data) {
@@ -639,16 +625,22 @@ angular.module('service.push', [])
          */
         obj.removePushListByCityIndex = function (cityIndex) {
             var self = this;
-            var pushList = this.pushData.pushList;
-            var removeList = pushList.filter(function (value) {
-                return value.cityIndex === cityIndex;
-            });
-            removeList.forEach(function (obj) {
-                self._deletePushInfo(obj);
-            });
+            var delInfo = {cityIndex: cityIndex};
+            if (self.pushData.fcmToken) {
+                delInfo.fcmToken = self.pushData.fcmToken;
+            }
+            else if (self.pushData.registrationId) {
+                delInfo.registrationId = self.pushData.registrationId;
+            }
+            else {
+                console.error('push info does not have fcmToken or registrationId');
+                return;
+            }
+
+            self._deletePushInfo(delInfo);
 
             //remove object list
-            this.pushData.pushList = pushList.filter(function (value) {
+            this.pushData.pushList = this.pushData.pushList.filter(function (value) {
                 return value.cityIndex !== cityIndex;
             });
             this.savePushInfo();

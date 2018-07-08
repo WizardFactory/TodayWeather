@@ -586,6 +586,9 @@ angular.module('controller.searchctrl', [])
             Util.ga.trackEvent('city', 'disable', city.disable, 0);
 
             WeatherInfo.disableCity(city.disable);
+            if (city.disable === true && city.hasPush) {
+                Push.removePushListByCityIndex(0);
+            }
 
             if (city.disable === false && city.t1h === '-') {
                 //it is enable at first time
