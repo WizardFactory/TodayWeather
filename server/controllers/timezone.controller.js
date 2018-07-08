@@ -129,7 +129,8 @@ class TimezoneController{
                     // 4. store timeoffset to DB
                     this._updateTimezone({timezone, geo, timezoneOffset}, (err)=>{
                         if(err){
-                            log.error('TZ > requestTimezoneOffset > Fail to Save : ', {timezone, geo, timezoneOffset});
+                            err.message += '' + JSON.stringify({timezone, geo, timezoneOffset});
+                            log.error('TZ > requestTimezoneOffset > Fail to Save : ', err);
                             return;
                         }
                     });
