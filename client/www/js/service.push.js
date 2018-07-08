@@ -95,6 +95,8 @@ angular.module('service.push', [])
                 self.pushData.type = pushData.type;
                 self.pushData.pushList = pushData.pushList;
                 self.pushData.pushList.forEach(function (pushInfo) {
+                    var city;
+                    var key;
                     if (pushInfo.category === 'alarm') {
                         pushInfo.time = new Date(pushInfo.time);
                     }
@@ -104,8 +106,22 @@ angular.module('service.push', [])
                     }
                     if (pushInfo.cityIndex === 0) {
                         try {
-                            var city = self._getSimpleCityInfo(pushInfo.cityIndex);
-                            for (var key in city) {
+                            city = self._getSimpleCityInfo(pushInfo.cityIndex);
+                            for (key in city) {
+                                pushInfo[key] = city[key];
+                            }
+                        }
+                        catch (err) {
+                           Util.ga.trackException(err, false);
+                        }
+                    }
+
+                    //TW-365 location 정보에 오류가 있으면 새로 생성함
+                    if (pushInfo.location && pushInfo.location.lat == undefined) {
+                        console.log('extract pushInfo again!');
+                        try {
+                            city = self._getSimpleCityInfo(pushInfo.cityIndex);
+                            for (key in city) {
                                 pushInfo[key] = city[key];
                             }
                         }
@@ -223,6 +239,8 @@ angular.module('service.push', [])
                 return;
             }
 
+            Util.ga.trackEvent('push', 'post', JSON.stringify({postPushList: postList}));
+
             $http({
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'Accept-Language': Util.language, 'Device-Id': Util.uuid},
@@ -231,9 +249,7 @@ angular.module('service.push', [])
                 timeout: 10*1000
             })
                 .success(function (data) {
-                    if (data) {
-                        console.log(JSON.stringify(data));
-                    }
+                    console.log('push done');
                 })
                 .error(function (data, status) {
                     console.log(status +":"+data);
@@ -467,16 +483,32 @@ angular.module('service.push', [])
 
             simpleInfo = {name: city.name, source: city.source};
 
-            if (city.location) {
+            if (city.location || city.location.lat) {
                 simpleInfo.location = city.location;
             }
-            else if (city.source === 'KMA' && city.address) {
+
+            if (city.source === 'KMA' && city.address) {
                 //old version용으로 마지막 보류임
                 //naton이 없는 address에서 오류 발생함 (TW-340)
                 //한국어 아닌 국내 address도 오류 발생함
-                var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(city.address));
-                if (town && !(town.first=="" && town.second=="" && town.third=="")) {
+                var address = city.address;
+                if (address.indexOf('대한민국') < 0) {
+                    address = '대한민국 ' + address;
+                }
+                var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(address));
+                if (town && town.first.length > 0) {
                     simpleInfo.town = town;
+                    if (simpleInfo.name == undefined) {
+                        if (town.third.length > 0) {
+                            simpleInfo.name = town.third;
+                        }
+                        else if (town.second.length > 0) {
+                            simpleInfo.name = town.second;
+                        }
+                        else if (town.first.length > 0) {
+                            simpleInfo.name = town.first;
+                        }
+                    }
                 }
                 else {
                     console.log("Fail to get town info city:"+JSON.stringify((city)));

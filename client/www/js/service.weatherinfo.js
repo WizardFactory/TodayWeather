@@ -343,7 +343,7 @@ angular.module('service.weatherinfo', [])
                 }
             });
 
-            console.log('save preference plist='+JSON.stringify(pList));
+            Util.ga.trackEvent('city', 'saveCityList', JSON.stringify(pList));
             TwStorage.set("cityList", pList);
         };
 
