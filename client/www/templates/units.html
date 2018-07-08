@@ -9,7 +9,7 @@
             <span style="vertical-align: middle">{{'LOC_UNITS'|translate}}</span>
         </p>
     </ion-nav-title>
-    <ion-content scroll="false" style="background-color: #F5F5F5;">
+    <ion-content scroll="false" class="main-content">
         <div class="list">
             <label class="item" ng-repeat="unit in units" ng-click="settingRadio(unit)">
                 {{getUnitNameStr(unit.name)|translate}}

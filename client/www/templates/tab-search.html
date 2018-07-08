@@ -13,14 +13,14 @@
                     ng-bind-html="isEditing ? 'LOC_OK' : isSearching ? 'LOC_CANCEL' : 'LOC_EDIT' | translate"></button>
         </p>
     </ion-nav-title>
-    <ion-content class="search-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
+    <ion-content class="main-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
                  delegate-handle="cityList" on-scroll="OnScrollResults()" tabs-shrink>
-        <div style="padding: 10px" ng-if="isSearching===true">
+        <div style="padding: 10px 10px 0px 10px" ng-if="isSearching===true">
             <button class="button" ng-click="OnSearchCurrentPosition()">
                 {{'LOC_FIND_BY_LOCATION'|translate}}
             </button>
         </div>
-        <div class="list card" ng-if="isSearching===true&&(searchResults.length > 0 || searchResults2.length > 0)"
+        <div class="list list-inset" ng-if="isSearching===true&&(searchResults.length > 0 || searchResults2.length > 0)"
                 style="margin-top: 0px;">
             <div class="item" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
                 <div class="row row-no-padding">
@@ -44,7 +44,7 @@
                 <img src="img/powered_by_google_on_white.png" width="144px">
             </div>
         </div>
-        <div class="list card" ng-if="isSearching===false && package === 'todayWeather'">
+        <div class="list list-inset" ng-if="isSearching===false && package === 'todayWeather'">
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
                     <div class="col search-item search-name" ng-class="{'col-40': city.t1h != '-'}" style="margin: auto 0;" ng-click="OnSelectCity($index)" >
@@ -75,7 +75,7 @@
                 </div>
             </div>
         </div>
-        <div class="list card" ng-if="isSearching===false && package === 'todayAir'">
+        <div class="list list-inset" ng-if="isSearching===false && package === 'todayAir'">
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
                     <div class="col search-item search-name col-25" style="margin: auto 0;" ng-click="OnSelectCity($index)" >
@@ -86,11 +86,11 @@
                         {{city.address[1]}}
                     </div>
                     <div class="search-item air-item" ng-click="OnOpenSettingPush($index)">
-                        <i class="material-icons" ng-bind-html="getSentimentIcon(city.airInfo.aqiGrade)"></i>
+                        <i ng-bind-html="getSentimentIcon(city.airInfo.aqiGrade)" class="material-icons" ng-style="{'color': grade2Color(city.airInfo.aqiGrade)}"></i>
                     </div>
                     <div class="col search-item search-name" style="margin: auto 0;" ng-click="OnSelectCity($index)" >
-                        {{'LOC_AIR_STATUS'|translate}} {{city.airInfo.aqiStr}}
-                        <br>{{city.airInfo.aqiValue}}
+                        {{'LOC_AIR_STATUS'|translate}}<br>
+                        {{city.airInfo.aqiStr}}<span style="font-size: 12px;"> ({{city.airInfo.aqiValue.toFixed(0)}})</span>
                     </div>
                     <div class="search-item last-item" ng-show="!isEditing" ng-click="OnOpenSettingPush($index)">
                         <a class="icon" ng-class="city.hasPush?'ion-android-notifications':'ion-android-notifications-none'"></a>

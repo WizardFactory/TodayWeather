@@ -267,74 +267,53 @@ angular.module('starter', [
             cordova.plugins.Keyboard.disableScroll(true);
         }
 
-        $rootScope.$watch('$viewContentLoaded', function(){
+        $rootScope.$on('$ionicView.beforeEnter', function() {
             if (navigator.splashscreen) {
                 console.log('splash screen hide!!!');
                 navigator.splashscreen.hide();
+            }
+
+            var body = angular.element(document.querySelectorAll('body'));
+            body.removeClass('search forecast dailyforecast air start setting push');
+            body.addClass($rootScope.state);
+
+            if (window.StatusBar) {
+                if ($rootScope.settingsInfo.theme === 'light') {
+                    StatusBar.styleDefault();
+                } else { //photo, dark, old
+                    StatusBar.styleLightContent();
+                }
             }
         });
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
             var headerbars = angular.element(document.querySelectorAll('ion-header-bar'));
-            headerbars.removeClass('bar-search');
-            headerbars.removeClass('bar-forecast');
-            headerbars.removeClass('bar-dailyforecast');
-            headerbars.removeClass('bar-air');
             headerbars.removeClass('bar-clear');
-            headerbars.removeClass('bar-dark');
-            headerbars.removeClass('bar-blue');
-
             for (var i = 0; i < headerbars.length; i++) {
                 headerbars[i].style.backgroundImage = "";
             }
 
-            var tabs = angular.element(document.querySelectorAll('.tab-nav'));
-            tabs.removeClass('tabs-blue');
-
             if (toState.name === 'tab.search') {
-                $rootScope.viewColor = '#f5f5f5';
-                headerbars.addClass('bar-search');
-                headerbars.addClass('bar-dark');
-            } else if (toState.name === 'tab.forecast') {
-                headerbars.addClass('bar-forecast');
-                if ($rootScope.settingsInfo.theme === 'photo') {
-                    $rootScope.viewColor = '#f5f5f5';
-                    headerbars.addClass('bar-clear');
-                } else if ($rootScope.settingsInfo.theme === 'blue') {
-                    $rootScope.viewColor = '#03a9f4';
-                    headerbars.addClass('bar-blue');
-                    tabs.addClass('tabs-blue');
-                } else {
-                    $rootScope.viewColor = '#f5f5f5';
-                    headerbars.addClass('bar-dark');
-                }
+                $rootScope.state = 'search';
+            } else if (toState.name === 'tab.forecast' || toState.name === 'tab.weather') {
+                $rootScope.state = 'forecast';
             } else if (toState.name === 'tab.dailyforecast') {
-                headerbars.addClass('bar-dailyforecast');
-                if ($rootScope.settingsInfo.theme === 'photo') {
-                    $rootScope.viewColor = '#f5f5f5';
-                    headerbars.addClass('bar-clear');
-                } else if ($rootScope.settingsInfo.theme === 'blue') {
-                    $rootScope.viewColor = '#03a9f4';
-                    headerbars.addClass('bar-blue');
-                    tabs.addClass('tabs-blue');
-                } else {
-                    $rootScope.viewColor = '#f5f5f5';
-                    headerbars.addClass('bar-dark');
-                }
+                $rootScope.state = 'dailyforecast';
             } else if (toState.name === 'tab.air') {
-                $rootScope.viewColor = '#f5f5f5';
-                headerbars.addClass('bar-air');
-                headerbars.addClass('bar-dark');
-            } else if (toState.name === 'tab.weather') {
-                $rootScope.viewColor = '#f5f5f5';
-                headerbars.addClass('bar-forecast');
-                headerbars.addClass('bar-dark');
+                $rootScope.state = 'air';
             } else if (toState.name === 'start') {
-                $rootScope.viewColor = '#fefefe';
-                headerbars.addClass('bar-clear');
-            } else {
-                $rootScope.viewColor = '#f5f5f5';
-                headerbars.addClass('bar-dark');
+                $rootScope.state = 'start';
+            } else if (toState.name === 'setting-radio' || toState.name === 'units') {
+                $rootScope.state = 'setting';
+            } else if (toState.name === 'setting-push') {
+                $rootScope.state = 'push';
+            } else { // 'nation', 'guide', 'purchase'
+                $rootScope.state = '';
+            }
+
+            if (fromState.name === '') {
+                var body = angular.element(document.querySelectorAll('body'));
+                body.addClass($rootScope.state);
             }
 
             Util.ga.trackView(toState.name);
@@ -1448,7 +1427,6 @@ angular.module('starter', [
                                     if (i === 12) {
                                         var self = d3.select(this);
                                         self.attr('y1', -bottom)
-                                            .attr('stroke', '#000')
                                             .attr('stroke-width', '2px');
                                     }
                                 })
@@ -1473,7 +1451,13 @@ angular.module('starter', [
                             .data(data);
 
                         rects.enter().append('rect')
-                            .attr('class', 'chart-bar');
+                            .attr('class', function (d, i) {
+                                if (i === 12) {
+                                    return 'chart-bar';
+                                } else {
+                                    return 'chart-blurry-bar';
+                                }
+                            });
 
                         rects.exit().remove();
 
@@ -1485,12 +1469,6 @@ angular.module('starter', [
                             .attr('height', 0)
                             .style('fill', function (d) {
                                 return scope.grade2Color(d.grade);
-                            })
-                            .style('fill-opacity', function (d, i) {
-                                if (i === 12) {
-                                    return 1.0;
-                                }
-                                return 0.6;
                             })
                             .attr('y', function (d) {
                                 if (d.val == undefined) {
@@ -1505,16 +1483,6 @@ angular.module('starter', [
                                 return y(0) - y(d.val);
                             });
                     };
-
-                    scope.$watch('airWidth', function(newValue) {
-                        if (newValue == undefined || newValue == width) {
-                            console.log('new value is undefined or already set same width='+width);
-                            return;
-                        }
-                        console.log('update airWidth='+newValue);
-                        width = newValue;
-                        return;
-                    });
 
                     scope.$watch('airChart', function (newVal) {
                         if (newVal == undefined) {
@@ -1614,15 +1582,6 @@ angular.module('starter', [
                     if ($scope.$root.settingsInfo.theme === 'photo') {
                         $element.bind('scroll', onScroll);
                     }
-                }
-            }
-        });
-
-        $compileProvider.directive('themeApply', function($document) {
-            return {
-                restrict: 'A',
-                link: function($scope, $element, $attr) {
-                    $element.addClass($scope.$root.settingsInfo.theme);
                 }
             }
         });
@@ -1788,7 +1747,7 @@ angular.module('starter', [
         $ionicConfigProvider.views.transition("android");
 
         if (window.StatusBar) {
-            StatusBar.backgroundColorByHexString('#111');
+            StatusBar.styleLightContent();
         }
 
         // Enable Native Scrolling on Android
