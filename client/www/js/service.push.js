@@ -95,6 +95,8 @@ angular.module('service.push', [])
                 self.pushData.type = pushData.type;
                 self.pushData.pushList = pushData.pushList;
                 self.pushData.pushList.forEach(function (pushInfo) {
+                    var city;
+                    var key;
                     if (pushInfo.category === 'alarm') {
                         pushInfo.time = new Date(pushInfo.time);
                     }
@@ -104,8 +106,8 @@ angular.module('service.push', [])
                     }
                     if (pushInfo.cityIndex === 0) {
                         try {
-                            var city = self._getSimpleCityInfo(pushInfo.cityIndex);
-                            for (var key in city) {
+                            city = self._getSimpleCityInfo(pushInfo.cityIndex);
+                            for (key in city) {
                                 pushInfo[key] = city[key];
                             }
                         }
@@ -118,8 +120,8 @@ angular.module('service.push', [])
                     if (pushInfo.location && pushInfo.location.lat == undefined) {
                         console.log('extract pushInfo again!');
                         try {
-                            var city = self._getSimpleCityInfo(pushInfo.cityIndex);
-                            for (var key in city) {
+                            city = self._getSimpleCityInfo(pushInfo.cityIndex);
+                            for (key in city) {
                                 pushInfo[key] = city[key];
                             }
                         }
