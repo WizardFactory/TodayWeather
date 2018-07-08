@@ -258,7 +258,9 @@ angular.module('service.weatherinfo', [])
                 window.updateCityInfo(index);
             }
             else {
-                //Util.ta.trackException(new Error("updateCityInfo is undefined"), false);
+                if (clientConfig && clientConfig.debug === false) {
+                    Util.ga.trackException(new Error("updateCityInfo is undefined"), false);
+                }
             }
 
             city.loadTime = new Date();
