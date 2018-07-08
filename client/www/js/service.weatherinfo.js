@@ -84,7 +84,7 @@ angular.module('service.weatherinfo', [])
          * @param {number} index
          */
         obj.setCityIndex = function (index) {
-            if (index >= -1 && index < cities.length) {
+            if (index >= 0 && index < cities.length) {
                 cityIndex = index;
                 // save current cityIndex
                 TwStorage.set("cityIndex", cityIndex);
