@@ -135,7 +135,7 @@ angular.module('service.weatherinfo', [])
         };
 
         obj.canLoadCity = function (index) {
-            if (index >= -1 && index < cities.length) {
+            if (index >= 0 && index < cities.length) {
                 var city = cities[index];
 
                 if (city.disable === true) {
