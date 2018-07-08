@@ -490,6 +490,7 @@ class DsfController {
         let first = (cb)=> {
             tz.requestTimezoneOffset(undefined, 'get', (err, tzOffset) => {
                 if (err) {
+                    log.warn('cDSF > Failed to run first step :', err);
                     return cb(null);
                 }
                 return cb('1. Found timezone Offset', tzOffset);
@@ -498,6 +499,7 @@ class DsfController {
         let second = (cb)=>{
             tz.requestTimezoneOffsetByGeo({lat: geo[1], lon:geo[0]}, timezone, (err, tzOffset)=>{
                 if(err){
+                    log.warn('cDSF > Failed to run second step :', err);
                     return cb(null);
                 }
                 return cb('2. Found timezone Offset', tzOffset);
@@ -620,6 +622,7 @@ class DsfController {
                         time.setUTCDate(time.getUTCDate() - 1);
                         let reqTime = parseInt(time.getTime() / 1000);
 
+                        // log.info(`cDsf> Req yesterday's data date[${time.toString()}], timeoffset[${timeOffset}], UTC[${reqTime}]`);
                         this._reqData(geo, reqTime, (err, result)=>{
                             if(err){
                                 log.error('cDSF > Fail to get Yesterday data : ', err);
@@ -652,6 +655,7 @@ class DsfController {
                         let time = this._getLocalLast0H(timeOffset);
                         let reqTime = parseInt(time.getTime() / 1000);
 
+                        // log.info(`cDsf> Req yesterday's data date[${time.toString()}], timeoffset[${timeOffset}], UTC[${reqTime}]`);
                         this._reqData(geo, reqTime, (err, result)=>{
                             if(err){
                                 log.error('cDSF > Fail to get today data : ', err);
