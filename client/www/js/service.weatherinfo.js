@@ -145,9 +145,8 @@ angular.module('service.weatherinfo', [])
                 var time = new Date();
                 return !!(city.loadTime === null || time.getTime() - city.loadTime.getTime() > (10 * 60 * 1000));
             }
-            else {
-                Util.ga.trackException(new Error('invalid city index='+index), false);
-            }
+            Util.ga.trackException(new Error('invalid city index='+index), false);
+            return false;
         };
 
         obj.addCity = function (city) {
