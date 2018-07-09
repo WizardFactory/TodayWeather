@@ -167,7 +167,7 @@ router.post('/', function(req, res) {
     }
     catch(e) {
         log.error(e);
-        res.status(500).send('e');
+        res.status(500).send(e.message);
     }
 });
 

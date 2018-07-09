@@ -7,7 +7,11 @@ window.theme = {
         icons: 'img/icons_default',
         weather: 'img/weather_default'
     },
-    'blue': {
+    'dark': {
+        icons: 'img/icons_default',
+        weather: 'img/weather_default'
+    },
+    'old': {
         icons: 'img/icons_old',
         weather: 'img/weather_old'
     }

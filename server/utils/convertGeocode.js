@@ -75,7 +75,7 @@ function convertGeocodeByDaum(first, second, third, callback) {
             log.debug('ConvertDaum >', 'mx:', resultXY.mx, 'my :', resultXY.my);
         }
         catch (e) {
-            log.error('## Error!!!', meta);
+            e.message += ' ' + JSON.stringify(meta);
             log.error(e);
         }
         finally {
@@ -167,8 +167,8 @@ function convertGeocodeByGoogle(first, second, third, callback, language) {
 
                 log.debug('convert geo by google mx:', resultXY.mx, 'my :', resultXY.my);
             }
-            catch(e){
-                log.error('## Error!!!', meta);
+            catch (e) {
+                e.message += ' ' + JSON.stringify(meta);
                 log.error(e);
             }
             finally{

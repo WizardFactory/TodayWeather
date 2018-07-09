@@ -158,7 +158,7 @@ angular.module('controller.settingctrl', [])
                 if (clientConfig.package === 'todayWeather') {
                     list = ['0', '1', '2', '3']
                 }
-                if (clientConfig.package === 'todayAir') {
+                else if (clientConfig.package === 'todayAir') {
                    list = ['3', '4', '2']
                 }
                 list = list.map(function (value) {
@@ -173,9 +173,13 @@ angular.module('controller.settingctrl', [])
             }
             else if (name === 'theme') {
                 title = 'LOC_THEME_SETTING';
-                // var themeList = ['photo', 'light', 'blue'];
-                var themeList = ['photo', 'light'];
-                list = themeList.map(function (value) {
+                if (clientConfig.package === 'todayWeather') {
+                    list = ['photo', 'light', 'dark', 'old'];
+                }
+                else if (clientConfig.package === 'todayAir') {
+                    list = ['light', 'dark'];
+                }
+                list = list.map(function (value) {
                     return {label: $scope.getThemeValueStr(value), value: value};
                 });
             }
@@ -230,8 +234,10 @@ angular.module('controller.settingctrl', [])
                     return 'LOC_WEATHER_PHOTO_THEME';
                 case 'light':
                     return 'LOC_LIGHT_THEME';
-                case 'blue':
-                    return 'LOC_BLUE_THEME';
+                case 'dark':
+                    return 'LOC_DARK_THEME';
+                case 'old':
+                    return 'LOC_OLD_THEME';
             }
             return 'N/A'
         };

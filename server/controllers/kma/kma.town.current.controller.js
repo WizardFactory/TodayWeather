@@ -26,7 +26,6 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
     var pubDate = kmaTimelib.getKoreaDateObj(newData[0].pubDate);
 
     log.debug('KMA Town C> pubDate :', pubDate.toString());
-    //log.info('KMA Town C> db find :', coord);
 
     try{
         async.mapSeries(newData,
@@ -68,6 +67,7 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
     return this;
 
 };
+
 /**
  *
  * @param modelCurrent
@@ -85,7 +85,8 @@ kmaTownCurrentController.prototype.getCurrentFromDB = function(modelCurrent, coo
             return callback(errorNo, req['modelCurrent']);
         }
 
-        modelKmaTownCurrent.find({'mCoord.mx': coord.mx, 'mCoord.my': coord.my}, {_id: 0}).sort({"fcsDate":1}).lean().exec(function(err, result){
+        var query = {'mCoord.mx': coord.mx, 'mCoord.my': coord.my};
+        modelKmaTownCurrent.find(query, {_id: 0}).sort({"fcsDate":1}).batchSize(30).lean().exec(function(err, result){
             if(err){
                 log.warn('KMA Town C> Fail to file&get current data from DB');
                 return callback(err);

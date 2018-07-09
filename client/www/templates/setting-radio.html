@@ -9,13 +9,14 @@
             <span style="vertical-align: middle">{{title|translate}}</span>
         </p>
     </ion-nav-title>
-
-    <ion-content style="background-color: #F5F5F5;">
-        <ion-radio ng-repeat="item in list"
-                   ng-value="item.value"
-                   ng-change="valueChanged(item)"
-                   ng-model="data.value">
-            {{ item.label|translate }}
-        </ion-radio>
+    <ion-content class="main-content">
+        <div class="list">
+            <ion-radio ng-repeat="item in list"
+                       ng-value="item.value"
+                       ng-change="valueChanged(item)"
+                       ng-model="data.value">
+                {{ item.label|translate }}
+            </ion-radio>
+        </div>
     </ion-content>
 </ion-view>

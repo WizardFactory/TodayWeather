@@ -31,14 +31,6 @@ angular.module('controller.tabctrl', [])
             //    }
             //}, 1000);
 
-            // 앱 실행 시 $stateChangeStart가 호출되는 시점에 TabCtrl이 생성되지 않아 init에서 직접 설정함
-            if ($rootScope.settingsInfo.theme === 'blue') {
-                if ($location.path() === '/tab/forecast' || $location.path() === '/tab/dailyforecast') {
-                    var tabs = angular.element(document.querySelectorAll('.tab-nav'));
-                    tabs.addClass('tabs-blue');
-                }
-            }
-
             if (ionic.Platform.isAndroid()) {
                 $ionicPlatform.registerBackButtonAction(function (event) {
                     if ($location.path() === '/tab/search'

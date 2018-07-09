@@ -38,16 +38,16 @@
                 <div class="main-box-arrow" ng-click="onSwipeRight()" ng-if="cityCount > 1">
                     <span class="icon-left ion-chevron-left"></span>
                 </div>
-                <div class="main-box" ng-if="airInfo" ng-style="{'color': grade2Color(airCodeGrade)}">
-                    <div class="main-box-air-title" ng-style="{'border-color': grade2Color(airCodeGrade)}">
+                <div class="main-box" ng-if="airInfo">
+                    <div class="main-box-air-title">
                         {{mainName|translate}}
                     </div>
-                    <div class="main-box-air-content">
+                    <div class="main-box-air-content" ng-style="{'color': grade2Color(airCodeGrade)}">
                         {{mainInfo}}<span>{{getAirCodeUnit(aqiCode)}}</span>
                     </div>
                     <div class="main-box-air-summary">
                         {{airCodeStr}}
-                        <i class="material-icons" ng-bind-html="getSentimentIcon(airCodeGrade)"></i>
+                        <i class="material-icons" ng-bind-html="getSentimentIcon(airCodeGrade)" ng-style="{'color': grade2Color(airCodeGrade)}"></i>
                         <span ng-if="airCodeActionGuide">{{airCodeActionGuide}}</span>
                     </div>
                     <div class="main-box-air-summary" style="display: inline-flex; margin-top: 4px" ng-click="goWeather()">

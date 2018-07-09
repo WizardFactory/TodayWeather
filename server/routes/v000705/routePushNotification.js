@@ -198,15 +198,14 @@ router.delete('/', function(req, res) {
         });
     }
     if (tasks.length <= 0) {
-        var err = new Error('invalid push info for deleting pushInfo:'+JSON.stringify(pushInfo));
-        log.error(err.message);
+        log.error('invalid push info for delete', pushInfo);
         return res.status(403).send(err.message);
     }
 
     async.parallel(tasks, function (err, results) {
       if (err) {
-          log.error(err.message);
-          return res.status(501).send(results);
+          log.error(err);
+          return res.status(501).send(err.message);
       }
       res.send(results);
     });

@@ -64,7 +64,8 @@ kmaTownShortestController.prototype.getShortestFromDB = function(modelCurrent, c
             return callback(errorNo, req['modelShortest']);
         }
 
-        modelKmaTownShortest.find({'mCoord.mx': coord.mx, 'mCoord.my': coord.my}, {_id: 0}).sort({"fcsDate":1}).lean().exec(function(err, result){
+        var query = {'mCoord.mx': coord.mx, 'mCoord.my': coord.my};
+        modelKmaTownShortest.find(query, {_id: 0}).sort({"fcsDate":1}).batchSize(30).lean().exec(function(err, result){
             if(err){
                 log.warn('KMA Town ST> Fail to file&get shortest data from DB');
                 return callback(err);

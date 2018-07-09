@@ -146,7 +146,7 @@
                     <td>
                         <img ng-src="{{::iconsImgPath}}/discomport_index.png">
                         <span>{{'LOC_DISCOMFORT_INDEX'|translate}} {{currentWeather.dsplsStr}}
-                            <span>({{currentWeather.dspls}})</span>
+                            <span class="sub-text">({{currentWeather.dspls}})</span>
                         </span>
                     </td>
                 </tr>
@@ -165,7 +165,9 @@
                 <tr ng-if="currentWeather.today.ultrvGrade != undefined">
                     <td>
                         <img ng-src="{{::iconsImgPath}}/ultrv.png">
-                        <span>{{"LOC_UV"|translate}} {{currentWeather.today.ultrv}} {{currentWeather.today.ultrvStr}}</span>
+                        <span>{{"LOC_UV"|translate}} {{currentWeather.today.ultrvStr}}
+                            <span class="sub-text">({{currentWeather.today.ultrv}})</span>
+                        </span>
                     </td>
                 </tr>
                 <tr ng-if="currentWeather.today.fsnGrade != undefined">

@@ -31,7 +31,7 @@
                 style="padding: 0 4px;margin-right: 4px"></button>
     </ion-nav-buttons>
     <ion-content delegate-handle="body" direction="y" zooming="false" scrollbar-x="false" scrollbar-y="false"
-                 has-bouncing="false" tabs-shrink bar-scrolled theme-apply class="main-content">
+                 has-bouncing="false" tabs-shrink bar-scrolled class="main-content">
         <div class="card">
             <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()" class="row row-no-padding"
                  ng-style="{'min-height':headerHeight+'px'}">
@@ -163,7 +163,7 @@
                     <td>
                         <img ng-src="{{::iconsImgPath}}/discomport_index.png">
                         <span>{{'LOC_DISCOMFORT_INDEX'|translate}} {{currentWeather.dsplsStr}}
-                            <span>({{currentWeather.dspls}})</span>
+                            <span class="sub-text">({{currentWeather.dspls}})</span>
                         </span>
                     </td>
                 </tr>
@@ -182,7 +182,9 @@
                 <tr ng-if="currentWeather.today.ultrvGrade != undefined">
                     <td>
                         <img ng-src="{{::iconsImgPath}}/ultrv.png">
-                        <span>{{"LOC_UV"|translate}} {{currentWeather.today.ultrv}} {{currentWeather.today.ultrvStr}}</span>
+                        <span>{{"LOC_UV"|translate}} {{currentWeather.today.ultrvStr}}
+                            <span class="sub-text">({{currentWeather.today.ultrv}})</span>
+                        </span>
                     </td>
                 </tr>
                 <tr ng-if="currentWeather.today.fsnGrade != undefined">
