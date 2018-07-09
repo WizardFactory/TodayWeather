@@ -20,5 +20,6 @@ kaqHourlyForecastSchema.index({stationName: 'hashed'});
 kaqHourlyForecastSchema.index({mapCase: 'hashed'});
 kaqHourlyForecastSchema.index({date: 1});
 kaqHourlyForecastSchema.index({"mapCase": 1, "stationName": 1, "date": 1});
+kaqHourlyForecastSchema.index({"mapCase": 1, "stationName": 1, "pubDate": 1, "code":1});
 
 module.exports = mongoose.model('KaqHourlyForecast', kaqHourlyForecastSchema);
