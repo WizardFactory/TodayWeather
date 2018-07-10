@@ -33,6 +33,82 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
         this.pollutants = ['pm10', 'pm25', 'o3', 'no2', 'so2'];
     }
 
+    /**
+     *
+     * @param {{stationName: string, code: string, pubDate: string, list: []}} forecastsObj
+     * @param callback
+     * @returns {*}
+     * @private
+     */
+    _filterList(forecastsObj, callback) {
+        if (forecastsObj == undefined) {
+            log.error('pass update forecast list hourlyForecasts is undefined');
+            return callback();
+        }
+        //filter by invalid and updated
+        let filteredList = [];
+        forecastsObj.hourly.forEach(hourData => {
+            if (hourData.val == undefined) {
+                log.warn("invalid val "+ forecastsObj.stationName+ " "+forecastsObj.code+" "+hourData.date);
+            }
+            else {
+                let hourForecast = this._makeHourForecast(
+                    forecastsObj.stationName,
+                    forecastsObj.code,
+                    forecastsObj.pubDate,
+                    hourData);
+                filteredList.push(hourForecast);
+            }
+        });
+
+        let query = {stationName: forecastsObj.stationName,
+            code: forecastsObj.code,
+            mapCase: this.mapCase,
+            pubDate: forecastsObj.pubDate};
+
+        this.collection.find(query).lean().exec((err, list)=> {
+            if (err) {
+                return callback(err);
+            }
+            if (list.length <= 0) {
+                return callback(null, filteredList);
+            }
+            let newList = filteredList.filter(newObj => {
+                let dbObj = list.find(dbObj=> {
+                    return dbObj.dataTime === newObj.dataTime;
+                });
+                return dbObj == undefined;
+            });
+            callback(null, newList);
+        });
+    }
+
+    /**
+     * parent인 ImgHourlyForecastController의 동일명 함수와 input이 다름
+     * @param {[]} list - hourly forecast list
+     * @param callback
+     * @private
+     */
+    _updateForecastList(list, callback) {
+        async.mapSeries(list,
+            (hourForecast,callback)=> {
+                this._updateDb(hourForecast, function (err) {
+                    if (err)  {
+                        log.error(err);
+                    }
+                    callback();
+                });
+            },
+            callback);
+    }
+
+    /**
+     *
+     * @param {Object} stn - MsrStnInfo
+     * @param {string} code - pm10, pm25, o3, so2, no2
+     * @param callback
+     * @private
+     */
     _updateDustInfo(stn, code, callback) {
         async.waterfall([
                 (callback) => {
@@ -50,13 +126,23 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                                 callback(err, hourlyForecastObj);
                             });
                 },
-                (hourlyForecasts, callback) => {
-                    if (hourlyForecasts == undefined) {
-                        log.error('pass update forecast list hourlyForecasts is undefined');
-                        return callback();
+                (forecastsObj, callback) => {
+                    this._filterList(forecastsObj, callback);
+                },
+                (hourlyForecastList, callback) => {
+                    let dataInfo = {mapCase:this.mapCase, stnName:stn.stationName, code:code};
+
+                    if (hourlyForecastList.length == 0) {
+                        log.info('already updated', dataInfo);
+                        return callback(null, null);
                     }
-                    log.debug(JSON.stringify(hourlyForecasts));
-                    this._updateForecastList(hourlyForecasts, callback);
+
+                    this._updateForecastList(hourlyForecastList,
+                        (err, result)=> {
+                            dataInfo.count = hourlyForecastList.length;
+                            log.info('updated', dataInfo);
+                            callback(err, result);
+                        });
                 }
             ],
             (err)=>{
@@ -67,13 +153,24 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
             });
     }
 
+    /**
+     *
+     * @param folderName - ex)2018-07-08 21:00:00
+     * @returns {string} - ex)2018-07-09 17:00
+     * @private
+     */
     _getPubdate(folderName) {
        let date = new Date(folderName);
        date.setHours(date.getHours()+20);
        return kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(date);
     }
 
-    _getModelImgList(dataTime, callback) {
+    /**
+     *
+     * @param callback
+     * @private
+     */
+    _getModelImgList(callback) {
         this.s3.ls()
             .then(results => {
                 log.debug(JSON.stringify({'s3list':results}));
@@ -87,6 +184,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                     return name.indexOf('dateBackup') < 0;
                 });
 
+                //'2018-04-09 21:00:00/'
                 let folderName = folderList[folderList.length-1];
                 this.modelList.forEach(mapCase => {
                     let imgPaths = {};
@@ -95,7 +193,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                         name = name === 'PM25'?'PM2_5':name;
                         imgPaths[value] = this.s3Url+folderName+mapCase+'.'+name+'.09KM.animation.gif';
                     });
-                    imgPaths.pubDate = this._getPubdate(folderName.slice(0, folderName.length-6));
+                    imgPaths.pubDate = this._getPubdate(folderName.slice(0, folderName.length-1));
                     modelImgList.push({mapCase: mapCase, imgPaths: imgPaths, folderName: folderName});
                 });
 
@@ -186,7 +284,10 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
 
     /**
      * 특정 한 모델이 실패해도, 다음 모델은 계속 진행
-     * @param modelImg
+     * @param {Object} modelImg
+     * @param {string} modelImg.folderName - ex)2018-07-08 21:00:00/
+     * @param {string} modelImg.mapCase - modelimg_CASE4, modelimg
+     * @param {{pubDate:string, no2:string, o3:string, pm10:string, pm25:string, so2:string}} modelImg.imgPaths
      * @param callback
      * @private
      */
@@ -288,7 +389,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                     this._getMapCase(dataTime, callback);
                 },
                 callback => {
-                    this._getModelImgList(dataTime, callback);
+                    this._getModelImgList(callback);
                 },
                 // (modelImgList, callback) => {
                 //     this._existAllModelimg(modelImgList, callback);
