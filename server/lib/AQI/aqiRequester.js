@@ -93,7 +93,7 @@ aqiRequester.prototype.getData = function(url, retryCount, callback){
         var result;
         try {
             result = JSON.parse(body);
-            log.info(result);
+            log.info('aqireqeuester.getdata', result);
         }
         catch (err) {
             return callback(err);
