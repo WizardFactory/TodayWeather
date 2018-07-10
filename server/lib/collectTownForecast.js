@@ -366,14 +366,28 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
                  //log.info(result.response.header[0].resultCode[0]);
                  //log.info(result.response.body[0]);
                  //log.info(result.response.body[0].totalCount[0]);
+                var resultCode = '';
+                var resultMsg = '';
+                if (result.response.header &&
+                    result.response.header[0] &&
+                    result.response.header[0].resultCode)
+                {
+                    resultCode = result.response.header[0].resultCode[0];
+                    resultMsg = result.response.header[0].resultMsg[0];
+                }
 
-                if(err || (result.response.header[0].resultCode[0] !== '0000') ||
-                    (result.response.body[0].totalCount[0] === '0')) {
-                    // there is error code or totalcount is zero as no valid data.
-                    log.warn('There are no data',
-                        result.response.header[0].resultCode[0],
-                        result.response.body[0].totalCount[0],
-                        meta);
+                var totalCount = '';
+                if (result.response.body &&
+                    result.response.body[0] &&
+                    result.response.body[0].totalCount)
+                {
+                    totalCount = result.response.body[0].totalCount[0];
+                }
+
+                if(err || (resultCode !== '0000') || (totalCount === '0')) {
+                    //there is error code or total count is zero as no valid data.
+                    //resultCode is 22, LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR.
+                    log.warn(JSON.stringify({resultCode, resultMsg, totalCount}), meta);
                     self.emit('recvFail', index);
                 }
                 else{
@@ -407,7 +421,7 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
             }
             catch(e){
                 e.message += ' ' + JSON.stringify(meta);
-                log.error(meta);
+                log.error(e);
                 self.emit('recvFail', index);
             }
             finally{
