@@ -623,6 +623,7 @@ function controllerWorldWeather() {
                         return callback();
                     }
                     collectorAqi.requestAqiData(req.geocode, 0, 0, req.timezone, function(err, aqiData){
+                        //err가 넘어오는 경우는 없음
                         if(err){
                             log.error('RQ> Fail to requestAqiData', meta);
                             return callback('Fail to requestAqiData');
@@ -690,6 +691,7 @@ function controllerWorldWeather() {
         var meta = {};
         meta.method = 'queryTwoDaysWeatherNewForm';
         meta.sID = req.sessionID;
+        meta.geocode = req.geocode;
 
         var errMsg;
         if (!req.validVersion) {
@@ -713,7 +715,6 @@ function controllerWorldWeather() {
         }
 
         req.cDate = cDate;
-        log.info('TWW> geocode : ', req.geocode, meta);
         log.info('TWW> system cur date : ', req.cDate, meta);
 
         async.parallel([
@@ -727,7 +728,10 @@ function controllerWorldWeather() {
             ],
             function(err) {
                 if(err){
-                    log.info('TWW2 > : ', err, meta);
+                    err.message += ' ' +JSON.stringify(meta);
+                    //TW-398 next에서 error message가 짤림.
+                    log.warn(err.message);
+                    return next(err);
                 }
                 next();
             });

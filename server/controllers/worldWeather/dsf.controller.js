@@ -730,16 +730,19 @@ class DsfController {
             ],
             (err, result)=>{
                 if(err){
-                    log.error('cDSF > Fail to collect DFS data');
+                    err.message += ' ' + JSON.stringify(meta);
+                    return callback(err);
                 }
+                let ret;
                 try {
                     //current date of weather data
                     req.cWeatherDate = new Date(result.current.data.current.dateObj);
+                    ret = this._makeOutputFormat(result, req);
                 }
                 catch (e) {
-                   err = e;
+                    err = e;
                 }
-                return callback(err, this._makeOutputFormat(result, req));
+                return callback(err, ret);
             }
         );
     }

@@ -31,13 +31,18 @@ dsfRequester.prototype.getForecast = function(geocode, date, key, callback){
 
     log.info('DFS> get data :', url);
     self.getData(url, self.defRetryCount, function(err, res){
-        if(err){
-            callback(err, {isSuccess: false});
-            return;
+        if (err) {
+            err.message += ' url='+url;
+            return callback(err, {isSuccess: false});
         }
-        if(res != undefined){
-            res.isSuccess = true;
+
+        if (res == undefined) {
+            err = new Error('res is undefined url='+url);
+            return callback(err, {isSuccess: false});
         }
+
+        res.isSuccess = true;
+
         callback(err, res);
         return;
     });
@@ -100,39 +105,28 @@ dsfRequester.prototype.getData = function(url, retryCount, callback){
                 log.warn('DFS> 1. Retry to get caused by ' + err.code + ' : ', retryCount, ', url:'+url);
                 return self.getData(url, --retryCount, callback);
             }
-            else {
-                err.message += ' url:'+url;
-                log.warn(err);
-            }
-            if(callback){
-                callback(err);
-            }
-            return;
+            return callback(err);
         }
+
         var statusCode = response.statusCode;
-
         if(statusCode === 404 || statusCode === 403){
-            log.debug('DFS> ERROR!!! StatusCode : ', statusCode);
-            if(callback){
-                callback(1);
-            }
-            return;
+            err = new Error('DFS> http statusCode is '+statusCode);
+            return callback(err);
         }
 
+        var result;
         try{
-            var result = JSON.parse(body);
-        }catch(e){
-            log.warn('DSF> Wong JSON : ', body);
+            result = JSON.parse(body);
+        }
+        catch (e) {
+            log.warn('DSF> Wrong JSON : ', body);
             if (retryCount > 0) {
                 log.warn('DFS> 2. Retry to get caused by wrong JSON, retrycount(', retryCount, ')');
                 return self.getData(url, --retryCount, callback);
             }
-
-            if(callback){
-                callback(e);
-            }
-            return;
+            return callback(e);
         }
+
         // log.info(result);
         if(callback){
             callback(err, result);
