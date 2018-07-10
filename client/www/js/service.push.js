@@ -146,8 +146,8 @@ angular.module('service.push', [])
 
         obj.savePushInfo = function () {
             var self = this;
-            console.log('save push data');
             TwStorage.set("pushData2", self.pushData);
+            Util.ga.trackEvent('push', 'post', JSON.stringify({savePushInfo: self.pushData}));
         };
 
         /**
@@ -238,8 +238,6 @@ angular.module('service.push', [])
                 console.log(JSON.stringify(postList));
                 return;
             }
-
-            Util.ga.trackEvent('push', 'post', JSON.stringify({postPushList: postList}));
 
             $http({
                 method: 'POST',
@@ -483,8 +481,11 @@ angular.module('service.push', [])
 
             simpleInfo = {name: city.name, source: city.source};
 
-            if (city.location || city.location.lat) {
+            if (city.location && city.location.lat) {
                 simpleInfo.location = city.location;
+            }
+            else {
+                console.log('city location is invalid', city.location);
             }
 
             if (city.source === 'KMA' && city.address) {
@@ -608,17 +609,32 @@ angular.module('service.push', [])
                     for (var key in city) {
                         if (key == 'location') {
                             if (pushInfo.location == undefined) {
+                                Util.ga.trackEvent('push', 'update', 'to add location');
                                 needToUpdate = true;
                             }
                             else if (pushInfo.location.lat === city.location.lat &&
                                 pushInfo.location.long === city.location.long) {
-                                needToUpdate = false;
+                                //needToUpdate = false;
                             }
                             else {
+                                Util.ga.trackEvent('push', 'update', 'by location');
                                 needToUpdate = true;
                             }
                         }
+                        else if (key == 'town') {
+                            if (pushInfo.town.first === city.town.first &&
+                                pushInfo.town.second === city.town.second &&
+                                pushInfo.town.third === city.town.third)
+                            {
+                                //needToUpdate = false;
+                            }
+                            else {
+                                needToUpdate = true;
+                                Util.ga.trackEvent('push', 'update', 'by town');
+                            }
+                        }
                         else if (pushInfo[key] !== city[key]) {
+                            Util.ga.trackEvent('push', 'update', 'by '+key);
                             needToUpdate = true;
                         }
                         pushInfo[key] = city[key];
@@ -633,6 +649,9 @@ angular.module('service.push', [])
             if (needToUpdate) {
                 this._postPushList(list);
                 this.savePushInfo();
+            }
+            else {
+                console.log('skip update push city index='+cityIndex);
             }
         };
 

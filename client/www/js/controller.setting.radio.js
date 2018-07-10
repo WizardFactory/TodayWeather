@@ -3,7 +3,7 @@
  */
 
 angular.module('controller.setting.radio', [])
-    .factory("radioList", function RadioList($rootScope, Units, TwStorage, Util) {
+    .factory("radioList", function RadioList($rootScope, Units, TwStorage, Util, Push) {
         var radioList = {};
         radioList.type = "";
         radioList.title = "";
@@ -31,6 +31,7 @@ angular.module('controller.setting.radio', [])
             if (this.type.indexOf('Unit') >= 0) {
                 if (Units.setUnit(this.type, this.value)) {
                     Units.saveUnits();
+                    Push.updateUnits();
 
                     if (this.type === 'airUnit') {
                         $rootScope.$broadcast('changeAirUnitEvent');

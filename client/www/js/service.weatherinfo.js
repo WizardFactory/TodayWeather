@@ -249,12 +249,12 @@ angular.module('service.weatherinfo', [])
                 //v000901/kma/addr 에서 추가해주어야 함.
                 if (!city.location && newCityInfo.location) {
                     city.location = newCityInfo.location;
-                    console.info('update location ', city);
+                    console.log('update location ', city);
                 }
             }
 
             if (window.updateCityInfo) {
-                console.info('update city info for push');
+                console.log('try to update city info for push');
                 window.updateCityInfo(index);
             }
             else {
