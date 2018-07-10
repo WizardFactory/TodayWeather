@@ -69,7 +69,7 @@
         }, false);
     </script>
 </head>
-<body style="background-color: #03a9f4; line-height: normal;" ng-style="{'background-color': viewColor}">
+<body style="line-height: normal;" ng-class="[package, settingsInfo.theme+'-theme']">
 <!--
   The nav bar that will be updated as we navigate between views.
 -->
@@ -84,7 +84,7 @@
 <ion-side-menus>
     <!-- Left menu -->
     <ion-side-menu side="left" ng-controller="SettingCtrl" ng-class="isMenuOpen() ? 'menu-open' : ''" class="menu menu-left">
-        <header class="bar bar-dark bar-header">
+        <header class="bar bar-header bar-default">
             <button class="button button-icon icon"
                     ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" menu-toggle>
             </button>
@@ -116,7 +116,7 @@
                     {{'LOC_REFRESH_INTERVAL'|translate}}
                     <span style="float: right">{{getRefreshIntervalValueStr(settingsInfo.refreshInterval)|translate}}</span>
                 </label>
-                <label class="item" ng-if="package === 'todayWeather'" ng-click="settingRadio('theme')">
+                <label class="item" ng-click="settingRadio('theme')">
                     {{'LOC_THEME_SETTING'|translate}}
                     <span style="float: right">{{getThemeValueStr(settingsInfo.theme)|translate}}</span>
                 </label>
@@ -148,7 +148,7 @@
         </ion-content>
     </ion-side-menu>
 
-    <ion-side-menu-content drag-content="false" ng-class="isMenuOpen() ? 'menu-open' : ''">
+    <ion-side-menu-content drag-content="false" ng-class="isMenuOpen() ? 'menu-open' : ''" class="body-content">
         <ion-nav-bar class="bar-clear"></ion-nav-bar>
         <ion-nav-view></ion-nav-view>
     </ion-side-menu-content>

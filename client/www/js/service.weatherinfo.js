@@ -79,8 +79,12 @@ angular.module('service.weatherinfo', [])
             return cityIndex;
         };
 
+        /**
+         *
+         * @param {number} index
+         */
         obj.setCityIndex = function (index) {
-            if (index >= -1 && index < cities.length) {
+            if (index >= 0 && index < cities.length) {
                 cityIndex = index;
                 // save current cityIndex
                 TwStorage.set("cityIndex", cityIndex);
@@ -131,18 +135,18 @@ angular.module('service.weatherinfo', [])
         };
 
         obj.canLoadCity = function (index) {
-            if (index === -1) {
-                return false;
+            if (index >= 0 && index < cities.length) {
+                var city = cities[index];
+
+                if (city.disable === true) {
+                    return false;
+                }
+
+                var time = new Date();
+                return !!(city.loadTime === null || time.getTime() - city.loadTime.getTime() > (10 * 60 * 1000));
             }
-
-            var city = cities[index];
-
-            if (city.disable === true) {
-                return false;
-            }
-
-            var time = new Date();
-            return !!(city.loadTime === null || time.getTime() - city.loadTime.getTime() > (10 * 60 * 1000));
+            Util.ga.trackException(new Error('invalid city index='+index), false);
+            return false;
         };
 
         obj.addCity = function (city) {
@@ -254,7 +258,9 @@ angular.module('service.weatherinfo', [])
                 window.updateCityInfo(index);
             }
             else {
-                Util.ta.trackException(new Error("updateCityInfo is undefined"), false);
+                if (clientConfig && clientConfig.debug === false) {
+                    Util.ga.trackException(new Error("updateCityInfo is undefined"), false);
+                }
             }
 
             city.loadTime = new Date();

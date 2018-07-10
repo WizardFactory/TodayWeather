@@ -31,7 +31,7 @@
                 style="padding: 0 4px;margin-right: 4px"></button>
     </ion-nav-buttons>
     <ion-content delegate-handle="body" direction="y" zooming="false" scrollbar-x="false" scrollbar-y="false"
-                 has-bouncing="false" tabs-shrink bar-scrolled theme-apply class="main-content">
+                 has-bouncing="false" tabs-shrink bar-scrolled class="main-content">
         <div class="card">
             <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()" class="row row-no-padding"
                  ng-style="{'min-height':headerHeight+'px'}">
@@ -146,7 +146,7 @@
                             <div ng-if="hasPropertyInThreeDays(['ultrvGrade'])">
                                 <img ng-src="{{::iconsImgPath}}/ultrv.png">
                                 <div>
-                                    <div>{{day.ultrv}} {{day.ultrvStr}}</div>
+                                    <div>{{day.ultrvStr}} <small>({{day.ultrv}})</small></div>
                                     <span class="sub-text">{{"LOC_UV"|translate}}</span>
                                 </div>
                             </div>

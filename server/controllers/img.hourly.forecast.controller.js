@@ -14,12 +14,12 @@ class ImgHourlyForecastController {
     }
 
     _getMsrStn(callback) {
-        MsrStn.find().lean().exec(function (err, stnList) {
+        MsrStn.find({}, {_id:0}).lean().exec(function (err, stnList) {
             if (err) {
                 return callback(err);
             }
             if (stnList.length === 0) {
-                return callback(new Error("airkroea msr stn list length is 0"));
+                return callback(new Error("airkorea msr stn list length is 0"));
             }
             callback(null, stnList);
         });
@@ -81,8 +81,8 @@ class ImgHourlyForecastController {
 
     /**
      * code(pm10, pm25, o3) 별로 모든 stn의 예보를 업데이트 요청한다.
-     * @param stnList
-     * @param code
+     * @param {Object[]} stnList
+     * @param {string} code
      * @param callback
      * @private
      */
@@ -96,6 +96,13 @@ class ImgHourlyForecastController {
             callback);
     }
 
+    /**
+     *
+     * @param {string[]} pollutants
+     * @param {Object[]} stnList
+     * @param callback
+     * @private
+     */
     _updateHourlyForecast(pollutants, stnList, callback) {
         log.info('update hourly forecast stnList:'+stnList.length);
 

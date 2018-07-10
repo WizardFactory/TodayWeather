@@ -46,6 +46,14 @@ angular.module('controller.setting.radio', [])
                 } else if (this.type === 'theme') {
                     $rootScope.iconsImgPath = window.theme[$rootScope.settingsInfo.theme].icons;
                     $rootScope.weatherImgPath = window.theme[$rootScope.settingsInfo.theme].weather;
+
+                    if (window.StatusBar) {
+                        if ($rootScope.settingsInfo.theme === 'light') {
+                            StatusBar.styleDefault();
+                        } else { //photo, dark, old
+                            StatusBar.styleLightContent();
+                        }
+                    }
                 }
             }
             else {
