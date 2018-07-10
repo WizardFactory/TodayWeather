@@ -204,6 +204,10 @@ angular.module('service.weatherinfo', [])
         obj.updateCity = function (index, newCityInfo) {
             var that = this;
             var city = cities[index];
+            if (city == undefined) {
+                Util.ga.trackException(new Error('invalid cityIndex:'+index+' length:'+cities.length), false);
+                return;
+            }
 
             if (newCityInfo.currentWeather) {
                 city.currentWeather = newCityInfo.currentWeather;
