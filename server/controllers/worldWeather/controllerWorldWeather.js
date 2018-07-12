@@ -554,7 +554,7 @@ function controllerWorldWeather() {
                         geocode = req.geocode;
                     }
                     else {
-                        return callback(new Error('unknwon geocode'));
+                        return callback(new Error('unknown geocode'));
                     }
                     collectorAqi.removeAqiDb(geocode, callback);
                 },
