@@ -213,7 +213,14 @@ angular.module('service.weatherutil', [])
                     url = _makeQueryUrlWithLocation(geoInfo.location, 'weather');
                 }
                 else if (geoInfo.address) {
-                    var town = this.getTownFromFullAddress(this.convertAddressArray(geoInfo.address));
+                    //naton이 없는 address에서 오류 발생함 (TW-340, TW-402)
+                    //한국어 아닌 국내 address도 오류 발생함
+                    var address = geoInfo.address;
+                    if (address.indexOf('대한민국') < 0) {
+                        address = '대한민국 ' + address;
+                    }
+
+                    var town = this.getTownFromFullAddress(this.convertAddressArray(address));
 
                     if (town.first=="" && town.second=="" && town.third=="") {
                         //town invalid
