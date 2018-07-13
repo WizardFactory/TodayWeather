@@ -49,23 +49,15 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
                     cb();
                 });
             },
-            function(err){
+            function (err) {
                 log.debug('KMA Town C> finished to save town.current data');
                 callback(err);
             }
         );
     }
-    catch(e){
-        if(callback){
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
+    catch (e) {
+        return callback(e);
     }
-
-    return this;
-
 };
 
 /**
@@ -78,11 +70,10 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
  * @private
  */
 kmaTownCurrentController.prototype.getCurrentFromDB = function(modelCurrent, coord, req, callback) {
-    var errorNo = 0;
 
     try{
         if(req != undefined && req['modelCurrent'] != undefined){
-            return callback(errorNo, req['modelCurrent']);
+            return callback(null, req['modelCurrent']);
         }
 
         var query = {'mCoord.mx': coord.mx, 'mCoord.my': coord.my};
@@ -92,10 +83,9 @@ kmaTownCurrentController.prototype.getCurrentFromDB = function(modelCurrent, coo
                 return callback(err);
             }
 
-            if(result.length == 0){
-                log.warn('KMA Town C> There are no current datas from DB');
-                errorNo = 1;
-                return callback(errorNo);
+            if (result.length == 0) {
+                err = new Error('KMA Town C> There are no current datas from DB ' + JSON.stringify(query));
+                return callback(err);
             }
 
             var ret = [];
@@ -116,23 +106,17 @@ kmaTownCurrentController.prototype.getCurrentFromDB = function(modelCurrent, coo
                 ret.push(newItem);
             });
 
-            callback(errorNo, {pubDate: pubDate, ret:ret});
+            callback(null, {pubDate: pubDate, ret:ret});
         });
 
-    }catch(e){
-        if (callback) {
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
+    }
+    catch (e) {
+        return callback(e);
     }
 };
 
-
 kmaTownCurrentController.prototype.checkPubDate = function(model, srcList, dateString, callback) {
     var pubDate = kmaTimelib.getKoreaDateObj(''+ dateString.date + dateString.time);
-    var errCode = 0;
 
     log.info('KMA Town C> checkPubDate pubDate : ', pubDate.toString());
     try{
@@ -140,7 +124,7 @@ kmaTownCurrentController.prototype.checkPubDate = function(model, srcList, dateS
             function(src,cb){
                 modelKmaTownCurrent.find({'mCoord.mx': src.mx, 'mCoord.my': src.my}, {_id: 0, mCoord:1, pubDate:1}).sort({"pubDate":1}).lean().exec(function(err, dbList){
                     if(err){
-                        log.info('KMA Town C> There is no data matached to : ', src);
+                        log.info('KMA Town C> There is no data matched to : ', src);
                         return cb(null, src);
                     }
 
@@ -165,19 +149,13 @@ kmaTownCurrentController.prototype.checkPubDate = function(model, srcList, dateS
                 log.info('KMA Town C> Count of the list for the updating : ', result.length);
                 log.info(JSON.stringify(result));
 
-                return callback(errCode, result);
+                return callback(null, result);
             }
         );
-    }catch(e){
-        if (callback) {
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
     }
-
-    return this;
+    catch (e) {
+        return callback(e);
+    }
 };
 
 kmaTownCurrentController.prototype.remove = function (pubDate) {

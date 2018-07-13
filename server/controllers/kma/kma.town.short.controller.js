@@ -13,16 +13,15 @@ function kmaTownShortController(){
 
 kmaTownShortController.prototype.saveShort = function(newData, callback){
     //log.info('KMA Town S> save :', newData);
-    var coord = {
-        mx: newData[0].mx,
-        my: newData[0].my
-    };
-
-    var pubDate = kmaTimelib.getKoreaDateObj(newData[0].pubDate);
-    log.verbose('KMA Town S> pubDate :', pubDate.toString());
-    //log.info('KMA Town S> db find :', coord);
-
     try{
+        var coord = {
+            mx: newData[0].mx,
+            my: newData[0].my
+        };
+
+        var pubDate = kmaTimelib.getKoreaDateObj(newData[0].pubDate);
+        log.verbose('KMA Town S> pubDate :', pubDate.toString(), coord);
+
         async.mapSeries(newData,
             function(item, cb){
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
@@ -44,25 +43,16 @@ kmaTownShortController.prototype.saveShort = function(newData, callback){
                 callback(err);
             }
         );
-    }catch(e){
-        if(callback){
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
     }
-
-
-    return this;
+    catch (e) {
+        return callback(e);
+    }
 };
 
 kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord, req, callback) {
-    var errorNo = 0;
-
     try{
         if(req != undefined && req['modelShort'] != undefined){
-            return callback(errorNo, req['modelShort']);
+            return callback(null, req['modelShort']);
         }
 
         var query = {'mCoord.mx': coord.mx, 'mCoord.my': coord.my};
@@ -72,10 +62,9 @@ kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord, 
                 return callback(err);
             }
 
-            if(result.length == 0){
-                log.warn('KMA Town S> There are no short datas from DB');
-                errorNo = 1;
-                return callback(errorNo);
+            if (result.length == 0) {
+                err = new Error('KMA Town S> There are no short datas from DB '+JSON.stringify(query));
+                return callback(err);
             }
 
             var ret = [];
@@ -97,26 +86,21 @@ kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord, 
             });
 
             log.info('KMA Town S> pubDate : ', pubDate);
-            callback(errorNo, {pubDate: pubDate, ret:ret});
+            callback(null, {pubDate: pubDate, ret:ret});
         });
 
-    }catch(e){
-        if (callback) {
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
+    }
+    catch (e) {
+        return callback(e);
     }
 };
 
 
 kmaTownShortController.prototype.checkPubDate = function(model, srcList, dateString, callback) {
-    var pubDate = kmaTimelib.getKoreaDateObj(''+ dateString.date + dateString.time);
-    var errCode = 0;
-
-    log.info('KMA Town S> pubDate : ', pubDate.toString());
     try{
+        var pubDate = kmaTimelib.getKoreaDateObj(''+ dateString.date + dateString.time);
+        log.info('KMA Town S> pubDate : ', pubDate.toString());
+
         async.mapSeries(srcList,
             function(src,cb){
                 modelKmaTownShort.find({'mCoord.mx': src.mx, 'mCoord.my': src.my}, {_id: 0, mCoord:1, pubDate:1})
@@ -124,7 +108,7 @@ kmaTownShortController.prototype.checkPubDate = function(model, srcList, dateStr
                     .lean()
                     .exec(function(err, dbList) {
                         if(err){
-                            log.info('KMA Town S> There is no data matached to : ', src);
+                            log.info('KMA Town S> There is no data matched to : ', src);
                             return cb(null, src);
                         }
 
@@ -149,19 +133,13 @@ kmaTownShortController.prototype.checkPubDate = function(model, srcList, dateStr
                 log.info('KMA Town S> Count of the list for the updating : ', result.length);
                 log.info('KMA Town S> ', JSON.stringify(result));
 
-                return callback(errCode, result);
+                return callback(null, result);
             }
         );
-    }catch(e){
-        if (callback) {
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
     }
-
-    return this;
+    catch (e) {
+        return callback(e);
+    }
 };
 
 kmaTownShortController.prototype.remove = function (pubDate) {
