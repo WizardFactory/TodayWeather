@@ -95,6 +95,8 @@ angular.module('service.push', [])
                 self.pushData.type = pushData.type;
                 self.pushData.pushList = pushData.pushList;
                 self.pushData.pushList.forEach(function (pushInfo) {
+                    var city;
+                    var key;
                     if (pushInfo.category === 'alarm') {
                         pushInfo.time = new Date(pushInfo.time);
                     }
@@ -104,8 +106,22 @@ angular.module('service.push', [])
                     }
                     if (pushInfo.cityIndex === 0) {
                         try {
-                            var city = self._getSimpleCityInfo(pushInfo.cityIndex);
-                            for (var key in city) {
+                            city = self._getSimpleCityInfo(pushInfo.cityIndex);
+                            for (key in city) {
+                                pushInfo[key] = city[key];
+                            }
+                        }
+                        catch (err) {
+                           Util.ga.trackException(err, false);
+                        }
+                    }
+
+                    //TW-365 location 정보에 오류가 있으면 새로 생성함
+                    if (pushInfo.location && pushInfo.location.lat == undefined) {
+                        console.log('extract pushInfo again!');
+                        try {
+                            city = self._getSimpleCityInfo(pushInfo.cityIndex);
+                            for (key in city) {
                                 pushInfo[key] = city[key];
                             }
                         }
@@ -130,8 +146,8 @@ angular.module('service.push', [])
 
         obj.savePushInfo = function () {
             var self = this;
-            console.log('save push data');
             TwStorage.set("pushData2", self.pushData);
+            Util.ga.trackEvent('push', 'post', JSON.stringify({savePushInfo: self.pushData}));
         };
 
         /**
@@ -231,9 +247,7 @@ angular.module('service.push', [])
                 timeout: 10*1000
             })
                 .success(function (data) {
-                    if (data) {
-                        console.log(JSON.stringify(data));
-                    }
+                    console.log('push done');
                 })
                 .error(function (data, status) {
                     console.log(status +":"+data);
@@ -252,26 +266,12 @@ angular.module('service.push', [])
          */
         obj._deletePushInfo = function (pushInfo) {
             var self = this;
-            var pushObj = {
-                type: self.pushData.type,
-                cityIndex: pushInfo.cityIndex,
-                id: pushInfo.id,
-                category: pushInfo.category };
-            if (self.pushData.fcmToken) {
-                pushObj.fcmToken = self.pushData.fcmToken;
-            }
-            else if (self.pushData.registrationId) {
-                pushObj.registrationId = self.pushData.registrationId;
-            }
-            else {
-                console.error('push info does not have fcmToken or regstrationId');
-            }
 
             $http({
                 method: 'DELETE',
                 headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
                 url: self.pushUrl,
-                data: pushObj,
+                data: pushInfo,
                 timeout: 10*1000
             })
                 .success(function (data) {
@@ -412,13 +412,16 @@ angular.module('service.push', [])
                         //ios의 경우 badge 업데이트
                         //현재위치의 경우 데이타 업데이트 가능? 체크
 
-                        var fav = data.additionalData.cityIndex;
+                        var fav = parseInt(data.additionalData.cityIndex);
                         if (!isNaN(fav)) {
                             console.log('clicked: ' + fav);
                             WeatherInfo.setCityIndex(fav);
                             $rootScope.$broadcast('reloadEvent', 'push');
+                            Util.ga.trackEvent('action', 'click', 'push fav=' + fav);
                         }
-                        Util.ga.trackEvent('action', 'click', 'push fav=' + fav);
+                        else {
+                            Util.ga.trackException(new Error('invalid fav:'+fav), false);
+                        }
                     }
                     else if (data.additionalData.foreground === true) {
                         $rootScope.$broadcast('notificationEvent', data);
@@ -478,16 +481,35 @@ angular.module('service.push', [])
 
             simpleInfo = {name: city.name, source: city.source};
 
-            if (city.location) {
+            if (city.location && city.location.lat) {
                 simpleInfo.location = city.location;
             }
-            else if (city.source === 'KMA' && city.address) {
+            else {
+                console.log('city location is invalid', city.location);
+            }
+
+            if (city.source === 'KMA' && city.address) {
                 //old version용으로 마지막 보류임
                 //naton이 없는 address에서 오류 발생함 (TW-340)
                 //한국어 아닌 국내 address도 오류 발생함
-                var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(city.address));
-                if (town && !(town.first=="" && town.second=="" && town.third=="")) {
+                var address = city.address;
+                if (address.indexOf('대한민국') < 0) {
+                    address = '대한민국 ' + address;
+                }
+                var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(address));
+                if (town && town.first.length > 0) {
                     simpleInfo.town = town;
+                    if (simpleInfo.name == undefined) {
+                        if (town.third.length > 0) {
+                            simpleInfo.name = town.third;
+                        }
+                        else if (town.second.length > 0) {
+                            simpleInfo.name = town.second;
+                        }
+                        else if (town.first.length > 0) {
+                            simpleInfo.name = town.first;
+                        }
+                    }
                 }
                 else {
                     console.log("Fail to get town info city:"+JSON.stringify((city)));
@@ -587,17 +609,32 @@ angular.module('service.push', [])
                     for (var key in city) {
                         if (key == 'location') {
                             if (pushInfo.location == undefined) {
+                                Util.ga.trackEvent('push', 'update', 'to add location');
                                 needToUpdate = true;
                             }
                             else if (pushInfo.location.lat === city.location.lat &&
                                 pushInfo.location.long === city.location.long) {
-                                needToUpdate = false;
+                                //needToUpdate = false;
                             }
                             else {
+                                Util.ga.trackEvent('push', 'update', 'by location');
                                 needToUpdate = true;
                             }
                         }
+                        else if (key == 'town') {
+                            if (pushInfo.town.first === city.town.first &&
+                                pushInfo.town.second === city.town.second &&
+                                pushInfo.town.third === city.town.third)
+                            {
+                                //needToUpdate = false;
+                            }
+                            else {
+                                needToUpdate = true;
+                                Util.ga.trackEvent('push', 'update', 'by town');
+                            }
+                        }
                         else if (pushInfo[key] !== city[key]) {
+                            Util.ga.trackEvent('push', 'update', 'by '+key);
                             needToUpdate = true;
                         }
                         pushInfo[key] = city[key];
@@ -612,6 +649,9 @@ angular.module('service.push', [])
             if (needToUpdate) {
                 this._postPushList(list);
                 this.savePushInfo();
+            }
+            else {
+                console.log('skip update push city index='+cityIndex);
             }
         };
 
@@ -639,16 +679,22 @@ angular.module('service.push', [])
          */
         obj.removePushListByCityIndex = function (cityIndex) {
             var self = this;
-            var pushList = this.pushData.pushList;
-            var removeList = pushList.filter(function (value) {
-                return value.cityIndex === cityIndex;
-            });
-            removeList.forEach(function (obj) {
-                self._deletePushInfo(obj);
-            });
+            var delInfo = {cityIndex: cityIndex};
+            if (self.pushData.fcmToken) {
+                delInfo.fcmToken = self.pushData.fcmToken;
+            }
+            else if (self.pushData.registrationId) {
+                delInfo.registrationId = self.pushData.registrationId;
+            }
+            else {
+                console.error('push info does not have fcmToken or registrationId');
+                return;
+            }
+
+            self._deletePushInfo(delInfo);
 
             //remove object list
-            this.pushData.pushList = pushList.filter(function (value) {
+            this.pushData.pushList = this.pushData.pushList.filter(function (value) {
                 return value.cityIndex !== cityIndex;
             });
             this.savePushInfo();
@@ -775,11 +821,15 @@ angular.module('service.push', [])
                 if (result.tap === true) {
                     //background
                     if (result.cityIndex != undefined) {
-                        var fav = result.cityIndex;
-                        console.log({notificationFav:fav});
-                        Util.ga.trackEvent('plugin', 'info', 'pushLinkMatch '+fav);
-                        WeatherInfo.setCityIndex(fav);
-                        $rootScope.$broadcast('reloadEvent', 'push');
+                        var fav = parseInt(result.cityIndex);
+                        if (!isNaN(fav)) {
+                            Util.ga.trackEvent('plugin', 'info', 'pushLinkMatch ' + fav);
+                            WeatherInfo.setCityIndex(fav);
+                            $rootScope.$broadcast('reloadEvent', 'push');
+                        }
+                        else {
+                            Util.ga.trackException(new Error('invalid fav:'+fav), false);
+                        }
                     }
                     else {
                         console.log('city index is undefined');

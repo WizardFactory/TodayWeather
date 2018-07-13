@@ -3,7 +3,7 @@
  */
 
 angular.module('controller.setting.radio', [])
-    .factory("radioList", function RadioList($rootScope, Units, TwStorage, Util) {
+    .factory("radioList", function RadioList($rootScope, Units, TwStorage, Util, Push) {
         var radioList = {};
         radioList.type = "";
         radioList.title = "";
@@ -31,6 +31,7 @@ angular.module('controller.setting.radio', [])
             if (this.type.indexOf('Unit') >= 0) {
                 if (Units.setUnit(this.type, this.value)) {
                     Units.saveUnits();
+                    Push.updateUnits();
 
                     if (this.type === 'airUnit') {
                         $rootScope.$broadcast('changeAirUnitEvent');
@@ -46,6 +47,14 @@ angular.module('controller.setting.radio', [])
                 } else if (this.type === 'theme') {
                     $rootScope.iconsImgPath = window.theme[$rootScope.settingsInfo.theme].icons;
                     $rootScope.weatherImgPath = window.theme[$rootScope.settingsInfo.theme].weather;
+
+                    if (window.StatusBar) {
+                        if ($rootScope.settingsInfo.theme === 'light') {
+                            StatusBar.styleDefault();
+                        } else { //photo, dark, old
+                            StatusBar.styleLightContent();
+                        }
+                    }
                 }
             }
             else {

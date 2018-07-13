@@ -68,7 +68,7 @@ aqiRequester.prototype.getData = function(url, retryCount, callback){
     };
 
     log.silly('AQI> get data : ', url);
-    req.get(url, {timeout: 1000 * 5, agentOptions: agentOptions}, function(err, response, body){
+    req.get(url, {timeout: 1000 * 3, agentOptions: agentOptions}, function(err, response, body){
         if(err) {
             log.warn(err);
             if((err.code === "ECONNRESET" || err.code === "ETIMEDOUT") && retryCount > 0){
@@ -93,16 +93,21 @@ aqiRequester.prototype.getData = function(url, retryCount, callback){
         var result;
         try {
             result = JSON.parse(body);
-            log.info(result);
+            log.info('aqireqeuester.getdata', result);
         }
         catch (err) {
             return callback(err);
         }
 
-        if(result.status != 'ok'){
-            callback(result.status);
-        }else{
+        if (result.status == 'ok') {
             callback(err, result);
+        }
+        else if (result.status == 'nug') {
+            log.warn('AQI> Retry to get caused by ' + result.status + ' : ', retryCount);
+            return self.getData(url, --retryCount, callback);
+        }
+        else {
+            callback(result.status);
         }
     });
 };

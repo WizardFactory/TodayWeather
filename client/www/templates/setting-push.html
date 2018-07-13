@@ -5,13 +5,13 @@
         </button>
     </ion-nav-buttons>
     <ion-nav-title>
-        <p class="title forecast-header">
+        <p class="title">
             <span>{{address}}</span>
         </p>
     </ion-nav-title>
-    <ion-content class="setting-push" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false">
+    <ion-content class="main-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false">
         <div class="list card">
-            <li class="item item-toggle push-type-title">
+            <li class="item item-toggle item-title">
                 {{"LOC_WEATHER_ALERT"|translate}}
                 <label class="toggle toggle-search">
                     <input type="checkbox" ng-model="alert.enable" ng-true-value="true" ng-false-value="false"
@@ -21,39 +21,39 @@
                     </div>
                 </label>
             </li>
-            <div class="light-padding push-desc">
+            <div class="item-desc">
                {{"LOC_ALERT_DESCRIPTION"|translate}}
             </div>
-            <li class="item range-slider light-padding" ng-hide="alert.enable === false">
+            <li class="item range-slider" ng-hide="alert.enable === false">
                 <input type="text" id="example_id" name="example_name" value="" />
             </li>
         </div>
         <div class="list card">
-            <li class="item light-padding push-type-title">
+            <li class="item item-title">
                 {{"LOC_WEATHER_ALARM"|translate}}
             </li>
-            <div class="light-padding push-desc">
+            <div class="item-desc">
                 {{"LOC_ALARM_DESCRIPTION"|translate}}
             </div>
             <li class="item row">
-                <div class="col push-day-button" ng-class="{'push-activated': dayOfWeek[value] == true}"
+                <div class="col day-button" ng-class="{'activated': dayOfWeek[value] == true}"
                         ng-repeat="value in [0,1,2,3,4,5,6]" ng-click="toggleEnableDay(value)">
                     {{dayToString(value)|translate}}</div>
             </li>
-            <li class="item item-icon-right light-padding" ng-if="value.enable" ng-repeat="value in alarmList" ng-click="onOpenTimePicker($index)">
+            <li class="item item-icon-right" ng-if="value.enable" ng-repeat="value in alarmList" ng-click="onOpenTimePicker($index)">
                 {{secs2dateStr(value.time)}}
                 <i class="icon ion-ios-gear-outline"></i>
             </li>
-            <li class="item item-icon-right light-padding" ng-if="canMakeNewAlarm()" ng-click="onOpenTimePicker(alarmList.length)">
-                -:--
+            <li class="item item-icon-right" ng-if="canMakeNewAlarm()" ng-click="onOpenTimePicker(alarmList.length)">
+                HH:MM
                 <i class="icon ion-ios-plus-empty"></i>
             </li>
         </div>
-        <div class="row row-no-padding">
-            <button class="col-50 button button-clear button-dark" ng-click="onClose()">
+        <div class="buttons-bottom row row-no-padding">
+            <button class="col-50 button" ng-click="onClose()">
                 {{'LOC_CANCEL'|translate}}
             </button>
-            <button class="col-50 button button-clear button-assertive" ng-click="onOkay()">
+            <button class="col-50 button" ng-click="onOkay()">
                 {{'LOC_SAVE'|translate}}
             </button>
         </div>

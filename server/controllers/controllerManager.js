@@ -20,6 +20,8 @@ var modelMidLand = require('../models/modelMidLand');
 var modelMidSea = require('../models/modelMidSea');
 var modelMidTemp = require('../models/modelMidTemp');
 
+var dongnae_keys = JSON.parse(require('../config/config').keyString.dongnae_forecast_keys);
+
 var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
 //var PastConditionGather = require('../lib/PastConditionGather');
 var keco = new (require('../lib/kecoRequester.js'))();
@@ -1002,6 +1004,11 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
         }
         return this;
     }
+
+    /**
+     * TW-396 key가 limit에 걸리는 경우를 대비하여 키 변경
+     */
+    key = dongnae_keys[Math.floor(Math.random() * dongnae_keys.length)];
 
     collectInfo.requestData(srcList, dataType, key, dateString.date, dateString.time, function(err, dataList) {
         if (err) {
