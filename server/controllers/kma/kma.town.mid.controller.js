@@ -23,7 +23,6 @@ function kmaTownMidController(){
 
 kmaTownMidController.prototype.saveMid = function(type, newData, overwrite, callback){
     var regId = '';
-    var errCode = 0;
 
     try{
         var pubDate = kmaTimelib.getKoreaDateObj(newData.pubDate);
@@ -38,12 +37,9 @@ kmaTownMidController.prototype.saveMid = function(type, newData, overwrite, call
 
         var db = dbType[type];
         if(db == undefined){
-            errCode = 1;
-            log.error('KMA Town M> saveMid : unknow db type : ', type);
-            if(callback){
-                callback(errCode);
-            }
-            return;
+            var err = new Error('KMA Town M> saveMid : unknown db type : ' + type);
+            log.error(err.message);
+            return callback(err);
         }
 
         log.silly(JSON.stringify(newData));
@@ -54,53 +50,45 @@ kmaTownMidController.prototype.saveMid = function(type, newData, overwrite, call
                 var newItem = {regId: regId, pubDate: pubDate, fcsDate: fcsDate, data: newData};
 
                 //log.info(JSON.stringify(newItem));
-                if(overwrite){
-                    db.update({regId: regId}, newItem, {upsert:true}, function(err){
-                        if(err){
-                            log.error('KMA Town M> Fail to update Mid : '+ type + ' ID : ' + regId);
-                            log.info(JSON.stringify(newItem));
-                            return cb();
-                        }
-                        cb();
-                    });
-                }else{
-                    db.update({regId: regId, pubDate: pubDate}, newItem, {upsert:true}, function(err){
-                        if(err){
-                            log.error('KMA Town M> Fail to update Mid'+ type + 'item');
-                            log.info(JSON.stringify(newItem));
-                            return cb();
-                        }
-
-                        cb();
-                    });
+                var query;
+                if (overwrite) {
+                    query =  {regId: regId};
                 }
+                else {
+                    query = {regId: regId, pubDate: pubDate};
+                }
+                db.update(query, newItem, {upsert:true}, function(err){
+                    if(err){
+                        log.error('KMA Town M> Fail to update Mid : '+ type + ' ID : ' + regId);
+                        log.info(JSON.stringify(newItem));
+                        return cb();
+                    }
+                    cb();
+                });
             }],
-            function(err){
-                var limitedTime = kmaTimelib.getPast8DaysTime(pubDate);
+            function (err) {
                 log.debug('KMA Town M> finished to save town.mid : ', type);
-                if(overwrite){
-                    log.info('KMA Town M> remove all item before pubData: ', pubDate.toString());
-                    db.remove({regId: regId, "fcsDate": {$lt:pubDate}}).exec();
-                }else{
-                    log.info('KMA Town M> remove all past 8days items: ', limitedTime.toString());
-                    db.remove({regId: regId, "fcsDate": {$lte:limitedTime}}).exec();
+
+                var fcsDate;
+                if (overwrite) {
+                    fcsDate = pubDate;
                 }
+                else {
+                    fcsDate = kmaTimelib.getPast8DaysTime(pubDate);
+                }
+                /**
+                 * 불필요하게 중복해서 호출되고 있음.
+                 */
+                log.info('KMA Town M> remove '+ type + ' item before : ', fcsDate.toString());
+                db.remove({regId: regId, "fcsDate": {$lt:fcsDate}}).exec();
 
                 callback(err);
             }
         );
-
-
-    }catch(e){
-        if(callback){
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
     }
-
-    return this;
+    catch (e) {
+        return callback(e);
+    }
 };
 
 kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, callback) {
@@ -109,29 +97,24 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
         var db = dbType[type];
         if(db == undefined){
             log.error('KMA Town M> getMidFromDB : unknown db type : ', type);
-            if(callback){
-                callback(new Error('unknow db type'));
-            }
-            return [];
+            return callback(new Error('unknown db type '+type));
         }
 
         if(req != undefined && req[type] != undefined){
             log.debug('KMA Town M> return existed data : ', type, JSON.stringify(req[type]));
-            callback(undefined, req[type]);
-            return req[type];
+            return callback(null, req[type]);
         }
 
         db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
             if(err){
-                log.warn('KMA Town M> Fail to file&get mid data from DB : ', type);
-                callback(err);
-                return [];
+                log.warn('KMA Town M> Fail to file&get mid data from DB ', {type:type, regId: indicator});
+                return callback(err);
             }
 
             if(result.length == 0){
-                log.warn('KMA Town M> There are no mid datas from DB : ', type);
-                callback(new Error('There are no mid datas'));
-                return [];
+                err = new Error('KMA Town M> There are no mid datas from DB ' + JSON.stringify({type, indicator}));
+                log.warn(err.message);
+                return callback(err);
             }
 
             if(result.length > 1){
@@ -153,8 +136,7 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
                 } else {
                     err = new Error('KMA Town M> ~> what is it???'+JSON.stringify(result[0].data));
                     log.error(err);
-                    callback(err);
-                    return [];
+                    return callback(err);
                 }
 
                 var newItem = {};
@@ -167,45 +149,33 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
                 //log.info(newItem);
                 ret.push(newItem);
 
-                callback(0, {pubDate: result[0].pubDate, ret: ret});
+                callback(null, {pubDate: result[0].pubDate, ret: ret});
             }
-            return result[0];
         });
-
-    }catch(e){
-        if (callback) {
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
-
-        return [];
+    }
+    catch (e) {
+        return callback(e);
     }
 };
 
 
 kmaTownMidController.prototype.checkPubDate = function(type, srcList, dateString, callback) {
     var pubDate = kmaTimelib.getKoreaDateObj(''+ dateString.date + dateString.time);
-    var errCode = 0;
 
     log.info('KMA Town M> pubDate : ', pubDate.toString(), 'Type : ', type);
     try{
         var db = dbType[type];
-        if(db == undefined){
-            errCode = 1;
-            log.error('KMA Town M> check pub Date : unknow db type : ', type);
-            if(callback){
-                callback(errCode);
-            }
-            return;
+        if(db == undefined) {
+            var err = new Error('KMA Town M> check pub Date : unknown db type : ' + type);
+            log.error(err);
+            return callback(err);
         }
 
         async.mapSeries(srcList,
             function(src,cb){
                 db.find({regId: src.code}, {_id: 0, regId: 1, pubDate: 1}).sort({"pubDate":1}).lean().exec(function(err, dbList){
                     if(err){
-                        log.info('KMA Town M> There is no data matached to : ', src);
+                        log.info('KMA Town M> There is no data matched to : ', src);
                         return cb(null, src);
                     }
 
@@ -216,7 +186,7 @@ kmaTownMidController.prototype.checkPubDate = function(type, srcList, dateString
                         }
                     }
 
-                    log.info('KMA Town M> Need to update : ', src.code);
+                    log.debug('KMA Town M> Need to update : ', src.code);
                     cb(null, src);
                 });
             },
@@ -231,19 +201,13 @@ kmaTownMidController.prototype.checkPubDate = function(type, srcList, dateString
                 log.info('KMA Town M> Count of the list for the updating : ', result.length);
                 log.silly('KMA Town M> ', JSON.stringify(result));
 
-                return callback(errCode, result);
+                return callback(null, result);
             }
         );
-    }catch(e){
-        if (callback) {
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
     }
-
-    return this;
+    catch(e){
+        return callback(e);
+    }
 };
 
 kmaTownMidController.prototype.checkForecastPubDate = function(model, srcList, dateString, callback) {

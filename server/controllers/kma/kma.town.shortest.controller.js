@@ -12,16 +12,15 @@ function kmaTownShortestController(){
 
 kmaTownShortestController.prototype.saveShortest = function(newData, callback){
     //log.info('KMA Town ST> save :', newData);
-    var coord = {
-        mx: newData[0].mx,
-        my: newData[0].my
-    };
+    try {
+        var coord = {
+            mx: newData[0].mx,
+            my: newData[0].my
+        };
 
-    var pubDate = kmaTimelib.getKoreaDateObj(newData[0].pubDate);
-    log.debug('KMA Town ST> pubDate :', pubDate.toString());
-    //log.info('KMA Town ST> db find :', coord);
+        var pubDate = kmaTimelib.getKoreaDateObj(newData[0].pubDate);
+        log.debug('KMA Town ST> pubDate :', pubDate.toString(), coord);
 
-    try{
         async.mapSeries(newData,
             function(item, cb){
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
@@ -43,25 +42,17 @@ kmaTownShortestController.prototype.saveShortest = function(newData, callback){
                 callback(err);
             }
         );
-    }catch(e){
-        if(callback){
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
     }
-
-
-    return this;
+    catch(e){
+        return callback(e);
+    }
 };
 
 kmaTownShortestController.prototype.getShortestFromDB = function(modelCurrent, coord, req, callback) {
-    var errorNo = 0;
 
     try{
         if(req != undefined && req['modelShortest'] != undefined){
-            return callback(errorNo, req['modelShortest']);
+            return callback(null, req['modelShortest']);
         }
 
         var query = {'mCoord.mx': coord.mx, 'mCoord.my': coord.my};
@@ -72,9 +63,8 @@ kmaTownShortestController.prototype.getShortestFromDB = function(modelCurrent, c
             }
 
             if(result.length == 0){
-                log.warn('KMA Town ST> There are no shortest datas from DB');
-                errorNo = 1;
-                return callback(errorNo);
+                err = new Error('KMA Town ST> There are no shortest datas from DB '+JSON.stringify(query));
+                return callback(err);
             }
 
             var ret = [];
@@ -96,26 +86,20 @@ kmaTownShortestController.prototype.getShortestFromDB = function(modelCurrent, c
                 ret.push(newItem);
             });
 
-            callback(errorNo, {pubDate: pubDate, ret:ret});
+            callback(null, {pubDate: pubDate, ret:ret});
         });
-
-    }catch(e){
-        if (callback) {
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
+    }
+    catch (e) {
+        return callback(e);
     }
 };
 
 
 kmaTownShortestController.prototype.checkPubDate = function(model, srcList, dateString, callback) {
-    var pubDate = kmaTimelib.getKoreaDateObj(''+ dateString.date + dateString.time);
-    var errCode = 0;
-
-    log.info('KMA Town ST> pubDate : ', pubDate.toString());
     try{
+        var pubDate = kmaTimelib.getKoreaDateObj(''+ dateString.date + dateString.time);
+        log.info('KMA Town ST> pubDate : ', pubDate.toString());
+
         async.mapSeries(srcList,
             function(src,cb){
                 modelKmaTownShortest.find({'mCoord.mx': src.mx, 'mCoord.my': src.my}, {_id: 0, mCoord:1, pubDate:1})
@@ -148,16 +132,12 @@ kmaTownShortestController.prototype.checkPubDate = function(model, srcList, date
                 log.info('KMA Town ST> Count of the list for the updating : ', result.length);
                 log.info('KMA Town ST> ', JSON.stringify(result));
 
-                return callback(errCode, result);
+                return callback(null, result);
             }
         );
-    }catch(e){
-        if (callback) {
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
+    }
+    catch (e) {
+        return callback(e);
     }
 
     return this;
