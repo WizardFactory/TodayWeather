@@ -14,8 +14,6 @@ var events = require('events');
 var async = require('async');
 var req = require('request');
 var config = require('../../config/config');
-var fs = require('fs');
-var convert = require('../../utils/coordinate2xy');
 var xml2json  = require('xml2js').parseString;
 var shortRssDb = require('../../models/modelShortRss');
 var town = require('../../models/town');
@@ -509,25 +507,21 @@ TownRss.prototype.saveShortRssNewForm = function(index, newData, callback){
 
 
 TownRss.prototype.getShortRssFromDB = function(model, coord, req, callback) {
-    var errorNo = 0;
-
     try{
         if(req != undefined && req['modelShortRss'] != undefined){
-            return callback(errorNo, req['modelShortRss']);
+            return callback(null, req['modelShortRss']);
         }
 
         var query = {'mCoord.mx': coord.mx, 'mCoord.my': coord.my};
         modelKmaTownShortRss.find(query, {_id: 0}).sort({"fcsDate":1}).batchSize(30).lean().exec(function(err, result){
             if(err){
-                log.info('KMA Town S-RSS> Fail to file&get short data from DB');
                 log.warn('KMA Town S-RSS> Fail to file&get short data from DB');
                 return callback(err);
             }
 
             if(result.length == 0){
-                log.warn('KMA Town S-RSS> There are no short datas from DB');
-                errorNo = 1;
-                return callback(errorNo);
+                err = new Error('KMA Town S-RSS> There are no short datas from DB '+JSON.stringify(query));
+                return callback(err);
             }
 
             try{
@@ -548,24 +542,15 @@ TownRss.prototype.getShortRssFromDB = function(model, coord, req, callback) {
                 });
 
                 log.info('KMA Town S-RSS> result : ', pubDate);
-                callback(errorNo, {pubDate: pubDate, ret:ret});
-            }catch(e){
-                if (callback) {
-                    callback(e);
-                }
-                else {
-                    log.error(e);
-                }
+                callback(null, {pubDate: pubDate, ret:ret});
+            }
+            catch (e) {
+                return callback(e);
             }
         });
-
-    }catch(e){
-        if (callback) {
-            callback(e);
-        }
-        else {
-            log.error(e);
-        }
+    }
+    catch (e) {
+        return callback(e);
     }
 };
 
@@ -662,7 +647,6 @@ TownRss.prototype.getData = function(index, item, cb){
 };
 
 TownRss.prototype.checkPubDate = function(item, dateString, index, callback){
-    var errCode = 0;
 
     if(config.db.version === '2.0'){
         var lastestPubDate = kmaTimelib.getKoreaDateObj(dateString);
@@ -670,46 +654,53 @@ TownRss.prototype.checkPubDate = function(item, dateString, index, callback){
             .sort({"pubDate":1})
             .lean()
             .exec(function(err, dbList) {
-                if(err
-                    || (dbList.length === 0)
+                if (err) {
+                    return callback(err);
+                }
+                if((dbList.length === 0)
                     || (dbList[0].pubDate === undefined)){
                     log.info('KMA Town S-RSS> There is no data matached to : ', item);
                     log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                    return callback(errCode);
+                    return callback(null);
                 }
 
                 for(var i=0 ; i<dbList.length ; i++){
                     if(dbList[i].pubDate.getTime() === lastestPubDate.getTime()){
-                        log.info('KMA Town S-RSS> Already updated : ', item, dateString);
-                        errCode = 1;
-                        return callback(errCode);
+                        err = new Error('KMA Town S-RSS> Already updated : ' + JSON.stringify({item, dateString}));
+                        log.info(err.message);
+                        return callback(err);
                     }
                 }
 
-                return callback(errCode);
+                return callback(null);
         });
-    }else{
+    }
+    else {
         shortRssDb.find({'mCoord.my' :item.mCoord.my, 'mCoord.mx':item.mCoord.mx}, function(err, list) {
             try{
-                if(err
-                    || (list.length === 0)
+                if (err) {
+                    return callback(err);
+                }
+                if((list.length === 0)
                     || (list[0].pubDate === undefined)) {
                     log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                    callback(errCode);
-                } else {
+                    callback(null);
+                }
+                else {
                     if (Number(list[0].pubDate) < Number(dateString)) {
                         log.debug('shortRss : refresh data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                        callback(errCode);
-                    } else {
-                        errCode = 1;
-                        log.debug('shortRss : already latest data');
-                        callback(errCode);
+                        callback(null);
+                    }
+                    else {
+                        err = new Error('shortRss : already latest data');
+                        log.debug(err.message);
+                        callback(err);
                     }
                 }
-            }catch(e){
+            }
+            catch (e) {
                 log.error(e);
-                errCode = 1;
-                return callback(errCode);
+                return callback(e);
             }
         })
     }
