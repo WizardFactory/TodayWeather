@@ -246,6 +246,7 @@ class DsfController {
             if(found.length > 0){
                 log.info('cDsf > found missed data : ', JSON.stringify(found[0]))
                 yData.data.hourly.data.push(found[0]);
+                yData.data.hourly.data.sort((a,b)=>{return a.dateObj.getTime() - b.dateObj.getTime()});
             }else{
                 log.info(`cDsf > Failed to find = ${JSON.stringify(debug)}`);
             }
@@ -253,6 +254,18 @@ class DsfController {
 
 
         return yData;
+    }
+
+    /**
+     * Description : wrapping function. It allows Mocha test to override it.
+     * @param query
+     * @param sort
+     * @param callback
+     * @returns {Promise}
+     * @private
+     */
+    _findDB(query, sort, callback){
+        return dsfModel.find(query).lean().sort(sort).exec(callback);
     }
 
     /**
@@ -275,7 +288,7 @@ class DsfController {
         };
 
         // Not sure which one is better whether to query once for three data or to query three times for each time data.
-        dsfModel.find(query).lean().sort({dateObj:1}).exec((err, list)=>{
+        this._findDB(query, {dateObj:1}, (err, list)=>{
             if(err){
                 err.message += 'cDsf > fail to get DSF data from DB';
                 log.error(err);
@@ -285,6 +298,8 @@ class DsfController {
             if(list.length < 3){
                 log.info('cDsf > There are few datas : ', list.length);
             }
+
+            log.info(JSON.stringify(list));
 
             let ret = {};
             let missedHourData = [];
