@@ -299,39 +299,43 @@ class DsfController {
                 log.info('cDsf > There are few datas : ', list.length);
             }
 
-            log.info(JSON.stringify(list));
+            try{
+                // log.info(JSON.stringify(list));
+                let ret = {};
+                let missedHourData = [];
+                list.forEach((item)=>{
+                    //log.info(JSON.stringify(item));
+                    //log.info('---> ', item.dateObj, item.timeOffset);
 
-            let ret = {};
-            let missedHourData = [];
-            list.forEach((item)=>{
-                //log.info(JSON.stringify(item));
-                //log.info('---> ', item.dateObj, item.timeOffset);
+                    if(ret['yesterday'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
+                        ret['yesterday'] = this._hasYesterdayData(cDate, item, item.timeOffset);
+                        missedHourData = this._checkMissedHourData(ret['yesterday'], item.timeOffset);
+                        log.info('cDsf > 1. missed Hour Datas : ', JSON.stringify(missedHourData));
+                    }else if(ret['today'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'today')){
+                        ret['today'] = item;
+                    }else if(ret['current'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 15)){
+                        ret['current'] = item;
+                    }else if(missedHourData.length > 0){
+                        // Try to find missed data to other DB's data.
+                        ret['yesterday'] = this._fulfillMissedHourData(missedHourData, ret['yesterday'], item);
+                        missedHourData = this._checkMissedHourData(ret['yesterday'], ret['yesterday'].timeOffset);
+                        log.info('cDsf > 2. missed Hour Datas : ', JSON.stringify(missedHourData));
+                    }
+                });
 
-                if(ret['yesterday'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
-                    ret['yesterday'] = this._hasYesterdayData(cDate, item, item.timeOffset);
-                    missedHourData = this._checkMissedHourData(ret['yesterday'], item.timeOffset);
-                    log.info('cDsf > 1. missed Hour Datas : ', JSON.stringify(missedHourData));
-                }else if(ret['today'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'today')){
-                    ret['today'] = item;
-                }else if(ret['current'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 15)){
-                    ret['current'] = item;
-                }else if(missedHourData.length > 0){
-                    // Try to find missed data to other DB's data.
-                    ret['yesterday'] = this._fulfillMissedHourData(missedHourData, ret['yesterday'], item);
-                    missedHourData = this._checkMissedHourData(ret['yesterday'], ret['yesterday'].timeOffset);
-                    log.info('cDsf > 2. missed Hour Datas : ', JSON.stringify(missedHourData));
+                // Finally, there is missed hour data on the yesterday's data, it should be dropped.
+                if(missedHourData.length > 0){
+                    log.info('cDsf > Lack of yesterday data : ', JSON.stringify(ret['yesterday']));
+                    ret['yesterday'] = undefined;
                 }
-            });
 
-            // Finally, there is missed hour data on the yesterday's data, it should be dropped.
-            if(missedHourData.length > 0){
-                log.info('cDsf > Lack of yesterday data : ', JSON.stringify(ret['yesterday']));
-                ret['yesterday'] = undefined;
+                log.debug('_findFromDB', JSON.stringify(ret));
+
+                return callback(null, ret);
+            }catch(e){
+                log.error(e);
+                return callback(e);
             }
-
-            log.debug('_findFromDB', JSON.stringify(ret));
-
-            return callback(null, ret);
         });
     }
 
@@ -680,7 +684,7 @@ class DsfController {
         let first = (cb)=> {
             tz.requestTimezoneOffset(undefined, 'get', (err, tzOffset) => {
                 if (err) {
-                    log.warn('cDSF > Failed to run first step :', err);
+                    log.warn(new Error(`cDSF > Failed to run first step : ${err}`));
                     return cb(null);
                 }
                 return cb('1. Found timezone Offset', tzOffset);
@@ -689,7 +693,7 @@ class DsfController {
         let second = (cb)=>{
             tz.requestTimezoneOffsetByGeo({lat: geo[1], lon:geo[0]}, timezone, (err, tzOffset)=>{
                 if(err){
-                    log.warn('cDSF > Failed to run second step :', err);
+                    log.warn(new Error(`cDSF > Failed to run second step : ${err}`));
                     return cb(null);
                 }
                 return cb('2. Found timezone Offset', tzOffset);
@@ -707,8 +711,9 @@ class DsfController {
         async.waterfall([first, second, third],
             (err, tzOffset)=>{
                 if(tzOffset === undefined){
-                    log.error(`cDsf > Fail to get timezone!! tz[${timezone}], geo[${geo[0]}, ${geo[1]}`);
-                    return callback('FAIL');
+                    err = new Error(`cDsf > Fail to get timezone!! tz[${timezone}], geo[${geo[0]}, ${geo[1]}`);
+                    log.error(err);
+                    return callback(err);
                 }
                 return callback(undefined, tzOffset);
             }
@@ -773,7 +778,8 @@ class DsfController {
 
                     this._getTimeOffset(curData.address.country, geo, (err, timeOffset_MIN)=>{
                         if(err && curData.timeOffset === undefined){
-                            log.warn('cDSF > Fail to get timeOffset : ', err);
+                            err.message += ' ' + 'cDSF > Fail to get timeOffset';
+                            log.warn(err);
                             timeOffset = 0;
                             return cb('3. FAIL TO GET TIMEOFFSET');
                         }
