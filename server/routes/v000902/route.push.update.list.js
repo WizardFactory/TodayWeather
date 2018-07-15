@@ -20,7 +20,7 @@ function updatePushInfoList(language, pushList, callback) {
         function (pushInfo, callback) {
             try {
                 pushInfo.lang = language;
-                if (pushInfo.location) {
+                if (pushInfo.location && pushInfo.location.hasOwnProperty('lat')) {
                     pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
                 }
                 if (pushInfo.source == undefined) {
