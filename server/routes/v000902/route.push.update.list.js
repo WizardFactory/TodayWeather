@@ -20,7 +20,7 @@ function updatePushInfoList(language, pushList, callback) {
         function (pushInfo, callback) {
             try {
                 pushInfo.lang = language;
-                if (pushInfo.location) {
+                if (pushInfo.location && pushInfo.location.hasOwnProperty('lat')) {
                     pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
                 }
                 if (pushInfo.source == undefined) {
@@ -46,6 +46,7 @@ function updatePushInfoList(language, pushList, callback) {
                 var co = new ControllerPush();
                 co.updatePushInfo(pushInfo, function (err, result) {
                     if (err) {
+                        log.error(err.message);
                         log.error(err);
                     }
                     callback(undefined, result);
@@ -55,6 +56,7 @@ function updatePushInfoList(language, pushList, callback) {
                 var ca = new AlertPushController();
                 ca.updateAlertPush(pushInfo, function (err, result) {
                     if (err) {
+                        log.error(err.message);
                         log.error(err);
                     }
                    callback(undefined, result) ;
@@ -119,12 +121,14 @@ router.post('/', function(req, res) {
         });
     }
     catch (err) {
+        log.error(err.message);
         log.error(err);
         return res.status(403).send(err.message);
     }
 
     updatePushInfoList(language, pushList, function (err, result) {
         if (err) {
+            log.error(err.message);
             log.error(err);
             if (err.statusCode) {
                 return res.status(err.statusCode).send(err.message);

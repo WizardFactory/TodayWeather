@@ -2075,6 +2075,7 @@ function ControllerTown() {
             function(err) {
                 if (err) {
                     err.message += ' ' + JSON.stringify(meta);
+                    log.error(err.message);
                     log.error(err);
                 }
                 next();

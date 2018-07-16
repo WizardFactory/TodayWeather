@@ -1050,21 +1050,27 @@ ControllerPush.prototype._requestGeoInfo = function (pushInfo, callback) {
 
 ControllerPush.prototype._geoInfo2pushInfo = function (pushInfo, geoInfo) {
     var success = false;
-    if (geoInfo.kmaAddress &&
-        geoInfo.kmaAddress.name1 &&
-        geoInfo.kmaAddress.name1.length > 1) {
-        pushInfo.town = {first: geoInfo.kmaAddress.name1};
-        if (geoInfo.kmaAddress.name2) {
-            pushInfo.town.second = geoInfo.kmaAddress.name2;
+    try {
+        if (geoInfo.kmaAddress &&
+            geoInfo.kmaAddress.name1 &&
+            geoInfo.kmaAddress.name1.length > 1) {
+            pushInfo.town = {first: geoInfo.kmaAddress.name1};
+            if (geoInfo.kmaAddress.name2) {
+                pushInfo.town.second = geoInfo.kmaAddress.name2;
+            }
+            if (geoInfo.kmaAddress.name3) {
+                pushInfo.town.third = geoInfo.kmaAddress.name3;
+            }
+            success = true;
         }
-        if (geoInfo.kmaAddress.name3) {
-            pushInfo.town.third = geoInfo.kmaAddress.name3;
+        if (geoInfo.location && geoInfo.location.hasOwnProperty('lat')) {
+            pushInfo.geo = [geoInfo.location.long, geoInfo.location.lat];
+            success = true;
         }
-        success = true;
     }
-    if (geoInfo.location) {
-        pushInfo.geo = [geoInfo.location.long, geoInfo.location.lat];
-        success = true;
+    catch (err) {
+        log.error(err);
+        success = false;
     }
 
     return success;
@@ -1418,6 +1424,13 @@ ControllerPush.prototype.apnFeedback = function () {
     });
 };
 
+/**
+ * This is not used.
+ * @param language
+ * @param pushList
+ * @param callback
+ * @returns {*}
+ */
 ControllerPush.prototype.updatePushInfoList = function (language, pushList, callback) {
     var self = this;
 
@@ -1431,7 +1444,7 @@ ControllerPush.prototype.updatePushInfoList = function (language, pushList, call
         function (pushInfo, callback) {
             try {
                 pushInfo.lang = language;
-                if (pushInfo.location) {
+                if (pushInfo.location && pushInfo.location.hasOwnProperty('lat')) {
                     pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
                 }
 
