@@ -23,13 +23,7 @@ var controllerAirkoreaDustImage = require('./controllers/airkorea.dust.image.con
 */
 var config = require('./config/config');
 var Logger = require('./lib/log');
-
-if (process.env.NODE_ENV === 'production') {
-    global.log  = new Logger();
-}
-else {
-    global.log  = new Logger(__dirname + "/debug.log");
-}
+global.log  = new Logger();
 
 //var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
 //     replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
