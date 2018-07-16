@@ -978,6 +978,7 @@ class AlertPushController {
         }
 
         AlertPush.find(query)
+            .lean()
             .exec((err, list) => {
                 if (err) {
                     return callback(err);
@@ -990,11 +991,7 @@ class AlertPushController {
                         log.error('alert push was duplicated list:'+JSON.stringify(list));
                     }
 
-                    let dbAlertPush = list[0];
-                    for (let key in alertPush) {
-                        dbAlertPush[key] = alertPush[key];
-                    }
-                    dbAlertPush.save(callback);
+                    AlertPush.update(query, {$set: alertPush}, callback);
                 }
             });
     }

@@ -23,9 +23,9 @@ deploy:
     access_key_id: $AWS_ACCESS_KEY_ID
     secret_access_key:
       secure: "$AWS_SECRET_ACCESS_KEY"
-    region: "us-east-1"
-    app: "tw-service"
-    env: "tw-test2"
-    bucket_name: "elasticbeanstalk-us-east-1-141248341265"
+    region: "ap-northeast-2"
+    app: "tw-seoul-test"
+    env: "TwSeoulTest-env"
+    bucket_name: "elasticbeanstalk-ap-northeast-2-141248341265"
     on:
       branch: master

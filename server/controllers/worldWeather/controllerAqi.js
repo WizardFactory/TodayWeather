@@ -378,6 +378,14 @@ controllerAqi.prototype.requestAqiDataFromFeed = function(geocode, idx, timeOffs
         });
 };
 
+/**
+ * aqi data를 못 가지고 와도, error를 return하지는 않음.
+ * @param geocode
+ * @param From
+ * @param To
+ * @param timeOffset
+ * @param callback
+ */
 controllerAqi.prototype.requestAqiData = function(geocode, From, To, timeOffset, callback){
     var self = this;
     var key = self._getAQIKey().key;
@@ -400,13 +408,15 @@ controllerAqi.prototype.requestAqiData = function(geocode, From, To, timeOffset,
 
     dataList.push('cur');
 
+    log.info('request aqi data list', dataList);
+
     async.mapSeries(dataList,
         function(date, cb){
             if(date === 'cur'){
                 date = undefined;
             }
             else {
-                log.info('date : ', (new Date(date*1000)).toISOString());
+                log.info('request aqi data date : ', (new Date(date*1000)).toISOString());
             }
 
             requester.getAqiData(geocode, key, function(err, result){

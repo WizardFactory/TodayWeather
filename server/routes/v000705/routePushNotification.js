@@ -88,6 +88,7 @@ router.post('/', function(req, res) {
         log.info('pushInfo : '+ JSON.stringify(pushInfo));
     }
     catch (err) {
+        log.error(err);
         return res.status(403).send(err.message);
     }
 

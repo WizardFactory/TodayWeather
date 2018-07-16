@@ -204,6 +204,10 @@ angular.module('service.weatherinfo', [])
         obj.updateCity = function (index, newCityInfo) {
             var that = this;
             var city = cities[index];
+            if (city == undefined) {
+                Util.ga.trackException(new Error('invalid cityIndex:'+index+' length:'+cities.length), false);
+                return;
+            }
 
             if (newCityInfo.currentWeather) {
                 city.currentWeather = newCityInfo.currentWeather;
@@ -246,15 +250,17 @@ angular.module('service.weatherinfo', [])
             }
             else {
                 //구버전에 저장된 도시정보에는 location이 없는 경우가 있음. #1971
-                //v000901/kma/addr 에서 추가해주어야 함.
-                if (!city.location && newCityInfo.location) {
+                //v000901/kma/addr 에서 추가해주어야 함. TW-402 TW-365 TW-340
+                if ((!city.location || !city.location.lat) &&
+                    (newCityInfo.location && newCityInfo.location.lat))
+                {
                     city.location = newCityInfo.location;
-                    console.info('update location ', city);
+                    console.log('update location ', city);
                 }
             }
 
             if (window.updateCityInfo) {
-                console.info('update city info for push');
+                console.log('try to update city info for push');
                 window.updateCityInfo(index);
             }
             else {

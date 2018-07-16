@@ -1499,7 +1499,13 @@ function ControllerTown() {
         var currentTime = self._getCurrentTimeValue(9);
 
         if (req.shortestList) {
-            self._mergeShortByShortest(req.short, req.shortestList, req.currentList, currentTime);
+            try {
+                self._mergeShortByShortest(req.short, req.shortestList, req.currentList, currentTime);
+            }
+            catch (err) {
+                err.message += ' ' + meta;
+                log.error(err);
+            }
             next();
         }
         else {
@@ -1521,12 +1527,18 @@ function ControllerTown() {
                         return next();
                     }
 
-                    var shortestList = shortestInfo.ret;
+                    try {
+                        var shortestList = shortestInfo.ret;
 
-                    log.verbose(shortestList);
-                    if(shortestList && shortestList.length > 0) {
-                        req.shortestList = shortestList;
-                        self._mergeShortByShortest(req.short, shortestList, req.currentList, currentTime);
+                        log.verbose(shortestList);
+                        if(shortestList && shortestList.length > 0) {
+                            req.shortestList = shortestList;
+                            self._mergeShortByShortest(req.short, shortestList, req.currentList, currentTime);
+                        }
+                    }
+                    catch (err) {
+                        err.message += ' ' + meta;
+                        log.error(err);
                     }
 
                     next();
@@ -2063,6 +2075,7 @@ function ControllerTown() {
             function(err) {
                 if (err) {
                     err.message += ' ' + JSON.stringify(meta);
+                    log.error(err.message);
                     log.error(err);
                 }
                 next();
