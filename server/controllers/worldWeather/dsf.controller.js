@@ -60,6 +60,20 @@ class DsfController {
         return 0;
     };
 
+    /**
+     * Description : To compare Date without Hour,Minutes,Second
+     * @param src
+     * @param dst
+     * @param timeOffset
+     * @returns {number|*}
+     * @private
+     */
+    _getDiffDate2(src, dst, timeOffset) {
+        let utcTime = new Date(src.getTime() + timeOffset);
+        let localTime = new Date(dst.getTime() + timeOffset);
+        return this._getDiffDate(utcTime, localTime);
+    }
+
     _getLocalLast0H(timeOffset_MIN) {
         var utcTime = new Date();
         var localTime = new Date();
@@ -157,6 +171,7 @@ class DsfController {
         let yDate = new Date(cDate.getTime() + timeOffset);
         yDate.setUTCDate(yDate.getUTCDate() - 1);
 
+        // log.info(`cDsf > YesterdayData tatget Date[${yDate.toUTCString()}]`);
         /**
          * To find if yesterday's data has Thistime's yesterday data.
          * If there is no Thistime's yesterday data, it would be ignored
@@ -171,6 +186,7 @@ class DsfController {
 
 
         if(yesterdayData.length > 0){
+            // log.info(`cDsf > Found yesterday data : date[${yData.dateObj.toString()}], timeOffset[${timeOffset}]`);
             return yData;
         }
 
@@ -194,11 +210,14 @@ class DsfController {
             return [];
         }
 
-        timeOffset += (timeOffset * 60 * 1000);
+        timeOffset = (timeOffset * 60 * 1000);
 
         let res = [];
         let hourlyData = yData.data.hourly.data;
         let yesterday = new Date(yData.dateObj.getTime() + timeOffset);
+
+        // log.info(`cDsf > Org Date[${yData.dateObj.toUTCString()}]`);
+        // log.info(`cDsf > target date[${yesterday.toUTCString()}]`);
 
         for(let i=0 ; i<24 ; i++){
             let isValid = hourlyData.filter(item =>{
@@ -231,7 +250,7 @@ class DsfController {
         }
 
         let hourlyData = cData.data.hourly.data;
-        let timeOffset = cData.timeOffset * 60 * 1000;
+        let timeOffset = yData.timeOffset * 60 * 1000;
 
         let debug = []; // For debug, later on, it'll be removed if there is no problem.
         hours.forEach(d=>{
@@ -315,7 +334,8 @@ class DsfController {
                         ret['today'] = item;
                     }else if(ret['current'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 15)){
                         ret['current'] = item;
-                    }else if(missedHourData.length > 0){
+                    }else if(missedHourData.length > 0 && this._getDiffDate2(ret['yesterday'].dateObj, item.dateObj, ret['yesterday'].timeOffset) === 0){
+                        // The only data which has the same date with yesterday is a subject.
                         // Try to find missed data to other DB's data.
                         ret['yesterday'] = this._fulfillMissedHourData(missedHourData, ret['yesterday'], item);
                         missedHourData = this._checkMissedHourData(ret['yesterday'], ret['yesterday'].timeOffset);
