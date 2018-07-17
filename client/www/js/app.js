@@ -32,7 +32,8 @@ angular.module('starter', [
     'controller.nation',
     'controller.nation.air',
     'controller.setting.radio',
-    'controller.push'
+    'controller.push',
+    'controller.kma.special'
 ])
     .factory('$exceptionHandler', function (Util) {
         return function (exception, cause) {
@@ -1623,6 +1624,12 @@ angular.module('starter', [
                 cache: false,
                 templateUrl: 'templates/setting-push.html',
                 controller: 'PushCtrl'
+            })
+            .state('kma-special', {
+                url: '/kma-special',
+                cache: false,
+                templateUrl: 'templates/kma-special.html',
+                controller: 'KmaSpecialCtrl'
             })
             .state('nation', {
                 url: '/nation',

@@ -46,6 +46,7 @@
     <script src="js/controller.setting.radio.js"></script>
     <script src="js/controller.air.js"></script>
     <script src="js/controller.push.js"></script>
+    <script src="js/controller.kma.special.js"></script>
 
     <script src="js/service.twads.js"></script>
     <script src="js/service.admobclean.js"></script>
@@ -92,6 +93,10 @@
         </header>
         <ion-content class="has-header menu-content">
             <div class="list">
+                <label class="item" ng-click="clickMenu('kma-special')" ng-if="getRegion() === 'KR'">
+                    {{'LOC_TYPE_SPECIAL_WEATHER'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right"></i>
+                </label>
                 <label class="item" ng-click="clickMenu('nation')" ng-if="getRegion() === 'KR' && package === 'todayWeather'">
                     {{'LOC_NATIONAL_WEATHER'|translate}}
                     <i class="icon ion-chevron-right" style="float: right"></i>
