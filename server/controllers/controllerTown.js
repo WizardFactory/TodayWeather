@@ -2121,6 +2121,12 @@ function ControllerTown() {
             itemList.push(item);
         }
 
+        if (current.hasOwnProperty('specialInfo')) {
+            var obj = current.specialInfo[0];
+            item = {str: obj.weatherStr+obj.levelStr, grade: obj.weather+5};
+            itemList.push(item);
+        }
+
         var airInfo = current.arpltn || current;
         airInfo.aqiGrade = airInfo.khaiGrade || airInfo.aqiGrade;
         airInfo.aqiStr = airInfo.khaiStr || airInfo.aqiStr;

@@ -13,7 +13,7 @@ var cTown = new ControllerTown24h();
 
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
-    log.info('+ kma/addr > request | Time[', printTime.toISOString(), ']');
+    log.info('+ kma > request | Time[', printTime.toISOString(), ']');
 
     next();
 });
@@ -56,7 +56,7 @@ var routerList = [cTown.checkQueryValidation, cTown.checkParamValidation, cTown.
     cTown.mergeByShortest, cTown.adjustShort, cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo,
     cTown.getPastMid, cTown.mergeMidWithShort, cTown.updateMidTempMaxMin, cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco,
     cTown.getKecoDustForecast, cTown.getRiseSetInfo, cTown.insertIndex, cTown.makeAirInfoList, cTown.AirForecastList, cTown.insertSkyIconLowCase,
-    cTown.setYesterday, cTown.convertUnits, cTown.insertStrForData, cTown.getSummaryAfterUnitConverter,
+    cTown.setYesterday, cTown.getSpecialInfo, cTown.convertUnits, cTown.insertStrForData, cTown.getSummaryAfterUnitConverter,
     cTown.makeResult, cTown.sendResult];
 
 router.get('/addr/:region', routerList);
@@ -68,5 +68,18 @@ router.get('/addr/:region/:city/:town', routerList);
 routerList.unshift(cTown.coord2addr);
 
 router.get('/coord/:loc', routerList);
+
+router.get('/special', function (req, res, next) {
+   var KmaSpecial = require('../../controllers/kma.specialweather.controller');
+   var kmaSpecial = new KmaSpecial();
+   kmaSpecial.getCurrent(res, function (err, list) {
+       if (err) {
+           log.error(err);
+           return res.status(501).send(err.message);
+       }
+       res.setHeader('Cache-Control', 'max-age=300'); //5mins
+       res.json(list);
+   });
+});
 
 module.exports = router;
