@@ -938,6 +938,8 @@ class DsfController {
                 catch (e) {
                     err = e;
                 }
+                // TW-367 : for debugging 5xx issue. It'll be removed after fixing it.
+                log.info(`cDsf > Finish to get DSF data`);
                 return callback(err, ret);
             }
         );
