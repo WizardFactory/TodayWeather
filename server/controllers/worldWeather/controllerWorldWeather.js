@@ -637,7 +637,7 @@ function controllerWorldWeather() {
             ],
             function(err) {
                 // TW-367 : for debugging 5xx issue. It'll be removed after fixing it.
-                log.info(`RQ > Finish to get AQI`);
+                log.info(`RQ > Finish to get AQI : ${JSON.stringify(meta)}`);
                 callback(err);
             });
     };
