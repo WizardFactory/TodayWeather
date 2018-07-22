@@ -1394,8 +1394,10 @@ angular.module('controller.tabctrl', [])
                 contentRatio = 0.68;
             }
 
-            //빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
-            $scope.headerHeight = $scope.bodyHeight * headerRatio + 44;
+            // 빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
+            // 최대 크기로 설정된 경우 [md-page-header]의 최대 height은 320px이므로 최대 크기로 제한
+            // = [md-page-header]의 padding-top(64px) + padding-bottom(22px) + bigDigitSize(142.1px) + summary 3lines
+            $scope.headerHeight = Math.min($scope.bodyHeight * headerRatio + 44, 320);
             $scope.mainHeight = $scope.bodyHeight * contentRatio;
         };
 
