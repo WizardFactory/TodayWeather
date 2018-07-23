@@ -2075,6 +2075,7 @@ function ControllerTown() {
             function(err) {
                 if (err) {
                     err.message += ' ' + JSON.stringify(meta);
+                    log.error(err.message);
                     log.error(err);
                 }
                 next();
@@ -2117,6 +2118,12 @@ function ControllerTown() {
                 tmpGrade = 3;
             }
             item = {str: current.weather, grade: tmpGrade};
+            itemList.push(item);
+        }
+
+        if (current.hasOwnProperty('specialInfo')) {
+            var obj = current.specialInfo[0];
+            item = {str: obj.weatherStr+obj.levelStr, grade: obj.weather+5};
             itemList.push(item);
         }
 

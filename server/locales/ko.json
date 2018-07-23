@@ -307,7 +307,7 @@
   "LOC_THEME_SETTING": "테마 설정",
   "LOC_WEATHER_PHOTO_THEME": "날씨 사진 테마",
   "LOC_LIGHT_THEME": "밝은 테마",
-  "LOC_BLUE_THEME": "파란색 테마",
+  "LOC_OLD_THEME": "이전 테마",
   "LOC_DARK_THEME": "어두운 테마",
   "LOC_AIR_QUALITY_IS_GOOD" : "대기상태가 좋아요",
   "LOC_AIR_QUALITY_IS_MODERATE" : "대기상태는 보통입니다",
@@ -319,5 +319,9 @@
   "LOC_AUTO_RENEWED_24_HOURS_BEFORE_EXPIRY_DATE": "1년 구독비용은 $ 1.09입니다. 만료일 24 시간 전에 자동 갱신됩니다.",
   "LOC_MANAGE_SUBSCRIPTIONS_FROM_ITUNES_ACCOUNT": "구독은 iTunes 계정에서 관리 할 수 있으며 언제든지 자동 갱신 구독을 취소할 수 있습니다.",
   "LOC_PRIVACY_POLICY": "개인정보방침",
-  "LOC_TERMS_OF_USE": "이용약관"
+  "LOC_TERMS_OF_USE": "이용약관",
+  "LOC_TYPE_SPECIAL_WEATHER": "기상특보",
+  "LOC_TYPE_PRELIMINARY_SPECIAL": "예비특보",
+  "LOC_TYPE_WEATHER_INFORMATION": "기상정보",
+  "LOC_TYPE_WEATHER_FLASH": "기상속보"
 }

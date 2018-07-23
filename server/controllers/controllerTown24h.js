@@ -15,6 +15,7 @@ var AqiConverter = require('../lib/aqi.converter');
 var KecoController = require('../controllers/kecoController');
 var AirkoreaHourlyForecastCtrl = require('../controllers/airkorea.hourly.forecast.controller');
 var KaqHourlyForecastCtrl = require('../controllers/kaq.hourly.forecast.controller');
+var KmaSpecialWeatherController = require('../controllers/kma.specialweather.controller');
 
 var config = require('../config/config');
 
@@ -1465,6 +1466,12 @@ function ControllerTown24h() {
             itemList.push(item);
         }
 
+        if (current.hasOwnProperty('specialInfo')) {
+            var obj = current.specialInfo[0];
+            item = {str: obj.weatherStr+obj.levelStr, grade: obj.weather+5};
+            itemList.push(item);
+        }
+
         if (current.rn1 && current.pty) {
             switch (current.pty) {
                 case 1:
@@ -1887,7 +1894,33 @@ function ControllerTown24h() {
             }
             next();
         });
-    }
+    };
+
+    this.getSpecialInfo = function (req, res, next) {
+        var kmaSpecial = new KmaSpecialWeatherController();
+        var town;
+        var stnName;
+        try {
+            town = {first:req.params.region, second:req.params.city, third:req.params.town};
+            stnName = req.current.nearStnName;
+        }
+        catch (e) {
+           log.error(e);
+           return next();
+        }
+
+        kmaSpecial.getSpecialInfo(town, stnName, function(err, list) {
+            if (err) {
+                log.error(err);
+                return next();
+            }
+            req.current = req.current || {};
+            if (list && list.length > 0) {
+                req.current.specialInfo = list;
+            }
+            return next();
+        });
+    };
 }
 
 // subclass extends superclass

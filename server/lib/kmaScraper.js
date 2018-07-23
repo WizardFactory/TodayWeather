@@ -1624,7 +1624,7 @@ KmaScraper.prototype.parseSpecialWeatherSituationList = function ($, callback) {
     var self = this;
     var specialWeatherSituationList = [];
 
-    log.info("prase kma special weather");
+    log.info("parse kma special weather");
 
     try {
         var specialHtml = $('.special_report_list2').eq(0);
@@ -1659,7 +1659,7 @@ KmaScraper.prototype.parseSpecialWeatherSituationList = function ($, callback) {
             specialWeatherSituationList.push(specialWeatherSituation);
         }
 
-        if (weatherFlashHtml && weatherInformationHtml.length > 0) {
+        if (weatherInformationHtml && weatherInformationHtml.length > 0) {
             specialWeatherSituation = {};
             specialWeatherSituation = self._parseWeatherInformationHtml(weatherInformationHtml, KmaSpecialWeatherSituation.TYPE_WEATHER_INFORMATION);
             specialWeatherSituationList.push(specialWeatherSituation);

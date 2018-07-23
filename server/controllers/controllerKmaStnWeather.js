@@ -1154,6 +1154,10 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
                         log.error(err);
                         kmaStnList = [];
                     }
+                    if (kmaStnList.length > 0) {
+                        stnWeather.nearStnId = kmaStnList[0].stnId;
+                        stnWeather.nearStnName = kmaStnList[0].stnName;
+                    }
                     return pCallback(null, kmaStnList);
                 });
             },

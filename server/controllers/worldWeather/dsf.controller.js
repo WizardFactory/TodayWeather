@@ -60,6 +60,20 @@ class DsfController {
         return 0;
     };
 
+    /**
+     * Description : To compare Date without Hour,Minutes,Second
+     * @param src
+     * @param dst
+     * @param timeOffset
+     * @returns {number|*}
+     * @private
+     */
+    _getDiffDate2(src, dst, timeOffset) {
+        let utcTime = new Date(src.getTime() + timeOffset);
+        let localTime = new Date(dst.getTime() + timeOffset);
+        return this._getDiffDate(utcTime, localTime);
+    }
+
     _getLocalLast0H(timeOffset_MIN) {
         var utcTime = new Date();
         var localTime = new Date();
@@ -157,6 +171,7 @@ class DsfController {
         let yDate = new Date(cDate.getTime() + timeOffset);
         yDate.setUTCDate(yDate.getUTCDate() - 1);
 
+        // log.info(`cDsf > YesterdayData tatget Date[${yDate.toUTCString()}]`);
         /**
          * To find if yesterday's data has Thistime's yesterday data.
          * If there is no Thistime's yesterday data, it would be ignored
@@ -171,6 +186,7 @@ class DsfController {
 
 
         if(yesterdayData.length > 0){
+            // log.info(`cDsf > Found yesterday data : date[${yData.dateObj.toString()}], timeOffset[${timeOffset}]`);
             return yData;
         }
 
@@ -194,11 +210,14 @@ class DsfController {
             return [];
         }
 
-        timeOffset += (timeOffset * 60 * 1000);
+        timeOffset = (timeOffset * 60 * 1000);
 
         let res = [];
         let hourlyData = yData.data.hourly.data;
         let yesterday = new Date(yData.dateObj.getTime() + timeOffset);
+
+        // log.info(`cDsf > Org Date[${yData.dateObj.toUTCString()}]`);
+        // log.info(`cDsf > target date[${yesterday.toUTCString()}]`);
 
         for(let i=0 ; i<24 ; i++){
             let isValid = hourlyData.filter(item =>{
@@ -231,7 +250,7 @@ class DsfController {
         }
 
         let hourlyData = cData.data.hourly.data;
-        let timeOffset = cData.timeOffset * 60 * 1000;
+        let timeOffset = yData.timeOffset * 60 * 1000;
 
         let debug = []; // For debug, later on, it'll be removed if there is no problem.
         hours.forEach(d=>{
@@ -246,6 +265,7 @@ class DsfController {
             if(found.length > 0){
                 log.info('cDsf > found missed data : ', JSON.stringify(found[0]))
                 yData.data.hourly.data.push(found[0]);
+                yData.data.hourly.data.sort((a,b)=>{return a.dateObj.getTime() - b.dateObj.getTime()});
             }else{
                 log.info(`cDsf > Failed to find = ${JSON.stringify(debug)}`);
             }
@@ -253,6 +273,18 @@ class DsfController {
 
 
         return yData;
+    }
+
+    /**
+     * Description : wrapping function. It allows Mocha test to override it.
+     * @param query
+     * @param sort
+     * @param callback
+     * @returns {Promise}
+     * @private
+     */
+    _findDB(query, sort, callback){
+        return dsfModel.find(query).lean().sort(sort).exec(callback);
     }
 
     /**
@@ -275,7 +307,7 @@ class DsfController {
         };
 
         // Not sure which one is better whether to query once for three data or to query three times for each time data.
-        dsfModel.find(query).lean().sort({dateObj:1}).exec((err, list)=>{
+        this._findDB(query, {dateObj:1}, (err, list)=>{
             if(err){
                 err.message += 'cDsf > fail to get DSF data from DB';
                 log.error(err);
@@ -286,37 +318,44 @@ class DsfController {
                 log.info('cDsf > There are few datas : ', list.length);
             }
 
-            let ret = {};
-            let missedHourData = [];
-            list.forEach((item)=>{
-                //log.info(JSON.stringify(item));
-                //log.info('---> ', item.dateObj, item.timeOffset);
+            try{
+                // log.info(JSON.stringify(list));
+                let ret = {};
+                let missedHourData = [];
+                list.forEach((item)=>{
+                    //log.info(JSON.stringify(item));
+                    //log.info('---> ', item.dateObj, item.timeOffset);
 
-                if(ret['yesterday'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
-                    ret['yesterday'] = this._hasYesterdayData(cDate, item, item.timeOffset);
-                    missedHourData = this._checkMissedHourData(ret['yesterday'], item.timeOffset);
-                    log.info('cDsf > 1. missed Hour Datas : ', JSON.stringify(missedHourData));
-                }else if(ret['today'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'today')){
-                    ret['today'] = item;
-                }else if(ret['current'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 15)){
-                    ret['current'] = item;
-                }else if(missedHourData.length > 0){
-                    // Try to find missed data to other DB's data.
-                    ret['yesterday'] = this._fulfillMissedHourData(missedHourData, ret['yesterday'], item);
-                    missedHourData = this._checkMissedHourData(ret['yesterday'], ret['yesterday'].timeOffset);
-                    log.info('cDsf > 2. missed Hour Datas : ', JSON.stringify(missedHourData));
+                    if(ret['yesterday'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
+                        ret['yesterday'] = this._hasYesterdayData(cDate, item, item.timeOffset);
+                        missedHourData = this._checkMissedHourData(ret['yesterday'], item.timeOffset);
+                        log.info('cDsf > 1. missed Hour Datas : ', JSON.stringify(missedHourData));
+                    }else if(ret['today'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'today')){
+                        ret['today'] = item;
+                    }else if(ret['current'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 15)){
+                        ret['current'] = item;
+                    }else if(missedHourData.length > 0 && this._getDiffDate2(ret['yesterday'].dateObj, item.dateObj, ret['yesterday'].timeOffset) === 0){
+                        // The only data which has the same date with yesterday is a subject.
+                        // Try to find missed data to other DB's data.
+                        ret['yesterday'] = this._fulfillMissedHourData(missedHourData, ret['yesterday'], item);
+                        missedHourData = this._checkMissedHourData(ret['yesterday'], ret['yesterday'].timeOffset);
+                        log.info('cDsf > 2. missed Hour Datas : ', JSON.stringify(missedHourData));
+                    }
+                });
+
+                // Finally, there is missed hour data on the yesterday's data, it should be dropped.
+                if(missedHourData.length > 0){
+                    log.info('cDsf > Lack of yesterday data : ', JSON.stringify(ret['yesterday']));
+                    ret['yesterday'] = undefined;
                 }
-            });
 
-            // Finally, there is missed hour data on the yesterday's data, it should be dropped.
-            if(missedHourData.length > 0){
-                log.info('cDsf > Lack of yesterday data : ', JSON.stringify(ret['yesterday']));
-                ret['yesterday'] = undefined;
+                log.debug('_findFromDB', JSON.stringify(ret));
+
+                return callback(null, ret);
+            }catch(e){
+                log.error(e);
+                return callback(e);
             }
-
-            log.debug('_findFromDB', JSON.stringify(ret));
-
-            return callback(null, ret);
         });
     }
 
@@ -665,7 +704,7 @@ class DsfController {
         let first = (cb)=> {
             tz.requestTimezoneOffset(undefined, 'get', (err, tzOffset) => {
                 if (err) {
-                    log.warn('cDSF > Failed to run first step :', err);
+                    log.warn(new Error(`cDSF > Failed to run first step : ${err}`));
                     return cb(null);
                 }
                 return cb('1. Found timezone Offset', tzOffset);
@@ -674,7 +713,7 @@ class DsfController {
         let second = (cb)=>{
             tz.requestTimezoneOffsetByGeo({lat: geo[1], lon:geo[0]}, timezone, (err, tzOffset)=>{
                 if(err){
-                    log.warn('cDSF > Failed to run second step :', err);
+                    log.warn(new Error(`cDSF > Failed to run second step : ${err}`));
                     return cb(null);
                 }
                 return cb('2. Found timezone Offset', tzOffset);
@@ -692,8 +731,9 @@ class DsfController {
         async.waterfall([first, second, third],
             (err, tzOffset)=>{
                 if(tzOffset === undefined){
-                    log.error(`cDsf > Fail to get timezone!! tz[${timezone}], geo[${geo[0]}, ${geo[1]}`);
-                    return callback('FAIL');
+                    err = new Error(`cDsf > Fail to get timezone!! tz[${timezone}], geo[${geo[0]}, ${geo[1]}`);
+                    log.error(err);
+                    return callback(err);
                 }
                 return callback(undefined, tzOffset);
             }
@@ -758,7 +798,8 @@ class DsfController {
 
                     this._getTimeOffset(curData.address.country, geo, (err, timeOffset_MIN)=>{
                         if(err && curData.timeOffset === undefined){
-                            log.warn('cDSF > Fail to get timeOffset : ', err);
+                            err.message += ' ' + 'cDSF > Fail to get timeOffset';
+                            log.warn(err);
                             timeOffset = 0;
                             return cb('3. FAIL TO GET TIMEOFFSET');
                         }
@@ -791,6 +832,96 @@ class DsfController {
                     }
                 },
                 (cb)=>{
+
+                    /**
+                     * sequence : 1. check output, if there is no yesterday data on output.
+                     *              1-1. generate reqtime as yesterday 00:00 and request data.
+                     *            2. if there is yesterday data on output, check missed hourly data on it.
+                     *              2-1. if there are missed hourly data, get missed data's hour and generate reqTime for missed data
+                     *              2-2. if there is no missed hourly data. exit and go next step.
+                     *            3. request missed data and merge into yesterday data of output
+                     *            4. if there are still missed data, goto 2-1.
+                     *
+                     * Exit Condition : retry count is reached to threshold(default is 3)
+                     *                  hourly data is fully fulfilled.
+                     *                  data has been broken(exception)
+                     */
+
+                    // Function to generate request time.
+                    let getReqTime = (missedDate)=>{
+                        let nextReqTime = this._getLocalLast0H(timeOffset);
+                        nextReqTime.setUTCDate(nextReqTime.getUTCDate() - 1);
+
+                        if(missedDate !== undefined){
+                            // generate reqTime for requesting missed hourly data.
+                            log.info(`cDSF > set Req Time for missed data [${JSON.stringify(missedDate)}]`);
+                            nextReqTime.setHours(missedDate.h);
+                        }
+                        return parseInt(nextReqTime.getTime() / 1000);
+                    };
+
+                    // Recursive function that try to request yesterday data data until hourly is fulfilled or retry count is over 0.
+                    let fnReceive = (geo, reqTime, retryCount, callback)=>{
+                        if(retryCount === 0){
+                            log.error(new Error(`cDSF > Failed to get Yesterday data : ${JSON.stringify({geo, reqTime})}`));
+                            return callback(null);
+                        }
+
+                        this._reqData(geo, reqTime, (err, result)=>{
+                            if(err){
+                                log.warn('cDSF > Fail to get Yesterday data : ', err);
+                                return fnReceive(geo, reqTime, --retryCount, callback);
+                            }
+
+                            let yesterdayData = {};
+                            try{
+                                yesterdayData = this._makeDbFormat(geo, cDate, timeOffset, this._parseData(result));
+                                if(output.yesterday === undefined){
+                                    output.yesterday = yesterdayData;
+                                    /* for Test
+                                    if(retryCount ===3){
+                                        output.yesterday.data.hourly.data.splice(4,1);
+                                        output.yesterday.data.hourly.data.splice(8,1);
+                                    }
+                                    */
+                                }else {
+                                    // fulfill missed hourly data
+                                    let missedHourlyData = this._checkMissedHourData(output.yesterday, timeOffset);
+                                    output.yesterday = this._fulfillMissedHourData(missedHourlyData, output.yesterday, yesterdayData);
+                                }
+                            }catch(e){
+                                log.error('cDsf > wrong yesterday data : ', e, JSON.stringify(result));
+                                return callback(null);
+                            }
+
+                            // check whether data is valid or not
+                            let missedHourlyData = this._checkMissedHourData(output.yesterday, timeOffset);
+                            if(missedHourlyData.length > 0){
+                                log.info(`cDSF > Missed Yesterday Data : ${JSON.stringify({geo, reqTime, retryCount})}, datelist[${JSON.stringify(missedHourlyData)}]`);
+
+                                // Try to get missed hourly data with generated reqTime.
+                                return fnReceive(geo, getReqTime(missedHourlyData[0]), --retryCount, callback);
+                            }
+
+                            this._saveData(geo, yesterdayData, (err)=>{
+                                if(err){
+                                    log.warn('cDSF > Fail to save yesterday Data to DB, ', err);
+                                }
+
+                                return callback(null);
+                            });
+                        });
+                    };
+
+                    /**
+                     * If there is no yesterday or there is missed hourly data, it would request a new data to fulfill hourly data array.
+                     */
+                    if(output.yesterday === undefined || this._checkMissedHourData(output.yesterday, timeOffset).length > 0){
+                        fnReceive(geo, getReqTime(), 3, cb);
+                    }else{
+                        cb(null);
+                    }
+/*
                     if(output.yesterday === undefined){
                         // 4. try to get&save yesterday data
                         let time = this._getLocalLast0H(timeOffset);
@@ -823,6 +954,7 @@ class DsfController {
                     }else{
                         return cb(null);
                     }
+*/
                 },
                 (cb)=>{
                     if(output.today === undefined){

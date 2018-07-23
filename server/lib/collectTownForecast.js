@@ -545,9 +545,10 @@ CollectData.prototype.organizeShortData = function(index, listData){
             return;
         }
         //TW-401
-        if (data.pty === -999 || data.sky === -999 || data.t3h === -998.9 || data.reh === -998) {
+        if (data.pty < 0 || data.sky < 0 || data.t3h < -100 || data.reh < 0) {
             log.error('Fail get full short data -'+JSON.stringify(data));
             self.emit('recvFail', index);
+            return;
         }
         if (data.uuu === template.uuu || data.vvv === template.vvv || data.vec === template.vec ||
             data.wsd === template.wsd) {
@@ -648,9 +649,10 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
             return;
         }
         //TW-401
-        if (data.pty === -999 || data.sky === -999 || data.t1h === -998.9 || data.reh === -998) {
+        if (data.pty < 0 || data.sky < 0 || data.t1h < -100 || data.reh < 0) {
             log.error('Fail get full shortest data -'+JSON.stringify(data));
             self.emit('recvFail', index);
+            return;
         }
         if (data.uuu === template.uuu || data.vvv === template.vvv || data.lgt === template.lgt ||
             data.vec === template.vec || data.wsd === template.wsd) {
@@ -748,10 +750,12 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
             return;
         }
         //TW-401
-        if (result.pty === -999 || result.sky === -999 || result.t1h === -998.9 || result.reh === -998) {
+        if (result.pty < 0 || result.sky < 0 || result.t1h < -100 || result.reh < 0) {
             log.error('Fail get full current data -'+JSON.stringify(result));
             self.emit('recvFail', index);
+            return;
         }
+
         if (result.uuu === template.uuu || result.vvv === template.vvv || result.lgt === template.lgt ||
             result.vec === template.vec || result.wsd === template.wsd) {
             log.warn('Fail get full current data -'+JSON.stringify(result));
