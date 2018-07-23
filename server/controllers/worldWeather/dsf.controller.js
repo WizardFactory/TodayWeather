@@ -1026,7 +1026,7 @@ class DsfController {
                     log.info('dsf timeoffset :', timeOffset);
                     this._requestDatas(geo, res, cDate, timeOffset, (err, result)=>{
                         if(err){
-                            log.error('cDsf > something wrong to get DSF data ', err);
+                            log.error('cDsf > something wrong to get DSF data ', err, JSON.stringify(meta));
                             return cb(err);
                         }
 
@@ -1049,6 +1049,8 @@ class DsfController {
                 catch (e) {
                     err = e;
                 }
+                // TW-367 : for debugging 5xx issue. It'll be removed after fixing it.
+                log.info(`cDsf > Finish to get DSF data : ${JSON.stringify(meta)}`);
                 return callback(err, ret);
             }
         );
