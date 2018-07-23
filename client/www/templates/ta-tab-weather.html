@@ -76,11 +76,19 @@
                             </div>
                         </div>
                         <div ng-short-chart class="chart-content" ng-style="{'height':chartShortHeight+'px'}"></div>
+                        <div class="chart-label" ng-style="{'top':(chartShortHeight - 10)+'px'}" ng-if="timeChart">
+                            <div class="chart-label-today">{{"LOC_THIS_DAY_TEMP"|translate}}</div>
+                            <div class="chart-label-yesterday">{{"LOC_PREVIOUS_DAY_TEMP"|translate}}</div>
+                        </div>
+                        <div class="chart-separator"></div>
+                        <div ng-short-detail-chart class="chart-content" ng-style="{'height':chartShortDetailHeight+'px'}" ng-if="expand=='expand_less'"></div>
+                        <div class="chart-separator"></div>
+                        <div class="chart-expander">
+                            <div ng-init="expand='expand_more'" ng-click="expand=(expand=='expand_less')?'expand_more':'expand_less'">
+                                <i class="material-icons">{{expand}}</i>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="chart-label" ng-if="timeChart">
-                    <div class="chart-label-today">{{"LOC_THIS_DAY_TEMP"|translate}}</div>
-                    <div class="chart-label-yesterday">{{"LOC_PREVIOUS_DAY_TEMP"|translate}}</div>
                 </div>
             </div>
           </div>

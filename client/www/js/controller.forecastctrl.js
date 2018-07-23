@@ -535,6 +535,7 @@ angular.module('controller.forecastctrl', [])
                 if ($scope.forecastType === 'short' || $scope.forecastType === 'weather' ) {
                     var chartShortHeight = $scope.mainHeight - (143 + padding);
                     $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
+                    $scope.chartShortDetailHeight = $scope.smallImageSize * 2 + 17 * 2 + 12 * 2; // margin + image + text + image + text + margin
                 }
                 if ($scope.forecastType === 'mid' || $scope.forecastType === 'weather' ) {
                     var chartMidHeight = $scope.mainHeight - (136 + padding);
