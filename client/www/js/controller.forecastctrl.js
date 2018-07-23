@@ -138,7 +138,7 @@ angular.module('controller.forecastctrl', [])
             }
         };
 
-        // var regionSize;
+        var regionSize;
         // var regionSumSize;
         var bigDigitSize;
         //var bigTempPointSize;
@@ -189,9 +189,9 @@ angular.module('controller.forecastctrl', [])
             //var topTimeSize = mainHeight * 0.026;
             //$scope.topTimeSize = topTimeSize<16.8?topTimeSize:16.8;
 
-            // regionSize = mainHeight * 0.0306 * padding; //0.051
-            // regionSize = regionSize<33.04?regionSize:33.04;
-            // $scope.regionSize = regionSize;
+            regionSize = mainHeight * 0.0306 * padding; //0.051
+            regionSize = regionSize<33.04?regionSize:33.04;
+            $scope.regionSize = regionSize;
 
             // regionSumSize = mainHeight * 0.0336 * padding; //0.047
             // regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
