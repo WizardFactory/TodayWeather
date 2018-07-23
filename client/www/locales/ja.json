@@ -1,4 +1,6 @@
 {
+  "LOC_TYPE_SPECIAL_WEATHER": "Special weather",
+  "LOC_SPECIAL_WEATHER_NOTE": "<Note>",
   "LOC_NATIONAL_AIR": "Nation AQI",
   "LOC_NULLSCHOOL_WIND": "nullschool wind",
   "LOC_TODAYAIR": "今日空気",
