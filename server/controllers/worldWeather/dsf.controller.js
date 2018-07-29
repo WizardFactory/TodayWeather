@@ -832,6 +832,96 @@ class DsfController {
                     }
                 },
                 (cb)=>{
+
+                    /**
+                     * sequence : 1. check output, if there is no yesterday data on output.
+                     *              1-1. generate reqtime as yesterday 00:00 and request data.
+                     *            2. if there is yesterday data on output, check missed hourly data on it.
+                     *              2-1. if there are missed hourly data, get missed data's hour and generate reqTime for missed data
+                     *              2-2. if there is no missed hourly data. exit and go next step.
+                     *            3. request missed data and merge into yesterday data of output
+                     *            4. if there are still missed data, goto 2-1.
+                     *
+                     * Exit Condition : retry count is reached to threshold(default is 3)
+                     *                  hourly data is fully fulfilled.
+                     *                  data has been broken(exception)
+                     */
+
+                    // Function to generate request time.
+                    let getReqTime = (missedDate)=>{
+                        let nextReqTime = this._getLocalLast0H(timeOffset);
+                        nextReqTime.setUTCDate(nextReqTime.getUTCDate() - 1);
+
+                        if(missedDate !== undefined){
+                            // generate reqTime for requesting missed hourly data.
+                            log.info(`cDSF > set Req Time for missed data [${JSON.stringify(missedDate)}]`);
+                            nextReqTime.setHours(missedDate.h);
+                        }
+                        return parseInt(nextReqTime.getTime() / 1000);
+                    };
+
+                    // Recursive function that try to request yesterday data data until hourly is fulfilled or retry count is over 0.
+                    let fnReceive = (geo, reqTime, retryCount, callback)=>{
+                        if(retryCount === 0){
+                            log.error(new Error(`cDSF > Failed to get Yesterday data : ${JSON.stringify({geo, reqTime})}`));
+                            return callback(null);
+                        }
+
+                        this._reqData(geo, reqTime, (err, result)=>{
+                            if(err){
+                                log.warn('cDSF > Fail to get Yesterday data : ', err);
+                                return fnReceive(geo, reqTime, --retryCount, callback);
+                            }
+
+                            let yesterdayData = {};
+                            try{
+                                yesterdayData = this._makeDbFormat(geo, cDate, timeOffset, this._parseData(result));
+                                if(output.yesterday === undefined){
+                                    output.yesterday = yesterdayData;
+                                    /* for Test
+                                    if(retryCount ===3){
+                                        output.yesterday.data.hourly.data.splice(4,1);
+                                        output.yesterday.data.hourly.data.splice(8,1);
+                                    }
+                                    */
+                                }else {
+                                    // fulfill missed hourly data
+                                    let missedHourlyData = this._checkMissedHourData(output.yesterday, timeOffset);
+                                    output.yesterday = this._fulfillMissedHourData(missedHourlyData, output.yesterday, yesterdayData);
+                                }
+                            }catch(e){
+                                log.error('cDsf > wrong yesterday data : ', e, JSON.stringify(result));
+                                return callback(null);
+                            }
+
+                            // check whether data is valid or not
+                            let missedHourlyData = this._checkMissedHourData(output.yesterday, timeOffset);
+                            if(missedHourlyData.length > 0){
+                                log.info(`cDSF > Missed Yesterday Data : ${JSON.stringify({geo, reqTime, retryCount})}, datelist[${JSON.stringify(missedHourlyData)}]`);
+
+                                // Try to get missed hourly data with generated reqTime.
+                                return fnReceive(geo, getReqTime(missedHourlyData[0]), --retryCount, callback);
+                            }
+
+                            this._saveData(geo, yesterdayData, (err)=>{
+                                if(err){
+                                    log.warn('cDSF > Fail to save yesterday Data to DB, ', err);
+                                }
+
+                                return callback(null);
+                            });
+                        });
+                    };
+
+                    /**
+                     * If there is no yesterday or there is missed hourly data, it would request a new data to fulfill hourly data array.
+                     */
+                    if(output.yesterday === undefined || this._checkMissedHourData(output.yesterday, timeOffset).length > 0){
+                        fnReceive(geo, getReqTime(), 3, cb);
+                    }else{
+                        cb(null);
+                    }
+/*
                     if(output.yesterday === undefined){
                         // 4. try to get&save yesterday data
                         let time = this._getLocalLast0H(timeOffset);
@@ -864,6 +954,7 @@ class DsfController {
                     }else{
                         return cb(null);
                     }
+*/
                 },
                 (cb)=>{
                     if(output.today === undefined){
@@ -935,7 +1026,7 @@ class DsfController {
                     log.info('dsf timeoffset :', timeOffset);
                     this._requestDatas(geo, res, cDate, timeOffset, (err, result)=>{
                         if(err){
-                            log.error('cDsf > something wrong to get DSF data ', err);
+                            log.error('cDsf > something wrong to get DSF data ', err, JSON.stringify(meta));
                             return cb(err);
                         }
 
@@ -958,6 +1049,8 @@ class DsfController {
                 catch (e) {
                     err = e;
                 }
+                // TW-367 : for debugging 5xx issue. It'll be removed after fixing it.
+                log.info(`cDsf > Finish to get DSF data : ${JSON.stringify(meta)}`);
                 return callback(err, ret);
             }
         );

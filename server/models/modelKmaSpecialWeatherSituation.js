@@ -19,10 +19,10 @@ var kmaSpecialWeatherSituationSchema = new mongoose.Schema({
     type : Number, //1 special, 2 preliminarySpecial, 3 weatherInformation, 4 weatherFlash
     imageUrl: String,
     situationList: [{
-        weather: Number,
-        weatherStr: String,
-        level: Number,
-        levelStr: String,
+        weather: Number,            //refer parseSituationType
+        weatherStr: String,         //refer parseSituationType
+        level: Number,              //refer strArray2SituationList
+        levelStr: String,           //refer strArray2SituationList
         info: [{
             timeStr: String, //6월20일아침
             location: String //제주도(제주도산지)

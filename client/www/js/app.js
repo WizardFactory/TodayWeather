@@ -32,7 +32,8 @@ angular.module('starter', [
     'controller.nation',
     'controller.nation.air',
     'controller.setting.radio',
-    'controller.push'
+    'controller.push',
+    'controller.kma.special'
 ])
     .factory('$exceptionHandler', function (Util) {
         return function (exception, cause) {
@@ -935,6 +936,211 @@ angular.module('starter', [
             };
         });
 
+        $compileProvider.directive('ngShortDetailChart', function() {
+            return {
+                restrict: 'A',
+                transclude: true,
+                link: function (scope, iElement) {
+                    var margin = 12;
+                    var textTop = 12;
+                    var width, height, x, y;
+                    var svg;
+
+                    function initSvg() {
+                        console.log('scope watch');
+
+                        x = d3.scale.ordinal().rangeBands([0, width]);
+                        y = d3.scale.linear().range([height, 0]);
+
+                        if (svg != undefined) {
+                            svg.selectAll("*").remove();
+                            svg.attr('width', width)
+                                .attr('height', height);
+                        }
+                        else {
+                            svg = d3.select(iElement[0]).append('svg')
+                                .attr('width', width)
+                                .attr('height', height);
+                        }
+                    }
+
+                    //parent element의 heigt가 변경되면, svg에 있는 모든 element를 지우고, height를 변경 다시 그림.
+                    //chart가 나오지 않는 경우에는 height가 0이므로 그때는 동작하지 않음.
+                    //element height는 광고 제거,추가 그리고 시간별,요일별 로 변경될때 변경됨.
+                    scope.$watch(function () {
+                        return iElement[0].getBoundingClientRect().height;
+                    }, function(newValue) {
+                        if (newValue === 0 || newValue === height) {
+                            return;
+                        }
+                        width = iElement[0].getBoundingClientRect().width;
+                        height = iElement[0].getBoundingClientRect().height;
+
+                        if (!(scope.timeChart == undefined)) {
+                            initSvg();
+                            chart();
+                        }
+                    });
+
+                    var chart = function () {
+                        var data = scope.timeChart;
+
+                        if (x == undefined || y == undefined || svg == undefined || data == undefined) {
+                            return;
+                        }
+
+                        x.domain(d3.range(data[0].values.length));
+
+                        d3.svg.axis()
+                            .scale(x)
+                            .orient('bottom');
+
+                        var currentRect = svg.selectAll('.current-rect').data(function () {
+                            return [data[1].currentIndex];
+                        });
+
+                        currentRect.enter().append('rect')
+                            .attr('class', 'current-rect');
+
+                        currentRect
+                            .attr('x', function (index) {
+                                return x.rangeBand() * index + x.rangeBand() / 2 + 0.5;
+                            })
+                            .attr('y', function () {
+                                return 0;
+                            })
+                            .attr('width', x.rangeBand() - 0.5)
+                            .attr('height', height);
+
+                        currentRect.exit().remove();
+
+                        // draw guideLine
+                        var guideLines = svg.selectAll('.guide-line')
+                            .data(function () {
+                                return data[1].values;
+                            });
+
+                        guideLines.enter().append('line')
+                            .attr('class', function (d) {
+                                if (d.value.time === 24) {
+                                    return 'guide-vivid-line';
+                                } else {
+                                    return 'guide-line';
+                                }
+                            })
+                            .attr('x1', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                            })
+                            .attr('x2', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                            })
+                            .attr('y1', 0)
+                            .attr('y2', height);
+
+                        guideLines.exit().remove();
+
+                        var hourlyTables = svg.selectAll('.hourly-table')
+                            .data(function () {
+                                return data[1].values;
+                            });
+
+                        var hourObject = hourlyTables.enter()
+                            .append('g')
+                            .attr('class', 'hourly-table');
+
+                        hourObject.append("svg:image")
+                            .attr("xlink:href", function (d) {
+                                return scope.iconsImgPath + "/wind_direction.png";
+                            })
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i - scope.smallImageSize/2;
+                            })
+                            .attr("y", margin / 2)
+                            .attr("width", scope.smallImageSize)
+                            .attr("height", scope.smallImageSize)
+                            .attr('transform', function (d, i) {
+                                return 'rotate(' + d.value.vec + ', ' + (x.rangeBand() * i) + ', ' + (margin + scope.smallImageSize) / 2 + ')';
+                            });
+
+                        hourObject.append("text")
+                            .attr('class', 'chart-text')
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i;
+                            })
+                            .attr("y", function(){
+                                return margin / 2 + scope.smallImageSize + textTop;
+                            })
+                            .text(function (d) {
+                                return d.value.wsd;
+                            })
+                            .append('tspan')
+                            .attr('class', 'chart-unit-text')
+                            .text(function () {
+                                return scope.getWindSpdUnit();
+                            });
+
+                        hourObject.append("svg:image")
+                            .attr("xlink:href", function (d) {
+                                var reh = d.value.reh? d.value.reh - d.value.reh % 10 : '00';
+                                return scope.iconsImgPath + "/humidity_" + reh +".png";
+                            })
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i - scope.smallImageSize/2;
+                            })
+                            .attr("y", function () {
+                                return margin / 2 + scope.smallImageSize + textTop + margin;
+                            })
+                            .attr("width", scope.smallImageSize)
+                            .attr("height", scope.smallImageSize);
+
+                        hourObject.append("text")
+                            .attr('class', 'chart-text')
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i;
+                            })
+                            .attr("y", function () {
+                                return margin / 2 + scope.smallImageSize * 2 + textTop + margin + textTop;
+                            })
+                            .text(function (d) {
+                                return d.value.reh;
+                            })
+                            .append('tspan')
+                            .attr('class', 'chart-unit-text')
+                            .text('%');
+
+                        hourObject.filter(function(d, i) {
+                            return i == 0;
+                        }).remove();
+                    };
+
+                    scope.$watch('timeWidth', function(newValue) {
+                        //guide에서 나올때, 점들이 모이는 증상이 있음.
+                        if (newValue == undefined || newValue == width) {
+                            console.log('new value is undefined or already set same width='+width);
+                            return;
+                        }
+
+                        console.log('update timeWidth='+newValue);
+                        width = newValue;
+
+                        return;
+                    });
+
+                    scope.$watch('timeChart', function (newVal) {
+                        if (newVal) {
+                            console.log("update timeChart");
+                            if (scope.timeChart == undefined) {
+                                console.log("time chart is undefined");
+                                return;
+                            }
+                            initSvg();
+                            chart();
+                        }
+                    });
+                }
+            };
+        });
+
         $compileProvider.directive('ngMidChart', function() {
             return {
                 restrict: 'A',
@@ -1623,6 +1829,12 @@ angular.module('starter', [
                 cache: false,
                 templateUrl: 'templates/setting-push.html',
                 controller: 'PushCtrl'
+            })
+            .state('kma-special', {
+                url: '/kma-special',
+                cache: false,
+                templateUrl: 'templates/kma-special.html',
+                controller: 'KmaSpecialCtrl'
             })
             .state('nation', {
                 url: '/nation',

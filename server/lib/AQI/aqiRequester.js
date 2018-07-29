@@ -47,7 +47,7 @@ aqiRequester.prototype.getAqiData = function(geocode, key, callback){
  */
 aqiRequester.prototype.getDataByAxios = function(url, callback) {
     log.info('AQI> url:'+url);
-    axios.get(url)
+    axios.get(url,{timeout:1000*2})
         .then(function(response) {
             callback(null, response.data.rxs);
         })

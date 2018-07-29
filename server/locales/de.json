@@ -307,7 +307,7 @@
   "LOC_THEME_SETTING": "Theme setting",
   "LOC_WEATHER_PHOTO_THEME": "Weather photo theme",
   "LOC_LIGHT_THEME": "Light theme",
-  "LOC_BLUE_THEME": "Blue theme",
+  "LOC_OLD_THEME": "Old theme",
   "LOC_DARK_THEME": "Dark theme",
   "LOC_AIR_QUALITY_IS_GOOD" : "Die Luftqualität wird als gut bewertet",
   "LOC_AIR_QUALITY_IS_MODERATE" : "Die Luftqualität wird als befriedigend bewertet",
@@ -319,5 +319,9 @@
   "LOC_AUTO_RENEWED_24_HOURS_BEFORE_EXPIRY_DATE": "1 year costs $1.09. Active subscriptions will be auto-renewed 24 hours before the expiry date.",
   "LOC_MANAGE_SUBSCRIPTIONS_FROM_ITUNES_ACCOUNT": "You can manage subscriptions from Account in iTunes after subscribing, you will also be able to cancel the auto-renewing subscription from there at any time.",
   "LOC_PRIVACY_POLICY": "Privacy Policy",
-  "LOC_TERMS_OF_USE": "Terms of Use"
+  "LOC_TERMS_OF_USE": "Terms of Use",
+  "LOC_TYPE_SPECIAL_WEATHER": "Special weather",
+  "LOC_TYPE_PRELIMINARY_SPECIAL": "Preliminary Special weather",
+  "LOC_TYPE_WEATHER_INFORMATION": "Weather information",
+  "LOC_TYPE_WEATHER_FLASH": "Flash weather information"
 }
