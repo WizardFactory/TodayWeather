@@ -278,7 +278,12 @@ angular.module('starter', [
             body.removeClass('search forecast dailyforecast air start setting push');
             body.addClass($rootScope.state);
 
-            if (window.StatusBar) {
+            var navbars = angular.element(document.querySelectorAll('ion-nav-bar'));
+            for (var i = 0; i < navbars.length; i++) {
+                navbars[i].style.visibility = "visible";
+            }
+
+            if (window.StatusBar && ionic.Platform.isIOS()) {
                 if ($rootScope.settingsInfo.theme === 'light') {
                     StatusBar.styleDefault();
                 } else { //photo, dark, old
@@ -1955,7 +1960,12 @@ angular.module('starter', [
         $ionicConfigProvider.views.transition("android");
 
         if (window.StatusBar) {
-            StatusBar.styleLightContent();
+            if (ionic.Platform.isIOS()) {
+                StatusBar.styleLightContent();
+            }
+            else {
+                StatusBar.backgroundColorByHexString('#111');
+            }
         }
 
         // Enable Native Scrolling on Android
