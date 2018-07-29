@@ -48,7 +48,7 @@ angular.module('controller.setting.radio', [])
                     $rootScope.iconsImgPath = window.theme[$rootScope.settingsInfo.theme].icons;
                     $rootScope.weatherImgPath = window.theme[$rootScope.settingsInfo.theme].weather;
 
-                    if (window.StatusBar) {
+                    if (window.StatusBar && ionic.Platform.isIOS()) {
                         if ($rootScope.settingsInfo.theme === 'light') {
                             StatusBar.styleDefault();
                         } else { //photo, dark, old
