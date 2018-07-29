@@ -1,6 +1,6 @@
 angular.module('controller.forecastctrl', [])
     .controller('ForecastCtrl', function ($scope, WeatherInfo, WeatherUtil, Util, Purchase, $stateParams,
-                                          $rootScope, $location, $ionicHistory, $translate, Units, Push) {
+                                          $rootScope, $location, $ionicHistory, $translate, Units, Push, TwStorage) {
         var ASPECT_RATIO_16_9 = 1.7;
         var colWidth;
 
@@ -217,6 +217,11 @@ angular.module('controller.forecastctrl', [])
 
             //smallDigitSize = mainHeight * 0.0320 * smallPadding;
             //smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
+
+            $scope.expand = TwStorage.get("expandShortChart");
+            if ($scope.expand === null) {
+                $scope.expand = false; // 기본값은 short-detail-chart가 숨겨진 상태
+            }
 
             var fav = parseInt($stateParams.fav);
             if (!isNaN(fav)) {
@@ -757,6 +762,11 @@ angular.module('controller.forecastctrl', [])
                 }
                 WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             }
+        };
+
+        $scope.clickExpander = function () {
+            $scope.expand = !$scope.expand;
+            TwStorage.set("expandShortChart", $scope.expand);
         };
 
         $scope.$on('applyEvent', function(event, sender) {
