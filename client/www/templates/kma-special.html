@@ -13,7 +13,7 @@
                  has-bouncing="false" style="background-color: #F5F5F5;">
         <div ng-if="specialList" class="item item-body" ng-repeat="special in specialList">
             <h2>{{special.name}} {{special.announcement}}</h2>
-            <img src="{{special.imageUrl}}">
+            <img ng-src="{{special.imageUrl}}">
             <div ng-if="special.situationList" ng-repeat="situation in special.situationList">
                 <b>{{situation.weatherStr}}{{situation.levelStr}}</b>
                 <div ng-if="situation.info" ng-repeat="info in situation.info">

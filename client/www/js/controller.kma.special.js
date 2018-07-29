@@ -13,8 +13,7 @@ start.controller('KmaSpecialCtrl', function($scope, Util, $http, $ionicHistory) 
     };
 
     function _makeQueryUrl() {
-        // var url = clientConfig.serverUrl;
-        var url = 'http://localhost:3000';
+        var url = clientConfig.serverUrl;
         url += '/v000903'+'/kma/special';
         return url;
     }
