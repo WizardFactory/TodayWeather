@@ -26,7 +26,7 @@
   "cordovaPlugins": [
     "cordova-plugin-admobpro-firebase",
     "cordova-plugin-firebase",
-    "cordova-plugin-google-analytics",
+    "cordova-plugin-google-analytics@1.8.3",
     "cordova-plugin-request-location-accuracy",
     "cordova.plugins.diagnostic",
     {
