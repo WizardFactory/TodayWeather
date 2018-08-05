@@ -14,7 +14,7 @@ function midRssKmaController() {
 }
 
 midRssKmaController.getData = function(regId, callback) {
-    log.input('midRssKmaController getData '+regId);
+    log.debug('midRssKmaController getData '+regId);
 
     if(config.db.version == '2.0'){
         modelKmaTownMidRss.find({regId:regId}, {_id: 0}).limit(1).lean().exec(function(err, midRssList) {
@@ -46,7 +46,7 @@ midRssKmaController.getData = function(regId, callback) {
 };
 
 midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
-    log.input('midRssKmaController overwriteData '+regId);
+    log.debug('midRssKmaController overwriteData '+regId);
 
     if (!reqMidData.hasOwnProperty('dailyData') || !Array.isArray(reqMidData.dailyData)) {
         log.warn('make dailyData array');
