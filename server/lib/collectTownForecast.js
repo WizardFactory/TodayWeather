@@ -743,14 +743,14 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
 
         //check data complete
         result = listResult[0];
-        if (result.rn1 === template.rn1 || result.sky === template.sky || result.reh === template.reh ||
+        if (result.rn1 === template.rn1 || result.reh === template.reh ||
             result.pty === template.pty || result.t1h === template.t1h) {
             log.error('Fail get full current data -'+JSON.stringify(result));
             self.emit('recvFail', index);
             return;
         }
         //TW-401
-        if (result.pty < 0 || result.sky < 0 || result.t1h < -100 || result.reh < 0) {
+        if (result.pty < 0 || result.t1h < -100 || result.reh < 0) {
             log.error('Fail get full current data -'+JSON.stringify(result));
             self.emit('recvFail', index);
             return;
