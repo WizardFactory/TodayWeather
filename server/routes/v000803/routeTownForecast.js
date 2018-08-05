@@ -45,7 +45,7 @@ router.get('/', [cTown.getSummary], function(req, res) {
  * getSummary는 getShortest, getCurrent보다 앞에 올수 없음.
  */
 var routerList = [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.getShort,
-    cTown.getShortRss, cTown.getShortest, cTown.getCurrent, cTown.updateCurrentListForValidation,
+    cTown.getShortRss, cTown.getShortest, cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentSkyByShortest,
     cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather, cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
     cTown.mergeByShortest, cTown.adjustShort, cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo,
     cTown.getPastMid, cTown.mergeMidWithShort, cTown.updateMidTempMaxMin, cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco,
