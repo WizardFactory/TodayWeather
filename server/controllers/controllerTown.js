@@ -1829,7 +1829,20 @@ function ControllerTown() {
                     reqCurrent.dongnae = JSON.parse(JSON.stringify(reqCurrent));
 
                     for (var key in stnWeatherInfo) {
-                        if (stnFirst || reqCurrent[key] == undefined) {
+                        if (reqCurrent[key] == undefined) {
+                            reqCurrent[key] = stnWeatherInfo[key];
+                        }
+                        else if (key === 't1h') {
+                            if (reqCurrent[key] <= -50) {
+                                reqCurrent[key] = stnWeatherInfo[key];
+                            }
+                        }
+                        else if (key === 'rn1' || key === 'reh' || key === 'vec' || key === 'wsd') {
+                            if (reqCurrent[key] < 0) {
+                                reqCurrent[key] = stnWeatherInfo[key];
+                            }
+                        }
+                        else {
                             reqCurrent[key] = stnWeatherInfo[key];
                         }
                     }
