@@ -7,6 +7,11 @@
 
 var mongoose = require('mongoose');
 
+/**
+ * indexType
+ * asthma-lunt: 폐질환가능지수, brain: 뇌졸중가능지수, skin: 피부질환가능지수, flowerWoody: 꽃가루농도위험지수(참나무),
+ * flowerPine: 꽃가루농도위험지수(소나무), flowerWeeds: 꽃가루농도위험지수(잡초류), influenza: 감기가능지수
+ */
 var healthDaySchema = new mongoose.Schema({
     areaNo: Number,             ///< 지역 코드
     date: Date,               ///< 날짜
