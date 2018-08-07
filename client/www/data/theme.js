@@ -8,7 +8,7 @@ window.theme = {
         weather: 'img/weather_default'
     },
     'dark': {
-        icons: 'img/icons_default',
+        icons: 'img/icons_dark',
         weather: 'img/weather_default'
     },
     'old': {
