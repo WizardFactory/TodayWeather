@@ -669,6 +669,10 @@ Keco.prototype._checkLimit = function (result) {
        if (result.indexOf('LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR') !== -1) {
            return true;
        }
+       else if (result.indexOf('DEADLINE HAS EXPIRED ERROR') !== -1) {
+           log.error('DEADLINE HAS EXPIRED ERROR');
+           return true;
+       }
     }
     return false;
 };
