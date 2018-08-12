@@ -147,6 +147,11 @@ angular.module('controller.forecastctrl', [])
 
             colWidth = Math.min($scope.bodyWidth / 7, 60);
             $scope.smallImageSize = colWidth - colWidth * 0.2 * 2;
+            
+            $scope.expand = TwStorage.get("expandShortChart");
+            if ($scope.expand === null) {
+                $scope.expand = false; // 기본값은 short-detail-chart가 숨겨진 상태
+            }
 
             var fav = parseInt($stateParams.fav);
             if (!isNaN(fav)) {
