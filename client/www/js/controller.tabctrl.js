@@ -1372,31 +1372,29 @@ angular.module('controller.tabctrl', [])
                 $scope.bodyWidth = 360;
             }
 
-            var headerRatio = 0.4;
-            var contentRatio = 0.6;
-            if ($scope.bodyWidth >= $scope.tabletWidth && $scope.bodyWidth < $scope.bodyHeight) {
-                headerRatio = 0.4;
-                contentRatio = 0.6;
+            var headerRatio = 5 / 12;
+            if ($scope.bodyHeight < 600) {
+                headerRatio = 2 / 5;
             }
-            else if ($scope.bodyHeight >= 730) {
-                //note5, nexus5x, iphone 5+
-                if (ionic.Platform.isIOS()) {
-                    headerRatio = 0.40;
-                    contentRatio = 0.60;
-                }
-                else {
-                    headerRatio = 0.32;
-                    contentRatio = 0.68;
-                }
+            else if (600 <= $scope.bodyHeight && $scope.bodyHeight < 840) {
+                headerRatio = 3 / 8;
             }
-            else {
-                headerRatio = 0.32;
-                contentRatio = 0.68;
-            }
+            var contentRatio = 1 - headerRatio;
 
-            //빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
-            $scope.headerHeight = $scope.bodyHeight * headerRatio + 44;
+            // 빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
+            $scope.headerHeight = ($scope.bodyHeight * headerRatio < 192) ? 192 : ($scope.bodyHeight * headerRatio);
             $scope.mainHeight = $scope.bodyHeight * contentRatio;
+
+            var contentWidth = $scope.bodyWidth * 0.8;
+            var contentHeight = $scope.headerHeight - 44 - 5; // headerBar height = 44px, bottom padding = 5px
+            if (ionic.Platform.isIOS()) {
+                contentHeight -= 20; // statusBar height = 20px
+            }
+            contentHeight -= 24 * 3; // line-height = 24px
+
+            var bigFontSize = (contentWidth / 4 < contentHeight * 0.9) ? (contentWidth / 4) : (contentHeight * 0.9);
+            $scope.bigFontSize = bigFontSize < 142.1 ? bigFontSize : 142.1;
+            $scope.bigImageSize = $scope.bigFontSize * 0.9;
         };
 
         var strWeather = "Weather";
