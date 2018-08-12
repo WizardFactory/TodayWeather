@@ -41,11 +41,11 @@
                 </div>
                 <div class="main-box" ng-if="currentWeather">
                     <div class="main-box-forecast-content">
-                        <div ng-style="::{'font-size':bigDigitSize+'px'}">
-                            {{getTemp(currentWeather.t1h)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}">˚</span>
+                        <div ng-style="::{'font-size':bigFontSize+'px'}">
+                            {{getTemp(currentWeather.t1h)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigFontSize/2+'px'}">˚</span>
                         </div>
                         <div style="margin: auto">
-                            <img id="imgBigSkyStateSize" ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
+                            <img id="imgBigSkyStateSize" ng-style="::{'height':bigImageSize+'px'}" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
                         </div>
                     </div>
                     <div class="main-box-summary">

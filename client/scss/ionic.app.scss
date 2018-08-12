@@ -302,6 +302,9 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
           span {
             vertical-align: super;
           }
+          img {
+            vertical-align: bottom;
+          }
         }
         .main-box-air-title {
           margin: auto;
@@ -322,7 +325,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
         }
         .main-box-summary {
           font-size: 21px;
-          line-height: 21px;
+          line-height: 24px;
           i {
             font-size: 24px;
             vertical-align: bottom;
@@ -330,7 +333,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
         }
         .main-box-air-summary {
           font-size: 21px;
-          line-height: 21px;
+          line-height: 24px;
           i {
             font-size: 24px;
             vertical-align: bottom;
