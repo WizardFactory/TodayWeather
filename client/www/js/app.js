@@ -1064,7 +1064,7 @@ angular.module('starter', [
                             .attr("width", scope.smallImageSize)
                             .attr("height", scope.smallImageSize)
                             .attr('transform', function (d, i) {
-                                return 'rotate(' + d.value.vec + ', ' + (x.rangeBand() * i + x.rangeBand() / 2) + ', ' + (margin + scope.smallImageSize) / 2 + ')';
+                                return 'rotate(' + (d.value.vec - 180) + ', ' + (x.rangeBand() * i + x.rangeBand() / 2) + ', ' + (margin + scope.smallImageSize) / 2 + ')';
                             });
 
                         hourObject.append("text")
