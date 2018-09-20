@@ -302,7 +302,11 @@ class TimezoneController{
      * @private
      */
     _getGeoByTimezone(timezone, callback){
-        let encodedUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address='+timezone+'&language=en&key=' + this._googleKey;
+        let encodedUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address=';
+        if(timezone === 'Asia/Tokyo'){
+             timezone = 'Tokyo';
+        }
+        encodedUrl += timezone + '&language=en' + '&key=' + this._googleKey;
         encodedUrl = encodeURI(encodedUrl);
         log.info(encodedUrl);
 
