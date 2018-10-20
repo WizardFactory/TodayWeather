@@ -743,21 +743,37 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
 
         //check data complete
         result = listResult[0];
-        if (result.rn1 === template.rn1 || result.reh === template.reh ||
-            result.pty === template.pty || result.t1h === template.t1h) {
-            log.error('Fail get full current data -'+JSON.stringify(result));
-            self.emit('recvFail', index);
-            return;
-        }
-        //TW-401
-        if (result.pty < 0 || result.t1h < -100 || result.reh < 0) {
+        if (result.rn1 === template.rn1 || result.pty === template.pty || result.t1h === template.t1h) {
             log.error('Fail get full current data -'+JSON.stringify(result));
             self.emit('recvFail', index);
             return;
         }
 
-        if (result.uuu === template.uuu || result.vvv === template.vvv || result.lgt === template.lgt ||
-            result.vec === template.vec || result.wsd === template.wsd) {
+        //TW-401
+        if (result.t1h < -100) {
+            log.error('Fail get full current data -'+JSON.stringify(result));
+            self.emit('recvFail', index);
+            return;
+        }
+
+        if (result.pty < 0) {
+            log.warn('Fail get pty of current data -'+JSON.stringify(result));
+            delete result.pty;
+        }
+
+        if (result.rn1 < 0) {
+            log.warn('Fail get rn1 of current data -'+JSON.stringify(result));
+            delete result.rn1;
+        }
+
+        if (result.reh < 0) {
+            log.warn('Fail get reh of current data -'+JSON.stringify(result));
+            delete result.reh;
+        }
+
+        if (result.uuu === template.uuu || result.vvv === template.vvv ||
+            result.vec === template.vec || result.wsd === template.wsd)
+        {
             log.warn('Fail get full current data -'+JSON.stringify(result));
         }
 

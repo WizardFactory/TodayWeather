@@ -38,15 +38,36 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
                 var newItem = {mCoord: coord, pubDate: pubDate, fcsDate: fcsDate, currentData: item};
                 log.debug('KMA Town C> item : ', JSON.stringify(newItem));
 
-                modelKmaTownCurrent.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
-                    if(err){
-                        log.error('KMA Town C> Fail to update current item');
+                modelKmaTownCurrent.find({mCoord: coord, fcsDate: fcsDate}).lean().exec(function (err, list) {
+                    if(err) {
+                        log.error('KMA Town C> Fail to find current item');
                         log.error(err);
-                        log.info(JSON.stringify(newItem));
                         return cb();
                     }
 
-                    cb();
+                    var oldItem;
+                    if (list.length == 1) {
+                        oldItem = list[0];
+                    }
+
+                    if (oldItem) {
+                        for (var key in oldItem.currentData) {
+                            if (newItem.currentData.hasOwnProperty(key) == false) {
+                                newItem.currentData[key] = oldItem.currentData[key];
+                            }
+                        }
+                    }
+
+                    modelKmaTownCurrent.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
+                        if(err){
+                            log.error('KMA Town C> Fail to update current item');
+                            log.error(err);
+                            log.info(JSON.stringify(newItem));
+                            return cb();
+                        }
+
+                        cb();
+                    });
                 });
             },
             function (err) {
