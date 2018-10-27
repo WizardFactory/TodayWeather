@@ -1640,7 +1640,7 @@ function ControllerTown24h() {
             if(req.midData) {
                 if (req.midData.dailyData == undefined || req.midData.dailyData.length == undefined
                     || req.midData.dailyData.length < 17) {
-                    log.error("daily data is invalid", meta);
+                    log.error("daily data is invalid", meta, 'Detailed Info : ', JSON.stringify(req.midData));
                 }
 
                 //#2013 check date
