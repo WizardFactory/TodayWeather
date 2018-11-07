@@ -107,7 +107,7 @@ function ControllerTown() {
      * @param res
      * @param next
      */
-    this.getAllDataFromDb = function(req, res, next){
+    this.getAllDataFromDb = function(req, res, next) {
         var meta = {};
 
         if(req.params.city === undefined){
@@ -1198,6 +1198,74 @@ function ControllerTown() {
         return weatherLgt || currentLgt;
     }
 
+    /**
+     * shortestList에서 current와 동일한 시간의 데이터를 찾아서 sky update
+     * @param current
+     * @param shortestList
+     * @param meta
+     * @private
+     */
+    this._mergeCurrentSkyFromShortestList = function (current, shortestList, meta) {
+        var shortest = shortestList.find(function(shortest) {
+            return shortest.date === current.date && shortest.time === current.time
+        });
+        if (shortest == undefined) {
+            log.warn(`Fail to find shortest ${current.date} ${current.time}`, meta);
+            return;
+        }
+        current.sky = shortest.sky;
+        log.info(`update current sky ${current.date} ${current.time}`, meta);
+    };
+
+    /**
+     * sky가 없거나, -1인 경우에만 shortest로 갱신
+     * @param req
+     * @param res
+     * @param next
+     */
+    this.mergeCurrentSkyByShortest = function (req, res, next) {
+        var meta = {};
+
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var townName = req.params.town;
+
+        meta.sID = req.sessionID;
+        meta.method = 'mergeCurrentSkyByShortest';
+        meta.region = regionName;
+        meta.city = cityName;
+        meta.town = townName;
+        log.info(meta);
+
+        if (req.shortestList == undefined || req.shortestList.length == 0) {
+            log.warn('shortest length is 0', meta);
+            return next();
+        }
+
+        req.currentList.forEach(function (current) {
+            if (current.sky == undefined || current.sky < 0) {
+                self._mergeCurrentSkyFromShortestList(current, req.shortestList, meta);
+            }
+        });
+
+        var current = req.current;
+        if (current == undefined) {
+            log.warn('current is undefined!', meta);
+            return next();
+        }
+        if (current.sky == undefined || current.sky < 0) {
+            self._mergeCurrentSkyFromShortestList(current, req.shortestList, meta);
+        }
+        next();
+    };
+
+    /**
+     * t1h가 -50이면 kma aws hourly data로 overwrite
+     * @param req
+     * @param res
+     * @param next
+     * @returns {ControllerTown}
+     */
     this.mergeCurrentByStnHourly = function (req, res, next) {
         var meta = {};
 
@@ -1226,6 +1294,7 @@ function ControllerTown() {
                 }
 
                 var hourlyList = stnWeatherInfo;
+                //update currentList for past
                 req.currentList.forEach(function (current) {
                     if (current.t1h != -50) {
                        return;
@@ -1248,6 +1317,7 @@ function ControllerTown() {
                     }
                 });
 
+                //update current for past
                 var reqC = req.current;
                 if (reqC == undefined || reqC.t1h == undefined || reqC.t1h == -50) {
                     if (!(reqC == undefined)) {
@@ -1759,7 +1829,20 @@ function ControllerTown() {
                     reqCurrent.dongnae = JSON.parse(JSON.stringify(reqCurrent));
 
                     for (var key in stnWeatherInfo) {
-                        if (stnFirst || reqCurrent[key] == undefined) {
+                        if (reqCurrent[key] == undefined) {
+                            reqCurrent[key] = stnWeatherInfo[key];
+                        }
+                        else if (key === 't1h') {
+                            if (reqCurrent[key] <= -50) {
+                                reqCurrent[key] = stnWeatherInfo[key];
+                            }
+                        }
+                        else if (key === 'rn1' || key === 'reh' || key === 'vec' || key === 'wsd') {
+                            if (reqCurrent[key] < 0) {
+                                reqCurrent[key] = stnWeatherInfo[key];
+                            }
+                        }
+                        else {
                             reqCurrent[key] = stnWeatherInfo[key];
                         }
                     }

@@ -1195,7 +1195,7 @@ ControllerPush.prototype.sendNotification = function (pushInfo, callback) {
 };
 
 /**
- * 갱신한지 180이 지난 경우 삭제, updatedAt이 없는 경우 정보추가
+ * 갱신한지 60이 지난 경우 삭제, updatedAt이 없는 경우 정보추가
  * @param pushList
  * @param callback
  * @private
@@ -1208,7 +1208,7 @@ ControllerPush.prototype._removeOldList = function (pushList, callback) {
         function (pushInfo, mCallback) {
             if (pushInfo.updatedAt) {
                 var current = new Date();
-                current.setDate(current.getDate()-180);
+                current.setDate(current.getDate()-60);
                 if (pushInfo.updatedAt.getTime() < current.getTime()) {
                     updatedCount++;
                     //remove

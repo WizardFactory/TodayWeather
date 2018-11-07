@@ -278,7 +278,12 @@ angular.module('starter', [
             body.removeClass('search forecast dailyforecast air start setting push');
             body.addClass($rootScope.state);
 
-            if (window.StatusBar) {
+            var navbars = angular.element(document.querySelectorAll('ion-nav-bar'));
+            for (var i = 0; i < navbars.length; i++) {
+                navbars[i].style.visibility = "visible";
+            }
+
+            if (window.StatusBar && ionic.Platform.isIOS()) {
                 if ($rootScope.settingsInfo.theme === 'light') {
                     StatusBar.styleDefault();
                 } else { //photo, dark, old
@@ -1029,13 +1034,13 @@ angular.module('starter', [
                                 }
                             })
                             .attr('x1', function (d, i) {
-                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                                return x.rangeBand() * i + x.rangeBand() / 2 + 0.5;
                             })
                             .attr('x2', function (d, i) {
-                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                                return x.rangeBand() * i + x.rangeBand() / 2 + 0.5;
                             })
                             .attr('y1', 0)
-                            .attr('y2', height);
+                            .attr('y2', margin);
 
                         guideLines.exit().remove();
 
@@ -1053,19 +1058,19 @@ angular.module('starter', [
                                 return scope.iconsImgPath + "/wind_direction.png";
                             })
                             .attr("x", function (d, i) {
-                                return x.rangeBand() * i - scope.smallImageSize/2;
+                                return x.rangeBand() * i + x.rangeBand() / 2 - scope.smallImageSize/2;
                             })
                             .attr("y", margin / 2)
                             .attr("width", scope.smallImageSize)
                             .attr("height", scope.smallImageSize)
                             .attr('transform', function (d, i) {
-                                return 'rotate(' + d.value.vec + ', ' + (x.rangeBand() * i) + ', ' + (margin + scope.smallImageSize) / 2 + ')';
+                                return 'rotate(' + d.value.vec + ', ' + (x.rangeBand() * i + x.rangeBand() / 2) + ', ' + (margin + scope.smallImageSize) / 2 + ')';
                             });
 
                         hourObject.append("text")
                             .attr('class', 'chart-text')
                             .attr("x", function (d, i) {
-                                return x.rangeBand() * i;
+                                return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .attr("y", function(){
                                 return margin / 2 + scope.smallImageSize + textTop;
@@ -1085,7 +1090,7 @@ angular.module('starter', [
                                 return scope.iconsImgPath + "/humidity_" + reh +".png";
                             })
                             .attr("x", function (d, i) {
-                                return x.rangeBand() * i - scope.smallImageSize/2;
+                                return x.rangeBand() * i + x.rangeBand() / 2 - scope.smallImageSize/2;
                             })
                             .attr("y", function () {
                                 return margin / 2 + scope.smallImageSize + textTop + margin;
@@ -1096,7 +1101,7 @@ angular.module('starter', [
                         hourObject.append("text")
                             .attr('class', 'chart-text')
                             .attr("x", function (d, i) {
-                                return x.rangeBand() * i;
+                                return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .attr("y", function () {
                                 return margin / 2 + scope.smallImageSize * 2 + textTop + margin + textTop;
@@ -1107,10 +1112,6 @@ angular.module('starter', [
                             .append('tspan')
                             .attr('class', 'chart-unit-text')
                             .text('%');
-
-                        hourObject.filter(function(d, i) {
-                            return i == 0;
-                        }).remove();
                     };
 
                     scope.$watch('timeWidth', function(newValue) {
@@ -1959,7 +1960,12 @@ angular.module('starter', [
         $ionicConfigProvider.views.transition("android");
 
         if (window.StatusBar) {
-            StatusBar.styleLightContent();
+            if (ionic.Platform.isIOS()) {
+                StatusBar.styleLightContent();
+            }
+            else {
+                StatusBar.backgroundColorByHexString('#111');
+            }
         }
 
         // Enable Native Scrolling on Android

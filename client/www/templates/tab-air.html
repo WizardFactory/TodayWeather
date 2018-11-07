@@ -42,7 +42,7 @@
                     <div class="main-box-air-title">
                         {{mainName|translate}}
                     </div>
-                    <div class="main-box-air-content" ng-style="{'color': grade2Color(airCodeGrade)}">
+                    <div class="main-box-air-content" ng-style="{'color': grade2Color(airCodeGrade), 'font-size': bigFontSize+'px'}">
                         {{mainInfo}}<span>{{getAirCodeUnit(aqiCode)}}</span>
                     </div>
                     <div class="main-box-air-summary">
@@ -50,7 +50,7 @@
                         <i class="material-icons" ng-bind-html="getSentimentIcon(airCodeGrade)" ng-style="{'color': grade2Color(airCodeGrade)}"></i>
                         <span ng-if="airCodeActionGuide">{{airCodeActionGuide}}</span>
                     </div>
-                    <div class="main-box-air-summary" style="display: inline-flex; margin-top: 4px" ng-click="goWeather()">
+                    <div class="main-box-air-summary" style="display: inline-flex;" ng-click="goWeather()">
                         <div>
                             <img id="imgBigSkyStateSize" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
                         </div>

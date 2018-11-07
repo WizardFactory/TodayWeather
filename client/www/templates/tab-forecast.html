@@ -41,11 +41,11 @@
                 </div>
                 <div class="main-box" ng-if="currentWeather">
                     <div class="main-box-forecast-content">
-                        <div ng-style="::{'font-size':bigDigitSize+'px'}">
-                            {{getTemp(currentWeather.t1h)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}">˚</span>
+                        <div ng-style="::{'font-size':bigFontSize+'px'}">
+                            {{getTemp(currentWeather.t1h)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigFontSize/2+'px'}">˚</span>
                         </div>
                         <div style="margin: auto">
-                            <img id="imgBigSkyStateSize" ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
+                            <img id="imgBigSkyStateSize" ng-style="::{'height':bigImageSize+'px'}" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
                         </div>
                     </div>
                     <div class="main-box-summary">
@@ -81,11 +81,12 @@
                             <div class="chart-label-yesterday">{{"LOC_PREVIOUS_DAY_TEMP"|translate}}</div>
                         </div>
                         <div class="chart-separator"></div>
-                        <div ng-short-detail-chart class="chart-content" ng-style="{'height':chartShortDetailHeight+'px'}" ng-if="expand=='expand_less'"></div>
+                        <div ng-short-detail-chart class="chart-content" ng-style="{'height':chartShortDetailHeight+'px'}" ng-if="expand"></div>
                         <div class="chart-separator"></div>
                         <div class="chart-expander">
-                            <div ng-init="expand='expand_more'" ng-click="expand=(expand=='expand_less')?'expand_more':'expand_less'">
-                                <i class="material-icons">{{expand}}</i>
+                            <div ng-click="clickExpander();">
+                                <i class="material-icons" ng-if="expand">expand_less</i>
+                                <i class="material-icons" ng-if="!expand">expand_more</i>
                             </div>
                         </div>
                     </div>

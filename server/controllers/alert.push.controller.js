@@ -916,7 +916,7 @@ class AlertPushController {
 
     _removeOldList() {
         let current = new Date();
-        current.setDate(current.getDate()-180);
+        current.setDate(current.getDate()-60);
 
         AlertPush.remove({"updateAt": {$lt:current} }, function (err) {
             if (err) {

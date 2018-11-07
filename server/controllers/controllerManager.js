@@ -448,7 +448,7 @@ Manager.prototype.saveCurrent = function(newData, callback){
                                 else {
                                     log.warn(new Error("new current("+newItem.date+newItem.time+") data is invalid!"));
                                 }
-                                if (newItem.rn1 !== -1) {
+                                if (newItem.rn1 >= 0) {
                                     dbCurrentList.currentData[i].rn1 = newItem.rn1;
                                 }
                                 if (newItem.sky !== -1) {
@@ -460,13 +460,13 @@ Manager.prototype.saveCurrent = function(newData, callback){
                                 if (newItem.vvv !== -100) {
                                     dbCurrentList.currentData[i].vvv = newItem.vvv;
                                 }
-                                if (newItem.reh !== -1) {
+                                if (newItem.reh >= 0) {
                                     dbCurrentList.currentData[i].reh = newItem.reh;
                                 }
-                                if (newItem.pty !== -1) {
+                                if (newItem.pty >= 0) {
                                     dbCurrentList.currentData[i].pty = newItem.pty;
                                 }
-                                if (newItem.lgt !== -1) {
+                                if (newItem.lgt >= 0) {
                                     dbCurrentList.currentData[i].lgt = newItem.lgt;
                                 }
                                 if (newItem.vec !== -1) {

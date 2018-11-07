@@ -60,16 +60,20 @@ class KmaSpecialWeatherController {
             specialWeatherSituation.name = trans.__('LOC_TYPE_WEATHER_FLASH');
         }
 
+        let pubDate = new Date(specialWeatherSituation.announcement);
         if (specialWeatherSituation.type === KmaSpecialWeatherSituation.TYPE_WEATHER_FLASH) {
-            let flashDate =  new Date(specialWeatherSituation.announcement);
+            let flashDate = new Date(specialWeatherSituation.announcement);;
             let current = new Date();
-            flashDate.setHours(flashDate.getHours()+6); //조정 필요
+            flashDate.setHours(flashDate.getHours()+10); //조정 필요
             if (flashDate.getTime() < current.getTime()) {
                 log.info('skip weather flash date='+ specialWeatherSituation.announcement);
                 return null;
             }
         }
 
+        //convert time to korea
+        pubDate.setHours(pubDate.getHours()-9);
+        specialWeatherSituation.announcement = pubDate;
         let strSituationList = [];
         if (Array.isArray(specialWeatherSituation.situationList)) {
             specialWeatherSituation.situationList.forEach(situation => {

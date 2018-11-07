@@ -365,7 +365,7 @@ MidRssKmaRequester.prototype.mainProcessM = function(self, callback) {
  * @returns {MidRssKmaRequester}
  */
 MidRssKmaRequester.prototype.mainProcess = function(self, callback) {
-    log.input('mainProcess');
+    log.debug('mainProcess');
 
     if (self.checkGetTime(new Date()) !== true) {
         log.silly("Update time isn't yet");
