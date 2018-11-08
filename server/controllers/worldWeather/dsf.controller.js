@@ -216,16 +216,19 @@ class DsfController {
         let hourlyData = yData.data.hourly.data;
         let yesterday = new Date(yData.dateObj.getTime() + timeOffset);
 
-        // log.info(`cDsf > Org Date[${yData.dateObj.toUTCString()}]`);
-        // log.info(`cDsf > target date[${yesterday.toUTCString()}]`);
+         //log.info(`cDsf > Org Date[${yData.dateObj.toUTCString()}]`);
+         //log.info(`cDsf > target date[${yesterday.toUTCString()}]`);
 
+        let debug = [];
         for(let i=0 ; i<24 ; i++){
             let isValid = hourlyData.filter(item =>{
                 let date = new Date(item.dateObj.getTime() + timeOffset);
+                debug.push({d: date.getUTCDate(), h:date.getUTCHours()});
                 return (yesterday.getUTCDate() === date.getUTCDate() && i === date.getUTCHours());
             });
 
             if(isValid.length === 0){
+                log.info(`cDsf > missed date list : ${JSON.stringify(debug)}`);
                 res.push({d: yesterday.getUTCDate(), h:i});
             }
         }
@@ -241,7 +244,7 @@ class DsfController {
      * @returns {*}
      * @private
      */
-    _fulfillMissedHourData(hours, yData, cData){
+    _fulfillMissedHourData(hours, yData, cData, timeOffset){
         if(hours.length < 1 || cData === undefined){
             return yData;
         }
@@ -250,7 +253,7 @@ class DsfController {
         }
 
         let hourlyData = cData.data.hourly.data;
-        let timeOffset = yData.timeOffset * 60 * 1000;
+        timeOffset = (timeOffset * 60 * 1000);
 
         let debug = []; // For debug, later on, it'll be removed if there is no problem.
         hours.forEach(d=>{
@@ -263,7 +266,6 @@ class DsfController {
             });
 
             if(found.length > 0){
-                log.info('cDsf > found missed data : ', JSON.stringify(found[0]))
                 yData.data.hourly.data.push(found[0]);
                 yData.data.hourly.data.sort((a,b)=>{return a.dateObj.getTime() - b.dateObj.getTime()});
             }else{
@@ -334,11 +336,11 @@ class DsfController {
                         ret['today'] = item;
                     }else if(ret['current'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 15)){
                         ret['current'] = item;
-                    }else if(missedHourData.length > 0 && this._getDiffDate2(ret['yesterday'].dateObj, item.dateObj, ret['yesterday'].timeOffset) === 0){
+                    }else if(missedHourData.length > 0 && this._getDiffDate2(ret['yesterday'].dateObj, item.dateObj, item.timeOffset) === 0){
                         // The only data which has the same date with yesterday is a subject.
                         // Try to find missed data to other DB's data.
-                        ret['yesterday'] = this._fulfillMissedHourData(missedHourData, ret['yesterday'], item);
-                        missedHourData = this._checkMissedHourData(ret['yesterday'], ret['yesterday'].timeOffset);
+                        ret['yesterday'] = this._fulfillMissedHourData(missedHourData, ret['yesterday'], item, item.timeOffset);
+                        missedHourData = this._checkMissedHourData(ret['yesterday'], item.timeOffset);
                         log.info('cDsf > 2. missed Hour Datas : ', JSON.stringify(missedHourData));
                     }
                 });
@@ -886,8 +888,9 @@ class DsfController {
                                     */
                                 }else {
                                     // fulfill missed hourly data
+                                    log.info(`Timeoffset : ${timeOffset}, ${output.yesterday.timeOffset}`);
                                     let missedHourlyData = this._checkMissedHourData(output.yesterday, timeOffset);
-                                    output.yesterday = this._fulfillMissedHourData(missedHourlyData, output.yesterday, yesterdayData);
+                                    output.yesterday = this._fulfillMissedHourData(missedHourlyData, output.yesterday, yesterdayData, timeOffset);
                                 }
                             }catch(e){
                                 log.error('cDsf > wrong yesterday data : ', e, JSON.stringify(result));
