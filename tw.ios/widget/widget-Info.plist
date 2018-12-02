@@ -45,5 +45,11 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widget-extension</string>
 	</dict>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>YES</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>YES</string>
+	<key>NSLocationUsageDescription</key>
+	<string>YES</string>
 </dict>
 </plist>
