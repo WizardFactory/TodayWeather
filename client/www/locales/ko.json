@@ -325,5 +325,9 @@
   "LOC_TYPE_SPECIAL_WEATHER": "기상특보",
   "LOC_TYPE_PRELIMINARY_SPECIAL": "예비특보",
   "LOC_TYPE_WEATHER_INFORMATION": "기상정보",
-  "LOC_TYPE_WEATHER_FLASH": "기상속보"
+  "LOC_TYPE_WEATHER_FLASH": "기상속보",
+  "LOC_NEEDS_ACCESS_TO": "선택 접근 권한",
+  "LOC_STORAGE_SPACE": "저장공간 - 즐겨찾는 지역을 백업/복원할 때 사용합니다.",
+  "LOC_LOCATION_ACCESS": "위치 - 현재 위치 검색을 수행하기 위해서 사용합니다.",
+  "LOC_CALL_INFORMATION": "전화 - 부적절한 광고를 노출하지 않기 위해 이용합니다."
 }
