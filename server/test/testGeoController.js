@@ -16,11 +16,13 @@ describe('unit test - geo controller class', function() {
        var geoCtrl = new GeoCtrl(37.507, 127.045);
         geoCtrl._request = function (url, callback) {
            console.log(url);
-            var result = '{"type":"H","code":"1123064","name":"역삼1동","fullName":"서울특별시 강남구 역삼1동","regionId":"I10000901","name0":"대한민국","code1":"11","name1":"서울특별시","code2":"11230","name2":"강남구","code3":"1123064","name3":"역삼1동","x":127.03306535867272,"y":37.495359482762545}';
+            // var result = '{"type":"H","code":"1123064","name":"역삼1동","fullName":"서울특별시 강남구 역삼1동","regionId":"I10000901","name0":"대한민국","code1":"11","name1":"서울특별시","code2":"11230","name2":"강남구","code3":"1123064","name3":"역삼1동","x":127.03306535867272,"y":37.495359482762545}';
+            var result = '{"meta":{"total_count":2},"documents":[{"region_type":"B","code":"1168010100","address_name":"서울특별시 강남구 역삼동","region_1depth_name":"서울특별시","region_2depth_name":"강남구","region_3depth_name":"역삼동","region_4depth_name":"","x":127.03312866105163,"y":37.49530540462},{"region_type":"H","code":"1168064000","address_name":"서울특별시 강남구 역삼1동","region_1depth_name":"서울특별시","region_2depth_name":"강남구","region_3depth_name":"역삼1동","region_4depth_name":"","x":127.03320108651666,"y":37.49542431718493}]}';
             callback(null, JSON.parse(result));
         };
 
-        geoCtrl._getAddressFromDaum(function (err) {
+        // geoCtrl._getAddressFromDaum(function (err) {
+        geoCtrl._getAddressFromKakao(function (err) {
             if (err) {
                 console.error(err);
             }
