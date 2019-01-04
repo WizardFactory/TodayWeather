@@ -114,21 +114,21 @@ GeoController.prototype._parseAddressFromKaKao = function (result) {
 
     if(region.length > 0){
         geoInfo.country = "KR";
-        geoInfo.address = region.address_name;
-        if(region.region_4depth_name !== "") {
-            geoInfo.name = region.region_4depth_name;
-        }else if(region.region_3depth_name !== ""){
-            geoInfo.name = region.region_3depth_name;
-        }else if(region.region_2depth_name !== ""){
-            geoInfo.name = region.region_2depth_name;
-        }else if (region.region_1depth_name !== ""){
-            geoInfo.name = region.region_1depth_name;
+        geoInfo.address = region[0].address_name;
+        if(region[0].region_4depth_name !== "") {
+            geoInfo.name = region[0].region_4depth_name;
+        }else if(region[0].region_3depth_name !== ""){
+            geoInfo.name = region[0].region_3depth_name;
+        }else if(region[0].region_2depth_name !== ""){
+            geoInfo.name = region[0].region_2depth_name;
+        }else if (region[0].region_1depth_name !== ""){
+            geoInfo.name = region[0].region_1depth_name;
         }
-        var name2 = region.region_2depth_name;
+        var name2 = region[0].region_2depth_name;
         if(name2){
             name2 = name2.replace(/ /g,"");
         }
-        geoInfo.kmaAddress = {"region": region.region_1depth_name, "city": name2, "town": region.region_3depth_name};
+        geoInfo.kmaAddress = {"region": region[0].region_1depth_name, "city": name2, "town": region[0].region_3depth_name};
     }
 
     return geoInfo;
