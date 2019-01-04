@@ -76,6 +76,7 @@
     // current postion
     float								gMylatitude;
     float								gMylongitude;
+    unsigned int                        retryReqCnt;
     
     CLLocationManager					*locationManager;
     CLLocation							*startingPoint;
@@ -116,7 +117,7 @@
 /********************************************************************
  Declare Class properties
  ********************************************************************/
-@property (retain, nonatomic) CLLocationManager					*locationManager;
+@property (strong, nonatomic) CLLocationManager					*locationManager;
 @property (retain, nonatomic) CLLocation						*startingPoint;
 @property (retain, nonatomic) NSMutableData						*responseData;
 @property (retain, nonatomic) IBOutlet UIActivityIndicatorView    *loadingIV;

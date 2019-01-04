@@ -38,6 +38,7 @@
 #define WIDGET_COMPACT_HEIGHT           110.0
 #define WIDGET_PADDING                  215.0
 
+#define RETRY_REQUEST_CNT               3
 
 
 /********************************************************************
@@ -150,6 +151,7 @@ static TodayViewController *todayVC = nil;
     DebugLog(@"Localized Bundle Display Nmae : %@ ", budleDisplayName);
     
     todayVC = self;
+    retryReqCnt = 0;
      
     [self processRequestIndicator:TRUE];
     [self initWidgetDatas];
@@ -1032,9 +1034,22 @@ static TodayViewController *todayVC = nil;
                                        //DebugLog(@"data : %@", data);
                                        [self makeJSONWithData:data reqType:type];
                                        [self processShowMore];
+                                       retryReqCnt = 0;
                                    } else {
                                        DebugLog(@"Failed to fetch %@: %@", url, error);
-                                       [self processErrorStatus:error];
+                                       if( retryReqCnt < RETRY_REQUEST_CNT )
+                                       {
+                                           [NSThread sleepForTimeInterval:0.5];  // 500msec
+                                           retryReqCnt++;
+                                           DebugLog(@"retryReqCnt:%d", retryReqCnt);
+                                           [self requestAsyncByURLSession:nssURL reqType:type];
+                                       }
+                                       else
+                                       {
+                                           retryReqCnt = 0;
+                                           DebugLog(@"processErrorStatus");
+                                           [self processErrorStatus:error];
+                                       }
                                    }
                                }];
      
@@ -2077,7 +2092,10 @@ static TodayViewController *todayVC = nil;
     
     // Update if you move 200 meter
     locationManager.distanceFilter = 200;
+    [locationManager requestWhenInUseAuthorization];
+    [locationManager startMonitoringSignificantLocationChanges];
     [locationManager startUpdatingLocation];
+    DebugLog(@"[initLocationInfo] startUpdatingLocation");
 }
 
 /********************************************************************
@@ -2392,7 +2410,7 @@ static TodayViewController *todayVC = nil;
 - (void) getWeatherByCoord:(float)latitude longitude:(float)longitude
 {
     NSDictionary *nssUnits = [todayUtil getUnits];
-    DebugLog(@"[getByCoord] units: %@", nssUnits);
+    DebugLog(@"[getWeatherByCoord] units: %@", nssUnits);
     NSString *nssTempUnits = [nssUnits objectForKey:@"temperatureUnit"];
     NSString *nssWindUnits = [nssUnits objectForKey:@"windSpeedUnit"];
     NSString *nssPressUnits = [nssUnits objectForKey:@"pressureUnit"];
@@ -2404,7 +2422,7 @@ static TodayViewController *todayVC = nil;
 
     NSString *nssURL = [NSString stringWithFormat:@"%@/%@/%.3f,%.3f?%@", TODAYWEATHER_URL, COORD_2_WEATHER_API_URL, latitude, longitude, nssQueryParams];
     
-    DebugLog(@"[getByCoord] url : %@", nssURL);
+    DebugLog(@"[getWeatherByCoord] url : %@", nssURL);
     
     [self requestAsyncByURLSession:nssURL reqType:TYPE_REQUEST_WEATHER_BY_COORD];
 }
