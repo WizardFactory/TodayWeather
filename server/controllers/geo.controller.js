@@ -63,6 +63,77 @@ GeoController.prototype._isKoreaArea = function (lat, lon) {
         131.88 >= lon && lon >= 123.9523;
 };
 
+/*
+ {
+ "meta": {
+ "total_count": 2
+ },
+ "documents": [{
+ "region_type": "B",
+ "code": "1168010100",
+ "address_name": "서울특별시 강남구 역삼동",
+ "region_1depth_name": "서울특별시",
+ "region_2depth_name": "강남구",
+ "region_3depth_name": "역삼동",
+ "region_4depth_name": "",
+ "x": 127.03312866105163,
+ "y": 37.49530540462
+ }, {
+ "region_type": "H",
+ "code": "1168064000",
+ "address_name": "서울특별시 강남구 역삼1동",
+ "region_1depth_name": "서울특별시",
+ "region_2depth_name": "강남구",
+ "region_3depth_name": "역삼1동",
+ "region_4depth_name": "",
+ "x": 127.03320108651666,
+ "y": 37.49542431718493
+ }]
+ }
+
+ */
+GeoController.prototype._parseAddressFromKaKao = function (result) {
+    var geoInfo = {};
+
+
+    if(result.meta.total_count < 2){
+        log.debug('It is not korea');
+        return geoInfo;
+    }
+    if(result.documents[0].address_name === "일본"){
+        return geoInfo.country = "JP";
+    }
+
+    if(result.documents[0].region_1depth_name === ""){
+        log.debug('It is not korea');
+        return geoInfo;
+    }
+    let region = result.documents.filter(v=>{
+        return v.region_type === "H"; // H === 행정동, B === 법정동
+    });
+
+    if(region.length > 0){
+        geoInfo.country = "KR";
+        geoInfo.address = region.address_name;
+        if(region.region_4depth_name !== "") {
+            geoInfo.name = region.region_4depth_name;
+        }else if(region.region_3depth_name !== ""){
+            geoInfo.name = region.region_3depth_name;
+        }else if(region.region_2depth_name !== ""){
+            geoInfo.name = region.region_2depth_name;
+        }else if (region.region_1depth_name !== ""){
+            geoInfo.name = region.region_1depth_name;
+        }
+        var name2 = region.region_2depth_name;
+        if(name2){
+            name2 = name2.replace(/ /g,"");
+        }
+        geoInfo.kmaAddress = {"region": region.region_1depth_name, "city": name2, "town": region.region_3depth_name};
+    }
+
+    return geoInfo;
+};
+
 GeoController.prototype._parseAddressFromDaum = function (result) {
     var geoInfo = {};
 
@@ -470,9 +541,12 @@ GeoController.prototype.location2address = function(req, res, next) {
                     return callback();
                 }
                 if (that._isKoreaArea(that.lat, that.lon)) {
-                    that._getAddressFromDaum(function (err, result) {
+                    // Daum Api, It's not available anymore
+                    //that._getAddressFromDaum(function (err, result) {
+                    that._getAddressFromKakao(function (err, result) {
                         try {
-                            var geoInfo = that._parseAddressFromDaum(result);
+                            //var geoInfo = that._parseAddressFromDaum(result);
+                            var geoInfo = that._parseAddressFromKaKao(result);
                             that.country = that.country || geoInfo.country;
                             that.kmaAddress = that.kmaAddress || geoInfo.kmaAddress;
                             if (that.lang === 'ko') {
@@ -509,9 +583,12 @@ GeoController.prototype.location2address = function(req, res, next) {
                     return callback();
                 }
 
-                that._getAddressFromDaum(function (err, result) {
+                // Daum Api, It's not available anymore
+                //that._getAddressFromDaum(function (err, result) {
+                that._getAddressFromKakao(function (err, result) {
                     try {
-                        var geoInfo = that._parseAddressFromDaum(result);
+                        //var geoInfo = that._parseAddressFromDaum(result);
+                        var geoInfo = that._parseAddressFromKaKao(result);
                         that.country = that.country || geoInfo.country;
                         that.kmaAddress = that.kmaAddress || geoInfo.kmaAddress;
                         if (that.lang === 'ko') {
