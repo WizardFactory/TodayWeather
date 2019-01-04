@@ -325,5 +325,9 @@
   "LOC_TYPE_SPECIAL_WEATHER": "Special weather",
   "LOC_TYPE_PRELIMINARY_SPECIAL": "Preliminary Special weather",
   "LOC_TYPE_WEATHER_INFORMATION": "Weather information",
-  "LOC_TYPE_WEATHER_FLASH": "Flash weather information"
+  "LOC_TYPE_WEATHER_FLASH": "Flash weather information",
+  "LOC_NEEDS_ACCESS_TO": "Needs access to",
+  "LOC_STORAGE_SPACE": "Storage space – Allows the app to back up and restore your location favorites.",
+  "LOC_LOCATION_ACCESS": "Location – Uses the device’s location.",
+  "LOC_CALL_INFORMATION": "Call information – Allows the app to avoid exposure to inappropriate advertising."
 }

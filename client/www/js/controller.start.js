@@ -208,6 +208,36 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         else if (clientConfig.package === 'todayAir') {
             $scope.imgAppIcon = 'img/ta_app_icon.png';
         }
+
+        var strNeedsAccessTo = "Needs access to";
+        var strStorageSpace = "Storage space – Allows the app to back up and restore your location favorites.";
+        var strLocation = "Location – Uses the device’s location.";
+        var strCallInformation = "Call information – Allows the app to avoid exposure to inappropriate advertising.";
+        var strOkay = "OK";
+
+        $translate(['LOC_NEEDS_ACCESS_TO', 'LOC_STORAGE_SPACE', 'LOC_LOCATION_ACCESS', 'LOC_CALL_INFORMATION', 'LOC_OK'])
+            .then(function (translations) {
+                    strNeedsAccessTo = translations.LOC_NEEDS_ACCESS_TO;
+                    strStorageSpace = translations.LOC_STORAGE_SPACE;
+                    strLocation = translations.LOC_LOCATION_ACCESS;
+                    strCallInformation = translations.LOC_CALL_INFORMATION;
+                    strOkay = translations.LOC_OK;
+                },
+                function (translationIds) {
+                    console.log("Fail to translate : " + JSON.stringify(translationIds));
+                })
+            .finally(function () {
+                var showAlertInfo = $ionicPopup.show({
+                    title: strNeedsAccessTo,
+                    template: strStorageSpace + '<br>' + strLocation + '<br>' + strCallInformation,
+                    buttons: [
+                        { text: strOkay }
+                    ]
+                });
+                showAlertInfo.then(function (res) {
+                    console.log("showAlertInfo close");
+                });
+            });
     }
 
     $scope.OnSelectResult = function(result) {
