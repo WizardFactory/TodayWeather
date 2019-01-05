@@ -32,11 +32,14 @@ function GeoController(lat, lon, lang, country) {
     this.name = "";
     this.daumUrl = 'https://'+API_DAUM_DOMAIN;
     this.googleUrl = 'https://'+MAPS_GOOGLEAPIS_DOMAIN;
+    this.axios = axios;
 }
 
 GeoController.prototype.setGoogleApiKey = function (key) {
    googleApiKey = key;
 };
+
+GeoController.prototype.axios = axios;
 
 GeoController.prototype._request = function(url, callback) {
     request(url, {json: true, timeout: 5000}, function(err, response, body) {
@@ -204,7 +207,7 @@ GeoController.prototype._getAddressFromKakao = function (callback) {
             index++;
 
             log.info(url);
-            axios.get(url, {headers: header})
+            that.axios.get(url, {headers: header})
             .then(response=>{
                 return cb(null, response.data);
             })
