@@ -208,7 +208,7 @@ GeoController.prototype._getAddressFromKakao = function (callback) {
             .then(response=>{
                 return cb(null, response.data);
             })
-            .cache(e=>{
+            .catch(e=>{
                 return cb(e);
             });
         },
