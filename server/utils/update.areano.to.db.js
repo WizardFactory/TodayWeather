@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const async = require('async');
 const fs = require('fs');
 const request = require('request');
+const axios = require('axios');
 
 const ModelAreaNo = require('../models/modelAreaNo');
 const ModelTown = require('../models/town');
@@ -38,6 +39,37 @@ function _query(areaInfo) {
         "town.third":areaInfo.town.third };
 }
 
+function getGeoCodeFromKakao(address, callback) {
+    var keyList = JSON.parse(config.keyString.daum_keys);
+    var daum_key = keyList[Math.floor(Math.random() * keyList.length)];
+    let url = 'https://dapi.kakao.com/v2/local/search/address.json'+
+        '?query='+ encodeURIComponent(address);
+    let header = {
+        Authorization: 'KakaoAK ' + daum_key
+    };
+
+
+    axios.get(url, {headers:header})
+    .then(response=>{
+
+        if(response.data.meta.total_count < 0){
+            return callback(new Error('There is no coord data'));
+        }
+
+        let geo = [parseFloat(response.data.documents[0].x.toFixed(7)),
+            parseFloat(response.data.documents[0].y.toFixed(7))];
+        return callback(undefined, geo);
+    })
+    .catch(e=>{
+        callback(e);
+    });
+}
+
+/**
+ * DAUM API, it's not available
+ * @param address
+ * @param callback
+ *
 function getGeoCodeFromDaum(address, callback) {
     var keyList = JSON.parse(config.keyString.daum_keys);
     var daum_key = keyList[Math.floor(Math.random() * keyList.length)];
@@ -69,6 +101,7 @@ function getGeoCodeFromDaum(address, callback) {
         return callback(err, geo);
     });
 }
+*/
 
 function updateAreaNoDb(areaInfo, callback) {
     // console.info('model.areano',JSON.stringify(areaInfo));
@@ -82,7 +115,8 @@ function updateAreaNoDb(areaInfo, callback) {
             // return callback(err);
             var objAreaNo = {town: areaInfo.town, areaNo: areaInfo.areaNo, updatedAt: "20180119"};
             var addr = areaInfo.town.first + ',' + areaInfo.town.second + ',' + areaInfo.town.third;
-            getGeoCodeFromDaum(addr, (err, geo)=> {
+            // getGeoCodeFromDaum(addr, (err, geo)=> {
+            getGeoCodeFromKakao(addr, (err, geo)=> {
                 if (err) {
                     return callback(err);
                 }

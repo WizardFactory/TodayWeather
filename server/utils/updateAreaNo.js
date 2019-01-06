@@ -12,6 +12,8 @@ var sourceFile = './utils/data/20160704_AreaNo';
 var resultFile = './utils/data/20160704_AreaNoResult';
 var updatedFile = './utils/data/20160704_AreaNoResult_updated';
 var Logger = require('../lib/log');
+const axios = require('axios');
+
 global.log  = new Logger(__dirname + "/debug.log");
 
 mongoose.connect(config.db.path, config.db.options, function(err){
@@ -30,6 +32,30 @@ lineList.shift();
 
 log.info('Source of Area Number File : ' + sourceFile);
 
+function getGeoCodeFromKakao(address, callback) {
+    var keyList = JSON.parse(config.keyString.daum_keys);
+    var daum_key = keyList[Math.floor(Math.random() * keyList.length)];
+    let url = 'https://dapi.kakao.com/v2/local/search/address.json'+
+        '?query='+ encodeURIComponent(address);
+    let header = {
+        Authorization: 'KakaoAK ' + daum_key
+    };
+
+    log.info(url);
+    axios.get(url, {headers:header})
+    .then(response=>{
+        return callback(undefined, response.data);
+    })
+    .catch(e=>{
+        callback(e);
+    });
+}
+
+/**
+ * DAUM API, it's not available anymore
+ * @param address
+ * @param callback
+ *
 function getGeoCodeFromDaum(address, callback) {
     var keyList = JSON.parse(config.keyString.daum_keys);
     var daum_key = keyList[Math.floor(Math.random() * keyList.length)];
@@ -51,6 +77,7 @@ function getGeoCodeFromDaum(address, callback) {
         return callback(err, body);
     });
 }
+*/
 
 function createAreaNumberStruct (err) {
     if (err) {
@@ -98,17 +125,26 @@ function createAreaNumberStruct (err) {
 
             if(result.length === 0){
                 var addr = savedData.town.first + ',' + savedData.town.second + ',' + savedData.town.third;
-                getGeoCodeFromDaum(addr, function(err, body){
+                // getGeoCodeFromDaum(addr, function(err, body){
+                getGeoCodeFromKakao(addr, function(err, body){
                     if(err){
                         log.error('Fail to get geocode : ', addr);
                         return;
                     }
                     try{
+                        if(body.meta.total_count > 0){
+                            savedData.geo = [parseFloat(body.documents[0].x.toFixed(7)), parseFloat(body.documents[0].y.toFixed(7))];
+                        }else{
+                            savedData.geo = [1,1];
+                        }
+
+                        /* It's for DAUM API and no more useful.
                         if(body.channel.item.length > 0){
                             savedData.geo = [parseFloat(body.channel.item[0].lng.toFixed(7)), parseFloat(body.channel.item[0].lat.toFixed(7))];
                         }else{
                             savedData.geo = [1,1];
                         }
+                        */
 
                         log.info('AreaNo. : ', JSON.stringify(savedData));
                         confirmResult.push(JSON.stringify(savedData));

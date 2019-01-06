@@ -5,6 +5,7 @@
 
 "use strict";
 
+const axios = require('axios');
 var async = require('async');
 var request = require('request');
 var dnscache = require('dnscache')({
@@ -31,11 +32,14 @@ function GeoController(lat, lon, lang, country) {
     this.name = "";
     this.daumUrl = 'https://'+API_DAUM_DOMAIN;
     this.googleUrl = 'https://'+MAPS_GOOGLEAPIS_DOMAIN;
+    this.axios = axios;
 }
 
 GeoController.prototype.setGoogleApiKey = function (key) {
    googleApiKey = key;
 };
+
+GeoController.prototype.axios = axios;
 
 GeoController.prototype._request = function(url, callback) {
     request(url, {json: true, timeout: 5000}, function(err, response, body) {
@@ -60,6 +64,77 @@ GeoController.prototype._request = function(url, callback) {
 GeoController.prototype._isKoreaArea = function (lat, lon) {
     return 39.3769 >= lat && lat >=32.6942 &&
         131.88 >= lon && lon >= 123.9523;
+};
+
+/*
+ {
+ "meta": {
+ "total_count": 2
+ },
+ "documents": [{
+ "region_type": "B",
+ "code": "1168010100",
+ "address_name": "서울특별시 강남구 역삼동",
+ "region_1depth_name": "서울특별시",
+ "region_2depth_name": "강남구",
+ "region_3depth_name": "역삼동",
+ "region_4depth_name": "",
+ "x": 127.03312866105163,
+ "y": 37.49530540462
+ }, {
+ "region_type": "H",
+ "code": "1168064000",
+ "address_name": "서울특별시 강남구 역삼1동",
+ "region_1depth_name": "서울특별시",
+ "region_2depth_name": "강남구",
+ "region_3depth_name": "역삼1동",
+ "region_4depth_name": "",
+ "x": 127.03320108651666,
+ "y": 37.49542431718493
+ }]
+ }
+
+ */
+GeoController.prototype._parseAddressFromKaKao = function (result) {
+    var geoInfo = {};
+
+
+    if(result.meta.total_count < 2){
+        log.debug('It is not korea');
+        return geoInfo;
+    }
+    if(result.documents[0].address_name === "일본"){
+        return geoInfo.country = "JP";
+    }
+
+    if(result.documents[0].region_1depth_name === ""){
+        log.debug('It is not korea');
+        return geoInfo;
+    }
+    let region = result.documents.filter(v=>{
+        return v.region_type === "H"; // H === 행정동, B === 법정동
+    });
+
+    if(region.length > 0){
+        geoInfo.country = "KR";
+        geoInfo.address = region[0].address_name;
+        if(region[0].region_4depth_name !== "") {
+            geoInfo.name = region[0].region_4depth_name;
+        }else if(region[0].region_3depth_name !== ""){
+            geoInfo.name = region[0].region_3depth_name;
+        }else if(region[0].region_2depth_name !== ""){
+            geoInfo.name = region[0].region_2depth_name;
+        }else if (region[0].region_1depth_name !== ""){
+            geoInfo.name = region[0].region_1depth_name;
+        }
+        var name2 = region[0].region_2depth_name;
+        if(name2){
+            name2 = name2.replace(/ /g,"");
+        }
+        geoInfo.kmaAddress = {"region": region[0].region_1depth_name, "city": name2, "town": region[0].region_3depth_name};
+    }
+
+    return geoInfo;
 };
 
 GeoController.prototype._parseAddressFromDaum = function (result) {
@@ -97,6 +172,58 @@ GeoController.prototype._parseAddressFromDaum = function (result) {
     return geoInfo;
 };
 
+/**
+ * {"meta":{"total_count":2},"documents":[{"region_type":"B","code":"1168010100",
+ * "address_name":"서울특별시 강남구 역삼동",
+ * "region_1depth_name":"서울특별시","region_2depth_name":"강남구","region_3depth_name":"역삼동","region_4depth_name":"",
+ * "x":127.03312866105163,"y":37.49530540462},{"region_type":"H","code":"1168064000",
+ * "address_name":"서울특별시 강남구 역삼1동",
+ * "region_1depth_name":"서울특별시","region_2depth_name":"강남구","region_3depth_name":"역삼1동","region_4depth_name":"",
+ * "x":127.03320108651666,"y":37.49542431718493}]}
+ *
+ * {"meta":{"total_count":2},"documents":[{"region_type":"B","code":"90003","address_name":"일본",
+ * "region_1depth_name":"","region_2depth_name":"","region_3depth_name":"","region_4depth_name":"",
+ * "x":135.2266257553163,"y":33.63189788608174},{"region_type":"H","code":"90003","address_name":"일본",
+ * "region_1depth_name":"","region_2depth_name":"","region_3depth_name":"","region_4depth_name":"",
+ * "x":135.2266257553163,"y":33.63189788608174}]}
+ * @param callback
+ * @returns {GeoController}
+ * @private
+ */
+GeoController.prototype._getAddressFromKakao = function (callback) {
+    var that = this;
+    var index = 0;
+
+    async.retry(daumKeys.length,
+        function (cb) {
+            let url = 'https://dapi.kakao.com/v2/local/geo/coord2regioncode.json';
+            url += '?x='+that.lon;
+            url += '&y='+that.lat;
+            url += '&input_coord=WGS84';
+            let header = {
+                Authorization: 'KakaoAK ' + daumKeys[index]
+            };
+
+            index++;
+
+            log.info(url);
+            that.axios.get(url, {headers: header})
+            .then(response=>{
+                return cb(null, response.data);
+            })
+            .catch(e=>{
+                return cb(e);
+            });
+        },
+        function (err, result) {
+            if (err) {
+                return callback(err);
+            }
+            callback(null, result);
+        });
+
+    return this;
+};
 /**
  * {"type":"H","code":"1123064","name":"역삼1동","fullName":"서울특별시 강남구 역삼1동","regionId":"I10000901",
  * "name0":"대한민국","code1":"11","name1":"서울특별시","code2":"11230","name2":"강남구","code3":"1123064",
@@ -417,9 +544,12 @@ GeoController.prototype.location2address = function(req, res, next) {
                     return callback();
                 }
                 if (that._isKoreaArea(that.lat, that.lon)) {
-                    that._getAddressFromDaum(function (err, result) {
+                    // Daum Api, It's not available anymore
+                    //that._getAddressFromDaum(function (err, result) {
+                    that._getAddressFromKakao(function (err, result) {
                         try {
-                            var geoInfo = that._parseAddressFromDaum(result);
+                            //var geoInfo = that._parseAddressFromDaum(result);
+                            var geoInfo = that._parseAddressFromKaKao(result);
                             that.country = that.country || geoInfo.country;
                             that.kmaAddress = that.kmaAddress || geoInfo.kmaAddress;
                             if (that.lang === 'ko') {
@@ -456,9 +586,12 @@ GeoController.prototype.location2address = function(req, res, next) {
                     return callback();
                 }
 
-                that._getAddressFromDaum(function (err, result) {
+                // Daum Api, It's not available anymore
+                //that._getAddressFromDaum(function (err, result) {
+                that._getAddressFromKakao(function (err, result) {
                     try {
-                        var geoInfo = that._parseAddressFromDaum(result);
+                        //var geoInfo = that._parseAddressFromDaum(result);
+                        var geoInfo = that._parseAddressFromKaKao(result);
                         that.country = that.country || geoInfo.country;
                         that.kmaAddress = that.kmaAddress || geoInfo.kmaAddress;
                         if (that.lang === 'ko') {

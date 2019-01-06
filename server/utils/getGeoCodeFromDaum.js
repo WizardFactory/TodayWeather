@@ -10,6 +10,7 @@ var async = require('async');
 var config = require('../config/config');
 var srcName = './utils/data/base.csv';
 var dstName = './utils/data/newBase.csv';
+const axios = require('axios');
 
 var lineList = fs.readFileSync(srcName).toString().split('\n');
 //remove header
@@ -30,6 +31,35 @@ function saveDst() {
   });
 }
 
+/**
+ *
+ * @param address
+ * @param callback
+ */
+function getGeoCodeFromKakao(address, callback) {
+    var keyList = JSON.parse(config.keyString.daum_keys);
+    var daum_key = keyList[Math.floor(Math.random() * keyList.length)];
+    let url = 'https://dapi.kakao.com/v2/local/search/address.json'+
+        '?query='+ encodeURIComponent(address);
+    let header = {
+        Authorization: 'KakaoAK ' + daum_key
+    };
+
+    log.info(url);
+    axios.get(url, {headers:header})
+    .then(response=>{
+        return callback(undefined, response.data);
+    })
+    .catch(e=>{
+        callback(e);
+    });
+}
+
+/**
+ * DAUM API, it's not useful anymore.
+ * @param address
+ * @param callback
+ *
 function getGeoCodeFromDaum(address, callback) {
     var keyList = JSON.parse(config.keyString.daum_keys);
     var daum_key = keyList[Math.floor(Math.random() * keyList.length)];
@@ -50,6 +80,7 @@ function getGeoCodeFromDaum(address, callback) {
         return callback(err, body);
     });
 }
+*/
 
 function makeNewBase (list) {
 
@@ -63,17 +94,26 @@ function makeNewBase (list) {
             if (townArray[3]) {
                 return callback();
             }
-            getGeoCodeFromDaum(address, function (err, body) {
+            // getGeoCodeFromDaum(address, function (err, body) {
+            getGeoCodeFromKakao(address, function (err, body) {
                 if (err) {
                     console.log(err);
                     callback(err);
                     return;
                 }
                 try {
+                    console.log(body.documents[0].y);
+                    var output = townArray[0]+","+townArray[1]+","+townArray[2]+","+body.documents[0].y.toFixed(7)+","+
+                        body.documents[0].x.toFixed(7);
+                    //+","+body.channel.item[0].title;
+
+                    /* No more useful
                     console.log(body.channel.item[0].lat);
                     var output = townArray[0]+","+townArray[1]+","+townArray[2]+","+body.channel.item[0].lat.toFixed(7)+","+
                         body.channel.item[0].lng.toFixed(7);
                         //+","+body.channel.item[0].title;
+
+                    */
                     console.log(output);
                     baseList.push(output);
                     callback(null, output);

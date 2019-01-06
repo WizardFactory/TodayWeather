@@ -6,6 +6,64 @@ var req = require('request');
 var xml2json  = require('xml2js').parseString;
 var convert = require('./coordinate2xy');
 var keyBox = require('../config/config').keyString;
+const axios = require('axios');
+
+function convertGeocodeByKakao(first, second, third, callback) {
+    let keyList = JSON.parse(keyBox.daum_keys);
+    let daum_key = keyList[Math.floor(Math.random() * keyList.length)];
+    let url = 'https://dapi.kakao.com/v2/local/search/address.json'+
+        '?query='+ encodeURIComponent(first + second + third);
+    let header = {
+        Authorization: 'KakaoAK ' + daum_key
+    };
+
+    var meta = {
+        method: 'convertGeocode',
+        first: first,
+        second: second,
+        third: third,
+        url: url
+    };
+
+    log.silly(meta.method + ' : ', url);
+    axios.get(url, {headers:header})
+    .then(response=>{
+        var geocode = {
+            lat: 0,
+            lon: 0
+        };
+        var resultXY = {
+            mx: 0,
+            my: 0
+        };
+        if (response.data.meta.total_count < 1) {
+            return callback(new Error("Fail to find geocode addr="+first+second+third));
+        }
+        /**
+         * lat == y, lon == x
+         */
+
+        geocode.lat = response.data.documents[0].y;
+        geocode.lon = response.data.documents[0].x;
+
+        log.silly('lat:', geocode.lat, 'lon:', geocode.lon);
+        resultXY.lat = geocode.lat;
+        resultXY.lon = geocode.lon;
+
+        var conv = new convert(geocode, {}).toLocation();
+        resultXY.mx = conv.getLocation().x;
+        resultXY.my = conv.getLocation().y;
+
+        log.debug('ConvertDaum >', 'mx:', resultXY.mx, 'my :', resultXY.my);
+
+        return callback(undefined, resultXY);
+    })
+    .catch(e=>{
+        e.message += ' ' + JSON.stringify(meta);
+        log.error(e);
+        callback(e);
+    });
+}
 
 function convertGeocodeByDaum(first, second, third, callback) {
     var keyList = JSON.parse(keyBox.daum_keys);
@@ -181,7 +239,9 @@ function convertGeocodeByGoogle(first, second, third, callback, language) {
 }
 
 function convertGeocode(first, second, third, callback){
-    convertGeocodeByDaum(first, second, third, function(err, resultXY) {
+    // 2019.01.03 : DAUM API, it's not available any more.
+    // convertGeocodeByDaum(first, second, third, function(err, resultXY) {
+    convertGeocodeByKakao(first, second, third, function(err, resultXY) {
         if (err)  {
             log.warn(err);
             convertGeocodeByGoogle(first, second, third, function(err, resultXY){
