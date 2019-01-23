@@ -1862,12 +1862,17 @@ function ControllerTown() {
 
                     //적정한 위치로 이동 필요함. 데이터 가져올때마다 보정하거나, 마지막에 보정하거나
                     if (reqCurrent.hasOwnProperty('rn1')) {
-                        if (reqCurrent.rn1 > 10) {
-                            reqCurrent.rn1 = Math.round(reqCurrent.rn1);
+                        if(reqCurrent.rn1 === 'number'){
+                            if (reqCurrent.rn1 > 10) {
+                                reqCurrent.rn1 = Math.round(reqCurrent.rn1);
+                            }
+                            else {
+                                reqCurrent.rn1 = parseFloat( (reqCurrent.rn1).toFixed(1) );
+                            }
+                        }else{
+                            delete reqCurrent.rn1;
                         }
-                        else {
-                            reqCurrent.rn1 = parseFloat( (reqCurrent.rn1).toFixed(1) );
-                        }
+
                     }
 
                     reqCurrent.sky = _convertCloud2SKy(reqCurrent.sky, stnWeatherInfo.cloud);
