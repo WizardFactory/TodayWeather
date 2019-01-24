@@ -9,12 +9,12 @@ var keyBox = require('../config/config').keyString;
 const axios = require('axios');
 
 function convertGeocodeByKakao(first, second, third, callback) {
-    let keyList = JSON.parse(keyBox.daum_keys);
-    let daum_key = keyList[Math.floor(Math.random() * keyList.length)];
+    let keyList = JSON.parse(keyBox.kakao_keys);
+    let kakao_key = keyList[Math.floor(Math.random() * keyList.length)];
     let url = 'https://dapi.kakao.com/v2/local/search/address.json'+
         '?query='+ encodeURIComponent(first + second + third);
     let header = {
-        Authorization: 'KakaoAK ' + daum_key
+        Authorization: 'KakaoAK ' + kakao_key
     };
 
     var meta = {

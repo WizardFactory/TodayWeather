@@ -48,7 +48,18 @@ function Keco() {
     this._currentRltmIndex = 0;
     this._currentSidoIndex = 0;
     this._daumApiKeys = '';  //for convert x,y
+    this._kakaoApiKeys = '';
 }
+
+Keco.prototype.setKakaoApiKeys = function (keys) {
+    this._kakaoApiKeys = keys;
+    return this;
+};
+
+
+Keco.prototype.getKakaoApiKey = function () {
+    return this._kakaoApiKeys[Math.floor(Math.random() * this._kakaoApiKeys.length)];
+};
 
 /**
  *

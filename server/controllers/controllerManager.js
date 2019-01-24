@@ -2293,6 +2293,7 @@ Manager.prototype.startManager = function(){
 
     keco.setServiceKeys(JSON.parse(config.keyString.airkorea_keys));
     keco.setDaumApiKeys(JSON.parse(config.keyString.daum_keys));
+    keco.setKakaoApiKeys(JSON.parse(config.keyString.kakao_keys));
     keco.getCtprvnSidoList();
 
     self.keco = keco;

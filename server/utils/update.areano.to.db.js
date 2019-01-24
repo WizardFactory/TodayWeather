@@ -40,12 +40,12 @@ function _query(areaInfo) {
 }
 
 function getGeoCodeFromKakao(address, callback) {
-    var keyList = JSON.parse(config.keyString.daum_keys);
-    var daum_key = keyList[Math.floor(Math.random() * keyList.length)];
+    var keyList = JSON.parse(config.keyString.kakao_keys);
+    var kakao_key = keyList[Math.floor(Math.random() * keyList.length)];
     let url = 'https://dapi.kakao.com/v2/local/search/address.json'+
         '?query='+ encodeURIComponent(address);
     let header = {
-        Authorization: 'KakaoAK ' + daum_key
+        Authorization: 'KakaoAK ' + kakao_key
     };
 
 
