@@ -17,6 +17,7 @@ var dnscache = require('dnscache')({
 var config = require('../config/config');
 
 var daumKeys = JSON.parse(config.keyString.daum_keys);
+let kakaoKeys = JSON.parse(config.keyString.kakao_keys);
 var googleApiKey = config.keyString.google_key;
 
 function GeoController(lat, lon, lang, country) {
@@ -194,14 +195,14 @@ GeoController.prototype._getAddressFromKakao = function (callback) {
     var that = this;
     var index = 0;
 
-    async.retry(daumKeys.length,
+    async.retry(kakaoKeys.length,
         function (cb) {
             let url = 'https://dapi.kakao.com/v2/local/geo/coord2regioncode.json';
             url += '?x='+that.lon;
             url += '&y='+that.lat;
             url += '&input_coord=WGS84';
             let header = {
-                Authorization: 'KakaoAK ' + daumKeys[index]
+                Authorization: 'KakaoAK ' + kakaoKeys[index]
             };
 
             index++;
