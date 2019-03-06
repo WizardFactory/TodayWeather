@@ -24,11 +24,16 @@ module.exports = function() {
 
     transports.push(new winston.transports.Console(options));
 
-    if (LogentriesToken && LogentriesToken.length > 0) {
-        transports.push(new winston.transports.Logentries({
-            level: 'info',
-            token: LogentriesToken
-        }));
+    try {
+        if (LogentriesToken && LogentriesToken.length > 0) {
+            transports.push(new winston.transports.Logentries({
+                level: 'info',
+                token: LogentriesToken
+            }));
+        }
+    }
+    catch(err) {
+        console.log(err);
     }
 
     var logger = new winston.Logger({
