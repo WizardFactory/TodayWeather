@@ -244,8 +244,9 @@ angular.module('service.util', [])
         };
 
         obj.placesUrl = 'js!https://maps.googleapis.com/maps/api/js?libraries=places';
-        if (clientConfig.googleapikey) {
-            obj.placesUrl += '&key='+clientConfig.googleapikey;
+        if (clientConfig.googleApiKeys) {
+            var index = Math.floor(Math.random() * clientConfig.googleApiKeys.length);
+            obj.placesUrl += '&key='+clientConfig.googleApiKeys[index];
         }
 
         obj.sendMail = function($translate) {
