@@ -55,7 +55,14 @@ var options = {
     production: production
 };
 
-var apnProvider = new apn.Provider(options);
+var apnProvider;
+
+try {
+    apnProvider = new apn.Provider(options);
+}
+catch(error) {
+    console.log(error);
+}
 
 var server_access_key = config.push.gcmAccessKey;
 
