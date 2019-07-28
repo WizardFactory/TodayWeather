@@ -24,29 +24,41 @@ var dnscache = require('dnscache')({
     "cachesize" : 1000
 });
 
-var apnGateway;
-
 var production = false;
-if (process.env.NODE_ENV === 'production') {
-    apnGateway = "gateway.push.apple.com";
-    production = true;
-}
-else {
-    apnGateway = "gateway.sandbox.push.apple.com";
-}
 
-var apnOptions = {
-    gateway : apnGateway,
-    cert: './config/aps_cert.pem',
-    key: './config/aps_key.pem',
-    production: production,
-    batchFeedback: true,
-    interval: 300 //seconds
+//apn version 1.7.5
+// var apnGateway;
+// if (process.env.NODE_ENV === 'production') {
+//     apnGateway = "gateway.push.apple.com";
+//     production = true;
+// }
+// else {
+//     apnGateway = "gateway.sandbox.push.apple.com";
+// }
+//
+// var apnOptions = {
+//     gateway : apnGateway,
+//     cert: './config/aps_cert.pem',
+//     key: './config/aps_key.pem',
+//     production: production,
+//     batchFeedback: true,
+//     interval: 300 //seconds
+// };
+//var apnConnection = new apn.Connection(apnOptions);
+
+var options = {
+    token: {
+        key: config.push.apnKeyPath,
+        keyId: config.push.apnKeyId,
+        teamId: config.push.apnTeamId
+    },
+    production: production
 };
+
+var apnProvider = new apn.Provider(options);
 
 var server_access_key = config.push.gcmAccessKey;
 
-var apnConnection = new apn.Connection(apnOptions);
 var sender = new gcm.Sender(server_access_key);
 
 var i18n = require('i18n');
@@ -319,7 +331,7 @@ ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification,
     log.info('send ios notification pushInfo='+JSON.stringify(pushInfo)+ ' notification='+JSON.stringify(notification));
 
     if (pushInfo.registrationId) {
-        var myDevice = new apn.Device(pushInfo.registrationId);
+
         var note = new apn.Notification();
         //note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
         //note.badge = 1;
@@ -327,7 +339,15 @@ ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification,
         note.alert = notification.title+'\n'+notification.text;
         //note.contentAvailable = true;
         note.payload = {cityIndex: pushInfo.cityIndex};
-        apnConnection.pushNotification(note, myDevice);
+
+        //apn 1.7.5
+        //var myDevice = new apn.Device(pushInfo.registrationId);
+        //apnConnection.pushNotification(note, myDevice);
+
+        apnProvider.send(note, pushInfo.registrationId).then((result)=> {
+            console.info(result);
+        });
+
         callback(undefined, 'sent');
     }
     else {
@@ -1415,13 +1435,13 @@ ControllerPush.prototype.apnFeedback = function () {
     //    "interval": 300 //seconds
     //};
 
-    var feedback = new apn.Feedback(apnOptions);
-    feedback.on("feedback", function(devices) {
-        devices.forEach(function(item) {
-            log.info(item);
-            // Do something with item.device and item.time;
-        });
-    });
+    // var feedback = new apn.Feedback(apnOptions);
+    // feedback.on("feedback", function(devices) {
+    //     devices.forEach(function(item) {
+    //         log.info(item);
+    //         // Do something with item.device and item.time;
+    //     });
+    // });
 };
 
 /**
