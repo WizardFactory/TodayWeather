@@ -93,13 +93,13 @@ dsfRequester.prototype.get = function(url, option, callback){
 
 dsfRequester.prototype.getData = function(url, retryCount, callback){
     var self = this;
-    var agentOptions = {
-        ciphers: 'ALL',
-        secureProtocol: 'TLSv1_method',
-    };
+    //var agentOptions = {
+    //    ciphers: 'ALL',
+    //    secureProtocol: 'TLSv1_method',
+    //};
 
     log.silly('DFS> get data : ', url);
-    self.get(url, {timeout: 1000 * 5, agentOptions: agentOptions}, function(err, response, body){
+    self.get(url, {timeout: 1000 * 5}, function(err, response, body){
         if(err) {
             if((err.code === "ECONNRESET" || err.code === "ETIMEDOUT") && retryCount > 0){
                 log.warn('DFS> 1. Retry to get caused by ' + err.code + ' : ', retryCount, ', url:'+url);
