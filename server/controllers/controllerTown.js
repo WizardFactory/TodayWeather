@@ -2531,7 +2531,7 @@ function ControllerTown() {
                                });
                             }
                             if (areaNoList.length < 1) {
-                                err = new Error('Fail to get area no query:'+JSON.stringify(query));
+                                err = new Error('Fail to get area no query:'+JSON.stringify(gcoord));
                                 return callback(err);
                             }
                             callback(null, areaNoList[0]);
