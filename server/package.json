@@ -40,7 +40,7 @@
     "in-app-purchase": "^1.8.4",
     "jade": "~1.11.0",
     "jsonwebtoken": "^5.7.0",
-    "jwt-simple": "^0.3.0",
+    "jwt-simple": "^0.5.6",
     "le_node": "^1.7.1",
     "mongoose": "5.1.2",
     "morgan": "~1.6.1",
