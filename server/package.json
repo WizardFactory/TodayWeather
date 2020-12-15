@@ -18,7 +18,7 @@
     "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
   },
   "dependencies": {
-    "apn": "^1.7.5",
+    "apn": "^2.2.0",
     "async": "^2.5.0",
     "aws-sdk": "^2.2.35",
     "axios": "^0.18.0",

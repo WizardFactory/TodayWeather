@@ -48,7 +48,18 @@ function Keco() {
     this._currentRltmIndex = 0;
     this._currentSidoIndex = 0;
     this._daumApiKeys = '';  //for convert x,y
+    this._kakaoApiKeys = '';
 }
+
+Keco.prototype.setKakaoApiKeys = function (keys) {
+    this._kakaoApiKeys = keys;
+    return this;
+};
+
+
+Keco.prototype.getKakaoApiKey = function () {
+    return this._kakaoApiKeys[Math.floor(Math.random() * this._kakaoApiKeys.length)];
+};
 
 /**
  *
@@ -1121,12 +1132,43 @@ Keco.prototype.getStationNameFromMsrstn = function(data, callback) {
 };
 
 /**
- *
+ *  Using KAKAO API
  * @param key
  * @param y
  * @param x
  * @param callback
  */
+Keco.prototype.getTmPointFromWgs84 = (key, y, x, callback)=>{
+    let axios = require('axios');
+    let url = 'https://dapi.kakao.com/v2/local/geo/transcoord.json';
+    url += '&x='+x;
+    url += '&y='+y;
+    url += '&input_coord=WGS84&output_coord=TM';
+    let header = {
+        Authorization: 'KakaoAK ' + key
+    };
+
+    axios.get(url, {headers: header})
+    .then(response=>{
+        if(response.data.meta.total_count < 1){
+            return callback(new Error('There is no coord data'));
+        }
+        callback(undefined, response.data.documents[0]);
+    })
+    .catch(e=>{
+        callback(e);
+    })
+};
+
+
+/**
+ * DAUM API, it's not available anymore. 2019.01.03
+ * @param key
+ * @param y
+ * @param x
+ * @param callback
+ */
+/*
 Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
     var url = 'https://apis.daum.net/local/geo/transcoord';
     url += '?apiKey='+key;
@@ -1140,6 +1182,7 @@ Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
         callback(err, result);
     });
 };
+*/
 
 Keco.prototype.retryGetAllCtprvn = function (self, count, callback) {
     if (count <= 0)  {

@@ -482,6 +482,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
     var keyBox = require('../config/config').keyString;
     keco.setServiceKeys(JSON.parse(keyBox.airkorea_keys));
     keco.setDaumApiKeys(JSON.parse(keyBox.daum_keys));
+    keco.setKakaoApiKeys(JSON.parse(keyBox.kakao_keys));
 
     async.waterfall([
         function(cb) {
@@ -494,7 +495,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
             });
         },
         function(geoCode, cb) {
-            keco.getTmPointFromWgs84(keco.getDaumApiKey(), geoCode.lat, geoCode.lon,
+            keco.getTmPointFromWgs84(keco.getKakaoApiKey(), geoCode.lat, geoCode.lon,
                 function (err, body) {
                     if (err) {
                         return cb(err);}

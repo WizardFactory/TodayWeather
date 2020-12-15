@@ -20,7 +20,16 @@ describe('unit test - geo controller class', function() {
             callback(null, JSON.parse(result));
         };
 
-        geoCtrl._getAddressFromDaum(function (err) {
+        geoCtrl.axios.get = (url, header)=>{
+            return new Promise((res, rej)=>{
+                console.log(url, JSON.stringify(header));
+                var result = '{"meta":{"total_count":2},"documents":[{"region_type":"B","code":"1168010100","address_name":"서울특별시 강남구 역삼동","region_1depth_name":"서울특별시","region_2depth_name":"강남구","region_3depth_name":"역삼동","region_4depth_name":"","x":127.03312866105163,"y":37.49530540462},{"region_type":"H","code":"1168064000","address_name":"서울특별시 강남구 역삼1동","region_1depth_name":"서울특별시","region_2depth_name":"강남구","region_3depth_name":"역삼1동","region_4depth_name":"","x":127.03320108651666,"y":37.49542431718493}]}';
+                return res(result);
+            });
+        };
+
+        // geoCtrl._getAddressFromDaum(function (err) {
+        geoCtrl._getAddressFromKakao(function (err) {
             if (err) {
                 console.error(err);
             }

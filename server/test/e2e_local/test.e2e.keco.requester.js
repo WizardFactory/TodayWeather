@@ -24,6 +24,7 @@ describe('e2e test - keco requester', function() {
         keco = new Keco();
         keco.setServiceKeys(JSON.parse(config.keyString.airkorea_keys));
         keco.setDaumApiKeys(JSON.parse(config.keyString.daum_keys));
+        keco.setKakaoApiKeys(JSON.parse(config.keyString.kakao_keys));
         mongoose.Promise = global.Promise;
         mongoose.connect('mongodb://localhost/todayweather', function(err) {
             if (err) {
@@ -138,7 +139,7 @@ describe('e2e test - keco requester', function() {
     //강릉시, 강동면 , 37.7254,128.9565111 -> tmX 373627.403952, tmY 465928.44815,
     it('convert WGS84 to TM', function (done) {
         this.timeout(10*1000);
-        keco.getTmPointFromWgs84(keco._daumApiKey, 37.773315, 128.919327, function (err, body) {
+        keco.getTmPointFromWgs84(keco._kakaoApiKeys, 37.773315, 128.919327, function (err, body) {
             console.log(body);
             done();
         });
