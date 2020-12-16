@@ -1227,6 +1227,10 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
             }
 
             if(self.resultList[i].url !== ''){
+                if(parseInt(i) > 1000){
+                    self.emit('recvFail', parseInt(i));
+                    continue;
+                }
                 self.getData(parseInt(i), dataType, self.resultList[i].url, self.resultList[i].options);
             }
         }
