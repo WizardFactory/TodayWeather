@@ -1227,7 +1227,7 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
             }
 
             if(self.resultList[i].url !== ''){
-                if(parseInt(i) > 1000){
+                if(parseInt(i) > 100){
                     self.emit('recvFail', parseInt(i));
                     continue;
                 }
