@@ -1,0 +1,65 @@
+{
+  "candidate": "sha256:815cc1a094df90f8cacc4fe016a8f85341fc7ae65fc61c42ea283c5e48d9e536",
+  "scenarios": [
+    {
+      "id": "S1",
+      "requirement": "AC3",
+      "required": true,
+      "environment": "Local Linux, Node 22, installed Paseo 0.7.2 modules",
+      "prerequisites": "Base checkout with both local secret files",
+      "actions": "Seed config into detached temporary worktree and run installed setup implementation",
+      "expected": "Both copies match source, permissions restricted, Git ignores both",
+      "failure": "Nonzero setup or mismatched bytes, mode, ignore",
+      "cleanup": "Remove temporary detached worktree and parent directory"
+    }
+  ],
+  "runs": [
+    {
+      "id": "correction-red-2",
+      "phase": "red",
+      "candidate": "pre-correction-config",
+      "command": "python3 reports/sdlc/paseo-workspace-secrets/check_setup.py before negation fix",
+      "environment": "Local Linux; isolated fixture or detached temporary worktree",
+      "observed": "PASS copy, modes, Git exclusion, rerun preserves existing files, no secret output\nPASS missing source safely skipped\nPASS destination directory symlink refused\nPASS missing source environment fails clearly\nTraceback (most recent call last):\n  File \"/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/reports/sdlc/paseo-workspace-secrets/check_setup.py\", line 41, in <module>\n    assert subprocess.run(['git','check-ignore','--quiet','.aws/'+name],cwd=target).returncode==0, 'Existing negation exposes '+name\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Existing negation exposes aleckim.pem",
+      "evidence": "reports/sdlc/paseo-workspace-secrets/correction-red.log",
+      "exit_code": 1,
+      "status": "passed",
+      "intended_failure": true
+    },
+    {
+      "id": "correction-green-2",
+      "phase": "green",
+      "candidate": "sha256:815cc1a094df90f8cacc4fe016a8f85341fc7ae65fc61c42ea283c5e48d9e536",
+      "command": "python3 reports/sdlc/paseo-workspace-secrets/check_setup.py",
+      "environment": "Local Linux; isolated fixture or detached temporary worktree",
+      "observed": "PASS copy, modes, Git exclusion, rerun preserves existing files, no secret output\nPASS missing source safely skipped\nPASS destination directory symlink refused\nPASS missing source environment fails clearly\nPASS existing Git ignore negations cannot expose copied files",
+      "evidence": "reports/sdlc/paseo-workspace-secrets/correction-green.log",
+      "exit_code": 0,
+      "status": "passed"
+    },
+    {
+      "id": "correction-post-refactor-2",
+      "phase": "post-refactor",
+      "candidate": "sha256:815cc1a094df90f8cacc4fe016a8f85341fc7ae65fc61c42ea283c5e48d9e536",
+      "command": "python3 reports/sdlc/paseo-workspace-secrets/check_setup.py",
+      "environment": "Local Linux; isolated fixture or detached temporary worktree",
+      "observed": "PASS copy, modes, Git exclusion, rerun preserves existing files, no secret output\nPASS missing source safely skipped\nPASS destination directory symlink refused\nPASS missing source environment fails clearly\nPASS existing Git ignore negations cannot expose copied files",
+      "evidence": "reports/sdlc/paseo-workspace-secrets/correction-post-refactor.log",
+      "exit_code": 0,
+      "status": "passed"
+    },
+    {
+      "id": "correction-smoke-2",
+      "phase": "smoke",
+      "candidate": "sha256:815cc1a094df90f8cacc4fe016a8f85341fc7ae65fc61c42ea283c5e48d9e536",
+      "command": "node /tmp/tw-paseo-smoke.mjs",
+      "environment": "Local Linux; isolated fixture or detached temporary worktree",
+      "observed": "PASS installed Paseo parser, source config seeding, real worktree setup, byte equality, modes and Git exclusion.\nNo SSH or AWS call. Secret contents were not printed. Temporary worktree cleaned up.",
+      "evidence": "reports/sdlc/paseo-workspace-secrets/correction-smoke.log",
+      "exit_code": 0,
+      "status": "passed",
+      "scenario_id": "S1",
+      "execution_kind": "real"
+    }
+  ]
+}

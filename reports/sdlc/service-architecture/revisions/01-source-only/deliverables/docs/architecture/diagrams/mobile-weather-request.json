@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Mobile weather request lifecycle",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      520
+    ]
+  },
+  "participants": [
+    {
+      "id": "app",
+      "type": "frontend",
+      "label": "Mobile UI",
+      "sublabel": "WeatherUtil"
+    },
+    {
+      "id": "public",
+      "type": "external",
+      "label": "Public API",
+      "sublabel": "Wiring absent"
+    },
+    {
+      "id": "backend",
+      "type": "backend",
+      "label": "Weather route",
+      "sublabel": "KMA or DSF"
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "MongoDB",
+      "sublabel": "Stored products"
+    },
+    {
+      "id": "upstream",
+      "type": "external",
+      "label": "Providers",
+      "sublabel": "DSF / WAQI"
+    }
+  ],
+  "messages": [
+    {
+      "id": "step-0",
+      "from": "app",
+      "to": "public",
+      "y": 160,
+      "label": "GET /weather/v000903/coord/:lat,:lon",
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-1",
+      "from": "public",
+      "to": "backend",
+      "y": 195,
+      "label": "Mapping required; implementation absent",
+      "variant": "default"
+    },
+    {
+      "id": "step-2",
+      "from": "backend",
+      "to": "db",
+      "y": 230,
+      "label": "KMA products OR DSF / AQI cache",
+      "variant": "default"
+    },
+    {
+      "id": "step-3",
+      "from": "db",
+      "to": "backend",
+      "y": 265,
+      "label": "Stored data / freshness result",
+      "variant": "return"
+    },
+    {
+      "id": "step-4",
+      "from": "backend",
+      "to": "upstream",
+      "y": 300,
+      "label": "DSF / AQI miss: fetch required data",
+      "variant": "default"
+    },
+    {
+      "id": "step-5",
+      "from": "upstream",
+      "to": "backend",
+      "y": 335,
+      "label": "Provider data (when requested)",
+      "variant": "return"
+    },
+    {
+      "id": "step-6",
+      "from": "backend",
+      "to": "db",
+      "y": 370,
+      "label": "Persist fetched data",
+      "variant": "default"
+    },
+    {
+      "id": "step-7",
+      "from": "backend",
+      "to": "public",
+      "y": 405,
+      "label": "Assembled KMA or world-weather JSON",
+      "variant": "return"
+    },
+    {
+      "id": "step-8",
+      "from": "public",
+      "to": "app",
+      "y": 437,
+      "label": "JSON \u2192 convertWeatherData \u2192 city state",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Conditional flow",
+      "items": [
+        "Public mapping is an unresolved external dependency; wiring is not implemented here.",
+        "KMA serves collected products; provider miss steps describe DSF / AQI."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Client behavior",
+      "items": [
+        "Cities refresh after 10 minutes; slower requests may overlap at 0, 2 and 4 seconds.",
+        "Geocoding precedes this request when required; direct KMA address fallback also exists."
+      ]
+    }
+  ]
+}

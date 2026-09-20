@@ -1,0 +1,92 @@
+{
+  "iteration": 4,
+  "decision": "PROCEED",
+  "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+  "authority_source": "AK current request; intent/service-architecture.md",
+  "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+  "next_action": "Continue next applicable stage within local scope.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/service-architecture/triage.md",
+      "sha256": "17188b1b33361e9101bd633bda6382b760c11df38b54867a754c55bad95316fb"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/service-architecture.md",
+      "sha256": "2d1c6bc0e1c1df7ce3a09e2cd406a53cd111f472916d2fb3763832373da9a79e"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/service-architecture/investigation.md",
+      "sha256": "26696f0e71c30d7e08f5fe80e3283eeead753e25f2ac356dccdcd9acda36f1c6"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/service-architecture.md",
+      "sha256": "fb83ecdba5a5a638137afbc4365c8f32f5ac74f373ec90d57d3b06dc770cdeb4"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/service-overview.json",
+      "sha256": "137046ea44a8c48f82c1e72797a42b260f3a0179338ab3632cb2e25a022856bc"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/mobile-weather-request.json",
+      "sha256": "fdfdfab5ed5d3aaa108fb7ff1b8e97a6d2628fe9e0d322db6d0a1a219d166db3"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/kaq-image-pipeline.json",
+      "sha256": "472c6d39fbf1836484061c4460e8ba0ce9c8b1427778f30c2e453ce2aa96b274"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/service-overview.html",
+      "sha256": "bcbc0772a90d226c220e7bc7eda964b5fec3a6de539a7cee9ce7a1b79b293ca8"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/mobile-weather-request.html",
+      "sha256": "61c0354a58d8f2d4ce907359ff1b175565167a53745d3361e0d5512e731cf980"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/kaq-image-pipeline.html",
+      "sha256": "e3b0825423d7b4bd678d99d0c7e19bc7ac784128155915d3566377836aef2744"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/overview-validation.json",
+      "sha256": "f4c6731d60cccf7cea386bc6f6a148745524be071536e1cb576eddefe0cba063"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/mobile-validation.json",
+      "sha256": "9ed00a746a7fd106101b36a4deba830f5cbb51697b6fe3daf704831b9a30ee02"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/kaq-validation.json",
+      "sha256": "53a52a26c3d9beaffece3adeeb9a647399ae00e562f1e783bdaff026fe9fd208"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "plan",
+      "path": "plans/service-architecture.md",
+      "sha256": "23caf096d1abf3e13f396047eeee76082ea753e4bf79ea412479c277332baea1"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3",
+      "AC4"
+    ]
+  }
+}

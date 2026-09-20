@@ -1,0 +1,92 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+  "authority_source": "AK current request; intent/service-architecture.md",
+  "candidate": "base:b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+  "next_action": "Continue next applicable stage within local scope.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/service-architecture/triage.md",
+      "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/service-architecture.md",
+      "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/service-architecture/investigation.md",
+      "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/service-architecture.md",
+      "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/service-overview.json",
+      "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/weather-collection.json",
+      "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/mobile-weather-request.json",
+      "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/service-overview.html",
+      "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/weather-collection.html",
+      "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/mobile-weather-request.html",
+      "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/design-validation.md",
+      "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+    },
+    {
+      "kind": "diagram-handoff",
+      "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+      "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+    },
+    {
+      "kind": "plan",
+      "path": "plans/service-architecture.md",
+      "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/service-architecture/test-plan.md",
+      "sha256": "4c816e27b3932916bccc7cee6f9cb9f06ec5b593724dfc6aa6763b39b055dbe6"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3",
+      "AC4"
+    ]
+  }
+}

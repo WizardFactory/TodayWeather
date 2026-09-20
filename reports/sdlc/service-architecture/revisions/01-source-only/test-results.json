@@ -1,0 +1,117 @@
+{
+  "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+  "scenarios": [
+    {
+      "id": "guidance-navigation",
+      "requirement": "AC4",
+      "required": true,
+      "environment": "Local repository filesystem; Python3",
+      "prerequisites": "Canonical AGENTS.md, CLAUDE.md adapter, architecture docs and source files",
+      "actions": "Resolve each entrypoint and follow mobile/collection links; inspect shared skill instructions",
+      "expected": "Both entrypoints resolve identical guidance and reachable implementation sources; six journeys pass",
+      "failure": "Missing import, duplicated rules, broken navigation or missing source",
+      "cleanup": "Read-only; no service or provider actions"
+    }
+  ],
+  "runs": [
+    {
+      "id": "guidance-red",
+      "phase": "red",
+      "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+      "command": "python3 reports/sdlc/service-architecture/guidance-check.py",
+      "exit_code": 1,
+      "environment": "Local Python3 / Node22 / installed Archify2.17 / Chromium",
+      "observed": "Expected assertion: Missing canonical AGENTS.md",
+      "evidence": "reports/sdlc/service-architecture/guidance-red.log",
+      "status": "passed",
+      "execution_kind": "real",
+      "intended_failure": true
+    },
+    {
+      "id": "guidance-green",
+      "phase": "green",
+      "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+      "command": "python3 reports/sdlc/service-architecture/guidance-check.py",
+      "exit_code": 0,
+      "environment": "Local Python3 / Node22 / installed Archify2.17 / Chromium",
+      "observed": "Canonical source/import and shared contract present",
+      "evidence": "reports/sdlc/service-architecture/guidance-green.log",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "guidance-final",
+      "phase": "post-refactor",
+      "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+      "command": "python3 reports/sdlc/service-architecture/guidance-check.py",
+      "exit_code": 0,
+      "environment": "Local Python3 / Node22 / installed Archify2.17 / Chromium",
+      "observed": "No refactor needed; final guidance contract passes",
+      "evidence": "reports/sdlc/service-architecture/guidance-post-refactor.log",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "guidance-journeys",
+      "phase": "smoke",
+      "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+      "command": "python3 reports/sdlc/service-architecture/guidance-smoke.py",
+      "exit_code": 0,
+      "environment": "Local Python3 / Node22 / installed Archify2.17 / Chromium",
+      "observed": "Six actual file-based navigation journeys pass; no CLI runtime launch claimed",
+      "evidence": "reports/sdlc/service-architecture/guidance-smoke.log",
+      "status": "passed",
+      "execution_kind": "real",
+      "scenario_id": "guidance-navigation"
+    },
+    {
+      "id": "documents",
+      "phase": "document",
+      "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+      "command": "python3 reports/sdlc/service-architecture/document-check.py",
+      "exit_code": 0,
+      "environment": "Local Python3 / Node22 / installed Archify2.17 / Chromium",
+      "observed": "128 links, 27 artifact checks, source and browser hashes, product preservation pass",
+      "evidence": "reports/sdlc/service-architecture/document-check.log",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "browser-service-overview",
+      "phase": "document",
+      "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+      "command": "ARCHIFY_CHROME=<existing Chromium> node <installed Archify>/bin/archify.mjs visual-check docs/architecture/diagrams/service-overview.html --json",
+      "exit_code": 0,
+      "environment": "Local Python3 / Node22 / installed Archify2.17 / Chromium",
+      "observed": "Real Chromium: four desktop viewports, two endpoint themes, containment/readability/chrome pass",
+      "evidence": "reports/sdlc/service-architecture/service-overview-browser-command.json",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "browser-weather-collection",
+      "phase": "document",
+      "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+      "command": "ARCHIFY_CHROME=<existing Chromium> node <installed Archify>/bin/archify.mjs visual-check docs/architecture/diagrams/weather-collection.html --json",
+      "exit_code": 0,
+      "environment": "Local Python3 / Node22 / installed Archify2.17 / Chromium",
+      "observed": "Real Chromium: four desktop viewports, two endpoint themes, containment/readability/chrome pass",
+      "evidence": "reports/sdlc/service-architecture/weather-collection-browser-command.json",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "browser-mobile-weather-request",
+      "phase": "document",
+      "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+      "command": "ARCHIFY_CHROME=<existing Chromium> node <installed Archify>/bin/archify.mjs visual-check docs/architecture/diagrams/mobile-weather-request.html --json",
+      "exit_code": 0,
+      "environment": "Local Python3 / Node22 / installed Archify2.17 / Chromium",
+      "observed": "Real Chromium: four desktop viewports, two endpoint themes, containment/readability/chrome pass",
+      "evidence": "reports/sdlc/service-architecture/mobile-weather-request-browser-command.json",
+      "status": "passed",
+      "execution_kind": "real"
+    }
+  ],
+  "not_applicable_reason": "No product code changed. Product runtime smoke is inapplicable; active instruction changes receive executable contract checks and separate file-based functional journeys. Independent agent decision evaluation is retained separately."
+}

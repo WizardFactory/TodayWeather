@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/docs/architecture/diagrams/kaq-image-pipeline.json",
+  "output": "/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/docs/architecture/diagrams/kaq-image-pipeline.html",
+  "specification": {
+    "sha256": "472c6d39fbf1836484061c4460e8ba0ce9c8b1427778f30c2e453ce2aa96b274",
+    "bytes": 3688
+  },
+  "artifact": {
+    "sha256": "e3b0825423d7b4bd678d99d0c7e19bc7ac784128155915d3566377836aef2744",
+    "bytes": 804296
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  },
+  "evidence": {
+    "verified": true,
+    "repository": "https://github.com/WizardFactory/TodayWeather",
+    "revision": "b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+    "references": 2,
+    "linkMode": "local-only"
+  }
+}

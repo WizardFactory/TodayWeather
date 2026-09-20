@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Mobile weather request lifecycle",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      520
+    ]
+  },
+  "participants": [
+    {
+      "id": "app",
+      "type": "frontend",
+      "label": "Mobile app",
+      "sublabel": "WeatherUtil"
+    },
+    {
+      "id": "edge",
+      "type": "external",
+      "label": "CloudFront",
+      "sublabel": "API production"
+    },
+    {
+      "id": "lambda",
+      "type": "backend",
+      "label": "Weather Lambda",
+      "sublabel": "Geocode + dispatch"
+    },
+    {
+      "id": "cache",
+      "type": "database",
+      "label": "Geo cache",
+      "sublabel": "DynamoDB / APIs"
+    },
+    {
+      "id": "backend",
+      "type": "backend",
+      "label": "Service EC2",
+      "sublabel": "nginx / PM2 \u00d7 10"
+    }
+  ],
+  "messages": [
+    {
+      "id": "step-0",
+      "from": "app",
+      "to": "edge",
+      "y": 160,
+      "label": "GET /weather/v000903/coord/:lat,:lon",
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-1",
+      "from": "edge",
+      "to": "lambda",
+      "y": 195,
+      "label": "API Gateway invokes weatherbycoord",
+      "variant": "default"
+    },
+    {
+      "id": "step-2",
+      "from": "lambda",
+      "to": "cache",
+      "y": 230,
+      "label": "Cached geo; provider lookup on miss",
+      "variant": "default"
+    },
+    {
+      "id": "step-3",
+      "from": "cache",
+      "to": "lambda",
+      "y": 265,
+      "label": "Country, KMA address, coordinates",
+      "variant": "return"
+    },
+    {
+      "id": "step-4",
+      "from": "lambda",
+      "to": "backend",
+      "y": 300,
+      "label": "KR: KMA addr; world: DSF coord",
+      "variant": "default"
+    },
+    {
+      "id": "step-5",
+      "from": "backend",
+      "to": "lambda",
+      "y": 335,
+      "label": "KMA / DSF response path",
+      "variant": "return"
+    },
+    {
+      "id": "step-6",
+      "from": "lambda",
+      "to": "edge",
+      "y": 370,
+      "label": "Enrich geo; success max-age=300",
+      "variant": "return"
+    },
+    {
+      "id": "step-7",
+      "from": "edge",
+      "to": "app",
+      "y": 437,
+      "label": "JSON; app converts and persists city state",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Verified dispatch",
+      "items": [
+        "AWS configuration and deployed Lambda code establish the public-to-EC2 path.",
+        "Explicit version wins; unversioned weather defaults to v000901. Address weather returns 501."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Limits and retries",
+      "items": [
+        "Service host routing and workers observed; provider results and DB queries untested.",
+        "Client attempts may overlap at 0 / 2 / 4 s; Lambda backend retries up to 3 times."
+      ]
+    }
+  ]
+}

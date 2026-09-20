@@ -1,0 +1,2 @@
+# Test plan
+AC1/AC2: isolated fixture with both files, permissions and Git ignore checks; rerun preserves changed destination. Missing source skips; symlink destination fails. AC3: compare configuration copies and parse via installed Paseo schema. Functional smoke uses actual Paseo seedPaseoConfigFile and runWorktreeSetupCommands with the existing base secrets and a temporary worktree; compare bytes without output and remove fixture. No AWS calls.

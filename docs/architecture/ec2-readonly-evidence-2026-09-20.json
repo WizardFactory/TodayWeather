@@ -1,0 +1,1097 @@
+{
+  "scope": {
+    "account": "141248341265",
+    "instance": "i-089297702b70911ec",
+    "host": "ec2-13-124-25-12.ap-northeast-2.compute.amazonaws.com",
+    "user": "ec2-user",
+    "method": "Authorized SSH; read-only Python/proc/files/netstat and existing PM2 getMonitorData RPC. No endpoint/database probe or remote write.",
+    "host_key": "First-use accept-new in isolated known_hosts; strict checking thereafter; no independent host-key attestation claimed.",
+    "private_material_excluded": [
+      "PEM contents",
+      "complete process environments",
+      "raw config/log source",
+      "raw request logs",
+      "client connection addresses",
+      "PM2 webhook settings"
+    ]
+  },
+  "observations": {
+    "inventory": "2026-09-20T14:59:12.072701Z",
+    "runtime": "2026-09-20T15:00:22.811474Z",
+    "pm2": "2026-09-20T15:02:16.299Z",
+    "operations": "2026-09-20T15:03:32.044698Z"
+  },
+  "os": "Amazon Linux AMI release 2018.03",
+  "node_version": "v10.15.3",
+  "nginx_version": "nginx/1.18.0",
+  "pm2": {
+    "observed_at_utc": "2026-09-20T15:02:16.299Z",
+    "method": "Read-only getMonitorData RPC on existing PM2 socket; no PM2 daemon launch",
+    "pm2_version": "3.3.1",
+    "processes": [
+      {
+        "pid": 32357,
+        "fields": {
+          "name": "pm2-logrotate",
+          "pm_id": 0,
+          "status": "online",
+          "exec_mode": "fork_mode",
+          "instances": 1,
+          "pm_exec_path": "/home/ec2-user/.pm2/modules/pm2-logrotate/node_modules/pm2-logrotate/app.js",
+          "pm_cwd": "/home/ec2-user/.pm2/modules/pm2-logrotate/node_modules/pm2-logrotate",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906647288,
+          "created_at": 1789906647288,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32366,
+        "fields": {
+          "name": "pm2-slack",
+          "pm_id": 1,
+          "status": "online",
+          "exec_mode": "fork_mode",
+          "instances": 1,
+          "pm_exec_path": "/home/ec2-user/.pm2/modules/pm2-slack/node_modules/pm2-slack/index.js",
+          "pm_cwd": "/home/ec2-user/.pm2/modules/pm2-slack/node_modules/pm2-slack",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906647338,
+          "created_at": 1789906647338,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32384,
+        "fields": {
+          "name": "www",
+          "pm_id": 2,
+          "status": "online",
+          "exec_mode": "cluster_mode",
+          "instances": 10,
+          "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www",
+          "pm_cwd": "/home/ec2-user/tw-svc/server",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906664709,
+          "created_at": 1789906664709,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32391,
+        "fields": {
+          "name": "www",
+          "pm_id": 3,
+          "status": "online",
+          "exec_mode": "cluster_mode",
+          "instances": 10,
+          "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www",
+          "pm_cwd": "/home/ec2-user/tw-svc/server",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906664772,
+          "created_at": 1789906664772,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32398,
+        "fields": {
+          "name": "www",
+          "pm_id": 4,
+          "status": "online",
+          "exec_mode": "cluster_mode",
+          "instances": 10,
+          "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www",
+          "pm_cwd": "/home/ec2-user/tw-svc/server",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906664867,
+          "created_at": 1789906664867,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32409,
+        "fields": {
+          "name": "www",
+          "pm_id": 5,
+          "status": "online",
+          "exec_mode": "cluster_mode",
+          "instances": 10,
+          "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www",
+          "pm_cwd": "/home/ec2-user/tw-svc/server",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906665237,
+          "created_at": 1789906665237,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32427,
+        "fields": {
+          "name": "www",
+          "pm_id": 6,
+          "status": "online",
+          "exec_mode": "cluster_mode",
+          "instances": 10,
+          "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www",
+          "pm_cwd": "/home/ec2-user/tw-svc/server",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906665603,
+          "created_at": 1789906665603,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32459,
+        "fields": {
+          "name": "www",
+          "pm_id": 7,
+          "status": "online",
+          "exec_mode": "cluster_mode",
+          "instances": 10,
+          "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www",
+          "pm_cwd": "/home/ec2-user/tw-svc/server",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906665964,
+          "created_at": 1789906665964,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32478,
+        "fields": {
+          "name": "www",
+          "pm_id": 8,
+          "status": "online",
+          "exec_mode": "cluster_mode",
+          "instances": 10,
+          "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www",
+          "pm_cwd": "/home/ec2-user/tw-svc/server",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906666402,
+          "created_at": 1789906666402,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32509,
+        "fields": {
+          "name": "www",
+          "pm_id": 9,
+          "status": "online",
+          "exec_mode": "cluster_mode",
+          "instances": 10,
+          "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www",
+          "pm_cwd": "/home/ec2-user/tw-svc/server",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906667091,
+          "created_at": 1789906667091,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32538,
+        "fields": {
+          "name": "www",
+          "pm_id": 10,
+          "status": "online",
+          "exec_mode": "cluster_mode",
+          "instances": 10,
+          "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www",
+          "pm_cwd": "/home/ec2-user/tw-svc/server",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906668469,
+          "created_at": 1789906668469,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "pid": 32563,
+        "fields": {
+          "name": "www",
+          "pm_id": 11,
+          "status": "online",
+          "exec_mode": "cluster_mode",
+          "instances": 10,
+          "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www",
+          "pm_cwd": "/home/ec2-user/tw-svc/server",
+          "node_version": "10.15.3",
+          "pm_uptime": 1789906669531,
+          "created_at": 1789906669531,
+          "restart_time": 0,
+          "unstable_restarts": 0,
+          "NODE_ENV": "production"
+        }
+      }
+    ]
+  },
+  "nginx_processes": [
+    {
+      "PPid": "1",
+      "Uid": "0\t0\t0\t0",
+      "comm": "nginx",
+      "cwd": "/",
+      "exe": "/usr/sbin/nginx",
+      "pid": 32333
+    },
+    {
+      "PPid": "32333",
+      "Uid": "498\t498\t498\t498",
+      "comm": "nginx",
+      "cwd": "/",
+      "exe": "/usr/sbin/nginx",
+      "pid": 32334
+    },
+    {
+      "PPid": "32333",
+      "Uid": "498\t498\t498\t498",
+      "comm": "nginx",
+      "cwd": "/",
+      "exe": "/usr/sbin/nginx",
+      "pid": 32335
+    }
+  ],
+  "listeners": {
+    "public_http": [
+      "0.0.0.0:80",
+      ":::80"
+    ],
+    "app": "127.0.0.1:3000",
+    "app_socket_owner_pid": 32346,
+    "app_socket_owner": "PM2 master",
+    "ssh": 22,
+    "local_mongod_observed": false
+  },
+  "nginx_configuration": {
+    "/etc/nginx/conf.d/virtual.conf": {
+      "directives": [],
+      "sha256": "50a9fb05d814a84589b43c66f69e454064f7d9c19254845893548318cda78844"
+    },
+    "/etc/nginx/fastcgi.conf": {
+      "directives": [],
+      "sha256": "b2c3d480a58f61f3a7dc61850b461e892e36f236317765a4f2f6d558c928fa57"
+    },
+    "/etc/nginx/nginx.conf": {
+      "directives": [
+        {
+          "directive": "worker_processes auto;",
+          "line": 6
+        },
+        {
+          "directive": "pid /var/run/nginx.pid;",
+          "line": 8
+        },
+        {
+          "directive": "include /usr/share/nginx/modules/*.conf;",
+          "line": 11
+        },
+        {
+          "directive": "worker_connections 1024;",
+          "line": 14
+        },
+        {
+          "directive": "keepalive_timeout   65;",
+          "line": 27
+        },
+        {
+          "directive": "include             /etc/nginx/mime.types;",
+          "line": 30
+        },
+        {
+          "directive": "include /etc/nginx/conf.d/*.conf;",
+          "line": 36
+        },
+        {
+          "directive": "listen       80 default_server;",
+          "line": 41
+        },
+        {
+          "directive": "listen       [::]:80 default_server;",
+          "line": 42
+        },
+        {
+          "directive": "server_name  localhost;",
+          "line": 43
+        },
+        {
+          "directive": "root         /usr/share/nginx/html;",
+          "line": 44
+        },
+        {
+          "directive": "include /etc/nginx/default.d/*.conf;",
+          "line": 47
+        },
+        {
+          "directive": "location / {",
+          "line": 49
+        },
+        {
+          "directive": "proxy_pass http://127.0.0.1:3000/;",
+          "line": 54
+        },
+        {
+          "directive": "location = /40x.html {",
+          "line": 61
+        },
+        {
+          "directive": "location = /50x.html {",
+          "line": 67
+        }
+      ],
+      "sha256": "bca608664cd1ef8c3c3476dc011eaeb782dc5c53756df5c4a0b9880374a66b94"
+    }
+  },
+  "nginx_headers": [
+    {
+      "header": "X-Real-IP",
+      "value": "$remote_addr"
+    },
+    {
+      "header": "X-Forwarded-For",
+      "value": "$proxy_add_x_forwarded_for"
+    },
+    {
+      "header": "Host",
+      "value": "$http_host"
+    },
+    {
+      "header": "X-NginX-Proxy",
+      "value": "[omitted]"
+    }
+  ],
+  "nginx_other": [
+    "error_log /var/log/nginx/error.log;",
+    "access_log  /var/log/nginx/access.log  main;"
+  ],
+  "configuration_selected_ast": {
+    "ipAddress": {
+      "operator": "||",
+      "left": {
+        "env": "OPENSHIFT_NODEJS_IP"
+      },
+      "right": {
+        "literal": "127.0.0.1"
+      }
+    },
+    "port": {
+      "operator": "||",
+      "left": {
+        "operator": "||",
+        "left": {
+          "env": "OPENSHIFT_NODEJS_PORT"
+        },
+        "right": {
+          "env": "PORT"
+        }
+      },
+      "right": {
+        "literal": "3000"
+      }
+    },
+    "mode": {
+      "operator": "||",
+      "left": {
+        "env": "SERVER_MODE"
+      },
+      "right": {
+        "literal": "service"
+      }
+    },
+    "db.version": {
+      "operator": "||",
+      "left": {
+        "env": "DB_DATA_VERSION"
+      },
+      "right": {
+        "literal": "2.0"
+      }
+    },
+    "db.path": {
+      "operator": "||",
+      "left": {
+        "env": "MONGOLAB_MONGODB_URL"
+      },
+      "right": {
+        "literal": {
+          "scheme": "mongodb:",
+          "hostname": "172.31.19.0",
+          "port": "16652",
+          "path": "/twonlyone",
+          "has_credentials": false
+        }
+      }
+    },
+    "db.database": {
+      "operator": "||",
+      "left": {
+        "env": "MONGOLAB_MONGODB_DATABASE"
+      },
+      "right": {
+        "literal": "twonlyone"
+      }
+    },
+    "serviceServer.url": {
+      "operator": "||",
+      "left": {
+        "env": "SERVICE_SERVER"
+      },
+      "right": {
+        "literal": {
+          "scheme": "http:",
+          "hostname": "tw-svc-spot.wizardfactory.net",
+          "port": "",
+          "path": "/",
+          "has_credentials": false
+        }
+      }
+    },
+    "serviceServer.version": {
+      "operator": "||",
+      "left": {
+        "env": "SERVICE_VERSION"
+      },
+      "right": {
+        "literal": "v000901"
+      }
+    },
+    "apiServer.url": {
+      "operator": "||",
+      "left": {
+        "env": "API_SERVER"
+      },
+      "right": {
+        "literal": {
+          "scheme": "http:",
+          "hostname": "todayweather.wizardfactory.net",
+          "port": "",
+          "path": "/",
+          "has_credentials": false
+        }
+      }
+    },
+    "image.kaq_korea_image.region": {
+      "operator": "||",
+      "left": {
+        "env": "KAQ_KOREA_IMAGE_MAP_REGION"
+      },
+      "right": {
+        "literal": "ap-northeast-2"
+      }
+    },
+    "image.kaq_korea_image.bucketName": {
+      "operator": "||",
+      "left": {
+        "env": "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME"
+      },
+      "right": {
+        "literal": "tw-kaqfs-images"
+      }
+    },
+    "aws.region": {
+      "operator": "||",
+      "left": {
+        "env": "AWS_REGION"
+      },
+      "right": {
+        "literal": "us-east-1"
+      }
+    }
+  },
+  "configuration_mtime_utc": "2019-03-09T13:50:14.020306+00:00",
+  "deployment": {
+    "branch": {
+      "exit_code": 0,
+      "output": "master"
+    },
+    "commit_time": {
+      "exit_code": 0,
+      "output": "2019-03-07T11:02:10+09:00"
+    },
+    "head": {
+      "exit_code": 0,
+      "output": "5bca4073255b41f55a8654b3de395cb033a06f03"
+    },
+    "top_level": [
+      ".git",
+      ".gitignore",
+      ".travis.yml",
+      "LICENSE",
+      "README.md",
+      "applewatch",
+      "client",
+      "image",
+      "server",
+      "ta.ios",
+      "tw.ios"
+    ],
+    "tracked_changes": {
+      "exit_code": 0,
+      "output": "server/config/config.js\nserver/lib/log.js"
+    }
+  },
+  "selected_file_comparison": {
+    "server/app.js": {
+      "host_sha256": "67205d75d90b274fda7169462f35185474c19cc5b406048633bbeadf6c83d42d",
+      "local_sha256": "67205d75d90b274fda7169462f35185474c19cc5b406048633bbeadf6c83d42d",
+      "matches": true
+    },
+    "server/bin/www": {
+      "host_sha256": "13aa19e10f9d135d5dfcba83ab7602321bdc417dde45b5391a6bd37a929e242b",
+      "local_sha256": "13aa19e10f9d135d5dfcba83ab7602321bdc417dde45b5391a6bd37a929e242b",
+      "matches": true
+    },
+    "server/config/config.js": {
+      "host_sha256": "cf00b9aada6b4f2ee57dd06c9efa593eb5098d9d8d27dd3e8889b1cf728b7697",
+      "local_sha256": "4adaa1259a01b637cfa55196b4407849a7939da6300328a867c81fe8ae79fc0d",
+      "matches": false
+    },
+    "server/controllers/controllerManager.js": {
+      "host_sha256": "4106537b0844b015c9d97485579b654639420764ec7546a7bd56bc5dc90504b4",
+      "local_sha256": "7587313da1e4d3943d4ada883e5d1054899ed41ebe4f889fde3703e7f42527df",
+      "matches": false
+    },
+    "server/controllers/controllerTown24h.js": {
+      "host_sha256": "db9769f033d0fbf2797ac947cdf47d930102b80c62934cd0b25954db0d17560d",
+      "local_sha256": "db9769f033d0fbf2797ac947cdf47d930102b80c62934cd0b25954db0d17560d",
+      "matches": true
+    },
+    "server/controllers/kaq.hourly.forecast.controller.js": {
+      "host_sha256": "a0a5332df05fca900036d1e429e26401777e97d47044603670480de7dd42604b",
+      "local_sha256": "a0a5332df05fca900036d1e429e26401777e97d47044603670480de7dd42604b",
+      "matches": true
+    },
+    "server/package.json": {
+      "host_sha256": "bf6bc2a5a7fd8208ad8d57d30440e7a8a98d1d20bb651abedae47aee17119226",
+      "local_sha256": "d535bb0ce97e438e48ce4e127a810ca5afbe8e2757a91e3033092698a2b77088",
+      "matches": false
+    },
+    "server/routes/v000903/index.js": {
+      "host_sha256": "27f091ee376cb35e27934b6f9944ca16c8fac42007cd97a5cecc6346e0b6376a",
+      "local_sha256": "27f091ee376cb35e27934b6f9944ca16c8fac42007cd97a5cecc6346e0b6376a",
+      "matches": true
+    }
+  },
+  "database_socket_observation": {
+    "remote_host": "172.31.19.0",
+    "remote_port": 16652,
+    "state": "ESTABLISHED",
+    "per_worker": {
+      "32391": 10,
+      "32538": 10,
+      "32478": 10,
+      "32398": 10,
+      "32384": 10,
+      "32563": 10,
+      "32409": 10,
+      "32427": 10,
+      "32459": 10,
+      "32509": 10
+    },
+    "total": 100,
+    "interpretation": "Observed TCP to configured Mongo endpoint; no database protocol/query or remote-host inspection."
+  },
+  "aws_instance_correlation": [
+    {
+      "Id": "i-0236094d748e19ec0",
+      "Name": "tw-mongo-ri",
+      "PrivateIp": "172.31.19.0",
+      "PublicIp": "52.79.242.39"
+    },
+    {
+      "Id": "i-089297702b70911ec",
+      "Name": "tw-svc-240714",
+      "PrivateIp": "172.31.62.89",
+      "PublicIp": "13.124.25.12"
+    }
+  ],
+  "operations": {
+    "boot_entries": {
+      "2": [
+        "S85nginx",
+        "S50pm2-ec2-user"
+      ],
+      "3": [
+        "S85nginx",
+        "S50pm2-ec2-user"
+      ],
+      "4": [
+        "S85nginx",
+        "S50pm2-ec2-user"
+      ],
+      "5": [
+        "S85nginx",
+        "S50pm2-ec2-user"
+      ]
+    },
+    "cron": {
+      "ec2-user": {
+        "exists": false,
+        "jobs": []
+      },
+      "root": {
+        "exists": false,
+        "jobs": []
+      }
+    },
+    "installed_dependencies": {
+      "apn": "1.7.8",
+      "async": "2.6.2",
+      "aws-sdk": "2.418.0",
+      "express": "4.13.4",
+      "mongoose": "5.1.2",
+      "newrelic": "4.13.0",
+      "request": "2.88.0"
+    },
+    "log_files": [
+      {
+        "bytes": 6335,
+        "mtime": 1789916188.495231,
+        "path": "/home/ec2-user/.pm2/logs/pm2-logrotate-out.log"
+      },
+      {
+        "bytes": 563551,
+        "mtime": 1789916599.933707,
+        "path": "/home/ec2-user/.pm2/logs/pm2-slack-error.log"
+      },
+      {
+        "bytes": 7566531,
+        "mtime": 1789916430.5366876,
+        "path": "/home/ec2-user/.pm2/logs/www-error-10.log"
+      },
+      {
+        "bytes": 7523373,
+        "mtime": 1789916376.952365,
+        "path": "/home/ec2-user/.pm2/logs/www-error-11.log"
+      },
+      {
+        "bytes": 7676385,
+        "mtime": 1789916442.244758,
+        "path": "/home/ec2-user/.pm2/logs/www-error-2.log"
+      },
+      {
+        "bytes": 7484895,
+        "mtime": 1789916449.056799,
+        "path": "/home/ec2-user/.pm2/logs/www-error-3.log"
+      },
+      {
+        "bytes": 7574763,
+        "mtime": 1789916474.980955,
+        "path": "/home/ec2-user/.pm2/logs/www-error-4.log"
+      },
+      {
+        "bytes": 7673699,
+        "mtime": 1789916503.2891254,
+        "path": "/home/ec2-user/.pm2/logs/www-error-5.log"
+      },
+      {
+        "bytes": 7510752,
+        "mtime": 1789916571.541536,
+        "path": "/home/ec2-user/.pm2/logs/www-error-6.log"
+      },
+      {
+        "bytes": 7772138,
+        "mtime": 1789916597.4256918,
+        "path": "/home/ec2-user/.pm2/logs/www-error-7.log"
+      },
+      {
+        "bytes": 7443827,
+        "mtime": 1789916422.156637,
+        "path": "/home/ec2-user/.pm2/logs/www-error-8.log"
+      },
+      {
+        "bytes": 7554878,
+        "mtime": 1789916427.7326705,
+        "path": "/home/ec2-user/.pm2/logs/www-error-9.log"
+      },
+      {
+        "bytes": 10350681,
+        "mtime": 1789916430.5366876,
+        "path": "/home/ec2-user/.pm2/logs/www-out-10.log"
+      },
+      {
+        "bytes": 9589881,
+        "mtime": 1789916430.5166874,
+        "path": "/home/ec2-user/.pm2/logs/www-out-11.log"
+      },
+      {
+        "bytes": 211499,
+        "mtime": 1789916442.244758,
+        "path": "/home/ec2-user/.pm2/logs/www-out-2.log"
+      },
+      {
+        "bytes": 106227,
+        "mtime": 1789916449.056799,
+        "path": "/home/ec2-user/.pm2/logs/www-out-3.log"
+      },
+      {
+        "bytes": 10411341,
+        "mtime": 1789916474.980955,
+        "path": "/home/ec2-user/.pm2/logs/www-out-4.log"
+      },
+      {
+        "bytes": 425821,
+        "mtime": 1789916503.2891254,
+        "path": "/home/ec2-user/.pm2/logs/www-out-5.log"
+      },
+      {
+        "bytes": 10013685,
+        "mtime": 1789916571.541536,
+        "path": "/home/ec2-user/.pm2/logs/www-out-6.log"
+      },
+      {
+        "bytes": 739272,
+        "mtime": 1789916597.4256918,
+        "path": "/home/ec2-user/.pm2/logs/www-out-7.log"
+      },
+      {
+        "bytes": 10220573,
+        "mtime": 1789916422.156637,
+        "path": "/home/ec2-user/.pm2/logs/www-out-8.log"
+      },
+      {
+        "bytes": 478618,
+        "mtime": 1789916427.7326705,
+        "path": "/home/ec2-user/.pm2/logs/www-out-9.log"
+      },
+      {
+        "bytes": 2124132,
+        "mtime": 1789916597.421692,
+        "path": "/var/log/nginx/access.log"
+      },
+      {
+        "bytes": 4364693,
+        "mtime": 1789906675.2420046,
+        "path": "/var/log/nginx/error.log"
+      }
+    ],
+    "logrotate_config": {
+      "pm2-logrotate": {
+        "compress": false,
+        "dateFormat": "YYYY-MM-DD_HH-mm-ss",
+        "max_size": "10M",
+        "retain": "5",
+        "rotateInterval": "0 0 * * *",
+        "rotateModule": true,
+        "workerInterval": "30"
+      }
+    },
+    "nginx_other": [
+      "error_log /var/log/nginx/error.log;",
+      "access_log  /var/log/nginx/access.log  main;"
+    ],
+    "nginx_proxy_headers": [
+      {
+        "header": "X-Real-IP",
+        "value": "$remote_addr"
+      },
+      {
+        "header": "X-Forwarded-For",
+        "value": "$proxy_add_x_forwarded_for"
+      },
+      {
+        "header": "Host",
+        "value": "$http_host"
+      },
+      {
+        "header": "X-NginX-Proxy",
+        "value": "[omitted]"
+      }
+    ],
+    "nginx_version": "nginx/1.18.0",
+    "observed_at_utc": "2026-09-20T15:03:32.044698Z",
+    "pm2_init": {
+      "pm2_home": "/home/ec2-user/.pm2",
+      "target_user_ec2_user": true,
+      "uses_kill": true,
+      "uses_resurrect": true
+    },
+    "untracked_file_count": 3
+  },
+  "saved_pm2_dump": {
+    "exists": true,
+    "mtime": 1720921507.8140075,
+    "saved_processes": [
+      {
+        "exec_mode": "cluster_mode",
+        "name": "www",
+        "pm_cwd": "/home/ec2-user/tw-svc/server",
+        "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www"
+      },
+      {
+        "exec_mode": "cluster_mode",
+        "name": "www",
+        "pm_cwd": "/home/ec2-user/tw-svc/server",
+        "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www"
+      },
+      {
+        "exec_mode": "cluster_mode",
+        "name": "www",
+        "pm_cwd": "/home/ec2-user/tw-svc/server",
+        "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www"
+      },
+      {
+        "exec_mode": "cluster_mode",
+        "name": "www",
+        "pm_cwd": "/home/ec2-user/tw-svc/server",
+        "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www"
+      },
+      {
+        "exec_mode": "cluster_mode",
+        "name": "www",
+        "pm_cwd": "/home/ec2-user/tw-svc/server",
+        "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www"
+      },
+      {
+        "exec_mode": "cluster_mode",
+        "name": "www",
+        "pm_cwd": "/home/ec2-user/tw-svc/server",
+        "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www"
+      },
+      {
+        "exec_mode": "cluster_mode",
+        "name": "www",
+        "pm_cwd": "/home/ec2-user/tw-svc/server",
+        "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www"
+      },
+      {
+        "exec_mode": "cluster_mode",
+        "name": "www",
+        "pm_cwd": "/home/ec2-user/tw-svc/server",
+        "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www"
+      },
+      {
+        "exec_mode": "cluster_mode",
+        "name": "www",
+        "pm_cwd": "/home/ec2-user/tw-svc/server",
+        "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www"
+      },
+      {
+        "exec_mode": "cluster_mode",
+        "name": "www",
+        "pm_cwd": "/home/ec2-user/tw-svc/server",
+        "pm_exec_path": "/home/ec2-user/tw-svc/server/bin/www"
+      }
+    ]
+  },
+  "collector_script_hashes": {
+    "inventory.py": "28a8d5fb96458b3f578f600c72659bf5e6cfa6f9ae58e440ae2f52411a8eddb4",
+    "runtime.py": "82a69658546b69a20787bc1d04b61069bf70e47a020c10fbdea4ec7ceaca0f2c",
+    "files.py": "b53f5b798f410b33108a1e65d68db2bd59dda6b87ca4ccb79afcaacac896af44",
+    "pm2.py": "da95205adbe95c3a068b6da30f2aa3a350d36561e9ba8774d4b5e3dff9181b01",
+    "operations.py": "4bfedf0725c35118eab66c464094304f2a938dcaf7cb8f35890f28909715d459",
+    "config-summary.js": "2b1b1c73c60055710563eb0b0a2caa0f86da9329be96754a58e0f5c5cbd5de11"
+  },
+  "selected_process_environment_check": {
+    "config_sha256": "cf00b9aada6b4f2ee57dd06c9efa593eb5098d9d8d27dd3e8889b1cf728b7697",
+    "kernel": "4.14.348-187.565.amzn1.x86_64 #1 SMP Sat Jun 29 10:37:25 UTC 2024 x86_64",
+    "observed_at_utc": "2026-09-20T15:10:34.401264Z",
+    "selected_keys": [
+      "SERVER_MODE",
+      "DB_DATA_VERSION",
+      "OPENSHIFT_NODEJS_IP",
+      "OPENSHIFT_NODEJS_PORT",
+      "PORT",
+      "MONGOLAB_MONGODB_URL",
+      "MONGOLAB_MONGODB_DATABASE",
+      "API_SERVER",
+      "SERVICE_SERVER",
+      "SERVICE_VERSION",
+      "KAQ_KOREA_IMAGE_MAP_REGION",
+      "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME"
+    ],
+    "worker_environment_presence": [
+      {
+        "pid": 32384,
+        "present": {
+          "API_SERVER": false,
+          "DB_DATA_VERSION": false,
+          "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME": false,
+          "KAQ_KOREA_IMAGE_MAP_REGION": false,
+          "MONGOLAB_MONGODB_DATABASE": false,
+          "MONGOLAB_MONGODB_URL": false,
+          "OPENSHIFT_NODEJS_IP": false,
+          "OPENSHIFT_NODEJS_PORT": false,
+          "PORT": false,
+          "SERVER_MODE": false,
+          "SERVICE_SERVER": false,
+          "SERVICE_VERSION": false
+        }
+      },
+      {
+        "pid": 32391,
+        "present": {
+          "API_SERVER": false,
+          "DB_DATA_VERSION": false,
+          "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME": false,
+          "KAQ_KOREA_IMAGE_MAP_REGION": false,
+          "MONGOLAB_MONGODB_DATABASE": false,
+          "MONGOLAB_MONGODB_URL": false,
+          "OPENSHIFT_NODEJS_IP": false,
+          "OPENSHIFT_NODEJS_PORT": false,
+          "PORT": false,
+          "SERVER_MODE": false,
+          "SERVICE_SERVER": false,
+          "SERVICE_VERSION": false
+        }
+      },
+      {
+        "pid": 32398,
+        "present": {
+          "API_SERVER": false,
+          "DB_DATA_VERSION": false,
+          "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME": false,
+          "KAQ_KOREA_IMAGE_MAP_REGION": false,
+          "MONGOLAB_MONGODB_DATABASE": false,
+          "MONGOLAB_MONGODB_URL": false,
+          "OPENSHIFT_NODEJS_IP": false,
+          "OPENSHIFT_NODEJS_PORT": false,
+          "PORT": false,
+          "SERVER_MODE": false,
+          "SERVICE_SERVER": false,
+          "SERVICE_VERSION": false
+        }
+      },
+      {
+        "pid": 32409,
+        "present": {
+          "API_SERVER": false,
+          "DB_DATA_VERSION": false,
+          "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME": false,
+          "KAQ_KOREA_IMAGE_MAP_REGION": false,
+          "MONGOLAB_MONGODB_DATABASE": false,
+          "MONGOLAB_MONGODB_URL": false,
+          "OPENSHIFT_NODEJS_IP": false,
+          "OPENSHIFT_NODEJS_PORT": false,
+          "PORT": false,
+          "SERVER_MODE": false,
+          "SERVICE_SERVER": false,
+          "SERVICE_VERSION": false
+        }
+      },
+      {
+        "pid": 32427,
+        "present": {
+          "API_SERVER": false,
+          "DB_DATA_VERSION": false,
+          "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME": false,
+          "KAQ_KOREA_IMAGE_MAP_REGION": false,
+          "MONGOLAB_MONGODB_DATABASE": false,
+          "MONGOLAB_MONGODB_URL": false,
+          "OPENSHIFT_NODEJS_IP": false,
+          "OPENSHIFT_NODEJS_PORT": false,
+          "PORT": false,
+          "SERVER_MODE": false,
+          "SERVICE_SERVER": false,
+          "SERVICE_VERSION": false
+        }
+      },
+      {
+        "pid": 32459,
+        "present": {
+          "API_SERVER": false,
+          "DB_DATA_VERSION": false,
+          "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME": false,
+          "KAQ_KOREA_IMAGE_MAP_REGION": false,
+          "MONGOLAB_MONGODB_DATABASE": false,
+          "MONGOLAB_MONGODB_URL": false,
+          "OPENSHIFT_NODEJS_IP": false,
+          "OPENSHIFT_NODEJS_PORT": false,
+          "PORT": false,
+          "SERVER_MODE": false,
+          "SERVICE_SERVER": false,
+          "SERVICE_VERSION": false
+        }
+      },
+      {
+        "pid": 32478,
+        "present": {
+          "API_SERVER": false,
+          "DB_DATA_VERSION": false,
+          "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME": false,
+          "KAQ_KOREA_IMAGE_MAP_REGION": false,
+          "MONGOLAB_MONGODB_DATABASE": false,
+          "MONGOLAB_MONGODB_URL": false,
+          "OPENSHIFT_NODEJS_IP": false,
+          "OPENSHIFT_NODEJS_PORT": false,
+          "PORT": false,
+          "SERVER_MODE": false,
+          "SERVICE_SERVER": false,
+          "SERVICE_VERSION": false
+        }
+      },
+      {
+        "pid": 32509,
+        "present": {
+          "API_SERVER": false,
+          "DB_DATA_VERSION": false,
+          "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME": false,
+          "KAQ_KOREA_IMAGE_MAP_REGION": false,
+          "MONGOLAB_MONGODB_DATABASE": false,
+          "MONGOLAB_MONGODB_URL": false,
+          "OPENSHIFT_NODEJS_IP": false,
+          "OPENSHIFT_NODEJS_PORT": false,
+          "PORT": false,
+          "SERVER_MODE": false,
+          "SERVICE_SERVER": false,
+          "SERVICE_VERSION": false
+        }
+      },
+      {
+        "pid": 32538,
+        "present": {
+          "API_SERVER": false,
+          "DB_DATA_VERSION": false,
+          "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME": false,
+          "KAQ_KOREA_IMAGE_MAP_REGION": false,
+          "MONGOLAB_MONGODB_DATABASE": false,
+          "MONGOLAB_MONGODB_URL": false,
+          "OPENSHIFT_NODEJS_IP": false,
+          "OPENSHIFT_NODEJS_PORT": false,
+          "PORT": false,
+          "SERVER_MODE": false,
+          "SERVICE_SERVER": false,
+          "SERVICE_VERSION": false
+        }
+      },
+      {
+        "pid": 32563,
+        "present": {
+          "API_SERVER": false,
+          "DB_DATA_VERSION": false,
+          "KAQ_KOREA_IMAGE_MAP_BUCKET_NAME": false,
+          "KAQ_KOREA_IMAGE_MAP_REGION": false,
+          "MONGOLAB_MONGODB_DATABASE": false,
+          "MONGOLAB_MONGODB_URL": false,
+          "OPENSHIFT_NODEJS_IP": false,
+          "OPENSHIFT_NODEJS_PORT": false,
+          "PORT": false,
+          "SERVER_MODE": false,
+          "SERVICE_SERVER": false,
+          "SERVICE_VERSION": false
+        }
+      }
+    ]
+  }
+}

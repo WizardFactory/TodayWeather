@@ -1,0 +1,74 @@
+[
+  {
+    "diagram_type": "architecture",
+    "output": "docs/architecture/diagrams/service-overview.html",
+    "specification_sha256": "50c6756acf24bdca03cc6c0cf271ee1041d652b33b9e20580d66a45c7da2815b",
+    "artifact_sha256": "e3b8911938b53cfa78636f0236ccb894fe753b0c1f7538973a839bfd7ae2653c",
+    "validation": "9/9 showcase, 0 errors, 0 warnings",
+    "browser_evidence": "pass",
+    "visual_review": "passed",
+    "correction_rounds": 0,
+    "delivery_receipt": "overview-delivery.json",
+    "browser_receipt": "service-overview-browser-command.json"
+  },
+  {
+    "diagram_type": "architecture",
+    "output": "docs/architecture/diagrams/weather-collection.html",
+    "specification_sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838",
+    "artifact_sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06",
+    "validation": "9/9 showcase, 0 errors, 0 warnings",
+    "browser_evidence": "pass",
+    "visual_review": "passed",
+    "correction_rounds": 0,
+    "delivery_receipt": "collection-delivery.json",
+    "browser_receipt": "weather-collection-browser-command.json"
+  },
+  {
+    "diagram_type": "sequence",
+    "output": "docs/architecture/diagrams/mobile-weather-request.html",
+    "specification_sha256": "9d0a564261c9255f8aa68576af3859400e02481a4a269fb27df50f98977c4f73",
+    "artifact_sha256": "036de95cd1e25ae3e131df60d3fd788b10d63d7c0bb0b4103487126e204fd468",
+    "validation": "9/9 showcase, 0 errors, 0 warnings",
+    "browser_evidence": "pass",
+    "visual_review": "passed",
+    "correction_rounds": 1,
+    "delivery_receipt": "mobile-delivery.json",
+    "browser_receipt": "mobile-weather-request-browser-command.json"
+  },
+  {
+    "diagram_type": "architecture",
+    "output": "docs/architecture/diagrams/kaq-image-pipeline.html",
+    "specification_sha256": "472c6d39fbf1836484061c4460e8ba0ce9c8b1427778f30c2e453ce2aa96b274",
+    "artifact_sha256": "e3b0825423d7b4bd678d99d0c7e19bc7ac784128155915d3566377836aef2744",
+    "validation": "9/9 showcase, 0 errors, 0 warnings",
+    "browser_evidence": "pass",
+    "visual_review": "passed",
+    "correction_rounds": 1,
+    "delivery_receipt": "kaq-delivery.json",
+    "browser_receipt": "kaq-image-pipeline-browser-command.json"
+  },
+  {
+    "diagram_type": "architecture",
+    "output": "docs/architecture/diagrams/aws-infrastructure.html",
+    "specification_sha256": "4eb98cbd7b2a3f2bda76633ba58b30f9a792a2565cb94d0c4269cbe387dbea6c",
+    "artifact_sha256": "a369e65a5ed63d44a4da512cdca56f167f05049ff6dde3ec83c345c403f75f38",
+    "validation": "9/9 showcase, 0 errors, 0 warnings",
+    "browser_evidence": "pass",
+    "visual_review": "passed",
+    "correction_rounds": 0,
+    "delivery_receipt": "aws-delivery.json",
+    "browser_receipt": "aws-infrastructure-browser-command.json"
+  },
+  {
+    "diagram_type": "architecture",
+    "output": "docs/architecture/diagrams/ec2-internals.html",
+    "specification_sha256": "afbe50d6d54d5334b4992fddc52afec71a403bacfffc0672a56b107a49c63166",
+    "artifact_sha256": "a0624b792cdd4a63cb2ba01f326deb599af831bed993c4e49a4cd36b61484f4e",
+    "validation": "9/9 showcase, 0 errors, 0 warnings",
+    "browser_evidence": "pass",
+    "visual_review": "passed",
+    "correction_rounds": 0,
+    "delivery_receipt": "ec2-delivery.json",
+    "browser_receipt": "ec2-internals-browser-command.json"
+  }
+]

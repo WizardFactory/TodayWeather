@@ -40,4 +40,3 @@ node_modules
 
 # Local EC2 SSH private key
 /.aws/aleckim.pem
-/.aws/credentials

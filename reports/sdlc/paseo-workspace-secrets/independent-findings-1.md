@@ -1,0 +1,2 @@
+# Independent verification, attempt 1
+Verifier context: /root/verify_paseo_setup; builder: /root. AC1 and AC3 passed; most AC2 checks passed. MEDIUM Must Fix: an existing .aws/.gitignore containing wildcard followed by !credentials leaves credentials unignored because grep only checks wildcard presence. Reproduced independently with synthetic values; no real secrets read. Fix required before completion.

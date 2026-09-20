@@ -1,0 +1,8 @@
+{
+  "iteration": 2,
+  "decision": "BLOCKED",
+  "reason": "Independent reviewer found four documentation precision issues; corrected exact loc parameter, coordinate-only cache age, API timeout provenance, and KAQ pixel-derived hourly forecast output. Reconcile upstream candidate/diagram receipts before final review.",
+  "authority_source": "AK authorized documentation scope; independent findings",
+  "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+  "next_action": "Rebind corrected design/build/self-verification then conclude independent review."
+}

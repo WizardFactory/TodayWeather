@@ -1,0 +1,8 @@
+{
+  "iteration": 2,
+  "decision": "BLOCKED",
+  "reason": "Reconcile upstream design receipt after removing redundant mobile response arrow; downstream build attempt cannot reuse stale design hashes. No user decision required.",
+  "authority_source": "Existing local documentation authority",
+  "candidate": "sha256:7cccb1ba89e76b56df1e9ac7de2a7cbd3379445319651b95d62941ca193bdc22",
+  "next_action": "Re-enter design with final bytes then resume unchanged plan/test/build."
+}

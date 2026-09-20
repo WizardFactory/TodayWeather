@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Service EC2: nginx, PM2 and Mongo endpoint",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1260,
+      680
+    ]
+  },
+  "components": [
+    {
+      "id": "ingress",
+      "type": "external",
+      "label": "CloudFront / Lambda",
+      "sublabel": "HTTP service origin",
+      "pos": [
+        35,
+        305
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "nginx",
+      "type": "backend",
+      "label": "nginx 1.18.0",
+      "sublabel": "Public :80 / 2 workers",
+      "pos": [
+        365,
+        305
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "workers",
+      "type": "backend",
+      "label": "10 Node workers",
+      "sublabel": "PM2 cluster / service",
+      "pos": [
+        695,
+        305
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "mongo",
+      "type": "database",
+      "label": "Mongo endpoint",
+      "sublabel": "172.31.19.0:16652",
+      "pos": [
+        1025,
+        305
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "boot",
+      "type": "backend",
+      "label": "SysV startup",
+      "sublabel": "Runlevels 2\u20135",
+      "pos": [
+        365,
+        70
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "pm2",
+      "type": "backend",
+      "label": "PM2 3.3.1",
+      "sublabel": "Shared :3000 listener",
+      "pos": [
+        695,
+        70
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "modules",
+      "type": "backend",
+      "label": "PM2 modules",
+      "sublabel": "logrotate + slack",
+      "pos": [
+        1025,
+        70
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "logs",
+      "type": "database",
+      "label": "Worker logs",
+      "sublabel": "~/.pm2/logs/www-*",
+      "pos": [
+        695,
+        535
+      ],
+      "size": [
+        190,
+        72
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "ingress-nginx",
+      "from": "ingress",
+      "to": "nginx",
+      "label": "HTTP :80"
+    },
+    {
+      "id": "nginx-workers",
+      "from": "nginx",
+      "to": "workers",
+      "label": "127.0.0.1:3000"
+    },
+    {
+      "id": "workers-mongo",
+      "from": "workers",
+      "to": "mongo",
+      "label": "100 TCP connections"
+    },
+    {
+      "id": "boot-nginx",
+      "from": "boot",
+      "to": "nginx",
+      "label": "S85 nginx",
+      "labelDy": 80
+    },
+    {
+      "id": "boot-pm2",
+      "from": "boot",
+      "to": "pm2",
+      "label": "S50 / resurrect"
+    },
+    {
+      "id": "pm2-workers",
+      "from": "pm2",
+      "to": "workers",
+      "label": "Manage / distribute",
+      "labelDy": 80
+    },
+    {
+      "id": "pm2-modules",
+      "from": "pm2",
+      "to": "modules",
+      "label": "Manage"
+    },
+    {
+      "id": "workers-logs",
+      "from": "workers",
+      "to": "logs",
+      "label": "stdout / stderr",
+      "labelDy": 80
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "SSH observed \u00b7 2026-09-20",
+      "items": [
+        "Amazon Linux AMI 2018.03; Node 10.15.3; instance i-089297702b70911ec.",
+        "Deployed: /home/ec2-user/tw-svc at 5bca407, with config / logger edits."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Meaning of the connections",
+      "items": [
+        "Mode service + DB version 2.0; no automatic gather / scrape / push loops.",
+        "Mongo target has live TCP sockets; remote engine and query success not inspected."
+      ]
+    }
+  ]
+}

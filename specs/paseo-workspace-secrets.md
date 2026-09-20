@@ -1,0 +1,2 @@
+# Specification
+Use a self-contained worktree.setup shell string. Require source checkout env; copy only .aws/aleckim.pem (0400) and .aws/credentials (0600). Use umask 077 and .aws mode 0700; refuse a symlink destination directory; preserve existing destination files. Missing source files warn and skip. Add .aws/.gitignore with wildcard so old branches without root ignore rules remain safe. No providers or services start.

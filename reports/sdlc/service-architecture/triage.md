@@ -1,0 +1,10 @@
+# Triage — AWS correlation continuation
+Original source-only analysis is archived under revisions/01-source-only; same task and stage counters continue.
+AK supplied aws-architecture-2026-09-20.md and asked to compare/connect it to code. AK then explicitly authorized necessary read-only AWS CLI inspection using ~/workspace/TodayWeather/.aws/credentials for account 141248341265.
+Endpoint remains local documentation/instructions/diagrams. No AWS mutation, Lambda invocation, host execution, runtime probes, deployment, commit or publication.
+Preserve existing source-only working files and original credential file. A fresh CLI-only venv was installed under /tmp because AWS CLI was not on PATH; no repository dependency or existing audit environment changed.
+Read uploaded report and found referenced evidence JSON and repository inventory at /root/workspace/TodayWeather/docs/architecture. Source baseline still b9795125a1b7dc8a4f7602d4612a6be7d79413ad. Current product tree remains unchanged.
+Acceptance continues AC1–AC4, now adding evidence-class distinctions and AWS/source correlation. Fresh routing and Lambda source inspection can refine the formerly unknown public API boundary; do not infer runtime sockets or deployed EC2 revisions.
+
+## EC2 host inspection continuation
+AK explicitly requests SSH using local .aws/aleckim.pem to ec2-user@ec2-13-124-25-12.ap-northeast-2.compute.amazonaws.com, analysis of host internals, document updates and added/refreshed diagrams. Same local documentation task and AC1–AC4. Existing shared SSH access guide and private-key ignore rule were added since previous candidate; preserve them. Prior AWS-correlated artifacts archived under revisions/02-aws-correlated. Read-only remote commands; no restart, deployment, config write, application endpoint invocation or database query. Use selected environment fields/connection metadata with secret values suppressed. Initial strict SSH rejected an unknown host key; retry uses accept-new with an isolated local known_hosts file, never disables changed-key checks.

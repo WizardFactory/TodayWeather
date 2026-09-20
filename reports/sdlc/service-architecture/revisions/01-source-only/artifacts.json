@@ -1,0 +1,2490 @@
+{
+  "schema_version": 1,
+  "task_id": "service-architecture",
+  "mode": "implementation",
+  "change_kind": "configuration",
+  "endpoint": "local",
+  "criteria": [
+    "AC1",
+    "AC2",
+    "AC3",
+    "AC4"
+  ],
+  "created_at": "2026-09-20T13:14:19.353873+00:00",
+  "events": [
+    {
+      "at": "2026-09-20T13:14:19.353938+00:00",
+      "action": "initialized",
+      "stage": null
+    },
+    {
+      "at": "2026-09-20T13:14:19.440764+00:00",
+      "action": "iteration-started",
+      "stage": "triage",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:15:45.497138+00:00",
+      "action": "iteration-finished",
+      "stage": "triage",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    },
+    {
+      "at": "2026-09-20T13:15:45.661989+00:00",
+      "action": "iteration-started",
+      "stage": "intent",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:15:45.816583+00:00",
+      "action": "iteration-finished",
+      "stage": "intent",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    },
+    {
+      "at": "2026-09-20T13:15:45.978362+00:00",
+      "action": "iteration-started",
+      "stage": "investigation",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:25:10.921763+00:00",
+      "action": "iteration-finished",
+      "stage": "investigation",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    },
+    {
+      "at": "2026-09-20T13:25:11.093316+00:00",
+      "action": "iteration-started",
+      "stage": "spec",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:25:11.275493+00:00",
+      "action": "iteration-finished",
+      "stage": "spec",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    },
+    {
+      "at": "2026-09-20T13:25:11.462923+00:00",
+      "action": "iteration-started",
+      "stage": "design",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:30:46.914253+00:00",
+      "action": "iteration-finished",
+      "stage": "design",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    },
+    {
+      "at": "2026-09-20T13:30:47.138324+00:00",
+      "action": "iteration-started",
+      "stage": "plan",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:30:47.457733+00:00",
+      "action": "iteration-finished",
+      "stage": "plan",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    },
+    {
+      "at": "2026-09-20T13:30:47.721643+00:00",
+      "action": "iteration-started",
+      "stage": "test-design",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:30:48.041167+00:00",
+      "action": "iteration-finished",
+      "stage": "test-design",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    },
+    {
+      "at": "2026-09-20T13:30:48.348512+00:00",
+      "action": "iteration-started",
+      "stage": "build",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:32:05.439885+00:00",
+      "action": "iteration-finished",
+      "stage": "build",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    },
+    {
+      "at": "2026-09-20T13:32:05.695112+00:00",
+      "action": "iteration-started",
+      "stage": "self-verification",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:33:34.689084+00:00",
+      "action": "iteration-finished",
+      "stage": "self-verification",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    },
+    {
+      "at": "2026-09-20T13:33:35.154007+00:00",
+      "action": "iteration-started",
+      "stage": "independent-verification",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:34:51.373943+00:00",
+      "action": "iteration-finished",
+      "stage": "independent-verification",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    },
+    {
+      "at": "2026-09-20T13:34:51.638146+00:00",
+      "action": "iteration-started",
+      "stage": "completion",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-20T13:34:51.929851+00:00",
+      "action": "iteration-finished",
+      "stage": "completion",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence."
+    }
+  ],
+  "stages": {
+    "triage": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:14:19.440739+00:00",
+          "objective": "Inspect repository and define local architecture documentation scope",
+          "resolution": null,
+          "inputs": [],
+          "finished_at": "2026-09-20T13:15:45.497075+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "base:b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [],
+            "outputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "intent": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:15:45.661955+00:00",
+          "objective": "Record scope and acceptance criteria",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/service-architecture/triage.md",
+              "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+            }
+          ],
+          "finished_at": "2026-09-20T13:15:45.816557+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "base:b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "intent",
+                "path": "intent/service-architecture.md",
+                "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "investigation": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:15:45.978324+00:00",
+          "objective": "Trace collection and client to backend paths",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/service-architecture/triage.md",
+              "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/service-architecture.md",
+              "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+            }
+          ],
+          "finished_at": "2026-09-20T13:25:10.921729+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "base:b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/service-architecture.md",
+                "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/service-architecture/investigation.md",
+                "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "spec": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:25:11.093277+00:00",
+          "objective": "Define evidence and artifact requirements",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/service-architecture/triage.md",
+              "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/service-architecture.md",
+              "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/service-architecture/investigation.md",
+              "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+            }
+          ],
+          "finished_at": "2026-09-20T13:25:11.275456+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "base:b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/service-architecture.md",
+                "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/service-architecture/investigation.md",
+                "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "spec",
+                "path": "specs/service-architecture.md",
+                "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "design": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:25:11.462886+00:00",
+          "objective": "Validate and deliver three source-based Archify views",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/service-architecture/triage.md",
+              "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/service-architecture.md",
+              "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/service-architecture/investigation.md",
+              "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/service-architecture.md",
+              "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+            }
+          ],
+          "finished_at": "2026-09-20T13:30:46.914176+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "base:b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/service-architecture.md",
+                "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/service-architecture/investigation.md",
+                "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/service-architecture.md",
+                "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              },
+              {
+                "kind": "design-validation",
+                "path": "reports/sdlc/service-architecture/design-validation.md",
+                "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+              },
+              {
+                "kind": "diagram-handoff",
+                "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+                "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "plan": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:30:47.138270+00:00",
+          "objective": "Record file operations and validation sequence",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/service-architecture/triage.md",
+              "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/service-architecture.md",
+              "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/service-architecture/investigation.md",
+              "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/service-architecture.md",
+              "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/service-overview.json",
+              "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/weather-collection.json",
+              "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.json",
+              "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/service-overview.html",
+              "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/weather-collection.html",
+              "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/mobile-weather-request.html",
+              "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+            },
+            {
+              "kind": "design-validation",
+              "path": "reports/sdlc/service-architecture/design-validation.md",
+              "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+            },
+            {
+              "kind": "diagram-handoff",
+              "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+              "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+            }
+          ],
+          "finished_at": "2026-09-20T13:30:47.457578+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "base:b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/service-architecture.md",
+                "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/service-architecture/investigation.md",
+                "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/service-architecture.md",
+                "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              },
+              {
+                "kind": "design-validation",
+                "path": "reports/sdlc/service-architecture/design-validation.md",
+                "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+              },
+              {
+                "kind": "diagram-handoff",
+                "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+                "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "plan",
+                "path": "plans/service-architecture.md",
+                "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "test-design": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:30:47.721584+00:00",
+          "objective": "Define link, guidance, browser and independent evaluation checks",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/service-architecture/triage.md",
+              "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/service-architecture.md",
+              "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/service-architecture/investigation.md",
+              "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/service-architecture.md",
+              "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/service-overview.json",
+              "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/weather-collection.json",
+              "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.json",
+              "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/service-overview.html",
+              "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/weather-collection.html",
+              "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/mobile-weather-request.html",
+              "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+            },
+            {
+              "kind": "design-validation",
+              "path": "reports/sdlc/service-architecture/design-validation.md",
+              "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+            },
+            {
+              "kind": "diagram-handoff",
+              "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+              "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+            },
+            {
+              "kind": "plan",
+              "path": "plans/service-architecture.md",
+              "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+            }
+          ],
+          "finished_at": "2026-09-20T13:30:48.041111+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "base:b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/service-architecture.md",
+                "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/service-architecture/investigation.md",
+                "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/service-architecture.md",
+                "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              },
+              {
+                "kind": "design-validation",
+                "path": "reports/sdlc/service-architecture/design-validation.md",
+                "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+              },
+              {
+                "kind": "diagram-handoff",
+                "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+                "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+              },
+              {
+                "kind": "plan",
+                "path": "plans/service-architecture.md",
+                "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/service-architecture/test-plan.md",
+                "sha256": "4c816e27b3932916bccc7cee6f9cb9f06ec5b593724dfc6aa6763b39b055dbe6"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "build": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:30:48.348451+00:00",
+          "objective": "Write source-based documents and canonical shared guidance",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/service-architecture/triage.md",
+              "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/service-architecture.md",
+              "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/service-architecture/investigation.md",
+              "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/service-architecture.md",
+              "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/service-overview.json",
+              "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/weather-collection.json",
+              "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.json",
+              "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/service-overview.html",
+              "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/weather-collection.html",
+              "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/mobile-weather-request.html",
+              "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+            },
+            {
+              "kind": "design-validation",
+              "path": "reports/sdlc/service-architecture/design-validation.md",
+              "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+            },
+            {
+              "kind": "diagram-handoff",
+              "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+              "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+            },
+            {
+              "kind": "plan",
+              "path": "plans/service-architecture.md",
+              "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/service-architecture/test-plan.md",
+              "sha256": "4c816e27b3932916bccc7cee6f9cb9f06ec5b593724dfc6aa6763b39b055dbe6"
+            }
+          ],
+          "finished_at": "2026-09-20T13:32:05.439833+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/service-architecture.md",
+                "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/service-architecture/investigation.md",
+                "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/service-architecture.md",
+                "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              },
+              {
+                "kind": "design-validation",
+                "path": "reports/sdlc/service-architecture/design-validation.md",
+                "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+              },
+              {
+                "kind": "diagram-handoff",
+                "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+                "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+              },
+              {
+                "kind": "plan",
+                "path": "plans/service-architecture.md",
+                "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/service-architecture/test-plan.md",
+                "sha256": "4c816e27b3932916bccc7cee6f9cb9f06ec5b593724dfc6aa6763b39b055dbe6"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "build",
+                "path": "reports/sdlc/service-architecture/build.md",
+                "sha256": "31e0388a93e7b2b4ec32e46e0dcda06c7a387ac267757200b7d84319aae3bb09"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/service-architecture/changes.patch",
+                "sha256": "2da09ccaa05c48b26cea5b499dbd2fff0f2e039bdea157f8c9390db124883028"
+              },
+              {
+                "kind": "candidate-manifest",
+                "path": "reports/sdlc/service-architecture/candidate.json",
+                "sha256": "6bba0c05070c2891382c669a57ad483c1fcfa955542354ec8980e024e9b8738f"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "AGENTS.md",
+                "sha256": "8082585dfb4f5c5d86f1e31d2decb93bce4bc254b2ca167619f6677e3fc13b20"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "CLAUDE.md",
+                "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "README.md",
+                "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/README.md",
+                "sha256": "f6ac7bdf5378794d5086fe03867a200166b251a30a8d49bd583379bd416c63d4"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/evidence.md",
+                "sha256": "ad5f25e99144ff4534163ad96720cba3437efceacdedd061ea90270f39231322"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/mobile-api.md",
+                "sha256": "a3d15996a385329688fea0c47c29896f3c65331d7d79d99846ce7a5278ccb01c"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/service-overview.md",
+                "sha256": "4b86577c0aa5ba7b310ef03a77954ff90aeb8b22021d9ea3cdc2944219c58150"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/weather-collection.md",
+                "sha256": "b2064102d5e6d0d2650f49a5c88c71ac7dbde63cb2adffefc6eb80b276d4600e"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "self-verification": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:32:05.695049+00:00",
+          "objective": "Check documents, shared guidance and final diagram evidence",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/service-architecture/triage.md",
+              "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/service-architecture.md",
+              "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/service-architecture/investigation.md",
+              "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/service-architecture.md",
+              "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/service-overview.json",
+              "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/weather-collection.json",
+              "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.json",
+              "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/service-overview.html",
+              "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/weather-collection.html",
+              "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/mobile-weather-request.html",
+              "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+            },
+            {
+              "kind": "design-validation",
+              "path": "reports/sdlc/service-architecture/design-validation.md",
+              "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+            },
+            {
+              "kind": "diagram-handoff",
+              "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+              "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+            },
+            {
+              "kind": "plan",
+              "path": "plans/service-architecture.md",
+              "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/service-architecture/test-plan.md",
+              "sha256": "4c816e27b3932916bccc7cee6f9cb9f06ec5b593724dfc6aa6763b39b055dbe6"
+            },
+            {
+              "kind": "build",
+              "path": "reports/sdlc/service-architecture/build.md",
+              "sha256": "31e0388a93e7b2b4ec32e46e0dcda06c7a387ac267757200b7d84319aae3bb09"
+            },
+            {
+              "kind": "change-record",
+              "path": "reports/sdlc/service-architecture/changes.patch",
+              "sha256": "2da09ccaa05c48b26cea5b499dbd2fff0f2e039bdea157f8c9390db124883028"
+            },
+            {
+              "kind": "candidate-manifest",
+              "path": "reports/sdlc/service-architecture/candidate.json",
+              "sha256": "6bba0c05070c2891382c669a57ad483c1fcfa955542354ec8980e024e9b8738f"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "AGENTS.md",
+              "sha256": "8082585dfb4f5c5d86f1e31d2decb93bce4bc254b2ca167619f6677e3fc13b20"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "CLAUDE.md",
+              "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "README.md",
+              "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/README.md",
+              "sha256": "f6ac7bdf5378794d5086fe03867a200166b251a30a8d49bd583379bd416c63d4"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/evidence.md",
+              "sha256": "ad5f25e99144ff4534163ad96720cba3437efceacdedd061ea90270f39231322"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/mobile-api.md",
+              "sha256": "a3d15996a385329688fea0c47c29896f3c65331d7d79d99846ce7a5278ccb01c"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/service-overview.md",
+              "sha256": "4b86577c0aa5ba7b310ef03a77954ff90aeb8b22021d9ea3cdc2944219c58150"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/weather-collection.md",
+              "sha256": "b2064102d5e6d0d2650f49a5c88c71ac7dbde63cb2adffefc6eb80b276d4600e"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/service-overview.json",
+              "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/service-overview.html",
+              "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/weather-collection.json",
+              "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/weather-collection.html",
+              "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.json",
+              "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.html",
+              "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+            }
+          ],
+          "finished_at": "2026-09-20T13:33:34.689016+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/service-architecture.md",
+                "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/service-architecture/investigation.md",
+                "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/service-architecture.md",
+                "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              },
+              {
+                "kind": "design-validation",
+                "path": "reports/sdlc/service-architecture/design-validation.md",
+                "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+              },
+              {
+                "kind": "diagram-handoff",
+                "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+                "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+              },
+              {
+                "kind": "plan",
+                "path": "plans/service-architecture.md",
+                "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/service-architecture/test-plan.md",
+                "sha256": "4c816e27b3932916bccc7cee6f9cb9f06ec5b593724dfc6aa6763b39b055dbe6"
+              },
+              {
+                "kind": "build",
+                "path": "reports/sdlc/service-architecture/build.md",
+                "sha256": "31e0388a93e7b2b4ec32e46e0dcda06c7a387ac267757200b7d84319aae3bb09"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/service-architecture/changes.patch",
+                "sha256": "2da09ccaa05c48b26cea5b499dbd2fff0f2e039bdea157f8c9390db124883028"
+              },
+              {
+                "kind": "candidate-manifest",
+                "path": "reports/sdlc/service-architecture/candidate.json",
+                "sha256": "6bba0c05070c2891382c669a57ad483c1fcfa955542354ec8980e024e9b8738f"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "AGENTS.md",
+                "sha256": "8082585dfb4f5c5d86f1e31d2decb93bce4bc254b2ca167619f6677e3fc13b20"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "CLAUDE.md",
+                "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "README.md",
+                "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/README.md",
+                "sha256": "f6ac7bdf5378794d5086fe03867a200166b251a30a8d49bd583379bd416c63d4"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/evidence.md",
+                "sha256": "ad5f25e99144ff4534163ad96720cba3437efceacdedd061ea90270f39231322"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/mobile-api.md",
+                "sha256": "a3d15996a385329688fea0c47c29896f3c65331d7d79d99846ce7a5278ccb01c"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/service-overview.md",
+                "sha256": "4b86577c0aa5ba7b310ef03a77954ff90aeb8b22021d9ea3cdc2944219c58150"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/weather-collection.md",
+                "sha256": "b2064102d5e6d0d2650f49a5c88c71ac7dbde63cb2adffefc6eb80b276d4600e"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "self-verification",
+                "path": "reports/sdlc/service-architecture/self-verification.md",
+                "sha256": "3079c5a0732e23c281d3cdf2da60dd9dc6529620d348bb367d1645602f3f7a5a"
+              },
+              {
+                "kind": "test-results",
+                "path": "reports/sdlc/service-architecture/test-results.json",
+                "sha256": "3bc776478ff5fdaeb24e637fa0f57d52e7e835a126a53085cf52b89a20de90f5"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-red.log",
+                "sha256": "11a49cdc9f97dd0bdacc19e00cc8abd21b76d233332afe91a53cc5c7ed849fa0"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-green.log",
+                "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-post-refactor.log",
+                "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-smoke.log",
+                "sha256": "c847d74702a580c5a28add82a871dc43f6fcf67942efdd36a68710faa27980a1"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/document-check.log",
+                "sha256": "a9d804ff8b4f331db06a209bbbe3d2769c49c471271edc97c46e0df1144a238b"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/service-overview-browser-command.json",
+                "sha256": "f4b1ee3a7b2de61f88a4da4c4bd32ccfa73e787140f94310525b30584359ffea"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/weather-collection-browser-command.json",
+                "sha256": "abdb10fb179f294b56e90ec8e0c7eccf6719007b0d4df19bcf953fb5d8025ca7"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/mobile-weather-request-browser-command.json",
+                "sha256": "67afec4ffc1ad78f95bea0b552f5d5e84e5da713a932d959d9bdad4df1c4d8ab"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "independent-verification": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:33:35.153956+00:00",
+          "objective": "Separate /root/architecture_verification agent challenges source claims and instruction decisions",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/service-architecture/triage.md",
+              "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/service-architecture.md",
+              "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/service-architecture/investigation.md",
+              "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/service-architecture.md",
+              "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/service-overview.json",
+              "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/weather-collection.json",
+              "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.json",
+              "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/service-overview.html",
+              "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/weather-collection.html",
+              "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/mobile-weather-request.html",
+              "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+            },
+            {
+              "kind": "design-validation",
+              "path": "reports/sdlc/service-architecture/design-validation.md",
+              "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+            },
+            {
+              "kind": "diagram-handoff",
+              "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+              "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+            },
+            {
+              "kind": "plan",
+              "path": "plans/service-architecture.md",
+              "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/service-architecture/test-plan.md",
+              "sha256": "4c816e27b3932916bccc7cee6f9cb9f06ec5b593724dfc6aa6763b39b055dbe6"
+            },
+            {
+              "kind": "build",
+              "path": "reports/sdlc/service-architecture/build.md",
+              "sha256": "31e0388a93e7b2b4ec32e46e0dcda06c7a387ac267757200b7d84319aae3bb09"
+            },
+            {
+              "kind": "change-record",
+              "path": "reports/sdlc/service-architecture/changes.patch",
+              "sha256": "2da09ccaa05c48b26cea5b499dbd2fff0f2e039bdea157f8c9390db124883028"
+            },
+            {
+              "kind": "candidate-manifest",
+              "path": "reports/sdlc/service-architecture/candidate.json",
+              "sha256": "6bba0c05070c2891382c669a57ad483c1fcfa955542354ec8980e024e9b8738f"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "AGENTS.md",
+              "sha256": "8082585dfb4f5c5d86f1e31d2decb93bce4bc254b2ca167619f6677e3fc13b20"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "CLAUDE.md",
+              "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "README.md",
+              "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/README.md",
+              "sha256": "f6ac7bdf5378794d5086fe03867a200166b251a30a8d49bd583379bd416c63d4"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/evidence.md",
+              "sha256": "ad5f25e99144ff4534163ad96720cba3437efceacdedd061ea90270f39231322"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/mobile-api.md",
+              "sha256": "a3d15996a385329688fea0c47c29896f3c65331d7d79d99846ce7a5278ccb01c"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/service-overview.md",
+              "sha256": "4b86577c0aa5ba7b310ef03a77954ff90aeb8b22021d9ea3cdc2944219c58150"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/weather-collection.md",
+              "sha256": "b2064102d5e6d0d2650f49a5c88c71ac7dbde63cb2adffefc6eb80b276d4600e"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/service-overview.json",
+              "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/service-overview.html",
+              "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/weather-collection.json",
+              "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/weather-collection.html",
+              "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.json",
+              "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.html",
+              "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+            },
+            {
+              "kind": "self-verification",
+              "path": "reports/sdlc/service-architecture/self-verification.md",
+              "sha256": "3079c5a0732e23c281d3cdf2da60dd9dc6529620d348bb367d1645602f3f7a5a"
+            },
+            {
+              "kind": "test-results",
+              "path": "reports/sdlc/service-architecture/test-results.json",
+              "sha256": "3bc776478ff5fdaeb24e637fa0f57d52e7e835a126a53085cf52b89a20de90f5"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/guidance-red.log",
+              "sha256": "11a49cdc9f97dd0bdacc19e00cc8abd21b76d233332afe91a53cc5c7ed849fa0"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/guidance-green.log",
+              "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/guidance-post-refactor.log",
+              "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/guidance-smoke.log",
+              "sha256": "c847d74702a580c5a28add82a871dc43f6fcf67942efdd36a68710faa27980a1"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/document-check.log",
+              "sha256": "a9d804ff8b4f331db06a209bbbe3d2769c49c471271edc97c46e0df1144a238b"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/service-overview-browser-command.json",
+              "sha256": "f4b1ee3a7b2de61f88a4da4c4bd32ccfa73e787140f94310525b30584359ffea"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/weather-collection-browser-command.json",
+              "sha256": "abdb10fb179f294b56e90ec8e0c7eccf6719007b0d4df19bcf953fb5d8025ca7"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/mobile-weather-request-browser-command.json",
+              "sha256": "67afec4ffc1ad78f95bea0b552f5d5e84e5da713a932d959d9bdad4df1c4d8ab"
+            }
+          ],
+          "finished_at": "2026-09-20T13:34:51.373902+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/service-architecture.md",
+                "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/service-architecture/investigation.md",
+                "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/service-architecture.md",
+                "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              },
+              {
+                "kind": "design-validation",
+                "path": "reports/sdlc/service-architecture/design-validation.md",
+                "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+              },
+              {
+                "kind": "diagram-handoff",
+                "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+                "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+              },
+              {
+                "kind": "plan",
+                "path": "plans/service-architecture.md",
+                "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/service-architecture/test-plan.md",
+                "sha256": "4c816e27b3932916bccc7cee6f9cb9f06ec5b593724dfc6aa6763b39b055dbe6"
+              },
+              {
+                "kind": "build",
+                "path": "reports/sdlc/service-architecture/build.md",
+                "sha256": "31e0388a93e7b2b4ec32e46e0dcda06c7a387ac267757200b7d84319aae3bb09"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/service-architecture/changes.patch",
+                "sha256": "2da09ccaa05c48b26cea5b499dbd2fff0f2e039bdea157f8c9390db124883028"
+              },
+              {
+                "kind": "candidate-manifest",
+                "path": "reports/sdlc/service-architecture/candidate.json",
+                "sha256": "6bba0c05070c2891382c669a57ad483c1fcfa955542354ec8980e024e9b8738f"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "AGENTS.md",
+                "sha256": "8082585dfb4f5c5d86f1e31d2decb93bce4bc254b2ca167619f6677e3fc13b20"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "CLAUDE.md",
+                "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "README.md",
+                "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/README.md",
+                "sha256": "f6ac7bdf5378794d5086fe03867a200166b251a30a8d49bd583379bd416c63d4"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/evidence.md",
+                "sha256": "ad5f25e99144ff4534163ad96720cba3437efceacdedd061ea90270f39231322"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/mobile-api.md",
+                "sha256": "a3d15996a385329688fea0c47c29896f3c65331d7d79d99846ce7a5278ccb01c"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/service-overview.md",
+                "sha256": "4b86577c0aa5ba7b310ef03a77954ff90aeb8b22021d9ea3cdc2944219c58150"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/weather-collection.md",
+                "sha256": "b2064102d5e6d0d2650f49a5c88c71ac7dbde63cb2adffefc6eb80b276d4600e"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              },
+              {
+                "kind": "self-verification",
+                "path": "reports/sdlc/service-architecture/self-verification.md",
+                "sha256": "3079c5a0732e23c281d3cdf2da60dd9dc6529620d348bb367d1645602f3f7a5a"
+              },
+              {
+                "kind": "test-results",
+                "path": "reports/sdlc/service-architecture/test-results.json",
+                "sha256": "3bc776478ff5fdaeb24e637fa0f57d52e7e835a126a53085cf52b89a20de90f5"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-red.log",
+                "sha256": "11a49cdc9f97dd0bdacc19e00cc8abd21b76d233332afe91a53cc5c7ed849fa0"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-green.log",
+                "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-post-refactor.log",
+                "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-smoke.log",
+                "sha256": "c847d74702a580c5a28add82a871dc43f6fcf67942efdd36a68710faa27980a1"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/document-check.log",
+                "sha256": "a9d804ff8b4f331db06a209bbbe3d2769c49c471271edc97c46e0df1144a238b"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/service-overview-browser-command.json",
+                "sha256": "f4b1ee3a7b2de61f88a4da4c4bd32ccfa73e787140f94310525b30584359ffea"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/weather-collection-browser-command.json",
+                "sha256": "abdb10fb179f294b56e90ec8e0c7eccf6719007b0d4df19bcf953fb5d8025ca7"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/mobile-weather-request-browser-command.json",
+                "sha256": "67afec4ffc1ad78f95bea0b552f5d5e84e5da713a932d959d9bdad4df1c4d8ab"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "independent-verification",
+                "path": "reports/sdlc/service-architecture/independent-verification.md",
+                "sha256": "f64907a5f5612f5310b60a7412bca2603d72a69bc860a933772073f795f98d24"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            },
+            "verifier": {
+              "independent": true,
+              "context_id": "/root/architecture_verification",
+              "builder_context_id": "/root",
+              "checks": "Independent source inspection, extracted retry/schedule VM checks, 128-link sweep, 14 candidate hashes, actual screenshot review and three shared-instruction decision scenarios. See independent-verification.md."
+            }
+          }
+        }
+      ]
+    },
+    "pr-review": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by implementation/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "correction": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "No correction requested",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "merge": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by implementation/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "completion": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-20T13:34:51.638088+00:00",
+          "objective": "Account for AC1-AC4 and deliver verified local artifacts",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/service-architecture/triage.md",
+              "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/service-architecture.md",
+              "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/service-architecture/investigation.md",
+              "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/service-architecture.md",
+              "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/service-overview.json",
+              "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/weather-collection.json",
+              "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.json",
+              "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/service-overview.html",
+              "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/weather-collection.html",
+              "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/architecture/diagrams/mobile-weather-request.html",
+              "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+            },
+            {
+              "kind": "design-validation",
+              "path": "reports/sdlc/service-architecture/design-validation.md",
+              "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+            },
+            {
+              "kind": "diagram-handoff",
+              "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+              "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+            },
+            {
+              "kind": "plan",
+              "path": "plans/service-architecture.md",
+              "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/service-architecture/test-plan.md",
+              "sha256": "4c816e27b3932916bccc7cee6f9cb9f06ec5b593724dfc6aa6763b39b055dbe6"
+            },
+            {
+              "kind": "build",
+              "path": "reports/sdlc/service-architecture/build.md",
+              "sha256": "31e0388a93e7b2b4ec32e46e0dcda06c7a387ac267757200b7d84319aae3bb09"
+            },
+            {
+              "kind": "change-record",
+              "path": "reports/sdlc/service-architecture/changes.patch",
+              "sha256": "2da09ccaa05c48b26cea5b499dbd2fff0f2e039bdea157f8c9390db124883028"
+            },
+            {
+              "kind": "candidate-manifest",
+              "path": "reports/sdlc/service-architecture/candidate.json",
+              "sha256": "6bba0c05070c2891382c669a57ad483c1fcfa955542354ec8980e024e9b8738f"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "AGENTS.md",
+              "sha256": "8082585dfb4f5c5d86f1e31d2decb93bce4bc254b2ca167619f6677e3fc13b20"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "CLAUDE.md",
+              "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "README.md",
+              "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/README.md",
+              "sha256": "f6ac7bdf5378794d5086fe03867a200166b251a30a8d49bd583379bd416c63d4"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/evidence.md",
+              "sha256": "ad5f25e99144ff4534163ad96720cba3437efceacdedd061ea90270f39231322"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/mobile-api.md",
+              "sha256": "a3d15996a385329688fea0c47c29896f3c65331d7d79d99846ce7a5278ccb01c"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/service-overview.md",
+              "sha256": "4b86577c0aa5ba7b310ef03a77954ff90aeb8b22021d9ea3cdc2944219c58150"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/weather-collection.md",
+              "sha256": "b2064102d5e6d0d2650f49a5c88c71ac7dbde63cb2adffefc6eb80b276d4600e"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/service-overview.json",
+              "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/service-overview.html",
+              "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/weather-collection.json",
+              "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/weather-collection.html",
+              "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.json",
+              "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "docs/architecture/diagrams/mobile-weather-request.html",
+              "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+            },
+            {
+              "kind": "self-verification",
+              "path": "reports/sdlc/service-architecture/self-verification.md",
+              "sha256": "3079c5a0732e23c281d3cdf2da60dd9dc6529620d348bb367d1645602f3f7a5a"
+            },
+            {
+              "kind": "test-results",
+              "path": "reports/sdlc/service-architecture/test-results.json",
+              "sha256": "3bc776478ff5fdaeb24e637fa0f57d52e7e835a126a53085cf52b89a20de90f5"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/guidance-red.log",
+              "sha256": "11a49cdc9f97dd0bdacc19e00cc8abd21b76d233332afe91a53cc5c7ed849fa0"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/guidance-green.log",
+              "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/guidance-post-refactor.log",
+              "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/guidance-smoke.log",
+              "sha256": "c847d74702a580c5a28add82a871dc43f6fcf67942efdd36a68710faa27980a1"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/document-check.log",
+              "sha256": "a9d804ff8b4f331db06a209bbbe3d2769c49c471271edc97c46e0df1144a238b"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/service-overview-browser-command.json",
+              "sha256": "f4b1ee3a7b2de61f88a4da4c4bd32ccfa73e787140f94310525b30584359ffea"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/weather-collection-browser-command.json",
+              "sha256": "abdb10fb179f294b56e90ec8e0c7eccf6719007b0d4df19bcf953fb5d8025ca7"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/service-architecture/mobile-weather-request-browser-command.json",
+              "sha256": "67afec4ffc1ad78f95bea0b552f5d5e84e5da713a932d959d9bdad4df1c4d8ab"
+            },
+            {
+              "kind": "independent-verification",
+              "path": "reports/sdlc/service-architecture/independent-verification.md",
+              "sha256": "f64907a5f5612f5310b60a7412bca2603d72a69bc860a933772073f795f98d24"
+            }
+          ],
+          "finished_at": "2026-09-20T13:34:51.929803+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+            "authority_source": "AK current request; intent/service-architecture.md",
+            "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+            "next_action": "Continue next applicable stage within local scope.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/service-architecture/triage.md",
+                "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/service-architecture.md",
+                "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/service-architecture/investigation.md",
+                "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/service-architecture.md",
+                "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              },
+              {
+                "kind": "design-validation",
+                "path": "reports/sdlc/service-architecture/design-validation.md",
+                "sha256": "74e712f0e4a906069dd9fe8979fc7a6ce5d36a0454432574184fbebb80d3614a"
+              },
+              {
+                "kind": "diagram-handoff",
+                "path": "reports/sdlc/service-architecture/diagram-handoff.json",
+                "sha256": "ec57261e2d1ca44fbdfd1ce6f4083085ab917e77c08e91e320a0a7d7309ee44d"
+              },
+              {
+                "kind": "plan",
+                "path": "plans/service-architecture.md",
+                "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/service-architecture/test-plan.md",
+                "sha256": "4c816e27b3932916bccc7cee6f9cb9f06ec5b593724dfc6aa6763b39b055dbe6"
+              },
+              {
+                "kind": "build",
+                "path": "reports/sdlc/service-architecture/build.md",
+                "sha256": "31e0388a93e7b2b4ec32e46e0dcda06c7a387ac267757200b7d84319aae3bb09"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/service-architecture/changes.patch",
+                "sha256": "2da09ccaa05c48b26cea5b499dbd2fff0f2e039bdea157f8c9390db124883028"
+              },
+              {
+                "kind": "candidate-manifest",
+                "path": "reports/sdlc/service-architecture/candidate.json",
+                "sha256": "6bba0c05070c2891382c669a57ad483c1fcfa955542354ec8980e024e9b8738f"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "AGENTS.md",
+                "sha256": "8082585dfb4f5c5d86f1e31d2decb93bce4bc254b2ca167619f6677e3fc13b20"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "CLAUDE.md",
+                "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "README.md",
+                "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/README.md",
+                "sha256": "f6ac7bdf5378794d5086fe03867a200166b251a30a8d49bd583379bd416c63d4"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/evidence.md",
+                "sha256": "ad5f25e99144ff4534163ad96720cba3437efceacdedd061ea90270f39231322"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/mobile-api.md",
+                "sha256": "a3d15996a385329688fea0c47c29896f3c65331d7d79d99846ce7a5278ccb01c"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/service-overview.md",
+                "sha256": "4b86577c0aa5ba7b310ef03a77954ff90aeb8b22021d9ea3cdc2944219c58150"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/weather-collection.md",
+                "sha256": "b2064102d5e6d0d2650f49a5c88c71ac7dbde63cb2adffefc6eb80b276d4600e"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/service-overview.json",
+                "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/service-overview.html",
+                "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/weather-collection.json",
+                "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/weather-collection.html",
+                "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.json",
+                "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "docs/architecture/diagrams/mobile-weather-request.html",
+                "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+              },
+              {
+                "kind": "self-verification",
+                "path": "reports/sdlc/service-architecture/self-verification.md",
+                "sha256": "3079c5a0732e23c281d3cdf2da60dd9dc6529620d348bb367d1645602f3f7a5a"
+              },
+              {
+                "kind": "test-results",
+                "path": "reports/sdlc/service-architecture/test-results.json",
+                "sha256": "3bc776478ff5fdaeb24e637fa0f57d52e7e835a126a53085cf52b89a20de90f5"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-red.log",
+                "sha256": "11a49cdc9f97dd0bdacc19e00cc8abd21b76d233332afe91a53cc5c7ed849fa0"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-green.log",
+                "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-post-refactor.log",
+                "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/guidance-smoke.log",
+                "sha256": "c847d74702a580c5a28add82a871dc43f6fcf67942efdd36a68710faa27980a1"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/document-check.log",
+                "sha256": "a9d804ff8b4f331db06a209bbbe3d2769c49c471271edc97c46e0df1144a238b"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/service-overview-browser-command.json",
+                "sha256": "f4b1ee3a7b2de61f88a4da4c4bd32ccfa73e787140f94310525b30584359ffea"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/weather-collection-browser-command.json",
+                "sha256": "abdb10fb179f294b56e90ec8e0c7eccf6719007b0d4df19bcf953fb5d8025ca7"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/service-architecture/mobile-weather-request-browser-command.json",
+                "sha256": "67afec4ffc1ad78f95bea0b552f5d5e84e5da713a932d959d9bdad4df1c4d8ab"
+              },
+              {
+                "kind": "independent-verification",
+                "path": "reports/sdlc/service-architecture/independent-verification.md",
+                "sha256": "f64907a5f5612f5310b60a7412bca2603d72a69bc860a933772073f795f98d24"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "completion",
+                "path": "reports/sdlc/service-architecture/completion.md",
+                "sha256": "f440cde02cf5b9481fb28f8fa854a67b16416ec1fa8fe279533b9fec2c4626ed"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

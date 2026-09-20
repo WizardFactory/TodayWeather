@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/docs/architecture/diagrams/service-overview.json",
+  "output": "/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/docs/architecture/diagrams/service-overview.html",
+  "specification": {
+    "sha256": "50c6756acf24bdca03cc6c0cf271ee1041d652b33b9e20580d66a45c7da2815b",
+    "bytes": 4122
+  },
+  "artifact": {
+    "sha256": "e3b8911938b53cfa78636f0236ccb894fe753b0c1f7538973a839bfd7ae2653c",
+    "bytes": 806550
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  },
+  "evidence": {
+    "verified": true,
+    "repository": "https://github.com/WizardFactory/TodayWeather",
+    "revision": "b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+    "references": 4,
+    "linkMode": "local-only"
+  }
+}

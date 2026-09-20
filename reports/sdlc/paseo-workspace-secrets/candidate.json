@@ -1,0 +1,20 @@
+{
+  "candidate": "sha256:815cc1a094df90f8cacc4fe016a8f85341fc7ae65fc61c42ea283c5e48d9e536",
+  "files": [
+    {
+      "kind": "candidate-source",
+      "path": "paseo.json",
+      "sha256": "084731feb3ee48f904292a9c068ab7db832065b0a913aea43e5487bf658827db"
+    },
+    {
+      "kind": "candidate-source",
+      "path": ".gitignore",
+      "sha256": "72affabd04d427671167b1f99b78593796f7a412a1e4ebaed6ec9d5dec2c172b"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/ec2-access.md",
+      "sha256": "ff6080b37e2d64a2741ae97f7cac2d89410efc73170316a03fbb785ad45a6a87"
+    }
+  ]
+}

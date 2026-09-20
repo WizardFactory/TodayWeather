@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1250,
+      650
+    ],
+    "title": "KAQ images: producer and consumer",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+      "provider": "github",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "rule",
+      "type": "external",
+      "label": "EventBridge",
+      "sublabel": "UTC minute 5",
+      "pos": [
+        35,
+        280
+      ],
+      "size": [
+        185,
+        70
+      ]
+    },
+    {
+      "id": "copy",
+      "type": "backend",
+      "label": "Copy Lambda",
+      "sublabel": "OCR publication date",
+      "pos": [
+        355,
+        280
+      ],
+      "size": [
+        185,
+        70
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "database",
+      "label": "S3 images",
+      "sublabel": "tw-kaqfs-images",
+      "pos": [
+        685,
+        280
+      ],
+      "size": [
+        185,
+        70
+      ]
+    },
+    {
+      "id": "consumer",
+      "type": "backend",
+      "label": "KAQ consumer",
+      "sublabel": "GIF pixels to forecasts",
+      "pos": [
+        1020,
+        280
+      ],
+      "size": [
+        185,
+        70
+      ],
+      "sources": [
+        {
+          "path": "server/controllers/kaq.hourly.forecast.controller.js"
+        }
+      ]
+    },
+    {
+      "id": "kaq",
+      "type": "external",
+      "label": "KAQ upstream",
+      "sublabel": "Static + animation GIF",
+      "pos": [
+        355,
+        70
+      ],
+      "size": [
+        185,
+        70
+      ]
+    },
+    {
+      "id": "ocr",
+      "type": "external",
+      "label": "Google Vision",
+      "sublabel": "Image text extraction",
+      "pos": [
+        355,
+        510
+      ],
+      "size": [
+        185,
+        70
+      ]
+    },
+    {
+      "id": "mongo",
+      "type": "database",
+      "label": "MongoDB models",
+      "sublabel": "Station hourly forecasts",
+      "pos": [
+        1020,
+        510
+      ],
+      "size": [
+        185,
+        70
+      ],
+      "sources": [
+        {
+          "path": "server/controllers/kaq.hourly.forecast.controller.js"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "schedule",
+      "from": "rule",
+      "to": "copy",
+      "label": "Invoke"
+    },
+    {
+      "id": "kaq-copy",
+      "from": "kaq",
+      "to": "copy",
+      "label": "Read GIFs",
+      "labelDy": 80
+    },
+    {
+      "id": "copy-ocr",
+      "from": "copy",
+      "to": "ocr",
+      "label": "OCR request",
+      "labelDy": 80
+    },
+    {
+      "id": "copy-s3",
+      "from": "copy",
+      "to": "s3",
+      "label": "Upload animation"
+    },
+    {
+      "id": "s3-consumer",
+      "from": "s3",
+      "to": "consumer",
+      "label": "Bucket unverified",
+      "variant": "dashed"
+    },
+    {
+      "id": "consumer-db",
+      "from": "consumer",
+      "to": "mongo",
+      "label": "Save (source)",
+      "variant": "dashed",
+      "labelDy": 80
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Observed failure",
+      "items": [
+        "Recorded 24 h: 24 invocations, 24 errors; sampled logs show missing OCR description.",
+        "The reason for absent OCR text is unverified; no repair or function invocation performed."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Two separate scheduled stages",
+      "items": [
+        "AWS producer hours end at 23; repository consumer list ends at 13 (UTC).",
+        "Object names match; live consumer bucket, mode and completion are unverified."
+      ]
+    }
+  ]
+}

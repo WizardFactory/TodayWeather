@@ -1,0 +1,268 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "TodayWeather AWS infrastructure",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1260,
+      700
+    ]
+  },
+  "components": [
+    {
+      "id": "dns",
+      "type": "cloud",
+      "label": "Route 53",
+      "sublabel": "todayweather DNS",
+      "pos": [
+        35,
+        70
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "photos",
+      "type": "database",
+      "label": "S3 \u00b7 Photos",
+      "sublabel": "today-weather-photos",
+      "pos": [
+        365,
+        70
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "service",
+      "type": "backend",
+      "label": "EC2 \u00b7 Service",
+      "sublabel": "tw-svc-240714 / Spot",
+      "pos": [
+        695,
+        70
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "mongo",
+      "type": "backend",
+      "label": "EC2 \u00b7 Mongo role",
+      "sublabel": "tw-mongo-ri",
+      "pos": [
+        1025,
+        70
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "cdn",
+      "type": "cloud",
+      "label": "CloudFront",
+      "sublabel": "E3QLRH0LJD07QR",
+      "pos": [
+        35,
+        305
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "rest",
+      "type": "cloud",
+      "label": "API Gateway REST",
+      "sublabel": "5hktkqusyb / production",
+      "pos": [
+        365,
+        305
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "handlers",
+      "type": "backend",
+      "label": "API Lambdas (4)",
+      "sublabel": "Weather + geocode",
+      "pos": [
+        695,
+        305
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "dynamo",
+      "type": "database",
+      "label": "DynamoDB",
+      "sublabel": "Address + geocode cache",
+      "pos": [
+        1025,
+        305
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "schedule",
+      "type": "messagebus",
+      "label": "EventBridge",
+      "sublabel": "KAQ schedule / UTC",
+      "pos": [
+        35,
+        540
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "copier",
+      "type": "backend",
+      "label": "KAQ copy Lambda",
+      "sublabel": "copyKaqfsImagesToS3",
+      "pos": [
+        365,
+        540
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "images",
+      "type": "database",
+      "label": "S3 \u00b7 KAQ images",
+      "sublabel": "tw-kaqfs-images",
+      "pos": [
+        695,
+        540
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "gather",
+      "type": "backend",
+      "label": "EC2 \u00b7 Gather role",
+      "sublabel": "tw-gather-20230821 / Spot",
+      "pos": [
+        1025,
+        540
+      ],
+      "size": [
+        190,
+        72
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "dns-cdn",
+      "from": "dns",
+      "to": "cdn",
+      "label": "CNAME",
+      "labelDy": 80
+    },
+    {
+      "id": "cdn-rest",
+      "from": "cdn",
+      "to": "rest",
+      "label": "weather/*, geocode/*",
+      "labelDy": 24
+    },
+    {
+      "id": "rest-handlers",
+      "from": "rest",
+      "to": "handlers",
+      "label": "GET \u2192 Lambda proxy"
+    },
+    {
+      "id": "handlers-dynamo",
+      "from": "handlers",
+      "to": "dynamo",
+      "label": "Geocode cache"
+    },
+    {
+      "id": "handlers-service",
+      "from": "handlers",
+      "to": "service",
+      "label": "Weather coord / HTTP"
+    },
+    {
+      "id": "cdn-service",
+      "from": "cdn",
+      "to": "service",
+      "label": "Default + push / HTTP",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "cdn-photos",
+      "from": "cdn",
+      "to": "photos",
+      "label": "photos/*"
+    },
+    {
+      "id": "schedule-copier",
+      "from": "schedule",
+      "to": "copier",
+      "label": "Minute 5 / invoke"
+    },
+    {
+      "id": "copier-images",
+      "from": "copier",
+      "to": "images",
+      "label": "GIF upload"
+    },
+    {
+      "id": "images-gather",
+      "from": "images",
+      "to": "gather",
+      "label": "Consumer unverified",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Account 141248341265 \u00b7 observed 2026-09-20",
+      "items": [
+        "EC2 / API / Lambda: ap-northeast-2; Route 53 / CloudFront: global.",
+        "Control-plane routes + deployed Lambda code; external providers omitted."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Deployment limits",
+      "items": [
+        "Named EC2 roles are inventory; host processes and Mongo connections unverified.",
+        "Dashed S3 consumer link is inferred from repository code; weather address returns 501."
+      ]
+    }
+  ]
+}

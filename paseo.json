@@ -1,0 +1,5 @@
+{
+  "worktree": {
+    "setup": "set -eu\n: \"${PASEO_SOURCE_CHECKOUT_PATH:?Paseo source checkout path is required}\"\numask 077\nif [ -L .aws ]; then\n  printf '%s\\n' 'Refusing a symlink at workspace .aws.' >&2\n  exit 1\nfi\nmkdir -p .aws\nchmod 700 .aws\nif [ -L .aws/.gitignore ]; then\n  printf '%s\\n' 'Refusing a symlink at .aws/.gitignore.' >&2\n  exit 1\nfi\nif [ \"$(tail -n 1 .aws/.gitignore 2>/dev/null || true)\" != '*' ]; then\n  printf '\\n*\\n' >> .aws/.gitignore\nfi\nfor name in aleckim.pem credentials; do\n  target=\".aws/$name\"\n  source=\"$PASEO_SOURCE_CHECKOUT_PATH/.aws/$name\"\n  if [ -e \"$target\" ] || [ -L \"$target\" ]; then\n    printf 'Keeping existing %s.\\n' \"$target\"\n  elif [ -f \"$source\" ]; then\n    case \"$name\" in\n      aleckim.pem) mode=400 ;;\n      credentials) mode=600 ;;\n    esac\n    install -m \"$mode\" \"$source\" \"$target\"\n    printf 'Copied %s from source checkout.\\n' \"$target\"\n  else\n    printf 'Source .aws/%s is unavailable; skipping.\\n' \"$name\" >&2\n  fi\ndone"
+  }
+}
