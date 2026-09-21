@@ -1,9 +1,9 @@
 {
-  "iteration": 4,
+  "iteration": 5,
   "decision": "PROCEED",
   "reason": "Deliverable assessed against the authorized local scope and source evidence.",
   "authority_source": "AK current request; intent/service-architecture.md",
-  "candidate": "sha256:c373d00c03953b5d8eec776b3cdd05517c163312a699010e2561411c6e444f73",
+  "candidate": "sha256:e6eaf244f617ef5deb3c069de5fb6c2470e4ef1af4a777ff08947c3b71dbb996",
   "next_action": "Continue next applicable stage within local scope.",
   "inputs": [
     {
@@ -128,13 +128,13 @@
     },
     {
       "kind": "build",
-      "path": "reports/sdlc/service-architecture/build.md",
-      "sha256": "eeffa74540e888c45c16999a4b5b4b58fcd3da2d713499ef969d35f7e2d4b2e3"
+      "path": "reports/sdlc/service-architecture/publication-cleanup/build.md",
+      "sha256": "1944c3e1304277fde18c49b66eecc1ba1dcd81803f1b516c86e2531e537a9541"
     },
     {
       "kind": "change-record",
       "path": "reports/sdlc/service-architecture/changes.patch",
-      "sha256": "456571372b0e405af4f82dd0806ec1d46dc47830190cdbf49fbc9d6e2ea1512c"
+      "sha256": "c7f52fccb44b75a58928aa6c3312990f8da8107b071c7ce85a47452598028ffb"
     },
     {
       "kind": "candidate-source",
@@ -159,7 +159,7 @@
     {
       "kind": "candidate-source",
       "path": "docs/architecture/README.md",
-      "sha256": "65c3d3589465edbc329c24fbbfc34824c271fe2de9405d0555e661d45d376084"
+      "sha256": "23de8102c6847bfa7772e7b261d11bd7216151295605231b766d187d97be8eaa"
     },
     {
       "kind": "candidate-source",
@@ -270,18 +270,397 @@
       "kind": "candidate-source",
       "path": "docs/architecture/diagrams/ec2-internals.html",
       "sha256": "a0624b792cdd4a63cb2ba01f326deb599af831bed993c4e49a4cd36b61484f4e"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/publication-cleanup/scope.md",
+      "sha256": "8f055069f9f3ea0f7dbd2918a8c9fb3a1ffa68aad631684eb62df8a7c13f5fd6"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/publication-cleanup/removed-snapshots.json",
+      "sha256": "7a74cf05b8d8d170db0adb3ddc9e76d1d89d70379a0621aa04eb76e742277a06"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/publication-cleanup/check.py",
+      "sha256": "dbe37afe7831c4619f1d9a91124ac8216905a8da6e96ee0ddca0233645add281"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/README.md",
+      "sha256": "6922f3310c6fdc1286e702b21d6ff5c8b77a2a57c01151835fa1ebc181e7a9a4"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/README.md",
+      "sha256": "a9cb6477f79827314443c6841705d97c5ee3d9626eb62b89d4e6a383dc226f7f"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/AGENTS.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/CLAUDE.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/README.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/README.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/mobile-weather-request.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/mobile-weather-request.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/mobile-weather-request.visual-check.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/mobile-weather-request.visual-check.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/service-overview.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/service-overview.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/service-overview.visual-check.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/service-overview.visual-check.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/weather-collection.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/weather-collection.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/weather-collection.visual-check.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/weather-collection.visual-check.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/evidence.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/mobile-api.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/service-overview.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/weather-collection.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/intent/service-architecture.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/plans/service-architecture.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/specs/service-architecture.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/.gitignore",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/AGENTS.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/CLAUDE.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/README.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/README.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/aws-code-correlation.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/aws-readonly-evidence-2026-09-20.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/deployed-lambda-excerpts.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/aws-infrastructure.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/aws-infrastructure.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/aws-infrastructure.visual-check.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/aws-infrastructure.visual-check.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/kaq-image-pipeline.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/kaq-image-pipeline.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/kaq-image-pipeline.visual-check.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/kaq-image-pipeline.visual-check.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/mobile-weather-request.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/mobile-weather-request.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/mobile-weather-request.visual-check.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/mobile-weather-request.visual-check.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/service-overview.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/service-overview.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/service-overview.visual-check.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/service-overview.visual-check.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/weather-collection.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/weather-collection.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/weather-collection.visual-check.html",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/weather-collection.visual-check.json",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/ec2-access.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/evidence.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/mobile-api.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/service-overview.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/weather-collection.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/intent/service-architecture.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/plans/service-architecture.md",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/specs/service-architecture.md",
+      "absent": true,
+      "sha256": null
     }
   ],
   "outputs": [
     {
       "kind": "self-verification",
-      "path": "reports/sdlc/service-architecture/self-verification.md",
-      "sha256": "a9f73b54b1e2f894cf56c252a54bfb414dcc1c2d8a166bde730544a92f265289"
+      "path": "reports/sdlc/service-architecture/publication-cleanup/self-verification.md",
+      "sha256": "0c68f302d3154ce01e4cfd974fed84dab07cbf559003b080c28e900e8301bba8"
     },
     {
       "kind": "test-results",
-      "path": "reports/sdlc/service-architecture/test-results.json",
-      "sha256": "8cbd651c974576e7bd0da46825d1bb4ea494152101bd6a81ac52efe92f4886f5"
+      "path": "reports/sdlc/service-architecture/publication-cleanup/test-results.json",
+      "sha256": "4a5d200bafe4080a705d0c0b7f995defc64d691e31f07fdbfeb59e0f5024c5e6"
     },
     {
       "kind": "execution-log",
@@ -290,58 +669,23 @@
     },
     {
       "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/guidance-green.log",
+      "path": "reports/sdlc/service-architecture/publication-cleanup/guidance-green.log",
       "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
     },
     {
       "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/guidance-post-refactor.log",
+      "path": "reports/sdlc/service-architecture/publication-cleanup/guidance-retained.log",
       "sha256": "406788983df095c46db984bf59c29702c853283f670ca7307bd2f3f682e7db7f"
     },
     {
       "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/guidance-smoke.log",
+      "path": "reports/sdlc/service-architecture/publication-cleanup/guidance-navigation.log",
       "sha256": "c847d74702a580c5a28add82a871dc43f6fcf67942efdd36a68710faa27980a1"
     },
     {
       "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/document-check.log",
-      "sha256": "49d8e3b9e32b5e95e88041bf31e0bbba8e4b42e9edd3a9fdc60f65d8c648caa0"
-    },
-    {
-      "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/service-overview-browser-command.json",
-      "sha256": "58d9c61582dcf1cf6d210f8d4e4e9efa7f73711962b1f29e982d5071f5ffcb99"
-    },
-    {
-      "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/weather-collection-browser-command.json",
-      "sha256": "abdb10fb179f294b56e90ec8e0c7eccf6719007b0d4df19bcf953fb5d8025ca7"
-    },
-    {
-      "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/mobile-weather-request-browser-command.json",
-      "sha256": "166b18267894076b2311ce993b65ea8068acf994f4ea6362f0f1440961657125"
-    },
-    {
-      "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/kaq-image-pipeline-browser-command.json",
-      "sha256": "e84afe068400cfc58f039108b7e091e022dec41d812a7561ec9c3de379636002"
-    },
-    {
-      "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/aws-infrastructure-browser-command.json",
-      "sha256": "d7fb77c2f93cfa896c3089fe68d1c10236c9a54e1bbe426e3443ce2fe180dda6"
-    },
-    {
-      "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/ec2-internals-browser-command.json",
-      "sha256": "efcca4715fa99ef1a59c0ae30cf0a66eb3136a25309e0f7df3b78c31f732a5f0"
-    },
-    {
-      "kind": "execution-log",
-      "path": "reports/sdlc/service-architecture/evidence-safety.log",
-      "sha256": "83fbdb64a1b3d882030685da338d27e767d38070a7c38c8d95de6e94a10fa77c"
+      "path": "reports/sdlc/service-architecture/publication-cleanup/publication-check.log",
+      "sha256": "e742e20b61d474f3d5e36c7a9a371b6720749e1ed3243f9fa73ca5ce441c1260"
     }
   ],
   "assessment": {

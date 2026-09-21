@@ -10,7 +10,7 @@ This is a source-based analysis of TodayWeather and TodayAir at commit `b9795125
 4. [AWS/code correlation](aws-code-correlation.md): current routing, deployed Lambda logic, cache policy, KAQ producer/consumer links and observed failures.
 5. [Service EC2 internals](ec2-internals.md): nginx, PM2 workers, resolved configuration, database sockets and deployed-code differences.
 6. [Evidence and limitations](evidence.md): source map and unresolved integration questions.
-6. [EC2 SSH access](ec2-access.md): user-confirmed connection command and local private-key setup.
+7. [EC2 SSH access](ec2-access.md): user-confirmed connection command and local private-key setup.
 
 ## Interactive diagrams
 

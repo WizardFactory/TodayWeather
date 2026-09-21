@@ -1,0 +1,7 @@
+PASS AGENTS.md: mobile API change reaches mobile-api.md and 3 actual implementation sources
+PASS AGENTS.md: collection freshness investigation reaches weather-collection.md and 3 actual implementation sources
+PASS AGENTS.md: shared skill task resolves canonical scope, both CLI links/hooks and verification requirement
+PASS CLAUDE.md: mobile API change reaches mobile-api.md and 3 actual implementation sources
+PASS CLAUDE.md: collection freshness investigation reaches weather-collection.md and 3 actual implementation sources
+PASS CLAUDE.md: shared skill task resolves canonical scope, both CLI links/hooks and verification requirement
+PASS: 6 local guidance journeys; same canonical file, no runtime/provider actions, no CLI launch claim.
