@@ -617,7 +617,7 @@
       "Id": "i-0236094d748e19ec0",
       "Name": "tw-mongo-ri",
       "PrivateIp": "172.31.19.0",
-      "PublicIp": "52.79.242.39"
+      "PublicIp": "REDACTED_NONPUBLIC_ROLE_ENDPOINT"
     },
     {
       "Id": "i-089297702b70911ec",

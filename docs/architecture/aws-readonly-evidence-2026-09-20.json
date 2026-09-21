@@ -228,7 +228,7 @@
       "State": "running",
       "Type": "m5.large",
       "Lifecycle": null,
-      "PublicIp": "52.79.242.39"
+      "PublicIp": "REDACTED_NONPUBLIC_ROLE_ENDPOINT"
     },
     {
       "Id": "i-089297702b70911ec",
@@ -244,7 +244,7 @@
       "State": "running",
       "Type": "c5.large",
       "Lifecycle": "spot",
-      "PublicIp": "15.165.47.202"
+      "PublicIp": "REDACTED_NONPUBLIC_ROLE_ENDPOINT"
     }
   ],
   "api_gateway": {
