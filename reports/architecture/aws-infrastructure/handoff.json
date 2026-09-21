@@ -1,0 +1,21 @@
+{
+  "diagram_type": "architecture",
+  "output": "docs/architecture/diagrams/aws-infrastructure.html",
+  "source": "docs/architecture/diagrams/aws-infrastructure.json",
+  "specification_sha256": "e88fc769e26bb93177198cb42618536e485748b8bb0243197a95d84d73c6818b",
+  "artifact_sha256": "be9c982684d0651a5307bad4031532c9baac13663fb3726ae56d77a41b69b424",
+  "evidence_source": "docs/architecture/aws-readonly-evidence-2026-09-20.json",
+  "evidence_sha256": "cb40d6b2b0a00b4e0f0ca04137c3c83a7fe0b2e4ff9b4b6666a7b3a23f0d96a3",
+  "evidence_observed_at_utc": "2026-09-20T13:45:01.471959+00:00",
+  "validation": "9/9 showcase; 0 errors; 0 warnings",
+  "browser_evidence": "passed",
+  "visual_review": "passed",
+  "visual_review_scope": "Final HTML captures inspected at 1440x900 light and 2048x1320 dark; earlier identical geometry inspected in inverse themes. No clipping, label collisions or ambiguous junctions observed. Four desktop viewport measurements pass.",
+  "correction_rounds": 3,
+  "limitations": [
+    "Four public Lambda functions grouped into one node.",
+    "EC2 role names do not prove running processes; Mongo network connections omitted.",
+    "S3-to-gather link is an explicitly unverified code-to-host inference.",
+    "No fresh AWS query, cloud changes or runtime probes; reuses 2026-09-20 evidence."
+  ]
+}

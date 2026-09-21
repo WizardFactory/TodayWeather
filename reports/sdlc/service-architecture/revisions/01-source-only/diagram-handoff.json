@@ -1,0 +1,38 @@
+[
+  {
+    "diagram_type": "architecture",
+    "output": "docs/architecture/diagrams/service-overview.html",
+    "specification_sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb",
+    "artifact_sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c",
+    "validation": "9/9 showcase, 0 errors, 0 warnings",
+    "browser_evidence": "pass",
+    "visual_review": "passed",
+    "correction_rounds": 0,
+    "delivery_receipt": "overview-delivery.json",
+    "browser_receipt": "service-overview-browser-command.json"
+  },
+  {
+    "diagram_type": "architecture",
+    "output": "docs/architecture/diagrams/weather-collection.html",
+    "specification_sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838",
+    "artifact_sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06",
+    "validation": "9/9 showcase, 0 errors, 0 warnings",
+    "browser_evidence": "pass",
+    "visual_review": "passed",
+    "correction_rounds": 1,
+    "delivery_receipt": "collection-delivery.json",
+    "browser_receipt": "weather-collection-browser-command.json"
+  },
+  {
+    "diagram_type": "sequence",
+    "output": "docs/architecture/diagrams/mobile-weather-request.html",
+    "specification_sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b",
+    "artifact_sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985",
+    "validation": "9/9 showcase, 0 errors, 0 warnings",
+    "browser_evidence": "pass",
+    "visual_review": "passed",
+    "correction_rounds": 2,
+    "delivery_receipt": "mobile-delivery.json",
+    "browser_receipt": "mobile-weather-request-browser-command.json"
+  }
+]

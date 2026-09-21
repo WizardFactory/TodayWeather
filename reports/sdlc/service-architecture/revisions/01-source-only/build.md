@@ -1,0 +1,6 @@
+# Build record
+Created docs/architecture index, overall service analysis, detailed domestic/world collection analysis, detailed mobile API analysis and evidence map. Added three validated Archify JSON/standalone HTML pairs and retained browser sidecars.
+Created AGENTS.md as canonical shared guidance and CLAUDE.md as @AGENTS.md adapter. Inserted architecture navigation in README without changing original content. No application source, runtime configuration or existing skill changed.
+Candidate identity and exact primary deliverable file set are in candidate.json. The source-tree identity excludes mutable planning and execution ledgers. Actual content diff is retained in changes.patch, including new artifacts.
+Scope follows plans/service-architecture.md. Validation repairs included missing repository metadata/root argument, diagnosed label positions and mobile desktop overflow; final receipts are current. Independent review corrected an ambiguous DB-version fallback claim before final candidate capture.
+Guidance Red: missing canonical file, then Green and post-refactor checks pass. Document/link/artifact checks pass. Real browser checks plus separate instruction decision evaluation provide functional evidence without invoking historical product services.

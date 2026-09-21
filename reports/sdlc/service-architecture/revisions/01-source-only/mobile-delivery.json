@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/docs/architecture/diagrams/mobile-weather-request.json",
+  "output": "/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/docs/architecture/diagrams/mobile-weather-request.html",
+  "specification": {
+    "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b",
+    "bytes": 3057
+  },
+  "artifact": {
+    "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985",
+    "bytes": 804204
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/docs/architecture/diagrams/aws-infrastructure.json",
+  "output": "/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/docs/architecture/diagrams/aws-infrastructure.html",
+  "specification": {
+    "sha256": "e88fc769e26bb93177198cb42618536e485748b8bb0243197a95d84d73c6818b",
+    "bytes": 4944
+  },
+  "artifact": {
+    "sha256": "be9c982684d0651a5307bad4031532c9baac13663fb3726ae56d77a41b69b424",
+    "bytes": 812665
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "iteration": 2,
+  "decision": "PROCEED",
+  "reason": "Scoped deliverable and evidence assessed against the user request.",
+  "authority_source": "User requested paseo.json to copy PEM and credentials into new workspaces; previous request includes base repository.",
+  "candidate": "sha256:815cc1a094df90f8cacc4fe016a8f85341fc7ae65fc61c42ea283c5e48d9e536",
+  "next_action": "Continue local implementation or verification.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/paseo-workspace-secrets/triage.md",
+      "sha256": "a9b7091d50431d5e022eccb072ba157b023ef708c503842a5a9bdcb443f950ad"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/paseo-workspace-secrets.md",
+      "sha256": "e36043a034494f05ee7eba145b9613c5673092c18c1a7fa8bb3665b986477459"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/paseo-workspace-secrets/investigation.md",
+      "sha256": "4a753448697f3582765ab3569e62117e702f63f01570981cded6039842aa8c51"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/paseo-workspace-secrets.md",
+      "sha256": "16836ede92b32b7dd693a2e4df090b85a95485b3ff40bc8d6485ff998c3b1067"
+    },
+    {
+      "kind": "plan",
+      "path": "plans/paseo-workspace-secrets.md",
+      "sha256": "266dc8061e889163cedfa72fe4e2dbc2426d6d97170792ba394dc6d1e0835601"
+    },
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/paseo-workspace-secrets/test-plan.md",
+      "sha256": "890b5c46430b70172d22c91e16a901ed185c35fde7e590f8459b0da77b2a1a91"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/paseo-workspace-secrets/build-correction.md",
+      "sha256": "c6351ff0988f219d8ca9a17c390a672af32c7fa8081227b11180cc83aac6047e"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/paseo-workspace-secrets/changes.md",
+      "sha256": "f14a8384c36e640b378d6e4a80140cbe4f65fdc1b3281c274030a218dc6ac651"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "paseo.json",
+      "sha256": "084731feb3ee48f904292a9c068ab7db832065b0a913aea43e5487bf658827db"
+    },
+    {
+      "kind": "candidate-source",
+      "path": ".gitignore",
+      "sha256": "72affabd04d427671167b1f99b78593796f7a412a1e4ebaed6ec9d5dec2c172b"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/ec2-access.md",
+      "sha256": "ff6080b37e2d64a2741ae97f7cac2d89410efc73170316a03fbb785ad45a6a87"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "self-verification",
+      "path": "reports/sdlc/paseo-workspace-secrets/self-verification-correction.md",
+      "sha256": "220f9a72243eb2799f5304d6905d8f14328fd641d585b754a79c0ac678bf2d8b"
+    },
+    {
+      "kind": "test-results",
+      "path": "reports/sdlc/paseo-workspace-secrets/test-results-correction.json",
+      "sha256": "f518880b477c83a541fcf7bf6bc1bcfdd806b6718fccb30f254a159df4addecd"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/paseo-workspace-secrets/correction-red.log",
+      "sha256": "801e1c6c106da23b718e53ff6a3e15b21ec0a5b0d69d46906a27c0d7d3656542"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/paseo-workspace-secrets/correction-green.log",
+      "sha256": "1a1c7eb9bc77127064fa13cd880ef917cdbfc40a478969260280aa3c1a2f5fcb"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/paseo-workspace-secrets/correction-post-refactor.log",
+      "sha256": "1a1c7eb9bc77127064fa13cd880ef917cdbfc40a478969260280aa3c1a2f5fcb"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/paseo-workspace-secrets/correction-smoke.log",
+      "sha256": "c774277ab1d79aeb6d6f399805c9301c4dd2a7436dc62c237d7e6622f3d29bc3"
+    }
+  ],
+  "assessment": {
+    "assessor": "root-builder",
+    "summary": "Local configuration only; no AWS calls, deployment or remote publication.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+  "authority_source": "AK current request; intent/service-architecture.md",
+  "candidate": "base:b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+  "next_action": "Continue next applicable stage within local scope.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/service-architecture/triage.md",
+      "sha256": "ca0523108016a474abdcf4a7cc8bf94016959787ac8fde682bd0dfdfff28a876"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/service-architecture.md",
+      "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/service-architecture/investigation.md",
+      "sha256": "3bccb582f1a7324d1ce94b76429ee860a86365423aabf4f8e35b844c74210db2"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3",
+      "AC4"
+    ]
+  }
+}

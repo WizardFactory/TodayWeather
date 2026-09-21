@@ -29,3 +29,15 @@ node_modules
 .idea
 
 .DS_Store
+
+# Skill working state and temporary diff snapshots
+/.planning/
+/reports/sdlc/**/.state.lock
+/reports/sdlc/**/changes.patch
+
+# Archify visual-check images (keep all HTML and JSON artifacts)
+*.visual-check.*.png
+
+# Local EC2 SSH private key
+/.aws/aleckim.pem
+/.aws/credentials

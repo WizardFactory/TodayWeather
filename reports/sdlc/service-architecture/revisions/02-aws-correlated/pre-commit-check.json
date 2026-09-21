@@ -1,0 +1,10 @@
+{
+  "event": "validate",
+  "result": {
+    "valid": true,
+    "task_id": "service-architecture",
+    "stage": null,
+    "checkpoint": "pre-commit",
+    "scope": "Local structure, recorded configuration and digest freshness only; verify authority, meaning and remote state separately."
+  }
+}

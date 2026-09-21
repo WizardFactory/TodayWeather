@@ -1,0 +1,62 @@
+{
+  "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+  "base": "b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "8082585dfb4f5c5d86f1e31d2decb93bce4bc254b2ca167619f6677e3fc13b20"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+    },
+    {
+      "path": "README.md",
+      "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325"
+    },
+    {
+      "path": "docs/architecture/README.md",
+      "sha256": "f6ac7bdf5378794d5086fe03867a200166b251a30a8d49bd583379bd416c63d4"
+    },
+    {
+      "path": "docs/architecture/evidence.md",
+      "sha256": "ad5f25e99144ff4534163ad96720cba3437efceacdedd061ea90270f39231322"
+    },
+    {
+      "path": "docs/architecture/mobile-api.md",
+      "sha256": "a3d15996a385329688fea0c47c29896f3c65331d7d79d99846ce7a5278ccb01c"
+    },
+    {
+      "path": "docs/architecture/service-overview.md",
+      "sha256": "4b86577c0aa5ba7b310ef03a77954ff90aeb8b22021d9ea3cdc2944219c58150"
+    },
+    {
+      "path": "docs/architecture/weather-collection.md",
+      "sha256": "b2064102d5e6d0d2650f49a5c88c71ac7dbde63cb2adffefc6eb80b276d4600e"
+    },
+    {
+      "path": "docs/architecture/diagrams/service-overview.json",
+      "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb"
+    },
+    {
+      "path": "docs/architecture/diagrams/service-overview.html",
+      "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c"
+    },
+    {
+      "path": "docs/architecture/diagrams/weather-collection.json",
+      "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+    },
+    {
+      "path": "docs/architecture/diagrams/weather-collection.html",
+      "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+    },
+    {
+      "path": "docs/architecture/diagrams/mobile-weather-request.json",
+      "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b"
+    },
+    {
+      "path": "docs/architecture/diagrams/mobile-weather-request.html",
+      "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985"
+    }
+  ]
+}

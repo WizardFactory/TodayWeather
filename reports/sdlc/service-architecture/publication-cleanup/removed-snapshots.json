@@ -1,0 +1,300 @@
+{
+  "preserved_git_commit": "a99a5bd54b3905c3b038146b7b7967e303b7b55f",
+  "files": [
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/AGENTS.md",
+      "sha256": "8082585dfb4f5c5d86f1e31d2decb93bce4bc254b2ca167619f6677e3fc13b20",
+      "bytes": 6191
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/CLAUDE.md",
+      "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49",
+      "bytes": 11
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/README.md",
+      "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325",
+      "bytes": 4789
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/README.md",
+      "sha256": "f6ac7bdf5378794d5086fe03867a200166b251a30a8d49bd583379bd416c63d4",
+      "bytes": 3230
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/mobile-weather-request.html",
+      "sha256": "91d7902f4741547d712c0c4f7b7a29743db919d38035cd9656a44dac4da69985",
+      "bytes": 804204
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/mobile-weather-request.json",
+      "sha256": "39bce13bb25404d247b0a9f4b774d4e0c1414526e11a7695600e92482cf30c9b",
+      "bytes": 3057
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/mobile-weather-request.visual-check.html",
+      "sha256": "6b51ef2ed57d29e31db07907664aa85bafe26f5d7045c098acda961de2b8b53f",
+      "bytes": 1976
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/mobile-weather-request.visual-check.json",
+      "sha256": "67afec4ffc1ad78f95bea0b552f5d5e84e5da713a932d959d9bdad4df1c4d8ab",
+      "bytes": 16980
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/service-overview.html",
+      "sha256": "cac46d079512a6dc8c61d84cc4b60758b1e263453463cd23360f6cd76db9549c",
+      "bytes": 806666
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/service-overview.json",
+      "sha256": "fc298c98f152b1ffd51b24cf33f618243aa9ab57ee1654dcef61fc6fc8fbd5fb",
+      "bytes": 4392
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/service-overview.visual-check.html",
+      "sha256": "4612c640a29789d35d6999e78f28768c92358fd328e11a76aaca778428402905",
+      "bytes": 1940
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/service-overview.visual-check.json",
+      "sha256": "f4b1ee3a7b2de61f88a4da4c4bd32ccfa73e787140f94310525b30584359ffea",
+      "bytes": 17021
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/weather-collection.html",
+      "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06",
+      "bytes": 806169
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/weather-collection.json",
+      "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838",
+      "bytes": 4516
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/weather-collection.visual-check.html",
+      "sha256": "8710c4c29b00162c09cd510874b4213d56053cf14253492cfba0c2988fd24fe0",
+      "bytes": 1952
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/diagrams/weather-collection.visual-check.json",
+      "sha256": "abdb10fb179f294b56e90ec8e0c7eccf6719007b0d4df19bcf953fb5d8025ca7",
+      "bytes": 17016
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/evidence.md",
+      "sha256": "ad5f25e99144ff4534163ad96720cba3437efceacdedd061ea90270f39231322",
+      "bytes": 5285
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/mobile-api.md",
+      "sha256": "a3d15996a385329688fea0c47c29896f3c65331d7d79d99846ce7a5278ccb01c",
+      "bytes": 13157
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/service-overview.md",
+      "sha256": "4b86577c0aa5ba7b310ef03a77954ff90aeb8b22021d9ea3cdc2944219c58150",
+      "bytes": 8175
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/docs/architecture/weather-collection.md",
+      "sha256": "b2064102d5e6d0d2650f49a5c88c71ac7dbde63cb2adffefc6eb80b276d4600e",
+      "bytes": 12003
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/intent/service-architecture.md",
+      "sha256": "6c1ef44b64df7c188987482e8a017f6e7d1edebf7cfcdbea4b5638e7966a30b0",
+      "bytes": 1015
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/plans/service-architecture.md",
+      "sha256": "c992a95421bf0fa4b1994a2b5ecf2d7c40ab13e2b285847f6cb5552ed8d93b4f",
+      "bytes": 1393
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/01-source-only/deliverables/specs/service-architecture.md",
+      "sha256": "51b9929c862b1be592954c69a66684a42131f3d38baecbbea1b98468b91fb25c",
+      "bytes": 1412
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/.gitignore",
+      "sha256": "74c2688f1c9097589026634b0434f3a21c403b5c9d7c4245187020b41bce6136",
+      "bytes": 802
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/AGENTS.md",
+      "sha256": "52109616b68e7b6f8fdb18c3d9a5ae5365a8870c4e2c26336c5f9b5f5f8235c1",
+      "bytes": 6649
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/CLAUDE.md",
+      "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49",
+      "bytes": 11
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/README.md",
+      "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325",
+      "bytes": 4789
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/README.md",
+      "sha256": "8872fdc2a7688a3d198d1fdd4083a01395ee995bf78062983bcb57b42c3007cc",
+      "bytes": 3828
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/aws-code-correlation.md",
+      "sha256": "5099c2939a88585cb60a9588e1e3918eebcfd52f1c78bf39d20a9e3a745c2bd0",
+      "bytes": 12489
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/aws-readonly-evidence-2026-09-20.json",
+      "sha256": "cb40d6b2b0a00b4e0f0ca04137c3c83a7fe0b2e4ff9b4b6666a7b3a23f0d96a3",
+      "bytes": 27556
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/deployed-lambda-excerpts.md",
+      "sha256": "94ac6ed16215d4a2a8fca3430e80e9109bd22015d89490327204cce4f7b8f08a",
+      "bytes": 13386
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/aws-infrastructure.html",
+      "sha256": "be9c982684d0651a5307bad4031532c9baac13663fb3726ae56d77a41b69b424",
+      "bytes": 812665
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/aws-infrastructure.json",
+      "sha256": "e88fc769e26bb93177198cb42618536e485748b8bb0243197a95d84d73c6818b",
+      "bytes": 4944
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/aws-infrastructure.visual-check.html",
+      "sha256": "92d35ea932b06808a36be6b93ca8ca1c78591eb60e3f4bec785dafad7f15d1c9",
+      "bytes": 1952
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/aws-infrastructure.visual-check.json",
+      "sha256": "a2e21451802c1234a1b0219c6628cf7a2a53e2eafec31bf3aff2884d2e499864",
+      "bytes": 17156
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/kaq-image-pipeline.html",
+      "sha256": "e3b0825423d7b4bd678d99d0c7e19bc7ac784128155915d3566377836aef2744",
+      "bytes": 804296
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/kaq-image-pipeline.json",
+      "sha256": "472c6d39fbf1836484061c4460e8ba0ce9c8b1427778f30c2e453ce2aa96b274",
+      "bytes": 3688
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/kaq-image-pipeline.visual-check.html",
+      "sha256": "05a8ca5b96610a6024d8292be3f4f249c34e6664e8f45e4e1a2a092e03e47a91",
+      "bytes": 1952
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/kaq-image-pipeline.visual-check.json",
+      "sha256": "e84afe068400cfc58f039108b7e091e022dec41d812a7561ec9c3de379636002",
+      "bytes": 16999
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/mobile-weather-request.html",
+      "sha256": "61c0354a58d8f2d4ce907359ff1b175565167a53745d3361e0d5512e731cf980",
+      "bytes": 803544
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/mobile-weather-request.json",
+      "sha256": "fdfdfab5ed5d3aaa108fb7ff1b8e97a6d2628fe9e0d322db6d0a1a219d166db3",
+      "bytes": 2906
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/mobile-weather-request.visual-check.html",
+      "sha256": "6b51ef2ed57d29e31db07907664aa85bafe26f5d7045c098acda961de2b8b53f",
+      "bytes": 1976
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/mobile-weather-request.visual-check.json",
+      "sha256": "748d2fae540922ae8e6dc75a1619df3d6b1496fe36cf164296b6f9659ce52872",
+      "bytes": 16980
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/service-overview.html",
+      "sha256": "bcbc0772a90d226c220e7bc7eda964b5fec3a6de539a7cee9ce7a1b79b293ca8",
+      "bytes": 806583
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/service-overview.json",
+      "sha256": "137046ea44a8c48f82c1e72797a42b260f3a0179338ab3632cb2e25a022856bc",
+      "bytes": 4156
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/service-overview.visual-check.html",
+      "sha256": "4612c640a29789d35d6999e78f28768c92358fd328e11a76aaca778428402905",
+      "bytes": 1940
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/service-overview.visual-check.json",
+      "sha256": "d47169f9f5f2db45dec18cb551ad5349b378fb2813e20fab94d1f38f672d9797",
+      "bytes": 17021
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/weather-collection.html",
+      "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06",
+      "bytes": 806169
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/weather-collection.json",
+      "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838",
+      "bytes": 4516
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/weather-collection.visual-check.html",
+      "sha256": "8710c4c29b00162c09cd510874b4213d56053cf14253492cfba0c2988fd24fe0",
+      "bytes": 1952
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/diagrams/weather-collection.visual-check.json",
+      "sha256": "abdb10fb179f294b56e90ec8e0c7eccf6719007b0d4df19bcf953fb5d8025ca7",
+      "bytes": 17016
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/ec2-access.md",
+      "sha256": "62a5617b750d2ef545b5293c5d10862a09dbe69ff87c7afbb5fda0408ae39f44",
+      "bytes": 1234
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/evidence.md",
+      "sha256": "5eae709ad663d3f89258e0b958119680542208e78e2cbdf3bd309d0c47403052",
+      "bytes": 5435
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/mobile-api.md",
+      "sha256": "9ba4799749270d4f4e4e418d3902618777405b6c283bb53faf31c2e8cd9a5382",
+      "bytes": 13807
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/service-overview.md",
+      "sha256": "44a243823f18a2aff2d36428082650ee022963b8e48e3edd73350abd9234e7f5",
+      "bytes": 8695
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/docs/architecture/weather-collection.md",
+      "sha256": "9cfed69ebcc78e7f4c5a909157ce71fdfae1052f6a6ccc81803ce2db039b7559",
+      "bytes": 12937
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/intent/service-architecture.md",
+      "sha256": "2d1c6bc0e1c1df7ce3a09e2cd406a53cd111f472916d2fb3763832373da9a79e",
+      "bytes": 2059
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/plans/service-architecture.md",
+      "sha256": "23caf096d1abf3e13f396047eeee76082ea753e4bf79ea412479c277332baea1",
+      "bytes": 1982
+    },
+    {
+      "path": "reports/sdlc/service-architecture/revisions/02-aws-correlated/deliverables/specs/service-architecture.md",
+      "sha256": "fb83ecdba5a5a638137afbc4365c8f32f5ac74f373ec90d57d3b06dc770cdeb4",
+      "bytes": 1966
+    }
+  ]
+}

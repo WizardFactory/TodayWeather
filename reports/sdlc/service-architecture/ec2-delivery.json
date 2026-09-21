@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/docs/architecture/diagrams/ec2-internals.json",
+  "output": "/root/.paseo/worktrees/08mqediz/spiteful-bullfrog/docs/architecture/diagrams/ec2-internals.html",
+  "specification": {
+    "sha256": "afbe50d6d54d5334b4992fddc52afec71a403bacfffc0672a56b107a49c63166",
+    "bytes": 3675
+  },
+  "artifact": {
+    "sha256": "a0624b792cdd4a63cb2ba01f326deb599af831bed993c4e49a4cd36b61484f4e",
+    "bytes": 805993
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

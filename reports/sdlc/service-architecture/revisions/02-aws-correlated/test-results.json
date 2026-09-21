@@ -1,0 +1,129 @@
+{
+  "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+  "scenarios": [
+    {
+      "id": "guidance-navigation",
+      "requirement": "AC4",
+      "required": true,
+      "environment": "Local repository filesystem; Python3",
+      "prerequisites": "Canonical AGENTS.md, CLAUDE.md adapter, architecture docs and source files",
+      "actions": "Resolve each entrypoint and follow mobile/collection links; inspect shared skill instructions",
+      "expected": "Both entrypoints resolve identical guidance and reachable implementation sources; six journeys pass",
+      "failure": "Missing import, duplicated rules, broken navigation or missing source",
+      "cleanup": "Read-only; no service or provider actions"
+    }
+  ],
+  "runs": [
+    {
+      "id": "guidance-red",
+      "phase": "red",
+      "candidate": "sha256:316b77b3a5ca92a6f115f396d61bd577b422e768b276bbb5bf105b498f0790cb",
+      "command": "python3 reports/sdlc/service-architecture/guidance-check.py",
+      "exit_code": 1,
+      "environment": "Local Python3 / Node22 / installed Archify2.17 / Chromium",
+      "observed": "Expected assertion: Missing canonical AGENTS.md",
+      "evidence": "reports/sdlc/service-architecture/revisions/01-source-only/guidance-red.log",
+      "status": "passed",
+      "execution_kind": "real",
+      "intended_failure": true
+    },
+    {
+      "id": "guidance-green",
+      "phase": "green",
+      "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+      "command": "python3 reports/sdlc/service-architecture/guidance-check.py",
+      "exit_code": 0,
+      "environment": "Local Python3 / Archify2.17 / Chromium",
+      "observed": "PASS: Codex AGENTS.md and Claude @AGENTS.md resolve one canonical source; required rules and links present.",
+      "evidence": "reports/sdlc/service-architecture/guidance-green.log",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "guidance-final",
+      "phase": "post-refactor",
+      "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+      "command": "python3 reports/sdlc/service-architecture/guidance-check.py",
+      "exit_code": 0,
+      "environment": "Local Python3 / Archify2.17 / Chromium",
+      "observed": "PASS: Codex AGENTS.md and Claude @AGENTS.md resolve one canonical source; required rules and links present.",
+      "evidence": "reports/sdlc/service-architecture/guidance-post-refactor.log",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "guidance-journeys",
+      "phase": "smoke",
+      "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+      "command": "python3 reports/sdlc/service-architecture/guidance-smoke.py",
+      "exit_code": 0,
+      "environment": "Local Python3 / Archify2.17 / Chromium",
+      "observed": "PASS AGENTS.md: mobile API change reaches mobile-api.md and 3 actual implementation sources\nPASS AGENTS.md: collection freshness investigation reaches weather-collection.md and 3 actual implementation sources\nPASS AGENTS.md: shared skill task resolves canonical scope, both CLI links/hooks and verification requirement\nPASS CLAUDE.md: mobile API change reaches mobile-api.md and 3 actual implementation sources\nPASS CLAUDE.md: collection freshness investigation reaches weather-collection.md and 3 actual implementation sources\nPASS CLAUDE.md: shared skill task resolves canonical scope, both CLI links/hooks and verification requirement\nPASS: 6 local guidance journeys; same canonical file, no runtime/provider actions, no CLI launch claim.",
+      "evidence": "reports/sdlc/service-architecture/guidance-smoke.log",
+      "status": "passed",
+      "execution_kind": "real",
+      "scenario_id": "guidance-navigation"
+    },
+    {
+      "id": "documents",
+      "phase": "document",
+      "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+      "command": "python3 reports/sdlc/service-architecture/document-check.py",
+      "exit_code": 0,
+      "environment": "Local Python3 / Archify2.17 / Chromium",
+      "observed": "PASS: 150 local links; 4 evidence sources/specs/HTML/browser bindings; 36 showcase checks; original product files and README content preserved.",
+      "evidence": "reports/sdlc/service-architecture/document-check.log",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "browser-service-overview",
+      "phase": "document",
+      "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+      "command": "Archify visual-check service-overview.html --json",
+      "exit_code": 0,
+      "environment": "Real Chromium desktop measurements",
+      "observed": "Four desktop viewport containment/readability checks, endpoint screenshots in light/dark; unchanged collection evidence reused with identical hash.",
+      "evidence": "reports/sdlc/service-architecture/service-overview-browser-command.json",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "browser-weather-collection",
+      "phase": "document",
+      "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+      "command": "Archify visual-check weather-collection.html --json",
+      "exit_code": 0,
+      "environment": "Real Chromium desktop measurements",
+      "observed": "Four desktop viewport containment/readability checks, endpoint screenshots in light/dark; unchanged collection evidence reused with identical hash.",
+      "evidence": "reports/sdlc/service-architecture/weather-collection-browser-command.json",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "browser-mobile-weather-request",
+      "phase": "document",
+      "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+      "command": "Archify visual-check mobile-weather-request.html --json",
+      "exit_code": 0,
+      "environment": "Real Chromium desktop measurements",
+      "observed": "Four desktop viewport containment/readability checks, endpoint screenshots in light/dark; unchanged collection evidence reused with identical hash.",
+      "evidence": "reports/sdlc/service-architecture/mobile-weather-request-browser-command.json",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "browser-kaq-image-pipeline",
+      "phase": "document",
+      "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+      "command": "Archify visual-check kaq-image-pipeline.html --json",
+      "exit_code": 0,
+      "environment": "Real Chromium desktop measurements",
+      "observed": "Four desktop viewport containment/readability checks, endpoint screenshots in light/dark; unchanged collection evidence reused with identical hash.",
+      "evidence": "reports/sdlc/service-architecture/kaq-image-pipeline-browser-command.json",
+      "status": "passed",
+      "execution_kind": "real"
+    }
+  ],
+  "not_applicable_reason": "Documentation-only AWS continuation; no product behavior edits. Original active-instruction creation red test retained against its original candidate; current canonical guidance and functional file journeys rerun. No product/provider integration tests or live endpoint probes."
+}

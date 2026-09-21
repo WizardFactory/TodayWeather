@@ -1,0 +1,202 @@
+{
+  "iteration": 4,
+  "decision": "PROCEED",
+  "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+  "authority_source": "AK current request; intent/service-architecture.md",
+  "candidate": "sha256:db0c828e4bacdb6f24e035e617cc1f643971d363bf67e073f1ebecbfb7ae2597",
+  "next_action": "Continue next applicable stage within local scope.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/service-architecture/triage.md",
+      "sha256": "17188b1b33361e9101bd633bda6382b760c11df38b54867a754c55bad95316fb"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/service-architecture.md",
+      "sha256": "2d1c6bc0e1c1df7ce3a09e2cd406a53cd111f472916d2fb3763832373da9a79e"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/service-architecture/investigation.md",
+      "sha256": "26696f0e71c30d7e08f5fe80e3283eeead753e25f2ac356dccdcd9acda36f1c6"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/service-architecture.md",
+      "sha256": "fb83ecdba5a5a638137afbc4365c8f32f5ac74f373ec90d57d3b06dc770cdeb4"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/service-overview.json",
+      "sha256": "137046ea44a8c48f82c1e72797a42b260f3a0179338ab3632cb2e25a022856bc"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/mobile-weather-request.json",
+      "sha256": "fdfdfab5ed5d3aaa108fb7ff1b8e97a6d2628fe9e0d322db6d0a1a219d166db3"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/kaq-image-pipeline.json",
+      "sha256": "472c6d39fbf1836484061c4460e8ba0ce9c8b1427778f30c2e453ce2aa96b274"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/service-overview.html",
+      "sha256": "bcbc0772a90d226c220e7bc7eda964b5fec3a6de539a7cee9ce7a1b79b293ca8"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/mobile-weather-request.html",
+      "sha256": "61c0354a58d8f2d4ce907359ff1b175565167a53745d3361e0d5512e731cf980"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/kaq-image-pipeline.html",
+      "sha256": "e3b0825423d7b4bd678d99d0c7e19bc7ac784128155915d3566377836aef2744"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/overview-validation.json",
+      "sha256": "f4c6731d60cccf7cea386bc6f6a148745524be071536e1cb576eddefe0cba063"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/mobile-validation.json",
+      "sha256": "9ed00a746a7fd106101b36a4deba830f5cbb51697b6fe3daf704831b9a30ee02"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/kaq-validation.json",
+      "sha256": "53a52a26c3d9beaffece3adeeb9a647399ae00e562f1e783bdaff026fe9fd208"
+    },
+    {
+      "kind": "plan",
+      "path": "plans/service-architecture.md",
+      "sha256": "23caf096d1abf3e13f396047eeee76082ea753e4bf79ea412479c277332baea1"
+    },
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/service-architecture/test-plan.md",
+      "sha256": "80724bc3f82d061b86676ba01bd7d39d8cd7433ac873f01a41c1d3497d5d98a7"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "build",
+      "path": "reports/sdlc/service-architecture/build.md",
+      "sha256": "5a84fa67c9c86812895b74dbf5f241ca73a6151aa2eb2c39a4e6415d1b580f07"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/service-architecture/changes.patch",
+      "sha256": "235ec3b43fb5cadf79e07988375a4e388009271000a69934776e6cec4a6dcc74"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "AGENTS.md",
+      "sha256": "f0f2bb366e79e501555aaa345d0dbdbfa30970fb7e21263db82d13b02895379c"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "CLAUDE.md",
+      "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "README.md",
+      "sha256": "1ea5502e5f3de422d883c74520ccae6c5da2176370ac8705cf492c4eccfe6325"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/README.md",
+      "sha256": "23c0e19ada06f2f14c8999134705eeaeaf39003cde13be9281b6f6aea963a39c"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/aws-code-correlation.md",
+      "sha256": "ee10495d268352ed9fb269371e8471df01aacbdf5d672a7e9cc1d76672e70f69"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/deployed-lambda-excerpts.md",
+      "sha256": "94ac6ed16215d4a2a8fca3430e80e9109bd22015d89490327204cce4f7b8f08a"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/evidence.md",
+      "sha256": "5eae709ad663d3f89258e0b958119680542208e78e2cbdf3bd309d0c47403052"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/mobile-api.md",
+      "sha256": "9ba4799749270d4f4e4e418d3902618777405b6c283bb53faf31c2e8cd9a5382"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/service-overview.md",
+      "sha256": "44a243823f18a2aff2d36428082650ee022963b8e48e3edd73350abd9234e7f5"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/weather-collection.md",
+      "sha256": "9cfed69ebcc78e7f4c5a909157ce71fdfae1052f6a6ccc81803ce2db039b7559"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/aws-readonly-evidence-2026-09-20.json",
+      "sha256": "cb40d6b2b0a00b4e0f0ca04137c3c83a7fe0b2e4ff9b4b6666a7b3a23f0d96a3"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/service-overview.json",
+      "sha256": "137046ea44a8c48f82c1e72797a42b260f3a0179338ab3632cb2e25a022856bc"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/service-overview.html",
+      "sha256": "bcbc0772a90d226c220e7bc7eda964b5fec3a6de539a7cee9ce7a1b79b293ca8"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/weather-collection.json",
+      "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/weather-collection.html",
+      "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/mobile-weather-request.json",
+      "sha256": "fdfdfab5ed5d3aaa108fb7ff1b8e97a6d2628fe9e0d322db6d0a1a219d166db3"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/mobile-weather-request.html",
+      "sha256": "61c0354a58d8f2d4ce907359ff1b175565167a53745d3361e0d5512e731cf980"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/kaq-image-pipeline.json",
+      "sha256": "472c6d39fbf1836484061c4460e8ba0ce9c8b1427778f30c2e453ce2aa96b274"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/kaq-image-pipeline.html",
+      "sha256": "e3b0825423d7b4bd678d99d0c7e19bc7ac784128155915d3566377836aef2744"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3",
+      "AC4"
+    ]
+  }
+}

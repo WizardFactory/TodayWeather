@@ -1,6 +1,10 @@
 # TodayWeather
 Inform how warm or cold it is today than yesterday.
 
+## Architecture documentation
+
+See the [service architecture guide](docs/architecture/README.md) for the overall structure, weather collection pipeline, mobile API calls, and interactive Archify diagrams. Shared contributor and agent guidance is maintained in [AGENTS.md](AGENTS.md).
+
 ## Running Locally
 You have to run server before start mobile application.
 

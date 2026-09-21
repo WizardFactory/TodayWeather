@@ -1,0 +1,2 @@
+# Investigation
+Paseo CLI/daemon 0.7.2. Official https://paseo.sh/docs/worktrees.md defines worktree.setup and PASEO_SOURCE_CHECKOUT_PATH. Installed server dist/server/utils/worktree.js lines 525 and 878 seed missing paseo.json from source checkout before setup; an existing target config wins. This permits this local configuration without a commit when target has no config. Commands execute in target cwd. No secret content inspected or logged.

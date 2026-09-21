@@ -1,0 +1,120 @@
+# Mobile application and API calls
+
+## Entry and refresh lifecycle
+
+The main application uses Ionic/Angular controllers and services. `controller.start.js` handles initial location/weather loading; `controller.tabctrl.js` handles existing city refreshes, resume and presentation. Both call `WeatherUtil.getWeatherByGeoInfo()`.
+
+1. Restore app settings/cities through `TwStorage` and initialize `WeatherInfo`.
+2. Select a saved city or obtain current position through Cordova/browser geolocation. The geolocation options include a 60-second timeout, 60-second maximum age, and high accuracy.
+3. Resolve geographic/address information when needed through `getGeoInfoByLocation()` or `getGeoInfoByAddr()`.
+4. `WeatherInfo.canLoadCity()` rejects disabled cities and skips network refresh while `loadTime` is no more than 10 minutes old. Restoring a city resets its in-memory load time to null; manual reload also clears it.
+5. `getWeatherByGeoInfo()` builds one weather URL, calls `_getHttp()`, and returns `$q.all()` around that request. The result is consequently an array containing `{data: responseBody}`.
+6. `convertWeatherData()` selects a source parser. `WeatherInfo.updateCity()` updates current/time/day/air display data, records load time, and persists cities; the controller broadcasts `applyEvent` to update screens.
+
+A current-position refresh can begin using the saved location while a location update runs. If coordinates change, another weather request can follow. This and the HTTP retry timer mean one user refresh does not imply exactly one network call.
+
+Sources: [startup controller](../../client/www/js/controller.start.js), [tab controller: `loadWeatherData`, `updateWeatherData`](../../client/www/js/controller.tabctrl.js), [WeatherUtil](../../client/www/js/service.weatherutil.js), [WeatherInfo](../../client/www/js/service.weatherinfo.js), [TwStorage](../../client/www/js/service.storage.js).
+
+## Exact client URL contract
+
+All paths below are appended to `clientConfig.serverUrl`. The checked-in value is `https://localhost`; Gulp copies variant release configuration from files outside `client/`. The real deployed base URL is not established here.
+
+| Call | Method and appended path | Selection / response |
+| --- | --- | --- |
+| Geocode coordinates | `GET /geocode/v000903/coord/:lat,:long` | `getGeoInfoByLocation`; resolves raw response body |
+| Geocode address | `GET /geocode/v000903/addr/:address` | `getGeoInfoByAddr`; resolves raw response body |
+| Weather by coordinates | `GET /weather/v000903/coord/:lat,:long` | Preferred when `geoInfo.location.lat` is truthy |
+| Weather by free-form address | `GET /weather/v000903/addr/:address` | Used when address cannot produce Korean town components |
+| Korean legacy address | `GET /v000903/kma/addr/:region[/:city[/:town]]` | Used for stored address-only cities when town parsing succeeds |
+| Nation view | `GET /v000903/nation/:nationCode` | Separate country overview call |
+| KMA warnings | `GET /v000903/kma/special` | Separate warning screen |
+| Push registrations | `/v000902/push`, `/v000902/push-list` | Separate service with registration/update/delete operations |
+| Purchase validation | `/v000705/check-purchase` | Platform-selected purchase controller/plugin |
+
+The exact coordinate condition uses truthiness, so latitude `0` does not take the normal coordinate branch. Address fallback prefixes `대한민국` when missing before extracting region/city/town. This is legacy behavior, not general worldwide address parsing. URL builders concatenate strings; they do not explicitly encode each path segment.
+
+Sources: [builders and selection](../../client/www/js/service.weatherutil.js), [warnings](../../client/www/js/controller.kma.special.js), [push](../../client/www/js/service.push.js), [purchase](../../client/www/js/controller.purchase.js), [build configuration selection](../../client/gulpfile.js).
+
+### Query parameters and headers
+
+Weather builders append all settings from `Units.getAllUnits()` and then `airForecastSource=kaq`. The settings include `temperatureUnit`, `windSpeedUnit`, `pressureUnit`, `distanceUnit`, `precipitationUnit`, and `airUnit`. Defaults vary by locale/settings; do not assume every device requests Celsius or the same AQI standard. Server KMA query handling fills missing or literal `(null)` unit values, and defaults an absent `airForecastSource` to `airkorea`.
+
+The weather `_retryGetHttp` wrapper specifies only `{method:'GET', url, timeout}`; it does not explicitly attach `Device-Id` or language headers. Push and some purchase requests set their own headers. Server logging of `device-id` is not proof that every weather request sends it.
+
+Sources: [Units](../../client/www/js/controller.units.js), [HTTP wrapper](../../client/www/js/service.weatherutil.js), [server defaults](../../server/controllers/controllerTown24h.js).
+
+## Public API and implemented backend
+
+Read-only AWS inspection and deployed Lambda code close the earlier missing-gateway gap. See [AWS/code correlation](aws-code-correlation.md) and [request diagram](diagrams/mobile-weather-request.html).
+
+| Boundary | Verified mapping | Remaining limit |
+| --- | --- | --- |
+| `/weather/{version}/coord/{loc}` | CloudFront -> API Gateway -> weatherbycoord -> geocoder -> EC2 KMA address (KR) or DSF coordinates | Actual provider/EC2 response not probed |
+| `/weather/{version}/addr/{address}` | API Gateway -> weatherbyaddr | Deployed handler returns application 501; free-form app fallback is unsupported |
+| `/geocode/{version}/coord/{loc}`, `/geocode/{version}/addr/{address}` | API Gateway -> geoinfo Lambda, DynamoDB cache and provider adapters | Provider availability unverified |
+| Direct `/v000903/kma/addr/...` | CloudFront default behavior -> service EC2; source mounts KMA pipeline | Host tree 5bca407; selected route files match local |
+| Backend `/v000903/kma/coord/:loc` | Source resolves via `API_SERVER/geocode/coord/:loc`, then KMA | Host config resolves public todayweather hostname |
+| Backend `/v000903/dsf/coord/:loc` | Weather Lambda selects this for non-KR v000903; source reuses v000902 pipeline | End-to-end result untested |
+| Backend `/v000903/geo/:loc` | Source implements KR/world redirects | Not used by inspected weather Lambda dispatch |
+
+Unversioned public variants are also deployed. Weather Lambda defaults them to `v000901`; versioned app requests select `v000903`. It forwards query parameters, derives language from the request header, retries the backend up to three times (3 seconds each), and enriches weather output with geographic fields. A standard Express start alone cannot provide the public Lambda paths. `route.geo.v000903` remains a separate legacy redirect that does not explicitly forward the original query string.
+
+Sources: [server mounts](../../server/app.js), [v000903 router](../../server/routes/v000903/index.js), [geo redirect](../../server/routes/v000903/route.geo.v000903.js), [deployed Lambda excerpts](deployed-lambda-excerpts.md), [AWS evidence](aws-readonly-evidence-2026-09-20.json).
+
+The [service-host inspection](ec2-internals.md) confirms nginx port 80 forwarding to loopback 3000 and ten PM2 API workers. The host configuration selects service mode and DB v2.0. Its deployed tree is older than the local analysis baseline; selected latest-route/Town24h files match, while DSF requester and several other files differ. No end-to-end request was issued.
+
+## Domestic API middleware in order
+
+The [v000903 KMA router](../../server/routes/v000903/route.kma.v000903.js) defines an order-dependent list shared by its address routes; the coordinate route prepends `coord2addr`.
+
+| Phase | Key middleware | Result |
+| --- | --- | --- |
+| Validate and locate | `checkQueryValidation`, `checkParamValidation`, `getAllDataFromDb` | Unit defaults, address/grid resolution, load town and medium products |
+| Short/current preparation | `getShort`, `getShortRss`, `getShortest`, `getCurrent` | Product-specific parsing into request fields |
+| Observation correction | `updateCurrentListForValidation`, `mergeCurrentSkyByShortest`, `mergeCurrentByStnHourly`, `getKmaStnMinuteWeather` | Integrate grid, hourly station and minute observations |
+| Time alignment / forecast merge | `convert0Hto24H`, `mergeShortWithCurrentList`, `mergeByShortest`, `adjustShort` | Align short/current series and extrema |
+| Medium-range composition | `getMid`, `getMidRss`, `convertMidKorStrToSkyInfo`, `getPastMid`, `mergeMidWithShort`, `updateMidTempMaxMin` | Combine past, short and medium daily weather |
+| Enrichment | `getLifeIndexKma`, `getHealthDay`, `getKeco`, `getKecoDustForecast`, `getRiseSetInfo`, `insertIndex`, `makeAirInfoList`, `AirForecastList` | Life/health/air/sunrise data |
+| Presentation | `insertSkyIconLowCase`, `setYesterday`, `getSpecialInfo`, `convertUnits`, `insertStrForData`, `getSummaryAfterUnitConverter` | Icons, yesterday comparison, warnings, requested units and text |
+| Response | `makeResult`, `sendResult` | JSON containing available product fields |
+
+`ControllerTown24h` calls the base `ControllerTown` constructor and overrides selected methods. `getAllDataFromDb` performs parallel product-family loading, with serial reads inside individual groups. It tolerates some missing product reads so later middleware can decide how to proceed. There is no single all-products freshness transaction.
+
+The important ordering constraints are documented in the router itself: current depends on short/shortest; icons precede unit conversion; descriptions and final summary follow conversion. Reordering these functions can change meaning even when the endpoint still returns 200.
+
+KMA output includes `source: 'KMA'`, region/city/town names, publication fields, `short`, `shortest`, `current`, `midData`, `dailySummary`, `airInfoList` or `airInfo`, requested `units`, and a rounded `location` for applicable versions. Fields are conditional, not guaranteed by a formal schema. `ControllerTown24h.sendResult()` simply calls `res.json(req.result)`; it does not set a whole-weather cache TTL. `/kma/special` separately sets `Cache-Control: max-age=300`.
+
+## World-weather API middleware in order
+
+The [v000902 DSF router reused by v000903](../../server/routes/v000902/route.dsf.coord.v000902.js) performs:
+
+1. `checkQueryValidation`, then adapts parameters to `category=current`, `days=2`, `gcode=:loc`, `aqi=airUnit`, `validVersion=true`.
+2. `queryTwoDaysWeatherNewForm`: DSF retrieval and WAQI retrieval in parallel, including cache fills as described in [collection](weather-collection.md).
+3. `convertDsfLocalTime`, `mergeDsfDailyData`, `mergeDsfCurrentDataNewForm`, `mergeDsfHourlyData`.
+4. `mergeAqi`, `dataSort`, lower-case icon normalization, `convertUnits`, `makeAirInfo`, `makeSummary`, `sendResult`.
+
+The response shape differs from KMA: world weather uses `daily`, `hourly`, `thisTime`, `pubDate`, location/time-zone context and units, with air enrichment when available. DSF retrieval errors propagate to Express; some AQI misses are tolerated. The frontend chooses the world parser whenever `source !== 'KMA'`, so malformed non-KMA bodies are not automatically rejected at the source discriminator.
+
+Sources: [world controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [world unit conversion](../../server/controllers/worldWeather/controller.ww.units.js), [client parser selection](../../client/www/js/service.weatherutil.js).
+
+## Retry, caching and failure behavior
+
+| Layer | Actual behavior | Consequence |
+| --- | --- | --- |
+| Client city state | Refresh only when load time is null or older than 10 minutes | Fresh memory state suppresses calls; manual reload bypasses it |
+| Client HTTP | Initial request plus recursive timers after 2 seconds; three attempts maximum, default 10-second timeout per attempt | Slow requests can overlap at approximately 0, 2 and 4 seconds |
+| Client completion | Success/error clears only that attempt's timer; first callback settles the shared promise | An early error is terminal even if another in-flight request may later succeed; existing requests are not cancelled |
+| Backend geocode | 3 attempts with 3-second per-request timeout | Coordinate requests can spend additional time outside the weather database |
+| DSF cache | Current data window 15 minutes plus historical completeness checks | A request may need multiple provider fetches |
+| AQI cache | 60-minute freshness test with feed/geographic fallback | Air and weather publication times differ |
+| HTTP cache | Deployed weather Lambda success max-age=300; geocode success 30 days; CloudFront weather/geocode min/default/max=0/86400/31536000; API stage cache disabled | Origin success headers differ from CDN defaults and client memory TTL; direct legacy routes use a different behavior |
+
+The comment in the client says 1.5-second retries and a nine-second total; the executable code uses 2-second timers and a default 10-second per-request timeout. Document the code. Immediate errors clear the retry timer, so this is not a conventional retry-after-failure algorithm. The wrapper's unused-style three-argument overload also assigns `callback` after setting `timeout=null`; the inspected `_getHttp` path uses the four-argument form and avoids that branch.
+
+On rejected loading/conversion, the controller presents a retry confirmation and records analytics. Existing city state and persistence are separate from successful freshness updates; the source does not establish a comprehensive offline synchronization contract.
+
+## Native widget differences
+
+TodayWeather and TodayAir widgets use Objective-C request code and their own path constants, including unversioned `weather/coord` and v000901 KMA address paths. They read shared preference data created by the app. Apple Watch contains an older extension and bundled web assets; the root README explicitly records a historical watch integration problem. Do not assume that all shipped native clients use the current Angular v000903 contract.
+
+Sources: [weather widget](../../tw.ios/widget/TodayViewController.m), [air widget](../../ta.ios/widget/TodayViewController.m), [storage bridge](../../client/www/js/service.storage.js), [original README](../../README.md).

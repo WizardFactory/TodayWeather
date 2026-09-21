@@ -1,0 +1,31 @@
+{
+  "task": "service-architecture",
+  "assignment": "architecture_verification",
+  "stage": "independent-verification",
+  "iteration": 1,
+  "iteration_limit": 10,
+  "builder_context": "/root",
+  "verifier_context": "/root/architecture_verification",
+  "authority": "AK requested local architecture docs and shared guidance; installed SDLC requires independent verification",
+  "endpoint": "local",
+  "scope": "Source claims, artifact semantics, independent checks and guidance decision scenarios",
+  "write_allowlist": [
+    "reports/sdlc/service-architecture/independent-verification.md"
+  ],
+  "prohibited": [
+    "product edits",
+    "provider calls",
+    "commits",
+    "publishing",
+    "skill installs",
+    "further delegation"
+  ],
+  "candidate_manifest": "candidate.json",
+  "inputs": [
+    "intent/service-architecture.md",
+    "specs/service-architecture.md",
+    "plans/service-architecture.md",
+    "reports/sdlc/service-architecture/test-plan.md"
+  ],
+  "checks": "Independent source reads, isolated schedule/retry execution, link/hash checks, canonical guidance task evaluation"
+}

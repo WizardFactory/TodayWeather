@@ -1,0 +1,132 @@
+{
+  "iteration": 5,
+  "decision": "PROCEED",
+  "reason": "Deliverable assessed against the authorized local scope and source evidence.",
+  "authority_source": "AK current request; intent/service-architecture.md",
+  "candidate": "sha256:c373d00c03953b5d8eec776b3cdd05517c163312a699010e2561411c6e444f73",
+  "next_action": "Continue next applicable stage within local scope.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/service-architecture/triage.md",
+      "sha256": "c1aa80dd6e3232e9b9e3d762d4666ebc818b88309b588e9b886f9c567d15dd29"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/service-architecture.md",
+      "sha256": "8f0c55b9df1d443cdeaf183f7f5de1a4c4ead8e39bdc1138d3e140c963e3a9f2"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/service-architecture/investigation.md",
+      "sha256": "e714f1a85d2c04458c44238c72b199499ddecd7622518eb55263203289edb6e0"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/service-architecture.md",
+      "sha256": "8dd06b62b235f4c55f04ff23e8e840c6d8fd46351c9cebadb35a71052af89fdf"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/service-overview.json",
+      "sha256": "50c6756acf24bdca03cc6c0cf271ee1041d652b33b9e20580d66a45c7da2815b"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/service-overview.html",
+      "sha256": "e3b8911938b53cfa78636f0236ccb894fe753b0c1f7538973a839bfd7ae2653c"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/overview-validation.json",
+      "sha256": "f4c6731d60cccf7cea386bc6f6a148745524be071536e1cb576eddefe0cba063"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/weather-collection.json",
+      "sha256": "49e34714eee6f5829190776d36b66a2e60abb66e622292b014606cd4350de838"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/weather-collection.html",
+      "sha256": "7cdcb106ab5dc887889d0bb4cffc27696dfa6ca52b8c86bf353e876719f56c06"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/collection-validation.json",
+      "sha256": "b90ace3a7751a53619acd581d97bfb6413647dd7eb1babd90d0b4ff0cf5f5d1f"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/mobile-weather-request.json",
+      "sha256": "9d0a564261c9255f8aa68576af3859400e02481a4a269fb27df50f98977c4f73"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/mobile-weather-request.html",
+      "sha256": "036de95cd1e25ae3e131df60d3fd788b10d63d7c0bb0b4103487126e204fd468"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/mobile-validation.json",
+      "sha256": "9ed00a746a7fd106101b36a4deba830f5cbb51697b6fe3daf704831b9a30ee02"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/kaq-image-pipeline.json",
+      "sha256": "472c6d39fbf1836484061c4460e8ba0ce9c8b1427778f30c2e453ce2aa96b274"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/kaq-image-pipeline.html",
+      "sha256": "e3b0825423d7b4bd678d99d0c7e19bc7ac784128155915d3566377836aef2744"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/kaq-validation.json",
+      "sha256": "53a52a26c3d9beaffece3adeeb9a647399ae00e562f1e783bdaff026fe9fd208"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/aws-infrastructure.json",
+      "sha256": "4eb98cbd7b2a3f2bda76633ba58b30f9a792a2565cb94d0c4269cbe387dbea6c"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/aws-infrastructure.html",
+      "sha256": "a369e65a5ed63d44a4da512cdca56f167f05049ff6dde3ec83c345c403f75f38"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/aws-validation.json",
+      "sha256": "52752391738c1ea2effdde478512e69d4477bb84e0fae5c8258ba4b119c5a1dd"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/ec2-internals.json",
+      "sha256": "afbe50d6d54d5334b4992fddc52afec71a403bacfffc0672a56b107a49c63166"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/ec2-internals.html",
+      "sha256": "a0624b792cdd4a63cb2ba01f326deb599af831bed993c4e49a4cd36b61484f4e"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/service-architecture/ec2-validation.json",
+      "sha256": "617ccedaefb3e52ff324679a81344ef1a9bbb32d4a084b48e3ce6e71c9b35584"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Reviewed actual artifact contents and references; limitations explicitly retained.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3",
+      "AC4"
+    ]
+  }
+}
