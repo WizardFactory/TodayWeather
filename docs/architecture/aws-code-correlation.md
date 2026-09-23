@@ -76,6 +76,8 @@ The original report's Lambda and the repository KAQ consumer are separate stages
 
 ## Operational observations and remaining gaps
 
+The later [30-day traffic report](../../reports/aws/api-traffic-2026-09-22.md) covers **2026-08-23 19:53:45 UTC to 2026-09-22 19:53:45 UTC**. It records 220,583 product API viewer requests, including 155,998 unversioned weather requests (70.72%). Of the latter, 38,069 had Android-like user agents; their released client source is not identified by this checkout. These traffic observations and the September 20 Lambda default above are separate evidence: no per-request backend-version correlation was performed. See [open questions and bounded S3 access checks](evidence.md#traffic-and-log-access-follow-up).
+
 In the exact 24-hour window recorded in the evidence JSON, weatherbycoord had **5,169 invocations, 0 Lambda errors, 0 throttles**; the KAQ copier had **24 invocations, 24 errors, 0 throttles**. A bounded CloudWatch log query returned 40 matching events with pagination remaining: all contained `TypeError` / `Cannot read property 'description' of undefined`, with `_getDate` stack frames in 32 events. These are repeated log events, not 40 distinct invocations. This localizes the observed failure to absent OCR result data. It does not identify why OCR data was absent. Full log payloads and client data were not copied into the repository.
 
 The configured runtimes are `nodejs6.10` for the four public handlers and `nodejs8.10` for the copier. This is current configuration evidence, not an assertion about invocation compatibility or a performed upgrade.

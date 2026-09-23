@@ -1,0 +1,32 @@
+{
+  "candidate": "edb51651c355f13f0745a093c5ed92c9906996a269376144659c072271dbb74f",
+  "not_applicable_reason": "Non-executable documentation; no runtime smoke or artificial TDD.",
+  "scenarios": [
+    {
+      "id": "DOC1",
+      "requirement": "AC1",
+      "required": true,
+      "environment": "local repository, existing Chromium",
+      "prerequisites": "Source baseline and selected AWS evidence present",
+      "actions": "Run document checks and inspect final diagram receipts",
+      "expected": "Source-grounded routes, artifact hashes and links pass",
+      "failure": "Mismatch, dead link or failed diagram evidence",
+      "cleanup": "No application started"
+    }
+  ],
+  "runs": [
+    {
+      "id": "DOC1-review-fix",
+      "scenario": "DOC1",
+      "phase": "document",
+      "candidate": "edb51651c355f13f0745a093c5ed92c9906996a269376144659c072271dbb74f",
+      "command": "python3 .planning/2026-09-22-push-diagram/review-fix-check.py",
+      "exit_code": 0,
+      "environment": "local Python; pre-collected real Chromium receipts",
+      "observed": "PASS: 117 local links/anchors; 7 shell blocks; traffic/rate/KST assertions; shared adapter; bounded S3 evidence; unchanged diagram/application bytes; whitespace and sensitive-pattern checks.\nCandidate: edb51651c355f13f0745a093c5ed92c9906996a269376144659c072271dbb74f\n",
+      "evidence": "reports/sdlc/push-diagram/review-fix-check.txt",
+      "execution_kind": "real",
+      "status": "passed"
+    }
+  ]
+}

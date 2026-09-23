@@ -1,0 +1,5 @@
+# Review correction amendment — 2026-09-23
+
+AK requested applying the assessed PR2552 review corrections and pushing. Scope: recommendations 1–4, dated S3 observations without claiming full privacy, and qualified token/error guidance. The prior review-only assessment is now included as supporting evidence. No S3 setting, application behavior, diagram graph or historical traffic aggregate changes. Separate server/client behavior fixes remain follow-up work. Endpoint is PR branch push, not merge readiness or deployment.
+
+Reuse the same push-diagram stage counters: build/self-verification/independent-verification iteration 4. AC1 covers accurate traffic/token/source statements, AC2 covers dated S3/causal boundaries, AC3 covers links, KST, shell guidance and unchanged diagram bytes. The original intent/spec/plan and previous receipts remain historical; this amendment narrows the current corrective scope. No new diagram is needed because architecture and routing are unchanged. CLI installation is documentation-only; check syntax and official source, do not claim installation executed.

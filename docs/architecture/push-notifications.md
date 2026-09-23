@@ -32,6 +32,10 @@ The DELETE implementation uses truthiness rather than property presence. With `{
 
 A first-token callback with an absent old token can therefore reach the 403 branch in this source. This is a code-supported failure scenario, **not proof of the cause of the logged 403 responses**. No client body or origin response body was correlated with those requests. The presence of PUT in CloudFront's allowed-method list is not evidence that every request passes every edge/origin check.
 
+An [isolated source check](../../reports/sdlc/pr2552-review-assessment/token-reproduction.json), with HTTP, storage and Firebase stubbed, confirmed that a repeated callback with the same token in one session sends no additional PUT. A new service instance without a persisted token can again send `oldToken=null`; after an explicit `savePushInfo()`, the same token does not trigger replacement on initialization. The relevant condition is a missing persisted token, not simply whether a user currently has alarms. This check did not reproduce production requests or device behavior.
+
+The server's invalid-pair branch sends `invalid body` as an HTTP response without explicitly logging that message. A count of that string in server logs alone therefore cannot establish this cause. An origin investigation must first confirm deployed code/logging and correlate token-presence indicators with request/status timestamps; raw token-bearing bodies should not be copied into reports. A separate fix should distinguish initial token acquisition from replacement and preserve persistence and failed-replacement retry semantics. No token behavior was changed here.
+
 ## Persistence and scheduling
 
 Alarm records use the [push model](../../server/models/modelPush.js); conditional alerts use the [AlertPush model](../../server/models/alert.push.model.js). Settings include device tokens, city/id, units, package (`todayWeather`/`todayAir`), enable flags and times. Mongo coordinates are `[longitude, latitude]`; the app supplies `{lat, long}`. Alarm writes use upsert; alert writes find an existing record then save or update.
@@ -68,7 +72,7 @@ In the [30-day CloudFront report](../../reports/aws/api-traffic-2026-09-22.md), 
 | `DELETE /v000902/push` | 2 | Both HTTP 200 |
 | `POST /v000705/push` | 12 | All HTTP 500 |
 
-PUT's HTTP 4xx/5xx rate is **96.29%**. Status `000` is a client disconnect before a response, not an HTTP status. These are incoming API requests, not notifications sent. The logs do not establish whether a token changed, a database write completed or a provider delivered a message.
+PUT's monthly HTTP 403-only rate is **86.57%** (16,337 / 18,872); its combined HTTP 4xx/5xx rate is **96.29%**. Daily 403 rates vary: September 21 is 96.43%, while the partial September 22 window is 92.80%. These denominators must not be interchanged. Status `000` is a client disconnect before a response, not an HTTP status. These are incoming API requests, not notifications sent. The logs do not establish whether a token changed, a database write completed or a provider delivered a message.
 
 The batch settings handler logs individual alarm/alert persistence errors and passes those callbacks onward without an error, so HTTP 200 is not proof that every submitted setting was saved. This and the token-refresh scenario are relevant source limitations, not fixes implemented in this documentation task.
 

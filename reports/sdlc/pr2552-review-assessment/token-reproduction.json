@@ -1,0 +1,22 @@
+{
+  "source": "client/www/js/service.push.js",
+  "kind": "isolated Node VM; HTTP, storage and Firebase stubbed; no external calls",
+  "first_callback": {
+    "oldToken": null,
+    "requests": 1,
+    "persisted": false
+  },
+  "same_token_callback": {
+    "additional_requests": 0
+  },
+  "changed_token_same_session": {
+    "oldToken": "prior in-memory token"
+  },
+  "fresh_session_without_save": {
+    "oldToken": null
+  },
+  "fresh_session_after_explicit_save": {
+    "same_token_requests": 0
+  },
+  "status": "PASS"
+}

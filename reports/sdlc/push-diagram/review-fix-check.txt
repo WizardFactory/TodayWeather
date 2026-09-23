@@ -1,0 +1,2 @@
+PASS: 117 local links/anchors; 7 shell blocks; traffic/rate/KST assertions; shared adapter; bounded S3 evidence; unchanged diagram/application bytes; whitespace and sensitive-pattern checks.
+Candidate: edb51651c355f13f0745a093c5ed92c9906996a269376144659c072271dbb74f

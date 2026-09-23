@@ -40,6 +40,27 @@ Verified on **2026-09-22** by executing AWS CLI `sts get-caller-identity`; retur
 
 `aws` was absent from PATH and `~/.aws` did not exist in the inspected session. Neither condition meant AWS access was unavailable. The `/tmp` CLI path is an existing temporary installation, not a portable guarantee; check it before reuse. Keep credential contents out of output and version control. Access instructions do not expand the current task's authorization to AWS mutations or application invocations.
 
+### Install a persistent CLI when needed
+
+For supported Linux x86-64 or ARM systems, the [official AWS CLI v2 installation guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) provides an installer that downloads, verifies and installs the CLI. With default XDG settings it installs under `$HOME/.local/share/aws-cli` and links `$HOME/.local/bin/aws`, so the installed executable survives `/tmp` cleanup. Prerequisites include Bash, curl and the supported Linux runtime described in that guide; use its platform-specific instructions for macOS or Windows.
+
+If no suitable CLI is installed, run:
+
+```sh
+(
+  set -e
+  TW_AWS_INSTALLER="$(mktemp)"
+  curl -fsSL https://awscli.amazonaws.com/v2/install.sh -o "$TW_AWS_INSTALLER"
+  bash "$TW_AWS_INSTALLER"
+)
+export PATH="$HOME/.local/bin:$PATH"
+aws --version
+```
+
+Retain that PATH entry in your shell startup configuration if needed. Custom `XDG_DATA_HOME` / `XDG_BIN_HOME` settings change the install locations; use the installer output and official guide to locate the executable. This recipe was checked against AWS documentation on 2026-09-23 and syntax-checked locally; installation was not executed during this documentation update. The earlier authenticated CLI observations remain specific to v1.46.1.
+
+### Select credentials and executable
+
 Run from any directory inside the checkout:
 
 ```sh
@@ -53,6 +74,9 @@ export AWS_DEFAULT_REGION=ap-northeast-2
 export AWS_PAGER=''
 
 TW_AWS_CLI="$(command -v aws || true)"
+if [ -z "$TW_AWS_CLI" ] && [ -x "$HOME/.local/bin/aws" ]; then
+  TW_AWS_CLI="$HOME/.local/bin/aws"
+fi
 if [ -z "$TW_AWS_CLI" ] && [ -x /tmp/tw-aws-correlation-cli/bin/aws ]; then
   TW_AWS_CLI=/tmp/tw-aws-correlation-cli/bin/aws
 fi
@@ -63,7 +87,7 @@ else
 fi
 ```
 
-Confirm account `141248341265` before continuing with account-specific queries. Do not run `aws configure` to overwrite existing credentials. The inspected CLI does **not** support `aws configure list-profiles`; inspect profile names through `boto3.Session().available_profiles` instead of printing credential contents.
+Confirm account `141248341265` before continuing with account-specific queries. Do not run `aws configure` to overwrite existing credentials. The inspected **v1.46.1** CLI does not support `aws configure list-profiles`; this observation does not describe CLI v2. With boto3 available, inspect profile names through `boto3.Session().available_profiles` instead of printing credential contents.
 
 With the environment above, the SDK fallback is:
 

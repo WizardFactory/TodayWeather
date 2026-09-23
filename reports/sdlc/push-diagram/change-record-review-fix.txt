@@ -1,0 +1,31 @@
+ AGENTS.md                                 |  1 +
+ docs/architecture/aws-code-correlation.md |  2 +
+ docs/architecture/ec2-access.md           | 26 ++++++++-
+ docs/architecture/evidence.md             | 10 ++++
+ docs/architecture/push-notifications.md   |  6 ++-
+ reports/aws/api-traffic-2026-09-22.md     |  2 +-
+ reports/sdlc/push-diagram/artifacts.json  | 87 +++++++++++++++++++++++++++----
+ 7 files changed, 122 insertions(+), 12 deletions(-)
+
+Candidate manifest:
+{
+  "candidate": "edb51651c355f13f0745a093c5ed92c9906996a269376144659c072271dbb74f",
+  "base": "8472b51bd84c0282253bf62cf155761d335c1470",
+  "files": {
+    "AGENTS.md": "7a562fe5936ec043a8f721b7e6b8a33ba2bc49c65f3176888531428f0d7eebf4",
+    "docs/architecture/README.md": "19330914bb466ab6318090dd6875d75521fb1ca03c028a46fb7f7f628f67cd1d",
+    "docs/architecture/ec2-access.md": "51ded4fca840050a989b9bc8dab2d264e8f71596b6093d417a9e672c7a7779d4",
+    "docs/architecture/push-notifications.md": "935ce5480a37e6a183ab44653cedfc31f049fbf29907ce537dd5e6bd76be46a3",
+    "docs/architecture/diagrams/push-notifications.json": "3569ff5ba04bac46380404010b18e5b64a7a92aa1e5835d7c4e7f77e2e407ae3",
+    "docs/architecture/diagrams/push-notifications.html": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe",
+    "reports/aws/api-traffic-2026-09-22-daily.csv": "00ed357e49bf7af4d3e2f4e041ab15b637fb5743acc36fa5a126e0c5a814b915",
+    "reports/aws/api-traffic-2026-09-22-evidence.json": "0f15f96a401cc1b8a139d5a03a46e572b9982ae3875bfc57ae523560a2206140",
+    "reports/aws/api-traffic-2026-09-22-routes.csv": "769f88fdf3a32961954de4dc8fe8b72727956160471f5011c6ebae5f20fe7c7e",
+    "reports/aws/api-traffic-2026-09-22.md": "83194a6431b8c35483eaa0e31cfbf470988e7bb02528d16836391e100a5e2725",
+    "docs/architecture/aws-code-correlation.md": "7c5c76578fc50edb363db4e0f8cd92488e1bbe247c6f4995ec0d842b891ff7d1",
+    "docs/architecture/evidence.md": "6b59423582f30363700062a4abd6ed1ea99a345212523b9b571c619cd18dea6d",
+    "reports/sdlc/pr2552-review-assessment/investigation.md": "5b15afd024c08b320d0a2f0e9fe3598e0b38a0e9820bf595efbc45d4d9fabbd1",
+    "reports/sdlc/pr2552-review-assessment/s3-public-access.json": "f20ddefa829fb11970c6890c902e7b026579465e5d6cf1508e10fc4376d62bf5",
+    "reports/sdlc/pr2552-review-assessment/token-reproduction.json": "f5a9aed2ce8380cb8662862e04d49475477c617ed70d08060526801741a10b7d"
+  }
+}

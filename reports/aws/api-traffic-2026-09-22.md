@@ -2,7 +2,7 @@
 
 **220,583 product API requests across 19 method/path groups** were observed in CloudFront logs. Of these, 213,683 (96.87%) had Apple/Android-like user agents. HTTP 4xx/5xx responses totalled 34,461 (15.62%). The strongest issue is the September 16–20 5xx cluster, which accounts for 17,811 of 18,123 monthly 5xx responses (98.28%).
 
-Requested 'one month' is interpreted as a rolling **30 days: 2026-08-23T19:53:45+00:00 <= timestamp < 2026-09-22T19:53:45+00:00**. All times and daily boundaries below are UTC. In Europe/Berlin this is August 23, 21:53:45 through September 22, 21:53:45 CEST. This is not the previous calendar month.
+Requested 'one month' is interpreted as a rolling **30 days: 2026-08-23T19:53:45+00:00 <= timestamp < 2026-09-22T19:53:45+00:00**. All times and daily boundaries below are UTC. In Korea Standard Time (KST, UTC+09:00), the same window is **2026-08-24 04:53:45 <= time < 2026-09-23 04:53:45**. Daily totals remain grouped by UTC, not KST. This is not the previous calendar month.
 
 This updates the existing report in place. The original 24-hour observation is preserved in the appendix; it is not added to the monthly totals.
 

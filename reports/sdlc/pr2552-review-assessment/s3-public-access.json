@@ -1,0 +1,99 @@
+{
+  "observed_at": "2026-09-23T08:04:19.320938+00:00",
+  "bucket": "tw-cloudfront",
+  "checks": {
+    "bucket_public_access_block": {
+      "error": "NoSuchPublicAccessBlockConfiguration"
+    },
+    "account_public_access_block": {
+      "error": "NoSuchPublicAccessBlockConfiguration"
+    },
+    "bucket_policy_status": {
+      "error": "NoSuchBucketPolicy"
+    },
+    "bucket_acl": {
+      "grants": [
+        {
+          "type": "CanonicalUser",
+          "group": null,
+          "permission": "FULL_CONTROL"
+        },
+        {
+          "type": "CanonicalUser",
+          "group": null,
+          "permission": "FULL_CONTROL"
+        }
+      ]
+    },
+    "ownership_controls": {
+      "error": "OwnershipControlsNotFoundError"
+    }
+  },
+  "anonymous_list": {
+    "http_status": 403,
+    "error": "AccessDenied"
+  },
+  "object_samples": [
+    {
+      "date": "2026-08-23",
+      "key_sha256": "e6926c86a1b9a2f8800ac6bbd5a807f19e53248a883746e529077828c34970bd",
+      "grants": [
+        {
+          "type": "CanonicalUser",
+          "group": null,
+          "permission": "FULL_CONTROL"
+        },
+        {
+          "type": "CanonicalUser",
+          "group": null,
+          "permission": "FULL_CONTROL"
+        }
+      ],
+      "anonymous_head": {
+        "http_status": 403,
+        "error": "403"
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "key_sha256": "d87ee58efb688380e70a45ed905e0f20aefe989cd28367acc9963990578d7f1a",
+      "grants": [
+        {
+          "type": "CanonicalUser",
+          "group": null,
+          "permission": "FULL_CONTROL"
+        },
+        {
+          "type": "CanonicalUser",
+          "group": null,
+          "permission": "FULL_CONTROL"
+        }
+      ],
+      "anonymous_head": {
+        "http_status": 403,
+        "error": "403"
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "key_sha256": "e31a7f8c73cd65e09cbd25484fab68550c6fab3a2f93be8d0954ffa157429564",
+      "grants": [
+        {
+          "type": "CanonicalUser",
+          "group": null,
+          "permission": "FULL_CONTROL"
+        },
+        {
+          "type": "CanonicalUser",
+          "group": null,
+          "permission": "FULL_CONTROL"
+        }
+      ],
+      "anonymous_head": {
+        "http_status": 403,
+        "error": "403"
+      }
+    }
+  ],
+  "completed_at": "2026-09-23T08:04:58.065487+00:00"
+}

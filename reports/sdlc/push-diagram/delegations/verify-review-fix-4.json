@@ -1,0 +1,24 @@
+{
+  "task": "push-diagram",
+  "assignment": "verify-review-fix-4",
+  "stage": "independent-verification",
+  "iteration": 4,
+  "remaining_after_attempt": 6,
+  "context_id": "/root/verify_push_diagram",
+  "builder_context_id": "/root",
+  "tool": "collaboration.followup_task",
+  "candidate": "edb51651c355f13f0745a093c5ed92c9906996a269376144659c072271dbb74f",
+  "input_manifest": "reports/sdlc/push-diagram/review-fix-candidate.json",
+  "authority": "AK: apply assessed review corrections and push PR2552; SDLC independent verification requirement",
+  "endpoint": "push PR branch; no merge",
+  "output": "/tmp/pr2552-review-fix-independent.md",
+  "scope": "Dated traffic/source claims, KST, official CLI guide, S3 limits and token/error wording; unchanged diagram evidence reuse",
+  "boundaries": "Read-only repository. Only /tmp report writable. No mutating check scripts, AWS/SSH/provider calls, installer execution, commits, push or delegation.",
+  "criteria": [
+    "AC1",
+    "AC2",
+    "AC3"
+  ],
+  "provider": "openai",
+  "review_type": "independent documentation verification; not cross-provider PR review"
+}
