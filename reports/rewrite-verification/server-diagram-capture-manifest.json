@@ -1,0 +1,61 @@
+{
+  "evidence": "Checksums of local-only visual-check capture bytes; PNGs intentionally excluded from Git",
+  "captures": [
+    {
+      "original": "docs/rewrite/diagrams/server-domestic-assembly.visual-check.1440x900.light.png",
+      "sha256": "671c522d0b2f584cdb9e1ae52b8e63c4cc6d7625b23364453651e9b8f356aaef",
+      "bytes": 114445,
+      "local_copy": "reports/rewrite-verification/server-domestic-assembly-1440x900-light.png",
+      "versioned": false
+    },
+    {
+      "original": "docs/rewrite/diagrams/server-domestic-assembly.visual-check.1440x900.dark.png",
+      "sha256": "5ec6b4bebde33f75550fb0fa0a329b5eddd2dd51abd9aac278c6631544285e51",
+      "bytes": 114484,
+      "local_copy": "reports/rewrite-verification/server-domestic-assembly-1440x900-dark.png",
+      "versioned": false
+    },
+    {
+      "original": "docs/rewrite/diagrams/server-domestic-assembly.visual-check.2048x1320.light.png",
+      "sha256": "424a60c6591beacdf161cec597c875cb888a79e8897f8b4ed48614fd255dfe58",
+      "bytes": 146195,
+      "local_copy": "reports/rewrite-verification/server-domestic-assembly-2048x1320-light.png",
+      "versioned": false
+    },
+    {
+      "original": "docs/rewrite/diagrams/server-domestic-assembly.visual-check.2048x1320.dark.png",
+      "sha256": "6f8d9c997032aeee01a8e3beb2c10b295e9adeb1b56d3d8801e5acdfb83b67d5",
+      "bytes": 147584,
+      "local_copy": "reports/rewrite-verification/server-domestic-assembly-2048x1320-dark.png",
+      "versioned": false
+    },
+    {
+      "original": "docs/rewrite/diagrams/server-world-cache-sequence.visual-check.1440x900.light.png",
+      "sha256": "814649bfb0aadaf47919a9394f4a34d4d40d8d926b05403f4abbf6507f9a689c",
+      "bytes": 105664,
+      "local_copy": "reports/rewrite-verification/server-world-cache-sequence-1440x900-light.png",
+      "versioned": false
+    },
+    {
+      "original": "docs/rewrite/diagrams/server-world-cache-sequence.visual-check.1440x900.dark.png",
+      "sha256": "db9b8accbf47f3968038c8a4f18889716ee9609c460b99fe51784431ffff0427",
+      "bytes": 106135,
+      "local_copy": "reports/rewrite-verification/server-world-cache-sequence-1440x900-dark.png",
+      "versioned": false
+    },
+    {
+      "original": "docs/rewrite/diagrams/server-world-cache-sequence.visual-check.2048x1320.light.png",
+      "sha256": "d03169c242942cf51b69463906ea4ba6612100a82d749e7ff4449ecdbb22460b",
+      "bytes": 137227,
+      "local_copy": "reports/rewrite-verification/server-world-cache-sequence-2048x1320-light.png",
+      "versioned": false
+    },
+    {
+      "original": "docs/rewrite/diagrams/server-world-cache-sequence.visual-check.2048x1320.dark.png",
+      "sha256": "22bb24e6937fe67786f3cd637d669862a8ceff480643473bfe16dc995acbcea1",
+      "bytes": 138379,
+      "local_copy": "reports/rewrite-verification/server-world-cache-sequence-2048x1320-dark.png",
+      "versioned": false
+    }
+  ]
+}

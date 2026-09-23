@@ -78,4 +78,4 @@ The batch settings handler logs individual alarm/alert persistence errors and pa
 
 ## Artifact verification
 
-[Delivery receipt](../../reports/sdlc/push-diagram/diagram-delivery.json) records **9/9 showcase checks, zero errors and warnings**, with 14 revision-pinned repository references. [Browser evidence](../../reports/sdlc/push-diagram/diagram-browser.json) records containment at 1440×900, 1600×1000, 1920×1080 and 2048×1320. [Visual review](../../reports/sdlc/push-diagram/visual-review.md) separately records actual light/dark screenshot inspection. Independent source verification is recorded in the task's verification report.
+[Delivery receipt](../../reports/sdlc/push-diagram/diagram-delivery.json) records **9/9 showcase checks, zero errors and warnings**, with 14 revision-pinned repository references. Browser evidence (local-only `reports/sdlc/push-diagram/diagram-browser.json`) records containment at 1440×900, 1600×1000, 1920×1080 and 2048×1320. [Visual review](../../reports/sdlc/push-diagram/visual-review.md) separately records actual light/dark screenshot inspection. Independent source verification is recorded in the task's verification report.

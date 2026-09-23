@@ -1,0 +1,13 @@
+{
+  "source_commit": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "checks": {
+    "json": 35,
+    "local_links": 499,
+    "screenshots": 21,
+    "capture_diagnostics": 16,
+    "python": 5
+  },
+  "errors": [],
+  "passed": true,
+  "limits": "Checks deliverable Markdown and HTML asset targets, Git inclusion, syntax and app screenshot bytes. All ignored local-only visual-check outputs are excluded; browser rendering and every prose claim are not validated."
+}

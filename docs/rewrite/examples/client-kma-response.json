@@ -1,0 +1,390 @@
+{
+  "_example": {
+    "kind": "partial synthetic documentation example",
+    "sourceRevision": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+    "liveProviderCapture": false,
+    "note": "Only selected client-facing fields; shortened histories are not complete server fixtures. _example is documentation metadata outside the API body."
+  },
+  "response": {
+    "source": "KMA",
+    "name": "서울",
+    "address": "대한민국 서울특별시 중구",
+    "country": "KR",
+    "location": {
+      "lat": 37.567,
+      "long": 126.978
+    },
+    "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea"
+    },
+    "regionName": "서울특별시",
+    "cityName": "중구",
+    "townName": "",
+    "shortPubDate": "202609230500",
+    "currentPubDate": "202609230900",
+    "current": {
+      "date": "20260923",
+      "time": 9,
+      "dateObj": "2026.09.23 09:00",
+      "stnDateTime": "2026-09-23 09:00",
+      "t1h": 21,
+      "skyIcon": "sun",
+      "weatherType": 0,
+      "weather": "맑음",
+      "reh": 60,
+      "wsd": 2,
+      "wdd": "N",
+      "hPa": 1013,
+      "visibility": 10,
+      "pty": 0,
+      "rn1": 0,
+      "summaryWeather": "맑은 아침입니다.",
+      "summaryAir": "대기질은 보통입니다.",
+      "arpltn": {
+        "stationName": "Synthetic Central Station",
+        "dataTime": "2026-09-23 09:00",
+        "aqiValue": 55,
+        "aqiGrade": 2,
+        "aqiStr": "보통",
+        "pm25Value": 18,
+        "pm25Grade": 2,
+        "pm25Str": "보통",
+        "pm10Value": 30,
+        "pm10Grade": 1,
+        "pm10Str": "좋음",
+        "o3Value": 0.02,
+        "o3Grade": 1,
+        "o3Str": "좋음"
+      },
+      "yesterday": {
+        "date": "20260922",
+        "time": 9,
+        "dateObj": "2026.09.22 09:00",
+        "t1h": 20,
+        "skyIcon": "sun"
+      }
+    },
+    "short": [
+      {
+        "date": "20260922",
+        "time": 0,
+        "dateObj": "2026.09.22 00:00",
+        "fromToday": -1,
+        "t3h": 18,
+        "skyIcon": "moon",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 3,
+        "dateObj": "2026.09.22 03:00",
+        "fromToday": -1,
+        "t3h": 19,
+        "skyIcon": "moon",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 6,
+        "dateObj": "2026.09.22 06:00",
+        "fromToday": -1,
+        "t3h": 20,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 9,
+        "dateObj": "2026.09.22 09:00",
+        "fromToday": -1,
+        "t3h": 21,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 12,
+        "dateObj": "2026.09.22 12:00",
+        "fromToday": -1,
+        "t3h": 22,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 15,
+        "dateObj": "2026.09.22 15:00",
+        "fromToday": -1,
+        "t3h": 23,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 18,
+        "dateObj": "2026.09.22 18:00",
+        "fromToday": -1,
+        "t3h": 24,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 21,
+        "dateObj": "2026.09.22 21:00",
+        "fromToday": -1,
+        "t3h": 25,
+        "skyIcon": "moon",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260923",
+        "time": 0,
+        "dateObj": "2026.09.23 00:00",
+        "fromToday": 0,
+        "t3h": 18,
+        "skyIcon": "moon",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260923",
+        "time": 3,
+        "dateObj": "2026.09.23 03:00",
+        "fromToday": 0,
+        "t3h": 19,
+        "skyIcon": "moon",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260923",
+        "time": 6,
+        "dateObj": "2026.09.23 06:00",
+        "fromToday": 0,
+        "t3h": 20,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260923",
+        "time": 9,
+        "dateObj": "2026.09.23 09:00",
+        "fromToday": 0,
+        "t3h": 21,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0,
+        "currentIndex": true
+      }
+    ],
+    "midData": {
+      "dailyData": [
+        {
+          "date": "20260922",
+          "dateObj": "2026.09.22 00:00",
+          "fromToday": -1,
+          "dayOfWeek": 2,
+          "tmn": 17,
+          "tmx": 25,
+          "skyAm": "sun",
+          "skyPm": "sun",
+          "pop": 0,
+          "reh": 60,
+          "wsd": 2,
+          "sunrise": "2026.09.22 06:20",
+          "sunset": "2026.09.22 18:25"
+        },
+        {
+          "date": "20260923",
+          "dateObj": "2026.09.23 00:00",
+          "fromToday": 0,
+          "dayOfWeek": 3,
+          "tmn": 18,
+          "tmx": 26,
+          "skyAm": "sun",
+          "skyPm": "sun",
+          "pop": 0,
+          "reh": 60,
+          "wsd": 2,
+          "sunrise": "2026.09.23 06:20",
+          "sunset": "2026.09.23 18:25"
+        },
+        {
+          "date": "20260924",
+          "dateObj": "2026.09.24 00:00",
+          "fromToday": 1,
+          "dayOfWeek": 4,
+          "tmn": 19,
+          "tmx": 27,
+          "skyAm": "sun",
+          "skyPm": "sun_bigcloud",
+          "pop": 30,
+          "reh": 60,
+          "wsd": 2,
+          "sunrise": "2026.09.24 06:20",
+          "sunset": "2026.09.24 18:25"
+        }
+      ]
+    },
+    "airInfoList": [
+      {
+        "last": {
+          "stationName": "Synthetic Central Station",
+          "dataTime": "2026-09-23 09:00",
+          "aqiValue": 55,
+          "aqiGrade": 2,
+          "aqiStr": "보통",
+          "pm25Value": 18,
+          "pm25Grade": 2,
+          "pm25Str": "보통",
+          "pm10Value": 30,
+          "pm10Grade": 1,
+          "pm10Str": "좋음",
+          "o3Value": 0.02,
+          "o3Grade": 1,
+          "o3Str": "좋음"
+        },
+        "forecastSource": "kaq",
+        "forecastPubDate": "2026-09-23 08:00",
+        "pollutants": {
+          "aqi": {
+            "hourly": [
+              {
+                "date": "2026-09-23 00:00",
+                "val": 46,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 01:00",
+                "val": 47,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 02:00",
+                "val": 48,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 03:00",
+                "val": 49,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 04:00",
+                "val": 50,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 05:00",
+                "val": 51,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 06:00",
+                "val": 52,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 07:00",
+                "val": 53,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 08:00",
+                "val": 54,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 09:00",
+                "val": 55,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 10:00",
+                "val": 56,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 11:00",
+                "val": 57,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 12:00",
+                "val": 58,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 13:00",
+                "val": 59,
+                "grade": 2
+              },
+              {
+                "date": "2026-09-23 14:00",
+                "val": 60,
+                "grade": 2
+              }
+            ],
+            "daily": [
+              {
+                "date": "2026-09-23",
+                "fromToday": 0,
+                "dayOfWeek": 3,
+                "val": 55,
+                "grade": 2,
+                "str": "보통"
+              },
+              {
+                "date": "2026-09-24",
+                "fromToday": 1,
+                "dayOfWeek": 4,
+                "val": 45,
+                "grade": 1,
+                "str": "좋음"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

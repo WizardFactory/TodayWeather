@@ -5,6 +5,8 @@ Inform how warm or cold it is today than yesterday.
 
 See the [service architecture guide](docs/architecture/README.md) for the overall structure, weather collection pipeline, mobile API calls, and interactive Archify diagrams. Shared contributor and agent guidance is maintained in [AGENTS.md](AGENTS.md).
 
+For server/client replacement planning, see the [rewrite reference package](docs/rewrite/README.md): screen definitions and simulator screenshots, data contracts and examples, ordered server assembly diagrams, migration decisions, and verification criteria.
+
 ## Running Locally
 You have to run server before start mobile application.
 

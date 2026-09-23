@@ -1,0 +1,29 @@
+{
+  "state": "guide",
+  "viewport": [
+    402,
+    778
+  ],
+  "screen": [
+    402,
+    874
+  ],
+  "theme": "light",
+  "errors": [],
+  "brokenImages": [],
+  "svgCount": 0,
+  "invalidSvg": 0,
+  "headers": [],
+  "tabs": [],
+  "fontStatus": "loaded",
+  "documentWidth": 402,
+  "scrollRegions": [
+    {
+      "className": "scroll-content ionic-scroll scroll-content-false",
+      "clientWidth": 402,
+      "scrollWidth": 402,
+      "clientHeight": 779,
+      "scrollHeight": 782
+    }
+  ]
+}

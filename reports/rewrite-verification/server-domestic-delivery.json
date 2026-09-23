@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "workflow",
+  "input": "/Users/ak/.paseo/worktrees/2hsryg27/creepy-lamprey/docs/rewrite/diagrams/server-domestic-assembly.json",
+  "output": "/Users/ak/.paseo/worktrees/2hsryg27/creepy-lamprey/docs/rewrite/diagrams/server-domestic-assembly.html",
+  "specification": {
+    "sha256": "aa98d4bbaf8e456033e1433612aa8c5c11523fbea123b08acb20ea07aaaa8b39",
+    "bytes": 4464
+  },
+  "artifact": {
+    "sha256": "b0600e11618c2697c62728bec95a876dc237cfdd52fff5a8a3d417b8c92f9d84",
+    "bytes": 710733
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}
