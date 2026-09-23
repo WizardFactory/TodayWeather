@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "artifact_sha256": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe",
+  "checks": [
+    "Search workers resolves only jobs",
+    "Escape closes search",
+    "Theme changes to dark",
+    "Real SVG download contains diagram without finder UI"
+  ],
+  "export_bytes": 149430,
+  "external_resources": []
+}

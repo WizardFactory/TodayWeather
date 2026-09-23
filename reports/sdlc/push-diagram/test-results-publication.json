@@ -1,0 +1,32 @@
+{
+  "candidate": "3b5ddf5344452ecd6a36f1e2e4affc24e5e45f600bb593b0336bd32552aac2f5",
+  "not_applicable_reason": "Non-executable documentation; no runtime smoke or artificial TDD.",
+  "scenarios": [
+    {
+      "id": "DOC1",
+      "requirement": "AC1",
+      "required": true,
+      "environment": "local repository, existing Chromium",
+      "prerequisites": "Source baseline and selected AWS evidence present",
+      "actions": "Run document checks and inspect final diagram receipts",
+      "expected": "Source-grounded routes, artifact hashes and links pass",
+      "failure": "Mismatch, dead link or failed diagram evidence",
+      "cleanup": "No application started"
+    }
+  ],
+  "runs": [
+    {
+      "id": "DOC1-publication",
+      "scenario": "DOC1",
+      "phase": "document",
+      "candidate": "3b5ddf5344452ecd6a36f1e2e4affc24e5e45f600bb593b0336bd32552aac2f5",
+      "command": "python3 .planning/2026-09-22-push-diagram/publication-check.py",
+      "exit_code": 0,
+      "environment": "local Python; pre-collected real Chromium receipts",
+      "observed": "PASS: 61 relative links; shell syntax; shared Claude adapter; 19 route/31 day aggregates and CSV totals; unchanged diagram/browser hashes; bounded sensitive-pattern scan; git diff --check.\ncandidate: 3b5ddf5344452ecd6a36f1e2e4affc24e5e45f600bb593b0336bd32552aac2f5\n",
+      "evidence": "reports/sdlc/push-diagram/publication-check.txt",
+      "execution_kind": "real",
+      "status": "passed"
+    }
+  ]
+}

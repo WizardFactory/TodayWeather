@@ -1,0 +1,3 @@
+# Intent: Push behavior diagram
+
+AK requested a push diagram. Deliver an explorable standalone architecture HTML and editable JSON plus a concise source-linked explanation. AC1: accurately distinguish POST setting sync, PUT token replacement, DELETE, alarm and alert workers, weather lookup, provider selection and notification handling. AC2: distinguish source behavior, dated AWS routing, observed HTTP errors and unverified delivery/root cause. AC3: showcase artifact checks, real browser checks at three desktop sizes, actual visual review and independent source verification pass. Repository artifacts in English; user communication in Korean. Local edits only; preserve monthly reports. No code fixes, mobile build, provider sends, PR or deployment.

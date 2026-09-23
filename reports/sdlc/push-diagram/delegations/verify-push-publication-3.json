@@ -1,0 +1,24 @@
+{
+  "assignment": "verify-push-publication-3",
+  "task": "push-diagram",
+  "stage": "independent-verification",
+  "iteration": 3,
+  "remaining_after_attempt": 7,
+  "context_id": "/root/verify_push_diagram",
+  "builder_context_id": "/root",
+  "tool": "collaboration.followup_task",
+  "authority": "SDLC independent verification requirement; AK requested push/PR publication on 2026-09-23",
+  "endpoint": "PR publication only",
+  "candidate": "3b5ddf5344452ecd6a36f1e2e4affc24e5e45f600bb593b0336bd32552aac2f5",
+  "input_manifest": "reports/sdlc/push-diagram/publication-candidate.json",
+  "output": "/tmp/push-publication-independent.md",
+  "boundaries": "Read-only worktree; only /tmp report writable. No cloud/app requests, shared state, commits, publication, or delegation.",
+  "criteria": [
+    "AC1",
+    "AC2",
+    "AC3"
+  ],
+  "scope": "Current access guidance, index and monthly report checks; unchanged diagram/source evidence reuse.",
+  "provider": "openai",
+  "review_type": "independent documentation verification, not cross-provider PR review"
+}

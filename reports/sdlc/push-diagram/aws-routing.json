@@ -1,0 +1,76 @@
+{
+  "observed_at": "2026-09-22T20:33:25.599754+00:00",
+  "distribution": "E3QLRH0LJD07QR",
+  "behaviors": [
+    {
+      "PathPattern": "/*/push",
+      "TargetOriginId": "Custom-tw-svc-spot.wizardfactory.net",
+      "AllowedMethods": {
+        "Quantity": 7,
+        "Items": [
+          "HEAD",
+          "DELETE",
+          "POST",
+          "GET",
+          "OPTIONS",
+          "PUT",
+          "PATCH"
+        ],
+        "CachedMethods": {
+          "Quantity": 2,
+          "Items": [
+            "HEAD",
+            "GET"
+          ]
+        }
+      },
+      "ViewerProtocolPolicy": "allow-all"
+    },
+    {
+      "PathPattern": "/*/push-list",
+      "TargetOriginId": "Custom-tw-svc-spot.wizardfactory.net",
+      "AllowedMethods": {
+        "Quantity": 7,
+        "Items": [
+          "HEAD",
+          "DELETE",
+          "POST",
+          "GET",
+          "OPTIONS",
+          "PUT",
+          "PATCH"
+        ],
+        "CachedMethods": {
+          "Quantity": 2,
+          "Items": [
+            "HEAD",
+            "GET"
+          ]
+        }
+      },
+      "ViewerProtocolPolicy": "allow-all"
+    }
+  ],
+  "origins": [
+    {
+      "Id": "Custom-tw-svc-spot.wizardfactory.net",
+      "DomainName": "tw-svc-spot.wizardfactory.net",
+      "OriginPath": "",
+      "CustomOriginConfig": {
+        "HTTPPort": 80,
+        "HTTPSPort": 443,
+        "OriginProtocolPolicy": "http-only",
+        "OriginSslProtocols": {
+          "Quantity": 3,
+          "Items": [
+            "TLSv1",
+            "TLSv1.1",
+            "TLSv1.2"
+          ]
+        },
+        "OriginReadTimeout": 30,
+        "OriginKeepaliveTimeout": 5
+      }
+    }
+  ]
+}

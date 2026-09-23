@@ -1,0 +1,156 @@
+{
+  "iteration": 3,
+  "decision": "PROCEED",
+  "reason": "Current publication files checked; unchanged diagram evidence reused by digest.",
+  "authority_source": "AK 2026-09-23: push existing PR branch or push and create a PR. See publication-amendment.md.",
+  "candidate": "3b5ddf5344452ecd6a36f1e2e4affc24e5e45f600bb593b0336bd32552aac2f5",
+  "next_action": "Proceed within the authorized PR-publication endpoint.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/push-diagram/triage.md",
+      "sha256": "08db76d6ca565a3be6752df105ac9e864780ef03bbb23defc578e6e999929a01"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/push-diagram.md",
+      "sha256": "6c5927a3ad1dafad878f4145b7b3be826400c36be541ad973585525719b03214"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/push-diagram/investigation.md",
+      "sha256": "9a8479d5e35a0e8131f25d59f0fa6406cd980652e08855e97d79eb54b47c791d"
+    },
+    {
+      "kind": "aws-routing",
+      "path": "reports/sdlc/push-diagram/aws-routing.json",
+      "sha256": "4690ef86ecffea1dfd8ecbdc7493953f85426476fd0f93ce97cdd0458ed741e8"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/push-diagram.md",
+      "sha256": "447ec8cbef7f584d08b37b4b2853b744580a164556513eaf66dc8310c11c2b77"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/push-notifications.json",
+      "sha256": "3569ff5ba04bac46380404010b18e5b64a7a92aa1e5835d7c4e7f77e2e407ae3"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/push-notifications.html",
+      "sha256": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/push-diagram/diagram-delivery.json",
+      "sha256": "cf92fcbd05dfdcdb226bcb18652c1f74e06df8dc8a8998f4c5ad67ab54314ff0"
+    },
+    {
+      "kind": "browser-evidence",
+      "path": "reports/sdlc/push-diagram/diagram-browser.json",
+      "sha256": "25024b8ae9237688503c584389f923fe48c9ca8d1dfe3582dfd0eff5289c2a95"
+    },
+    {
+      "kind": "visual-review",
+      "path": "reports/sdlc/push-diagram/visual-review.md",
+      "sha256": "c4bed9bc50dcf0aca7968872d0e656cc916709a6bef1bc780bceefb012284fcf"
+    },
+    {
+      "kind": "plan",
+      "path": "plans/push-diagram.md",
+      "sha256": "7ea0bbb3bf64fb047ff65a9a8478179352fe536803cd19ac649bc9edf2db5374"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/push-diagram/build-publication.md",
+      "sha256": "a584be0dfc06974dd9bba343b11f8694c3e88a7f2541085748111ef348e0f3dc"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/push-diagram/change-record-publication.txt",
+      "sha256": "450638c35794e7dc961d67c43391a261f3c260a4699e42068dd962017b766b1f"
+    },
+    {
+      "kind": "publication-authority",
+      "path": "reports/sdlc/push-diagram/publication-amendment.md",
+      "sha256": "c15f29a2af424983b4168f9b8e4c3b34e5b92105e8412ff6f453dd77fb8ed904"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "AGENTS.md",
+      "sha256": "91a5642fcf046673e9a018c34a52da6bd0607561058ba05b1666c9afc585fdc6"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/README.md",
+      "sha256": "19330914bb466ab6318090dd6875d75521fb1ca03c028a46fb7f7f628f67cd1d"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/ec2-access.md",
+      "sha256": "b26db0a488e98edcf5c6856d4730adc4ba1c78c794d83c28128ab5dfddfe004d"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/push-notifications.md",
+      "sha256": "9bcae638f7fd23ec1a79ad3d343210e7952c1c4d5d1bfdca8abb1e05a65bd696"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/push-notifications.json",
+      "sha256": "3569ff5ba04bac46380404010b18e5b64a7a92aa1e5835d7c4e7f77e2e407ae3"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/push-notifications.html",
+      "sha256": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/aws/api-traffic-2026-09-22-daily.csv",
+      "sha256": "00ed357e49bf7af4d3e2f4e041ab15b637fb5743acc36fa5a126e0c5a814b915"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/aws/api-traffic-2026-09-22-evidence.json",
+      "sha256": "0f15f96a401cc1b8a139d5a03a46e572b9982ae3875bfc57ae523560a2206140"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/aws/api-traffic-2026-09-22-routes.csv",
+      "sha256": "769f88fdf3a32961954de4dc8fe8b72727956160471f5011c6ebae5f20fe7c7e"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/aws/api-traffic-2026-09-22.md",
+      "sha256": "f8b75b81ea85ef044edf34a26c528cbe86eb424e6c4e33b13622902b34d813ed"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "self-verification",
+      "path": "reports/sdlc/push-diagram/self-verification-publication.md",
+      "sha256": "cc83862ba3b3adad5a9d93ec1b135a48771834b2ab7b8272fb09defe5a0787ea"
+    },
+    {
+      "kind": "test-results",
+      "path": "reports/sdlc/push-diagram/test-results-publication.json",
+      "sha256": "70d45ea6a7680a7bdfad0003d6f63f0ca90c1924acbcd626095c42aed1afd603"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/push-diagram/publication-check.txt",
+      "sha256": "84fd5b4262fb6266c5acdc135ff529a04730436dadd471e1299e9ba8ad62e3b2"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Fresh source identities and content checks cover the publication candidate.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3"
+    ]
+  }
+}

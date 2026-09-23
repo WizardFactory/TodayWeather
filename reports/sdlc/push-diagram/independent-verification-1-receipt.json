@@ -1,0 +1,35 @@
+{
+  "iteration": 1,
+  "decision": "BLOCKED",
+  "reason": "Independent verifier found inaccurate DELETE narrowing semantics; documentation correction accepted.",
+  "authority_source": "User-requested local push diagram and SDLC independent verification.",
+  "candidate": "75da4f993821bbea8409756bbdc894e1f7e09971cf05c8c3987f56f2d9b689c1",
+  "next_action": "Correct DELETE truthy guard documentation, renew checks and independent assessment.",
+  "inputs": [],
+  "outputs": [
+    {
+      "kind": "independent-verification",
+      "path": "reports/sdlc/push-diagram/independent-verification-1.md",
+      "sha256": "da61149b88342745bbfdbfc8354ea0d6f5fe4f2513ed19c199db903df3bc449f"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root/verify_push_diagram",
+    "summary": "One mandatory AC1 documentation correction; other source and artifact checks passed.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3"
+    ]
+  },
+  "verifier": {
+    "independent": true,
+    "context_id": "/root/verify_push_diagram",
+    "builder_context_id": "/root",
+    "checks": [
+      "Actual source tracing",
+      "46 local links",
+      "Artifact hashes and screenshots"
+    ]
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "iteration": 4,
+  "decision": "PROCEED",
+  "reason": "Current publication files checked; unchanged diagram evidence reused by digest.",
+  "authority_source": "AK 2026-09-23: apply assessed review corrections and push PR2552. See review-fix-amendment.md.",
+  "candidate": "edb51651c355f13f0745a093c5ed92c9906996a269376144659c072271dbb74f",
+  "next_action": "Proceed within the authorized PR-publication endpoint.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/push-diagram/triage.md",
+      "sha256": "08db76d6ca565a3be6752df105ac9e864780ef03bbb23defc578e6e999929a01"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/push-diagram.md",
+      "sha256": "6c5927a3ad1dafad878f4145b7b3be826400c36be541ad973585525719b03214"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/push-diagram/investigation.md",
+      "sha256": "9a8479d5e35a0e8131f25d59f0fa6406cd980652e08855e97d79eb54b47c791d"
+    },
+    {
+      "kind": "aws-routing",
+      "path": "reports/sdlc/push-diagram/aws-routing.json",
+      "sha256": "4690ef86ecffea1dfd8ecbdc7493953f85426476fd0f93ce97cdd0458ed741e8"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/push-diagram.md",
+      "sha256": "447ec8cbef7f584d08b37b4b2853b744580a164556513eaf66dc8310c11c2b77"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/push-notifications.json",
+      "sha256": "3569ff5ba04bac46380404010b18e5b64a7a92aa1e5835d7c4e7f77e2e407ae3"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/push-notifications.html",
+      "sha256": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/push-diagram/diagram-delivery.json",
+      "sha256": "cf92fcbd05dfdcdb226bcb18652c1f74e06df8dc8a8998f4c5ad67ab54314ff0"
+    },
+    {
+      "kind": "browser-evidence",
+      "path": "reports/sdlc/push-diagram/diagram-browser.json",
+      "sha256": "25024b8ae9237688503c584389f923fe48c9ca8d1dfe3582dfd0eff5289c2a95"
+    },
+    {
+      "kind": "visual-review",
+      "path": "reports/sdlc/push-diagram/visual-review.md",
+      "sha256": "c4bed9bc50dcf0aca7968872d0e656cc916709a6bef1bc780bceefb012284fcf"
+    },
+    {
+      "kind": "plan",
+      "path": "plans/push-diagram.md",
+      "sha256": "7ea0bbb3bf64fb047ff65a9a8478179352fe536803cd19ac649bc9edf2db5374"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/push-diagram/build-review-fix.md",
+      "sha256": "edb24ff0b455b89c68c048ba0fcfe09a784ec54c35a1cbfd53395d3972475d00"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/push-diagram/change-record-review-fix.txt",
+      "sha256": "56ec7c2de016562df95b5e5c56672d9b60f2a9c939e128719ecd91539413e590"
+    },
+    {
+      "kind": "review-fix-authority",
+      "path": "reports/sdlc/push-diagram/review-fix-amendment.md",
+      "sha256": "66408b2f1ea44f1a97895a7947454a39a0b37d421218a5d1b1425cafd36815ae"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "AGENTS.md",
+      "sha256": "7a562fe5936ec043a8f721b7e6b8a33ba2bc49c65f3176888531428f0d7eebf4"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/README.md",
+      "sha256": "19330914bb466ab6318090dd6875d75521fb1ca03c028a46fb7f7f628f67cd1d"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/ec2-access.md",
+      "sha256": "51ded4fca840050a989b9bc8dab2d264e8f71596b6093d417a9e672c7a7779d4"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/push-notifications.md",
+      "sha256": "935ce5480a37e6a183ab44653cedfc31f049fbf29907ce537dd5e6bd76be46a3"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/push-notifications.json",
+      "sha256": "3569ff5ba04bac46380404010b18e5b64a7a92aa1e5835d7c4e7f77e2e407ae3"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/push-notifications.html",
+      "sha256": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/aws/api-traffic-2026-09-22-daily.csv",
+      "sha256": "00ed357e49bf7af4d3e2f4e041ab15b637fb5743acc36fa5a126e0c5a814b915"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/aws/api-traffic-2026-09-22-evidence.json",
+      "sha256": "0f15f96a401cc1b8a139d5a03a46e572b9982ae3875bfc57ae523560a2206140"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/aws/api-traffic-2026-09-22-routes.csv",
+      "sha256": "769f88fdf3a32961954de4dc8fe8b72727956160471f5011c6ebae5f20fe7c7e"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/aws/api-traffic-2026-09-22.md",
+      "sha256": "83194a6431b8c35483eaa0e31cfbf470988e7bb02528d16836391e100a5e2725"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/aws-code-correlation.md",
+      "sha256": "7c5c76578fc50edb363db4e0f8cd92488e1bbe247c6f4995ec0d842b891ff7d1"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/evidence.md",
+      "sha256": "6b59423582f30363700062a4abd6ed1ea99a345212523b9b571c619cd18dea6d"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/pr2552-review-assessment/investigation.md",
+      "sha256": "5b15afd024c08b320d0a2f0e9fe3598e0b38a0e9820bf595efbc45d4d9fabbd1"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/pr2552-review-assessment/s3-public-access.json",
+      "sha256": "f20ddefa829fb11970c6890c902e7b026579465e5d6cf1508e10fc4376d62bf5"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "reports/sdlc/pr2552-review-assessment/token-reproduction.json",
+      "sha256": "f5a9aed2ce8380cb8662862e04d49475477c617ed70d08060526801741a10b7d"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "self-verification",
+      "path": "reports/sdlc/push-diagram/self-verification-review-fix.md",
+      "sha256": "96b2bbcb95e33f3506213801a081bef0caa702ff73e6d58fbafd26c381d9b0ef"
+    },
+    {
+      "kind": "test-results",
+      "path": "reports/sdlc/push-diagram/test-results-review-fix.json",
+      "sha256": "7e35428dd81f41972d842ca58091a3833f50e8118a6eecdd67fddb7020c9c6f4"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/push-diagram/review-fix-check.txt",
+      "sha256": "90a0c32a7593cd9a5f07960a7b3f904cb8375f1fd6a1546abfa570f9309ee9f1"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Fresh source identities and content checks cover the publication candidate.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3"
+    ]
+  }
+}

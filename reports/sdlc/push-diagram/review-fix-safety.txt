@@ -1,0 +1,1 @@
+Scanned 27 changed/new files against local credential values without printing them and common AWS/private-key patterns: zero matches. No application or diagram artifact bytes changed. Installer was documented, not executed.

@@ -1,0 +1,22 @@
+ AGENTS.md                       |  2 +-
+ docs/architecture/README.md     |  4 ++-
+ docs/architecture/ec2-access.md | 79 +++++++++++++++++++++++++++++++++++++++--
+ 3 files changed, 81 insertions(+), 4 deletions(-)
+
+New deliverables and current hashes:
+{
+  "candidate": "3b5ddf5344452ecd6a36f1e2e4affc24e5e45f600bb593b0336bd32552aac2f5",
+  "base": "54b2d0f2802742123f5a016e37b0807fda775bab",
+  "files": {
+    "AGENTS.md": "91a5642fcf046673e9a018c34a52da6bd0607561058ba05b1666c9afc585fdc6",
+    "docs/architecture/README.md": "19330914bb466ab6318090dd6875d75521fb1ca03c028a46fb7f7f628f67cd1d",
+    "docs/architecture/ec2-access.md": "b26db0a488e98edcf5c6856d4730adc4ba1c78c794d83c28128ab5dfddfe004d",
+    "docs/architecture/push-notifications.md": "9bcae638f7fd23ec1a79ad3d343210e7952c1c4d5d1bfdca8abb1e05a65bd696",
+    "docs/architecture/diagrams/push-notifications.json": "3569ff5ba04bac46380404010b18e5b64a7a92aa1e5835d7c4e7f77e2e407ae3",
+    "docs/architecture/diagrams/push-notifications.html": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe",
+    "reports/aws/api-traffic-2026-09-22-daily.csv": "00ed357e49bf7af4d3e2f4e041ab15b637fb5743acc36fa5a126e0c5a814b915",
+    "reports/aws/api-traffic-2026-09-22-evidence.json": "0f15f96a401cc1b8a139d5a03a46e572b9982ae3875bfc57ae523560a2206140",
+    "reports/aws/api-traffic-2026-09-22-routes.csv": "769f88fdf3a32961954de4dc8fe8b72727956160471f5011c6ebae5f20fe7c7e",
+    "reports/aws/api-traffic-2026-09-22.md": "f8b75b81ea85ef044edf34a26c528cbe86eb424e6c4e33b13622902b34d813ed"
+  }
+}

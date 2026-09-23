@@ -19,7 +19,7 @@ Use the [architecture index](docs/architecture/README.md), then the document rel
 - [AWS/code correlation](docs/architecture/aws-code-correlation.md): timestamped AWS routing, deployed Lambda behavior and remaining host-level gaps.
 - [Evidence and limitations](docs/architecture/evidence.md): source lookup map and missing external dependencies.
 - [Service EC2 internals](docs/architecture/ec2-internals.md): observed nginx/PM2 topology, host configuration, database sockets and deployed-code differences.
-- [EC2 SSH access](docs/architecture/ec2-access.md): user-confirmed SSH command and local key location.
+- [EC2 SSH and AWS API access](docs/architecture/ec2-access.md): SSH key, repository AWS credentials, named account profile, verified CLI path and SDK fallback. Read this before concluding that AWS access is unavailable because `aws` is not on PATH or `~/.aws` is absent.
 
 Treat repository claims as revision-bound and AWS claims as timestamped observations. Recheck relevant implementation before changing behavior.
 
@@ -40,6 +40,7 @@ Prefer shared app edits in `client/www/` when that is the intended build source.
 ## Architecture constraints to preserve
 
 - The app builds `/weather/v000903/...` and `/geocode/v000903/...`. The 2026-09-20 AWS/deployed-source evidence verifies CloudFront -> API Gateway -> Lambda; weather coordinates dispatch to EC2 KMA address or DSF coordinates. Gateway code is outside this checkout. Recheck current evidence before relying on that deployment mapping; the inspected service host uses a 5bca407 checkout with config/logger edits, service mode and DB version 2.0. Separate gather/Mongo internals remain unverified. Weather address Lambda is unsupported (501); unversioned weather defaults to v000901.
+- The [2026-08-23 to 2026-09-22 UTC traffic window](reports/aws/api-traffic-2026-09-22.md) recorded 70.72% of product API requests on unversioned `/weather/coord/...`. The Lambda default `v000901` is a separate 2026-09-20 deployment observation, not per-request historical correlation. Android-like callers of this path remain unidentified; see [open questions](docs/architecture/evidence.md#traffic-and-log-access-follow-up).
 - Domestic weather is largely gathered before requests; the latest DSF/AQI path can call providers during a request. A legacy collector's presence does not establish startup wiring.
 - `SERVER_MODE` selects background work, not route visibility. Its default `local` starts both gather and scrape. Inspect startup side effects before running the server; use an isolated configured environment for runtime verification.
 - `/gather/*` GET handlers can call providers and write data. Do not use them as health probes; `/health` is the explicit basic health route.

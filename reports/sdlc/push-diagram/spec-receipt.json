@@ -1,0 +1,46 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "Specification aligns diagram semantics, evidence boundaries and artifact acceptance.",
+  "authority_source": "AK requested a push behavior diagram; local documentation only. Shared SDLC HOTL policy permits bounded checks.",
+  "candidate": "d14da457515407873fba28c9b0291bb23ce955a3",
+  "next_action": "Continue the next applicable local documentation stage.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/push-diagram/triage.md",
+      "sha256": "08db76d6ca565a3be6752df105ac9e864780ef03bbb23defc578e6e999929a01"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/push-diagram.md",
+      "sha256": "6c5927a3ad1dafad878f4145b7b3be826400c36be541ad973585525719b03214"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/push-diagram/investigation.md",
+      "sha256": "9a8479d5e35a0e8131f25d59f0fa6406cd980652e08855e97d79eb54b47c791d"
+    },
+    {
+      "kind": "aws-routing",
+      "path": "reports/sdlc/push-diagram/aws-routing.json",
+      "sha256": "4690ef86ecffea1dfd8ecbdc7493953f85426476fd0f93ce97cdd0458ed741e8"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "spec",
+      "path": "specs/push-diagram.md",
+      "sha256": "447ec8cbef7f584d08b37b4b2853b744580a164556513eaf66dc8310c11c2b77"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Specification aligns diagram semantics, evidence boundaries and artifact acceptance.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3"
+    ]
+  }
+}

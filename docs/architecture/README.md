@@ -10,7 +10,8 @@ This is a source-based analysis of TodayWeather and TodayAir at commit `b9795125
 4. [AWS/code correlation](aws-code-correlation.md): current routing, deployed Lambda logic, cache policy, KAQ producer/consumer links and observed failures.
 5. [Service EC2 internals](ec2-internals.md): nginx, PM2 workers, resolved configuration, database sockets and deployed-code differences.
 6. [Evidence and limitations](evidence.md): source map and unresolved integration questions.
-7. [EC2 SSH access](ec2-access.md): user-confirmed connection command and local private-key setup.
+7. [Push notifications](push-notifications.md): settings/token APIs, alarm and alert workers, provider selection and observed request errors.
+8. [EC2 SSH and AWS API access](ec2-access.md): connection commands, local credential locations, named AWS profile and CLI/SDK usage.
 
 ## Interactive diagrams
 
@@ -18,6 +19,7 @@ Open the HTML files in a browser. Each file is standalone and includes theme swi
 
 | View | Standalone HTML | Source |
 | --- | --- | --- |
+| Push notifications | [Settings to device notification](diagrams/push-notifications.html) | [JSON](diagrams/push-notifications.json) |
 | Service EC2 internals | [nginx / PM2 / Mongo endpoint](diagrams/ec2-internals.html) | [JSON](diagrams/ec2-internals.json) |
 | AWS infrastructure | [AWS resource topology](diagrams/aws-infrastructure.html) | [JSON](diagrams/aws-infrastructure.json) |
 | Overall service (architecture) | [Service structure](diagrams/service-overview.html) | [JSON](diagrams/service-overview.json) |
