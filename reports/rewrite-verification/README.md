@@ -42,7 +42,7 @@ Capture corrections were confined to the harness: a wrong test radio title was r
 
 ## Local diagram verification artifacts
 
-The user-reported blank pages were `.visual-check.html` screenshot contact sheets whose PNGs were excluded by Git. These temporary HTML pages are now excluded too, along with renamed diagram PNG copies. Main diagram HTML embeds SVG and remains versioned; source JSON and machine-readable verification receipts remain versioned. App screen captures remain versioned. The package validator checks HTML assets against the deliverable Git file set so ordinary published pages cannot silently depend on ignored local files.
+The user-reported blank pages were `.visual-check.html` screenshot contact sheets whose PNGs were excluded by Git. All visual-check HTML, PNG and raw browser JSON receipts are now excluded, including renamed copies. Main diagram HTML embeds SVG and remains versioned; editable source JSON and artifact validation/delivery receipts remain versioned, while all raw visual-check browser receipts are local-only. App screen captures remain versioned. The package validator checks HTML assets against the deliverable Git file set so ordinary published pages cannot silently depend on ignored local files.
 
 ## Evidence boundaries and remaining risk
 

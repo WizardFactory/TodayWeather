@@ -58,7 +58,7 @@ for item in manifest:
         if d['errors'] or d['brokenImages'] or d['invalidSvg']:errors.append(f'Capture diagnostics: {item["file"]}')
         counts['capture_diagnostics']+=1
 
-result={'source_commit':'ff7acf3996ccb66c912d2ed4710cf300197d6966','checks':counts,'errors':errors,'passed':not errors,'limits':'Checks deliverable Markdown and HTML asset targets, Git inclusion, syntax and app screenshot bytes. Ignored local-only diagram contact sheets and PNGs are excluded; browser rendering and every prose claim are not validated.'}
+result={'source_commit':'ff7acf3996ccb66c912d2ed4710cf300197d6966','checks':counts,'errors':errors,'passed':not errors,'limits':'Checks deliverable Markdown and HTML asset targets, Git inclusion, syntax and app screenshot bytes. All ignored local-only visual-check outputs are excluded; browser rendering and every prose claim are not validated.'}
 (ROOT/'reports/rewrite-verification/package-validation.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))
 raise SystemExit(1 if errors else 0)

@@ -18,7 +18,7 @@ Source baseline: `ff7acf3996ccb66c912d2ed4710cf300197d6966`, inspected 2026-09-2
 - Specification SHA-256: `aa98d4bbaf8e456033e1433612aa8c5c11523fbea123b08acb20ea07aaaa8b39` (4464 bytes)
 - Artifact SHA-256: `b0600e11618c2697c62728bec95a876dc237cfdd52fff5a8a3d417b8c92f9d84` (710733 bytes)
 - Validation: [receipt](server-domestic-validation.json); final atomic [delivery receipt](server-domestic-delivery.json)
-- `browser_evidence: passed` — [receipt](server-domestic-visual-check.json)
+- `browser_evidence: passed` — local receipt `server-domestic-visual-check.json` (excluded from Git)
 - `visual_review: passed` — [local light/dark capture inventory](server-diagram-captures.md#server-domestic-assembly)
 - `correction_rounds: 2` (candidate validation and visual refinements; final source is frozen)
 
@@ -29,13 +29,13 @@ Source baseline: `ff7acf3996ccb66c912d2ed4710cf300197d6966`, inspected 2026-09-2
 - Specification SHA-256: `c4bc6b53b3a62f2adbfe57ae36770cb92715f7d14ec8d28becf9664e35eeb20b` (2973 bytes)
 - Artifact SHA-256: `4ea74da819ed4bbd5eb65ad45fdab15eef96d17e7091c018a1b6ccc4c3e5fc67` (710788 bytes)
 - Validation: [receipt](server-world-validation.json); final atomic [delivery receipt](server-world-delivery.json)
-- `browser_evidence: passed` — [receipt](server-world-visual-check.json)
+- `browser_evidence: passed` — local receipt `server-world-visual-check.json` (excluded from Git)
 - `visual_review: passed` — [local light/dark capture inventory](server-diagram-captures.md#server-world-cache-sequence)
 - `correction_rounds: 2` (candidate validation and visual refinements; final source is frozen)
 
 ## Capture portability
 
-Diagram verification PNGs are intentionally excluded from Git at the user's request, including the eight renamed report copies. The [local capture inventory](server-diagram-captures.md) and [SHA-256 manifest](server-diagram-capture-manifest.json) preserve provenance only; they do not promise downloadable PNGs in a fresh checkout. Generated `.visual-check.html` contact sheets and their PNGs are local-only and excluded from Git. Open the main standalone diagram HTML for inline SVG. Neither delivered diagram HTML was edited.
+All Archify visual-check outputs (PNG, contact-sheet HTML and browser-receipt JSON), including renamed copies, are excluded from Git at the user's request. This is repository policy, not a Git retention requirement imposed by the skill. The [local capture inventory](server-diagram-captures.md) and [SHA-256 manifest](server-diagram-capture-manifest.json) preserve provenance only; they do not promise downloadable PNGs in a fresh checkout. Generated `.visual-check.html` contact sheets and their PNGs are local-only and excluded from Git. Open the main standalone diagram HTML for inline SVG. Neither delivered diagram HTML was edited.
 
 ## Source checks and reproducibility
 
@@ -60,8 +60,8 @@ Initial sandboxed Chrome capture ended with SIGABRT. Repeating the supported pac
 
 - `docs/rewrite/server-response-assembly.md`: route boundary, source precedence, joins, conditional envelopes and exact middleware appendix.
 - `docs/rewrite/server-data-lifecycle.md`: producers/models, modes/schedules, storage formats, freshness/failure matrix and rewrite dependencies.
-- `docs/rewrite/diagrams/server-domestic-assembly*`: canonical JSON, generated main HTML and browser JSON receipt (contact sheets and PNGs are local-only).
-- `docs/rewrite/diagrams/server-world-cache-sequence*`: canonical JSON, generated main HTML and browser JSON receipt (contact sheets and PNGs are local-only).
-- `reports/rewrite-verification/server-*`: artifact/browser receipts, documentation link/source check, this evidence report, a local screenshot inventory/manifest; PNG files are excluded.
+- `docs/rewrite/diagrams/server-domestic-assembly*`: canonical JSON and generated main HTML (all visual-check outputs are local-only).
+- `docs/rewrite/diagrams/server-world-cache-sequence*`: canonical JSON and generated main HTML (all visual-check outputs are local-only).
+- `reports/rewrite-verification/server-*`: artifact validation/delivery receipts, documentation link/source check, this evidence report, a local screenshot inventory/manifest; PNG files are excluded.
 
 Assumptions: source-level TodayWeather/TodayAir shared server behavior; direct Express routes are distinguished from public gateway paths. Remaining risks: historical provider contracts, live DB content, deployment differences, partial-success semantics and source quirks need isolated runtime characterization before implementation decisions.
