@@ -1,0 +1,30 @@
+diff --git a/docs/architecture/README.md b/docs/architecture/README.md
+index 2607f021..b8bd2817 100644
+--- a/docs/architecture/README.md
++++ b/docs/architecture/README.md
+@@ -10,7 +10,8 @@ This is a source-based analysis of TodayWeather and TodayAir at commit `b9795125
+ 4. [AWS/code correlation](aws-code-correlation.md): current routing, deployed Lambda logic, cache policy, KAQ producer/consumer links and observed failures.
+ 5. [Service EC2 internals](ec2-internals.md): nginx, PM2 workers, resolved configuration, database sockets and deployed-code differences.
+ 6. [Evidence and limitations](evidence.md): source map and unresolved integration questions.
+-7. [EC2 SSH access](ec2-access.md): user-confirmed connection command and local private-key setup.
++7. [Push notifications](push-notifications.md): settings/token APIs, alarm and alert workers, provider selection and observed request errors.
++8. [EC2 SSH access](ec2-access.md): user-confirmed connection command and local private-key setup.
+ 
+ ## Interactive diagrams
+ 
+@@ -18,6 +19,7 @@ Open the HTML files in a browser. Each file is standalone and includes theme swi
+ 
+ | View | Standalone HTML | Source |
+ | --- | --- | --- |
++| Push notifications | [Settings to device notification](diagrams/push-notifications.html) | [JSON](diagrams/push-notifications.json) |
+ | Service EC2 internals | [nginx / PM2 / Mongo endpoint](diagrams/ec2-internals.html) | [JSON](diagrams/ec2-internals.json) |
+ | AWS infrastructure | [AWS resource topology](diagrams/aws-infrastructure.html) | [JSON](diagrams/aws-infrastructure.json) |
+ | Overall service (architecture) | [Service structure](diagrams/service-overview.html) | [JSON](diagrams/service-overview.json) |
+
+New files and hashes:
+{
+  "docs/architecture/README.md": "6a1faa8cfa0651720a77a3124edd36bc0b733562d6868b91a591b3839d4ca431",
+  "docs/architecture/push-notifications.md": "3ab725f2c697c53e4cb5fff61e461a36f05b55b6847e14eafd6f5733dc138356",
+  "docs/architecture/diagrams/push-notifications.json": "3569ff5ba04bac46380404010b18e5b64a7a92aa1e5835d7c4e7f77e2e407ae3",
+  "docs/architecture/diagrams/push-notifications.html": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe"
+}

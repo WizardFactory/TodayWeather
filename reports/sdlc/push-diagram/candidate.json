@@ -1,0 +1,9 @@
+{
+  "candidate": "ef73d50f7902e165b7e5fb402b2274910f98687532c043439d986f7fd5c8cb30",
+  "files": {
+    "docs/architecture/README.md": "6a1faa8cfa0651720a77a3124edd36bc0b733562d6868b91a591b3839d4ca431",
+    "docs/architecture/push-notifications.md": "9bcae638f7fd23ec1a79ad3d343210e7952c1c4d5d1bfdca8abb1e05a65bd696",
+    "docs/architecture/diagrams/push-notifications.json": "3569ff5ba04bac46380404010b18e5b64a7a92aa1e5835d7c4e7f77e2e407ae3",
+    "docs/architecture/diagrams/push-notifications.html": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe"
+  }
+}

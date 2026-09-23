@@ -19,7 +19,7 @@ Use the [architecture index](docs/architecture/README.md), then the document rel
 - [AWS/code correlation](docs/architecture/aws-code-correlation.md): timestamped AWS routing, deployed Lambda behavior and remaining host-level gaps.
 - [Evidence and limitations](docs/architecture/evidence.md): source lookup map and missing external dependencies.
 - [Service EC2 internals](docs/architecture/ec2-internals.md): observed nginx/PM2 topology, host configuration, database sockets and deployed-code differences.
-- [EC2 SSH access](docs/architecture/ec2-access.md): user-confirmed SSH command and local key location.
+- [EC2 SSH and AWS API access](docs/architecture/ec2-access.md): SSH key, repository AWS credentials, named account profile, verified CLI path and SDK fallback. Read this before concluding that AWS access is unavailable because `aws` is not on PATH or `~/.aws` is absent.
 
 Treat repository claims as revision-bound and AWS claims as timestamped observations. Recheck relevant implementation before changing behavior.
 

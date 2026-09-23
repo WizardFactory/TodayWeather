@@ -1,0 +1,25 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "Scope is local documentation with existing code and log evidence.",
+  "authority_source": "AK requested a push behavior diagram; local documentation only. Shared SDLC HOTL policy permits bounded checks.",
+  "candidate": "d14da457515407873fba28c9b0291bb23ce955a3",
+  "next_action": "Continue the next applicable local documentation stage.",
+  "inputs": [],
+  "outputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/push-diagram/triage.md",
+      "sha256": "08db76d6ca565a3be6752df105ac9e864780ef03bbb23defc578e6e999929a01"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Scope is local documentation with existing code and log evidence.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3"
+    ]
+  }
+}

@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "TodayWeather push: settings to notification",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1360,
+      590
+    ],
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "d14da457515407873fba28c9b0291bb23ce955a3",
+      "provider": "github",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "settings",
+      "type": "frontend",
+      "label": "App push settings",
+      "sublabel": "Firebase token + local pushData2",
+      "pos": [
+        40,
+        85
+      ],
+      "size": [
+        200,
+        82
+      ],
+      "sources": [
+        {
+          "path": "client/www/js/service.push.js"
+        },
+        {
+          "path": "client/www/js/service.firebase.js"
+        }
+      ]
+    },
+    {
+      "id": "edge",
+      "type": "cloud",
+      "label": "CloudFront",
+      "sublabel": "Push goes directly to EC2",
+      "pos": [
+        400,
+        85
+      ],
+      "size": [
+        200,
+        82
+      ]
+    },
+    {
+      "id": "push-api",
+      "type": "backend",
+      "label": "Service push API",
+      "sublabel": "POST settings / PUT token / DELETE",
+      "pos": [
+        760,
+        85
+      ],
+      "size": [
+        200,
+        82
+      ],
+      "sources": [
+        {
+          "path": "server/routes/v000902/index.js"
+        },
+        {
+          "path": "server/routes/v000902/route.push.update.list.js"
+        },
+        {
+          "path": "server/routes/v000705/routePushNotification.js"
+        }
+      ]
+    },
+    {
+      "id": "push-store",
+      "type": "database",
+      "label": "MongoDB settings",
+      "sublabel": "push + AlertPush models",
+      "pos": [
+        1120,
+        85
+      ],
+      "size": [
+        200,
+        82
+      ],
+      "sources": [
+        {
+          "path": "server/models/modelPush.js"
+        },
+        {
+          "path": "server/models/alert.push.model.js"
+        }
+      ]
+    },
+    {
+      "id": "notification",
+      "type": "frontend",
+      "label": "Notification handling",
+      "sublabel": "Tap: select city + reload",
+      "pos": [
+        40,
+        365
+      ],
+      "size": [
+        200,
+        82
+      ],
+      "sources": [
+        {
+          "path": "client/www/js/service.push.js"
+        }
+      ]
+    },
+    {
+      "id": "delivery",
+      "type": "external",
+      "label": "Push provider selection",
+      "sublabel": "FCM; legacy APNs / GCM",
+      "pos": [
+        400,
+        365
+      ],
+      "size": [
+        200,
+        82
+      ],
+      "sources": [
+        {
+          "path": "server/controllers/controllerPush.js"
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "type": "backend",
+      "label": "Alarm + alert workers",
+      "sublabel": "Only SERVER_MODE=push",
+      "pos": [
+        760,
+        365
+      ],
+      "size": [
+        200,
+        82
+      ],
+      "sources": [
+        {
+          "path": "server/app.js"
+        },
+        {
+          "path": "server/controllers/controllerPush.js"
+        },
+        {
+          "path": "server/controllers/alert.push.controller.js"
+        }
+      ]
+    },
+    {
+      "id": "weather",
+      "type": "backend",
+      "label": "Weather service",
+      "sublabel": "SERVICE_SERVER /v000902/...",
+      "pos": [
+        1120,
+        365
+      ],
+      "size": [
+        200,
+        82
+      ],
+      "sources": [
+        {
+          "path": "server/controllers/controllerPush.js"
+        },
+        {
+          "path": "server/controllers/alert.push.controller.js"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "app-api",
+      "from": "settings",
+      "to": "edge",
+      "label": "POST / PUT / DELETE",
+      "variant": "emphasis"
+    },
+    {
+      "id": "edge-origin",
+      "from": "edge",
+      "to": "push-api",
+      "label": "HTTP :80",
+      "variant": "emphasis"
+    },
+    {
+      "id": "persist-settings",
+      "from": "push-api",
+      "to": "push-store",
+      "label": "write settings",
+      "variant": "emphasis"
+    },
+    {
+      "id": "read-due",
+      "from": "jobs",
+      "to": "push-store",
+      "label": "read / update",
+      "variant": "default",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "fetch-weather",
+      "from": "jobs",
+      "to": "weather",
+      "label": "weather GET",
+      "variant": "default"
+    },
+    {
+      "id": "send-push",
+      "from": "jobs",
+      "to": "delivery",
+      "label": "send payload",
+      "variant": "emphasis"
+    },
+    {
+      "id": "device-delivery",
+      "from": "delivery",
+      "to": "notification",
+      "label": "notify device",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Settings and token changes",
+      "items": [
+        "POST /v000902/push-list saves alarm / alert settings.",
+        "PUT /v000902/push replaces old + new tokens; DELETE removes settings."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Independent background jobs",
+      "items": [
+        "Alarm: every minute; match UTC time and local weekday.",
+        "Alert: UTC minutes 7 / 17 / 35 / 50; time window and rain / air rules."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Observed errors and evidence limits",
+      "items": [
+        "30-day PUT /push: 16,337 HTTP 403; 1,834 HTTP 502.",
+        "Missing token pair can yield 403; logged cause unproven.",
+        "Worker deployment and device delivery are unverified."
+      ]
+    }
+  ]
+}

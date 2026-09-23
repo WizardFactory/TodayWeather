@@ -1,0 +1,137 @@
+{
+  "iteration": 2,
+  "decision": "PROCEED",
+  "reason": "Fresh-context verifier confirms AC1/AC2/AC3 and resolves DELETE finding; no mandatory findings remain.",
+  "authority_source": "AK requested a push behavior diagram; local documentation only. Shared SDLC HOTL policy permits bounded checks.",
+  "candidate": "ef73d50f7902e165b7e5fb402b2274910f98687532c043439d986f7fd5c8cb30",
+  "next_action": "Continue the next applicable local documentation stage.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/push-diagram/triage.md",
+      "sha256": "08db76d6ca565a3be6752df105ac9e864780ef03bbb23defc578e6e999929a01"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/push-diagram.md",
+      "sha256": "6c5927a3ad1dafad878f4145b7b3be826400c36be541ad973585525719b03214"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/push-diagram/investigation.md",
+      "sha256": "9a8479d5e35a0e8131f25d59f0fa6406cd980652e08855e97d79eb54b47c791d"
+    },
+    {
+      "kind": "aws-routing",
+      "path": "reports/sdlc/push-diagram/aws-routing.json",
+      "sha256": "4690ef86ecffea1dfd8ecbdc7493953f85426476fd0f93ce97cdd0458ed741e8"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/push-diagram.md",
+      "sha256": "447ec8cbef7f584d08b37b4b2853b744580a164556513eaf66dc8310c11c2b77"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/push-notifications.json",
+      "sha256": "3569ff5ba04bac46380404010b18e5b64a7a92aa1e5835d7c4e7f77e2e407ae3"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/push-notifications.html",
+      "sha256": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/push-diagram/diagram-delivery.json",
+      "sha256": "cf92fcbd05dfdcdb226bcb18652c1f74e06df8dc8a8998f4c5ad67ab54314ff0"
+    },
+    {
+      "kind": "browser-evidence",
+      "path": "reports/sdlc/push-diagram/diagram-browser.json",
+      "sha256": "25024b8ae9237688503c584389f923fe48c9ca8d1dfe3582dfd0eff5289c2a95"
+    },
+    {
+      "kind": "visual-review",
+      "path": "reports/sdlc/push-diagram/visual-review.md",
+      "sha256": "c4bed9bc50dcf0aca7968872d0e656cc916709a6bef1bc780bceefb012284fcf"
+    },
+    {
+      "kind": "plan",
+      "path": "plans/push-diagram.md",
+      "sha256": "7ea0bbb3bf64fb047ff65a9a8478179352fe536803cd19ac649bc9edf2db5374"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/push-diagram/build-2.md",
+      "sha256": "6fb4e19861a2e3c002764464a7cc32aa34278cb7aedff0b3fe9e8f8bac21af21"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/push-diagram/change-record-2.txt",
+      "sha256": "0711e1f5a5ca1205cacc3d5bdba09fd1ff6168ffb53b9b88d11979ce98dd3362"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/README.md",
+      "sha256": "6a1faa8cfa0651720a77a3124edd36bc0b733562d6868b91a591b3839d4ca431"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/push-notifications.md",
+      "sha256": "9bcae638f7fd23ec1a79ad3d343210e7952c1c4d5d1bfdca8abb1e05a65bd696"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/push-notifications.json",
+      "sha256": "3569ff5ba04bac46380404010b18e5b64a7a92aa1e5835d7c4e7f77e2e407ae3"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/push-notifications.html",
+      "sha256": "8dd9d4a93b93d0aa6d8a48f3f0ba21075906da988049ab754773a4aeccf79dfe"
+    },
+    {
+      "kind": "self-verification",
+      "path": "reports/sdlc/push-diagram/self-verification-2.md",
+      "sha256": "c4496f0ce46d47eba2826f911131d62203ff4cd5eaa57de1a857bb2ff7cc3135"
+    },
+    {
+      "kind": "test-results",
+      "path": "reports/sdlc/push-diagram/test-results-2.json",
+      "sha256": "ea080182d8c35aaf4426db5f4b24a1e278d79dd199ea8f00181c114f31e370f9"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/push-diagram/document-check-2.log",
+      "sha256": "3ecf15844c8876dcabd703b0f97a34416b4fd93dea3d7fbbd22f2b086114602e"
+    },
+    {
+      "kind": "viewer-interaction",
+      "path": "reports/sdlc/push-diagram/viewer-interaction.json",
+      "sha256": "fe1a4ddde24594ee0579fe846d7e5e4d80958b9aff67c3a7bd890bc329fff32f"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "independent-verification",
+      "path": "reports/sdlc/push-diagram/independent-verification.md",
+      "sha256": "cd9cf273f159628ae9f0e2a046436221a4c5586bd532adc00553433d3cfb3e16"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root/verify_push_diagram",
+    "summary": "PASS; mandatory DELETE documentation finding resolved and unchanged artifact checks reused by exact byte identity.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3"
+    ]
+  },
+  "verifier": {
+    "independent": true,
+    "context_id": "/root/verify_push_diagram",
+    "builder_context_id": "/root",
+    "checks": "Source semantics and DELETE correction; 29 unchanged evidence identities; Final candidate hashes and links; Independent light/dark screenshot review"
+  }
+}
