@@ -1,0 +1,13 @@
+{
+  "source_commit": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "checks": {
+    "json": 39,
+    "local_links": 508,
+    "screenshots": 21,
+    "capture_diagnostics": 16,
+    "python": 5
+  },
+  "errors": [],
+  "passed": true,
+  "limits": "Checks local link targets, syntax and evidence bytes; does not validate every prose claim, anchor, meteorological value or live integration."
+}

@@ -1,0 +1,274 @@
+{
+  "_example": {
+    "kind": "partial synthetic documentation example",
+    "sourceRevision": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+    "liveProviderCapture": false,
+    "note": "Only selected client-facing fields; shortened histories are not complete server fixtures. _example is documentation metadata outside the API body.",
+    "boundary": "Synthetic public weather envelope after geographic enrichment, modeled on deployed Lambda source inspected 2026-09-20; not a direct DSF backend response or live capture. Direct DSF uses location.lon; this public envelope uses location.long."
+  },
+  "response": {
+    "name": "Tokyo",
+    "address": "Tokyo, Japan",
+    "country": "JP",
+    "location": {
+      "lat": 35.69,
+      "long": 139.692
+    },
+    "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airnow"
+    },
+    "pubDate": {
+      "DSF": "2026-09-23T00:00:00.000Z"
+    },
+    "thisTime": [
+      {
+        "date": "20260922",
+        "time": 9,
+        "dateObj": "2026.09.22 09:00",
+        "t1h": 20,
+        "skyIcon": "sun"
+      },
+      {
+        "date": "20260923",
+        "time": 9,
+        "dateObj": "2026.09.23 09:00",
+        "stnDateTime": "2026.09.23 09:00",
+        "t1h": 21,
+        "skyIcon": "sun",
+        "weatherType": 0,
+        "weather": "Clear",
+        "reh": 60,
+        "wsd": 2,
+        "wdd": "N",
+        "hPa": 1013,
+        "visibility": 10,
+        "pty": 0,
+        "rn1": 0,
+        "summaryWeather": "A clear morning.",
+        "summaryAir": "Moderate air quality.",
+        "arpltn": {
+          "stationName": "Synthetic Central Station",
+          "dataTime": "2026-09-23 09:00",
+          "aqiValue": 55,
+          "aqiGrade": 2,
+          "aqiStr": "보통",
+          "pm25Value": 18,
+          "pm25Grade": 2,
+          "pm25Str": "보통",
+          "pm10Value": 30,
+          "pm10Grade": 1,
+          "pm10Str": "좋음",
+          "o3Value": 0.02,
+          "o3Grade": 1,
+          "o3Str": "좋음"
+        },
+        "temp_c": 21,
+        "temp_f": 69.8,
+        "ftemp_c": 21,
+        "humid": 60,
+        "windSpd_ms": 2,
+        "press": 1013,
+        "vis": 10
+      }
+    ],
+    "hourly": [
+      {
+        "date": "20260922",
+        "time": 0,
+        "dateObj": "2026.09.22 00:00",
+        "fromToday": -1,
+        "t3h": 18,
+        "skyIcon": "moon",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 3,
+        "dateObj": "2026.09.22 03:00",
+        "fromToday": -1,
+        "t3h": 19,
+        "skyIcon": "moon",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 6,
+        "dateObj": "2026.09.22 06:00",
+        "fromToday": -1,
+        "t3h": 20,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 9,
+        "dateObj": "2026.09.22 09:00",
+        "fromToday": -1,
+        "t3h": 21,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 12,
+        "dateObj": "2026.09.22 12:00",
+        "fromToday": -1,
+        "t3h": 22,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 15,
+        "dateObj": "2026.09.22 15:00",
+        "fromToday": -1,
+        "t3h": 23,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 18,
+        "dateObj": "2026.09.22 18:00",
+        "fromToday": -1,
+        "t3h": 24,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260922",
+        "time": 21,
+        "dateObj": "2026.09.22 21:00",
+        "fromToday": -1,
+        "t3h": 25,
+        "skyIcon": "moon",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260923",
+        "time": 0,
+        "dateObj": "2026.09.23 00:00",
+        "fromToday": 0,
+        "t3h": 18,
+        "skyIcon": "moon",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260923",
+        "time": 3,
+        "dateObj": "2026.09.23 03:00",
+        "fromToday": 0,
+        "t3h": 19,
+        "skyIcon": "moon",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260923",
+        "time": 6,
+        "dateObj": "2026.09.23 06:00",
+        "fromToday": 0,
+        "t3h": 20,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0
+      },
+      {
+        "date": "20260923",
+        "time": 9,
+        "dateObj": "2026.09.23 09:00",
+        "fromToday": 0,
+        "t3h": 21,
+        "skyIcon": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "pty": 0,
+        "currentIndex": true
+      }
+    ],
+    "daily": [
+      {
+        "date": "20260922",
+        "dateObj": "2026.09.22 00:00",
+        "fromToday": -1,
+        "dayOfWeek": 2,
+        "tmn": 17,
+        "tmx": 25,
+        "skyAm": "sun",
+        "skyPm": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "sunrise": "2026.09.22 06:20",
+        "sunset": "2026.09.22 18:25"
+      },
+      {
+        "date": "20260923",
+        "dateObj": "2026.09.23 00:00",
+        "fromToday": 0,
+        "dayOfWeek": 3,
+        "tmn": 18,
+        "tmx": 26,
+        "skyAm": "sun",
+        "skyPm": "sun",
+        "pop": 0,
+        "reh": 60,
+        "wsd": 2,
+        "sunrise": "2026.09.23 06:20",
+        "sunset": "2026.09.23 18:25"
+      },
+      {
+        "date": "20260924",
+        "dateObj": "2026.09.24 00:00",
+        "fromToday": 1,
+        "dayOfWeek": 4,
+        "tmn": 19,
+        "tmx": 27,
+        "skyAm": "sun",
+        "skyPm": "sun_bigcloud",
+        "pop": 30,
+        "reh": 60,
+        "wsd": 2,
+        "sunrise": "2026.09.24 06:20",
+        "sunset": "2026.09.24 18:25"
+      }
+    ]
+  }
+}

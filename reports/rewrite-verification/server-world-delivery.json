@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "/Users/ak/.paseo/worktrees/2hsryg27/creepy-lamprey/docs/rewrite/diagrams/server-world-cache-sequence.json",
+  "output": "/Users/ak/.paseo/worktrees/2hsryg27/creepy-lamprey/docs/rewrite/diagrams/server-world-cache-sequence.html",
+  "specification": {
+    "sha256": "c4bc6b53b3a62f2adbfe57ae36770cb92715f7d14ec8d28becf9664e35eeb20b",
+    "bytes": 2973
+  },
+  "artifact": {
+    "sha256": "4ea74da819ed4bbd5eb65ad45fdab15eef96d17e7091c018a1b6ccc4c3e5fc67",
+    "bytes": 710788
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

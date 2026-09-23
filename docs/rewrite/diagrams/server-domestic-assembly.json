@@ -1,0 +1,210 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Domestic weather response assembly",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": {
+      "entries": {
+        "frontend": {
+          "label": "Request / response"
+        },
+        "backend": {
+          "label": "Assembly stage"
+        },
+        "database": {
+          "label": "Stored products"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "read",
+      "label": "Ordered pipeline \u00b7 upper"
+    },
+    {
+      "id": "compose",
+      "label": "Ordered pipeline \u00b7 lower"
+    }
+  ],
+  "mainPath": [
+    "request",
+    "location",
+    "preload",
+    "short",
+    "current",
+    "timeline",
+    "daily",
+    "enrich",
+    "presentation",
+    "response"
+  ],
+  "nodes": [
+    {
+      "id": "request",
+      "lane": "read",
+      "col": 0,
+      "type": "frontend",
+      "label": "1. KMA request",
+      "sublabel": "address or coordinates",
+      "width": 166
+    },
+    {
+      "id": "location",
+      "lane": "compose",
+      "col": 0,
+      "type": "backend",
+      "label": "2. Resolve location",
+      "sublabel": "query defaults + grid",
+      "width": 166
+    },
+    {
+      "id": "preload",
+      "lane": "compose",
+      "col": 1,
+      "type": "database",
+      "label": "3. Preload products",
+      "sublabel": "town / mid in parallel",
+      "width": 166
+    },
+    {
+      "id": "short",
+      "lane": "read",
+      "col": 1,
+      "type": "backend",
+      "label": "4. Forecast baseline",
+      "sublabel": "short + RSS + shortest",
+      "width": 166
+    },
+    {
+      "id": "current",
+      "lane": "read",
+      "col": 2,
+      "type": "backend",
+      "label": "5. Current corrections",
+      "sublabel": "grid + station readings",
+      "width": 166
+    },
+    {
+      "id": "timeline",
+      "lane": "compose",
+      "col": 2,
+      "type": "backend",
+      "label": "6. Align time series",
+      "sublabel": "00:00 \u2192 prior 24:00",
+      "width": 166
+    },
+    {
+      "id": "daily",
+      "lane": "compose",
+      "col": 3,
+      "type": "backend",
+      "label": "7. Compose daily",
+      "sublabel": "past + short + medium",
+      "width": 166
+    },
+    {
+      "id": "enrich",
+      "lane": "read",
+      "col": 3,
+      "type": "backend",
+      "label": "8. Enrich weather",
+      "sublabel": "life, health, air, sun",
+      "width": 166
+    },
+    {
+      "id": "presentation",
+      "lane": "read",
+      "col": 4,
+      "type": "backend",
+      "label": "9. Format presentation",
+      "sublabel": "icons \u2192 units \u2192 text",
+      "width": 166
+    },
+    {
+      "id": "response",
+      "lane": "compose",
+      "col": 4,
+      "type": "frontend",
+      "label": "10. KMA JSON",
+      "sublabel": "conditional fields",
+      "width": 166
+    }
+  ],
+  "edges": [
+    {
+      "id": "request-to-location",
+      "from": "request",
+      "to": "location",
+      "role": "main"
+    },
+    {
+      "id": "location-to-preload",
+      "from": "location",
+      "to": "preload",
+      "role": "main"
+    },
+    {
+      "id": "preload-to-short",
+      "from": "preload",
+      "to": "short",
+      "role": "main"
+    },
+    {
+      "id": "short-to-current",
+      "from": "short",
+      "to": "current",
+      "role": "main"
+    },
+    {
+      "id": "current-to-timeline",
+      "from": "current",
+      "to": "timeline",
+      "role": "main"
+    },
+    {
+      "id": "timeline-to-daily",
+      "from": "timeline",
+      "to": "daily",
+      "role": "main"
+    },
+    {
+      "id": "daily-to-enrich",
+      "from": "daily",
+      "to": "enrich",
+      "role": "main"
+    },
+    {
+      "id": "enrich-to-presentation",
+      "from": "enrich",
+      "to": "presentation",
+      "role": "main"
+    },
+    {
+      "id": "presentation-to-response",
+      "from": "presentation",
+      "to": "response",
+      "role": "main"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Precollected inputs",
+      "items": [
+        "Town reads are serial; medium reads are serial. Both groups run in parallel.",
+        "Each product retains its own publication time. No shared freshness transaction."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Order is behavior",
+      "items": [
+        "Observed and forecast values merge before extrema, icons, units and summaries.",
+        "Missing products can be logged and omitted; 200 does not prove completeness."
+      ]
+    }
+  ]
+}

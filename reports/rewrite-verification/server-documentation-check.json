@@ -1,0 +1,40 @@
+{
+  "source_revision": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "checks": {
+    "relative_links": {
+      "count": 121,
+      "missing": []
+    },
+    "kma_middleware_order": {
+      "expected_count": 37,
+      "documented_count": 37,
+      "matches": true
+    },
+    "dsf_middleware_order": {
+      "expected_count": 14,
+      "documented_count": 14,
+      "matches": true
+    },
+    "artifacts": {
+      "domestic": {
+        "validation_ok": true,
+        "delivery_ok": true,
+        "browser_passed": true,
+        "specification_bytes_match": true,
+        "artifact_bytes_match": true
+      },
+      "world": {
+        "validation_ok": true,
+        "delivery_ok": true,
+        "browser_passed": true,
+        "specification_bytes_match": true,
+        "artifact_bytes_match": true
+      }
+    },
+    "durable_captures": {
+      "count": 8,
+      "byte_identity": true
+    }
+  },
+  "scope": "Static documentation/source/artifact verification only; no runtime weather/provider tests"
+}
