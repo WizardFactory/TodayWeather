@@ -28,6 +28,8 @@ Production application code was not changed. Screenshots use synthetic data in a
 
 The domestic diagram groups stages for readability; the document preserves the exact 37-middleware list. The world diagram separates weather/AQI parallel work and cache/provider boundaries; the document preserves the 14-middleware list and exceptional paths. Generated HTML must be regenerated through Archify from JSON, not patched by hand.
 
+Open the main HTML links above, not the adjacent `.visual-check.html` contact sheets. Main diagrams contain inline SVG. The temporary contact sheets and their PNG evidence are intentionally excluded from Git and appear only after a local `visual-check` run. App screen captures under `screenshots/` remain versioned.
+
 ## How the documents connect
 
 Follow one user flow end to end: **S01 location selection → public weather URL → gateway boundary → KMA or world assembly → raw response → WeatherUtil conversion → WeatherInfo city → S03/S04/S05**. The public `/weather/v000903` prefix is not an Express mount in this repository. Backend storage objects, wire JSON and client chart models are three distinct shapes.

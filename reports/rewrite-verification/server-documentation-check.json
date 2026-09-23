@@ -36,5 +36,6 @@
       "byte_identity": true
     }
   },
-  "scope": "Static documentation/source/artifact verification only; no runtime weather/provider tests"
+  "scope": "Static documentation/source/artifact verification only; no runtime weather/provider tests",
+  "publication_policy": "Diagram PNGs (original and renamed copies) are local-only; prior copy checks establish byte identity, not current Git inclusion."
 }

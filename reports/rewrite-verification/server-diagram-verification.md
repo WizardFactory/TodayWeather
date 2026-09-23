@@ -19,7 +19,7 @@ Source baseline: `ff7acf3996ccb66c912d2ed4710cf300197d6966`, inspected 2026-09-2
 - Artifact SHA-256: `b0600e11618c2697c62728bec95a876dc237cfdd52fff5a8a3d417b8c92f9d84` (710733 bytes)
 - Validation: [receipt](server-domestic-validation.json); final atomic [delivery receipt](server-domestic-delivery.json)
 - `browser_evidence: passed` — [receipt](server-domestic-visual-check.json)
-- `visual_review: passed` — [durable light/dark captures](server-diagram-captures.md#server-domestic-assembly)
+- `visual_review: passed` — [local light/dark capture inventory](server-diagram-captures.md#server-domestic-assembly)
 - `correction_rounds: 2` (candidate validation and visual refinements; final source is frozen)
 
 ### World — sequence
@@ -30,12 +30,12 @@ Source baseline: `ff7acf3996ccb66c912d2ed4710cf300197d6966`, inspected 2026-09-2
 - Artifact SHA-256: `4ea74da819ed4bbd5eb65ad45fdab15eef96d17e7091c018a1b6ccc4c3e5fc67` (710788 bytes)
 - Validation: [receipt](server-world-validation.json); final atomic [delivery receipt](server-world-delivery.json)
 - `browser_evidence: passed` — [receipt](server-world-visual-check.json)
-- `visual_review: passed` — [durable light/dark captures](server-diagram-captures.md#server-world-cache-sequence)
+- `visual_review: passed` — [local light/dark capture inventory](server-diagram-captures.md#server-world-cache-sequence)
 - `correction_rounds: 2` (candidate validation and visual refinements; final source is frozen)
 
 ## Capture portability
 
-The repository ignores `*.visual-check.*.png`. All eight final images were copied byte-for-byte to trackable `reports/rewrite-verification/server-<diagram>-<size>-<theme>.png` paths. Use the [durable capture gallery](server-diagram-captures.md) and [SHA-256 manifest](server-diagram-capture-manifest.json). Original generated browser receipts/contact sheets retain the original names as provenance; they can be regenerated locally and are not the portable image entry point. Neither delivered diagram HTML was edited.
+Diagram verification PNGs are intentionally excluded from Git at the user's request, including the eight renamed report copies. The [local capture inventory](server-diagram-captures.md) and [SHA-256 manifest](server-diagram-capture-manifest.json) preserve provenance only; they do not promise downloadable PNGs in a fresh checkout. Generated `.visual-check.html` contact sheets and their PNGs are local-only and excluded from Git. Open the main standalone diagram HTML for inline SVG. Neither delivered diagram HTML was edited.
 
 ## Source checks and reproducibility
 
@@ -60,8 +60,8 @@ Initial sandboxed Chrome capture ended with SIGABRT. Repeating the supported pac
 
 - `docs/rewrite/server-response-assembly.md`: route boundary, source precedence, joins, conditional envelopes and exact middleware appendix.
 - `docs/rewrite/server-data-lifecycle.md`: producers/models, modes/schedules, storage formats, freshness/failure matrix and rewrite dependencies.
-- `docs/rewrite/diagrams/server-domestic-assembly*`: canonical JSON, generated HTML, browser JSON receipt and contact sheet (generated image names are ignored; durable copies are in the reports directory).
-- `docs/rewrite/diagrams/server-world-cache-sequence*`: canonical JSON, generated HTML, browser JSON receipt and contact sheet (generated image names are ignored; durable copies are in the reports directory).
-- `reports/rewrite-verification/server-*`: artifact/browser receipts, documentation link/source check, this evidence report, a durable screenshot gallery/manifest and eight renamed PNG copies.
+- `docs/rewrite/diagrams/server-domestic-assembly*`: canonical JSON, generated main HTML and browser JSON receipt (contact sheets and PNGs are local-only).
+- `docs/rewrite/diagrams/server-world-cache-sequence*`: canonical JSON, generated main HTML and browser JSON receipt (contact sheets and PNGs are local-only).
+- `reports/rewrite-verification/server-*`: artifact/browser receipts, documentation link/source check, this evidence report, a local screenshot inventory/manifest; PNG files are excluded.
 
 Assumptions: source-level TodayWeather/TodayAir shared server behavior; direct Express routes are distinguished from public gateway paths. Remaining risks: historical provider contracts, live DB content, deployment differences, partial-success semantics and source quirks need isolated runtime characterization before implementation decisions.

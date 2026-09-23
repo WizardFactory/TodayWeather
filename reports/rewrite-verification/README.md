@@ -40,6 +40,10 @@ The QA review checked route inventories, both middleware lists, converter branch
 
 Capture corrections were confined to the harness: a wrong test radio title was replaced with the real localization key; TodayAir product switching required a full document reload, not a hash-only navigation. Captures were replaced after checking actual product route registration. Historical fixture-icon/readiness investigation is summarized in the earlier planning evidence; final stored visual fixtures use existing icons and the readiness shim.
 
+## Local diagram verification artifacts
+
+The user-reported blank pages were `.visual-check.html` screenshot contact sheets whose PNGs were excluded by Git. These temporary HTML pages are now excluded too, along with renamed diagram PNG copies. Main diagram HTML embeds SVG and remains versioned; source JSON and machine-readable verification receipts remain versioned. App screen captures remain versioned. The package validator checks HTML assets against the deliverable Git file set so ordinary published pages cannot silently depend on ignored local files.
+
 ## Evidence boundaries and remaining risk
 
 Screens use Korean/light theme/portrait and synthetic world-shaped weather. Seoul is a rendering label; these captures do not prove domestic KMA response correctness. No live provider health, production gateway configuration, data freshness, original Cordova build, native permissions, purchases, push delivery, widgets/watch, keyboard, touch gestures, accessibility sizes or landscape has been established. Native status bar is hidden in the test shell. The explicit unsafe-area screenshot shows why actual release host configuration needs separate verification.

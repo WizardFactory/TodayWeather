@@ -1,103 +1,102 @@
-# Changed repository files
+# PR changed files
 
-Documentation and verification artifacts only. Ignored task plans, temporary staged dependencies and original ignored Archify PNG filenames are excluded; portable evidence copies are included.
+Final PR scope relative to origin/master. A = added, M = modified, D = removed from Git. Local ignored contact sheets/diagram PNGs are retained on disk; app screenshots remain versioned.
 
-- `README.md`
-- `docs/rewrite/README.md`
-- `docs/rewrite/client-data-contracts.md`
-- `docs/rewrite/client-state-and-behavior.md`
-- `docs/rewrite/decisions-and-open-questions.md`
-- `docs/rewrite/diagrams/server-domestic-assembly.html`
-- `docs/rewrite/diagrams/server-domestic-assembly.json`
-- `docs/rewrite/diagrams/server-domestic-assembly.visual-check.html`
-- `docs/rewrite/diagrams/server-domestic-assembly.visual-check.json`
-- `docs/rewrite/diagrams/server-world-cache-sequence.html`
-- `docs/rewrite/diagrams/server-world-cache-sequence.json`
-- `docs/rewrite/diagrams/server-world-cache-sequence.visual-check.html`
-- `docs/rewrite/diagrams/server-world-cache-sequence.visual-check.json`
-- `docs/rewrite/examples/README.md`
-- `docs/rewrite/examples/client-kma-normalized.json`
-- `docs/rewrite/examples/client-kma-response.json`
-- `docs/rewrite/examples/client-world-normalized.json`
-- `docs/rewrite/examples/client-world-response.json`
-- `docs/rewrite/examples/screenshot-nation.json`
-- `docs/rewrite/examples/screenshot-special.json`
-- `docs/rewrite/examples/screenshot-weather-basic.json`
-- `docs/rewrite/examples/screenshot-weather.json`
-- `docs/rewrite/rewrite-playbook.md`
-- `docs/rewrite/screen-specifications.md`
-- `docs/rewrite/screenshots/README.md`
-- `docs/rewrite/screenshots/baseline-unsafe-area.png`
-- `docs/rewrite/screenshots/index.html`
-- `docs/rewrite/screenshots/manifest.json`
-- `docs/rewrite/screenshots/ta-air.png`
-- `docs/rewrite/screenshots/ta-weather.png`
-- `docs/rewrite/screenshots/tw-air.png`
-- `docs/rewrite/screenshots/tw-daily-compact.png`
-- `docs/rewrite/screenshots/tw-daily.png`
-- `docs/rewrite/screenshots/tw-favorites.png`
-- `docs/rewrite/screenshots/tw-guide.png`
-- `docs/rewrite/screenshots/tw-hourly-compact.png`
-- `docs/rewrite/screenshots/tw-hourly.png`
-- `docs/rewrite/screenshots/tw-menu.png`
-- `docs/rewrite/screenshots/tw-nation-air.png`
-- `docs/rewrite/screenshots/tw-nation.png`
-- `docs/rewrite/screenshots/tw-purchase-unavailable.png`
-- `docs/rewrite/screenshots/tw-push-settings.png`
-- `docs/rewrite/screenshots/tw-start-compact.png`
-- `docs/rewrite/screenshots/tw-start.png`
-- `docs/rewrite/screenshots/tw-temperature-unit.png`
-- `docs/rewrite/screenshots/tw-theme.png`
-- `docs/rewrite/screenshots/tw-units.png`
-- `docs/rewrite/screenshots/tw-warning.png`
-- `docs/rewrite/server-data-lifecycle.md`
-- `docs/rewrite/server-response-assembly.md`
-- `docs/rewrite/verification-matrix.md`
-- `reports/rewrite-verification/README.md`
-- `reports/rewrite-verification/capture-source-parity.json`
-- `reports/rewrite-verification/capture/README.md`
-- `reports/rewrite-verification/capture/RenderCheck.swift`
-- `reports/rewrite-verification/capture/capture-screen.py`
-- `reports/rewrite-verification/capture/evaluate.py`
-- `reports/rewrite-verification/capture/inspect.js`
-- `reports/rewrite-verification/capture/prepare.py`
-- `reports/rewrite-verification/capture/render-harness.js`
-- `reports/rewrite-verification/capture/server.py`
-- `reports/rewrite-verification/changed-files.md`
-- `reports/rewrite-verification/independent-review.md`
-- `reports/rewrite-verification/package-validation.json`
-- `reports/rewrite-verification/server-diagram-capture-manifest.json`
-- `reports/rewrite-verification/server-diagram-captures.md`
-- `reports/rewrite-verification/server-diagram-verification.md`
-- `reports/rewrite-verification/server-documentation-check.json`
-- `reports/rewrite-verification/server-domestic-assembly-1440x900-dark.png`
-- `reports/rewrite-verification/server-domestic-assembly-1440x900-light.png`
-- `reports/rewrite-verification/server-domestic-assembly-2048x1320-dark.png`
-- `reports/rewrite-verification/server-domestic-assembly-2048x1320-light.png`
-- `reports/rewrite-verification/server-domestic-delivery.json`
-- `reports/rewrite-verification/server-domestic-validation.json`
-- `reports/rewrite-verification/server-domestic-visual-check.json`
-- `reports/rewrite-verification/server-world-cache-sequence-1440x900-dark.png`
-- `reports/rewrite-verification/server-world-cache-sequence-1440x900-light.png`
-- `reports/rewrite-verification/server-world-cache-sequence-2048x1320-dark.png`
-- `reports/rewrite-verification/server-world-cache-sequence-2048x1320-light.png`
-- `reports/rewrite-verification/server-world-delivery.json`
-- `reports/rewrite-verification/server-world-validation.json`
-- `reports/rewrite-verification/server-world-visual-check.json`
-- `reports/rewrite-verification/ta-air.json`
-- `reports/rewrite-verification/ta-weather.json`
-- `reports/rewrite-verification/tw-air.json`
-- `reports/rewrite-verification/tw-daily.json`
-- `reports/rewrite-verification/tw-favorites.json`
-- `reports/rewrite-verification/tw-guide.json`
-- `reports/rewrite-verification/tw-hourly.json`
-- `reports/rewrite-verification/tw-nation-air.json`
-- `reports/rewrite-verification/tw-nation.json`
-- `reports/rewrite-verification/tw-purchase-unavailable.json`
-- `reports/rewrite-verification/tw-push-settings.json`
-- `reports/rewrite-verification/tw-start.json`
-- `reports/rewrite-verification/tw-temperature-unit.json`
-- `reports/rewrite-verification/tw-theme.json`
-- `reports/rewrite-verification/tw-units.json`
-- `reports/rewrite-verification/tw-warning.json`
-- `reports/rewrite-verification/validate-package.py`
+- `M — .gitignore`
+- `M — README.md`
+- `M — docs/architecture/README.md`
+- `D — docs/architecture/diagrams/aws-infrastructure.visual-check.html`
+- `D — docs/architecture/diagrams/ec2-internals.visual-check.html`
+- `D — docs/architecture/diagrams/kaq-image-pipeline.visual-check.html`
+- `D — docs/architecture/diagrams/mobile-weather-request.visual-check.html`
+- `D — docs/architecture/diagrams/push-notifications.visual-check.html`
+- `D — docs/architecture/diagrams/service-overview.visual-check.html`
+- `D — docs/architecture/diagrams/weather-collection.visual-check.html`
+- `A — docs/rewrite/README.md`
+- `A — docs/rewrite/client-data-contracts.md`
+- `A — docs/rewrite/client-state-and-behavior.md`
+- `A — docs/rewrite/decisions-and-open-questions.md`
+- `A — docs/rewrite/diagrams/server-domestic-assembly.html`
+- `A — docs/rewrite/diagrams/server-domestic-assembly.json`
+- `A — docs/rewrite/diagrams/server-domestic-assembly.visual-check.json`
+- `A — docs/rewrite/diagrams/server-world-cache-sequence.html`
+- `A — docs/rewrite/diagrams/server-world-cache-sequence.json`
+- `A — docs/rewrite/diagrams/server-world-cache-sequence.visual-check.json`
+- `A — docs/rewrite/examples/README.md`
+- `A — docs/rewrite/examples/client-kma-normalized.json`
+- `A — docs/rewrite/examples/client-kma-response.json`
+- `A — docs/rewrite/examples/client-world-normalized.json`
+- `A — docs/rewrite/examples/client-world-response.json`
+- `A — docs/rewrite/examples/screenshot-nation.json`
+- `A — docs/rewrite/examples/screenshot-special.json`
+- `A — docs/rewrite/examples/screenshot-weather-basic.json`
+- `A — docs/rewrite/examples/screenshot-weather.json`
+- `A — docs/rewrite/rewrite-playbook.md`
+- `A — docs/rewrite/screen-specifications.md`
+- `A — docs/rewrite/screenshots/README.md`
+- `A — docs/rewrite/screenshots/baseline-unsafe-area.png`
+- `A — docs/rewrite/screenshots/index.html`
+- `A — docs/rewrite/screenshots/manifest.json`
+- `A — docs/rewrite/screenshots/ta-air.png`
+- `A — docs/rewrite/screenshots/ta-weather.png`
+- `A — docs/rewrite/screenshots/tw-air.png`
+- `A — docs/rewrite/screenshots/tw-daily-compact.png`
+- `A — docs/rewrite/screenshots/tw-daily.png`
+- `A — docs/rewrite/screenshots/tw-favorites.png`
+- `A — docs/rewrite/screenshots/tw-guide.png`
+- `A — docs/rewrite/screenshots/tw-hourly-compact.png`
+- `A — docs/rewrite/screenshots/tw-hourly.png`
+- `A — docs/rewrite/screenshots/tw-menu.png`
+- `A — docs/rewrite/screenshots/tw-nation-air.png`
+- `A — docs/rewrite/screenshots/tw-nation.png`
+- `A — docs/rewrite/screenshots/tw-purchase-unavailable.png`
+- `A — docs/rewrite/screenshots/tw-push-settings.png`
+- `A — docs/rewrite/screenshots/tw-start-compact.png`
+- `A — docs/rewrite/screenshots/tw-start.png`
+- `A — docs/rewrite/screenshots/tw-temperature-unit.png`
+- `A — docs/rewrite/screenshots/tw-theme.png`
+- `A — docs/rewrite/screenshots/tw-units.png`
+- `A — docs/rewrite/screenshots/tw-warning.png`
+- `A — docs/rewrite/server-data-lifecycle.md`
+- `A — docs/rewrite/server-response-assembly.md`
+- `A — docs/rewrite/verification-matrix.md`
+- `A — reports/rewrite-verification/README.md`
+- `A — reports/rewrite-verification/capture-source-parity.json`
+- `A — reports/rewrite-verification/capture/README.md`
+- `A — reports/rewrite-verification/capture/RenderCheck.swift`
+- `A — reports/rewrite-verification/capture/capture-screen.py`
+- `A — reports/rewrite-verification/capture/evaluate.py`
+- `A — reports/rewrite-verification/capture/inspect.js`
+- `A — reports/rewrite-verification/capture/prepare.py`
+- `A — reports/rewrite-verification/capture/render-harness.js`
+- `A — reports/rewrite-verification/capture/server.py`
+- `A — reports/rewrite-verification/changed-files.md`
+- `A — reports/rewrite-verification/independent-review.md`
+- `A — reports/rewrite-verification/package-validation.json`
+- `A — reports/rewrite-verification/server-diagram-capture-manifest.json`
+- `A — reports/rewrite-verification/server-diagram-captures.md`
+- `A — reports/rewrite-verification/server-diagram-verification.md`
+- `A — reports/rewrite-verification/server-documentation-check.json`
+- `A — reports/rewrite-verification/server-domestic-delivery.json`
+- `A — reports/rewrite-verification/server-domestic-validation.json`
+- `A — reports/rewrite-verification/server-domestic-visual-check.json`
+- `A — reports/rewrite-verification/server-world-delivery.json`
+- `A — reports/rewrite-verification/server-world-validation.json`
+- `A — reports/rewrite-verification/server-world-visual-check.json`
+- `A — reports/rewrite-verification/ta-air.json`
+- `A — reports/rewrite-verification/ta-weather.json`
+- `A — reports/rewrite-verification/tw-air.json`
+- `A — reports/rewrite-verification/tw-daily.json`
+- `A — reports/rewrite-verification/tw-favorites.json`
+- `A — reports/rewrite-verification/tw-guide.json`
+- `A — reports/rewrite-verification/tw-hourly.json`
+- `A — reports/rewrite-verification/tw-nation-air.json`
+- `A — reports/rewrite-verification/tw-nation.json`
+- `A — reports/rewrite-verification/tw-purchase-unavailable.json`
+- `A — reports/rewrite-verification/tw-push-settings.json`
+- `A — reports/rewrite-verification/tw-start.json`
+- `A — reports/rewrite-verification/tw-temperature-unit.json`
+- `A — reports/rewrite-verification/tw-theme.json`
+- `A — reports/rewrite-verification/tw-units.json`
+- `A — reports/rewrite-verification/tw-warning.json`
+- `A — reports/rewrite-verification/validate-package.py`

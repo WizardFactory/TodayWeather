@@ -15,7 +15,9 @@ This is a source-based analysis of TodayWeather and TodayAir at commit `b9795125
 
 ## Interactive diagrams
 
-Open the HTML files in a browser. Each file is standalone and includes theme switching, zoom, search and export controls. JSON files are the editable Archify sources; do not hand-edit generated HTML.
+Open the main HTML files linked in the table below in a browser. Each contains its diagram as inline SVG and includes theme switching, zoom, search and export controls. JSON files are the editable Archify sources; do not hand-edit generated HTML.
+
+Files ending in `.visual-check.html` are local screenshot contact sheets, not the diagrams themselves. These temporary HTML files and their PNGs are intentionally excluded from Git and are generated only by a local `visual-check` run. Open `service-overview.html`, for example, rather than `service-overview.visual-check.html`. The main diagram HTML does not depend on those PNGs.
 
 | View | Standalone HTML | Source |
 | --- | --- | --- |
