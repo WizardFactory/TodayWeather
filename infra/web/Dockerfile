@@ -10,7 +10,7 @@ COPY web web
 COPY web-api web-api
 COPY scripts scripts
 COPY tsconfig.json ./
-RUN npm run build && npm prune --omit=dev --ignore-scripts
+RUN VITE_WEB_TRANSPORT=proxy npm run build && npm prune --omit=dev --ignore-scripts
 
 FROM node:22-bookworm-slim
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=4174 WEB_STATIC_DIR=/app/web/dist

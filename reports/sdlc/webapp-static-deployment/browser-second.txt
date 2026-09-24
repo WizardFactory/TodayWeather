@@ -1,0 +1,197 @@
+
+> todayweather-web@0.1.0 test:e2e
+> playwright test --reporter=line
+
+[WebServer] (node:4059111) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 14 tests using 1 worker
+
+(node:4059123) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/14] web/e2e/review.spec.ts:5:1 › first worker claim preserves an edited notification form
+[2/14] web/e2e/review.spec.ts:36:1 › missing rain hides the period while explicit snow remains visible
+  1) web/e2e/review.spec.ts:36:1 › missing rain hides the period while explicit snow remains visible 
+
+    TypeError: Cannot convert undefined or null to object
+
+      39 |   await page.route("https://todayweather.wizardfactory.net/weather/**", async route => {
+      40 |     const data:any = structuredClone(rawWeather);
+    > 41 |     for (const key of ["rn1","r06","r03","r1d"]) delete data.current[key];
+         |                                                                      ^
+      42 |     data.current.sn1 = 2;
+      43 |     await route.fulfill({json:data});
+      44 |   });
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/review.spec.ts:41:70
+
+    Error: expect(locator).not.toContainText(expected) failed
+
+    Locator: locator('.metric').filter({ hasText: '강수량' }).first()
+    Expected substring: not "시간"
+    Error: element(s) not found
+
+    Call log:
+      - Expect "not toContainText" locator('.metric').filter({ hasText: '강수량' }).first() with timeout 10000ms
+      - waiting for locator('.metric').filter({ hasText: '강수량' }).first()
+      - Test ended.
+
+
+      45 |   await page.goto("/weather/seoul/hourly");
+      46 |   const rain = page.locator(".metric").filter({ hasText: "강수량" }).first();
+    > 47 |   await expect(rain).not.toContainText("시간");
+         |                          ^
+      48 |   await expect(
+      49 |     page.locator(".metric").filter({ hasText: /적설량|눈 강수량/ }),
+      50 |   ).toContainText("2 mm");
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/review.spec.ts:47:26
+
+    Error Context: test-results/review-missing-rain-hides--cc523-plicit-snow-remains-visible/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/review-missing-rain-hides--cc523-plicit-snow-remains-visible/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/review-missing-rain-hides--cc523-plicit-snow-remains-visible/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:4059385) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[3/14] web/e2e/review.spec.ts:55:1 › static favorites delete without notification or capability network calls
+[4/14] web/e2e/review.spec.ts:65:1 › worker upgrade serves the new shell and retains an old tab chunk
+[5/14] web/e2e/web.spec.ts:12:1 › weather, air, national views, warnings and settings persist at desktop size
+[6/14] web/e2e/web.spec.ts:71:1 › mobile favorites, geolocation denial and unavailable notifications stay usable
+[7/14] web/e2e/web.spec.ts:110:1 › offline shell uses matching snapshot and never labels it fresh
+  2) web/e2e/web.spec.ts:110:1 › offline shell uses matching snapshot and never labels it fresh ────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('저장된 자료').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('저장된 자료').first() with timeout 10000ms
+      - waiting for getByText('저장된 자료').first()
+
+
+      119 |   await expect(
+      120 |     page.getByText("저장된 자료", { exact: false }).first(),
+    > 121 |   ).toBeVisible();
+          |     ^
+      122 |   await page.screenshot({ path: screenshots + "/offline.png", fullPage: true });
+      123 |   await context.setOffline(false);
+      124 | });
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/web.spec.ts:121:5
+
+    Error Context: test-results/web-offline-shell-uses-mat-86783-t-and-never-labels-it-fresh/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/web-offline-shell-uses-mat-86783-t-and-never-labels-it-fresh/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/web-offline-shell-uses-mat-86783-t-and-never-labels-it-fresh/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:4060120) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[8/14] web/e2e/web.spec.ts:126:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+[9/14] web/e2e/web.spec.ts:151:1 › immediate search submission selects the submitted city
+[10/14] web/e2e/web.spec.ts:164:1 › late geolocation preserves newly added favorites and settings
+[11/14] web/e2e/web.spec.ts:198:3 › corrupt offline snapshot recovers safely: missing timestamp
+  3) web/e2e/web.spec.ts:198:3 › corrupt offline snapshot recovers safely: missing timestamp ───────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: '자료를 불러오지 못했어요' })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: '자료를 불러오지 못했어요' }) with timeout 10000ms
+      - waiting for getByRole('heading', { name: '자료를 불러오지 못했어요' })
+
+
+      235 |     await expect(
+      236 |       page.getByRole("heading", { name: "자료를 불러오지 못했어요" }),
+    > 237 |     ).toBeVisible();
+          |       ^
+      238 |     await expect(
+      239 |       page.getByText("Unexpected Application Error!", { exact: false }),
+      240 |     ).toHaveCount(0);
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/web.spec.ts:237:7
+
+    Error Context: test-results/web-corrupt-offline-snapsh-0caa7-rs-safely-missing-timestamp/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/web-corrupt-offline-snapsh-0caa7-rs-safely-missing-timestamp/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/web-corrupt-offline-snapsh-0caa7-rs-safely-missing-timestamp/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:4060504) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[12/14] web/e2e/web.spec.ts:198:3 › corrupt offline snapshot recovers safely: invalid hourly array
+  4) web/e2e/web.spec.ts:198:3 › corrupt offline snapshot recovers safely: invalid hourly array ────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: '자료를 불러오지 못했어요' })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: '자료를 불러오지 못했어요' }) with timeout 10000ms
+      - waiting for getByRole('heading', { name: '자료를 불러오지 못했어요' })
+
+
+      235 |     await expect(
+      236 |       page.getByRole("heading", { name: "자료를 불러오지 못했어요" }),
+    > 237 |     ).toBeVisible();
+          |       ^
+      238 |     await expect(
+      239 |       page.getByText("Unexpected Application Error!", { exact: false }),
+      240 |     ).toHaveCount(0);
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/web.spec.ts:237:7
+
+    Error Context: test-results/web-corrupt-offline-snapsh-607c1-safely-invalid-hourly-array/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/web-corrupt-offline-snapsh-607c1-safely-invalid-hourly-array/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/web-corrupt-offline-snapsh-607c1-safely-invalid-hourly-array/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:4060682) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[13/14] web/e2e/web.spec.ts:245:1 › upstream failure is recoverable and never replaced by demo data
+[14/14] web/e2e/web.spec.ts:255:1 › freeform address resolves through the existing geocode API
+  4 failed
+    web/e2e/review.spec.ts:36:1 › missing rain hides the period while explicit snow remains visible 
+    web/e2e/web.spec.ts:110:1 › offline shell uses matching snapshot and never labels it fresh ─────
+    web/e2e/web.spec.ts:198:3 › corrupt offline snapshot recovers safely: missing timestamp ────────
+    web/e2e/web.spec.ts:198:3 › corrupt offline snapshot recovers safely: invalid hourly array ─────
+  10 passed (1.1m)

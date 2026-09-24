@@ -9,7 +9,11 @@ export default defineConfig({
     ["list"],
     [
       "json",
-      { outputFile: "reports/sdlc/webapp-implementation/browser-results.json" },
+      {
+        outputFile:
+          process.env.WEB_BROWSER_RESULTS ??
+          "test-results/browser-results.json",
+      },
     ],
   ],
   use: {
@@ -24,14 +28,9 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "node web-api/dist/server.js",
-    url: "http://127.0.0.1:4174/api/health",
+    command: "node scripts/web-static-preview.mjs",
+    url: "http://127.0.0.1:4174/index.html",
     reuseExistingServer: false,
-    env: {
-      WEB_API_MODE: "demo",
-      WEB_ORIGIN: "http://127.0.0.1:4174",
-      HOST: "127.0.0.1",
-      PORT: "4174",
-    },
+    env: { PORT: "4174" },
   },
 });

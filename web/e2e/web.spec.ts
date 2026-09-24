@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 const screenshots =
   process.env.WEB_SCREENSHOTS ??
   "reports/sdlc/webapp-implementation/screenshots";
@@ -17,9 +17,7 @@ test("weather, air, national views, warnings and settings persist at desktop siz
   page.on("pageerror", (e) => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await seoul(page);
-  await expect(
-    page.getByText("예제 데이터", { exact: false }).first(),
-  ).toBeVisible();
+  await expect(page.getByText("예제 데이터", { exact: false })).toHaveCount(0);
   await page.screenshot({
     path: screenshots + "/desktop-weather.png",
     fullPage: true,
@@ -113,6 +111,7 @@ test("offline shell uses matching snapshot and never labels it fresh", async ({
 }) => {
   await seoul(page);
   await page.waitForTimeout(300);
+  await page.unroute("https://todayweather.wizardfactory.net/**");
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator(".temperature")).toBeVisible();
@@ -230,6 +229,7 @@ for (const corruption of ["missing timestamp", "invalid hourly array"]) {
         };
       });
     }, corruption);
+    await page.unroute("https://todayweather.wizardfactory.net/**");
     await context.setOffline(true);
     await page.reload();
     await expect(
@@ -241,3 +241,45 @@ for (const corruption of ["missing timestamp", "invalid hourly array"]) {
     await context.setOffline(false);
   });
 }
+
+test("upstream failure is recoverable and never replaced by demo data", async ({
+  page,
+}) => {
+  await page.route(
+    "https://todayweather.wizardfactory.net/weather/**",
+    (route) => route.abort(),
+  );
+  await page.goto("/weather/seoul/hourly");
+  await expect(
+    page.getByRole("heading", { name: "자료를 불러오지 못했어요" }),
+  ).toBeVisible();
+  await expect(page.locator(".temperature")).toHaveCount(0);
+  await expect(page.getByText("예제 데이터", { exact: false })).toHaveCount(0);
+  await page.unroute("https://todayweather.wizardfactory.net/weather/**");
+  await page.reload();
+  await expect(page.locator(".temperature")).toBeVisible();
+});
+test("freeform address resolves through the existing geocode API", async ({
+  page,
+}) => {
+  let addressRequested = false;
+  await page.route(
+    "https://todayweather.wizardfactory.net/geocode/v000903/addr/**",
+    (route) => {
+      addressRequested = true;
+      return route.fulfill({
+        json: {
+          name: "테스트 주소",
+          address: "서울 테스트",
+          country: "KR",
+          location: { lat: 37.567, long: 126.978 },
+        },
+      });
+    },
+  );
+  await page.goto("/locations");
+  await page.getByRole("textbox", { name: "지역 검색" }).fill("테스트 주소");
+  await page.getByRole("textbox", { name: "지역 검색" }).press("Enter");
+  await expect(page.locator(".temperature")).toBeVisible();
+  expect(addressRequested).toBe(true);
+});

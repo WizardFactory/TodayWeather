@@ -1,0 +1,11 @@
+{
+  "checked": [
+    "README.md",
+    "docs/architecture/web-client.md",
+    "docs/webapp/README.md",
+    "docs/webapp/implementation.md",
+    "infra/web/README.md",
+    "infra/web/static/README.md"
+  ],
+  "missing": []
+}

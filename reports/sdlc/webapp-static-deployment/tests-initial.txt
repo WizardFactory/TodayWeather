@@ -1,0 +1,267 @@
+
+> todayweather-web@0.1.0 test
+> vitest run
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.1 /root/.paseo/worktrees/08mqediz/shiny-elephant
+
+ ❯ web/test/direct-api.test.ts (9 tests | 1 failed) 312ms
+   ❯ static browser API transport (8)
+     × normalizes world data and maps coordinate/address geocoding 11ms
+ ❯ web-api/test/api.test.ts (8 tests | 8 failed) 40052ms
+   ❯ isolated web API (8)
+     × returns explicitly labeled sample data and changed units 5015ms
+     × rejects invalid coordinates/units rather than silently defaulting 5005ms
+     × keeps API missing route and method status truthful 5002ms
+     × live mode never silently returns demo after upstream failure 5007ms
+     × rejects HTML at status 200 and upstream redirects 5003ms
+     × uses explicit v000903, canonical physical units and valid zero coordinates 5008ms
+     × returns nation, warnings and search without legacy runtime 5003ms
+     × does not promise push when sender is not configured 5006ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  web-api/test/api.test.ts > isolated web API > returns explicitly labeled sample data and changed units
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ web-api/test/api.test.ts:32:3
+     30| });
+     31| describe("isolated web API", () => {
+     32|   it("returns explicitly labeled sample data and changed units", async…
+       |   ^
+     33|     const base = await start();
+     34|     const r = await fetch(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  web-api/test/api.test.ts > isolated web API > rejects invalid coordinates/units rather than silently defaulting
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ web-api/test/api.test.ts:43:3
+     41|     expect(d.current.temperature).toBeGreaterThan(32);
+     42|   });
+     43|   it("rejects invalid coordinates/units rather than silently defaultin…
+       |   ^
+     44|     const base = await start();
+     45|     for (const q of [
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  web-api/test/api.test.ts > isolated web API > keeps API missing route and method status truthful
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ web-api/test/api.test.ts:53:3
+     51|       expect((await fetch(base + "/api/web/v1/weather?" + q)).status).…
+     52|   });
+     53|   it("keeps API missing route and method status truthful", async () =>…
+       |   ^
+     54|     const base = await start();
+     55|     expect((await fetch(base + "/api/missing")).status).toBe(404);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  web-api/test/api.test.ts > isolated web API > live mode never silently returns demo after upstream failure
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ web-api/test/api.test.ts:64:3
+     62|     ).toBe(405);
+     63|   });
+     64|   it("live mode never silently returns demo after upstream failure", a…
+       |   ^
+     65|     const base = await start({
+     66|       mode: "live",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  web-api/test/api.test.ts > isolated web API > rejects HTML at status 200 and upstream redirects
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ web-api/test/api.test.ts:73:3
+     71|     expect((await r.json()).error.code).toBe("UPSTREAM_FAILURE");
+     72|   });
+     73|   it("rejects HTML at status 200 and upstream redirects", async () => {
+       |   ^
+     74|     for (const response of [
+     75|       new Response("<html>error</html>", {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  web-api/test/api.test.ts > isolated web API > uses explicit v000903, canonical physical units and valid zero coordinates
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ web-api/test/api.test.ts:89:3
+     87|     }
+     88|   });
+     89|   it("uses explicit v000903, canonical physical units and valid zero c…
+       |   ^
+     90|     let called = "";
+     91|     const base = await start({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  web-api/test/api.test.ts > isolated web API > returns nation, warnings and search without legacy runtime
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ web-api/test/api.test.ts:111:3
+    109|     expect((await r.json()).mode).toBe("live");
+    110|   });
+    111|   it("returns nation, warnings and search without legacy runtime", asy…
+       |   ^
+    112|     const base = await start();
+    113|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  web-api/test/api.test.ts > isolated web API > does not promise push when sender is not configured
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ web-api/test/api.test.ts:126:3
+    124|     ).toBe("busan");
+    125|   });
+    126|   it("does not promise push when sender is not configured", async () =…
+       |   ^
+    127|     const base = await start();
+    128|     const r = await fetch(base + "/api/web/v1/capabilities");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  web/test/direct-api.test.ts > static browser API transport > normalizes world data and maps coordinate/address geocoding
+Error: 날씨 서비스 자료를 읽을 수 없습니다.
+ ❯ readJson web/src/direct-api.ts:24:17
+     22|   let data;
+     23|   try { data = JSON.parse(new TextDecoder().decode(bytes)); }
+     24|   catch { throw new Error('날씨 서비스 자료를 읽을 수 없습니다.'); }
+       |                 ^
+     25|   if (!response.ok) throw new Error(typeof data?.error?.message === 's…
+     26|   return data;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 8 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1918:21
+ ❯ listenInCluster node:net:1997:12
+ ❯ node:net:2206:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:89:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "web-api/test/api.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "returns explicitly labeled sample data and changed units". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1918:21
+ ❯ listenInCluster node:net:1997:12
+ ❯ node:net:2206:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:89:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "web-api/test/api.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "rejects invalid coordinates/units rather than silently defaulting". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1918:21
+ ❯ listenInCluster node:net:1997:12
+ ❯ node:net:2206:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:89:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "web-api/test/api.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "keeps API missing route and method status truthful". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1918:21
+ ❯ listenInCluster node:net:1997:12
+ ❯ node:net:2206:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:89:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "web-api/test/api.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "live mode never silently returns demo after upstream failure". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1918:21
+ ❯ listenInCluster node:net:1997:12
+ ❯ node:net:2206:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:89:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "web-api/test/api.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "rejects HTML at status 200 and upstream redirects". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1918:21
+ ❯ listenInCluster node:net:1997:12
+ ❯ node:net:2206:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:89:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "web-api/test/api.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "uses explicit v000903, canonical physical units and valid zero coordinates". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1918:21
+ ❯ listenInCluster node:net:1997:12
+ ❯ node:net:2206:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:89:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "web-api/test/api.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "returns nation, warnings and search without legacy runtime". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1918:21
+ ❯ listenInCluster node:net:1997:12
+ ❯ node:net:2206:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:89:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "web-api/test/api.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "does not promise push when sender is not configured". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  2 failed | 7 passed (9)
+      Tests  9 failed | 39 passed (48)
+     Errors  8 errors
+   Start at  18:58:44
+   Duration  40.75s (tests 95%, transform 3%, import 1%)
+

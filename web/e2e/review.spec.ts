@@ -1,6 +1,7 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
+import rawWeather from "../../web-api/fixtures/weather.json" with { type: "json" };
 test("first worker claim preserves an edited notification form", async ({
   page,
 }) => {
@@ -35,15 +36,16 @@ test("first worker claim preserves an edited notification form", async ({
 test("missing rain hides the period while explicit snow remains visible", async ({
   page,
 }) => {
-  await page.route("**/api/web/v1/weather?*", async (route) => {
-    const response = await route.fetch(),
-      data = await response.json();
-    data.current.precipitation = null;
-    data.current.precipitationHours = null;
-    data.current.snowfall = 2;
-    data.current.snowfallHours = 1;
-    await route.fulfill({ json: data });
-  });
+  await page.route(
+    "https://todayweather.wizardfactory.net/weather/**",
+    async (route) => {
+      const data: any = structuredClone(rawWeather);
+      for (const key of ["rn1", "r06", "r03", "r1d"])
+        delete data.thisTime[1][key];
+      data.thisTime[1].sn1 = 2;
+      await route.fulfill({ json: data });
+    },
+  );
   await page.goto("/weather/seoul/hourly");
   const rain = page.locator(".metric").filter({ hasText: "강수량" }).first();
   await expect(rain).not.toContainText("시간");
@@ -54,52 +56,16 @@ test("missing rain hides the period while explicit snow remains visible", async 
     page.getByRole("heading", { name: "강수·눈 예보" }),
   ).toBeVisible();
 });
-test("favorite deletion waits for capability and successful rule cleanup", async ({
+test("static favorites delete without notification or capability network calls", async ({
   page,
 }) => {
-  let capability: "failed" | "enabled" = "failed",
-    failDelete = true,
-    deletions = 0;
-  await page.route("**/api/web/v1/capabilities", (route) =>
-    capability === "failed"
-      ? route.abort()
-      : route.fulfill({
-          json: {
-            mode: "demo",
-            notifications: { enabled: true },
-            billing: { enabled: false },
-            search: { catalog: true, geocode: false },
-          },
-        }),
-  );
-  await page.route("**/api/web/v1/installations", (route) =>
-    route.fulfill({ json: { csrf: "synthetic" } }),
-  );
-  await page.route("**/api/web/v1/notification-rules", (route) =>
-    route.fulfill({ json: { items: [{ id: "r", place: { id: "seoul" } }] } }),
-  );
-  await page.route("**/api/web/v1/notification-rules/r", (route) => {
-    deletions++;
-    return route.fulfill({
-      status: failDelete ? 503 : 200,
-      json: failDelete
-        ? { error: { message: "synthetic failure" } }
-        : { deleted: true },
-    });
-  });
   await page.goto("/");
   await page.getByRole("button", { name: "서울", exact: true }).first().click();
+  await expect(page.locator(".temperature")).toBeVisible();
   await page.goto("/locations");
   await page.getByRole("button", { name: "서울 삭제", exact: true }).click();
-  await expect(page.locator(".toast")).toContainText("확인하지 못했습니다");
-  await expect(page.locator(".location-card")).toHaveCount(1);
-  capability = "enabled";
-  await page.getByRole("button", { name: "서울 삭제", exact: true }).click();
-  await expect.poll(() => deletions).toBe(1);
-  await expect(page.locator(".location-card")).toHaveCount(1);
-  failDelete = false;
-  await page.getByRole("button", { name: "서울 삭제", exact: true }).click();
-  await expect.poll(() => deletions).toBe(2);
+  await expect(page.locator(".location-card")).toHaveCount(0);
+  await page.reload();
   await expect(page.locator(".location-card")).toHaveCount(0);
 });
 test("worker upgrade serves the new shell and retains an old tab chunk", async ({

@@ -1,0 +1,150 @@
+
+> todayweather-web@0.1.0 deploy:static
+> node scripts/deploy-web-static.mjs --bucket tdywx-web-example --distribution EXAMPLE
+
+{
+  "dryRun": true,
+  "site": "https://app.tdywx.xyz",
+  "commands": [
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/assets/index-CJZ7NkvH.css",
+      "s3://tdywx-web-example/assets/index-CJZ7NkvH.css",
+      "--content-type",
+      "text/css; charset=utf-8",
+      "--cache-control",
+      "public,max-age=31536000,immutable",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/assets/index-CnjH_0I6.js",
+      "s3://tdywx-web-example/assets/index-CnjH_0I6.js",
+      "--content-type",
+      "text/javascript; charset=utf-8",
+      "--cache-control",
+      "public,max-age=31536000,immutable",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/assets/nation-BNzoyo3M.js",
+      "s3://tdywx-web-example/assets/nation-BNzoyo3M.js",
+      "--content-type",
+      "text/javascript; charset=utf-8",
+      "--cache-control",
+      "public,max-age=31536000,immutable",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/assets/warnings-DB3KeKh9.js",
+      "s3://tdywx-web-example/assets/warnings-DB3KeKh9.js",
+      "--content-type",
+      "text/javascript; charset=utf-8",
+      "--cache-control",
+      "public,max-age=31536000,immutable",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/assets/weather-D2P0wld8.js",
+      "s3://tdywx-web-example/assets/weather-D2P0wld8.js",
+      "--content-type",
+      "text/javascript; charset=utf-8",
+      "--cache-control",
+      "public,max-age=31536000,immutable",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/icon.svg",
+      "s3://tdywx-web-example/icon.svg",
+      "--content-type",
+      "image/svg+xml",
+      "--cache-control",
+      "no-cache",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/icons/icon-192.png",
+      "s3://tdywx-web-example/icons/icon-192.png",
+      "--content-type",
+      "image/png",
+      "--cache-control",
+      "no-cache",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/icons/icon-512.png",
+      "s3://tdywx-web-example/icons/icon-512.png",
+      "--content-type",
+      "image/png",
+      "--cache-control",
+      "no-cache",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/manifest.webmanifest",
+      "s3://tdywx-web-example/manifest.webmanifest",
+      "--content-type",
+      "application/manifest+json",
+      "--cache-control",
+      "no-cache",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/release.json",
+      "s3://tdywx-web-example/release.json",
+      "--content-type",
+      "application/json",
+      "--cache-control",
+      "no-cache",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/index.html",
+      "s3://tdywx-web-example/index.html",
+      "--content-type",
+      "text/html; charset=utf-8",
+      "--cache-control",
+      "no-cache",
+      "--only-show-errors"
+    ],
+    [
+      "s3",
+      "cp",
+      "/root/.paseo/worktrees/08mqediz/shiny-elephant/web/dist/sw.js",
+      "s3://tdywx-web-example/sw.js",
+      "--content-type",
+      "text/javascript; charset=utf-8",
+      "--cache-control",
+      "no-cache",
+      "--only-show-errors"
+    ],
+    [
+      "cloudfront",
+      "create-invalidation",
+      "--distribution-id",
+      "EXAMPLE",
+      "--paths",
+      "/*"
+    ]
+  ]
+}

@@ -185,9 +185,9 @@ publish on https://chrome.google.com/webstore/developer/dashboard
 
 ## Web app
 
-The new responsive web app runs independently of Cordova and the legacy server. See [run instructions and implementation status](docs/webapp/implementation.md), [deployment preparation](infra/web/README.md), and [issue #2558](https://github.com/WizardFactory/TodayWeather/issues/2558).
+The new responsive web app runs independently of Cordova and the legacy server. See [run instructions and implementation status](docs/webapp/implementation.md), [S3/CloudFront deployment](infra/web/static/README.md), and [issue #2558](https://github.com/WizardFactory/TodayWeather/issues/2558).
 
 ```sh
 npm ci --ignore-scripts
-WEB_API_MODE=demo npm run dev
+VITE_WEB_MODE=demo npm run dev
 ```

@@ -1,0 +1,16 @@
+
+> todayweather-web@0.1.0 test
+> vitest run
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.1 /root/.paseo/worktrees/08mqediz/shiny-elephant
+
+
+ Test Files  10 passed (10)
+      Tests  52 passed (52)
+   Start at  19:01:45
+   Duration  1.58s (tests 45%, transform 39%, import 14%, worker 2%)
+

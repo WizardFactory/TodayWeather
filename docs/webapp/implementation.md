@@ -8,21 +8,20 @@ Use Node >=22.12 (verified with 22.22.2) from the repository root. These npm wor
 
 ```sh
 npm ci --ignore-scripts
-WEB_API_MODE=demo npm run dev
+npm run dev
 ```
 
-Open http://127.0.0.1:5173. Set a loopback `WEB_ORIGIN` to use a different development host/port; the launcher keeps Vite and the API Origin aligned. Demo mode is deliberately labelled on weather, air, national and warning screens. It uses synthetic fixtures copied from `docs/rewrite/examples/`; changing cities does not make those fixtures real observations. Demo air units are restricted to the fixture's Korean standard.
+Open http://127.0.0.1:5173. The default is **direct/live**: the browser calls the existing public API and the launcher starts only Vite. Set a loopback `WEB_ORIGIN` for another development host/port. For explicitly labelled synthetic data use `VITE_WEB_MODE=demo npm run dev`; changing cities does not make demo fixtures real observations.
 
 ```sh
-# Real upstream reads; no legacy server, collectors or database startup.
-npm run dev
-
-# Production bundle, also needed to exercise service worker/offline behavior.
-npm run build
-WEB_API_MODE=demo WEB_ORIGIN=http://localhost:4174 npm start
+# Build only the static client. No API process is needed.
+npm run build:web
+npm run preview:static
 ```
 
-Open http://localhost:4174. Omit `WEB_API_MODE=demo` to use live data. Live provider failures return errors and never substitute synthetic responses. The browser can show a previously received snapshot with an explicit disconnected/stale notice for up to 24 hours.
+Open http://127.0.0.1:4174 to exercise the production bundle, service worker and snapshots. Live failures never substitute demo responses; a previously received snapshot may be shown with a disconnected/stale notice for up to 24 hours. The preview is a local file server, not a production requirement.
+
+Deploy `web/dist` using the [S3 + CloudFront runbook](../../infra/web/static/README.md) and template for **app.tdywx.xyz**. No AWS resources or DNS were created by this implementation.
 
 ```sh
 npm run typecheck
@@ -32,7 +31,9 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-For a preinstalled browser, set `PLAYWRIGHT_EXECUTABLE_PATH`. Browser tests own a demo server on port 4174; stop other servers on that port first. CI installs Chromium and runs these commands without production credentials. CI executes these checks for PR #2562; use its current check results for remote status. Earlier local passes do not override a failed CI run.
+Browser tests own a static-only server on port 4174 and intercept external API reads with synthetic raw provider fixtures. They assert that the browser makes no `/api/` requests; they do not prove live provider freshness. Set `PLAYWRIGHT_EXECUTABLE_PATH` for a preinstalled browser. CI also publishes `web-static-dist` for review.
+
+The optional older Node adapter remains available with `VITE_WEB_TRANSPORT=proxy npm run dev`. For a proxy production build use `VITE_WEB_TRANSPORT=proxy npm run build`, then configure the API and `npm start` as in the [legacy runbook](../../infra/web/README.md). This mode is not accepted by the static uploader. `WEB_API_MODE` controls that optional server; `VITE_WEB_MODE` controls a direct client at build time.
 
 ## Implemented surface
 
@@ -45,7 +46,7 @@ For a preinstalled browser, set `PLAYWRIGHT_EXECUTABLE_PATH`. Browser tests own 
 | Nationwide weather/air | Schematic regional map and complete numeric lists; weather/pollutant tabs | Repair stale upstream nationwide air feed before release |
 | Special weather reports | Structured bulletins, publication text and official links | Provider freshness and active-warning device checks |
 | Preferences | Six unit families, four themes, startup/refresh, local backup/import | Photo theme uses a sky color treatment, not native photo packs |
-| Notifications | Owned browser subscription, weekday/time rules, explicit save/cancel, test send, unsubscribe, delete-favorite reconciliation | Optional server configuration, real APNs/FCM/browser delivery; conditional rain/snow/air rules are **not implemented** |
+| Notifications | Static mode explicitly reports unavailable; optional proxy mode retains owned subscriptions and weekday/time reminders | Static Web Push needs separate backend scheduling; conditional rain/snow/air rules and device verification remain open |
 | Sharing/install/help | Catalog-only share links, install help, privacy/storage/provider guidance, PWA manifest and icons | HTTPS/iOS home-screen install and all supported device checks |
 | Store purchases/widgets | Honest web availability/price and native-feature guidance | No native purchase migration, billing, native widgets/watch or background tracking |
 
@@ -53,12 +54,13 @@ Four settings subpages are consolidated into `/settings`; weather/air overview i
 
 ## Architecture and contracts
 
-See [implemented architecture](../architecture/web-client.md) and its [interactive diagram](diagrams/webapp-implementation.html). The earlier [technical design](technical-design.md) and [proposed cloud diagram](diagrams/webapp-architecture.html) remain a future scaling design. The running candidate uses one Node process serving static assets and a same-origin API. It is **not a Lambda implementation**.
+See [implemented architecture](../architecture/web-client.md) and its [interactive diagram](diagrams/webapp-implementation.html). The earlier [technical design](technical-design.md) and [proposed cloud diagram](diagrams/webapp-architecture.html) remain a future scaling design. The default runtime is a static PWA on private S3/CloudFront with direct calls to the existing public API. It requires no new persistent Node service or API Lambda.
 
 - `packages/weather-core/`: source-aware, unit-aware normalization without mutating provider payloads. KMA `-50` temperatures and negative nonnegative metrics become unavailable; valid zero remains zero. Old daily rows are excluded by source date.
 - `web/`: React/TypeScript UI, versioned local preferences, IndexedDB snapshots keyed by location and all units, query cancellation and explicit stale/demo notices. Coordinates are rounded to three decimals; sharing uses a curated public city ID rather than exact current location.
-- `web-api/`: fixed upstream paths, bounded timeout/body size, JSON/schema checks, canonical physical unit requests and local conversion; optional owned notification routes.
-- `infra/web/`: Docker image and single-replica Caddy/Compose staging recipe. No resources or DNS have been created.
+- `web/src/direct-api.ts`: fixed public API operations, bounded reads, JSON/schema checks, canonical physical units and local normalization; local catalog and capabilities.
+- `web-api/`: optional legacy proxy and owned notification routes, excluded from the static runtime.
+- `infra/web/static/`: private S3/OAC, CloudFront/TLS/DNS template, route function and guarded dry-run uploader. `infra/web/` also retains the explicitly selected legacy Docker/Caddy recipe. No resources or DNS have been created.
 
 The service worker caches the shell and hashed assets, not API responses. Activation is user initiated for updates; the previous shell cache is retained for existing tabs. Browser snapshots are separate and expire after 24 hours. Maps and warnings require a network connection. Losing browser storage loses local favorites and snapshots; anonymous notification ownership expires after 90 days without activity and is not an account-recovery mechanism.
 

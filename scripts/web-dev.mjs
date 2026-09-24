@@ -11,15 +11,20 @@ if (
   origin.hash
 )
   throw new Error("WEB_ORIGIN must be a loopback HTTP origin for development");
+const transport = process.env.VITE_WEB_TRANSPORT ?? "direct";
 const children = [
-  spawn("npm", ["run", "dev", "-w", "@todayweather/api"], {
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      WEB_API_MODE: mode,
-      WEB_ORIGIN: origin.origin,
-    },
-  }),
+  ...(transport === "proxy"
+    ? [
+        spawn("npm", ["run", "dev", "-w", "@todayweather/api"], {
+          stdio: "inherit",
+          env: {
+            ...process.env,
+            WEB_API_MODE: mode,
+            WEB_ORIGIN: origin.origin,
+          },
+        }),
+      ]
+    : []),
   spawn(
     "npm",
     [
@@ -34,7 +39,14 @@ const children = [
       origin.port || "80",
       "--strictPort",
     ],
-    { stdio: "inherit" },
+    {
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        VITE_WEB_TRANSPORT: transport,
+        VITE_WEB_MODE: process.env.VITE_WEB_MODE ?? mode,
+      },
+    },
   ),
 ];
 let stopping = false;

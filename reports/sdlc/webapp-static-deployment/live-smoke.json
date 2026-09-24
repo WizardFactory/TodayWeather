@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "at": "2026-09-24T17:12:17.729Z",
+  "origin": "http://127.0.0.1:4189",
+  "mocked": false,
+  "apiServer": false,
+  "responses": [
+    {
+      "path": "/weather/v000903/coord/37.567,126.978",
+      "status": 200
+    },
+    {
+      "path": "/v000903/nation/KR",
+      "status": 200
+    },
+    {
+      "path": "/v000903/nation/KR",
+      "status": 200
+    },
+    {
+      "path": "/v000903/kma/special",
+      "status": 200
+    },
+    {
+      "path": "/geocode/v000903/coord/37.567,126.978",
+      "status": 200
+    },
+    {
+      "path": "/geocode/v000903/addr/%EC%84%9C%EC%9A%B8",
+      "status": 200
+    }
+  ],
+  "geocode": [
+    {
+      "status": 200,
+      "validCoordinates": true
+    },
+    {
+      "status": 200,
+      "validCoordinates": true
+    }
+  ],
+  "pageErrors": [],
+  "localApiRequests": 0,
+  "limits": "Local origin browser CORS and public reads only; no app.tdywx.xyz hosting/DNS/device verification; HTTP success does not establish data freshness."
+}

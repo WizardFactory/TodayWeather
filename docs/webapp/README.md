@@ -1,8 +1,8 @@
-# TodayWeather webapp proposal
+# TodayWeather webapp
 
-Prepared 2026-09-24 for AK. **Planning/design only; application and deployment are not implemented.** The priority is maximum feature parity with the existing mobile products.
+Prepared 2026-09-24 for AK. The [implemented client](implementation.md) now defaults to direct existing-API calls and has a [static S3/CloudFront deployment recipe](../../infra/web/static/README.md) for `app.tdywx.xyz`. Production resources are not deployed. The documents below preserve the original mobile-parity proposal and its remaining scope.
 
-Build a **responsive PWA in a separate `web/` client**, reuse the existing versioned weather service through a small web API adapter, and add web-specific push delivery. Preserve hourly/daily weather, yesterday comparisons, air quality, saved locations, nationwide views, warnings and settings. Treat native widgets and store purchases as explicit product decisions.
+Original proposal: build a **responsive PWA in a separate `web/` client**, reuse the existing versioned weather service through a small web API adapter, and add web-specific push delivery. Preserve hourly/daily weather, yesterday comparisons, air quality, saved locations, nationwide views, warnings and settings. Treat native widgets and store purchases as explicit product decisions.
 
 | Read | Purpose |
 | --- | --- |
@@ -16,7 +16,7 @@ Build a **responsive PWA in a separate `web/` client**, reuse the existing versi
 
 The design covers TodayWeather plus TodayAir's air-first/combined-weather experience in one web product by default. International weather remains in scope where the existing service supports it. A read-only internal milestone is useful for integration testing, but is **not** the final parity release.
 
-The main choices before implementation are product branding, web monetization/native-purchase linking, production domain and operations budget. Default recommendation: one combined product, local favorites without mandatory login, and an ad-free beta while commercial policy is decided. Exact-time delivery and native home-screen widgets are not browser parity promises.
+The main choices before implementation are product branding, web monetization/native-purchase linking, operations budget. Default recommendation: one combined product, local favorites without mandatory login, and an ad-free beta while commercial policy is decided. Exact-time delivery and native home-screen widgets are not browser parity promises.
 
 Planning estimate: **8–12 elapsed weeks** for two engineers with part-time design/QA/operations, assuming the current API/providers are usable. Paid account/entitlement work may add **3–5 weeks**; provider replacement or legacy backend repairs require separate estimation after the first spike. These are estimates, not measured commitments.
 

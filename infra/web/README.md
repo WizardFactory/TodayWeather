@@ -1,6 +1,8 @@
-# Web deployment preparation
+# Optional Node/proxy deployment
 
-This directory prepares a **single-instance HTTPS staging deployment**. No deployment has been executed. Read [implementation status](../../docs/webapp/implementation.md) and resolve its release gates before public launch.
+The default **app.tdywx.xyz deployment is [static S3 + CloudFront](static/README.md)** and needs no additional Node server. This document preserves the optional proxy mode with server-based reminders. The Dockerfile explicitly sets `VITE_WEB_TRANSPORT=proxy` at build time.
+
+This directory also prepares a **single-instance HTTPS staging deployment**. No deployment has been executed. Read [implementation status](../../docs/webapp/implementation.md) and resolve its release gates before public launch.
 
 ## Runtime configuration
 
@@ -39,4 +41,4 @@ Back up the volume securely. Notification data contains coordinates, push endpoi
 
 Keep the previous image, persistent data and VAPID/session keys for rollback. Restore the previous image with the same configuration; check `/api/health` and schema version before resuming reminders. Do not restore an old volume while the sender is active. Keep old hashed assets accessible across releases; the browser retains the immediately preceding cache, but tabs skipping multiple releases need a reload. Do not rewrite missing assets or APIs to `index.html`.
 
-The original S3/CloudFront/Lambda/queue proposal requires separate infrastructure implementation and a transactional shared notification store; these files do not claim to provision it. Deployment, DNS, paid services and production provider repair remain operator-owned release steps.
+The [static template](static/README.md) implements only hosting and direct existing-API access. A future serverless notification implementation still requires scheduling and transactional storage. Deployment, DNS, paid services and production provider repair remain operator-owned release steps.

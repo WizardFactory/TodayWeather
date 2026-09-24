@@ -44,7 +44,13 @@ describe("native and development boundaries", () => {
           return { on() {} };
         },
       }),
-      process: { env: { WEB_ORIGIN: "http://127.0.0.1:5182" }, on() {} },
+      process: {
+        env: {
+          WEB_ORIGIN: "http://127.0.0.1:5182",
+          VITE_WEB_TRANSPORT: "proxy",
+        },
+        on() {},
+      },
       setTimeout,
     });
     expect(calls[0].options.env.WEB_ORIGIN).toBe("http://127.0.0.1:5182");

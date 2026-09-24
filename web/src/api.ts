@@ -1,29 +1,43 @@
 import { type Place, type Units, type Weather } from "@todayweather/core";
 import { readSnapshot, weatherKey, writeSnapshot } from "./state";
+import { directApi, readJson } from "./direct-api";
+import { readTransportSettings } from "./transport-config";
+const settings = readTransportSettings(import.meta.env);
 export async function api<T>(
   path: string,
   signal?: AbortSignal,
   init?: RequestInit,
 ): Promise<T> {
-  const timeout = AbortSignal.timeout(15000),
-    combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
-  const response = await fetch("/api/web/v1" + path, {
-    ...init,
-    signal: combined,
-    headers: {
-      Accept: "application/json",
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...init?.headers,
-    },
-  });
-  if (!response.headers.get("Content-Type")?.includes("json"))
-    throw new Error(
-      "서버 응답을 확인할 수 없습니다. 연결 설정을 확인해 주세요.",
-    );
-  const data = await response.json();
-  if (!response.ok)
-    throw new Error(data.error?.message ?? "요청을 처리하지 못했습니다.");
-  return data as T;
+  const controller = new AbortController();
+  const abort = () => controller.abort(signal?.reason);
+  if (signal?.aborted) abort();
+  signal?.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(
+    () =>
+      controller.abort(
+        new DOMException("요청 시간이 초과되었습니다.", "TimeoutError"),
+      ),
+    15000,
+  );
+  try {
+    if (controller.signal.aborted) throw controller.signal.reason;
+    if (settings.transport === "direct")
+      return (await directApi(path, settings, controller.signal, init)) as T;
+    return (await readJson(
+      await fetch("/api/web/v1" + path, {
+        ...init,
+        signal: controller.signal,
+        headers: {
+          Accept: "application/json",
+          ...(init?.body ? { "Content-Type": "application/json" } : {}),
+          ...init?.headers,
+        },
+      }),
+    )) as T;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", abort);
+  }
 }
 export const unitQuery = (units: Units) =>
   new URLSearchParams(units).toString();
@@ -52,6 +66,8 @@ export async function fetchWeather(
 ): Promise<{ weather: Weather; snapshot: boolean }> {
   const key = weatherKey(place, units);
   try {
+    if (typeof navigator !== "undefined" && navigator.onLine === false)
+      throw new Error("오프라인 상태입니다.");
     const weather = await api<Weather>(
       `/weather?lat=${place.lat}&lon=${place.lon}&${unitQuery(units)}`,
       signal,

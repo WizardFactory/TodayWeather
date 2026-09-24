@@ -16,7 +16,10 @@
     "test": "vitest run",
     "build": "npm run build -w @todayweather/web && npm run build -w @todayweather/api",
     "test:e2e": "playwright test",
-    "start": "node web-api/dist/server.js"
+    "start": "node web-api/dist/server.js",
+    "build:web": "npm run build -w @todayweather/web",
+    "preview:static": "node scripts/web-static-preview.mjs",
+    "deploy:static": "node scripts/deploy-web-static.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

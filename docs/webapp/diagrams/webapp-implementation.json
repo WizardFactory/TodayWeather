@@ -2,245 +2,141 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "TodayWeather webapp \u2014 implemented local runtime",
+    "title": "TodayWeather \u2014 static web deployment",
     "locale": "en",
     "quality_profile": "showcase",
     "viewBox": [
       1220,
-      700
+      650
     ]
   },
   "components": [
     {
-      "id": "web-ui",
+      "id": "browser",
       "type": "frontend",
       "label": "Responsive PWA",
-      "sublabel": "Weather + air parity",
+      "sublabel": "app.tdywx.xyz",
       "pos": [
         40,
         100
       ],
       "size": [
-        190,
-        76
+        230,
+        80
       ]
     },
     {
-      "id": "web-edge",
-      "type": "backend",
-      "label": "HTTPS reverse proxy",
-      "sublabel": "Prepared Caddy config",
+      "id": "edge",
+      "type": "cloud",
+      "label": "CloudFront + TLS",
+      "sublabel": "Prepared web distribution",
       "pos": [
-        350,
+        480,
         100
       ],
       "size": [
-        190,
-        76
+        230,
+        80
       ]
     },
     {
-      "id": "web-bff",
-      "type": "backend",
-      "label": "Node web API",
-      "sublabel": "Same-origin adapter",
+      "id": "s3",
+      "type": "database",
+      "label": "Private S3 assets",
+      "sublabel": "Versioned static releases",
       "pos": [
-        660,
+        930,
         100
       ],
       "size": [
-        190,
-        76
+        250,
+        80
       ]
     },
     {
-      "id": "weather-api",
+      "id": "api",
       "type": "external",
-      "label": "Existing weather API",
-      "sublabel": "Versioned public gateway",
+      "label": "Existing public API",
+      "sublabel": "Weather / geocode / nation",
       "pos": [
-        970,
-        100
+        40,
+        370
       ],
       "size": [
-        210,
-        76
+        230,
+        80
       ]
     },
     {
-      "id": "local-state",
+      "id": "storage",
       "type": "database",
       "label": "Browser storage",
-      "sublabel": "Favorites + snapshots",
+      "sublabel": "Preferences + offline cache",
       "pos": [
-        40,
-        330
+        480,
+        370
       ],
       "size": [
-        190,
-        76
-      ]
-    },
-    {
-      "id": "static-origin",
-      "type": "database",
-      "label": "Built web assets",
-      "sublabel": "Served by Node process",
-      "pos": [
-        350,
-        330
-      ],
-      "size": [
-        190,
-        76
-      ]
-    },
-    {
-      "id": "web-rules",
-      "type": "database",
-      "label": "Local notification store",
-      "sublabel": "One process, owned rules",
-      "pos": [
-        660,
-        330
-      ],
-      "size": [
-        190,
-        76
-      ]
-    },
-    {
-      "id": "web-sender",
-      "type": "backend",
-      "label": "Reminder scheduler",
-      "sublabel": "Four sends outside store lock",
-      "pos": [
-        970,
-        330
-      ],
-      "size": [
-        210,
-        76
-      ]
-    },
-    {
-      "id": "browser-worker",
-      "type": "frontend",
-      "label": "Browser service worker",
-      "sublabel": "Visible city notification",
-      "pos": [
-        650,
-        560
-      ],
-      "size": [
-        210,
-        76
-      ]
-    },
-    {
-      "id": "push-network",
-      "type": "external",
-      "label": "Browser push service",
-      "sublabel": "Supported vendor endpoint",
-      "pos": [
-        970,
-        560
-      ],
-      "size": [
-        210,
-        76
+        230,
+        80
       ]
     }
   ],
   "connections": [
     {
-      "id": "browse-web",
-      "from": "web-ui",
-      "to": "web-edge",
-      "label": "HTTPS",
+      "id": "shell",
+      "from": "browser",
+      "to": "edge",
+      "label": "HTTPS app shell",
       "variant": "emphasis"
     },
     {
-      "id": "route-api",
-      "from": "web-edge",
-      "to": "web-bff",
-      "label": "/api/*",
+      "id": "origin",
+      "from": "edge",
+      "to": "s3",
+      "label": "OAC signed GET",
       "variant": "emphasis"
     },
     {
-      "id": "read-weather",
-      "from": "web-bff",
-      "to": "weather-api",
-      "label": "v000903",
+      "id": "reads",
+      "from": "browser",
+      "to": "api",
+      "label": "Direct v000903 GET",
+      "labelDy": 60,
       "variant": "emphasis"
     },
     {
-      "id": "persist-local",
-      "from": "web-ui",
-      "to": "local-state",
-      "label": "local save",
-      "labelDy": 90
-    },
-    {
-      "id": "load-assets",
-      "from": "web-edge",
-      "to": "static-origin",
-      "label": "via Node",
-      "labelDy": 90
-    },
-    {
-      "id": "save-rules",
-      "from": "web-bff",
-      "to": "web-rules",
-      "label": "owned writes",
-      "labelDy": 90
-    },
-    {
-      "id": "schedule-jobs",
-      "from": "web-rules",
-      "to": "web-sender",
-      "label": "claimed jobs",
-      "variant": "dashed"
-    },
-    {
-      "id": "send-push",
-      "from": "web-sender",
-      "to": "push-network",
-      "label": "Web Push",
-      "variant": "dashed",
-      "labelDy": 90
-    },
-    {
-      "id": "display-push",
-      "from": "push-network",
-      "to": "browser-worker",
-      "label": "push event",
-      "variant": "dashed"
+      "id": "local",
+      "from": "browser",
+      "to": "storage",
+      "label": "Local persistence",
+      "fromSide": "bottom",
+      "toSide": "left"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Working read features",
+      "title": "Static by default",
       "items": [
-        "Weather, air, favorites and nationwide views",
-        "Explicit demo mode; no live-to-demo fallback"
+        "No required Node BFF or API proxy",
+        "Canonical units normalized in browser"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Optional reminders",
+      "title": "Prepared AWS hosting",
       "items": [
-        "Durable claims, bounded delivery, five-minute recovery",
-        "Owned rules; single process; disabled by default"
+        "Private bucket, OAC, TLS and cache policy",
+        "Dry-run upload tool retains prior assets"
       ]
     },
     {
       "dot": "amber",
-      "title": "Release gates remain",
+      "title": "Explicit boundaries",
       "items": [
-        "Provider freshness, conditional alerts and device QA",
-        "HTTPS deployment files prepared; not deployed"
+        "Web Push unavailable in static mode",
+        "Cloud resources and DNS not deployed"
       ]
     }
   ]

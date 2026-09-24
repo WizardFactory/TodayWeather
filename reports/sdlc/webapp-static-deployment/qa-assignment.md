@@ -1,0 +1,7 @@
+# Independent static verification
+
+Task webapp-static-deployment, assignment static-qa-1, independent-verification iteration 1/10. Builder /root; verifier /root/static_qa. User authorized direct existing API implementation, static S3 readiness and Git push only. No AWS mutations, deploy, merge, PR messages or further delegation.
+
+Read AGENTS.md, intent.md, spec.md, plan.md, test-plan.md, build.md, candidate.json and evidence in this directory. Independently challenge AC1–AC5 on frozen candidate. Validate hashes and actual tracked/untracked diff scope. Inspect direct/live/demo/proxy contracts, error/units/geocode/offline behavior, static CSP/navigation/cache, uploader ordering/dry-run/guard, infrastructure schema and operational instructions. Verify existing source/native runtime isolation. Main continues evidence-only handoff checks.
+
+Run meaningful targeted checks independently. Production build is ready; use another loopback port or existing Playwright when main suite has stopped. External reads are optional bounded public APIs; no credentials in logs. Unit suite sockets/Chromium may require ordinary sandbox escalation. Do not modify application/tests/docs, generated dist or shared state. Isolated verifier tests go in /tmp. Write only qa.md, qa.json and qa-* evidence under this report directory. Return actual commands/outcomes, consumed manifest hash, findings with severity/disposition and PASS/CHANGES_REQUIRED/NEEDS_HUMAN. This is independent verification, not a cross-provider PR review. No deadline pressure; focus on material requirements.

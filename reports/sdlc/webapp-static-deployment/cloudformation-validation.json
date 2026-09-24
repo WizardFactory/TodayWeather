@@ -1,0 +1,16 @@
+{
+  "Parameters": [
+    {
+      "ParameterKey": "HostedZoneId",
+      "DefaultValue": "",
+      "NoEcho": false,
+      "Description": "Optional public Route53 zone for tdywx.xyz; empty means external/manual DNS"
+    },
+    {
+      "ParameterKey": "CertificateArn",
+      "NoEcho": false,
+      "Description": "Issued ACM certificate in us-east-1 covering app.tdywx.xyz"
+    }
+  ],
+  "Description": "TodayWeather app.tdywx.xyz private static hosting. No compute server or API deployment."
+}

@@ -30,5 +30,8 @@ jobs:
           name: web-browser-evidence
           path: |
             reports/sdlc/webapp-implementation/screenshots
-            reports/sdlc/webapp-implementation/browser-results.json
             test-results
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-static-dist
+          path: web/dist
