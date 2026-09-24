@@ -33,7 +33,7 @@ The [configuration](../../server/config/config.js) defaults to `SERVER_MODE=loca
 | `local` (default) | All normal mounts | `startManager()` and `startScrape()` |
 | `gather` | All normal mounts | `startManager()`; listener timeout extended to 24 hours |
 | `scrape` | All normal mounts | `startScrape()` |
-| `push` | All normal mounts | `ControllerPush.start()`, `apnFeedback()`, `AlertPush.start()` |
+| `push` | All normal mounts | `ControllerPush.start()`, `AlertPush.start()` |
 | `service` | All normal mounts | None of those background loops |
 
 [Startup conditions](../../server/app.js) and [HTTP listener](../../server/bin/www) establish these facts. The source alone does not establish process count; the [service-host snapshot](ec2-internals.md) separately observes ten API cluster workers in service mode. `local` starts two consumers of the manager's shared in-memory task array. There is no durable message broker or distributed scheduler in that path.
@@ -64,7 +64,7 @@ App coordinates use `{lat,long}`; server geography often uses `{lat,lon}`; Mongo
 
 ## Other service paths
 
-- Push registration uses versioned REST endpoints; delivery runs in `push` mode and requests weather from `SERVICE_SERVER`. The server dependencies include APNs, GCM and Firebase integrations. [Push client](../../client/www/js/service.push.js), [scheduled push](../../server/controllers/controllerPush.js), [alerts](../../server/controllers/alert.push.controller.js).
+- Push registration uses versioned REST endpoints; delivery runs in `push` mode and requests weather from `SERVICE_SERVER`. Delivery uses Firebase for FCM tokens, including iOS, with legacy GCM retained for Android. Direct APNs has been removed; see the [push contract and deployment observations](push-notifications.md). [Push client](../../client/www/js/service.push.js), [scheduled push](../../server/controllers/controllerPush.js), [alerts](../../server/controllers/alert.push.controller.js).
 - Purchase validation remains on a reused `/check-purchase` router. Gulp selects different purchase controller/plugin combinations for iOS and Android. [Receipt route](../../server/routes/v000705/receiptValidation.js), [build selection](../../client/gulpfile.js).
 - Air forecast image processing and S3 helpers exist alongside the weather pipeline. A CloudFront invalidation helper exists, but its periodic manager dispatch is commented out; current CloudFront existence/routing is established separately by AWS evidence. [Manager](../../server/controllers/controllerManager.js), [S3 helpers](../../server/s3).
 - Localization uses server `i18n` and client Angular Translate; analytics and advertising are app concerns, separate from the weather HTTP wrapper. [Client utility](../../client/www/js/service.util.js), [app](../../client/www/js/app.js).
