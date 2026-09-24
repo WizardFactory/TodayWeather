@@ -45,7 +45,7 @@ It executes the actual v000903 coordinate router in process, complete middleware
 
 ### RSS continuous integration
 
-[RSS offline checks](../../../.github/workflows/rss-offline.yml) runs on pushes and pull requests using Node 22 and `TZ=UTC`, matching the server timezone confirmed by the operator. It runs all 43 regression tests and all 36 response smoke cases (both DB formats, three synthetic grids, newer/equal/older publications and both unit systems). A failure in either command fails the job.
+[RSS offline checks](../../../.github/workflows/rss-offline.yml) runs on pushes and pull requests using Node 16.20.2 and 22.22.2 with `TZ=UTC`, matching the server timezone confirmed by the operator. Each runtime runs all 43 RSS regression tests, the historical observation/recovery and runtime compatibility suites, and all 36 response smoke cases (both DB formats, three synthetic grids, newer/equal/older publications and both unit systems). A failure in any command fails the job.
 
 Smoke dependencies and output stay under the runner's temporary directory. This workflow is independent of the legacy Mocha/Travis suite and requires no production credentials, database, provider access or service startup. Hosted runner setup and npm installation require network access; the weather checks themselves use isolated dependencies.
 
@@ -88,6 +88,10 @@ They cover strict KST identities, QC/missing-value validation, sparse history,
 independent daily observations, partial-field preservation, explicit past gaps,
 pagination, missing-only recovery and duplicate/lease behavior with synthetic data.
 Run the observation suite under `TZ=UTC` and `TZ=America/Los_Angeles`.
+
+The history integration job in [Gather offline regression](../../../.github/workflows/gather-offline.yml)
+runs the real local persistence/response smoke and non-KST policy checks on
+Node 16.20.2 and 22.22.2 for relevant pull requests and master pushes.
 
 For a separate real persistence/transport smoke, install temporary dependencies:
 

@@ -41,13 +41,17 @@ jobs:
   history-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['16.20.2', '22.22.2']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: '22.22.2'
+          node-version: ${{ matrix.node }}
           package-manager-cache: false
       - name: Install isolated history test dependencies
         run: npm install --prefix "$RUNNER_TEMP/history-offline" --ignore-scripts --no-audit --no-fund --package-lock=false mongodb-memory-server-core@10.1.4 mongoose@5.1.2 xml2js@0.4.23 async@2.6.4 sprintf@0.1.5 express@4.13.4
