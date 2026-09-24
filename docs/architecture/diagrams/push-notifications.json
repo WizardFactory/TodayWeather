@@ -14,8 +14,7 @@
       "revision": "c9220de35fe31838e10e692494731b90106b0f65",
       "provider": "github",
       "link_mode": "local-only"
-    },
-    "subtitle": "Source flow with issue #2565 working-tree compatibility changes; deployment unverified"
+    }
   },
   "components": [
     {
@@ -124,7 +123,7 @@
       "id": "delivery",
       "type": "external",
       "label": "Push provider selection",
-      "sublabel": "FCM / APNs HTTP/2 / legacy GCM",
+      "sublabel": "FCM (iOS + Android) / legacy GCM",
       "pos": [
         400,
         365
@@ -255,7 +254,7 @@
       "items": [
         "Alarm: every minute; match UTC time and local weekday.",
         "Alert: UTC minutes 7 / 17 / 35 / 50; time window and rain / air rules.",
-        "FCM / APNs initialize on first send; APNs callback awaits SDK result."
+        "FCM initializes on first send; iOS without an FCM token fails."
       ]
     },
     {
@@ -264,7 +263,7 @@
       "items": [
         "30-day PUT /push: 16,337 HTTP 403; 1,834 HTTP 502.",
         "Missing token pair can yield 403; logged cause unproven.",
-        "Worker deployment and device delivery are unverified."
+        "Inspected hosts: no active push worker; delivery unverified."
       ]
     }
   ]

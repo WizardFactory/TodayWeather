@@ -97,11 +97,11 @@ NODE_PATH=/tmp/tw-runtime-candidate/node_modules npm --prefix server run test:ru
 NODE_PATH=/tmp/tw-runtime-candidate/node_modules npm --prefix server run test:runtime:smoke
 ```
 
-`test:runtime` checks provider initialization, credential selection, payloads and
-asynchronous results using explicit VM substitutes. `test:runtime:smoke` requires
+`test:runtime` checks lazy Firebase initialization, app selection, payloads,
+callback errors and alarm/alert rejection of legacy iOS records without FCM using explicit VM substitutes. `test:runtime:smoke` requires
 OpenSSL and permission to bind loopback sockets. It loads real native grpc/iconv,
-sends synthetic APNs HTTP/2 and FCM requests only to a locally generated TLS peer,
-and checks APNs success/rejection and JWT signing. A separate child loads the full
+requires the retired APNs package to be absent and sends a synthetic FCM request
+only to a locally generated TLS peer, checking its encoded payload and response. A separate child loads the full
 app in `service`/`test` mode, substitutes Mongo connection, checks `/health` = `OK`
 and emits a normal Console log. External network connections are rejected before
 SDK or app imports. No real credentials, provider calls, push sends or collection

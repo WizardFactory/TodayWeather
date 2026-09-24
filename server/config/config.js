@@ -62,13 +62,7 @@ module.exports = {
         googleClientSecret: (process.env.PLAY_STORE_API_CLIENT_SECRET || "PLAY_STORE_API_CLIENT_SECRET")
     },
     push: {
-        gcmAccessKey: (process.env.GCM_ACCESS_KEY || 'Your gcm access key'),
-        apnKeyPath: (process.env.APN_KEY_PATH || ''),
-        apnKeyId: (process.env.APN_KEY_ID || ''),
-        apnTeamId: (process.env.APN_TEAM_ID || ''),
-        apnTopic: (process.env.APN_TOPIC || ''),
-        apnCertPath: (process.env.APN_CERT_PATH || 'config/aps_cert.pem'),
-        apnCertKeyPath: (process.env.APN_CERT_KEY_PATH || 'config/aps_key.pem'),
+        gcmAccessKey: (process.env.GCM_ACCESS_KEY || 'Your gcm access key')
     },
     url: {
         requester: ('http://'+(process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1')+':'+(process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000')+'/'),

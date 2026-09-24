@@ -4,7 +4,6 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const crypto = require('crypto');
 const child = require('child_process');
 const net = require('net');
 const serverRoot = path.resolve(__dirname, '../..');
@@ -33,56 +32,30 @@ async function sdkSmoke() {
     const Iconv = require('iconv').Iconv;
     assert.equal(typeof grpc.credentials.createInsecure, 'function');
     assert.equal(new Iconv('EUC-KR', 'UTF-8').convert(Buffer.from([0xb0, 0xa1])).toString(), '가');
-    const apn = require('apn');
+    assert.throws(() => require.resolve('apn'), {code: 'MODULE_NOT_FOUND'});
     const firebase = require('firebase-admin');
-    const http2 = require('http2');
     const https = require('https');
     const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-node16-smoke-'));
-    let peer, provider, app;
+    let peer, app;
     const originalRequest = https.request;
     try {
         child.execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
             '-subj', '/CN=localhost', '-addext', 'subjectAltName=DNS:localhost,IP:127.0.0.1',
             '-keyout', path.join(temporary, 'key.pem'), '-out', path.join(temporary, 'cert.pem')], {stdio: 'ignore'});
         const cert = fs.readFileSync(path.join(temporary, 'cert.pem'));
-        const pair = crypto.generateKeyPairSync('ec', {namedCurve: 'prime256v1',
-            privateKeyEncoding: {type: 'pkcs8', format: 'pem'}, publicKeyEncoding: {type: 'spki', format: 'pem'}});
         const received = [];
-        // APNs advertises its stream limit. apn2 waits for this HTTP/2 setting.
-        peer = http2.createSecureServer({key: fs.readFileSync(path.join(temporary, 'key.pem')), cert,
-            allowHTTP1: true, settings: {maxConcurrentStreams: 100}});
+        peer = https.createServer({key: fs.readFileSync(path.join(temporary, 'key.pem')), cert});
         peer.on('request', (req, res) => {
             let body = '';
             req.on('data', data => { body += data; });
             req.on('end', () => {
                 received.push({path: req.url, headers: req.headers, body: JSON.parse(body)});
-                if (req.url.startsWith('/3/device/')) {
-                    const rejected = req.url.endsWith('b'.repeat(64));
-                    res.writeHead(rejected ? 400 : 200, {'content-type': 'application/json'});
-                    res.end(rejected ? JSON.stringify({reason: 'BadDeviceToken'}) : '');
-                } else {
-                    res.writeHead(200, {'content-type': 'application/json'});
-                    res.end(JSON.stringify({name: 'projects/offline-only/messages/synthetic-message'}));
-                }
+                res.writeHead(200, {'content-type': 'application/json'});
+                res.end(JSON.stringify({name: 'projects/offline-only/messages/synthetic-message'}));
             });
         });
         await new Promise(resolve => peer.listen(0, '127.0.0.1', resolve));
         const port = peer.address().port;
-        provider = new apn.Provider({token: {key: pair.privateKey, keyId: 'OFFLINEKEY', teamId: 'OFFLINETEAM'},
-            production: false, address: '127.0.0.1', port, ca: cert});
-        const note = new apn.Notification();
-        note.topic = 'test.offline'; note.alert = 'Offline notification'; note.payload = {cityIndex: 0};
-        const accepted = await provider.send(note, 'a'.repeat(64));
-        assert.equal(accepted.sent.length, 1); assert.equal(accepted.failed.length, 0);
-        const rejected = await provider.send(note, 'b'.repeat(64));
-        assert.equal(rejected.failed[0].response.reason, 'BadDeviceToken');
-        assert.equal(received[0].headers['apns-topic'], 'test.offline');
-        assert.equal(received[0].body.aps.alert, 'Offline notification');
-        assert.equal(received[0].body.cityIndex, 0);
-        const jwt = received[0].headers.authorization.replace(/^bearer /, '');
-        const decoded = require('jsonwebtoken').verify(jwt, pair.publicKey, {algorithms: ['ES256']});
-        assert.equal(decoded.iss, 'OFFLINETEAM');
-
         // Keep real FCM encoding and HTTP handling; redirect only its endpoint to our TLS peer.
         https.request = function (options, callback) {
             assert.equal(options.hostname || options.host, 'fcm.googleapis.com');
@@ -99,10 +72,9 @@ async function sdkSmoke() {
         assert.equal(fcm.path, '/v1/projects/offline-only/messages:send');
         assert.equal(fcm.body.message.data.cityIndex, '0');
         assert.equal(fcm.body.message.token, 'synthetic-device');
-        console.log('PASS Node16 native grpc/iconv; real APNs HTTP/2 acceptance/rejection/JWT; real FCM HTTP request/response using loopback only');
+        console.log('PASS Node16 native grpc/iconv; APNs package absent; real FCM HTTP request/response using loopback only');
     } finally {
         https.request = originalRequest;
-        if (provider) { provider.shutdown(); }
         if (app) { await app.delete(); }
         if (peer) { await new Promise(resolve => peer.close(resolve)); }
         fs.rmSync(temporary, {recursive: true, force: true});
@@ -113,7 +85,7 @@ async function appSmoke() {
     process.chdir(serverRoot);
     process.env.SERVER_MODE = 'service'; process.env.NODE_ENV = 'test'; process.env.DB_DATA_VERSION = '2.0';
     for (const name of Object.keys(process.env)) {
-        if (name.startsWith('NEW_RELIC_')) { delete process.env[name]; }
+        if (name.startsWith('NEW_RELIC_') || name.startsWith('APN_')) { delete process.env[name]; }
     }
     const config = require('../../config/config');
     config.logToken = {}; // Real Console logger, no external log transport.
@@ -123,6 +95,7 @@ async function appSmoke() {
     const app = require('../../app');
     assert.equal(connections, 1);
     assert.equal(Object.keys(require.cache).some(file => /[/\\]newrelic[/\\]/.test(file)), false);
+    assert.throws(() => require.resolve('apn'), {code: 'MODULE_NOT_FOUND'});
     assert.equal(require('firebase-admin').apps.length, 0, 'service routers do not initialize messaging apps');
     const http = require('http');
     const listener = http.createServer(app);

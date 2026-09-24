@@ -4,7 +4,6 @@
 
 "use strict";
 
-var apn = require('apn');
 var pushProviders = require('../lib/pushProviders');
 var gcm = require('node-gcm');
 var config = require('../config/config');
@@ -262,49 +261,6 @@ ControllerPush.prototype.sendAndroidNotification = function (pushInfo, notificat
         var err = new Error('GCM registration id is invalid pushInfo:'+JSON.stringify(pushInfo));
         callback(err);
     }
-};
-
-/**
- * @param pushInfo
- * @param notification title, text
- * @param callback
- */
-ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification, callback) {
-    log.info('send ios notification pushInfo='+JSON.stringify(pushInfo)+ ' notification='+JSON.stringify(notification));
-
-    if (pushInfo.registrationId) {
-
-        var note = new apn.Notification();
-        //note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
-        //note.badge = 1;
-        note.sound = "ping.aiff";
-        note.alert = notification.title+'\n'+notification.text;
-        //note.contentAvailable = true;
-        note.payload = {cityIndex: pushInfo.cityIndex};
-
-        if (config.push.apnTopic) { note.topic = config.push.apnTopic; }
-        var pending;
-        try {
-            pending = pushProviders.apn().send(note, pushInfo.registrationId);
-        } catch (err) {
-            callback(err);
-            return this;
-        }
-        pending.then(function (result) {
-            if (!result || !result.sent || !result.sent.length || (result.failed && result.failed.length)) {
-                var failure = result && result.failed && result.failed[0];
-                var reason = failure && failure.response && failure.response.reason;
-                callback(new Error('APNs submission failed' + (reason ? ': ' + reason : '')));
-                return;
-            }
-            callback(undefined, 'sent');
-        }, function (err) { callback(err); });
-    }
-    else {
-        var err = new Error('APN registration id is invalid pushInfo:'+JSON.stringify(pushInfo));
-        callback(err);
-    }
-    return this;
 };
 
 ControllerPush.prototype._getAqiStr = function (arpltn, trans) {
@@ -1152,7 +1108,7 @@ ControllerPush.prototype.sendNotification = function (pushInfo, callback) {
             });
         }
         else if (pushInfo.type == 'ios') {
-            self.sendIOSNotification(pushInfo, notification, callback);
+            callback(new Error('FCM token is required for iOS notifications'));
         }
         else if (pushInfo.type == 'android') {
             self.sendAndroidNotification(pushInfo, notification, callback);
@@ -1377,21 +1333,6 @@ ControllerPush.prototype.start = function () {
         var timeUTC = date.getUTCHours() * 60 * 60 + date.getUTCMinutes() * 60;
         self.sendPush.call(self, timeUTC);
     }, self.timeInterval);
-};
-
-ControllerPush.prototype.apnFeedback = function () {
-    //var options = {
-    //    "batchFeedback": true,
-    //    "interval": 300 //seconds
-    //};
-
-    // var feedback = new apn.Feedback(apnOptions);
-    // feedback.on("feedback", function(devices) {
-    //     devices.forEach(function(item) {
-    //         log.info(item);
-    //         // Do something with item.device and item.time;
-    //     });
-    // });
 };
 
 /**

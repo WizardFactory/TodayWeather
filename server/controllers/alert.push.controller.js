@@ -668,7 +668,7 @@ class AlertPushController {
             });
         }
         else if (pushInfo.type == 'ios') {
-            ctrlPush.sendIOSNotification(pushInfo, notification, callback);
+            callback(new Error('FCM token is required for iOS notifications'));
         }
         else if (pushInfo.type == 'android') {
             ctrlPush.sendAndroidNotification(pushInfo, notification, callback);
@@ -1058,4 +1058,3 @@ class AlertPushController {
 }
 
 module.exports = AlertPushController;
-
