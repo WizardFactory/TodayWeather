@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/root/.paseo/worktrees/08mqediz/juicy-goose/reports/sdlc/issue-2554-ci/check-workflow.py", line 10, in <module>
+    assert path.exists(), 'Missing RSS workflow: regression checks are not automated'
+           ^^^^^^^^^^^^^
+AssertionError: Missing RSS workflow: regression checks are not automated

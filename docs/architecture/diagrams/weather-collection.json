@@ -74,6 +74,9 @@
         },
         {
           "path": "server/lib/kecoRequester.js"
+        },
+        {
+          "path": "server/controllers/kma/kma.town.short.rss.controller.js"
         }
       ]
     },
@@ -164,6 +167,9 @@
       "sources": [
         {
           "path": "server/controllers/controllerTown24h.js"
+        },
+        {
+          "path": "server/controllers/controllerTown.js"
         }
       ]
     }
@@ -224,10 +230,10 @@
     },
     {
       "dot": "amber",
-      "title": "Scope",
+      "title": "RSS fallback \u2014 issue #2554 local change",
       "items": [
-        "This view covers scheduled domestic ingestion; DSF is fetched on demand.",
-        "Scraper upstream calls and auxiliary providers are detailed in weather-collection.md."
+        "Collector stores wdEn; service maps ws to wsd and wd \u00d7 45 to vec.",
+        "Newer RSS replaces valid source fields; equal fills gaps; older is skipped."
       ]
     }
   ]

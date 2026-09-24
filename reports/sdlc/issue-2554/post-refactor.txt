@@ -1,0 +1,268 @@
+TAP version 13
+# Subtest: collector direction E
+ok 1 - collector direction E
+  ---
+  duration_ms: 14.407676
+  type: 'test'
+  ...
+# Subtest: collector direction N
+ok 2 - collector direction N
+  ---
+  duration_ms: 8.498881
+  type: 'test'
+  ...
+# Subtest: collector direction NE
+ok 3 - collector direction NE
+  ---
+  duration_ms: 9.230458
+  type: 'test'
+  ...
+# Subtest: collector direction NW
+ok 4 - collector direction NW
+  ---
+  duration_ms: 6.597602
+  type: 'test'
+  ...
+# Subtest: collector direction S
+ok 5 - collector direction S
+  ---
+  duration_ms: 8.177841
+  type: 'test'
+  ...
+# Subtest: collector direction SE
+ok 6 - collector direction SE
+  ---
+  duration_ms: 6.149424
+  type: 'test'
+  ...
+# Subtest: collector direction SW
+ok 7 - collector direction SW
+  ---
+  duration_ms: 5.373464
+  type: 'test'
+  ...
+# Subtest: collector direction W
+ok 8 - collector direction W
+  ---
+  duration_ms: 9.461158
+  type: 'test'
+  ...
+# Subtest: collector direction UNKNOWN
+ok 9 - collector direction UNKNOWN
+  ---
+  duration_ms: 6.007208
+  type: 'test'
+  ...
+# Subtest: collector absent direction remains sentinel
+ok 10 - collector absent direction remains sentinel
+  ---
+  duration_ms: 8.488522
+  type: 'test'
+  ...
+# Subtest: 1.0 newer RSS uses real DB projection and normalizes wind
+ok 11 - 1.0 newer RSS uses real DB projection and normalizes wind
+  ---
+  duration_ms: 7.074391
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 0 to degrees
+ok 12 - 1.0 direction 0 to degrees
+  ---
+  duration_ms: 6.212832
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 1 to degrees
+ok 13 - 1.0 direction 1 to degrees
+  ---
+  duration_ms: 5.942798
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 2 to degrees
+ok 14 - 1.0 direction 2 to degrees
+  ---
+  duration_ms: 5.703922
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 3 to degrees
+ok 15 - 1.0 direction 3 to degrees
+  ---
+  duration_ms: 8.484434
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 4 to degrees
+ok 16 - 1.0 direction 4 to degrees
+  ---
+  duration_ms: 5.959348
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 5 to degrees
+ok 17 - 1.0 direction 5 to degrees
+  ---
+  duration_ms: 5.88485
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 6 to degrees
+ok 18 - 1.0 direction 6 to degrees
+  ---
+  duration_ms: 7.479828
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 7 to degrees
+ok 19 - 1.0 direction 7 to degrees
+  ---
+  duration_ms: 7.229762
+  type: 'test'
+  ...
+# Subtest: 1.0 equal preserves valid values and fills missing/sentinel fields
+ok 20 - 1.0 equal preserves valid values and fills missing/sentinel fields
+  ---
+  duration_ms: 33.623502
+  type: 'test'
+  ...
+# Subtest: 1.0 older is ignored
+ok 21 - 1.0 older is ignored
+  ---
+  duration_ms: 10.086084
+  type: 'test'
+  ...
+# Subtest: 1.0 invalid RSS wind never erases base
+ok 22 - 1.0 invalid RSS wind never erases base
+  ---
+  duration_ms: 72.609578
+  type: 'test'
+  ...
+# Subtest: 1.0 absent/missing sources preserve every base field
+ok 23 - 1.0 absent/missing sources preserve every base field
+  ---
+  duration_ms: 38.958926
+  type: 'test'
+  ...
+# Subtest: 1.0 first future and single future slot are included
+ok 24 - 1.0 first future and single future slot are included
+  ---
+  duration_ms: 11.077727
+  type: 'test'
+  ...
+# Subtest: 1.0 exact now and past stay unchanged; midnight matches
+ok 25 - 1.0 exact now and past stay unchanged; midnight matches
+  ---
+  duration_ms: 5.98204
+  type: 'test'
+  ...
+# Subtest: 1.0 tmx source gate and 06:00 tmn
+ok 26 - 1.0 tmx source gate and 06:00 tmn
+  ---
+  duration_ms: 8.189294
+  type: 'test'
+  ...
+# Subtest: 2.0 newer RSS uses real DB projection and normalizes wind
+ok 27 - 2.0 newer RSS uses real DB projection and normalizes wind
+  ---
+  duration_ms: 5.678846
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 0 to degrees
+ok 28 - 2.0 direction 0 to degrees
+  ---
+  duration_ms: 4.846431
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 1 to degrees
+ok 29 - 2.0 direction 1 to degrees
+  ---
+  duration_ms: 5.279019
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 2 to degrees
+ok 30 - 2.0 direction 2 to degrees
+  ---
+  duration_ms: 6.112986
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 3 to degrees
+ok 31 - 2.0 direction 3 to degrees
+  ---
+  duration_ms: 6.568687
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 4 to degrees
+ok 32 - 2.0 direction 4 to degrees
+  ---
+  duration_ms: 5.418249
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 5 to degrees
+ok 33 - 2.0 direction 5 to degrees
+  ---
+  duration_ms: 5.472239
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 6 to degrees
+ok 34 - 2.0 direction 6 to degrees
+  ---
+  duration_ms: 6.42057
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 7 to degrees
+ok 35 - 2.0 direction 7 to degrees
+  ---
+  duration_ms: 6.84937
+  type: 'test'
+  ...
+# Subtest: 2.0 equal preserves valid values and fills missing/sentinel fields
+ok 36 - 2.0 equal preserves valid values and fills missing/sentinel fields
+  ---
+  duration_ms: 30.852868
+  type: 'test'
+  ...
+# Subtest: 2.0 older is ignored
+ok 37 - 2.0 older is ignored
+  ---
+  duration_ms: 5.54685
+  type: 'test'
+  ...
+# Subtest: 2.0 invalid RSS wind never erases base
+ok 38 - 2.0 invalid RSS wind never erases base
+  ---
+  duration_ms: 77.700125
+  type: 'test'
+  ...
+# Subtest: 2.0 absent/missing sources preserve every base field
+ok 39 - 2.0 absent/missing sources preserve every base field
+  ---
+  duration_ms: 65.646695
+  type: 'test'
+  ...
+# Subtest: 2.0 first future and single future slot are included
+ok 40 - 2.0 first future and single future slot are included
+  ---
+  duration_ms: 9.666253
+  type: 'test'
+  ...
+# Subtest: 2.0 exact now and past stay unchanged; midnight matches
+ok 41 - 2.0 exact now and past stay unchanged; midnight matches
+  ---
+  duration_ms: 4.505875
+  type: 'test'
+  ...
+# Subtest: 2.0 tmx source gate and 06:00 tmn
+ok 42 - 2.0 tmx source gate and 06:00 tmn
+  ---
+  duration_ms: 4.386702
+  type: 'test'
+  ...
+# Subtest: v2 UTC/KST publication boundary remains on the intended local date
+ok 43 - v2 UTC/KST publication boundary remains on the intended local date
+  ---
+  duration_ms: 0.696471
+  type: 'test'
+  ...
+1..43
+# tests 43
+# suites 0
+# pass 43
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 617.401474

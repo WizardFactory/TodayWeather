@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/root/.paseo/worktrees/08mqediz/juicy-goose/docs/architecture/diagrams/weather-collection.json",
+  "output": "/root/.paseo/worktrees/08mqediz/juicy-goose/docs/architecture/diagrams/weather-collection.html",
+  "specification": {
+    "sha256": "91eba492fe1acaf108b47bffaf1ae292967885c3b327dacfa89a2e27dd527cff",
+    "bytes": 4718
+  },
+  "artifact": {
+    "sha256": "a4f869f092a70dd892948f3fff8fa5a2de391f1488a7f7070727d4b8e0d73d53",
+    "bytes": 806305
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  },
+  "evidence": {
+    "verified": true,
+    "repository": "https://github.com/WizardFactory/TodayWeather",
+    "revision": "b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+    "references": 10,
+    "linkMode": "local-only"
+  }
+}

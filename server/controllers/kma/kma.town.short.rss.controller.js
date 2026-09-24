@@ -299,7 +299,7 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
             }
             template.wd = parseFloat(item.wd[0]);
             template.wdKor = self.convertWeatherString(item.wdKor[0]);
-            template.wfEn = self.convertWeatherString(item.wfEn[0]);
+            template.wdEn = self.convertWeatherString(item.wdEn && item.wdEn[0]);
             template.reh = parseFloat(item.reh[0]);
             template.r06 = parseFloat(item.r06[0]);
             template.s06 = parseFloat(item.s06[0]);

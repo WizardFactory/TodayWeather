@@ -49,6 +49,29 @@ Sources: [manager collection and save selection](../../server/controllers/contro
 
 Legacy documents carry `pubDate=YYYYMMDDHHMM` and `date`/`time` values. Invalid measurements use field-specific sentinels such as `-50` temperature or `-1` missing values. Preserving invalid-value handling matters: treating a sentinel as a real observation changes merged forecasts and yesterday comparisons.
 
+## Grid RSS wind contract (issue #2554 local repair)
+
+The [RSS parser](../../server/controllers/kma/kma.town.short.rss.controller.js) stores numeric `ws` (m/s), numeric `wd` (eight compass sectors), and separately encoded `wdKor`/`wdEn` labels. `wdEn` now comes from the upstream English wind label rather than repeating the `wfEn` weather assignment. Unknown or absent English direction remains `-1`. Both legacy per-grid documents and v2 per-slot documents retain their existing schemas; historical `wdEn=-1` is not backfilled by this repair.
+
+The [KMA RSS format](https://www.kma.go.kr/w/resources/pdf/dongnaeforecast_rss.pdf), pp. 1–2, defines the numeric and text codes separately:
+
+| Direction | RSS `wd` | Service `vec` (degrees) | Stored `wdEn` / `wdKor` |
+| --- | --- | --- | --- |
+| N | 0 | 0 | 2 |
+| NE | 1 | 45 | 3 |
+| E | 2 | 90 | 1 |
+| SE | 3 | 135 | 6 |
+| S | 4 | 180 | 5 |
+| SW | 5 | 225 | 7 |
+| W | 6 | 270 | 8 |
+| NW | 7 | 315 | 4 |
+
+The service maps `ws → wsd` and `wd × 45 → vec`; code `8`, fractional directions and missing/non-numeric/nonfinite values are rejected, not wrapped. North is `0`, so zero is a valid value. `wdEn` is not used to infer `vec`, including for historical rows with its sentinel. See [response merge policy](mobile-api.md#rss-fallback-contract-issue-2554-local-repair).
+
+The legacy collector `calculateTime()` is host-timezone-sensitive: it parses a timezone-less timestamp as local time and then adds the host timezone offset. The XML-to-response smoke therefore explicitly uses `TZ=UTC`. A non-UTC host can shift forecast slots; that pre-existing defect is outside this wind repair. Deployment preparation must verify the gather process timezone or resolve that separate defect before claiming the whole pipeline is correct. V2 publication Date/KST conversion and service matching are tested separately.
+
+This section and the RSS card in the collection diagram describe the local repair, not an observed production deployment. The original diagram revision continues to identify its pre-existing topology evidence. Regression fixtures are synthetic; the issue's Seoul/Busan/Jeju observations remain timestamped investigation evidence, not a nationwide audit.
+
 ## Scraping and auxiliary products
 
 `startScrape()` runs in `scrape` or `local`, pushes initial minute, hourly and special-weather jobs into the same task array, installs a 60-second timer and calls `task()` itself. Thereafter minute observations enqueue on even minutes, special-weather situations on minutes divisible by 3, and hourly station observations at minutes 4, 6, 9 and 15. Scraper callbacks recognize `'skip'` for already-updated observations. In `local`, both startup methods call `task()`, so two drain loops share one array.
