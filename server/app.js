@@ -4,8 +4,6 @@
 
 'use strict';
 
-require('newrelic');
-
 var express = require('express');
 var cors = require('cors');
 var path = require('path');

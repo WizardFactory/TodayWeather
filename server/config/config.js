@@ -17,7 +17,6 @@ module.exports = {
         test_cert: (process.env.DATA_GO_KR_TEST_CERT_KEY || 'You have to set key of data.go.kr'),
         normal: (process.env.DATA_GO_KR_NORMAL_KEY || 'You have to set key of data.go.kr'),
         cert_key: (process.env.DATA_GO_KR_CERT_KEY || 'You have to set key of data.go.kr'),
-        newrelic: (process.env.NEW_RELIC_LICENSE_KEY || 'Your New Relic license key'),
         aws_access_key:(process.env.AWS_ACCESS_KEY || 'You have to set key of AWS'),
         aws_secret_key:(process.env.AWS_SECRET_KEY || 'You have to set key of AWS'),
         owm_keys : [{
@@ -64,9 +63,12 @@ module.exports = {
     },
     push: {
         gcmAccessKey: (process.env.GCM_ACCESS_KEY || 'Your gcm access key'),
-        apnKeyPath : (process.env.APN_KEY_ID || 'APN KEY PATH'),
-        apnKeyId : (process.env.APN_KEY_ID || 'APN KEY ID'),
-        apnTeamId : (process.env.APN_KEY_ID || 'APN TEAM ID'),
+        apnKeyPath: (process.env.APN_KEY_PATH || ''),
+        apnKeyId: (process.env.APN_KEY_ID || ''),
+        apnTeamId: (process.env.APN_TEAM_ID || ''),
+        apnTopic: (process.env.APN_TOPIC || ''),
+        apnCertPath: (process.env.APN_CERT_PATH || 'config/aps_cert.pem'),
+        apnCertKeyPath: (process.env.APN_CERT_KEY_PATH || 'config/aps_key.pem'),
     },
     url: {
         requester: ('http://'+(process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1')+':'+(process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000')+'/'),

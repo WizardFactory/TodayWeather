@@ -4,8 +4,8 @@
 
 "use strict";
 
-var admin = require("firebase-admin");
 var apn = require('apn');
+var pushProviders = require('../lib/pushProviders');
 var gcm = require('node-gcm');
 var config = require('../config/config');
 var PushInfo = require('../models/modelPush');
@@ -24,76 +24,15 @@ var dnscache = require('dnscache')({
     "cachesize" : 1000
 });
 
-var production = false;
-
-//apn version 1.7.5
-// var apnGateway;
-// if (process.env.NODE_ENV === 'production') {
-//     apnGateway = "gateway.push.apple.com";
-//     production = true;
-// }
-// else {
-//     apnGateway = "gateway.sandbox.push.apple.com";
-// }
-//
-// var apnOptions = {
-//     gateway : apnGateway,
-//     cert: './config/aps_cert.pem',
-//     key: './config/aps_key.pem',
-//     production: production,
-//     batchFeedback: true,
-//     interval: 300 //seconds
-// };
-//var apnConnection = new apn.Connection(apnOptions);
-
-var options = {
-    token: {
-        key: config.push.apnKeyPath,
-        keyId: config.push.apnKeyId,
-        teamId: config.push.apnTeamId
-    },
-    production: production
-};
-
-var apnProvider;
-
-try {
-    apnProvider = new apn.Provider(options);
-}
-catch(error) {
-    console.log(error);
-}
-
 var server_access_key = config.push.gcmAccessKey;
 
 var sender = new gcm.Sender(server_access_key);
 
 var i18n = require('i18n');
 
-var twFirebaseAdmin;
-var taFirebaseAdmin;
-
 function ControllerPush() {
     this.timeInterval = 60*1000; //1min
     this.url = config.serviceServer.url;
-
-    try {
-        if (twFirebaseAdmin == undefined) {
-            var twServiceAccount = require("../config/admob-app-id-6159460161-firebase-adminsdk-r2shn-9e77fbe119.json");
-            twFirebaseAdmin = admin.initializeApp({
-                credential: admin.credential.cert(twServiceAccount),
-            }, 'todayWeather');
-        }
-        if (taFirebaseAdmin == undefined) {
-            var taServiceAccount = require("../config/todayair-74958-firebase-adminsdk-2n8hn-68ad361049.json");
-            taFirebaseAdmin = admin.initializeApp({
-                credential: admin.credential.cert(taServiceAccount),
-            }, 'todayAir');
-        }
-    }
-    catch (err) {
-       log.error(err);
-    }
 }
 
 /**
@@ -297,24 +236,20 @@ ControllerPush.prototype.sendFcmNotification = function(pushInfo, notification, 
         token: pushInfo.fcmToken
     };
 
-    var admin;
-    if (pushInfo.package === 'todayAir') {
-        admin = taFirebaseAdmin;
+    var pending;
+    try {
+        pending = pushProviders.firebase(pushInfo.package).messaging().send(message);
+    } catch (err) {
+        callback(err);
+        return this;
     }
-    else {
-        admin = twFirebaseAdmin;
-    }
-
-    log.info('fcm admin name:', admin.name);
-
-    admin.messaging().send(message)
-        .then(function (response) {
-            log.info('Successfully sent message:', response);
-            callback(null, response);
-        })
-        .catch(function (err) {
-            callback(err);
-        });
+    pending.then(function (response) {
+        log.info('Successfully sent message:', response);
+        callback(null, response);
+    }, function (err) {
+        callback(err);
+    });
+    return this;
 };
 
 ControllerPush.prototype.sendAndroidNotification = function (pushInfo, notification, callback) {
@@ -347,15 +282,23 @@ ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification,
         //note.contentAvailable = true;
         note.payload = {cityIndex: pushInfo.cityIndex};
 
-        //apn 1.7.5
-        //var myDevice = new apn.Device(pushInfo.registrationId);
-        //apnConnection.pushNotification(note, myDevice);
-
-        apnProvider.send(note, pushInfo.registrationId).then((result)=> {
-            console.info(result);
-        });
-
-        callback(undefined, 'sent');
+        if (config.push.apnTopic) { note.topic = config.push.apnTopic; }
+        var pending;
+        try {
+            pending = pushProviders.apn().send(note, pushInfo.registrationId);
+        } catch (err) {
+            callback(err);
+            return this;
+        }
+        pending.then(function (result) {
+            if (!result || !result.sent || !result.sent.length || (result.failed && result.failed.length)) {
+                var failure = result && result.failed && result.failed[0];
+                var reason = failure && failure.response && failure.response.reason;
+                callback(new Error('APNs submission failed' + (reason ? ': ' + reason : '')));
+                return;
+            }
+            callback(undefined, 'sent');
+        }, function (err) { callback(err); });
     }
     else {
         var err = new Error('APN registration id is invalid pushInfo:'+JSON.stringify(pushInfo));

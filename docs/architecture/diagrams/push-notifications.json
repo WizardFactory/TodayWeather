@@ -11,10 +11,11 @@
     ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "d14da457515407873fba28c9b0291bb23ce955a3",
+      "revision": "c9220de35fe31838e10e692494731b90106b0f65",
       "provider": "github",
       "link_mode": "local-only"
-    }
+    },
+    "subtitle": "Source flow with issue #2565 working-tree compatibility changes; deployment unverified"
   },
   "components": [
     {
@@ -123,7 +124,7 @@
       "id": "delivery",
       "type": "external",
       "label": "Push provider selection",
-      "sublabel": "FCM; legacy APNs / GCM",
+      "sublabel": "FCM / APNs HTTP/2 / legacy GCM",
       "pos": [
         400,
         365
@@ -253,7 +254,8 @@
       "title": "Independent background jobs",
       "items": [
         "Alarm: every minute; match UTC time and local weekday.",
-        "Alert: UTC minutes 7 / 17 / 35 / 50; time window and rain / air rules."
+        "Alert: UTC minutes 7 / 17 / 35 / 50; time window and rain / air rules.",
+        "FCM / APNs initialize on first send; APNs callback awaits SDK result."
       ]
     },
     {

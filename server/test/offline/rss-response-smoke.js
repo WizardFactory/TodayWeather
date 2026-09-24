@@ -1,5 +1,5 @@
 /* Full v000903 KMA coordinate router smoke, with no HTTP socket or production calls.
- * Requires Node >=18, async 2.5, express 4.13, sprintf 0.1.5 and xml2js 0.4.23.
+ * Requires Node >=16.20.2, async 2.5, express 4.13, sprintf 0.1.5 and xml2js 0.4.23.
  * Run: TZ=UTC NODE_PATH=/tmp/issue-2554-response-smoke/node_modules \
  *      TW_REPO=/path/to/checkout node server/test/offline/rss-response-smoke.js
  * Optional TW_SMOKE_OUTPUT_DIR selects artifact directory outside the checkout.
@@ -14,7 +14,9 @@ const crypto = require('crypto');
 const root = process.env.TW_REPO || process.cwd();
 const outputDir = process.env.TW_SMOKE_OUTPUT_DIR || path.join(require('os').tmpdir(),'issue-2554-response-smoke-output');
 fs.mkdirSync(outputDir,{recursive:true});
-const clone = value => structuredClone(value);
+// Preserve Date/undefined values in fixtures on the Node 16 service runtime.
+const v8 = require('v8');
+const clone = value => v8.deserialize(v8.serialize(value));
 const RealDate = Date;
 const instant = process.env.TW_SMOKE_NOW || '2026-09-24T00:10:00.000Z'; // 09:10 KST, after 09:00 observation publication.
 class FixedDate extends RealDate { constructor(...args) { super(...(args.length ? args : [instant])); } static now() { return new RealDate(instant).getTime(); } }
