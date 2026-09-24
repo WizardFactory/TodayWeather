@@ -95,3 +95,11 @@ NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/env-star
 ```
 
 See [server configuration](../../CONFIGURATION.md) for runtime behavior.
+
+## Paseo workspace environment setup
+
+Run `python3 server/test/offline/paseo-env-setup.test.py` from the repository root.
+The synthetic filesystem checks cover environment copying, private permissions,
+Git exclusion, existing-file preservation, missing sources and symlink handling.
+They also check that the existing AWS-file setup is preserved. No private
+configuration or running Paseo daemon is required.

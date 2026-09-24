@@ -1,1 +1,0 @@
-PASS source/current paseo.json equality. PASS base .gitignore existing bytes preserved with /server/.env appended. PASS source server/.env ignored and untracked. No source secret contents read or changed.

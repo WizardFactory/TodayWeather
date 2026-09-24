@@ -1,8 +1,0 @@
-{
-  "verifier": {
-    "independent": true,
-    "context_id": "/root/verify_env",
-    "builder_context_id": "/root",
-    "checks": "Final 15 candidate hashes and staged bytes match; config change comments-only; dotenv example parser check; operator statement attribution; combined staged source scope/security review; refreshed test evidence consumed"
-  }
-}

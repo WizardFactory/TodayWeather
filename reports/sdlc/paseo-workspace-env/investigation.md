@@ -1,3 +1,0 @@
-# Investigation
-Installed Paseo worktree.js exports seedPaseoConfigFile and runWorktreeSetupCommands. Setup shell runs in target cwd with PASEO_SOURCE_CHECKOUT_PATH pointing to original repo root. Seed uses COPYFILE_EXCL so existing target config wins. Existing paseo.json is identical in this and base checkouts and copies .aws/aleckim.pem and credentials; preserve that string verbatim and append env logic.
-Base server/.env exists mode 0600 but git check-ignore returns 1. Copy source values are never emitted. Use a nested server/.gitignore rule in setup to support branches predating the dotenv ignore change and neutralize existing negations.

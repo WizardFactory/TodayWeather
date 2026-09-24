@@ -1,5 +1,0 @@
-PASS copy, modes, Git exclusion, rerun preserves existing files, no secret output
-PASS missing source safely skipped
-PASS destination directory symlink refused
-PASS missing source environment fails clearly
-PASS existing Git ignore negations cannot expose copied files

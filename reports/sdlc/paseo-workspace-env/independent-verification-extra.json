@@ -1,8 +1,0 @@
-{
-  "verifier": {
-    "independent": true,
-    "context_id": "/root/verify_env",
-    "builder_context_id": "/root",
-    "checks": "Eight synthetic checks, native Paseo worktree smoke, supplemental AWS and live symlink checks, exact original setup prefix preservation, active base config equality and env metadata, four candidate hashes"
-  }
-}

@@ -1,8 +1,0 @@
-PASS copy, 0600, ignore, paths with spaces, AWS preservation, no secret output
-PASS existing environment preserved; ignore setup idempotent
-PASS pre-existing ignore negation safely overridden without losing content
-PASS missing source skipped
-PASS server symlink refused
-PASS ignore-file symlink refused
-PASS existing dangling environment symlink preserved
-PASS missing Paseo source variable fails clearly
