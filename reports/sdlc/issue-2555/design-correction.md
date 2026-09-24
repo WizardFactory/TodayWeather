@@ -1,0 +1,3 @@
+# Review correction design
+Same timer/dispatch/storage topology and operational defaults. Reject incomplete single-page responses before organization; retain 999-item request and defer bounded pagination. Decode existing key strings once and encode as a query component, with explicit percent-escape contract and safe invalid-key failure. Fix direct sea field correspondence. Hold hourly short activation pending consumer repair. Dedicated Node22 offline CI has read-only permissions and no deploy/production work.
+Archify deliver: 9/9 checks, 0 errors/warnings; specification 6a230759e19a2f66c7476e060d29253c5d4a0feba49ea52e32cd2034b48a2fce, artifact e5a071971c369349e0c56891cb434fc9b8887792f417d3266b3942c75f6ba5a1. Browser and visual evidence tracked separately before commit.

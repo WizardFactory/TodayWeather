@@ -1,0 +1,231 @@
+
+> TodayWeather@0.7.5 test:offline
+> node test/offline/run.js
+
+
+
+  gather drift: synthetic offline compatibility
+
+    ✓ builds migrated TOWN_CURRENT URL without HTTP
+
+    ✓ dispatches 00 to organizeCurrentData
+
+    ✓ builds migrated TOWN_SHORTEST URL without HTTP
+
+    ✓ dispatches 00 to organizeShortestData
+
+    ✓ builds migrated TOWN_SHORT URL without HTTP
+
+    ✓ dispatches 00 to organizeShortData
+
+    ✓ builds migrated MID_FORECAST URL without HTTP
+
+    ✓ dispatches 00 to organizeForecastData
+
+    ✓ builds migrated MID_LAND URL without HTTP
+
+    ✓ dispatches 00 to organizeLandData
+
+    ✓ builds migrated MID_TEMP URL without HTTP
+
+    ✓ dispatches 00 to organizeTempData
+
+    ✓ builds migrated MID_SEA URL without HTTP
+
+    ✓ dispatches 00 to organizeSeaData
+
+    ✓ fails safely on non-success
+
+    ✓ fails safely on legacy success
+
+    ✓ fails safely on zero count
+
+    ✓ fails safely on bad count
+
+    ✓ fails safely on missing count
+
+    ✓ fails safely on empty items
+
+    ✓ fails safely on missing header
+
+    ✓ fails safely on missing envelope
+
+    ✓ fails safely on malformed XML without reflecting raw text
+
+    ✓ rejects HTTP status/response 403
+
+    ✓ rejects HTTP status/response 404
+
+    ✓ rejects HTTP status/response 500
+
+    ✓ rejects HTTP status/response 302
+
+    ✓ rejects HTTP status/response null
+
+    ✓ does not log transport errors containing the request URL
+
+    ✓ maps the specified short fixture and publication/grid fields
+
+    ✓ parses complete quantities 1.5/0.5
+
+    ✓ parses complete quantities  1.5 mm /0.5cm
+
+    ✓ keeps unsupported precipitation missing: ""
+
+    ✓ keeps unsupported precipitation missing: " "
+
+    ✓ keeps unsupported precipitation missing: "unknown"
+
+    ✓ keeps unsupported precipitation missing: "1~4"
+
+    ✓ keeps unsupported precipitation missing: "1.0mm 미만"
+
+    ✓ keeps unsupported precipitation missing: "50mm 이상"
+
+    ✓ keeps unsupported precipitation missing: "Infinity"
+
+    ✓ keeps unsupported precipitation missing: "NaN"
+
+    ✓ keeps unsupported precipitation missing: "-1"
+
+    ✓ keeps unsupported precipitation missing: "-999"
+
+    ✓ keeps unsupported precipitation missing: "1e999"
+
+    ✓ keeps unsupported precipitation missing: "1.2junk"
+
+    ✓ retains legacy categories and forecast grouping
+
+    ✓ rejects invalid TMP ""
+
+    ✓ rejects invalid TMP "NaN"
+
+    ✓ rejects invalid TMP "Infinity"
+
+    ✓ rejects invalid TMP "12bad"
+
+    ✓ normalizes shortest RN1 0
+
+    ✓ normalizes shortest RN1 1.5
+
+    ✓ normalizes shortest RN1 undefined
+
+    ✓ normalizes shortest RN1 ""
+
+    ✓ normalizes shortest RN1 "bad"
+
+    ✓ normalizes shortest RN1 "Infinity"
+
+    ✓ normalizes shortest RN1 "NaN"
+
+    ✓ normalizes shortest RN1 -1
+
+    ✓ normalizes shortest RN1 -999
+
+    ✓ normalizes shortest RN1 "1~4"
+
+    ✓ normalizes shortest RN1 "1mm 미만"
+
+    ✓ does not leak keys for empty request lists or callback exceptions
+
+    ✓ preserves upstream current validation and Kakao initialization/API
+
+    ✓ preserves protective logger catch with a throwing transport
+
+    ✓ preserves upstream operational defaults and inclusive request cutoffs
+
+  upstream storage and period-contract characterization
+
+    ✓ merges existing current fields without overwriting a new valid zero
+
+    ✓ retains current reh/lgt sentinel template contract
+
+    ✓ documents legacy 24h splitting as a limitation, not hourly-to-six-hour equivalence
+
+  independent-review regressions: malformed organized output
+
+    ✓ rejects malformed MID_FORECAST without reflecting provider text
+
+    ✓ rejects malformed MID_TEMP without reflecting provider text
+
+    ✓ rejects malformed MID_LAND without reflecting provider text
+
+    ✓ rejects malformed MID_SEA without reflecting provider text
+
+    ✓ reports organizer rejection to the callback
+
+    ✓ rejects invalid TMP in later forecast groups
+
+    ✓ rejects invalid SKY in later forecast groups
+
+    ✓ rejects invalid REH in later forecast groups
+
+    ✓ rejects invalid PTY in later forecast groups
+
+  real mid organizers with synthetic fixtures
+
+    ✓ collects nonempty valid MID_FORECAST
+
+    ✓ collects nonempty valid MID_TEMP
+
+    ✓ collects nonempty valid MID_LAND
+
+    ✓ collects nonempty valid MID_SEA
+
+    ✓ rejects a nonfinite day-specific sea height 4AAm
+
+    ✓ rejects a nonfinite day-specific sea height 5APm
+
+    ✓ rejects a nonfinite day-specific sea height 6BAm
+
+    ✓ rejects a nonfinite day-specific sea height 7BPm
+
+    ✓ does not reuse missing temperature fields from a previous region
+
+    ✓ rejects non-finite sea values before JSON serialization can hide them
+
+  mid forecast text completeness
+
+    ✓ rejects empty/malformed land forecast text ""
+
+    ✓ rejects empty/malformed land forecast text "   "
+
+    ✓ rejects empty/malformed land forecast text {"unexpected":["text"]}
+
+  review corrections: complete responses and key representation
+
+    ✓ rejects count/item mismatch 1 before organization
+
+    ✓ rejects count/item mismatch 10 before organization
+
+    ✓ rejects count/item mismatch 12 before organization
+
+    ✓ rejects count/item mismatch 999 before organization
+
+    ✓ rejects count/item mismatch 1000 before organization
+
+    ✓ normalizes raw or once-encoded dummy key DUMMY+a/b=
+
+    ✓ normalizes raw or once-encoded dummy key DUMMY%2Ba%2Fb%3D
+
+    ✓ normalizes raw or once-encoded dummy key DUMMY%2ba%2fb%3d
+
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: undefined
+
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: 
+
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%badEscape
+
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%2
+
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%GG
+
+    ✓ does not reflect raw/encoded dummy keys on transport failure
+
+
+  103 passing (375ms)
+
+PASS synthetic XML -> requester -> events -> saveShort -> getShortFromDB (1 write, exact quantities/timestamps/grid)
+PASS provider-error XML -> failed collection, no additional persistence; no key-bearing logs
+PASS truncated XML page -> failed requestData -> no additional persistence; encoded/raw dummy keys safe
+PASS sea XML -> requester -> events -> saveMid (26 distinct heights); later-day NaN prevents another write

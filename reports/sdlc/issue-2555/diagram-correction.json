@@ -1,0 +1,42 @@
+{
+  "specification": {
+    "sha256": "6a230759e19a2f66c7476e060d29253c5d4a0feba49ea52e32cd2034b48a2fce",
+    "bytes": 4512
+  },
+  "artifact": {
+    "sha256": "e5a071971c369349e0c56891cb434fc9b8887792f417d3266b3942c75f6ba5a1",
+    "bytes": 806177
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  },
+  "browser_status": "pass",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "ok": true
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "ok": true
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "ok": true
+    },
+    {
+      "width": 2048,
+      "height": 1320,
+      "ok": true
+    }
+  ],
+  "visual_review": "Author inspected actual 2048x1320 light/dark screenshots; readable labels, cards and unambiguous edges"
+}

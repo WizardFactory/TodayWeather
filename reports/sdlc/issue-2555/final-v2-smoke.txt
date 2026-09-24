@@ -1,0 +1,4 @@
+PASS synthetic XML -> requester -> events -> saveShort -> getShortFromDB (1 write, exact quantities/timestamps/grid)
+PASS provider-error XML -> failed collection, no additional persistence; no key-bearing logs
+
+Exit code: 0

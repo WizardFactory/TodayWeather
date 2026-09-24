@@ -1,0 +1,4 @@
+PASS command sequence: success exit= 0
+PASS command sequence: rss-wind.test.js exit= 23
+PASS command sequence: rss-response-smoke.js exit= 23
+PASS workflow contract and injected failure propagation (local shell evaluation)

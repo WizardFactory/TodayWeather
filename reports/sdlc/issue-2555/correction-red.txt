@@ -1,0 +1,317 @@
+
+
+  ․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․
+  ․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․
+
+  86 passing (409ms)
+  17 failing
+
+  1) real mid organizers with synthetic fixtures collects nonempty valid MID_SEA:
+
+      AssertionError [ERR_ASSERTION]: wh4AAm
+
+0.5 !== 0.9
+
+      + expected - actual
+
+      -0.5
+      +0.9
+      
+      at server/test/offline/gather-code-drift.test.js:287:28
+      at Array.forEach (<anonymous>)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:286:98)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  2) real mid organizers with synthetic fixtures rejects a nonfinite day-specific sea height 4AAm:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(c.recvFailed)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:298:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  3) real mid organizers with synthetic fixtures rejects a nonfinite day-specific sea height 5APm:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(c.recvFailed)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:298:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  4) real mid organizers with synthetic fixtures rejects a nonfinite day-specific sea height 6BAm:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(c.recvFailed)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:298:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  5) real mid organizers with synthetic fixtures rejects a nonfinite day-specific sea height 7BPm:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(c.recvFailed)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:298:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  6) review corrections: complete responses and key representation rejects count/item mismatch 1 before organization:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:338:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:381:17
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:336:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:329:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:337:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  7) review corrections: complete responses and key representation rejects count/item mismatch 10 before organization:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:338:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:381:17
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:336:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:329:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:337:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  8) review corrections: complete responses and key representation rejects count/item mismatch 12 before organization:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:338:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:381:17
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:336:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:329:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:337:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  9) review corrections: complete responses and key representation rejects count/item mismatch 999 before organization:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:338:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:381:17
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:336:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:329:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:337:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  10) review corrections: complete responses and key representation rejects count/item mismatch 1000 before organization:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:338:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:381:17
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:336:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:329:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:337:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  11) review corrections: complete responses and key representation normalizes raw or once-encoded dummy key DUMMY+a/b=:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'DUMMY a/b='
+- 'DUMMY+a/b='
+        ^
+
+      + expected - actual
+
+      -DUMMY a/b=
+      +DUMMY+a/b=
+      
+      at server/test/offline/gather-code-drift.test.js:347:24
+      at Array.forEach (<anonymous>)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:345:33)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  12) review corrections: complete responses and key representation normalizes raw or once-encoded dummy key DUMMY%2ba%2fb%3d:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(u.search.includes('serviceKey=DUMMY%2Ba%2Fb%3D&'))
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at server/test/offline/gather-code-drift.test.js:348:17
+      at Array.forEach (<anonymous>)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:345:33)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  13) review corrections: complete responses and key representation rejects missing/malformed encoded key without diagnostics leaking it: undefined:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=undefined&base_date=20260924&base_time=0800&nx=60&ny=127&pageNo=1&numOfRows=999'
+- ''
+
+      + expected - actual
+
+      -http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=undefined&base_date=20260924&base_time=0800&nx=60&ny=127&pageNo=1&numOfRows=999
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:355:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  14) review corrections: complete responses and key representation rejects missing/malformed encoded key without diagnostics leaking it: :
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=&base_date=20260924&base_time=0800&nx=60&ny=127&pageNo=1&numOfRows=999'
+- ''
+
+      + expected - actual
+
+      -http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=&base_date=20260924&base_time=0800&nx=60&ny=127&pageNo=1&numOfRows=999
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:355:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  15) review corrections: complete responses and key representation rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%badEscape:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=DUMMY%badEscape&base_date=20260924&base_time=0800&nx=60&ny=127&pageNo=1&numOfRows=999'
+- ''
+
+      + expected - actual
+
+      -http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=DUMMY%badEscape&base_date=20260924&base_time=0800&nx=60&ny=127&pageNo=1&numOfRows=999
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:355:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  16) review corrections: complete responses and key representation rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%2:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=DUMMY%2&base_date=20260924&base_time=0800&nx=60&ny=127&pageNo=1&numOfRows=999'
+- ''
+
+      + expected - actual
+
+      -http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=DUMMY%2&base_date=20260924&base_time=0800&nx=60&ny=127&pageNo=1&numOfRows=999
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:355:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  17) review corrections: complete responses and key representation rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%GG:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=DUMMY%GG&base_date=20260924&base_time=0800&nx=60&ny=127&pageNo=1&numOfRows=999'
+- ''
+
+      + expected - actual
+
+      -http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=DUMMY%GG&base_date=20260924&base_time=0800&nx=60&ny=127&pageNo=1&numOfRows=999
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:355:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+
+

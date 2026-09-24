@@ -1,0 +1,74 @@
+{
+  "candidate": "sha256:14773bd85732dbe0b32aa8e059e082bfc0a8f9e6bd49919aca21b42c77ab2a83",
+  "scenarios": [
+    {
+      "id": "workflow-commands",
+      "requirement": "CI1",
+      "required": true,
+      "environment": "Local Node22.22.2, Python/PyYAML, bash and npm",
+      "prerequisites": "Network only for public npm packages; fresh temporary dependency directory",
+      "actions": "Execute exact YAML run strings in order with declared UTC/environment; checkout/setup represented by existing local checkout/runtime",
+      "expected": "43 regression and 36 complete-router cases pass after fresh install",
+      "failure": "Any command nonzero or failed test",
+      "cleanup": "No production state; package/output artifacts under /tmp"
+    }
+  ],
+  "runs": [
+    {
+      "id": "red-1",
+      "phase": "red",
+      "candidate": "baseline:no-workflow",
+      "command": "python3 reports/sdlc/issue-2554-ci/check-workflow.py",
+      "exit_code": 1,
+      "environment": "Local Node22.22.2 / Python3 / bash; not hosted Actions",
+      "observed": "Expected missing-workflow assertion before implementation",
+      "evidence": "reports/sdlc/issue-2554-ci/red.log",
+      "status": "passed",
+      "execution_kind": "configuration-evaluation",
+      "intended_failure": true
+    },
+    {
+      "id": "green-1",
+      "phase": "green",
+      "candidate": "sha256:14773bd85732dbe0b32aa8e059e082bfc0a8f9e6bd49919aca21b42c77ab2a83",
+      "command": "python3 reports/sdlc/issue-2554-ci/check-workflow.py",
+      "exit_code": 0,
+      "environment": "Local Node22.22.2 / Python3 / bash; not hosted Actions",
+      "observed": "Contract and success/injected regression/smoke failure propagation passed",
+      "evidence": "reports/sdlc/issue-2554-ci/green.log",
+      "status": "passed",
+      "execution_kind": "configuration-evaluation"
+    },
+    {
+      "id": "post-refactor-1",
+      "phase": "post-refactor",
+      "candidate": "sha256:14773bd85732dbe0b32aa8e059e082bfc0a8f9e6bd49919aca21b42c77ab2a83",
+      "command": "python3 reports/sdlc/issue-2554-ci/check-workflow.py",
+      "exit_code": 0,
+      "environment": "Local Node22.22.2 / Python3 / bash; not hosted Actions",
+      "observed": "Final unchanged candidate evaluation passed",
+      "evidence": "reports/sdlc/issue-2554-ci/post-refactor.log",
+      "status": "passed",
+      "execution_kind": "configuration-evaluation"
+    },
+    {
+      "id": "smoke-1",
+      "phase": "smoke",
+      "candidate": "sha256:14773bd85732dbe0b32aa8e059e082bfc0a8f9e6bd49919aca21b42c77ab2a83",
+      "command": "python3 reports/sdlc/issue-2554-ci/run-local-workflow.py",
+      "exit_code": 0,
+      "environment": "Local Node22.22.2 / Python3 / bash; not hosted Actions",
+      "observed": "Fresh npm install; 43 regression and 36 response scenarios passed",
+      "evidence": "reports/sdlc/issue-2554-ci/local-smoke.log",
+      "status": "passed",
+      "execution_kind": "real",
+      "scenario_id": "workflow-commands"
+    }
+  ],
+  "acceptance_coverage": {
+    "CI1": "green/post-refactor/smoke",
+    "CI2": "green/post-refactor/smoke + independent failure injection",
+    "CI3": "README + independent report; remote publication checked separately"
+  },
+  "not_applicable_reason": ""
+}

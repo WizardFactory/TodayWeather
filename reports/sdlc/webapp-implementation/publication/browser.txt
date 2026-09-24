@@ -1,0 +1,23 @@
+
+> todayweather-web@0.1.0 test:e2e
+> playwright test --reporter=line
+
+[WebServer] (node:3777243) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 8 tests using 1 worker
+
+(node:3777251) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/8] web/e2e/web.spec.ts:10:1 › weather, air, national views, warnings and settings persist at desktop size
+[2/8] web/e2e/web.spec.ts:69:1 › mobile favorites, geolocation denial and unavailable notifications stay usable
+[3/8] web/e2e/web.spec.ts:107:1 › offline shell uses matching snapshot and never labels it fresh
+[4/8] web/e2e/web.spec.ts:123:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+[5/8] web/e2e/web.spec.ts:139:1 › immediate search submission selects the submitted city
+[6/8] web/e2e/web.spec.ts:152:1 › late geolocation preserves newly added favorites and settings
+[7/8] web/e2e/web.spec.ts:186:3 › corrupt offline snapshot recovers safely: missing timestamp
+[8/8] web/e2e/web.spec.ts:186:3 › corrupt offline snapshot recovers safely: invalid hourly array
+  8 passed (20.1s)

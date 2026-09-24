@@ -41,7 +41,7 @@ var dnscache = require('dnscache')({
 function CollectData(options, callback){
     var self = this;
 
-    var NEWSKY2_KMA_GO_DOMAIN = "newsky2.kma.go.kr";
+    var KMA_API_DOMAIN = "apis.data.go.kr";
 
     self.listPointNumber = Object.freeze(
         [
@@ -140,13 +140,13 @@ function CollectData(options, callback){
     });
 
     self.DATA_URL = Object.freeze({
-        TOWN_CURRENT: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastGrib',
-        TOWN_SHORTEST: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastTimeData',
-        TOWN_SHORT: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastSpaceData',
-        MID_FORECAST: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleForecast',
-        MID_LAND: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleLandWeather',
-        MID_TEMP: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleTemperature',
-        MID_SEA: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleSeaWeather'
+        TOWN_CURRENT: 'http://'+KMA_API_DOMAIN+'/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst',
+        TOWN_SHORTEST: 'http://'+KMA_API_DOMAIN+'/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst',
+        TOWN_SHORT: 'http://'+KMA_API_DOMAIN+'/1360000/VilageFcstInfoService_2.0/getVilageFcst',
+        MID_FORECAST: 'http://'+KMA_API_DOMAIN+'/1360000/MidFcstInfoService/getMidFcst',
+        MID_LAND: 'http://'+KMA_API_DOMAIN+'/1360000/MidFcstInfoService/getMidLandFcst',
+        MID_TEMP: 'http://'+KMA_API_DOMAIN+'/1360000/MidFcstInfoService/getMidTa',
+        MID_SEA: 'http://'+KMA_API_DOMAIN+'/1360000/MidFcstInfoService/getMidSeaFcst'
     });
 
     events.EventEmitter.call(this);
@@ -194,7 +194,7 @@ function CollectData(options, callback){
             self.recvFailed = true;
             self.receivedCount++;
 
-            log.debug('will retry this: ', listIndex, 'URL : ', self.resultList[listIndex].url);
+            log.debug('Collection failed at index', listIndex);
 
             if(self.receivedCount === self.listCount){
                 self.emit('dataCompleted');
@@ -252,8 +252,19 @@ CollectData.prototype.getUrl = function(dataType, key, date, time, data){
             break;
     }
 
-    // add key data
-    url += '?serviceKey=' + key;
+    // Accept a raw key or exactly one layer of URI percent encoding.
+    // Decode once (never form-decode '+'), then encode the query component.
+    // Literal percent characters must be supplied as %25.
+    try {
+        if (typeof key !== 'string' || !key.trim()) {
+            throw new Error('Missing service key');
+        }
+        url += '?serviceKey=' + encodeURIComponent(decodeURIComponent(key));
+    }
+    catch (err) {
+        log.warn('KMA invalid service key representation');
+        return '';
+    }
 
     try{
         // add additional data such as location info, code
@@ -314,123 +325,125 @@ CollectData.prototype.resetResult = function(){
 * */
 CollectData.prototype.getData = function(index, dataType, url, options, callback){
     var self = this;
-    var meta = {};
-
-    meta.method = 'getData';
-    meta.index = index;
-    meta.url = url;
-
-    //log.info(meta);
-    //log.info('url[', index, ']: ', self.resultList[index].url);
+    // Only locally constructed metadata may enter diagnostics. Transport/parser
+    // errors and provider messages can echo the service-key-bearing request URL.
+    var meta = {method: 'getData', index: index, dataType: dataType};
+    function fail(reason) {
+        var error = new Error(reason);
+        log.warn(reason, meta);
+        self.emit('recvFail', index);
+        if (callback) {
+            callback(error, index);
+        }
+    }
 
     req.get(url, {timeout: 1000*10}, function(err, response, body){
-        if(err) {
-            if (err.code === "ETIMEDOUT" || err.code === "ESOCKETTIMEDOUT" || err.code === "ECONNRESET") {
-                log.debug(err);
-            }
-            else {
-                log.warn(`err.code=${err.code}`);
-            }
-            //log.error('#', meta);
-
-            self.emit('recvFail', index);
-            if(callback){
-                callback(err, index);
-            }
-            return;
+        if (err) {
+            return fail('KMA transport failure');
         }
-        var statusCode = response.statusCode;
-
-        if(statusCode === 404 || statusCode === 403){
-            //log.error('ERROR!!! StatusCode : ', statusCode);
-            //log.error('#', meta);
-
-            log.debug('ERROR!!! StatusCode : ', statusCode);
-            self.emit('recvFail', index);
-            if(callback){
-                callback(err, index);
-            }
-            return;
+        if (!response || !(response.statusCode >= 200 && response.statusCode < 300)) {
+            return fail('KMA HTTP failure');
         }
-
-        //log.info(body);
         xml2json(body, function(err, result){
+            var envelope = result && result.response;
+            var header = envelope && envelope.header && envelope.header[0];
+            var payload = envelope && envelope.body && envelope.body[0];
+            var count = payload && payload.totalCount && payload.totalCount[0];
+            var items = payload && payload.items && payload.items[0] && payload.items[0].item;
+            if (err || !header || !header.resultCode || header.resultCode[0] !== '00' ||
+                !/^[0-9]+$/.test(count) || !isFinite(Number(count)) || Number(count) <= 0 ||
+                !Array.isArray(items) || items.length === 0 || items.some(function (item) {
+                    return !item || typeof item !== 'object' || Array.isArray(item);
+                })) {
+                return fail('KMA invalid or empty response');
+            }
+            // This requester intentionally fetches one page only. Never mark
+            // a truncated prefix complete, even if its last group is valid.
+            if (Number(count) !== items.length) {
+                return fail('KMA incomplete or inconsistent response');
+            }
+            var organized;
             try {
-                /*
-                * I want to show you the data structure on the result.
-                * If you want to know this, turn off comment below.
-                */
-                 //log.info(result);
-                 //log.info('> ', result.response);
-                 //log.info(result.response.header[0]);
-                 //log.info(result.response.header[0].resultCode[0]);
-                 //log.info(result.response.body[0]);
-                 //log.info(result.response.body[0].totalCount[0]);
-                var resultCode = '';
-                var resultMsg = '';
-                if (result.response.header &&
-                    result.response.header[0] &&
-                    result.response.header[0].resultCode)
-                {
-                    resultCode = result.response.header[0].resultCode[0];
-                    resultMsg = result.response.header[0].resultMsg[0];
-                }
-
-                var totalCount = '';
-                if (result.response.body &&
-                    result.response.body[0] &&
-                    result.response.body[0].totalCount)
-                {
-                    totalCount = result.response.body[0].totalCount[0];
-                }
-
-                if(err || (resultCode !== '0000') || (totalCount === '0')) {
-                    //there is error code or total count is zero as no valid data.
-                    //resultCode is 22, LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR.
-                    log.warn(JSON.stringify({resultCode, resultMsg, totalCount}), meta);
-                    self.emit('recvFail', index);
-                }
-                else{
-                    switch(dataType) {
-                        case self.DATA_TYPE.TOWN_CURRENT:
-                            self.organizeCurrentData(index, result);
-                            break;
-                        case self.DATA_TYPE.TOWN_SHORTEST:
-                            self.organizeShortestData(index, result);
-                            break;
-                        case self.DATA_TYPE.TOWN_SHORT:
-                            self.organizeShortData(index, result);
-                            break;
-                        case self.DATA_TYPE.MID_FORECAST:
-                            self.organizeForecastData(index, result, options);
-                            break;
-                        case self.DATA_TYPE.MID_LAND:
-                            self.organizeLandData(index, result, options);
-                            break;
-                        case self.DATA_TYPE.MID_TEMP:
-                            self.organizeTempData(index, result, options);
-                            break;
-                        case self.DATA_TYPE.MID_SEA:
-                            self.organizeSeaData(index, result, options);
-                            break;
-                        default:
-                            log.error('can not organize data as it is unknown data type');
-                            break;
-                    }
+                switch(dataType) {
+                    case self.DATA_TYPE.TOWN_CURRENT:
+                        organized = self.organizeCurrentData(index, result);
+                        break;
+                    case self.DATA_TYPE.TOWN_SHORTEST:
+                        organized = self.organizeShortestData(index, result);
+                        break;
+                    case self.DATA_TYPE.TOWN_SHORT:
+                        organized = self.organizeShortData(index, result);
+                        break;
+                    case self.DATA_TYPE.MID_FORECAST:
+                        organized = self.organizeForecastData(index, result, options);
+                        break;
+                    case self.DATA_TYPE.MID_LAND:
+                        organized = self.organizeLandData(index, result, options);
+                        break;
+                    case self.DATA_TYPE.MID_TEMP:
+                        organized = self.organizeTempData(index, result, options);
+                        break;
+                    case self.DATA_TYPE.MID_SEA:
+                        organized = self.organizeSeaData(index, result, options);
+                        break;
+                    default:
+                        return fail('KMA unknown data type');
                 }
             }
-            catch(e){
-                e.message += ' ' + JSON.stringify(meta);
-                log.error(e);
-                self.emit('recvFail', index);
+            catch(e) {
+                return fail('KMA response organization failed');
             }
-            finally{
-                if(callback){
-                    callback(err, index, result);
-                }
+            if (callback) {
+                callback(organized === true ? null : new Error('KMA response organization failed'), index,
+                    organized === true ? result : undefined);
             }
         });
     });
+};
+
+// Complete decimal values only: ranges/thresholds must not become exact amounts.
+function parseMeasurement(value, missing, unit, noValue) {
+    if (typeof value !== 'string' && typeof value !== 'number') {
+        return missing;
+    }
+    var text = String(value).trim();
+    if (noValue && text === noValue) {
+        return 0;
+    }
+    if (unit && text.slice(-unit.length) === unit) {
+        text = text.slice(0, -unit.length).trim();
+    }
+    if (!/^[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)$/.test(text)) {
+        return missing;
+    }
+    var number = Number(text);
+    return isFinite(number) && (!unit || number >= 0) ? number : missing;
+}
+
+// An empty batch or non-finite measurement must never mark collection complete.
+CollectData.prototype._emitOrganizedData = function (index, records, required) {
+    var invalid = !records.length || records.some(function (record) {
+        for (var key in record) {
+            if (key.slice(0, 2) === 'wf' &&
+                (typeof record[key] !== 'string' || !record[key].trim())) {
+                return true;
+            }
+            if (typeof record[key] === 'number' && !isFinite(record[key])) {
+                return true;
+            }
+        }
+        return required && required.some(function (field) {
+            return typeof record[field.name] !== 'number' ||
+                record[field.name] === field.missing || record[field.name] < field.min;
+        });
+    });
+    if (invalid) {
+        log.warn('KMA empty or invalid organized data', {index: index});
+        this.emit('recvFail', index);
+        return false;
+    }
+    this.emit('recvData', index, records);
+    return true;
 };
 
 CollectData.prototype._createOrFindResult = function(list, template, date, time) {
@@ -468,7 +481,7 @@ CollectData.prototype.organizeShortData = function(index, listData){
 
     try{
         if (listData.response.body[0].totalCount[0] === '0') {
-            log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
+            log.error('There are no data', {index: index});
             self.emit('recvFail', index);
             return;
         }
@@ -531,6 +544,18 @@ CollectData.prototype.organizeShortData = function(index, listData){
                 else if(item.category[0] === 'WAV') {result.wav = parseFloat(item.fcstValue[0]);}
                 else if(item.category[0] === 'VEC') {result.vec = parseFloat(item.fcstValue[0]);}
                 else if(item.category[0] === 'WSD') {result.wsd = parseFloat(item.fcstValue[0]);}
+                // Provisional field compatibility only: PCP/SNO are hourly, and
+                // TMP is not proof of the legacy three-hour temperature cadence.
+                // Do not infer six-hour totals from the retained r06/s06 names.
+                else if(item.category[0] === 'PCP') {
+                    result.r06 = parseMeasurement(item.fcstValue[0], -1, 'mm', '강수없음');
+                }
+                else if(item.category[0] === 'SNO') {
+                    result.s06 = parseMeasurement(item.fcstValue[0], -1, 'cm', '적설없음');
+                }
+                else if(item.category[0] === 'TMP') {
+                    result.t3h = parseMeasurement(item.fcstValue[0], -50);
+                }
                 else{
                     log.error(new Error('Known property', item.category[0]));
                 }
@@ -540,19 +565,19 @@ CollectData.prototype.organizeShortData = function(index, listData){
         var data = listResult[0];
         if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
             data.t3h === template.t3h) {
-            log.error('Fail get full short data -'+JSON.stringify(data));
+            log.error('Fail get full short data -', {index: index});
             self.emit('recvFail', index);
             return;
         }
         //TW-401
         if (data.pty < 0 || data.sky < 0 || data.t3h < -100 || data.reh < 0) {
-            log.error('Fail get full short data -'+JSON.stringify(data));
+            log.error('Fail get full short data -', {index: index});
             self.emit('recvFail', index);
             return;
         }
         if (data.uuu === template.uuu || data.vvv === template.vvv || data.vec === template.vec ||
             data.wsd === template.wsd) {
-            log.warn('Fail get full short data -'+JSON.stringify(data));
+            log.warn('Fail get full short data -', {index: index});
         }
 
         listResult.sort(self._sortByDateTime);
@@ -562,7 +587,10 @@ CollectData.prototype.organizeShortData = function(index, listData){
         //    log.info(listResult[i]);
         //}
 
-        self.emit('recvData', index, listResult);
+        return self._emitOrganizedData(index, listResult, [
+            {name: 'sky', missing: -1, min: 0}, {name: 'reh', missing: -1, min: 0},
+            {name: 'pty', missing: -1, min: 0}, {name: 't3h', missing: -50, min: -100}
+        ]);
     }
     catch(e){
         log.error('Error!! organizeShortData : failed data organized');
@@ -595,7 +623,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
 
     try{
         if (listData.response.body[0].totalCount[0] === '0') {
-            log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
+            log.error('There are no data', {index: index});
             self.emit('recvFail', index);
             return;
         }
@@ -620,13 +648,16 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                 result.mx = parseInt(item.nx[0]);
                 result.my = parseInt(item.ny[0]);
 
-                var val = parseFloat(item.fcstValue[0]);
+                var value = item.fcstValue && item.fcstValue[0];
+                var val = parseFloat(value);
                 //if (val < 0) {
                 //    log.error('organize Shortest Get invalid data '+ item.category[0]+ ' result'+ JSON.stringify(result));
                 //}
 
                 if(item.category[0] === 'PTY') {result.pty = val;}
-                else if(item.category[0] === 'RN1') {result.rn1 = val;}
+                else if(item.category[0] === 'RN1') {
+                    result.rn1 = parseMeasurement(value, -1, 'mm', '강수없음');
+                }
                 else if(item.category[0] === 'SKY') {result.sky = val;}
                 else if(item.category[0] === 'LGT') {result.lgt = val;}
                 else if(item.category[0] === 'T1H') {result.t1h = val;}
@@ -636,7 +667,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                 else if(item.category[0] === 'VEC') {result.vec = val;}
                 else if(item.category[0] === 'WSD') {result.wsd = val;}
                 else{
-                    log.error(new Error('Known property '+item.category[0]));
+                    log.error('Unknown shortest category');
                 }
             }
         }
@@ -644,19 +675,19 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
         var data = listResult[0];
         if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
             data.t1h === template.t1h) {
-            log.error('Fail get full shortest data -'+JSON.stringify(data));
+            log.error('Fail get full shortest data -', {index: index});
             self.emit('recvFail', index);
             return;
         }
         //TW-401
         if (data.pty < 0 || data.sky < 0 || data.t1h < -100 || data.reh < 0) {
-            log.error('Fail get full shortest data -'+JSON.stringify(data));
+            log.error('Fail get full shortest data -', {index: index});
             self.emit('recvFail', index);
             return;
         }
         if (data.uuu === template.uuu || data.vvv === template.vvv || data.lgt === template.lgt ||
             data.vec === template.vec || data.wsd === template.wsd) {
-            log.warn('Fail get full shortest data -'+JSON.stringify(data));
+            log.warn('Fail get full shortest data -', {index: index});
         }
 
         listResult.sort(self._sortByDateTime);
@@ -666,10 +697,13 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
         //    log.silly(listResult[i]);
         //}
 
-        self.emit('recvData', index, listResult);
+        return self._emitOrganizedData(index, listResult, [
+            {name: 'sky', missing: -1, min: 0}, {name: 'reh', missing: -1, min: 0},
+            {name: 'pty', missing: -1, min: 0}, {name: 't1h', missing: -50, min: -100}
+        ]);
     }
     catch(e){
-        log.error(e);
+        log.error('KMA collection operation failed');
         self.emit('recvFail', index);
     }
 };
@@ -711,7 +745,6 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
                         (item.baseTime === undefined) &&
                         (item.obsrValue === undefined))
             {
-                log.silly(item);
                 log.error('organizeCurrentData : There is not forecast date');
                 continue;
             }
@@ -736,7 +769,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
                 else if(item.category[0] === 'VEC') {result.vec = parseFloat(item.obsrValue[0]);}
                 else if(item.category[0] === 'WSD') {result.wsd = parseFloat(item.obsrValue[0]);}
                 else{
-                    log.error('organizeCurrentData : Known property', item.category[0]);
+                    log.error('Unknown current category');
                 }
             }
         }
@@ -744,37 +777,37 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
         //check data complete
         result = listResult[0];
         if (result.rn1 === template.rn1 || result.pty === template.pty || result.t1h === template.t1h) {
-            log.error('Fail get full current data -'+JSON.stringify(result));
+            log.error('Fail get full current data -', {index: index});
             self.emit('recvFail', index);
             return;
         }
 
         //TW-401
         if (result.t1h < -100) {
-            log.error('Fail get full current data -'+JSON.stringify(result));
+            log.error('Fail get full current data -', {index: index});
             self.emit('recvFail', index);
             return;
         }
 
         if (result.pty < 0) {
-            log.warn('Fail get pty of current data -'+JSON.stringify(result));
+            log.warn('Fail get pty of current data -', {index: index});
             delete result.pty;
         }
 
         if (result.rn1 < 0) {
-            log.warn('Fail get rn1 of current data -'+JSON.stringify(result));
+            log.warn('Fail get rn1 of current data -', {index: index});
             delete result.rn1;
         }
 
         if (result.reh < 0) {
-            log.warn('Fail get reh of current data -'+JSON.stringify(result));
+            log.warn('Fail get reh of current data -', {index: index});
             delete result.reh;
         }
 
         if (result.uuu === template.uuu || result.vvv === template.vvv ||
             result.vec === template.vec || result.wsd === template.wsd)
         {
-            log.warn('Fail get full current data -'+JSON.stringify(result));
+            log.warn('Fail get full current data -', {index: index});
         }
 
         //log.info('result count : ', listResult.length);
@@ -782,11 +815,11 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
         //    log.info(listResult[i]);
         //}
 
-        self.emit('recvData', index, listResult);
+        return self._emitOrganizedData(index, listResult);
     }
     catch(e){
         log.error('Error!! organizeCurrentData : failed data organized');
-        log.error(e);
+        log.error('KMA collection operation failed');
         self.emit('recvFail', index);
     }
 };
@@ -814,15 +847,12 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
         for(i=0 ; i < listItem.length ; i++){
             var item = listItem[i];
             //log.info(item);
-            if(item.wfSv === undefined){
-                log.silly(item);
-                log.error('organizeForecastData : There is not forecast date');
-                continue;
+            if (!item.wfSv || typeof item.wfSv[0] !== 'string' || !item.wfSv[0].trim()) {
+                throw new Error('Missing mid forecast text');
             }
-            result = template;
+            result = Object.assign({}, template);
             result.wfsv = item.wfSv[0];
-            var insertItem = JSON.parse(JSON.stringify(result));
-            listResult.push(insertItem);
+            listResult.push(result);
         }
 
         //log.info('result count : ', listResult.length);
@@ -830,7 +860,7 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
         //    log.info(listResult[i]);
         //}
 
-        self.emit('recvData', index, listResult);
+        return self._emitOrganizedData(index, listResult);
     }
     catch(e){
         log.error('Error!! organizeForecastData : failed data organized');
@@ -870,12 +900,11 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
         };
 
         listItem.forEach(function(item){
-            if(item.regId === undefined){
-                log.error('There is no data');
-                return;
+            if (!item.regId || typeof item.regId[0] !== 'string' || !item.regId[0].trim()) {
+                throw new Error('Missing mid region');
             }
 
-            result = template;
+            result = Object.assign({}, template);
             result.regId = item.regId[0];
             result.wf3Am = item.wf3Am[0];
             result.wf3Pm = item.wf3Pm[0];
@@ -891,8 +920,7 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
             result.wf9 = item.wf9[0];
             result.wf10 = item.wf10[0];
 
-            var insertItem = JSON.parse(JSON.stringify(result));
-            listResult.push(insertItem);
+            listResult.push(result);
         });
 
 
@@ -901,7 +929,7 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
         //    log.info(listResult[i]);
         //}
 
-        self.emit('recvData', index, listResult);
+        return self._emitOrganizedData(index, listResult);
     }
     catch(e){
         log.error('Error!! organizeLandData : failed data organized');
@@ -951,22 +979,23 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
         });
 
         listItem.forEach(function(item){
-            if(item.regId === undefined){
-                log.error('There is no data');
-                return;
+            if (!item.regId || typeof item.regId[0] !== 'string' || !item.regId[0].trim()) {
+                throw new Error('Missing mid region');
             }
 
-            result = template;
+            result = Object.assign({}, template);
             result.regId = item.regId[0];
 
             itemNameList.forEach(function (name) {
                 if(item[name] && item[name][0]) {
-                    result[name] = parseFloat(item[name][0]);
+                    result[name] = parseMeasurement(item[name][0], -100);
                 }
             });
 
-            var insertItem = JSON.parse(JSON.stringify(result));
-            listResult.push(insertItem);
+            if (!itemNameList.some(function (name) { return result[name] !== -100; })) {
+                throw new Error('Missing mid temperatures');
+            }
+            listResult.push(result);
         });
 
 
@@ -975,11 +1004,11 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
         //    log.info(listResult[i]);
         //}
 
-        self.emit('recvData', index, listResult);
+        return self._emitOrganizedData(index, listResult);
     }
     catch(e){
         log.error('Error!! organizeTempData : failed data organized');
-        log.error(e);
+        log.error('KMA collection operation failed');
         self.emit('recvFail', index);
     }
 };
@@ -1042,12 +1071,11 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
         };
 
         listItem.forEach(function(item){
-            if(item.regId === undefined){
-                log.error('There is no data');
-                return;
+            if (!item.regId || typeof item.regId[0] !== 'string' || !item.regId[0].trim()) {
+                throw new Error('Missing mid region');
             }
 
-            result = template;
+            result = Object.assign({}, template);
             result.regId = item.regId[0];
             result.wf3Am = item.wf3Am[0];
             result.wf3Pm = item.wf3Pm[0];
@@ -1067,22 +1095,22 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
             result.wh3APm = parseFloat(item.wh3APm[0]);
             result.wh3BAm = parseFloat(item.wh3BAm[0]);
             result.wh3BPm = parseFloat(item.wh3BPm[0]);
-            result.wh4AAm = parseFloat(item.wh3AAm[0]);
-            result.wh4APm = parseFloat(item.wh3APm[0]);
-            result.wh4BAm = parseFloat(item.wh3BAm[0]);
-            result.wh4BPm = parseFloat(item.wh3BPm[0]);
-            result.wh5AAm = parseFloat(item.wh3AAm[0]);
-            result.wh5APm = parseFloat(item.wh3APm[0]);
-            result.wh5BAm = parseFloat(item.wh3BAm[0]);
-            result.wh5BPm = parseFloat(item.wh3BPm[0]);
-            result.wh6AAm = parseFloat(item.wh3AAm[0]);
-            result.wh6APm = parseFloat(item.wh3APm[0]);
-            result.wh6BAm = parseFloat(item.wh3BAm[0]);
-            result.wh6BPm = parseFloat(item.wh3BPm[0]);
-            result.wh7AAm = parseFloat(item.wh3AAm[0]);
-            result.wh7APm = parseFloat(item.wh3APm[0]);
-            result.wh7BAm = parseFloat(item.wh3BAm[0]);
-            result.wh7BPm = parseFloat(item.wh3BPm[0]);
+            result.wh4AAm = parseFloat(item.wh4AAm[0]);
+            result.wh4APm = parseFloat(item.wh4APm[0]);
+            result.wh4BAm = parseFloat(item.wh4BAm[0]);
+            result.wh4BPm = parseFloat(item.wh4BPm[0]);
+            result.wh5AAm = parseFloat(item.wh5AAm[0]);
+            result.wh5APm = parseFloat(item.wh5APm[0]);
+            result.wh5BAm = parseFloat(item.wh5BAm[0]);
+            result.wh5BPm = parseFloat(item.wh5BPm[0]);
+            result.wh6AAm = parseFloat(item.wh6AAm[0]);
+            result.wh6APm = parseFloat(item.wh6APm[0]);
+            result.wh6BAm = parseFloat(item.wh6BAm[0]);
+            result.wh6BPm = parseFloat(item.wh6BPm[0]);
+            result.wh7AAm = parseFloat(item.wh7AAm[0]);
+            result.wh7APm = parseFloat(item.wh7APm[0]);
+            result.wh7BAm = parseFloat(item.wh7BAm[0]);
+            result.wh7BPm = parseFloat(item.wh7BPm[0]);
             result.wh8A = parseFloat(item.wh8A[0]);
             result.wh8B = parseFloat(item.wh8B[0]);
             result.wh9A = parseFloat(item.wh9A[0]);
@@ -1090,8 +1118,7 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
             result.wh10A = parseFloat(item.wh10A[0]);
             result.wh10B = parseFloat(item.wh10B[0]);
 
-            var insertItem = JSON.parse(JSON.stringify(result));
-            listResult.push(insertItem);
+            listResult.push(result);
         });
 
         //log.info('result count : ', listResult.length);
@@ -1099,7 +1126,7 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
         //    log.info(listResult[i]);
         //}
 
-        self.emit('recvData', index, listResult);
+        return self._emitOrganizedData(index, listResult);
     }
     catch(e){
         log.error('Error!! organizeSeaData : failed data organized');
@@ -1162,7 +1189,7 @@ CollectData.prototype.requestDataByBaseTimeList = function (src, dataType, key, 
             callback(e);
         }
         else if (e) {
-            log.error(e);
+            log.error('KMA collection operation failed');
         }
     }
     return this;
@@ -1174,7 +1201,6 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
 
     meta.method = 'requestData';
     meta.dataType = dataType;
-    meta.key = key;
     meta.date = date;
     meta.time = time;
 
@@ -1208,8 +1234,7 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
             catch (e) {
                 //callback 안에서 error가 발생하면 이쪽으로 타기 때문에 여기서 error를 callback으로 넘지면 안됨
                 log.error("requestData : ERROR !!! in event dataCompleted");
-                e.message += ' ' + JSON.stringify(meta);
-                log.error(e);
+                log.error('Collection callback failed', meta);
             }
         });
     }
@@ -1240,8 +1265,7 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
             callback(e);
         }
         else {
-            e.message += ' ' + JSON.stringify(meta);
-            log.error(e);
+            log.error('Collection request failed', meta);
         }
     }
 

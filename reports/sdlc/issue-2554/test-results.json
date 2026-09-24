@@ -1,0 +1,101 @@
+{
+  "candidate": "sha256:41685a6ea7dc84e3b5ba82802e131dba864d97097fa6c209e278622703d8ffca",
+  "scenarios": [
+    {
+      "id": "response-path",
+      "requirement": "AC5",
+      "required": true,
+      "environment": "Node 22.22.2; TZ=UTC; Express 4.13.4; isolated synthetic storage/provider boundaries",
+      "prerequisites": "Four temporary packages documented in server/test/offline/README.md; no running server or DB",
+      "actions": "Parse synthetic XML and execute actual v000903 router across 3 grids, 2 DB formats, 3 publication policies and 2 unit combinations",
+      "expected": "36 responses retain correct wind, guards, matching, formatting and product publication metadata",
+      "failure": "Any assertion, swallowed programming exception, missing middleware or incorrect query grid",
+      "cleanup": "No production state; temporary artifacts under /tmp only"
+    }
+  ],
+  "runs": [
+    {
+      "id": "red-1",
+      "phase": "red",
+      "candidate": "baseline:ff7acf39",
+      "command": "node server/test/offline/rss-wind.test.js",
+      "exit_code": 1,
+      "environment": "Node 22.22.2; isolated local process",
+      "observed": "38 intended failing assertions out of 42 before source edits",
+      "evidence": "reports/sdlc/issue-2554/red.txt",
+      "status": "passed",
+      "intended_failure": true,
+      "execution_kind": "isolated-regression"
+    },
+    {
+      "id": "green-1",
+      "phase": "green",
+      "candidate": "sha256:41685a6ea7dc84e3b5ba82802e131dba864d97097fa6c209e278622703d8ffca",
+      "command": "node server/test/offline/rss-wind.test.js",
+      "exit_code": 0,
+      "environment": "Node 22.22.2; isolated local process",
+      "observed": "42/42 passed on repaired production source",
+      "evidence": "reports/sdlc/issue-2554/green.txt",
+      "status": "passed",
+      "execution_kind": "isolated-regression"
+    },
+    {
+      "id": "post-refactor-1",
+      "phase": "post-refactor",
+      "candidate": "sha256:41685a6ea7dc84e3b5ba82802e131dba864d97097fa6c209e278622703d8ffca",
+      "command": "TZ=UTC node server/test/offline/rss-wind.test.js",
+      "exit_code": 0,
+      "environment": "Node 22.22.2; isolated local process",
+      "observed": "Final suite 43/43; unchanged production source",
+      "evidence": "reports/sdlc/issue-2554/post-refactor.txt",
+      "status": "passed",
+      "execution_kind": "isolated-regression"
+    },
+    {
+      "id": "timezone-1",
+      "phase": "regression",
+      "candidate": "sha256:41685a6ea7dc84e3b5ba82802e131dba864d97097fa6c209e278622703d8ffca",
+      "command": "TZ=America/Los_Angeles node server/test/offline/rss-wind.test.js",
+      "exit_code": 0,
+      "environment": "Node 22.22.2; isolated local process",
+      "observed": "43/43 publication/service cases; not collector forecast-date invariance",
+      "evidence": "reports/sdlc/issue-2554/timezone.txt",
+      "status": "passed",
+      "execution_kind": "isolated-regression"
+    },
+    {
+      "id": "smoke-1",
+      "phase": "smoke",
+      "candidate": "sha256:41685a6ea7dc84e3b5ba82802e131dba864d97097fa6c209e278622703d8ffca",
+      "command": "TZ=UTC NODE_PATH=/tmp/issue-2554-response-smoke/node_modules TW_SMOKE_OUTPUT_DIR=/tmp/issue-2554-root-smoke TW_SMOKE_CONTEXT=/root node server/test/offline/rss-response-smoke.js",
+      "exit_code": 0,
+      "environment": "Node 22.22.2; isolated local process",
+      "observed": "36/36 real complete KMA router responses; external storage/provider boundaries synthetic",
+      "evidence": "reports/sdlc/issue-2554/smoke.txt",
+      "status": "passed",
+      "execution_kind": "real",
+      "scenario_id": "response-path"
+    },
+    {
+      "id": "documents-1",
+      "phase": "document",
+      "candidate": "sha256:41685a6ea7dc84e3b5ba82802e131dba864d97097fa6c209e278622703d8ffca",
+      "command": "node --check <two changed controllers and two test files>; git diff --check; local architecture link and receipt checks",
+      "exit_code": 0,
+      "environment": "Node 22.22.2; isolated local process",
+      "observed": "JavaScript syntax, whitespace and local links passed; diagram 9/9 plus browser and visual verified",
+      "evidence": "reports/sdlc/issue-2554/document-check.json",
+      "status": "passed",
+      "execution_kind": "real"
+    }
+  ],
+  "acceptance_coverage": {
+    "AC1": "red/green/post-refactor",
+    "AC2": "red/green/post-refactor/smoke",
+    "AC3": "red/green/post-refactor/smoke",
+    "AC4": "post-refactor/timezone/smoke",
+    "AC5": "smoke",
+    "AC6": "documents + independent report"
+  },
+  "not_applicable_reason": ""
+}

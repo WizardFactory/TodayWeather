@@ -1,0 +1,121 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "Assessed concrete deliverables against authorized local scope.",
+  "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+  "candidate": "sha256:14773bd85732dbe0b32aa8e059e082bfc0a8f9e6bd49919aca21b42c77ab2a83",
+  "next_action": "Continue authorized local implementation and verification.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/issue-2554-ci/triage.md",
+      "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/issue-2554-ci.md",
+      "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/issue-2554-ci/investigation.md",
+      "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/issue-2554-ci.md",
+      "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+    },
+    {
+      "kind": "plan",
+      "path": "plans/issue-2554-ci.md",
+      "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+    },
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/issue-2554-ci/test-plan.md",
+      "sha256": "bff168be7b8667bc4cb56f48783464aa949f5564f5cfac8e7cd16a24288d9f6d"
+    },
+    {
+      "kind": "evaluator",
+      "path": "reports/sdlc/issue-2554-ci/check-workflow.py",
+      "sha256": "0fe0f6f2b3dc9b077895716e0adb7c0a04c20e0b0a051501979c983a5cf84f71"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/issue-2554-ci/build.md",
+      "sha256": "687cadacba1dc9995aeafacdd88defe1ecd07f6484aef9046dee5d96c2736dcd"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/issue-2554-ci/change-record.md",
+      "sha256": "411b1168debbdfd918682b446dd1124e5dbe49b7165bce805be59d5c73927443"
+    },
+    {
+      "kind": "candidate-source",
+      "path": ".github/workflows/rss-offline.yml",
+      "sha256": "84a6132154cad649bc9262b45ffc35b773ad5a500ce8763acf16ca1cdd88f448"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/README.md",
+      "sha256": "e720a0c143780d69e9131991a7f5388aefc6ec9e9942abd9d8b0ed726069fcce"
+    },
+    {
+      "kind": "candidate",
+      "path": "reports/sdlc/issue-2554-ci/candidate.json",
+      "sha256": "d0ce01c48c6d9241da095f63b1ba750b356b3ee9f0e85d33b212670f8b2e69c5"
+    },
+    {
+      "kind": "self-verification",
+      "path": "reports/sdlc/issue-2554-ci/self-verification.md",
+      "sha256": "bd9c2c9d09a6cea05feabd529c620d7f48a126d8deeedcffab9eb5376d9d1368"
+    },
+    {
+      "kind": "test-results",
+      "path": "reports/sdlc/issue-2554-ci/test-results.json",
+      "sha256": "4a5d3b958e5bc7c4e6759209d487f45ea494e8f7652868f58f335109f668d2f3"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554-ci/red.log",
+      "sha256": "e1630f2dea4158f33cb4095b9946200fbd7d8078702f3b145dcc91643e17e328"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554-ci/green.log",
+      "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554-ci/post-refactor.log",
+      "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554-ci/local-smoke.log",
+      "sha256": "2ab9740725e1019b9f096b5463d6cb78500cefb4053cc306fd4166ea87d9f31e"
+    },
+    {
+      "kind": "independent-verification",
+      "path": "reports/sdlc/issue-2554-ci/independent-verification.md",
+      "sha256": "1ca9421683ab962d9dab80073a66fbacefb717dd4f2e69f4d0d341c7c2f4e7f2"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "completion",
+      "path": "reports/sdlc/issue-2554-ci/completion.md",
+      "sha256": "f99d2cff1605dcb83a50606442d567f6bca434794433cd6ac3fce7a4a1cc7873"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+    "criteria": [
+      "CI1",
+      "CI2",
+      "CI3"
+    ]
+  }
+}

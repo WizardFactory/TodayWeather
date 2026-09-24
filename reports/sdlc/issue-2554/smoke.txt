@@ -1,0 +1,17 @@
+{
+  "outcome": "passed",
+  "scenarioCount": 36,
+  "evidence": "/tmp/issue-2554-root-smoke/evidence.json",
+  "candidate": {
+    "server/controllers/controllerTown.js": "a7f603b244b693de022c42a56065144abd89d9b730e0116ce65f859271b91330",
+    "server/controllers/kma/kma.town.short.rss.controller.js": "01be54d9ca5f0174113a4c55a9befd688a83e8c91e80264c43ca92f71f15af74",
+    "server/controllers/controllerTown24h.js": "db9769f033d0fbf2797ac947cdf47d930102b80c62934cd0b25954db0d17560d",
+    "server/routes/v000903/route.kma.v000903.js": "cc46427fc7448e89517df957cb0a3c3c949bd8c51bdcb8b87d8ad4a991375551",
+    "server/test/offline/rss-wind.test.js": "778b4e63af6a41aa478ecc00b9cdb7badd734b73b23863eb07f18618cc9efbfb",
+    "intent/issue-2554.md": "5770fce290f0e508c8b9b1e2e1217e1c302700ac6516ebfc0d6a25c37b3117c0",
+    "specs/issue-2554.md": "32c60dcadd0759144c27536553bed4e62e8c1523e915a83889680ce3db934132",
+    "plans/issue-2554.md": "9b9ee4f989e9fd0f15a9dfefc344a0d710dda8593dd04ac766d13dc16b46f2a9",
+    "docs/architecture/weather-collection.md": "de5c245f9042747d0d14cf41a79538a301856641c8cd095275adfee19707ebc2",
+    "docs/architecture/mobile-api.md": "4b11afd8b45c059f26529864ee01157c1bcb6fd3b834d4d0ae9fa51c19edc19e"
+  }
+}

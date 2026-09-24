@@ -1,0 +1,294 @@
+Local checkout/runtime represent checkout/setup actions; Node:
+v22.22.2
+STEP: RSS regression tests
+TAP version 13
+# Subtest: collector direction E
+ok 1 - collector direction E
+  ---
+  duration_ms: 14.366151
+  type: 'test'
+  ...
+# Subtest: collector direction N
+ok 2 - collector direction N
+  ---
+  duration_ms: 9.811154
+  type: 'test'
+  ...
+# Subtest: collector direction NE
+ok 3 - collector direction NE
+  ---
+  duration_ms: 9.089425
+  type: 'test'
+  ...
+# Subtest: collector direction NW
+ok 4 - collector direction NW
+  ---
+  duration_ms: 6.301008
+  type: 'test'
+  ...
+# Subtest: collector direction S
+ok 5 - collector direction S
+  ---
+  duration_ms: 7.32438
+  type: 'test'
+  ...
+# Subtest: collector direction SE
+ok 6 - collector direction SE
+  ---
+  duration_ms: 5.169134
+  type: 'test'
+  ...
+# Subtest: collector direction SW
+ok 7 - collector direction SW
+  ---
+  duration_ms: 5.70236
+  type: 'test'
+  ...
+# Subtest: collector direction W
+ok 8 - collector direction W
+  ---
+  duration_ms: 7.257345
+  type: 'test'
+  ...
+# Subtest: collector direction UNKNOWN
+ok 9 - collector direction UNKNOWN
+  ---
+  duration_ms: 6.197365
+  type: 'test'
+  ...
+# Subtest: collector absent direction remains sentinel
+ok 10 - collector absent direction remains sentinel
+  ---
+  duration_ms: 8.66885
+  type: 'test'
+  ...
+# Subtest: 1.0 newer RSS uses real DB projection and normalizes wind
+ok 11 - 1.0 newer RSS uses real DB projection and normalizes wind
+  ---
+  duration_ms: 8.142066
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 0 to degrees
+ok 12 - 1.0 direction 0 to degrees
+  ---
+  duration_ms: 7.171916
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 1 to degrees
+ok 13 - 1.0 direction 1 to degrees
+  ---
+  duration_ms: 6.260253
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 2 to degrees
+ok 14 - 1.0 direction 2 to degrees
+  ---
+  duration_ms: 6.253209
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 3 to degrees
+ok 15 - 1.0 direction 3 to degrees
+  ---
+  duration_ms: 7.83851
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 4 to degrees
+ok 16 - 1.0 direction 4 to degrees
+  ---
+  duration_ms: 5.583999
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 5 to degrees
+ok 17 - 1.0 direction 5 to degrees
+  ---
+  duration_ms: 5.511784
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 6 to degrees
+ok 18 - 1.0 direction 6 to degrees
+  ---
+  duration_ms: 5.549154
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 7 to degrees
+ok 19 - 1.0 direction 7 to degrees
+  ---
+  duration_ms: 6.608283
+  type: 'test'
+  ...
+# Subtest: 1.0 equal preserves valid values and fills missing/sentinel fields
+ok 20 - 1.0 equal preserves valid values and fills missing/sentinel fields
+  ---
+  duration_ms: 30.685791
+  type: 'test'
+  ...
+# Subtest: 1.0 older is ignored
+ok 21 - 1.0 older is ignored
+  ---
+  duration_ms: 8.592949
+  type: 'test'
+  ...
+# Subtest: 1.0 invalid RSS wind never erases base
+ok 22 - 1.0 invalid RSS wind never erases base
+  ---
+  duration_ms: 69.963218
+  type: 'test'
+  ...
+# Subtest: 1.0 absent/missing sources preserve every base field
+ok 23 - 1.0 absent/missing sources preserve every base field
+  ---
+  duration_ms: 43.704595
+  type: 'test'
+  ...
+# Subtest: 1.0 first future and single future slot are included
+ok 24 - 1.0 first future and single future slot are included
+  ---
+  duration_ms: 12.449612
+  type: 'test'
+  ...
+# Subtest: 1.0 exact now and past stay unchanged; midnight matches
+ok 25 - 1.0 exact now and past stay unchanged; midnight matches
+  ---
+  duration_ms: 7.847005
+  type: 'test'
+  ...
+# Subtest: 1.0 tmx source gate and 06:00 tmn
+ok 26 - 1.0 tmx source gate and 06:00 tmn
+  ---
+  duration_ms: 8.305492
+  type: 'test'
+  ...
+# Subtest: 2.0 newer RSS uses real DB projection and normalizes wind
+ok 27 - 2.0 newer RSS uses real DB projection and normalizes wind
+  ---
+  duration_ms: 8.064352
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 0 to degrees
+ok 28 - 2.0 direction 0 to degrees
+  ---
+  duration_ms: 15.862006
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 1 to degrees
+ok 29 - 2.0 direction 1 to degrees
+  ---
+  duration_ms: 7.157368
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 2 to degrees
+ok 30 - 2.0 direction 2 to degrees
+  ---
+  duration_ms: 6.4298
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 3 to degrees
+ok 31 - 2.0 direction 3 to degrees
+  ---
+  duration_ms: 7.655277
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 4 to degrees
+ok 32 - 2.0 direction 4 to degrees
+  ---
+  duration_ms: 8.640628
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 5 to degrees
+ok 33 - 2.0 direction 5 to degrees
+  ---
+  duration_ms: 8.120836
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 6 to degrees
+ok 34 - 2.0 direction 6 to degrees
+  ---
+  duration_ms: 8.066195
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 7 to degrees
+ok 35 - 2.0 direction 7 to degrees
+  ---
+  duration_ms: 8.774127
+  type: 'test'
+  ...
+# Subtest: 2.0 equal preserves valid values and fills missing/sentinel fields
+ok 36 - 2.0 equal preserves valid values and fills missing/sentinel fields
+  ---
+  duration_ms: 37.198646
+  type: 'test'
+  ...
+# Subtest: 2.0 older is ignored
+ok 37 - 2.0 older is ignored
+  ---
+  duration_ms: 7.828391
+  type: 'test'
+  ...
+# Subtest: 2.0 invalid RSS wind never erases base
+ok 38 - 2.0 invalid RSS wind never erases base
+  ---
+  duration_ms: 91.573279
+  type: 'test'
+  ...
+# Subtest: 2.0 absent/missing sources preserve every base field
+ok 39 - 2.0 absent/missing sources preserve every base field
+  ---
+  duration_ms: 46.490689
+  type: 'test'
+  ...
+# Subtest: 2.0 first future and single future slot are included
+ok 40 - 2.0 first future and single future slot are included
+  ---
+  duration_ms: 13.900362
+  type: 'test'
+  ...
+# Subtest: 2.0 exact now and past stay unchanged; midnight matches
+ok 41 - 2.0 exact now and past stay unchanged; midnight matches
+  ---
+  duration_ms: 7.35126
+  type: 'test'
+  ...
+# Subtest: 2.0 tmx source gate and 06:00 tmn
+ok 42 - 2.0 tmx source gate and 06:00 tmn
+  ---
+  duration_ms: 7.566682
+  type: 'test'
+  ...
+# Subtest: v2 UTC/KST publication boundary remains on the intended local date
+ok 43 - v2 UTC/KST publication boundary remains on the intended local date
+  ---
+  duration_ms: 0.943332
+  type: 'test'
+  ...
+1..43
+# tests 43
+# suites 0
+# pass 43
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 660.861479
+STEP: Install isolated smoke dependencies
+npm warn deprecated sprintf@0.1.5: The sprintf package is deprecated in favor of sprintf-js.
+
+added 47 packages in 3s
+STEP: Full RSS response smoke
+{
+  "outcome": "passed",
+  "scenarioCount": 36,
+  "evidence": "/tmp/issue2554-ci-smoke-dfjtfwfx/rss-smoke/output/evidence.json",
+  "candidate": {
+    "server/controllers/controllerTown.js": "a7f603b244b693de022c42a56065144abd89d9b730e0116ce65f859271b91330",
+    "server/controllers/kma/kma.town.short.rss.controller.js": "01be54d9ca5f0174113a4c55a9befd688a83e8c91e80264c43ca92f71f15af74",
+    "server/controllers/controllerTown24h.js": "db9769f033d0fbf2797ac947cdf47d930102b80c62934cd0b25954db0d17560d",
+    "server/routes/v000903/route.kma.v000903.js": "cc46427fc7448e89517df957cb0a3c3c949bd8c51bdcb8b87d8ad4a991375551",
+    "server/test/offline/rss-wind.test.js": "778b4e63af6a41aa478ecc00b9cdb7badd734b73b23863eb07f18618cc9efbfb",
+    "intent/issue-2554.md": "5770fce290f0e508c8b9b1e2e1217e1c302700ac6516ebfc0d6a25c37b3117c0",
+    "specs/issue-2554.md": "32c60dcadd0759144c27536553bed4e62e8c1523e915a83889680ce3db934132",
+    "plans/issue-2554.md": "9b9ee4f989e9fd0f15a9dfefc344a0d710dda8593dd04ac766d13dc16b46f2a9",
+    "docs/architecture/weather-collection.md": "de5c245f9042747d0d14cf41a79538a301856641c8cd095275adfee19707ebc2",
+    "docs/architecture/mobile-api.md": "4b11afd8b45c059f26529864ee01157c1bcb6fd3b834d4d0ae9fa51c19edc19e"
+  }
+}
+PASS exact workflow shell steps; fresh isolated npm dependencies; temporary root: /tmp/issue2554-ci-smoke-dfjtfwfx
