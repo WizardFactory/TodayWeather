@@ -84,6 +84,16 @@ The important ordering constraints are documented in the router itself: current 
 
 KMA output includes `source: 'KMA'`, region/city/town names, publication fields, `short`, `shortest`, `current`, `midData`, `dailySummary`, `airInfoList` or `airInfo`, requested `units`, and a rounded `location` for applicable versions. Fields are conditional, not guaranteed by a formal schema. `ControllerTown24h.sendResult()` simply calls `res.json(req.result)`; it does not set a whole-weather cache TTL. `/kma/special` separately sets `Cache-Control: max-age=300`.
 
+### RSS fallback contract (issue #2554 local repair)
+
+`getShortRss` compares RSS and base short publication timestamps before matching strictly future KST forecast slots. Older RSS is skipped; equal timestamps fill unusable base values; newer RSS replaces selected fields only when the corresponding RSS source is usable. The first RSS slot is included when it is future, including a single-slot result. Date/time matching happens before `convert0Hto24H`, so next-day midnight uses `YYYYMMDD0000` at this boundary.
+
+Both DB versions project `ws` and `wd`. [Wind normalization](weather-collection.md#grid-rss-wind-contract-issue-2554-local-repair) takes place at the service merge boundary, before downstream unit conversion. Missing `wav`, `uuu` and `vvv` leave existing base values intact; the merge does not derive vector components. Every selected source rejects absent/null/non-numeric/nonfinite data and field-specific sentinels. Nonnegative fields accept zero, temperatures accept real negative values above `-50` (including `-1` °C) and reject `-999`, and optional vector components accept values above `-100`. At 06:00 minimum temperature checks `tmn`; at 15:00 maximum checks `tmx` itself.
+
+Later observation and shortest-forecast merges can still supersede RSS values. `shortRssPubDate` records the accepted RSS publication, including equal publication or a result with no matching future slot; it does not prove every response field came from RSS. `currentPubDate` and `shortestPubDate` retain separate freshness meanings. This repair changes neither route ordering nor requested-unit conversion.
+
+Local checks run with `node server/test/offline/rss-wind.test.js` (Node 18+; no DB/provider access). See the [verification record](../../reports/sdlc/issue-2554/self-verification.md) for actual response-path smoke coverage and limitations. No production restart/deployment is part of this change; origin/CDN comparisons must follow a separately approved deployment. Unrelated Jeju HTTP 500 and legacy historical placeholders are not explained by this patch.
+
 ## World-weather API middleware in order
 
 The [v000902 DSF router reused by v000903](../../server/routes/v000902/route.dsf.coord.v000902.js) performs:

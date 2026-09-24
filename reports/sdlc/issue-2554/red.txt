@@ -1,0 +1,1094 @@
+TAP version 13
+# Subtest: collector direction E
+not ok 1 - collector direction E
+  ---
+  duration_ms: 15.341449
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:85:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -1 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: -1
+  operator: 'strictEqual'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:87:42
+    TownRss.parseShortRss (controllers/kma/kma.town.short.rss.controller.js:333:9)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:86:35)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: collector direction N
+not ok 2 - collector direction N
+  ---
+  duration_ms: 8.651656
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:85:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: -1
+  operator: 'strictEqual'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:87:42
+    TownRss.parseShortRss (controllers/kma/kma.town.short.rss.controller.js:333:9)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:86:35)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: collector direction NE
+not ok 3 - collector direction NE
+  ---
+  duration_ms: 7.430326
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:85:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -1 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: -1
+  operator: 'strictEqual'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:87:42
+    TownRss.parseShortRss (controllers/kma/kma.town.short.rss.controller.js:333:9)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:86:35)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: collector direction NW
+not ok 4 - collector direction NW
+  ---
+  duration_ms: 7.091514
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:85:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -1 !== 4
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 4
+  actual: -1
+  operator: 'strictEqual'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:87:42
+    TownRss.parseShortRss (controllers/kma/kma.town.short.rss.controller.js:333:9)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:86:35)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: collector direction S
+not ok 5 - collector direction S
+  ---
+  duration_ms: 8.146764
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:85:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -1 !== 5
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 5
+  actual: -1
+  operator: 'strictEqual'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:87:42
+    TownRss.parseShortRss (controllers/kma/kma.town.short.rss.controller.js:333:9)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:86:35)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: collector direction SE
+not ok 6 - collector direction SE
+  ---
+  duration_ms: 6.08293
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:85:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -1 !== 6
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 6
+  actual: -1
+  operator: 'strictEqual'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:87:42
+    TownRss.parseShortRss (controllers/kma/kma.town.short.rss.controller.js:333:9)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:86:35)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: collector direction SW
+not ok 7 - collector direction SW
+  ---
+  duration_ms: 5.878679
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:85:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -1 !== 7
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 7
+  actual: -1
+  operator: 'strictEqual'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:87:42
+    TownRss.parseShortRss (controllers/kma/kma.town.short.rss.controller.js:333:9)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:86:35)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: collector direction W
+not ok 8 - collector direction W
+  ---
+  duration_ms: 7.317726
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:85:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -1 !== 8
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 8
+  actual: -1
+  operator: 'strictEqual'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:87:42
+    TownRss.parseShortRss (controllers/kma/kma.town.short.rss.controller.js:333:9)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:86:35)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: collector direction UNKNOWN
+ok 9 - collector direction UNKNOWN
+  ---
+  duration_ms: 5.860725
+  type: 'test'
+  ...
+# Subtest: collector absent direction remains sentinel
+ok 10 - collector absent direction remains sentinel
+  ---
+  duration_ms: 8.863942
+  type: 'test'
+  ...
+# Subtest: 1.0 newer RSS uses real DB projection and normalizes wind
+not ok 11 - 1.0 newer RSS uses real DB projection and normalizes wind
+  ---
+  duration_ms: 7.384881
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:99:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 1.3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1.3
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:101:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 direction 0 to degrees
+not ok 12 - 1.0 direction 0 to degrees
+  ---
+  duration_ms: 5.968226
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 direction 1 to degrees
+not ok 13 - 1.0 direction 1 to degrees
+  ---
+  duration_ms: 5.509047
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 45
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 45
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 direction 2 to degrees
+not ok 14 - 1.0 direction 2 to degrees
+  ---
+  duration_ms: 5.535908
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 90
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 90
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 direction 3 to degrees
+not ok 15 - 1.0 direction 3 to degrees
+  ---
+  duration_ms: 7.101262
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 135
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 135
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 direction 4 to degrees
+not ok 16 - 1.0 direction 4 to degrees
+  ---
+  duration_ms: 5.6063
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 180
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 180
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 direction 5 to degrees
+not ok 17 - 1.0 direction 5 to degrees
+  ---
+  duration_ms: 6.799348
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 225
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 225
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 direction 6 to degrees
+not ok 18 - 1.0 direction 6 to degrees
+  ---
+  duration_ms: 6.454684
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 270
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 270
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 direction 7 to degrees
+not ok 19 - 1.0 direction 7 to degrees
+  ---
+  duration_ms: 6.758391
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 315
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 315
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 equal preserves valid values and fills missing/sentinel fields
+not ok 20 - 1.0 equal preserves valid values and fills missing/sentinel fields
+  ---
+  duration_ms: 16.844136
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:110:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 1.3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1.3
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:114:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 older is ignored
+ok 21 - 1.0 older is ignored
+  ---
+  duration_ms: 6.096045
+  type: 'test'
+  ...
+# Subtest: 1.0 invalid RSS wind never erases base
+not ok 22 - 1.0 invalid RSS wind never erases base
+  ---
+  duration_ms: 6.639338
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:121:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    ws undefined
+    
+    undefined !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:124:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 absent/missing sources preserve every base field
+not ok 23 - 1.0 absent/missing sources preserve every base field
+  ---
+  duration_ms: 8.465509
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:129:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        date: '20260924',
+    +   pop: undefined,
+    +   pty: undefined,
+    -   pop: 10,
+    -   pty: 0,
+        r06: 0,
+        reh: 60,
+        s06: 0,
+        sky: 3,
+        t3h: 23,
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    date: '20260924'
+    time: '1200'
+    pop: 10
+    pty: 0
+    r06: 0
+    s06: 0
+    reh: 60
+    sky: 3
+    t3h: 23
+    tmn: 10
+    tmx: 30
+    wsd: 2
+    vec: 180
+    wav: 0.5
+    uuu: -2
+    vvv: 1
+  actual:
+    date: '20260924'
+    time: '1200'
+    r06: 0
+    s06: 0
+    reh: 60
+    sky: 3
+    t3h: 23
+    tmn: 10
+    tmx: 30
+    wsd: 2
+    vec: 180
+    wav: 0.5
+    uuu: -2
+    vvv: 1
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:133:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 first future and single future slot are included
+not ok 24 - 1.0 first future and single future slot are included
+  ---
+  duration_ms: 10.670467
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:139:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 1.3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1.3
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:141:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 exact now and past stay unchanged; midnight matches
+not ok 25 - 1.0 exact now and past stay unchanged; midnight matches
+  ---
+  duration_ms: 6.648436
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:144:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 1.3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1.3
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:147:88)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 tmx source gate and 06:00 tmn
+not ok 26 - 1.0 tmx source gate and 06:00 tmn
+  ---
+  duration_ms: 8.285733
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:149:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    30 !== 31
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 31
+  actual: 30
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:153:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 newer RSS uses real DB projection and normalizes wind
+not ok 27 - 2.0 newer RSS uses real DB projection and normalizes wind
+  ---
+  duration_ms: 13.455397
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:99:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 1.3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1.3
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:101:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 direction 0 to degrees
+not ok 28 - 2.0 direction 0 to degrees
+  ---
+  duration_ms: 6.364525
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 direction 1 to degrees
+not ok 29 - 2.0 direction 1 to degrees
+  ---
+  duration_ms: 6.326405
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 45
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 45
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 direction 2 to degrees
+not ok 30 - 2.0 direction 2 to degrees
+  ---
+  duration_ms: 6.386015
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 90
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 90
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 direction 3 to degrees
+not ok 31 - 2.0 direction 3 to degrees
+  ---
+  duration_ms: 6.419809
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 135
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 135
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 direction 4 to degrees
+not ok 32 - 2.0 direction 4 to degrees
+  ---
+  duration_ms: 5.59662
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 180
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 180
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 direction 5 to degrees
+not ok 33 - 2.0 direction 5 to degrees
+  ---
+  duration_ms: 4.561889
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 225
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 225
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 direction 6 to degrees
+not ok 34 - 2.0 direction 6 to degrees
+  ---
+  duration_ms: 4.793421
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 270
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 270
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 direction 7 to degrees
+not ok 35 - 2.0 direction 7 to degrees
+  ---
+  duration_ms: 4.640746
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:107:30'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 315
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 315
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:108:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 equal preserves valid values and fills missing/sentinel fields
+not ok 36 - 2.0 equal preserves valid values and fills missing/sentinel fields
+  ---
+  duration_ms: 11.269335
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:110:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 1.3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1.3
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:114:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 older is ignored
+ok 37 - 2.0 older is ignored
+  ---
+  duration_ms: 5.0981
+  type: 'test'
+  ...
+# Subtest: 2.0 invalid RSS wind never erases base
+not ok 38 - 2.0 invalid RSS wind never erases base
+  ---
+  duration_ms: 5.189181
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:121:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    ws undefined
+    
+    undefined !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:124:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 absent/missing sources preserve every base field
+not ok 39 - 2.0 absent/missing sources preserve every base field
+  ---
+  duration_ms: 6.430098
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:129:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        date: '20260924',
+    +   pop: undefined,
+    +   pty: undefined,
+    -   pop: 10,
+    -   pty: 0,
+        r06: 0,
+        reh: 60,
+        s06: 0,
+        sky: 3,
+        t3h: 23,
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    date: '20260924'
+    time: '1200'
+    pop: 10
+    pty: 0
+    r06: 0
+    s06: 0
+    reh: 60
+    sky: 3
+    t3h: 23
+    tmn: 10
+    tmx: 30
+    wsd: 2
+    vec: 180
+    wav: 0.5
+    uuu: -2
+    vvv: 1
+  actual:
+    date: '20260924'
+    time: '1200'
+    r06: 0
+    s06: 0
+    reh: 60
+    sky: 3
+    t3h: 23
+    tmn: 10
+    tmx: 30
+    wsd: 2
+    vec: 180
+    wav: 0.5
+    uuu: -2
+    vvv: 1
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:133:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 first future and single future slot are included
+not ok 40 - 2.0 first future and single future slot are included
+  ---
+  duration_ms: 6.075516
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:139:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 1.3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1.3
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:141:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 exact now and past stay unchanged; midnight matches
+not ok 41 - 2.0 exact now and past stay unchanged; midnight matches
+  ---
+  duration_ms: 6.140197
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:144:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 1.3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1.3
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:147:88)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 tmx source gate and 06:00 tmn
+not ok 42 - 2.0 tmx source gate and 06:00 tmn
+  ---
+  duration_ms: 6.033207
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:149:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    30 !== 31
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 31
+  actual: 30
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/juicy-goose/server/test/offline/rss-wind.test.js:153:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..42
+# tests 42
+# suites 0
+# pass 4
+# fail 38
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 357.672193

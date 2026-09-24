@@ -1,0 +1,50 @@
+[
+  {
+    "revision": "baseline",
+    "timezone": "UTC",
+    "input": "202609240000",
+    "hourOffset": 15,
+    "actual": "202609241500",
+    "functionSha256": "a32bafb69730a1cc13c20998838d8726c05a87e3f8c88e2db63c4365b1771387"
+  },
+  {
+    "revision": "baseline",
+    "timezone": "Europe/Berlin",
+    "input": "202609240000",
+    "hourOffset": 15,
+    "actual": "202609241300",
+    "functionSha256": "a32bafb69730a1cc13c20998838d8726c05a87e3f8c88e2db63c4365b1771387"
+  },
+  {
+    "revision": "baseline",
+    "timezone": "America/Los_Angeles",
+    "input": "202609240000",
+    "hourOffset": 15,
+    "actual": "202609242200",
+    "functionSha256": "a32bafb69730a1cc13c20998838d8726c05a87e3f8c88e2db63c4365b1771387"
+  },
+  {
+    "revision": "candidate",
+    "timezone": "UTC",
+    "input": "202609240000",
+    "hourOffset": 15,
+    "actual": "202609241500",
+    "functionSha256": "a32bafb69730a1cc13c20998838d8726c05a87e3f8c88e2db63c4365b1771387"
+  },
+  {
+    "revision": "candidate",
+    "timezone": "Europe/Berlin",
+    "input": "202609240000",
+    "hourOffset": 15,
+    "actual": "202609241300",
+    "functionSha256": "a32bafb69730a1cc13c20998838d8726c05a87e3f8c88e2db63c4365b1771387"
+  },
+  {
+    "revision": "candidate",
+    "timezone": "America/Los_Angeles",
+    "input": "202609240000",
+    "hourOffset": 15,
+    "actual": "202609242200",
+    "functionSha256": "a32bafb69730a1cc13c20998838d8726c05a87e3f8c88e2db63c4365b1771387"
+  }
+]

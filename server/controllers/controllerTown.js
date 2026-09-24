@@ -56,6 +56,22 @@ var midArray = [
     {db:modelMidTemp, name:'modelMidTemp'}
 ];
 
+// RSS and base forecasts use field-specific missing values. Never let a missing
+// source erase a usable base value, including on a newer RSS publication.
+function _isRssValueUsable(value, missing) {
+    return typeof value === 'number' && isFinite(value) &&
+        (missing === -1 ? value >= 0 : value > missing);
+}
+
+function _mergeRssValue(target, field, value, overwrite, missing, round) {
+    if (!_isRssValueUsable(value, missing)) {
+        return;
+    }
+    if (overwrite || !_isRssValueUsable(target[field], missing)) {
+        target[field] = round ? +value.toFixed(1) : value;
+    }
+}
+
 function _isKoreaArea(lat, lon) {
     var geo = new GeoController();
     return geo._isKoreaArea(lat, lon);
@@ -510,7 +526,7 @@ function ControllerTown() {
                 var i;
                 var requestTime = self._getTimeValue(9);
 
-                for(i=rssList.length-1;i>0;i--) {
+                for(i=rssList.length-1;i>=0;i--) {
                     // 미래의 데이터만을 가져와서 사용한다. 과거 데이터는 current로 부터 얻은 데이터를 그대로 사용
                     // === 만을 하지 않고 <= 로 하는 이유는 동일한 값이 존재하지 않을 수도 있기 때문이다.
                     if(parseInt('' + rssList[i].date) <= parseInt('' + requestTime.date + requestTime.time)) {
@@ -523,7 +539,6 @@ function ControllerTown() {
                 i = i+1;
                 
                 var j;
-                var found;
                 var overwrite = false;
 
                 req.shortRssPubDate = shortRssInfo.pubDate;
@@ -533,59 +548,33 @@ function ControllerTown() {
                 }
                 // rss 데이터를 모두 가져온다.
                 for(i;i<rssList.length;i++) {
-                    found = 0;
-
                     for(j=0;j<req.short.length;j++) {
                         if(parseInt(req.short[j].date + req.short[j].time) === parseInt(rssList[i].date)) {
-                            found = 1;
-
-                            if (overwrite || req.short[j].pop == undefined || req.short[j].pop == -1) {
-                                req.short[j].pop = rssList[i].pop;
+                            var target = req.short[j];
+                            var rss = rssList[i];
+                            _mergeRssValue(target, 'pop', rss.pop, overwrite, -1);
+                            _mergeRssValue(target, 'pty', rss.pty, overwrite, -1);
+                            // adjustShort later distributes six-hour precipitation.
+                            _mergeRssValue(target, 'r06', rss.r06, overwrite, -1, true);
+                            _mergeRssValue(target, 's06', rss.s06, overwrite, -1, true);
+                            _mergeRssValue(target, 'reh', rss.reh, overwrite, -1);
+                            _mergeRssValue(target, 'sky', rss.sky, overwrite, -1);
+                            _mergeRssValue(target, 't3h', rss.temp, overwrite, -50, true);
+                            if (target.time === '0600') {
+                                _mergeRssValue(target, 'tmn', rss.tmn, overwrite, -50);
+                            } else if (target.time === '1500') {
+                                _mergeRssValue(target, 'tmx', rss.tmx, overwrite, -50);
                             }
-                            if (overwrite || req.short[j].pty == undefined || req.short[j].pty == -1) {
-                                req.short[j].pty = rssList[i].pty;
+                            _mergeRssValue(target, 'wsd', rss.ws, overwrite, -1);
+                            // KMA RSS wd: 0..7 = N, NE, E, SE, S, SW, W, NW.
+                            // This differs from the stored wdKor/wdEn label codes.
+                            // North is 0 degrees; reject 8 and fractional codes.
+                            if (_isRssValueUsable(rss.wd, -1) && rss.wd <= 7 && rss.wd % 1 === 0) {
+                                _mergeRssValue(target, 'vec', rss.wd * 45, overwrite, -1);
                             }
-                            //s06, r06은 6시간 단위로 오기 때문에 3,9,15,21은 원래 -1이며, RSS는 다른 시간대의 값과 동일하게 옴.
-                            //지금 -1을 덮어쓰고, adjustShort에서 나누어서 저장하게 되어있는데, adjustShort를 사용안하면 주의 필요.
-                            if (overwrite || req.short[j].r06 == undefined || req.short[j].r06 == -1) {
-                                req.short[j].r06 = +(rssList[i].r06).toFixed(1);
-                            }
-                            if (overwrite || req.short[j].s06 == undefined || req.short[j].s06 == -1) {
-                                req.short[j].s06 = +(rssList[i].s06).toFixed(1);
-                            }
-                            if (overwrite || req.short[j].reh == undefined || req.short[j].reh == -1) {
-                                req.short[j].reh = rssList[i].reh;
-                            }
-                            if (overwrite || req.short[j].sky == undefined || req.short[j].sky == -1) {
-                                req.short[j].sky = rssList[i].sky;
-                            }
-                            if (overwrite || req.short[j].t3h == undefined || req.short[j].t3h == -50) {
-                                req.short[j].t3h = +(rssList[i].temp).toFixed(1);
-                            }
-                            if(req.short[j].time === '0600' && rssList[i].tmn != -999) {
-                                if (overwrite || req.short[j].tmn == undefined || req.short[j].tmn == -50) {
-                                    req.short[j].tmn = rssList[i].tmn;
-                                }
-                            } else if(req.short[j].time === '1500' && rssList[i].tmn != -999) {
-                                if (overwrite || req.short[j].tmx == undefined || req.short[j].tmx == -50) {
-                                    req.short[j].tmx = rssList[i].tmx;
-                                }
-                            }
-                            if (overwrite || req.short[j].wsd == undefined || req.short[j].wsd == -1) {
-                                req.short[j].wsd = rssList[i].wsd;
-                            }
-                            if (overwrite || req.short[j].vec == undefined || req.short[j].vec == -1) {
-                                req.short[j].vec = rssList[i].vec;
-                            }
-                            if (overwrite || req.short[j].wav == undefined || req.short[j].wav == -1) {
-                                req.short[j].wav = rssList[i].wav;
-                            }
-                            if (overwrite || req.short[j].uuu == undefined || req.short[j].uuu == -100) {
-                                req.short[j].uuu = rssList[i].uuu;
-                            }
-                            if (overwrite || req.short[j].vvv == undefined || req.short[j].vvv == -100) {
-                                req.short[j].vvv = rssList[i].vvv;
-                            }
+                            _mergeRssValue(target, 'wav', rss.wav, overwrite, -1);
+                            _mergeRssValue(target, 'uuu', rss.uuu, overwrite, -100);
+                            _mergeRssValue(target, 'vvv', rss.vvv, overwrite, -100);
                             break;
                         }
                     }
