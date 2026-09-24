@@ -1,0 +1,4 @@
+# Collection design validation
+Retain the existing timer → dispatch → requester → persistence → read pipeline. Update only requester compatibility notes and explicit period limitation. JSON repository revision identifies the public baseline; local-only references resolve candidate files in this PR.
+Archify 2.17: deterministic deliver passed 9/9 checks, zero errors/warnings. Specification SHA-256 767a8855cda7c02350bb756d610ea22a09250078f4a7f2f5d00863f4cd865b57; HTML 3917c68ac32790aae1cbb9b940aeb1c0f9e6b8572240229ac494a39e028b7f0f.
+Browser: initial default Chrome lookup skipped; existing Playwright Chromium explicitly selected, then visual-check passed all four desktop sizes (1440x900, 1600x1000, 1920x1080, 2048x1320), light/dark captures, no overflow or diagnostics. Screenshots are ignored local artifacts by repository policy; machine measurements retained in browser.json.

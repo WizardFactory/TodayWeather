@@ -1,0 +1,147 @@
+
+
+  ․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․
+  ․․․․․․․․․․․․․․․․․․․․
+
+  67 passing (420ms)
+  9 failing
+
+  1) independent-review regressions: malformed organized output rejects malformed MID_FORECAST without reflecting provider text:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(c.recvFailed)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:242:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  2) independent-review regressions: malformed organized output rejects malformed MID_TEMP without reflecting provider text:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(c.recvFailed)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:242:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  3) independent-review regressions: malformed organized output rejects malformed MID_LAND without reflecting provider text:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(c.recvFailed)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:242:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  4) independent-review regressions: malformed organized output rejects malformed MID_SEA without reflecting provider text:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(c.recvFailed)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:242:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  5) independent-review regressions: malformed organized output reports organizer rejection to the callback:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:248:35
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:380:17
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:336:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:329:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:247:9)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  6) independent-review regressions: malformed organized output rejects invalid TMP in later forecast groups:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(!r.isCompleted)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:255:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  7) independent-review regressions: malformed organized output rejects invalid SKY in later forecast groups:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(!r.isCompleted)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:255:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  8) independent-review regressions: malformed organized output rejects invalid REH in later forecast groups:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(!r.isCompleted)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:255:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  9) independent-review regressions: malformed organized output rejects invalid PTY in later forecast groups:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(!r.isCompleted)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:255:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+
+

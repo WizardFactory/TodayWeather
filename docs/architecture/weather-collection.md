@@ -40,7 +40,7 @@ The health-day expression can reach 18 at UTC 09, but cannot reach 6 because add
 
 1. `/gather/current`, `/short`, and `/shortest` select a key and call the corresponding manager method with base offset `9`. Query-time helpers select product-specific base date/time; `town.getCoord()` supplies domestic grid coordinates.
 2. `_recursiveRequestData(..., 70, ...)` dispatches through `collectTownForecast.requestData()`, choosing a random key from the configured town forecast key list for each recursive pass.
-3. The requester builds legacy KMA service URLs for current, shortest, short and medium-range products, performs HTTP with a 10-second per-request timeout, parses XML through `xml2js`, and maps category values into forecast records. The requester's own retry count defaults to zero when constructed without options; manager recursion is a separate retry layer.
+3. The requester builds `http://apis.data.go.kr` URLs for current, shortest, short and medium-range products, performs HTTP with a 10-second per-request timeout, accepts success code `00`, parses XML through `xml2js`, and maps category values into forecast records. Invalid/empty responses fail collection without logging service-key-bearing URLs. The requester's own retry count defaults to zero when constructed without options; manager recursion is a separate retry layer.
 4. `async.mapSeries` saves completed items via `getSaveFunc()`. Failed coordinates are retried using a decremented recursion count. Invalid temperature coordinates can be retried with an adjusted shortest publication time. Recursion uses zero-delay timers, not exponential backoff.
 5. `getSaveFunc()` routes current/shortest/short to v2 KMA controllers when `DB_DATA_VERSION === '2.0'`; with `DB_DATA_VERSION === '1.0'`, legacy `saveCurrent`, `saveShortest`, `saveShort` merge/update per-grid documents. Other values have no save branch or callback in these three wrappers; there is no generic fallback. Medium-range products use their own save functions. There is no transaction covering all weather products.
 6. Product-specific cleanup removes old KMA records. `_checkPubDate()` also supports skipping already-current products in callers that use it; the three whole-grid methods shown above directly invoke collection, so do not assume publication deduplication applies uniformly.
@@ -48,6 +48,10 @@ The health-day expression can reach 18 at UTC 09, but cannot reach 6 because add
 Sources: [manager collection and save selection](../../server/controllers/controllerManager.js), [requester](../../server/lib/collectTownForecast.js), [v2 current controller](../../server/controllers/kma/kma.town.current.controller.js), [legacy current](../../server/models/modelCurrent.js), [v2 current](../../server/models/kma/kma.town.current.model.js).
 
 Legacy documents carry `pubDate=YYYYMMDDHHMM` and `date`/`time` values. Invalid measurements use field-specific sentinels such as `-50` temperature or `-1` missing values. Preserving invalid-value handling matters: treating a sentinel as a real observation changes merged forecasts and yesterday comparisons.
+
+## KMA source reconciliation and period limits
+
+[#2555 source reconciliation](gather-source-reconciliation.md) records the seven migrated paths, all appendix dispositions, inactive legacy-gather policy and operator deployment/rollback handoff. PCP/SNO/TMP map into the existing r06/s06/t3h schema with strict finite parsing and existing missing sentinels; RN1 zero stays zero. These field aliases **do not establish six-hour accumulation or three-hour cadence**. The existing 24h consumer still splits adjacent quantities; characterization tests expose this limitation rather than claiming period equivalence. No schedule, retry default, DB version or provider authorization changes here.
 
 ## Scraping and auxiliary products
 

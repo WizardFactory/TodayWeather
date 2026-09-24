@@ -1,0 +1,10 @@
+{
+  "candidate": "sha256:b550d244df318349a3a5ca27cb9fe3f6c83b9c0ead1e574dcfb5ade1ca1a6cfd",
+  "base": "87b8855f308611a07897cd3a39c45fefb3088d77",
+  "files": {
+    "server/lib/collectTownForecast.js": "4e6802fc2a87d69891ca4abccab86cf65ab811d3b49bbfdca438d9ba499a2edb",
+    "server/test/offline/harness.js": "dae9d7276fb195457bd6e801b713face09e033b282dca4af6337a8ac91134a28",
+    "server/test/offline/gather-code-drift.test.js": "3070d06d1ad3a16773bae6ef38ca1269fad077555bc96cd590104304541b40a5",
+    "server/test/offline/gather-smoke.js": "bb456844bb85301b01f0dd0bf93d9dd4a9d7dce8ea72457f575571df0277b427"
+  }
+}

@@ -11,7 +11,7 @@
     "title": "Weather collection and persistence",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+      "revision": "87b8855f308611a07897cd3a39c45fefb3088d77",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -59,7 +59,7 @@
       "id": "fetch",
       "type": "backend",
       "label": "Product requesters",
-      "sublabel": "Fetch, parse, retry",
+      "sublabel": "KMA 00 / safe parsing",
       "pos": [
         685,
         130
@@ -224,10 +224,10 @@
     },
     {
       "dot": "amber",
-      "title": "Scope",
+      "title": "KMA compatibility (#2555)",
       "items": [
-        "This view covers scheduled domestic ingestion; DSF is fetched on demand.",
-        "Scraper upstream calls and auxiliary providers are detailed in weather-collection.md."
+        "apis.data.go.kr over HTTP; operator must verify authorization.",
+        "PCP/SNO/TMP retain legacy fields; periods are not equivalent."
       ]
     }
   ]

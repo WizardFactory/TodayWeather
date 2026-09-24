@@ -1,0 +1,759 @@
+
+
+  ․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․
+  ․․․․․․․․
+
+  10 passing (288ms)
+  54 failing
+
+  1) gather drift: synthetic offline compatibility builds migrated TOWN_CURRENT URL without HTTP:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib'
+- 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst'
+
+      + expected - actual
+
+      -http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib
+      +http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:35:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  2) gather drift: synthetic offline compatibility dispatches 00 to organizeCurrentData:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 1
+
+      + expected - actual
+
+      -0
+      +1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:56:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  3) gather drift: synthetic offline compatibility builds migrated TOWN_SHORTEST URL without HTTP:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastTimeData'
+- 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst'
+
+      + expected - actual
+
+      -http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastTimeData
+      +http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:35:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  4) gather drift: synthetic offline compatibility dispatches 00 to organizeShortestData:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 1
+
+      + expected - actual
+
+      -0
+      +1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:56:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  5) gather drift: synthetic offline compatibility builds migrated TOWN_SHORT URL without HTTP:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastSpaceData'
+- 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst'
+
+      + expected - actual
+
+      -http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastSpaceData
+      +http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:35:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  6) gather drift: synthetic offline compatibility dispatches 00 to organizeShortData:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 1
+
+      + expected - actual
+
+      -0
+      +1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:56:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  7) gather drift: synthetic offline compatibility builds migrated MID_FORECAST URL without HTTP:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleForecast'
+- 'http://apis.data.go.kr/1360000/MidFcstInfoService/getMidFcst'
+
+      + expected - actual
+
+      -http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleForecast
+      +http://apis.data.go.kr/1360000/MidFcstInfoService/getMidFcst
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:35:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  8) gather drift: synthetic offline compatibility dispatches 00 to organizeForecastData:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 1
+
+      + expected - actual
+
+      -0
+      +1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:56:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  9) gather drift: synthetic offline compatibility builds migrated MID_LAND URL without HTTP:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleLandWeather'
+- 'http://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst'
+
+      + expected - actual
+
+      -http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleLandWeather
+      +http://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:35:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  10) gather drift: synthetic offline compatibility dispatches 00 to organizeLandData:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 1
+
+      + expected - actual
+
+      -0
+      +1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:56:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  11) gather drift: synthetic offline compatibility builds migrated MID_TEMP URL without HTTP:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleTemperature'
+- 'http://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa'
+
+      + expected - actual
+
+      -http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleTemperature
+      +http://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:35:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  12) gather drift: synthetic offline compatibility dispatches 00 to organizeTempData:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 1
+
+      + expected - actual
+
+      -0
+      +1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:56:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  13) gather drift: synthetic offline compatibility builds migrated MID_SEA URL without HTTP:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleSeaWeather'
+- 'http://apis.data.go.kr/1360000/MidFcstInfoService/getMidSeaFcst'
+
+      + expected - actual
+
+      -http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleSeaWeather
+      +http://apis.data.go.kr/1360000/MidFcstInfoService/getMidSeaFcst
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:35:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  14) gather drift: synthetic offline compatibility dispatches 00 to organizeSeaData:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 1
+
+      + expected - actual
+
+      -0
+      +1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:56:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  15) gather drift: synthetic offline compatibility fails safely on non-success:
+     AssertionError [ERR_ASSERTION]: failure callback must carry an error
+      at server/test/offline/gather-code-drift.test.js:73:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:72:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  16) gather drift: synthetic offline compatibility fails safely on legacy success:
+     AssertionError [ERR_ASSERTION]: failure callback must carry an error
+      at server/test/offline/gather-code-drift.test.js:73:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:72:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  17) gather drift: synthetic offline compatibility fails safely on zero count:
+     AssertionError [ERR_ASSERTION]: failure callback must carry an error
+      at server/test/offline/gather-code-drift.test.js:73:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:72:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  18) gather drift: synthetic offline compatibility fails safely on bad count:
+     AssertionError [ERR_ASSERTION]: failure callback must carry an error
+      at server/test/offline/gather-code-drift.test.js:73:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:72:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  19) gather drift: synthetic offline compatibility fails safely on missing count:
+     AssertionError [ERR_ASSERTION]: failure callback must carry an error
+      at server/test/offline/gather-code-drift.test.js:73:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:72:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  20) gather drift: synthetic offline compatibility fails safely on empty items:
+     AssertionError [ERR_ASSERTION]: failure callback must carry an error
+      at server/test/offline/gather-code-drift.test.js:73:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:72:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  21) gather drift: synthetic offline compatibility fails safely on missing header:
+     AssertionError [ERR_ASSERTION]: failure callback must carry an error
+      at server/test/offline/gather-code-drift.test.js:73:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:72:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  22) gather drift: synthetic offline compatibility fails safely on missing envelope:
+     AssertionError [ERR_ASSERTION]: failure callback must carry an error
+      at server/test/offline/gather-code-drift.test.js:73:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:72:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  23) gather drift: synthetic offline compatibility fails safely on malformed XML without reflecting raw text:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(!logs.join('\n').includes(KEY))
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at server/test/offline/gather-code-drift.test.js:83:48
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:308:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onerror (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:123:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at error (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:831:5)
+      at strictFail (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:858:7)
+      at end (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:837:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1200:14)
+      at SAXParser.close (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:188:19)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:42)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:82:9)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  24) gather drift: synthetic offline compatibility rejects HTTP status/response 403:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:89:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:351:17
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:88:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  25) gather drift: synthetic offline compatibility rejects HTTP status/response 404:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:89:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:351:17
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:88:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  26) gather drift: synthetic offline compatibility rejects HTTP status/response 500:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:89:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:88:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  27) gather drift: synthetic offline compatibility rejects HTTP status/response 302:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:89:17
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:429:21
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:357:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:88:13)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  28) gather drift: synthetic offline compatibility rejects HTTP status/response null:
+     TypeError: Cannot read properties of undefined (reading 'statusCode')
+      at server/lib/collectTownForecast.js:342:35
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:88:13)
+
+  29) gather drift: synthetic offline compatibility does not log transport errors containing the request URL:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(!logs.join('\n').includes(KEY))
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at server/test/offline/gather-code-drift.test.js:96:48
+      at server/test/offline/gather-code-drift.test.js:27:59
+      at server/lib/collectTownForecast.js:338:17
+      at Object.get (server/test/offline/gather-code-drift.test.js:21:9)
+      at CollectData.getData (server/lib/collectTownForecast.js:326:9)
+      at receive (server/test/offline/gather-code-drift.test.js:27:7)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:95:9)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  30) gather drift: synthetic offline compatibility maps the specified short fixture and publication/grid fields:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(r.isCompleted)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:100:66)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  31) gather drift: synthetic offline compatibility parses complete quantities 1.5/0.5:
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:110:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  32) gather drift: synthetic offline compatibility parses complete quantities  1.5 mm /0.5cm:
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:110:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  33) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  34) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: " ":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  35) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "unknown":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  36) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "1~4":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  37) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "1.0mm 미만":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  38) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "50mm 이상":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  39) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "Infinity":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  40) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "NaN":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  41) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "-1":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  42) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "-999":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  43) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "1e999":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  44) gather drift: synthetic offline compatibility keeps unsupported precipitation missing: "1.2junk":
+     TypeError: Cannot read properties of undefined (reading 'r06')
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:116:34)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  45) gather drift: synthetic offline compatibility retains legacy categories and forecast grouping:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(r.isCompleted)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:123:9)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  46) gather drift: synthetic offline compatibility normalizes shortest RN1 undefined:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(r.isCompleted)
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:139:64)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  47) gather drift: synthetic offline compatibility normalizes shortest RN1 "":
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+NaN !== -1
+
+      + expected - actual
+
+      -NaN
+      +-1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:140:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  48) gather drift: synthetic offline compatibility normalizes shortest RN1 "bad":
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+NaN !== -1
+
+      + expected - actual
+
+      -NaN
+      +-1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:140:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  49) gather drift: synthetic offline compatibility normalizes shortest RN1 "Infinity":
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+Infinity !== -1
+
+      + expected - actual
+
+      -Infinity
+      +-1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:140:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  50) gather drift: synthetic offline compatibility normalizes shortest RN1 "NaN":
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+NaN !== -1
+
+      + expected - actual
+
+      -NaN
+      +-1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:140:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  51) gather drift: synthetic offline compatibility normalizes shortest RN1 -999:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+-999 !== -1
+
+      + expected - actual
+
+      --999
+      +-1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:140:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  52) gather drift: synthetic offline compatibility normalizes shortest RN1 "1~4":
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+1 !== -1
+
+      + expected - actual
+
+      -1
+      +-1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:140:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  53) gather drift: synthetic offline compatibility normalizes shortest RN1 "1mm 미만":
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+1 !== -1
+
+      + expected - actual
+
+      -1
+      +-1
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:140:20)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  54) gather drift: synthetic offline compatibility does not leak keys for empty request lists or callback exceptions:
+
+      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(!logs.join('\n').includes(KEY))
+
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:147:9)
+      at process.processImmediate (node:internal/timers:484:21)
+
+
+

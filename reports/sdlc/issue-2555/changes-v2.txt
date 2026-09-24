@@ -1,0 +1,1222 @@
+diff --git a/docs/architecture/diagrams/weather-collection.html b/docs/architecture/diagrams/weather-collection.html
+index 7f3d3e0f..e2a82c14 100644
+--- a/docs/architecture/diagrams/weather-collection.html
++++ b/docs/architecture/diagrams/weather-collection.html
+@@ -5086,7 +5086,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
+     </div>
+ 
+     <script id="archify-guided-views-data" type="application/json">[]</script>
+-    <script id="archify-source-evidence-data" type="application/json">{"schemaVersion":1,"verified":true,"repository":{"url":"https://github.com/WizardFactory/TodayWeather","revision":"b9795125a1b7dc8a4f7602d4612a6be7d79413ad","shortRevision":"b979512","label":"WizardFactory/TodayWeather","linkMode":"local-only"},"referenceCount":8,"nodes":{"clock":[{"path":"server/controllers/controllerManager.js"}],"dispatch":[{"path":"server/routes/v000001/routeGather.js"}],"fetch":[{"path":"server/lib/collectTownForecast.js"},{"path":"server/lib/kecoRequester.js"}],"scrape":[{"path":"server/lib/kmaScraper.js"}],"station":[{"path":"server/lib/kmaScraper.js"}],"storage":[{"path":"server/models/modelCurrent.js"}],"readapi":[{"path":"server/controllers/controllerTown24h.js"}]}}</script>
++    <script id="archify-source-evidence-data" type="application/json">{"schemaVersion":1,"verified":true,"repository":{"url":"https://github.com/WizardFactory/TodayWeather","revision":"87b8855f308611a07897cd3a39c45fefb3088d77","shortRevision":"87b8855","label":"WizardFactory/TodayWeather","linkMode":"local-only"},"referenceCount":8,"nodes":{"clock":[{"path":"server/controllers/controllerManager.js"}],"dispatch":[{"path":"server/routes/v000001/routeGather.js"}],"fetch":[{"path":"server/lib/collectTownForecast.js"},{"path":"server/lib/kecoRequester.js"}],"scrape":[{"path":"server/lib/kmaScraper.js"}],"station":[{"path":"server/lib/kmaScraper.js"}],"storage":[{"path":"server/models/modelCurrent.js"}],"readapi":[{"path":"server/controllers/controllerTown24h.js"}]}}</script>
+     <script id="archify-i18n-data" type="application/json">{"locale":"en","messages":{"viewer.kind.frontend":"Frontend","viewer.kind.backend":"Backend","viewer.kind.database":"Database","viewer.kind.cloud":"Cloud","viewer.kind.security":"Security","viewer.kind.messagebus":"Message bus","viewer.kind.external":"External","viewer.kind.neutral":"Neutral","viewer.kind.node":"Node","viewer.kind.start":"Start","viewer.kind.active":"Active","viewer.kind.waiting":"Waiting","viewer.kind.decision":"Decision","viewer.kind.success":"Success","viewer.kind.failure":"Failure","viewer.toolbar.actions":"Diagram actions","viewer.theme.toggle.title":"Toggle theme (T)","viewer.theme.toggle":"Toggle color theme","viewer.theme.dark":"Dark","viewer.theme.light":"Light","viewer.preset.choose.title":"Choose visual style (S cycles)","viewer.preset.choose":"Choose visual style","viewer.preset.style":"Style","viewer.preset.menu":"Visual style","viewer.preset.identity":"Visual identity","viewer.preset.cycles":"S cycles","viewer.preset.classic":"Classic","viewer.preset.classic.short":"Classic","viewer.preset.classic.hint":"Stable technical default","viewer.preset.flow":"Signal Flow","viewer.preset.flow.short":"Flow","viewer.preset.flow.hint":"Motion-forward presentation","viewer.preset.blueprint":"Blueprint","viewer.preset.blueprint.hint":"Engineering review","viewer.preset.editorial":"Editorial","viewer.preset.editorial.hint":"Publication and launch notes","viewer.preset.badge.signalFlow":"SIGNAL FLOW","viewer.preset.badge.blueprint":"BLUEPRINT / REV 01","viewer.preset.badge.editorial":"EDITORIAL / FIELD NOTE","viewer.preset.badge.editorialPlate":"ARCHIFY / PLATE 04","viewer.preset.current":"Visual style: {style}. Choose visual style","viewer.motion.live":"Live","viewer.motion.still":"Still","viewer.motion.pause":"Pause motion","viewer.motion.resume":"Resume motion","viewer.motion.reduced":"Motion paused by reduced-motion preference","viewer.motion.hidden":"Motion paused while this page is hidden","viewer.motion.yielding":"Pause motion; currently yielding to {owner}","viewer.motion.yielding.title":"Live preview enabled · yielding to {owner}","viewer.owner.story":"the guided story","viewer.owner.chapter":"the active chapter","viewer.owner.chapterPreview":"the chapter delta preview","viewer.owner.handoff":"the chapter handoff","viewer.owner.route":"Route Probe","viewer.owner.lens":"Semantic Lens","viewer.owner.relationship":"Relationship Preview","viewer.owner.intent":"Intent Trace","viewer.owner.focus":"semantic focus","viewer.owner.legend":"legend preview","viewer.owner.reader":"reader interaction","viewer.present.enter":"Enter presentation stage","viewer.present.enter.title":"Presentation stage (F)","viewer.present.exit":"Exit presentation stage","viewer.present.exit.title":"Exit presentation stage (F or Escape)","viewer.present.present":"Present","viewer.present.exit.label":"Exit","viewer.export.button":"Export","viewer.export.button.title":"Export diagram (E)","viewer.export.diagram":"Export diagram","viewer.export.menu":"Export","viewer.export.subtitle":"Portable, clean outputs","viewer.export.share":"Share","viewer.export.shareCard":"Share Card","viewer.export.routeShareCard":"Route Share Card","viewer.export.reachShareCard":"Reach Share Card","viewer.export.copyShareCard":"Copy Share Card","viewer.export.copyDiagram":"Copy diagram","viewer.export.clipboardPng":"PNG to clipboard","viewer.export.raster":"Raster images","viewer.export.image":"Image","viewer.export.lossless":"Lossless image","viewer.export.compact":"Compact image","viewer.export.modern":"Modern image","viewer.export.vectorMotion":"Vector and motion","viewer.export.vectorMotion.heading":"Vector \u0026 motion","viewer.export.editable":"Editable vector","viewer.export.motion6s":"6s motion","viewer.export.unsupported":"Not supported by this browser","viewer.export.clipboardUnsupported":"Clipboard image write not supported by this browser","viewer.export.clipboardUnsupported.period":"Clipboard image write not supported by this browser.","viewer.export.clipboardUnsupported.short":"Clipboard image write not supported in this browser.","viewer.export.motionUnavailable":"Motion capture unavailable in this browser","viewer.export.webmUnavailable":"WebM unavailable in this browser","viewer.export.failed":"Export failed: {message}","viewer.export.unknownVariant":"Unknown Share Card variant: {variant}","viewer.export.routeRequired":"Trace a route before exporting a Route Share Card","viewer.export.reachRequired":"Trace authored reach before exporting a Reach Share Card","viewer.export.unknown":"unknown","viewer.export.routeFailed":"Route Share Card export failed: {message}","viewer.export.reachFailed":"Reach Share Card export failed: {message}","viewer.export.copyFailed":"Copy failed: {message}","viewer.export.copiedPng":"Copied PNG to clipboard","viewer.export.copiedShare":"Copied Share Card","viewer.export.downloadedShare":"Downloaded Share Card","viewer.export.downloadedRoute":"Downloaded Route Share Card","viewer.export.downloadedReach":"Downloaded Reach Share Card","viewer.export.downloadedWebm":"Downloaded WebM","viewer.export.recording":"Recording 6 seconds of motion…","viewer.export.card.routeSummary.one":"Route: {source} → {target} · {count} directed hop","viewer.export.card.routeSummary.other":"Route: {source} → {target} · {count} directed hops","viewer.export.card.reachSummary":"Authored {direction} from {origin} · {nodes} · {links} · max {hops}","viewer.export.card.node.one":"{count} node","viewer.export.card.node.other":"{count} nodes","viewer.export.card.link.one":"{count} link","viewer.export.card.link.other":"{count} links","viewer.export.card.hop.one":"{count} hop","viewer.export.card.hop.other":"{count} hops","viewer.export.card.routeBadge":"ARCHIFY · ROUTE · {hops}","viewer.export.card.reachBadge":"ARCHIFY · {direction} REACH","viewer.export.card.defaultBadge":"ARCHIFY · {preset} · {theme}","viewer.export.direction.upstream":"Upstream","viewer.export.direction.downstream":"Downstream","viewer.export.error.canvasUnavailable":"Canvas unavailable for {label}","viewer.export.error.contextUnavailable":"2D canvas context unavailable for {label}","viewer.export.error.toBlobUnavailable":"canvas.toBlob unavailable for {label}","viewer.export.error.toBlobNull":"canvas.toBlob returned no data for {label}","viewer.export.error.variantsCombined":"Share Card variants cannot be combined","viewer.export.error.viewerState":"Share Card export could not remove temporary viewer state","viewer.export.error.routeState":"Route Card export could not preserve the resolved route safely","viewer.export.error.reachState":"Reach Card export could not preserve authored reach safely","viewer.export.error.webmRequirements":"WebM motion export requires a trace animation and browser MediaRecorder support","viewer.export.error.mediaRecorder":"MediaRecorder failed","viewer.export.error.emptyWebm":"MediaRecorder produced an empty WebM","viewer.export.error.webmBackground":"SVG background could not be loaded for WebM export","viewer.guided.region":"Guided diagram views","viewer.guided.previous":"Previous guided view","viewer.guided.previous.title":"Previous guided view ([)","viewer.guided.next":"Next guided view","viewer.guided.next.title":"Next guided view (])","viewer.guided.views":"Guided views","viewer.guided.explore":"Explore this system","viewer.guided.intro":"Step through curated paths without changing the source diagram.","viewer.guided.trail":"Story trail","viewer.guided.beat":"Beat","viewer.guided.nextBeat":"Next","viewer.guided.play":"Play guided story","viewer.guided.play.title":"Play guided story (P)","viewer.guided.pause":"Pause guided story","viewer.guided.pause.title":"Pause guided story (P)","viewer.guided.replay":"Replay guided story","viewer.guided.replay.title":"Replay guided story (P)","viewer.guided.playStory":"Play story","viewer.guided.pauseStory":"Pause","viewer.guided.replayStory":"Replay story","viewer.guided.motionUnavailable":"Story playback unavailable while motion is Still","viewer.guided.enableMotion":"Switch motion to Live to play the guided story","viewer.guided.selectBeatLink":"Select a Story Beat to copy its exact link","viewer.guided.copyMoment":"Copy moment","viewer.guided.momentCopied":"Moment link copied","viewer.guided.momentCopyFailed":"Could not copy story moment link","viewer.guided.copied":"Copied","viewer.guided.copyFailed":"Copy failed","viewer.guided.showAll":"Show all","viewer.guided.showAll.aria":"Show entire diagram","viewer.guided.chapters":"Story chapters","viewer.guided.storyTrail":"Story trail for {label}: {count} beats","viewer.guided.chapter.open":"Open chapter {index} of {total}: {label}, {count} stops","viewer.guided.chapter.current":"Current chapter {index} of {total}: {label}, {count} stops","viewer.guided.chapter.selectedNodes":"{count} selected nodes","viewer.guided.chapter.stops":"{count} stops","viewer.guided.chapter.stop.one":"{count} stop","viewer.guided.chapter.stop.other":"{count} stops","viewer.guided.chapter.current.title":"{label} — current chapter, {count} stops","viewer.guided.chapter.delta.expanded":"{stay} stay, {enter} enter, {leave} leave","viewer.guided.chapter.delta.aria":"Open chapter {index} of {total}: {label}. Chapter focus delta: {delta}","viewer.guided.chapter.delta.title":"{label} — {delta} chapter focus","viewer.guided.handoff":"{from} → {to} · via {label}","viewer.guided.share.chapter":"Chapter {index} / {total}","viewer.guided.share.initial":"Chapter 01 / 01","viewer.guided.share.default":"Guided chapter","viewer.guided.state.ready":"Ready","viewer.guided.state.playing":"Playing","viewer.guided.state.settled":"Settled","viewer.guided.state.paused":"Paused","viewer.guided.state.pinned":"Pinned","viewer.guided.state.still":"Still","viewer.guided.share.step":"Step {index} / {total} · {label}","viewer.guided.share.staticMoment":"{step} · Static moment","viewer.guided.share.complete":"{count} steps complete · {note}","viewer.guided.share.settled":"Path settled for reading.","viewer.guided.share.staticPath":"{count} steps · Static path","viewer.guided.share.ready":"{count} steps · Ready","viewer.guided.share.aria":"{state} chapter {index} of {total}: {label}. {beat}. {route}","viewer.guided.beat.start":"Beat {index} / {total} · {label} · starting point","viewer.guided.beat.forward":"Beat {index} / {total} · {from} → {to}","viewer.guided.beat.reverse":"Beat {index} / {total} · {from} → {to} · reverse authored link","viewer.guided.beat.multiple":"Beat {index} / {total} · {from} ⇄ {to} · {count} authored links","viewer.guided.beat.group":"Beat {index} / {total} · {from} · {to} · grouped · no direct link","viewer.guided.beat.aria.prefix":"Story beat {index} of {total}: {label}. ","viewer.guided.beat.aria.start":"Starting point.","viewer.guided.beat.aria.forward":"From {from} through one authored forward relationship.","viewer.guided.beat.aria.reverse":"From {from}; the authored relationship points from {to} to {from}.","viewer.guided.beat.aria.multiple":"From {from} through {count} authored relationships; shown without arbitrary motion.","viewer.guided.beat.aria.group":"Grouped from {from} with no direct authored relationship.","viewer.guided.caption.start":"Starting point","viewer.guided.caption.grouped":"Grouped transition · no direct authored link","viewer.guided.caption.more":" +{count} more","viewer.guided.caption.reverse":"Reverse authored relationship","viewer.guided.caption.relationships":"{count} authored relationships","viewer.guided.caption.relationship":"Authored relationship","viewer.guided.caption.direction":"authored direction: {from} → {to}","viewer.guided.caption.starting":"Authored starting point","viewer.guided.beatLink":"Copy link to current story moment: Beat {index} of {total}: {label}","viewer.guided.noStory":"This diagram has no authored guided story.","viewer.guide.eyebrow":"Diagram guide","viewer.guide.close":"Close diagram guide","viewer.guide.inspecting":"Inspecting compiled semantics","viewer.guide.actions":"Diagram exploration actions","viewer.guide.find":"Find any node","viewer.guide.find.hint":"Search labels, responsibilities, kinds, and stable IDs.","viewer.guide.route":"Trace a route","viewer.guide.route.aria":"Trace a directed route","viewer.guide.route.hint":"Ask how two semantic nodes connect in authored direction.","viewer.guide.map":"See the whole system","viewer.guide.map.hint":"Open Semantic Radar with a live viewport and stable nodes.","viewer.guide.lens":"Compare semantic kinds","viewer.guide.lens.hint":"Count roles, reveal their traffic, and compare direct authored links.","viewer.guide.story":"Play the guided story","viewer.guide.story.hint":"Walk the authored chapters and real relationships.","viewer.guide.present":"Enter Presentation Stage","viewer.guide.present.hint":"Give the live diagram the viewport without changing export.","viewer.guide.shortcuts":"Additional keyboard shortcuts","viewer.guide.shortcut.export":"Export","viewer.guide.shortcut.theme":"Theme","viewer.guide.shortcut.style":"Style","viewer.guide.shortcut.reset":"Reset","viewer.guide.shortcut.zoomIn":"Zoom in","viewer.guide.shortcut.zoomOut":"Zoom out","viewer.guide.shortcut.close":"Close","viewer.guide.facts":"{nodes} · {relationships} · {views}","viewer.guide.fact.node.one":"{count} semantic node","viewer.guide.fact.node.other":"{count} semantic nodes","viewer.guide.fact.relationship.one":"{count} relationship","viewer.guide.fact.relationship.other":"{count} relationships","viewer.guide.fact.view.one":"{count} guided view","viewer.guide.fact.view.other":"{count} guided views","viewer.guide.story.available.one":"Walk {count} authored chapter and its real relationships.","viewer.guide.story.available.other":"Walk {count} authored chapters and their real relationships.","viewer.guide.story.unavailable":"No authored guided story in this diagram.","viewer.guide.open":"Open diagram guide","viewer.guide.noStory":"This diagram has no authored guided story.","viewer.finder.title":"Find a node","viewer.finder.close":"Close node finder","viewer.finder.placeholder":"Search labels or IDs","viewer.finder.search":"Search diagram nodes","viewer.finder.results":"Diagram nodes","viewer.finder.empty":"No matching nodes","viewer.finder.result.focus":"Focus {label}","viewer.finder.result.routeStart":"Choose {label} as route start","viewer.finder.result.routeTarget":"Choose {label} as route destination, {links}","viewer.finder.status.empty":"No matching nodes","viewer.finder.status.count.one":"{count} matching node","viewer.finder.status.count.other":"{count} matching nodes","viewer.finder.noun.nodes":"nodes","viewer.finder.link.one":"{count} link","viewer.finder.link.other":"{count} links","viewer.finder.result.focus.one":"Focus {label}, {count} related connection","viewer.finder.result.focus.other":"Focus {label}, {count} related connections","viewer.finder.status.filtered":"{visible} of {available} {noun}","viewer.finder.status.all":"{available} {noun}","viewer.passport.eyebrow":"Semantic passport","viewer.passport.metadata":"Node metadata","viewer.passport.evidence":"Verified source evidence","viewer.passport.verified":"Verified source","viewer.passport.verificationScope":"Verified against local Git at the pinned revision. Remote access has not been checked.","viewer.passport.reach":"Authored reach","viewer.passport.reach.trace":"Trace authored reachability","viewer.passport.upstream":"Upstream","viewer.passport.downstream":"Downstream","viewer.passport.upstream.trace":"Trace upstream authored reachability","viewer.passport.downstream.trace":"Trace downstream authored reachability","viewer.passport.close":"Close semantic passport","viewer.passport.copy":"Copy link","viewer.passport.copy.focus":"Copy link to focused node","viewer.passport.relations":"Relations","viewer.passport.relations.show":"Show connected relationships","viewer.passport.relations.hide":"Hide connected relationships","viewer.passport.relations.list":"Connected relationships","viewer.passport.copyRelation":"Copy relation","viewer.passport.copyNode":"Copy node","viewer.passport.copyPinned":"Copy link to pinned relationship","viewer.passport.copySource":"Copy link to source node","viewer.passport.copy.focused.success":"Focused node link copied","viewer.passport.copy.pinned.success":"Pinned relationship link copied","viewer.passport.copy.focused.failed":"Could not copy focused node link","viewer.passport.copy.pinned.failed":"Could not copy pinned relationship link","viewer.passport.relationship.none":"No connected relationships","viewer.passport.relationship.count.one":"{count} relation","viewer.passport.relationship.count.other":"{count} relations","viewer.passport.relationship.show.one":"Show {count} connected relationship","viewer.passport.relationship.show.other":"Show {count} connected relationships","viewer.passport.relationship.summary":"{out} outgoing · {in} incoming{loops}","viewer.passport.relationship.loops":" · {count} loop","viewer.passport.relationship.explorer":"Direct relationship explorer","viewer.passport.relationship.help":"Use arrow keys to explore relationships. Press Enter or Space to pin details; Escape clears.","viewer.passport.relationship.loopsBack":"loops back","viewer.passport.relationship.connectsTo":"connects to","viewer.passport.relationship.connectsFrom":"connects from","viewer.passport.relationship.pinned":"Pinned relationship · {from} → {to} · {label}","viewer.passport.relationship.inspect":"Inspect relationship {index} of {total}: {from} to {to}, {label}. Press Enter for details.","viewer.passport.relationship.group.out":"Outgoing","viewer.passport.relationship.group.in":"Incoming","viewer.passport.relationship.group.loop":"Self loops","viewer.passport.relationship.row":"{group}: {relationship}, {neighbor}","viewer.passport.relationship.direction.out":"OUT →","viewer.passport.relationship.direction.in":"← IN","viewer.passport.relationship.direction.loop":"LOOP","viewer.passport.sourceCount.one":"{count} verified source reference","viewer.passport.sourceCount.other":"{count} verified source references","viewer.passport.sourceMarker":"SRC","viewer.passport.beacon.one":"{count} verified source; focus this node to inspect","viewer.passport.beacon.other":"{count} verified sources; focus this node to inspect","viewer.passport.repository.open":"Open verified repository revision {revision}","viewer.passport.source.open":"Open verified source {path} at revision {revision}","viewer.passport.source.openLink":"Open ↗","viewer.passport.reach.upstream.one":"Trace {count} upstream authored node","viewer.passport.reach.upstream.other":"Trace {count} upstream authored nodes","viewer.passport.reach.downstream.one":"Trace {count} downstream authored node","viewer.passport.reach.downstream.other":"Trace {count} downstream authored nodes","viewer.passport.reach.noUpstream":"No upstream authored nodes","viewer.passport.reach.noDownstream":"No downstream authored nodes","viewer.passport.reach.status":"{direction} · {nodes} nodes · {links} links · max {hops} hops","viewer.route.eyebrow":"Route probe","viewer.route.start":"Choose a start node","viewer.route.start.find":"Find start","viewer.route.start.find.aria":"Find a route start","viewer.route.copy":"Copy link","viewer.route.copy.aria":"Copy link to traced route","viewer.route.clear":"Clear","viewer.route.clear.aria":"Clear route probe","viewer.route.traced":"Traced route","viewer.route.pickTwo":"Pick two semantic nodes on the diagram","viewer.route.pickOne":"Pick a semantic node on the diagram","viewer.route.controls":"Route journey controls","viewer.route.previous":"Previous route position","viewer.route.play":"Play route journey","viewer.route.pause":"Pause route journey","viewer.route.replay":"Replay route journey","viewer.route.next":"Next route position","viewer.route.journey":"Journey","viewer.route.pause.label":"Pause","viewer.route.replay.label":"Replay","viewer.route.overview":"Overview","viewer.route.overview.aria":"Show complete route overview","viewer.route.instructions":"Choose the source, then the destination. Direction matters.","viewer.route.destination":"Choose a destination from {label}","viewer.route.destination.find":"Find target","viewer.route.destination.find.aria":"Find a reachable route destination","viewer.route.differentDestination":"Choose a different destination","viewer.route.distinct":"A route needs two distinct semantic nodes.","viewer.route.unreachable":"No directed route to {label}","viewer.route.unreachable.detail":"{target} is not reachable from {source}. Pick a highlighted destination.","viewer.route.start.instructions":"Select the source. The next step will reveal only directed destinations.","viewer.route.copy.success":"Traced route link copied","viewer.route.copy.failed":"Could not copy traced route link","viewer.route.position":"Route position {index} of {total}: {label}","viewer.route.step":"Step {index} of {total} · {phase} · {label}","viewer.route.motionRequired":"Automatic journey requires Live motion","viewer.route.trigger.clear":"Clear traced route","viewer.route.overview.status":"{nodes} · {hops} · shortest authored route","viewer.route.overview.node.one":"{count} node","viewer.route.overview.node.other":"{count} nodes","viewer.route.overview.hop.one":"{count} directed hop","viewer.route.overview.hop.other":"{count} directed hops","viewer.route.phase.playing":"Playing","viewer.route.phase.complete":"Complete","viewer.route.phase.inspecting":"Inspecting","viewer.route.destination.count.one":"{count} directed destination available. Pick a highlighted node.","viewer.route.destination.count.other":"{count} directed destinations available. Pick a highlighted node.","viewer.route.noOutgoing":"No outgoing route starts here. Clear and choose another source.","viewer.route.result.title":"{source} to {target}","viewer.route.finder.source.title":"Choose route start","viewer.route.finder.source.placeholder":"Search route sources","viewer.route.finder.source.empty":"No matching route sources","viewer.route.finder.source.results":"Nodes that can start a route","viewer.route.finder.source.noun":"route sources","viewer.route.finder.source.badge":"start","viewer.route.finder.target.title":"Destination from {label}","viewer.route.finder.target.placeholder":"Search reachable destinations","viewer.route.finder.target.empty":"No matching reachable destinations","viewer.route.finder.target.results":"Reachable route destinations","viewer.route.finder.target.noun":"reachable destinations","viewer.route.hop.one":"{count} hop","viewer.route.hop.other":"{count} hops","viewer.lens.eyebrow":"Semantic lens","viewer.lens.title":"Compare system roles","viewer.lens.close":"Close semantic lens","viewer.lens.instruction":"Choose up to two semantic kinds. One reveals its real traffic; two compare only direct authored relationships.","viewer.lens.kinds":"Semantic kinds","viewer.lens.choose":"Choose a kind to inspect its nodes and touching relationships.","viewer.lens.copy":"Copy link to semantic lens","viewer.lens.clear":"Clear semantic lens","viewer.lens.open":"Open semantic lens","viewer.lens.openActive":"Open active semantic lens","viewer.lens.legend":"Semantic legend","viewer.lens.legend.inspect.one":"Inspect {label}, {count} node","viewer.lens.legend.inspect.other":"Inspect {label}, {count} nodes","viewer.lens.kind.count.one":"{label}, {count} node","viewer.lens.kind.count.other":"{label}, {count} nodes","viewer.lens.compare.one":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} direct relationship","viewer.lens.compare.other":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} direct relationships","viewer.lens.single":"{nodes} · {relationships} · connected peers remain visible","viewer.lens.node.one":"{count} {label} node","viewer.lens.node.other":"{count} {label} nodes","viewer.lens.relationship.one":"{count} touching relationship","viewer.lens.relationship.other":"{count} touching relationships","viewer.radar.title":"Semantic radar","viewer.radar.building":"Building overview","viewer.radar.openFull":"Open full semantic radar","viewer.radar.open":"Open radar","viewer.radar.close":"Close semantic radar","viewer.radar.surface":"Diagram overview. Click a node to focus it, or use arrow keys to pan.","viewer.radar.click":"Click node","viewer.radar.drag":"Drag to pan","viewer.radar.space":"Semantic radar needs more MAP space.","viewer.radar.nodes":"Semantic diagram radar nodes","viewer.radar.focus":"Focus {label} from Semantic Radar","viewer.radar.status":"{count} nodes · {viewport}","viewer.radar.fullMap":"{count} nodes · full map","viewer.radar.compacted":"Radar compacted to avoid covering the Semantic Passport or MAP controls.","viewer.radar.cancelWaiting":"Cancel semantic radar waiting for more MAP space","viewer.radar.needsSpace":"Semantic radar needs more visible MAP space","viewer.radar.viewport.full":"full map","viewer.radar.viewport.width":"{percent}% width","viewer.radar.viewport.scale":"{percent}% viewport","viewer.nav.controls":"Diagram view controls","viewer.nav.route":"Trace a directed route","viewer.nav.route.title":"Trace route (R)","viewer.nav.route.short":"PATH","viewer.nav.radar":"Open semantic radar","viewer.nav.radar.title":"Semantic radar (M)","viewer.nav.radar.short":"MAP","viewer.nav.lens":"Open semantic lens","viewer.nav.lens.title":"Semantic lens (L)","viewer.nav.lens.short":"LENS","viewer.nav.find":"Find a node","viewer.nav.find.title":"Find a node (/)","viewer.nav.guide":"Open diagram guide","viewer.nav.guide.title":"Diagram guide (?)","viewer.nav.zoomOut":"Zoom out","viewer.nav.zoomOut.title":"Zoom out (-)","viewer.nav.reset":"Reset diagram view","viewer.nav.reset.title":"Reset view (0)","viewer.nav.read":"READ","viewer.nav.zoomIn":"Zoom in","viewer.nav.zoomIn.title":"Zoom in (+)","viewer.nav.camera":"{hint}. Reset diagram view","viewer.nav.camera.title":"{semantic}{hint} · reset view (0)","viewer.nav.camera.semantic":"Semantic camera active · ","viewer.nav.level.map":"MAP","viewer.nav.level.read":"READ","viewer.nav.level.full":"FULL","viewer.nav.level.auto":"AUTO","viewer.nav.detail.map":"Zoom in to reveal relationship labels and node context","viewer.nav.detail.read":"Zoom in again to reveal tags and annotations","viewer.nav.detail.full":"Full diagram detail","viewer.intent.summary":"{label}. {out} outgoing, {in} incoming{loops}. {total} connections. Press Enter for details.","viewer.intent.loops":", {count} self loop","viewer.common.copied":"Copied","viewer.common.copyFailed":"Copy failed","viewer.common.copyLink":"Copy link","viewer.common.clear":"Clear","viewer.common.close":"Close"}}</script>
+     <div class="guided-views no-print" id="guided-views" hidden aria-label="Guided diagram views">
+       <button id="guided-view-prev" type="button" aria-label="Previous guided view" title="Previous guided view ([)">&#8592;</button>
+@@ -5190,15 +5190,15 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
+         <text data-detail="context" x="447.5" y="179" class="t-muted" font-size="9" text-anchor="middle">Loopback /gather/*</text>
+         </g>
+ 
+-        <g id="node-fetch" data-node-id="fetch" data-node-label="Product requesters" tabindex="0" role="button" aria-label="Focus Product requesters, Fetch, parse, retry, Architecture component" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Fetch, parse, retry" data-node-context="Architecture component">
+-          <title>Product requesters · Fetch, parse, retry · Architecture component</title>
++        <g id="node-fetch" data-node-id="fetch" data-node-label="Product requesters" tabindex="0" role="button" aria-label="Focus Product requesters, KMA 00 / safe parsing, Architecture component" aria-pressed="false" data-node-kind="backend" data-node-sublabel="KMA 00 / safe parsing" data-node-context="Architecture component">
++          <title>Product requesters · KMA 00 / safe parsing · Architecture component</title>
+           <rect x="685" y="130" width="185" height="70" rx="6" class="c-mask"/>
+           <rect x="685" y="130" width="185" height="70" rx="6" class="c-backend" stroke-width="1.5"/>
+           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(691 136) scale(0.6875)">
+             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+           </g>
+           <text data-node-label="" data-detail-anchor="" x="777.5" y="163" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Product requesters</text>
+-        <text data-detail="context" x="777.5" y="179" class="t-muted" font-size="9" text-anchor="middle">Fetch, parse, retry</text>
++        <text data-detail="context" x="777.5" y="179" class="t-muted" font-size="9" text-anchor="middle">KMA 00 / safe parsing</text>
+         </g>
+ 
+         <g id="node-providers" data-node-id="providers" data-node-label="KMA / AirKorea" tabindex="0" role="button" aria-label="Focus KMA / AirKorea, RSS, APIs, pages, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="RSS, APIs, pages" data-node-context="Architecture component">
+@@ -5507,11 +5507,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
+       <div class="card">
+         <div class="card-header">
+           <div class="card-dot amber"></div>
+-          <h3>Scope</h3>
++          <h3>KMA compatibility (#2555)</h3>
+         </div>
+         <ul>
+-          <li>&bull; This view covers scheduled domestic ingestion; DSF is fetched on demand.</li>
+-          <li>&bull; Scraper upstream calls and auxiliary providers are detailed in weather-collection.md.</li>
++          <li>&bull; apis.data.go.kr over HTTP; operator must verify authorization.</li>
++          <li>&bull; PCP/SNO/TMP retain legacy fields; periods are not equivalent.</li>
+         </ul>
+       </div>
+     </div>
+diff --git a/docs/architecture/diagrams/weather-collection.json b/docs/architecture/diagrams/weather-collection.json
+index 76a3ad39..94309e9c 100644
+--- a/docs/architecture/diagrams/weather-collection.json
++++ b/docs/architecture/diagrams/weather-collection.json
+@@ -11,7 +11,7 @@
+     "title": "Weather collection and persistence",
+     "repository": {
+       "url": "https://github.com/WizardFactory/TodayWeather",
+-      "revision": "b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
++      "revision": "87b8855f308611a07897cd3a39c45fefb3088d77",
+       "provider": "github",
+       "link_mode": "local-only"
+     }
+@@ -59,7 +59,7 @@
+       "id": "fetch",
+       "type": "backend",
+       "label": "Product requesters",
+-      "sublabel": "Fetch, parse, retry",
++      "sublabel": "KMA 00 / safe parsing",
+       "pos": [
+         685,
+         130
+@@ -224,10 +224,10 @@
+     },
+     {
+       "dot": "amber",
+-      "title": "Scope",
++      "title": "KMA compatibility (#2555)",
+       "items": [
+-        "This view covers scheduled domestic ingestion; DSF is fetched on demand.",
+-        "Scraper upstream calls and auxiliary providers are detailed in weather-collection.md."
++        "apis.data.go.kr over HTTP; operator must verify authorization.",
++        "PCP/SNO/TMP retain legacy fields; periods are not equivalent."
+       ]
+     }
+   ]
+diff --git a/docs/architecture/weather-collection.md b/docs/architecture/weather-collection.md
+index 2cc3dbb7..9869b5c4 100644
+--- a/docs/architecture/weather-collection.md
++++ b/docs/architecture/weather-collection.md
+@@ -40,7 +40,7 @@ The health-day expression can reach 18 at UTC 09, but cannot reach 6 because add
+ 
+ 1. `/gather/current`, `/short`, and `/shortest` select a key and call the corresponding manager method with base offset `9`. Query-time helpers select product-specific base date/time; `town.getCoord()` supplies domestic grid coordinates.
+ 2. `_recursiveRequestData(..., 70, ...)` dispatches through `collectTownForecast.requestData()`, choosing a random key from the configured town forecast key list for each recursive pass.
+-3. The requester builds legacy KMA service URLs for current, shortest, short and medium-range products, performs HTTP with a 10-second per-request timeout, parses XML through `xml2js`, and maps category values into forecast records. The requester's own retry count defaults to zero when constructed without options; manager recursion is a separate retry layer.
++3. The requester builds `http://apis.data.go.kr` URLs for current, shortest, short and medium-range products, performs HTTP with a 10-second per-request timeout, accepts success code `00`, parses XML through `xml2js`, and maps category values into forecast records. Invalid/empty responses fail collection without logging service-key-bearing URLs. The requester's own retry count defaults to zero when constructed without options; manager recursion is a separate retry layer.
+ 4. `async.mapSeries` saves completed items via `getSaveFunc()`. Failed coordinates are retried using a decremented recursion count. Invalid temperature coordinates can be retried with an adjusted shortest publication time. Recursion uses zero-delay timers, not exponential backoff.
+ 5. `getSaveFunc()` routes current/shortest/short to v2 KMA controllers when `DB_DATA_VERSION === '2.0'`; with `DB_DATA_VERSION === '1.0'`, legacy `saveCurrent`, `saveShortest`, `saveShort` merge/update per-grid documents. Other values have no save branch or callback in these three wrappers; there is no generic fallback. Medium-range products use their own save functions. There is no transaction covering all weather products.
+ 6. Product-specific cleanup removes old KMA records. `_checkPubDate()` also supports skipping already-current products in callers that use it; the three whole-grid methods shown above directly invoke collection, so do not assume publication deduplication applies uniformly.
+@@ -49,6 +49,10 @@ Sources: [manager collection and save selection](../../server/controllers/contro
+ 
+ Legacy documents carry `pubDate=YYYYMMDDHHMM` and `date`/`time` values. Invalid measurements use field-specific sentinels such as `-50` temperature or `-1` missing values. Preserving invalid-value handling matters: treating a sentinel as a real observation changes merged forecasts and yesterday comparisons.
+ 
++## KMA source reconciliation and period limits
++
++[#2555 source reconciliation](gather-source-reconciliation.md) records the seven migrated paths, all appendix dispositions, inactive legacy-gather policy and operator deployment/rollback handoff. PCP/SNO/TMP map into the existing r06/s06/t3h schema with strict finite parsing and existing missing sentinels; RN1 zero stays zero. These field aliases **do not establish six-hour accumulation or three-hour cadence**. The existing 24h consumer still splits adjacent quantities; characterization tests expose this limitation rather than claiming period equivalence. No schedule, retry default, DB version or provider authorization changes here.
++
+ ## Scraping and auxiliary products
+ 
+ `startScrape()` runs in `scrape` or `local`, pushes initial minute, hourly and special-weather jobs into the same task array, installs a 60-second timer and calls `task()` itself. Thereafter minute observations enqueue on even minutes, special-weather situations on minutes divisible by 3, and hourly station observations at minutes 4, 6, 9 and 15. Scraper callbacks recognize `'skip'` for already-updated observations. In `local`, both startup methods call `task()`, so two drain loops share one array.
+diff --git a/server/lib/collectTownForecast.js b/server/lib/collectTownForecast.js
+index eb9e2a57..07e05e64 100644
+--- a/server/lib/collectTownForecast.js
++++ b/server/lib/collectTownForecast.js
+@@ -41,7 +41,7 @@ var dnscache = require('dnscache')({
+ function CollectData(options, callback){
+     var self = this;
+ 
+-    var NEWSKY2_KMA_GO_DOMAIN = "newsky2.kma.go.kr";
++    var KMA_API_DOMAIN = "apis.data.go.kr";
+ 
+     self.listPointNumber = Object.freeze(
+         [
+@@ -140,13 +140,13 @@ function CollectData(options, callback){
+     });
+ 
+     self.DATA_URL = Object.freeze({
+-        TOWN_CURRENT: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastGrib',
+-        TOWN_SHORTEST: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastTimeData',
+-        TOWN_SHORT: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastSpaceData',
+-        MID_FORECAST: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleForecast',
+-        MID_LAND: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleLandWeather',
+-        MID_TEMP: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleTemperature',
+-        MID_SEA: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleSeaWeather'
++        TOWN_CURRENT: 'http://'+KMA_API_DOMAIN+'/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst',
++        TOWN_SHORTEST: 'http://'+KMA_API_DOMAIN+'/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst',
++        TOWN_SHORT: 'http://'+KMA_API_DOMAIN+'/1360000/VilageFcstInfoService_2.0/getVilageFcst',
++        MID_FORECAST: 'http://'+KMA_API_DOMAIN+'/1360000/MidFcstInfoService/getMidFcst',
++        MID_LAND: 'http://'+KMA_API_DOMAIN+'/1360000/MidFcstInfoService/getMidLandFcst',
++        MID_TEMP: 'http://'+KMA_API_DOMAIN+'/1360000/MidFcstInfoService/getMidTa',
++        MID_SEA: 'http://'+KMA_API_DOMAIN+'/1360000/MidFcstInfoService/getMidSeaFcst'
+     });
+ 
+     events.EventEmitter.call(this);
+@@ -194,7 +194,7 @@ function CollectData(options, callback){
+             self.recvFailed = true;
+             self.receivedCount++;
+ 
+-            log.debug('will retry this: ', listIndex, 'URL : ', self.resultList[listIndex].url);
++            log.debug('Collection failed at index', listIndex);
+ 
+             if(self.receivedCount === self.listCount){
+                 self.emit('dataCompleted');
+@@ -314,123 +314,120 @@ CollectData.prototype.resetResult = function(){
+ * */
+ CollectData.prototype.getData = function(index, dataType, url, options, callback){
+     var self = this;
+-    var meta = {};
+-
+-    meta.method = 'getData';
+-    meta.index = index;
+-    meta.url = url;
+-
+-    //log.info(meta);
+-    //log.info('url[', index, ']: ', self.resultList[index].url);
++    // Only locally constructed metadata may enter diagnostics. Transport/parser
++    // errors and provider messages can echo the service-key-bearing request URL.
++    var meta = {method: 'getData', index: index, dataType: dataType};
++    function fail(reason) {
++        var error = new Error(reason);
++        log.warn(reason, meta);
++        self.emit('recvFail', index);
++        if (callback) {
++            callback(error, index);
++        }
++    }
+ 
+     req.get(url, {timeout: 1000*10}, function(err, response, body){
+-        if(err) {
+-            if (err.code === "ETIMEDOUT" || err.code === "ESOCKETTIMEDOUT" || err.code === "ECONNRESET") {
+-                log.debug(err);
+-            }
+-            else {
+-                log.warn(`err.code=${err.code}`);
+-            }
+-            //log.error('#', meta);
+-
+-            self.emit('recvFail', index);
+-            if(callback){
+-                callback(err, index);
+-            }
+-            return;
++        if (err) {
++            return fail('KMA transport failure');
+         }
+-        var statusCode = response.statusCode;
+-
+-        if(statusCode === 404 || statusCode === 403){
+-            //log.error('ERROR!!! StatusCode : ', statusCode);
+-            //log.error('#', meta);
+-
+-            log.debug('ERROR!!! StatusCode : ', statusCode);
+-            self.emit('recvFail', index);
+-            if(callback){
+-                callback(err, index);
+-            }
+-            return;
++        if (!response || !(response.statusCode >= 200 && response.statusCode < 300)) {
++            return fail('KMA HTTP failure');
+         }
+-
+-        //log.info(body);
+         xml2json(body, function(err, result){
++            var envelope = result && result.response;
++            var header = envelope && envelope.header && envelope.header[0];
++            var payload = envelope && envelope.body && envelope.body[0];
++            var count = payload && payload.totalCount && payload.totalCount[0];
++            var items = payload && payload.items && payload.items[0] && payload.items[0].item;
++            if (err || !header || !header.resultCode || header.resultCode[0] !== '00' ||
++                !/^[0-9]+$/.test(count) || !isFinite(Number(count)) || Number(count) <= 0 ||
++                !Array.isArray(items) || items.length === 0 || items.some(function (item) {
++                    return !item || typeof item !== 'object' || Array.isArray(item);
++                })) {
++                return fail('KMA invalid or empty response');
++            }
++            var organized;
+             try {
+-                /*
+-                * I want to show you the data structure on the result.
+-                * If you want to know this, turn off comment below.
+-                */
+-                 //log.info(result);
+-                 //log.info('> ', result.response);
+-                 //log.info(result.response.header[0]);
+-                 //log.info(result.response.header[0].resultCode[0]);
+-                 //log.info(result.response.body[0]);
+-                 //log.info(result.response.body[0].totalCount[0]);
+-                var resultCode = '';
+-                var resultMsg = '';
+-                if (result.response.header &&
+-                    result.response.header[0] &&
+-                    result.response.header[0].resultCode)
+-                {
+-                    resultCode = result.response.header[0].resultCode[0];
+-                    resultMsg = result.response.header[0].resultMsg[0];
++                switch(dataType) {
++                    case self.DATA_TYPE.TOWN_CURRENT:
++                        organized = self.organizeCurrentData(index, result);
++                        break;
++                    case self.DATA_TYPE.TOWN_SHORTEST:
++                        organized = self.organizeShortestData(index, result);
++                        break;
++                    case self.DATA_TYPE.TOWN_SHORT:
++                        organized = self.organizeShortData(index, result);
++                        break;
++                    case self.DATA_TYPE.MID_FORECAST:
++                        organized = self.organizeForecastData(index, result, options);
++                        break;
++                    case self.DATA_TYPE.MID_LAND:
++                        organized = self.organizeLandData(index, result, options);
++                        break;
++                    case self.DATA_TYPE.MID_TEMP:
++                        organized = self.organizeTempData(index, result, options);
++                        break;
++                    case self.DATA_TYPE.MID_SEA:
++                        organized = self.organizeSeaData(index, result, options);
++                        break;
++                    default:
++                        return fail('KMA unknown data type');
+                 }
++            }
++            catch(e) {
++                return fail('KMA response organization failed');
++            }
++            if (callback) {
++                callback(organized === true ? null : new Error('KMA response organization failed'), index,
++                    organized === true ? result : undefined);
++            }
++        });
++    });
++};
+ 
+-                var totalCount = '';
+-                if (result.response.body &&
+-                    result.response.body[0] &&
+-                    result.response.body[0].totalCount)
+-                {
+-                    totalCount = result.response.body[0].totalCount[0];
+-                }
++// Complete decimal values only: ranges/thresholds must not become exact amounts.
++function parseMeasurement(value, missing, unit, noValue) {
++    if (typeof value !== 'string' && typeof value !== 'number') {
++        return missing;
++    }
++    var text = String(value).trim();
++    if (noValue && text === noValue) {
++        return 0;
++    }
++    if (unit && text.slice(-unit.length) === unit) {
++        text = text.slice(0, -unit.length).trim();
++    }
++    if (!/^[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)$/.test(text)) {
++        return missing;
++    }
++    var number = Number(text);
++    return isFinite(number) && (!unit || number >= 0) ? number : missing;
++}
+ 
+-                if(err || (resultCode !== '0000') || (totalCount === '0')) {
+-                    //there is error code or total count is zero as no valid data.
+-                    //resultCode is 22, LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR.
+-                    log.warn(JSON.stringify({resultCode, resultMsg, totalCount}), meta);
+-                    self.emit('recvFail', index);
+-                }
+-                else{
+-                    switch(dataType) {
+-                        case self.DATA_TYPE.TOWN_CURRENT:
+-                            self.organizeCurrentData(index, result);
+-                            break;
+-                        case self.DATA_TYPE.TOWN_SHORTEST:
+-                            self.organizeShortestData(index, result);
+-                            break;
+-                        case self.DATA_TYPE.TOWN_SHORT:
+-                            self.organizeShortData(index, result);
+-                            break;
+-                        case self.DATA_TYPE.MID_FORECAST:
+-                            self.organizeForecastData(index, result, options);
+-                            break;
+-                        case self.DATA_TYPE.MID_LAND:
+-                            self.organizeLandData(index, result, options);
+-                            break;
+-                        case self.DATA_TYPE.MID_TEMP:
+-                            self.organizeTempData(index, result, options);
+-                            break;
+-                        case self.DATA_TYPE.MID_SEA:
+-                            self.organizeSeaData(index, result, options);
+-                            break;
+-                        default:
+-                            log.error('can not organize data as it is unknown data type');
+-                            break;
+-                    }
+-                }
+-            }
+-            catch(e){
+-                e.message += ' ' + JSON.stringify(meta);
+-                log.error(e);
+-                self.emit('recvFail', index);
++// An empty batch or non-finite measurement must never mark collection complete.
++CollectData.prototype._emitOrganizedData = function (index, records, required) {
++    var invalid = !records.length || records.some(function (record) {
++        for (var key in record) {
++            if (key.slice(0, 2) === 'wf' &&
++                (typeof record[key] !== 'string' || !record[key].trim())) {
++                return true;
+             }
+-            finally{
+-                if(callback){
+-                    callback(err, index, result);
+-                }
++            if (typeof record[key] === 'number' && !isFinite(record[key])) {
++                return true;
+             }
++        }
++        return required && required.some(function (field) {
++            return typeof record[field.name] !== 'number' ||
++                record[field.name] === field.missing || record[field.name] < field.min;
+         });
+     });
++    if (invalid) {
++        log.warn('KMA empty or invalid organized data', {index: index});
++        this.emit('recvFail', index);
++        return false;
++    }
++    this.emit('recvData', index, records);
++    return true;
+ };
+ 
+ CollectData.prototype._createOrFindResult = function(list, template, date, time) {
+@@ -468,7 +465,7 @@ CollectData.prototype.organizeShortData = function(index, listData){
+ 
+     try{
+         if (listData.response.body[0].totalCount[0] === '0') {
+-            log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
++            log.error('There are no data', {index: index});
+             self.emit('recvFail', index);
+             return;
+         }
+@@ -531,6 +528,18 @@ CollectData.prototype.organizeShortData = function(index, listData){
+                 else if(item.category[0] === 'WAV') {result.wav = parseFloat(item.fcstValue[0]);}
+                 else if(item.category[0] === 'VEC') {result.vec = parseFloat(item.fcstValue[0]);}
+                 else if(item.category[0] === 'WSD') {result.wsd = parseFloat(item.fcstValue[0]);}
++                // Provisional field compatibility only: PCP/SNO are hourly, and
++                // TMP is not proof of the legacy three-hour temperature cadence.
++                // Do not infer six-hour totals from the retained r06/s06 names.
++                else if(item.category[0] === 'PCP') {
++                    result.r06 = parseMeasurement(item.fcstValue[0], -1, 'mm', '강수없음');
++                }
++                else if(item.category[0] === 'SNO') {
++                    result.s06 = parseMeasurement(item.fcstValue[0], -1, 'cm', '적설없음');
++                }
++                else if(item.category[0] === 'TMP') {
++                    result.t3h = parseMeasurement(item.fcstValue[0], -50);
++                }
+                 else{
+                     log.error(new Error('Known property', item.category[0]));
+                 }
+@@ -540,19 +549,19 @@ CollectData.prototype.organizeShortData = function(index, listData){
+         var data = listResult[0];
+         if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
+             data.t3h === template.t3h) {
+-            log.error('Fail get full short data -'+JSON.stringify(data));
++            log.error('Fail get full short data -', {index: index});
+             self.emit('recvFail', index);
+             return;
+         }
+         //TW-401
+         if (data.pty < 0 || data.sky < 0 || data.t3h < -100 || data.reh < 0) {
+-            log.error('Fail get full short data -'+JSON.stringify(data));
++            log.error('Fail get full short data -', {index: index});
+             self.emit('recvFail', index);
+             return;
+         }
+         if (data.uuu === template.uuu || data.vvv === template.vvv || data.vec === template.vec ||
+             data.wsd === template.wsd) {
+-            log.warn('Fail get full short data -'+JSON.stringify(data));
++            log.warn('Fail get full short data -', {index: index});
+         }
+ 
+         listResult.sort(self._sortByDateTime);
+@@ -562,7 +571,10 @@ CollectData.prototype.organizeShortData = function(index, listData){
+         //    log.info(listResult[i]);
+         //}
+ 
+-        self.emit('recvData', index, listResult);
++        return self._emitOrganizedData(index, listResult, [
++            {name: 'sky', missing: -1, min: 0}, {name: 'reh', missing: -1, min: 0},
++            {name: 'pty', missing: -1, min: 0}, {name: 't3h', missing: -50, min: -100}
++        ]);
+     }
+     catch(e){
+         log.error('Error!! organizeShortData : failed data organized');
+@@ -595,7 +607,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
+ 
+     try{
+         if (listData.response.body[0].totalCount[0] === '0') {
+-            log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
++            log.error('There are no data', {index: index});
+             self.emit('recvFail', index);
+             return;
+         }
+@@ -620,13 +632,16 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
+                 result.mx = parseInt(item.nx[0]);
+                 result.my = parseInt(item.ny[0]);
+ 
+-                var val = parseFloat(item.fcstValue[0]);
++                var value = item.fcstValue && item.fcstValue[0];
++                var val = parseFloat(value);
+                 //if (val < 0) {
+                 //    log.error('organize Shortest Get invalid data '+ item.category[0]+ ' result'+ JSON.stringify(result));
+                 //}
+ 
+                 if(item.category[0] === 'PTY') {result.pty = val;}
+-                else if(item.category[0] === 'RN1') {result.rn1 = val;}
++                else if(item.category[0] === 'RN1') {
++                    result.rn1 = parseMeasurement(value, -1, 'mm', '강수없음');
++                }
+                 else if(item.category[0] === 'SKY') {result.sky = val;}
+                 else if(item.category[0] === 'LGT') {result.lgt = val;}
+                 else if(item.category[0] === 'T1H') {result.t1h = val;}
+@@ -636,7 +651,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
+                 else if(item.category[0] === 'VEC') {result.vec = val;}
+                 else if(item.category[0] === 'WSD') {result.wsd = val;}
+                 else{
+-                    log.error(new Error('Known property '+item.category[0]));
++                    log.error('Unknown shortest category');
+                 }
+             }
+         }
+@@ -644,19 +659,19 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
+         var data = listResult[0];
+         if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
+             data.t1h === template.t1h) {
+-            log.error('Fail get full shortest data -'+JSON.stringify(data));
++            log.error('Fail get full shortest data -', {index: index});
+             self.emit('recvFail', index);
+             return;
+         }
+         //TW-401
+         if (data.pty < 0 || data.sky < 0 || data.t1h < -100 || data.reh < 0) {
+-            log.error('Fail get full shortest data -'+JSON.stringify(data));
++            log.error('Fail get full shortest data -', {index: index});
+             self.emit('recvFail', index);
+             return;
+         }
+         if (data.uuu === template.uuu || data.vvv === template.vvv || data.lgt === template.lgt ||
+             data.vec === template.vec || data.wsd === template.wsd) {
+-            log.warn('Fail get full shortest data -'+JSON.stringify(data));
++            log.warn('Fail get full shortest data -', {index: index});
+         }
+ 
+         listResult.sort(self._sortByDateTime);
+@@ -666,10 +681,13 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
+         //    log.silly(listResult[i]);
+         //}
+ 
+-        self.emit('recvData', index, listResult);
++        return self._emitOrganizedData(index, listResult, [
++            {name: 'sky', missing: -1, min: 0}, {name: 'reh', missing: -1, min: 0},
++            {name: 'pty', missing: -1, min: 0}, {name: 't1h', missing: -50, min: -100}
++        ]);
+     }
+     catch(e){
+-        log.error(e);
++        log.error('KMA collection operation failed');
+         self.emit('recvFail', index);
+     }
+ };
+@@ -711,7 +729,6 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
+                         (item.baseTime === undefined) &&
+                         (item.obsrValue === undefined))
+             {
+-                log.silly(item);
+                 log.error('organizeCurrentData : There is not forecast date');
+                 continue;
+             }
+@@ -736,7 +753,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
+                 else if(item.category[0] === 'VEC') {result.vec = parseFloat(item.obsrValue[0]);}
+                 else if(item.category[0] === 'WSD') {result.wsd = parseFloat(item.obsrValue[0]);}
+                 else{
+-                    log.error('organizeCurrentData : Known property', item.category[0]);
++                    log.error('Unknown current category');
+                 }
+             }
+         }
+@@ -744,37 +761,37 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
+         //check data complete
+         result = listResult[0];
+         if (result.rn1 === template.rn1 || result.pty === template.pty || result.t1h === template.t1h) {
+-            log.error('Fail get full current data -'+JSON.stringify(result));
++            log.error('Fail get full current data -', {index: index});
+             self.emit('recvFail', index);
+             return;
+         }
+ 
+         //TW-401
+         if (result.t1h < -100) {
+-            log.error('Fail get full current data -'+JSON.stringify(result));
++            log.error('Fail get full current data -', {index: index});
+             self.emit('recvFail', index);
+             return;
+         }
+ 
+         if (result.pty < 0) {
+-            log.warn('Fail get pty of current data -'+JSON.stringify(result));
++            log.warn('Fail get pty of current data -', {index: index});
+             delete result.pty;
+         }
+ 
+         if (result.rn1 < 0) {
+-            log.warn('Fail get rn1 of current data -'+JSON.stringify(result));
++            log.warn('Fail get rn1 of current data -', {index: index});
+             delete result.rn1;
+         }
+ 
+         if (result.reh < 0) {
+-            log.warn('Fail get reh of current data -'+JSON.stringify(result));
++            log.warn('Fail get reh of current data -', {index: index});
+             delete result.reh;
+         }
+ 
+         if (result.uuu === template.uuu || result.vvv === template.vvv ||
+             result.vec === template.vec || result.wsd === template.wsd)
+         {
+-            log.warn('Fail get full current data -'+JSON.stringify(result));
++            log.warn('Fail get full current data -', {index: index});
+         }
+ 
+         //log.info('result count : ', listResult.length);
+@@ -782,11 +799,11 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
+         //    log.info(listResult[i]);
+         //}
+ 
+-        self.emit('recvData', index, listResult);
++        return self._emitOrganizedData(index, listResult);
+     }
+     catch(e){
+         log.error('Error!! organizeCurrentData : failed data organized');
+-        log.error(e);
++        log.error('KMA collection operation failed');
+         self.emit('recvFail', index);
+     }
+ };
+@@ -814,15 +831,12 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
+         for(i=0 ; i < listItem.length ; i++){
+             var item = listItem[i];
+             //log.info(item);
+-            if(item.wfSv === undefined){
+-                log.silly(item);
+-                log.error('organizeForecastData : There is not forecast date');
+-                continue;
++            if (!item.wfSv || typeof item.wfSv[0] !== 'string' || !item.wfSv[0].trim()) {
++                throw new Error('Missing mid forecast text');
+             }
+-            result = template;
++            result = Object.assign({}, template);
+             result.wfsv = item.wfSv[0];
+-            var insertItem = JSON.parse(JSON.stringify(result));
+-            listResult.push(insertItem);
++            listResult.push(result);
+         }
+ 
+         //log.info('result count : ', listResult.length);
+@@ -830,7 +844,7 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
+         //    log.info(listResult[i]);
+         //}
+ 
+-        self.emit('recvData', index, listResult);
++        return self._emitOrganizedData(index, listResult);
+     }
+     catch(e){
+         log.error('Error!! organizeForecastData : failed data organized');
+@@ -870,12 +884,11 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
+         };
+ 
+         listItem.forEach(function(item){
+-            if(item.regId === undefined){
+-                log.error('There is no data');
+-                return;
++            if (!item.regId || typeof item.regId[0] !== 'string' || !item.regId[0].trim()) {
++                throw new Error('Missing mid region');
+             }
+ 
+-            result = template;
++            result = Object.assign({}, template);
+             result.regId = item.regId[0];
+             result.wf3Am = item.wf3Am[0];
+             result.wf3Pm = item.wf3Pm[0];
+@@ -891,8 +904,7 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
+             result.wf9 = item.wf9[0];
+             result.wf10 = item.wf10[0];
+ 
+-            var insertItem = JSON.parse(JSON.stringify(result));
+-            listResult.push(insertItem);
++            listResult.push(result);
+         });
+ 
+ 
+@@ -901,7 +913,7 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
+         //    log.info(listResult[i]);
+         //}
+ 
+-        self.emit('recvData', index, listResult);
++        return self._emitOrganizedData(index, listResult);
+     }
+     catch(e){
+         log.error('Error!! organizeLandData : failed data organized');
+@@ -951,22 +963,23 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
+         });
+ 
+         listItem.forEach(function(item){
+-            if(item.regId === undefined){
+-                log.error('There is no data');
+-                return;
++            if (!item.regId || typeof item.regId[0] !== 'string' || !item.regId[0].trim()) {
++                throw new Error('Missing mid region');
+             }
+ 
+-            result = template;
++            result = Object.assign({}, template);
+             result.regId = item.regId[0];
+ 
+             itemNameList.forEach(function (name) {
+                 if(item[name] && item[name][0]) {
+-                    result[name] = parseFloat(item[name][0]);
++                    result[name] = parseMeasurement(item[name][0], -100);
+                 }
+             });
+ 
+-            var insertItem = JSON.parse(JSON.stringify(result));
+-            listResult.push(insertItem);
++            if (!itemNameList.some(function (name) { return result[name] !== -100; })) {
++                throw new Error('Missing mid temperatures');
++            }
++            listResult.push(result);
+         });
+ 
+ 
+@@ -975,11 +988,11 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
+         //    log.info(listResult[i]);
+         //}
+ 
+-        self.emit('recvData', index, listResult);
++        return self._emitOrganizedData(index, listResult);
+     }
+     catch(e){
+         log.error('Error!! organizeTempData : failed data organized');
+-        log.error(e);
++        log.error('KMA collection operation failed');
+         self.emit('recvFail', index);
+     }
+ };
+@@ -1042,12 +1055,11 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
+         };
+ 
+         listItem.forEach(function(item){
+-            if(item.regId === undefined){
+-                log.error('There is no data');
+-                return;
++            if (!item.regId || typeof item.regId[0] !== 'string' || !item.regId[0].trim()) {
++                throw new Error('Missing mid region');
+             }
+ 
+-            result = template;
++            result = Object.assign({}, template);
+             result.regId = item.regId[0];
+             result.wf3Am = item.wf3Am[0];
+             result.wf3Pm = item.wf3Pm[0];
+@@ -1090,8 +1102,7 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
+             result.wh10A = parseFloat(item.wh10A[0]);
+             result.wh10B = parseFloat(item.wh10B[0]);
+ 
+-            var insertItem = JSON.parse(JSON.stringify(result));
+-            listResult.push(insertItem);
++            listResult.push(result);
+         });
+ 
+         //log.info('result count : ', listResult.length);
+@@ -1099,7 +1110,7 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
+         //    log.info(listResult[i]);
+         //}
+ 
+-        self.emit('recvData', index, listResult);
++        return self._emitOrganizedData(index, listResult);
+     }
+     catch(e){
+         log.error('Error!! organizeSeaData : failed data organized');
+@@ -1162,7 +1173,7 @@ CollectData.prototype.requestDataByBaseTimeList = function (src, dataType, key,
+             callback(e);
+         }
+         else if (e) {
+-            log.error(e);
++            log.error('KMA collection operation failed');
+         }
+     }
+     return this;
+@@ -1174,7 +1185,6 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
+ 
+     meta.method = 'requestData';
+     meta.dataType = dataType;
+-    meta.key = key;
+     meta.date = date;
+     meta.time = time;
+ 
+@@ -1208,8 +1218,7 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
+             catch (e) {
+                 //callback 안에서 error가 발생하면 이쪽으로 타기 때문에 여기서 error를 callback으로 넘지면 안됨
+                 log.error("requestData : ERROR !!! in event dataCompleted");
+-                e.message += ' ' + JSON.stringify(meta);
+-                log.error(e);
++                log.error('Collection callback failed', meta);
+             }
+         });
+     }
+@@ -1240,8 +1249,7 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
+             callback(e);
+         }
+         else {
+-            e.message += ' ' + JSON.stringify(meta);
+-            log.error(e);
++            log.error('Collection request failed', meta);
+         }
+     }
+ 
+
+diff --git a/server/test/offline/harness.js b/server/test/offline/harness.js
+new file mode 100644
+index 00000000..56583686
+--- /dev/null
++++ b/server/test/offline/harness.js
+@@ -0,0 +1,60 @@
++'use strict';
++// Execute the real CommonJS module in isolation; every dependency is explicit.
++// No production config, DNS cache, timers, application startup or network loads.
++var fs = require('fs');
++var path = require('path');
++var vm = require('vm');
++var util = require('util');
++exports.load = function (relative, dependencies, globals) {
++    var filename = path.resolve(__dirname, '../..', relative);
++    var sandbox = Object.assign({module: {exports: {}}, exports: {},
++        require: function (name) {
++            if (!Object.prototype.hasOwnProperty.call(dependencies, name)) {
++                throw new Error('Unstubbed dependency: ' + name);
++            }
++            return dependencies[name];
++        },
++        setTimeout: function () { throw new Error('Unexpected timer'); },
++        setInterval: function () { throw new Error('Unexpected interval'); }
++    }, globals);
++    vm.runInNewContext(fs.readFileSync(filename, 'utf8'), sandbox, {filename: filename});
++    return sandbox.module.exports;
++};
++exports.logger = function (lines) {
++    var log = {};
++    ['debug', 'info', 'warn', 'error', 'verbose', 'silly'].forEach(function (level) {
++        log[level] = function () { lines.push(util.format.apply(util, arguments)); };
++    });
++    return log;
++};
++exports.collector = function (request, logs) {
++    var Collector = exports.load('lib/collectTownForecast.js', {
++        events: require('events'), request: request || {get: function () { throw new Error('Unexpected HTTP'); }},
++        xml2js: require('xml2js'), dnscache: function () {}
++    }, {log: exports.logger(logs || [])});
++    return new Collector();
++};
++exports.prepare = function (collector, count) {
++    collector.listCount = count || 1;
++    collector.resetResult();
++    return collector;
++};
++exports.item = function (category, value, time) {
++    return {baseDate: ['20260924'], baseTime: ['0800'], fcstDate: ['20260924'],
++        fcstTime: [time || '0900'], nx: ['60'], ny: ['127'], category: [category], fcstValue: [String(value)]};
++};
++exports.shortItems = function (overrides, time) {
++    var fields = Object.assign({TMP: '12.5', PCP: '강수없음', SNO: '적설없음', SKY: '1',
++        REH: '60', PTY: '0', POP: '0', UUU: '0', VVV: '0', VEC: '0', WSD: '0'}, overrides);
++    return Object.keys(fields).map(function (key) { return exports.item(key, fields[key], time); });
++};
++exports.response = function (items) {
++    return {response: {header: [{resultCode: ['00'], resultMsg: ['NORMAL_SERVICE']}],
++        body: [{totalCount: [String(items.length)], items: [{item: items}]}]}};
++};
++exports.xml = function (response) { return new (require('xml2js').Builder)().buildObject(response); };
++exports.organize = function (kind, items) {
++    var c = exports.prepare(exports.collector());
++    c[kind](0, exports.response(items));
++    return c.resultList[0];
++};
+
+diff --git a/server/test/offline/gather-code-drift.test.js b/server/test/offline/gather-code-drift.test.js
+new file mode 100644
+index 00000000..138af38c
+--- /dev/null
++++ b/server/test/offline/gather-code-drift.test.js
+@@ -0,0 +1,315 @@
++'use strict';
++// All provider data in this suite is SYNTHETIC, not a captured live response.
++var assert = require('assert');
++var fs = require('fs');
++var path = require('path');
++var h = require('./harness');
++var KEY = 'OFFLINE_ONLY_SERVICE_KEY_2555';
++var routes = {
++    TOWN_CURRENT: ['VilageFcstInfoService_2.0/getUltraSrtNcst', 'organizeCurrentData'],
++    TOWN_SHORTEST: ['VilageFcstInfoService_2.0/getUltraSrtFcst', 'organizeShortestData'],
++    TOWN_SHORT: ['VilageFcstInfoService_2.0/getVilageFcst', 'organizeShortData'],
++    MID_FORECAST: ['MidFcstInfoService/getMidFcst', 'organizeForecastData'],
++    MID_LAND: ['MidFcstInfoService/getMidLandFcst', 'organizeLandData'],
++    MID_TEMP: ['MidFcstInfoService/getMidTa', 'organizeTempData'],
++    MID_SEA: ['MidFcstInfoService/getMidSeaFcst', 'organizeSeaData']
++};
++function source(file) { return fs.readFileSync(path.resolve(__dirname, '../..', file), 'utf8'); }
++function receive(body, status, error, done) {
++    var logs = [];
++    var c = h.prepare(h.collector({get: function (url, options, cb) {
++        cb(error, status === null ? undefined : {statusCode: status || 200}, body);
++    }}, logs));
++    var type = c.DATA_TYPE.TOWN_SHORT;
++    var url = c.getUrl(type, KEY, '20260924', '0800', {mx: 60, my: 127});
++    c.resultList[0].url = url;
++    var count = 0;
++    c.getData(0, type, url, {}, function (err) { count++; done(err, c, logs); });
++    assert.strictEqual(count, 1, 'exactly one completion callback');
++}
++describe('gather drift: synthetic offline compatibility', function () {
++    Object.keys(routes).forEach(function (name) {
++        it('builds migrated ' + name + ' URL without HTTP', function () {
++            var c = h.collector();
++            var u = new URL(c.getUrl(c.DATA_TYPE[name], KEY, '20260924', '0600', {mx: 60, my: 127, code: '11B00000'}));
++            assert.strictEqual(u.origin + u.pathname, 'http://apis.data.go.kr/1360000/' + routes[name][0]);
++            assert.strictEqual(u.searchParams.get('serviceKey'), KEY);
++            if (name.indexOf('TOWN_') === 0) {
++                assert.strictEqual(u.searchParams.get('base_date'), '20260924');
++                assert.strictEqual(u.searchParams.get('base_time'), '0600');
++                assert.strictEqual(u.searchParams.get('nx'), '60');
++                assert.strictEqual(u.searchParams.get('ny'), '127');
++            } else {
++                assert.strictEqual(u.searchParams.get('tmFc'), '202609240600');
++                assert.strictEqual(u.searchParams.get(name === 'MID_FORECAST' ? 'stnId' : 'regId'), '11B00000');
++            }
++        });
++        it('dispatches 00 to ' + routes[name][1], function () {
++            var called = 0;
++            var c = h.prepare(h.collector({get: function (url, options, cb) {
++                cb(null, {statusCode: 200}, h.xml(h.response(h.shortItems())));
++            }}));
++            Object.keys(routes).forEach(function (other) { c[routes[other][1]] = function () {
++                assert.strictEqual(other, name); called++;
++            }; });
++            c.getData(0, c.DATA_TYPE[name], 'http://offline.invalid/?serviceKey=' + KEY, {});
++            assert.strictEqual(called, 1);
++        });
++    });
++    var invalid = {
++        'non-success': function (r) { r.response.header[0].resultCode = ['22']; },
++        'legacy success': function (r) { r.response.header[0].resultCode = ['0000']; },
++        'zero count': function (r) { r.response.body[0].totalCount = ['0']; },
++        'bad count': function (r) { r.response.body[0].totalCount = ['2oops']; },
++        'missing count': function (r) { delete r.response.body[0].totalCount; },
++        'empty items': function (r) { r.response.body[0].items = [{}]; },
++        'missing header': function (r) { delete r.response.header; },
++        'missing envelope': function (r) { delete r.response; r.other = 'no data'; }
++    };
++    Object.keys(invalid).forEach(function (name) {
++        it('fails safely on ' + name, function () {
++            var r = h.response(h.shortItems()); invalid[name](r);
++            receive(h.xml(r), 200, null, function (err, c, logs) {
++                assert(err, 'failure callback must carry an error');
++                assert.strictEqual(c.recvFailed, true);
++                assert.strictEqual(c.resultList[0].isCompleted, false);
++                assert(!logs.join('\n').includes(KEY));
++                assert(!logs.join('\n').includes('serviceKey='));
++            });
++        });
++    });
++    it('fails safely on malformed XML without reflecting raw text', function () {
++        receive('<response><' + KEY, 200, null, function (err, c, logs) {
++            assert(err); assert(c.recvFailed); assert(!logs.join('\n').includes(KEY));
++        });
++    });
++    [403, 404, 500, 302, null].forEach(function (status) {
++        it('rejects HTTP status/response ' + status, function () {
++            receive(h.xml(h.response(h.shortItems())), status, null, function (err, c) {
++                assert(err); assert(c.recvFailed); assert(!c.resultList[0].isCompleted);
++            });
++        });
++    });
++    it('does not log transport errors containing the request URL', function () {
++        var error = new Error('http://offline.invalid/?serviceKey=' + KEY); error.code = 'ETIMEDOUT';
++        receive('', 200, error, function (err, c, logs) {
++            assert(err); assert(c.recvFailed); assert(!logs.join('\n').includes(KEY));
++        });
++    });
++    it('maps the specified short fixture and publication/grid fields', function () {
++        var r = h.organize('organizeShortData', h.shortItems()); assert(r.isCompleted);
++        var v = r.data[0];
++        Object.keys({t3h: 12.5, r06: 0, s06: 0, sky: 1, reh: 60, pty: 0, date: '20260924', time: '0900', pubDate: '202609240800', mx: 60, my: 127}).forEach(function (key) {
++            var expected = {t3h: 12.5, r06: 0, s06: 0, sky: 1, reh: 60, pty: 0, date: '20260924', time: '0900', pubDate: '202609240800', mx: 60, my: 127};
++            assert.strictEqual(v[key], expected[key], key);
++        });
++    });
++    [['1.5', '0.5'], [' 1.5 mm ', '0.5cm']].forEach(function (values) {
++        it('parses complete quantities ' + values.join('/'), function () {
++            var v = h.organize('organizeShortData', h.shortItems({PCP: values[0], SNO: values[1]})).data[0];
++            assert.strictEqual(v.r06, 1.5); assert.strictEqual(v.s06, 0.5);
++        });
++    });
++    ['', ' ', 'unknown', '1~4', '1.0mm 미만', '50mm 이상', 'Infinity', 'NaN', '-1', '-999', '1e999', '1.2junk'].forEach(function (value) {
++        it('keeps unsupported precipitation missing: ' + JSON.stringify(value), function () {
++            var v = h.organize('organizeShortData', h.shortItems({PCP: value, SNO: value})).data[0];
++            assert.strictEqual(v.r06, -1); assert.strictEqual(v.s06, -1);
++        });
++    });
++    it('retains legacy categories and forecast grouping', function () {
++        var items = h.shortItems().filter(function (v) { return !['TMP', 'PCP', 'SNO'].includes(v.category[0]); });
++        items = items.concat([h.item('T3H', '-2.5'), h.item('R06', '3'), h.item('S06', '2'), h.item('TMN', '-4'), h.item('TMX', '8'), h.item('WAV', '1')]);
++        var r = h.organize('organizeShortData', h.shortItems({}, '1200').concat(items));
++        assert(r.isCompleted); assert.strictEqual(r.data.length, 2);
++        assert.strictEqual(r.data[0].time, '0900'); assert.strictEqual(r.data[0].t3h, -2.5);
++        assert.strictEqual(r.data[0].r06, 3); assert.strictEqual(r.data[0].s06, 2);
++        assert.strictEqual(r.data[0].tmn, -4); assert.strictEqual(r.data[0].tmx, 8); assert.strictEqual(r.data[0].wav, 1);
++    });
++    ['', 'NaN', 'Infinity', '12bad'].forEach(function (value) {
++        it('rejects invalid TMP ' + JSON.stringify(value), function () {
++            assert(!h.organize('organizeShortData', h.shortItems({TMP: value})).isCompleted);
++        });
++    });
++    [0, 1.5, undefined, '', 'bad', 'Infinity', 'NaN', -1, -999, '1~4', '1mm 미만'].forEach(function (value) {
++        it('normalizes shortest RN1 ' + JSON.stringify(value), function () {
++            var items = h.shortItems().filter(function (i) { return !['TMP', 'PCP', 'SNO'].includes(i.category[0]); });
++            items.push(h.item('T1H', '12.5'), h.item('LGT', '0'));
++            var rn = h.item('RN1', value); if (value === undefined) delete rn.fcstValue;
++            items.push(rn);
++            var r = h.organize('organizeShortestData', items); assert(r.isCompleted);
++            assert.strictEqual(r.data[0].rn1, typeof value === 'number' && value >= 0 ? value : -1);
++            assert.strictEqual(r.data[0].pty, 0);
++        });
++    });
++    it('does not leak keys for empty request lists or callback exceptions', function () {
++        var logs = []; var c = h.collector(undefined, logs);
++        c.requestData([], c.DATA_TYPE.TOWN_SHORT, KEY, '20260924', '0800');
++        assert(!logs.join('\n').includes(KEY));
++    });
++    it('preserves upstream current validation and Kakao initialization/API', function () {
++        var manager = source('controllers/controllerManager.js');
++        ['rn1', 'reh', 'pty', 'lgt'].forEach(function (k) { assert(manager.includes('newItem.' + k + ' >= 0')); });
++        assert(manager.includes('keco.setKakaoApiKeys(JSON.parse(config.keyString.kakao_keys))'));
++        var keco = source('lib/kecoRequester.js');
++        assert(keco.includes('Keco.prototype.setKakaoApiKeys')); assert(keco.includes('Keco.prototype.getKakaoApiKey'));
++        assert(keco.includes('https://dapi.kakao.com/v2/local/geo/transcoord.json'));
++    });
++    it('preserves protective logger catch with a throwing transport', function () {
++        var messages = [];
++        var logger = h.load('lib/log.js', {le_node: {}, '../config/config': {mode: 'test', logToken: {test: 'DUMMY'}},
++            winston: {transports: {Console: function (o) { assert.strictEqual(o.level, 'error'); },
++                Logentries: function () { throw new Error('synthetic transport failure'); }},
++                Logger: function (o) { this.transports = o.transports; }}
++        }, {process: {env: {NODE_ENV: 'production'}}, console: {log: function (e) { messages.push(e.message); }}});
++        assert.strictEqual(logger().transports.length, 1); assert.strictEqual(messages.length, 1);
++    });
++    it('preserves upstream operational defaults and inclusive request cutoffs', function () {
++        var manager = source('controllers/controllerManager.js');
++        assert.strictEqual((manager.match(/self\._recursiveRequestData\([^;]*?, 70,/g) || []).length, 8);
++        assert(manager.includes('key, dateString, 50, undefined'));
++        assert(manager.includes('self.checkTimeAndRequestTask(true);'));
++        assert(source('lib/PastConditionGather.js').includes('self.updateList, 10,'));
++        var c = h.collector(); var sent = [];
++        c.getData = function (i) { sent.push(i); };
++        c.requestData(Array.from({length: 103}, function () { return {mx: 60, my: 127}; }), c.DATA_TYPE.TOWN_SHORT, KEY, '20260924', '0800');
++        assert.strictEqual(sent.length, 101); assert.strictEqual(sent[100], 100);
++        sent = [];
++        c.requestDataByBaseTimeList({mx: 60, my: 127}, c.DATA_TYPE.TOWN_CURRENT, KEY, Array.from({length: 202}, function () { return {date: '20260924', time: '0800'}; }));
++        assert.strictEqual(sent.length, 200); assert.strictEqual(sent[199], 199);
++    });
++});
++
++describe('upstream storage and period-contract characterization', function () {
++    it('merges existing current fields without overwriting a new valid zero', function (done) {
++        var saved;
++        var time = h.load('lib/kmaTimeLib.js', {});
++        var model = {
++            find: function () { return {lean: function () { return {exec: function (cb) {
++                cb(null, [{currentData: {sky: 3, lgt: 2, rn1: 8, reh: 70}}]);
++            }}; }}; },
++            update: function (query, doc, options, cb) { saved = doc; cb(); }
++        };
++        var Current = h.load('controllers/kma/kma.town.current.controller.js', {
++            async: require('async'), '../../models/kma/kma.town.current.model.js': model, '../../lib/kmaTimeLib': time
++        }, {log: h.logger([])});
++        new Current().saveCurrent([{mx: 60, my: 127, date: '20260924', time: '0900', pubDate: '202609240800', rn1: 0, t1h: 12.5}], function (err) {
++            assert.ifError(err); assert.strictEqual(saved.currentData.rn1, 0);
++            assert.strictEqual(saved.currentData.reh, 70); assert.strictEqual(saved.currentData.sky, 3);
++            assert.strictEqual(saved.currentData.lgt, 2); done();
++        });
++    });
++    it('retains current reh/lgt sentinel template contract', function () {
++        var items = [h.item('T1H', 12), h.item('RN1', 0), h.item('PTY', 0)];
++        items.forEach(function (item) { item.obsrValue = item.fcstValue; });
++        var r = h.organize('organizeCurrentData', items); assert(r.isCompleted);
++        assert.strictEqual(r.data[0].reh, -1); assert.strictEqual(r.data[0].lgt, -1);
++    });
++    it('documents legacy 24h splitting as a limitation, not hourly-to-six-hour equivalence', function () {
++        function Base() {}
++        Base.prototype._createOrGetDaySummaryList = function (list, date) {
++            if (!list.length) list.push({date: date}); return list[0];
++        };
++        var deps = {async: require('async'), request: {}, '../controllers/controllerTown': Base,
++            '../lib/kmaTimeLib': h.load('lib/kmaTimeLib.js', {}), '../config/config': {}};
++        ['../lib/unitConverter', '../lib/aqi.converter', '../controllers/kecoController',
++            '../controllers/airkorea.hourly.forecast.controller', '../controllers/kaq.hourly.forecast.controller',
++            '../controllers/kma.specialweather.controller'].forEach(function (name) { deps[name] = function () {}; });
++        var Town = h.load('controllers/controllerTown24h.js', deps, {log: h.logger([])});
++        var rows = ['0600', '0900', '1200'].map(function (t, i) {
++            return {date: '20260924', time: t, pty: 2, reh: 60, t3h: 10 + i, tmn: -50, tmx: -50, r06: 1.5, s06: 0.5};
++        });
++        var called = 0;
++        new Town().adjustShort({params: {}, short: rows}, {}, function () { called++; });
++        assert.strictEqual(called, 1);
++        // Existing consumer splits every other record; this is NOT a correct
++        // conversion for hourly PCP/SNO. Preserve it, expose it, defer redesign.
++        assert.strictEqual(rows[1].r06, 0.8); assert.strictEqual(rows[2].r06, 0.8);
++        assert.strictEqual(rows[1].s06, 0.3); assert.strictEqual(rows[2].s06, 0.3);
++        assert.strictEqual(rows[2].t3h, 12);
++    });
++});
++
++describe('independent-review regressions: malformed organized output', function () {
++    ['MID_FORECAST', 'MID_TEMP', 'MID_LAND', 'MID_SEA'].forEach(function (type) {
++        it('rejects malformed ' + type + ' without reflecting provider text', function () {
++            var logs = [];
++            var c = h.prepare(h.collector({get: function (url, opts, cb) {
++                cb(null, {statusCode: 200}, h.xml(h.response([{bogus: ['http://offline.invalid/?serviceKey=' + KEY]}])));
++            }}, logs));
++            var callbackError;
++            c.getData(0, c.DATA_TYPE[type], 'http://offline.invalid/?serviceKey=' + KEY,
++                {date: '20260924', time: '0600', code: '11B00000'}, function (err) { callbackError = err; });
++            assert(c.recvFailed); assert(!c.resultList[0].isCompleted); assert(callbackError);
++            assert(!logs.join('\n').includes(KEY)); assert(!logs.join('\n').includes('serviceKey='));
++        });
++    });
++    it('reports organizer rejection to the callback', function () {
++        receive(h.xml(h.response(h.shortItems({TMP: 'broken'}))), 200, null, function (err, c) {
++            assert(c.recvFailed); assert(err);
++        });
++    });
++    ['TMP', 'SKY', 'REH', 'PTY'].forEach(function (field) {
++        it('rejects invalid ' + field + ' in later forecast groups', function () {
++            var values = {}; values[field] = 'broken';
++            var r = h.organize('organizeShortData', h.shortItems().concat(h.shortItems(values, '1000')));
++            assert(!r.isCompleted);
++        });
++    });
++});
++
++describe('real mid organizers with synthetic fixtures', function () {
++    function midItem(type) {
++        if (type === 'MID_FORECAST') return {wfSv: ['Synthetic outlook']};
++        var item = {regId: ['11B00000']};
++        if (type === 'MID_TEMP') {
++            for (var d = 3; d <= 10; d++) { item['taMin' + d] = ['0']; item['taMax' + d] = ['12.5']; }
++        } else {
++            ['3Am', '3Pm', '4Am', '4Pm', '5Am', '5Pm', '6Am', '6Pm', '7Am', '7Pm', '8', '9', '10'].forEach(function (suffix) { item['wf' + suffix] = ['Clear']; });
++            ['3AAm', '3APm', '3BAm', '3BPm', '4AAm', '4APm', '4BAm', '4BPm', '5AAm', '5APm', '5BAm', '5BPm', '6AAm', '6APm', '6BAm', '6BPm', '7AAm', '7APm', '7BAm', '7BPm', '8A', '8B', '9A', '9B', '10A', '10B'].forEach(function (suffix) { item['wh' + suffix] = ['0.5']; });
++        }
++        return item;
++    }
++    ['MID_FORECAST', 'MID_TEMP', 'MID_LAND', 'MID_SEA'].forEach(function (type) {
++        it('collects nonempty valid ' + type, function () {
++            var c = h.prepare(h.collector({get: function (url, opts, cb) {
++                cb(null, {statusCode: 200}, h.xml(h.response([midItem(type)])));
++            }}));
++            var called = 0;
++            c.getData(0, c.DATA_TYPE[type], 'http://offline.invalid', {date: '20260924', time: '0600', code: '11B00000'}, function (err) {
++                assert.ifError(err); called++;
++            });
++            assert.strictEqual(called, 1); assert(c.resultList[0].isCompleted);
++            assert.strictEqual(c.resultList[0].data.length, 1);
++            assert.strictEqual(c.resultList[0].data[0].pubDate, '202609240600');
++        });
++    });
++    it('does not reuse missing temperature fields from a previous region', function () {
++        var first = midItem('MID_TEMP');
++        var second = {regId: ['11D00000'], taMin3: ['4']};
++        var c = h.prepare(h.collector());
++        c.organizeTempData(0, h.response([first, second]), {date: '20260924', time: '0600'});
++        assert(c.resultList[0].isCompleted);
++        assert.strictEqual(c.resultList[0].data[1].taMin3, 4);
++        assert.strictEqual(c.resultList[0].data[1].taMax3, -100);
++    });
++    it('rejects non-finite sea values before JSON serialization can hide them', function () {
++        var item = midItem('MID_SEA'); item.wh3AAm = ['NaN'];
++        var c = h.prepare(h.collector());
++        c.organizeSeaData(0, h.response([item]), {date: '20260924', time: '0600'});
++        assert(c.recvFailed); assert(!c.resultList[0].isCompleted);
++    });
++});
++
++describe('mid forecast text completeness', function () {
++    ['', '   ', {unexpected: ['text']}].forEach(function (text) {
++        it('rejects empty/malformed land forecast text ' + JSON.stringify(text), function () {
++            var item = {regId: ['11B00000']};
++            ['3Am', '3Pm', '4Am', '4Pm', '5Am', '5Pm', '6Am', '6Pm', '7Am', '7Pm', '8', '9', '10'].forEach(function (suffix) { item['wf' + suffix] = [text]; });
++            var c = h.prepare(h.collector({get: function (url, opts, cb) {
++                cb(null, {statusCode: 200}, h.xml(h.response([item])));
++            }}));
++            c.getData(0, c.DATA_TYPE.MID_LAND, 'http://offline.invalid', {date: '20260924', time: '0600'}, function (err) { assert(err); });
++            assert(c.recvFailed); assert(!c.resultList[0].isCompleted);
++        });
++    });
++});
+
+diff --git a/server/test/offline/gather-smoke.js b/server/test/offline/gather-smoke.js
+new file mode 100644
+index 00000000..6caf5507
+--- /dev/null
++++ b/server/test/offline/gather-smoke.js
+@@ -0,0 +1,56 @@
++'use strict';
++// Synthetic, offline module integration: real XML, requester events and storage
++// controller exports. HTTP and Mongo boundaries are in-memory adapters.
++var assert = require('assert');
++var h = require('./harness');
++var logs = [];
++var log = h.logger(logs);
++var time = h.load('lib/kmaTimeLib.js', {}, {log: log});
++var records = [];
++var model = {
++    update: function (query, record, options, callback) {
++        assert.strictEqual(options.upsert, true);
++        records.push(record); callback();
++    },
++    find: function () {
++        var query = {sort: function () { return query; }, batchSize: function () { return query; },
++            lean: function () { return query; }, exec: function (callback) { callback(null, records); }};
++        return query;
++    }
++};
++var Short = h.load('controllers/kma/kma.town.short.controller.js', {
++    async: require('async'), '../../models/kma/kma.town.short.model.js': model, '../../lib/kmaTimeLib': time
++}, {log: log, commonString: ['date', 'time', 'mx', 'my'], shortString: ['r06', 's06', 't3h', 'sky', 'reh', 'pty']});
++var short = new Short();
++var callbacks = 0;
++var body = h.xml(h.response(h.shortItems({PCP: '1.5mm', SNO: '0.5cm'})));
++var collector = h.collector({get: function (url, options, callback) {
++    assert(url.startsWith('http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?'));
++    callback(null, {statusCode: 200}, body);
++}}, logs);
++collector.requestData([{mx: 60, my: 127}], collector.DATA_TYPE.TOWN_SHORT, 'OFFLINE_SMOKE_DUMMY', '20260924', '0800', function (err, results) {
++    assert.strictEqual(err, false); assert(results[0].isCompleted);
++    short.saveShort(results[0].data, function (err) {
++        assert.ifError(err);
++        short.getShortFromDB(null, {mx: 60, my: 127}, {}, function (err, result) {
++            assert.ifError(err); assert.strictEqual(result.pubDate, '202609240800');
++            var v = result.ret[0];
++            assert.strictEqual(v.r06, 1.5); assert.strictEqual(v.s06, 0.5); assert.strictEqual(v.t3h, 12.5);
++            assert.strictEqual(v.date, '20260924'); assert.strictEqual(v.time, '0900');
++            assert.strictEqual(v.mx, 60); assert.strictEqual(v.my, 127); callbacks++;
++        });
++    });
++});
++assert.strictEqual(callbacks, 1); assert.strictEqual(records.length, 1);
++assert.strictEqual(records[0].fcsDate.toISOString(), '2026-09-24T00:00:00.000Z');
++var bad = h.collector({get: function (url, options, callback) {
++    callback(null, {statusCode: 200}, '<response><header><resultCode>22</resultCode></header></response>');
++}}, logs);
++bad.requestData([{mx: 60, my: 127}], bad.DATA_TYPE.TOWN_SHORT, 'OFFLINE_SMOKE_DUMMY', '20260924', '0800', function (failed, results) {
++    assert.strictEqual(failed, true); assert.strictEqual(results[0].isCompleted, false); callbacks++;
++    if (results[0].isCompleted) short.saveShort(results[0].data, function () {});
++});
++assert.strictEqual(callbacks, 2); assert.strictEqual(records.length, 1);
++assert(!logs.join('\n').includes('OFFLINE_SMOKE_DUMMY')); assert(!logs.join('\n').includes('serviceKey='));
++console.log('PASS synthetic XML -> requester -> events -> saveShort -> getShortFromDB (1 write, exact quantities/timestamps/grid)');
++console.log('PASS provider-error XML -> failed collection, no additional persistence; no key-bearing logs');
