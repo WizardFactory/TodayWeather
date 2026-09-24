@@ -91,6 +91,7 @@ test("mobile favorites, geolocation denial and unavailable notifications stay us
   await page.goto("/locations");
   await expect(page.locator(".location-card")).toHaveCount(2);
   await page.getByRole("button", { name: "서울 삭제", exact: true }).click();
+  await expect(page.locator(".location-card")).toHaveCount(1);
   await page.reload();
   await expect(page.locator(".location-card")).toHaveCount(1);
   await context.setGeolocation({ latitude: 37.567, longitude: 126.978 });
