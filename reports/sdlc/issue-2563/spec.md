@@ -1,0 +1,6 @@
+# Specification
+Require config/env.js first in app.js. The module calls dotenv.config with path.join(__dirname, '../.env') and UTF-8 defaults. Pin dotenv 10.0.0 for Node >=10 compatibility. Retain the existing npm start entrypoint.
+Process environment wins, including empty strings. No .env: continue existing environment/default behavior. Other file read errors: throw sanitized startup error containing only error code and generic relative filename. Do not log parsed values. Invalid/non-assignment lines follow dotenv 10 parsing (ignored); malformed quoting is not validated. Explain syntax boundaries in server/README.md.
+Ignore .env and .env.* except .env.example. Copy upload unchanged to server/.env with 0600 only after ignore protection. Provide a safe example with service mode, localhost database, and blank credential placeholders; no uploaded credentials.
+Documentation: gather automatically schedules real provider/DB work; missing normal/cert keys remain missing; TWA_S3 entries remain unused. No new validation or provider logic.
+AC1–AC5 from intent apply. Tests and config smoke operate on temporary server layouts, never import the real application to completion or connect externally.

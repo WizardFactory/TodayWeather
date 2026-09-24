@@ -1,0 +1,4 @@
+# PR scope amendment — 2026-09-24
+AK confirmed that DATA_GO_KR_NORMAL_KEY and DATA_GO_KR_CERT_KEY are not used by the current production server and requested explanatory comments and a PR. Preserve legacy configuration fields without changing runtime fallback. Update config comments, example and documentation; treat the statement as operator confirmation, not a new live host inspection.
+
+User now authorizes local commits, branch push and PR creation for the combined dotenv and Paseo workspace-copy changes. No merge, auto-merge, production startup, restart or deployment. Previously completed local receipts remain historical; final source identity and refreshed verification are recorded in pr-verification.md and pr-independent-verification.md. This is a PR-creation endpoint, not a merge-ready claim.

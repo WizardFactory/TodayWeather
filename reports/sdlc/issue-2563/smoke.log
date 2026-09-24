@@ -1,0 +1,1 @@
+PASS real uploaded-file bootstrap/config smoke: 31 settings, mode, DB version, port, arrays and selected mappings; no app/provider/DB execution.

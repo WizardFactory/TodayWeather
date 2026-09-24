@@ -4,6 +4,7 @@
 
 'use strict';
 
+require('./config/env');
 require('newrelic');
 
 var express = require('express');

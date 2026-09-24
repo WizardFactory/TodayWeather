@@ -1,0 +1,4 @@
+# Final local verification completion before PR publication
+User amendment authorizes commit, push and draft PR; merge/deployment remain excluded. AC1–AC5 are satisfied by the refreshed final candidate, operator-confirmed key applicability notes, 235 regressions plus gather smoke, eight setup checks, real config smoke and distinct independent local verification PASS. Private .env and credentials remain excluded.
+
+The original local-endpoint state now records iteration-2 final source verification. Remote publication follows the separate pr-intent-amendment.md authority and is recorded in the PR itself, without pretending the local state supplies formal PR-review/merge readiness. No different-provider PR review is claimed. Final source identity: pr-candidate.json. Raw execution logs and patch snapshots retain original whitespace; source-only staged whitespace check passes.

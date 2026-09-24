@@ -1,0 +1,3 @@
+# Specification
+Append a self-contained POSIX shell block to existing worktree.setup: refuse symlink server or server/.gitignore; mkdir server if needed; append /.env as final nested ignore rule if absent at end. Preserve existing server/.env or symlink. Otherwise install -m 600 from $PASEO_SOURCE_CHECKOUT_PATH/server/.env if regular source exists; print only filename-level status; missing source warns and skips. Existing umask 077 applies. No source .env creation or overwrite.
+Install reviewed config into base checkout with optimistic content guard; append /server/.env to its existing root .gitignore without replacing other lines. Verify active parser and configuration equality.

@@ -15,6 +15,8 @@ module.exports = {
     keyString: {
         test_normal: (process.env.DATA_GO_KR_TEST_NORMAL_KEY || 'You have to set key of data.go.kr'),
         test_cert: (process.env.DATA_GO_KR_TEST_CERT_KEY || 'You have to set key of data.go.kr'),
+        // Not used by the current production server (operator-confirmed 2026-09-24).
+        // Retained for legacy callers; these settings may remain unset in production.
         normal: (process.env.DATA_GO_KR_NORMAL_KEY || 'You have to set key of data.go.kr'),
         cert_key: (process.env.DATA_GO_KR_CERT_KEY || 'You have to set key of data.go.kr'),
         newrelic: (process.env.NEW_RELIC_LICENSE_KEY || 'Your New Relic license key'),

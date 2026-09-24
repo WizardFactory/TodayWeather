@@ -7,7 +7,7 @@ All provider fixtures are synthetic. These tests load real exported functions wi
 Use an isolated harness instead of installing the whole legacy application:
 
 ```sh
-npm install --prefix /tmp/issue-2555-harness --ignore-scripts --no-audit --no-fund --package-lock=false mocha@2.5.3 xml2js@0.4.23 async@2.6.4
+npm install --prefix /tmp/issue-2555-harness --ignore-scripts --no-audit --no-fund --package-lock=false mocha@2.5.3 xml2js@0.4.23 async@2.6.4 mongoose@5.1.2 express@4.13.4 sprintf@0.1.5 dotenv@10.0.0
 NODE_PATH=/tmp/issue-2555-harness/node_modules npm --prefix server run test:offline
 ```
 
@@ -17,7 +17,7 @@ The separate smoke integrates real XML parsing, requestData/events and the short
 
 The legacy 24h consumer characterization deliberately exposes its adjacent-record quantity split. Passing means the existing assumption is documented; it does not validate that split for hourly PCP/SNO. See [period limitations and full disposition](../../../docs/architecture/gather-source-reconciliation.md).
 
-`test:offline` explicitly runs only the regression file, then the functional smoke, and propagates failures. The default `npm test` remains the legacy suite. The dedicated [GitHub Actions workflow](../../../.github/workflows/gather-offline.yml) runs this command with Node 22.22.2 and isolated dependencies on relevant pull requests and master pushes, with read-only repository permissions and no deployment steps. The historical Travis job is unchanged.
+`test:offline` explicitly selects the offline regression files and gather functional smoke, and propagates failures. The default `npm test` remains the legacy suite. The dedicated [GitHub Actions workflow](../../../.github/workflows/gather-offline.yml) runs this command with Node 22.22.2 and isolated dependencies on relevant pull requests and master pushes, with read-only repository permissions and no deployment steps. The historical Travis job is unchanged.
 
 Correction coverage uses distinct values for every sea wave field, nonfinite values in later days, mismatched item counts and raw/once-percent-encoded dummy keys. Partial pages fail before organization, so responses over the 999-item capacity require a separate pagination implementation. Key strings decode URI escapes exactly once and re-encode as a query component; raw plus is preserved, malformed escapes fail, literal percent must be supplied as `%25`.
 
@@ -60,7 +60,7 @@ with in-memory persistence adapters and a fixed clock; no Mongo connection.
 Install an isolated test environment (no repository dependency changes):
 
 ```sh
-npm install --prefix /tmp/issue-2560-offline --ignore-scripts --no-audit --no-fund async@2.6.4 xml2js@0.4.23 mocha@2.5.3 express@4.13.4 sprintf@0.1.5 mongoose@5.1.2
+npm install --prefix /tmp/issue-2560-offline --ignore-scripts --no-audit --no-fund async@2.6.4 xml2js@0.4.23 mocha@2.5.3 express@4.13.4 sprintf@0.1.5 mongoose@5.1.2 dotenv@10.0.0
 NODE_PATH=/tmp/issue-2560-offline/node_modules npm --prefix server run test:offline
 TZ=UTC NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/daily-response-smoke.js
 ```
@@ -79,3 +79,19 @@ and real provider/deployment behavior remain operator checks.
 See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/daily-forecast-contract.md).
 
 `daily-review.test.js` adds shower mapping/storage, forecast-gap health, retired scheduler, raw short source publication bounds, DB1 complete snapshot replacement, KST year/midnight and shared JS consumer compatibility checks. Full-route smoke covers D+3 available, absent, partial, stale and DB1 legacy-without-snapshot, showers and optional RSS humidity. Raw additional daily fields do not expand the hourly template or invent daily precipitation totals. Native runtime tests remain operator-owned.
+
+## Environment startup (#2563)
+
+`env-startup.test.js` adds 12 checks using real dotenv 10.0.0 and temporary
+server layouts. It verifies loading before the first New Relic import for direct
+app imports, `bin/www`, and `npm start`; working-directory independence; existing
+process values including empty strings; missing files; documented dotenv syntax;
+and sanitized read failures. It intercepts New Relic before any application
+provider, database, timer or listener can initialize. The operator's actual
+`server/.env` is never read by these regression checks.
+
+```sh
+NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/env-startup.test.js
+```
+
+See [server configuration](../../CONFIGURATION.md) for runtime behavior.

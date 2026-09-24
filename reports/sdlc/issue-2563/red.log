@@ -1,0 +1,55 @@
+node:assert:150
+  throw new AssertionError(obj);
+  ^
+
+AssertionError [ERR_ASSERTION]: repository cwd, before first New Relic import
+/tmp/tw-env-test-0FHNlv/server/probe.js:35
+  } else { if (error !== stop) throw error; assert.ok(seen); }
+                               ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+'local' !== 'gather'
+
+    at Module._load (/tmp/tw-env-test-0FHNlv/server/probe.js:16:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Module.require (node:internal/modules/cjs/loader:1463:12)
+    at require (node:internal/modules/helpers:147:16)
+    at Object.<anonymous> (/tmp/tw-env-test-0FHNlv/server/app.js:7:1)
+    at Module._compile (node:internal/modules/cjs/loader:1705:14)
+    at Object..js (node:internal/modules/cjs/loader:1838:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function.<anonymous> (node:internal/modules/cjs/loader:1263:12) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'local',
+  expected: 'gather',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.2
+
+
+1 !== 0
+
+    at run (/root/.paseo/worktrees/08mqediz/eatable-whale/server/test/offline/env-startup.test.js:53:12)
+    at Object.<anonymous> (/root/.paseo/worktrees/08mqediz/eatable-whale/server/test/offline/env-startup.test.js:114:5)
+    at Module._compile (node:internal/modules/cjs/loader:1705:14)
+    at Object..js (node:internal/modules/cjs/loader:1838:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.2

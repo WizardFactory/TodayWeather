@@ -1,0 +1,1430 @@
+{
+  "schema_version": 1,
+  "task_id": "paseo-workspace-env",
+  "mode": "implementation",
+  "change_kind": "configuration",
+  "endpoint": "local",
+  "criteria": [
+    "AC1",
+    "AC2",
+    "AC3",
+    "AC4"
+  ],
+  "created_at": "2026-09-24T13:44:41.132161+00:00",
+  "events": [
+    {
+      "at": "2026-09-24T13:44:41.132251+00:00",
+      "action": "initialized",
+      "stage": null
+    },
+    {
+      "at": "2026-09-24T13:44:41.391120+00:00",
+      "action": "iteration-started",
+      "stage": "triage",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T13:44:41.584017+00:00",
+      "action": "iteration-finished",
+      "stage": "triage",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy."
+    },
+    {
+      "at": "2026-09-24T13:44:41.880357+00:00",
+      "action": "iteration-started",
+      "stage": "intent",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T13:44:42.093232+00:00",
+      "action": "iteration-finished",
+      "stage": "intent",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy."
+    },
+    {
+      "at": "2026-09-24T13:44:42.367275+00:00",
+      "action": "iteration-started",
+      "stage": "investigation",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T13:44:42.568854+00:00",
+      "action": "iteration-finished",
+      "stage": "investigation",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy."
+    },
+    {
+      "at": "2026-09-24T13:44:42.823701+00:00",
+      "action": "iteration-started",
+      "stage": "spec",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T13:44:43.002510+00:00",
+      "action": "iteration-finished",
+      "stage": "spec",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy."
+    },
+    {
+      "at": "2026-09-24T13:44:43.195871+00:00",
+      "action": "stage-excluded",
+      "stage": "design",
+      "reason": "Small development-workspace setup extension; no application architecture, route, collector, response, mode or storage flow change. Existing native setup suffices; no diagram needed."
+    },
+    {
+      "at": "2026-09-24T13:44:43.359325+00:00",
+      "action": "iteration-started",
+      "stage": "plan",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T13:44:43.537761+00:00",
+      "action": "iteration-finished",
+      "stage": "plan",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy."
+    },
+    {
+      "at": "2026-09-24T13:44:43.803280+00:00",
+      "action": "iteration-started",
+      "stage": "test-design",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T13:44:43.984309+00:00",
+      "action": "iteration-finished",
+      "stage": "test-design",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy."
+    },
+    {
+      "at": "2026-09-24T13:44:44.270787+00:00",
+      "action": "iteration-started",
+      "stage": "build",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T13:49:07.412034+00:00",
+      "action": "iteration-finished",
+      "stage": "build",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy."
+    },
+    {
+      "at": "2026-09-24T13:49:07.796456+00:00",
+      "action": "iteration-started",
+      "stage": "self-verification",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T13:49:08.038438+00:00",
+      "action": "iteration-finished",
+      "stage": "self-verification",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy."
+    },
+    {
+      "at": "2026-09-24T13:49:08.380977+00:00",
+      "action": "iteration-started",
+      "stage": "independent-verification",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T13:50:35.757582+00:00",
+      "action": "iteration-finished",
+      "stage": "independent-verification",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy."
+    },
+    {
+      "at": "2026-09-24T13:50:36.089172+00:00",
+      "action": "iteration-started",
+      "stage": "completion",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T13:50:36.224059+00:00",
+      "action": "iteration-finished",
+      "stage": "completion",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy."
+    }
+  ],
+  "stages": {
+    "triage": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T13:44:41.391089+00:00",
+          "objective": "triage for Paseo environment copy, local scope",
+          "resolution": null,
+          "inputs": [],
+          "finished_at": "2026-09-24T13:44:41.583985+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+            "authority_source": "User: copy .env from the base checkout when Paseo creates a workspace; local setup configuration only",
+            "candidate": "c9220de35fe31838e10e692494731b90106b0f65",
+            "next_action": "Continue authorized local workflow",
+            "inputs": [],
+            "outputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/paseo-workspace-env/triage.md",
+                "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Read source, constraints and stage evidence; no production execution or secrets in records.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "intent": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T13:44:41.880326+00:00",
+          "objective": "intent for Paseo environment copy, local scope",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/paseo-workspace-env/triage.md",
+              "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+            }
+          ],
+          "finished_at": "2026-09-24T13:44:42.093178+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+            "authority_source": "User: copy .env from the base checkout when Paseo creates a workspace; local setup configuration only",
+            "candidate": "c9220de35fe31838e10e692494731b90106b0f65",
+            "next_action": "Continue authorized local workflow",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/paseo-workspace-env/triage.md",
+                "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/paseo-workspace-env/intent.md",
+                "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Read source, constraints and stage evidence; no production execution or secrets in records.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "investigation": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T13:44:42.367240+00:00",
+          "objective": "investigation for Paseo environment copy, local scope",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/paseo-workspace-env/triage.md",
+              "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+            },
+            {
+              "kind": "intent",
+              "path": "reports/sdlc/paseo-workspace-env/intent.md",
+              "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+            }
+          ],
+          "finished_at": "2026-09-24T13:44:42.568829+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+            "authority_source": "User: copy .env from the base checkout when Paseo creates a workspace; local setup configuration only",
+            "candidate": "c9220de35fe31838e10e692494731b90106b0f65",
+            "next_action": "Continue authorized local workflow",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/paseo-workspace-env/triage.md",
+                "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+              },
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/paseo-workspace-env/intent.md",
+                "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+                "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Read source, constraints and stage evidence; no production execution or secrets in records.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "spec": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T13:44:42.823665+00:00",
+          "objective": "spec for Paseo environment copy, local scope",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/paseo-workspace-env/triage.md",
+              "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+            },
+            {
+              "kind": "intent",
+              "path": "reports/sdlc/paseo-workspace-env/intent.md",
+              "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+              "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+            }
+          ],
+          "finished_at": "2026-09-24T13:44:43.002483+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+            "authority_source": "User: copy .env from the base checkout when Paseo creates a workspace; local setup configuration only",
+            "candidate": "c9220de35fe31838e10e692494731b90106b0f65",
+            "next_action": "Continue authorized local workflow",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/paseo-workspace-env/triage.md",
+                "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+              },
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/paseo-workspace-env/intent.md",
+                "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+                "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "spec",
+                "path": "reports/sdlc/paseo-workspace-env/spec.md",
+                "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Read source, constraints and stage evidence; no production execution or secrets in records.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "design": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Small development-workspace setup extension; no application architecture, route, collector, response, mode or storage flow change. Existing native setup suffices; no diagram needed.",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "plan": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T13:44:43.359270+00:00",
+          "objective": "plan for Paseo environment copy, local scope",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/paseo-workspace-env/triage.md",
+              "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+            },
+            {
+              "kind": "intent",
+              "path": "reports/sdlc/paseo-workspace-env/intent.md",
+              "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+              "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+            },
+            {
+              "kind": "spec",
+              "path": "reports/sdlc/paseo-workspace-env/spec.md",
+              "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+            }
+          ],
+          "finished_at": "2026-09-24T13:44:43.537712+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+            "authority_source": "User: copy .env from the base checkout when Paseo creates a workspace; local setup configuration only",
+            "candidate": "c9220de35fe31838e10e692494731b90106b0f65",
+            "next_action": "Continue authorized local workflow",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/paseo-workspace-env/triage.md",
+                "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+              },
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/paseo-workspace-env/intent.md",
+                "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+                "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+              },
+              {
+                "kind": "spec",
+                "path": "reports/sdlc/paseo-workspace-env/spec.md",
+                "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "plan",
+                "path": "reports/sdlc/paseo-workspace-env/plan.md",
+                "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Read source, constraints and stage evidence; no production execution or secrets in records.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "test-design": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T13:44:43.803234+00:00",
+          "objective": "test-design for Paseo environment copy, local scope",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/paseo-workspace-env/triage.md",
+              "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+            },
+            {
+              "kind": "intent",
+              "path": "reports/sdlc/paseo-workspace-env/intent.md",
+              "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+              "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+            },
+            {
+              "kind": "spec",
+              "path": "reports/sdlc/paseo-workspace-env/spec.md",
+              "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+            },
+            {
+              "kind": "plan",
+              "path": "reports/sdlc/paseo-workspace-env/plan.md",
+              "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+            }
+          ],
+          "finished_at": "2026-09-24T13:44:43.984245+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+            "authority_source": "User: copy .env from the base checkout when Paseo creates a workspace; local setup configuration only",
+            "candidate": "c9220de35fe31838e10e692494731b90106b0f65",
+            "next_action": "Continue authorized local workflow",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/paseo-workspace-env/triage.md",
+                "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+              },
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/paseo-workspace-env/intent.md",
+                "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+                "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+              },
+              {
+                "kind": "spec",
+                "path": "reports/sdlc/paseo-workspace-env/spec.md",
+                "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+              },
+              {
+                "kind": "plan",
+                "path": "reports/sdlc/paseo-workspace-env/plan.md",
+                "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/paseo-workspace-env/test-plan.md",
+                "sha256": "2554ab890e1bfbccb046a7884a752ad3faf1595378b43ef3124c922ddaea2989"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Read source, constraints and stage evidence; no production execution or secrets in records.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "build": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T13:44:44.270745+00:00",
+          "objective": "build for Paseo environment copy, local scope",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/paseo-workspace-env/triage.md",
+              "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+            },
+            {
+              "kind": "intent",
+              "path": "reports/sdlc/paseo-workspace-env/intent.md",
+              "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+              "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+            },
+            {
+              "kind": "spec",
+              "path": "reports/sdlc/paseo-workspace-env/spec.md",
+              "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+            },
+            {
+              "kind": "plan",
+              "path": "reports/sdlc/paseo-workspace-env/plan.md",
+              "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/paseo-workspace-env/test-plan.md",
+              "sha256": "2554ab890e1bfbccb046a7884a752ad3faf1595378b43ef3124c922ddaea2989"
+            }
+          ],
+          "finished_at": "2026-09-24T13:49:07.411981+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+            "authority_source": "User: copy .env from the base checkout when Paseo creates a workspace; local setup configuration only",
+            "candidate": "sha256:e7f23673e14102ace1d540e483cf1a6929ad5dd5500f25a3cfd9c84c7ce252cf",
+            "next_action": "Continue authorized local workflow",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/paseo-workspace-env/triage.md",
+                "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+              },
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/paseo-workspace-env/intent.md",
+                "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+                "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+              },
+              {
+                "kind": "spec",
+                "path": "reports/sdlc/paseo-workspace-env/spec.md",
+                "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+              },
+              {
+                "kind": "plan",
+                "path": "reports/sdlc/paseo-workspace-env/plan.md",
+                "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/paseo-workspace-env/test-plan.md",
+                "sha256": "2554ab890e1bfbccb046a7884a752ad3faf1595378b43ef3124c922ddaea2989"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "build",
+                "path": "reports/sdlc/paseo-workspace-env/build.md",
+                "sha256": "4ab39907f4229c4b783eabc7b4e8b350bed9bf86e051bf3bd67e21bbe4049828"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/paseo-workspace-env/changes.patch",
+                "sha256": "bd0bc5c759ade08655c4a09d3e25eceddaae728db3fc79eda6f6e903eb7e7130"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "paseo.json",
+                "sha256": "a2c49779ceec46bc8eef74f205852c560bace7cb8186191905fc1eba8c8c2ed3"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "server/CONFIGURATION.md",
+                "sha256": "54bcb3afd8d3322ee092b0ef1d0239440f2fcef8be873ba488d233394ef6037b"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "reports/sdlc/paseo-workspace-env/check_setup.py",
+                "sha256": "5cf3ee8613f818c9c8543c12dedc1656e73888ccb54b227b42e353de2c9da4e3"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "reports/sdlc/paseo-workspace-env/smoke.mjs",
+                "sha256": "19cc03b12091818a2bef0d6f020b8ae864e7f445c75dc14e1fbe6714bced676a"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Read source, constraints and stage evidence; no production execution or secrets in records.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "self-verification": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T13:49:07.796368+00:00",
+          "objective": "self-verification for Paseo environment copy, local scope",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/paseo-workspace-env/triage.md",
+              "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+            },
+            {
+              "kind": "intent",
+              "path": "reports/sdlc/paseo-workspace-env/intent.md",
+              "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+              "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+            },
+            {
+              "kind": "spec",
+              "path": "reports/sdlc/paseo-workspace-env/spec.md",
+              "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+            },
+            {
+              "kind": "plan",
+              "path": "reports/sdlc/paseo-workspace-env/plan.md",
+              "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/paseo-workspace-env/test-plan.md",
+              "sha256": "2554ab890e1bfbccb046a7884a752ad3faf1595378b43ef3124c922ddaea2989"
+            },
+            {
+              "kind": "build",
+              "path": "reports/sdlc/paseo-workspace-env/build.md",
+              "sha256": "4ab39907f4229c4b783eabc7b4e8b350bed9bf86e051bf3bd67e21bbe4049828"
+            },
+            {
+              "kind": "change-record",
+              "path": "reports/sdlc/paseo-workspace-env/changes.patch",
+              "sha256": "bd0bc5c759ade08655c4a09d3e25eceddaae728db3fc79eda6f6e903eb7e7130"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "paseo.json",
+              "sha256": "a2c49779ceec46bc8eef74f205852c560bace7cb8186191905fc1eba8c8c2ed3"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "server/CONFIGURATION.md",
+              "sha256": "54bcb3afd8d3322ee092b0ef1d0239440f2fcef8be873ba488d233394ef6037b"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "reports/sdlc/paseo-workspace-env/check_setup.py",
+              "sha256": "5cf3ee8613f818c9c8543c12dedc1656e73888ccb54b227b42e353de2c9da4e3"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "reports/sdlc/paseo-workspace-env/smoke.mjs",
+              "sha256": "19cc03b12091818a2bef0d6f020b8ae864e7f445c75dc14e1fbe6714bced676a"
+            }
+          ],
+          "finished_at": "2026-09-24T13:49:08.038366+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+            "authority_source": "User: copy .env from the base checkout when Paseo creates a workspace; local setup configuration only",
+            "candidate": "sha256:e7f23673e14102ace1d540e483cf1a6929ad5dd5500f25a3cfd9c84c7ce252cf",
+            "next_action": "Continue authorized local workflow",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/paseo-workspace-env/triage.md",
+                "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+              },
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/paseo-workspace-env/intent.md",
+                "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+                "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+              },
+              {
+                "kind": "spec",
+                "path": "reports/sdlc/paseo-workspace-env/spec.md",
+                "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+              },
+              {
+                "kind": "plan",
+                "path": "reports/sdlc/paseo-workspace-env/plan.md",
+                "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/paseo-workspace-env/test-plan.md",
+                "sha256": "2554ab890e1bfbccb046a7884a752ad3faf1595378b43ef3124c922ddaea2989"
+              },
+              {
+                "kind": "build",
+                "path": "reports/sdlc/paseo-workspace-env/build.md",
+                "sha256": "4ab39907f4229c4b783eabc7b4e8b350bed9bf86e051bf3bd67e21bbe4049828"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/paseo-workspace-env/changes.patch",
+                "sha256": "bd0bc5c759ade08655c4a09d3e25eceddaae728db3fc79eda6f6e903eb7e7130"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "paseo.json",
+                "sha256": "a2c49779ceec46bc8eef74f205852c560bace7cb8186191905fc1eba8c8c2ed3"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "server/CONFIGURATION.md",
+                "sha256": "54bcb3afd8d3322ee092b0ef1d0239440f2fcef8be873ba488d233394ef6037b"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "reports/sdlc/paseo-workspace-env/check_setup.py",
+                "sha256": "5cf3ee8613f818c9c8543c12dedc1656e73888ccb54b227b42e353de2c9da4e3"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "reports/sdlc/paseo-workspace-env/smoke.mjs",
+                "sha256": "19cc03b12091818a2bef0d6f020b8ae864e7f445c75dc14e1fbe6714bced676a"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "self-verification",
+                "path": "reports/sdlc/paseo-workspace-env/self-verification.md",
+                "sha256": "8aa21a8dbdec040cd824d7db03192d0bfce64c0b8d70f50ff0c653c8e7f76fa1"
+              },
+              {
+                "kind": "test-results",
+                "path": "reports/sdlc/paseo-workspace-env/test-results.json",
+                "sha256": "93499179156402d0f0f9ca759a7ec63df1b70d216b9ff567a09d3d77278482df"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/red.log",
+                "sha256": "7dd140b356e905b38611ac0c32caaf8e789fe004fe633110af97622fd9085ae8"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/green.log",
+                "sha256": "f13fe7f84ebf33bcc28ee391d49e93b3954c6169f1a068da357d2b41a6b58e8d"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/post-refactor.log",
+                "sha256": "1a1c7eb9bc77127064fa13cd880ef917cdbfc40a478969260280aa3c1a2f5fcb"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/smoke.log",
+                "sha256": "727e55fb476ba77ff2cb0230fe3a320125f305a5e76b4d913abc8fc4407ec193"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/activation.log",
+                "sha256": "a3cb556b6f6340bd1e2f74608ebe9a4c214e51a9f7616e28378c5a7438b1003c"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Read source, constraints and stage evidence; no production execution or secrets in records.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "independent-verification": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T13:49:08.380897+00:00",
+          "objective": "independent-verification for Paseo environment copy, local scope",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/paseo-workspace-env/triage.md",
+              "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+            },
+            {
+              "kind": "intent",
+              "path": "reports/sdlc/paseo-workspace-env/intent.md",
+              "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+              "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+            },
+            {
+              "kind": "spec",
+              "path": "reports/sdlc/paseo-workspace-env/spec.md",
+              "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+            },
+            {
+              "kind": "plan",
+              "path": "reports/sdlc/paseo-workspace-env/plan.md",
+              "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/paseo-workspace-env/test-plan.md",
+              "sha256": "2554ab890e1bfbccb046a7884a752ad3faf1595378b43ef3124c922ddaea2989"
+            },
+            {
+              "kind": "build",
+              "path": "reports/sdlc/paseo-workspace-env/build.md",
+              "sha256": "4ab39907f4229c4b783eabc7b4e8b350bed9bf86e051bf3bd67e21bbe4049828"
+            },
+            {
+              "kind": "change-record",
+              "path": "reports/sdlc/paseo-workspace-env/changes.patch",
+              "sha256": "bd0bc5c759ade08655c4a09d3e25eceddaae728db3fc79eda6f6e903eb7e7130"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "paseo.json",
+              "sha256": "a2c49779ceec46bc8eef74f205852c560bace7cb8186191905fc1eba8c8c2ed3"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "server/CONFIGURATION.md",
+              "sha256": "54bcb3afd8d3322ee092b0ef1d0239440f2fcef8be873ba488d233394ef6037b"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "reports/sdlc/paseo-workspace-env/check_setup.py",
+              "sha256": "5cf3ee8613f818c9c8543c12dedc1656e73888ccb54b227b42e353de2c9da4e3"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "reports/sdlc/paseo-workspace-env/smoke.mjs",
+              "sha256": "19cc03b12091818a2bef0d6f020b8ae864e7f445c75dc14e1fbe6714bced676a"
+            },
+            {
+              "kind": "self-verification",
+              "path": "reports/sdlc/paseo-workspace-env/self-verification.md",
+              "sha256": "8aa21a8dbdec040cd824d7db03192d0bfce64c0b8d70f50ff0c653c8e7f76fa1"
+            },
+            {
+              "kind": "test-results",
+              "path": "reports/sdlc/paseo-workspace-env/test-results.json",
+              "sha256": "93499179156402d0f0f9ca759a7ec63df1b70d216b9ff567a09d3d77278482df"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/paseo-workspace-env/red.log",
+              "sha256": "7dd140b356e905b38611ac0c32caaf8e789fe004fe633110af97622fd9085ae8"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/paseo-workspace-env/green.log",
+              "sha256": "f13fe7f84ebf33bcc28ee391d49e93b3954c6169f1a068da357d2b41a6b58e8d"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/paseo-workspace-env/post-refactor.log",
+              "sha256": "1a1c7eb9bc77127064fa13cd880ef917cdbfc40a478969260280aa3c1a2f5fcb"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/paseo-workspace-env/smoke.log",
+              "sha256": "727e55fb476ba77ff2cb0230fe3a320125f305a5e76b4d913abc8fc4407ec193"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/paseo-workspace-env/activation.log",
+              "sha256": "a3cb556b6f6340bd1e2f74608ebe9a4c214e51a9f7616e28378c5a7438b1003c"
+            }
+          ],
+          "finished_at": "2026-09-24T13:50:35.757528+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+            "authority_source": "User: copy .env from the base checkout when Paseo creates a workspace; local setup configuration only",
+            "candidate": "sha256:e7f23673e14102ace1d540e483cf1a6929ad5dd5500f25a3cfd9c84c7ce252cf",
+            "next_action": "Continue authorized local workflow",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/paseo-workspace-env/triage.md",
+                "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+              },
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/paseo-workspace-env/intent.md",
+                "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+                "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+              },
+              {
+                "kind": "spec",
+                "path": "reports/sdlc/paseo-workspace-env/spec.md",
+                "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+              },
+              {
+                "kind": "plan",
+                "path": "reports/sdlc/paseo-workspace-env/plan.md",
+                "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/paseo-workspace-env/test-plan.md",
+                "sha256": "2554ab890e1bfbccb046a7884a752ad3faf1595378b43ef3124c922ddaea2989"
+              },
+              {
+                "kind": "build",
+                "path": "reports/sdlc/paseo-workspace-env/build.md",
+                "sha256": "4ab39907f4229c4b783eabc7b4e8b350bed9bf86e051bf3bd67e21bbe4049828"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/paseo-workspace-env/changes.patch",
+                "sha256": "bd0bc5c759ade08655c4a09d3e25eceddaae728db3fc79eda6f6e903eb7e7130"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "paseo.json",
+                "sha256": "a2c49779ceec46bc8eef74f205852c560bace7cb8186191905fc1eba8c8c2ed3"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "server/CONFIGURATION.md",
+                "sha256": "54bcb3afd8d3322ee092b0ef1d0239440f2fcef8be873ba488d233394ef6037b"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "reports/sdlc/paseo-workspace-env/check_setup.py",
+                "sha256": "5cf3ee8613f818c9c8543c12dedc1656e73888ccb54b227b42e353de2c9da4e3"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "reports/sdlc/paseo-workspace-env/smoke.mjs",
+                "sha256": "19cc03b12091818a2bef0d6f020b8ae864e7f445c75dc14e1fbe6714bced676a"
+              },
+              {
+                "kind": "self-verification",
+                "path": "reports/sdlc/paseo-workspace-env/self-verification.md",
+                "sha256": "8aa21a8dbdec040cd824d7db03192d0bfce64c0b8d70f50ff0c653c8e7f76fa1"
+              },
+              {
+                "kind": "test-results",
+                "path": "reports/sdlc/paseo-workspace-env/test-results.json",
+                "sha256": "93499179156402d0f0f9ca759a7ec63df1b70d216b9ff567a09d3d77278482df"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/red.log",
+                "sha256": "7dd140b356e905b38611ac0c32caaf8e789fe004fe633110af97622fd9085ae8"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/green.log",
+                "sha256": "f13fe7f84ebf33bcc28ee391d49e93b3954c6169f1a068da357d2b41a6b58e8d"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/post-refactor.log",
+                "sha256": "1a1c7eb9bc77127064fa13cd880ef917cdbfc40a478969260280aa3c1a2f5fcb"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/smoke.log",
+                "sha256": "727e55fb476ba77ff2cb0230fe3a320125f305a5e76b4d913abc8fc4407ec193"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/activation.log",
+                "sha256": "a3cb556b6f6340bd1e2f74608ebe9a4c214e51a9f7616e28378c5a7438b1003c"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "independent-verification",
+                "path": "reports/sdlc/paseo-workspace-env/independent-verification.md",
+                "sha256": "951abb785935ec25e9fc562f4ee4e37879618145b43d7d49da84fe2154507a30"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Read source, constraints and stage evidence; no production execution or secrets in records.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            },
+            "verifier": {
+              "independent": true,
+              "context_id": "/root/verify_env",
+              "builder_context_id": "/root",
+              "checks": "Eight synthetic checks, native Paseo worktree smoke, supplemental AWS and live symlink checks, exact original setup prefix preservation, active base config equality and env metadata, four candidate hashes"
+            }
+          }
+        }
+      ]
+    },
+    "pr-review": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by implementation/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "correction": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "No correction requested",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "merge": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by implementation/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "completion": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T13:50:36.089104+00:00",
+          "objective": "completion for Paseo environment copy, local scope",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/paseo-workspace-env/triage.md",
+              "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+            },
+            {
+              "kind": "intent",
+              "path": "reports/sdlc/paseo-workspace-env/intent.md",
+              "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+              "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+            },
+            {
+              "kind": "spec",
+              "path": "reports/sdlc/paseo-workspace-env/spec.md",
+              "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+            },
+            {
+              "kind": "plan",
+              "path": "reports/sdlc/paseo-workspace-env/plan.md",
+              "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/paseo-workspace-env/test-plan.md",
+              "sha256": "2554ab890e1bfbccb046a7884a752ad3faf1595378b43ef3124c922ddaea2989"
+            },
+            {
+              "kind": "build",
+              "path": "reports/sdlc/paseo-workspace-env/build.md",
+              "sha256": "4ab39907f4229c4b783eabc7b4e8b350bed9bf86e051bf3bd67e21bbe4049828"
+            },
+            {
+              "kind": "change-record",
+              "path": "reports/sdlc/paseo-workspace-env/changes.patch",
+              "sha256": "bd0bc5c759ade08655c4a09d3e25eceddaae728db3fc79eda6f6e903eb7e7130"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "paseo.json",
+              "sha256": "a2c49779ceec46bc8eef74f205852c560bace7cb8186191905fc1eba8c8c2ed3"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "server/CONFIGURATION.md",
+              "sha256": "54bcb3afd8d3322ee092b0ef1d0239440f2fcef8be873ba488d233394ef6037b"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "reports/sdlc/paseo-workspace-env/check_setup.py",
+              "sha256": "5cf3ee8613f818c9c8543c12dedc1656e73888ccb54b227b42e353de2c9da4e3"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "reports/sdlc/paseo-workspace-env/smoke.mjs",
+              "sha256": "19cc03b12091818a2bef0d6f020b8ae864e7f445c75dc14e1fbe6714bced676a"
+            },
+            {
+              "kind": "self-verification",
+              "path": "reports/sdlc/paseo-workspace-env/self-verification.md",
+              "sha256": "8aa21a8dbdec040cd824d7db03192d0bfce64c0b8d70f50ff0c653c8e7f76fa1"
+            },
+            {
+              "kind": "test-results",
+              "path": "reports/sdlc/paseo-workspace-env/test-results.json",
+              "sha256": "93499179156402d0f0f9ca759a7ec63df1b70d216b9ff567a09d3d77278482df"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/paseo-workspace-env/red.log",
+              "sha256": "7dd140b356e905b38611ac0c32caaf8e789fe004fe633110af97622fd9085ae8"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/paseo-workspace-env/green.log",
+              "sha256": "f13fe7f84ebf33bcc28ee391d49e93b3954c6169f1a068da357d2b41a6b58e8d"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/paseo-workspace-env/post-refactor.log",
+              "sha256": "1a1c7eb9bc77127064fa13cd880ef917cdbfc40a478969260280aa3c1a2f5fcb"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/paseo-workspace-env/smoke.log",
+              "sha256": "727e55fb476ba77ff2cb0230fe3a320125f305a5e76b4d913abc8fc4407ec193"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/paseo-workspace-env/activation.log",
+              "sha256": "a3cb556b6f6340bd1e2f74608ebe9a4c214e51a9f7616e28378c5a7438b1003c"
+            },
+            {
+              "kind": "independent-verification",
+              "path": "reports/sdlc/paseo-workspace-env/independent-verification.md",
+              "sha256": "951abb785935ec25e9fc562f4ee4e37879618145b43d7d49da84fe2154507a30"
+            }
+          ],
+          "finished_at": "2026-09-24T13:50:36.224011+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed stage deliverable against requested Paseo environment copy.",
+            "authority_source": "User: copy .env from the base checkout when Paseo creates a workspace; local setup configuration only",
+            "candidate": "sha256:e7f23673e14102ace1d540e483cf1a6929ad5dd5500f25a3cfd9c84c7ce252cf",
+            "next_action": "Continue authorized local workflow",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/paseo-workspace-env/triage.md",
+                "sha256": "8259c5bb0754434ae204b52492067a0c7e6af919e148b1c8fd921787c14881e9"
+              },
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/paseo-workspace-env/intent.md",
+                "sha256": "d770adf68bf56e327f333b756b994726763a38292d3b4197219a97f838595348"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/paseo-workspace-env/investigation.md",
+                "sha256": "68519da1aca2f10fa13578968953c34516e373fa81c66a8d2d0ae5b6bcb62d0e"
+              },
+              {
+                "kind": "spec",
+                "path": "reports/sdlc/paseo-workspace-env/spec.md",
+                "sha256": "61900b6e119c13aa81cfdd39b22809533bfbe5b6944b2afa8301f0a41c9f88a1"
+              },
+              {
+                "kind": "plan",
+                "path": "reports/sdlc/paseo-workspace-env/plan.md",
+                "sha256": "517b49e1c86bcb7de1fcf62ef8c1fc840c973e3d39f76fa1f462629846a92347"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/paseo-workspace-env/test-plan.md",
+                "sha256": "2554ab890e1bfbccb046a7884a752ad3faf1595378b43ef3124c922ddaea2989"
+              },
+              {
+                "kind": "build",
+                "path": "reports/sdlc/paseo-workspace-env/build.md",
+                "sha256": "4ab39907f4229c4b783eabc7b4e8b350bed9bf86e051bf3bd67e21bbe4049828"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/paseo-workspace-env/changes.patch",
+                "sha256": "bd0bc5c759ade08655c4a09d3e25eceddaae728db3fc79eda6f6e903eb7e7130"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "paseo.json",
+                "sha256": "a2c49779ceec46bc8eef74f205852c560bace7cb8186191905fc1eba8c8c2ed3"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "server/CONFIGURATION.md",
+                "sha256": "54bcb3afd8d3322ee092b0ef1d0239440f2fcef8be873ba488d233394ef6037b"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "reports/sdlc/paseo-workspace-env/check_setup.py",
+                "sha256": "5cf3ee8613f818c9c8543c12dedc1656e73888ccb54b227b42e353de2c9da4e3"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "reports/sdlc/paseo-workspace-env/smoke.mjs",
+                "sha256": "19cc03b12091818a2bef0d6f020b8ae864e7f445c75dc14e1fbe6714bced676a"
+              },
+              {
+                "kind": "self-verification",
+                "path": "reports/sdlc/paseo-workspace-env/self-verification.md",
+                "sha256": "8aa21a8dbdec040cd824d7db03192d0bfce64c0b8d70f50ff0c653c8e7f76fa1"
+              },
+              {
+                "kind": "test-results",
+                "path": "reports/sdlc/paseo-workspace-env/test-results.json",
+                "sha256": "93499179156402d0f0f9ca759a7ec63df1b70d216b9ff567a09d3d77278482df"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/red.log",
+                "sha256": "7dd140b356e905b38611ac0c32caaf8e789fe004fe633110af97622fd9085ae8"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/green.log",
+                "sha256": "f13fe7f84ebf33bcc28ee391d49e93b3954c6169f1a068da357d2b41a6b58e8d"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/post-refactor.log",
+                "sha256": "1a1c7eb9bc77127064fa13cd880ef917cdbfc40a478969260280aa3c1a2f5fcb"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/smoke.log",
+                "sha256": "727e55fb476ba77ff2cb0230fe3a320125f305a5e76b4d913abc8fc4407ec193"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/paseo-workspace-env/activation.log",
+                "sha256": "a3cb556b6f6340bd1e2f74608ebe9a4c214e51a9f7616e28378c5a7438b1003c"
+              },
+              {
+                "kind": "independent-verification",
+                "path": "reports/sdlc/paseo-workspace-env/independent-verification.md",
+                "sha256": "951abb785935ec25e9fc562f4ee4e37879618145b43d7d49da84fe2154507a30"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "completion",
+                "path": "reports/sdlc/paseo-workspace-env/completion.md",
+                "sha256": "d050a5d180a33898a8e38b215510f98806cac9b45ee8621b466233259fca511b"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Read source, constraints and stage evidence; no production execution or secrets in records.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

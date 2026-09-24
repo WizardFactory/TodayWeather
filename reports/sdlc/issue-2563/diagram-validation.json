@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "validate",
+  "stage": "render",
+  "type": "architecture",
+  "input": "/root/.paseo/worktrees/08mqediz/eatable-whale/docs/architecture/diagrams/service-overview.json",
+  "error": "Renderer process could not start.",
+  "diagnostics": [
+    {
+      "code": "internal/renderer-process",
+      "severity": "error",
+      "message": "Renderer process could not start.",
+      "subject": {},
+      "evidence": {
+        "reason": "spawnSync /root/.nvm/versions/node/v22.22.2/bin/node EPERM"
+      },
+      "supportedFixes": []
+    }
+  ]
+}

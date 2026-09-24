@@ -1,0 +1,4 @@
+# Self-verification
+Eight focused synthetic checks and five existing AWS checks passed after intended Red. Real installed Paseo parser/seed/setup functions exercised on a temporary real Git worktree; original root inferred by Paseo, copied bytes/mode/Git ignore verified, existing-target config precedence preserved. No actual credentials used in tests. Base activation verified by config byte equality and source .env ignore/untracked status; source private file unchanged. No daemon restart or registered workspace creation.
+
+Application runtime tests are not repeated: only development-workspace setup and its documentation changed. No application architecture/diagram change applies. Existing-target-branch paseo.json wins; users need this setup on branches carrying an older config. Local workspace mode and already-created workspaces do not run worktree initialization. No full app/gather/provider execution or deployment is claimed.

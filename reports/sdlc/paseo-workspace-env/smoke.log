@@ -1,0 +1,2 @@
+PASS installed Paseo parser, config seed, inferred source path, actual worktree setup, bytes, mode and Git ignore
+PASS existing target configuration precedence is preserved

@@ -1,0 +1,68 @@
+{
+  "candidate": "sha256:e7f23673e14102ace1d540e483cf1a6929ad5dd5500f25a3cfd9c84c7ce252cf",
+  "scenarios": [
+    {
+      "id": "paseo-lifecycle",
+      "requirement": "AC1",
+      "required": true,
+      "environment": "Installed Paseo lifecycle functions, Node22, synthetic isolated Git worktree",
+      "prerequisites": "Git and installed @getpaseo/server",
+      "actions": "Seed config and run worktree setup with inferred original root; inspect synthetic target bytes/mode/ignore",
+      "expected": "Correct file copied privately, native config precedence preserved",
+      "failure": "Any assertion or setup failure",
+      "cleanup": "Temporary Git worktree removed; no real workspace registered"
+    }
+  ],
+  "runs": [
+    {
+      "id": "workspace-env-red",
+      "phase": "red",
+      "candidate": "c9220de prior paseo.json plus new test",
+      "command": "python3 reports/sdlc/paseo-workspace-env/check_setup.py",
+      "exit_code": 1,
+      "observed": "Target server/.env absent before new block",
+      "environment": "Local shell/Python3/Node22 with synthetic isolated filesystem",
+      "evidence": "reports/sdlc/paseo-workspace-env/red.log",
+      "status": "passed",
+      "execution_kind": "real",
+      "intended_failure": true
+    },
+    {
+      "id": "workspace-env-green",
+      "phase": "green",
+      "candidate": "sha256:e7f23673e14102ace1d540e483cf1a6929ad5dd5500f25a3cfd9c84c7ce252cf",
+      "command": "python3 reports/sdlc/paseo-workspace-env/check_setup.py",
+      "exit_code": 0,
+      "observed": "Eight synthetic env setup checks passed",
+      "environment": "Local shell/Python3/Node22 with synthetic isolated filesystem",
+      "evidence": "reports/sdlc/paseo-workspace-env/green.log",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "workspace-env-post-refactor",
+      "phase": "post-refactor",
+      "candidate": "sha256:e7f23673e14102ace1d540e483cf1a6929ad5dd5500f25a3cfd9c84c7ce252cf",
+      "command": "python3 reports/sdlc/paseo-workspace-secrets/check_setup.py",
+      "exit_code": 0,
+      "observed": "Five existing AWS setup checks passed",
+      "environment": "Local shell/Python3/Node22 with synthetic isolated filesystem",
+      "evidence": "reports/sdlc/paseo-workspace-env/post-refactor.log",
+      "status": "passed",
+      "execution_kind": "real"
+    },
+    {
+      "id": "workspace-env-smoke",
+      "phase": "smoke",
+      "candidate": "sha256:e7f23673e14102ace1d540e483cf1a6929ad5dd5500f25a3cfd9c84c7ce252cf",
+      "command": "node reports/sdlc/paseo-workspace-env/smoke.mjs",
+      "exit_code": 0,
+      "observed": "Installed parser/config seed/source inference/worktree setup passed; existing target config retained",
+      "environment": "Local shell/Python3/Node22 with synthetic isolated filesystem",
+      "evidence": "reports/sdlc/paseo-workspace-env/smoke.log",
+      "status": "passed",
+      "execution_kind": "real",
+      "scenario_id": "paseo-lifecycle"
+    }
+  ]
+}

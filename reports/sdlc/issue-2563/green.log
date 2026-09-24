@@ -1,0 +1,13 @@
+PASS repository cwd, before first New Relic import
+PASS server cwd
+PASS unrelated cwd
+PASS bin/www entrypoint
+PASS npm start entrypoint
+PASS process environment wins
+PASS empty process value is preserved
+PASS missing file keeps defaults
+PASS missing file keeps supplied environment
+PASS dotenv 10 ignores non-assignment lines; keeps hash in values
+PASS directory at .env stops startup
+PASS permission error is sanitized
+12 environment startup checks passed

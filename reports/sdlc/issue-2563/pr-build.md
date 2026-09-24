@@ -1,0 +1,3 @@
+# Final PR candidate build
+Updated current-production applicability comments in config/config.js and .env.example; the example legacy assignments are commented out. Configuration guide records AK's dated confirmation and no longer treats these settings as prerequisites. Runtime behavior is unchanged. Combined dotenv/Paseo candidate includes all prior authorized code and documentation; no private file is included.
+Final source snapshots: pr-candidate.json. New authority/scope: pr-intent-amendment.md. Original local completion and previous verification reports remain preserved in stage history. Final build iteration 2 refreshes snapshots for publication; unchanged diagram artifacts retain their prior delivery/browser/visual evidence.

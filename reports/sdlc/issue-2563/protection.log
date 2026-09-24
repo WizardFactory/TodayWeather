@@ -1,0 +1,2 @@
+PASS candidate hashes unchanged; no uploaded secret values in changed files or task evidence.
+PASS local .env byte equality, mode 0600 and Git exclusion (previous check).

@@ -26,6 +26,11 @@ build/Release
 # https://www.npmjs.org/doc/misc/npm-faq.html#should-i-check-my-node_modules-folder-into-git
 node_modules
 
+# Local environment files may contain credentials. Keep sanitized examples.
+.env
+.env.*
+!.env.example
+
 .idea
 
 .DS_Store

@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/root/.paseo/worktrees/08mqediz/eatable-whale/reports/sdlc/paseo-workspace-env/check_setup.py", line 39, in <module>
+    assert copied.is_file(), 'server/.env was not copied'
+           ^^^^^^^^^^^^^^^^
+AssertionError: server/.env was not copied
