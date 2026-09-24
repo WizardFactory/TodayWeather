@@ -84,7 +84,7 @@ var seaModel = {
     update: function (query, doc, options, cb) { seaRecords.push(doc); cb(); },
     remove: function () { return {exec: function () {}}; }
 };
-var midDeps = {async: require('async'), '../../lib/kmaTimeLib': time};
+var midDeps = {'../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'), async: require('async'), '../../lib/kmaTimeLib': time};
 ['forecast', 'land', 'sea', 'temp'].forEach(function (type) {
     midDeps['../../models/kma/kma.town.mid.' + type + '.model.js'] = type === 'sea' ? seaModel : {};
 });

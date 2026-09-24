@@ -1,0 +1,162 @@
+TAP version 13
+# Subtest: captured day 4–10 succeeds with original values and no invented day 3
+ok 1 - captured day 4–10 succeeds with original values and no invented day 3
+  ---
+  duration_ms: 28.596222
+  type: 'test'
+  ...
+# Subtest: synthetic legacy day 3 remains supported
+ok 2 - synthetic legacy day 3 remains supported
+  ---
+  duration_ms: 1.739357
+  type: 'test'
+  ...
+# Subtest: missing optional fields never become sentinel temperatures or defaults
+ok 3 - missing optional fields never become sentinel temperatures or defaults
+  ---
+  duration_ms: 2.159573
+  type: 'test'
+  ...
+# Subtest: organizeLandData malformed envelopes and empty/invalid items fail once
+ok 4 - organizeLandData malformed envelopes and empty/invalid items fail once
+  ---
+  duration_ms: 9.953819
+  type: 'test'
+  ...
+# Subtest: organizeTempData malformed envelopes and empty/invalid items fail once
+ok 5 - organizeTempData malformed envelopes and empty/invalid items fail once
+  ---
+  duration_ms: 8.591204
+  type: 'test'
+  ...
+# Subtest: 1.0 real schemas + Manager handoff + storage projection + service round trip
+ok 6 - 1.0 real schemas + Manager handoff + storage projection + service round trip
+  ---
+  duration_ms: 246.190119
+  type: 'test'
+  ...
+# Subtest: 1.0 partial valid horizons persist without requiring day 10
+ok 7 - 1.0 partial valid horizons persist without requiring day 10
+  ---
+  duration_ms: 28.131226
+  type: 'test'
+  ...
+# Subtest: 2.0 real schemas + Manager handoff + storage projection + service round trip
+ok 8 - 2.0 real schemas + Manager handoff + storage projection + service round trip
+  ---
+  duration_ms: 29.14585
+  type: 'test'
+  ...
+# Subtest: 2.0 partial valid horizons persist without requiring day 10
+ok 9 - 2.0 partial valid horizons persist without requiring day 10
+  ---
+  duration_ms: 22.263878
+  type: 'test'
+  ...
+# Subtest: KST publication, 06/18 cycles, mixed timestamp representations and year/month boundaries
+ok 10 - KST publication, 06/18 cycles, mixed timestamp representations and year/month boundaries
+  ---
+  duration_ms: 129.607461
+  type: 'test'
+  ...
+# Subtest: legacy day 3, honest captured gap, no NaN/sentinel/unknown sky output
+ok 11 - legacy day 3, honest captured gap, no NaN/sentinel/unknown sky output
+  ---
+  duration_ms: 27.752357
+  type: 'test'
+  ...
+# Subtest: stale or future publication, identity mismatch, latest partial never uses older forecast
+ok 12 - stale or future publication, identity mismatch, latest partial never uses older forecast
+  ---
+  duration_ms: 29.054981
+  type: 'test'
+  ...
+# Subtest: short merge sorts/deduplicates, keeps seven-day recent history and declares boundary gap
+ok 13 - short merge sorts/deduplicates, keeps seven-day recent history and declares boundary gap
+  ---
+  duration_ms: 32.194703
+  type: 'test'
+  ...
+# Subtest: dedicated daily health fails captured polluted list while short is current
+ok 14 - dedicated daily health fails captured polluted list while short is current
+  ---
+  duration_ms: 20.991893
+  type: 'test'
+  ...
+# Subtest: RSS retirement ignores older/equal/newer mixed publications and empty targets
+ok 15 - RSS retirement ignores older/equal/newer mixed publications and empty targets
+  ---
+  duration_ms: 287.916183
+  type: 'test'
+  ...
+# Subtest: 401/error envelopes emit only controlled failure without key-bearing diagnostics
+ok 16 - 401/error envelopes emit only controlled failure without key-bearing diagnostics
+  ---
+  duration_ms: 8.099576
+  type: 'test'
+  ...
+# Subtest: RSS HTML/malformed XML never publishes or persists; retired schedules never fetch
+ok 17 - RSS HTML/malformed XML never publishes or persists; retired schedules never fetch
+  ---
+  duration_ms: 30.240944
+  type: 'test'
+  ...
+# Subtest: unknown land text alone is invalid rather than a successful empty forecast
+ok 18 - unknown land text alone is invalid rather than a successful empty forecast
+  ---
+  duration_ms: 2.31848
+  type: 'test'
+  ...
+# Subtest: invalid short weather never erases a valid mid row or invents zero precipitation
+ok 19 - invalid short weather never erases a valid mid row or invents zero precipitation
+  ---
+  duration_ms: 25.853532
+  type: 'test'
+  ...
+# Subtest: short-only missing average temperature stays absent, valid negative temperature remains real
+ok 20 - short-only missing average temperature stays absent, valid negative temperature remains real
+  ---
+  duration_ms: 179.809083
+  type: 'test'
+  ...
+# Subtest: stale/missing/future short publication cannot extend forecast; recent history survives
+ok 21 - stale/missing/future short publication cannot extend forecast; recent history survives
+  ---
+  duration_ms: 50.856535
+  type: 'test'
+  ...
+# Subtest: failed primary DB write reports failure without pruning older records
+not ok 22 - failed primary DB write reports failure without pruning older records
+  ---
+  duration_ms: 22.052533
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:191:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:196:33)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 21
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1256.271475

@@ -128,3 +128,23 @@ On rejected loading/conversion, the controller presents a retry confirmation and
 TodayWeather and TodayAir widgets use Objective-C request code and their own path constants, including unversioned `weather/coord` and v000901 KMA address paths. They read shared preference data created by the app. Apple Watch contains an older extension and bundled web assets; the root README explicitly records a historical watch integration problem. Do not assume that all shipped native clients use the current Angular v000903 contract.
 
 Sources: [weather widget](../../tw.ios/widget/TodayViewController.m), [air widget](../../ta.ios/widget/TodayViewController.m), [storage bridge](../../client/www/js/service.storage.js), [original README](../../README.md).
+
+## Daily forecast validity (issue #2560)
+
+The mid-land/temperature collectors preserve available day-3–10 fields without
+requiring day 3 or day 10. Both storage versions retain publication/region and
+optional precipitation probabilities. Mid composition joins by each source's
+KST target date, with independent 36-hour publication limits and no future or
+mismatched identity. Short daily overlays have a 24-hour publication limit.
+The seven-day observation history remains; unavailable days are omitted and
+listed in additive `midData.dailyStatus.unavailableDates`. The captured day-4
+forecast remains September 28, with September 27 unavailable unless an actual
+valid source supplies it. Existing v000903 `tmn`/`tmx` output conversion remains.
+
+Legacy **mid RSS is retired**: scheduled collection/storage entry points are
+disabled and `getMidRss` passes through without cached overlay. Short RSS remains
+independent. No replacement feed or production recovery is claimed.
+
+See the [daily validity diagram](diagrams/daily-forecast-validity.html),
+[editable source](diagrams/daily-forecast-validity.json), and
+[contract, source policy and operator checklist](../../reports/sdlc/issue-2560/daily-forecast-contract.md).

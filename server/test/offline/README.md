@@ -49,3 +49,27 @@ It executes the actual v000903 coordinate router in process, complete middleware
 
 Smoke dependencies and output stay under the runner's temporary directory. This workflow is independent of the legacy Mocha/Travis suite and requires no production credentials, database, provider access or service startup. Hosted runner setup and npm installation require network access; the weather checks themselves use isolated dependencies.
 
+
+## Daily forecasts (#2560)
+
+`daily-forecast.test.js` runs the captured day-4–10 regression plus synthetic
+parser/storage/service/freshness/RSS cases. The only captured input is
+`fixtures/mid-land-captured.json`. `daily-harness.js` uses actual Mongoose schemas
+with in-memory persistence adapters and a fixed clock; no Mongo connection.
+
+Install an isolated test environment (no repository dependency changes):
+
+```sh
+npm install --prefix /tmp/issue-2560-offline --ignore-scripts --no-audit --no-fund async@2.6.4 xml2js@0.4.23 mocha@2.5.3 express@4.13.4 sprintf@0.1.5 mongoose@5.1.2
+NODE_PATH=/tmp/issue-2560-offline/node_modules npm --prefix server run test:offline
+TZ=UTC NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/daily-response-smoke.js
+```
+
+The additional smoke executes all v000903 middleware for both DB versions and
+C/F units, covering captured, stale, missing-text and missing-temperature data.
+HTTP, DB and timers are intercepted before loading real modules. It does not
+import or initialize `server/app.js`; existing global field declarations are
+read as text only. Tests require Node >=18. Historical production Node builds
+and real provider/deployment behavior remain operator checks.
+
+See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/daily-forecast-contract.md).

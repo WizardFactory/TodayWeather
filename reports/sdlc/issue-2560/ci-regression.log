@@ -1,0 +1,538 @@
+
+> TodayWeather@0.7.5 test:offline
+> node test/offline/run.js
+
+
+
+  gather drift: synthetic offline compatibility
+    ✓ builds migrated TOWN_CURRENT URL without HTTP (41ms)
+    ✓ dispatches 00 to organizeCurrentData (72ms)
+    ✓ builds migrated TOWN_SHORTEST URL without HTTP
+    ✓ dispatches 00 to organizeShortestData
+    ✓ builds migrated TOWN_SHORT URL without HTTP
+    ✓ dispatches 00 to organizeShortData
+    ✓ builds migrated MID_FORECAST URL without HTTP
+    ✓ dispatches 00 to organizeForecastData
+    ✓ builds migrated MID_LAND URL without HTTP
+    ✓ dispatches 00 to organizeLandData
+    ✓ builds migrated MID_TEMP URL without HTTP
+    ✓ dispatches 00 to organizeTempData
+    ✓ builds migrated MID_SEA URL without HTTP
+    ✓ dispatches 00 to organizeSeaData
+    ✓ fails safely on non-success
+    ✓ fails safely on legacy success
+    ✓ fails safely on zero count
+    ✓ fails safely on bad count
+    ✓ fails safely on missing count
+    ✓ fails safely on empty items
+    ✓ fails safely on missing header
+    ✓ fails safely on missing envelope
+    ✓ fails safely on malformed XML without reflecting raw text
+    ✓ rejects HTTP status/response 403
+    ✓ rejects HTTP status/response 404
+    ✓ rejects HTTP status/response 500
+    ✓ rejects HTTP status/response 302
+    ✓ rejects HTTP status/response null
+    ✓ does not log transport errors containing the request URL
+    ✓ maps the specified short fixture and publication/grid fields
+    ✓ parses complete quantities 1.5/0.5
+    ✓ parses complete quantities  1.5 mm /0.5cm
+    ✓ keeps unsupported precipitation missing: ""
+    ✓ keeps unsupported precipitation missing: " "
+    ✓ keeps unsupported precipitation missing: "unknown"
+    ✓ keeps unsupported precipitation missing: "1~4"
+    ✓ keeps unsupported precipitation missing: "1.0mm 미만"
+    ✓ keeps unsupported precipitation missing: "50mm 이상"
+    ✓ keeps unsupported precipitation missing: "Infinity"
+    ✓ keeps unsupported precipitation missing: "NaN"
+    ✓ keeps unsupported precipitation missing: "-1"
+    ✓ keeps unsupported precipitation missing: "-999"
+    ✓ keeps unsupported precipitation missing: "1e999"
+    ✓ keeps unsupported precipitation missing: "1.2junk"
+    ✓ retains legacy categories and forecast grouping
+    ✓ rejects invalid TMP ""
+    ✓ rejects invalid TMP "NaN"
+    ✓ rejects invalid TMP "Infinity"
+    ✓ rejects invalid TMP "12bad"
+    ✓ normalizes shortest RN1 0
+    ✓ normalizes shortest RN1 1.5
+    ✓ normalizes shortest RN1 undefined
+    ✓ normalizes shortest RN1 ""
+    ✓ normalizes shortest RN1 "bad"
+    ✓ normalizes shortest RN1 "Infinity"
+    ✓ normalizes shortest RN1 "NaN"
+    ✓ normalizes shortest RN1 -1
+    ✓ normalizes shortest RN1 -999
+    ✓ normalizes shortest RN1 "1~4"
+    ✓ normalizes shortest RN1 "1mm 미만"
+    ✓ does not leak keys for empty request lists or callback exceptions
+    ✓ preserves upstream current validation and Kakao initialization/API
+    ✓ preserves protective logger catch with a throwing transport
+    ✓ preserves upstream operational defaults and inclusive request cutoffs
+
+  upstream storage and period-contract characterization
+    ✓ merges existing current fields without overwriting a new valid zero
+    ✓ retains current reh/lgt sentinel template contract
+    ✓ documents legacy 24h splitting as a limitation, not hourly-to-six-hour equivalence
+
+  independent-review regressions: malformed organized output
+    ✓ rejects malformed MID_FORECAST without reflecting provider text
+    ✓ rejects malformed MID_TEMP without reflecting provider text
+    ✓ rejects malformed MID_LAND without reflecting provider text
+    ✓ rejects malformed MID_SEA without reflecting provider text
+    ✓ reports organizer rejection to the callback
+    ✓ rejects invalid TMP in later forecast groups
+    ✓ rejects invalid SKY in later forecast groups
+    ✓ rejects invalid REH in later forecast groups
+    ✓ rejects invalid PTY in later forecast groups
+
+  real mid organizers with synthetic fixtures
+    ✓ collects nonempty valid MID_FORECAST
+    ✓ collects nonempty valid MID_TEMP
+    ✓ collects nonempty valid MID_LAND
+    ✓ collects nonempty valid MID_SEA
+    ✓ rejects a nonfinite day-specific sea height 4AAm
+    ✓ rejects a nonfinite day-specific sea height 5APm
+    ✓ rejects a nonfinite day-specific sea height 6BAm
+    ✓ rejects a nonfinite day-specific sea height 7BPm
+    ✓ does not reuse missing temperature fields from a previous region
+    ✓ rejects non-finite sea values before JSON serialization can hide them
+
+  mid forecast text completeness
+    ✓ rejects empty/malformed land forecast text ""
+    ✓ rejects empty/malformed land forecast text "   "
+    ✓ rejects empty/malformed land forecast text {"unexpected":["text"]}
+
+  review corrections: complete responses and key representation
+    ✓ rejects count/item mismatch 1 before organization
+    ✓ rejects count/item mismatch 10 before organization
+    ✓ rejects count/item mismatch 12 before organization
+    ✓ rejects count/item mismatch 999 before organization
+    ✓ rejects count/item mismatch 1000 before organization
+    ✓ normalizes raw or once-encoded dummy key DUMMY+a/b=
+    ✓ normalizes raw or once-encoded dummy key DUMMY%2Ba%2Fb%3D
+    ✓ normalizes raw or once-encoded dummy key DUMMY%2ba%2fb%3d
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: undefined
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: 
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%badEscape
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%2
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%GG
+    ✓ does not reflect raw/encoded dummy keys on transport failure
+
+
+  103 passing (511ms)
+
+PASS synthetic XML -> requester -> events -> saveShort -> getShortFromDB (1 write, exact quantities/timestamps/grid)
+PASS provider-error XML -> failed collection, no additional persistence; no key-bearing logs
+PASS truncated XML page -> failed requestData -> no additional persistence; encoded/raw dummy keys safe
+PASS sea XML -> requester -> events -> saveMid (26 distinct heights); later-day NaN prevents another write
+TAP version 13
+# Subtest: captured day 4–10 succeeds with original values and no invented day 3
+ok 1 - captured day 4–10 succeeds with original values and no invented day 3
+  ---
+  duration_ms: 33.926318
+  type: 'test'
+  ...
+# Subtest: synthetic legacy day 3 remains supported
+ok 2 - synthetic legacy day 3 remains supported
+  ---
+  duration_ms: 2.410203
+  type: 'test'
+  ...
+# Subtest: missing optional fields never become sentinel temperatures or defaults
+ok 3 - missing optional fields never become sentinel temperatures or defaults
+  ---
+  duration_ms: 4.151735
+  type: 'test'
+  ...
+# Subtest: organizeLandData malformed envelopes and empty/invalid items fail once
+ok 4 - organizeLandData malformed envelopes and empty/invalid items fail once
+  ---
+  duration_ms: 12.75683
+  type: 'test'
+  ...
+# Subtest: organizeTempData malformed envelopes and empty/invalid items fail once
+ok 5 - organizeTempData malformed envelopes and empty/invalid items fail once
+  ---
+  duration_ms: 11.111387
+  type: 'test'
+  ...
+# Subtest: 1.0 real schemas + Manager handoff + storage projection + service round trip
+ok 6 - 1.0 real schemas + Manager handoff + storage projection + service round trip
+  ---
+  duration_ms: 285.35791
+  type: 'test'
+  ...
+# Subtest: 1.0 partial valid horizons persist without requiring day 10
+ok 7 - 1.0 partial valid horizons persist without requiring day 10
+  ---
+  duration_ms: 29.251283
+  type: 'test'
+  ...
+# Subtest: 2.0 real schemas + Manager handoff + storage projection + service round trip
+ok 8 - 2.0 real schemas + Manager handoff + storage projection + service round trip
+  ---
+  duration_ms: 29.727753
+  type: 'test'
+  ...
+# Subtest: 2.0 partial valid horizons persist without requiring day 10
+ok 9 - 2.0 partial valid horizons persist without requiring day 10
+  ---
+  duration_ms: 26.64269
+  type: 'test'
+  ...
+# Subtest: KST publication, 06/18 cycles, mixed timestamp representations and year/month boundaries
+ok 10 - KST publication, 06/18 cycles, mixed timestamp representations and year/month boundaries
+  ---
+  duration_ms: 140.353149
+  type: 'test'
+  ...
+# Subtest: legacy day 3, honest captured gap, no NaN/sentinel/unknown sky output
+ok 11 - legacy day 3, honest captured gap, no NaN/sentinel/unknown sky output
+  ---
+  duration_ms: 20.343563
+  type: 'test'
+  ...
+# Subtest: stale or future publication, identity mismatch, latest partial never uses older forecast
+ok 12 - stale or future publication, identity mismatch, latest partial never uses older forecast
+  ---
+  duration_ms: 26.428521
+  type: 'test'
+  ...
+# Subtest: short merge sorts/deduplicates, keeps seven-day recent history and declares boundary gap
+ok 13 - short merge sorts/deduplicates, keeps seven-day recent history and declares boundary gap
+  ---
+  duration_ms: 47.179935
+  type: 'test'
+  ...
+# Subtest: dedicated daily health fails captured polluted list while short is current
+ok 14 - dedicated daily health fails captured polluted list while short is current
+  ---
+  duration_ms: 21.438028
+  type: 'test'
+  ...
+# Subtest: RSS retirement ignores older/equal/newer mixed publications and empty targets
+ok 15 - RSS retirement ignores older/equal/newer mixed publications and empty targets
+  ---
+  duration_ms: 397.205058
+  type: 'test'
+  ...
+# Subtest: 401/error envelopes emit only controlled failure without key-bearing diagnostics
+ok 16 - 401/error envelopes emit only controlled failure without key-bearing diagnostics
+  ---
+  duration_ms: 11.12381
+  type: 'test'
+  ...
+# Subtest: RSS HTML/malformed XML never publishes or persists; retired schedules never fetch
+ok 17 - RSS HTML/malformed XML never publishes or persists; retired schedules never fetch
+  ---
+  duration_ms: 46.407853
+  type: 'test'
+  ...
+# Subtest: unknown land text alone is invalid rather than a successful empty forecast
+ok 18 - unknown land text alone is invalid rather than a successful empty forecast
+  ---
+  duration_ms: 3.59192
+  type: 'test'
+  ...
+# Subtest: invalid short weather never erases a valid mid row or invents zero precipitation
+ok 19 - invalid short weather never erases a valid mid row or invents zero precipitation
+  ---
+  duration_ms: 38.528804
+  type: 'test'
+  ...
+# Subtest: short-only missing average temperature stays absent, valid negative temperature remains real
+ok 20 - short-only missing average temperature stays absent, valid negative temperature remains real
+  ---
+  duration_ms: 238.972798
+  type: 'test'
+  ...
+# Subtest: stale/missing/future short publication cannot extend forecast; recent history survives
+ok 21 - stale/missing/future short publication cannot extend forecast; recent history survives
+  ---
+  duration_ms: 74.890149
+  type: 'test'
+  ...
+# Subtest: failed primary DB write reports failure without pruning older records
+ok 22 - failed primary DB write reports failure without pruning older records
+  ---
+  duration_ms: 23.196462
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1552.881047
+TAP version 13
+# Subtest: collector direction E
+ok 1 - collector direction E
+  ---
+  duration_ms: 18.003852
+  type: 'test'
+  ...
+# Subtest: collector direction N
+ok 2 - collector direction N
+  ---
+  duration_ms: 8.975116
+  type: 'test'
+  ...
+# Subtest: collector direction NE
+ok 3 - collector direction NE
+  ---
+  duration_ms: 9.478097
+  type: 'test'
+  ...
+# Subtest: collector direction NW
+ok 4 - collector direction NW
+  ---
+  duration_ms: 6.570263
+  type: 'test'
+  ...
+# Subtest: collector direction S
+ok 5 - collector direction S
+  ---
+  duration_ms: 7.791034
+  type: 'test'
+  ...
+# Subtest: collector direction SE
+ok 6 - collector direction SE
+  ---
+  duration_ms: 7.433517
+  type: 'test'
+  ...
+# Subtest: collector direction SW
+ok 7 - collector direction SW
+  ---
+  duration_ms: 6.766502
+  type: 'test'
+  ...
+# Subtest: collector direction W
+ok 8 - collector direction W
+  ---
+  duration_ms: 7.772199
+  type: 'test'
+  ...
+# Subtest: collector direction UNKNOWN
+ok 9 - collector direction UNKNOWN
+  ---
+  duration_ms: 6.081321
+  type: 'test'
+  ...
+# Subtest: collector absent direction remains sentinel
+ok 10 - collector absent direction remains sentinel
+  ---
+  duration_ms: 9.832789
+  type: 'test'
+  ...
+# Subtest: 1.0 newer RSS uses real DB projection and normalizes wind
+ok 11 - 1.0 newer RSS uses real DB projection and normalizes wind
+  ---
+  duration_ms: 7.634122
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 0 to degrees
+ok 12 - 1.0 direction 0 to degrees
+  ---
+  duration_ms: 5.87255
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 1 to degrees
+ok 13 - 1.0 direction 1 to degrees
+  ---
+  duration_ms: 5.508971
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 2 to degrees
+ok 14 - 1.0 direction 2 to degrees
+  ---
+  duration_ms: 5.560288
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 3 to degrees
+ok 15 - 1.0 direction 3 to degrees
+  ---
+  duration_ms: 8.012147
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 4 to degrees
+ok 16 - 1.0 direction 4 to degrees
+  ---
+  duration_ms: 6.666915
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 5 to degrees
+ok 17 - 1.0 direction 5 to degrees
+  ---
+  duration_ms: 5.696432
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 6 to degrees
+ok 18 - 1.0 direction 6 to degrees
+  ---
+  duration_ms: 6.091129
+  type: 'test'
+  ...
+# Subtest: 1.0 direction 7 to degrees
+ok 19 - 1.0 direction 7 to degrees
+  ---
+  duration_ms: 5.866389
+  type: 'test'
+  ...
+# Subtest: 1.0 equal preserves valid values and fills missing/sentinel fields
+ok 20 - 1.0 equal preserves valid values and fills missing/sentinel fields
+  ---
+  duration_ms: 33.367613
+  type: 'test'
+  ...
+# Subtest: 1.0 older is ignored
+ok 21 - 1.0 older is ignored
+  ---
+  duration_ms: 8.909393
+  type: 'test'
+  ...
+# Subtest: 1.0 invalid RSS wind never erases base
+ok 22 - 1.0 invalid RSS wind never erases base
+  ---
+  duration_ms: 91.231999
+  type: 'test'
+  ...
+# Subtest: 1.0 absent/missing sources preserve every base field
+ok 23 - 1.0 absent/missing sources preserve every base field
+  ---
+  duration_ms: 43.555664
+  type: 'test'
+  ...
+# Subtest: 1.0 first future and single future slot are included
+ok 24 - 1.0 first future and single future slot are included
+  ---
+  duration_ms: 11.333021
+  type: 'test'
+  ...
+# Subtest: 1.0 exact now and past stay unchanged; midnight matches
+ok 25 - 1.0 exact now and past stay unchanged; midnight matches
+  ---
+  duration_ms: 5.663531
+  type: 'test'
+  ...
+# Subtest: 1.0 tmx source gate and 06:00 tmn
+ok 26 - 1.0 tmx source gate and 06:00 tmn
+  ---
+  duration_ms: 6.226272
+  type: 'test'
+  ...
+# Subtest: 2.0 newer RSS uses real DB projection and normalizes wind
+ok 27 - 2.0 newer RSS uses real DB projection and normalizes wind
+  ---
+  duration_ms: 11.783142
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 0 to degrees
+ok 28 - 2.0 direction 0 to degrees
+  ---
+  duration_ms: 6.536771
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 1 to degrees
+ok 29 - 2.0 direction 1 to degrees
+  ---
+  duration_ms: 6.228144
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 2 to degrees
+ok 30 - 2.0 direction 2 to degrees
+  ---
+  duration_ms: 6.301061
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 3 to degrees
+ok 31 - 2.0 direction 3 to degrees
+  ---
+  duration_ms: 6.46132
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 4 to degrees
+ok 32 - 2.0 direction 4 to degrees
+  ---
+  duration_ms: 6.222866
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 5 to degrees
+ok 33 - 2.0 direction 5 to degrees
+  ---
+  duration_ms: 6.74476
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 6 to degrees
+ok 34 - 2.0 direction 6 to degrees
+  ---
+  duration_ms: 6.892906
+  type: 'test'
+  ...
+# Subtest: 2.0 direction 7 to degrees
+ok 35 - 2.0 direction 7 to degrees
+  ---
+  duration_ms: 6.819469
+  type: 'test'
+  ...
+# Subtest: 2.0 equal preserves valid values and fills missing/sentinel fields
+ok 36 - 2.0 equal preserves valid values and fills missing/sentinel fields
+  ---
+  duration_ms: 30.77493
+  type: 'test'
+  ...
+# Subtest: 2.0 older is ignored
+ok 37 - 2.0 older is ignored
+  ---
+  duration_ms: 6.490134
+  type: 'test'
+  ...
+# Subtest: 2.0 invalid RSS wind never erases base
+ok 38 - 2.0 invalid RSS wind never erases base
+  ---
+  duration_ms: 84.03829
+  type: 'test'
+  ...
+# Subtest: 2.0 absent/missing sources preserve every base field
+ok 39 - 2.0 absent/missing sources preserve every base field
+  ---
+  duration_ms: 40.210547
+  type: 'test'
+  ...
+# Subtest: 2.0 first future and single future slot are included
+ok 40 - 2.0 first future and single future slot are included
+  ---
+  duration_ms: 10.300171
+  type: 'test'
+  ...
+# Subtest: 2.0 exact now and past stay unchanged; midnight matches
+ok 41 - 2.0 exact now and past stay unchanged; midnight matches
+  ---
+  duration_ms: 5.906273
+  type: 'test'
+  ...
+# Subtest: 2.0 tmx source gate and 06:00 tmn
+ok 42 - 2.0 tmx source gate and 06:00 tmn
+  ---
+  duration_ms: 5.608798
+  type: 'test'
+  ...
+# Subtest: v2 UTC/KST publication boundary remains on the intended local date
+ok 43 - v2 UTC/KST publication boundary remains on the intended local date
+  ---
+  duration_ms: 0.709365
+  type: 'test'
+  ...
+1..43
+# tests 43
+# suites 0
+# pass 43
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 645.312421

@@ -22,7 +22,20 @@ var midLandSchema = mongoose.Schema({
         wf7Pm: String,
         wf8: String,
         wf9: String,
-        wf10: String
+        wf10: String,
+        rnSt3Am: Number,
+        rnSt3Pm: Number,
+        rnSt4Am: Number,
+        rnSt4Pm: Number,
+        rnSt5Am: Number,
+        rnSt5Pm: Number,
+        rnSt6Am: Number,
+        rnSt6Pm: Number,
+        rnSt7Am: Number,
+        rnSt7Pm: Number,
+        rnSt8: Number,
+        rnSt9: Number,
+        rnSt10: Number
     }]
 });
 

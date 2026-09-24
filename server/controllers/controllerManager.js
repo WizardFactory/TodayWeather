@@ -4,6 +4,9 @@
 "use strict";
 
 var fs = require('fs');
+var midPolicy = require('../lib/midForecastPolicy');
+var landString = midPolicy.landFields;
+var tempString = midPolicy.tempFields;
 var async = require('async');
 
 var collectTown = require('../lib/collectTownForecast');
@@ -766,27 +769,23 @@ Manager.prototype.saveShortest = function(newData, callback){
  */
 Manager.prototype.dupMid = function(src, des){
     var forecastString = ['cnt', 'wfsv'];
-    var tempString = ['taMin3', 'taMax3', 'taMin4', 'taMax4', 'taMin5', 'taMax5', 'taMin6', 'taMax6',
-        'taMin7', 'taMax7', 'taMin8', 'taMax8', 'taMin9', 'taMax9', 'taMin10', 'taMax10'];
     var seaString = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm', 'wf6Am', 'wf6Pm',
         'wf7Am', 'wf7Pm', 'wf8', 'wf9', 'wf10',
         'wh3AAm', 'wh3APm', 'wh3BAm', 'wh3BPm', 'wh4AAm', 'wh4APm', 'wh4BAm', 'wh4BPm',
         'wh5AAm', 'wh5APm', 'wh5BAm', 'wh5BPm', 'wh6AAm', 'wh6APm', 'wh6BAm', 'wh6BPm',
         'wh7AAm', 'wh7APm', 'wh7BAm', 'wh7BPm', 'wh8A', 'wh8B', 'wh9A', 'wh9B', 'wh10A', 'wh10B'];
-    var landString = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm',
-        'wf6Am', 'wf6Pm', 'wf7Am', 'wf7Pm', 'wf8', 'wf9', 'wf10'];
     var stringList = [];
 
     if(src.wfsv !== undefined){
         // forecast
         stringList = forecastString;
-    } else if(src.taMax10 !== undefined){
+    } else if(tempString.some(function (key) { return src[key] !== undefined; })){
         // temp
         stringList = tempString;
     } else if(src.wh10B !== undefined){
         // sea
         stringList = seaString;
-    } else if(src.wf10 !== undefined){
+    } else if(landString.some(function (key) { return src[key] !== undefined; })){
         // land
         stringList = landString;
     } else {

@@ -5,7 +5,9 @@ var path = require('path');
 var spawnSync = require('child_process').spawnSync;
 var commands = [
     [require.resolve('mocha/bin/_mocha'), path.join(__dirname, 'gather-code-drift.test.js')],
-    [path.join(__dirname, 'gather-smoke.js')]
+    [path.join(__dirname, 'gather-smoke.js')],
+    [path.join(__dirname, 'daily-forecast.test.js')],
+    [path.join(__dirname, 'rss-wind.test.js')]
 ];
 commands.forEach(function (args) {
     var result = spawnSync(process.execPath, args, {stdio: 'inherit'});

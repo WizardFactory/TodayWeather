@@ -1,0 +1,157 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Daily forecast validity",
+    "locale": "en",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "ingest",
+      "label": "Collection"
+    },
+    {
+      "id": "serve",
+      "label": "Service"
+    },
+    {
+      "id": "fallback",
+      "label": "Unavailable sources",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "provider",
+    "parse",
+    "store",
+    "validate",
+    "merge",
+    "response"
+  ],
+  "nodes": [
+    {
+      "id": "provider",
+      "lane": "ingest",
+      "col": 0,
+      "type": "external",
+      "label": "KMA mid forecast",
+      "sublabel": "Land and temperature",
+      "width": 150
+    },
+    {
+      "id": "parse",
+      "lane": "ingest",
+      "col": 1,
+      "type": "backend",
+      "label": "Available horizons",
+      "sublabel": "Validate envelope and values",
+      "width": 150
+    },
+    {
+      "id": "store",
+      "lane": "ingest",
+      "col": 2,
+      "type": "database",
+      "label": "Persist publication",
+      "sublabel": "DB versions 1 and 2",
+      "width": 150
+    },
+    {
+      "id": "validate",
+      "lane": "serve",
+      "col": 2,
+      "type": "backend",
+      "label": "Check source age",
+      "sublabel": "KST targets; age up to 36h",
+      "width": 150
+    },
+    {
+      "id": "merge",
+      "lane": "serve",
+      "col": 3,
+      "type": "backend",
+      "label": "Join by target date",
+      "sublabel": "Short plus recent history",
+      "width": 150
+    },
+    {
+      "id": "response",
+      "lane": "serve",
+      "col": 4,
+      "type": "frontend",
+      "label": "Daily response",
+      "sublabel": "Sorted, unique, honest gaps",
+      "width": 150
+    },
+    {
+      "id": "unavailable",
+      "lane": "fallback",
+      "col": 1,
+      "type": "security",
+      "label": "Controlled failure",
+      "sublabel": "No valid-data event",
+      "width": 150
+    },
+    {
+      "id": "rss",
+      "lane": "fallback",
+      "col": 3,
+      "type": "external",
+      "label": "Legacy RSS retired",
+      "sublabel": "No fetch or cached overlay",
+      "width": 150
+    }
+  ],
+  "edges": [
+    {
+      "from": "provider",
+      "to": "parse",
+      "label": "XML"
+    },
+    {
+      "from": "parse",
+      "to": "store",
+      "label": "Valid fields"
+    },
+    {
+      "from": "store",
+      "to": "validate",
+      "label": "Read"
+    },
+    {
+      "from": "validate",
+      "to": "merge",
+      "label": "Fresh sources"
+    },
+    {
+      "from": "merge",
+      "to": "response",
+      "label": "Complete daily rows"
+    },
+    {
+      "from": "parse",
+      "to": "unavailable",
+      "label": "Invalid input",
+      "role": "error"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Calendar identity",
+      "items": [
+        "Day 4 remains publication date + 4 in KST.",
+        "A missing September 27 is never filled with September 28."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Consumer contract",
+      "items": [
+        "Incomplete days are omitted; no clear-weather or zero-temperature defaults.",
+        "Retain observation history from the previous seven days."
+      ]
+    }
+  ]
+}
