@@ -2117,6 +2117,19 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     }
 
     if (time === 2 || putAll) {
+        if (config.history && config.history.enabled) {
+            self.asyncTasks.push(function AsosHistory(callback) {
+                require('../lib/history/service').scheduled(function(err, reports) {
+                    if (err) { log.warn('ASOS history recovery unavailable'); }
+                    if (reports) {
+                        reports.forEach(function(report) {
+                            log.info('ASOS history recovery', report);
+                        });
+                    }
+                    callback();
+                });
+            });
+        }
         //spend long time
         log.info('push past');
         self.asyncTasks.push(function Past(callback) {

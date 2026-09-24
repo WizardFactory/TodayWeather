@@ -1293,16 +1293,25 @@ function ControllerTown() {
         log.info(meta);
 
         self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
+            if (err || !townInfo) { return next(); }
+            function done() {
+                if (!config.history || !config.history.readEnabled) { return next(); }
+                var history = require('../lib/history/service');
+                history.loadForTown(townInfo, function(error, data) {
+                    history.mergeHourly(req, data);
+                    next();
+                });
+            }
             controllerKmaStnWeather.getCityHourlyList(townInfo,  function (err, stnWeatherInfo) {
                 if (err) {
                     err.message += ' ' + JSON.stringify(meta);
                     log.error(err);
-                    return next();
+                    return done();
                 }
 
                 if (stnWeatherInfo == undefined) {
                     log.error("Fail to find stnWeatherInfo", meta);
-                    return next();
+                    return done();
                 }
 
                 var hourlyList = stnWeatherInfo;
@@ -1351,7 +1360,7 @@ function ControllerTown() {
                         }
                     }
                 }
-                next();
+                done();
             });
         });
 
@@ -2894,6 +2903,7 @@ function ControllerTown() {
         }
 
         function finish() {
+            if (req._history) { require('../lib/history/service').mergeDaily(req); }
             var byDate = {};
             req.midData.dailyData.forEach(function (row) {
                 if (midPolicy.inWindow(row.date) && midPolicy.complete(row)) { byDate[row.date] = row; }
@@ -3336,6 +3346,7 @@ function ControllerTown() {
         meta.town = townName;
         log.info('## - ' + decodeURI(req.originalUrl)  + ' sID=' + req.sessionID);
 
+        if (req.historyStatus) { result.historyStatus = req.historyStatus; }
         result.regionName = regionName;
         result.cityName = cityName;
         result.townName = townName;
@@ -3347,7 +3358,7 @@ function ControllerTown() {
             result.shortRssPubDate = req.shortRssPubDate;
         }
         if(req.short){
-            result.short = req.short;
+            result.short = require('../lib/history/policy').hourlyResponse(req.short);
         }
         if (req.shortestPubDate) {
             result.shortestPubDate = req.shortestPubDate;
@@ -4781,6 +4792,15 @@ ControllerTown.prototype._convertSummaryTo3H = function (summary) {
         }
     }
 
+    if (summary.historyObservation) {
+        // Do not turn missing ASOS rain/precipitation/lightning into a dry observation.
+        ['rn1', 'pty', 'lgt'].forEach(function(field) {
+            var values = summary[field] || [];
+            var valid = values.filter(function(value) { return _isRssValueUsable(value, -1); });
+            if (!valid.length || (field === 'rn1' && valid.length !== 3)) { newItem[field] = -1; }
+        });
+        newItem.historyObservation = summary.historyObservation;
+    }
     return newItem;
 };
 
@@ -5514,7 +5534,8 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
     var daySummaryList = [];
     //var dateInfo = _getCurrentTimeValue(9);
 
-    pastList.forEach(function (hourCondition, i) {
+    pastList.forEach(function (input) {
+        var hourCondition = Object.assign({}, input);
         if (hourCondition.time === "0000") {
             var D = kmaTimeLib.convertStringToDate(hourCondition.date);
             D.setDate(D.getDate()-1);
@@ -5523,10 +5544,6 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
             hourCondition.time = "2400";
             hourCondition.date = kmaTimeLib.convertDateToYYYYMMDD(D);
         }
-        //index 0번 0000시가 하루전으로 변경되므로, 한개는 버려야 함.
-        if (i == 0) {
-            return;
-        }
 
         //if (dateInfo.date - hourCondition.date > 7) {
         //    //skip
@@ -5534,53 +5551,54 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
         //    return;
         //}
         var dayCondition = self._createOrGetDayCondition(dayConditionList, hourCondition.date);
-        if (hourCondition.lgt !== -1) {
+        if (hourCondition.historyObservation) { dayCondition.historyRecovered = true; }
+        if (_isRssValueUsable(hourCondition.lgt, -1)) {
             dayCondition.lgt.push(hourCondition.lgt);
         }
-        if (hourCondition.pty !== -1) {
+        if (_isRssValueUsable(hourCondition.pty, -1)) {
             dayCondition.pty.push(hourCondition.pty);
         }
-        if (hourCondition.reh !== -1) {
+        if (_isRssValueUsable(hourCondition.reh, -1)) {
             dayCondition.reh.push(hourCondition.reh);
         }
-        if (hourCondition.rn1 !== -1) {
+        if (_isRssValueUsable(hourCondition.rn1, -1)) {
             dayCondition.rn1.push(hourCondition.rn1);
         }
-        if (hourCondition.sky !== -1) {
+        if (_isRssValueUsable(hourCondition.sky, -1)) {
             dayCondition.sky.push(hourCondition.sky);
         }
-        if (hourCondition.t1h !== -50) {
+        if (_isRssValueUsable(hourCondition.t1h, -50)) {
             dayCondition.t1h.push(hourCondition.t1h);
         }
-        if (hourCondition.wsd !== -1) {
+        if (_isRssValueUsable(hourCondition.wsd, -1)) {
             dayCondition.wsd.push(hourCondition.wsd);
         }
         if (parseInt(hourCondition.time) <= 1200 ) {
-            if (hourCondition.lgt !== -1) {
+            if (_isRssValueUsable(hourCondition.lgt, -1)) {
                 dayCondition.lgtAm.push(hourCondition.lgt);
             }
-            if (hourCondition.sky !== -1) {
+            if (_isRssValueUsable(hourCondition.sky, -1)) {
                 dayCondition.skyAm.push(hourCondition.sky);
             }
-            if (hourCondition.pty !== -1) {
+            if (_isRssValueUsable(hourCondition.pty, -1)) {
                 dayCondition.ptyAm.push(hourCondition.pty);
             }
         }
         else {
-            if (hourCondition.lgt !== -1) {
+            if (_isRssValueUsable(hourCondition.lgt, -1)) {
                 dayCondition.lgtPm.push(hourCondition.lgt);
             }
-            if (hourCondition.sky !== -1) {
+            if (_isRssValueUsable(hourCondition.sky, -1)) {
                 dayCondition.skyPm.push(hourCondition.sky);
             }
-            if (hourCondition.pty !== -1) {
+            if (_isRssValueUsable(hourCondition.pty, -1)) {
                 dayCondition.ptyPm.push(hourCondition.pty);
             }
         }
     });
 
     dayConditionList.forEach(function (dayCondition) {
-        if (dayCondition.reh.length === 0) {
+        if (dayCondition.t1h.length === 0) {
             log.warn(new Error("dayCondition is empty :" + dayCondition.date));
             return;
         }
@@ -5615,6 +5633,13 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
         daySummary.wsd = self._average(dayCondition.wsd, -1, 1);
         daySummary.taMax = +(self._max(dayCondition.t1h, -50)).toFixed(1);
         daySummary.taMin = +(self._min(dayCondition.t1h, -50)).toFixed(1);
+        daySummary.observationType = 'hourly-summary';
+        daySummary.observationHours = dayCondition.t1h.length;
+        if (dayCondition.historyRecovered && dayCondition.rn1.length < 24) { delete daySummary.rn1; }
+        // Absence is not zero rainfall or zero lightning.
+        ['reh', 'rn1', 'wsd', 'lgt', 'pty', 'sky', 'lgtAm', 'lgtPm', 'ptyAm', 'ptyPm'].forEach(function(field) {
+            if (!dayCondition[field].length) { delete daySummary[field]; }
+        });
     });
 
     return daySummaryList;
@@ -5634,4 +5659,3 @@ ControllerTown.prototype._getUrlWithCoord = function (lat, lon, queries) {
 };
 
 module.exports = ControllerTown;
-

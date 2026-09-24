@@ -1611,6 +1611,7 @@ function ControllerTown24h() {
                 req.result = {};
             }
             result = req.result;
+            if (req.historyStatus) { result.historyStatus = req.historyStatus; }
             result.regionName = regionName;
             result.cityName = cityName;
             result.townName = townName;
@@ -1625,7 +1626,7 @@ function ControllerTown24h() {
                 if (req.short == undefined || req.short.length == undefined || req.short.length < 33) {
                     log.error("short is invalid", meta);
                 }
-                result.short = req.short;
+                result.short = require('../lib/history/policy').hourlyResponse(req.short);
             }
             if (req.shortestPubDate) {
                 result.shortestPubDate = req.shortestPubDate;

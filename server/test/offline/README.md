@@ -79,3 +79,28 @@ and real provider/deployment behavior remain operator checks.
 See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/daily-forecast-contract.md).
 
 `daily-review.test.js` adds shower mapping/storage, forecast-gap health, retired scheduler, raw short source publication bounds, DB1 complete snapshot replacement, KST year/midnight and shared JS consumer compatibility checks. Full-route smoke covers D+3 available, absent, partial, stale and DB1 legacy-without-snapshot, showers and optional RSS humidity. Raw additional daily fields do not expand the hourly template or invent daily precipitation totals. Native runtime tests remain operator-owned.
+
+## Historical observations (#2564)
+
+`history-observations.test.js` and `history-recovery.test.js` run in `test:offline`.
+They cover strict KST identities, QC/missing-value validation, sparse history,
+independent daily observations, partial-field preservation, explicit past gaps,
+pagination, missing-only recovery and duplicate/lease behavior with synthetic data.
+Run the observation suite under `TZ=UTC` and `TZ=America/Los_Angeles`.
+
+For a separate real persistence/transport smoke, install temporary dependencies:
+
+```sh
+npm install --prefix /tmp/issue-2564-integration --ignore-scripts --no-audit --no-fund --package-lock=false mongodb-memory-server-core@10.1.4 mongoose@5.1.2
+TZ=UTC NODE_PATH=/tmp/issue-2564-integration/node_modules:/tmp/issue-2560-offline/node_modules MONGOMS_DOWNLOAD_DIR=/tmp/issue-2564-mongodb node server/test/offline/history-integration-smoke.js
+```
+
+The earlier daily-suite dependency directory supplies Express/async/XML helpers.
+The smoke downloads MongoDB 7.0.14 to the specified temporary directory if absent,
+starts MongoDB and a synthetic provider only on loopback, and closes both. It uses
+the production native collection adapter with the temporary server's modern driver;
+the deployed Mongoose 5/old Mongo server combination is not validated by this check.
+It verifies real storage/readback/uniqueness/leases, actual HTTP pagination/retries,
+and actual v000903 route/shared client parsing in 16 DB-version/unit/data-availability
+scenarios. No application startup, production secrets, KMA requests or mobile build.
+See the [operator contract](../../../reports/sdlc/issue-2564/operator-contract.md).

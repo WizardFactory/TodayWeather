@@ -44,14 +44,15 @@ function makeFixture(place, policy) {
   for(let d=3;d<=10;d++){land['wf'+d]='맑음';land['wf'+d+'Am']='맑음';land['wf'+d+'Pm']='맑음';temp['taMax'+d]=27;temp['taMin'+d]=18;}
   return {place,basePub,short,current,shortest,rss,land,temp,forecast:{date:'20260924',time:'0600',cnt:1,wfsv:'Synthetic clear weather'}};
 }
-function createHarness(version, fixture) {
+function createHarness(version, fixture, historyOptions = {}) {
   const traces=[],queries=[],logs=[],cache=new Map(),models=new Map();
   let activeMethod;
-  const config={db:{version},apiServer:{url:'https://synthetic.invalid'},ipAddress:'127.0.0.1',port:1};
+  const config={history:historyOptions.config,db:{version},apiServer:{url:'https://synthetic.invalid'},ipAddress:'127.0.0.1',port:1};
   const manager={MAX_CURRENT_COUNT:200,leadingZeros:(n,l)=>String(n).padStart(l,'0'),getRegIdByTown:(r,c,cb)=>cb(null,{pointNumber:'109',cityCode:'11B10101'})};
   const logger={};
   for(const level of ['info','silly','debug','verbose','warn','error']) logger[level]=(...args)=>{if(level==='error'||level==='warn')logs.push({method:activeMethod,level,args:args.map(a=>a&&a.stack||a)});};
   const sandbox={console,Buffer,Date:FixedDate,setTimeout(){throw new Error('Unexpected timer');},setInterval(){throw new Error('Unexpected interval');},clearTimeout,setImmediate,log:logger,manager,__:s=>s};
+  if (historyOptions.db) { sandbox.setTimeout=setTimeout; sandbox.clearTimeout=clearTimeout; }
   sandbox.global=sandbox;
   const context=vm.createContext(sandbox);
   const managerCode=fs.readFileSync(path.join(root,'server/controllers/controllerManager.js'),'utf8');
@@ -61,6 +62,7 @@ function createHarness(version, fixture) {
   for(const match of app.matchAll(/global\.(\w+String)\s*=\s*(\[[\s\S]*?\]);/g)) vm.runInContext(match[0],context);
   function modelData(name) {
     if(name==='town') return locations;
+    if(name==='modelKmaStnInfo') return historyOptions.stations || [];
     if(name==='modelAreaNo'||name==='modelHealthDay') return [];
     const isV2=name.startsWith('kma.');
     const map={'modelShort':'short','modelCurrent':'current','modelShortest':'shortest','modelShortRss':'rss','kma.town.short.model':'short','kma.town.current.model':'current','kma.town.shortest.model':'shortest','kma.town.short.rss.model':'rss'};
@@ -101,6 +103,7 @@ function createHarness(version, fixture) {
     if(cache.has(filename))return cache.get(filename).exports;
     const mod={exports:{}};cache.set(filename,mod);
     function localRequire(id) {
+      if(id==='mongoose' && historyOptions.db) return {connection:{db:historyOptions.db}};
       if(id==='dnscache')return ()=>({});
       if(id==='request')return (url,opts,cb)=>{
         assert(url.startsWith('https://synthetic.invalid/geocode/coord/'));
