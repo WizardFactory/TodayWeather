@@ -252,8 +252,19 @@ CollectData.prototype.getUrl = function(dataType, key, date, time, data){
             break;
     }
 
-    // add key data
-    url += '?serviceKey=' + key;
+    // Accept a raw key or exactly one layer of URI percent encoding.
+    // Decode once (never form-decode '+'), then encode the query component.
+    // Literal percent characters must be supplied as %25.
+    try {
+        if (typeof key !== 'string' || !key.trim()) {
+            throw new Error('Missing service key');
+        }
+        url += '?serviceKey=' + encodeURIComponent(decodeURIComponent(key));
+    }
+    catch (err) {
+        log.warn('KMA invalid service key representation');
+        return '';
+    }
 
     try{
         // add additional data such as location info, code
@@ -345,6 +356,11 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
                     return !item || typeof item !== 'object' || Array.isArray(item);
                 })) {
                 return fail('KMA invalid or empty response');
+            }
+            // This requester intentionally fetches one page only. Never mark
+            // a truncated prefix complete, even if its last group is valid.
+            if (Number(count) !== items.length) {
+                return fail('KMA incomplete or inconsistent response');
             }
             var organized;
             try {
@@ -1079,22 +1095,22 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
             result.wh3APm = parseFloat(item.wh3APm[0]);
             result.wh3BAm = parseFloat(item.wh3BAm[0]);
             result.wh3BPm = parseFloat(item.wh3BPm[0]);
-            result.wh4AAm = parseFloat(item.wh3AAm[0]);
-            result.wh4APm = parseFloat(item.wh3APm[0]);
-            result.wh4BAm = parseFloat(item.wh3BAm[0]);
-            result.wh4BPm = parseFloat(item.wh3BPm[0]);
-            result.wh5AAm = parseFloat(item.wh3AAm[0]);
-            result.wh5APm = parseFloat(item.wh3APm[0]);
-            result.wh5BAm = parseFloat(item.wh3BAm[0]);
-            result.wh5BPm = parseFloat(item.wh3BPm[0]);
-            result.wh6AAm = parseFloat(item.wh3AAm[0]);
-            result.wh6APm = parseFloat(item.wh3APm[0]);
-            result.wh6BAm = parseFloat(item.wh3BAm[0]);
-            result.wh6BPm = parseFloat(item.wh3BPm[0]);
-            result.wh7AAm = parseFloat(item.wh3AAm[0]);
-            result.wh7APm = parseFloat(item.wh3APm[0]);
-            result.wh7BAm = parseFloat(item.wh3BAm[0]);
-            result.wh7BPm = parseFloat(item.wh3BPm[0]);
+            result.wh4AAm = parseFloat(item.wh4AAm[0]);
+            result.wh4APm = parseFloat(item.wh4APm[0]);
+            result.wh4BAm = parseFloat(item.wh4BAm[0]);
+            result.wh4BPm = parseFloat(item.wh4BPm[0]);
+            result.wh5AAm = parseFloat(item.wh5AAm[0]);
+            result.wh5APm = parseFloat(item.wh5APm[0]);
+            result.wh5BAm = parseFloat(item.wh5BAm[0]);
+            result.wh5BPm = parseFloat(item.wh5BPm[0]);
+            result.wh6AAm = parseFloat(item.wh6AAm[0]);
+            result.wh6APm = parseFloat(item.wh6APm[0]);
+            result.wh6BAm = parseFloat(item.wh6BAm[0]);
+            result.wh6BPm = parseFloat(item.wh6BPm[0]);
+            result.wh7AAm = parseFloat(item.wh7AAm[0]);
+            result.wh7APm = parseFloat(item.wh7APm[0]);
+            result.wh7BAm = parseFloat(item.wh7BAm[0]);
+            result.wh7BPm = parseFloat(item.wh7BPm[0]);
             result.wh8A = parseFloat(item.wh8A[0]);
             result.wh8B = parseFloat(item.wh8B[0]);
             result.wh9A = parseFloat(item.wh9A[0]);

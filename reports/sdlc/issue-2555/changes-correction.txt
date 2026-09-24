@@ -1,0 +1,369 @@
+diff --git a/docs/architecture/diagrams/weather-collection.html b/docs/architecture/diagrams/weather-collection.html
+index e2a82c14..7ad97c9d 100644
+--- a/docs/architecture/diagrams/weather-collection.html
++++ b/docs/architecture/diagrams/weather-collection.html
+@@ -5190,15 +5190,15 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
+         <text data-detail="context" x="447.5" y="179" class="t-muted" font-size="9" text-anchor="middle">Loopback /gather/*</text>
+         </g>
+ 
+-        <g id="node-fetch" data-node-id="fetch" data-node-label="Product requesters" tabindex="0" role="button" aria-label="Focus Product requesters, KMA 00 / safe parsing, Architecture component" aria-pressed="false" data-node-kind="backend" data-node-sublabel="KMA 00 / safe parsing" data-node-context="Architecture component">
+-          <title>Product requesters · KMA 00 / safe parsing · Architecture component</title>
++        <g id="node-fetch" data-node-id="fetch" data-node-label="Product requesters" tabindex="0" role="button" aria-label="Focus Product requesters, KMA 00 / complete batch, Architecture component" aria-pressed="false" data-node-kind="backend" data-node-sublabel="KMA 00 / complete batch" data-node-context="Architecture component">
++          <title>Product requesters · KMA 00 / complete batch · Architecture component</title>
+           <rect x="685" y="130" width="185" height="70" rx="6" class="c-mask"/>
+           <rect x="685" y="130" width="185" height="70" rx="6" class="c-backend" stroke-width="1.5"/>
+           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(691 136) scale(0.6875)">
+             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+           </g>
+           <text data-node-label="" data-detail-anchor="" x="777.5" y="163" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Product requesters</text>
+-        <text data-detail="context" x="777.5" y="179" class="t-muted" font-size="9" text-anchor="middle">KMA 00 / safe parsing</text>
++        <text data-detail="context" x="777.5" y="179" class="t-muted" font-size="9" text-anchor="middle">KMA 00 / complete batch</text>
+         </g>
+ 
+         <g id="node-providers" data-node-id="providers" data-node-label="KMA / AirKorea" tabindex="0" role="button" aria-label="Focus KMA / AirKorea, RSS, APIs, pages, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="RSS, APIs, pages" data-node-context="Architecture component">
+@@ -5510,8 +5510,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
+           <h3>KMA compatibility (#2555)</h3>
+         </div>
+         <ul>
+-          <li>&bull; apis.data.go.kr over HTTP; operator must verify authorization.</li>
+-          <li>&bull; PCP/SNO/TMP retain legacy fields; periods are not equivalent.</li>
++          <li>&bull; HTTP; reject partial pages and validate day-specific sea values.</li>
++          <li>&bull; Hold hourly short activation until legacy consumers are repaired.</li>
+         </ul>
+       </div>
+     </div>
+diff --git a/docs/architecture/diagrams/weather-collection.json b/docs/architecture/diagrams/weather-collection.json
+index 94309e9c..80b0d21f 100644
+--- a/docs/architecture/diagrams/weather-collection.json
++++ b/docs/architecture/diagrams/weather-collection.json
+@@ -59,7 +59,7 @@
+       "id": "fetch",
+       "type": "backend",
+       "label": "Product requesters",
+-      "sublabel": "KMA 00 / safe parsing",
++      "sublabel": "KMA 00 / complete batch",
+       "pos": [
+         685,
+         130
+@@ -226,8 +226,8 @@
+       "dot": "amber",
+       "title": "KMA compatibility (#2555)",
+       "items": [
+-        "apis.data.go.kr over HTTP; operator must verify authorization.",
+-        "PCP/SNO/TMP retain legacy fields; periods are not equivalent."
++        "HTTP; reject partial pages and validate day-specific sea values.",
++        "Hold hourly short activation until legacy consumers are repaired."
+       ]
+     }
+   ]
+diff --git a/docs/architecture/gather-source-reconciliation.md b/docs/architecture/gather-source-reconciliation.md
+index f577b6dd..9519804e 100644
+--- a/docs/architecture/gather-source-reconciliation.md
++++ b/docs/architecture/gather-source-reconciliation.md
+@@ -16,7 +16,11 @@ This is a source reconciliation against public `master` baseline `87b8855f308611
+ | MID_TEMP | `/1360000/MidFcstInfoService/getMidTa` |
+ | MID_SEA | `/1360000/MidFcstInfoService/getMidSeaFcst` |
+ 
+-Success is `00`. HTTP failures, invalid XML, missing envelopes/headers, invalid/nonpositive counts, malformed or empty items and invalid/empty organized batches use controlled failure events; request callbacks also report organizer failures. Logs use local diagnostic messages without request keys/URLs, raw transport/parser errors or raw response dumps. These offline checks establish no provider availability, authorization renewal or transport security improvement. Any HTTPS migration requires separate justification and operator verification.
++Success is `00`. The single-page request remains `pageNo=1&numOfRows=999`; `totalCount` must equal the actual item count before any organizer runs. Partial or inconsistent pages fail without publishing or storing the prefix. Responses exceeding this page capacity cannot be collected until separately implemented bounded pagination can combine and validate the full product. No extra provider calls or retry-policy changes are introduced. Day-3–10 sea wave fields each read their own source field; distinct-value fixtures cover every field, including nonfinite values in days 4–7.
++
++The existing service-key string interface accepts raw URI-unescaped strings or strings with exactly one layer of URI percent encoding. Normalize by decoding percent escapes once, then encoding the entire value as a query component; a raw `+` is a literal plus, never a space. A literal percent must be supplied as `%25`; malformed percent escapes and missing/empty strings are rejected with static diagnostics. Already encoded keys are not double-encoded. No form decoding or repeated decoding is performed, and no configuration values are inspected.
++
++HTTP failures, invalid XML, missing envelopes/headers, invalid/nonpositive counts, malformed or empty items and invalid/empty organized batches use controlled failure events; request callbacks also report organizer failures. Logs use local diagnostic messages without request keys/URLs, raw transport/parser errors or raw response dumps. These offline checks establish no provider availability, authorization renewal or transport security improvement. Any HTTPS migration requires separate justification and operator verification.
+ 
+ PCP maps to `r06`, SNO to `s06`, TMP to `t3h`. Explicit `강수없음` and `적설없음` become zero. Complete finite decimal quantities (optional matching `mm` for PCP/RN1, `cm` for SNO, surrounding whitespace) are supported. Range/threshold text such as `1~4`, `1.0mm 미만`, or `50mm 이상`, blanks, unknown strings, infinities and negative precipitation become the existing `-1` missing sentinel. They are synthetic safety cases, not captured provider examples. TMP accepts signed finite decimals or `-50` missing; invalid required temperature rejects the batch. All short/shortest groups are checked, not just the first. RN1 preserves zero, treats missing/invalid/negative values as `-1`, and cannot publish NaN. Legacy R06/S06/T3H categories remain supported.
+ 
+@@ -32,6 +36,8 @@ PCP maps to `r06`, SNO to `s06`, TMP to `t3h`. Explicit `강수없음` and `적
+ | [controllerTown](../../server/controllers/controllerTown.js), RSS merge, `adjustShort`, current interpolation and string conversion | RSS can fill sentinels; temperature feeds summaries/interpolation; rain/snow strings use legacy fields. Existing time-slot and quantity assumptions remain. |
+ | [controllerTown24h](../../server/controllers/controllerTown24h.js), `_convertWeatherData` | Snow cm-to-mm and requested-unit conversion are unit conversion, not period aggregation. |
+ 
++**Activation hold:** Do not activate the migrated hourly short feed in production until the legacy period consumers are repaired and verified under a separately reviewed contract. Existing source schedules stay unchanged; this document does not enforce a runtime feature gate. An operator must prevent activation through the approved deployment/job policy.
++
+ No downstream period repair is included. A separate design must establish provider publication/cadence, accumulation windows, mixed API/RSS provenance, API/widget compatibility and a migration contract before changing consumer formulas. Operator acceptance should examine raw stored timestamps/values and consumer responses separately; a field-name match is insufficient evidence of meteorological equivalence. #2554 RSS wind/fallback repair remains separate.
+ 
+ ## Complete appendix disposition
+@@ -111,7 +117,7 @@ After separate approval, an operator should:
+ 
+ 1. Recheck current source/runtime drift and securely preserve existing deployment/config outside Git. Record a rollback revision/artifact; do not assume this appendix establishes runtime parity.
+ 2. Provide valid KMA authorization through the existing `keyString.dongnae_forecast_keys` interface and existing manager key selection; retain required public config interfaces, `SERVER_MODE`, `DB_DATA_VERSION` and normal monitoring/Kakao configuration. This PR neither imports config nor renews provider keys. Verify HTTP transport policy independently before transmitting real credentials.
+-3. Explicitly choose upstream defaults versus any separately reviewed production policy; the documented legacy profile is inactive. Assess provider quotas, job placement, retry/termination and periods before activation. Deploy through the existing approved process with rollback ready.
++3. Keep hourly short collection inactive until the consumer-period repair is verified; confirm page completeness/capacity and the raw-versus-once-encoded key contract with authorized operator checks. This PR does not provide pagination beyond 999 items. Explicitly choose upstream defaults versus any separately reviewed production policy; the documented legacy profile is inactive. Assess provider quotas, job placement, retry/termination and periods before activation. Deploy through the existing approved process with rollback ready.
+ 4. Verify collection outcome, grid coordinates, finite/sentinel values and publication timestamps in storage, then through origin and CDN. Separately inspect hourly-versus-legacy-period consumer behavior; successful HTTP alone does not prove collection or accurate precipitation periods.
+ 5. Roll back by restoring the recorded previous source artifact and securely preserved configuration, restarting only approved gather processes. No schema migration is introduced, but records already written remain; assess timestamps/values and use an operator-approved recovery plan rather than deleting data automatically.
+ 
+diff --git a/docs/architecture/weather-collection.md b/docs/architecture/weather-collection.md
+index 9869b5c4..5bafe9f3 100644
+--- a/docs/architecture/weather-collection.md
++++ b/docs/architecture/weather-collection.md
+@@ -51,7 +51,7 @@ Legacy documents carry `pubDate=YYYYMMDDHHMM` and `date`/`time` values. Invalid
+ 
+ ## KMA source reconciliation and period limits
+ 
+-[#2555 source reconciliation](gather-source-reconciliation.md) records the seven migrated paths, all appendix dispositions, inactive legacy-gather policy and operator deployment/rollback handoff. PCP/SNO/TMP map into the existing r06/s06/t3h schema with strict finite parsing and existing missing sentinels; RN1 zero stays zero. These field aliases **do not establish six-hour accumulation or three-hour cadence**. The existing 24h consumer still splits adjacent quantities; characterization tests expose this limitation rather than claiming period equivalence. No schedule, retry default, DB version or provider authorization changes here.
++[#2555 source reconciliation](gather-source-reconciliation.md) records the seven migrated paths, all appendix dispositions, inactive legacy-gather policy and operator deployment/rollback handoff. PCP/SNO/TMP map into the existing r06/s06/t3h schema with strict finite parsing and existing missing sentinels; RN1 zero stays zero. These field aliases **do not establish six-hour accumulation or three-hour cadence**. The existing 24h consumer still splits adjacent quantities; characterization tests expose this limitation rather than claiming period equivalence. Partial single-page responses fail before organization; larger products need a separate pagination implementation. Sea wave values retain each day’s own input. Raw or once-percent-encoded keys normalize to one query encoding. Hold hourly short activation until legacy period consumers are repaired and verified; source schedules are not a feature gate. No schedule, retry default, DB version or provider authorization changes here.
+ 
+ ## Scraping and auxiliary products
+ 
+diff --git a/server/lib/collectTownForecast.js b/server/lib/collectTownForecast.js
+index 07e05e64..8cd9a91f 100644
+--- a/server/lib/collectTownForecast.js
++++ b/server/lib/collectTownForecast.js
+@@ -252,8 +252,19 @@ CollectData.prototype.getUrl = function(dataType, key, date, time, data){
+             break;
+     }
+ 
+-    // add key data
+-    url += '?serviceKey=' + key;
++    // Accept a raw key or exactly one layer of URI percent encoding.
++    // Decode once (never form-decode '+'), then encode the query component.
++    // Literal percent characters must be supplied as %25.
++    try {
++        if (typeof key !== 'string' || !key.trim()) {
++            throw new Error('Missing service key');
++        }
++        url += '?serviceKey=' + encodeURIComponent(decodeURIComponent(key));
++    }
++    catch (err) {
++        log.warn('KMA invalid service key representation');
++        return '';
++    }
+ 
+     try{
+         // add additional data such as location info, code
+@@ -346,6 +357,11 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
+                 })) {
+                 return fail('KMA invalid or empty response');
+             }
++            // This requester intentionally fetches one page only. Never mark
++            // a truncated prefix complete, even if its last group is valid.
++            if (Number(count) !== items.length) {
++                return fail('KMA incomplete or inconsistent response');
++            }
+             var organized;
+             try {
+                 switch(dataType) {
+@@ -1079,22 +1095,22 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
+             result.wh3APm = parseFloat(item.wh3APm[0]);
+             result.wh3BAm = parseFloat(item.wh3BAm[0]);
+             result.wh3BPm = parseFloat(item.wh3BPm[0]);
+-            result.wh4AAm = parseFloat(item.wh3AAm[0]);
+-            result.wh4APm = parseFloat(item.wh3APm[0]);
+-            result.wh4BAm = parseFloat(item.wh3BAm[0]);
+-            result.wh4BPm = parseFloat(item.wh3BPm[0]);
+-            result.wh5AAm = parseFloat(item.wh3AAm[0]);
+-            result.wh5APm = parseFloat(item.wh3APm[0]);
+-            result.wh5BAm = parseFloat(item.wh3BAm[0]);
+-            result.wh5BPm = parseFloat(item.wh3BPm[0]);
+-            result.wh6AAm = parseFloat(item.wh3AAm[0]);
+-            result.wh6APm = parseFloat(item.wh3APm[0]);
+-            result.wh6BAm = parseFloat(item.wh3BAm[0]);
+-            result.wh6BPm = parseFloat(item.wh3BPm[0]);
+-            result.wh7AAm = parseFloat(item.wh3AAm[0]);
+-            result.wh7APm = parseFloat(item.wh3APm[0]);
+-            result.wh7BAm = parseFloat(item.wh3BAm[0]);
+-            result.wh7BPm = parseFloat(item.wh3BPm[0]);
++            result.wh4AAm = parseFloat(item.wh4AAm[0]);
++            result.wh4APm = parseFloat(item.wh4APm[0]);
++            result.wh4BAm = parseFloat(item.wh4BAm[0]);
++            result.wh4BPm = parseFloat(item.wh4BPm[0]);
++            result.wh5AAm = parseFloat(item.wh5AAm[0]);
++            result.wh5APm = parseFloat(item.wh5APm[0]);
++            result.wh5BAm = parseFloat(item.wh5BAm[0]);
++            result.wh5BPm = parseFloat(item.wh5BPm[0]);
++            result.wh6AAm = parseFloat(item.wh6AAm[0]);
++            result.wh6APm = parseFloat(item.wh6APm[0]);
++            result.wh6BAm = parseFloat(item.wh6BAm[0]);
++            result.wh6BPm = parseFloat(item.wh6BPm[0]);
++            result.wh7AAm = parseFloat(item.wh7AAm[0]);
++            result.wh7APm = parseFloat(item.wh7APm[0]);
++            result.wh7BAm = parseFloat(item.wh7BAm[0]);
++            result.wh7BPm = parseFloat(item.wh7BPm[0]);
+             result.wh8A = parseFloat(item.wh8A[0]);
+             result.wh8B = parseFloat(item.wh8B[0]);
+             result.wh9A = parseFloat(item.wh9A[0]);
+diff --git a/server/package.json b/server/package.json
+index cd7a03e1..326867b9 100644
+--- a/server/package.json
++++ b/server/package.json
+@@ -14,6 +14,7 @@
+   "scripts": {
+     "start": "node ./bin/www",
+     "test": "./node_modules/mocha/bin/mocha",
++    "test:offline": "node test/offline/run.js",
+     "e2e": "./node_modules/mocha/bin/mocha test/e2e",
+     "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
+   },
+diff --git a/server/test/offline/README.md b/server/test/offline/README.md
+index 2279ce7f..5f7243ae 100644
+--- a/server/test/offline/README.md
++++ b/server/test/offline/README.md
+@@ -6,8 +6,7 @@ Use an isolated harness instead of installing the whole legacy application:
+ 
+ ```sh
+ npm install --prefix /tmp/issue-2555-harness --ignore-scripts --no-audit --no-fund --package-lock=false mocha@2.5.3 xml2js@0.4.23 async@2.6.4
+-NODE_PATH=/tmp/issue-2555-harness/node_modules /tmp/issue-2555-harness/node_modules/.bin/mocha server/test/offline/gather-code-drift.test.js
+-NODE_PATH=/tmp/issue-2555-harness/node_modules node server/test/offline/gather-smoke.js
++NODE_PATH=/tmp/issue-2555-harness/node_modules npm --prefix server run test:offline
+ ```
+ 
+ Commands run from the repository root; dependency installation needs package-registry access, but test execution needs no network. Tested with Node v22.22.2/npm 10.9.7. Mocha 2.5.3 is within the repository's legacy range; no application dependency tree changes are made.
+@@ -15,3 +14,7 @@ Commands run from the repository root; dependency installation needs package-reg
+ The separate smoke integrates real XML parsing, requestData/events and the short storage controller's save/read functions through synthetic HTTP and in-memory model adapters. It verifies timestamps, coordinates, exact values and no write on failure. It is not a live provider/DB/mobile test.
+ 
+ The legacy 24h consumer characterization deliberately exposes its adjacent-record quantity split. Passing means the existing assumption is documented; it does not validate that split for hourly PCP/SNO. See [period limitations and full disposition](../../../docs/architecture/gather-source-reconciliation.md).
++
++`test:offline` explicitly runs only the regression file, then the functional smoke, and propagates failures. The default `npm test` remains the legacy suite. The dedicated [GitHub Actions workflow](../../../.github/workflows/gather-offline.yml) runs this command with Node 22.22.2 and isolated dependencies on relevant pull requests and master pushes, with read-only repository permissions and no deployment steps. The historical Travis job is unchanged.
++
++Correction coverage uses distinct values for every sea wave field, nonfinite values in later days, mismatched item counts and raw/once-percent-encoded dummy keys. Partial pages fail before organization, so responses over the 999-item capacity require a separate pagination implementation. Key strings decode URI escapes exactly once and re-encode as a query component; raw plus is preserved, malformed escapes fail, literal percent must be supplied as `%25`.
+diff --git a/server/test/offline/gather-code-drift.test.js b/server/test/offline/gather-code-drift.test.js
+index 138af38c..238fc83c 100644
+--- a/server/test/offline/gather-code-drift.test.js
++++ b/server/test/offline/gather-code-drift.test.js
+@@ -265,7 +265,7 @@ describe('real mid organizers with synthetic fixtures', function () {
+             for (var d = 3; d <= 10; d++) { item['taMin' + d] = ['0']; item['taMax' + d] = ['12.5']; }
+         } else {
+             ['3Am', '3Pm', '4Am', '4Pm', '5Am', '5Pm', '6Am', '6Pm', '7Am', '7Pm', '8', '9', '10'].forEach(function (suffix) { item['wf' + suffix] = ['Clear']; });
+-            ['3AAm', '3APm', '3BAm', '3BPm', '4AAm', '4APm', '4BAm', '4BPm', '5AAm', '5APm', '5BAm', '5BPm', '6AAm', '6APm', '6BAm', '6BPm', '7AAm', '7APm', '7BAm', '7BPm', '8A', '8B', '9A', '9B', '10A', '10B'].forEach(function (suffix) { item['wh' + suffix] = ['0.5']; });
++            ['3AAm', '3APm', '3BAm', '3BPm', '4AAm', '4APm', '4BAm', '4BPm', '5AAm', '5APm', '5BAm', '5BPm', '6AAm', '6APm', '6BAm', '6BPm', '7AAm', '7APm', '7BAm', '7BPm', '8A', '8B', '9A', '9B', '10A', '10B'].forEach(function (suffix) { item['wh' + suffix] = [String(0.5 + Object.keys(item).filter(function (key) { return key.indexOf('wh') === 0; }).length / 10)]; });
+         }
+         return item;
+     }
+@@ -281,6 +281,21 @@ describe('real mid organizers with synthetic fixtures', function () {
+             assert.strictEqual(called, 1); assert(c.resultList[0].isCompleted);
+             assert.strictEqual(c.resultList[0].data.length, 1);
+             assert.strictEqual(c.resultList[0].data[0].pubDate, '202609240600');
++            if (type === 'MID_SEA') {
++                var expected = midItem(type);
++                Object.keys(expected).filter(function (key) { return key.indexOf('wh') === 0; }).forEach(function (key) {
++                    assert.strictEqual(c.resultList[0].data[0][key], Number(expected[key][0]), key);
++                });
++            }
++        });
++    });
++
++    ['4AAm', '5APm', '6BAm', '7BPm'].forEach(function (suffix) {
++        it('rejects a nonfinite day-specific sea height ' + suffix, function () {
++            var item = midItem('MID_SEA'); item['wh' + suffix] = ['NaN'];
++            var c = h.prepare(h.collector());
++            c.organizeSeaData(0, h.response([item]), {date: '20260924', time: '0600'});
++            assert(c.recvFailed); assert(!c.resultList[0].isCompleted);
+         });
+     });
+     it('does not reuse missing temperature fields from a previous region', function () {
+@@ -313,3 +328,40 @@ describe('mid forecast text completeness', function () {
+         });
+     });
+ });
++
++
++describe('review corrections: complete responses and key representation', function () {
++    [1, 10, 12, 999, 1000].forEach(function (count) {
++        it('rejects count/item mismatch ' + count + ' before organization', function () {
++            var r = h.response(h.shortItems()); r.response.body[0].totalCount = [String(count)];
++            receive(h.xml(r), 200, null, function (err, c) {
++                assert(err); assert(c.recvFailed); assert(!c.resultList[0].isCompleted);
++            });
++        });
++    });
++    ['DUMMY+a/b=', 'DUMMY%2Ba%2Fb%3D', 'DUMMY%2ba%2fb%3d'].forEach(function (key) {
++        it('normalizes raw or once-encoded dummy key ' + key, function () {
++            var c = h.collector();
++            Object.keys(routes).forEach(function (name) {
++                var u = new URL(c.getUrl(c.DATA_TYPE[name], key, '20260924', '0600', {mx: 60, my: 127, code: '11B00000'}));
++                assert.strictEqual(u.searchParams.get('serviceKey'), 'DUMMY+a/b=');
++                assert(u.search.includes('serviceKey=DUMMY%2Ba%2Fb%3D&'));
++            });
++        });
++    });
++    [undefined, '', 'DUMMY%badEscape', 'DUMMY%2', 'DUMMY%GG'].forEach(function (key) {
++        it('rejects missing/malformed encoded key without diagnostics leaking it: ' + key, function () {
++            var logs = []; var c = h.collector(undefined, logs);
++            assert.strictEqual(c.getUrl(c.DATA_TYPE.TOWN_SHORT, key, '20260924', '0800', {mx: 60, my: 127}), '');
++            assert(!logs.join(' ').includes('DUMMY')); assert(!logs.join(' ').includes('serviceKey='));
++        });
++    });
++    it('does not reflect raw/encoded dummy keys on transport failure', function () {
++        var key = 'DUMMY+a/b='; var logs = [];
++        var c = h.prepare(h.collector({get: function (url, opts, cb) { cb(new Error(url)); }}, logs));
++        var url = c.getUrl(c.DATA_TYPE.TOWN_SHORT, key, '20260924', '0800', {mx: 60, my: 127});
++        c.getData(0, c.DATA_TYPE.TOWN_SHORT, url, {}, function (err) { assert(err); });
++        assert(!logs.join(' ').includes(key)); assert(!logs.join(' ').includes(encodeURIComponent(key)));
++        assert(!logs.join(' ').includes('serviceKey='));
++    });
++});
+diff --git a/server/test/offline/gather-smoke.js b/server/test/offline/gather-smoke.js
+index 6caf5507..b5bb65d6 100644
+--- a/server/test/offline/gather-smoke.js
++++ b/server/test/offline/gather-smoke.js
+@@ -26,9 +26,10 @@ var callbacks = 0;
+ var body = h.xml(h.response(h.shortItems({PCP: '1.5mm', SNO: '0.5cm'})));
+ var collector = h.collector({get: function (url, options, callback) {
+     assert(url.startsWith('http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?'));
++    assert.strictEqual(new URL(url).searchParams.get('serviceKey'), 'OFFLINE_SMOKE+a/b=');
+     callback(null, {statusCode: 200}, body);
+ }}, logs);
+-collector.requestData([{mx: 60, my: 127}], collector.DATA_TYPE.TOWN_SHORT, 'OFFLINE_SMOKE_DUMMY', '20260924', '0800', function (err, results) {
++collector.requestData([{mx: 60, my: 127}], collector.DATA_TYPE.TOWN_SHORT, 'OFFLINE_SMOKE%2Ba%2Fb%3D', '20260924', '0800', function (err, results) {
+     assert.strictEqual(err, false); assert(results[0].isCompleted);
+     short.saveShort(results[0].data, function (err) {
+         assert.ifError(err);
+@@ -54,3 +55,59 @@ assert.strictEqual(callbacks, 2); assert.strictEqual(records.length, 1);
+ assert(!logs.join('\n').includes('OFFLINE_SMOKE_DUMMY')); assert(!logs.join('\n').includes('serviceKey='));
+ console.log('PASS synthetic XML -> requester -> events -> saveShort -> getShortFromDB (1 write, exact quantities/timestamps/grid)');
+ console.log('PASS provider-error XML -> failed collection, no additional persistence; no key-bearing logs');
++
++// A truncated page must never reach the actual storage controller, even when
++// every group in its prefix is complete. No continuation HTTP is scheduled.
++var partial = h.response(h.shortItems()); partial.response.body[0].totalCount = ['1000'];
++var pageRequests = 0;
++var paged = h.collector({get: function (url, options, callback) {
++    pageRequests++; callback(null, {statusCode: 200}, h.xml(partial));
++}}, logs);
++paged.requestData([{mx: 60, my: 127}], paged.DATA_TYPE.TOWN_SHORT, 'OFFLINE_SMOKE+a/b=', '20260924', '0800', function (failed, results) {
++    assert.strictEqual(failed, true); assert.strictEqual(results[0].isCompleted, false); callbacks++;
++    if (results[0].isCompleted) short.saveShort(results[0].data, function () {});
++});
++assert.strictEqual(callbacks, 3); assert.strictEqual(records.length, 1); assert.strictEqual(pageRequests, 1);
++assert(!logs.join(' ').includes('OFFLINE_SMOKE')); assert(!logs.join(' ').includes('serviceKey='));
++console.log('PASS truncated XML page -> failed requestData -> no additional persistence; encoded/raw dummy keys safe');
++
++// Sea XML -> requester/events -> actual mid controller save with memory model.
++var seaItem = {regId: ['11B00000']};
++for (var day = 3; day <= 10; day++) {
++    (day <= 7 ? ['Am', 'Pm'] : ['']).forEach(function (half) { seaItem['wf' + day + half] = ['Clear']; });
++    (day <= 7 ? ['AAm', 'APm', 'BAm', 'BPm'] : ['A', 'B']).forEach(function (suffix, index) {
++        seaItem['wh' + day + suffix] = [String(day + index / 10)];
++    });
++}
++var seaRecords = [];
++var seaModel = {
++    update: function (query, doc, options, cb) { seaRecords.push(doc); cb(); },
++    remove: function () { return {exec: function () {}}; }
++};
++var midDeps = {async: require('async'), '../../lib/kmaTimeLib': time};
++['forecast', 'land', 'sea', 'temp'].forEach(function (type) {
++    midDeps['../../models/kma/kma.town.mid.' + type + '.model.js'] = type === 'sea' ? seaModel : {};
++});
++var Mid = h.load('controllers/kma/kma.town.mid.controller.js', midDeps, {log: log});
++var seaBody = h.xml(h.response([seaItem]));
++var seaCollector = h.collector({get: function (url, options, cb) { cb(null, {statusCode: 200}, seaBody); }}, logs);
++var seaCallbacks = 0;
++function collectSea(expectFailure) {
++    seaCollector.requestData([{code: '11B00000'}], seaCollector.DATA_TYPE.MID_SEA, 'OFFLINE_SMOKE+a/b=', '20260924', '0600', function (failed, results) {
++        assert.strictEqual(failed, expectFailure); seaCallbacks++;
++        if (results[0].isCompleted) {
++            new Mid().saveMid('modelMidSea', results[0].data[0], true, function (err) { assert.ifError(err); });
++        }
++    });
++}
++collectSea(false);
++assert.strictEqual(seaCallbacks, 1); assert.strictEqual(seaRecords.length, 1);
++Object.keys(seaItem).filter(function (key) { return key.indexOf('wh') === 0; }).forEach(function (key) {
++    assert.strictEqual(seaRecords[0].data[key], Number(seaItem[key][0]), key);
++});
++assert.strictEqual(seaRecords[0].pubDate.toISOString(), '2026-09-23T21:00:00.000Z');
++seaItem.wh7BPm = ['NaN']; seaBody = h.xml(h.response([seaItem]));
++collectSea(true);
++assert.strictEqual(seaCallbacks, 2); assert.strictEqual(seaRecords.length, 1);
++assert(!logs.join(' ').includes('OFFLINE_SMOKE')); assert(!logs.join(' ').includes('serviceKey='));
++console.log('PASS sea XML -> requester -> events -> saveMid (26 distinct heights); later-day NaN prevents another write');

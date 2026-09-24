@@ -1,0 +1,69 @@
+{
+  "candidate": "sha256:e564b9c1f656668d813f12cad69564c2c2dd389ab64b2789902e982d7b6d1116",
+  "scenarios": [
+    {
+      "id": "correction-xml-storage",
+      "requirement": "AC4",
+      "required": true,
+      "environment": "Real local CommonJS/XML/event/storage-controller pipeline with in-memory HTTP and Mongo adapters",
+      "prerequisites": "Isolated xml2js and async; no config/network/DB",
+      "actions": "Synthetic short/sea XML through real requestData/events/storage save controllers; reject partial page and later-day NaN",
+      "expected": "103 regressions; 26 distinct sea heights persisted; no write for bad sea or partial short page; safe keys/logs",
+      "failure": "wrong day/quantity or invalid/partial persistence or key leak",
+      "cleanup": "Memory-only state; harness remains in /tmp"
+    }
+  ],
+  "runs": [
+    {
+      "id": "review-correction-red",
+      "phase": "red",
+      "candidate": "parent:5e653285-with-correction-tests",
+      "command": "NODE_PATH=/tmp/issue-2555-harness/node_modules /tmp/issue-2555-harness/node_modules/.bin/mocha server/test/offline/gather-code-drift.test.js --reporter dot",
+      "exit_code": 17,
+      "environment": "Node22.22.2/npm10.9.7; isolated Mocha2.5.3/xml2js0.4.23/async2.6.4; synthetic HTTP/model boundaries",
+      "observed": "86 passing,17 intended failures",
+      "evidence": "reports/sdlc/issue-2555/correction-red.txt",
+      "execution_kind": "isolated",
+      "status": "passed",
+      "intended_failure": true
+    },
+    {
+      "id": "review-correction-green",
+      "phase": "green",
+      "candidate": "sha256:e564b9c1f656668d813f12cad69564c2c2dd389ab64b2789902e982d7b6d1116",
+      "command": "NODE_PATH=/tmp/issue-2555-harness/node_modules /tmp/issue-2555-harness/node_modules/.bin/mocha server/test/offline/gather-code-drift.test.js --reporter dot",
+      "exit_code": 0,
+      "environment": "Node22.22.2/npm10.9.7; isolated Mocha2.5.3/xml2js0.4.23/async2.6.4; synthetic HTTP/model boundaries",
+      "observed": "103 passing",
+      "evidence": "reports/sdlc/issue-2555/correction-green.txt",
+      "execution_kind": "isolated",
+      "status": "passed"
+    },
+    {
+      "id": "review-correction-post-refactor",
+      "phase": "post-refactor",
+      "candidate": "sha256:e564b9c1f656668d813f12cad69564c2c2dd389ab64b2789902e982d7b6d1116",
+      "command": "NODE_PATH=/tmp/issue-2555-harness/node_modules /tmp/issue-2555-harness/node_modules/.bin/mocha server/test/offline/gather-code-drift.test.js --reporter dot",
+      "exit_code": 0,
+      "environment": "Node22.22.2/npm10.9.7; isolated Mocha2.5.3/xml2js0.4.23/async2.6.4; synthetic HTTP/model boundaries",
+      "observed": "103 passing",
+      "evidence": "reports/sdlc/issue-2555/correction-post-refactor.txt",
+      "execution_kind": "isolated",
+      "status": "passed"
+    },
+    {
+      "id": "review-correction-smoke",
+      "phase": "smoke",
+      "candidate": "sha256:e564b9c1f656668d813f12cad69564c2c2dd389ab64b2789902e982d7b6d1116",
+      "command": "NODE_PATH=/tmp/issue-2555-harness/node_modules node server/test/offline/gather-smoke.js",
+      "exit_code": 0,
+      "environment": "Node22.22.2/npm10.9.7; isolated Mocha2.5.3/xml2js0.4.23/async2.6.4; synthetic HTTP/model boundaries",
+      "observed": "Four PASS lines: short storage, provider error, truncated page no write, sea26 values and NaN no write",
+      "evidence": "reports/sdlc/issue-2555/correction-smoke.txt",
+      "execution_kind": "real",
+      "status": "passed",
+      "scenario_id": "correction-xml-storage"
+    }
+  ],
+  "not_applicable_reason": ""
+}

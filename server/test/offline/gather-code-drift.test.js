@@ -265,7 +265,7 @@ describe('real mid organizers with synthetic fixtures', function () {
             for (var d = 3; d <= 10; d++) { item['taMin' + d] = ['0']; item['taMax' + d] = ['12.5']; }
         } else {
             ['3Am', '3Pm', '4Am', '4Pm', '5Am', '5Pm', '6Am', '6Pm', '7Am', '7Pm', '8', '9', '10'].forEach(function (suffix) { item['wf' + suffix] = ['Clear']; });
-            ['3AAm', '3APm', '3BAm', '3BPm', '4AAm', '4APm', '4BAm', '4BPm', '5AAm', '5APm', '5BAm', '5BPm', '6AAm', '6APm', '6BAm', '6BPm', '7AAm', '7APm', '7BAm', '7BPm', '8A', '8B', '9A', '9B', '10A', '10B'].forEach(function (suffix) { item['wh' + suffix] = ['0.5']; });
+            ['3AAm', '3APm', '3BAm', '3BPm', '4AAm', '4APm', '4BAm', '4BPm', '5AAm', '5APm', '5BAm', '5BPm', '6AAm', '6APm', '6BAm', '6BPm', '7AAm', '7APm', '7BAm', '7BPm', '8A', '8B', '9A', '9B', '10A', '10B'].forEach(function (suffix) { item['wh' + suffix] = [String(0.5 + Object.keys(item).filter(function (key) { return key.indexOf('wh') === 0; }).length / 10)]; });
         }
         return item;
     }
@@ -281,6 +281,21 @@ describe('real mid organizers with synthetic fixtures', function () {
             assert.strictEqual(called, 1); assert(c.resultList[0].isCompleted);
             assert.strictEqual(c.resultList[0].data.length, 1);
             assert.strictEqual(c.resultList[0].data[0].pubDate, '202609240600');
+            if (type === 'MID_SEA') {
+                var expected = midItem(type);
+                Object.keys(expected).filter(function (key) { return key.indexOf('wh') === 0; }).forEach(function (key) {
+                    assert.strictEqual(c.resultList[0].data[0][key], Number(expected[key][0]), key);
+                });
+            }
+        });
+    });
+
+    ['4AAm', '5APm', '6BAm', '7BPm'].forEach(function (suffix) {
+        it('rejects a nonfinite day-specific sea height ' + suffix, function () {
+            var item = midItem('MID_SEA'); item['wh' + suffix] = ['NaN'];
+            var c = h.prepare(h.collector());
+            c.organizeSeaData(0, h.response([item]), {date: '20260924', time: '0600'});
+            assert(c.recvFailed); assert(!c.resultList[0].isCompleted);
         });
     });
     it('does not reuse missing temperature fields from a previous region', function () {
@@ -311,5 +326,42 @@ describe('mid forecast text completeness', function () {
             c.getData(0, c.DATA_TYPE.MID_LAND, 'http://offline.invalid', {date: '20260924', time: '0600'}, function (err) { assert(err); });
             assert(c.recvFailed); assert(!c.resultList[0].isCompleted);
         });
+    });
+});
+
+
+describe('review corrections: complete responses and key representation', function () {
+    [1, 10, 12, 999, 1000].forEach(function (count) {
+        it('rejects count/item mismatch ' + count + ' before organization', function () {
+            var r = h.response(h.shortItems()); r.response.body[0].totalCount = [String(count)];
+            receive(h.xml(r), 200, null, function (err, c) {
+                assert(err); assert(c.recvFailed); assert(!c.resultList[0].isCompleted);
+            });
+        });
+    });
+    ['DUMMY+a/b=', 'DUMMY%2Ba%2Fb%3D', 'DUMMY%2ba%2fb%3d'].forEach(function (key) {
+        it('normalizes raw or once-encoded dummy key ' + key, function () {
+            var c = h.collector();
+            Object.keys(routes).forEach(function (name) {
+                var u = new URL(c.getUrl(c.DATA_TYPE[name], key, '20260924', '0600', {mx: 60, my: 127, code: '11B00000'}));
+                assert.strictEqual(u.searchParams.get('serviceKey'), 'DUMMY+a/b=');
+                assert(u.search.includes('serviceKey=DUMMY%2Ba%2Fb%3D&'));
+            });
+        });
+    });
+    [undefined, '', 'DUMMY%badEscape', 'DUMMY%2', 'DUMMY%GG'].forEach(function (key) {
+        it('rejects missing/malformed encoded key without diagnostics leaking it: ' + key, function () {
+            var logs = []; var c = h.collector(undefined, logs);
+            assert.strictEqual(c.getUrl(c.DATA_TYPE.TOWN_SHORT, key, '20260924', '0800', {mx: 60, my: 127}), '');
+            assert(!logs.join(' ').includes('DUMMY')); assert(!logs.join(' ').includes('serviceKey='));
+        });
+    });
+    it('does not reflect raw/encoded dummy keys on transport failure', function () {
+        var key = 'DUMMY+a/b='; var logs = [];
+        var c = h.prepare(h.collector({get: function (url, opts, cb) { cb(new Error(url)); }}, logs));
+        var url = c.getUrl(c.DATA_TYPE.TOWN_SHORT, key, '20260924', '0800', {mx: 60, my: 127});
+        c.getData(0, c.DATA_TYPE.TOWN_SHORT, url, {}, function (err) { assert(err); });
+        assert(!logs.join(' ').includes(key)); assert(!logs.join(' ').includes(encodeURIComponent(key)));
+        assert(!logs.join(' ').includes('serviceKey='));
     });
 });

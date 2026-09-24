@@ -59,7 +59,7 @@
       "id": "fetch",
       "type": "backend",
       "label": "Product requesters",
-      "sublabel": "KMA 00 / safe parsing",
+      "sublabel": "KMA 00 / complete batch",
       "pos": [
         685,
         130
@@ -226,8 +226,8 @@
       "dot": "amber",
       "title": "KMA compatibility (#2555)",
       "items": [
-        "apis.data.go.kr over HTTP; operator must verify authorization.",
-        "PCP/SNO/TMP retain legacy fields; periods are not equivalent."
+        "HTTP; reject partial pages and validate day-specific sea values.",
+        "Hold hourly short activation until legacy consumers are repaired."
       ]
     }
   ]

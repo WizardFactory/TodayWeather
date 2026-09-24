@@ -1,0 +1,4 @@
+PASS synthetic XML -> requester -> events -> saveShort -> getShortFromDB (1 write, exact quantities/timestamps/grid)
+PASS provider-error XML -> failed collection, no additional persistence; no key-bearing logs
+PASS truncated XML page -> failed requestData -> no additional persistence; encoded/raw dummy keys safe
+PASS sea XML -> requester -> events -> saveMid (26 distinct heights); later-day NaN prevents another write
