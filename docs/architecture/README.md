@@ -21,6 +21,7 @@ Files ending in `.visual-check.html` are local screenshot contact sheets, not th
 
 | View | Standalone HTML | Source |
 | --- | --- | --- |
+| Historical observations | [Recovery and response](diagrams/historical-observations.html) | [JSON](diagrams/historical-observations.json) |
 | Push notifications | [Settings to device notification](diagrams/push-notifications.html) | [JSON](diagrams/push-notifications.json) |
 | Service EC2 internals | [nginx / PM2 / Mongo endpoint](diagrams/ec2-internals.html) | [JSON](diagrams/ec2-internals.json) |
 | AWS infrastructure | [AWS resource topology](diagrams/aws-infrastructure.html) | [JSON](diagrams/aws-infrastructure.json) |

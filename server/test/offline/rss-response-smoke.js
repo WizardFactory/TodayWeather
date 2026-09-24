@@ -1,5 +1,5 @@
 /* Full v000903 KMA coordinate router smoke, with no HTTP socket or production calls.
- * Requires Node >=18, async 2.5, express 4.13, sprintf 0.1.5 and xml2js 0.4.23.
+ * Requires Node >=16.20.2, async 2.5, express 4.13, sprintf 0.1.5 and xml2js 0.4.23.
  * Run: TZ=UTC NODE_PATH=/tmp/issue-2554-response-smoke/node_modules \
  *      TW_REPO=/path/to/checkout node server/test/offline/rss-response-smoke.js
  * Optional TW_SMOKE_OUTPUT_DIR selects artifact directory outside the checkout.
@@ -14,7 +14,9 @@ const crypto = require('crypto');
 const root = process.env.TW_REPO || process.cwd();
 const outputDir = process.env.TW_SMOKE_OUTPUT_DIR || path.join(require('os').tmpdir(),'issue-2554-response-smoke-output');
 fs.mkdirSync(outputDir,{recursive:true});
-const clone = value => structuredClone(value);
+// Preserve Date/undefined values in fixtures on the Node 16 service runtime.
+const v8 = require('v8');
+const clone = value => v8.deserialize(v8.serialize(value));
 const RealDate = Date;
 const instant = process.env.TW_SMOKE_NOW || '2026-09-24T00:10:00.000Z'; // 09:10 KST, after 09:00 observation publication.
 class FixedDate extends RealDate { constructor(...args) { super(...(args.length ? args : [instant])); } static now() { return new RealDate(instant).getTime(); } }
@@ -44,14 +46,15 @@ function makeFixture(place, policy) {
   for(let d=3;d<=10;d++){land['wf'+d]='맑음';land['wf'+d+'Am']='맑음';land['wf'+d+'Pm']='맑음';temp['taMax'+d]=27;temp['taMin'+d]=18;}
   return {place,basePub,short,current,shortest,rss,land,temp,forecast:{date:'20260924',time:'0600',cnt:1,wfsv:'Synthetic clear weather'}};
 }
-function createHarness(version, fixture) {
+function createHarness(version, fixture, historyOptions = {}) {
   const traces=[],queries=[],logs=[],cache=new Map(),models=new Map();
   let activeMethod;
-  const config={db:{version},apiServer:{url:'https://synthetic.invalid'},ipAddress:'127.0.0.1',port:1};
+  const config={history:historyOptions.config,db:{version},apiServer:{url:'https://synthetic.invalid'},ipAddress:'127.0.0.1',port:1};
   const manager={MAX_CURRENT_COUNT:200,leadingZeros:(n,l)=>String(n).padStart(l,'0'),getRegIdByTown:(r,c,cb)=>cb(null,{pointNumber:'109',cityCode:'11B10101'})};
   const logger={};
   for(const level of ['info','silly','debug','verbose','warn','error']) logger[level]=(...args)=>{if(level==='error'||level==='warn')logs.push({method:activeMethod,level,args:args.map(a=>a&&a.stack||a)});};
   const sandbox={console,Buffer,Date:FixedDate,setTimeout(){throw new Error('Unexpected timer');},setInterval(){throw new Error('Unexpected interval');},clearTimeout,setImmediate,log:logger,manager,__:s=>s};
+  if (historyOptions.db) { sandbox.setTimeout=setTimeout; sandbox.clearTimeout=clearTimeout; }
   sandbox.global=sandbox;
   const context=vm.createContext(sandbox);
   const managerCode=fs.readFileSync(path.join(root,'server/controllers/controllerManager.js'),'utf8');
@@ -61,6 +64,7 @@ function createHarness(version, fixture) {
   for(const match of app.matchAll(/global\.(\w+String)\s*=\s*(\[[\s\S]*?\]);/g)) vm.runInContext(match[0],context);
   function modelData(name) {
     if(name==='town') return locations;
+    if(name==='modelKmaStnInfo') return historyOptions.stations || [];
     if(name==='modelAreaNo'||name==='modelHealthDay') return [];
     const isV2=name.startsWith('kma.');
     const map={'modelShort':'short','modelCurrent':'current','modelShortest':'shortest','modelShortRss':'rss','kma.town.short.model':'short','kma.town.current.model':'current','kma.town.shortest.model':'shortest','kma.town.short.rss.model':'rss'};
@@ -101,6 +105,7 @@ function createHarness(version, fixture) {
     if(cache.has(filename))return cache.get(filename).exports;
     const mod={exports:{}};cache.set(filename,mod);
     function localRequire(id) {
+      if(id==='mongoose' && historyOptions.db) return {connection:{db:historyOptions.db}};
       if(id==='dnscache')return ()=>({});
       if(id==='request')return (url,opts,cb)=>{
         assert(url.startsWith('https://synthetic.invalid/geocode/coord/'));
