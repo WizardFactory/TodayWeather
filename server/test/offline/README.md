@@ -23,7 +23,7 @@ Correction coverage uses distinct values for every sea wave field, nonfinite val
 
 ## Isolated RSS checks
 
-Run from the repository root with Node 18+ (validated with Node 22.22.2):
+Run from the repository root with Node 16.20.2+ (validated with Node 16.20.2 and Node 22.22.2):
 
 ```sh
 TZ=UTC node server/test/offline/rss-wind.test.js
@@ -73,9 +73,41 @@ adds 44 synthetic source-provenance, freshness, bound and precedence checks
 to `test:offline` (223 regression checks plus gather smoke in total).
 HTTP, DB and timers are intercepted before loading real modules. It does not
 import or initialize `server/app.js`; existing global field declarations are
-read as text only. Tests require Node >=18. Historical production Node builds
-and real provider/deployment behavior remain operator checks.
+read as text only. These tests also pass on Node 16.20.2 after replacing the response smoke's
+`structuredClone` helper with a Date-preserving V8 clone. Real provider and
+deployment behavior remain operator checks.
 
 See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/daily-forecast-contract.md).
 
 `daily-review.test.js` adds shower mapping/storage, forecast-gap health, retired scheduler, raw short source publication bounds, DB1 complete snapshot replacement, KST year/midnight and shared JS consumer compatibility checks. Full-route smoke covers D+3 available, absent, partial, stale and DB1 legacy-without-snapshot, showers and optional RSS humidity. Raw additional daily fields do not expand the hourly template or invent daily precipitation totals. Native runtime tests remain operator-owned.
+
+## Node 16 runtime and push compatibility (#2565)
+
+The service target is Node 16.20.2 / npm 8.19.4 (`server/.nvmrc`), an interim
+EOL runtime. Use the checked-in lock; broad fresh resolution can select newer
+transitive packages that require Node 18 or 20. `npm ci` removes the target
+`node_modules`, so install only into a separate candidate, never the live tree.
+
+```sh
+# Select Node 16.20.2 first. From the repository root:
+mkdir -p /tmp/tw-runtime-candidate
+cp server/package.json server/package-lock.json /tmp/tw-runtime-candidate/
+npm ci --prefix /tmp/tw-runtime-candidate --no-audit --no-fund
+NODE_PATH=/tmp/tw-runtime-candidate/node_modules npm --prefix server run test:runtime
+NODE_PATH=/tmp/tw-runtime-candidate/node_modules npm --prefix server run test:runtime:smoke
+```
+
+`test:runtime` checks lazy Firebase initialization, app selection, payloads,
+callback errors and alarm/alert rejection of legacy iOS records without FCM using explicit VM substitutes. `test:runtime:smoke` requires
+OpenSSL and permission to bind loopback sockets. It loads real native grpc/iconv,
+requires the retired APNs package to be absent and sends a synthetic FCM request
+only to a locally generated TLS peer, checking its encoded payload and response. A separate child loads the full
+app in `service`/`test` mode, substitutes Mongo connection, checks `/health` = `OK`
+and emits a normal Console log. External network connections are rejected before
+SDK or app imports. No real credentials, provider calls, push sends or collection
+are used. Each child has a 30-second limit.
+
+The smoke deliberately omits production DB/provider behavior and Amazon Linux 1
+linking. OpenSSL must support `req -addext` (1.1.1+); the SDK/native import checks
+on the older target host are a separate gate. The existing legacy `npm test` /
+`e2e` suites include providers and databases; they are not part of this command.
