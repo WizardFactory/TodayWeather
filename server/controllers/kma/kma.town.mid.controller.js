@@ -3,6 +3,9 @@
  */
 "use strict";
 
+var midPolicy = require('../../lib/midForecastPolicy');
+var landString = midPolicy.landFields;
+var tempString = midPolicy.tempFields;
 var async = require('async');
 
 var modelKmaTownMidForecast = require('../../models/kma/kma.town.mid.forecast.model.js');
@@ -61,12 +64,13 @@ kmaTownMidController.prototype.saveMid = function(type, newData, overwrite, call
                     if(err){
                         log.error('KMA Town M> Fail to update Mid : '+ type + ' ID : ' + regId);
                         log.info(JSON.stringify(newItem));
-                        return cb();
+                        return cb(err);
                     }
                     cb();
                 });
             }],
             function (err) {
+                if (err) { return callback(err); }
                 log.debug('KMA Town M> finished to save town.mid : ', type);
 
                 var fcsDate;
@@ -105,7 +109,7 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
             return callback(null, req[type]);
         }
 
-        db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
+        db.find({regId : indicator}, {_id: 0}).sort({pubDate: -1}).limit(1).lean().exec(function(err, result){
             if(err){
                 log.warn('KMA Town M> Fail to file&get mid data from DB ', {type:type, regId: indicator});
                 return callback(err);
@@ -129,9 +133,9 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
                     privateString = forecastString;
                 } else if(result[0].data.hasOwnProperty('wh10B')){
                     privateString = seaString;
-                } else if(result[0].data.hasOwnProperty('taMax10')){
+                } else if(tempString.some(function (key) { return result[0].data[key] !== undefined; })){
                     privateString = tempString;
-                } else if(result[0].data.hasOwnProperty('wf10')){
+                } else if(landString.some(function (key) { return result[0].data[key] !== undefined; })){
                     privateString = landString;
                 } else {
                     err = new Error('KMA Town M> ~> what is it???'+JSON.stringify(result[0].data));
@@ -139,7 +143,7 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
                     return callback(err);
                 }
 
-                var newItem = {};
+                var newItem = {regId: result[0].regId, pubDate: result[0].pubDate};
                 commonString.forEach(function(string){
                     newItem[string] = result[0].data[string];
                 });

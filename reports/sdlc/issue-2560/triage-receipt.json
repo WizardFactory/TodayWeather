@@ -1,0 +1,26 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "Assessed current source and concrete stage artifacts; scope remains local.",
+  "authority_source": "User implementation request, AGENTS.md and shared SDLC policy",
+  "candidate": "01eb787b+issue-2560-working-tree",
+  "next_action": "Continue next applicable local stage",
+  "inputs": [],
+  "outputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/issue-2560/triage.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    }
+  ],
+  "assessment": {
+    "assessor": "main /root",
+    "summary": "Evidence supports the documented offline contract; production deployment and remote publication excluded.",
+    "criteria": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
+  }
+}

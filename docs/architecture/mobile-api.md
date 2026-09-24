@@ -86,7 +86,7 @@ KMA output includes `source: 'KMA'`, region/city/town names, publication fields,
 
 ### RSS fallback contract (issue #2554 local repair)
 
-`getShortRss` compares RSS and base short publication timestamps before matching strictly future KST forecast slots. Older RSS is skipped; equal timestamps fill unusable base values; newer RSS replaces selected fields only when the corresponding RSS source is usable. The first RSS slot is included when it is future, including a single-slot result. Date/time matching happens before `convert0Hto24H`, so next-day midnight uses `YYYYMMDD0000` at this boundary.
+`getShortRss` first requires an independently valid RSS publication aged 0–24 hours, then compares normalized RSS and usable base short publication timestamps before matching strictly future KST forecast slots. Older RSS is skipped; equal timestamps fill unusable base values; newer RSS replaces selected fields only when the corresponding RSS source is usable. The first RSS slot is included when it is future, including a single-slot result. Date/time matching happens before `convert0Hto24H`, so next-day midnight uses `YYYYMMDD0000` at this boundary.
 
 Both DB versions project `ws` and `wd`. [Wind normalization](weather-collection.md#grid-rss-wind-contract-issue-2554-local-repair) takes place at the service merge boundary, before downstream unit conversion. Missing `wav`, `uuu` and `vvv` leave existing base values intact; the merge does not derive vector components. Every selected source rejects absent/null/non-numeric/nonfinite data and field-specific sentinels. Nonnegative fields accept zero, temperatures accept real negative values above `-50` (including `-1` °C) and reject `-999`, and optional vector components accept values above `-100`. At 06:00 minimum temperature checks `tmn`; at 15:00 maximum checks `tmx` itself.
 
@@ -128,3 +128,27 @@ On rejected loading/conversion, the controller presents a retry confirmation and
 TodayWeather and TodayAir widgets use Objective-C request code and their own path constants, including unversioned `weather/coord` and v000901 KMA address paths. They read shared preference data created by the app. Apple Watch contains an older extension and bundled web assets; the root README explicitly records a historical watch integration problem. Do not assume that all shipped native clients use the current Angular v000903 contract.
 
 Sources: [weather widget](../../tw.ios/widget/TodayViewController.m), [air widget](../../ta.ios/widget/TodayViewController.m), [storage bridge](../../client/www/js/service.storage.js), [original README](../../README.md).
+
+## Daily forecast validity (issue #2560)
+
+The mid-land/temperature collectors preserve available day-3–10 fields without
+requiring day 3 or day 10. Both storage versions retain publication/region and
+optional precipitation probabilities. Mid composition joins by each source's
+KST target date, with independent 36-hour publication limits and no future or
+mismatched identity. Short daily overlays have a 24-hour publication limit. When primary short data is stale or its publication is absent, a request-local snapshot of fields actually copied from matched short RSS slots supplies daily input. Its own KST publication determines freshness and the publication-date+4 target ceiling. Later mixed-hourly extrema cannot revive untouched stale values; incomplete RSS-only days remain unavailable. The accepted feed timestamp alone is never sufficient.
+The seven-day observation history remains; unavailable days are omitted and
+listed in additive `midData.dailyStatus.unavailableDates`. The captured day-4
+forecast remains September 28, with September 27 unavailable unless an actual
+valid source supplies it. Existing v000903 `tmn`/`tmx` output conversion remains.
+
+Legacy **mid RSS is retired**: scheduled collection/storage entry points are
+disabled and `getMidRss` passes through without cached overlay. Short RSS remains
+independent. No replacement feed or production recovery is claimed.
+
+See the [daily validity diagram](diagrams/daily-forecast-validity.html),
+[editable source](diagrams/daily-forecast-validity.json), and
+[contract, source policy and operator checklist](../../reports/sdlc/issue-2560/daily-forecast-contract.md).
+
+RSS-only daily fallback omits `r06`/`s06` aggregates: accepted RSS values are overlapping six-hour amounts and have not passed the mixed-hourly precipitation redistribution. Summing them would overstate the daily amount. Hourly precipitation remains unchanged; missing daily aggregates mean unavailable, not zero.
+
+The daily boundary also reads raw short targets beyond the unchanged hourly41-slot template. DB2 preserves each source document's publication; DB1 stores an optional current-batch `dailySource` snapshot, replaced completely on successful saves. Legacy DB1 documents without it cannot extend daily horizons until normal collection. Each raw slot is validated independently and must provide usable daily extrema/weather; raw rain totals are omitted. Shared weather acceptance/conversion includes both shower labels using existing rain icons. Humidity is optional for short daily summaries. `dailyStatus.healthy` now rejects gaps from today through the last available forecast, with unsupported trailing dates listed separately. A sanitized degraded-health warning is limited to one per minute per process. No new public provenance fields or hourly horizon expansion is introduced.

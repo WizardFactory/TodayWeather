@@ -1,0 +1,32 @@
+{
+  "base": "01eb787b10cc2694ea52642b8b24ad8c5426503e",
+  "candidate": "1d5f88896c2b3a7fbebd35a0aff69d2fb5c115a35333a939d9fb0b9f1af1bc9a",
+  "files": {
+    "docs/architecture/diagrams/daily-forecast-validity.html": "67fa42d10f2d26b1d23e3231a988a7d64bb563d17002215d9053998e61c1f77d",
+    "docs/architecture/diagrams/daily-forecast-validity.json": "707e34b4af3bf84d1b72bb2c29b3c3b4da48ccc6138cd77557f348fa8c0f2d65",
+    "docs/architecture/mobile-api.md": "696f34af034fce4aaae42d81153cadfc83a6877232b72a12fd76d8b2f23a3f54",
+    "docs/architecture/weather-collection.md": "788c9b6812d365ed63d06123a4f3ebb02cbaba0575783a573c51fef532091e5b",
+    "server/controllers/controllerManager.js": "7ca4184e95e1cbf9ab9ae6860d59506613d4383a4103e632be6b07d092dc2804",
+    "server/controllers/controllerTown.js": "7f19ea0bbf5d7358bcde966ebd68e808b8a7b377f41d7007356bcd7d27df13d3",
+    "server/controllers/kma/kma.town.mid.controller.js": "5b9c06658411e8eadac2302d6f1bc9b883eba30f3c0b6eee5e9938d28708fe87",
+    "server/controllers/kma/kma.town.mid.rss.controller.js": "dc5e0243731d252bd21d628c4d7ee499da4bd4ab0ee47ea0f2fc94ba0ab0585a",
+    "server/lib/collectTownForecast.js": "dde9f078fc34bc01fc2594048ddaecb705e4e208c25ec2c043ffdfeda8ccd0a1",
+    "server/lib/midForecastPolicy.js": "4bb35ebaaa220b4924fd08559c8a079accbedc963034d2380ec199c57625ce29",
+    "server/lib/midRssKmaRequester.js": "e1027e7b3b076b0e42c9129be472fe5cce040fe68e432fce290e3b40943b5f79",
+    "server/models/kma/kma.town.mid.land.model.js": "ae86961387e498dde9dcbd7cb86573b0fd8e91a4ef1871e96a782df14a648f85",
+    "server/models/kma/kma.town.mid.temp.model.js": "70580e4f38d34dc7fb342e6b38bcd22788c4f4c83405d80b075a7662c079809a",
+    "server/models/modelMidLand.js": "11374af9372afe5ac755c89b4b3ad01b795f8feccbb488a46c1af00de1eabb81",
+    "server/models/modelMidTemp.js": "3c98f2c1f29c209641d58f28e47d725f23ecf1c590257220a06a57706dc4d324",
+    "server/test/offline/README.md": "20a1960574bb035bbd2a2395d67b0296b637d5cad56396823f37b736352677a2",
+    "server/test/offline/daily-forecast.test.js": "e91631845549e54afa0d872439f892908993b937d2f482fc63d52429c9349634",
+    "server/test/offline/daily-harness.js": "77b4592196b221401364437eafd61ffe2aefa98ab6505039e81e31e4d29f132d",
+    "server/test/offline/daily-response-smoke.js": "2c87bf7cdcde23ef0a0da984becd98679fea397b53e9412617fcc8c95690ca3a",
+    "server/test/offline/fixtures/mid-land-captured.json": "16b30d08545b34b1acd55c144066314cb65acf1fd80a8582392946f74173fa55",
+    "server/test/offline/gather-code-drift.test.js": "ea34ed9db6f75e10a18466ac7b195a8805aa02fafabfec69af2b7e3f1567b6ee",
+    "server/test/offline/gather-smoke.js": "45c933e338372fa76652216108f93540205ff3656b92c6691ba6d136593d1918",
+    "server/test/offline/harness.js": "3a977bf9ecb66a34ca8bbcde238a681cfbbed651ef366065fb4c7d2fd1b24b3f",
+    "server/test/offline/rss-response-smoke.js": "604ef09feae62f38faeeeeec7b7fe94cdb375ff039eb86090456d73b9c90d3ca",
+    "server/test/offline/rss-wind.test.js": "28224e2339cb4419cdc319c06f9557bec0f56132e28992303417147ad8f5545a",
+    "server/test/offline/run.js": "6bb5f05f845ac4998630f40cf4081eb33150ef29cbcb69e55ac894fa889bf211"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "candidate": "4507d3a9035b1b91ab55a525e6eb6de9d5ace1634e5d923c59a67ede8479751e",
+  "scenarios": [
+    {
+      "id": "review2-route",
+      "requirement": "D",
+      "required": true,
+      "environment": "Node v22.22.2; isolated /tmp/issue-2560-offline dependencies; no app/provider/DB/timer startup",
+      "prerequisites": "Synthetic fixtures, real Express modules, intercepted HTTP/model/timer boundaries",
+      "actions": "Execute real v000903 middleware for captured, RSS fallback, source-valid D+3 and showers in DB1/2 and C/F",
+      "expected": "68 scenarios retain valid days and flag actual gaps; no raw-source or stale-field pollution",
+      "failure": "Assertion or swallowed programming exception; fabricated values or target dates",
+      "cleanup": "No external mutable state; temporary evidence only"
+    }
+  ],
+  "runs": [
+    {
+      "id": "initial-red",
+      "phase": "red",
+      "candidate": "b13dc38-before-repair",
+      "command": "NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/daily-review.test.js",
+      "exit_code": 1,
+      "environment": "Node v22.22.2; isolated /tmp/issue-2560-offline dependencies; no app/provider/DB/timer startup",
+      "observed": "Six required behavior assertions fail; separate scheduler stub setup issue recorded, not a product defect",
+      "evidence": "reports/sdlc/issue-2560/review2-executions.json",
+      "execution_kind": "real",
+      "status": "passed",
+      "intended_failure": true
+    },
+    {
+      "id": "green",
+      "phase": "green",
+      "candidate": "4507d3a9035b1b91ab55a525e6eb6de9d5ace1634e5d923c59a67ede8479751e",
+      "command": "NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/daily-review.test.js",
+      "exit_code": 0,
+      "environment": "Node v22.22.2; isolated /tmp/issue-2560-offline dependencies; no app/provider/DB/timer startup",
+      "observed": "11 checks pass",
+      "evidence": "reports/sdlc/issue-2560/review2-executions.json",
+      "execution_kind": "real",
+      "status": "passed"
+    },
+    {
+      "id": "regression",
+      "phase": "post-refactor",
+      "candidate": "4507d3a9035b1b91ab55a525e6eb6de9d5ace1634e5d923c59a67ede8479751e",
+      "command": "NODE_PATH=/tmp/issue-2560-offline/node_modules npm --prefix server run test:offline",
+      "exit_code": 0,
+      "environment": "Node v22.22.2; isolated /tmp/issue-2560-offline dependencies; no app/provider/DB/timer startup",
+      "observed": "223 checks plus gather smoke pass",
+      "evidence": "reports/sdlc/issue-2560/review2-executions.json",
+      "execution_kind": "real",
+      "status": "passed"
+    },
+    {
+      "id": "daily-smoke",
+      "phase": "smoke",
+      "candidate": "4507d3a9035b1b91ab55a525e6eb6de9d5ace1634e5d923c59a67ede8479751e",
+      "command": "TZ=UTC NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/daily-response-smoke.js",
+      "exit_code": 0,
+      "environment": "Node v22.22.2; isolated /tmp/issue-2560-offline dependencies; no app/provider/DB/timer startup",
+      "observed": "68 actual-router scenarios pass with isolated external boundaries",
+      "evidence": "reports/sdlc/issue-2560/review2-smoke.json",
+      "execution_kind": "real",
+      "status": "passed",
+      "scenario_id": "review2-route"
+    }
+  ]
+}

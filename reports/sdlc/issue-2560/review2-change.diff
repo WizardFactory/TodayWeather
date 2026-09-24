@@ -1,0 +1,682 @@
+diff --git a/server/app.js b/server/app.js
+index 2d1b8aad..da63b043 100644
+--- a/server/app.js
++++ b/server/app.js
+@@ -116,8 +116,6 @@ global.shortestString = ['pty', 'rn1', 'sky', 'lgt', 't1h', 'uuu', 'vvv', 'reh',
+ global.commonString = ['date', 'time'];
+ global.rssString = ['ftm', 'date', 'temp', 'tmx', 'tmn', 'sky', 'pty', 'wfKor', 'wfEn', 'pop', 'r12', 's12', 'ws', 'wd', 'wdKor', 'wdEn', 'reh', 'r06', 's06'];
+ global.forecastString = ['cnt', 'wfsv'];
+-global.tempString = ['taMin3', 'taMax3', 'taMin4', 'taMax4', 'taMin5', 'taMax5', 'taMin6', 'taMax6',
+-    'taMin7', 'taMax7', 'taMin8', 'taMax8', 'taMin9', 'taMax9', 'taMin10', 'taMax10'];
+ global.seaString = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm', 'wf6Am', 'wf6Pm',
+     'wf7Am', 'wf7Pm', 'wf8', 'wf9', 'wf10',
+     'wh3AAm', 'wh3APm', 'wh3BAm', 'wh3BPm', 'wh4AAm', 'wh4APm', 'wh4BAm', 'wh4BPm',
+diff --git a/server/controllers/controllerManager.js b/server/controllers/controllerManager.js
+index 87ecd0f8..1c30040b 100644
+--- a/server/controllers/controllerManager.js
++++ b/server/controllers/controllerManager.js
+@@ -232,6 +232,9 @@ Manager.prototype.saveShort = function(newData, callback){
+     };
+ 
+     var pubDate = newData[0].pubDate;
++    var dailySource = {pubDate: pubDate, rows: newData.map(function (row) {
++        return midPolicy.shortDailySnapshot(row, pubDate);
++    })};
+     log.verbose('S> pubDate :', pubDate);
+     //log.info('S> db find :', coord);
+     try{
+@@ -245,7 +248,7 @@ Manager.prototype.saveShort = function(newData, callback){
+             }
+ 
+             if(list.length === 0){
+-                var newItem = new modelShort({mCoord: coord, pubDate: pubDate, shortData: newData});
++                var newItem = new modelShort({mCoord: coord, pubDate: pubDate, shortData: newData, dailySource: dailySource});
+                 newItem.save(function(err){
+                     if(err){
+                         log.error('S> fail to save to DB :', coord);
+@@ -359,6 +362,7 @@ Manager.prototype.saveShort = function(newData, callback){
+                 }
+ 
+                 dbShortList.pubDate = pubDate;
++                dbShortList.dailySource = dailySource;
+                 //log.info(dbShortList.shortData);
+                 dbShortList.save(function(err){
+                     if(err){
+@@ -2141,11 +2145,6 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
+             self._requestApi("midsea", callback);
+         });
+ 
+-        log.info('push mid rss');
+-        self.asyncTasks.push(function MidRss(callback) {
+-            self._requestApi("midrss", callback);
+-        });
+-
+         log.info('push short rss');
+         self.asyncTasks.push(function ShortRss(callback) {
+             self._requestApi("shortrss", callback);
+diff --git a/server/controllers/controllerTown.js b/server/controllers/controllerTown.js
+index 130f1ce7..ad7bde53 100644
+--- a/server/controllers/controllerTown.js
++++ b/server/controllers/controllerTown.js
+@@ -46,6 +46,9 @@ var ControllerWeatherDesc = require('./controller.weather.desc');
+ 
+ var KmaForecastZoneCode = require('./kma/kma.forecast.zone.controller');
+ 
++// Bound degraded-health diagnostics to one per minute per process.
++var nextDailyHealthWarning = 0;
++
+ var townArray = [
+     {db:modelShort, name:'modelShort'},
+     {db:modelCurrent, name:'modelCurrent'},
+@@ -458,6 +461,7 @@ function ControllerTown() {
+                     }
+ 
+                     var shortList=shortInfo.ret;
++                    req._dailyShort = shortInfo.dailyRows || [];
+ 
+                     self._dataListPrint(shortList, 'route S', 'original short');
+ 
+@@ -2896,9 +2900,67 @@ function ControllerTown() {
+             });
+             req.midData.dailyData = Object.keys(byDate).sort().map(function (date) { return byDate[date]; });
+             req.midData.dailyStatus = midPolicy.dailyHealth(req.midData);
++            if (!req.midData.dailyStatus.healthy && Date.now() >= nextDailyHealthWarning) {
++                nextDailyHealthWarning = Date.now() + 60000;
++                log.warn('KMA daily forecast degraded', {
++                    reasons: req.midData.dailyStatus.reasons,
++                    unavailableDates: req.midData.dailyStatus.unavailableDates,
++                    landPublication: midPolicy.timestamp(req.midData.landPubDate),
++                    tempPublication: midPolicy.timestamp(req.midData.tempPubDate)
++                });
++            }
+             next();
+         }
+-        var daySummaryList;
++        function overlay(inputs) {
++            var shortRows = inputs.map(function (source) {
++                var row = Object.assign({}, source);
++                ['t3h', 'tmn', 'tmx'].forEach(function (key) {
++                    if (!midPolicy.temperature(row[key])) { row[key] = -50; }
++                });
++                ['pop', 'reh', 'sky', 'pty', 'r06', 's06', 'wsd', 'lgt'].forEach(function (key) {
++                    var value = row[key];
++                    var maximum = {pop: 100, reh: 100, sky: 4, pty: 3, lgt: 1}[key];
++                    if (typeof value !== 'number' || !isFinite(value) || value < (key === 'sky' ? 1 : 0) ||
++                        (maximum !== undefined && value > maximum) ||
++                        (['sky', 'pty', 'lgt'].indexOf(key) !== -1 && value % 1 !== 0)) { row[key] = -1; }
++                });
++                return row;
++            });
++            var daySummaryList = self._getDaySummaryListByShort(shortRows).filter(function (row) {
++                return midPolicy.complete(row) && midPolicy.weather(row.wfAm) && midPolicy.weather(row.wfPm);
++            });
++            daySummaryList.forEach(function (row) {
++                // Legacy summaries turn an empty sum/lightning list into 0.
++                // Omit that value unless an actual usable source exists.
++                Object.keys(row).forEach(function (key) {
++                    var value = row[key];
++                    if (typeof value === 'number' && (!isFinite(value) ||
++                        (['taMin', 'taMax', 't1d'].indexOf(key) === -1 && value < 0))) { delete row[key]; }
++                });
++                if (!shortRows.some(function (source) {
++                    return source.date === row.date && midPolicy.temperature(source.t3h);
++                })) { delete row.t1d; }
++                ['r06', 's06', 'lgtAm', 'lgtPm'].forEach(function (key) {
++                    var lightning = key.slice(0, 3) === 'lgt';
++                    var present = shortRows.some(function (source) {
++                        var value = source[lightning ? 'lgt' : key];
++                        return source.date === row.date && typeof value === 'number' && isFinite(value) && value >= 0 &&
++                            (!lightning || (value <= 1 && (key === 'lgtAm' ? +source.time <= 1200 : +source.time > 1200)));
++                    });
++                    if (!present) { delete row[key]; }
++                });
++            });
++            self._mergeList(req.midData.dailyData, daySummaryList);
++        }
++
++        var extendedRows = midPolicy.dailyShortRows(req._dailyShort).map(function (source) {
++            var row = Object.assign({}, source);
++            kmaTimeLib.convert0Hto24H(row);
++            return row;
++        }).filter(function (row) {
++            return row.date > midPolicy.addDays(midPolicy.date(Date.now()), 2);
++        });
++        if (extendedRows.length) { overlay(extendedRows); }
+ 
+         var dailyShort = req.short;
+         var dailyShortPub = req.shortPubDate;
+@@ -2919,47 +2981,9 @@ function ControllerTown() {
+         }
+         if (dailyShort && midPolicy.freshShort(dailyShortPub)) {
+             try {
+-                var shortRows = dailyShort.filter(function (row) {
++                overlay(dailyShort.filter(function (row) {
+                     return midPolicy.inWindow(row.date) && row.date <= midPolicy.addDays(midPolicy.date(dailyShortPub), 4);
+-                }).map(function (source) {
+-                    var row = Object.assign({}, source);
+-                    ['t3h', 'tmn', 'tmx'].forEach(function (key) {
+-                        if (!midPolicy.temperature(row[key])) { row[key] = -50; }
+-                    });
+-                    ['pop', 'reh', 'sky', 'pty', 'r06', 's06', 'wsd', 'lgt'].forEach(function (key) {
+-                        var value = row[key];
+-                        var maximum = {pop: 100, reh: 100, sky: 4, pty: 3, lgt: 1}[key];
+-                        if (typeof value !== 'number' || !isFinite(value) || value < (key === 'sky' ? 1 : 0) ||
+-                            (maximum !== undefined && value > maximum) ||
+-                            (['sky', 'pty', 'lgt'].indexOf(key) !== -1 && value % 1 !== 0)) { row[key] = -1; }
+-                    });
+-                    return row;
+-                });
+-                daySummaryList = self._getDaySummaryListByShort(shortRows).filter(function (row) {
+-                    return midPolicy.complete(row) && midPolicy.weather(row.wfAm) && midPolicy.weather(row.wfPm);
+-                });
+-                daySummaryList.forEach(function (row) {
+-                    // Legacy summaries turn an empty sum/lightning list into 0.
+-                    // Omit that value unless an actual usable source exists.
+-                    Object.keys(row).forEach(function (key) {
+-                        var value = row[key];
+-                        if (typeof value === 'number' && (!isFinite(value) ||
+-                            (['taMin', 'taMax', 't1d'].indexOf(key) === -1 && value < 0))) { delete row[key]; }
+-                    });
+-                    if (!shortRows.some(function (source) {
+-                        return source.date === row.date && midPolicy.temperature(source.t3h);
+-                    })) { delete row.t1d; }
+-                    ['r06', 's06', 'lgtAm', 'lgtPm'].forEach(function (key) {
+-                        var lightning = key.slice(0, 3) === 'lgt';
+-                        var present = shortRows.some(function (source) {
+-                            var value = source[lightning ? 'lgt' : key];
+-                            return source.date === row.date && typeof value === 'number' && isFinite(value) && value >= 0 &&
+-                                (!lightning || (value <= 1 && (key === 'lgtAm' ? +source.time <= 1200 : +source.time > 1200)));
+-                        });
+-                        if (!present) { delete row[key]; }
+-                    });
+-                });
+-                self._mergeList(req.midData.dailyData, daySummaryList);
++                }));
+             }
+             catch(e) {
+                 e.message += ' ' + JSON.stringify(meta);
+@@ -4532,7 +4556,11 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
+                     return cb(new Error('~> what???' + JSON.stringify(meta)));
+                 }
+                 //log.info(ret);
+-                cb(0, {pubDate: result[0].pubDate, ret:ret});
++                var dailySource = result[0].dailySource;
++                var dailyRows = dailySource && Array.isArray(dailySource.rows) ? dailySource.rows.map(function (row) {
++                    return midPolicy.shortDailySnapshot(row, dailySource.pubDate);
++                }) : [];
++                cb(0, {pubDate: result[0].pubDate, ret:ret, dailyRows: dailyRows});
+             }
+         });
+     }
+@@ -5325,73 +5353,7 @@ ControllerTown.prototype._convertSkyToKorStr = function(sky, pty) {
+  * @private
+  */
+ ControllerTown.prototype._convertKorStrToSky = function (skyKorStr) {
+-    var sky = 1;
+-    var pty = 0;
+-    var lgt = 0;
+-
+-    switch (skyKorStr) {
+-        case "맑음":
+-            sky = 1;
+-            break;
+-        case "구름조금":
+-            sky = 2;
+-            break;
+-        case "구름많음":
+-            sky = 3;
+-            break;
+-        case "흐림":
+-            sky = 4;
+-            break;
+-        case "흐리고 한때 비":
+-        case "흐리고 비":
+-            sky = 4;
+-            pty = 1;
+-            break;
+-        case "구름적고 한때 비":
+-        case "구름적고 비":
+-            sky = 2;
+-            pty = 1;
+-            break;
+-        case "구름많고 한때 비":
+-        case "구름많고 비":
+-            sky = 3;
+-            pty = 1;
+-            break;
+-        case "흐리고 한때 눈":
+-        case "흐리고 눈":
+-            sky = 4;
+-            pty = 3;
+-            break;
+-        case "구름적고 한때 눈":
+-        case "구름적고 눈":
+-            sky = 2;
+-            pty = 3;
+-            break;
+-        case "구름많고 한때 눈":
+-        case "구름많고 눈":
+-            sky = 3;
+-            pty = 3;
+-            break;
+-        case "구름적고 비/눈":
+-        case "구름적고 눈/비":
+-            sky = 2;
+-            pty = 2;
+-            break;
+-        case "구름많고 비/눈":
+-        case "구름많고 눈/비":
+-            sky = 3;
+-            pty = 2;
+-            break;
+-        case "흐리고 비/눈":
+-        case "흐리고 눈/비":
+-            sky = 4;
+-            pty = 2;
+-            break;
+-        default :
+-            log.error("Fail to convert sky string="+skyKorStr);
+-            return undefined;
+-    }
+-    return  {sky: sky, pty: pty, lgt: lgt};
++    return midPolicy.skyInfo(skyKorStr);
+ };
+ 
+ /**
+@@ -5477,11 +5439,6 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
+     });
+ 
+     dayConditionList.forEach(function (dayCondition) {
+-        if (dayCondition.reh.length === 0) {
+-            log.warn(new Error("dayCondition is empty :" + dayCondition.date));
+-            return;
+-        }
+-
+         var daySummary = self._createOrGetDaySummaryList(daySummaryList, dayCondition.date);
+ 
+         daySummary.pop = self._max(dayCondition.pop, -1);
+diff --git a/server/controllers/kma/kma.town.short.controller.js b/server/controllers/kma/kma.town.short.controller.js
+index fa345c05..3b7a5a2f 100644
+--- a/server/controllers/kma/kma.town.short.controller.js
++++ b/server/controllers/kma/kma.town.short.controller.js
+@@ -4,6 +4,7 @@
+ "use strict";
+ 
+ var async = require('async');
++var midPolicy = require('../../lib/midForecastPolicy');
+ 
+ var modelKmaTownShort = require('../../models/kma/kma.town.short.model.js');
+ var kmaTimelib = require('../../lib/kmaTimeLib');
+@@ -68,12 +69,14 @@ kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord,
+             }
+ 
+             var ret = [];
++            var dailyRows = [];
+             var pubDate = kmaTimelib.getKoreaTimeString(result[result.length-1].pubDate);
+ 
+             log.info('KMA Town S> get Data : ', result.length);
+             result.forEach(function(item){
+                 var newItem = {};
+                 var shortData = item.shortData;
++                dailyRows.push(midPolicy.shortDailySnapshot(shortData, item.pubDate));
+ 
+                 //log.info(JSON.stringify(item));
+                 commonString.forEach(function(string){
+@@ -86,7 +89,7 @@ kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord,
+             });
+ 
+             log.info('KMA Town S> pubDate : ', pubDate);
+-            callback(null, {pubDate: pubDate, ret:ret});
++            callback(null, {pubDate: pubDate, ret:ret, dailyRows: dailyRows});
+         });
+ 
+     }
+diff --git a/server/lib/midForecastPolicy.js b/server/lib/midForecastPolicy.js
+index 3f9728f3..30787089 100644
+--- a/server/lib/midForecastPolicy.js
++++ b/server/lib/midForecastPolicy.js
+@@ -18,9 +18,28 @@ exports.temperature = function (value) {
+ exports.probability = function (value) {
+     return typeof value === 'number' && isFinite(value) && value >= 0 && value <= 100;
+ };
+-exports.weather = function (value) {
+-    return typeof value === 'string' && ["맑음", "구름조금", "구름많음", "흐림", "흐리고 한때 비", "흐리고 비", "구름적고 한때 비", "구름적고 비", "구름많고 한때 비", "구름많고 비", "흐리고 한때 눈", "흐리고 눈", "구름적고 한때 눈", "구름적고 눈", "구름많고 한때 눈", "구름많고 눈", "구름적고 비/눈", "구름적고 눈/비", "구름많고 비/눈", "구름많고 눈/비", "흐리고 비/눈", "흐리고 눈/비"].indexOf(value.trim()) !== -1;
++// One mapping for validation and service conversion. Shower icons use the
++// existing rain category (pty=1); the original provider wording is preserved.
++var weatherMap = Object.create(null);
++[
++    [1, 0, '맑음'], [2, 0, '구름조금'], [3, 0, '구름많음'], [4, 0, '흐림'],
++    [4, 1, '흐리고 한때 비|흐리고 비|흐리고 소나기'],
++    [2, 1, '구름적고 한때 비|구름적고 비'],
++    [3, 1, '구름많고 한때 비|구름많고 비|구름많고 소나기'],
++    [4, 3, '흐리고 한때 눈|흐리고 눈'],
++    [2, 3, '구름적고 한때 눈|구름적고 눈'],
++    [3, 3, '구름많고 한때 눈|구름많고 눈'],
++    [2, 2, '구름적고 비/눈|구름적고 눈/비'],
++    [3, 2, '구름많고 비/눈|구름많고 눈/비'],
++    [4, 2, '흐리고 비/눈|흐리고 눈/비']
++].forEach(function (group) {
++    group[2].split('|').forEach(function (text) { weatherMap[text] = {sky: group[0], pty: group[1]}; });
++});
++exports.skyInfo = function (value) {
++    var info = typeof value === 'string' && weatherMap[value.trim()];
++    return info ? {sky: info.sky, pty: info.pty, lgt: 0} : undefined;
+ };
++exports.weather = function (value) { return !!exports.skyInfo(value); };
+ exports.number = function (value) {
+     if (typeof value !== 'number' && typeof value !== 'string') { return NaN; }
+     if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(String(value).trim())) { return NaN; }
+@@ -66,6 +85,29 @@ exports.freshShort = function (value, now) {
+     var age = (now === undefined ? Date.now() : +now) - exports.timestamp(value);
+     return age >= 0 && age <= 24 * 3600000;
+ };
++// Raw snapshots contain only daily inputs. They never include unadjusted
++// overlapping rain/snow accumulations or values inherited by legacy merges.
++exports.shortDailySnapshot = function (row, publication) {
++    var result = {pubDate: publication};
++    ['date', 'time', 't3h', 'tmn', 'tmx', 'sky', 'pty', 'reh', 'pop', 'wsd'].forEach(function (field) {
++        if (row[field] !== undefined) { result[field] = row[field]; }
++    });
++    return result;
++};
++exports.dailyShortRows = function (records, now) {
++    var slots = {};
++    (Array.isArray(records) ? records : []).forEach(function (row) {
++        if (!row || typeof row.date !== 'string' || typeof row.time !== 'string') { return; }
++        if (!isFinite(exports.timestamp(row.date + row.time)) ||
++            !isFinite(exports.timestamp(row.pubDate))) { return; }
++        var key = row.date + row.time;
++        if (!slots[key] || exports.timestamp(row.pubDate) >= exports.timestamp(slots[key].pubDate)) { slots[key] = row; }
++    });
++    return Object.keys(slots).sort().map(function (key) { return slots[key]; }).filter(function (row) {
++        return exports.freshShort(row.pubDate, now) && exports.inWindow(row.date, now) &&
++            row.date <= exports.addDays(exports.date(row.pubDate), 4);
++    });
++};
+ exports.latest = function (records, publication, now) {
+     if (!Array.isArray(records) || !records.length) { return null; }
+     var latest = records.reduce(function (a, b) {
+@@ -91,7 +133,9 @@ exports.dailyHealth = function (mid, now) {
+     rows.forEach(function (row, i) {
+         if (!exports.inWindow(row.date, now)) { reasons.push('target-out-of-window'); }
+         if (seen[row.date] || (i && rows[i - 1].date > row.date)) { reasons.push('dates-not-unique-sorted'); }
+-        seen[row.date] = true;
++        if (exports.complete(row) && exports.weather(row.wfAm) && exports.weather(row.wfPm)) {
++            seen[row.date] = true;
++        } else { reasons.push('invalid-daily-row'); }
+     });
+     if (!rows.some(function (row) { return row.date >= exports.addDays(today, 4) &&
+         exports.complete(row) && exports.weather(row.wfAm) && exports.weather(row.wfPm); })) {
+@@ -102,7 +146,9 @@ exports.dailyHealth = function (mid, now) {
+         var target = exports.addDays(today, d);
+         if (!seen[target]) { missing.push(target); }
+     }
+-    return {healthy: reasons.length === 0, reasons: reasons, unavailableDates: missing, rss: 'retired'};
++    var last = Object.keys(seen).filter(function (date) { return date >= today; }).sort().pop();
++    if (last && missing.some(function (date) { return date <= last; })) { reasons.push('forecast-gap'); }
++    return {healthy: reasons.length === 0, reasons: reasons.filter(function (reason, i) { return reasons.indexOf(reason) === i; }), unavailableDates: missing, rss: 'retired'};
+ };
+ exports.parse = function (kind, response, options) {
+     var envelope = response && response.response;
+diff --git a/server/models/modelShort.js b/server/models/modelShort.js
+index 97ad42bc..d87c3390 100644
+--- a/server/models/modelShort.js
++++ b/server/models/modelShort.js
+@@ -10,6 +10,12 @@ var shortSchema = new mongoose.Schema({
+         my : Number
+     },
+     pubDate : String, //YYYYMMDDHHMM last baseDate+baseTime
++    // Latest raw collection, replaced as a whole; never reuse partially merged fields.
++    dailySource: {
++        pubDate: String,
++        rows: [{date: String, time: String, t3h: Number, tmn: Number, tmx: Number,
++            sky: Number, pty: Number, reh: Number, pop: Number, wsd: Number}]
++    },
+     shortData : [{
+         date : String, //fcstDate
+         time : String, //fcstTime
+diff --git a/server/test/offline/README.md b/server/test/offline/README.md
+index bf77bd71..f9759387 100644
+--- a/server/test/offline/README.md
++++ b/server/test/offline/README.md
+@@ -68,12 +68,14 @@ TZ=UTC NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/d
+ The additional smoke executes all v000903 middleware for both DB versions and
+ C/F units, covering captured, stale, missing-text and missing-temperature data,
+ plus stale/missing primary short with fresh RSS, partial/nonmatching RSS and
+-nonzero six-hour precipitation (36 route scenarios). `short-rss-daily.test.js`
++nonzero six-hour precipitation (68 route scenarios). `short-rss-daily.test.js`
+ adds 44 synthetic source-provenance, freshness, bound and precedence checks
+-to `test:offline` (212 regression checks plus gather smoke in total).
++to `test:offline` (223 regression checks plus gather smoke in total).
+ HTTP, DB and timers are intercepted before loading real modules. It does not
+ import or initialize `server/app.js`; existing global field declarations are
+ read as text only. Tests require Node >=18. Historical production Node builds
+ and real provider/deployment behavior remain operator checks.
+ 
+ See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/daily-forecast-contract.md).
++
++`daily-review.test.js` adds shower mapping/storage, forecast-gap health, retired scheduler, raw short source publication bounds, DB1 complete snapshot replacement, KST year/midnight and shared JS consumer compatibility checks. Full-route smoke covers D+3 available, absent, partial, stale and DB1 legacy-without-snapshot, showers and optional RSS humidity. Raw additional daily fields do not expand the hourly template or invent daily precipitation totals. Native runtime tests remain operator-owned.
+diff --git a/server/test/offline/daily-forecast.test.js b/server/test/offline/daily-forecast.test.js
+index aab18038..bb18ed5e 100644
+--- a/server/test/offline/daily-forecast.test.js
++++ b/server/test/offline/daily-forecast.test.js
+@@ -127,7 +127,7 @@ test('short merge sorts/deduplicates, keeps seven-day recent history and declare
+     let done=0;env.town.mergeMidWithShort(req,{},()=>done++);assert.equal(done,1);
+     const dates=req.midData.dailyData.map(r=>r.date);
+     assert.equal(dates[0],'20260917');assert.equal(dates.length,new Set(dates).size);assert(!dates.includes('20260927'));assert(!dates.includes('20250407'));
+-    assert(req.midData.dailyStatus.unavailableDates.includes('20260927'));assert(req.midData.dailyStatus.healthy);
++    assert(req.midData.dailyStatus.unavailableDates.includes('20260927'));assert.equal(req.midData.dailyStatus.healthy,false);
+     assert.equal(req.midData.dailyData.find(r=>r.date==='20260924').taMax,24);
+ });
+ test('dedicated daily health fails captured polluted list while short is current',()=>{
+diff --git a/server/test/offline/daily-response-smoke.js b/server/test/offline/daily-response-smoke.js
+index 82b83b77..6bfe79c9 100644
+--- a/server/test/offline/daily-response-smoke.js
++++ b/server/test/offline/daily-response-smoke.js
+@@ -34,7 +34,7 @@ async function main(){
+             const day=rows.find(row=>row.date==='20260928');
+             assert.equal(day.tmn,units==='C'?18:64);assert.equal(day.tmx,units==='C'?27:80);
+             assert.equal(day.wfAm,'구름많음');assert.equal(day.rnStAm,20);
+-            assert.equal(b.midData.dailyStatus.healthy,true);
++            assert.equal(b.midData.dailyStatus.healthy,false);assert(b.midData.dailyStatus.reasons.includes('forecast-gap'));
+         } else {
+             assert(!dates.includes('20260928'));assert.equal(b.midData.dailyStatus.healthy,false);
+         }
+@@ -44,13 +44,14 @@ async function main(){
+         summaries.push({version,scenario,units,dates,status:b.midData.dailyStatus,middlewareCount:result.traces.length});
+     }
+     // Synthetic review regression: RSS must contribute daily fields independently.
+-    for(const version of ['1.0','2.0'])for(const scenario of ['stale-primary','missing-primary','partial-rss','unmatched-rss','rain-rss'])for(const units of ['C','F']) {
++    for(const version of ['1.0','2.0'])for(const scenario of ['stale-primary','missing-primary','partial-rss','unmatched-rss','rain-rss','no-humidity'])for(const units of ['C','F']) {
+         const f=route.makeFixture(route.locations[0],'newer');
+         f.basePub='202609161400';f.rssPub='202609241400';
+         f.missingShort=scenario==='missing-primary';
+         f.short.forEach(r=>{r.t3h=35;r.tmn=30;r.tmx=40;});
+         // Every forecast slot is synthetic. Tomorrow includes both extrema slots.
+         f.rss=f.rss.map(r=>({...r,ftm:f.rssPub,date:r.date.replace('20260924',scenario==='unmatched-rss'?'20260930':'20260925')}));
++        if(scenario==='no-humidity')f.rss.forEach(r=>{r.reh=-1;});
+         if(scenario==='rain-rss')f.rss.forEach(r=>{r.pty=1;r.r06=6;r.s06=2;});
+         if(scenario==='partial-rss')f.rss.forEach(r=>{
+             for(const key of ['temp','tmn','tmx'])r[key]=-999;
+@@ -60,10 +61,11 @@ async function main(){
+         const result=await env.request({temperatureUnit:units,windSpeedUnit:'m/s'});
+         assert.deepEqual(result.traces,env.methods);
+         const b=result.body,rows=b.midData.dailyData,dates=rows.map(r=>r.date),tomorrow=rows.find(r=>r.date==='20260925');
+-        if(['stale-primary','missing-primary','rain-rss'].includes(scenario)) {
++        if(['stale-primary','missing-primary','rain-rss','no-humidity'].includes(scenario)) {
+             assert(tomorrow,scenario+' retains fresh RSS daily forecast');
+             assert.equal(tomorrow.tmn,units==='C'?19:66);assert.equal(tomorrow.tmx,units==='C'?28:82);
+             assert.equal(tomorrow.wfAm,scenario==='rain-rss'?'구름적고 비':'맑음');assert.equal(b.shortRssPubDate,f.rssPub);
++            if(scenario==='no-humidity')assert.equal(tomorrow.reh,undefined);
+             assert.equal(tomorrow.r06,undefined);assert.equal(tomorrow.s06,undefined);
+             if(scenario==='rain-rss')assert(b.short.some(r=>r.r06>0),'hourly precipitation remains usable');
+         } else assert.equal(tomorrow,undefined,'untouched stale fields cannot become fresh daily weather');
+@@ -73,6 +75,29 @@ async function main(){
+         assert(!result.logs.some(row=>row.args.some(arg=>/TypeError|ReferenceError/.test(String(arg)))));
+         summaries.push({version,scenario,units,dates,middlewareCount:result.traces.length});
+     }
++    for(const version of ['1.0','2.0'])for(const scenario of ['stored-day3','stale-day3','partial-day3','absent-day3','legacy-db1','shower-cloudy','shower-overcast'])for(const units of ['C','F']) {
++        const f=route.makeFixture(route.locations[0],'newer');
++        const c=h.prepare(h.collector());c.organizeLandData(0,h.response([captured]),{date:'20260924',time:'0600'});f.land=c.resultList[0].data[0];
++        if(scenario.startsWith('shower-'))f.land.wf4Am=f.land.wf4Pm=scenario==='shower-cloudy'?'구름많고 소나기':'흐리고 소나기';
++        if(scenario==='partial-day3')f.short.forEach(r=>{if(r.date==='20260927')r.tmn=-50;});
++        if(scenario==='absent-day3')f.short=f.short.filter(r=>r.date<'20260927');
++        const pub=scenario==='stale-day3'?'202609161400':f.basePub;
++        f.shortPublications={'20260927':pub};
++        if(scenario!=='legacy-db1')f.dailySource={pubDate:pub,rows:f.short};
++        const result=await route.createHarness(version,f).request({temperatureUnit:units,windSpeedUnit:'m/s'});
++        const b=result.body,rows=b.midData.dailyData,d3=rows.find(r=>r.date==='20260927');
++        const available=!['stale-day3','partial-day3','absent-day3'].includes(scenario) && !(scenario==='legacy-db1'&&version==='1.0');
++        assert.equal(!!d3,available,version+' '+scenario);
++        assert.equal(b.midData.dailyStatus.healthy,available);
++        if(d3){assert.equal(d3.tmn,units==='C'?18:64);assert.equal(d3.tmx,units==='C'?27:80);assert.equal(d3.r06,undefined);}
++        assert(!b.short.some(r=>r.date==='20260927'),'hourly contract unchanged');
++        if(scenario.startsWith('shower-')){
++            const d4=rows.find(r=>r.date==='20260928');assert.equal(d4.wfAm,f.land.wf4Am);assert.equal(d4.ptyAm,1);assert.equal(d4.skyAm,scenario==='shower-cloudy'?'sun_bigcloud_rain':'cloud_rain');
++        }
++        assert(!JSON.stringify(b).includes('dailySource'));assert(!JSON.stringify(b).includes('dailyRows'));
++        assert(!result.logs.some(row=>row.args.some(arg=>/TypeError|ReferenceError/.test(String(arg)))));
++        summaries.push({version,scenario,units,day3:available,status:b.midData.dailyStatus});
++    }
+     const result={fixedClock:process.env.TW_SMOKE_NOW,scenarioCount:summaries.length,outcome:'passed',scenarios:summaries};
+     if(process.env.TW_DAILY_EVIDENCE)fs.writeFileSync(process.env.TW_DAILY_EVIDENCE,JSON.stringify(result,null,2)+'\n');
+     console.log(JSON.stringify(result,null,2));
+diff --git a/server/test/offline/gather-smoke.js b/server/test/offline/gather-smoke.js
+index e3602287..e3a09900 100644
+--- a/server/test/offline/gather-smoke.js
++++ b/server/test/offline/gather-smoke.js
+@@ -19,7 +19,8 @@ var model = {
+     }
+ };
+ var Short = h.load('controllers/kma/kma.town.short.controller.js', {
+-    async: require('async'), '../../models/kma/kma.town.short.model.js': model, '../../lib/kmaTimeLib': time
++    async: require('async'), '../../models/kma/kma.town.short.model.js': model, '../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'),
++    '../../lib/kmaTimeLib': time
+ }, {log: log, commonString: ['date', 'time', 'mx', 'my'], shortString: ['r06', 's06', 't3h', 'sky', 'reh', 'pty']});
+ var short = new Short();
+ var callbacks = 0;
+@@ -84,7 +85,8 @@ var seaModel = {
+     update: function (query, doc, options, cb) { seaRecords.push(doc); cb(); },
+     remove: function () { return {exec: function () {}}; }
+ };
+-var midDeps = {'../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'), async: require('async'), '../../lib/kmaTimeLib': time};
++var midDeps = {'../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'), async: require('async'), '../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'),
++    '../../lib/kmaTimeLib': time};
+ ['forecast', 'land', 'sea', 'temp'].forEach(function (type) {
+     midDeps['../../models/kma/kma.town.mid.' + type + '.model.js'] = type === 'sea' ? seaModel : {};
+ });
+diff --git a/server/test/offline/rss-response-smoke.js b/server/test/offline/rss-response-smoke.js
+index e0f14366..adc6a8e6 100644
+--- a/server/test/offline/rss-response-smoke.js
++++ b/server/test/offline/rss-response-smoke.js
+@@ -68,8 +68,8 @@ function createHarness(version, fixture) {
+       const kind=map[name],dataKey={short:'shortData',current:'currentData',shortest:'shortestData',rss:'shortData'}[kind];
+       if(kind==='short' && fixture.missingShort) return [];
+       const pub={short:fixture.basePub,current:'202609240900',shortest:'202609240830',rss:fixture.rssPub || '202609240800'}[kind];
+-      if(isV2) return fixture[kind].map(item=>({mCoord:fixture.place.mCoord,pubDate:kstDate(pub),fcsDate:kstDate(kind==='rss'?item.date:item.date+item.time),[dataKey]:item}));
+-      return [{mCoord:fixture.place.mCoord,pubDate:pub,[dataKey]:fixture[kind]}];
++      if(isV2) return fixture[kind].map(item=>({mCoord:fixture.place.mCoord,pubDate:kstDate(kind==='short' && fixture.shortPublications && fixture.shortPublications[item.date] || pub),fcsDate:kstDate(kind==='rss'?item.date:item.date+item.time),[dataKey]:item}));
++      return [{mCoord:fixture.place.mCoord,pubDate:pub,[dataKey]:fixture[kind],dailySource:kind==='short'?fixture.dailySource:undefined}];
+     }
+     const midMap={'modelMidForecast':'forecast','modelMidLand':'land','modelMidTemp':'temp','kma.town.mid.forecast.model':'forecast','kma.town.mid.land.model':'land','kma.town.mid.temp.model':'temp'};
+     if(midMap[name]) { const row=fixture[midMap[name]]; if(!row)return []; const pub=row.date+row.time; return [{pubDate:isV2?kstDate(pub):pub,data:isV2?row:[row]}]; }
+diff --git a/server/test/offline/run.js b/server/test/offline/run.js
+index bd9112db..1c31997a 100644
+--- a/server/test/offline/run.js
++++ b/server/test/offline/run.js
+@@ -7,6 +7,7 @@ var commands = [
+     [require.resolve('mocha/bin/_mocha'), path.join(__dirname, 'gather-code-drift.test.js')],
+     [path.join(__dirname, 'gather-smoke.js')],
+     [path.join(__dirname, 'daily-forecast.test.js')],
++    [path.join(__dirname, 'daily-review.test.js')],
+     [path.join(__dirname, 'short-rss-daily.test.js')],
+     [path.join(__dirname, 'rss-wind.test.js')]
+ ];
+
+NEW FILE server/test/offline/daily-review.test.js
+'use strict';
+// Synthetic review regressions. Real implementations; no production initialization.
+const test=require('node:test'),assert=require('node:assert/strict');
+const h=require('./harness'),dh=require('./daily-harness');
+for(const version of ['1.0','2.0'])for(const weather of ['구름많고 소나기','흐리고 소나기']) {
+ test(version+' shower parse/storage/conversion '+weather,()=>{
+  const e=dh.environment(version),item={regId:['11B00000'],wf4Am:[weather],wf4Pm:[weather]};
+  const parsed=e.policy.parse('land',h.response([item]),{date:'20260924',time:'0600'});
+  assert.equal(parsed[0].wf4Am,weather);
+  e.manager.saveMidLand(parsed,assert.ifError);
+  let land;e.town._getMidDataFromDB(e.model('modelMidLand'),'11B00000',{},(err,r)=>{assert(!err);land=r;});
+  assert.equal(land.ret[0].wf4Pm,weather);
+  const converted=e.town._convertKorStrToSky(weather);
+  assert.equal(converted.sky,weather.startsWith('구름')?3:4);assert.equal(converted.pty,1);
+ });
+}
+test('weather acceptance and conversion share every recognized label',()=>{
+ const e=dh.environment();
+ for(const [text,sky,pty] of [['맑음',1,0],['흐리고 눈',4,3],['구름많고 비/눈',3,2],['구름많고 소나기',3,1],['흐리고 소나기',4,1]]) {
+  assert(e.policy.weather(text));assert.equal(e.town._convertKorStrToSky(text).sky,sky);assert.equal(e.town._convertKorStrToSky(text).pty,pty);
+ }
+ for(const text of ['',null,'unknown','toString','__proto__'])assert(!e.policy.weather(text));
+});
+test('health flags an internal gap without requiring an unsupported trailing horizon',()=>{
+ const e=dh.environment(),p=e.policy;
+ const dailyData=Array.from({length:10},(_,i)=>({date:p.addDays('20260924',i),taMin:10,taMax:20,wfAm:'맑음',wfPm:'맑음'}));
+ const mid={landPubDate:'202609240600',tempPubDate:'202609240600',dailyData};
+ assert(p.dailyHealth(mid).healthy);assert.deepEqual(Array.from(p.dailyHealth(mid).unavailableDates),['20261004']);
+ mid.dailyData=dailyData.filter(r=>r.date!=='20260927');
+ assert.equal(p.dailyHealth(mid).healthy,false);assert(p.dailyHealth(mid).reasons.includes('forecast-gap'));
+ mid.dailyData=dailyData.map(r=>r.date==='20260927'?Object.assign({},r,{taMin:-999}):r);
+ assert.equal(p.dailyHealth(mid).healthy,false);
+});
+test('retired mid RSS never enters startup or minute-2 scheduling',()=>{
+ for(const [now,putAll] of [['2026-09-24T07:02:00Z',false],['2026-09-24T07:27:00Z',true]]) {
+  const e=dh.environment('2.0',now),queued=[];e.manager.asyncTasks={length:0,push:fn=>queued.push(fn.name)};e.manager._requestApi=(name,cb)=>cb();
+  e.manager.checkTimeAndRequestTask(putAll);
+  assert(!queued.includes('MidRss'));assert(queued.includes('ShortRss'));
+ }
+});
+test('raw daily slots use their own publication and newest slot, never outer publication',()=>{
+ const e=dh.environment(),p=e.policy;
+ const row={date:'20260927',time:'0600',tmn:12,tmx:23,sky:3,pty:0};
+ const records=[{pubDate:'202609240500',...row},{pubDate:'202609241400',...row,tmn:-50}];
+ assert.equal(p.dailyShortRows(records)[0].tmn,-50,'new partial cannot borrow old minimum');
+ assert.equal(p.dailyShortRows([{pubDate:'202609161400',...row}]).length,0);
+ assert.equal(p.dailyShortRows([{pubDate:'202609241800',...row}]).length,0);
+ assert.equal(p.dailyShortRows([{pubDate:'202609241400',...row,date:'20260929'}]).length,0);
+ assert.equal(p.dailyShortRows([{pubDate:'202609241400',...row,time:'oops'}]).length,0);
+});
+test('DB1 current raw snapshot replaces partial batch without inheriting prior fields',()=>{
+ const e=dh.environment('1.0'),model=e.model('modelShort');
+ const Manager=e.load('controllers/controllerManager.js',{'../models/modelShort':model});
+ const manager=Object.create(Manager.prototype);manager.MAX_SHORT_COUNT=64;
+ const row={mx:60,my:127,date:'20260927',time:'0600',pubDate:'202609240500',tmn:12,tmx:23,t3h:18,sky:3,pty:0,reh:50};
+ let callbacks=0;manager.saveShort([row,{...row,date:'20260928'}],err=>{assert(!err);callbacks++;});
+ assert.equal(model.docs[0].dailySource.pubDate,row.pubDate);
+ assert.equal(model.docs[0].dailySource.rows[0].tmn,12);
+ manager.saveShort([{...row,pubDate:'202609241400',tmn:-50,sky:-1}],err=>{assert(!err);callbacks++;});
+ assert.equal(callbacks,2);
+ assert.equal(model.docs[0].shortData[0].tmn,12,'legacy hourly merge unchanged');
+ assert.equal(model.docs[0].dailySource.rows[0].tmn,-50,'daily snapshot retains missing value');
+ assert.equal(model.docs[0].dailySource.rows[0].sky,-1);
+ assert.equal(model.docs[0].dailySource.rows.length,1,'old batch horizons removed');
+ assert.equal(model.docs[0].shortData.length,2,'legacy hourly history preserved');
+});
+
+test('extended daily source keeps KST month/year and midnight target identity',()=>{
+ const e=dh.environment('2.0','2026-12-30T15:30:00Z'),p=e.policy;
+ const raw=[{date:'20270103',time:'0000',tmn:10,tmx:20,sky:3,pty:0,pubDate:'202612301800'}];
+ const rows=p.dailyShortRows(raw);assert.equal(rows.length,1);assert.equal(rows[0].date,'20270103');
+ const aligned={...rows[0]};e.time.convert0Hto24H(aligned);assert.equal(aligned.date,'20270102');assert.equal(aligned.time,'2400');
+ assert.equal(p.dailyShortRows([{...raw[0],date:'20270104'}]).length,0);
+ assert.equal(p.dailyShortRows([null,{}, {...raw[0],date:20270103}]).length,0);
+});
+test('actual shared client daily parser ignores additive status and preserves shower/date fields',()=>{
+ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+ const source=fs.readFileSync(path.resolve(__dirname,'../../../client/www/js/service.weatherutil.js'),'utf8');
+ const start=source.indexOf('function _parseMidTownWeather(midData)');
+ const end=source.indexOf('\n        function',start+10);
+ const parse=vm.runInNewContext('('+source.slice(start,end).trim()+')');
+ const row={date:'20260927',fromToday:3,tmn:18,tmx:27,wfAm:'구름많고 소나기',skyAm:'sun_bigcloud_rain',skyPm:'cloud_rain'};
+ const plain=parse({dailyData:[{...row}]}),status=parse({dailyData:[{...row}],dailyStatus:{healthy:false,reasons:['forecast-gap']}});
+ assert.deepEqual(JSON.parse(JSON.stringify(plain)),JSON.parse(JSON.stringify(status)));
+ assert.equal(status.dayTable[0].date,'20260927');assert.equal(status.dayTable[0].wfAm,row.wfAm);
+});

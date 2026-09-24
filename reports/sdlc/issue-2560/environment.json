@@ -1,0 +1,11 @@
+{
+  "node": "v22.22.2",
+  "dependencies": {
+    "async": "2.6.4",
+    "xml2js": "0.4.23",
+    "mocha": "2.5.3",
+    "express": "4.13.4",
+    "sprintf": "0.1.5",
+    "mongoose": "5.1.2"
+  }
+}

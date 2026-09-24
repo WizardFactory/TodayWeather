@@ -1,0 +1,278 @@
+{
+  "iteration": 4,
+  "decision": "PROCEED",
+  "reason": "Independent verifier PASS; no unresolved Must Fix findings; exact source digests recorded in report.",
+  "authority_source": "User implementation request, AGENTS.md and shared SDLC policy",
+  "candidate": "1d5f88896c2b3a7fbebd35a0aff69d2fb5c115a35333a939d9fb0b9f1af1bc9a",
+  "next_action": "Continue next applicable local stage",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/issue-2560/triage.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    },
+    {
+      "kind": "intent",
+      "path": "reports/sdlc/issue-2560/intent.md",
+      "sha256": "bf4ac404aa291fab339683565d3e21113728d0df5ed435cd8dc6970a975fd27d"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/issue-2560/investigation.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    },
+    {
+      "kind": "spec",
+      "path": "reports/sdlc/issue-2560/spec.md",
+      "sha256": "aaff814c9965be8885c074af8e627d0b2b68f48e8ceb357d6d275da7d81b9ff0"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.json",
+      "sha256": "707e34b4af3bf84d1b72bb2c29b3c3b4da48ccc6138cd77557f348fa8c0f2d65"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.html",
+      "sha256": "67fa42d10f2d26b1d23e3231a988a7d64bb563d17002215d9053998e61c1f77d"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/issue-2560/design-validation.json",
+      "sha256": "61fac3273f8033040b88fa31a116886cfcf65f09200ad104398839f7421b0970"
+    },
+    {
+      "kind": "design-browser",
+      "path": "reports/sdlc/issue-2560/design-browser-command.json",
+      "sha256": "2320f7c993a449da31c0d788f397786f34170523a39ff31a2fe101bdc4d0ae5f"
+    },
+    {
+      "kind": "design-visual",
+      "path": "reports/sdlc/issue-2560/design.md",
+      "sha256": "a148f7eae1c1b0aa446260afe7d2321b6456f0a5d52f48460c7188c9438c5bbd"
+    },
+    {
+      "kind": "plan",
+      "path": "reports/sdlc/issue-2560/plan.md",
+      "sha256": "fdce69484f022bd3854a4a86c58c59d1fe7154aef17baf37c267339e4979462d"
+    },
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/issue-2560/test-plan.md",
+      "sha256": "37c49c119f8ca75ff166304bbc65f3526f480e4e10ef633fe091fd0e1a6d6dd9"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/issue-2560/build.md",
+      "sha256": "9357e511aa9cde96fb64383cb9b11f8dfd562d1c2ff1c91d0264e80c79fce5fd"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/issue-2560/change-record.diff",
+      "sha256": "3ec4c2a6e8db26fcb9b385e155140d8e1b7b0ce9d4a817f375b2dc26ce6b9a3c"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.html",
+      "sha256": "67fa42d10f2d26b1d23e3231a988a7d64bb563d17002215d9053998e61c1f77d"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.json",
+      "sha256": "707e34b4af3bf84d1b72bb2c29b3c3b4da48ccc6138cd77557f348fa8c0f2d65"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/mobile-api.md",
+      "sha256": "696f34af034fce4aaae42d81153cadfc83a6877232b72a12fd76d8b2f23a3f54"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/weather-collection.md",
+      "sha256": "788c9b6812d365ed63d06123a4f3ebb02cbaba0575783a573c51fef532091e5b"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/controllers/controllerManager.js",
+      "sha256": "7ca4184e95e1cbf9ab9ae6860d59506613d4383a4103e632be6b07d092dc2804"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/controllers/controllerTown.js",
+      "sha256": "7f19ea0bbf5d7358bcde966ebd68e808b8a7b377f41d7007356bcd7d27df13d3"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/controllers/kma/kma.town.mid.controller.js",
+      "sha256": "5b9c06658411e8eadac2302d6f1bc9b883eba30f3c0b6eee5e9938d28708fe87"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/controllers/kma/kma.town.mid.rss.controller.js",
+      "sha256": "dc5e0243731d252bd21d628c4d7ee499da4bd4ab0ee47ea0f2fc94ba0ab0585a"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/lib/collectTownForecast.js",
+      "sha256": "dde9f078fc34bc01fc2594048ddaecb705e4e208c25ec2c043ffdfeda8ccd0a1"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/lib/midForecastPolicy.js",
+      "sha256": "4bb35ebaaa220b4924fd08559c8a079accbedc963034d2380ec199c57625ce29"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/lib/midRssKmaRequester.js",
+      "sha256": "e1027e7b3b076b0e42c9129be472fe5cce040fe68e432fce290e3b40943b5f79"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/models/kma/kma.town.mid.land.model.js",
+      "sha256": "ae86961387e498dde9dcbd7cb86573b0fd8e91a4ef1871e96a782df14a648f85"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/models/kma/kma.town.mid.temp.model.js",
+      "sha256": "70580e4f38d34dc7fb342e6b38bcd22788c4f4c83405d80b075a7662c079809a"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/models/modelMidLand.js",
+      "sha256": "11374af9372afe5ac755c89b4b3ad01b795f8feccbb488a46c1af00de1eabb81"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/models/modelMidTemp.js",
+      "sha256": "3c98f2c1f29c209641d58f28e47d725f23ecf1c590257220a06a57706dc4d324"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/README.md",
+      "sha256": "20a1960574bb035bbd2a2395d67b0296b637d5cad56396823f37b736352677a2"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/daily-forecast.test.js",
+      "sha256": "e91631845549e54afa0d872439f892908993b937d2f482fc63d52429c9349634"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/daily-harness.js",
+      "sha256": "77b4592196b221401364437eafd61ffe2aefa98ab6505039e81e31e4d29f132d"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/daily-response-smoke.js",
+      "sha256": "2c87bf7cdcde23ef0a0da984becd98679fea397b53e9412617fcc8c95690ca3a"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/fixtures/mid-land-captured.json",
+      "sha256": "16b30d08545b34b1acd55c144066314cb65acf1fd80a8582392946f74173fa55"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/gather-code-drift.test.js",
+      "sha256": "ea34ed9db6f75e10a18466ac7b195a8805aa02fafabfec69af2b7e3f1567b6ee"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/gather-smoke.js",
+      "sha256": "45c933e338372fa76652216108f93540205ff3656b92c6691ba6d136593d1918"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/harness.js",
+      "sha256": "3a977bf9ecb66a34ca8bbcde238a681cfbbed651ef366065fb4c7d2fd1b24b3f"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/rss-response-smoke.js",
+      "sha256": "604ef09feae62f38faeeeeec7b7fe94cdb375ff039eb86090456d73b9c90d3ca"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/rss-wind.test.js",
+      "sha256": "28224e2339cb4419cdc319c06f9557bec0f56132e28992303417147ad8f5545a"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/run.js",
+      "sha256": "6bb5f05f845ac4998630f40cf4081eb33150ef29cbcb69e55ac894fa889bf211"
+    },
+    {
+      "kind": "self-verification",
+      "path": "reports/sdlc/issue-2560/self-verification.md",
+      "sha256": "668bf946ed7728623a238e001626fadee3af59b4f45f7af940e30f9370cd082b"
+    },
+    {
+      "kind": "test-results",
+      "path": "reports/sdlc/issue-2560/test-results.json",
+      "sha256": "8e4786335559aed36264318e8f7f0fd023741d1eb13619c302ecb0404a1fbc6e"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/red.log",
+      "sha256": "df2109308186ec4a27a8c746b0ef285ddf5330fcfb237ee89ac4b1155a0a9bbf"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/final-green.log",
+      "sha256": "f09491a828bfee977bfc226f7aa6c8faa8d18b40eed7c663a3e19620b712fd3d"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/final-regression.log",
+      "sha256": "8fd75c1b8532b0e2ecf13213fc2556a0173077671778733e639c132fb1c5813c"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/final-smoke.log",
+      "sha256": "af53bec3a8ef2ed63fd47caac801c548c8d097fd731571572b1c3faafb35c977"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "independent-verification",
+      "path": "reports/sdlc/issue-2560/independent-verification.md",
+      "sha256": "fcd144953b4529e7fd754999c597c8cc38e0efe7e4fbf27a408f07d1b41c7d0f"
+    },
+    {
+      "kind": "independent-tests",
+      "path": "reports/sdlc/issue-2560/independent-checks.js",
+      "sha256": "e34685c681c859dc2deee94e264c54d6bbe3feaa6b49815c1b0254fbf916e257"
+    },
+    {
+      "kind": "publication-verification",
+      "path": "reports/sdlc/issue-2560/pr-publication-verification.md",
+      "sha256": "90fa4e81714dcfce93f1538c5d414f10e441cb2db2597a57ae7b43ba13a056f1"
+    },
+    {
+      "kind": "publication-authority",
+      "path": "reports/sdlc/issue-2560/pr-handoff.md",
+      "sha256": "40bc1a8a84f1f401cd3fe317e484e07ce28f12d9af821be02be3aa116027e6b7"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/ci-independent.log",
+      "sha256": "bc4d940f8af3526cc4a3aca46826602fc81f4de2702330d2a016727518c8fde6"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root/verify_daily; receipt recorded by /root",
+    "summary": "Independent verifier PASS; no unresolved Must Fix findings; exact source digests recorded in report.",
+    "criteria": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
+  },
+  "verifier": {
+    "independent": true,
+    "context_id": "/root/verify_daily",
+    "builder_context_id": "/root",
+    "checks": "Actual independent parser/merge/persistence/RSS probes, 168 regressions and 16 route scenarios; three bounded passes with findings and verified closure recorded separately."
+  }
+}

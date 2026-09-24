@@ -4,6 +4,9 @@
 
 "use strict";
 
+var midPolicy = require('../lib/midForecastPolicy');
+var landString = midPolicy.landFields;
+var tempString = midPolicy.tempFields;
 var async = require('async');
 var sprintf = require('sprintf');
 
@@ -43,6 +46,9 @@ var ControllerWeatherDesc = require('./controller.weather.desc');
 
 var KmaForecastZoneCode = require('./kma/kma.forecast.zone.controller');
 
+// Bound degraded-health diagnostics to one per minute per process.
+var nextDailyHealthWarning = 0;
+
 var townArray = [
     {db:modelShort, name:'modelShort'},
     {db:modelCurrent, name:'modelCurrent'},
@@ -63,12 +69,13 @@ function _isRssValueUsable(value, missing) {
         (missing === -1 ? value >= 0 : value > missing);
 }
 
-function _mergeRssValue(target, field, value, overwrite, missing, round) {
+function _mergeRssValue(target, field, value, overwrite, missing, round, contribution) {
     if (!_isRssValueUsable(value, missing)) {
         return;
     }
     if (overwrite || !_isRssValueUsable(target[field], missing)) {
         target[field] = round ? +value.toFixed(1) : value;
+        if (contribution) { contribution[field] = target[field]; }
     }
 }
 
@@ -454,6 +461,7 @@ function ControllerTown() {
                     }
 
                     var shortList=shortInfo.ret;
+                    req._dailyShort = shortInfo.dailyRows || [];
 
                     self._dataListPrint(shortList, 'route S', 'original short');
 
@@ -516,7 +524,13 @@ function ControllerTown() {
                     return next();
                 }
 
-                if (parseInt(shortRssInfo.pubDate) < parseInt(req.shortPubDate)) {
+                // Validate the RSS publication independently before it can replace fields.
+                if (!midPolicy.freshShort(shortRssInfo.pubDate)) {
+                    log.warn('short RSS unavailable: invalid or expired publication', meta);
+                    return next();
+                }
+                if (midPolicy.freshShort(req.shortPubDate) &&
+                    midPolicy.timestamp(shortRssInfo.pubDate) < midPolicy.timestamp(req.shortPubDate)) {
                     log.warn('short rss was updated yet!! rss pubDate=', shortRssInfo.pubDate, meta);
                     return next();
                 }
@@ -543,7 +557,12 @@ function ControllerTown() {
 
                 req.shortRssPubDate = shortRssInfo.pubDate;
 
-                if (parseInt(req.shortPubDate) < parseInt(req.shortRssPubDate)) {
+                // Request-local evidence: only fields actually copied at matched slots.
+                // Never authorize the entire mixed short array using the RSS timestamp.
+                req._dailyShortRss = {pubDate: shortRssInfo.pubDate, rows: []};
+
+                if (!midPolicy.freshShort(req.shortPubDate) ||
+                    midPolicy.timestamp(req.shortPubDate) < midPolicy.timestamp(req.shortRssPubDate)) {
                    overwrite = true;
                 }
                 // rss 데이터를 모두 가져온다.
@@ -552,29 +571,33 @@ function ControllerTown() {
                         if(parseInt(req.short[j].date + req.short[j].time) === parseInt(rssList[i].date)) {
                             var target = req.short[j];
                             var rss = rssList[i];
-                            _mergeRssValue(target, 'pop', rss.pop, overwrite, -1);
-                            _mergeRssValue(target, 'pty', rss.pty, overwrite, -1);
+                            var contribution = {date: target.date, time: target.time};
+                            _mergeRssValue(target, 'pop', rss.pop, overwrite, -1, false, contribution);
+                            _mergeRssValue(target, 'pty', rss.pty, overwrite, -1, false, contribution);
                             // adjustShort later distributes six-hour precipitation.
-                            _mergeRssValue(target, 'r06', rss.r06, overwrite, -1, true);
-                            _mergeRssValue(target, 's06', rss.s06, overwrite, -1, true);
-                            _mergeRssValue(target, 'reh', rss.reh, overwrite, -1);
-                            _mergeRssValue(target, 'sky', rss.sky, overwrite, -1);
-                            _mergeRssValue(target, 't3h', rss.temp, overwrite, -50, true);
+                            _mergeRssValue(target, 'r06', rss.r06, overwrite, -1, true, contribution);
+                            _mergeRssValue(target, 's06', rss.s06, overwrite, -1, true, contribution);
+                            _mergeRssValue(target, 'reh', rss.reh, overwrite, -1, false, contribution);
+                            _mergeRssValue(target, 'sky', rss.sky, overwrite, -1, false, contribution);
+                            _mergeRssValue(target, 't3h', rss.temp, overwrite, -50, true, contribution);
                             if (target.time === '0600') {
-                                _mergeRssValue(target, 'tmn', rss.tmn, overwrite, -50);
+                                _mergeRssValue(target, 'tmn', rss.tmn, overwrite, -50, false, contribution);
                             } else if (target.time === '1500') {
-                                _mergeRssValue(target, 'tmx', rss.tmx, overwrite, -50);
+                                _mergeRssValue(target, 'tmx', rss.tmx, overwrite, -50, false, contribution);
                             }
-                            _mergeRssValue(target, 'wsd', rss.ws, overwrite, -1);
+                            _mergeRssValue(target, 'wsd', rss.ws, overwrite, -1, false, contribution);
                             // KMA RSS wd: 0..7 = N, NE, E, SE, S, SW, W, NW.
                             // This differs from the stored wdKor/wdEn label codes.
                             // North is 0 degrees; reject 8 and fractional codes.
                             if (_isRssValueUsable(rss.wd, -1) && rss.wd <= 7 && rss.wd % 1 === 0) {
-                                _mergeRssValue(target, 'vec', rss.wd * 45, overwrite, -1);
+                                _mergeRssValue(target, 'vec', rss.wd * 45, overwrite, -1, false, contribution);
                             }
-                            _mergeRssValue(target, 'wav', rss.wav, overwrite, -1);
-                            _mergeRssValue(target, 'uuu', rss.uuu, overwrite, -100);
-                            _mergeRssValue(target, 'vvv', rss.vvv, overwrite, -100);
+                            _mergeRssValue(target, 'wav', rss.wav, overwrite, -1, false, contribution);
+                            _mergeRssValue(target, 'uuu', rss.uuu, overwrite, -100, false, contribution);
+                            _mergeRssValue(target, 'vvv', rss.vvv, overwrite, -100, false, contribution);
+                            if (Object.keys(contribution).length > 2) {
+                                req._dailyShortRss.rows.push(contribution);
+                            }
                             break;
                         }
                     }
@@ -1917,16 +1940,19 @@ function ControllerTown() {
             return this;
         }
 
+        req.midData.dailyData = req.midData.dailyData.filter(function (row) {
+            return self._convertKorStrToSky(row.wfAm) && self._convertKorStrToSky(row.wfPm) && midPolicy.complete(row);
+        });
         req.midData.dailyData.forEach(function (dailyData) {
             var skyInfoAm = self._convertKorStrToSky(dailyData.wfAm);
             if (skyInfoAm == undefined) {
                 log.warn(JSON.stringify(dailyData), meta);
-                skyInfoAm = {sky: 1, pty: 0, lgt: 0};
+                return;
             }
             var skyInfoPm = self._convertKorStrToSky(dailyData.wfPm);
             if (skyInfoPm == undefined) {
                 log.warn(JSON.stringify(dailyData), meta);
-                skyInfoPm = {sky: 1, pty: 0, lgt: 0};
+                return;
             }
 
             dailyData.skyAm = skyInfoAm.sky;
@@ -1989,57 +2015,10 @@ function ControllerTown() {
      * @returns {ControllerTown}
      */
     this.getMidRss = function (req, res, next) {
-        var regionName = req.params.region;
-        var cityName = req.params.city;
-
-        var meta = {};
-        meta.sID = req.sessionID;
-        meta.method = 'getMidRss';
-        meta.region = regionName;
-        meta.city = cityName;
-        log.info(meta);
-
-        if (!req.hasOwnProperty('midData')) {
-            req.midData = {};
-        }
-        if (!req.midData.hasOwnProperty('dailyData') || !Array.isArray(req.midData.dailyData)) {
-            req.midData.dailyData = [];
-        }
-
-        try {
-            manager.getRegIdByTown(regionName, cityName, function(err, code) {
-                if (err) {
-                    err.message += ' ' + JSON.stringify(meta);
-                    log.error(err);
-                    return next();
-                }
-
-                var midRssKmaController = require('./kma/kma.town.mid.rss.controller');
-                midRssKmaController.overwriteData(req.midData, code.cityCode, function (err) {
-                    if (err) {
-                        err.message += ' ' + JSON.stringify(meta);
-                        log.error(err);
-                    }
-                    next();
-                });
-            });
-        }
-        catch(e) {
-            e.message += ' ' + JSON.stringify(meta);
-            log.error(e);
-            next();
-        }
-
+        next(); // Legacy mid RSS is retired; cached records have no precedence.
         return this;
     };
 
-    /**
-     *
-     * @param req
-     * @param res
-     * @param next
-     * @returns {ControllerTown}
-     */
     this.getMid = function(req, res, next){
         var meta = {};
 
@@ -2064,14 +2043,10 @@ function ControllerTown() {
                 },
                 function (code, callback) {
                     self._getMidDataFromDB(modelMidForecast, code.pointNumber, req, function (err, forecastInfo) {
-                        if (err) {
-                            return callback(err);
-                        }
-
-                        var forecastList = forecastInfo.ret;
+                        var forecastList = forecastInfo && forecastInfo.ret || [];
                         //log.info(forecastList);
                         req.midData = {};
-                        req.midData.forecast = forecastList[forecastList.length - 1];
+                        if (forecastList.length) { req.midData.forecast = forecastList[forecastList.length - 1]; }
 
                         var areaCode = code.cityCode.slice(0, 3);
                         if (areaCode === '11B') {
@@ -2083,16 +2058,13 @@ function ControllerTown() {
                         else {
                             areaCode = code.cityCode.slice(0, 4) + '0000';
                         }
-                        callback(err, {code:code, areaCode:areaCode});
+                        callback(null, {code:code, areaCode:areaCode});
                     });
                 },
                 function (regInfo, callback) {
                     self._getMidDataFromDB(modelMidLand, regInfo.areaCode, req, function(err, landInfo) {
-                        if (err) {
-                            return callback(err);
-                        }
-                        regInfo.landInfo = landInfo;
-                        callback(err, regInfo);
+                        regInfo.landInfo = landInfo || {ret: []};
+                        callback(null, regInfo);
                     });
                 },
                 function (regInfo, callback) {
@@ -2115,27 +2087,13 @@ function ControllerTown() {
                 },
                 function (regInfo, callback) {
                     self._getMidDataFromDB(modelMidTemp, regInfo.code.cityCode, req, function (err, tempInfo) {
-                        if (err) {
-                            return callback(err);
-                        }
-                        regInfo.tempInfo = tempInfo;
-                        callback(err, regInfo);
+                        regInfo.tempInfo = tempInfo || {ret: []};
+                        callback(null, regInfo);
                     });
                 },
                 function (regInfo, callback) {
                     var landInfo = regInfo.landInfo;
                     var tempInfo = regInfo.tempInfo;
-
-                    if(config.db.version == '2.0'){
-                        if (landInfo.pubDate.getTime() != tempInfo.pubDate.getTime()) {
-                            log.error('RM> publishing date of land and temp are different', meta);
-                        }
-                    }
-                    else{
-                        if (landInfo.pubDate != tempInfo.pubDate) {
-                            log.error('RM> publishing date of land and temp are different', meta);
-                        }
-                    }
 
                     self._mergeLandWithTemp(landInfo.ret, tempInfo.ret, function(err, dataList) {
                         if(err){
@@ -2146,7 +2104,7 @@ function ControllerTown() {
                         req.midData.landPubDate = landInfo.pubDate;
                         req.midData.tempPubDate = tempInfo.pubDate;
                         callback(err, dataList);
-                    });
+                    }, {land: landInfo.pubDate, temp: tempInfo.pubDate});
                 }
             ],
             function(err) {
@@ -2935,22 +2893,107 @@ function ControllerTown() {
             req.midData.dailyData = [];
         }
 
-        var daySummaryList;
+        function finish() {
+            var byDate = {};
+            req.midData.dailyData.forEach(function (row) {
+                if (midPolicy.inWindow(row.date) && midPolicy.complete(row)) { byDate[row.date] = row; }
+            });
+            req.midData.dailyData = Object.keys(byDate).sort().map(function (date) { return byDate[date]; });
+            req.midData.dailyStatus = midPolicy.dailyHealth(req.midData);
+            if (!req.midData.dailyStatus.healthy && Date.now() >= nextDailyHealthWarning) {
+                nextDailyHealthWarning = Date.now() + 60000;
+                log.warn('KMA daily forecast degraded', {
+                    reasons: req.midData.dailyStatus.reasons,
+                    unavailableDates: req.midData.dailyStatus.unavailableDates,
+                    landPublication: midPolicy.timestamp(req.midData.landPubDate),
+                    tempPublication: midPolicy.timestamp(req.midData.tempPubDate)
+                });
+            }
+            next();
+        }
+        function overlay(inputs) {
+            var shortRows = inputs.map(function (source) {
+                var row = Object.assign({}, source);
+                ['t3h', 'tmn', 'tmx'].forEach(function (key) {
+                    if (!midPolicy.temperature(row[key])) { row[key] = -50; }
+                });
+                ['pop', 'reh', 'sky', 'pty', 'r06', 's06', 'wsd', 'lgt'].forEach(function (key) {
+                    var value = row[key];
+                    var maximum = {pop: 100, reh: 100, sky: 4, pty: 3, lgt: 1}[key];
+                    if (typeof value !== 'number' || !isFinite(value) || value < (key === 'sky' ? 1 : 0) ||
+                        (maximum !== undefined && value > maximum) ||
+                        (['sky', 'pty', 'lgt'].indexOf(key) !== -1 && value % 1 !== 0)) { row[key] = -1; }
+                });
+                return row;
+            });
+            var daySummaryList = self._getDaySummaryListByShort(shortRows).filter(function (row) {
+                return midPolicy.complete(row) && midPolicy.weather(row.wfAm) && midPolicy.weather(row.wfPm);
+            });
+            daySummaryList.forEach(function (row) {
+                // Legacy summaries turn an empty sum/lightning list into 0.
+                // Omit that value unless an actual usable source exists.
+                Object.keys(row).forEach(function (key) {
+                    var value = row[key];
+                    if (typeof value === 'number' && (!isFinite(value) ||
+                        (['taMin', 'taMax', 't1d'].indexOf(key) === -1 && value < 0))) { delete row[key]; }
+                });
+                if (!shortRows.some(function (source) {
+                    return source.date === row.date && midPolicy.temperature(source.t3h);
+                })) { delete row.t1d; }
+                ['r06', 's06', 'lgtAm', 'lgtPm'].forEach(function (key) {
+                    var lightning = key.slice(0, 3) === 'lgt';
+                    var present = shortRows.some(function (source) {
+                        var value = source[lightning ? 'lgt' : key];
+                        return source.date === row.date && typeof value === 'number' && isFinite(value) && value >= 0 &&
+                            (!lightning || (value <= 1 && (key === 'lgtAm' ? +source.time <= 1200 : +source.time > 1200)));
+                    });
+                    if (!present) { delete row[key]; }
+                });
+            });
+            self._mergeList(req.midData.dailyData, daySummaryList);
+        }
 
-        if (req.short) {
+        var extendedRows = midPolicy.dailyShortRows(req._dailyShort).map(function (source) {
+            var row = Object.assign({}, source);
+            kmaTimeLib.convert0Hto24H(row);
+            return row;
+        }).filter(function (row) {
+            return row.date > midPolicy.addDays(midPolicy.date(Date.now()), 2);
+        });
+        if (extendedRows.length) { overlay(extendedRows); }
+
+        var dailyShort = req.short;
+        var dailyShortPub = req.shortPubDate;
+        if (!midPolicy.freshShort(dailyShortPub) && req._dailyShortRss) {
+            dailyShort = req._dailyShortRss.rows.map(function (source) {
+                var row = Object.assign({}, source);
+                // Match the public route's KST midnight convention, without importing
+                // extrema or defaults produced later from stale primary slots.
+                kmaTimeLib.convert0Hto24H(row);
+                // These are overlapping six-hour provider amounts, not the
+                // three-hour amounts produced by adjustShort. Their daily total
+                // is unknown here; keep hourly amounts but omit daily aggregates.
+                delete row.r06;
+                delete row.s06;
+                return row;
+            });
+            dailyShortPub = req._dailyShortRss.pubDate;
+        }
+        if (dailyShort && midPolicy.freshShort(dailyShortPub)) {
             try {
-                daySummaryList = self._getDaySummaryListByShort(req.short);
-                self._mergeList(req.midData.dailyData, daySummaryList);
+                overlay(dailyShort.filter(function (row) {
+                    return midPolicy.inWindow(row.date) && row.date <= midPolicy.addDays(midPolicy.date(dailyShortPub), 4);
+                }));
             }
             catch(e) {
                 e.message += ' ' + JSON.stringify(meta);
                 log.error(e);
             }
-            next();
+            finish();
         }
         else {
             log.error('You have to getShort before mergeMid', meta);
-            next();
+            finish();
         }
         return this;
     };
@@ -4513,7 +4556,11 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
                     return cb(new Error('~> what???' + JSON.stringify(meta)));
                 }
                 //log.info(ret);
-                cb(0, {pubDate: result[0].pubDate, ret:ret});
+                var dailySource = result[0].dailySource;
+                var dailyRows = dailySource && Array.isArray(dailySource.rows) ? dailySource.rows.map(function (row) {
+                    return midPolicy.shortDailySnapshot(row, dailySource.pubDate);
+                }) : [];
+                cb(0, {pubDate: result[0].pubDate, ret:ret, dailyRows: dailyRows});
             }
         });
     }
@@ -4613,9 +4660,9 @@ ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb) {
                         privateString = forecastString;
                     } else if(result[0].data[0].hasOwnProperty('wh10B')){
                         privateString = seaString;
-                    } else if(result[0].data[0].hasOwnProperty('taMax10')){
+                    } else if(tempString.some(function (key) { return result[0].data[0][key] !== undefined; })){
                         privateString = tempString;
-                    } else if(result[0].data[0].hasOwnProperty('wf10')){
+                    } else if(landString.some(function (key) { return result[0].data[0][key] !== undefined; })){
                         privateString = landString;
                     } else {
                         err = new Error('~> what is it???'+JSON.stringify(result[0].data[0]));
@@ -4623,7 +4670,7 @@ ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb) {
                     }
 
                     result[0].data.forEach(function(item){
-                        var newItem = {};
+                        var newItem = {regId: result[0].regId, pubDate: item.date + item.time};
                         commonString.forEach(function(string){
                             newItem[string] = item[string];
                         });
@@ -4993,138 +5040,47 @@ ControllerTown.prototype._mergeShortWithRSS = function(shortList, rssList, cb){
  * @param cb
  * @returns {Array}
  */
-ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
-    var meta = {};
-    var result = [];
-
-    meta.method = '_mergeLandWithTemp';
-
-    var self = this;
-
-    try{
-        var todayLand = landList[landList.length - 1];
-        var todayTemp = tempList[tempList.length - 1];
-        var i;
-        var currentDate;
-        var item;
-        var index;
-
-        //log.info(todayLand);
-        var startDate = kmaTimeLib.convertStringToDate(todayLand.date);
-        startDate.setDate(startDate.getDate()+3);
-        for(i=0 ; i<8 ; i++){
-            currentDate = kmaTimeLib.convertDateToYYYYMMDD(startDate);
-            item = {
-                date: currentDate
-            };
-            index = i+3;
-
-            if(todayLand.hasOwnProperty('wf' + index + 'Am')) {
-                item.wfAm = todayLand['wf' + index + 'Am'];
-                item.wfPm = todayLand['wf' + index + 'Pm'];
-            }
-            else {
-                item.wfAm = item.wfPm = todayLand['wf' + index];
-            }
-
-            result.push(item);
-            startDate.setDate(startDate.getDate()+1);
-        }
-        //log.info(todayTemp);
-        startDate = kmaTimeLib.convertStringToDate(todayTemp.date);
-        startDate.setDate(startDate.getDate()+3);
-        for(i=0 ; i<8 ; i++) {
-            var isNew = false;
-            currentDate = kmaTimeLib.convertDateToYYYYMMDD(startDate);
-            item = null;
-            for(var j=0 ; j < result.length ; j++){
-                if(result[j].date === currentDate){
-                    item = result[j];
-                    break;
+ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb, publications){
+    try {
+        var now = Date.now();
+        var pubs = publications || {};
+        var land = midPolicy.latest(landList, pubs.land, now);
+        var temp = midPolicy.latest(tempList, pubs.temp, now);
+        var byDate = {};
+        [land, temp].forEach(function (record, source) {
+            if (!record) { return; }
+            for (var day = 3; day <= 10; day++) {
+                var date = midPolicy.addDays(record.date, day);
+                if (!midPolicy.inWindow(date, now)) { continue; }
+                var row = byDate[date] || {date: date};
+                if (source === 0) {
+                    ['Am', 'Pm'].forEach(function (half) {
+                        var suffix = day + (day <= 7 ? half : '');
+                        if (midPolicy.weather(record['wf' + suffix])) { row['wf' + half] = record['wf' + suffix]; }
+                        if (midPolicy.probability(record['rnSt' + suffix])) { row['rnSt' + half] = record['rnSt' + suffix]; }
+                    });
+                } else {
+                    ['Min', 'Max'].forEach(function (extreme) {
+                        var value = record['ta' + extreme + day];
+                        if (midPolicy.temperature(value)) { row['ta' + extreme] = value; }
+                    });
                 }
+                byDate[date] = row;
             }
-            //item = result.find(function (obj) {
-            //    return obj.date === currentDate;
-            //});
-
-            if (item == null) {
-                item = {date: currentDate};
-                isNew = true;
-            }
-            index = i+3;
-            item.taMin = todayTemp['taMin' + index];
-            item.taMax = todayTemp['taMax' + index];
-            if (isNew) {
-                result.push(item);
-            }
-            startDate.setDate(startDate.getDate()+1);
-        }
-        //log.info('res', result);
-        // 11일 전의 데이터부터 차례차례 가져와서 과거의 날씨 정보를 채워 넣자...
-        if (landList > 1) {
-            for(i = 10 ; i > 0 ; i--){
-                currentDate = self._getCurrentTimeValue(9 - (i * 24));
-                var targetDate = self._getCurrentTimeValue(9 + 72 - (i * 24)); // 찾은 데이터는 3일 후의 날씨를 보여주기때문에 72를 더해야 함
-                item = {
-                    date: targetDate.date
-                };
-                var j;
-                //log.info(currentDate, targetDate);
-                for(j in landList){
-                    if(currentDate.date === landList[j].date && landList[j].time === '1800'){
-                        item.wfAm = landList[j].wf3Am;
-                        item.wfPm = landList[j].wf3Pm;
-                        break;
-                    }
-                }
-
-                for(j in tempList){
-                    if(currentDate.date === tempList[j].date && tempList[j].time === '1800'){
-                        item.taMin = tempList[j].taMin3;
-                        item.taMax = tempList[j].taMax3;
-                        result.push(item);
-                        //log.info('> prev data', item);
-                        break;
-                    }
-                }
-            }
-        }
-        result.sort(self._sortByDateTime);
-
-        result = result.filter(function (item) {
-            if (item.wfAm == undefined || item.wfPm == undefined || item.wfAm == "" || item.wfPm == "") {
-                return false;
-            }
-            if (item.taMax == undefined || item.taMin == undefined || item.taMax == -100 || item.taMin == -100) {
-                return false;
-            }
-            return true;
         });
-        //log.info(result);
-
-        if(cb){
-            cb(0, result);
-        }
-
+        // Preserve the legacy complete-row consumer contract. Partial source
+        // values remain stored, but no fabricated daily weather reaches clients.
+        var self = this;
+        var result = Object.keys(byDate).sort().map(function (date) { return byDate[date]; }).filter(function (row) {
+            return midPolicy.complete(row) && self._convertKorStrToSky(row.wfAm) && self._convertKorStrToSky(row.wfPm);
+        });
+        return cb(null, result);
+    } catch (e) {
+        return cb(e);
     }
-    catch (e) {
-        if (cb) {
-            cb(e);
-        }
-        else {
-            e.message += ' ' + JSON.stringify(meta);
-            log.error(e);
-        }
-        return [];
-    }
-
-    return [];
 };
 
-/**
- *
- * @returns {Array}
- */
+/** Create the legacy short forecast time slots. */
 ControllerTown.prototype._makeBasicShortList = function(){
     var result = [];
 
@@ -5397,73 +5353,7 @@ ControllerTown.prototype._convertSkyToKorStr = function(sky, pty) {
  * @private
  */
 ControllerTown.prototype._convertKorStrToSky = function (skyKorStr) {
-    var sky = 1;
-    var pty = 0;
-    var lgt = 0;
-
-    switch (skyKorStr) {
-        case "맑음":
-            sky = 1;
-            break;
-        case "구름조금":
-            sky = 2;
-            break;
-        case "구름많음":
-            sky = 3;
-            break;
-        case "흐림":
-            sky = 4;
-            break;
-        case "흐리고 한때 비":
-        case "흐리고 비":
-            sky = 4;
-            pty = 1;
-            break;
-        case "구름적고 한때 비":
-        case "구름적고 비":
-            sky = 2;
-            pty = 1;
-            break;
-        case "구름많고 한때 비":
-        case "구름많고 비":
-            sky = 3;
-            pty = 1;
-            break;
-        case "흐리고 한때 눈":
-        case "흐리고 눈":
-            sky = 4;
-            pty = 3;
-            break;
-        case "구름적고 한때 눈":
-        case "구름적고 눈":
-            sky = 2;
-            pty = 3;
-            break;
-        case "구름많고 한때 눈":
-        case "구름많고 눈":
-            sky = 3;
-            pty = 3;
-            break;
-        case "구름적고 비/눈":
-        case "구름적고 눈/비":
-            sky = 2;
-            pty = 2;
-            break;
-        case "구름많고 비/눈":
-        case "구름많고 눈/비":
-            sky = 3;
-            pty = 2;
-            break;
-        case "흐리고 비/눈":
-        case "흐리고 눈/비":
-            sky = 4;
-            pty = 2;
-            break;
-        default :
-            log.error("Fail to convert sky string="+skyKorStr);
-            return undefined;
-    }
-    return  {sky: sky, pty: pty, lgt: lgt};
+    return midPolicy.skyInfo(skyKorStr);
 };
 
 /**
@@ -5549,11 +5439,6 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
     });
 
     dayConditionList.forEach(function (dayCondition) {
-        if (dayCondition.reh.length === 0) {
-            log.warn(new Error("dayCondition is empty :" + dayCondition.date));
-            return;
-        }
-
         var daySummary = self._createOrGetDaySummaryList(daySummaryList, dayCondition.date);
 
         daySummary.pop = self._max(dayCondition.pop, -1);

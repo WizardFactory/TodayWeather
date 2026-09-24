@@ -1,0 +1,370 @@
+TAP version 13
+# Subtest: captured day 4–10 succeeds with original values and no invented day 3
+ok 1 - captured day 4–10 succeeds with original values and no invented day 3
+  ---
+  duration_ms: 54.839722
+  type: 'test'
+  ...
+# Subtest: synthetic legacy day 3 remains supported
+ok 2 - synthetic legacy day 3 remains supported
+  ---
+  duration_ms: 2.401433
+  type: 'test'
+  ...
+# Subtest: missing optional fields never become sentinel temperatures or defaults
+ok 3 - missing optional fields never become sentinel temperatures or defaults
+  ---
+  duration_ms: 3.983608
+  type: 'test'
+  ...
+# Subtest: organizeLandData malformed envelopes and empty/invalid items fail once
+ok 4 - organizeLandData malformed envelopes and empty/invalid items fail once
+  ---
+  duration_ms: 78.360031
+  type: 'test'
+  ...
+# Subtest: organizeTempData malformed envelopes and empty/invalid items fail once
+ok 5 - organizeTempData malformed envelopes and empty/invalid items fail once
+  ---
+  duration_ms: 245.377413
+  type: 'test'
+  ...
+# Subtest: 1.0 real schemas + Manager handoff + storage projection + service round trip
+not ok 6 - 1.0 real schemas + Manager handoff + storage projection + service round trip
+  ---
+  duration_ms: 709.482266
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:60:5'
+  failureType: 'testCodeFailure'
+  error: "ifError got unwanted exception: Cannot read properties of undefined (reading 'some')"
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+  error: "Cannot read properties of undefined (reading 'some')"
+  name: 'TypeError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4565:42
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4541:68)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:67:18)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:67:93
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4593:17)
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4565:42
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4541:68)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:67:18)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 partial valid horizons persist without requiring day 10
+not ok 7 - 1.0 partial valid horizons persist without requiring day 10
+  ---
+  duration_ms: 39.769562
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:76:5'
+  failureType: 'testCodeFailure'
+  error: "ifError got unwanted exception: Cannot read properties of undefined (reading 'some')"
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+  error: "Cannot read properties of undefined (reading 'some')"
+  name: 'TypeError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4565:42
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4541:68)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:81:34)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:81:91
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4593:17)
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4565:42
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4541:68)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:81:34)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 real schemas + Manager handoff + storage projection + service round trip
+not ok 8 - 2.0 real schemas + Manager handoff + storage projection + service round trip
+  ---
+  duration_ms: 37.625499
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:60:5'
+  failureType: 'testCodeFailure'
+  error: "ifError got unwanted exception: Cannot read properties of undefined (reading 'some')"
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+  error: "Cannot read properties of undefined (reading 'some')"
+  name: 'TypeError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/kma/kma.town.mid.controller.js:135:38
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    kmaTownMidController.getMidFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/kma/kma.town.mid.controller.js:111:64)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4526:27)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:67:18)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:67:93
+    kmaTownMidController.getMidFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/kma/kma.town.mid.controller.js:160:16)
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/kma/kma.town.mid.controller.js:135:38
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    kmaTownMidController.getMidFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/kma/kma.town.mid.controller.js:111:64)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4526:27)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:67:18)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: 2.0 partial valid horizons persist without requiring day 10
+not ok 9 - 2.0 partial valid horizons persist without requiring day 10
+  ---
+  duration_ms: 32.443743
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:76:5'
+  failureType: 'testCodeFailure'
+  error: "ifError got unwanted exception: Cannot read properties of undefined (reading 'some')"
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+  error: "Cannot read properties of undefined (reading 'some')"
+  name: 'TypeError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/kma/kma.town.mid.controller.js:135:38
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    kmaTownMidController.getMidFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/kma/kma.town.mid.controller.js:111:64)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4526:27)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:81:34)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:81:91
+    kmaTownMidController.getMidFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/kma/kma.town.mid.controller.js:160:16)
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/kma/kma.town.mid.controller.js:135:38
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    kmaTownMidController.getMidFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/kma/kma.town.mid.controller.js:111:64)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4526:27)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:81:34)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: KST publication, 06/18 cycles, mixed timestamp representations and year/month boundaries
+not ok 10 - KST publication, 06/18 cycles, mixed timestamp representations and year/month boundaries
+  ---
+  duration_ms: 34.640715
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:86:1'
+  failureType: 'testCodeFailure'
+  error: 'env.policy.timestamp is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:93:64)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: legacy day 3, honest captured gap, no NaN/sentinel/unknown sky output
+not ok 11 - legacy day 3, honest captured gap, no NaN/sentinel/unknown sky output
+  ---
+  duration_ms: 42.135929
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:102:1'
+  failureType: 'testCodeFailure'
+  error: 'ifError got unwanted exception: midPolicy.latest is not a function'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+  error: 'midPolicy.latest is not a function'
+  name: 'TypeError'
+  stack: |-
+    ControllerTown._mergeLandWithTemp (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4949:30)
+    merge (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:56:14)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:104:18)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:56:71
+    ControllerTown._mergeLandWithTemp (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4981:16)
+    ControllerTown._mergeLandWithTemp (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4949:30)
+    merge (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:56:14)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:104:18)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: stale or future publication, identity mismatch, latest partial never uses older forecast
+not ok 12 - stale or future publication, identity mismatch, latest partial never uses older forecast
+  ---
+  duration_ms: 36.000864
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:111:1'
+  failureType: 'testCodeFailure'
+  error: 'ifError got unwanted exception: midPolicy.latest is not a function'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+  error: 'midPolicy.latest is not a function'
+  name: 'TypeError'
+  stack: |-
+    ControllerTown._mergeLandWithTemp (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4949:30)
+    merge (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:56:14)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:113:94)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:56:71
+    ControllerTown._mergeLandWithTemp (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4981:16)
+    ControllerTown._mergeLandWithTemp (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4949:30)
+    merge (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:56:14)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:113:94)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: short merge sorts/deduplicates, keeps seven-day recent history and declares boundary gap
+not ok 13 - short merge sorts/deduplicates, keeps seven-day recent history and declares boundary gap
+  ---
+  duration_ms: 33.049855
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:120:1'
+  failureType: 'testCodeFailure'
+  error: 'ifError got unwanted exception: midPolicy.latest is not a function'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+  error: 'midPolicy.latest is not a function'
+  name: 'TypeError'
+  stack: |-
+    ControllerTown._mergeLandWithTemp (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4949:30)
+    merge (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:56:14)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:121:37)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:56:71
+    ControllerTown._mergeLandWithTemp (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4981:16)
+    ControllerTown._mergeLandWithTemp (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4949:30)
+    merge (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:56:14)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:121:37)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: dedicated daily health fails captured polluted list while short is current
+not ok 14 - dedicated daily health fails captured polluted list while short is current
+  ---
+  duration_ms: 42.106255
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:133:1'
+  failureType: 'testCodeFailure'
+  error: 'env.policy.timestamp is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:135:45)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: RSS retirement ignores older/equal/newer mixed publications and empty targets
+ok 15 - RSS retirement ignores older/equal/newer mixed publications and empty targets
+  ---
+  duration_ms: 421.025922
+  type: 'test'
+  ...
+# Subtest: 401/error envelopes emit only controlled failure without key-bearing diagnostics
+ok 16 - 401/error envelopes emit only controlled failure without key-bearing diagnostics
+  ---
+  duration_ms: 10.200216
+  type: 'test'
+  ...
+# Subtest: RSS HTML/malformed XML never publishes or persists; retired schedules never fetch
+ok 17 - RSS HTML/malformed XML never publishes or persists; retired schedules never fetch
+  ---
+  duration_ms: 37.898257
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 8
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1896.272408

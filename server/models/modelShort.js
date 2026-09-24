@@ -10,6 +10,12 @@ var shortSchema = new mongoose.Schema({
         my : Number
     },
     pubDate : String, //YYYYMMDDHHMM last baseDate+baseTime
+    // Latest raw collection, replaced as a whole; never reuse partially merged fields.
+    dailySource: {
+        pubDate: String,
+        rows: [{date: String, time: String, t3h: Number, tmn: Number, tmx: Number,
+            sky: Number, pty: Number, reh: Number, pop: Number, wsd: Number}]
+    },
     shortData : [{
         date : String, //fcstDate
         time : String, //fcstTime

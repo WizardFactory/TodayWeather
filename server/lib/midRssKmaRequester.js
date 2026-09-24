@@ -4,6 +4,7 @@
 
 "use strict";
 
+var midPolicy = require('./midForecastPolicy');
 var xml2json  = require('xml2js').parseString;
 var async = require('async');
 var req = require('request');
@@ -36,6 +37,7 @@ function MidRssKmaRequester() {
 }
 
 MidRssKmaRequester.prototype.checkGetTime = function(time) {
+    if (!midPolicy.rssEnabled) { return false; }
     log.silly("midRssKma next get time"+this._nextGetTime);
     return time >= this._nextGetTime;
 };
@@ -67,16 +69,15 @@ MidRssKmaRequester.prototype.setNextGetTime = function(time) {
 
 MidRssKmaRequester.prototype.getMidRss = function(url, callback) {
     var url = url || this._url;
-    log.info(`kma mid rss url=${url}`);
+    log.info('KMA mid RSS transport');
     req(url, function(err, response, body) {
         if (err) {
-            return callback(err);
+            return callback(new Error('KMA mid RSS transport failure'));
         }
-        if ( response.statusCode >= 400) {
-            return callback(new Error(body));
+        if (!response || response.statusCode !== 200 || typeof body !== 'string' ||
+            /<(?:!doctype\s+html|html)(?:\s|>)/i.test(body) || !/<rss(?:\s|>)/i.test(body)) {
+            return callback(new Error('KMA mid RSS invalid HTTP/XML response'));
         }
-
-        log.silly(body);
         callback(err, body);
     });
     return this;
@@ -136,9 +137,13 @@ MidRssKmaRequester.prototype.parseMidRssData = function(midDataList, dataList) {
 MidRssKmaRequester.prototype.parseMidRss = function(xmlData, callback) {
     var self = this;
 
+    if (typeof xmlData !== 'string' || /<(?:!doctype\s+html|html)(?:\s|>)/i.test(xmlData) || !/<rss(?:\s|>)/i.test(xmlData)) {
+        callback(new Error('KMA mid RSS invalid envelope'));
+        return this;
+    }
     xml2json(xmlData, function (err, result) {
         if (err) {
-            return callback(err);
+            return callback(new Error('KMA mid RSS invalid XML'));
         }
         try {
             var item = result.rss.channel[0].item[0];
@@ -146,7 +151,9 @@ MidRssKmaRequester.prototype.parseMidRss = function(xmlData, callback) {
             log.silly(koreaWf);
             var pubDate = item.description[0].header[0].tm[0];
             log.silly(pubDate);
+            if (!midPolicy.publication(pubDate)) { throw new Error('Invalid RSS publication'); }
             var locationList = item.description[0].body[0].location;
+            if (!Array.isArray(locationList) || !locationList.length) { throw new Error('Empty RSS locations'); }
             var midKmaList = [];
             locationList.forEach(function (location) {
                 var midKma = {province: location.province[0], city: location.city[0], pubDate: pubDate, midData: []};
@@ -158,7 +165,7 @@ MidRssKmaRequester.prototype.parseMidRss = function(xmlData, callback) {
             callback(err, midKmaList);
         }
         catch(e) {
-            callback(e);
+            callback(new Error('KMA mid RSS invalid envelope'));
         }
     });
 
@@ -238,6 +245,7 @@ MidRssKmaRequester.prototype.integrateMidRss = function (parsedData, callback) {
 };
 
 MidRssKmaRequester.prototype.saveMidRssNewForm = function (midKmaList, callback) {
+    if (!midPolicy.rssEnabled) { callback(new Error('Legacy mid RSS unavailable: retired feed')); return this; }
     async.map(midKmaList,
         function(mid, cb){
             mid['pubDate'] = kmaTimelib.getKoreaDateObj(mid.pubDate);
@@ -262,6 +270,7 @@ MidRssKmaRequester.prototype.saveMidRssNewForm = function (midKmaList, callback)
 };
 
 MidRssKmaRequester.prototype.saveMidRss = function (midKmaList, callback) {
+    if (!midPolicy.rssEnabled) { callback(new Error('Legacy mid RSS unavailable: retired feed')); return this; }
     MidRssModel.find({}, function (err, midRssModelList) {
         if (err) {
             return callback(err);
@@ -301,6 +310,7 @@ MidRssKmaRequester.prototype.saveMidRss = function (midKmaList, callback) {
 };
 
 MidRssKmaRequester.prototype.processGetMidRss = function (stnId, callback) {
+    if (!midPolicy.rssEnabled) { callback(new Error('Legacy mid RSS unavailable: retired feed')); return this; }
     var self = this;
 
     async.waterfall([
@@ -347,6 +357,7 @@ MidRssKmaRequester.prototype.processGetMidRss = function (stnId, callback) {
 };
 
 MidRssKmaRequester.prototype.mainProcessM = function(self, callback) {
+    if (!midPolicy.rssEnabled) { callback(new Error('Legacy mid RSS unavailable: retired feed')); return this; }
     var self = this;
     var stnList = new collectTown().listPointNumber;
     async.map(stnList,
@@ -365,6 +376,7 @@ MidRssKmaRequester.prototype.mainProcessM = function(self, callback) {
  * @returns {MidRssKmaRequester}
  */
 MidRssKmaRequester.prototype.mainProcess = function(self, callback) {
+    if (!midPolicy.rssEnabled) { if (callback) { callback(self); } return this; }
     log.debug('mainProcess');
 
     if (self.checkGetTime(new Date()) !== true) {
@@ -429,6 +441,7 @@ MidRssKmaRequester.prototype.cbMidRssProcess = function(self, err) {
 };
 
 MidRssKmaRequester.prototype.start = function () {
+    if (!midPolicy.rssEnabled) { return this; }
     log.info('start MID RSS KMA REQUEST');
 
     this.setNextGetTime(new Date());

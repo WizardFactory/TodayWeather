@@ -1,0 +1,77 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "Assessed current source and concrete stage artifacts; scope remains local.",
+  "authority_source": "User implementation request, AGENTS.md and shared SDLC policy",
+  "candidate": "01eb787b+issue-2560-working-tree",
+  "next_action": "Continue next applicable local stage",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/issue-2560/triage.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    },
+    {
+      "kind": "intent",
+      "path": "reports/sdlc/issue-2560/intent.md",
+      "sha256": "bf4ac404aa291fab339683565d3e21113728d0df5ed435cd8dc6970a975fd27d"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/issue-2560/investigation.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    },
+    {
+      "kind": "spec",
+      "path": "reports/sdlc/issue-2560/spec.md",
+      "sha256": "aaff814c9965be8885c074af8e627d0b2b68f48e8ceb357d6d275da7d81b9ff0"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.json",
+      "sha256": "707e34b4af3bf84d1b72bb2c29b3c3b4da48ccc6138cd77557f348fa8c0f2d65"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.html",
+      "sha256": "67fa42d10f2d26b1d23e3231a988a7d64bb563d17002215d9053998e61c1f77d"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/issue-2560/design-validation.json",
+      "sha256": "61fac3273f8033040b88fa31a116886cfcf65f09200ad104398839f7421b0970"
+    },
+    {
+      "kind": "design-browser",
+      "path": "reports/sdlc/issue-2560/design-browser-command.json",
+      "sha256": "2320f7c993a449da31c0d788f397786f34170523a39ff31a2fe101bdc4d0ae5f"
+    },
+    {
+      "kind": "design-visual",
+      "path": "reports/sdlc/issue-2560/design.md",
+      "sha256": "a148f7eae1c1b0aa446260afe7d2321b6456f0a5d52f48460c7188c9438c5bbd"
+    },
+    {
+      "kind": "plan",
+      "path": "reports/sdlc/issue-2560/plan.md",
+      "sha256": "fdce69484f022bd3854a4a86c58c59d1fe7154aef17baf37c267339e4979462d"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/issue-2560/test-plan.md",
+      "sha256": "37c49c119f8ca75ff166304bbc65f3526f480e4e10ef633fe091fd0e1a6d6dd9"
+    }
+  ],
+  "assessment": {
+    "assessor": "main /root",
+    "summary": "Evidence supports the documented offline contract; production deployment and remote publication excluded.",
+    "criteria": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
+  }
+}
