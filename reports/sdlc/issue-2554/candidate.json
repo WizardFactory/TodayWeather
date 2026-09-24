@@ -1,0 +1,11 @@
+{
+  "id": "sha256:41685a6ea7dc84e3b5ba82802e131dba864d97097fa6c209e278622703d8ffca",
+  "base": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "production_files": {
+    "server/controllers/controllerTown.js": "a7f603b244b693de022c42a56065144abd89d9b730e0116ce65f859271b91330",
+    "server/controllers/kma/kma.town.short.rss.controller.js": "01be54d9ca5f0174113a4c55a9befd688a83e8c91e80264c43ca92f71f15af74",
+    "server/controllers/controllerTown24h.js": "db9769f033d0fbf2797ac947cdf47d930102b80c62934cd0b25954db0d17560d",
+    "server/routes/v000903/route.kma.v000903.js": "cc46427fc7448e89517df957cb0a3c3c949bd8c51bdcb8b87d8ad4a991375551"
+  },
+  "identity_scope": "RSS parser/merge and unchanged latest response controller/router. Test source snapshots are separately hashed in build receipt. Production bytes remained identical for green, post-refactor, timezone and smoke runs."
+}

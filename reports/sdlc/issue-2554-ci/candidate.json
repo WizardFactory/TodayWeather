@@ -1,0 +1,8 @@
+{
+  "id": "sha256:14773bd85732dbe0b32aa8e059e082bfc0a8f9e6bd49919aca21b42c77ab2a83",
+  "base": "658605dba6cf56b90b5bba3ef9dd307438e69484",
+  "files": {
+    ".github/workflows/rss-offline.yml": "84a6132154cad649bc9262b45ffc35b773ad5a500ce8763acf16ca1cdd88f448",
+    "server/test/offline/README.md": "e720a0c143780d69e9131991a7f5388aefc6ec9e9942abd9d8b0ed726069fcce"
+  }
+}

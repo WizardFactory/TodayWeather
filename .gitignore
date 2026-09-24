@@ -43,6 +43,7 @@ visual-check.*
 # Existing renamed copies of Archify's raw browser-check receipts.
 /reports/architecture/aws-infrastructure/browser.json
 /reports/sdlc/push-diagram/diagram-browser.json
+/reports/sdlc/issue-2554/diagram-browser.json
 /reports/sdlc/service-architecture/**/*-browser-command.json
 # Diagram evidence copies are local artifacts too; app screen captures stay tracked.
 /reports/rewrite-verification/server-*-1440x900-*.png

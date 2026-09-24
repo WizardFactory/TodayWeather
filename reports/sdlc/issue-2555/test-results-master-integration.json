@@ -1,0 +1,70 @@
+{
+  "candidate": "sha256:388381bcc32cd6cbad5750f34d449098848571123fc4926c613d5694f22ab461",
+  "scenarios": [
+    {
+      "id": "integration-pipelines",
+      "requirement": "AC4",
+      "required": true,
+      "environment": "Real local CommonJS/XML/event/storage-controller pipeline with in-memory HTTP and Mongo adapters",
+      "prerequisites": "Isolated xml2js and async; no config/network/DB",
+      "actions": "Run unchanged correction tests+smoke with upstream RSS43 regression and36 response-smoke cases, plus alternate timezone regression",
+      "expected": "All gather103/4 and RSS43/36 checks pass; both source parents preserved",
+      "failure": "Any wrong mapping, period-policy change, RSS fallback regression or external side effect",
+      "cleanup": "Memory-only state; harness remains in /tmp"
+    }
+  ],
+  "runs": [
+    {
+      "id": "review-correction-red",
+      "phase": "red",
+      "candidate": "parent:5e653285-with-correction-tests",
+      "command": "NODE_PATH=/tmp/issue-2555-harness/node_modules /tmp/issue-2555-harness/node_modules/.bin/mocha server/test/offline/gather-code-drift.test.js --reporter dot",
+      "exit_code": 17,
+      "environment": "Node22.22.2/npm10.9.7; isolated Mocha2.5.3/xml2js0.4.23/async2.6.4; synthetic HTTP/model boundaries",
+      "observed": "86 passing,17 intended failures",
+      "evidence": "reports/sdlc/issue-2555/correction-red.txt",
+      "execution_kind": "isolated",
+      "status": "passed",
+      "intended_failure": true
+    },
+    {
+      "id": "master-integration-green",
+      "phase": "green",
+      "candidate": "sha256:388381bcc32cd6cbad5750f34d449098848571123fc4926c613d5694f22ab461",
+      "command": "NODE_PATH=/tmp/issue-2555-harness/node_modules npm --prefix server run test:offline",
+      "exit_code": 0,
+      "environment": "Node22.22.2, unchanged isolated dependencies; real modules with synthetic HTTP/DB boundaries",
+      "observed": "103 tests+4 smoke cases pass",
+      "evidence": "reports/sdlc/issue-2555/master-integration-gather.txt",
+      "execution_kind": "isolated",
+      "status": "passed"
+    },
+    {
+      "id": "master-integration-post-refactor",
+      "phase": "post-refactor",
+      "candidate": "sha256:388381bcc32cd6cbad5750f34d449098848571123fc4926c613d5694f22ab461",
+      "command": "TZ=America/Los_Angeles node server/test/offline/rss-wind.test.js",
+      "exit_code": 0,
+      "environment": "Node22.22.2, unchanged isolated dependencies; real modules with synthetic HTTP/DB boundaries",
+      "observed": "43 pass, no failures; publication/service behavior timezone regression",
+      "evidence": "reports/sdlc/issue-2555/master-integration-rss-alternate-tz.txt",
+      "execution_kind": "isolated",
+      "status": "passed"
+    },
+    {
+      "id": "master-integration-smoke",
+      "phase": "smoke",
+      "candidate": "sha256:388381bcc32cd6cbad5750f34d449098848571123fc4926c613d5694f22ab461",
+      "command": "TZ=UTC NODE_PATH=/tmp/issue-2554-response-smoke/node_modules TW_SMOKE_OUTPUT_DIR=/tmp/issue-2555-merge-rss-output node server/test/offline/rss-response-smoke.js",
+      "exit_code": 0,
+      "environment": "Node22.22.2, unchanged isolated dependencies; real modules with synthetic HTTP/DB boundaries",
+      "observed": "36 response cases pass; real router/middleware/serialization, synthetic external boundaries",
+      "evidence": "reports/sdlc/issue-2555/master-integration-rss-smoke.txt",
+      "execution_kind": "real",
+      "status": "passed",
+      "scenario_id": "integration-pipelines"
+    }
+  ],
+  "not_applicable_reason": "",
+  "red_reuse_reason": "Correction-red.txt is the actual prior failing implementation record; master integration changes no gather runtime/test bytes. New integrated green+upstream regression/smoke check current source composition."
+}

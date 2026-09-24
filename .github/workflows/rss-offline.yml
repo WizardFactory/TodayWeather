@@ -1,0 +1,36 @@
+name: RSS offline checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rss-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: RSS regression tests
+        run: node server/test/offline/rss-wind.test.js
+      - name: Install isolated smoke dependencies
+        run: >-
+          npm install --prefix "$RUNNER_TEMP/rss-smoke"
+          --ignore-scripts --no-audit --no-fund
+          async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23
+      - name: Full RSS response smoke
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+          TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
+          TW_SMOKE_CONTEXT: github-actions
+        run: node server/test/offline/rss-response-smoke.js

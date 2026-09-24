@@ -1,0 +1,27 @@
+{
+  "candidate": "sha256:388381bcc32cd6cbad5750f34d449098848571123fc4926c613d5694f22ab461",
+  "base": "8add895b28436a6f67acf7f44272b2698c300fc4",
+  "parents": [
+    "b4d063fd7fd0f7403f7dcb35820927b69ece4162",
+    "8add895b28436a6f67acf7f44272b2698c300fc4"
+  ],
+  "files": {
+    "server/lib/collectTownForecast.js": "a8de41fb633c67491b50b02b9bf88a1a744cd866a12c98d313a3a7be0c219c87",
+    "server/package.json": "eee087a0ca3af077c4e861a8dd35e040d3e33ee3c29bdc2a3700ca56ac8a1de7",
+    "server/test/offline/harness.js": "dae9d7276fb195457bd6e801b713face09e033b282dca4af6337a8ac91134a28",
+    "server/test/offline/gather-code-drift.test.js": "b6e556fce9ac2857afec0e41f83749544e11ceefda8b2437e98e8e6a2b5b1271",
+    "server/test/offline/gather-smoke.js": "c273a33e13bd531a85913a50c067115104c0cd4dc69054a22da6ac035badd6d6",
+    "server/test/offline/run.js": "1da11e57554f2f7ab86b34f9d0e8ae9408cbfb92e328e5cec79ea3e96c74c106",
+    ".github/workflows/gather-offline.yml": "a6981b110bcce4c7d8e492056ae1788a3fd2f854ed6fb01f983f1b2cc8c54ef6",
+    "docs/architecture/gather-source-reconciliation.md": "31e54f719a986264b739c12076d36eee7e7f547e46c06f2d12789c2e8fc39563",
+    "docs/architecture/weather-collection.md": "b7d5cc1da3c627ac70a1092ada65dfd6e0501df511278e62a91a94f0d14deb7a",
+    "docs/architecture/diagrams/weather-collection.json": "bb41c842c0f3263adc3e390471e954dc6b1187776e889009067cd6a751b4b3db",
+    "docs/architecture/diagrams/weather-collection.html": "0c825cde1f3895912c2fdd187ec67c0c23b149c2e309169e9b23dfc3e0060ebc",
+    "server/test/offline/README.md": "9f4f4e550d332072030e88bd4c52d739e21d7e0534d21af8f4c51171ee71e2d6",
+    "server/controllers/controllerTown.js": "a7f603b244b693de022c42a56065144abd89d9b730e0116ce65f859271b91330",
+    "server/controllers/kma/kma.town.short.rss.controller.js": "01be54d9ca5f0174113a4c55a9befd688a83e8c91e80264c43ca92f71f15af74",
+    "server/test/offline/rss-wind.test.js": "778b4e63af6a41aa478ecc00b9cdb7badd734b73b23863eb07f18618cc9efbfb",
+    "server/test/offline/rss-response-smoke.js": "47fcb72dd9c95c42061d97ce24778d2cd89897d7cd93e549b3e4f4617445fb3b",
+    ".github/workflows/rss-offline.yml": "84a6132154cad649bc9262b45ffc35b773ad5a500ce8763acf16ca1cdd88f448"
+  }
+}

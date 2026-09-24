@@ -1,0 +1,160 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "Assessed concrete deliverables against authorized local scope.",
+  "authority_source": "AK request to proceed with issue #2554; intent/issue-2554.md",
+  "candidate": "sha256:41685a6ea7dc84e3b5ba82802e131dba864d97097fa6c209e278622703d8ffca",
+  "next_action": "Continue authorized local implementation and verification.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/issue-2554/triage.md",
+      "sha256": "00fbd8a4d523f853385b9dda840c717df03a4031fb00deb302f62ae5b53802c7"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/issue-2554.md",
+      "sha256": "5770fce290f0e508c8b9b1e2e1217e1c302700ac6516ebfc0d6a25c37b3117c0"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/issue-2554/investigation.md",
+      "sha256": "dc250cb489cbea173e49d9be5f6063b59af3f7a8c318406e9a540688eacfc571"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/issue-2554.md",
+      "sha256": "32c60dcadd0759144c27536553bed4e62e8c1523e915a83889680ce3db934132"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/weather-collection.json",
+      "sha256": "91eba492fe1acaf108b47bffaf1ae292967885c3b327dacfa89a2e27dd527cff"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/weather-collection.html",
+      "sha256": "a4f869f092a70dd892948f3fff8fa5a2de391f1488a7f7070727d4b8e0d73d53"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/issue-2554/design-validation.md",
+      "sha256": "1a3852facfaab7de047af471e2c41060723bfe26bc5ca42b4427d4d8e7a1abd6"
+    },
+    {
+      "kind": "plan",
+      "path": "plans/issue-2554.md",
+      "sha256": "9b9ee4f989e9fd0f15a9dfefc344a0d710dda8593dd04ac766d13dc16b46f2a9"
+    },
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/issue-2554/test-plan.md",
+      "sha256": "8fa7ec866b96b2baedce8b6125258544e57c8b5e3dc52df1dca0455927ca9f58"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/issue-2554/build.md",
+      "sha256": "c96e2245513e35862b68dc2d5a2226126823a45dcc39b60b35280f96874c0916"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/issue-2554/changes.patch",
+      "sha256": "dd1ef88166310d9be920e7aadcafd399489331af31a9ff11c6f95d6c8caca287"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/controllers/controllerTown.js",
+      "sha256": "a7f603b244b693de022c42a56065144abd89d9b730e0116ce65f859271b91330"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/controllers/kma/kma.town.short.rss.controller.js",
+      "sha256": "01be54d9ca5f0174113a4c55a9befd688a83e8c91e80264c43ca92f71f15af74"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/rss-wind.test.js",
+      "sha256": "778b4e63af6a41aa478ecc00b9cdb7badd734b73b23863eb07f18618cc9efbfb"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/rss-response-smoke.js",
+      "sha256": "47fcb72dd9c95c42061d97ce24778d2cd89897d7cd93e549b3e4f4617445fb3b"
+    },
+    {
+      "kind": "self-verification",
+      "path": "reports/sdlc/issue-2554/self-verification.md",
+      "sha256": "c33c750c4ff3405453bb9bce793890d2034d5f7adf6dd361e8247e3123977d48"
+    },
+    {
+      "kind": "test-results",
+      "path": "reports/sdlc/issue-2554/test-results.json",
+      "sha256": "9c8524aafa2a97f8ec180a16e0117d065b6c1783aa6bebdd23c9af55242716f3"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554/red.txt",
+      "sha256": "5144a08e25b683c6ed50a676cb6191123250aa44f8b217d04edc5a1270845352"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554/green.txt",
+      "sha256": "e2ec72bd741235719d6c50261258ba5f0f9bcd97ab492fdda6fb680d1aae669b"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554/post-refactor.txt",
+      "sha256": "c58773897d17eb46709133dab9be86d14c778018bf667a59d3ad5d1f54dd1571"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554/timezone.txt",
+      "sha256": "b8af4aef71e6107bff1689e3e9e8e9e34045229e4ae715cd1bdc0960c1e85078"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554/smoke.txt",
+      "sha256": "bb1075e36c94869683cdea9a71646a93fa974ab309e8726079fe5f3ba48762a1"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554/document-check.json",
+      "sha256": "0b91be719977774014b3636af57210ddf735639dd033258dea94c77b895ade8c"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "independent-verification",
+      "path": "reports/sdlc/issue-2554/independent-verification.md",
+      "sha256": "dc9666d4553962bac7da6d23ee6b44cd732e7f79adf15bb8e62990ea00e25cdb"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554/independent-smoke.json",
+      "sha256": "a64cdd1cb962e8c6ae20bd338aa61766af952e0688ae75cc6b7ca1fa7d2133cf"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2554/independent-regression.txt",
+      "sha256": "9335a3a7423da3d757aeaf10ff9671cd6ec060fd7b1b88f2f420f86825fbc0db"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root",
+    "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3",
+      "AC4",
+      "AC5",
+      "AC6"
+    ]
+  },
+  "verifier": {
+    "independent": true,
+    "context_id": "/root/response_smoke",
+    "builder_context_id": "/root",
+    "checks": "Independent whole-module router smoke and code review; see independent-verification.md and smoke evidence."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "sdlc": {
+    "path": "/root/.agents/skills/sdlc/SKILL.md",
+    "sha256": "857c96a115fdec872105775d247a01321e3da2825c7fa2e459d4b3fd9892c775"
+  },
+  "planning-with-files": {
+    "path": "/root/.agents/skills/planning-with-files/SKILL.md",
+    "sha256": "f313bc997d267912a516194cf698fecf5dd77c55e564d9c3373e1ea213e3961f"
+  },
+  "archify": {
+    "path": "/root/.agents/skills/archify/SKILL.md",
+    "sha256": "10094272d6d1b4ad0f2c2e0880cb646fe4991454a2dc3d854aecb27e7407ee1f"
+  }
+}

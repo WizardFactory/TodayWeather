@@ -1,0 +1,4 @@
+# CI verification
+CI1/CI2: Python/PyYAML evaluator loads workflow; absent workflow is intended red. Validate event/runtime/permission contract, then run real shell step text with temporary command doubles to check success order and injected regression/smoke failures propagate.
+CI1/CI2 additional local smoke: execute the exact workflow run scripts with Node22 and real npm in a fresh temporary directory, followed by all 43 regression and 36 full-response cases. Only action checkout/setup are represented by the existing local checkout/runtime; no hosted-execution claim.
+CI3: independent verifier checks candidate and command behavior. After push observe Actions check head and outcome; preserve actual hosted execution URL in PR record. No unsafe service integration or live provider call. Temporary dirs only for package/log artifacts.
