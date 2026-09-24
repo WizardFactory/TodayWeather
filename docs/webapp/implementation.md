@@ -66,10 +66,14 @@ The service worker caches the shell and hashed assets, not API responses. Activa
 
 ## Evidence from live reads
 
-Bounded public reads on 2026-09-24 returned HTTP 200 for health, domestic coordinate weather, reverse geocode, national data and warnings. See [probe receipt](../../reports/sdlc/webapp-implementation/api-probe.json). A successful response does not establish data quality:
+Bounded public reads on 2026-09-24 returned HTTP 200 for health, domestic coordinate weather, reverse geocode, national data and warnings. Raw probe receipts are local, ignored SDLC records. A successful response does not establish data quality:
 
 - Seoul's KMA current temperature was 25.2 C, while its yesterday temperature used `-50`; the upstream summary reported an invalid +75 degree comparison. The client computes comparisons from validated values instead.
 - Daily data mixed April 2025 rows with September 2026 rows. The adapter excluded historical rows from the future forecast.
 - Nationwide air included a 2021 observation timestamp; it is visibly stale. Domestic weather did not include an air station list.
 
 No provider freshness repair, legacy server mutation, database migration or mobile release has been performed. A public release with maximum parity must resolve these upstream and device gates, plus the explicit feature gaps above; keep #2558 open.
+
+## Verification records
+
+Run the checks in the static deployment runbook and `npm run test:e2e` against the built static files. The [Web app workflow](../../.github/workflows/web.yml) publishes `web-browser-evidence` and `web-static-dist` as CI artifacts. Local SDLC reports under `reports/sdlc/` are ignored and are not part of this PR; maintained implementation and operating guidance live under `docs/` and `infra/`. Historical results above retain their original dates and scope.

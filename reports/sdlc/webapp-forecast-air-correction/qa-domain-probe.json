@@ -1,9 +1,0 @@
-{
-  "status": "passed",
-  "checks": [
-    "year rollover collision: zero retained, sentinel/string/default-icon cannot erase fallback, snow1h and rain3h stay paired",
-    "shortest-only feed survives absent short data; minute ordering and invalid date filtering hold",
-    "distinct-timestamp input ordering does not change merged forecast",
-    "summary plain text preserves unavailable numeric air; snapshot accepts 500-char/old records and rejects invalid shapes, whitespace, overlimit and expired records"
-  ]
-}

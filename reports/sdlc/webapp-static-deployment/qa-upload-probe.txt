@@ -1,7 +1,0 @@
-{
-  "mockOnly": true,
-  "actualAwsCalls": 0,
-  "validUploadSequence": 14,
-  "destinationMismatchStoppedBeforeUpload": true,
-  "firstAssetFailureStoppedBeforeShellAndInvalidation": true
-}

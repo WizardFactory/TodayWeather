@@ -1,9 +1,0 @@
-{
-  "artifact": {
-    "path": "/root/.paseo/worktrees/08mqediz/shiny-elephant/docs/webapp/diagrams/webapp-implementation.html",
-    "sha256": "2309fb073376ad499086a936183b9c327e0728d72fdea8490eb408e5479e8e71",
-    "bytes": 801257
-  },
-  "browser": "pass",
-  "visualReview": "Main inspected 1440 light and 2048 dark. Updated card readable, no clipping, topology unchanged."
-}

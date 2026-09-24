@@ -2,6 +2,8 @@
 
 Reviewed 2026-09-24 at repository revision `525a4a27`. Scope: feasibility and operating evidence, not implementation or deployment. AK requested reuse of current infrastructure without an additional Node server. The existing mobile feature-parity objective remains in force.
 
+Raw inspection and probe receipts are retained locally under ignored `reports/sdlc/`; the dated findings and limits below are the maintained summary.
+
 ## Conclusion
 
 An additional persistent Node server is **not an architectural requirement** for weather, air, geocoding, nation, warnings, favorites, settings or the PWA shell. The current web client depends on the new `/api/web/v1` adapter, but almost all of its read-side work can move into the browser while retaining the existing public API.
@@ -15,10 +17,10 @@ Web Push needs server-side subscription ownership, persistent rules, scheduling 
 | Evidence | Observation | Boundary |
 | --- | --- | --- |
 | [Operating topology](../architecture/aws-code-correlation.md) | Existing CloudFront routes weather/geocode to API Gateway/Lambda and direct versioned service paths to EC2 | Original snapshot September 20 |
-| [Fresh AWS configuration](../../reports/sdlc/webapp-existing-infra-review/aws-evidence.json) | September 24, 14:39 UTC: the same distribution has API Gateway `/production` for `weather/*` and `geocode/*`; default and push behaviors use the service origin | Read-only configuration, not a new deployment or host inspection |
-| [Lambda comparison](../../reports/sdlc/webapp-existing-infra-review/source-evidence.json) | All four public Lambda code hashes match the September 20 evidence | Environment and EC2 code were not freshly inspected; current API resources are not a deployed stage export |
-| [Browser probe](../../reports/sdlc/webapp-existing-infra-review/browser-evidence.json) | Credential-free fetch from a separate HTTPS origin read weather, reverse geocode, nation and warnings with HTTP 200 and response type `cors` | One Seoul location, Korean language/default units, Chromium; no worldwide availability claim |
-| [Address browser follow-up](../../reports/sdlc/webapp-existing-infra-review/address-browser-evidence.json) | Address geocode for Seoul also returned browser-readable HTTP 200, wildcard CORS and valid coordinates | First browser attempt failed with `TypeError: Failed to fetch`; cause unproven. [Server-side follow-up](../../reports/sdlc/webapp-existing-infra-review/address-evidence.json) also returned 200 |
+| Fresh AWS configuration | September 24, 14:39 UTC: the same distribution has API Gateway `/production` for `weather/*` and `geocode/*`; default and push behaviors use the service origin | Read-only configuration, not a new deployment or host inspection |
+| Lambda comparison | All four public Lambda code hashes match the September 20 evidence | Environment and EC2 code were not freshly inspected; current API resources are not a deployed stage export |
+| Browser probe | Credential-free fetch from a separate HTTPS origin read weather, reverse geocode, nation and warnings with HTTP 200 and response type `cors` | One Seoul location, Korean language/default units, Chromium; no worldwide availability claim |
+| Address browser follow-up | Address geocode for Seoul also returned browser-readable HTTP 200, wildcard CORS and valid coordinates | First browser attempt failed with `TypeError: Failed to fetch`; cause unproven. Server-side follow-up also returned 200 |
 | [Shared adapter](../../packages/weather-core/src/index.ts) | Pure normalization has no Node runtime import and is already used by the browser workspace | Live weather/nation/warning normalization was executed separately in Node by the probe, not within a deployed webapp |
 | [EC2 internals](../architecture/ec2-internals.md) | September 20: Node 10.15.3, nginx, ten PM2 cluster workers, service mode | Historical host observation only; not grounds to install the Node 22 web service unchanged |
 | [Push architecture](../architecture/push-notifications.md) | Native registrations/tokens and separate alarm/alert loops exist in source | The running push worker, current delivery and generic Web Push compatibility remain unverified |

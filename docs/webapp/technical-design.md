@@ -1,6 +1,6 @@
 # Webapp technical and deployment design
 
-Proposed architecture, 2026-09-24; not current deployment evidence. Product requirements: [specification](specification.md). Source research and official references: [investigation](../../reports/sdlc/webapp-parity-design/investigation.md).
+Proposed architecture, 2026-09-24; not current deployment evidence. Product requirements: [specification](specification.md). Source baseline: [mobile API architecture](../architecture/mobile-api.md); official references are linked below.
 
 ## Architecture decision
 

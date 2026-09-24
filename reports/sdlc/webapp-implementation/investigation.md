@@ -1,4 +1,0 @@
-# Investigation
-Reused inspected design/source/fixture contracts at the unchanged baseline; local source startup and native code remain outside execution. Public /health was fetched successfully (HTTP 200) during intake; this alone does not prove weather freshness or provider coverage. Bounded product reads are investigated separately.
-Existing synthetic fixtures: docs/rewrite/examples. Live host is taken from timestamped existing docs, verified only by actual probes recorded here. Node 22.22.2, npm 10.9.7. Registry versions: Vite 8.3.0, React 19.3.0, Vitest 5.0.1, Playwright 1.63.0. Official Vite/Vitest/React Router/service-worker docs browsed 2026-09-24.
-Architecture decision: isolated modern npm workspaces web, web-api, packages/weather-core; legacy client/server untouched. Pure shared core prevents browser dependence on Node/Angular. Browser rendering and API share validated normalized types. Native store migration not invented.

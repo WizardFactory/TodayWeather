@@ -1,5 +1,0 @@
-# Static deployment specification
-
-Default transport direct, mode live, upstream https://todayweather.wizardfactory.net. Build settings VITE_WEB_TRANSPORT=direct|proxy, VITE_WEB_MODE=live|demo, VITE_WEATHER_API_ORIGIN (HTTPS origin). Proxy explicitly retains legacy /api/web/v1 behavior. Direct mode supplies local catalog/capabilities (notifications false), uses existing raw endpoints and canonical units, and normalizes in browser. No credentials on public reads; preserve cancellation, bounded responses, schema/error checks, snapshots and geocode validation. Demo is explicitly selected and uses bundled synthetic fixtures without network fallbacks.
-
-CloudFormation prepares private S3 + OAC + CloudFront, app.tdywx.xyz alias, supplied us-east-1 ACM certificate, optional Route53 hosted zone, strict known-navigation rewrite, HTTPS/security headers and cache policies. No root-domain redirect is provisioned. Deploy command defaults to dry-run, rejects non-live/non-direct artifacts, retains old assets, verifies destination in execute mode, uploads assets before entrypoints and invalidates shell. Real AWS changes are operator actions outside this implementation.
