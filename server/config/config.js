@@ -7,6 +7,12 @@ module.exports = {
     ipAddress: (process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1'),
     port: (process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000'),
     mode: (process.env.SERVER_MODE || 'local'), //local, gather, service, push, scrape
+    history: {
+        enabled: process.env.ASOS_HISTORY_ENABLED === 'true',
+        readEnabled: process.env.ASOS_HISTORY_READ_ENABLED === 'true',
+        key: process.env.ASOS_HISTORY_SERVICE_KEY,
+        stations: (process.env.ASOS_HISTORY_STATIONS || '').split(',').map(function(id) { return id.trim(); }).filter(Boolean)
+    },
     db: {
         version: (process.env.DB_DATA_VERSION || '1.0'),
         path: (process.env.MONGOLAB_MONGODB_URL || 'mongodb://localhost/'),

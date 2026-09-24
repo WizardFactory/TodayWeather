@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Historical observation recovery",
+    "quality_profile": "showcase",
+    "animation": "none"
+  },
+  "components": [
+    {
+      "id": "asos",
+      "type": "external",
+      "label": "KMA ASOS",
+      "sublabel": "Hourly and daily observations",
+      "pos": [
+        50,
+        45
+      ],
+      "size": [
+        230,
+        64
+      ]
+    },
+    {
+      "id": "recover",
+      "type": "backend",
+      "label": "Bounded recovery",
+      "sublabel": "Validate dates, fields and periods",
+      "pos": [
+        450,
+        45
+      ],
+      "size": [
+        240,
+        64
+      ]
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "Observation store",
+      "sublabel": "Unique identity and provenance",
+      "pos": [
+        850,
+        45
+      ],
+      "size": [
+        250,
+        64
+      ]
+    },
+    {
+      "id": "schedule",
+      "type": "messagebus",
+      "label": "Gather schedule / CLI",
+      "sublabel": "Enabled configuration, bounded dates",
+      "pos": [
+        450,
+        215
+      ],
+      "size": [
+        240,
+        64
+      ]
+    },
+    {
+      "id": "read",
+      "type": "backend",
+      "label": "KMA API composition",
+      "sublabel": "Fill gaps; omit unknown rain",
+      "pos": [
+        850,
+        215
+      ],
+      "size": [
+        250,
+        64
+      ]
+    },
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Hourly and daily views",
+      "sublabel": "Existing cadence and KST dates",
+      "pos": [
+        850,
+        385
+      ],
+      "size": [
+        250,
+        64
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "asos",
+      "to": "recover",
+      "label": "Validated records"
+    },
+    {
+      "from": "recover",
+      "to": "store",
+      "label": "Atomic fill"
+    },
+    {
+      "from": "schedule",
+      "to": "recover",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "from": "store",
+      "to": "read",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "read",
+      "to": "client",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "History and gaps",
+      "labelDy": 24
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Recovery contract",
+      "items": [
+        "Seven complete KST dates, ending yesterday",
+        "Reject wrong dates, stations and invalid measurements"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Response contract",
+      "items": [
+        "Hourly observations never synthesized from daily data",
+        "Official daily records survive missing hourly humidity"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Operational boundary",
+      "items": [
+        "Local implementation; production activation is separate",
+        "No provider requests in the weather response path"
+      ]
+    }
+  ]
+}

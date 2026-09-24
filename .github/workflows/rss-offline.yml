@@ -11,6 +11,10 @@ jobs:
   rss-offline:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['16.20.2', '22.22.2']
     env:
       TZ: UTC
     steps:
@@ -19,7 +23,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: '22'
+          node-version: ${{ matrix.node }}
           package-manager-cache: false
       - name: RSS regression tests
         run: node server/test/offline/rss-wind.test.js
@@ -27,7 +31,14 @@ jobs:
         run: >-
           npm install --prefix "$RUNNER_TEMP/rss-smoke"
           --ignore-scripts --no-audit --no-fund
-          async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23
+          async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2
+      - name: History and runtime compatibility checks
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+        run: |
+          node server/test/offline/history-observations.test.js
+          node server/test/offline/history-recovery.test.js
+          node server/test/offline/runtime-node16.test.js
       - name: Full RSS response smoke
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules

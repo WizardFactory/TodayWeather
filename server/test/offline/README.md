@@ -45,7 +45,7 @@ It executes the actual v000903 coordinate router in process, complete middleware
 
 ### RSS continuous integration
 
-[RSS offline checks](../../../.github/workflows/rss-offline.yml) runs on pushes and pull requests using Node 22 and `TZ=UTC`, matching the server timezone confirmed by the operator. It runs all 43 regression tests and all 36 response smoke cases (both DB formats, three synthetic grids, newer/equal/older publications and both unit systems). A failure in either command fails the job.
+[RSS offline checks](../../../.github/workflows/rss-offline.yml) runs on pushes and pull requests using Node 16.20.2 and 22.22.2 with `TZ=UTC`, matching the server timezone confirmed by the operator. Each runtime runs all 43 RSS regression tests, the historical observation/recovery and runtime compatibility suites, and all 36 response smoke cases (both DB formats, three synthetic grids, newer/equal/older publications and both unit systems). A failure in any command fails the job.
 
 Smoke dependencies and output stay under the runner's temporary directory. This workflow is independent of the legacy Mocha/Travis suite and requires no production credentials, database, provider access or service startup. Hosted runner setup and npm installation require network access; the weather checks themselves use isolated dependencies.
 
@@ -80,6 +80,35 @@ deployment behavior remain operator checks.
 See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/daily-forecast-contract.md).
 
 `daily-review.test.js` adds shower mapping/storage, forecast-gap health, retired scheduler, raw short source publication bounds, DB1 complete snapshot replacement, KST year/midnight and shared JS consumer compatibility checks. Full-route smoke covers D+3 available, absent, partial, stale and DB1 legacy-without-snapshot, showers and optional RSS humidity. Raw additional daily fields do not expand the hourly template or invent daily precipitation totals. Native runtime tests remain operator-owned.
+
+## Historical observations (#2564)
+
+`history-observations.test.js` and `history-recovery.test.js` run in `test:offline`.
+They cover strict KST identities, QC/missing-value validation, sparse history,
+independent daily observations, partial-field preservation, explicit past gaps,
+pagination, missing-only recovery and duplicate/lease behavior with synthetic data.
+Run the observation suite under `TZ=UTC` and `TZ=America/Los_Angeles`.
+
+The history integration job in [Gather offline regression](../../../.github/workflows/gather-offline.yml)
+runs the real local persistence/response smoke and non-KST policy checks on
+Node 16.20.2 and 22.22.2 for relevant pull requests and master pushes.
+
+For a separate real persistence/transport smoke, install temporary dependencies:
+
+```sh
+npm install --prefix /tmp/issue-2564-integration --ignore-scripts --no-audit --no-fund --package-lock=false mongodb-memory-server-core@10.1.4 mongoose@5.1.2
+TZ=UTC NODE_PATH=/tmp/issue-2564-integration/node_modules:/tmp/issue-2560-offline/node_modules MONGOMS_DOWNLOAD_DIR=/tmp/issue-2564-mongodb node server/test/offline/history-integration-smoke.js
+```
+
+The earlier daily-suite dependency directory supplies Express/async/XML helpers.
+The smoke downloads MongoDB 7.0.14 to the specified temporary directory if absent,
+starts MongoDB and a synthetic provider only on loopback, and closes both. It uses
+the production native collection adapter with the temporary server's modern driver;
+the deployed Mongoose 5/old Mongo server combination is not validated by this check.
+It verifies real storage/readback/uniqueness/leases, actual HTTP pagination/retries,
+and actual v000903 route/shared client parsing in 16 DB-version/unit/data-availability
+scenarios. No application startup, production secrets, KMA requests or mobile build.
+See the [operator contract](../../../reports/sdlc/issue-2564/operator-contract.md).
 
 ## Node 16 runtime and push compatibility (#2565)
 
