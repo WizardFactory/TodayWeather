@@ -24,7 +24,7 @@
   "dependencies": {
     "async": "^2.5.0",
     "aws-sdk": "^2.2.35",
-    "axios": "^0.18.0",
+    "axios": "^1.20.0",
     "body-parser": "~1.13.1",
     "cheerio": "^0.20.0",
     "compress": "^0.99.0",
@@ -35,7 +35,7 @@
     "dnscache": "^1.0.1",
     "express": "~4.13.0",
     "express-session": "^1.14.1",
-    "firebase-admin": "5.13.1",
+    "firebase-admin": "14.5.0",
     "get-image-colors": "^1.8.1",
     "get-pixels": "^3.3.0",
     "i18n": "^0.8.3",
