@@ -54,7 +54,21 @@ self.addEventListener("fetch", (event) => {
   }
   if (ASSETS.includes(url.pathname) || url.pathname.startsWith("/assets/"))
     event.respondWith(
-      caches.match(request).then((cached) => cached ?? fetch(request)),
+      (async () => {
+        const current = await (await caches.open(CACHE)).match(request);
+        if (current) return current;
+        // Old tabs may still request an older hashed chunk. Unhashed shell files must never fall back.
+        if (url.pathname.startsWith("/assets/")) {
+          const keys = (await caches.keys())
+            .filter((key) => key.startsWith("tw-shell-") && key !== CACHE)
+            .reverse();
+          for (const key of keys) {
+            const previous = await (await caches.open(key)).match(request);
+            if (previous) return previous;
+          }
+        }
+        return fetch(request);
+      })(),
     );
 });
 self.addEventListener("push", (event) => {

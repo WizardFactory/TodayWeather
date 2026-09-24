@@ -2,7 +2,6 @@
   "name": "todayweather-web",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "workspaces": [
     "packages/weather-core",
     "web",

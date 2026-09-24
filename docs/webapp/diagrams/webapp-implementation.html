@@ -5165,7 +5165,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <path data-edge-from="web-ui" data-edge-to="local-state" data-edge-label="local save" data-edge-key="3" data-edge-id="persist-local" data-composition-points="135,176;135,330" d="M 135 176 L 135 330" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="web-edge" data-edge-to="static-origin" data-edge-label="via Node" data-edge-key="4" data-edge-id="load-assets" data-composition-points="445,176;445,330" d="M 445 176 L 445 330" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="web-bff" data-edge-to="web-rules" data-edge-label="owned writes" data-edge-key="5" data-edge-id="save-rules" data-composition-points="755,176;755,330" d="M 755 176 L 755 330" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="web-rules" data-edge-to="web-sender" data-edge-label="due rules" data-edge-key="6" data-edge-id="schedule-jobs" data-composition-points="850,368;970,368" d="M 850 368 L 970 368" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="web-rules" data-edge-to="web-sender" data-edge-label="claimed jobs" data-edge-key="6" data-edge-id="schedule-jobs" data-composition-points="850,368;970,368" d="M 850 368 L 970 368" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path data-edge-from="web-sender" data-edge-to="push-network" data-edge-label="Web Push" data-edge-key="7" data-edge-id="send-push" data-composition-points="1075,406;1075,560" d="M 1075 406 L 1075 560" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path data-edge-from="push-network" data-edge-to="browser-worker" data-edge-label="push event" data-edge-key="8" data-edge-id="display-push" data-composition-points="970,598;860,598" d="M 970 598 L 860 598" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
@@ -5254,15 +5254,15 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="context" x="755" y="382" class="t-muted" font-size="9" text-anchor="middle">One process, owned rules</text>
         </g>
 
-        <g id="node-web-sender" data-node-id="web-sender" data-node-label="Reminder scheduler" tabindex="0" role="button" aria-label="Focus Reminder scheduler, 30-second in-process tick, Architecture component" aria-pressed="false" data-node-kind="backend" data-node-sublabel="30-second in-process tick" data-node-context="Architecture component">
-          <title>Reminder scheduler · 30-second in-process tick · Architecture component</title>
+        <g id="node-web-sender" data-node-id="web-sender" data-node-label="Reminder scheduler" tabindex="0" role="button" aria-label="Focus Reminder scheduler, Four sends outside store lock, Architecture component" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Four sends outside store lock" data-node-context="Architecture component">
+          <title>Reminder scheduler · Four sends outside store lock · Architecture component</title>
           <rect x="970" y="330" width="210" height="76" rx="6" class="c-mask"/>
           <rect x="970" y="330" width="210" height="76" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(976 336) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="1075" y="366" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Reminder scheduler</text>
-        <text data-detail="context" x="1075" y="382" class="t-muted" font-size="9" text-anchor="middle">30-second in-process tick</text>
+        <text data-detail="context" x="1075" y="382" class="t-muted" font-size="9" text-anchor="middle">Four sends outside store lock</text>
         </g>
 
         <g id="node-browser-worker" data-node-id="browser-worker" data-node-label="Browser service worker" tabindex="0" role="button" aria-label="Focus Browser service worker, Visible city notification, Architecture component" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Visible city notification" data-node-context="Architecture component">
@@ -5316,9 +5316,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="721.2" y="246" width="67.6" height="14" rx="3" class="c-mask"/>
           <text x="755" y="256" class="t-muted" font-size="8" text-anchor="middle">owned writes</text>
         </g>
-        <g data-detail="context" data-edge-from="web-rules" data-edge-to="web-sender" data-edge-label="due rules" data-edge-key="6" data-edge-id="schedule-jobs">
-          <rect x="883.4" y="348" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
-          <text x="910" y="358" class="t-messagebus" font-size="8" text-anchor="middle">due rules</text>
+        <g data-detail="context" data-edge-from="web-rules" data-edge-to="web-sender" data-edge-label="claimed jobs" data-edge-key="6" data-edge-id="schedule-jobs">
+          <rect x="876.2" y="348" width="67.6" height="14" rx="3" class="c-mask"/>
+          <text x="910" y="358" class="t-messagebus" font-size="8" text-anchor="middle">claimed jobs</text>
         </g>
         <g data-detail="context" data-edge-from="web-sender" data-edge-to="push-network" data-edge-label="Web Push" data-edge-key="7" data-edge-id="send-push">
           <rect x="1050.8" y="476" width="48.4" height="14" rx="3" class="c-mask"/>
@@ -5555,8 +5555,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Optional reminders</h3>
         </div>
         <ul>
-          <li>&bull; Signed owner cookie, CSRF and revision checks</li>
-          <li>&bull; Single-process durable store; disabled by default</li>
+          <li>&bull; Durable claims, bounded delivery, five-minute recovery</li>
+          <li>&bull; Owned rules; single process; disabled by default</li>
         </ul>
       </div>
 

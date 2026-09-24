@@ -1,0 +1,57 @@
+{
+  "assignment_id": "qa-3",
+  "role": "qa: verification",
+  "stage": "independent-verification",
+  "iteration": 3,
+  "iteration_limit": 10,
+  "remaining_after_current": 7,
+  "builder_context_id": "/root",
+  "context_id": "/root/webapp_qa",
+  "dispatch_tool": "collaboration.followup_task",
+  "actual_provider": "OpenAI",
+  "model": "Inherited; exact runtime model not independently exposed",
+  "endpoint": "PR correction publication; no merge/deployment",
+  "source_candidate": "sha256:6622fcebea6e0b0a6c8ea6f370da2856b256afe18618a5cbd19f96cd47533d73",
+  "assignment": "reports/sdlc/webapp-implementation/review-fixes/qa-3-assignment.md",
+  "source_writes_authorized": false,
+  "cross_provider_pr_review": false,
+  "status": "dispatched",
+  "inputs": [
+    {
+      "path": "reports/sdlc/webapp-implementation/review-fixes/intent.md",
+      "sha256": "bc66189567aff23f1f759335c442008e17fe0fc2b9189eb75ac5e8b7d0900f03"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/review-fixes/spec.md",
+      "sha256": "3a7051803c915769c387e5fada33d4549bd62145ece9f0fa5ea574f25e0358c3"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/review-fixes/plan.md",
+      "sha256": "b73ac51d9c9ec38ebde6d5d92c0d1abbab41be481bf028748134ca35b37cb3c1"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/review-fixes/test-plan.md",
+      "sha256": "4cf32d773aed5beae49cee99c5f8fc98511233f30aba2820870a3fc601995a11"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/review-fixes/build.md",
+      "sha256": "8eeb65f3f1853e9b0e73f45f7abbdd84c623b17f5d816c647995953c3d9d3df3"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/review-fixes/candidate.json",
+      "sha256": "32b68d1ea831bc52953a4bb5e2f9e395e9e95f50f5230235ae5d9f17145cfa3f"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/review-fixes/changes.patch",
+      "sha256": "698b98008f19eb282c41efddcff7f8fa342b85cc61de6fbc0a6b518946610ae0"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/review-fixes/self-verification.md",
+      "sha256": "cc01d9556732f17f8b44f9b587d44270887011d03b2b562a8bf158e3e7588a54"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/review-fixes/test-results.json",
+      "sha256": "34d7da1985f106f41b3361400c8d18bb89f24fb710b9b29244c1ab48a4b7820d"
+    }
+  ]
+}

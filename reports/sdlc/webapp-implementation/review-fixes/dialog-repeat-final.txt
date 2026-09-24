@@ -1,0 +1,61 @@
+
+> todayweather-web@0.1.0 test:e2e
+> playwright test --grep coordinate deep links --repeat-each=10 --reporter=line
+
+[WebServer] (node:3854134) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 10 tests using 1 worker
+
+(node:3854163) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3854357) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[2/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3854569) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[3/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3854801) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[4/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3854968) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[5/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3855164) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[6/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3855316) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3855466) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[8/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3855624) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[9/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3855814) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[10/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+  10 passed (34.2s)

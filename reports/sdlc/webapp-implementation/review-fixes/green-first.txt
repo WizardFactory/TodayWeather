@@ -1,0 +1,70 @@
+
+> todayweather-web@0.1.0 test
+> vitest run
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.1 /root/.paseo/worktrees/08mqediz/shiny-elephant
+
+ ❯ web/test/platform.test.ts (3 tests | 1 failed) 1046ms
+   ❯ native and development boundaries (3)
+     × loads existing Cordova CommonJS version modules 242ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  web/test/platform.test.ts > native and development boundaries > loads existing Cordova CommonJS version modules
+AssertionError: node:internal/modules/cjs/loader:1386
+  throw err;
+  ^
+
+Error: Cannot find module 'q'
+Require stack:
+- /root/.paseo/worktrees/08mqediz/shiny-elephant/tw.ios/cordova/lib/versions.js
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+    at Function._load (node:internal/modules/cjs/loader:1192:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Module.require (node:internal/modules/cjs/loader:1463:12)
+    at require (node:internal/modules/helpers:147:16)
+    at Object.<anonymous> (/root/.paseo/worktrees/08mqediz/shiny-elephant/tw.ios/cordova/lib/versions.js:23:9)
+    at Module._compile (node:internal/modules/cjs/loader:1705:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/root/.paseo/worktrees/08mqediz/shiny-elephant/tw.ios/cordova/lib/versions.js'
+  ]
+}
+
+Node.js v22.22.2
+: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ Object.<anonymous> tw.ios/cordova/lib/versions.js:23:9
+ ❯ web/test/platform.test.ts:13:44
+     11|       const result = spawnSync(process.execPath, [platform + "/cordova…
+     12|       expect(result.stderr).not.toContain("ES module scope");
+     13|       expect(result.status, result.stderr).toBe(0);
+       |                                            ^
+     14|     }
+     15|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 7 passed (8)
+      Tests  1 failed | 37 passed (38)
+   Start at  14:00:09
+   Duration  2.21s (transform 45%, tests 38%, import 15%, worker 2%)
+
+  Transform  transforming modules took 2.66s · 45% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+

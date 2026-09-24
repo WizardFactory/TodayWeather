@@ -11,6 +11,8 @@ import webpush, { type PushSubscription } from "web-push";
 import {
   coordinates,
   parseUnits,
+  PLACES,
+  placeId,
   type Place,
   type Units,
 } from "@todayweather/core";
@@ -34,6 +36,12 @@ type Install = {
   deliveries: Record<string, number>;
 };
 type Store = { version: 1; installations: Record<string, Install> };
+type Delivery = {
+  ownerId: string;
+  subscription: PushSubscription;
+  payload: unknown;
+  rule?: { id: string; revision: number };
+};
 export type NotificationConfig = {
   directory: string;
   secret: string;
@@ -108,6 +116,13 @@ export function validateRule(input: unknown, id: string): NotificationRule {
       throw Error();
     const c = coordinates(r.place.lat, r.place.lon),
       units = parseUnits(r.units);
+    const known = PLACES.find((p) => p.id === r.place.id);
+    if (
+      known
+        ? known.lat !== c.lat || known.lon !== c.lon
+        : r.place.id !== placeId(c.lat, c.lon)
+    )
+      throw Error();
     if (
       !r.alert ||
       typeof r.alert.enabled !== "boolean" ||
@@ -171,6 +186,9 @@ export class NotificationService implements NotificationRoutes {
   private ready: Promise<void>;
   private queue: Promise<unknown> = Promise.resolve();
   private file: string;
+  private activeSends = 0;
+  private sendWaiters: (() => void)[] = [];
+  private lastTickMinute?: number;
   constructor(private config: NotificationConfig) {
     if (config.secret.length < 32)
       throw new Error("Session secret must have at least 32 characters");
@@ -241,7 +259,7 @@ export class NotificationService implements NotificationRoutes {
     };
   }
   async handle(req: IncomingMessage, path: string, body: unknown) {
-    return this.transaction(async () => {
+    const result = await this.transaction(async () => {
       let owner = this.session(req);
       if (path === "/installations" && req.method === "POST") {
         if (!owner) {
@@ -365,13 +383,17 @@ export class NotificationService implements NotificationRoutes {
           );
         owner.deliveries.test = Date.now();
         await this.persist();
-        await this.send(owner.subscription, {
-          title: "오늘날씨 알림 확인",
-          body: "웹 알림 연결을 확인했습니다.",
-          url: "/locations",
-          tag: "tw-test",
-        });
-        return { body: { accepted: true, displayConfirmed: false } };
+        const delivery: Delivery = {
+          ownerId: owner.id,
+          subscription: structuredClone(owner.subscription),
+          payload: {
+            title: "오늘날씨 알림 확인",
+            body: "웹 알림 연결을 확인했습니다.",
+            url: "/locations",
+            tag: "tw-test",
+          },
+        };
+        return { body: { accepted: true, displayConfirmed: false }, delivery };
       }
       throw new ApiError(
         405,
@@ -379,6 +401,17 @@ export class NotificationService implements NotificationRoutes {
         "지원하지 않는 알림 요청입니다.",
       );
     });
+    if ("delivery" in result && result.delivery) {
+      const { delivery, ...response } = result;
+      if (!(await this.deliver(delivery)))
+        throw new ApiError(
+          409,
+          "SUBSCRIPTION_CHANGED",
+          "알림 구독이 변경됐습니다. 다시 확인해 주세요.",
+        );
+      return response;
+    }
+    return result;
   }
   private async send(subscription: PushSubscription, payload: unknown) {
     const text = JSON.stringify(payload);
@@ -388,42 +421,109 @@ export class NotificationService implements NotificationRoutes {
       timeout: 10000,
     });
   }
+  private sameSubscription(
+    a: PushSubscription | undefined,
+    b: PushSubscription,
+  ) {
+    return (
+      a?.endpoint === b.endpoint &&
+      a.keys.auth === b.keys.auth &&
+      a.keys.p256dh === b.keys.p256dh
+    );
+  }
+  private async deliver(job: Delivery): Promise<boolean> {
+    if (this.activeSends >= 4)
+      await new Promise<void>((resolve) => this.sendWaiters.push(resolve));
+    else this.activeSends++;
+    try {
+      const valid = await this.transaction(async () => {
+        const owner = this.state.installations[job.ownerId];
+        return (
+          !!owner &&
+          this.sameSubscription(owner.subscription, job.subscription) &&
+          (!job.rule ||
+            owner.rules.some(
+              (rule) =>
+                rule.id === job.rule!.id &&
+                rule.revision === job.rule!.revision &&
+                rule.enabled,
+            ))
+        );
+      });
+      if (!valid) return false;
+      try {
+        await this.send(job.subscription, job.payload);
+      } catch (error) {
+        const status = (error as { statusCode?: number }).statusCode;
+        if (status === 404 || status === 410)
+          await this.transaction(async () => {
+            const owner = this.state.installations[job.ownerId];
+            if (
+              owner &&
+              this.sameSubscription(owner.subscription, job.subscription)
+            ) {
+              delete owner.subscription;
+              await this.persist();
+            }
+          });
+        throw error;
+      }
+      return true;
+    } finally {
+      const next = this.sendWaiters.shift();
+      if (next) next();
+      else this.activeSends--;
+    }
+  }
   async tick(now = new Date()) {
-    return this.transaction(async () => {
+    const jobs = await this.transaction(async () => {
+      const end = Math.floor(now.getTime() / 60000) * 60000;
+      if (!Number.isFinite(end)) return [];
+      // Startup checks the current minute. Later invocations recover at most five wall minutes.
+      const start = Math.max(this.lastTickMinute ?? end, end - 4 * 60000);
+      this.lastTickMinute = Math.max(this.lastTickMinute ?? end, end);
+      const deliveries: Delivery[] = [];
       for (const owner of Object.values(this.state.installations)) {
         if (!owner.subscription || now.getTime() - owner.seen > 90 * 86400000)
           continue;
         for (const rule of owner.rules) {
-          const key = dueAlarm(rule, now);
-          if (!key || owner.deliveries[key]) continue;
-          owner.deliveries[key] = now.getTime(); // Persist dedupe before sending: prefer a missed delivery over duplicate storm after a crash.
-          for (const [k, t] of Object.entries(owner.deliveries))
-            if (now.getTime() - t > 7 * 86400000) delete owner.deliveries[k];
-          await this.persist();
-          try {
-            await this.send(owner.subscription, {
-              title: `${rule.place.name} · 날씨를 확인할 시간`,
-              body: "오늘의 기온과 미세먼지를 확인해 보세요.",
-              url: `/weather/${rule.place.id}/hourly`,
-              place: rule.place,
-              tag: key,
+          for (let minute = start; minute <= end; minute += 60000) {
+            const key = dueAlarm(rule, new Date(minute));
+            if (!key || owner.deliveries[key]) continue;
+            owner.deliveries[key] = now.getTime(); // Persist dedupe before sending: prefer a missed delivery over duplicate storm after a crash.
+            for (const [k, t] of Object.entries(owner.deliveries))
+              if (now.getTime() - t > 7 * 86400000) delete owner.deliveries[k];
+            deliveries.push({
+              ownerId: owner.id,
+              subscription: structuredClone(owner.subscription),
+              rule: { id: rule.id, revision: rule.revision },
+              payload: {
+                title: `${rule.place.name} · 날씨를 확인할 시간`,
+                body: "오늘의 기온과 미세먼지를 확인해 보세요.",
+                url: `/weather/${rule.place.id}/hourly`,
+                place: rule.place,
+                tag: key,
+              },
             });
-          } catch (error) {
-            const status = (error as { statusCode?: number }).statusCode;
-            if (status === 404 || status === 410) {
-              delete owner.subscription;
-              await this.persist();
-              break;
-            }
-            console.error(
-              JSON.stringify({
-                event: "web_push_send_failed",
-                status: status ?? "unknown",
-              }),
-            );
           }
         }
       }
+      // One durable claim write per tick, before any network delivery.
+      if (deliveries.length) await this.persist();
+      return deliveries;
     });
+    await Promise.all(
+      jobs.map((job) =>
+        this.deliver(job).catch((error) => {
+          console.error(
+            JSON.stringify({
+              event: "web_push_send_failed",
+              status:
+                (error as { statusCode?: number }).statusCode ?? "unknown",
+            }),
+          );
+        }),
+      ),
+    );
   }
 }

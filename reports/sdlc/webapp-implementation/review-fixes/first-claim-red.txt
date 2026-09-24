@@ -1,0 +1,55 @@
+
+> todayweather-web@0.1.0 test:e2e
+> playwright test --grep first worker claim --reporter=line
+
+[WebServer] (node:3849673) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 1 test using 1 worker
+
+(node:3849702) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] web/e2e/review.spec.ts:4:1 › first worker claim preserves an edited notification form
+  1) web/e2e/review.spec.ts:4:1 › first worker claim preserves an edited notification form ─────────
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  getByRole('button', { name: '일', exact: true })
+    Expected: "true"
+    Received: "false"
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" getByRole('button', { name: '일', exact: true }) with timeout 10000ms
+      - waiting for getByRole('button', { name: '일', exact: true })
+        - waiting for "http://127.0.0.1:4174/notifications/seoul" navigation to finish...
+        - navigated to "http://127.0.0.1:4174/notifications/seoul"
+        23 × locator resolved to <button aria-pressed="false">일</button>
+           - unexpected value "false"
+
+
+      19 |     await claimed;
+      20 |   });
+    > 21 |   await expect(page.getByRole("button", { name: "일", exact: true })).toHaveAttribute("aria-pressed", "true");
+         |                                                                      ^
+      22 | });
+      23 | test("missing rain hides the period while explicit snow remains visible", async ({
+      24 |   page,
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/review.spec.ts:21:70
+
+    Error Context: test-results/review-first-worker-claim--695b7-an-edited-notification-form/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/review-first-worker-claim--695b7-an-edited-notification-form/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/review-first-worker-claim--695b7-an-edited-notification-form/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    web/e2e/review.spec.ts:4:1 › first worker claim preserves an edited notification form ──────────

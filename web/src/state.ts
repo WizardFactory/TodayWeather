@@ -244,8 +244,12 @@ function validPoint(p: unknown): boolean {
       "feelsLike",
     ].every((k) => finiteOrNull(p[k])) &&
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(p.at) &&
-    typeof p.precipitationHours === "number" &&
-    Number.isFinite(p.precipitationHours)
+    finiteOrNull(p.precipitationHours) &&
+    ((!("snowfall" in p) && !("snowfallHours" in p)) ||
+      (finiteOrNull(p.snowfall) &&
+        finiteOrNull(p.snowfallHours) &&
+        [null, 1, 3, 24].includes(p.precipitationHours) &&
+        [null, 1, 3, 24].includes(p.snowfallHours)))
   );
 }
 function validAir(station: unknown): boolean {
@@ -353,7 +357,23 @@ export function validateSnapshot(
       !["available", "unavailable"].includes(w.availability.air)
     )
       return;
-    return w as Weather;
+    // Older snapshots had inferred six-hour labels. Keep their values but never repeat unverifiable periods.
+    const migrate = (p: any) =>
+      "snowfall" in p
+        ? p
+        : {
+            ...p,
+            precipitationHours: null,
+            snowfall: null,
+            snowfallHours: null,
+          };
+    return {
+      ...w,
+      current: migrate(w.current),
+      yesterday: w.yesterday && migrate(w.yesterday),
+      hourly: w.hourly.map(migrate),
+      daily: w.daily.map(migrate),
+    } as Weather;
   } catch {
     return;
   }

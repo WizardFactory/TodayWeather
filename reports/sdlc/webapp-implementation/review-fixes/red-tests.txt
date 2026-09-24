@@ -1,0 +1,210 @@
+
+> todayweather-web@0.1.0 test
+> vitest run
+
+
+ RUN  v5.0.1 /root/.paseo/worktrees/08mqediz/shiny-elephant
+
+ ❯ packages/weather-core/test/review.test.ts (2 tests | 2 failed) 35ms
+   ❯ reviewed source boundaries (2)
+     × preserves actual precipitation periods, null fallback, snow and zero 26ms
+     × upgrades only trusted KMA image links and rejects deceptive hosts 7ms
+ ❯ web/test/worker.test.ts (2 tests | 1 failed) 63ms
+   × uses the current shell but retains previous hashed assets 57ms
+ ❯ web-api/test/notification-review.test.ts (4 tests | 4 failed) 415ms
+   × rejects malformed and mismatched notification place identities 41ms
+   × keeps settings responsive during test sends and preserves a replacement on stale 410 125ms
+   × sends with bounded concurrency outside the claim lock and deduplicates concurrent ticks 234ms
+   × recovers a missed minute within five minutes and never replays older or duplicate alarms 12ms
+ ❯ web/test/platform.test.ts (3 tests | 3 failed) 366ms
+   ❯ native and development boundaries (3)
+     × loads existing Cordova CommonJS version modules 78ms
+     × uses the same explicit loopback Origin and Vite listener 119ms
+     × changes the shell digest when only a manifest or worker changes 165ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  web-api/test/notification-review.test.ts > rejects malformed and mismatched notification place identities
+AssertionError: expected [Function] to throw an error
+ ❯ web-api/test/notification-review.test.ts:20:148
+     18| }
+     19| it("rejects malformed and mismatched notification place identities",()…
+     20|   for(const id of ["","../settings","seoul?x=1","unknown","p_91_1","p_…
+       |                                                                                                                                                    ^
+     21|   expect(validateRule(input,"r").place.id).toBe("seoul");
+     22|   expect(validateRule({...input,place:{...input.place,id:"p_37.567_126…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  web-api/test/notification-review.test.ts > keeps settings responsive during test sends and preserves a replacement on stale 410
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ web-api/test/notification-review.test.ts:37:18
+     35|     const fast=await Promise.race([mutation.then(()=>true),new Promise…
+     36|     release(); await pending; await mutation;
+     37|     expect(fast).toBe(true);
+       |                  ^
+     38|     const session=await service.handle(request("POST",headers),"/insta…
+     39|     expect((session.body as any).subscribed).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  web-api/test/notification-review.test.ts > sends with bounded concurrency outside the claim lock and deduplicates concurrent ticks
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ web-api/test/notification-review.test.ts:54:18
+     52|     const fast=await Promise.race([read.then(()=>true),new Promise(r=>…
+     53|     const observed=maximum; release();await Promise.all(ticks);await r…
+     54|     expect(fast).toBe(true);expect(observed).toBe(4);expect(maximum).t…
+       |                  ^
+     55|   } finally {release();await Promise.all(ticks);await cleanup();}
+     56| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  web-api/test/notification-review.test.ts > recovers a missed minute within five minutes and never replays older or duplicate alarms
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ web-api/test/notification-review.test.ts:62:72
+     60|     await service.handle(request("PUT",headers),"/notification-rules/r…
+     61|     await service.tick(new Date("2026-09-23T21:59:30Z"));
+     62|     await service.tick(new Date("2026-09-23T22:02:00Z"));expect(count)…
+       |                                                                        ^
+     63|     await service.tick(new Date("2026-09-23T22:02:30Z"));expect(count)…
+     64|     await service.tick(new Date("2026-09-24T22:06:00Z"));expect(count)…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  web/test/platform.test.ts > native and development boundaries > loads existing Cordova CommonJS version modules
+AssertionError: expected 'file:///root/.paseo/worktrees/08mqedi…' not to contain 'ES module scope'
+
+- Expected
++ Received
+
+- ES module scope
++ file:///root/.paseo/worktrees/08mqediz/shiny-elephant/tw.ios/cordova/lib/versions.js:22
++ var child_process = require('child_process'),
++                     ^
++
++ ReferenceError: require is not defined in ES module scope, you can use import instead
++ This file is being treated as an ES module because it has a '.js' file extension and '/root/.paseo/worktrees/08mqediz/shiny-elephant/package.json' contains "type": "module". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.
++     at file:///root/.paseo/worktrees/08mqediz/shiny-elephant/tw.ios/cordova/lib/versions.js:22:21
++     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
++     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
++     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
++
++ Node.js v22.22.2
++
+
+ ❯ web/test/platform.test.ts:12:33
+     10|     for (const platform of ["tw.ios", "ta.ios", "applewatch"]) {
+     11|       const result = spawnSync(process.execPath, [platform + "/cordova…
+     12|       expect(result.stderr).not.toContain("ES module scope");
+       |                                 ^
+     13|       expect(result.status, result.stderr).toBe(0);
+     14|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  web/test/platform.test.ts > native and development boundaries > uses the same explicit loopback Origin and Vite listener
+AssertionError: expected 'http://localhost:5173' to be 'http://127.0.0.1:5182' // Object.is equality
+
+Expected: "http://127.0.0.1:5182"
+Received: "http://localhost:5173"
+
+ ❯ web/test/platform.test.ts:20:45
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  web/test/platform.test.ts > native and development boundaries > changes the shell digest when only a manifest or worker changes
+AssertionError: expected '4abcac03ab328181' not to be '4abcac03ab328181' // Object.is equality
+ ❯ web/test/platform.test.ts:38:26
+     36|       for(const file of ["index.html","icon.svg","manifest.webmanifest…
+     37|       const first=run(); writeFileSync(join(dir,"web/dist/manifest.web…
+     38|       expect(second).not.toBe(first);
+       |                          ^
+     39|       writeFileSync(join(dir,"web/public/sw.js"),worker+"\n// worker u…
+     40|     } finally { rmSync(dir,{recursive:true,force:true}); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  web/test/worker.test.ts > uses the current shell but retains previous hashed assets
+AssertionError: expected 'old manifest' to be 'new manifest' // Object.is equality
+
+Expected: "new manifest"
+Received: "old manifest"
+
+ ❯ web/test/worker.test.ts:12:50
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  packages/weather-core/test/review.test.ts > reviewed source boundaries > preserves actual precipitation periods, null fallback, snow and zero
+AssertionError: expected 1 to be null
+
+- Expected:
+null
+
++ Received:
+1
+
+ ❯ packages/weather-core/test/review.test.ts:11:45
+      9|     raw.midData.dailyData = [{date: raw.current.date, time: "0000", r0…
+     10|     const data = normalizeWeather(raw);
+     11|     expect(data.current.precipitationHours).toBeNull();
+       |                                             ^
+     12|     expect(data.hourly[0].precipitation).toBe(2);
+     13|     expect(data.hourly[0].precipitationHours).toBe(3);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  packages/weather-core/test/review.test.ts > reviewed source boundaries > upgrades only trusted KMA image links and rejects deceptive hosts
+AssertionError: expected [ undefined, …(5) ] to deeply equal [ …(6) ]
+
+- Expected
++ Received
+
+  [
+-   "https://www.weather.go.kr/a.png",
+-   "https://weather.go.kr/a.png",
+-   undefined,
+-   undefined,
+-   undefined,
+    undefined,
++   "https://weather.go.kr/a.png",
++   "https://evil.example/a.png",
++   "https://weather.go.kr.evil.example/a",
++   "https://user@weather.go.kr/a",
++   "https://weather.go.kr:8443/a",
+  ]
+
+ ❯ packages/weather-core/test/review.test.ts:25:88
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+
+
+ Test Files  4 failed | 4 passed (8)
+      Tests  10 failed | 28 passed (38)
+   Start at  13:55:11
+   Duration  1.30s (transform 47%, tests 36%, import 15%, worker 2%)
+

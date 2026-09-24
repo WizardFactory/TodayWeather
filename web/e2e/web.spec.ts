@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
-const screenshots = "reports/sdlc/webapp-implementation/screenshots";
+const screenshots =
+  process.env.WEB_SCREENSHOTS ??
+  "reports/sdlc/webapp-implementation/screenshots";
 async function seoul(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "서울", exact: true }).first().click();
@@ -128,12 +130,21 @@ test("coordinate deep links survive empty storage and unsaved alarm edits block 
   await page.goto("/notifications/seoul");
   await expect(page.getByRole("heading", { name: "서울 알림" })).toBeVisible();
   await page.getByRole("button", { name: "일", exact: true }).click();
-  page.once("dialog", (dialog) => dialog.dismiss());
-  await page.getByRole("link", { name: "설정", exact: true }).last().click();
+  let dialogs = 0;
+  page.on("dialog", () => dialogs++);
+  const cancel = page.waitForEvent("dialog").then((dialog) => dialog.dismiss());
+  await Promise.all([
+    cancel,
+    page.getByRole("link", { name: "설정", exact: true }).last().click(),
+  ]);
   await expect(page).toHaveURL(/\/notifications\/seoul$/);
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("link", { name: "설정", exact: true }).last().click();
+  const accept = page.waitForEvent("dialog").then((dialog) => dialog.accept());
+  await Promise.all([
+    accept,
+    page.getByRole("link", { name: "설정", exact: true }).last().click(),
+  ]);
   await expect(page).toHaveURL(/\/settings$/);
+  expect(dialogs).toBe(2);
 });
 
 test("immediate search submission selects the submitted city", async ({

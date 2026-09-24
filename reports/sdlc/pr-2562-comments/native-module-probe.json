@@ -1,0 +1,17 @@
+[
+  {
+    "command": "node tw.ios/cordova/lib/versions.js",
+    "exit_code": 1,
+    "diagnostic": "file:///root/.paseo/worktrees/08mqediz/shiny-elephant/tw.ios/cordova/lib/versions.js:22\nvar child_process = require('child_process'),\n                    ^\n\nReferenceError: require is not defined in ES module scope, you can use import instead\nThis file is being treated as an ES module because it has a '.js' file extension and '/root/.paseo/worktrees/08mqediz/shiny-elephant/package.json' contains \"type\": \"module\". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.\n    at file:///root/.paseo/worktrees/08mqediz/shiny-elephant/tw.ios/cordova/lib/versions.js:22:21\n    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v22.22.2\n"
+  },
+  {
+    "command": "node ta.ios/cordova/lib/versions.js",
+    "exit_code": 1,
+    "diagnostic": "file:///root/.paseo/worktrees/08mqediz/shiny-elephant/ta.ios/cordova/lib/versions.js:22\nvar child_process = require('child_process'),\n                    ^\n\nReferenceError: require is not defined in ES module scope, you can use import instead\nThis file is being treated as an ES module because it has a '.js' file extension and '/root/.paseo/worktrees/08mqediz/shiny-elephant/package.json' contains \"type\": \"module\". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.\n    at file:///root/.paseo/worktrees/08mqediz/shiny-elephant/ta.ios/cordova/lib/versions.js:22:21\n    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v22.22.2\n"
+  },
+  {
+    "command": "node applewatch/cordova/lib/versions.js",
+    "exit_code": 1,
+    "diagnostic": "file:///root/.paseo/worktrees/08mqediz/shiny-elephant/applewatch/cordova/lib/versions.js:22\nvar child_process = require('child_process'),\n                    ^\n\nReferenceError: require is not defined in ES module scope, you can use import instead\nThis file is being treated as an ES module because it has a '.js' file extension and '/root/.paseo/worktrees/08mqediz/shiny-elephant/package.json' contains \"type\": \"module\". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.\n    at file:///root/.paseo/worktrees/08mqediz/shiny-elephant/applewatch/cordova/lib/versions.js:22:21\n    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v22.22.2\n"
+  }
+]

@@ -27,6 +27,24 @@ export async function api<T>(
 }
 export const unitQuery = (units: Units) =>
   new URLSearchParams(units).toString();
+/** Establish server capability and finish rule cleanup before the caller removes local state. */
+export async function deletePlaceRules(placeId: string): Promise<void> {
+  const caps = await api<Capabilities>("/capabilities");
+  if (caps.notifications?.enabled === false) return;
+  if (caps.notifications?.enabled !== true)
+    throw new Error("알림 상태를 확인하지 못했습니다.");
+  const session = await api<{ csrf: string }>("/installations", undefined, {
+    method: "POST",
+  });
+  const rules = await api<{ items: { id: string; place: Place }[] }>(
+    "/notification-rules",
+  );
+  for (const rule of rules.items.filter((rule) => rule.place.id === placeId))
+    await api("/notification-rules/" + encodeURIComponent(rule.id), undefined, {
+      method: "DELETE",
+      headers: { "X-CSRF-Token": session.csrf },
+    });
+}
 export async function fetchWeather(
   place: Place,
   units: Units,

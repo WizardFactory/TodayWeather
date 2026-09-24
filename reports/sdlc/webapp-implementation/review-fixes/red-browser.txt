@@ -1,0 +1,53 @@
+
+> todayweather-web@0.1.0 test:e2e
+> playwright test --grep favorite deletion waits --reporter=line
+
+[WebServer] (node:3836286) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 1 test using 1 worker
+
+(node:3836294) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] web/e2e/review.spec.ts:4:1 › favorite deletion waits for capability and successful rule cleanup
+  1) web/e2e/review.spec.ts:4:1 › favorite deletion waits for capability and successful rule cleanup 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.toast')
+    Expected substring: "확인하지 못했습니다"
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" locator('.toast') with timeout 10000ms
+      - waiting for locator('.toast')
+        13 × locator resolved to <div class="toast" role="status">…</div>
+           - unexpected value "서울을 관심지역에서 삭제했습니다."
+
+
+      12 |   await page.goto("/locations");
+      13 |   await page.getByRole("button",{name:"서울 삭제",exact:true}).click();
+    > 14 |   await expect(page.locator(".toast")).toContainText("확인하지 못했습니다");
+         |                                        ^
+      15 |   await expect(page.locator(".location-card")).toHaveCount(1);
+      16 |   capability="enabled";
+      17 |   await page.getByRole("button",{name:"서울 삭제",exact:true}).click();
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/review.spec.ts:14:40
+
+    Error Context: test-results/review-favorite-deletion-w-6843e-and-successful-rule-cleanup/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/review-favorite-deletion-w-6843e-and-successful-rule-cleanup/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/review-favorite-deletion-w-6843e-and-successful-rule-cleanup/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    web/e2e/review.spec.ts:4:1 › favorite deletion waits for capability and successful rule cleanup 

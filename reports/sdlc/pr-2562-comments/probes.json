@@ -1,0 +1,51 @@
+{
+  "precipitation_missing": {
+    "value": null,
+    "hours": 6
+  },
+  "precipitation_threeHourRain": {
+    "value": 3,
+    "hours": 6
+  },
+  "precipitation_snowOnly": {
+    "value": null,
+    "hours": 6
+  },
+  "precipitation_nullableOneHour": {
+    "value": 3,
+    "hours": 1
+  },
+  "warningUrls": [
+    null,
+    "https://untrusted.example/warning.png"
+  ],
+  "acceptedPlaceIds": [
+    "",
+    "../settings",
+    "seoul?unexpected=1"
+  ],
+  "apiReadBlockedBySend": true,
+  "queuedMinuteSends": 2,
+  "noCatchupForUninvokedMinute": null,
+  "developmentOrigins": [
+    {
+      "origin": "http://localhost:5173",
+      "status": 200,
+      "body": {
+        "synthetic": true
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:5173",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "ORIGIN_REJECTED",
+          "message": "허용되지 않은 요청입니다.",
+          "retryable": false,
+          "requestId": "681346a5-0909-4b18-b9e7-beb1e483d657"
+        }
+      }
+    }
+  ]
+}

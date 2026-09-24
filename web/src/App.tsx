@@ -45,7 +45,7 @@ import {
   type Units,
 } from "@todayweather/core";
 import { AppContext, useApp } from "./context";
-import { api, unitQuery, type Capabilities } from "./api";
+import { api, deletePlaceRules, unitQuery, type Capabilities } from "./api";
 import {
   defaultState,
   restoreState,
@@ -153,7 +153,11 @@ export default function App() {
           "오프라인 기능을 준비하지 못했습니다. 온라인 조회는 계속 이용할 수 있습니다.",
         ),
       );
-    const changed = () => window.location.reload();
+    let controlled = navigator.serviceWorker.controller !== null;
+    const changed = () => {
+      if (controlled) window.location.reload();
+      controlled = true;
+    };
     navigator.serviceWorker.addEventListener("controllerchange", changed);
     return () => {
       disposed = true;
@@ -531,21 +535,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
   }
   async function deletePlace(p: Place) {
     try {
-      if (capabilities?.notifications.enabled) {
-        const session = await api<{ csrf: string }>(
-          "/installations",
-          undefined,
-          { method: "POST" },
-        );
-        const rules = await api<{ items: { id: string; place: Place }[] }>(
-          "/notification-rules",
-        );
-        for (const r of rules.items.filter((r) => r.place.id === p.id))
-          await api("/notification-rules/" + r.id, undefined, {
-            method: "DELETE",
-            headers: { "X-CSRF-Token": session.csrf },
-          });
-      }
+      await deletePlaceRules(p.id);
       setState((s) => removePlace(s, p.id));
       notify(`${p.name}을 관심지역에서 삭제했습니다.`);
     } catch {

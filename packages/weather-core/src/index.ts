@@ -53,7 +53,9 @@ export type Point = {
   pressure: number | null;
   visibility: number | null;
   precipitation: number | null;
-  precipitationHours: number;
+  precipitationHours: number | null;
+  snowfall: number | null;
+  snowfallHours: number | null;
   rainProbability: number | null;
   feelsLike: number | null;
   icon: string;
@@ -245,6 +247,7 @@ function point(
   source: Units,
   target: Units,
   isKma: boolean,
+  period: 1 | 3 | 24,
 ): Point | null {
   const r = record(value),
     at = rowTime(r);
@@ -262,6 +265,8 @@ function point(
   };
   const unit = (v: unknown, kind: string, key: keyof Units) =>
     convertValue(numberValue(v), kind, source[key], target[key]);
+  const rain = numberValue(r.rn1) ?? numberValue(r.r06);
+  const snow = numberValue(r.sn1) ?? numberValue(r.s1d) ?? numberValue(r.s06);
   return {
     at,
     temperature: temp(r.t1h ?? r.t3h),
@@ -272,8 +277,27 @@ function point(
     windDirection: str(r.wdd),
     pressure: unit(r.hPa ?? r.pressure, "pressure", "pressureUnit"),
     visibility: unit(r.visibility, "distance", "distanceUnit"),
-    precipitation: unit(r.rn1 ?? r.r06, "precipitation", "precipitationUnit"),
-    precipitationHours: r.rn1 !== undefined ? 1 : 6,
+    precipitation: convertValue(
+      rain,
+      "precipitation",
+      source.precipitationUnit,
+      target.precipitationUnit,
+    ),
+    precipitationHours: rain === null ? null : period,
+    snowfall: convertValue(
+      snow,
+      "precipitation",
+      source.precipitationUnit,
+      target.precipitationUnit,
+    ),
+    snowfallHours:
+      snow === null
+        ? null
+        : numberValue(r.sn1) !== null
+          ? 1
+          : numberValue(r.s1d) !== null
+            ? 24
+            : period,
     rainProbability: numberValue(r.pop),
     feelsLike: temp(r.sensorytem ?? r.sensible),
     icon: str(r.skyIcon ?? r.skyAm) || "cloud",
@@ -345,7 +369,7 @@ export function normalizeWeather(
   if (source.airUnit !== target.airUnit)
     throw new Error("Air standard mismatch");
   const currentRaw = kma ? record(raw.current) : record(array(raw.thisTime)[1]);
-  const current = point(currentRaw, source, target, kma);
+  const current = point(currentRaw, source, target, kma, 1);
   if (!current) throw new Error("Missing current weather");
   const geo = record(raw.location),
     loc = coordinates(
@@ -359,13 +383,13 @@ export function normalizeWeather(
     country: str(raw.country) || options.location?.country || "",
     ...loc,
   };
-  const points = (rows: unknown) =>
+  const points = (rows: unknown, period: 1 | 3 | 24) =>
     array(rows)
-      .map((v) => point(v, source, target, kma))
+      .map((v) => point(v, source, target, kma, period))
       .filter((p): p is Point => p !== null)
       .sort((a, b) => a.at.localeCompare(b.at));
-  const hourly = points(kma ? raw.short : raw.hourly),
-    daily = points(kma ? record(raw.midData).dailyData : raw.daily);
+  const hourly = points(kma ? raw.short : raw.hourly, kma ? 3 : 1),
+    daily = points(kma ? record(raw.midData).dailyData : raw.daily, 24);
   // Keep station emptiness authoritative; never carry an old station into a new result.
   const airRaw = Array.isArray(raw.airInfoList)
     ? raw.airInfoList
@@ -380,6 +404,7 @@ export function normalizeWeather(
       source,
       target,
       kma,
+      1,
     );
   const notices: string[] = [];
   if (yesterday?.temperature === null)
@@ -427,7 +452,7 @@ export function normalizeNation(
     fetchedAt: new Date().toISOString(),
     weather: raw.weather.flatMap((v) => {
       const r = record(v),
-        current = point(r.current, source, options.units, true);
+        current = point(r.current, source, options.units, true, 1);
       return current
         ? [{ name: str(r.cityName) || str(r.regionName), current }]
         : [];
@@ -440,6 +465,24 @@ export function normalizeNation(
       };
     }),
   };
+}
+function warningImage(value: unknown): string | undefined {
+  if (typeof value !== "string") return;
+  try {
+    const url = new URL(value);
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      !["weather.go.kr", "www.weather.go.kr"].includes(url.hostname) ||
+      url.username ||
+      url.password ||
+      url.port
+    )
+      return;
+    url.protocol = "https:";
+    return url.href;
+  } catch {
+    return;
+  }
 }
 export function normalizeWarnings(value: unknown): WarningBulletin[] {
   if (!Array.isArray(value)) throw new Error("Invalid warning response");
@@ -469,8 +512,8 @@ export function normalizeWarnings(value: unknown): WarningBulletin[] {
           }),
         };
       }),
-      ...(typeof r.imageUrl === "string" && r.imageUrl.startsWith("https://")
-        ? { imageUrl: r.imageUrl }
+      ...(warningImage(r.imageUrl)
+        ? { imageUrl: warningImage(r.imageUrl) }
         : {}),
     };
   });

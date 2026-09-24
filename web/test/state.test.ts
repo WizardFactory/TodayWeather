@@ -85,5 +85,20 @@ describe("untrusted persisted weather", () => {
         validateSnapshot({ ...value, weather: { ...w, ...patch } }, key, now),
       ).toBeUndefined();
     expect(validateSnapshot(value, key + "mismatch", now)).toBeUndefined();
+    const old = structuredClone(value) as any;
+    for (const point of [
+      old.weather.current,
+      old.weather.yesterday,
+      ...old.weather.hourly,
+      ...old.weather.daily,
+    ].filter(Boolean)) {
+      delete point.snowfall;
+      delete point.snowfallHours;
+      point.precipitationHours = 6;
+    }
+    const migrated = validateSnapshot(old, key, now)!;
+    expect(migrated.current.precipitation).toBe(w.current.precipitation);
+    expect(migrated.current.precipitationHours).toBeNull();
+    expect(migrated.current.snowfall).toBeNull();
   });
 });

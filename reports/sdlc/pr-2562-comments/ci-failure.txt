@@ -1,0 +1,69 @@
+verify	Run npm run test:e2e	﻿2026-09-24T10:07:40.9574550Z ##[group]Run npm run test:e2e
+verify	Run npm run test:e2e	2026-09-24T10:07:40.9574892Z [36;1mnpm run test:e2e[0m
+verify	Run npm run test:e2e	2026-09-24T10:07:40.9612237Z shell: /usr/bin/bash -e {0}
+verify	Run npm run test:e2e	2026-09-24T10:07:40.9612524Z ##[endgroup]
+verify	Run npm run test:e2e	2026-09-24T10:07:41.0578119Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:41.0578628Z > todayweather-web@0.1.0 test:e2e
+verify	Run npm run test:e2e	2026-09-24T10:07:41.0579600Z > playwright test
+verify	Run npm run test:e2e	2026-09-24T10:07:41.0579819Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:42.3715772Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:42.3716548Z Running 8 tests using 1 worker
+verify	Run npm run test:e2e	2026-09-24T10:07:42.3717050Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:46.4299555Z   ✓  1 web/e2e/web.spec.ts:10:1 › weather, air, national views, warnings and settings persist at desktop size (2.1s)
+verify	Run npm run test:e2e	2026-09-24T10:07:47.6396321Z   ✓  2 web/e2e/web.spec.ts:69:1 › mobile favorites, geolocation denial and unavailable notifications stay usable (1.2s)
+verify	Run npm run test:e2e	2026-09-24T10:07:48.7537030Z   ✓  3 web/e2e/web.spec.ts:107:1 › offline shell uses matching snapshot and never labels it fresh (1.1s)
+verify	Run npm run test:e2e	2026-09-24T10:07:49.4355117Z   ✘  4 web/e2e/web.spec.ts:123:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation (595ms)
+verify	Run npm run test:e2e	2026-09-24T10:07:50.5971950Z   ✓  5 web/e2e/web.spec.ts:139:1 › immediate search submission selects the submitted city (614ms)
+verify	Run npm run test:e2e	2026-09-24T10:07:51.5554652Z   ✓  6 web/e2e/web.spec.ts:152:1 › late geolocation preserves newly added favorites and settings (940ms)
+verify	Run npm run test:e2e	2026-09-24T10:07:52.4338547Z   ✓  7 web/e2e/web.spec.ts:186:3 › corrupt offline snapshot recovers safely: missing timestamp (865ms)
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3018620Z   ✓  8 web/e2e/web.spec.ts:186:3 › corrupt offline snapshot recovers safely: invalid hourly array (855ms)
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3537634Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3544005Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3555924Z   1) web/e2e/web.spec.ts:123:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3556868Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3557373Z     Error: dialog.accept: Cannot accept dialog which is already handled!
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3557995Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3558927Z       132 |   await page.getByRole("link", { name: "설정", exact: true }).last().click();
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3560038Z       133 |   await expect(page).toHaveURL(/\/notifications\/seoul$/);
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3560927Z     > 134 |   page.once("dialog", (dialog) => dialog.accept());
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3561668Z           |                                          ^
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3562755Z       135 |   await page.getByRole("link", { name: "설정", exact: true }).last().click();
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3563714Z       136 |   await expect(page).toHaveURL(/\/settings$/);
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3564304Z       137 | });
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3565105Z         at _Page.<anonymous> (/home/runner/work/TodayWeather/TodayWeather/web/e2e/web.spec.ts:134:42)
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3565834Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3566143Z     Error: expect(page).toHaveURL(expected) failed
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3566571Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3566815Z     Expected pattern: /\/settings$/
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3567597Z     Received string:  "http://127.0.0.1:4174/notifications/seoul"
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3568109Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3568282Z     Call log:
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3569054Z       - Expect "toHaveURL" with timeout 10000ms
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3570077Z         - locator resolved to <html lang="ko" data-theme="light">…</html>
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3571049Z         - unexpected value "http://127.0.0.1:4174/notifications/seoul"
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3572173Z       - Protocol error (Runtime.callFunctionOn): Internal server error, session closed.
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3572852Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3572868Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3573237Z       134 |   page.once("dialog", (dialog) => dialog.accept());
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3574389Z       135 |   await page.getByRole("link", { name: "설정", exact: true }).last().click();
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3575360Z     > 136 |   await expect(page).toHaveURL(/\/settings$/);
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3576047Z           |                      ^
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3577098Z       137 | });
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3577486Z       138 |
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3578132Z       139 | test("immediate search submission selects the submitted city", async ({
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3579698Z         at /home/runner/work/TodayWeather/TodayWeather/web/e2e/web.spec.ts:136:22
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3580263Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3581040Z     Error Context: test-results/web-coordinate-deep-links--8acf1-larm-edits-block-navigation/error-context.md
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3581891Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3582672Z     attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3583897Z     test-results/web-coordinate-deep-links--8acf1-larm-edits-block-navigation/trace.zip
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3584718Z     Usage:
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3584901Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3585711Z         npx playwright show-trace test-results/web-coordinate-deep-links--8acf1-larm-edits-block-navigation/trace.zip
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3586600Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3587246Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3587774Z 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3587915Z   1 failed
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3589185Z     web/e2e/web.spec.ts:123:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation 
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3590133Z   7 passed (11.7s)
+verify	Run npm run test:e2e	2026-09-24T10:07:53.3830485Z ##[error]Process completed with exit code 1.

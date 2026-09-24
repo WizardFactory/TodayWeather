@@ -11,7 +11,7 @@ npm ci --ignore-scripts
 WEB_API_MODE=demo npm run dev
 ```
 
-Open http://localhost:5173. Demo mode is deliberately labelled on weather, air, national and warning screens. It uses synthetic fixtures copied from `docs/rewrite/examples/`; changing cities does not make those fixtures real observations. Demo air units are restricted to the fixture's Korean standard.
+Open http://127.0.0.1:5173. Set a loopback `WEB_ORIGIN` to use a different development host/port; the launcher keeps Vite and the API Origin aligned. Demo mode is deliberately labelled on weather, air, national and warning screens. It uses synthetic fixtures copied from `docs/rewrite/examples/`; changing cities does not make those fixtures real observations. Demo air units are restricted to the fixture's Korean standard.
 
 ```sh
 # Real upstream reads; no legacy server, collectors or database startup.
@@ -32,7 +32,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-For a preinstalled browser, set `PLAYWRIGHT_EXECUTABLE_PATH`. Browser tests own a demo server on port 4174; stop other servers on that port first. CI installs Chromium and runs these commands without production credentials. CI has been authored, not executed remotely.
+For a preinstalled browser, set `PLAYWRIGHT_EXECUTABLE_PATH`. Browser tests own a demo server on port 4174; stop other servers on that port first. CI installs Chromium and runs these commands without production credentials. CI executes these checks for PR #2562; use its current check results for remote status. Earlier local passes do not override a failed CI run.
 
 ## Implemented surface
 

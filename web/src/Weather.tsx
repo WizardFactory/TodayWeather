@@ -229,6 +229,7 @@ function WeatherDetails({
         : null;
   const today = w.daily.find((p) => p.at.slice(0, 10) === t.at.slice(0, 10));
   const hourly = w.hourly.filter((p) => p.at >= t.at).slice(0, 16);
+  const snowLabel = w.source === "KMA" ? "적설량" : "눈 강수량";
   const previous = hourly.map((p) => {
     const date = new Date(p.at.slice(0, 10) + "T12:00:00Z");
     date.setUTCDate(date.getUTCDate() - 1);
@@ -326,6 +327,15 @@ function WeatherDetails({
             "강수량",
             `${formatValue(t.precipitation, 1)} ${w.units.precipitationUnit}`,
           ],
+          ...(t.snowfall !== null
+            ? [
+                [
+                  CloudRainIcon,
+                  snowLabel,
+                  `${formatValue(t.snowfall, 1)} ${w.units.precipitationUnit}`,
+                ],
+              ]
+            : []),
         ].map(([Icon, label, value]) => {
           const I = Icon as typeof Droplets;
           return (
@@ -334,7 +344,14 @@ function WeatherDetails({
               <div>
                 <span>
                   {String(label)}
-                  {label === "강수량" ? ` · ${t.precipitationHours}시간` : ""}
+                  {label === "강수량" &&
+                  t.precipitation !== null &&
+                  t.precipitationHours !== null
+                    ? ` · ${t.precipitationHours}시간`
+                    : ""}
+                  {label === snowLabel && t.snowfallHours !== null
+                    ? ` · ${t.snowfallHours}시간`
+                    : ""}
                 </span>
                 <strong>{String(value)}</strong>
               </div>
@@ -369,6 +386,32 @@ function WeatherDetails({
       {(view === "daily" || view === "overview") && (
         <DailyForecast weather={w} />
       )}
+      <section className="panel">
+        <SectionHead title="강수·눈 예보" />
+        <div className="detail-grid">
+          {(view === "daily" ? w.daily : hourly).slice(0, 8).map((p) => (
+            <div key={p.at}>
+              <span>
+                {dayLabel(p.at)} {view !== "daily" && p.at.slice(11)}
+              </span>
+              <span>
+                강수 {formatValue(p.precipitation, 1)}{" "}
+                {w.units.precipitationUnit}
+                {p.precipitationHours !== null && p.precipitation !== null
+                  ? ` · ${p.precipitationHours}시간`
+                  : ""}
+              </span>
+              {p.snowfall !== null && (
+                <span>
+                  {snowLabel} {formatValue(p.snowfall, 1)}{" "}
+                  {w.units.precipitationUnit}
+                  {p.snowfallHours !== null ? ` · ${p.snowfallHours}시간` : ""}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
       <section className="panel details-panel">
         <SectionHead title="날씨 자세히" />
         <div className="detail-grid">

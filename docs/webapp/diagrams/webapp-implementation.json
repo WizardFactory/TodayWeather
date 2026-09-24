@@ -113,7 +113,7 @@
       "id": "web-sender",
       "type": "backend",
       "label": "Reminder scheduler",
-      "sublabel": "30-second in-process tick",
+      "sublabel": "Four sends outside store lock",
       "pos": [
         970,
         330
@@ -199,7 +199,7 @@
       "id": "schedule-jobs",
       "from": "web-rules",
       "to": "web-sender",
-      "label": "due rules",
+      "label": "claimed jobs",
       "variant": "dashed"
     },
     {
@@ -231,8 +231,8 @@
       "dot": "emerald",
       "title": "Optional reminders",
       "items": [
-        "Signed owner cookie, CSRF and revision checks",
-        "Single-process durable store; disabled by default"
+        "Durable claims, bounded delivery, five-minute recovery",
+        "Owned rules; single process; disabled by default"
       ]
     },
     {

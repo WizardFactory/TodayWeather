@@ -1,0 +1,90 @@
+
+> todayweather-web@0.1.0 test:e2e
+> playwright test --grep coordinate deep links --repeat-each=10 --reporter=line
+
+[WebServer] (node:3846403) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 10 tests using 1 worker
+
+(node:3846462) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3846629) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[2/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3846766) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[3/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+  1) web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation 
+
+    Error: page.goto: Navigation to "http://127.0.0.1:4174/notifications/seoul" is interrupted by another navigation to "http://127.0.0.1:4174/weather/p_37.567_126.978/hourly"
+    Call log:
+      - navigating to "http://127.0.0.1:4174/notifications/seoul", waiting until "load"
+
+
+      128 |   await page.goto("/weather/p_37.567_126.978/hourly");
+      129 |   await expect(page.locator(".temperature")).toBeVisible();
+    > 130 |   await page.goto("/notifications/seoul");
+          |              ^
+      131 |   await expect(page.getByRole("heading", { name: "서울 알림" })).toBeVisible();
+      132 |   await page.getByRole("button", { name: "일", exact: true }).click();
+      133 |   let dialogs = 0;
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/web.spec.ts:130:14
+
+    Error Context: test-results/web-coordinate-deep-links--8acf1-larm-edits-block-navigation-repeat2/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/web-coordinate-deep-links--8acf1-larm-edits-block-navigation-repeat2/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/web-coordinate-deep-links--8acf1-larm-edits-block-navigation-repeat2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:3846940) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[4/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3847080) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[5/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3847319) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[6/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3847469) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3847602) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[8/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3847774) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[9/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+(node:3847924) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[10/10] web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation
+  1 failed
+    web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation 
+  9 passed (27.7s)
