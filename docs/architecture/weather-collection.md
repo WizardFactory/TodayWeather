@@ -27,7 +27,7 @@ These are scheduler trigger times, **not provider publication guarantees**. `get
 | `short` | 13 | Direct self-HTTP |
 | `keco` real-time station air | 3, 13, 23, 33, 43, 53 | Direct self-HTTP |
 | `kecoSido` regional air | 4, 14, 24, 34, 44, 54 | Direct self-HTTP |
-| `past`, `kecoForecast`, `midtemp`, `midland`, `midforecast`, `midsea`, `midrss`, `shortrss` | 2 | Queued, drained in reverse insertion order |
+| `past`, `kecoForecast`, `midtemp`, `midland`, `midforecast`, `midsea`, `shortrss` | 2 | Queued, drained in reverse insertion order |
 | `lifeindex` | 10 | Queued |
 | `healthday` | 10, with `getUTCHours()+9 === 6 || === 18` | Queued; actual expression has no modulo 24 |
 | KAQ hourly forecast | 7, UTC hours 8, 9, 10, 11, 20, 21, 22, 13 | Queued controller call, not self-HTTP |
@@ -148,3 +148,5 @@ independent. No replacement feed or production recovery is claimed.
 See the [daily validity diagram](diagrams/daily-forecast-validity.html),
 [editable source](diagrams/daily-forecast-validity.json), and
 [contract, source policy and operator checklist](../../reports/sdlc/issue-2560/daily-forecast-contract.md).
+
+Review5303256769 correction removes the retired `midrss` task from `checkTimeAndRequestTask` startup/hourly queues; short RSS remains scheduled. Legacy DB1 short saves additionally replace an optional current-batch `dailySource` snapshot for independently validated daily targets beyond the hourly template. Older documents are not backfilled; service can use this only after a successful normal collection. DB2 reuses each stored short document's publication. See the daily forecast contract for snapshot/rollback semantics.

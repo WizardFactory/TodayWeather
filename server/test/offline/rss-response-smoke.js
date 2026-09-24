@@ -68,8 +68,8 @@ function createHarness(version, fixture) {
       const kind=map[name],dataKey={short:'shortData',current:'currentData',shortest:'shortestData',rss:'shortData'}[kind];
       if(kind==='short' && fixture.missingShort) return [];
       const pub={short:fixture.basePub,current:'202609240900',shortest:'202609240830',rss:fixture.rssPub || '202609240800'}[kind];
-      if(isV2) return fixture[kind].map(item=>({mCoord:fixture.place.mCoord,pubDate:kstDate(pub),fcsDate:kstDate(kind==='rss'?item.date:item.date+item.time),[dataKey]:item}));
-      return [{mCoord:fixture.place.mCoord,pubDate:pub,[dataKey]:fixture[kind]}];
+      if(isV2) return fixture[kind].map(item=>({mCoord:fixture.place.mCoord,pubDate:kstDate(kind==='short' && fixture.shortPublications && fixture.shortPublications[item.date] || pub),fcsDate:kstDate(kind==='rss'?item.date:item.date+item.time),[dataKey]:item}));
+      return [{mCoord:fixture.place.mCoord,pubDate:pub,[dataKey]:fixture[kind],dailySource:kind==='short'?fixture.dailySource:undefined}];
     }
     const midMap={'modelMidForecast':'forecast','modelMidLand':'land','modelMidTemp':'temp','kma.town.mid.forecast.model':'forecast','kma.town.mid.land.model':'land','kma.town.mid.temp.model':'temp'};
     if(midMap[name]) { const row=fixture[midMap[name]]; if(!row)return []; const pub=row.date+row.time; return [{pubDate:isV2?kstDate(pub):pub,data:isV2?row:[row]}]; }

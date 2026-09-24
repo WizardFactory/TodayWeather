@@ -127,7 +127,7 @@ test('short merge sorts/deduplicates, keeps seven-day recent history and declare
     let done=0;env.town.mergeMidWithShort(req,{},()=>done++);assert.equal(done,1);
     const dates=req.midData.dailyData.map(r=>r.date);
     assert.equal(dates[0],'20260917');assert.equal(dates.length,new Set(dates).size);assert(!dates.includes('20260927'));assert(!dates.includes('20250407'));
-    assert(req.midData.dailyStatus.unavailableDates.includes('20260927'));assert(req.midData.dailyStatus.healthy);
+    assert(req.midData.dailyStatus.unavailableDates.includes('20260927'));assert.equal(req.midData.dailyStatus.healthy,false);
     assert.equal(req.midData.dailyData.find(r=>r.date==='20260924').taMax,24);
 });
 test('dedicated daily health fails captured polluted list while short is current',()=>{

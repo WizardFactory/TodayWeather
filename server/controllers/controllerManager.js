@@ -232,6 +232,9 @@ Manager.prototype.saveShort = function(newData, callback){
     };
 
     var pubDate = newData[0].pubDate;
+    var dailySource = {pubDate: pubDate, rows: newData.map(function (row) {
+        return midPolicy.shortDailySnapshot(row, pubDate);
+    })};
     log.verbose('S> pubDate :', pubDate);
     //log.info('S> db find :', coord);
     try{
@@ -245,7 +248,7 @@ Manager.prototype.saveShort = function(newData, callback){
             }
 
             if(list.length === 0){
-                var newItem = new modelShort({mCoord: coord, pubDate: pubDate, shortData: newData});
+                var newItem = new modelShort({mCoord: coord, pubDate: pubDate, shortData: newData, dailySource: dailySource});
                 newItem.save(function(err){
                     if(err){
                         log.error('S> fail to save to DB :', coord);
@@ -359,6 +362,7 @@ Manager.prototype.saveShort = function(newData, callback){
                 }
 
                 dbShortList.pubDate = pubDate;
+                dbShortList.dailySource = dailySource;
                 //log.info(dbShortList.shortData);
                 dbShortList.save(function(err){
                     if(err){
@@ -2139,11 +2143,6 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         log.info('push mid sea');
         self.asyncTasks.push(function MidSea(callback) {
             self._requestApi("midsea", callback);
-        });
-
-        log.info('push mid rss');
-        self.asyncTasks.push(function MidRss(callback) {
-            self._requestApi("midrss", callback);
         });
 
         log.info('push short rss');

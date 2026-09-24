@@ -18,9 +18,28 @@ exports.temperature = function (value) {
 exports.probability = function (value) {
     return typeof value === 'number' && isFinite(value) && value >= 0 && value <= 100;
 };
-exports.weather = function (value) {
-    return typeof value === 'string' && ["맑음", "구름조금", "구름많음", "흐림", "흐리고 한때 비", "흐리고 비", "구름적고 한때 비", "구름적고 비", "구름많고 한때 비", "구름많고 비", "흐리고 한때 눈", "흐리고 눈", "구름적고 한때 눈", "구름적고 눈", "구름많고 한때 눈", "구름많고 눈", "구름적고 비/눈", "구름적고 눈/비", "구름많고 비/눈", "구름많고 눈/비", "흐리고 비/눈", "흐리고 눈/비"].indexOf(value.trim()) !== -1;
+// One mapping for validation and service conversion. Shower icons use the
+// existing rain category (pty=1); the original provider wording is preserved.
+var weatherMap = Object.create(null);
+[
+    [1, 0, '맑음'], [2, 0, '구름조금'], [3, 0, '구름많음'], [4, 0, '흐림'],
+    [4, 1, '흐리고 한때 비|흐리고 비|흐리고 소나기'],
+    [2, 1, '구름적고 한때 비|구름적고 비'],
+    [3, 1, '구름많고 한때 비|구름많고 비|구름많고 소나기'],
+    [4, 3, '흐리고 한때 눈|흐리고 눈'],
+    [2, 3, '구름적고 한때 눈|구름적고 눈'],
+    [3, 3, '구름많고 한때 눈|구름많고 눈'],
+    [2, 2, '구름적고 비/눈|구름적고 눈/비'],
+    [3, 2, '구름많고 비/눈|구름많고 눈/비'],
+    [4, 2, '흐리고 비/눈|흐리고 눈/비']
+].forEach(function (group) {
+    group[2].split('|').forEach(function (text) { weatherMap[text] = {sky: group[0], pty: group[1]}; });
+});
+exports.skyInfo = function (value) {
+    var info = typeof value === 'string' && weatherMap[value.trim()];
+    return info ? {sky: info.sky, pty: info.pty, lgt: 0} : undefined;
 };
+exports.weather = function (value) { return !!exports.skyInfo(value); };
 exports.number = function (value) {
     if (typeof value !== 'number' && typeof value !== 'string') { return NaN; }
     if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(String(value).trim())) { return NaN; }
@@ -66,6 +85,29 @@ exports.freshShort = function (value, now) {
     var age = (now === undefined ? Date.now() : +now) - exports.timestamp(value);
     return age >= 0 && age <= 24 * 3600000;
 };
+// Raw snapshots contain only daily inputs. They never include unadjusted
+// overlapping rain/snow accumulations or values inherited by legacy merges.
+exports.shortDailySnapshot = function (row, publication) {
+    var result = {pubDate: publication};
+    ['date', 'time', 't3h', 'tmn', 'tmx', 'sky', 'pty', 'reh', 'pop', 'wsd'].forEach(function (field) {
+        if (row[field] !== undefined) { result[field] = row[field]; }
+    });
+    return result;
+};
+exports.dailyShortRows = function (records, now) {
+    var slots = {};
+    (Array.isArray(records) ? records : []).forEach(function (row) {
+        if (!row || typeof row.date !== 'string' || typeof row.time !== 'string') { return; }
+        if (!isFinite(exports.timestamp(row.date + row.time)) ||
+            !isFinite(exports.timestamp(row.pubDate))) { return; }
+        var key = row.date + row.time;
+        if (!slots[key] || exports.timestamp(row.pubDate) >= exports.timestamp(slots[key].pubDate)) { slots[key] = row; }
+    });
+    return Object.keys(slots).sort().map(function (key) { return slots[key]; }).filter(function (row) {
+        return exports.freshShort(row.pubDate, now) && exports.inWindow(row.date, now) &&
+            row.date <= exports.addDays(exports.date(row.pubDate), 4);
+    });
+};
 exports.latest = function (records, publication, now) {
     if (!Array.isArray(records) || !records.length) { return null; }
     var latest = records.reduce(function (a, b) {
@@ -91,7 +133,9 @@ exports.dailyHealth = function (mid, now) {
     rows.forEach(function (row, i) {
         if (!exports.inWindow(row.date, now)) { reasons.push('target-out-of-window'); }
         if (seen[row.date] || (i && rows[i - 1].date > row.date)) { reasons.push('dates-not-unique-sorted'); }
-        seen[row.date] = true;
+        if (exports.complete(row) && exports.weather(row.wfAm) && exports.weather(row.wfPm)) {
+            seen[row.date] = true;
+        } else { reasons.push('invalid-daily-row'); }
     });
     if (!rows.some(function (row) { return row.date >= exports.addDays(today, 4) &&
         exports.complete(row) && exports.weather(row.wfAm) && exports.weather(row.wfPm); })) {
@@ -102,7 +146,9 @@ exports.dailyHealth = function (mid, now) {
         var target = exports.addDays(today, d);
         if (!seen[target]) { missing.push(target); }
     }
-    return {healthy: reasons.length === 0, reasons: reasons, unavailableDates: missing, rss: 'retired'};
+    var last = Object.keys(seen).filter(function (date) { return date >= today; }).sort().pop();
+    if (last && missing.some(function (date) { return date <= last; })) { reasons.push('forecast-gap'); }
+    return {healthy: reasons.length === 0, reasons: reasons.filter(function (reason, i) { return reasons.indexOf(reason) === i; }), unavailableDates: missing, rss: 'retired'};
 };
 exports.parse = function (kind, response, options) {
     var envelope = response && response.response;

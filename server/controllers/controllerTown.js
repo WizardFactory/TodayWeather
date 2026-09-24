@@ -46,6 +46,9 @@ var ControllerWeatherDesc = require('./controller.weather.desc');
 
 var KmaForecastZoneCode = require('./kma/kma.forecast.zone.controller');
 
+// Bound degraded-health diagnostics to one per minute per process.
+var nextDailyHealthWarning = 0;
+
 var townArray = [
     {db:modelShort, name:'modelShort'},
     {db:modelCurrent, name:'modelCurrent'},
@@ -458,6 +461,7 @@ function ControllerTown() {
                     }
 
                     var shortList=shortInfo.ret;
+                    req._dailyShort = shortInfo.dailyRows || [];
 
                     self._dataListPrint(shortList, 'route S', 'original short');
 
@@ -2896,9 +2900,67 @@ function ControllerTown() {
             });
             req.midData.dailyData = Object.keys(byDate).sort().map(function (date) { return byDate[date]; });
             req.midData.dailyStatus = midPolicy.dailyHealth(req.midData);
+            if (!req.midData.dailyStatus.healthy && Date.now() >= nextDailyHealthWarning) {
+                nextDailyHealthWarning = Date.now() + 60000;
+                log.warn('KMA daily forecast degraded', {
+                    reasons: req.midData.dailyStatus.reasons,
+                    unavailableDates: req.midData.dailyStatus.unavailableDates,
+                    landPublication: midPolicy.timestamp(req.midData.landPubDate),
+                    tempPublication: midPolicy.timestamp(req.midData.tempPubDate)
+                });
+            }
             next();
         }
-        var daySummaryList;
+        function overlay(inputs) {
+            var shortRows = inputs.map(function (source) {
+                var row = Object.assign({}, source);
+                ['t3h', 'tmn', 'tmx'].forEach(function (key) {
+                    if (!midPolicy.temperature(row[key])) { row[key] = -50; }
+                });
+                ['pop', 'reh', 'sky', 'pty', 'r06', 's06', 'wsd', 'lgt'].forEach(function (key) {
+                    var value = row[key];
+                    var maximum = {pop: 100, reh: 100, sky: 4, pty: 3, lgt: 1}[key];
+                    if (typeof value !== 'number' || !isFinite(value) || value < (key === 'sky' ? 1 : 0) ||
+                        (maximum !== undefined && value > maximum) ||
+                        (['sky', 'pty', 'lgt'].indexOf(key) !== -1 && value % 1 !== 0)) { row[key] = -1; }
+                });
+                return row;
+            });
+            var daySummaryList = self._getDaySummaryListByShort(shortRows).filter(function (row) {
+                return midPolicy.complete(row) && midPolicy.weather(row.wfAm) && midPolicy.weather(row.wfPm);
+            });
+            daySummaryList.forEach(function (row) {
+                // Legacy summaries turn an empty sum/lightning list into 0.
+                // Omit that value unless an actual usable source exists.
+                Object.keys(row).forEach(function (key) {
+                    var value = row[key];
+                    if (typeof value === 'number' && (!isFinite(value) ||
+                        (['taMin', 'taMax', 't1d'].indexOf(key) === -1 && value < 0))) { delete row[key]; }
+                });
+                if (!shortRows.some(function (source) {
+                    return source.date === row.date && midPolicy.temperature(source.t3h);
+                })) { delete row.t1d; }
+                ['r06', 's06', 'lgtAm', 'lgtPm'].forEach(function (key) {
+                    var lightning = key.slice(0, 3) === 'lgt';
+                    var present = shortRows.some(function (source) {
+                        var value = source[lightning ? 'lgt' : key];
+                        return source.date === row.date && typeof value === 'number' && isFinite(value) && value >= 0 &&
+                            (!lightning || (value <= 1 && (key === 'lgtAm' ? +source.time <= 1200 : +source.time > 1200)));
+                    });
+                    if (!present) { delete row[key]; }
+                });
+            });
+            self._mergeList(req.midData.dailyData, daySummaryList);
+        }
+
+        var extendedRows = midPolicy.dailyShortRows(req._dailyShort).map(function (source) {
+            var row = Object.assign({}, source);
+            kmaTimeLib.convert0Hto24H(row);
+            return row;
+        }).filter(function (row) {
+            return row.date > midPolicy.addDays(midPolicy.date(Date.now()), 2);
+        });
+        if (extendedRows.length) { overlay(extendedRows); }
 
         var dailyShort = req.short;
         var dailyShortPub = req.shortPubDate;
@@ -2919,47 +2981,9 @@ function ControllerTown() {
         }
         if (dailyShort && midPolicy.freshShort(dailyShortPub)) {
             try {
-                var shortRows = dailyShort.filter(function (row) {
+                overlay(dailyShort.filter(function (row) {
                     return midPolicy.inWindow(row.date) && row.date <= midPolicy.addDays(midPolicy.date(dailyShortPub), 4);
-                }).map(function (source) {
-                    var row = Object.assign({}, source);
-                    ['t3h', 'tmn', 'tmx'].forEach(function (key) {
-                        if (!midPolicy.temperature(row[key])) { row[key] = -50; }
-                    });
-                    ['pop', 'reh', 'sky', 'pty', 'r06', 's06', 'wsd', 'lgt'].forEach(function (key) {
-                        var value = row[key];
-                        var maximum = {pop: 100, reh: 100, sky: 4, pty: 3, lgt: 1}[key];
-                        if (typeof value !== 'number' || !isFinite(value) || value < (key === 'sky' ? 1 : 0) ||
-                            (maximum !== undefined && value > maximum) ||
-                            (['sky', 'pty', 'lgt'].indexOf(key) !== -1 && value % 1 !== 0)) { row[key] = -1; }
-                    });
-                    return row;
-                });
-                daySummaryList = self._getDaySummaryListByShort(shortRows).filter(function (row) {
-                    return midPolicy.complete(row) && midPolicy.weather(row.wfAm) && midPolicy.weather(row.wfPm);
-                });
-                daySummaryList.forEach(function (row) {
-                    // Legacy summaries turn an empty sum/lightning list into 0.
-                    // Omit that value unless an actual usable source exists.
-                    Object.keys(row).forEach(function (key) {
-                        var value = row[key];
-                        if (typeof value === 'number' && (!isFinite(value) ||
-                            (['taMin', 'taMax', 't1d'].indexOf(key) === -1 && value < 0))) { delete row[key]; }
-                    });
-                    if (!shortRows.some(function (source) {
-                        return source.date === row.date && midPolicy.temperature(source.t3h);
-                    })) { delete row.t1d; }
-                    ['r06', 's06', 'lgtAm', 'lgtPm'].forEach(function (key) {
-                        var lightning = key.slice(0, 3) === 'lgt';
-                        var present = shortRows.some(function (source) {
-                            var value = source[lightning ? 'lgt' : key];
-                            return source.date === row.date && typeof value === 'number' && isFinite(value) && value >= 0 &&
-                                (!lightning || (value <= 1 && (key === 'lgtAm' ? +source.time <= 1200 : +source.time > 1200)));
-                        });
-                        if (!present) { delete row[key]; }
-                    });
-                });
-                self._mergeList(req.midData.dailyData, daySummaryList);
+                }));
             }
             catch(e) {
                 e.message += ' ' + JSON.stringify(meta);
@@ -4532,7 +4556,11 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
                     return cb(new Error('~> what???' + JSON.stringify(meta)));
                 }
                 //log.info(ret);
-                cb(0, {pubDate: result[0].pubDate, ret:ret});
+                var dailySource = result[0].dailySource;
+                var dailyRows = dailySource && Array.isArray(dailySource.rows) ? dailySource.rows.map(function (row) {
+                    return midPolicy.shortDailySnapshot(row, dailySource.pubDate);
+                }) : [];
+                cb(0, {pubDate: result[0].pubDate, ret:ret, dailyRows: dailyRows});
             }
         });
     }
@@ -5325,73 +5353,7 @@ ControllerTown.prototype._convertSkyToKorStr = function(sky, pty) {
  * @private
  */
 ControllerTown.prototype._convertKorStrToSky = function (skyKorStr) {
-    var sky = 1;
-    var pty = 0;
-    var lgt = 0;
-
-    switch (skyKorStr) {
-        case "맑음":
-            sky = 1;
-            break;
-        case "구름조금":
-            sky = 2;
-            break;
-        case "구름많음":
-            sky = 3;
-            break;
-        case "흐림":
-            sky = 4;
-            break;
-        case "흐리고 한때 비":
-        case "흐리고 비":
-            sky = 4;
-            pty = 1;
-            break;
-        case "구름적고 한때 비":
-        case "구름적고 비":
-            sky = 2;
-            pty = 1;
-            break;
-        case "구름많고 한때 비":
-        case "구름많고 비":
-            sky = 3;
-            pty = 1;
-            break;
-        case "흐리고 한때 눈":
-        case "흐리고 눈":
-            sky = 4;
-            pty = 3;
-            break;
-        case "구름적고 한때 눈":
-        case "구름적고 눈":
-            sky = 2;
-            pty = 3;
-            break;
-        case "구름많고 한때 눈":
-        case "구름많고 눈":
-            sky = 3;
-            pty = 3;
-            break;
-        case "구름적고 비/눈":
-        case "구름적고 눈/비":
-            sky = 2;
-            pty = 2;
-            break;
-        case "구름많고 비/눈":
-        case "구름많고 눈/비":
-            sky = 3;
-            pty = 2;
-            break;
-        case "흐리고 비/눈":
-        case "흐리고 눈/비":
-            sky = 4;
-            pty = 2;
-            break;
-        default :
-            log.error("Fail to convert sky string="+skyKorStr);
-            return undefined;
-    }
-    return  {sky: sky, pty: pty, lgt: lgt};
+    return midPolicy.skyInfo(skyKorStr);
 };
 
 /**
@@ -5477,11 +5439,6 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
     });
 
     dayConditionList.forEach(function (dayCondition) {
-        if (dayCondition.reh.length === 0) {
-            log.warn(new Error("dayCondition is empty :" + dayCondition.date));
-            return;
-        }
-
         var daySummary = self._createOrGetDaySummaryList(daySummaryList, dayCondition.date);
 
         daySummary.pop = self._max(dayCondition.pop, -1);

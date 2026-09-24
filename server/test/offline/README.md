@@ -68,12 +68,14 @@ TZ=UTC NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/d
 The additional smoke executes all v000903 middleware for both DB versions and
 C/F units, covering captured, stale, missing-text and missing-temperature data,
 plus stale/missing primary short with fresh RSS, partial/nonmatching RSS and
-nonzero six-hour precipitation (36 route scenarios). `short-rss-daily.test.js`
+nonzero six-hour precipitation (68 route scenarios). `short-rss-daily.test.js`
 adds 44 synthetic source-provenance, freshness, bound and precedence checks
-to `test:offline` (212 regression checks plus gather smoke in total).
+to `test:offline` (223 regression checks plus gather smoke in total).
 HTTP, DB and timers are intercepted before loading real modules. It does not
 import or initialize `server/app.js`; existing global field declarations are
 read as text only. Tests require Node >=18. Historical production Node builds
 and real provider/deployment behavior remain operator checks.
 
 See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/daily-forecast-contract.md).
+
+`daily-review.test.js` adds shower mapping/storage, forecast-gap health, retired scheduler, raw short source publication bounds, DB1 complete snapshot replacement, KST year/midnight and shared JS consumer compatibility checks. Full-route smoke covers D+3 available, absent, partial, stale and DB1 legacy-without-snapshot, showers and optional RSS humidity. Raw additional daily fields do not expand the hourly template or invent daily precipitation totals. Native runtime tests remain operator-owned.

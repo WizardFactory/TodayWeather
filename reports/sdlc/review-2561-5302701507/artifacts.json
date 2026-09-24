@@ -76,6 +76,34 @@
       "iteration": 1,
       "decision": "PROCEED",
       "reason": "P1 reproduced on both DB versions; required repair scope justified. Assessment complete, implementation not authorized by this review-only request."
+    },
+    {
+      "at": "2026-09-24T11:31:37.368285+00:00",
+      "action": "iteration-started",
+      "stage": "investigation",
+      "iteration": 2
+    },
+    {
+      "at": "2026-09-24T11:34:57.520633+00:00",
+      "action": "iteration-finished",
+      "stage": "investigation",
+      "iteration": 2,
+      "decision": "PROCEED",
+      "reason": "Latest comments adjudicated with ten isolated scenarios and source evidence; shower P1 confirmed and D+3 wording qualified. Review-only endpoint."
+    },
+    {
+      "at": "2026-09-24T11:34:57.711554+00:00",
+      "action": "iteration-started",
+      "stage": "completion",
+      "iteration": 2
+    },
+    {
+      "at": "2026-09-24T11:34:57.813469+00:00",
+      "action": "iteration-finished",
+      "stage": "completion",
+      "iteration": 2,
+      "decision": "PROCEED",
+      "reason": "Latest comments adjudicated with ten isolated scenarios and source evidence; shower P1 confirmed and D+3 wording qualified. Review-only endpoint."
     }
   ],
   "stages": {
@@ -176,9 +204,9 @@
     "investigation": {
       "applicable": true,
       "status": "complete",
-      "reason": "P1 reproduced on both DB versions; required repair scope justified. Assessment complete, implementation not authorized by this review-only request.",
+      "reason": "Latest comments adjudicated with ten isolated scenarios and source evidence; shower P1 confirmed and D+3 wording qualified. Review-only endpoint.",
       "iteration_limit": 10,
-      "iterations_started": 1,
+      "iterations_started": 2,
       "history": [
         {
           "iteration": 1,
@@ -237,6 +265,70 @@
             "assessment": {
               "assessor": "/root, implementation author assessing existing external review",
               "summary": "R1 reproduced; R2 source-specific freshness and field provenance required. No new independent-review claim.",
+              "criteria": [
+                "R1",
+                "R2"
+              ]
+            }
+          }
+        },
+        {
+          "iteration": 2,
+          "started_at": "2026-09-24T11:31:37.368252+00:00",
+          "objective": "Assess latest review 5303256769 and issue comment 5812616522 on b13dc38a, with isolated source probes; review only",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+              "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+            },
+            {
+              "kind": "intent",
+              "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+              "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+            }
+          ],
+          "finished_at": "2026-09-24T11:34:57.520572+00:00",
+          "receipt": {
+            "iteration": 2,
+            "decision": "PROCEED",
+            "reason": "Latest comments adjudicated with ten isolated scenarios and source evidence; shower P1 confirmed and D+3 wording qualified. Review-only endpoint.",
+            "authority_source": "User request: PR리뷰 댓글 검토해줘",
+            "candidate": "b13dc38adece3d301765b03afea4a5feb9d02d8b",
+            "next_action": "Report findings and repair scope to user; no product or remote edits in this review-only turn.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+                "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+              },
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+                "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/review-2561-5302701507/latest-assessment.md",
+                "sha256": "0d82db0060b40e2c7f8be3510f513cbd8aa3cba5b685932db0d7065dbe5d4fe4"
+              },
+              {
+                "kind": "probe",
+                "path": "reports/sdlc/review-2561-5302701507/latest-probe.js",
+                "sha256": "05423349f3ef16f39ed90b22cd3d38b8dd33da29c4a94397d8517e75bd8359a6"
+              },
+              {
+                "kind": "probe-results",
+                "path": "reports/sdlc/review-2561-5302701507/latest-probe-results.json",
+                "sha256": "55a8cae534ddf5b17855913932dec54c739f934cbf692e8576f9ab4aceee8587"
+              }
+            ],
+            "assessment": {
+              "assessor": "main /root (author assessment, not independent PR review)",
+              "summary": "R1 comment validity and R2 repair scope established; prior RSS correction accepted, new shader/weather and coverage concerns remain.",
               "criteria": [
                 "R1",
                 "R2"
@@ -329,9 +421,9 @@
     "completion": {
       "applicable": true,
       "status": "complete",
-      "reason": "P1 reproduced on both DB versions; required repair scope justified. Assessment complete, implementation not authorized by this review-only request.",
+      "reason": "Latest comments adjudicated with ten isolated scenarios and source evidence; shower P1 confirmed and D+3 wording qualified. Review-only endpoint.",
       "iteration_limit": 10,
-      "iterations_started": 1,
+      "iterations_started": 2,
       "history": [
         {
           "iteration": 1,
@@ -410,6 +502,100 @@
             "assessment": {
               "assessor": "/root, implementation author assessing existing external review",
               "summary": "R1 reproduced; R2 source-specific freshness and field provenance required. No new independent-review claim.",
+              "criteria": [
+                "R1",
+                "R2"
+              ]
+            }
+          }
+        },
+        {
+          "iteration": 2,
+          "started_at": "2026-09-24T11:34:57.711487+00:00",
+          "objective": "Assess latest review on b13dc38a without product or remote mutation",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+              "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+            },
+            {
+              "kind": "intent",
+              "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+              "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/review-2561-5302701507/latest-assessment.md",
+              "sha256": "0d82db0060b40e2c7f8be3510f513cbd8aa3cba5b685932db0d7065dbe5d4fe4"
+            },
+            {
+              "kind": "probe",
+              "path": "reports/sdlc/review-2561-5302701507/latest-probe.js",
+              "sha256": "05423349f3ef16f39ed90b22cd3d38b8dd33da29c4a94397d8517e75bd8359a6"
+            },
+            {
+              "kind": "probe-results",
+              "path": "reports/sdlc/review-2561-5302701507/latest-probe-results.json",
+              "sha256": "55a8cae534ddf5b17855913932dec54c739f934cbf692e8576f9ab4aceee8587"
+            }
+          ],
+          "finished_at": "2026-09-24T11:34:57.813429+00:00",
+          "receipt": {
+            "iteration": 2,
+            "decision": "PROCEED",
+            "reason": "Latest comments adjudicated with ten isolated scenarios and source evidence; shower P1 confirmed and D+3 wording qualified. Review-only endpoint.",
+            "authority_source": "User request: PR리뷰 댓글 검토해줘",
+            "candidate": "b13dc38adece3d301765b03afea4a5feb9d02d8b",
+            "next_action": "Report findings and repair scope to user; no product or remote edits in this review-only turn.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+                "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+              },
+              {
+                "kind": "intent",
+                "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+                "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/review-2561-5302701507/latest-assessment.md",
+                "sha256": "0d82db0060b40e2c7f8be3510f513cbd8aa3cba5b685932db0d7065dbe5d4fe4"
+              },
+              {
+                "kind": "probe",
+                "path": "reports/sdlc/review-2561-5302701507/latest-probe.js",
+                "sha256": "05423349f3ef16f39ed90b22cd3d38b8dd33da29c4a94397d8517e75bd8359a6"
+              },
+              {
+                "kind": "probe-results",
+                "path": "reports/sdlc/review-2561-5302701507/latest-probe-results.json",
+                "sha256": "55a8cae534ddf5b17855913932dec54c739f934cbf692e8576f9ab4aceee8587"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "completion",
+                "path": "reports/sdlc/review-2561-5302701507/latest-assessment.md",
+                "sha256": "0d82db0060b40e2c7f8be3510f513cbd8aa3cba5b685932db0d7065dbe5d4fe4"
+              },
+              {
+                "kind": "probe",
+                "path": "reports/sdlc/review-2561-5302701507/latest-probe.js",
+                "sha256": "05423349f3ef16f39ed90b22cd3d38b8dd33da29c4a94397d8517e75bd8359a6"
+              },
+              {
+                "kind": "probe-results",
+                "path": "reports/sdlc/review-2561-5302701507/latest-probe-results.json",
+                "sha256": "55a8cae534ddf5b17855913932dec54c739f934cbf692e8576f9ab4aceee8587"
+              }
+            ],
+            "assessment": {
+              "assessor": "main /root (author assessment, not independent PR review)",
+              "summary": "R1 comment validity and R2 repair scope established; prior RSS correction accepted, new shader/weather and coverage concerns remain.",
               "criteria": [
                 "R1",
                 "R2"

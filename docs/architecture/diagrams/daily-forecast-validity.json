@@ -142,14 +142,14 @@
       "title": "Calendar identity",
       "items": [
         "Day 4 remains publication date + 4 in KST.",
-        "A missing September 27 is never filled with September 28."
+        "Available short targets fill the boundary; uncovered internal dates degrade health."
       ]
     },
     {
       "dot": "emerald",
       "title": "Consumer contract",
       "items": [
-        "Incomplete days are omitted; no clear-weather or zero-temperature defaults.",
+        "One weather mapping includes showers; missing humidity does not hide a day.",
         "Retain observation history from the previous seven days."
       ]
     },

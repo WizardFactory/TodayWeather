@@ -19,7 +19,8 @@ var model = {
     }
 };
 var Short = h.load('controllers/kma/kma.town.short.controller.js', {
-    async: require('async'), '../../models/kma/kma.town.short.model.js': model, '../../lib/kmaTimeLib': time
+    async: require('async'), '../../models/kma/kma.town.short.model.js': model, '../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'),
+    '../../lib/kmaTimeLib': time
 }, {log: log, commonString: ['date', 'time', 'mx', 'my'], shortString: ['r06', 's06', 't3h', 'sky', 'reh', 'pty']});
 var short = new Short();
 var callbacks = 0;
@@ -84,7 +85,8 @@ var seaModel = {
     update: function (query, doc, options, cb) { seaRecords.push(doc); cb(); },
     remove: function () { return {exec: function () {}}; }
 };
-var midDeps = {'../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'), async: require('async'), '../../lib/kmaTimeLib': time};
+var midDeps = {'../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'), async: require('async'), '../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'),
+    '../../lib/kmaTimeLib': time};
 ['forecast', 'land', 'sea', 'temp'].forEach(function (type) {
     midDeps['../../models/kma/kma.town.mid.' + type + '.model.js'] = type === 'sea' ? seaModel : {};
 });

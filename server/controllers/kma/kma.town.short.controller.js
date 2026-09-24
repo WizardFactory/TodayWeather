@@ -4,6 +4,7 @@
 "use strict";
 
 var async = require('async');
+var midPolicy = require('../../lib/midForecastPolicy');
 
 var modelKmaTownShort = require('../../models/kma/kma.town.short.model.js');
 var kmaTimelib = require('../../lib/kmaTimeLib');
@@ -68,12 +69,14 @@ kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord, 
             }
 
             var ret = [];
+            var dailyRows = [];
             var pubDate = kmaTimelib.getKoreaTimeString(result[result.length-1].pubDate);
 
             log.info('KMA Town S> get Data : ', result.length);
             result.forEach(function(item){
                 var newItem = {};
                 var shortData = item.shortData;
+                dailyRows.push(midPolicy.shortDailySnapshot(shortData, item.pubDate));
 
                 //log.info(JSON.stringify(item));
                 commonString.forEach(function(string){
@@ -86,7 +89,7 @@ kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord, 
             });
 
             log.info('KMA Town S> pubDate : ', pubDate);
-            callback(null, {pubDate: pubDate, ret:ret});
+            callback(null, {pubDate: pubDate, ret:ret, dailyRows: dailyRows});
         });
 
     }
