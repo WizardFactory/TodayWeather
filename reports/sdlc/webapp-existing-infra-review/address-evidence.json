@@ -1,0 +1,15 @@
+{
+  "observed_at": "2026-09-24T14:40:07.687777+00:00",
+  "operation": "address-server-side-followup",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8",
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "max-age=2592000",
+    "Age": null,
+    "X-Cache": "Miss from cloudfront"
+  },
+  "body_bytes": 75,
+  "body_sha256": "49bddaac254adc40b8c1842098e16a05d8633e7c7c96351d89cd60f0804d5849",
+  "note": "Server-side request does not enforce CORS; body omitted to avoid upstream error details."
+}

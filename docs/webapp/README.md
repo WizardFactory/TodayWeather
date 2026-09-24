@@ -12,6 +12,7 @@ Build a **responsive PWA in a separate `web/` client**, reuse the existing versi
 | [Interactive architecture](diagrams/webapp-architecture.html) | Proposed components and existing API boundary; [editable JSON](diagrams/webapp-architecture.json) |
 | [Intent](intent.md) | User request, authority and planning acceptance |
 | [Verification](../../reports/sdlc/webapp-parity-design/completion.md) | Executed checks and remaining limitations |
+| [Existing-infrastructure deployment review](existing-infrastructure-review.md) | September 24 feasibility review: static hosting and existing public APIs without an additional persistent Node service; Web Push migration boundary |
 
 The design covers TodayWeather plus TodayAir's air-first/combined-weather experience in one web product by default. International weather remains in scope where the existing service supports it. A read-only internal milestone is useful for integration testing, but is **not** the final parity release.
 

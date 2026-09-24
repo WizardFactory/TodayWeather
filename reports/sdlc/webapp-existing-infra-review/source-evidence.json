@@ -1,0 +1,64 @@
+{
+  "checked_at": "2026-09-24T14:43:32.263055+00:00",
+  "revision": "525a4a27576b42c16b3ee030879176043b9bf945",
+  "lambda_comparison": [
+    {
+      "function": "tw-backend-functions-production-weatherbycoord",
+      "code_hash_matches_2026_09_20": true
+    },
+    {
+      "function": "tw-backend-functions-production-weatherbyaddr",
+      "code_hash_matches_2026_09_20": true
+    },
+    {
+      "function": "tw-backend-functions-production-geoinfobycoord",
+      "code_hash_matches_2026_09_20": true
+    },
+    {
+      "function": "tw-backend-functions-production-geoinfobyaddr",
+      "code_hash_matches_2026_09_20": true
+    }
+  ],
+  "sources": [
+    {
+      "path": "web-api/src/api.ts",
+      "sha256": "a8463debc3bebf77147168b11eef04783245a0a7673655684c320c19d41f71c4"
+    },
+    {
+      "path": "web-api/src/notifications.ts",
+      "sha256": "bf1402a3bd1e51d5d8974aeb905116e160fbe29ad99a7df188ddfa18091476f9"
+    },
+    {
+      "path": "web-api/src/server.ts",
+      "sha256": "28aa4cf1c29e1556f5289e817966a65b83e16987771e50b50137ce038d58284a"
+    },
+    {
+      "path": "web/src/api.ts",
+      "sha256": "b66d4108bc6b0f32eb8247435b1a955bda89df0d49fa65a29d3daebb5e21caf1"
+    },
+    {
+      "path": "web/src/state.ts",
+      "sha256": "ae1f888ed9a8f69ce265f898611c93bead0028f9fa906b360cd4b53258a4d513"
+    },
+    {
+      "path": "web/src/Notifications.tsx",
+      "sha256": "2e4501a2538706a42db179650692a5eb96b5c378e6882ee8d3b9c7eac3fc6b5d"
+    },
+    {
+      "path": "packages/weather-core/src/index.ts",
+      "sha256": "5f2802094691703bd0d21cc65637ad633b0fb28eabe07d7fc59971687416a469"
+    },
+    {
+      "path": "docs/architecture/aws-code-correlation.md",
+      "sha256": "7c5c76578fc50edb363db4e0f8cd92488e1bbe247c6f4995ec0d842b891ff7d1"
+    },
+    {
+      "path": "docs/architecture/ec2-internals.md",
+      "sha256": "1327c125b9a0374c851eb28ed97c500ea61cbce9071dcb051afad297672c4f80"
+    },
+    {
+      "path": "docs/architecture/push-notifications.md",
+      "sha256": "f20dafa73b99d8dd67d973eab1f695c3f621316c487eeace68800f92cf3abba8"
+    }
+  ]
+}

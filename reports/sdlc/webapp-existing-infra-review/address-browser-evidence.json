@@ -1,0 +1,34 @@
+{
+  "observed_at": "2026-09-24T14:41:04.273Z",
+  "browser": "Chromium",
+  "origin": "https://webapp-review.invalid",
+  "credentials": "omit",
+  "note": "Browser CORS checks are real; normalization runs separately in Node using the shared pure module. No application deployment or device push tested.",
+  "observations": [
+    {
+      "operation": "address",
+      "path": "/geocode/v000903/addr/%EC%84%9C%EC%9A%B8",
+      "readable": true,
+      "status": 200,
+      "responseType": "cors",
+      "contentType": "application/json; charset=UTF-8",
+      "networkFailures": [],
+      "transportHeaders": {
+        "access-control-allow-origin": "*",
+        "cache-control": "max-age=2592000",
+        "x-cache": "Miss from cloudfront"
+      },
+      "bytes": 75,
+      "sha256": "49bddaac254adc40b8c1842098e16a05d8633e7c7c96351d89cd60f0804d5849",
+      "topLevelKeys": [
+        "country",
+        "address",
+        "location"
+      ],
+      "geocodeShape": {
+        "hasCoordinates": true,
+        "hasNameOrAddress": true
+      }
+    }
+  ]
+}
