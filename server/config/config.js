@@ -7,6 +7,12 @@ module.exports = {
     ipAddress: (process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1'),
     port: (process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000'),
     mode: (process.env.SERVER_MODE || 'local'), //local, gather, service, push, scrape
+    history: {
+        enabled: process.env.ASOS_HISTORY_ENABLED === 'true',
+        readEnabled: process.env.ASOS_HISTORY_READ_ENABLED === 'true',
+        key: process.env.ASOS_HISTORY_SERVICE_KEY,
+        stations: (process.env.ASOS_HISTORY_STATIONS || '').split(',').map(function(id) { return id.trim(); }).filter(Boolean)
+    },
     db: {
         version: (process.env.DB_DATA_VERSION || '1.0'),
         path: (process.env.MONGOLAB_MONGODB_URL || 'mongodb://localhost/'),
@@ -19,7 +25,6 @@ module.exports = {
         // Retained for legacy callers; these settings may remain unset in production.
         normal: (process.env.DATA_GO_KR_NORMAL_KEY || 'You have to set key of data.go.kr'),
         cert_key: (process.env.DATA_GO_KR_CERT_KEY || 'You have to set key of data.go.kr'),
-        newrelic: (process.env.NEW_RELIC_LICENSE_KEY || 'Your New Relic license key'),
         aws_access_key:(process.env.AWS_ACCESS_KEY || 'You have to set key of AWS'),
         aws_secret_key:(process.env.AWS_SECRET_KEY || 'You have to set key of AWS'),
         owm_keys : [{
@@ -65,10 +70,7 @@ module.exports = {
         googleClientSecret: (process.env.PLAY_STORE_API_CLIENT_SECRET || "PLAY_STORE_API_CLIENT_SECRET")
     },
     push: {
-        gcmAccessKey: (process.env.GCM_ACCESS_KEY || 'Your gcm access key'),
-        apnKeyPath : (process.env.APN_KEY_ID || 'APN KEY PATH'),
-        apnKeyId : (process.env.APN_KEY_ID || 'APN KEY ID'),
-        apnTeamId : (process.env.APN_KEY_ID || 'APN TEAM ID'),
+        gcmAccessKey: (process.env.GCM_ACCESS_KEY || 'Your gcm access key')
     },
     url: {
         requester: ('http://'+(process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1')+':'+(process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000')+'/'),

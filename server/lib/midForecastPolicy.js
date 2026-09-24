@@ -133,7 +133,9 @@ exports.dailyHealth = function (mid, now) {
     rows.forEach(function (row, i) {
         if (!exports.inWindow(row.date, now)) { reasons.push('target-out-of-window'); }
         if (seen[row.date] || (i && rows[i - 1].date > row.date)) { reasons.push('dates-not-unique-sorted'); }
-        if (exports.complete(row) && exports.weather(row.wfAm) && exports.weather(row.wfPm)) {
+        var observedHistory = row.date < today &&
+            (row.observationType === 'daily' || row.observationType === 'hourly-summary');
+        if (exports.complete(row) && (observedHistory || (exports.weather(row.wfAm) && exports.weather(row.wfPm)))) {
             seen[row.date] = true;
         } else { reasons.push('invalid-daily-row'); }
     });

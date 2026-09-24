@@ -5,7 +5,6 @@
 'use strict';
 
 require('./config/env');
-require('newrelic');
 
 var express = require('express');
 var cors = require('cors');
@@ -135,7 +134,6 @@ if (config.mode === 'push') {
     var ControllerPush = require('./controllers/controllerPush');
     var co = new ControllerPush();
     co.start();
-    co.apnFeedback();
 
     var AlertPush = require('./controllers/alert.push.controller');
     var ctrlAlert = new AlertPush();

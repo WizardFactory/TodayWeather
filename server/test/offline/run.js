@@ -10,7 +10,9 @@ var commands = [
     [path.join(__dirname, 'daily-forecast.test.js')],
     [path.join(__dirname, 'daily-review.test.js')],
     [path.join(__dirname, 'short-rss-daily.test.js')],
-    [path.join(__dirname, 'rss-wind.test.js')]
+    [path.join(__dirname, 'rss-wind.test.js')],
+    [path.join(__dirname, 'history-observations.test.js')],
+    [path.join(__dirname, 'history-recovery.test.js')]
 ];
 commands.forEach(function (args) {
     var result = spawnSync(process.execPath, args, {stdio: 'inherit'});

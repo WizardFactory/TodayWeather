@@ -8,7 +8,7 @@ sanitized `.env.example` files are tracked.
 
 Start from the repository root with `npm --prefix server start` or
 `node server/bin/www`, or run `npm start` from `server/`.
-[app.js](app.js) loads [config/env.js](config/env.js) before New Relic and all
+[app.js](app.js) loads [config/env.js](config/env.js) before Express and all
 configuration consumers. The loader always reads `server/.env`, independent of
 the working directory. Importing `app.js` directly uses the same bootstrap.
 Importing `config/config.js` alone does not bootstrap the environment.
@@ -41,8 +41,8 @@ and does not install dependencies or start the weather server.
 - An absent `.env` is allowed for deployments that provide all settings through
   the process environment. Other read failures stop startup with a generic error
   and an error code; file contents and raw error details are not printed.
-- `dotenv` is pinned to `10.0.0` (Node.js >=10), compatible with the Node 10.15.3
-  service-host snapshot in the [architecture evidence](../docs/architecture/ec2-internals.md).
+- `dotenv` is pinned to `10.0.0` (Node.js >=10), compatible with the Node 16.20.2
+  target pinned in [.nvmrc](.nvmrc). Use npm 8 with the committed lockfile.
   This does not certify the complete legacy dependency tree on every Node version.
 - Use one `KEY=value` assignment per line. Balanced single/double quotes are
   removed; JSON arrays remain strings, e.g. `DONGNAE_SECRET_KEYS='["key1","key2"]'`.
@@ -82,5 +82,5 @@ npm --prefix server run test:offline
 ```
 
 The environment regression runs real dotenv in temporary server layouts and
-stops at the first New Relic import, before providers, databases, timers or HTTP
+stops at the first Express import, before providers, databases, timers or HTTP
 listeners initialize. Do not use a real gather startup as a configuration probe.

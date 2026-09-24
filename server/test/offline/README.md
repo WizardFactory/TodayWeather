@@ -23,7 +23,7 @@ Correction coverage uses distinct values for every sea wave field, nonfinite val
 
 ## Isolated RSS checks
 
-Run from the repository root with Node 18+ (validated with Node 22.22.2):
+Run from the repository root with Node 16.20.2+ (validated with Node 16.20.2 and Node 22.22.2):
 
 ```sh
 TZ=UTC node server/test/offline/rss-wind.test.js
@@ -45,7 +45,7 @@ It executes the actual v000903 coordinate router in process, complete middleware
 
 ### RSS continuous integration
 
-[RSS offline checks](../../../.github/workflows/rss-offline.yml) runs on pushes and pull requests using Node 22 and `TZ=UTC`, matching the server timezone confirmed by the operator. It runs all 43 regression tests and all 36 response smoke cases (both DB formats, three synthetic grids, newer/equal/older publications and both unit systems). A failure in either command fails the job.
+[RSS offline checks](../../../.github/workflows/rss-offline.yml) runs on pushes and pull requests using Node 16.20.2 and 22.22.2 with `TZ=UTC`, matching the server timezone confirmed by the operator. Each runtime runs all 43 RSS regression tests, the historical observation/recovery and runtime compatibility suites, and all 36 response smoke cases (both DB formats, three synthetic grids, newer/equal/older publications and both unit systems). A failure in any command fails the job.
 
 Smoke dependencies and output stay under the runner's temporary directory. This workflow is independent of the legacy Mocha/Travis suite and requires no production credentials, database, provider access or service startup. Hosted runner setup and npm installation require network access; the weather checks themselves use isolated dependencies.
 
@@ -73,8 +73,9 @@ adds 44 synthetic source-provenance, freshness, bound and precedence checks
 to `test:offline` (223 regression checks plus gather smoke in total).
 HTTP, DB and timers are intercepted before loading real modules. It does not
 import or initialize `server/app.js`; existing global field declarations are
-read as text only. Tests require Node >=18. Historical production Node builds
-and real provider/deployment behavior remain operator checks.
+read as text only. These tests also pass on Node 16.20.2 after replacing the response smoke's
+`structuredClone` helper with a Date-preserving V8 clone. Real provider and
+deployment behavior remain operator checks.
 
 See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/daily-forecast-contract.md).
 
@@ -83,10 +84,10 @@ See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/d
 ## Environment startup (#2563)
 
 `env-startup.test.js` adds 12 checks using real dotenv 10.0.0 and temporary
-server layouts. It verifies loading before the first New Relic import for direct
+server layouts. It verifies loading before the first Express import for direct
 app imports, `bin/www`, and `npm start`; working-directory independence; existing
 process values including empty strings; missing files; documented dotenv syntax;
-and sanitized read failures. It intercepts New Relic before any application
+and sanitized read failures. It intercepts Express before any application
 provider, database, timer or listener can initialize. The operator's actual
 `server/.env` is never read by these regression checks.
 
@@ -103,3 +104,63 @@ The synthetic filesystem checks cover environment copying, private permissions,
 Git exclusion, existing-file preservation, missing sources and symlink handling.
 They also check that the existing AWS-file setup is preserved. No private
 configuration or running Paseo daemon is required.
+
+## Historical observations (#2564)
+
+`history-observations.test.js` and `history-recovery.test.js` run in `test:offline`.
+They cover strict KST identities, QC/missing-value validation, sparse history,
+independent daily observations, partial-field preservation, explicit past gaps,
+pagination, missing-only recovery and duplicate/lease behavior with synthetic data.
+Run the observation suite under `TZ=UTC` and `TZ=America/Los_Angeles`.
+
+The history integration job in [Gather offline regression](../../../.github/workflows/gather-offline.yml)
+runs the real local persistence/response smoke and non-KST policy checks on
+Node 16.20.2 and 22.22.2 for relevant pull requests and master pushes.
+
+For a separate real persistence/transport smoke, install temporary dependencies:
+
+```sh
+npm install --prefix /tmp/issue-2564-integration --ignore-scripts --no-audit --no-fund --package-lock=false mongodb-memory-server-core@10.1.4 mongoose@5.1.2
+TZ=UTC NODE_PATH=/tmp/issue-2564-integration/node_modules:/tmp/issue-2560-offline/node_modules MONGOMS_DOWNLOAD_DIR=/tmp/issue-2564-mongodb node server/test/offline/history-integration-smoke.js
+```
+
+The earlier daily-suite dependency directory supplies Express/async/XML helpers.
+The smoke downloads MongoDB 7.0.14 to the specified temporary directory if absent,
+starts MongoDB and a synthetic provider only on loopback, and closes both. It uses
+the production native collection adapter with the temporary server's modern driver;
+the deployed Mongoose 5/old Mongo server combination is not validated by this check.
+It verifies real storage/readback/uniqueness/leases, actual HTTP pagination/retries,
+and actual v000903 route/shared client parsing in 16 DB-version/unit/data-availability
+scenarios. No application startup, production secrets, KMA requests or mobile build.
+See the [operator contract](../../../reports/sdlc/issue-2564/operator-contract.md).
+
+## Node 16 runtime and push compatibility (#2565)
+
+The service target is Node 16.20.2 / npm 8.19.4 (`server/.nvmrc`), an interim
+EOL runtime. Use the checked-in lock; broad fresh resolution can select newer
+transitive packages that require Node 18 or 20. `npm ci` removes the target
+`node_modules`, so install only into a separate candidate, never the live tree.
+
+```sh
+# Select Node 16.20.2 first. From the repository root:
+mkdir -p /tmp/tw-runtime-candidate
+cp server/package.json server/package-lock.json /tmp/tw-runtime-candidate/
+npm ci --prefix /tmp/tw-runtime-candidate --no-audit --no-fund
+NODE_PATH=/tmp/tw-runtime-candidate/node_modules npm --prefix server run test:runtime
+NODE_PATH=/tmp/tw-runtime-candidate/node_modules npm --prefix server run test:runtime:smoke
+```
+
+`test:runtime` checks lazy Firebase initialization, app selection, payloads,
+callback errors and alarm/alert rejection of legacy iOS records without FCM using explicit VM substitutes. `test:runtime:smoke` requires
+OpenSSL and permission to bind loopback sockets. It loads real native grpc/iconv,
+requires the retired APNs package to be absent and sends a synthetic FCM request
+only to a locally generated TLS peer, checking its encoded payload and response. A separate child loads the full
+app in `service`/`test` mode, substitutes Mongo connection, checks `/health` = `OK`
+and emits a normal Console log. External network connections are rejected before
+SDK or app imports. No real credentials, provider calls, push sends or collection
+are used. Each child has a 30-second limit.
+
+The smoke deliberately omits production DB/provider behavior and Amazon Linux 1
+linking. OpenSSL must support `req -addext` (1.1.1+); the SDK/native import checks
+on the older target host are a separate gate. The existing legacy `npm test` /
+`e2e` suites include providers and databases; they are not part of this command.

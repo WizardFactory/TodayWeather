@@ -1,6 +1,6 @@
 'use strict';
 
-// Real dotenv in temporary server trees. Stop app startup at New Relic so no
+// Real dotenv in temporary server trees. Stop app startup at Express so no
 // provider, database, scheduler or HTTP listener can run.
 var assert = require('assert');
 var fs = require('fs');
@@ -34,7 +34,7 @@ function run(name, options) {
             "SERVER_MODE='gather'", 'DB_DATA_VERSION="2.0"',
             'PORT=4321', 'OPENSHIFT_NODEJS_PORT=4322',
             "DONGNAE_SECRET_KEYS='[\"dummy-a\",\"dummy-b\"]'",
-            'NEW_RELIC_LICENSE_KEY=synthetic-license', 'EMPTY_VALUE='
+            'DATA_GO_KR_TEST_NORMAL_KEY=synthetic-key', 'EMPTY_VALUE='
         ].join('\n'));
     }
     // Strip every production setting; copy only command/runtime essentials.
@@ -83,7 +83,7 @@ try {
         "  };",
         "}",
         "Module._load = function (name) {",
-        "  if (name === 'newrelic') {",
+        "  if (name === 'express') {",
         "    seen = true;",
         "    var config = require('./config/config');",
         "    assert.strictEqual(config.mode, expected.mode);",
@@ -91,7 +91,7 @@ try {
         "    assert.strictEqual(config.port, expected.port);",
         "    if (expected.mode === 'gather') {",
         "      assert.deepStrictEqual(JSON.parse(config.keyString.dongnae_forecast_keys), ['dummy-a', 'dummy-b']);",
-        "      assert.strictEqual(config.keyString.newrelic, 'synthetic-license');",
+        "      assert.strictEqual(config.keyString.test_normal, 'synthetic-key');",
         "      assert.strictEqual(process.env.EMPTY_VALUE, '');",
         "    }",
         "    if (expected.emptyMode) assert.strictEqual(process.env.SERVER_MODE, '');",
@@ -112,7 +112,7 @@ try {
         "if (process.env.TW_NPM_PROBE) process.exit(0);"
     ].join('\n'));
 
-    run('repository cwd, before first New Relic import');
+    run('repository cwd, before first Express import');
     run('server cwd', {cwd: fixture});
     run('unrelated cwd', {cwd: os.tmpdir()});
     run('bin/www entrypoint', {entry: 'bin/www'});

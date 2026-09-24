@@ -1,6 +1,6 @@
 'use strict';
 
-// Load before New Relic or any module that reads config/process.env.
+// Load before Express or any module that reads config/process.env.
 // An absolute path keeps npm, direct Node and process-manager startup consistent.
 var result = require('dotenv').config({
     path: require('path').join(__dirname, '../.env')

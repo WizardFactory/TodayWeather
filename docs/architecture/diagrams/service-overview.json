@@ -211,7 +211,7 @@
       "items": [
         "Service-to-Mongo target sockets observed; database engine/query success untested.",
         "Dashed ingestion edge remains source-only; separate gather host not inspected.",
-        "Checkout startup: dotenv loads server/.env before New Relic/config; process env wins."
+        "Checkout startup: dotenv loads server/.env before app dependencies/config; process env wins."
       ]
     }
   ]
