@@ -1,0 +1,94 @@
+{
+  "iteration": 1,
+  "decision": "BLOCKED",
+  "reason": "Independent verifier found empty MID_LAND weather strings accepted; fix and rerun",
+  "authority_source": "User request: review #2555 and make PR; AGENTS.md and installed SDLC policy",
+  "candidate": "sha256:ff51336f1cd57a4eb61babfc01768f69205fd7fe06504ecdc8b18d6f22a7bd99",
+  "next_action": "Correct forecast text validation",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/issue-2555/triage.md",
+      "sha256": "d57bd6ce78846924e60fcec3e220a702fa4c5aca2a55b90df3d38b7e68e0771f"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/issue-2555.md",
+      "sha256": "d81ac5ba5c14e16885ca2ce5a1c08edbe07856f7dfd51e14f0b7f6d885d30514"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/issue-2555/investigation.md",
+      "sha256": "e9e2b2dde7466290c77d8164a1491aa0c743c200eca3b3729285b057b6ac1aae"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/issue-2555.md",
+      "sha256": "62e1f3b4bbf653d757de36f7a23f431f33582095eade953bd9bd4d10b4be6406"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/weather-collection.json",
+      "sha256": "767a8855cda7c02350bb756d610ea22a09250078f4a7f2f5d00863f4cd865b57"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/weather-collection.html",
+      "sha256": "3917c68ac32790aae1cbb9b940aeb1c0f9e6b8572240229ac494a39e028b7f0f"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/issue-2555/design.md",
+      "sha256": "d6a89a7a3ece974abeb9a773f0dbe3bb5ce328d37d5126dd0b2ac4e89e3e0485"
+    },
+    {
+      "kind": "plan",
+      "path": "plans/issue-2555.md",
+      "sha256": "e3c6ffaa7432066b3330977ab841fc469df87de193665a038372414b241b2b5f"
+    },
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/issue-2555/test-plan.md",
+      "sha256": "244617bd25e94d2fc3feb832745bb64ca414e72ed65bfb72207c60bf7dab0cce"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/issue-2555/build.md",
+      "sha256": "3acc98d76534b394792d5a08b4716ccc4926e8fb08d97f00aade0b8480b6e9da"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/issue-2555/changes.txt",
+      "sha256": "366fa6131f5621220b44e83d1912d15f8dcd5ac16215e89d9f4bac9763b36126"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/lib/collectTownForecast.js",
+      "sha256": "70934e200c8e6efe72de2927365fb0095d1c8044ba072bb9a473d00da0df48f6"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/harness.js",
+      "sha256": "dae9d7276fb195457bd6e801b713face09e033b282dca4af6337a8ac91134a28"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/gather-code-drift.test.js",
+      "sha256": "66d212d93bc54b7726e0afa8cf385f55016796b9c7e8f6e8ad7f4a1c0cfa7cbb"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/gather-smoke.js",
+      "sha256": "bb456844bb85301b01f0dd0bf93d9dd4a9d7dce8ea72457f575571df0277b427"
+    }
+  ],
+  "outputs": [],
+  "assessment": {
+    "assessor": "/root/offline_verifier",
+    "summary": "Existing findings resolved; new empty forecast-text failure reproduced",
+    "criteria": [
+      "AC1",
+      "AC4"
+    ]
+  }
+}

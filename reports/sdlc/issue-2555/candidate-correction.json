@@ -1,0 +1,19 @@
+{
+  "candidate": "sha256:e564b9c1f656668d813f12cad69564c2c2dd389ab64b2789902e982d7b6d1116",
+  "base": "87b8855f308611a07897cd3a39c45fefb3088d77",
+  "parent": "5e653285726e4035490ca13de532fdb8ccb7e218",
+  "files": {
+    "server/lib/collectTownForecast.js": "a8de41fb633c67491b50b02b9bf88a1a744cd866a12c98d313a3a7be0c219c87",
+    "server/package.json": "eee087a0ca3af077c4e861a8dd35e040d3e33ee3c29bdc2a3700ca56ac8a1de7",
+    "server/test/offline/harness.js": "dae9d7276fb195457bd6e801b713face09e033b282dca4af6337a8ac91134a28",
+    "server/test/offline/gather-code-drift.test.js": "b6e556fce9ac2857afec0e41f83749544e11ceefda8b2437e98e8e6a2b5b1271",
+    "server/test/offline/gather-smoke.js": "c273a33e13bd531a85913a50c067115104c0cd4dc69054a22da6ac035badd6d6",
+    "server/test/offline/run.js": "1da11e57554f2f7ab86b34f9d0e8ae9408cbfb92e328e5cec79ea3e96c74c106",
+    ".github/workflows/gather-offline.yml": "a6981b110bcce4c7d8e492056ae1788a3fd2f854ed6fb01f983f1b2cc8c54ef6",
+    "docs/architecture/gather-source-reconciliation.md": "31e54f719a986264b739c12076d36eee7e7f547e46c06f2d12789c2e8fc39563",
+    "docs/architecture/weather-collection.md": "35fdbf9809ff8cea104f3640e6724b6f4c265f170675ea651081c150f56576a1",
+    "docs/architecture/diagrams/weather-collection.json": "6a230759e19a2f66c7476e060d29253c5d4a0feba49ea52e32cd2034b48a2fce",
+    "docs/architecture/diagrams/weather-collection.html": "e5a071971c369349e0c56891cb434fc9b8887792f417d3266b3942c75f6ba5a1",
+    "server/test/offline/README.md": "0e4078d62ff0cf5dc0b75c60a0907632a82b98c60543f2fcae7661dec61afcdb"
+  }
+}

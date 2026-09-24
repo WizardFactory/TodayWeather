@@ -1,0 +1,69 @@
+{
+  "candidate": "sha256:ff51336f1cd57a4eb61babfc01768f69205fd7fe06504ecdc8b18d6f22a7bd99",
+  "scenarios": [
+    {
+      "id": "xml-storage-roundtrip",
+      "requirement": "AC4",
+      "required": true,
+      "environment": "Real local CommonJS/XML/event/storage-controller pipeline with in-memory HTTP and Mongo adapters",
+      "prerequisites": "Isolated xml2js and async; no config/network/DB",
+      "actions": "Run synthetic XML through requestData, saveShort, getShortFromDB; then invalid response",
+      "expected": "Exact publication/grid/1.5/0.5/12.5, one write; failure no second write and no key logs",
+      "failure": "Wrong data/date/grid, failed result accepted, extra write or key log",
+      "cleanup": "Memory-only state; harness remains in /tmp"
+    }
+  ],
+  "runs": [
+    {
+      "id": "baseline-final-suite",
+      "phase": "red",
+      "candidate": "baseline:87b8855f308611a07897cd3a39c45fefb3088d77",
+      "command": "cd /tmp/issue-2555-baseline && NODE_PATH=/tmp/issue-2555-harness/node_modules /tmp/issue-2555-harness/node_modules/.bin/mocha server/test/offline/gather-code-drift.test.js --reporter dot",
+      "exit_code": 65,
+      "environment": "same isolated dependency versions; selected baseline modules copied via git show",
+      "observed": "17 passing, 65 failing; intended endpoint/00/parser/failure/logging regressions",
+      "evidence": "reports/sdlc/issue-2555/baseline-replay.txt",
+      "execution_kind": "isolated",
+      "status": "passed",
+      "intended_failure": true
+    },
+    {
+      "id": "final-green",
+      "phase": "green",
+      "candidate": "sha256:ff51336f1cd57a4eb61babfc01768f69205fd7fe06504ecdc8b18d6f22a7bd99",
+      "command": "NODE_PATH=/tmp/issue-2555-harness/node_modules /tmp/issue-2555-harness/node_modules/.bin/mocha server/test/offline/gather-code-drift.test.js --reporter dot",
+      "exit_code": 0,
+      "environment": "Node v22.22.2; Mocha 2.5.3; xml2js 0.4.23; async 2.6.4; injected HTTP/model/log/timer boundaries",
+      "observed": "\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\n  \u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\n\n  82 passing (284ms)",
+      "evidence": "reports/sdlc/issue-2555/final-green.txt",
+      "execution_kind": "isolated",
+      "status": "passed"
+    },
+    {
+      "id": "final-post-refactor",
+      "phase": "post-refactor",
+      "candidate": "sha256:ff51336f1cd57a4eb61babfc01768f69205fd7fe06504ecdc8b18d6f22a7bd99",
+      "command": "NODE_PATH=/tmp/issue-2555-harness/node_modules /tmp/issue-2555-harness/node_modules/.bin/mocha server/test/offline/gather-code-drift.test.js --reporter dot",
+      "exit_code": 0,
+      "environment": "Node v22.22.2; Mocha 2.5.3; xml2js 0.4.23; async 2.6.4; injected HTTP/model/log/timer boundaries",
+      "observed": "\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\n  \u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\u2024\n\n  82 passing (292ms)",
+      "evidence": "reports/sdlc/issue-2555/final-post-refactor.txt",
+      "execution_kind": "isolated",
+      "status": "passed"
+    },
+    {
+      "id": "final-smoke",
+      "phase": "smoke",
+      "candidate": "sha256:ff51336f1cd57a4eb61babfc01768f69205fd7fe06504ecdc8b18d6f22a7bd99",
+      "command": "NODE_PATH=/tmp/issue-2555-harness/node_modules node server/test/offline/gather-smoke.js",
+      "exit_code": 0,
+      "environment": "Node v22.22.2; Mocha 2.5.3; xml2js 0.4.23; async 2.6.4; injected HTTP/model/log/timer boundaries",
+      "observed": "PASS synthetic XML -> requester -> events -> saveShort -> getShortFromDB (1 write, exact quantities/timestamps/grid)\nPASS provider-error XML -> failed collection, no additional persistence; no key-bearing logs",
+      "evidence": "reports/sdlc/issue-2555/final-smoke.txt",
+      "execution_kind": "real",
+      "status": "passed",
+      "scenario_id": "xml-storage-roundtrip"
+    }
+  ],
+  "not_applicable_reason": ""
+}

@@ -1,0 +1,81 @@
+
+
+  ․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․
+  ․․․․․․․․․․․․․․․․․․․․․․․․․․․․․
+
+  82 passing (256ms)
+  3 failing
+
+  1) mid forecast text completeness rejects empty/malformed land forecast text "":
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:311:125
+      at server/lib/collectTownForecast.js:381:17
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:336:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:309:17)
+      at CollectData.getData (server/lib/collectTownForecast.js:329:9)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:311:15)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  2) mid forecast text completeness rejects empty/malformed land forecast text "   ":
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:311:125
+      at server/lib/collectTownForecast.js:381:17
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:336:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:309:17)
+      at CollectData.getData (server/lib/collectTownForecast.js:329:9)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:311:15)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  3) mid forecast text completeness rejects empty/malformed land forecast text {"unexpected":["text"]}:
+     AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(err)
+
+      at server/test/offline/gather-code-drift.test.js:311:125
+      at server/lib/collectTownForecast.js:381:17
+      at Parser.<anonymous> (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:304:18)
+      at Parser.emit (node:events:519:28)
+      at SAXParser.onclosetag (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:262:26)
+      at emit (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:745:35)
+      at emitNode (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:803:5)
+      at closeTag (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1089:7)
+      at SAXParser.write (/tmp/issue-2555-harness/node_modules/sax/lib/sax.js:1707:13)
+      at exports.Parser.Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:323:31)
+      at Parser.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:5:59)
+      at exports.parseString (/tmp/issue-2555-harness/node_modules/xml2js/lib/parser.js:369:19)
+      at server/lib/collectTownForecast.js:336:9
+      at Object.get (server/test/offline/gather-code-drift.test.js:309:17)
+      at CollectData.getData (server/lib/collectTownForecast.js:329:9)
+      at Context.<anonymous> (server/test/offline/gather-code-drift.test.js:311:15)
+      at process.processImmediate (node:internal/timers:484:21)
+
+
+
+
+Exit code: 3

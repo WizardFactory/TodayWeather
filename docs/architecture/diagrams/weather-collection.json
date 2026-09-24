@@ -11,7 +11,7 @@
     "title": "Weather collection and persistence",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+      "revision": "87b8855f308611a07897cd3a39c45fefb3088d77",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -59,7 +59,7 @@
       "id": "fetch",
       "type": "backend",
       "label": "Product requesters",
-      "sublabel": "Fetch, parse, retry",
+      "sublabel": "KMA 00 / complete batch",
       "pos": [
         685,
         130
@@ -226,6 +226,14 @@
       "items": [
         "Immediate startup pass; queued jobs use pop() and async.series.",
         "Current, shortest and air observations also dispatch outside the queue."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "KMA compatibility (#2555)",
+      "items": [
+        "HTTP; reject partial pages and validate day-specific sea values.",
+        "Hold hourly short activation until legacy consumers are repaired."
       ]
     },
     {
