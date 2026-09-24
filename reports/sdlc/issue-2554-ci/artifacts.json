@@ -1,0 +1,1404 @@
+{
+  "schema_version": 1,
+  "task_id": "issue-2554-ci",
+  "mode": "implementation",
+  "change_kind": "configuration",
+  "endpoint": "local",
+  "criteria": [
+    "CI1",
+    "CI2",
+    "CI3"
+  ],
+  "created_at": "2026-09-24T03:45:19.722095+00:00",
+  "events": [
+    {
+      "at": "2026-09-24T03:45:19.722197+00:00",
+      "action": "initialized",
+      "stage": null
+    },
+    {
+      "at": "2026-09-24T03:46:48.180838+00:00",
+      "action": "iteration-started",
+      "stage": "triage",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:46:48.374602+00:00",
+      "action": "iteration-finished",
+      "stage": "triage",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed concrete deliverables against authorized local scope."
+    },
+    {
+      "at": "2026-09-24T03:46:48.599355+00:00",
+      "action": "iteration-started",
+      "stage": "intent",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:46:48.735475+00:00",
+      "action": "iteration-finished",
+      "stage": "intent",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed concrete deliverables against authorized local scope."
+    },
+    {
+      "at": "2026-09-24T03:46:48.994830+00:00",
+      "action": "iteration-started",
+      "stage": "investigation",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:46:49.141910+00:00",
+      "action": "iteration-finished",
+      "stage": "investigation",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed concrete deliverables against authorized local scope."
+    },
+    {
+      "at": "2026-09-24T03:46:49.357125+00:00",
+      "action": "iteration-started",
+      "stage": "spec",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:46:49.525081+00:00",
+      "action": "iteration-finished",
+      "stage": "spec",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed concrete deliverables against authorized local scope."
+    },
+    {
+      "at": "2026-09-24T03:46:49.705546+00:00",
+      "action": "stage-excluded",
+      "stage": "design",
+      "reason": "Small standalone CI configuration; service structure, routes and runtime flow unchanged. No diagram change warranted."
+    },
+    {
+      "at": "2026-09-24T03:46:49.843839+00:00",
+      "action": "iteration-started",
+      "stage": "plan",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:46:49.992916+00:00",
+      "action": "iteration-finished",
+      "stage": "plan",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed concrete deliverables against authorized local scope."
+    },
+    {
+      "at": "2026-09-24T03:46:50.272036+00:00",
+      "action": "iteration-started",
+      "stage": "test-design",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:49:23.577307+00:00",
+      "action": "iteration-finished",
+      "stage": "test-design",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed concrete deliverables against authorized local scope."
+    },
+    {
+      "at": "2026-09-24T03:49:23.851212+00:00",
+      "action": "iteration-started",
+      "stage": "build",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:53:15.191328+00:00",
+      "action": "iteration-finished",
+      "stage": "build",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed concrete deliverables against authorized local scope."
+    },
+    {
+      "at": "2026-09-24T03:53:15.426808+00:00",
+      "action": "iteration-started",
+      "stage": "self-verification",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:53:27.362838+00:00",
+      "action": "iteration-finished",
+      "stage": "self-verification",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed concrete deliverables against authorized local scope."
+    },
+    {
+      "at": "2026-09-24T03:53:27.640627+00:00",
+      "action": "iteration-started",
+      "stage": "independent-verification",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:53:27.809415+00:00",
+      "action": "iteration-finished",
+      "stage": "independent-verification",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed concrete deliverables against authorized local scope."
+    },
+    {
+      "at": "2026-09-24T03:53:44.092955+00:00",
+      "action": "iteration-started",
+      "stage": "completion",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:53:44.288971+00:00",
+      "action": "iteration-finished",
+      "stage": "completion",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Assessed concrete deliverables against authorized local scope."
+    }
+  ],
+  "stages": {
+    "triage": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed concrete deliverables against authorized local scope.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:46:48.180804+00:00",
+          "objective": "Assess authorized CI follow-up and preserve prior work",
+          "resolution": null,
+          "inputs": [],
+          "finished_at": "2026-09-24T03:46:48.374568+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed concrete deliverables against authorized local scope.",
+            "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+            "candidate": "working-tree:issue-2554-ci",
+            "next_action": "Continue authorized local implementation and verification.",
+            "inputs": [],
+            "outputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/issue-2554-ci/triage.md",
+                "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+              "criteria": [
+                "CI1",
+                "CI2",
+                "CI3"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "intent": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed concrete deliverables against authorized local scope.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:46:48.599323+00:00",
+          "objective": "Define isolated automated checks",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/issue-2554-ci/triage.md",
+              "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+            }
+          ],
+          "finished_at": "2026-09-24T03:46:48.735441+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed concrete deliverables against authorized local scope.",
+            "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+            "candidate": "working-tree:issue-2554-ci",
+            "next_action": "Continue authorized local implementation and verification.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/issue-2554-ci/triage.md",
+                "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "intent",
+                "path": "intent/issue-2554-ci.md",
+                "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+              "criteria": [
+                "CI1",
+                "CI2",
+                "CI3"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "investigation": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed concrete deliverables against authorized local scope.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:46:48.994802+00:00",
+          "objective": "Check legacy runtime and official Actions contracts",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/issue-2554-ci/triage.md",
+              "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/issue-2554-ci.md",
+              "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+            }
+          ],
+          "finished_at": "2026-09-24T03:46:49.141878+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed concrete deliverables against authorized local scope.",
+            "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+            "candidate": "working-tree:issue-2554-ci",
+            "next_action": "Continue authorized local implementation and verification.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/issue-2554-ci/triage.md",
+                "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/issue-2554-ci.md",
+                "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/issue-2554-ci/investigation.md",
+                "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+              "criteria": [
+                "CI1",
+                "CI2",
+                "CI3"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "spec": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed concrete deliverables against authorized local scope.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:46:49.357096+00:00",
+          "objective": "Specify standalone UTC RSS workflow",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/issue-2554-ci/triage.md",
+              "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/issue-2554-ci.md",
+              "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/issue-2554-ci/investigation.md",
+              "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+            }
+          ],
+          "finished_at": "2026-09-24T03:46:49.525042+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed concrete deliverables against authorized local scope.",
+            "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+            "candidate": "working-tree:issue-2554-ci",
+            "next_action": "Continue authorized local implementation and verification.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/issue-2554-ci/triage.md",
+                "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/issue-2554-ci.md",
+                "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/issue-2554-ci/investigation.md",
+                "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "spec",
+                "path": "specs/issue-2554-ci.md",
+                "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+              "criteria": [
+                "CI1",
+                "CI2",
+                "CI3"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "design": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Small standalone CI configuration; service structure, routes and runtime flow unchanged. No diagram change warranted.",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "plan": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed concrete deliverables against authorized local scope.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:46:49.843800+00:00",
+          "objective": "Plan test-first workflow and exact-command smoke",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/issue-2554-ci/triage.md",
+              "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/issue-2554-ci.md",
+              "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/issue-2554-ci/investigation.md",
+              "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/issue-2554-ci.md",
+              "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+            }
+          ],
+          "finished_at": "2026-09-24T03:46:49.992881+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed concrete deliverables against authorized local scope.",
+            "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+            "candidate": "working-tree:issue-2554-ci",
+            "next_action": "Continue authorized local implementation and verification.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/issue-2554-ci/triage.md",
+                "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/issue-2554-ci.md",
+                "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/issue-2554-ci/investigation.md",
+                "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/issue-2554-ci.md",
+                "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "plan",
+                "path": "plans/issue-2554-ci.md",
+                "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+              "criteria": [
+                "CI1",
+                "CI2",
+                "CI3"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "test-design": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed concrete deliverables against authorized local scope.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:46:50.271992+00:00",
+          "objective": "Add evaluator for workflow failure and command execution",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/issue-2554-ci/triage.md",
+              "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/issue-2554-ci.md",
+              "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/issue-2554-ci/investigation.md",
+              "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/issue-2554-ci.md",
+              "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+            },
+            {
+              "kind": "plan",
+              "path": "plans/issue-2554-ci.md",
+              "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+            }
+          ],
+          "finished_at": "2026-09-24T03:49:23.577224+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed concrete deliverables against authorized local scope.",
+            "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+            "candidate": "working-tree:issue-2554-ci",
+            "next_action": "Continue authorized local implementation and verification.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/issue-2554-ci/triage.md",
+                "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/issue-2554-ci.md",
+                "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/issue-2554-ci/investigation.md",
+                "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/issue-2554-ci.md",
+                "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+              },
+              {
+                "kind": "plan",
+                "path": "plans/issue-2554-ci.md",
+                "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/issue-2554-ci/test-plan.md",
+                "sha256": "bff168be7b8667bc4cb56f48783464aa949f5564f5cfac8e7cd16a24288d9f6d"
+              },
+              {
+                "kind": "evaluator",
+                "path": "reports/sdlc/issue-2554-ci/check-workflow.py",
+                "sha256": "0fe0f6f2b3dc9b077895716e0adb7c0a04c20e0b0a051501979c983a5cf84f71"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+              "criteria": [
+                "CI1",
+                "CI2",
+                "CI3"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "build": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed concrete deliverables against authorized local scope.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:49:23.851149+00:00",
+          "objective": "Add isolated UTC workflow and usage documentation",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/issue-2554-ci/triage.md",
+              "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/issue-2554-ci.md",
+              "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/issue-2554-ci/investigation.md",
+              "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/issue-2554-ci.md",
+              "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+            },
+            {
+              "kind": "plan",
+              "path": "plans/issue-2554-ci.md",
+              "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/issue-2554-ci/test-plan.md",
+              "sha256": "bff168be7b8667bc4cb56f48783464aa949f5564f5cfac8e7cd16a24288d9f6d"
+            },
+            {
+              "kind": "evaluator",
+              "path": "reports/sdlc/issue-2554-ci/check-workflow.py",
+              "sha256": "0fe0f6f2b3dc9b077895716e0adb7c0a04c20e0b0a051501979c983a5cf84f71"
+            }
+          ],
+          "finished_at": "2026-09-24T03:53:15.191277+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed concrete deliverables against authorized local scope.",
+            "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+            "candidate": "sha256:14773bd85732dbe0b32aa8e059e082bfc0a8f9e6bd49919aca21b42c77ab2a83",
+            "next_action": "Continue authorized local implementation and verification.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/issue-2554-ci/triage.md",
+                "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/issue-2554-ci.md",
+                "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/issue-2554-ci/investigation.md",
+                "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/issue-2554-ci.md",
+                "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+              },
+              {
+                "kind": "plan",
+                "path": "plans/issue-2554-ci.md",
+                "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/issue-2554-ci/test-plan.md",
+                "sha256": "bff168be7b8667bc4cb56f48783464aa949f5564f5cfac8e7cd16a24288d9f6d"
+              },
+              {
+                "kind": "evaluator",
+                "path": "reports/sdlc/issue-2554-ci/check-workflow.py",
+                "sha256": "0fe0f6f2b3dc9b077895716e0adb7c0a04c20e0b0a051501979c983a5cf84f71"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "build",
+                "path": "reports/sdlc/issue-2554-ci/build.md",
+                "sha256": "687cadacba1dc9995aeafacdd88defe1ecd07f6484aef9046dee5d96c2736dcd"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/issue-2554-ci/change-record.md",
+                "sha256": "411b1168debbdfd918682b446dd1124e5dbe49b7165bce805be59d5c73927443"
+              },
+              {
+                "kind": "candidate-source",
+                "path": ".github/workflows/rss-offline.yml",
+                "sha256": "84a6132154cad649bc9262b45ffc35b773ad5a500ce8763acf16ca1cdd88f448"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "server/test/offline/README.md",
+                "sha256": "e720a0c143780d69e9131991a7f5388aefc6ec9e9942abd9d8b0ed726069fcce"
+              },
+              {
+                "kind": "candidate",
+                "path": "reports/sdlc/issue-2554-ci/candidate.json",
+                "sha256": "d0ce01c48c6d9241da095f63b1ba750b356b3ee9f0e85d33b212670f8b2e69c5"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+              "criteria": [
+                "CI1",
+                "CI2",
+                "CI3"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "self-verification": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed concrete deliverables against authorized local scope.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:53:15.426754+00:00",
+          "objective": "Assess evaluator and exact-command fresh-install smoke",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/issue-2554-ci/triage.md",
+              "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/issue-2554-ci.md",
+              "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/issue-2554-ci/investigation.md",
+              "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/issue-2554-ci.md",
+              "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+            },
+            {
+              "kind": "plan",
+              "path": "plans/issue-2554-ci.md",
+              "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/issue-2554-ci/test-plan.md",
+              "sha256": "bff168be7b8667bc4cb56f48783464aa949f5564f5cfac8e7cd16a24288d9f6d"
+            },
+            {
+              "kind": "evaluator",
+              "path": "reports/sdlc/issue-2554-ci/check-workflow.py",
+              "sha256": "0fe0f6f2b3dc9b077895716e0adb7c0a04c20e0b0a051501979c983a5cf84f71"
+            },
+            {
+              "kind": "build",
+              "path": "reports/sdlc/issue-2554-ci/build.md",
+              "sha256": "687cadacba1dc9995aeafacdd88defe1ecd07f6484aef9046dee5d96c2736dcd"
+            },
+            {
+              "kind": "change-record",
+              "path": "reports/sdlc/issue-2554-ci/change-record.md",
+              "sha256": "411b1168debbdfd918682b446dd1124e5dbe49b7165bce805be59d5c73927443"
+            },
+            {
+              "kind": "candidate-source",
+              "path": ".github/workflows/rss-offline.yml",
+              "sha256": "84a6132154cad649bc9262b45ffc35b773ad5a500ce8763acf16ca1cdd88f448"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "server/test/offline/README.md",
+              "sha256": "e720a0c143780d69e9131991a7f5388aefc6ec9e9942abd9d8b0ed726069fcce"
+            },
+            {
+              "kind": "candidate",
+              "path": "reports/sdlc/issue-2554-ci/candidate.json",
+              "sha256": "d0ce01c48c6d9241da095f63b1ba750b356b3ee9f0e85d33b212670f8b2e69c5"
+            }
+          ],
+          "finished_at": "2026-09-24T03:53:27.362791+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed concrete deliverables against authorized local scope.",
+            "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+            "candidate": "sha256:14773bd85732dbe0b32aa8e059e082bfc0a8f9e6bd49919aca21b42c77ab2a83",
+            "next_action": "Continue authorized local implementation and verification.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/issue-2554-ci/triage.md",
+                "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/issue-2554-ci.md",
+                "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/issue-2554-ci/investigation.md",
+                "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/issue-2554-ci.md",
+                "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+              },
+              {
+                "kind": "plan",
+                "path": "plans/issue-2554-ci.md",
+                "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/issue-2554-ci/test-plan.md",
+                "sha256": "bff168be7b8667bc4cb56f48783464aa949f5564f5cfac8e7cd16a24288d9f6d"
+              },
+              {
+                "kind": "evaluator",
+                "path": "reports/sdlc/issue-2554-ci/check-workflow.py",
+                "sha256": "0fe0f6f2b3dc9b077895716e0adb7c0a04c20e0b0a051501979c983a5cf84f71"
+              },
+              {
+                "kind": "build",
+                "path": "reports/sdlc/issue-2554-ci/build.md",
+                "sha256": "687cadacba1dc9995aeafacdd88defe1ecd07f6484aef9046dee5d96c2736dcd"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/issue-2554-ci/change-record.md",
+                "sha256": "411b1168debbdfd918682b446dd1124e5dbe49b7165bce805be59d5c73927443"
+              },
+              {
+                "kind": "candidate-source",
+                "path": ".github/workflows/rss-offline.yml",
+                "sha256": "84a6132154cad649bc9262b45ffc35b773ad5a500ce8763acf16ca1cdd88f448"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "server/test/offline/README.md",
+                "sha256": "e720a0c143780d69e9131991a7f5388aefc6ec9e9942abd9d8b0ed726069fcce"
+              },
+              {
+                "kind": "candidate",
+                "path": "reports/sdlc/issue-2554-ci/candidate.json",
+                "sha256": "d0ce01c48c6d9241da095f63b1ba750b356b3ee9f0e85d33b212670f8b2e69c5"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "self-verification",
+                "path": "reports/sdlc/issue-2554-ci/self-verification.md",
+                "sha256": "bd9c2c9d09a6cea05feabd529c620d7f48a126d8deeedcffab9eb5376d9d1368"
+              },
+              {
+                "kind": "test-results",
+                "path": "reports/sdlc/issue-2554-ci/test-results.json",
+                "sha256": "4a5d3b958e5bc7c4e6759209d487f45ea494e8f7652868f58f335109f668d2f3"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/red.log",
+                "sha256": "e1630f2dea4158f33cb4095b9946200fbd7d8078702f3b145dcc91643e17e328"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/green.log",
+                "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/post-refactor.log",
+                "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/local-smoke.log",
+                "sha256": "2ab9740725e1019b9f096b5463d6cb78500cefb4053cc306fd4166ea87d9f31e"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+              "criteria": [
+                "CI1",
+                "CI2",
+                "CI3"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "independent-verification": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed concrete deliverables against authorized local scope.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:53:27.640581+00:00",
+          "objective": "Assess independently consumed candidate and execution",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/issue-2554-ci/triage.md",
+              "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/issue-2554-ci.md",
+              "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/issue-2554-ci/investigation.md",
+              "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/issue-2554-ci.md",
+              "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+            },
+            {
+              "kind": "plan",
+              "path": "plans/issue-2554-ci.md",
+              "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/issue-2554-ci/test-plan.md",
+              "sha256": "bff168be7b8667bc4cb56f48783464aa949f5564f5cfac8e7cd16a24288d9f6d"
+            },
+            {
+              "kind": "evaluator",
+              "path": "reports/sdlc/issue-2554-ci/check-workflow.py",
+              "sha256": "0fe0f6f2b3dc9b077895716e0adb7c0a04c20e0b0a051501979c983a5cf84f71"
+            },
+            {
+              "kind": "build",
+              "path": "reports/sdlc/issue-2554-ci/build.md",
+              "sha256": "687cadacba1dc9995aeafacdd88defe1ecd07f6484aef9046dee5d96c2736dcd"
+            },
+            {
+              "kind": "change-record",
+              "path": "reports/sdlc/issue-2554-ci/change-record.md",
+              "sha256": "411b1168debbdfd918682b446dd1124e5dbe49b7165bce805be59d5c73927443"
+            },
+            {
+              "kind": "candidate-source",
+              "path": ".github/workflows/rss-offline.yml",
+              "sha256": "84a6132154cad649bc9262b45ffc35b773ad5a500ce8763acf16ca1cdd88f448"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "server/test/offline/README.md",
+              "sha256": "e720a0c143780d69e9131991a7f5388aefc6ec9e9942abd9d8b0ed726069fcce"
+            },
+            {
+              "kind": "candidate",
+              "path": "reports/sdlc/issue-2554-ci/candidate.json",
+              "sha256": "d0ce01c48c6d9241da095f63b1ba750b356b3ee9f0e85d33b212670f8b2e69c5"
+            },
+            {
+              "kind": "self-verification",
+              "path": "reports/sdlc/issue-2554-ci/self-verification.md",
+              "sha256": "bd9c2c9d09a6cea05feabd529c620d7f48a126d8deeedcffab9eb5376d9d1368"
+            },
+            {
+              "kind": "test-results",
+              "path": "reports/sdlc/issue-2554-ci/test-results.json",
+              "sha256": "4a5d3b958e5bc7c4e6759209d487f45ea494e8f7652868f58f335109f668d2f3"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/issue-2554-ci/red.log",
+              "sha256": "e1630f2dea4158f33cb4095b9946200fbd7d8078702f3b145dcc91643e17e328"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/issue-2554-ci/green.log",
+              "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/issue-2554-ci/post-refactor.log",
+              "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/issue-2554-ci/local-smoke.log",
+              "sha256": "2ab9740725e1019b9f096b5463d6cb78500cefb4053cc306fd4166ea87d9f31e"
+            }
+          ],
+          "finished_at": "2026-09-24T03:53:27.809348+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed concrete deliverables against authorized local scope.",
+            "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+            "candidate": "sha256:14773bd85732dbe0b32aa8e059e082bfc0a8f9e6bd49919aca21b42c77ab2a83",
+            "next_action": "Continue authorized local implementation and verification.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/issue-2554-ci/triage.md",
+                "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/issue-2554-ci.md",
+                "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/issue-2554-ci/investigation.md",
+                "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/issue-2554-ci.md",
+                "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+              },
+              {
+                "kind": "plan",
+                "path": "plans/issue-2554-ci.md",
+                "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/issue-2554-ci/test-plan.md",
+                "sha256": "bff168be7b8667bc4cb56f48783464aa949f5564f5cfac8e7cd16a24288d9f6d"
+              },
+              {
+                "kind": "evaluator",
+                "path": "reports/sdlc/issue-2554-ci/check-workflow.py",
+                "sha256": "0fe0f6f2b3dc9b077895716e0adb7c0a04c20e0b0a051501979c983a5cf84f71"
+              },
+              {
+                "kind": "build",
+                "path": "reports/sdlc/issue-2554-ci/build.md",
+                "sha256": "687cadacba1dc9995aeafacdd88defe1ecd07f6484aef9046dee5d96c2736dcd"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/issue-2554-ci/change-record.md",
+                "sha256": "411b1168debbdfd918682b446dd1124e5dbe49b7165bce805be59d5c73927443"
+              },
+              {
+                "kind": "candidate-source",
+                "path": ".github/workflows/rss-offline.yml",
+                "sha256": "84a6132154cad649bc9262b45ffc35b773ad5a500ce8763acf16ca1cdd88f448"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "server/test/offline/README.md",
+                "sha256": "e720a0c143780d69e9131991a7f5388aefc6ec9e9942abd9d8b0ed726069fcce"
+              },
+              {
+                "kind": "candidate",
+                "path": "reports/sdlc/issue-2554-ci/candidate.json",
+                "sha256": "d0ce01c48c6d9241da095f63b1ba750b356b3ee9f0e85d33b212670f8b2e69c5"
+              },
+              {
+                "kind": "self-verification",
+                "path": "reports/sdlc/issue-2554-ci/self-verification.md",
+                "sha256": "bd9c2c9d09a6cea05feabd529c620d7f48a126d8deeedcffab9eb5376d9d1368"
+              },
+              {
+                "kind": "test-results",
+                "path": "reports/sdlc/issue-2554-ci/test-results.json",
+                "sha256": "4a5d3b958e5bc7c4e6759209d487f45ea494e8f7652868f58f335109f668d2f3"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/red.log",
+                "sha256": "e1630f2dea4158f33cb4095b9946200fbd7d8078702f3b145dcc91643e17e328"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/green.log",
+                "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/post-refactor.log",
+                "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/local-smoke.log",
+                "sha256": "2ab9740725e1019b9f096b5463d6cb78500cefb4053cc306fd4166ea87d9f31e"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "independent-verification",
+                "path": "reports/sdlc/issue-2554-ci/independent-verification.md",
+                "sha256": "1ca9421683ab962d9dab80073a66fbacefb717dd4f2e69f4d0d341c7c2f4e7f2"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+              "criteria": [
+                "CI1",
+                "CI2",
+                "CI3"
+              ]
+            },
+            "verifier": {
+              "independent": true,
+              "context_id": "/root/ci_verify",
+              "builder_context_id": "/root",
+              "checks": "Independent CI workflow configuration and command execution verification; see independent-verification.md."
+            }
+          }
+        }
+      ]
+    },
+    "pr-review": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by implementation/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "correction": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "No correction requested",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "merge": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by implementation/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "completion": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Assessed concrete deliverables against authorized local scope.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:53:44.092886+00:00",
+          "objective": "Complete locally verified CI change before authorized publication",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/issue-2554-ci/triage.md",
+              "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+            },
+            {
+              "kind": "intent",
+              "path": "intent/issue-2554-ci.md",
+              "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/issue-2554-ci/investigation.md",
+              "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+            },
+            {
+              "kind": "spec",
+              "path": "specs/issue-2554-ci.md",
+              "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+            },
+            {
+              "kind": "plan",
+              "path": "plans/issue-2554-ci.md",
+              "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+            },
+            {
+              "kind": "test-plan",
+              "path": "reports/sdlc/issue-2554-ci/test-plan.md",
+              "sha256": "bff168be7b8667bc4cb56f48783464aa949f5564f5cfac8e7cd16a24288d9f6d"
+            },
+            {
+              "kind": "evaluator",
+              "path": "reports/sdlc/issue-2554-ci/check-workflow.py",
+              "sha256": "0fe0f6f2b3dc9b077895716e0adb7c0a04c20e0b0a051501979c983a5cf84f71"
+            },
+            {
+              "kind": "build",
+              "path": "reports/sdlc/issue-2554-ci/build.md",
+              "sha256": "687cadacba1dc9995aeafacdd88defe1ecd07f6484aef9046dee5d96c2736dcd"
+            },
+            {
+              "kind": "change-record",
+              "path": "reports/sdlc/issue-2554-ci/change-record.md",
+              "sha256": "411b1168debbdfd918682b446dd1124e5dbe49b7165bce805be59d5c73927443"
+            },
+            {
+              "kind": "candidate-source",
+              "path": ".github/workflows/rss-offline.yml",
+              "sha256": "84a6132154cad649bc9262b45ffc35b773ad5a500ce8763acf16ca1cdd88f448"
+            },
+            {
+              "kind": "candidate-source",
+              "path": "server/test/offline/README.md",
+              "sha256": "e720a0c143780d69e9131991a7f5388aefc6ec9e9942abd9d8b0ed726069fcce"
+            },
+            {
+              "kind": "candidate",
+              "path": "reports/sdlc/issue-2554-ci/candidate.json",
+              "sha256": "d0ce01c48c6d9241da095f63b1ba750b356b3ee9f0e85d33b212670f8b2e69c5"
+            },
+            {
+              "kind": "self-verification",
+              "path": "reports/sdlc/issue-2554-ci/self-verification.md",
+              "sha256": "bd9c2c9d09a6cea05feabd529c620d7f48a126d8deeedcffab9eb5376d9d1368"
+            },
+            {
+              "kind": "test-results",
+              "path": "reports/sdlc/issue-2554-ci/test-results.json",
+              "sha256": "4a5d3b958e5bc7c4e6759209d487f45ea494e8f7652868f58f335109f668d2f3"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/issue-2554-ci/red.log",
+              "sha256": "e1630f2dea4158f33cb4095b9946200fbd7d8078702f3b145dcc91643e17e328"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/issue-2554-ci/green.log",
+              "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/issue-2554-ci/post-refactor.log",
+              "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+            },
+            {
+              "kind": "execution-log",
+              "path": "reports/sdlc/issue-2554-ci/local-smoke.log",
+              "sha256": "2ab9740725e1019b9f096b5463d6cb78500cefb4053cc306fd4166ea87d9f31e"
+            },
+            {
+              "kind": "independent-verification",
+              "path": "reports/sdlc/issue-2554-ci/independent-verification.md",
+              "sha256": "1ca9421683ab962d9dab80073a66fbacefb717dd4f2e69f4d0d341c7c2f4e7f2"
+            }
+          ],
+          "finished_at": "2026-09-24T03:53:44.288918+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Assessed concrete deliverables against authorized local scope.",
+            "authority_source": "AK request to proceed with CI recommendation on PR2556; intent/issue-2554-ci.md",
+            "candidate": "sha256:14773bd85732dbe0b32aa8e059e082bfc0a8f9e6bd49919aca21b42c77ab2a83",
+            "next_action": "Continue authorized local implementation and verification.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/issue-2554-ci/triage.md",
+                "sha256": "6884196f8bd4d0fd96d1fe78edb068df2cfaa091e66363f5fa6f3fb55f359803"
+              },
+              {
+                "kind": "intent",
+                "path": "intent/issue-2554-ci.md",
+                "sha256": "552bf6af87f2e7e2c101f8f975acfc3220adaa15f8678f885cd2bb0ef20e9440"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/issue-2554-ci/investigation.md",
+                "sha256": "755b8d9a7fd3ec148f16669ae9b4591a154a170cba70120702e880e21eb61cf7"
+              },
+              {
+                "kind": "spec",
+                "path": "specs/issue-2554-ci.md",
+                "sha256": "2a942a669c78ff8afefa8d98fd9e225ae4ccde5c84f732c9686ddfad06520ef6"
+              },
+              {
+                "kind": "plan",
+                "path": "plans/issue-2554-ci.md",
+                "sha256": "b1b1bbd530bfe5c3d1eed1cc83c16a7c0e8ef31fe279ba091675889dc92416c8"
+              },
+              {
+                "kind": "test-plan",
+                "path": "reports/sdlc/issue-2554-ci/test-plan.md",
+                "sha256": "bff168be7b8667bc4cb56f48783464aa949f5564f5cfac8e7cd16a24288d9f6d"
+              },
+              {
+                "kind": "evaluator",
+                "path": "reports/sdlc/issue-2554-ci/check-workflow.py",
+                "sha256": "0fe0f6f2b3dc9b077895716e0adb7c0a04c20e0b0a051501979c983a5cf84f71"
+              },
+              {
+                "kind": "build",
+                "path": "reports/sdlc/issue-2554-ci/build.md",
+                "sha256": "687cadacba1dc9995aeafacdd88defe1ecd07f6484aef9046dee5d96c2736dcd"
+              },
+              {
+                "kind": "change-record",
+                "path": "reports/sdlc/issue-2554-ci/change-record.md",
+                "sha256": "411b1168debbdfd918682b446dd1124e5dbe49b7165bce805be59d5c73927443"
+              },
+              {
+                "kind": "candidate-source",
+                "path": ".github/workflows/rss-offline.yml",
+                "sha256": "84a6132154cad649bc9262b45ffc35b773ad5a500ce8763acf16ca1cdd88f448"
+              },
+              {
+                "kind": "candidate-source",
+                "path": "server/test/offline/README.md",
+                "sha256": "e720a0c143780d69e9131991a7f5388aefc6ec9e9942abd9d8b0ed726069fcce"
+              },
+              {
+                "kind": "candidate",
+                "path": "reports/sdlc/issue-2554-ci/candidate.json",
+                "sha256": "d0ce01c48c6d9241da095f63b1ba750b356b3ee9f0e85d33b212670f8b2e69c5"
+              },
+              {
+                "kind": "self-verification",
+                "path": "reports/sdlc/issue-2554-ci/self-verification.md",
+                "sha256": "bd9c2c9d09a6cea05feabd529c620d7f48a126d8deeedcffab9eb5376d9d1368"
+              },
+              {
+                "kind": "test-results",
+                "path": "reports/sdlc/issue-2554-ci/test-results.json",
+                "sha256": "4a5d3b958e5bc7c4e6759209d487f45ea494e8f7652868f58f335109f668d2f3"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/red.log",
+                "sha256": "e1630f2dea4158f33cb4095b9946200fbd7d8078702f3b145dcc91643e17e328"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/green.log",
+                "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/post-refactor.log",
+                "sha256": "a04b4bf8b19fda0ea9f6a2514003652b4d7fd5de56a429965202c0be6c0fc42e"
+              },
+              {
+                "kind": "execution-log",
+                "path": "reports/sdlc/issue-2554-ci/local-smoke.log",
+                "sha256": "2ab9740725e1019b9f096b5463d6cb78500cefb4053cc306fd4166ea87d9f31e"
+              },
+              {
+                "kind": "independent-verification",
+                "path": "reports/sdlc/issue-2554-ci/independent-verification.md",
+                "sha256": "1ca9421683ab962d9dab80073a66fbacefb717dd4f2e69f4d0d341c7c2f4e7f2"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "completion",
+                "path": "reports/sdlc/issue-2554-ci/completion.md",
+                "sha256": "f99d2cff1605dcb83a50606442d567f6bca434794433cd6ac3fce7a4a1cc7873"
+              }
+            ],
+            "assessment": {
+              "assessor": "/root",
+              "summary": "Actual source, evidence and limitations inspected; no production or remote mutation.",
+              "criteria": [
+                "CI1",
+                "CI2",
+                "CI3"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

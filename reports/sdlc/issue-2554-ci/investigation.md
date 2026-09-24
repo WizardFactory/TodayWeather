@@ -1,0 +1,4 @@
+# Investigation
+server/package.json npm test launches Mocha; nested offline Node tests are not wired. .travis.yml uses Node 6.13 and has master deployment coupling. No existing GitHub workflow exists. Keep this configuration unchanged; add a separate Actions job.
+Existing scripts need Node18+; Node22.22.2 already passed. Full response smoke reads fixed synthetic data, performs no external I/O except isolated dependency installation, and requires TZ UTC. Do not set SMOKE_POLICIES so all 36 cases run.
+Official action docs inspected 2026-09-24: https://github.com/actions/checkout and https://github.com/actions/setup-node. GitHub tag resolution: checkout v7 SHA 3d3c42e5aac5ba805825da76410c181273ba90b1 (v7.0.1); setup-node v7 SHA 820762786026740c76f36085b0efc47a31fe5020. Use full SHAs, contents read, no persisted checkout credential or package caching. Hosted ubuntu-latest supports required action runtimes.
