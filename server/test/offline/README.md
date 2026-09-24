@@ -66,7 +66,11 @@ TZ=UTC NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/d
 ```
 
 The additional smoke executes all v000903 middleware for both DB versions and
-C/F units, covering captured, stale, missing-text and missing-temperature data.
+C/F units, covering captured, stale, missing-text and missing-temperature data,
+plus stale/missing primary short with fresh RSS, partial/nonmatching RSS and
+nonzero six-hour precipitation (36 route scenarios). `short-rss-daily.test.js`
+adds 44 synthetic source-provenance, freshness, bound and precedence checks
+to `test:offline` (212 regression checks plus gather smoke in total).
 HTTP, DB and timers are intercepted before loading real modules. It does not
 import or initialize `server/app.js`; existing global field declarations are
 read as text only. Tests require Node >=18. Historical production Node builds

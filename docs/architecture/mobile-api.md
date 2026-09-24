@@ -86,7 +86,7 @@ KMA output includes `source: 'KMA'`, region/city/town names, publication fields,
 
 ### RSS fallback contract (issue #2554 local repair)
 
-`getShortRss` compares RSS and base short publication timestamps before matching strictly future KST forecast slots. Older RSS is skipped; equal timestamps fill unusable base values; newer RSS replaces selected fields only when the corresponding RSS source is usable. The first RSS slot is included when it is future, including a single-slot result. Date/time matching happens before `convert0Hto24H`, so next-day midnight uses `YYYYMMDD0000` at this boundary.
+`getShortRss` first requires an independently valid RSS publication aged 0–24 hours, then compares normalized RSS and usable base short publication timestamps before matching strictly future KST forecast slots. Older RSS is skipped; equal timestamps fill unusable base values; newer RSS replaces selected fields only when the corresponding RSS source is usable. The first RSS slot is included when it is future, including a single-slot result. Date/time matching happens before `convert0Hto24H`, so next-day midnight uses `YYYYMMDD0000` at this boundary.
 
 Both DB versions project `ws` and `wd`. [Wind normalization](weather-collection.md#grid-rss-wind-contract-issue-2554-local-repair) takes place at the service merge boundary, before downstream unit conversion. Missing `wav`, `uuu` and `vvv` leave existing base values intact; the merge does not derive vector components. Every selected source rejects absent/null/non-numeric/nonfinite data and field-specific sentinels. Nonnegative fields accept zero, temperatures accept real negative values above `-50` (including `-1` °C) and reject `-999`, and optional vector components accept values above `-100`. At 06:00 minimum temperature checks `tmn`; at 15:00 maximum checks `tmx` itself.
 
@@ -135,7 +135,7 @@ The mid-land/temperature collectors preserve available day-3–10 fields without
 requiring day 3 or day 10. Both storage versions retain publication/region and
 optional precipitation probabilities. Mid composition joins by each source's
 KST target date, with independent 36-hour publication limits and no future or
-mismatched identity. Short daily overlays have a 24-hour publication limit.
+mismatched identity. Short daily overlays have a 24-hour publication limit. When primary short data is stale or its publication is absent, a request-local snapshot of fields actually copied from matched short RSS slots supplies daily input. Its own KST publication determines freshness and the publication-date+4 target ceiling. Later mixed-hourly extrema cannot revive untouched stale values; incomplete RSS-only days remain unavailable. The accepted feed timestamp alone is never sufficient.
 The seven-day observation history remains; unavailable days are omitted and
 listed in additive `midData.dailyStatus.unavailableDates`. The captured day-4
 forecast remains September 28, with September 27 unavailable unless an actual
@@ -148,3 +148,5 @@ independent. No replacement feed or production recovery is claimed.
 See the [daily validity diagram](diagrams/daily-forecast-validity.html),
 [editable source](diagrams/daily-forecast-validity.json), and
 [contract, source policy and operator checklist](../../reports/sdlc/issue-2560/daily-forecast-contract.md).
+
+RSS-only daily fallback omits `r06`/`s06` aggregates: accepted RSS values are overlapping six-hour amounts and have not passed the mixed-hourly precipitation redistribution. Summing them would overstate the daily amount. Hourly precipitation remains unchanged; missing daily aggregates mean unavailable, not zero.

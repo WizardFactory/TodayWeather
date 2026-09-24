@@ -43,6 +43,36 @@ async function main(){
         assert(!result.logs.some(row=>row.args.some(arg=>/TypeError|ReferenceError/.test(String(arg)))));
         summaries.push({version,scenario,units,dates,status:b.midData.dailyStatus,middlewareCount:result.traces.length});
     }
+    // Synthetic review regression: RSS must contribute daily fields independently.
+    for(const version of ['1.0','2.0'])for(const scenario of ['stale-primary','missing-primary','partial-rss','unmatched-rss','rain-rss'])for(const units of ['C','F']) {
+        const f=route.makeFixture(route.locations[0],'newer');
+        f.basePub='202609161400';f.rssPub='202609241400';
+        f.missingShort=scenario==='missing-primary';
+        f.short.forEach(r=>{r.t3h=35;r.tmn=30;r.tmx=40;});
+        // Every forecast slot is synthetic. Tomorrow includes both extrema slots.
+        f.rss=f.rss.map(r=>({...r,ftm:f.rssPub,date:r.date.replace('20260924',scenario==='unmatched-rss'?'20260930':'20260925')}));
+        if(scenario==='rain-rss')f.rss.forEach(r=>{r.pty=1;r.r06=6;r.s06=2;});
+        if(scenario==='partial-rss')f.rss.forEach(r=>{
+            for(const key of ['temp','tmn','tmx'])r[key]=-999;
+            for(const key of ['sky','pty','reh','pop','r06','s06'])r[key]=-1;
+        });
+        const env=route.createHarness(version,f);
+        const result=await env.request({temperatureUnit:units,windSpeedUnit:'m/s'});
+        assert.deepEqual(result.traces,env.methods);
+        const b=result.body,rows=b.midData.dailyData,dates=rows.map(r=>r.date),tomorrow=rows.find(r=>r.date==='20260925');
+        if(['stale-primary','missing-primary','rain-rss'].includes(scenario)) {
+            assert(tomorrow,scenario+' retains fresh RSS daily forecast');
+            assert.equal(tomorrow.tmn,units==='C'?19:66);assert.equal(tomorrow.tmx,units==='C'?28:82);
+            assert.equal(tomorrow.wfAm,scenario==='rain-rss'?'구름적고 비':'맑음');assert.equal(b.shortRssPubDate,f.rssPub);
+            assert.equal(tomorrow.r06,undefined);assert.equal(tomorrow.s06,undefined);
+            if(scenario==='rain-rss')assert(b.short.some(r=>r.r06>0),'hourly precipitation remains usable');
+        } else assert.equal(tomorrow,undefined,'untouched stale fields cannot become fresh daily weather');
+        assert(dates.includes('20260923'));assert(dates.includes('20260917'));assert(dates.includes('20260928'));
+        assert.equal(dates.length,new Set(dates).size);assert.deepEqual(dates,[...dates].sort());
+        assert(!JSON.stringify(b).includes('_dailyShortRss'),'provenance stays request-local');
+        assert(!result.logs.some(row=>row.args.some(arg=>/TypeError|ReferenceError/.test(String(arg)))));
+        summaries.push({version,scenario,units,dates,middlewareCount:result.traces.length});
+    }
     const result={fixedClock:process.env.TW_SMOKE_NOW,scenarioCount:summaries.length,outcome:'passed',scenarios:summaries};
     if(process.env.TW_DAILY_EVIDENCE)fs.writeFileSync(process.env.TW_DAILY_EVIDENCE,JSON.stringify(result,null,2)+'\n');
     console.log(JSON.stringify(result,null,2));

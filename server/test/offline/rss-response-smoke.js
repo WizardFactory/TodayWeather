@@ -66,7 +66,8 @@ function createHarness(version, fixture) {
     const map={'modelShort':'short','modelCurrent':'current','modelShortest':'shortest','modelShortRss':'rss','kma.town.short.model':'short','kma.town.current.model':'current','kma.town.shortest.model':'shortest','kma.town.short.rss.model':'rss'};
     if(map[name]) {
       const kind=map[name],dataKey={short:'shortData',current:'currentData',shortest:'shortestData',rss:'shortData'}[kind];
-      const pub={short:fixture.basePub,current:'202609240900',shortest:'202609240830',rss:'202609240800'}[kind];
+      if(kind==='short' && fixture.missingShort) return [];
+      const pub={short:fixture.basePub,current:'202609240900',shortest:'202609240830',rss:fixture.rssPub || '202609240800'}[kind];
       if(isV2) return fixture[kind].map(item=>({mCoord:fixture.place.mCoord,pubDate:kstDate(pub),fcsDate:kstDate(kind==='rss'?item.date:item.date+item.time),[dataKey]:item}));
       return [{mCoord:fixture.place.mCoord,pubDate:pub,[dataKey]:fixture[kind]}];
     }
@@ -122,17 +123,17 @@ function createHarness(version, fixture) {
   // Exercise real XML parsing and collector conversion before presenting rows at the Mongo boundary.
   const direction={Seoul:['북','N',2],Busan:['남서','SW',7],Jeju:['북서','NW',4]}[fixture.place.name];
   const xmlRows=fixture.rss.map(row=>{
-    const values=Object.assign({},row,{hour:Number(row.date.slice(8,10)),day:0,wfKor:'맑음',wfEn:'Clear',wdKor:direction[0],wdEn:direction[1]});
+    const values=Object.assign({},row,{hour:Number(row.date.slice(8,10)),day:Math.round((kstDate(row.date.slice(0,8)+'0000')-kstDate((fixture.rssPub || '202609240800').slice(0,8)+'0000'))/86400000),wfKor:'맑음',wfEn:'Clear',wdKor:direction[0],wdEn:direction[1]});
     delete values.date;delete values.ftm;
     return '<data>'+Object.entries(values).map(([key,value])=>'<'+key+'>'+value+'</'+key+'>').join('')+'</data>';
   }).join('');
-  const xml='<wid><header><tm>202609240800</tm><x>'+fixture.place.mCoord.mx+'</x><y>'+fixture.place.mCoord.my+'</y></header><body>'+xmlRows+'</body></wid>';
+  const xml='<wid><header><tm>'+(fixture.rssPub || '202609240800')+'</tm><x>'+fixture.place.mCoord.mx+'</x><y>'+fixture.place.mCoord.my+'</y></header><body>'+xmlRows+'</body></wid>';
   const Rss=load(path.join(root,'server/controllers/kma/kma.town.short.rss.controller.js'));
   let parsed=false;
   require('xml2js').parseString(xml,(error,upstream)=>{
     assert.ifError(error);
     new Rss().parseShortRss(0,upstream,(code,converted)=>{
-      assert.equal(code,0);assert.equal(converted.shortData.length,7);
+      assert.equal(code,0);assert.equal(converted.shortData.length,fixture.rss.length);
       for(const row of converted.shortData) {assert.equal(row.wdEn,direction[2]);assert.equal(row.wfEn,1);}
       fixture.rss=converted.shortData;parsed=true;
     });

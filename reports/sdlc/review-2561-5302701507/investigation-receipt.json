@@ -1,0 +1,45 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "P1 reproduced on both DB versions; required repair scope justified. Assessment complete, implementation not authorized by this review-only request.",
+  "authority_source": "AK requested examination of review 5302701507",
+  "candidate": "95fe711eee09f021c266303195badb1d4c612ad5",
+  "next_action": "Return the evidence-backed assessment to AK",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+      "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+    },
+    {
+      "kind": "intent",
+      "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+      "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+      "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+    },
+    {
+      "kind": "reproduction-source",
+      "path": "reports/sdlc/review-2561-5302701507/probe.js",
+      "sha256": "0296bacf758467b840a2cb360d6db9614d1c8b8667d46c2df3d69d6b3ca0fdea"
+    },
+    {
+      "kind": "execution-evidence",
+      "path": "reports/sdlc/review-2561-5302701507/probe-results.json",
+      "sha256": "c225aed6288b225fc9feef51a9a9ff91ce6b6da13088e88ac74870eb82dc7d1d"
+    }
+  ],
+  "assessment": {
+    "assessor": "/root, implementation author assessing existing external review",
+    "summary": "R1 reproduced; R2 source-specific freshness and field provenance required. No new independent-review claim.",
+    "criteria": [
+      "R1",
+      "R2"
+    ]
+  }
+}

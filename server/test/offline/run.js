@@ -7,6 +7,7 @@ var commands = [
     [require.resolve('mocha/bin/_mocha'), path.join(__dirname, 'gather-code-drift.test.js')],
     [path.join(__dirname, 'gather-smoke.js')],
     [path.join(__dirname, 'daily-forecast.test.js')],
+    [path.join(__dirname, 'short-rss-daily.test.js')],
     [path.join(__dirname, 'rss-wind.test.js')]
 ];
 commands.forEach(function (args) {

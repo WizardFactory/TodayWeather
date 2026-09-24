@@ -152,6 +152,14 @@
         "Incomplete days are omitted; no clear-weather or zero-temperature defaults.",
         "Retain observation history from the previous seven days."
       ]
+    },
+    {
+      "dot": "amber",
+      "title": "Short RSS provenance",
+      "items": [
+        "Validate each short source at 0\u201324h; target ceiling is its KST date + 4.",
+        "If primary is stale, use only copied RSS fields; never revive untouched values."
+      ]
     }
   ]
 }

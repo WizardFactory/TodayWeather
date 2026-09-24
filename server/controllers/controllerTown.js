@@ -66,12 +66,13 @@ function _isRssValueUsable(value, missing) {
         (missing === -1 ? value >= 0 : value > missing);
 }
 
-function _mergeRssValue(target, field, value, overwrite, missing, round) {
+function _mergeRssValue(target, field, value, overwrite, missing, round, contribution) {
     if (!_isRssValueUsable(value, missing)) {
         return;
     }
     if (overwrite || !_isRssValueUsable(target[field], missing)) {
         target[field] = round ? +value.toFixed(1) : value;
+        if (contribution) { contribution[field] = target[field]; }
     }
 }
 
@@ -519,7 +520,13 @@ function ControllerTown() {
                     return next();
                 }
 
-                if (parseInt(shortRssInfo.pubDate) < parseInt(req.shortPubDate)) {
+                // Validate the RSS publication independently before it can replace fields.
+                if (!midPolicy.freshShort(shortRssInfo.pubDate)) {
+                    log.warn('short RSS unavailable: invalid or expired publication', meta);
+                    return next();
+                }
+                if (midPolicy.freshShort(req.shortPubDate) &&
+                    midPolicy.timestamp(shortRssInfo.pubDate) < midPolicy.timestamp(req.shortPubDate)) {
                     log.warn('short rss was updated yet!! rss pubDate=', shortRssInfo.pubDate, meta);
                     return next();
                 }
@@ -546,7 +553,12 @@ function ControllerTown() {
 
                 req.shortRssPubDate = shortRssInfo.pubDate;
 
-                if (parseInt(req.shortPubDate) < parseInt(req.shortRssPubDate)) {
+                // Request-local evidence: only fields actually copied at matched slots.
+                // Never authorize the entire mixed short array using the RSS timestamp.
+                req._dailyShortRss = {pubDate: shortRssInfo.pubDate, rows: []};
+
+                if (!midPolicy.freshShort(req.shortPubDate) ||
+                    midPolicy.timestamp(req.shortPubDate) < midPolicy.timestamp(req.shortRssPubDate)) {
                    overwrite = true;
                 }
                 // rss 데이터를 모두 가져온다.
@@ -555,29 +567,33 @@ function ControllerTown() {
                         if(parseInt(req.short[j].date + req.short[j].time) === parseInt(rssList[i].date)) {
                             var target = req.short[j];
                             var rss = rssList[i];
-                            _mergeRssValue(target, 'pop', rss.pop, overwrite, -1);
-                            _mergeRssValue(target, 'pty', rss.pty, overwrite, -1);
+                            var contribution = {date: target.date, time: target.time};
+                            _mergeRssValue(target, 'pop', rss.pop, overwrite, -1, false, contribution);
+                            _mergeRssValue(target, 'pty', rss.pty, overwrite, -1, false, contribution);
                             // adjustShort later distributes six-hour precipitation.
-                            _mergeRssValue(target, 'r06', rss.r06, overwrite, -1, true);
-                            _mergeRssValue(target, 's06', rss.s06, overwrite, -1, true);
-                            _mergeRssValue(target, 'reh', rss.reh, overwrite, -1);
-                            _mergeRssValue(target, 'sky', rss.sky, overwrite, -1);
-                            _mergeRssValue(target, 't3h', rss.temp, overwrite, -50, true);
+                            _mergeRssValue(target, 'r06', rss.r06, overwrite, -1, true, contribution);
+                            _mergeRssValue(target, 's06', rss.s06, overwrite, -1, true, contribution);
+                            _mergeRssValue(target, 'reh', rss.reh, overwrite, -1, false, contribution);
+                            _mergeRssValue(target, 'sky', rss.sky, overwrite, -1, false, contribution);
+                            _mergeRssValue(target, 't3h', rss.temp, overwrite, -50, true, contribution);
                             if (target.time === '0600') {
-                                _mergeRssValue(target, 'tmn', rss.tmn, overwrite, -50);
+                                _mergeRssValue(target, 'tmn', rss.tmn, overwrite, -50, false, contribution);
                             } else if (target.time === '1500') {
-                                _mergeRssValue(target, 'tmx', rss.tmx, overwrite, -50);
+                                _mergeRssValue(target, 'tmx', rss.tmx, overwrite, -50, false, contribution);
                             }
-                            _mergeRssValue(target, 'wsd', rss.ws, overwrite, -1);
+                            _mergeRssValue(target, 'wsd', rss.ws, overwrite, -1, false, contribution);
                             // KMA RSS wd: 0..7 = N, NE, E, SE, S, SW, W, NW.
                             // This differs from the stored wdKor/wdEn label codes.
                             // North is 0 degrees; reject 8 and fractional codes.
                             if (_isRssValueUsable(rss.wd, -1) && rss.wd <= 7 && rss.wd % 1 === 0) {
-                                _mergeRssValue(target, 'vec', rss.wd * 45, overwrite, -1);
+                                _mergeRssValue(target, 'vec', rss.wd * 45, overwrite, -1, false, contribution);
                             }
-                            _mergeRssValue(target, 'wav', rss.wav, overwrite, -1);
-                            _mergeRssValue(target, 'uuu', rss.uuu, overwrite, -100);
-                            _mergeRssValue(target, 'vvv', rss.vvv, overwrite, -100);
+                            _mergeRssValue(target, 'wav', rss.wav, overwrite, -1, false, contribution);
+                            _mergeRssValue(target, 'uuu', rss.uuu, overwrite, -100, false, contribution);
+                            _mergeRssValue(target, 'vvv', rss.vvv, overwrite, -100, false, contribution);
+                            if (Object.keys(contribution).length > 2) {
+                                req._dailyShortRss.rows.push(contribution);
+                            }
                             break;
                         }
                     }
@@ -2884,10 +2900,27 @@ function ControllerTown() {
         }
         var daySummaryList;
 
-        if (req.short && midPolicy.freshShort(req.shortPubDate)) {
+        var dailyShort = req.short;
+        var dailyShortPub = req.shortPubDate;
+        if (!midPolicy.freshShort(dailyShortPub) && req._dailyShortRss) {
+            dailyShort = req._dailyShortRss.rows.map(function (source) {
+                var row = Object.assign({}, source);
+                // Match the public route's KST midnight convention, without importing
+                // extrema or defaults produced later from stale primary slots.
+                kmaTimeLib.convert0Hto24H(row);
+                // These are overlapping six-hour provider amounts, not the
+                // three-hour amounts produced by adjustShort. Their daily total
+                // is unknown here; keep hourly amounts but omit daily aggregates.
+                delete row.r06;
+                delete row.s06;
+                return row;
+            });
+            dailyShortPub = req._dailyShortRss.pubDate;
+        }
+        if (dailyShort && midPolicy.freshShort(dailyShortPub)) {
             try {
-                var shortRows = req.short.filter(function (row) {
-                    return midPolicy.inWindow(row.date) && row.date <= midPolicy.addDays(midPolicy.date(req.shortPubDate), 4);
+                var shortRows = dailyShort.filter(function (row) {
+                    return midPolicy.inWindow(row.date) && row.date <= midPolicy.addDays(midPolicy.date(dailyShortPub), 4);
                 }).map(function (source) {
                     var row = Object.assign({}, source);
                     ['t3h', 'tmn', 'tmx'].forEach(function (key) {

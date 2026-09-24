@@ -1,0 +1,345 @@
+diff --git a/docs/architecture/diagrams/daily-forecast-validity.json b/docs/architecture/diagrams/daily-forecast-validity.json
+index 6bb837f3..4b38388d 100644
+--- a/docs/architecture/diagrams/daily-forecast-validity.json
++++ b/docs/architecture/diagrams/daily-forecast-validity.json
+@@ -152,6 +152,14 @@
+         "Incomplete days are omitted; no clear-weather or zero-temperature defaults.",
+         "Retain observation history from the previous seven days."
+       ]
++    },
++    {
++      "dot": "amber",
++      "title": "Short RSS provenance",
++      "items": [
++        "Validate each short source at 0\u201324h; target ceiling is its KST date + 4.",
++        "If primary is stale, use only copied RSS fields; never revive untouched values."
++      ]
+     }
+   ]
+ }
+diff --git a/docs/architecture/mobile-api.md b/docs/architecture/mobile-api.md
+index d8a65ee4..f0fae256 100644
+--- a/docs/architecture/mobile-api.md
++++ b/docs/architecture/mobile-api.md
+@@ -86,7 +86,7 @@ KMA output includes `source: 'KMA'`, region/city/town names, publication fields,
+ 
+ ### RSS fallback contract (issue #2554 local repair)
+ 
+-`getShortRss` compares RSS and base short publication timestamps before matching strictly future KST forecast slots. Older RSS is skipped; equal timestamps fill unusable base values; newer RSS replaces selected fields only when the corresponding RSS source is usable. The first RSS slot is included when it is future, including a single-slot result. Date/time matching happens before `convert0Hto24H`, so next-day midnight uses `YYYYMMDD0000` at this boundary.
++`getShortRss` first requires an independently valid RSS publication aged 0–24 hours, then compares normalized RSS and usable base short publication timestamps before matching strictly future KST forecast slots. Older RSS is skipped; equal timestamps fill unusable base values; newer RSS replaces selected fields only when the corresponding RSS source is usable. The first RSS slot is included when it is future, including a single-slot result. Date/time matching happens before `convert0Hto24H`, so next-day midnight uses `YYYYMMDD0000` at this boundary.
+ 
+ Both DB versions project `ws` and `wd`. [Wind normalization](weather-collection.md#grid-rss-wind-contract-issue-2554-local-repair) takes place at the service merge boundary, before downstream unit conversion. Missing `wav`, `uuu` and `vvv` leave existing base values intact; the merge does not derive vector components. Every selected source rejects absent/null/non-numeric/nonfinite data and field-specific sentinels. Nonnegative fields accept zero, temperatures accept real negative values above `-50` (including `-1` °C) and reject `-999`, and optional vector components accept values above `-100`. At 06:00 minimum temperature checks `tmn`; at 15:00 maximum checks `tmx` itself.
+ 
+@@ -135,7 +135,7 @@ The mid-land/temperature collectors preserve available day-3–10 fields without
+ requiring day 3 or day 10. Both storage versions retain publication/region and
+ optional precipitation probabilities. Mid composition joins by each source's
+ KST target date, with independent 36-hour publication limits and no future or
+-mismatched identity. Short daily overlays have a 24-hour publication limit.
++mismatched identity. Short daily overlays have a 24-hour publication limit. When primary short data is stale or its publication is absent, a request-local snapshot of fields actually copied from matched short RSS slots supplies daily input. Its own KST publication determines freshness and the publication-date+4 target ceiling. Later mixed-hourly extrema cannot revive untouched stale values; incomplete RSS-only days remain unavailable. The accepted feed timestamp alone is never sufficient.
+ The seven-day observation history remains; unavailable days are omitted and
+ listed in additive `midData.dailyStatus.unavailableDates`. The captured day-4
+ forecast remains September 28, with September 27 unavailable unless an actual
+@@ -148,3 +148,5 @@ independent. No replacement feed or production recovery is claimed.
+ See the [daily validity diagram](diagrams/daily-forecast-validity.html),
+ [editable source](diagrams/daily-forecast-validity.json), and
+ [contract, source policy and operator checklist](../../reports/sdlc/issue-2560/daily-forecast-contract.md).
++
++RSS-only daily fallback omits `r06`/`s06` aggregates: accepted RSS values are overlapping six-hour amounts and have not passed the mixed-hourly precipitation redistribution. Summing them would overstate the daily amount. Hourly precipitation remains unchanged; missing daily aggregates mean unavailable, not zero.
+diff --git a/server/controllers/controllerTown.js b/server/controllers/controllerTown.js
+index 962ef79b..130f1ce7 100644
+--- a/server/controllers/controllerTown.js
++++ b/server/controllers/controllerTown.js
+@@ -66,12 +66,13 @@ function _isRssValueUsable(value, missing) {
+         (missing === -1 ? value >= 0 : value > missing);
+ }
+ 
+-function _mergeRssValue(target, field, value, overwrite, missing, round) {
++function _mergeRssValue(target, field, value, overwrite, missing, round, contribution) {
+     if (!_isRssValueUsable(value, missing)) {
+         return;
+     }
+     if (overwrite || !_isRssValueUsable(target[field], missing)) {
+         target[field] = round ? +value.toFixed(1) : value;
++        if (contribution) { contribution[field] = target[field]; }
+     }
+ }
+ 
+@@ -519,7 +520,13 @@ function ControllerTown() {
+                     return next();
+                 }
+ 
+-                if (parseInt(shortRssInfo.pubDate) < parseInt(req.shortPubDate)) {
++                // Validate the RSS publication independently before it can replace fields.
++                if (!midPolicy.freshShort(shortRssInfo.pubDate)) {
++                    log.warn('short RSS unavailable: invalid or expired publication', meta);
++                    return next();
++                }
++                if (midPolicy.freshShort(req.shortPubDate) &&
++                    midPolicy.timestamp(shortRssInfo.pubDate) < midPolicy.timestamp(req.shortPubDate)) {
+                     log.warn('short rss was updated yet!! rss pubDate=', shortRssInfo.pubDate, meta);
+                     return next();
+                 }
+@@ -546,7 +553,12 @@ function ControllerTown() {
+ 
+                 req.shortRssPubDate = shortRssInfo.pubDate;
+ 
+-                if (parseInt(req.shortPubDate) < parseInt(req.shortRssPubDate)) {
++                // Request-local evidence: only fields actually copied at matched slots.
++                // Never authorize the entire mixed short array using the RSS timestamp.
++                req._dailyShortRss = {pubDate: shortRssInfo.pubDate, rows: []};
++
++                if (!midPolicy.freshShort(req.shortPubDate) ||
++                    midPolicy.timestamp(req.shortPubDate) < midPolicy.timestamp(req.shortRssPubDate)) {
+                    overwrite = true;
+                 }
+                 // rss 데이터를 모두 가져온다.
+@@ -555,29 +567,33 @@ function ControllerTown() {
+                         if(parseInt(req.short[j].date + req.short[j].time) === parseInt(rssList[i].date)) {
+                             var target = req.short[j];
+                             var rss = rssList[i];
+-                            _mergeRssValue(target, 'pop', rss.pop, overwrite, -1);
+-                            _mergeRssValue(target, 'pty', rss.pty, overwrite, -1);
++                            var contribution = {date: target.date, time: target.time};
++                            _mergeRssValue(target, 'pop', rss.pop, overwrite, -1, false, contribution);
++                            _mergeRssValue(target, 'pty', rss.pty, overwrite, -1, false, contribution);
+                             // adjustShort later distributes six-hour precipitation.
+-                            _mergeRssValue(target, 'r06', rss.r06, overwrite, -1, true);
+-                            _mergeRssValue(target, 's06', rss.s06, overwrite, -1, true);
+-                            _mergeRssValue(target, 'reh', rss.reh, overwrite, -1);
+-                            _mergeRssValue(target, 'sky', rss.sky, overwrite, -1);
+-                            _mergeRssValue(target, 't3h', rss.temp, overwrite, -50, true);
++                            _mergeRssValue(target, 'r06', rss.r06, overwrite, -1, true, contribution);
++                            _mergeRssValue(target, 's06', rss.s06, overwrite, -1, true, contribution);
++                            _mergeRssValue(target, 'reh', rss.reh, overwrite, -1, false, contribution);
++                            _mergeRssValue(target, 'sky', rss.sky, overwrite, -1, false, contribution);
++                            _mergeRssValue(target, 't3h', rss.temp, overwrite, -50, true, contribution);
+                             if (target.time === '0600') {
+-                                _mergeRssValue(target, 'tmn', rss.tmn, overwrite, -50);
++                                _mergeRssValue(target, 'tmn', rss.tmn, overwrite, -50, false, contribution);
+                             } else if (target.time === '1500') {
+-                                _mergeRssValue(target, 'tmx', rss.tmx, overwrite, -50);
++                                _mergeRssValue(target, 'tmx', rss.tmx, overwrite, -50, false, contribution);
+                             }
+-                            _mergeRssValue(target, 'wsd', rss.ws, overwrite, -1);
++                            _mergeRssValue(target, 'wsd', rss.ws, overwrite, -1, false, contribution);
+                             // KMA RSS wd: 0..7 = N, NE, E, SE, S, SW, W, NW.
+                             // This differs from the stored wdKor/wdEn label codes.
+                             // North is 0 degrees; reject 8 and fractional codes.
+                             if (_isRssValueUsable(rss.wd, -1) && rss.wd <= 7 && rss.wd % 1 === 0) {
+-                                _mergeRssValue(target, 'vec', rss.wd * 45, overwrite, -1);
++                                _mergeRssValue(target, 'vec', rss.wd * 45, overwrite, -1, false, contribution);
++                            }
++                            _mergeRssValue(target, 'wav', rss.wav, overwrite, -1, false, contribution);
++                            _mergeRssValue(target, 'uuu', rss.uuu, overwrite, -100, false, contribution);
++                            _mergeRssValue(target, 'vvv', rss.vvv, overwrite, -100, false, contribution);
++                            if (Object.keys(contribution).length > 2) {
++                                req._dailyShortRss.rows.push(contribution);
+                             }
+-                            _mergeRssValue(target, 'wav', rss.wav, overwrite, -1);
+-                            _mergeRssValue(target, 'uuu', rss.uuu, overwrite, -100);
+-                            _mergeRssValue(target, 'vvv', rss.vvv, overwrite, -100);
+                             break;
+                         }
+                     }
+@@ -2884,10 +2900,27 @@ function ControllerTown() {
+         }
+         var daySummaryList;
+ 
+-        if (req.short && midPolicy.freshShort(req.shortPubDate)) {
++        var dailyShort = req.short;
++        var dailyShortPub = req.shortPubDate;
++        if (!midPolicy.freshShort(dailyShortPub) && req._dailyShortRss) {
++            dailyShort = req._dailyShortRss.rows.map(function (source) {
++                var row = Object.assign({}, source);
++                // Match the public route's KST midnight convention, without importing
++                // extrema or defaults produced later from stale primary slots.
++                kmaTimeLib.convert0Hto24H(row);
++                // These are overlapping six-hour provider amounts, not the
++                // three-hour amounts produced by adjustShort. Their daily total
++                // is unknown here; keep hourly amounts but omit daily aggregates.
++                delete row.r06;
++                delete row.s06;
++                return row;
++            });
++            dailyShortPub = req._dailyShortRss.pubDate;
++        }
++        if (dailyShort && midPolicy.freshShort(dailyShortPub)) {
+             try {
+-                var shortRows = req.short.filter(function (row) {
+-                    return midPolicy.inWindow(row.date) && row.date <= midPolicy.addDays(midPolicy.date(req.shortPubDate), 4);
++                var shortRows = dailyShort.filter(function (row) {
++                    return midPolicy.inWindow(row.date) && row.date <= midPolicy.addDays(midPolicy.date(dailyShortPub), 4);
+                 }).map(function (source) {
+                     var row = Object.assign({}, source);
+                     ['t3h', 'tmn', 'tmx'].forEach(function (key) {
+diff --git a/server/test/offline/README.md b/server/test/offline/README.md
+index 00186b13..bf77bd71 100644
+--- a/server/test/offline/README.md
++++ b/server/test/offline/README.md
+@@ -66,7 +66,11 @@ TZ=UTC NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/d
+ ```
+ 
+ The additional smoke executes all v000903 middleware for both DB versions and
+-C/F units, covering captured, stale, missing-text and missing-temperature data.
++C/F units, covering captured, stale, missing-text and missing-temperature data,
++plus stale/missing primary short with fresh RSS, partial/nonmatching RSS and
++nonzero six-hour precipitation (36 route scenarios). `short-rss-daily.test.js`
++adds 44 synthetic source-provenance, freshness, bound and precedence checks
++to `test:offline` (212 regression checks plus gather smoke in total).
+ HTTP, DB and timers are intercepted before loading real modules. It does not
+ import or initialize `server/app.js`; existing global field declarations are
+ read as text only. Tests require Node >=18. Historical production Node builds
+diff --git a/server/test/offline/daily-response-smoke.js b/server/test/offline/daily-response-smoke.js
+index 5a85b806..82b83b77 100644
+--- a/server/test/offline/daily-response-smoke.js
++++ b/server/test/offline/daily-response-smoke.js
+@@ -43,6 +43,36 @@ async function main(){
+         assert(!result.logs.some(row=>row.args.some(arg=>/TypeError|ReferenceError/.test(String(arg)))));
+         summaries.push({version,scenario,units,dates,status:b.midData.dailyStatus,middlewareCount:result.traces.length});
+     }
++    // Synthetic review regression: RSS must contribute daily fields independently.
++    for(const version of ['1.0','2.0'])for(const scenario of ['stale-primary','missing-primary','partial-rss','unmatched-rss','rain-rss'])for(const units of ['C','F']) {
++        const f=route.makeFixture(route.locations[0],'newer');
++        f.basePub='202609161400';f.rssPub='202609241400';
++        f.missingShort=scenario==='missing-primary';
++        f.short.forEach(r=>{r.t3h=35;r.tmn=30;r.tmx=40;});
++        // Every forecast slot is synthetic. Tomorrow includes both extrema slots.
++        f.rss=f.rss.map(r=>({...r,ftm:f.rssPub,date:r.date.replace('20260924',scenario==='unmatched-rss'?'20260930':'20260925')}));
++        if(scenario==='rain-rss')f.rss.forEach(r=>{r.pty=1;r.r06=6;r.s06=2;});
++        if(scenario==='partial-rss')f.rss.forEach(r=>{
++            for(const key of ['temp','tmn','tmx'])r[key]=-999;
++            for(const key of ['sky','pty','reh','pop','r06','s06'])r[key]=-1;
++        });
++        const env=route.createHarness(version,f);
++        const result=await env.request({temperatureUnit:units,windSpeedUnit:'m/s'});
++        assert.deepEqual(result.traces,env.methods);
++        const b=result.body,rows=b.midData.dailyData,dates=rows.map(r=>r.date),tomorrow=rows.find(r=>r.date==='20260925');
++        if(['stale-primary','missing-primary','rain-rss'].includes(scenario)) {
++            assert(tomorrow,scenario+' retains fresh RSS daily forecast');
++            assert.equal(tomorrow.tmn,units==='C'?19:66);assert.equal(tomorrow.tmx,units==='C'?28:82);
++            assert.equal(tomorrow.wfAm,scenario==='rain-rss'?'구름적고 비':'맑음');assert.equal(b.shortRssPubDate,f.rssPub);
++            assert.equal(tomorrow.r06,undefined);assert.equal(tomorrow.s06,undefined);
++            if(scenario==='rain-rss')assert(b.short.some(r=>r.r06>0),'hourly precipitation remains usable');
++        } else assert.equal(tomorrow,undefined,'untouched stale fields cannot become fresh daily weather');
++        assert(dates.includes('20260923'));assert(dates.includes('20260917'));assert(dates.includes('20260928'));
++        assert.equal(dates.length,new Set(dates).size);assert.deepEqual(dates,[...dates].sort());
++        assert(!JSON.stringify(b).includes('_dailyShortRss'),'provenance stays request-local');
++        assert(!result.logs.some(row=>row.args.some(arg=>/TypeError|ReferenceError/.test(String(arg)))));
++        summaries.push({version,scenario,units,dates,middlewareCount:result.traces.length});
++    }
+     const result={fixedClock:process.env.TW_SMOKE_NOW,scenarioCount:summaries.length,outcome:'passed',scenarios:summaries};
+     if(process.env.TW_DAILY_EVIDENCE)fs.writeFileSync(process.env.TW_DAILY_EVIDENCE,JSON.stringify(result,null,2)+'\n');
+     console.log(JSON.stringify(result,null,2));
+diff --git a/server/test/offline/rss-response-smoke.js b/server/test/offline/rss-response-smoke.js
+index 839fa88b..e0f14366 100644
+--- a/server/test/offline/rss-response-smoke.js
++++ b/server/test/offline/rss-response-smoke.js
+@@ -66,7 +66,8 @@ function createHarness(version, fixture) {
+     const map={'modelShort':'short','modelCurrent':'current','modelShortest':'shortest','modelShortRss':'rss','kma.town.short.model':'short','kma.town.current.model':'current','kma.town.shortest.model':'shortest','kma.town.short.rss.model':'rss'};
+     if(map[name]) {
+       const kind=map[name],dataKey={short:'shortData',current:'currentData',shortest:'shortestData',rss:'shortData'}[kind];
+-      const pub={short:fixture.basePub,current:'202609240900',shortest:'202609240830',rss:'202609240800'}[kind];
++      if(kind==='short' && fixture.missingShort) return [];
++      const pub={short:fixture.basePub,current:'202609240900',shortest:'202609240830',rss:fixture.rssPub || '202609240800'}[kind];
+       if(isV2) return fixture[kind].map(item=>({mCoord:fixture.place.mCoord,pubDate:kstDate(pub),fcsDate:kstDate(kind==='rss'?item.date:item.date+item.time),[dataKey]:item}));
+       return [{mCoord:fixture.place.mCoord,pubDate:pub,[dataKey]:fixture[kind]}];
+     }
+@@ -122,17 +123,17 @@ function createHarness(version, fixture) {
+   // Exercise real XML parsing and collector conversion before presenting rows at the Mongo boundary.
+   const direction={Seoul:['북','N',2],Busan:['남서','SW',7],Jeju:['북서','NW',4]}[fixture.place.name];
+   const xmlRows=fixture.rss.map(row=>{
+-    const values=Object.assign({},row,{hour:Number(row.date.slice(8,10)),day:0,wfKor:'맑음',wfEn:'Clear',wdKor:direction[0],wdEn:direction[1]});
++    const values=Object.assign({},row,{hour:Number(row.date.slice(8,10)),day:Math.round((kstDate(row.date.slice(0,8)+'0000')-kstDate((fixture.rssPub || '202609240800').slice(0,8)+'0000'))/86400000),wfKor:'맑음',wfEn:'Clear',wdKor:direction[0],wdEn:direction[1]});
+     delete values.date;delete values.ftm;
+     return '<data>'+Object.entries(values).map(([key,value])=>'<'+key+'>'+value+'</'+key+'>').join('')+'</data>';
+   }).join('');
+-  const xml='<wid><header><tm>202609240800</tm><x>'+fixture.place.mCoord.mx+'</x><y>'+fixture.place.mCoord.my+'</y></header><body>'+xmlRows+'</body></wid>';
++  const xml='<wid><header><tm>'+(fixture.rssPub || '202609240800')+'</tm><x>'+fixture.place.mCoord.mx+'</x><y>'+fixture.place.mCoord.my+'</y></header><body>'+xmlRows+'</body></wid>';
+   const Rss=load(path.join(root,'server/controllers/kma/kma.town.short.rss.controller.js'));
+   let parsed=false;
+   require('xml2js').parseString(xml,(error,upstream)=>{
+     assert.ifError(error);
+     new Rss().parseShortRss(0,upstream,(code,converted)=>{
+-      assert.equal(code,0);assert.equal(converted.shortData.length,7);
++      assert.equal(code,0);assert.equal(converted.shortData.length,fixture.rss.length);
+       for(const row of converted.shortData) {assert.equal(row.wdEn,direction[2]);assert.equal(row.wfEn,1);}
+       fixture.rss=converted.shortData;parsed=true;
+     });
+diff --git a/server/test/offline/run.js b/server/test/offline/run.js
+index 797f3bcc..bd9112db 100644
+--- a/server/test/offline/run.js
++++ b/server/test/offline/run.js
+@@ -7,6 +7,7 @@ var commands = [
+     [require.resolve('mocha/bin/_mocha'), path.join(__dirname, 'gather-code-drift.test.js')],
+     [path.join(__dirname, 'gather-smoke.js')],
+     [path.join(__dirname, 'daily-forecast.test.js')],
++    [path.join(__dirname, 'short-rss-daily.test.js')],
+     [path.join(__dirname, 'rss-wind.test.js')]
+ ];
+ commands.forEach(function (args) {
+
+NEW FILE server/test/offline/short-rss-daily.test.js
+'use strict';
+// Synthetic fixtures; real short RSS DB adapters and Town middleware, all I/O stubbed.
+const test=require('node:test');
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../../..'),h=require(root+'/server/test/offline/harness'),time=require(root+'/server/lib/kmaTimeLib');
+const instant='2026-09-24T07:27:00Z';
+class Clock extends Date{constructor(...args){super(...(args.length?args:[instant]));}static now(){return new Date(instant).getTime();}}
+const policy=h.load('lib/midForecastPolicy.js',{}, {Date:Clock});
+const app=fs.readFileSync(root+'/server/app.js','utf8'); // declarations only; never execute app
+const rssString=vm.runInNewContext(app.match(/global\.rssString = (\[[^;]+);/)[1]);
+const shortString=vm.runInNewContext(app.match(/global\.shortString = (\[[^;]+);/)[1]);
+const currentSource=fs.readFileSync(root+'/server/controllers/controllerTown.js','utf8');
+
+function run(version, primary='202609161400', variant='full', pubDate='202609241400', targetDate='20260925'){
+ const sourceKind='head',config={db:{version}},logs=[],log=h.logger(logs),noop=function(){};
+ let rows=['0600','1500'].map(t=>({ftm:pubDate,date:targetDate+t,temp:20,tmn:10,tmx:24,sky:1,pty:0,reh:50,pop:0,r06:0,s06:0,ws:1,wd:0}));
+ if(variant==='no-match') rows=rows.map(r=>({...r,date:r.date.replace('20260925','20260926')}));
+ if(variant==='partial') rows=rows.map(r=>({date:r.date,ftm:r.ftm,ws:1,wd:0}));
+ const model={find(){const q={sort(){return q},batchSize(){return q},limit(){return q},lean(){return q},exec(cb){cb(null,version==='1.0'?[{pubDate,shortData:rows}]:rows.map(row=>({pubDate:time.getKoreaDateObj(pubDate),fcsDate:time.getKoreaDateObj(row.date),shortData:row})));}};return q;}};
+ const Rss=h.load('controllers/kma/kma.town.short.rss.controller.js',{
+  events:require('events'),async:{},request:{},xml2js:{},dnscache:noop,'../../config/config':config,'../../models/modelShortRss':model,'../../models/town':{},'../../models/kma/kma.town.short.rss.model.js':model,'../../lib/kmaTimeLib':time
+ },{Date:Clock,log,rssString});
+ const source=currentSource;
+ const deps={};for(const m of source.matchAll(/require\('([^']+)'\)/g))deps[m[1]]=function(){throw new Error('Unexpected dependency '+m[1]);};
+ for(const n of ['./kma/kma.town.current.controller.js','./kma/kma.town.short.controller.js','./kma/kma.town.shortest.controller.js','./kma/kma.town.mid.controller.js'])deps[n]=noop;
+ Object.assign(deps,{'../config/config':config,'../models/modelShortRss':model,'../lib/kmaTimeLib':time,'../lib/midForecastPolicy':policy,'./kma/kma.town.short.rss.controller.js':Rss});
+ const mod={exports:{}};vm.runInNewContext(source,{module:mod,exports:mod.exports,require:n=>{assert(Object.hasOwn(deps,n));return deps[n]},Date:Clock,log,rssString,shortString,commonString:['date','time'],setTimeout(){throw new Error('Unexpected timer')},setInterval(){throw new Error('Unexpected timer')}});
+ const town=new mod.exports();town._getCoord=(r,c,t,cb)=>cb(null,{mx:60,my:127});town._getTimeValue=()=>({date:'20260924',time:'1627'});
+ const staleValid=variant!=='empty-base';
+ const short=['0600','1500'].map(t=>({date:targetDate,time:t,t3h:staleValid?35:-50,tmn:staleValid&&t==='0600'?30:-50,tmx:staleValid&&t==='1500'?40:-50,sky:staleValid?1:-1,pty:staleValid?0:-1,reh:staleValid?50:-1,pop:staleValid?0:-1,r06:staleValid?0:-1,s06:staleValid?0:-1,wsd:-1,vec:-1,lgt:-1}));
+ const req={params:{},short,midData:{dailyData:[]}};if(primary!=='missing')req.shortPubDate=primary;
+ let callbacks=0;town.getShortRss(req,{},()=>callbacks++);assert.equal(callbacks,1);
+ // Later middleware must not authorize stale values or taint the RSS snapshot.
+ if(variant==='mutated') req.short.forEach(r=>{r.tmn=30;r.tmx=40;r.t3h=35;});
+ const merged=JSON.parse(JSON.stringify(req.short));town.mergeMidWithShort(req,{},()=>callbacks++);assert.equal(callbacks,2);
+ assert(!logs.some(l=>/TypeError|ReferenceError|Unexpected dependency/.test(l)),logs.join('\n'));
+ return {version,sourceKind,primary,variant,shortRssPubDate:req.shortRssPubDate,afterRss:merged,daily:JSON.parse(JSON.stringify(req.midData.dailyData))};
+}
+
+for(const version of ['1.0','2.0']) {
+ for(const primary of ['202609161400','missing','202609241800']) {
+  for(const variant of ['full','empty-base','mutated']) test(version+' '+primary+' fresh RSS '+variant,()=>{
+   const r=run(version,primary,variant);
+   assert.deepEqual(r.daily.map(d=>d.date),['20260925']);
+   assert.equal(r.daily[0].taMin,10); assert.equal(r.daily[0].taMax,24);
+   assert.equal(r.daily[0].r06,undefined); assert.equal(r.daily[0].s06,undefined);
+   assert.equal(r.daily[0].wfAm,'맑음'); assert.equal(r.daily[0].lgtAm,undefined);
+  });
+  for(const variant of ['partial','no-match']) test(version+' '+primary+' RSS '+variant+' cannot revive base',()=>{
+   assert.deepEqual(run(version,primary,variant).daily,[]);
+  });
+ }
+ for(const pub of ['202609231626','202609241628','bad']) test(version+' invalid RSS publication '+pub,()=>{
+  assert.deepEqual(run(version,'202609161400','full',pub).daily,[]);
+ });
+ test(version+' RSS age and target bound use its own publication',()=>{
+  assert.equal(run(version,'missing','full','202609231627','20260927').daily.length,1);
+  assert.equal(run(version,'missing','full','202609231627','20260928').daily.length,0);
+ });
+ for(const pub of ['202609241300','202609241400','202609241500']) test(version+' fresh primary precedence '+pub,()=>{
+  const r=run(version,'202609241400','full',pub);
+  assert.equal(r.daily.length,1); assert.equal(r.daily[0].taMax,pub>'202609241400'?24:40);
+ });
+}

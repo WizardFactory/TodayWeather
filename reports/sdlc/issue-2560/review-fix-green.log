@@ -1,0 +1,274 @@
+TAP version 13
+# Subtest: 1.0 202609161400 fresh RSS full
+ok 1 - 1.0 202609161400 fresh RSS full
+  ---
+  duration_ms: 19.946962
+  type: 'test'
+  ...
+# Subtest: 1.0 202609161400 fresh RSS empty-base
+ok 2 - 1.0 202609161400 fresh RSS empty-base
+  ---
+  duration_ms: 4.168076
+  type: 'test'
+  ...
+# Subtest: 1.0 202609161400 fresh RSS mutated
+ok 3 - 1.0 202609161400 fresh RSS mutated
+  ---
+  duration_ms: 4.238318
+  type: 'test'
+  ...
+# Subtest: 1.0 202609161400 RSS partial cannot revive base
+ok 4 - 1.0 202609161400 RSS partial cannot revive base
+  ---
+  duration_ms: 6.720925
+  type: 'test'
+  ...
+# Subtest: 1.0 202609161400 RSS no-match cannot revive base
+ok 5 - 1.0 202609161400 RSS no-match cannot revive base
+  ---
+  duration_ms: 3.583323
+  type: 'test'
+  ...
+# Subtest: 1.0 missing fresh RSS full
+ok 6 - 1.0 missing fresh RSS full
+  ---
+  duration_ms: 3.65064
+  type: 'test'
+  ...
+# Subtest: 1.0 missing fresh RSS empty-base
+ok 7 - 1.0 missing fresh RSS empty-base
+  ---
+  duration_ms: 4.382717
+  type: 'test'
+  ...
+# Subtest: 1.0 missing fresh RSS mutated
+ok 8 - 1.0 missing fresh RSS mutated
+  ---
+  duration_ms: 4.372177
+  type: 'test'
+  ...
+# Subtest: 1.0 missing RSS partial cannot revive base
+ok 9 - 1.0 missing RSS partial cannot revive base
+  ---
+  duration_ms: 5.137047
+  type: 'test'
+  ...
+# Subtest: 1.0 missing RSS no-match cannot revive base
+ok 10 - 1.0 missing RSS no-match cannot revive base
+  ---
+  duration_ms: 4.100401
+  type: 'test'
+  ...
+# Subtest: 1.0 202609241800 fresh RSS full
+ok 11 - 1.0 202609241800 fresh RSS full
+  ---
+  duration_ms: 4.587931
+  type: 'test'
+  ...
+# Subtest: 1.0 202609241800 fresh RSS empty-base
+ok 12 - 1.0 202609241800 fresh RSS empty-base
+  ---
+  duration_ms: 6.290732
+  type: 'test'
+  ...
+# Subtest: 1.0 202609241800 fresh RSS mutated
+ok 13 - 1.0 202609241800 fresh RSS mutated
+  ---
+  duration_ms: 4.326913
+  type: 'test'
+  ...
+# Subtest: 1.0 202609241800 RSS partial cannot revive base
+ok 14 - 1.0 202609241800 RSS partial cannot revive base
+  ---
+  duration_ms: 4.500226
+  type: 'test'
+  ...
+# Subtest: 1.0 202609241800 RSS no-match cannot revive base
+ok 15 - 1.0 202609241800 RSS no-match cannot revive base
+  ---
+  duration_ms: 3.502032
+  type: 'test'
+  ...
+# Subtest: 1.0 invalid RSS publication 202609231626
+ok 16 - 1.0 invalid RSS publication 202609231626
+  ---
+  duration_ms: 3.821008
+  type: 'test'
+  ...
+# Subtest: 1.0 invalid RSS publication 202609241628
+ok 17 - 1.0 invalid RSS publication 202609241628
+  ---
+  duration_ms: 3.600125
+  type: 'test'
+  ...
+# Subtest: 1.0 invalid RSS publication bad
+ok 18 - 1.0 invalid RSS publication bad
+  ---
+  duration_ms: 3.659356
+  type: 'test'
+  ...
+# Subtest: 1.0 RSS age and target bound use its own publication
+ok 19 - 1.0 RSS age and target bound use its own publication
+  ---
+  duration_ms: 9.283151
+  type: 'test'
+  ...
+# Subtest: 1.0 fresh primary precedence 202609241300
+ok 20 - 1.0 fresh primary precedence 202609241300
+  ---
+  duration_ms: 5.046778
+  type: 'test'
+  ...
+# Subtest: 1.0 fresh primary precedence 202609241400
+ok 21 - 1.0 fresh primary precedence 202609241400
+  ---
+  duration_ms: 4.118865
+  type: 'test'
+  ...
+# Subtest: 1.0 fresh primary precedence 202609241500
+ok 22 - 1.0 fresh primary precedence 202609241500
+  ---
+  duration_ms: 3.855592
+  type: 'test'
+  ...
+# Subtest: 2.0 202609161400 fresh RSS full
+ok 23 - 2.0 202609161400 fresh RSS full
+  ---
+  duration_ms: 4.494236
+  type: 'test'
+  ...
+# Subtest: 2.0 202609161400 fresh RSS empty-base
+ok 24 - 2.0 202609161400 fresh RSS empty-base
+  ---
+  duration_ms: 4.081013
+  type: 'test'
+  ...
+# Subtest: 2.0 202609161400 fresh RSS mutated
+ok 25 - 2.0 202609161400 fresh RSS mutated
+  ---
+  duration_ms: 5.325257
+  type: 'test'
+  ...
+# Subtest: 2.0 202609161400 RSS partial cannot revive base
+ok 26 - 2.0 202609161400 RSS partial cannot revive base
+  ---
+  duration_ms: 3.875289
+  type: 'test'
+  ...
+# Subtest: 2.0 202609161400 RSS no-match cannot revive base
+ok 27 - 2.0 202609161400 RSS no-match cannot revive base
+  ---
+  duration_ms: 2.661471
+  type: 'test'
+  ...
+# Subtest: 2.0 missing fresh RSS full
+ok 28 - 2.0 missing fresh RSS full
+  ---
+  duration_ms: 3.266312
+  type: 'test'
+  ...
+# Subtest: 2.0 missing fresh RSS empty-base
+ok 29 - 2.0 missing fresh RSS empty-base
+  ---
+  duration_ms: 3.15844
+  type: 'test'
+  ...
+# Subtest: 2.0 missing fresh RSS mutated
+ok 30 - 2.0 missing fresh RSS mutated
+  ---
+  duration_ms: 3.535884
+  type: 'test'
+  ...
+# Subtest: 2.0 missing RSS partial cannot revive base
+ok 31 - 2.0 missing RSS partial cannot revive base
+  ---
+  duration_ms: 3.62449
+  type: 'test'
+  ...
+# Subtest: 2.0 missing RSS no-match cannot revive base
+ok 32 - 2.0 missing RSS no-match cannot revive base
+  ---
+  duration_ms: 2.67141
+  type: 'test'
+  ...
+# Subtest: 2.0 202609241800 fresh RSS full
+ok 33 - 2.0 202609241800 fresh RSS full
+  ---
+  duration_ms: 5.536923
+  type: 'test'
+  ...
+# Subtest: 2.0 202609241800 fresh RSS empty-base
+ok 34 - 2.0 202609241800 fresh RSS empty-base
+  ---
+  duration_ms: 3.123445
+  type: 'test'
+  ...
+# Subtest: 2.0 202609241800 fresh RSS mutated
+ok 35 - 2.0 202609241800 fresh RSS mutated
+  ---
+  duration_ms: 3.279335
+  type: 'test'
+  ...
+# Subtest: 2.0 202609241800 RSS partial cannot revive base
+ok 36 - 2.0 202609241800 RSS partial cannot revive base
+  ---
+  duration_ms: 3.3404
+  type: 'test'
+  ...
+# Subtest: 2.0 202609241800 RSS no-match cannot revive base
+ok 37 - 2.0 202609241800 RSS no-match cannot revive base
+  ---
+  duration_ms: 2.697989
+  type: 'test'
+  ...
+# Subtest: 2.0 invalid RSS publication 202609231626
+ok 38 - 2.0 invalid RSS publication 202609231626
+  ---
+  duration_ms: 2.343227
+  type: 'test'
+  ...
+# Subtest: 2.0 invalid RSS publication 202609241628
+ok 39 - 2.0 invalid RSS publication 202609241628
+  ---
+  duration_ms: 2.379705
+  type: 'test'
+  ...
+# Subtest: 2.0 invalid RSS publication bad
+ok 40 - 2.0 invalid RSS publication bad
+  ---
+  duration_ms: 2.957023
+  type: 'test'
+  ...
+# Subtest: 2.0 RSS age and target bound use its own publication
+ok 41 - 2.0 RSS age and target bound use its own publication
+  ---
+  duration_ms: 6.483531
+  type: 'test'
+  ...
+# Subtest: 2.0 fresh primary precedence 202609241300
+ok 42 - 2.0 fresh primary precedence 202609241300
+  ---
+  duration_ms: 3.122363
+  type: 'test'
+  ...
+# Subtest: 2.0 fresh primary precedence 202609241400
+ok 43 - 2.0 fresh primary precedence 202609241400
+  ---
+  duration_ms: 3.327637
+  type: 'test'
+  ...
+# Subtest: 2.0 fresh primary precedence 202609241500
+ok 44 - 2.0 fresh primary precedence 202609241500
+  ---
+  duration_ms: 3.851916
+  type: 'test'
+  ...
+1..44
+# tests 44
+# suites 0
+# pass 44
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 271.08921

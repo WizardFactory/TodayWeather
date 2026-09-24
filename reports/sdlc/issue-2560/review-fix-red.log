@@ -1,0 +1,552 @@
+TAP version 13
+# Subtest: 1.0 202609161400 fresh RSS full
+not ok 1 - 1.0 202609161400 fresh RSS full
+  ---
+  duration_ms: 19.255121
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: 1.0 202609161400 fresh RSS empty-base
+not ok 2 - 1.0 202609161400 fresh RSS empty-base
+  ---
+  duration_ms: 4.699008
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: 1.0 202609161400 fresh RSS mutated
+not ok 3 - 1.0 202609161400 fresh RSS mutated
+  ---
+  duration_ms: 4.162265
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 202609161400 RSS partial cannot revive base
+ok 4 - 1.0 202609161400 RSS partial cannot revive base
+  ---
+  duration_ms: 4.474629
+  type: 'test'
+  ...
+# Subtest: 1.0 202609161400 RSS no-match cannot revive base
+ok 5 - 1.0 202609161400 RSS no-match cannot revive base
+  ---
+  duration_ms: 3.53824
+  type: 'test'
+  ...
+# Subtest: 1.0 missing fresh RSS full
+not ok 6 - 1.0 missing fresh RSS full
+  ---
+  duration_ms: 5.282298
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 missing fresh RSS empty-base
+not ok 7 - 1.0 missing fresh RSS empty-base
+  ---
+  duration_ms: 4.03574
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 missing fresh RSS mutated
+not ok 8 - 1.0 missing fresh RSS mutated
+  ---
+  duration_ms: 3.372711
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 missing RSS partial cannot revive base
+ok 9 - 1.0 missing RSS partial cannot revive base
+  ---
+  duration_ms: 3.876271
+  type: 'test'
+  ...
+# Subtest: 1.0 missing RSS no-match cannot revive base
+ok 10 - 1.0 missing RSS no-match cannot revive base
+  ---
+  duration_ms: 3.969445
+  type: 'test'
+  ...
+# Subtest: 1.0 invalid RSS publication 202609231626
+ok 11 - 1.0 invalid RSS publication 202609231626
+  ---
+  duration_ms: 3.595718
+  type: 'test'
+  ...
+# Subtest: 1.0 invalid RSS publication 202609241628
+ok 12 - 1.0 invalid RSS publication 202609241628
+  ---
+  duration_ms: 2.532461
+  type: 'test'
+  ...
+# Subtest: 1.0 invalid RSS publication bad
+ok 13 - 1.0 invalid RSS publication bad
+  ---
+  duration_ms: 3.080305
+  type: 'test'
+  ...
+# Subtest: 1.0 RSS age and target bound use its own publication
+not ok 14 - 1.0 RSS age and target bound use its own publication
+  ---
+  duration_ms: 4.29821
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:55:2'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:56:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 fresh primary precedence 202609241300
+ok 15 - 1.0 fresh primary precedence 202609241300
+  ---
+  duration_ms: 7.684205
+  type: 'test'
+  ...
+# Subtest: 1.0 fresh primary precedence 202609241400
+ok 16 - 1.0 fresh primary precedence 202609241400
+  ---
+  duration_ms: 4.086674
+  type: 'test'
+  ...
+# Subtest: 1.0 fresh primary precedence 202609241500
+ok 17 - 1.0 fresh primary precedence 202609241500
+  ---
+  duration_ms: 3.85481
+  type: 'test'
+  ...
+# Subtest: 2.0 202609161400 fresh RSS full
+not ok 18 - 2.0 202609161400 fresh RSS full
+  ---
+  duration_ms: 3.761297
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 202609161400 fresh RSS empty-base
+not ok 19 - 2.0 202609161400 fresh RSS empty-base
+  ---
+  duration_ms: 4.839391
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 202609161400 fresh RSS mutated
+not ok 20 - 2.0 202609161400 fresh RSS mutated
+  ---
+  duration_ms: 4.728724
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 202609161400 RSS partial cannot revive base
+ok 21 - 2.0 202609161400 RSS partial cannot revive base
+  ---
+  duration_ms: 4.027383
+  type: 'test'
+  ...
+# Subtest: 2.0 202609161400 RSS no-match cannot revive base
+ok 22 - 2.0 202609161400 RSS no-match cannot revive base
+  ---
+  duration_ms: 5.349724
+  type: 'test'
+  ...
+# Subtest: 2.0 missing fresh RSS full
+not ok 23 - 2.0 missing fresh RSS full
+  ---
+  duration_ms: 3.090504
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 missing fresh RSS empty-base
+not ok 24 - 2.0 missing fresh RSS empty-base
+  ---
+  duration_ms: 3.136721
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 missing fresh RSS mutated
+not ok 25 - 2.0 missing fresh RSS mutated
+  ---
+  duration_ms: 2.593034
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:42:57'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   '20260925'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '20260925'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:44:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 missing RSS partial cannot revive base
+ok 26 - 2.0 missing RSS partial cannot revive base
+  ---
+  duration_ms: 3.149704
+  type: 'test'
+  ...
+# Subtest: 2.0 missing RSS no-match cannot revive base
+ok 27 - 2.0 missing RSS no-match cannot revive base
+  ---
+  duration_ms: 3.347513
+  type: 'test'
+  ...
+# Subtest: 2.0 invalid RSS publication 202609231626
+ok 28 - 2.0 invalid RSS publication 202609231626
+  ---
+  duration_ms: 3.448672
+  type: 'test'
+  ...
+# Subtest: 2.0 invalid RSS publication 202609241628
+ok 29 - 2.0 invalid RSS publication 202609241628
+  ---
+  duration_ms: 3.734506
+  type: 'test'
+  ...
+# Subtest: 2.0 invalid RSS publication bad
+ok 30 - 2.0 invalid RSS publication bad
+  ---
+  duration_ms: 5.413973
+  type: 'test'
+  ...
+# Subtest: 2.0 RSS age and target bound use its own publication
+not ok 31 - 2.0 RSS age and target bound use its own publication
+  ---
+  duration_ms: 3.996365
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:55:2'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/short-rss-daily.test.js:56:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 fresh primary precedence 202609241300
+ok 32 - 2.0 fresh primary precedence 202609241300
+  ---
+  duration_ms: 4.614851
+  type: 'test'
+  ...
+# Subtest: 2.0 fresh primary precedence 202609241400
+ok 33 - 2.0 fresh primary precedence 202609241400
+  ---
+  duration_ms: 4.612486
+  type: 'test'
+  ...
+# Subtest: 2.0 fresh primary precedence 202609241500
+ok 34 - 2.0 fresh primary precedence 202609241500
+  ---
+  duration_ms: 4.385763
+  type: 'test'
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 20
+# fail 14
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 200.846772

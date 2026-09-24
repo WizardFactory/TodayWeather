@@ -1,0 +1,157 @@
+{
+  "iteration": 3,
+  "decision": "PROCEED",
+  "reason": "Assess review correction and source-scoped evidence; user authorized push to existing PR, no merge/deployment.",
+  "authority_source": "User: \uc218\uc815\ud558\uace0 push \uc9c4\ud589; PR2561 review5302701507; shared SDLC policy",
+  "candidate": "3a8f46596de956a840dcb74980f88a86a79758d1639f9b326364c9d94d0f7b63",
+  "next_action": "Continue authorized correction and PR branch publication; external reviewer re-examination remains pending.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/issue-2560/triage.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    },
+    {
+      "kind": "intent",
+      "path": "reports/sdlc/issue-2560/intent.md",
+      "sha256": "bf4ac404aa291fab339683565d3e21113728d0df5ed435cd8dc6970a975fd27d"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/issue-2560/investigation.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    },
+    {
+      "kind": "spec",
+      "path": "reports/sdlc/issue-2560/spec.md",
+      "sha256": "aaff814c9965be8885c074af8e627d0b2b68f48e8ceb357d6d275da7d81b9ff0"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.json",
+      "sha256": "972155979e8f8ba0a74e664b8322b20872c9d30f7914ef4eb0fea3a492e821ff"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.html",
+      "sha256": "2af4c49ee22cb3135ad46344d38742c00f0e6f22df661472757725044415902b"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/issue-2560/review-fix-design-delivery.json",
+      "sha256": "b0d3ca32d87630f189b0e49a86b221eaaa7e5fc9e7e8afde7a8d058f65553e9a"
+    },
+    {
+      "kind": "design-browser",
+      "path": "reports/sdlc/issue-2560/review-fix-design-browser.json",
+      "sha256": "13d0410f32ff144dc60fca3155dd398978922e160696d407403e5e447c1ae786"
+    },
+    {
+      "kind": "plan",
+      "path": "reports/sdlc/issue-2560/review-fix-plan.md",
+      "sha256": "581980ddb2fb52810ac0a846daf2515b7dde3aa6829849687187e2b07ae9207d"
+    },
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/issue-2560/review-fix-plan.md",
+      "sha256": "581980ddb2fb52810ac0a846daf2515b7dde3aa6829849687187e2b07ae9207d"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/issue-2560/review-fix-verification.md",
+      "sha256": "cd7168b3a33c51c247232726b76fd3992e45091f56d4cf94b8560d8df133e8af"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/issue-2560/review-fix-change-record.diff",
+      "sha256": "b550a3f5e8ffcbc945b147a767077a62c8d452206ae638cc1da53573e4baea70"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/controllers/controllerTown.js",
+      "sha256": "fd66ce806e19cdec9805f0cdc0852c231a4bc377866eaded3aafe79def4d2ed9"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/daily-response-smoke.js",
+      "sha256": "2593fb1d6111e9b3068c2ddcaebe36acf2e96440a179d92fb33a94c31b0a0222"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/rss-response-smoke.js",
+      "sha256": "07fd8ed54652c1530fa292cc2a21ed846dfb94e8df6929d08148020ca8e139db"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/run.js",
+      "sha256": "e6dd06a0a4f1768f2cf250770061dca7c4e3b9abddbcf76e5b9c150ed6fd1f76"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/short-rss-daily.test.js",
+      "sha256": "373a98f922924cf1868f260517b7383d9c26e040d1b37965bc0e4d2e49a4d28b"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/README.md",
+      "sha256": "7427e46e795abc369b456b03c5a9373431932f38a4ad65009e85cd201089ca0e"
+    },
+    {
+      "kind": "self-verification",
+      "path": "reports/sdlc/issue-2560/review-fix-verification.md",
+      "sha256": "cd7168b3a33c51c247232726b76fd3992e45091f56d4cf94b8560d8df133e8af"
+    },
+    {
+      "kind": "test-results",
+      "path": "reports/sdlc/issue-2560/review-fix-test-results.json",
+      "sha256": "332ae81ff64bc1f1a944700e344c3f11df74c78f0b3000287774b879fcaf5fcb"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/review-fix-red.log",
+      "sha256": "e55e83ae5f01175efda79ed986a69c5a94333a7ae9adb4d3c7e633c6277c7e0e"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/review-fix-green.log",
+      "sha256": "ef5a1c8efd94f049516e421eecc673a71bcc33468a89378eac0c019cfe9d7927"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/review-fix-offline.log",
+      "sha256": "02e3fe2c11333e147a43bf7e4e459551fea628b1a6b6fdfc0d8f2943900c5a8a"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/review-fix-daily-smoke.json",
+      "sha256": "9e873e99eefbdf306bd665940a1e6d7f639956a731736abcd52e029ec4c307e1"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/review-fix-rss-smoke.json",
+      "sha256": "5980e8f2f1aba8fc278c444caa692525f9a4c15b24232372236cd4fc0ede067e"
+    },
+    {
+      "kind": "independent-verification",
+      "path": "reports/sdlc/issue-2560/review-fix-independent.md",
+      "sha256": "8b9585c4ca29ff488517654584903b60083f1aa397426d20dd48af37d3cd028b"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "completion",
+      "path": "reports/sdlc/issue-2560/review-fix-handoff.md",
+      "sha256": "c6b09ccad5075d96ba3f2fb4729ad7c5423b40f0d4284e1ec7c339887122e207"
+    }
+  ],
+  "assessment": {
+    "assessor": "main /root",
+    "summary": "Per-source short RSS fallback, complete-row safeguards, offline regression and public-route compatibility assessed; no live recovery claim.",
+    "criteria": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
+  }
+}
