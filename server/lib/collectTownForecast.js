@@ -22,6 +22,7 @@
 "use strict";
 
 var events = require('events');
+var midPolicy = require('./midForecastPolicy');
 var req = require('request');
 var xml2json  = require('xml2js').parseString;
 
@@ -868,150 +869,20 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
     }
 };
 
-CollectData.prototype.organizeLandData = function(index, listData, options){
-    var self = this;
-    //var i = 0;
-    var listItem = listData.response.body[0].items[0].item;
-    var listResult = [];
-
-    //log.info('currentData count : ' + listItem.length);
-    //log.info(listItem);
-
-    try{
-        var result = {};
-        var template = {
-            pubDate: options.date + options.time,
-            date: options.date,
-            time: options.time,
-            regId: 0, /* 예보 구역 코드 */
-            wf3Am: '', /* 3일 후 오전 날씨 예보 */
-            wf3Pm: '', /* 3일 후 오후 날씨 예보 */
-            wf4Am: '', /* 4일 후 오전날씨 예보 */
-            wf4Pm: '', /* 4일 후 오후 날씨 예보 */
-            wf5Am: '', /* 5일 후 오전 날씨 예보 */
-            wf5Pm: '', /* 5일 후 오후 날씨 예보 */
-            wf6Am: '', /* 6일 후 오전 날씨 예보 */
-            wf6Pm: '', /* 6일 후 오후 날씨 예보 */
-            wf7Am: '', /* 7일 후 오전 날씨 예보 */
-            wf7Pm: '', /* 7일 후 오후 날씨 예보 */
-            wf8: '', /* 8일 후 날씨 예보 */
-            wf9: '', /* 9일 후 날씨 예보 */
-            wf10: '' /* 10일 후 날씨 예보 */
-        };
-
-        listItem.forEach(function(item){
-            if (!item.regId || typeof item.regId[0] !== 'string' || !item.regId[0].trim()) {
-                throw new Error('Missing mid region');
-            }
-
-            result = Object.assign({}, template);
-            result.regId = item.regId[0];
-            result.wf3Am = item.wf3Am[0];
-            result.wf3Pm = item.wf3Pm[0];
-            result.wf4Am = item.wf4Am[0];
-            result.wf4Pm = item.wf4Pm[0];
-            result.wf5Am = item.wf5Am[0];
-            result.wf5Pm = item.wf5Pm[0];
-            result.wf6Am = item.wf6Am[0];
-            result.wf6Pm = item.wf6Pm[0];
-            result.wf7Am = item.wf7Am[0];
-            result.wf7Pm = item.wf7Pm[0];
-            result.wf8 = item.wf8[0];
-            result.wf9 = item.wf9[0];
-            result.wf10 = item.wf10[0];
-
-            listResult.push(result);
-        });
-
-
-        //log.info('result count : ', listResult.length);
-        //for(i=0 ; i<listResult.length ; i++){
-        //    log.info(listResult[i]);
-        //}
-
-        return self._emitOrganizedData(index, listResult);
-    }
-    catch(e){
-        log.error('Error!! organizeLandData : failed data organized');
-        self.emit('recvFail', index);
-    }
-};
-
-CollectData.prototype.organizeTempData = function(index, listData, options){
-    var self = this;
-    //var i = 0;
-    var listItem = listData.response.body[0].items[0].item;
-    var listResult = [];
-
-    //log.info('currentData count : ' + listItem.length);
-    //log.info(listItem);
-
-    try{
-        var result = {};
-        var itemNameList = ['taMin3', 'taMax3', 'taMin4', 'taMax4','taMin5', 'taMax5', 'taMin6', 'taMax6','taMin7', 'taMax7',
-           'taMin8', 'taMax8', 'taMin9', 'taMax9','taMin10', 'taMax10'];
-
-        var template = {
-            pubDate: options.date + options.time,
-            date: options.date,
-            time: options.time,
-            regId: 0 /* 예보 구역 코드 */
-            //taMin3: -100, /* 3일 후 예상 최저 기온 */
-            //taMax3: -100, /* 3일 후 예상 최고 기온 */
-            //taMin4: -100, /* 4일 후 예상 최저 기온 */
-            //taMax4: -100, /* 4일 후 예상 최고 기온 */
-            //taMin5: -100, /* 5일 후 예상 최저 기온 */
-            //taMax5: -100, /* 5일 후 예상 최고 기온 */
-            //taMin6: -100, /* 6일 후 예상 최저 기온 */
-            //taMax6: -100, /* 6일 후 예상 최고 기온 */
-            //taMin7: -100, /* 7일 후 예상 최저 기온 */
-            //taMax7: -100, /* 7일 후 예상 최고 기온 */
-            //taMin8: -100, /* 8일 후 예상 최저 기온 */
-            //taMax8: -100, /* 8일 후 예상 최고 기온 */
-            //taMin9: -100, /* 9일 후 예상 최저 기온 */
-            //taMax9: -100, /* 9일 후 예상 최고 기온 */
-            //taMin10: -100, /* 10일 후 예상 최저 기온 */
-            //taMax10: -100 /* 10일 후 예상 최고 기온 */
-        };
-
-        itemNameList.forEach(function (name) {
-            template[name] = -100;
-        });
-
-        listItem.forEach(function(item){
-            if (!item.regId || typeof item.regId[0] !== 'string' || !item.regId[0].trim()) {
-                throw new Error('Missing mid region');
-            }
-
-            result = Object.assign({}, template);
-            result.regId = item.regId[0];
-
-            itemNameList.forEach(function (name) {
-                if(item[name] && item[name][0]) {
-                    result[name] = parseMeasurement(item[name][0], -100);
-                }
-            });
-
-            if (!itemNameList.some(function (name) { return result[name] !== -100; })) {
-                throw new Error('Missing mid temperatures');
-            }
-            listResult.push(result);
-        });
-
-
-        //log.info('result count : ', listResult.length);
-        //for(i=0 ; i<listResult.length ; i++){
-        //    log.info(listResult[i]);
-        //}
-
-        return self._emitOrganizedData(index, listResult);
-    }
-    catch(e){
-        log.error('Error!! organizeTempData : failed data organized');
-        log.error('KMA collection operation failed');
-        self.emit('recvFail', index);
-    }
-};
+// Missing horizons stay absent; downstream consumers require a complete daily row.
+['Land', 'Temp'].forEach(function (dataset) {
+    CollectData.prototype['organize' + dataset + 'Data'] = function (index, response, options) {
+        try {
+            var records = midPolicy.parse(dataset.toLowerCase(), response, options);
+            return this._emitOrganizedData(index, records);
+        } catch (e) {
+            log.warn('KMA mid forecast invalid', {dataset: dataset, index: index,
+                publication: options && options.date + options.time});
+            this.emit('recvFail', index);
+            return false;
+        }
+    };
+});
 
 CollectData.prototype.organizeSeaData = function(index, listData, options){
     var self = this;

@@ -1,0 +1,6 @@
+# Design evidence
+Source: docs/architecture/diagrams/daily-forecast-validity.json; delivered workflow HTML at the adjacent .html path. Uses installed Archify 2.17.
+The collection path preserves partial valid fields and publication; service independently checks freshness, combines by calendar target and returns complete daily rows with explicit gaps. Retired RSS is outside the usable-source path. Source details and compatibility are in daily-forecast-contract.md.
+Artifact: validate/deliver passed all 9 artifact checks, 0 composition errors/warnings (design-validation.json, design-delivery.json).
+Browser: initial default discovery skipped (Chrome not on PATH); resolved existing Chrome /root/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome and reran the supported visual-check. Final browser check passed 1440x900,1600x1000,1920x1080,2048x1320 without scroll overflow; light/dark captures retained beside HTML.
+Perceptual review: main agent opened the actual 1440x900 light and 2048x1320 dark screenshots. Labels, branch connections and explanatory cards are legible, no intersections/occlusion, one main flow with explicit retired source; layout uses the desktop without clipping. Artifact, browser and visual review are separate evidence.

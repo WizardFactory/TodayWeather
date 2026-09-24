@@ -1,0 +1,2650 @@
+{
+  "createdAt": "2026-09-24T08:57:15.403Z",
+  "fixedRequestTime": "2026-09-24T00:10:00.000Z",
+  "hostTimezone": "UTC",
+  "executionContext": "local",
+  "candidate": {
+    "server/controllers/controllerTown.js": "7f19ea0bbf5d7358bcde966ebd68e808b8a7b377f41d7007356bcd7d27df13d3",
+    "server/controllers/kma/kma.town.short.rss.controller.js": "01be54d9ca5f0174113a4c55a9befd688a83e8c91e80264c43ca92f71f15af74",
+    "server/controllers/controllerTown24h.js": "db9769f033d0fbf2797ac947cdf47d930102b80c62934cd0b25954db0d17560d",
+    "server/routes/v000903/route.kma.v000903.js": "cc46427fc7448e89517df957cb0a3c3c949bd8c51bdcb8b87d8ad4a991375551",
+    "server/test/offline/rss-wind.test.js": "28224e2339cb4419cdc319c06f9557bec0f56132e28992303417147ad8f5545a",
+    "intent/issue-2554.md": "5770fce290f0e508c8b9b1e2e1217e1c302700ac6516ebfc0d6a25c37b3117c0",
+    "specs/issue-2554.md": "32c60dcadd0759144c27536553bed4e62e8c1523e915a83889680ce3db934132",
+    "plans/issue-2554.md": "9b9ee4f989e9fd0f15a9dfefc344a0d710dda8593dd04ac766d13dc16b46f2a9",
+    "docs/architecture/weather-collection.md": "ab141d4ad2b557348a369e89581e8fb5ad6228c6914c2f6e4e457fe581ab6b30",
+    "docs/architecture/mobile-api.md": "696f34af034fce4aaae42d81153cadfc83a6877232b72a12fd76d8b2f23a3f54"
+  },
+  "scenarioCount": 36,
+  "outcome": "passed",
+  "scenarios": [
+    {
+      "version": "1.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "newer",
+      "units": "si",
+      "wind": {
+        "wsd": 1.3,
+        "vec": 0
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "newer",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 4.7,
+        "vec": 0
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "equal",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "equal",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "older",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "older",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "newer",
+      "units": "si",
+      "wind": {
+        "wsd": 1.3,
+        "vec": 225
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "newer",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 4.7,
+        "vec": 225
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "equal",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "equal",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "older",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "older",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "newer",
+      "units": "si",
+      "wind": {
+        "wsd": 1.3,
+        "vec": 315
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "newer",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 4.7,
+        "vec": 315
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "equal",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "equal",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "older",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "older",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "modelShort",
+        "modelCurrent",
+        "modelShortest",
+        "modelShortRss",
+        "modelMidForecast",
+        "modelMidLand",
+        "modelMidTemp",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "newer",
+      "units": "si",
+      "wind": {
+        "wsd": 1.3,
+        "vec": 0
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "newer",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 4.7,
+        "vec": 0
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "equal",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "equal",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "older",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Seoul",
+      "grid": {
+        "mx": 60,
+        "my": 127
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 60,
+        "mCoord.my": 127
+      },
+      "policy": "older",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "newer",
+      "units": "si",
+      "wind": {
+        "wsd": 1.3,
+        "vec": 225
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "newer",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 4.7,
+        "vec": 225
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "equal",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "equal",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "older",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Busan",
+      "grid": {
+        "mx": 98,
+        "my": 76
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 98,
+        "mCoord.my": 76
+      },
+      "policy": "older",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "newer",
+      "units": "si",
+      "wind": {
+        "wsd": 1.3,
+        "vec": 315
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "newer",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 4.7,
+        "vec": 315
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "equal",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "equal",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "older",
+      "units": "si",
+      "wind": {
+        "wsd": 2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "location": "Jeju",
+      "grid": {
+        "mx": 53,
+        "my": 38
+      },
+      "rssGridQuery": {
+        "mCoord.mx": 53,
+        "mCoord.my": 38
+      },
+      "policy": "older",
+      "units": "fahrenheit_kmh",
+      "wind": {
+        "wsd": 7.2,
+        "vec": 270
+      },
+      "shortCount": 41,
+      "midCount": 18,
+      "executedMiddleware": 38,
+      "collectorRows": 7,
+      "queryModels": [
+        "town",
+        "kma.town.short.model",
+        "kma.town.current.model",
+        "kma.town.shortest.model",
+        "kma.town.short.rss.model",
+        "kma.town.mid.forecast.model",
+        "kma.town.mid.land.model",
+        "kma.town.mid.temp.model",
+        "modelAreaNo"
+      ],
+      "warningSummary": [
+        {
+          "method": "getShortRss",
+          "level": "warn",
+          "count": 1,
+          "example": "short rss was updated yet!! rss pubDate="
+        },
+        {
+          "method": "mergeCurrentSkyByShortest",
+          "level": "warn",
+          "count": 24,
+          "example": "Fail to find shortest 20260916 0900"
+        },
+        {
+          "method": "getLifeIndexKma",
+          "level": "warn",
+          "count": 2,
+          "example": "Fail to get area no"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "warn",
+          "count": 1,
+          "example": "Heath> There is no areaNo, goto finding areaNo"
+        },
+        {
+          "method": "getHealthDay",
+          "level": "error",
+          "count": 1,
+          "example": "Health> 2. cannot get areaNo near by "
+        },
+        {
+          "method": "makeAirInfoList",
+          "level": "error",
+          "count": 1,
+          "example": "fail to make air info list"
+        },
+        {
+          "method": "getSummaryAfterUnitConverter",
+          "level": "warn",
+          "count": 1,
+          "example": "airInfo is invalid! "
+        }
+      ]
+    }
+  ]
+}

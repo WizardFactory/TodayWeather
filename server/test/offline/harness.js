@@ -7,7 +7,8 @@ var vm = require('vm');
 var util = require('util');
 exports.load = function (relative, dependencies, globals) {
     var filename = path.resolve(__dirname, '../..', relative);
-    var sandbox = Object.assign({module: {exports: {}}, exports: {},
+    var module = {exports: {}};
+    var sandbox = Object.assign({module: module, exports: module.exports,
         require: function (name) {
             if (!Object.prototype.hasOwnProperty.call(dependencies, name)) {
                 throw new Error('Unstubbed dependency: ' + name);
@@ -29,6 +30,7 @@ exports.logger = function (lines) {
 };
 exports.collector = function (request, logs) {
     var Collector = exports.load('lib/collectTownForecast.js', {
+        './midForecastPolicy': require('../../lib/midForecastPolicy'),
         events: require('events'), request: request || {get: function () { throw new Error('Unexpected HTTP'); }},
         xml2js: require('xml2js'), dnscache: function () {}
     }, {log: exports.logger(logs || [])});

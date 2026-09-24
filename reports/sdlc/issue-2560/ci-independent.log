@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: IV-1 entirely unrecognized land item fails rather than publishing success
+ok 1 - IV-1 entirely unrecognized land item fails rather than publishing success
+  ---
+  duration_ms: 79.934574
+  type: 'test'
+  ...
+# Subtest: IV-2 invalid short weather cannot erase valid mid weather or become zero rain
+ok 2 - IV-2 invalid short weather cannot erase valid mid weather or become zero rain
+  ---
+  duration_ms: 371.110352
+  type: 'test'
+  ...
+# Subtest: IV-3 no text DB record does not block fresh primary data
+ok 3 - IV-3 no text DB record does not block fresh primary data
+  ---
+  duration_ms: 62.919397
+  type: 'test'
+  ...
+# Subtest: IV-4 service remains usable without either primary and retired RSS
+ok 4 - IV-4 service remains usable without either primary and retired RSS
+  ---
+  duration_ms: 40.141627
+  type: 'test'
+  ...
+# Subtest: IV-5 absent source temperature is not a numeric daily mean; real minus one is preserved
+ok 5 - IV-5 absent source temperature is not a numeric daily mean; real minus one is preserved
+  ---
+  duration_ms: 66.792143
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 789.649083

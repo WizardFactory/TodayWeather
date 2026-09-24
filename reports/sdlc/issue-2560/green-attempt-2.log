@@ -1,0 +1,220 @@
+TAP version 13
+# Subtest: captured day 4–10 succeeds with original values and no invented day 3
+ok 1 - captured day 4–10 succeeds with original values and no invented day 3
+  ---
+  duration_ms: 35.061612
+  type: 'test'
+  ...
+# Subtest: synthetic legacy day 3 remains supported
+ok 2 - synthetic legacy day 3 remains supported
+  ---
+  duration_ms: 2.011196
+  type: 'test'
+  ...
+# Subtest: missing optional fields never become sentinel temperatures or defaults
+ok 3 - missing optional fields never become sentinel temperatures or defaults
+  ---
+  duration_ms: 3.280926
+  type: 'test'
+  ...
+# Subtest: organizeLandData malformed envelopes and empty/invalid items fail once
+ok 4 - organizeLandData malformed envelopes and empty/invalid items fail once
+  ---
+  duration_ms: 10.235112
+  type: 'test'
+  ...
+# Subtest: organizeTempData malformed envelopes and empty/invalid items fail once
+ok 5 - organizeTempData malformed envelopes and empty/invalid items fail once
+  ---
+  duration_ms: 10.238789
+  type: 'test'
+  ...
+# Subtest: 1.0 real schemas + Manager handoff + storage projection + service round trip
+not ok 6 - 1.0 real schemas + Manager handoff + storage projection + service round trip
+  ---
+  duration_ms: 221.898283
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:60:5'
+  failureType: 'testCodeFailure'
+  error: 'ifError got unwanted exception: ifError got unwanted exception: 0'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+    generatedMessage: false
+    actual: 0
+    expected: ~
+    operator: 'ifError'
+    diff: 'simple'
+  error: 'ifError got unwanted exception: 0'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual: 0
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:67:93
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4586:21
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4541:68)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:67:18)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:67:93
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4586:21
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4541:68)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:67:18)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 1.0 partial valid horizons persist without requiring day 10
+not ok 7 - 1.0 partial valid horizons persist without requiring day 10
+  ---
+  duration_ms: 26.105677
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:76:5'
+  failureType: 'testCodeFailure'
+  error: 'ifError got unwanted exception: ifError got unwanted exception: 0'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+    generatedMessage: false
+    actual: 0
+    expected: ~
+    operator: 'ifError'
+    diff: 'simple'
+  error: 'ifError got unwanted exception: 0'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual: 0
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:81:91
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4586:21
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4541:68)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:81:34)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  operator: 'ifError'
+  stack: |-
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:81:91
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4586:21
+    Object.exec (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-harness.js:26:92)
+    ControllerTown._getMidDataFromDB (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/controllers/controllerTown.js:4541:68)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:81:34)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 real schemas + Manager handoff + storage projection + service round trip
+not ok 8 - 2.0 real schemas + Manager handoff + storage projection + service round trip
+  ---
+  duration_ms: 29.598209
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:60:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + NaN
+    - 1790197200000
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1790197200000
+  actual: NaN
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:71:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 2.0 partial valid horizons persist without requiring day 10
+ok 9 - 2.0 partial valid horizons persist without requiring day 10
+  ---
+  duration_ms: 22.120576
+  type: 'test'
+  ...
+# Subtest: KST publication, 06/18 cycles, mixed timestamp representations and year/month boundaries
+ok 10 - KST publication, 06/18 cycles, mixed timestamp representations and year/month boundaries
+  ---
+  duration_ms: 132.995374
+  type: 'test'
+  ...
+# Subtest: legacy day 3, honest captured gap, no NaN/sentinel/unknown sky output
+ok 11 - legacy day 3, honest captured gap, no NaN/sentinel/unknown sky output
+  ---
+  duration_ms: 19.87875
+  type: 'test'
+  ...
+# Subtest: stale or future publication, identity mismatch, latest partial never uses older forecast
+ok 12 - stale or future publication, identity mismatch, latest partial never uses older forecast
+  ---
+  duration_ms: 21.024259
+  type: 'test'
+  ...
+# Subtest: short merge sorts/deduplicates, keeps seven-day recent history and declares boundary gap
+ok 13 - short merge sorts/deduplicates, keeps seven-day recent history and declares boundary gap
+  ---
+  duration_ms: 23.619896
+  type: 'test'
+  ...
+# Subtest: dedicated daily health fails captured polluted list while short is current
+ok 14 - dedicated daily health fails captured polluted list while short is current
+  ---
+  duration_ms: 22.32653
+  type: 'test'
+  ...
+# Subtest: RSS retirement ignores older/equal/newer mixed publications and empty targets
+ok 15 - RSS retirement ignores older/equal/newer mixed publications and empty targets
+  ---
+  duration_ms: 392.375158
+  type: 'test'
+  ...
+# Subtest: 401/error envelopes emit only controlled failure without key-bearing diagnostics
+ok 16 - 401/error envelopes emit only controlled failure without key-bearing diagnostics
+  ---
+  duration_ms: 8.870063
+  type: 'test'
+  ...
+# Subtest: RSS HTML/malformed XML never publishes or persists; retired schedules never fetch
+ok 17 - RSS HTML/malformed XML never publishes or persists; retired schedules never fetch
+  ---
+  duration_ms: 29.793133
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 14
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1077.840626

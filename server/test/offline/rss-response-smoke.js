@@ -16,7 +16,7 @@ const outputDir = process.env.TW_SMOKE_OUTPUT_DIR || path.join(require('os').tmp
 fs.mkdirSync(outputDir,{recursive:true});
 const clone = value => structuredClone(value);
 const RealDate = Date;
-const instant = '2026-09-24T00:10:00.000Z'; // 09:10 KST, after 09:00 observation publication.
+const instant = process.env.TW_SMOKE_NOW || '2026-09-24T00:10:00.000Z'; // 09:10 KST, after 09:00 observation publication.
 class FixedDate extends RealDate { constructor(...args) { super(...(args.length ? args : [instant])); } static now() { return new RealDate(instant).getTime(); } }
 const locations = [
   {name:'Seoul',town:{first:'서울특별시',second:'종로구',third:'청운효자동'},mCoord:{mx:60,my:127},gCoord:{lat:37.5665,lon:126.978}},
@@ -27,7 +27,7 @@ function ymd(date) {return date.toISOString().slice(0,10).replace(/-/g,'');}
 function hhmm(date) {return date.toISOString().slice(11,16).replace(':','');}
 function kstDate(str) { return new RealDate(str.slice(0,4)+'-'+str.slice(4,6)+'-'+str.slice(6,8)+'T'+str.slice(8,10)+':'+str.slice(10,12)+':00+09:00'); }
 function makeFixture(place, policy) {
-  const basePub = policy==='newer' ? '202609240500' : policy==='older' ? '202609241100' : '202609240800';
+  const basePub = policy==='newer' ? '202609240500' : policy==='older' ? '202609240900' : '202609240800';
   const short=[];
   for(let day=-1;day<=3;day++) for(let hour=0;hour<24;hour+=3) {
     const d=new RealDate(Date.UTC(2026,8,24+day,hour));
@@ -51,7 +51,7 @@ function createHarness(version, fixture) {
   const manager={MAX_CURRENT_COUNT:200,leadingZeros:(n,l)=>String(n).padStart(l,'0'),getRegIdByTown:(r,c,cb)=>cb(null,{pointNumber:'109',cityCode:'11B10101'})};
   const logger={};
   for(const level of ['info','silly','debug','verbose','warn','error']) logger[level]=(...args)=>{if(level==='error'||level==='warn')logs.push({method:activeMethod,level,args:args.map(a=>a&&a.stack||a)});};
-  const sandbox={console,Buffer,Date:FixedDate,setTimeout,clearTimeout,setImmediate,log:logger,manager,__:s=>s};
+  const sandbox={console,Buffer,Date:FixedDate,setTimeout(){throw new Error('Unexpected timer');},setInterval(){throw new Error('Unexpected interval');},clearTimeout,setImmediate,log:logger,manager,__:s=>s};
   sandbox.global=sandbox;
   const context=vm.createContext(sandbox);
   const managerCode=fs.readFileSync(path.join(root,'server/controllers/controllerManager.js'),'utf8');
@@ -66,12 +66,13 @@ function createHarness(version, fixture) {
     const map={'modelShort':'short','modelCurrent':'current','modelShortest':'shortest','modelShortRss':'rss','kma.town.short.model':'short','kma.town.current.model':'current','kma.town.shortest.model':'shortest','kma.town.short.rss.model':'rss'};
     if(map[name]) {
       const kind=map[name],dataKey={short:'shortData',current:'currentData',shortest:'shortestData',rss:'shortData'}[kind];
-      const pub={short:fixture.basePub,current:'202609240900',shortest:'202609240830',rss:'202609240800'}[kind];
-      if(isV2) return fixture[kind].map(item=>({mCoord:fixture.place.mCoord,pubDate:kstDate(pub),fcsDate:kstDate(kind==='rss'?item.date:item.date+item.time),[dataKey]:item}));
-      return [{mCoord:fixture.place.mCoord,pubDate:pub,[dataKey]:fixture[kind]}];
+      if(kind==='short' && fixture.missingShort) return [];
+      const pub={short:fixture.basePub,current:'202609240900',shortest:'202609240830',rss:fixture.rssPub || '202609240800'}[kind];
+      if(isV2) return fixture[kind].map(item=>({mCoord:fixture.place.mCoord,pubDate:kstDate(kind==='short' && fixture.shortPublications && fixture.shortPublications[item.date] || pub),fcsDate:kstDate(kind==='rss'?item.date:item.date+item.time),[dataKey]:item}));
+      return [{mCoord:fixture.place.mCoord,pubDate:pub,[dataKey]:fixture[kind],dailySource:kind==='short'?fixture.dailySource:undefined}];
     }
     const midMap={'modelMidForecast':'forecast','modelMidLand':'land','modelMidTemp':'temp','kma.town.mid.forecast.model':'forecast','kma.town.mid.land.model':'land','kma.town.mid.temp.model':'temp'};
-    if(midMap[name]) return [{pubDate:isV2?kstDate('202609240600'):'202609240600',data:isV2?fixture[midMap[name]]:[fixture[midMap[name]]]}];
+    if(midMap[name]) { const row=fixture[midMap[name]]; if(!row)return []; const pub=row.date+row.time; return [{pubDate:isV2?kstDate(pub):pub,data:isV2?row:[row]}]; }
     return [];
   }
   function getModel(name) {
@@ -122,17 +123,17 @@ function createHarness(version, fixture) {
   // Exercise real XML parsing and collector conversion before presenting rows at the Mongo boundary.
   const direction={Seoul:['북','N',2],Busan:['남서','SW',7],Jeju:['북서','NW',4]}[fixture.place.name];
   const xmlRows=fixture.rss.map(row=>{
-    const values=Object.assign({},row,{hour:Number(row.date.slice(8,10)),day:0,wfKor:'맑음',wfEn:'Clear',wdKor:direction[0],wdEn:direction[1]});
+    const values=Object.assign({},row,{hour:Number(row.date.slice(8,10)),day:Math.round((kstDate(row.date.slice(0,8)+'0000')-kstDate((fixture.rssPub || '202609240800').slice(0,8)+'0000'))/86400000),wfKor:'맑음',wfEn:'Clear',wdKor:direction[0],wdEn:direction[1]});
     delete values.date;delete values.ftm;
     return '<data>'+Object.entries(values).map(([key,value])=>'<'+key+'>'+value+'</'+key+'>').join('')+'</data>';
   }).join('');
-  const xml='<wid><header><tm>202609240800</tm><x>'+fixture.place.mCoord.mx+'</x><y>'+fixture.place.mCoord.my+'</y></header><body>'+xmlRows+'</body></wid>';
+  const xml='<wid><header><tm>'+(fixture.rssPub || '202609240800')+'</tm><x>'+fixture.place.mCoord.mx+'</x><y>'+fixture.place.mCoord.my+'</y></header><body>'+xmlRows+'</body></wid>';
   const Rss=load(path.join(root,'server/controllers/kma/kma.town.short.rss.controller.js'));
   let parsed=false;
   require('xml2js').parseString(xml,(error,upstream)=>{
     assert.ifError(error);
     new Rss().parseShortRss(0,upstream,(code,converted)=>{
-      assert.equal(code,0);assert.equal(converted.shortData.length,7);
+      assert.equal(code,0);assert.equal(converted.shortData.length,fixture.rss.length);
       for(const row of converted.shortData) {assert.equal(row.wdEn,direction[2]);assert.equal(row.wfEn,1);}
       fixture.rss=converted.shortData;parsed=true;
     });
@@ -197,4 +198,5 @@ async function main(){
   fs.writeFileSync(path.join(outputDir,'evidence.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify({outcome:report.outcome,scenarioCount:output.length,evidence:path.join(outputDir,'evidence.json'),candidate},null,2));
 }
-main().catch(err=>{console.error(err.stack);process.exitCode=1;});
+module.exports = {makeFixture,createHarness,locations};
+if (require.main === module) main().catch(err=>{console.error(err.stack);process.exitCode=1;});

@@ -1,0 +1,919 @@
+{
+  "head": "95fe711eee09f021c266303195badb1d4c612ad5",
+  "fixedClock": "2026-09-24T07:27:00Z",
+  "assertions": "All 20 scenario expectations confirmed; head rejects fresh RSS with stale/missing primary; naive switch accepts untouched stale data.",
+  "results": [
+    {
+      "version": "1.0",
+      "sourceKind": "base",
+      "primary": "202609161400",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 10,
+          "taMax": 24
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "sourceKind": "head",
+      "primary": "202609161400",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": []
+    },
+    {
+      "version": "1.0",
+      "sourceKind": "base",
+      "primary": "missing",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 10,
+          "taMax": 24
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "sourceKind": "head",
+      "primary": "missing",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": []
+    },
+    {
+      "version": "1.0",
+      "sourceKind": "base",
+      "primary": "202609241400",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 10,
+          "taMax": 24
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "sourceKind": "head",
+      "primary": "202609241400",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 10,
+          "taMax": 24
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "sourceKind": "gate-only",
+      "primary": "202609161400",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": []
+    },
+    {
+      "version": "1.0",
+      "sourceKind": "gate-only",
+      "primary": "missing",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": []
+    },
+    {
+      "version": "1.0",
+      "sourceKind": "naive-fresh-rss",
+      "primary": "202609161400",
+      "variant": "partial",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 35,
+          "tmn": 30,
+          "tmx": 40,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 35,
+          "tmn": 30,
+          "tmx": 40,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 30,
+          "taMax": 40
+        }
+      ]
+    },
+    {
+      "version": "1.0",
+      "sourceKind": "naive-fresh-rss",
+      "primary": "202609161400",
+      "variant": "no-match",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 35,
+          "tmn": 30,
+          "tmx": 40,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": -1,
+          "vec": -1,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 35,
+          "tmn": 30,
+          "tmx": 40,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": -1,
+          "vec": -1,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 30,
+          "taMax": 40
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "sourceKind": "base",
+      "primary": "202609161400",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 10,
+          "taMax": 24
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "sourceKind": "head",
+      "primary": "202609161400",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": []
+    },
+    {
+      "version": "2.0",
+      "sourceKind": "base",
+      "primary": "missing",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 10,
+          "taMax": 24
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "sourceKind": "head",
+      "primary": "missing",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": []
+    },
+    {
+      "version": "2.0",
+      "sourceKind": "base",
+      "primary": "202609241400",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 10,
+          "taMax": 24
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "sourceKind": "head",
+      "primary": "202609241400",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 10,
+          "taMax": 24
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "sourceKind": "gate-only",
+      "primary": "202609161400",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": []
+    },
+    {
+      "version": "2.0",
+      "sourceKind": "gate-only",
+      "primary": "missing",
+      "variant": "full",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 20,
+          "tmn": 10,
+          "tmx": -50,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 20,
+          "tmn": -50,
+          "tmx": 24,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": []
+    },
+    {
+      "version": "2.0",
+      "sourceKind": "naive-fresh-rss",
+      "primary": "202609161400",
+      "variant": "partial",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 35,
+          "tmn": 30,
+          "tmx": 40,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 35,
+          "tmn": 30,
+          "tmx": 40,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": 1,
+          "vec": 0,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 30,
+          "taMax": 40
+        }
+      ]
+    },
+    {
+      "version": "2.0",
+      "sourceKind": "naive-fresh-rss",
+      "primary": "202609161400",
+      "variant": "no-match",
+      "shortRssPubDate": "202609241400",
+      "afterRss": [
+        {
+          "date": "20260925",
+          "time": "0600",
+          "t3h": 35,
+          "tmn": 30,
+          "tmx": 40,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": -1,
+          "vec": -1,
+          "lgt": -1
+        },
+        {
+          "date": "20260925",
+          "time": "1500",
+          "t3h": 35,
+          "tmn": 30,
+          "tmx": 40,
+          "sky": 1,
+          "pty": 0,
+          "reh": 50,
+          "pop": 0,
+          "r06": 0,
+          "s06": 0,
+          "wsd": -1,
+          "vec": -1,
+          "lgt": -1
+        }
+      ],
+      "daily": [
+        {
+          "date": "20260925",
+          "taMin": 30,
+          "taMax": 40
+        }
+      ]
+    }
+  ]
+}

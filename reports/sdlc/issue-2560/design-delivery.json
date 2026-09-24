@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "workflow",
+  "input": "/root/.paseo/worktrees/08mqediz/humorous-lionfish/docs/architecture/diagrams/daily-forecast-validity.json",
+  "output": "/root/.paseo/worktrees/08mqediz/humorous-lionfish/docs/architecture/diagrams/daily-forecast-validity.html",
+  "specification": {
+    "sha256": "707e34b4af3bf84d1b72bb2c29b3c3b4da48ccc6138cd77557f348fa8c0f2d65",
+    "bytes": 3211
+  },
+  "artifact": {
+    "sha256": "67fa42d10f2d26b1d23e3231a988a7d64bb563d17002215d9053998e61c1f77d",
+    "bytes": 806615
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

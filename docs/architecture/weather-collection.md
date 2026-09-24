@@ -27,7 +27,7 @@ These are scheduler trigger times, **not provider publication guarantees**. `get
 | `short` | 13 | Direct self-HTTP |
 | `keco` real-time station air | 3, 13, 23, 33, 43, 53 | Direct self-HTTP |
 | `kecoSido` regional air | 4, 14, 24, 34, 44, 54 | Direct self-HTTP |
-| `past`, `kecoForecast`, `midtemp`, `midland`, `midforecast`, `midsea`, `midrss`, `shortrss` | 2 | Queued, drained in reverse insertion order |
+| `past`, `kecoForecast`, `midtemp`, `midland`, `midforecast`, `midsea`, `shortrss` | 2 | Queued, drained in reverse insertion order |
 | `lifeindex` | 10 | Queued |
 | `healthday` | 10, with `getUTCHours()+9 === 6 || === 18` | Queued; actual expression has no modulo 24 |
 | KAQ hourly forecast | 7, UTC hours 8, 9, 10, 11, 20, 21, 22, 13 | Queued controller call, not self-HTTP |
@@ -84,7 +84,8 @@ This section and the RSS card in the collection diagram describe the local repai
 | Product | Main path | Use at read time |
 | --- | --- | --- |
 | Station minute/hourly and warnings | `kmaScraper` → station/special-weather models | Correct/augment gridded current weather, precipitation and alerts |
-| Short and medium RSS | `kma.town.short.rss.controller`, `midRssKmaRequester` | Supplement API forecasts and medium-range daily data |
+| Short RSS | `kma.town.short.rss.controller` | Supplement short API forecasts |
+| Legacy mid RSS (retired, #2560) | `midRssKmaRequester` | Collection/storage disabled; cached medium data is not applied |
 | AirKorea observations and forecast | `kecoController`, `kecoRequester` | Station/regional pollutants, forecast and air indices |
 | KAQ / AirKorea hourly image forecasts | `kaq.hourly.forecast.controller`, `airkorea.hourly.forecast.controller`, image parsers | Hourly pollutant projections; selected by `airForecastSource` |
 | Life and health indices | `lifeIndexKmaRequester`, `controllerHealthDay` | Weather/life advisories |
@@ -127,3 +128,25 @@ The scheduled `copyKaqfsImagesToS3` Lambda is an upstream producer separate from
 ## Observed service host versus collection hosts
 
 [Read-only service EC2 inspection](ec2-internals.md) identifies ten PM2 API workers configured as `service`, so this host does not automatically start the Manager gather/scrape loops or push loops. Its KAQ bucket setting resolves to `tw-kaqfs-images`, but a matching setting is not evidence that this host runs the scheduled image consumer. The separate gather instance was not accessed. The service checkout is `5bca407` with host config/logger edits; its Manager retry budgets and KMA requester differ from the local baseline. The schedules above remain repository facts, not a claim about the gather instance's deployed code. Request-time DSF/AQI fills remain possible on the API host.
+
+## Daily forecast validity (issue #2560)
+
+The mid-land/temperature collectors preserve available day-3–10 fields without
+requiring day 3 or day 10. Both storage versions retain publication/region and
+optional precipitation probabilities. Mid composition joins by each source's
+KST target date, with independent 36-hour publication limits and no future or
+mismatched identity. Short daily overlays have a 24-hour publication limit.
+The seven-day observation history remains; unavailable days are omitted and
+listed in additive `midData.dailyStatus.unavailableDates`. The captured day-4
+forecast remains September 28, with September 27 unavailable unless an actual
+valid source supplies it. Existing v000903 `tmn`/`tmx` output conversion remains.
+
+Legacy **mid RSS is retired**: scheduled collection/storage entry points are
+disabled and `getMidRss` passes through without cached overlay. Short RSS remains
+independent. No replacement feed or production recovery is claimed.
+
+See the [daily validity diagram](diagrams/daily-forecast-validity.html),
+[editable source](diagrams/daily-forecast-validity.json), and
+[contract, source policy and operator checklist](../../reports/sdlc/issue-2560/daily-forecast-contract.md).
+
+Review5303256769 correction removes the retired `midrss` task from `checkTimeAndRequestTask` startup/hourly queues; short RSS remains scheduled. Legacy DB1 short saves additionally replace an optional current-batch `dailySource` snapshot for independently validated daily targets beyond the hourly template. Older documents are not backfilled; service can use this only after a successful normal collection. DB2 reuses each stored short document's publication. See the daily forecast contract for snapshot/rollback semantics.

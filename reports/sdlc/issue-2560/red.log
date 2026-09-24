@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: captured day 4–10 succeeds with original values and no invented day 3
+not ok 1 - captured day 4–10 succeeds with original values and no invented day 3
+  ---
+  duration_ms: 86.049717
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:20:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'recvFail'
+    - 'recvData'
+           ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'recvData'
+  actual: 'recvFail'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:22:43)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: synthetic legacy day 3 remains supported
+ok 2 - synthetic legacy day 3 remains supported
+  ---
+  duration_ms: 2.127293
+  type: 'test'
+  ...
+# Subtest: missing optional fields never become sentinel temperatures or defaults
+not ok 3 - missing optional fields never become sentinel temperatures or defaults
+  ---
+  duration_ms: 4.051016
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:32:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    taMin3
+    + actual - expected
+    
+    + -100
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual: -100
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:36:66)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: organizeLandData malformed envelopes and empty/invalid items fail once
+not ok 4 - organizeLandData malformed envelopes and empty/invalid items fail once
+  ---
+  duration_ms: 3.264075
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:39:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Got unwanted exception.
+    Actual message: "Cannot read properties of undefined (reading 'body')"
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+  error: "Cannot read properties of undefined (reading 'body')"
+  name: 'TypeError'
+  stack: |-
+    CollectData.organizeLandData (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/lib/collectTownForecast.js:874:38)
+    parse (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:17:12)
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:43:54
+    getActual (node:assert:609:5)
+    Function.doesNotThrow (node:assert:777:32)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:43:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+  operator: 'doesNotThrow'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:43:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: organizeTempData malformed envelopes and empty/invalid items fail once
+not ok 5 - organizeTempData malformed envelopes and empty/invalid items fail once
+  ---
+  duration_ms: 1.90609
+  type: 'test'
+  location: '/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:39:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Got unwanted exception.
+    Actual message: "Cannot read properties of undefined (reading 'body')"
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+  error: "Cannot read properties of undefined (reading 'body')"
+  name: 'TypeError'
+  stack: |-
+    CollectData.organizeTempData (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/lib/collectTownForecast.js:943:38)
+    parse (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:17:12)
+    /root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:43:54
+    getActual (node:assert:609:5)
+    Function.doesNotThrow (node:assert:777:32)
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:43:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+  operator: 'doesNotThrow'
+  stack: |-
+    TestContext.<anonymous> (/root/.paseo/worktrees/08mqediz/humorous-lionfish/server/test/offline/daily-forecast.test.js:43:20)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 1
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 115.593337

@@ -1,0 +1,935 @@
+{
+  "candidate": "4507d3a9035b1b91ab55a525e6eb6de9d5ace1634e5d923c59a67ede8479751e",
+  "node": "v22.22.2",
+  "raw_logs": "Kept locally; exact summary tails and content hashes retained here. No logs claim provider or DB access.",
+  "initial_red_note": "Six functional assertion failures plus one unstubbed scheduler dependency; scheduler harness corrected. Final assertions replayed against unchanged b13dc38 production source: ten expected failures, one client compatibility pass.",
+  "executions": [
+    {
+      "id": "initial-red",
+      "exit_code": 1,
+      "raw_log_sha256": "756cfa4960599b5704b3a2abb1c8dca2d1ba1aae159ba39f58d348755813c9f6",
+      "raw_log_local_path": "/tmp/review2-red.log",
+      "summary_tail": [
+        "1..7",
+        "# tests 7",
+        "# suites 0",
+        "# pass 0",
+        "# fail 7",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 553.055873"
+      ]
+    },
+    {
+      "id": "source-red",
+      "exit_code": 1,
+      "raw_log_sha256": "be43d9ec4dcde748eade952712d342f3e67f1f1cdc6a8f63b946f9a86fa22d69",
+      "raw_log_local_path": "/tmp/review2-source-red.log",
+      "summary_tail": [
+        "1..9",
+        "# tests 9",
+        "# suites 0",
+        "# pass 6",
+        "# fail 3",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 642.403444"
+      ]
+    },
+    {
+      "id": "baseline-replay",
+      "exit_code": 1,
+      "raw_log_sha256": "190d7269201741602187aa899a4c7e57fd7ee339cf8f62648c5cb3f26461f9f1",
+      "raw_log_local_path": "/tmp/review2-replay-red.log",
+      "summary_tail": [
+        "1..11",
+        "# tests 11",
+        "# suites 0",
+        "# pass 1",
+        "# fail 10",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 570.551293"
+      ]
+    },
+    {
+      "id": "green",
+      "exit_code": 0,
+      "raw_log_sha256": "99d83c8aba4791c3f9ef1bf6403a3c95bf8ea101d442ef8d4a405c87b8f1be35",
+      "raw_log_local_path": "/tmp/review2-green-final.log",
+      "summary_tail": [
+        "1..11",
+        "# tests 11",
+        "# suites 0",
+        "# pass 11",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 666.769796"
+      ]
+    },
+    {
+      "id": "regression",
+      "exit_code": 0,
+      "raw_log_sha256": "a941de409aa5244036d004a2f503cac73b0ff61a7206f0e5e8c7491dd11f1ef6",
+      "raw_log_local_path": "/tmp/review2-offline-final.log",
+      "summary_tail": [
+        "1..43",
+        "# tests 43",
+        "# suites 0",
+        "# pass 43",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 633.728471"
+      ]
+    },
+    {
+      "id": "daily-smoke",
+      "exit_code": 0,
+      "raw_log_sha256": "a77fc6e7e7fa4e6daaa2fbc8f81e5975ff82a365634d393434f48a94235df4fe",
+      "raw_log_local_path": "/tmp/review2-daily-final.json",
+      "outcome": "passed",
+      "scenarioCount": 68,
+      "scenarios": [
+        {
+          "version": "1.0",
+          "scenario": "captured",
+          "units": "C",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "captured",
+          "units": "F",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "stale",
+          "units": "C",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "land-unavailable",
+              "future-mid-unavailable"
+            ],
+            "unavailableDates": [
+              "20260927",
+              "20260928",
+              "20260929",
+              "20260930",
+              "20261001",
+              "20261002",
+              "20261003",
+              "20261004"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "stale",
+          "units": "F",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "land-unavailable",
+              "future-mid-unavailable"
+            ],
+            "unavailableDates": [
+              "20260927",
+              "20260928",
+              "20260929",
+              "20260930",
+              "20261001",
+              "20261002",
+              "20261003",
+              "20261004"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "missing-text",
+          "units": "C",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "missing-text",
+          "units": "F",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "missing-temp",
+          "units": "C",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "temperature-unavailable",
+              "future-mid-unavailable"
+            ],
+            "unavailableDates": [
+              "20260927",
+              "20260928",
+              "20260929",
+              "20260930",
+              "20261001",
+              "20261002",
+              "20261003",
+              "20261004"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "missing-temp",
+          "units": "F",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "temperature-unavailable",
+              "future-mid-unavailable"
+            ],
+            "unavailableDates": [
+              "20260927",
+              "20260928",
+              "20260929",
+              "20260930",
+              "20261001",
+              "20261002",
+              "20261003",
+              "20261004"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "captured",
+          "units": "C",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "captured",
+          "units": "F",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "stale",
+          "units": "C",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "land-unavailable",
+              "future-mid-unavailable"
+            ],
+            "unavailableDates": [
+              "20260927",
+              "20260928",
+              "20260929",
+              "20260930",
+              "20261001",
+              "20261002",
+              "20261003",
+              "20261004"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "stale",
+          "units": "F",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "land-unavailable",
+              "future-mid-unavailable"
+            ],
+            "unavailableDates": [
+              "20260927",
+              "20260928",
+              "20260929",
+              "20260930",
+              "20261001",
+              "20261002",
+              "20261003",
+              "20261004"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "missing-text",
+          "units": "C",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "missing-text",
+          "units": "F",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "missing-temp",
+          "units": "C",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "temperature-unavailable",
+              "future-mid-unavailable"
+            ],
+            "unavailableDates": [
+              "20260927",
+              "20260928",
+              "20260929",
+              "20260930",
+              "20261001",
+              "20261002",
+              "20261003",
+              "20261004"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "missing-temp",
+          "units": "F",
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "temperature-unavailable",
+              "future-mid-unavailable"
+            ],
+            "unavailableDates": [
+              "20260927",
+              "20260928",
+              "20260929",
+              "20260930",
+              "20261001",
+              "20261002",
+              "20261003",
+              "20261004"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "stale-primary",
+          "units": "C"
+        },
+        {
+          "version": "1.0",
+          "scenario": "stale-primary",
+          "units": "F"
+        },
+        {
+          "version": "1.0",
+          "scenario": "missing-primary",
+          "units": "C"
+        },
+        {
+          "version": "1.0",
+          "scenario": "missing-primary",
+          "units": "F"
+        },
+        {
+          "version": "1.0",
+          "scenario": "partial-rss",
+          "units": "C"
+        },
+        {
+          "version": "1.0",
+          "scenario": "partial-rss",
+          "units": "F"
+        },
+        {
+          "version": "1.0",
+          "scenario": "unmatched-rss",
+          "units": "C"
+        },
+        {
+          "version": "1.0",
+          "scenario": "unmatched-rss",
+          "units": "F"
+        },
+        {
+          "version": "1.0",
+          "scenario": "rain-rss",
+          "units": "C"
+        },
+        {
+          "version": "1.0",
+          "scenario": "rain-rss",
+          "units": "F"
+        },
+        {
+          "version": "1.0",
+          "scenario": "no-humidity",
+          "units": "C"
+        },
+        {
+          "version": "1.0",
+          "scenario": "no-humidity",
+          "units": "F"
+        },
+        {
+          "version": "2.0",
+          "scenario": "stale-primary",
+          "units": "C"
+        },
+        {
+          "version": "2.0",
+          "scenario": "stale-primary",
+          "units": "F"
+        },
+        {
+          "version": "2.0",
+          "scenario": "missing-primary",
+          "units": "C"
+        },
+        {
+          "version": "2.0",
+          "scenario": "missing-primary",
+          "units": "F"
+        },
+        {
+          "version": "2.0",
+          "scenario": "partial-rss",
+          "units": "C"
+        },
+        {
+          "version": "2.0",
+          "scenario": "partial-rss",
+          "units": "F"
+        },
+        {
+          "version": "2.0",
+          "scenario": "unmatched-rss",
+          "units": "C"
+        },
+        {
+          "version": "2.0",
+          "scenario": "unmatched-rss",
+          "units": "F"
+        },
+        {
+          "version": "2.0",
+          "scenario": "rain-rss",
+          "units": "C"
+        },
+        {
+          "version": "2.0",
+          "scenario": "rain-rss",
+          "units": "F"
+        },
+        {
+          "version": "2.0",
+          "scenario": "no-humidity",
+          "units": "C"
+        },
+        {
+          "version": "2.0",
+          "scenario": "no-humidity",
+          "units": "F"
+        },
+        {
+          "version": "1.0",
+          "scenario": "stored-day3",
+          "units": "C",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "stored-day3",
+          "units": "F",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "stale-day3",
+          "units": "C",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "stale-day3",
+          "units": "F",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "partial-day3",
+          "units": "C",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "partial-day3",
+          "units": "F",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "absent-day3",
+          "units": "C",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "absent-day3",
+          "units": "F",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "legacy-db1",
+          "units": "C",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "legacy-db1",
+          "units": "F",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "shower-cloudy",
+          "units": "C",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "shower-cloudy",
+          "units": "F",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "shower-overcast",
+          "units": "C",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "1.0",
+          "scenario": "shower-overcast",
+          "units": "F",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "stored-day3",
+          "units": "C",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "stored-day3",
+          "units": "F",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "stale-day3",
+          "units": "C",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "invalid-daily-row",
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260924",
+              "20260925",
+              "20260926",
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "stale-day3",
+          "units": "F",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "invalid-daily-row",
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260924",
+              "20260925",
+              "20260926",
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "partial-day3",
+          "units": "C",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "partial-day3",
+          "units": "F",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "absent-day3",
+          "units": "C",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "absent-day3",
+          "units": "F",
+          "day3": false,
+          "status": {
+            "healthy": false,
+            "reasons": [
+              "forecast-gap"
+            ],
+            "unavailableDates": [
+              "20260927"
+            ],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "legacy-db1",
+          "units": "C",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "legacy-db1",
+          "units": "F",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "shower-cloudy",
+          "units": "C",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "shower-cloudy",
+          "units": "F",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "shower-overcast",
+          "units": "C",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        },
+        {
+          "version": "2.0",
+          "scenario": "shower-overcast",
+          "units": "F",
+          "day3": true,
+          "status": {
+            "healthy": true,
+            "reasons": [],
+            "unavailableDates": [],
+            "rss": "retired"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rss-smoke",
+      "exit_code": 0,
+      "raw_log_sha256": "7a66a60aba49edd72eeeb1eeea040e6909c9728cf2d0b3f4c5c2a9836eae2150",
+      "raw_log_local_path": "/tmp/review2-rss-final.json",
+      "outcome": "passed",
+      "scenarioCount": 36
+    }
+  ]
+}

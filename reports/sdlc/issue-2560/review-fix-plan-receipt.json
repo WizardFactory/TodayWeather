@@ -1,0 +1,67 @@
+{
+  "iteration": 2,
+  "decision": "PROCEED",
+  "reason": "Assess review correction and source-scoped evidence; user authorized push to existing PR, no merge/deployment.",
+  "authority_source": "User: \uc218\uc815\ud558\uace0 push \uc9c4\ud589; PR2561 review5302701507; shared SDLC policy",
+  "candidate": "review-fix-in-progress",
+  "next_action": "Continue authorized correction and PR branch publication; external reviewer re-examination remains pending.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/issue-2560/triage.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    },
+    {
+      "kind": "intent",
+      "path": "reports/sdlc/issue-2560/intent.md",
+      "sha256": "bf4ac404aa291fab339683565d3e21113728d0df5ed435cd8dc6970a975fd27d"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/issue-2560/investigation.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    },
+    {
+      "kind": "spec",
+      "path": "reports/sdlc/issue-2560/spec.md",
+      "sha256": "aaff814c9965be8885c074af8e627d0b2b68f48e8ceb357d6d275da7d81b9ff0"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.json",
+      "sha256": "972155979e8f8ba0a74e664b8322b20872c9d30f7914ef4eb0fea3a492e821ff"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.html",
+      "sha256": "2af4c49ee22cb3135ad46344d38742c00f0e6f22df661472757725044415902b"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/issue-2560/review-fix-design-delivery.json",
+      "sha256": "b0d3ca32d87630f189b0e49a86b221eaaa7e5fc9e7e8afde7a8d058f65553e9a"
+    },
+    {
+      "kind": "design-browser",
+      "path": "reports/sdlc/issue-2560/review-fix-design-browser.json",
+      "sha256": "13d0410f32ff144dc60fca3155dd398978922e160696d407403e5e447c1ae786"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "plan",
+      "path": "reports/sdlc/issue-2560/review-fix-plan.md",
+      "sha256": "581980ddb2fb52810ac0a846daf2515b7dde3aa6829849687187e2b07ae9207d"
+    }
+  ],
+  "assessment": {
+    "assessor": "main /root",
+    "summary": "Per-source short RSS fallback, complete-row safeguards, offline regression and public-route compatibility assessed; no live recovery claim.",
+    "criteria": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
+  }
+}

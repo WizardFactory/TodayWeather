@@ -1,0 +1,60 @@
+{
+  "iteration": 2,
+  "decision": "PROCEED",
+  "reason": "Latest comments adjudicated with ten isolated scenarios and source evidence; shower P1 confirmed and D+3 wording qualified. Review-only endpoint.",
+  "authority_source": "User request: PR\ub9ac\ubdf0 \ub313\uae00 \uac80\ud1a0\ud574\uc918",
+  "candidate": "b13dc38adece3d301765b03afea4a5feb9d02d8b",
+  "next_action": "Report findings and repair scope to user; no product or remote edits in this review-only turn.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+      "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+    },
+    {
+      "kind": "intent",
+      "path": "reports/sdlc/review-2561-5302701507/assessment.md",
+      "sha256": "dd065bd02230e45e34e11d148bed8f2218b35e621d978f4fb963e87dfbf37e59"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/review-2561-5302701507/latest-assessment.md",
+      "sha256": "0d82db0060b40e2c7f8be3510f513cbd8aa3cba5b685932db0d7065dbe5d4fe4"
+    },
+    {
+      "kind": "probe",
+      "path": "reports/sdlc/review-2561-5302701507/latest-probe.js",
+      "sha256": "05423349f3ef16f39ed90b22cd3d38b8dd33da29c4a94397d8517e75bd8359a6"
+    },
+    {
+      "kind": "probe-results",
+      "path": "reports/sdlc/review-2561-5302701507/latest-probe-results.json",
+      "sha256": "55a8cae534ddf5b17855913932dec54c739f934cbf692e8576f9ab4aceee8587"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "completion",
+      "path": "reports/sdlc/review-2561-5302701507/latest-assessment.md",
+      "sha256": "0d82db0060b40e2c7f8be3510f513cbd8aa3cba5b685932db0d7065dbe5d4fe4"
+    },
+    {
+      "kind": "probe",
+      "path": "reports/sdlc/review-2561-5302701507/latest-probe.js",
+      "sha256": "05423349f3ef16f39ed90b22cd3d38b8dd33da29c4a94397d8517e75bd8359a6"
+    },
+    {
+      "kind": "probe-results",
+      "path": "reports/sdlc/review-2561-5302701507/latest-probe-results.json",
+      "sha256": "55a8cae534ddf5b17855913932dec54c739f934cbf692e8576f9ab4aceee8587"
+    }
+  ],
+  "assessment": {
+    "assessor": "main /root (author assessment, not independent PR review)",
+    "summary": "R1 comment validity and R2 repair scope established; prior RSS correction accepted, new shader/weather and coverage concerns remain.",
+    "criteria": [
+      "R1",
+      "R2"
+    ]
+  }
+}

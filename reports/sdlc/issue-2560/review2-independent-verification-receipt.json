@@ -1,0 +1,173 @@
+{
+  "iteration": 6,
+  "decision": "PROCEED",
+  "reason": "Assess review correction and source-scoped evidence; user authorized push to existing PR, no merge/deployment.",
+  "authority_source": "User: \uc218\uc815 \uc9c4\ud589; prior correction/push authorization; PR2561 review5303256769; shared SDLC policy",
+  "candidate": "4507d3a9035b1b91ab55a525e6eb6de9d5ace1634e5d923c59a67ede8479751e",
+  "next_action": "Continue authorized correction and PR branch publication; external reviewer re-examination remains pending.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/issue-2560/triage.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    },
+    {
+      "kind": "intent",
+      "path": "reports/sdlc/issue-2560/intent.md",
+      "sha256": "bf4ac404aa291fab339683565d3e21113728d0df5ed435cd8dc6970a975fd27d"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/issue-2560/investigation.md",
+      "sha256": "4da053d907a0cb45324a30798d7be63b4b102adae689717d2bcc5de88b05818f"
+    },
+    {
+      "kind": "spec",
+      "path": "reports/sdlc/issue-2560/spec.md",
+      "sha256": "aaff814c9965be8885c074af8e627d0b2b68f48e8ceb357d6d275da7d81b9ff0"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.json",
+      "sha256": "4ac61008168dbc14c1e6ad03dc30f62cfc9fcea0510b88f4443b97706c8caeca"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/daily-forecast-validity.html",
+      "sha256": "aeb1a9b1b27cff781916407bb79b7d14fdd5da86bb51d89241baf8c43a5f106c"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/issue-2560/review2-design.json",
+      "sha256": "b3eb86281fb2898fc4200f0fd628b2006abcfde84b6c53c4981accc0bd2676ac"
+    },
+    {
+      "kind": "plan",
+      "path": "reports/sdlc/issue-2560/review2-plan.md",
+      "sha256": "09c702e01c0cd83e2eee4a335d4e6cc7faedc9d4f8d35047995c649032adca5b"
+    },
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/issue-2560/review2-plan.md",
+      "sha256": "09c702e01c0cd83e2eee4a335d4e6cc7faedc9d4f8d35047995c649032adca5b"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/issue-2560/review2-verification.md",
+      "sha256": "3b0d1c9608f9da8eb6b1fd38b948fc34128fb9e200f30cd61160b5d59a935a98"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/issue-2560/review2-change.diff",
+      "sha256": "ec6bb4d7042cb3597770188f9bd7cba8a6e225dc3897ec051d484288f2670a55"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/app.js",
+      "sha256": "85041f44b13705dffc35e52966384b2a75db9c14bb2465d76e2b086bc7866836"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/controllers/controllerManager.js",
+      "sha256": "a7b4817a81749ef7db9c162a25a938a2177af86c3894ee053d85125b7e8467ef"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/controllers/controllerTown.js",
+      "sha256": "a66fd8902b1c39b50baee03d5804650b4008069cf4518a9275c052c11da55ccc"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/controllers/kma/kma.town.short.controller.js",
+      "sha256": "95886528925f7087de10b53c46767c8d96ad658a2156041d886d1340a9471b2f"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/lib/midForecastPolicy.js",
+      "sha256": "861bb60bbcc5044c4885e2889ba06fdf1d8e15711243f059cb71a15c9c61d5f5"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/models/modelShort.js",
+      "sha256": "f5d9620f44898755f62a5828414edd4044ab80dba4bd4676f1218f68095850fd"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/daily-review.test.js",
+      "sha256": "4660cc777237b94ae2796997ec482ed0ece751f7f138843fb21b11c41750ec74"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/daily-forecast.test.js",
+      "sha256": "186113dbabab6fd83614053d11f9bf5712ecdadf064062cbc6b45e733052d54d"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/daily-response-smoke.js",
+      "sha256": "2808f3093aaf4c3a4e3241eeada8e38ce05133898f75f3b62acb6da37cda6145"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/rss-response-smoke.js",
+      "sha256": "f93a193e652ac06596fde83fd3c0b55b8b9470bc3281e00efa20b0c8935bbb2a"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/gather-smoke.js",
+      "sha256": "038f6d8c5c1c97f34d0b7e25e86bd91e80fce58fbce408c96fa42e61117b41cf"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/run.js",
+      "sha256": "10ed02499009ae2cb9dcdff40c10b990548f872a1abf0fed811a4f45c3be66ff"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "server/test/offline/README.md",
+      "sha256": "671f5bd1f799a3534a015343d15dfa969cbef7201b55b73b952f99cc8744507a"
+    },
+    {
+      "kind": "self-verification",
+      "path": "reports/sdlc/issue-2560/review2-verification.md",
+      "sha256": "3b0d1c9608f9da8eb6b1fd38b948fc34128fb9e200f30cd61160b5d59a935a98"
+    },
+    {
+      "kind": "test-results",
+      "path": "reports/sdlc/issue-2560/review2-test-results.json",
+      "sha256": "caafad1e7b76cc3aacb0376682fe5969f3dac86200981fe66adb715ec5095297"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/review2-executions.json",
+      "sha256": "e158f746a12306b4956f618c9fffef4fc0e439b63c3fde3cd326b31e1eccb889"
+    },
+    {
+      "kind": "execution-log",
+      "path": "reports/sdlc/issue-2560/review2-smoke.json",
+      "sha256": "76d64940f2ce3ba79eb4abb0d5b7f584f2f88dc52a7bd806b59f429640d93cef"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "independent-verification",
+      "path": "reports/sdlc/issue-2560/review2-independent.md",
+      "sha256": "631b31d37caf543e5840b411522fdaf99e5ab303314ca1d1fc048d218b2d8272"
+    }
+  ],
+  "assessment": {
+    "assessor": "main /root",
+    "summary": "Shared shower mapping, source-valid horizons and coverage safeguards, offline regression and public-route compatibility assessed; no live recovery claim.",
+    "criteria": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
+  },
+  "verifier": {
+    "independent": true,
+    "context_id": "/root/verify_daily",
+    "builder_context_id": "/root",
+    "checks": "See review2-independent.md for independently executed regressions and focused probes, including source publication, partial slot, diagnostic and compatibility probes."
+  }
+}

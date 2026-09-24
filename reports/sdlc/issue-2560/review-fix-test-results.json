@@ -1,0 +1,68 @@
+{
+  "candidate": "3a8f46596de956a840dcb74980f88a86a79758d1639f9b326364c9d94d0f7b63",
+  "scenarios": [
+    {
+      "id": "review-daily-route",
+      "requirement": "D",
+      "required": true,
+      "environment": "Node v22.22.2; isolated /tmp/issue-2560-offline dependencies; no app/provider/DB/timer startup",
+      "prerequisites": "Synthetic fixtures, real Express modules, intercepted HTTP/model/timer boundaries",
+      "actions": "Execute real v000903 middleware with source-provenance correction for DB1/2 and C/F",
+      "expected": "36 scenarios retain valid RSS daily weather, reject stale-field revival and omit unverifiable six-hour daily totals; preserve history and primary paths",
+      "failure": "Assertion or swallowed programming exception; fabricated values or target dates",
+      "cleanup": "No external mutable state; temporary evidence only"
+    }
+  ],
+  "runs": [
+    {
+      "id": "review-red",
+      "phase": "red",
+      "candidate": "95fe711eee09f021c266303195badb1d4c612ad5 plus initial new test",
+      "command": "NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/short-rss-daily.test.js",
+      "exit_code": 1,
+      "environment": "Node v22.22.2; isolated /tmp/issue-2560-offline dependencies; no app/provider/DB/timer startup",
+      "observed": "34 initial cases: 14 intended stale/missing-primary fallback or RSS-bound assertion failures, 20 controls passed",
+      "evidence": "reports/sdlc/issue-2560/review-fix-red.log",
+      "execution_kind": "real",
+      "status": "passed",
+      "intended_failure": true
+    },
+    {
+      "id": "review-green",
+      "phase": "green",
+      "candidate": "3a8f46596de956a840dcb74980f88a86a79758d1639f9b326364c9d94d0f7b63",
+      "command": "NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/short-rss-daily.test.js",
+      "exit_code": 0,
+      "environment": "Node v22.22.2; isolated /tmp/issue-2560-offline dependencies; no app/provider/DB/timer startup",
+      "observed": "44/44 passed",
+      "evidence": "reports/sdlc/issue-2560/review-fix-green.log",
+      "execution_kind": "real",
+      "status": "passed"
+    },
+    {
+      "id": "review-regression",
+      "phase": "post-refactor",
+      "candidate": "3a8f46596de956a840dcb74980f88a86a79758d1639f9b326364c9d94d0f7b63",
+      "command": "NODE_PATH=/tmp/issue-2560-offline/node_modules npm --prefix server run test:offline",
+      "exit_code": 0,
+      "environment": "Node v22.22.2; isolated /tmp/issue-2560-offline dependencies; no app/provider/DB/timer startup",
+      "observed": "212 regression checks plus gather functional smoke passed",
+      "evidence": "reports/sdlc/issue-2560/review-fix-offline.log",
+      "execution_kind": "real",
+      "status": "passed"
+    },
+    {
+      "id": "review-route",
+      "phase": "smoke",
+      "candidate": "3a8f46596de956a840dcb74980f88a86a79758d1639f9b326364c9d94d0f7b63",
+      "command": "TZ=UTC NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/daily-response-smoke.js",
+      "exit_code": 0,
+      "environment": "Node v22.22.2; isolated /tmp/issue-2560-offline dependencies; no app/provider/DB/timer startup",
+      "observed": "36/36 full-route scenarios passed",
+      "evidence": "reports/sdlc/issue-2560/review-fix-daily-smoke.json",
+      "execution_kind": "real",
+      "status": "passed",
+      "scenario_id": "review-daily-route"
+    }
+  ]
+}

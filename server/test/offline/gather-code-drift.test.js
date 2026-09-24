@@ -264,7 +264,7 @@ describe('real mid organizers with synthetic fixtures', function () {
         if (type === 'MID_TEMP') {
             for (var d = 3; d <= 10; d++) { item['taMin' + d] = ['0']; item['taMax' + d] = ['12.5']; }
         } else {
-            ['3Am', '3Pm', '4Am', '4Pm', '5Am', '5Pm', '6Am', '6Pm', '7Am', '7Pm', '8', '9', '10'].forEach(function (suffix) { item['wf' + suffix] = ['Clear']; });
+            ['3Am', '3Pm', '4Am', '4Pm', '5Am', '5Pm', '6Am', '6Pm', '7Am', '7Pm', '8', '9', '10'].forEach(function (suffix) { item['wf' + suffix] = [type === 'MID_LAND' ? '맑음' : 'Clear']; });
             ['3AAm', '3APm', '3BAm', '3BPm', '4AAm', '4APm', '4BAm', '4BPm', '5AAm', '5APm', '5BAm', '5BPm', '6AAm', '6APm', '6BAm', '6BPm', '7AAm', '7APm', '7BAm', '7BPm', '8A', '8B', '9A', '9B', '10A', '10B'].forEach(function (suffix) { item['wh' + suffix] = [String(0.5 + Object.keys(item).filter(function (key) { return key.indexOf('wh') === 0; }).length / 10)]; });
         }
         return item;
@@ -305,7 +305,7 @@ describe('real mid organizers with synthetic fixtures', function () {
         c.organizeTempData(0, h.response([first, second]), {date: '20260924', time: '0600'});
         assert(c.resultList[0].isCompleted);
         assert.strictEqual(c.resultList[0].data[1].taMin3, 4);
-        assert.strictEqual(c.resultList[0].data[1].taMax3, -100);
+        assert.strictEqual(c.resultList[0].data[1].taMax3, undefined);
     });
     it('rejects non-finite sea values before JSON serialization can hide them', function () {
         var item = midItem('MID_SEA'); item.wh3AAm = ['NaN'];
