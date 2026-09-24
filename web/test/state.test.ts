@@ -65,6 +65,13 @@ describe("untrusted persisted weather", () => {
     const key = weatherKey(w.location, w.units),
       value = { weather: w, savedAt: now };
     expect(validateSnapshot(value, key, now)).toEqual(w);
+    expect(
+      validateSnapshot(
+        { ...value, weather: { ...w, airSummary: "제공사 요약" } },
+        key,
+        now,
+      )?.airSummary,
+    ).toBe("제공사 요약");
     for (const savedAt of [
       undefined,
       NaN,
@@ -79,6 +86,8 @@ describe("untrusted persisted weather", () => {
       { current: {} },
       { units: {} },
       { notices: [null] },
+      { airSummary: {} },
+      { airSummary: "x".repeat(501) },
       { fetchedAt: "2020-01-01T00:00:00Z" },
     ])
       expect(

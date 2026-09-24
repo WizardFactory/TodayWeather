@@ -1,0 +1,3 @@
+# Spec
+
+KMA hourly is a sorted unique union of normalized short (3h) and shortest (1h) timestamps. Overlay valid non-null/nonempty shortest fields; preserve fallback short fields with their paired accumulation durations. Invalid timestamps omitted. DSF stays unchanged. Optional airSummary is trimmed text limited to 500 characters. Numeric air availability/stations remain authoritative; no inferred measurements. Both weather and air empty states show provider summary with explicit observation-time-unverified caveat. Legacy snapshots without summary remain valid; invalid summary objects/overlong strings rejected.

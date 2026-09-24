@@ -1,0 +1,3 @@
+# Self verification
+
+All five acceptance criteria have supporting local evidence. Three intended Red failures preceded implementation; seven targeted cases passed after the fix. The first Green attempt caught numeric summary coercion, fixed by requiring a string. Final typecheck/build and 55 tests pass. Sixteen real static-browser scenarios pass against intercepted raw fixtures, including mixed forecast periods, text escaping, unknown air timestamp, numeric-air priority and offline persistence. No provider freshness claim is made. Archify checks and main visual inspection passed. Product/source candidate is frozen for independent QA. No deployment performed.

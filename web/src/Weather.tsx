@@ -311,9 +311,12 @@ function WeatherDetails({
               )}
             </>
           ) : (
-            <Empty title="관측 자료 없음">
-              기온 정보는 계속 확인할 수 있어요.
-            </Empty>
+            <>
+              <Empty title="관측 자료 없음">
+                기온 정보는 계속 확인할 수 있어요.
+              </Empty>
+              <ProviderAirSummary weather={w} />
+            </>
           )}
         </section>
       </div>
@@ -497,6 +500,18 @@ function DailyForecast({ weather: w }: { weather: Weather }) {
     </section>
   );
 }
+function ProviderAirSummary({ weather: w }: { weather: Weather }) {
+  if (!w.airSummary) return null;
+  return (
+    <div role="note" className="provider-air-summary">
+      <h3>제공사 대기질 요약</h3>
+      <p>{w.airSummary}</p>
+      <p className="warning-text">
+        관측 시각 미확인 · 측정값이 아닌 제공사 요약입니다.
+      </p>
+    </div>
+  );
+}
 function AirDetails({ weather: w }: { weather: Weather }) {
   const [stationIndex, setStationIndex] = useState(0),
     [code, setCode] = useState<Pollutant>("aqi");
@@ -508,6 +523,7 @@ function AirDetails({ weather: w }: { weather: Weather }) {
           이 지역에 대한 관측 자료가 도착하면 표시됩니다. 날씨 탭에서 기상
           예보를 확인해 주세요.
         </Empty>
+        <ProviderAirSummary weather={w} />
       </section>
     );
   const p = station.pollutants[code],

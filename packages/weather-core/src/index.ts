@@ -92,6 +92,8 @@ export type Weather = {
   hourly: Point[];
   daily: Point[];
   air: AirStation[];
+  /** Provider wording only; no verified air observation time or inferred numeric grade. */
+  airSummary?: string;
   availability: {
     weather: "available" | "partial";
     air: "available" | "unavailable";
@@ -308,6 +310,40 @@ function point(
     uv: str(r.ultrvStr ?? r.uvIndex),
   };
 }
+/** Keep each metric's original accumulation duration when filling hourly gaps. */
+function kmaForecast(
+  short: unknown,
+  shortest: unknown,
+  source: Units,
+  target: Units,
+): Point[] {
+  const timeline = new Map<string, Point>();
+  for (const row of array(short)) {
+    const p = point(row, source, target, true, 3);
+    if (p) timeline.set(p.at, p);
+  }
+  for (const row of array(shortest)) {
+    const p = point(row, source, target, true, 1);
+    if (!p) continue;
+    const previous = timeline.get(p.at);
+    if (!previous) {
+      timeline.set(p.at, p);
+      continue;
+    }
+    // Missing hourly fields must not erase valid three-hour fields. Amounts and
+    // durations are normalized together, so a retained 3h total stays labelled 3h.
+    const valid = Object.fromEntries(
+      Object.entries(p).filter(
+        ([key, value]) =>
+          value !== null &&
+          value !== "" &&
+          (key !== "icon" || !!str(record(row).skyIcon ?? record(row).skyAm)),
+      ),
+    );
+    timeline.set(p.at, { ...previous, ...valid });
+  }
+  return [...timeline.values()].sort((a, b) => a.at.localeCompare(b.at));
+}
 export function normalizeAir(value: unknown): AirStation {
   const s = record(value),
     last = record(s.last ?? value),
@@ -388,7 +424,9 @@ export function normalizeWeather(
       .map((v) => point(v, source, target, kma, period))
       .filter((p): p is Point => p !== null)
       .sort((a, b) => a.at.localeCompare(b.at));
-  const hourly = points(kma ? raw.short : raw.hourly, kma ? 3 : 1),
+  const hourly = kma
+      ? kmaForecast(raw.short, raw.shortest, source, target)
+      : points(raw.hourly, 1),
     daily = points(kma ? record(raw.midData).dailyData : raw.daily, 24);
   // Keep station emptiness authoritative; never carry an old station into a new result.
   const airRaw = Array.isArray(raw.airInfoList)
@@ -430,6 +468,10 @@ export function normalizeWeather(
     hourly,
     daily: recentDaily,
     air,
+    ...(typeof currentRaw.summaryAir === "string" &&
+    currentRaw.summaryAir.trim()
+      ? { airSummary: str(currentRaw.summaryAir).trim().slice(0, 500) }
+      : {}),
     availability: {
       weather: current.temperature === null ? "partial" : "available",
       air: air.length ? "available" : "unavailable",

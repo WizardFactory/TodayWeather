@@ -1,0 +1,29 @@
+
+> todayweather-web@0.1.0 test:e2e
+> playwright test
+
+[WebServer] (node:4091358) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 16 tests using 1 worker
+
+(node:4091387) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 web/e2e/forecast-air.spec.ts:4:1 › KMA mixed intervals and unverified air summary survive static offline reload (2.5s)
+  ✓   2 web/e2e/forecast-air.spec.ts:69:1 › measured air remains primary and does not show the summary fallback (975ms)
+  ✓   3 web/e2e/review.spec.ts:5:1 › first worker claim preserves an edited notification form (1.0s)
+  ✓   4 web/e2e/review.spec.ts:36:1 › missing rain hides the period while explicit snow remains visible (931ms)
+  ✓   5 web/e2e/review.spec.ts:59:1 › static favorites delete without notification or capability network calls (1.6s)
+  ✓   6 web/e2e/review.spec.ts:71:1 › worker upgrade serves the new shell and retains an old tab chunk (3.8s)
+  ✓   7 web/e2e/web.spec.ts:12:1 › weather, air, national views, warnings and settings persist at desktop size (5.2s)
+  ✓   8 web/e2e/web.spec.ts:69:1 › mobile favorites, geolocation denial and unavailable notifications stay usable (3.0s)
+  ✓   9 web/e2e/web.spec.ts:108:1 › offline shell uses matching snapshot and never labels it fresh (2.4s)
+  ✓  10 web/e2e/web.spec.ts:125:1 › coordinate deep links survive empty storage and unsaved alarm edits block navigation (1.7s)
+  ✓  11 web/e2e/web.spec.ts:150:1 › immediate search submission selects the submitted city (1.3s)
+  ✓  12 web/e2e/web.spec.ts:163:1 › late geolocation preserves newly added favorites and settings (2.2s)
+  ✓  13 web/e2e/web.spec.ts:197:3 › corrupt offline snapshot recovers safely: missing timestamp (2.2s)
+  ✓  14 web/e2e/web.spec.ts:197:3 › corrupt offline snapshot recovers safely: invalid hourly array (2.1s)
+  ✓  15 web/e2e/web.spec.ts:245:1 › upstream failure is recoverable and never replaced by demo data (1.4s)
+  ✓  16 web/e2e/web.spec.ts:262:1 › freeform address resolves through the existing geocode API (1.2s)
+
+  16 passed (36.8s)

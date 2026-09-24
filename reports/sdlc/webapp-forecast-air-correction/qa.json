@@ -1,0 +1,142 @@
+{
+  "assignment_id": "forecast-qa-1",
+  "verifier": "/root/forecast_qa",
+  "builder": "/root",
+  "independent": true,
+  "timestamp": "2026-09-24T18:01:14.444188+00:00",
+  "candidate": "sha256:d6c491b860eb783fcb366fc7c5092de8e5a4980156d3a0041f9ddbdd4884435a",
+  "base": "84bb1af88eefa5e152da61142d9999443c0d1bfe",
+  "verdict": "PASS",
+  "decision": "PROCEED",
+  "consumed": [
+    {
+      "path": "reports/sdlc/webapp-forecast-air-correction/intent.md",
+      "sha256": "5808d2274c0e6747735e296c0652cd625b03af76b82d82287c3e3281a345e634"
+    },
+    {
+      "path": "reports/sdlc/webapp-forecast-air-correction/spec.md",
+      "sha256": "1ade36498db76ba1ba94e841c97bf84d0f2011eaa6fe02f07801aa39e0c0f4db"
+    },
+    {
+      "path": "reports/sdlc/webapp-forecast-air-correction/plan.md",
+      "sha256": "cb153279ba6f0e9414fff13bd0cc78a7ab610b17b1ac89dfafd1bbce669b231d"
+    },
+    {
+      "path": "reports/sdlc/webapp-forecast-air-correction/test-plan.md",
+      "sha256": "98b9d8c486541382cd560a97e8e99ca9e7109ae7852cf3a5384bff3dd4bb5d07"
+    },
+    {
+      "path": "reports/sdlc/webapp-forecast-air-correction/build.md",
+      "sha256": "028e87ad3b61a9de287afcfb7f46b4c3aa8219198a3230d46d82f9c379833315"
+    },
+    {
+      "path": "reports/sdlc/webapp-forecast-air-correction/self-verification.md",
+      "sha256": "847a09119c635c86e89400cccc9664569264d4bd7be4b560b1f521855ff7dab3"
+    },
+    {
+      "path": "reports/sdlc/webapp-forecast-air-correction/candidate.json",
+      "sha256": "eafa55a349e9c9e1f54ad16f2c1edb3694c7b5ae852983d718c0a066ba1dd885"
+    },
+    {
+      "path": "reports/sdlc/webapp-forecast-air-correction/qa-assignment.md",
+      "sha256": "0324bf424905277d524e605e24f9a3e809e9f9124827e251e13b80a27b880a2a"
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/architecture/web-client.md",
+      "sha256": "8b1378e06a143ee8b1286e948eef9e5f74c7fe9100e7061254dfe7a8e963dc04"
+    },
+    {
+      "path": "docs/webapp/diagrams/webapp-implementation.html",
+      "sha256": "2309fb073376ad499086a936183b9c327e0728d72fdea8490eb408e5479e8e71"
+    },
+    {
+      "path": "docs/webapp/diagrams/webapp-implementation.json",
+      "sha256": "ddaf6ac46e1d4e128fc099b24e2603ad4121866ea2cbc32c0428f2d9ad29d541"
+    },
+    {
+      "path": "docs/webapp/implementation.md",
+      "sha256": "29e5f058629e5039dd94c09f97d4f985e5aaafa6155d841412bc18b0272193ef"
+    },
+    {
+      "path": "packages/weather-core/src/index.ts",
+      "sha256": "99af0c1cdfcb2ec6a8392638525030d9d1093269113fd64c4a9511f9ab165330"
+    },
+    {
+      "path": "packages/weather-core/test/forecast-air.test.ts",
+      "sha256": "ce7d2c5b8295c7110d8343386bcdd49374a18151ad5cd4cd39f1c7f871d3daa0"
+    },
+    {
+      "path": "web/e2e/forecast-air.spec.ts",
+      "sha256": "36a0c8a1ed29718d4bd8ce3aea96e49dfa0371a4ac2259d5677c96c055ae9d32"
+    },
+    {
+      "path": "web/src/Weather.tsx",
+      "sha256": "7282efd28294024a23ad9ffb5554860519e669bcad4cc6c8546d538e169c6786"
+    },
+    {
+      "path": "web/src/state.ts",
+      "sha256": "4d88dd2cf2d5b00c8f59128d7512725265ec7cc2931b40c89a32fe01041869fd"
+    },
+    {
+      "path": "web/src/style.css",
+      "sha256": "c36f69a2d694c514b8208175a969cf038d028ab33ec27ca5773c412e9d0f606e"
+    },
+    {
+      "path": "web/test/state.test.ts",
+      "sha256": "1ea5c139a7d238296d65eb8d3c52fa7887377090d94382b7864ea4fc04d88f5d"
+    }
+  ],
+  "checks": [
+    {
+      "id": "qa-units",
+      "command": "npm test",
+      "exit_code": 0,
+      "observed": "55 tests across 11 files passed; isolated local API sockets only",
+      "evidence": "qa-tests.txt"
+    },
+    {
+      "id": "qa-typecheck",
+      "command": "npm run typecheck",
+      "exit_code": 0,
+      "observed": "TypeScript passed",
+      "evidence": "qa-typecheck.txt"
+    },
+    {
+      "id": "qa-browser",
+      "command": "node_modules/.bin/playwright test --config=/tmp/forecast-qa-playwright.config.mjs",
+      "exit_code": 0,
+      "observed": "2 changed scenarios passed on prebuilt static bundle; raw provider fixtures, no local API",
+      "evidence": "qa-browser.txt"
+    },
+    {
+      "id": "qa-domain-probe",
+      "command": "node --import tsx /tmp/forecast-qa-probe.mts",
+      "exit_code": 0,
+      "observed": "4 independent groups: year-rollover overlap/fallback/zero/pairing, shortest-only invalid date/minute order, ordering invariance, summary/snapshot validity matrix",
+      "evidence": "qa-domain-probe.json"
+    },
+    {
+      "id": "qa-mobile-probe",
+      "command": "node /tmp/forecast-qa-browser.mjs",
+      "exit_code": 0,
+      "observed": "390px mobile fallback, HTML escaping, no overflow, summary disappearance on refreshed missing value, zero errors/local API calls",
+      "evidence": "qa-browser-probe.json"
+    },
+    {
+      "id": "qa-source",
+      "command": "candidate SHA-256 recheck; git diff --check -- . :!reports/**; source/document inspection",
+      "exit_code": 0,
+      "observed": "11 hashes match frozen manifest; source diff clean; docs/diagram represent implementation",
+      "evidence": "candidate.json"
+    }
+  ],
+  "findings": [],
+  "limitations": [
+    "Local same-provider independent verification only, not cross-provider PR approval or production readiness",
+    "No rebuild, live provider, native build, AWS or remote mutation performed",
+    "Reused main complete 16-scenario smoke and diagram generation/browser evidence; independently ran both changed browser cases plus separate mobile probe",
+    "Source data freshness and existing provider availability remain outside this correction"
+  ]
+}

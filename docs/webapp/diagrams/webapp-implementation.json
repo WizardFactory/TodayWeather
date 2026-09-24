@@ -117,10 +117,10 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Static by default",
+      "title": "Browser normalization",
       "items": [
-        "No required Node BFF or API proxy",
-        "Canonical units normalized in browser"
+        "KMA 1h + 3h forecasts; periods retained",
+        "Air summary separate from observations"
       ]
     },
     {

@@ -343,7 +343,11 @@ export function validateSnapshot(
       !Array.isArray(w.daily) ||
       !w.daily.every(validPoint) ||
       !Array.isArray(w.air) ||
-      !w.air.every(validAir)
+      !w.air.every(validAir) ||
+      (w.airSummary !== undefined &&
+        (typeof w.airSummary !== "string" ||
+          !w.airSummary.trim() ||
+          w.airSummary.length > 500))
     )
       return;
     if (

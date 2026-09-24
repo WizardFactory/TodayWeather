@@ -40,9 +40,9 @@ The optional older Node adapter remains available with `VITE_WEB_TRANSPORT=proxy
 | Mobile capability | Web implementation | Remaining release work |
 | --- | --- | --- |
 | Startup and saved locations | Explicit search/current-location consent, catalog + live geocode, 30 favorites, delete/restore, start screen | OS permission matrix and non-Korean geocode/provider checks |
-| Current/hourly weather | Current values, yesterday delta, broken-line-safe hourly chart and accessible numeric table | Upstream missing yesterday values remain unavailable |
+| Current/hourly weather | Current values, yesterday delta, merged KMA one-hour/three-hour forecast with preserved accumulation periods, hourly chart and accessible numeric table | Upstream missing yesterday values remain unavailable |
 | Daily/combined weather | Valid future daily rows, AM/PM icons, min/max range, overview | Confirm every legacy ancillary metric/provider format |
-| Air details | Seven pollutants, station selection, hourly/daily series, independent observation timestamps | Live air availability and all four provider standards |
+| Air details | Seven pollutants, station selection, hourly/daily series, independent observation timestamps; text-only provider summary with unknown-time caveat when station data is absent | Live air availability and all four provider standards |
 | Nationwide weather/air | Schematic regional map and complete numeric lists; weather/pollutant tabs | Repair stale upstream nationwide air feed before release |
 | Special weather reports | Structured bulletins, publication text and official links | Provider freshness and active-warning device checks |
 | Preferences | Six unit families, four themes, startup/refresh, local backup/import | Photo theme uses a sky color treatment, not native photo packs |

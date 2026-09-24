@@ -1,0 +1,208 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "Inspected correction deliverable supports authorized PR update; prior release limits remain explicit.",
+  "authority_source": "AK: 1\u00b72\ubc88 \ubcf4\uc644 \uc9c4\ud589; existing PR push authority, 2026-09-24",
+  "candidate": "sha256:d6c491b860eb783fcb366fc7c5092de8e5a4980156d3a0041f9ddbdd4884435a",
+  "next_action": "Continue authorized local implementation and verification; no production deployment.",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/webapp-forecast-air-correction/triage.md",
+      "sha256": "8f43e8fc262f044ac319b1232c5f8bf1a1ed6930e5221c11e181d21410dfeca7"
+    },
+    {
+      "kind": "intent",
+      "path": "reports/sdlc/webapp-forecast-air-correction/intent.md",
+      "sha256": "5808d2274c0e6747735e296c0652cd625b03af76b82d82287c3e3281a345e634"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/webapp-forecast-air-correction/investigation.md",
+      "sha256": "695323b1105530570d884898df9b9f38d89904d40a28c3395764384e2243d36b"
+    },
+    {
+      "kind": "spec",
+      "path": "reports/sdlc/webapp-forecast-air-correction/spec.md",
+      "sha256": "1ade36498db76ba1ba94e841c97bf84d0f2011eaa6fe02f07801aa39e0c0f4db"
+    },
+    {
+      "kind": "design-source",
+      "path": "docs/webapp/diagrams/webapp-implementation.json",
+      "sha256": "ddaf6ac46e1d4e128fc099b24e2603ad4121866ea2cbc32c0428f2d9ad29d541"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/webapp/diagrams/webapp-implementation.html",
+      "sha256": "2309fb073376ad499086a936183b9c327e0728d72fdea8490eb408e5479e8e71"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/webapp-forecast-air-correction/design-delivery.json",
+      "sha256": "0ea126480a5fee375281bcec380813666e49133e010fa9df932403d5477fc7b6"
+    },
+    {
+      "kind": "plan",
+      "path": "reports/sdlc/webapp-forecast-air-correction/plan.md",
+      "sha256": "cb153279ba6f0e9414fff13bd0cc78a7ab610b17b1ac89dfafd1bbce669b231d"
+    },
+    {
+      "kind": "test-plan",
+      "path": "reports/sdlc/webapp-forecast-air-correction/test-plan.md",
+      "sha256": "98b9d8c486541382cd560a97e8e99ca9e7109ae7852cf3a5384bff3dd4bb5d07"
+    },
+    {
+      "kind": "build",
+      "path": "reports/sdlc/webapp-forecast-air-correction/build.md",
+      "sha256": "028e87ad3b61a9de287afcfb7f46b4c3aa8219198a3230d46d82f9c379833315"
+    },
+    {
+      "kind": "candidate-manifest",
+      "path": "reports/sdlc/webapp-forecast-air-correction/candidate.json",
+      "sha256": "eafa55a349e9c9e1f54ad16f2c1edb3694c7b5ae852983d718c0a066ba1dd885"
+    },
+    {
+      "kind": "change-record",
+      "path": "reports/sdlc/webapp-forecast-air-correction/changes.patch",
+      "sha256": "d9f438c545240cb30384bb20413909258d35e3ef21a55ada5b5e7952a26ea663"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/architecture/web-client.md",
+      "sha256": "8b1378e06a143ee8b1286e948eef9e5f74c7fe9100e7061254dfe7a8e963dc04"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/webapp/diagrams/webapp-implementation.html",
+      "sha256": "2309fb073376ad499086a936183b9c327e0728d72fdea8490eb408e5479e8e71"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/webapp/diagrams/webapp-implementation.json",
+      "sha256": "ddaf6ac46e1d4e128fc099b24e2603ad4121866ea2cbc32c0428f2d9ad29d541"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "docs/webapp/implementation.md",
+      "sha256": "29e5f058629e5039dd94c09f97d4f985e5aaafa6155d841412bc18b0272193ef"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "packages/weather-core/src/index.ts",
+      "sha256": "99af0c1cdfcb2ec6a8392638525030d9d1093269113fd64c4a9511f9ab165330"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "packages/weather-core/test/forecast-air.test.ts",
+      "sha256": "ce7d2c5b8295c7110d8343386bcdd49374a18151ad5cd4cd39f1c7f871d3daa0"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "web/e2e/forecast-air.spec.ts",
+      "sha256": "36a0c8a1ed29718d4bd8ce3aea96e49dfa0371a4ac2259d5677c96c055ae9d32"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "web/src/Weather.tsx",
+      "sha256": "7282efd28294024a23ad9ffb5554860519e669bcad4cc6c8546d538e169c6786"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "web/src/state.ts",
+      "sha256": "4d88dd2cf2d5b00c8f59128d7512725265ec7cc2931b40c89a32fe01041869fd"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "web/src/style.css",
+      "sha256": "c36f69a2d694c514b8208175a969cf038d028ab33ec27ca5773c412e9d0f606e"
+    },
+    {
+      "kind": "candidate-source",
+      "path": "web/test/state.test.ts",
+      "sha256": "1ea5c139a7d238296d65eb8d3c52fa7887377090d94382b7864ea4fc04d88f5d"
+    },
+    {
+      "kind": "self-verification",
+      "path": "reports/sdlc/webapp-forecast-air-correction/self-verification.md",
+      "sha256": "847a09119c635c86e89400cccc9664569264d4bd7be4b560b1f521855ff7dab3"
+    },
+    {
+      "kind": "test-results",
+      "path": "reports/sdlc/webapp-forecast-air-correction/test-results.json",
+      "sha256": "7f0a06a7320e240b8580149ab6b8c5ac0289bc1a3d660c10f0b60d746e262382"
+    },
+    {
+      "kind": "red-log",
+      "path": "reports/sdlc/webapp-forecast-air-correction/red.txt",
+      "sha256": "16b36c0014847243b5051125536061bba8048fd8fec2dfe62a9eb5db72f17c12"
+    },
+    {
+      "kind": "green-log",
+      "path": "reports/sdlc/webapp-forecast-air-correction/green-targeted.txt",
+      "sha256": "a11692fda32b0688d46811519614d4d2f4748c832b895b96978612e6c5044ea6"
+    },
+    {
+      "kind": "post-refactor-log",
+      "path": "reports/sdlc/webapp-forecast-air-correction/post-refactor.txt",
+      "sha256": "98abd36299dd77eede395a2038af1ec0aa7291e2ce5651f9bbe6483ed1faccbd"
+    },
+    {
+      "kind": "browser-log",
+      "path": "reports/sdlc/webapp-forecast-air-correction/browser-first.txt",
+      "sha256": "cd12bdaceffc1939c71400eda4b328b80c4989a8b217a2dabd9828ba3d4ef361"
+    },
+    {
+      "kind": "diagram-assessment",
+      "path": "reports/sdlc/webapp-forecast-air-correction/diagram-assessment.json",
+      "sha256": "9edc81b16d6a3cdd9ce954fc726cbc98d80c6d7ce6afa579de3d1bca91c77b99"
+    },
+    {
+      "kind": "typecheck",
+      "path": "reports/sdlc/webapp-forecast-air-correction/typecheck-final.txt",
+      "sha256": "e2b050589bfc0461b5dad8f6afc8b8ba8403776a4b4ac8e751a6a87eeb5d1127"
+    },
+    {
+      "kind": "build-log",
+      "path": "reports/sdlc/webapp-forecast-air-correction/build.txt",
+      "sha256": "a4520d6748c6d5c096cf177d8207a35d9f60b4a2b4b0585ab06b620b6fca4aca"
+    },
+    {
+      "kind": "independent-verification",
+      "path": "reports/sdlc/webapp-forecast-air-correction/qa.md",
+      "sha256": "c134e344ed0cca8d00cc8df3d2682b2ad292f9c3fc87d972ff5f4cf260c337aa"
+    },
+    {
+      "kind": "verifier-result",
+      "path": "reports/sdlc/webapp-forecast-air-correction/qa.json",
+      "sha256": "b8760aeb489347a28b38a303273459ff4373e5c3254bd5ee5e3a47a225ce50f0"
+    },
+    {
+      "kind": "delegation",
+      "path": "reports/sdlc/webapp-forecast-air-correction/delegation.json",
+      "sha256": "e6fd98663a1c91a43e62958a32bb1151a33f7e0b89be7e74f39c812fc2ea19ab"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "completion",
+      "path": "reports/sdlc/webapp-forecast-air-correction/completion.md",
+      "sha256": "fa00e16c5c68a4dd1d5163b30aed8f93a61d95b60b514a97261e5b40917c41d4"
+    },
+    {
+      "kind": "document-check",
+      "path": "reports/sdlc/webapp-forecast-air-correction/document-check.json",
+      "sha256": "ec253b20916c0e4efdef7c90b4f23075c3878c3010e43bb9adb2dd16501ca1e6"
+    }
+  ],
+  "assessment": {
+    "assessor": "main-agent",
+    "summary": "Content checked for source/proposal separation, maximum functional parity and explicit platform/release limitations.",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3",
+      "AC4",
+      "AC5"
+    ]
+  }
+}

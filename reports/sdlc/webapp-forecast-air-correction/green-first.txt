@@ -1,0 +1,41 @@
+
+> todayweather-web@0.1.0 test
+> vitest run packages/weather-core/test/forecast-air.test.ts web/test/state.test.ts
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.1 /root/.paseo/worktrees/08mqediz/shiny-elephant
+
+ ❯ packages/weather-core/test/forecast-air.test.ts (3 tests | 1 failed) 57ms
+   ❯ KMA mixed-interval forecast and provider air summary (3)
+     × keeps a bounded plain-text summary without inventing numeric air observations 14ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/weather-core/test/forecast-air.test.ts > KMA mixed-interval forecast and provider air summary > keeps a bounded plain-text summary without inventing numeric air observations
+AssertionError: expected '42' to be undefined
+
+- Expected:
+undefined
+
++ Received:
+"42"
+
+ ❯ packages/weather-core/test/forecast-air.test.ts:29:114
+     27|   const w=normalizeWeather(raw);expect(w.airSummary).toBe('대기상태가 좋아요')…
+     28|   raw.current.summaryAir='x'.repeat(700);expect(normalizeWeather(raw).…
+     29|   for(const value of [null,{},[],42,'  ']){raw.current.summaryAir=valu…
+       |                                                                                                                  ^
+     30|  });
+     31| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 6 passed (7)
+   Start at  19:53:59
+   Duration  609ms (transform 70%, tests 17%, import 11%, worker 2%)
+

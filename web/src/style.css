@@ -1981,3 +1981,6 @@ th {
     scroll-behavior: auto !important;
   }
 }
+
+.provider-air-summary { padding: 0 1rem 1rem; overflow-wrap: anywhere; }
+.provider-air-summary h3 { font-size: 1rem; }
