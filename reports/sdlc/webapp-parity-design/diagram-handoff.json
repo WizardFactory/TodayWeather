@@ -1,0 +1,39 @@
+{
+  "diagram_type": "architecture",
+  "output": "docs/webapp/diagrams/webapp-architecture.html",
+  "specification_sha256": "c379cb4cf72ab009947f6fadd556ddd02ba99815f4ed928b479c299ed3e88b51",
+  "artifact_sha256": "c8dcf67c9c923f97c777f2a95aaf7f50798ecd3d4dca350da477bb5b77536a05",
+  "validation": "9/9 showcase, 0 errors, 0 warnings",
+  "browser_evidence": "passed",
+  "visual_review": "passed",
+  "correction_rounds": 0,
+  "artifact_label_repairs": 1,
+  "reviewer": "main-agent, image-capable",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "overflowX": false,
+      "overflowY": false
+    },
+    {
+      "width": 1600,
+      "height": 1000,
+      "overflowX": false,
+      "overflowY": false
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "overflowX": false,
+      "overflowY": false
+    },
+    {
+      "width": 2048,
+      "height": 1320,
+      "overflowX": false,
+      "overflowY": false
+    }
+  ],
+  "visual_scope": "Four captured light/dark endpoint screenshots inspected; READ layout, node/edge labels, corridors, card fit and overall balance. No application prototype or export interaction test claimed."
+}

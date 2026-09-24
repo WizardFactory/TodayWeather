@@ -1,0 +1,356 @@
+import {
+  Cloud,
+  CloudRain,
+  CloudSnow,
+  CloudSun,
+  Sun,
+  Moon,
+  CloudLightning,
+  Wind,
+  LoaderCircle,
+  TriangleAlert,
+  RefreshCw,
+  ArrowUpRight,
+} from "lucide-react";
+import { formatValue, type Point, type Weather } from "@todayweather/core";
+import type { ReactNode } from "react";
+export function WeatherIcon({
+  icon = "",
+  size = 40,
+}: {
+  icon?: string;
+  size?: number;
+}) {
+  const Icon = /rain|shower/.test(icon)
+    ? CloudRain
+    : /snow/.test(icon)
+      ? CloudSnow
+      : /thunder|lightning/.test(icon)
+        ? CloudLightning
+        : /moon/.test(icon)
+          ? Moon
+          : /sun.*cloud|cloud.*sun/.test(icon)
+            ? CloudSun
+            : /sun|clear/.test(icon)
+              ? Sun
+              : /wind/.test(icon)
+                ? Wind
+                : Cloud;
+  return (
+    <Icon
+      size={size}
+      strokeWidth={1.5}
+      className={`weather-icon ${Icon === Sun || Icon === CloudSun ? "sunny" : ""}`}
+    />
+  );
+}
+export function Loading() {
+  return (
+    <div className="empty-state" role="status">
+      <LoaderCircle className="spin" size={26} />
+      <p>날씨를 불러오는 중이에요</p>
+    </div>
+  );
+}
+export function ErrorState({
+  error,
+  retry,
+}: {
+  error: unknown;
+  retry?: () => void;
+}) {
+  return (
+    <div className="empty-state error" role="alert">
+      <TriangleAlert size={28} />
+      <h3>자료를 불러오지 못했어요</h3>
+      <p>
+        {error instanceof Error ? error.message : "잠시 후 다시 시도해 주세요."}
+      </p>
+      {retry && (
+        <button className="button" onClick={retry}>
+          <RefreshCw size={16} /> 다시 시도
+        </button>
+      )}
+    </div>
+  );
+}
+export function Empty({
+  title,
+  children,
+}: {
+  title: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="empty-state">
+      <Cloud size={32} />
+      <h3>{title}</h3>
+      {children && <p>{children}</p>}
+    </div>
+  );
+}
+export function Stamp({
+  at,
+  label = "관측 시각",
+}: {
+  at: string | null | undefined;
+  label?: string;
+}) {
+  return (
+    <span className="stamp">
+      {label} {at?.replace("T", " ").slice(0, 19) ?? "정보 없음"}
+    </span>
+  );
+}
+export function isOld(at: string | null, limitHours = 3) {
+  if (!at) return false;
+  const s = at.replace(" ", "T");
+  const match = s.match(/^\d{4}-\d{2}-\d{2}/);
+  if (!match) return false; // A conservative date-only check avoids guessing unknown source timezones.
+  return (
+    Date.now() - Date.parse(match[0] + "T23:59:59+14:00") >
+    limitHours * 3600000 + 86400000
+  );
+}
+export function DataNotice({
+  weather,
+  snapshot,
+}: {
+  weather: Weather;
+  snapshot: boolean;
+}) {
+  return (
+    <>
+      {weather.mode === "demo" && (
+        <div className="notice demo">
+          <span className="dot" />
+          <strong>예제 데이터</strong>
+          <span>화면 체험용 가상 날씨입니다. 실제 날씨가 아닙니다.</span>
+        </div>
+      )}
+      {snapshot && (
+        <div className="notice warning" role="status">
+          <TriangleAlert size={16} />
+          <span>
+            연결하지 못해 저장된 자료를 표시합니다. 마지막 수신{" "}
+            {new Date(weather.fetchedAt).toLocaleString("ko-KR")}
+          </span>
+        </div>
+      )}
+      {isOld(weather.observedAt) && (
+        <div className="notice warning">
+          관측 시각이 오래된 자료입니다. 외출 전 최신 기상 정보를 확인해 주세요.
+        </div>
+      )}
+    </>
+  );
+}
+export const dayLabel = (at: string) => {
+  const d = new Date(at.slice(0, 10) + "T12:00:00Z");
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : new Intl.DateTimeFormat("ko-KR", {
+        month: "numeric",
+        day: "numeric",
+        weekday: "short",
+        timeZone: "UTC",
+      }).format(d);
+};
+export const hourLabel = (at: string) =>
+  at.slice(11, 13) + ":" + at.slice(14, 16);
+export function TemperatureChart({
+  points,
+  yesterday,
+  unit,
+}: {
+  points: Point[];
+  yesterday: Point[];
+  unit: string;
+}) {
+  const data = points.slice(0, 16),
+    temps = [...data, ...yesterday]
+      .map((p) => p.temperature)
+      .filter((v): v is number => v !== null);
+  if (!data.length || !temps.length)
+    return <Empty title="시간별 예보가 없습니다" />;
+  const low = Math.min(...temps) - 3,
+    range = Math.max(...temps) - low + 4,
+    width = Math.max(720, data.length * 68),
+    height = 220;
+  const x = (i: number) =>
+      38 + (i * (width - 76)) / Math.max(data.length - 1, 1),
+    y = (v: number) => height - 36 - ((v - low) / range) * (height - 70);
+  const segments = (rows: Point[]) => {
+    let previous = false;
+    return rows
+      .map((p, i) => {
+        if (p.temperature === null) {
+          previous = false;
+          return "";
+        }
+        const part = `${previous ? "L" : "M"} ${x(i)} ${y(p.temperature)}`;
+        previous = true;
+        return part;
+      })
+      .join(" ");
+  };
+  return (
+    <>
+      <div className="chart-scroll">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          style={{ minWidth: width }}
+          role="img"
+          aria-label="시간별 기온 변화, 아래 표에서 수치 확인 가능"
+        >
+          <defs>
+            <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#4c8eff" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#4c8eff" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {[0, 1, 2].map((i) => (
+            <line
+              key={i}
+              x1="20"
+              x2={width - 20}
+              y1={50 + i * 60}
+              y2={50 + i * 60}
+              stroke="var(--line)"
+              strokeDasharray="3 5"
+            />
+          ))}
+          <path
+            d={segments(yesterday.slice(0, data.length))}
+            fill="none"
+            stroke="#aebdce"
+            strokeWidth="2"
+            strokeDasharray="5 6"
+          />
+          <path
+            d={segments(data)}
+            fill="none"
+            stroke="#4087ef"
+            strokeWidth="3"
+            strokeLinejoin="round"
+          />
+          {data.map((p, i) => (
+            <g key={p.at}>
+              {p.temperature !== null && (
+                <>
+                  <circle
+                    cx={x(i)}
+                    cy={y(p.temperature)}
+                    r="4"
+                    fill="var(--panel)"
+                    stroke="#4087ef"
+                    strokeWidth="2"
+                  />
+                  <text
+                    x={x(i)}
+                    y={y(p.temperature) - 15}
+                    textAnchor="middle"
+                    className="chart-value"
+                  >
+                    {formatValue(p.temperature)}°
+                  </text>
+                </>
+              )}
+              <text
+                x={x(i)}
+                y={height - 10}
+                textAnchor="middle"
+                className="chart-label"
+              >
+                {hourLabel(p.at)}
+              </text>
+            </g>
+          ))}
+        </svg>
+        <div className="hour-icons" style={{ minWidth: width }}>
+          {data.map((p) => (
+            <div key={p.at}>
+              <WeatherIcon icon={p.icon} size={23} />
+              <span>{formatValue(p.rainProbability)}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <details className="data-table">
+        <summary>시간별 상세 수치 보기</summary>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>시각</th>
+                <th>기온 (°{unit})</th>
+                <th>강수확률</th>
+                <th>습도</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((p) => (
+                <tr key={p.at}>
+                  <td>
+                    {dayLabel(p.at)} {hourLabel(p.at)}
+                  </td>
+                  <td>{formatValue(p.temperature, 1)}</td>
+                  <td>{formatValue(p.rainProbability)}%</td>
+                  <td>{formatValue(p.humidity)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </>
+  );
+}
+export function PageTitle({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="page-title">
+      <div>
+        {eyebrow && <span className="eyebrow">{eyebrow}</span>}
+        <h1>{title}</h1>
+        {description && <p>{description}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+export function SectionHead({
+  title,
+  aside,
+}: {
+  title: string;
+  aside?: ReactNode;
+}) {
+  return (
+    <div className="section-head">
+      <h2>{title}</h2>
+      {aside}
+    </div>
+  );
+}
+export function ExternalWeather() {
+  return (
+    <a
+      className="text-link"
+      href="https://www.weather.go.kr/"
+      target="_blank"
+      rel="noreferrer"
+    >
+      기상청 날씨누리 <ArrowUpRight size={14} />
+    </a>
+  );
+}

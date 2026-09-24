@@ -51,3 +51,10 @@ visual-check.*
 # Local EC2 SSH private key
 /.aws/aleckim.pem
 /.aws/credentials
+
+# Web workspaces and local browser verification
+/web/dist/
+/web-api/dist/
+/test-results/
+/playwright-report/
+/infra/web/.env

@@ -1,0 +1,42 @@
+
+> todayweather-web@0.1.0 test
+> vitest run
+
+
+ RUN  v5.0.1 /root/.paseo/worktrees/08mqediz/shiny-elephant
+
+ ❯ packages/weather-core/test/weather.test.ts (11 tests | 1 failed) 58ms
+   ❯ national city identity (1)
+     × keeps distinct cities in the same province 16ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/weather-core/test/weather.test.ts > national city identity > keeps distinct cities in the same province
+AssertionError: expected [ '강원도', '강원도' ] to deeply equal [ '춘천시', '강릉시' ]
+
+- Expected
++ Received
+
+  [
+-   "춘천시",
+-   "강릉시",
++   "강원도",
++   "강원도",
+  ]
+
+ ❯ packages/weather-core/test/weather.test.ts:154:45
+    152|       { units: DEFAULT_UNITS, mode: "live" },
+    153|     );
+    154|     expect(data.weather.map((r) => r.name)).toEqual(["춘천시", "강릉시"]);
+       |                                             ^
+    155|   });
+    156| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  1 failed | 25 passed (26)
+   Start at  07:36:06
+   Duration  864ms (transform 66%, tests 17%, import 15%, worker 1%)
+

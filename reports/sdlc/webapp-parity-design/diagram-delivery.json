@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/root/.paseo/worktrees/08mqediz/shiny-elephant/docs/webapp/diagrams/webapp-architecture.json",
+  "output": "/root/.paseo/worktrees/08mqediz/shiny-elephant/docs/webapp/diagrams/webapp-architecture.html",
+  "specification": {
+    "sha256": "c379cb4cf72ab009947f6fadd556ddd02ba99815f4ed928b479c299ed3e88b51",
+    "bytes": 4796
+  },
+  "artifact": {
+    "sha256": "c8dcf67c9c923f97c777f2a95aaf7f50798ecd3d4dca350da477bb5b77536a05",
+    "bytes": 811453
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

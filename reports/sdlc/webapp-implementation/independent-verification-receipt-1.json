@@ -1,0 +1,32 @@
+{
+  "iteration": 1,
+  "decision": "BLOCKED",
+  "reason": "Independent QA reproduced wrong search selection, stale geolocation state overwrite, and invalid snapshot expiry/shape acceptance. Correct under existing implementation authority.",
+  "authority_source": "AK requested implementation; SDLC independent verification",
+  "candidate": "sha256:48ebadaa40e872234a599e41d2ec3c749374eae72a0a1e8ca81a2bd654c872a0",
+  "next_action": "Re-enter build iteration 2 with failing regressions, then repeat relevant checks and QA.",
+  "inputs": [],
+  "outputs": [
+    {
+      "kind": "independent-verification",
+      "path": "reports/sdlc/webapp-implementation/qa-1.md",
+      "sha256": "05c2de05a7ad0263bf073665229578f7fa8d3ee7df1fcd7d004e777fa7390068"
+    }
+  ],
+  "assessment": {
+    "assessor": "main, accepting independent QA findings",
+    "summary": "Three mandatory issues independently reproduced; main also found collapsed national city names.",
+    "criteria": [
+      "AC2",
+      "AC3",
+      "AC5",
+      "AC7"
+    ]
+  },
+  "verifier": {
+    "independent": true,
+    "context_id": "/root/webapp_qa",
+    "builder_context_id": "/root",
+    "checks": "QA source, TypeScript, 25 tests and independent real browser reproductions in qa-1.md/json"
+  }
+}

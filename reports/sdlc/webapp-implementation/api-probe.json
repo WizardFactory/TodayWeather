@@ -1,0 +1,82 @@
+[
+  {
+    "name": "weather_kr",
+    "path_template": "/weather/v000903/coord/37.567,126.978",
+    "checked_at": "2026-09-24",
+    "status": 200,
+    "content_type": "application/json; charset=UTF-8",
+    "bytes": 26172,
+    "keys": [
+      "regionName",
+      "cityName",
+      "townName",
+      "shortPubDate",
+      "shortRssPubDate",
+      "short",
+      "shortestPubDate",
+      "shortest",
+      "currentPubDate",
+      "current",
+      "midData",
+      "source",
+      "units",
+      "location",
+      "name",
+      "country",
+      "address"
+    ],
+    "source": "KMA",
+    "provider_times": {
+      "currentPubDate": "202609241100",
+      "shortPubDate": "202609241100"
+    },
+    "application_error": null,
+    "elapsed_seconds": 2.63
+  },
+  {
+    "name": "geocode",
+    "path_template": "/geocode/v000903/coord/37.567,126.978",
+    "checked_at": "2026-09-24",
+    "status": 200,
+    "content_type": "application/json; charset=UTF-8",
+    "bytes": 230,
+    "keys": [
+      "name",
+      "country",
+      "address",
+      "location",
+      "kmaAddress"
+    ],
+    "source": null,
+    "provider_times": {},
+    "application_error": null,
+    "elapsed_seconds": 2.22
+  },
+  {
+    "name": "nation",
+    "path_template": "/v000903/nation/KR",
+    "checked_at": "2026-09-24",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "bytes": 408601,
+    "keys": [
+      "nation",
+      "weather",
+      "air"
+    ],
+    "source": null,
+    "provider_times": {},
+    "application_error": null,
+    "elapsed_seconds": 3.5
+  },
+  {
+    "name": "warnings",
+    "path_template": "/v000903/kma/special",
+    "checked_at": "2026-09-24",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "bytes": 2388,
+    "keys": "array",
+    "elapsed_seconds": 0.69
+  }
+]

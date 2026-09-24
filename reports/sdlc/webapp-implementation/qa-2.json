@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "assignment_id": "qa-2",
+  "task_id": "webapp-implementation",
+  "stage": "independent-verification",
+  "iteration": 2,
+  "generated_at": "2026-09-24T05:51:35.974074+00:00",
+  "candidate": "sha256:184769c5a403bff6971dcd94047847c6dde0f1ded0af7b004174349b47af4e13",
+  "base": "87b8855f308611a07897cd3a39c45fefb3088d77",
+  "context": {
+    "agent": "/root/webapp_qa",
+    "role": "independent QA verifier, continuing QA-1",
+    "provider": "OpenAI",
+    "model": "Inherited; exact model ID not exposed",
+    "reasoning_effort": "not observed",
+    "builder": "/root",
+    "independence": "Non-builder context; no source edits; not cross-provider PR review"
+  },
+  "verdict": "PASS",
+  "hotl_decision": "PROCEED",
+  "scope": "Local executable integration candidate only. Does not establish full mobile parity, production readiness, deployment or PR review.",
+  "inputs": [
+    {
+      "path": "reports/sdlc/webapp-implementation/delegations/qa-2-assignment.md",
+      "sha256": "f76a588b26354fdbb9af332eeec204db7ee2a00f55868f24744ac4ef1d329257"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/candidate.json",
+      "sha256": "5acf9e4fab5a801cb398d64b40554d27f21b559744eef2a8c9508099f2d1b656"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/corrections.md",
+      "sha256": "500e7f862754bad8916d869e5d5fbf560bf5041d6cd0c86627c32458020671e9"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/build.md",
+      "sha256": "c1e65b2849a3e1e0705ab152cdfd9d5daf73b756baeca6780d50867a872019f9"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/self-verification.md",
+      "sha256": "7cd4734960a446fdd8ea5c97f54b21c266028ee839e2421f72f28348a9ac4b67"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/test-results.json",
+      "sha256": "38dd917968ee5e2fff8d62bcccc3fea6ce14b9de254874442ced60bcd7aee09f"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/qa-1.md",
+      "sha256": "05c2de05a7ad0263bf073665229578f7fa8d3ee7df1fcd7d004e777fa7390068"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/qa-1.json",
+      "sha256": "3c88af0f32d59aefaf94f9e5b63e05d6eab89259601c95256ddd63a1135b2915"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/correction-build.log",
+      "sha256": "13358800e59789473e832846fbffc0ad474072fa888a24d979755e292e81811d"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/correction-browser.log",
+      "sha256": "1105eac5ea9dd3d7d198c0efff1c9df0d7e9ab535d06fdd88e01bbafb8a199e5"
+    },
+    {
+      "path": "reports/sdlc/webapp-implementation/correction-post-refactor.log",
+      "sha256": "ad0078b1eb62f82664e381bcc1e95fb5b6030e3b8161a3ea4603f1d3f387ad45"
+    },
+    {
+      "path": "packages/weather-core/src/index.ts",
+      "sha256": "5314a5ee462e289a044f1871c4232b15a09b99c92cba6de8e982b655ad4a88ad"
+    },
+    {
+      "path": "packages/weather-core/test/weather.test.ts",
+      "sha256": "e348389637f26b4ff0a5c8e4ad3076153cb1bd3926e518a41681d1331ccebd84"
+    },
+    {
+      "path": "web/e2e/web.spec.ts",
+      "sha256": "57761e885ff1cf7489e8e2179db92962d4e88e510785534af2adbfe7b670b056"
+    },
+    {
+      "path": "web/src/App.tsx",
+      "sha256": "83754050dcc74bb23d763629445acbde3bdb4dd517d8773e353905f298e31455"
+    },
+    {
+      "path": "web/src/state.ts",
+      "sha256": "233710298549579cd9cb783b40f751ec804c13af5601efc4236002e44c7835ca"
+    },
+    {
+      "path": "web/test/state.test.ts",
+      "sha256": "a8a2c8f18feadf9155814cb6df5577e4383316d5ce457845f1e39b9ad30eae34"
+    }
+  ],
+  "source_file_set": {
+    "count": 60,
+    "hash_mismatches": [],
+    "agreement": true,
+    "unexpected": [],
+    "missing": [],
+    "changed_since_qa1": [
+      "packages/weather-core/src/index.ts",
+      "packages/weather-core/test/weather.test.ts",
+      "web/e2e/web.spec.ts",
+      "web/src/App.tsx",
+      "web/src/state.ts",
+      "web/test/state.test.ts"
+    ]
+  },
+  "browser_artifacts": [
+    {
+      "path": "web/dist/assets/index-D2kEcy3k.js",
+      "sha256": "0f1a21703075c6ed83805d0cb0b4a96a1b729389ee1e8a69d62bb05fdb20b6e9"
+    },
+    {
+      "path": "web-api/dist/server.js",
+      "sha256": "0e2503e45152ec3f97371c2776310de8766b7c69a1cdb65428f65851113d218b"
+    },
+    {
+      "path": "/tmp/qa2-browser.mjs",
+      "sha256": "7b97be4499d8cc184901f05c1d1fc5259afb59a02f61b5c92323b4948aa3f47d"
+    }
+  ],
+  "checks": [
+    {
+      "id": "qa2-typecheck",
+      "command": "npm run typecheck",
+      "exit_code": 0,
+      "outcome": "passed",
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-typecheck.log"
+    },
+    {
+      "id": "qa2-tests",
+      "command": "npm test, existing managed loopback permission",
+      "exit_code": 0,
+      "outcome": "passed",
+      "observed": "27 tests across four files; synthetic providers and injected push sender",
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-tests.log"
+    },
+    {
+      "id": "qa2-domain",
+      "command": "node --import tsx --input-type=module, independent five-city fixture",
+      "exit_code": 0,
+      "outcome": "passed",
+      "observed": "Distinct Chuncheon/Gangneung, Mokpo/Yeosu and Andong city identities and numeric values; region-name fallback; Yeosu/Andong catalog entries",
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-domain.log"
+    },
+    {
+      "id": "qa2-browser",
+      "command": "node /tmp/qa2-browser.mjs, Chromium 390x844 against http://127.0.0.1:4188 demo production BFF",
+      "exit_code": 0,
+      "outcome": "passed",
+      "observed": "Five independent cases: immediate submit; delayed geolocation preserving Busan and F; missing-timestamp snapshot recovery; invalid-hourly snapshot recovery; valid snapshot retention. Invalid records removed; online recovery passed; no pageerror events.",
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-browser-verified.log"
+    }
+  ],
+  "prior_findings": [
+    {
+      "id": "QA1-F1",
+      "disposition": "RESOLVED",
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-browser-verified.log",
+      "reason": "Immediate 부산 Enter selects Busan; submission reads submitted text instead of stale debounced results."
+    },
+    {
+      "id": "QA1-F2",
+      "disposition": "RESOLVED",
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-browser-verified.log",
+      "reason": "Late Seoul callback retains both Busan and Seoul and the subsequently selected F preference; selection merges from latest state."
+    },
+    {
+      "id": "QA1-F3",
+      "disposition": "RESOLVED",
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-browser-verified.log",
+      "reason": "Missing savedAt and null hourly records are removed and show recoverable error, without router crash. Valid snapshots remain usable offline and network recovery restores weather."
+    },
+    {
+      "id": "N1",
+      "origin": "main-discovered",
+      "disposition": "RESOLVED",
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-domain.log",
+      "reason": "cityName precedes regionName; independent five-city fixture preserves names/values. Yeosu/Andong catalog and map positions exist in source; city-prefix matching handles the 시 suffix."
+    }
+  ],
+  "new_findings": [],
+  "setup_attempts": [
+    {
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-browser.log",
+      "outcome": "not-run",
+      "reason": "Reviewer script syntax error; no browser behavior evaluated."
+    },
+    {
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-browser-confirm.log",
+      "outcome": "not-run",
+      "reason": "Reviewer attempted closed mobile sidebar settings link; locator timeout, not application regression."
+    },
+    {
+      "evidence": "reports/sdlc/webapp-implementation/qa-2-browser-final.log",
+      "outcome": "not-run",
+      "reason": "Reviewer attempted desktop-only settings link hidden at 390px; corrected final script opens actual mobile menu."
+    }
+  ],
+  "limitations": [
+    "Used newly rebuilt production bundle documented by main; independently hashed, but no independent rebuild.",
+    "Reused QA-1 unchanged source review and main eight-scenario broad smoke; independently reran five correction/compatibility browser cases.",
+    "No live provider request, real push receipt, deployment, Docker/Compose, remote CI, native runtime, or cross-provider review.",
+    "Nation N1 verified via source + independent domain fixture, not new live national-data request.",
+    "Dynamic previous-worker update/rollback and supported-device/browser matrix remain outside this bounded corrective review.",
+    "Full mobile parity still has declared release gates; keep issue #2558 open."
+  ],
+  "outputs": [
+    "reports/sdlc/webapp-implementation/qa-2.md",
+    "reports/sdlc/webapp-implementation/qa-2.json"
+  ]
+}

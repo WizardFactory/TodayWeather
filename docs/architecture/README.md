@@ -44,3 +44,5 @@ node "$ARCHIFY_DIR/bin/archify.mjs" visual-check docs/architecture/diagrams/serv
 ```
 
 Use `architecture` for collection and `sequence` for mobile requests. Architecture sources pin repository evidence to the analyzed revision; update that revision deliberately after relevant source changes. Validation, browser execution and perceptual review are separate claims. See the [verification record](../../reports/sdlc/service-architecture/self-verification.md) for results and limitations.
+
+- [Web client and adapter](web-client.md): new responsive PWA, same-origin Node adapter, optional reminders and deployment boundaries.

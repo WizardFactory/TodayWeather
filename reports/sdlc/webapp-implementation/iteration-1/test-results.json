@@ -1,0 +1,92 @@
+{
+  "candidate": "sha256:48ebadaa40e872234a599e41d2ec3c749374eae72a0a1e8ca81a2bd654c872a0",
+  "scenarios": [
+    {
+      "id": "browser-composed",
+      "requirement": "AC7",
+      "required": true,
+      "environment": "Node 22.22.2, Chromium via Playwright 1.63, loopback production server",
+      "prerequisites": "npm dependencies and production build; explicit synthetic demo mode",
+      "actions": "Run four web/e2e scenarios with actual browser/server, including offline and saved-state restoration",
+      "expected": "All weather/air/nation/settings/favorite/route/offline assertions pass with no page errors",
+      "failure": "Wrong unit/city, lost state, fresh-looking offline data, hidden failed notification or route failure",
+      "cleanup": "Playwright closes browser and its local server; generated screenshots retained"
+    }
+  ],
+  "runs": [
+    {
+      "id": "domain-initial-red",
+      "phase": "red",
+      "candidate": "initial deliberately stubbed weather-core before implementation",
+      "command": "npm test -- packages/weather-core/test/weather.test.ts",
+      "exit_code": 1,
+      "environment": "Node 22.22.2 isolated web workspace",
+      "observed": "Eight intended behavioral assertions failed against initial stubs",
+      "evidence": "reports/sdlc/webapp-implementation/red-domain.log",
+      "execution_kind": "real",
+      "status": "passed",
+      "intended_failure": true
+    },
+    {
+      "id": "candidate-green",
+      "phase": "green",
+      "candidate": "sha256:48ebadaa40e872234a599e41d2ec3c749374eae72a0a1e8ca81a2bd654c872a0",
+      "command": "npm test",
+      "exit_code": 0,
+      "environment": "Node 22.22.2 isolated web workspace",
+      "observed": "25 tests passed after final source/navigation edits; no provider/device send",
+      "evidence": "reports/sdlc/webapp-implementation/post-refactor-tests.log",
+      "execution_kind": "real",
+      "status": "passed"
+    },
+    {
+      "id": "candidate-post-refactor",
+      "phase": "post-refactor",
+      "candidate": "sha256:48ebadaa40e872234a599e41d2ec3c749374eae72a0a1e8ca81a2bd654c872a0",
+      "command": "npm test",
+      "exit_code": 0,
+      "environment": "Node 22.22.2 isolated web workspace",
+      "observed": "25 tests passed on frozen candidate",
+      "evidence": "reports/sdlc/webapp-implementation/final-regression.log",
+      "execution_kind": "real",
+      "status": "passed"
+    },
+    {
+      "id": "candidate-browser-smoke",
+      "phase": "smoke",
+      "candidate": "sha256:48ebadaa40e872234a599e41d2ec3c749374eae72a0a1e8ca81a2bd654c872a0",
+      "command": "PLAYWRIGHT_EXECUTABLE_PATH=<installed chromium> npm run test:e2e",
+      "exit_code": 0,
+      "environment": "Node 22.22.2 isolated web workspace",
+      "observed": "Four real browser/server scenarios passed; demo data explicitly labeled",
+      "evidence": "reports/sdlc/webapp-implementation/final-browser.log",
+      "execution_kind": "real",
+      "status": "passed",
+      "scenario_id": "browser-composed"
+    },
+    {
+      "id": "typecheck",
+      "phase": "check",
+      "candidate": "sha256:48ebadaa40e872234a599e41d2ec3c749374eae72a0a1e8ca81a2bd654c872a0",
+      "command": "npm run typecheck",
+      "exit_code": 0,
+      "environment": "Node 22.22.2 isolated web workspace",
+      "observed": "TypeScript passed",
+      "evidence": "reports/sdlc/webapp-implementation/typecheck.log",
+      "execution_kind": "real",
+      "status": "passed"
+    },
+    {
+      "id": "production-build",
+      "phase": "check",
+      "candidate": "sha256:48ebadaa40e872234a599e41d2ec3c749374eae72a0a1e8ca81a2bd654c872a0",
+      "command": "npm run build",
+      "exit_code": 0,
+      "environment": "Node 22.22.2 isolated web workspace",
+      "observed": "Vite/client and esbuild/API passed",
+      "evidence": "reports/sdlc/webapp-implementation/build.log",
+      "execution_kind": "real",
+      "status": "passed"
+    }
+  ]
+}

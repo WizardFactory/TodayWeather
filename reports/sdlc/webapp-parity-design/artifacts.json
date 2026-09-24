@@ -1,0 +1,899 @@
+{
+  "schema_version": 1,
+  "task_id": "webapp-parity-design",
+  "mode": "plan-only",
+  "change_kind": "non-executable",
+  "endpoint": "local",
+  "criteria": [
+    "AC1",
+    "AC2",
+    "AC3",
+    "AC4",
+    "AC5"
+  ],
+  "created_at": "2026-09-24T03:50:28.423354+00:00",
+  "events": [
+    {
+      "at": "2026-09-24T03:50:28.423430+00:00",
+      "action": "initialized",
+      "stage": null
+    },
+    {
+      "at": "2026-09-24T03:51:21.858683+00:00",
+      "action": "iteration-started",
+      "stage": "triage",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:53:04.292620+00:00",
+      "action": "iteration-finished",
+      "stage": "triage",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit."
+    },
+    {
+      "at": "2026-09-24T03:53:04.557465+00:00",
+      "action": "iteration-started",
+      "stage": "intent",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:53:04.673481+00:00",
+      "action": "stage-excluded",
+      "stage": "independent-verification",
+      "reason": "Bounded local plan-only proposal; no runtime or external-state changes. Main checks documents and diagram; future implementation requires independent review."
+    },
+    {
+      "at": "2026-09-24T03:53:05.370902+00:00",
+      "action": "iteration-finished",
+      "stage": "intent",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit."
+    },
+    {
+      "at": "2026-09-24T03:53:05.624706+00:00",
+      "action": "iteration-started",
+      "stage": "investigation",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:54:11.871095+00:00",
+      "action": "iteration-finished",
+      "stage": "investigation",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit."
+    },
+    {
+      "at": "2026-09-24T03:54:12.114638+00:00",
+      "action": "iteration-started",
+      "stage": "spec",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T03:58:04.070707+00:00",
+      "action": "iteration-finished",
+      "stage": "spec",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit."
+    },
+    {
+      "at": "2026-09-24T03:58:04.349340+00:00",
+      "action": "iteration-started",
+      "stage": "design",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T04:02:04.383331+00:00",
+      "action": "iteration-finished",
+      "stage": "design",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit."
+    },
+    {
+      "at": "2026-09-24T04:02:04.696594+00:00",
+      "action": "iteration-started",
+      "stage": "plan",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T04:03:34.405017+00:00",
+      "action": "iteration-finished",
+      "stage": "plan",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit."
+    },
+    {
+      "at": "2026-09-24T04:03:34.722056+00:00",
+      "action": "iteration-started",
+      "stage": "completion",
+      "iteration": 1
+    },
+    {
+      "at": "2026-09-24T04:05:42.631329+00:00",
+      "action": "iteration-finished",
+      "stage": "completion",
+      "iteration": 1,
+      "decision": "PROCEED",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit."
+    }
+  ],
+  "stages": {
+    "triage": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:51:21.858656+00:00",
+          "objective": "Bound local webapp parity planning, source baseline and exclusions",
+          "resolution": null,
+          "inputs": [],
+          "finished_at": "2026-09-24T03:53:04.292556+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+            "authority_source": "AK request for webapp planning/design and mobile-feature parity clarification, 2026-09-24",
+            "candidate": "source-baseline:87b8855f308611a07897cd3a39c45fefb3088d77; local design documents",
+            "next_action": "Continue applicable local planning stages; no application deployment.",
+            "inputs": [],
+            "outputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/webapp-parity-design/triage.md",
+                "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+              }
+            ],
+            "assessment": {
+              "assessor": "main-agent",
+              "summary": "Content checked for source/proposal separation, maximum functional parity and explicit platform/release limitations.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4",
+                "AC5"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "intent": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:53:04.557431+00:00",
+          "objective": "Define full-feature webapp design scope and acceptance",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/webapp-parity-design/triage.md",
+              "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+            }
+          ],
+          "finished_at": "2026-09-24T03:53:05.370872+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+            "authority_source": "AK request for webapp planning/design and mobile-feature parity clarification, 2026-09-24",
+            "candidate": "source-baseline:87b8855f308611a07897cd3a39c45fefb3088d77; local design documents",
+            "next_action": "Continue applicable local planning stages; no application deployment.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/webapp-parity-design/triage.md",
+                "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "intent",
+                "path": "docs/webapp/intent.md",
+                "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+              }
+            ],
+            "assessment": {
+              "assessor": "main-agent",
+              "summary": "Content checked for source/proposal separation, maximum functional parity and explicit platform/release limitations.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4",
+                "AC5"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "investigation": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:53:05.624678+00:00",
+          "objective": "Recheck mobile feature/API evidence and official browser/hosting constraints",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/webapp-parity-design/triage.md",
+              "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+            },
+            {
+              "kind": "intent",
+              "path": "docs/webapp/intent.md",
+              "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+            }
+          ],
+          "finished_at": "2026-09-24T03:54:11.871068+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+            "authority_source": "AK request for webapp planning/design and mobile-feature parity clarification, 2026-09-24",
+            "candidate": "source-baseline:87b8855f308611a07897cd3a39c45fefb3088d77; local design documents",
+            "next_action": "Continue applicable local planning stages; no application deployment.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/webapp-parity-design/triage.md",
+                "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+              },
+              {
+                "kind": "intent",
+                "path": "docs/webapp/intent.md",
+                "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/webapp-parity-design/investigation.md",
+                "sha256": "0e5502e37061179c695ec38b3fa2e0b8ce51b7f09932d6051f738c9eaa1f35fe"
+              }
+            ],
+            "assessment": {
+              "assessor": "main-agent",
+              "summary": "Content checked for source/proposal separation, maximum functional parity and explicit platform/release limitations.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4",
+                "AC5"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "spec": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:54:12.114606+00:00",
+          "objective": "Specify complete parity, responsive flows, data/push and deployment behavior",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/webapp-parity-design/triage.md",
+              "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+            },
+            {
+              "kind": "intent",
+              "path": "docs/webapp/intent.md",
+              "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/webapp-parity-design/investigation.md",
+              "sha256": "0e5502e37061179c695ec38b3fa2e0b8ce51b7f09932d6051f738c9eaa1f35fe"
+            }
+          ],
+          "finished_at": "2026-09-24T03:58:04.070630+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+            "authority_source": "AK request for webapp planning/design and mobile-feature parity clarification, 2026-09-24",
+            "candidate": "source-baseline:87b8855f308611a07897cd3a39c45fefb3088d77; local design documents",
+            "next_action": "Continue applicable local planning stages; no application deployment.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/webapp-parity-design/triage.md",
+                "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+              },
+              {
+                "kind": "intent",
+                "path": "docs/webapp/intent.md",
+                "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/webapp-parity-design/investigation.md",
+                "sha256": "0e5502e37061179c695ec38b3fa2e0b8ce51b7f09932d6051f738c9eaa1f35fe"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "spec",
+                "path": "docs/webapp/specification.md",
+                "sha256": "f9aabd92540153ab5f420dd013f23dbd8f31d02c78a554687377dd1775c39204"
+              },
+              {
+                "kind": "technical-design",
+                "path": "docs/webapp/technical-design.md",
+                "sha256": "a8bdd82e99327ae745dd15c566a3ffac0771e45fdefeb3916305f321e9881027"
+              }
+            ],
+            "assessment": {
+              "assessor": "main-agent",
+              "summary": "Content checked for source/proposal separation, maximum functional parity and explicit platform/release limitations.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4",
+                "AC5"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "design": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T03:58:04.349299+00:00",
+          "objective": "Create proposed webapp architecture with deterministic, browser and visual checks",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/webapp-parity-design/triage.md",
+              "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+            },
+            {
+              "kind": "intent",
+              "path": "docs/webapp/intent.md",
+              "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/webapp-parity-design/investigation.md",
+              "sha256": "0e5502e37061179c695ec38b3fa2e0b8ce51b7f09932d6051f738c9eaa1f35fe"
+            },
+            {
+              "kind": "spec",
+              "path": "docs/webapp/specification.md",
+              "sha256": "f9aabd92540153ab5f420dd013f23dbd8f31d02c78a554687377dd1775c39204"
+            },
+            {
+              "kind": "technical-design",
+              "path": "docs/webapp/technical-design.md",
+              "sha256": "a8bdd82e99327ae745dd15c566a3ffac0771e45fdefeb3916305f321e9881027"
+            }
+          ],
+          "finished_at": "2026-09-24T04:02:04.383247+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+            "authority_source": "AK request for webapp planning/design and mobile-feature parity clarification, 2026-09-24",
+            "candidate": "source-baseline:87b8855f308611a07897cd3a39c45fefb3088d77; local design documents",
+            "next_action": "Continue applicable local planning stages; no application deployment.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/webapp-parity-design/triage.md",
+                "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+              },
+              {
+                "kind": "intent",
+                "path": "docs/webapp/intent.md",
+                "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/webapp-parity-design/investigation.md",
+                "sha256": "0e5502e37061179c695ec38b3fa2e0b8ce51b7f09932d6051f738c9eaa1f35fe"
+              },
+              {
+                "kind": "spec",
+                "path": "docs/webapp/specification.md",
+                "sha256": "f9aabd92540153ab5f420dd013f23dbd8f31d02c78a554687377dd1775c39204"
+              },
+              {
+                "kind": "technical-design",
+                "path": "docs/webapp/technical-design.md",
+                "sha256": "a8bdd82e99327ae745dd15c566a3ffac0771e45fdefeb3916305f321e9881027"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "design-source",
+                "path": "docs/webapp/diagrams/webapp-architecture.json",
+                "sha256": "c379cb4cf72ab009947f6fadd556ddd02ba99815f4ed928b479c299ed3e88b51"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/webapp/diagrams/webapp-architecture.html",
+                "sha256": "c8dcf67c9c923f97c777f2a95aaf7f50798ecd3d4dca350da477bb5b77536a05"
+              },
+              {
+                "kind": "design-validation",
+                "path": "reports/sdlc/webapp-parity-design/design-validation.md",
+                "sha256": "82229f9613752aae4133165c85c70ea9d193d1908fb29bb9e80521ceb5225fe8"
+              },
+              {
+                "kind": "artifact-receipt",
+                "path": "reports/sdlc/webapp-parity-design/diagram-delivery.json",
+                "sha256": "c481a398c4c2cadf92d61ff26b4b4a14e2ada86ade07e74314b37d32ab87ecf5"
+              },
+              {
+                "kind": "browser-evidence",
+                "path": "reports/sdlc/webapp-parity-design/diagram-browser-command.json",
+                "sha256": "727cc2c3243067e5bd67a6d609dd44e5c97edf329236881d23a58d5d51c4bef5"
+              },
+              {
+                "kind": "visual-review",
+                "path": "reports/sdlc/webapp-parity-design/diagram-handoff.json",
+                "sha256": "fe6d57bb4a1b9a3b0f732b7b95cf608f0b838e6b0634ff88d881a3f60884dc6c"
+              }
+            ],
+            "assessment": {
+              "assessor": "main-agent",
+              "summary": "Content checked for source/proposal separation, maximum functional parity and explicit platform/release limitations.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4",
+                "AC5"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "plan": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T04:02:04.696545+00:00",
+          "objective": "Define implementation work packages, acceptance tests, estimates and rollout gates",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/webapp-parity-design/triage.md",
+              "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+            },
+            {
+              "kind": "intent",
+              "path": "docs/webapp/intent.md",
+              "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/webapp-parity-design/investigation.md",
+              "sha256": "0e5502e37061179c695ec38b3fa2e0b8ce51b7f09932d6051f738c9eaa1f35fe"
+            },
+            {
+              "kind": "spec",
+              "path": "docs/webapp/specification.md",
+              "sha256": "f9aabd92540153ab5f420dd013f23dbd8f31d02c78a554687377dd1775c39204"
+            },
+            {
+              "kind": "technical-design",
+              "path": "docs/webapp/technical-design.md",
+              "sha256": "a8bdd82e99327ae745dd15c566a3ffac0771e45fdefeb3916305f321e9881027"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/webapp/diagrams/webapp-architecture.json",
+              "sha256": "c379cb4cf72ab009947f6fadd556ddd02ba99815f4ed928b479c299ed3e88b51"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/webapp/diagrams/webapp-architecture.html",
+              "sha256": "c8dcf67c9c923f97c777f2a95aaf7f50798ecd3d4dca350da477bb5b77536a05"
+            },
+            {
+              "kind": "design-validation",
+              "path": "reports/sdlc/webapp-parity-design/design-validation.md",
+              "sha256": "82229f9613752aae4133165c85c70ea9d193d1908fb29bb9e80521ceb5225fe8"
+            },
+            {
+              "kind": "artifact-receipt",
+              "path": "reports/sdlc/webapp-parity-design/diagram-delivery.json",
+              "sha256": "c481a398c4c2cadf92d61ff26b4b4a14e2ada86ade07e74314b37d32ab87ecf5"
+            },
+            {
+              "kind": "browser-evidence",
+              "path": "reports/sdlc/webapp-parity-design/diagram-browser-command.json",
+              "sha256": "727cc2c3243067e5bd67a6d609dd44e5c97edf329236881d23a58d5d51c4bef5"
+            },
+            {
+              "kind": "visual-review",
+              "path": "reports/sdlc/webapp-parity-design/diagram-handoff.json",
+              "sha256": "fe6d57bb4a1b9a3b0f732b7b95cf608f0b838e6b0634ff88d881a3f60884dc6c"
+            }
+          ],
+          "finished_at": "2026-09-24T04:03:34.404938+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+            "authority_source": "AK request for webapp planning/design and mobile-feature parity clarification, 2026-09-24",
+            "candidate": "source-baseline:87b8855f308611a07897cd3a39c45fefb3088d77; local design documents",
+            "next_action": "Continue applicable local planning stages; no application deployment.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/webapp-parity-design/triage.md",
+                "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+              },
+              {
+                "kind": "intent",
+                "path": "docs/webapp/intent.md",
+                "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/webapp-parity-design/investigation.md",
+                "sha256": "0e5502e37061179c695ec38b3fa2e0b8ce51b7f09932d6051f738c9eaa1f35fe"
+              },
+              {
+                "kind": "spec",
+                "path": "docs/webapp/specification.md",
+                "sha256": "f9aabd92540153ab5f420dd013f23dbd8f31d02c78a554687377dd1775c39204"
+              },
+              {
+                "kind": "technical-design",
+                "path": "docs/webapp/technical-design.md",
+                "sha256": "a8bdd82e99327ae745dd15c566a3ffac0771e45fdefeb3916305f321e9881027"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/webapp/diagrams/webapp-architecture.json",
+                "sha256": "c379cb4cf72ab009947f6fadd556ddd02ba99815f4ed928b479c299ed3e88b51"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/webapp/diagrams/webapp-architecture.html",
+                "sha256": "c8dcf67c9c923f97c777f2a95aaf7f50798ecd3d4dca350da477bb5b77536a05"
+              },
+              {
+                "kind": "design-validation",
+                "path": "reports/sdlc/webapp-parity-design/design-validation.md",
+                "sha256": "82229f9613752aae4133165c85c70ea9d193d1908fb29bb9e80521ceb5225fe8"
+              },
+              {
+                "kind": "artifact-receipt",
+                "path": "reports/sdlc/webapp-parity-design/diagram-delivery.json",
+                "sha256": "c481a398c4c2cadf92d61ff26b4b4a14e2ada86ade07e74314b37d32ab87ecf5"
+              },
+              {
+                "kind": "browser-evidence",
+                "path": "reports/sdlc/webapp-parity-design/diagram-browser-command.json",
+                "sha256": "727cc2c3243067e5bd67a6d609dd44e5c97edf329236881d23a58d5d51c4bef5"
+              },
+              {
+                "kind": "visual-review",
+                "path": "reports/sdlc/webapp-parity-design/diagram-handoff.json",
+                "sha256": "fe6d57bb4a1b9a3b0f732b7b95cf608f0b838e6b0634ff88d881a3f60884dc6c"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "plan",
+                "path": "docs/webapp/implementation-plan.md",
+                "sha256": "46d27be835bede6c4453a1b0dc16a8dd940c6d5c3d17e81fbb7e09f8c119cdc6"
+              },
+              {
+                "kind": "overview",
+                "path": "docs/webapp/README.md",
+                "sha256": "e0d4fdad16c1dad4b175b0cb86f4521153112a92ae80534a8428042098b16e91"
+              }
+            ],
+            "assessment": {
+              "assessor": "main-agent",
+              "summary": "Content checked for source/proposal separation, maximum functional parity and explicit platform/release limitations.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4",
+                "AC5"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "test-design": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by plan-only/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "build": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by plan-only/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "self-verification": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by plan-only/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "independent-verification": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Bounded local plan-only proposal; no runtime or external-state changes. Main checks documents and diagram; future implementation requires independent review.",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "pr-review": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by plan-only/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "correction": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "No correction requested",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "merge": {
+      "applicable": false,
+      "status": "not-applicable",
+      "reason": "Excluded by plan-only/local route",
+      "iteration_limit": 10,
+      "iterations_started": 0,
+      "history": []
+    },
+    "completion": {
+      "applicable": true,
+      "status": "complete",
+      "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+      "iteration_limit": 10,
+      "iterations_started": 1,
+      "history": [
+        {
+          "iteration": 1,
+          "started_at": "2026-09-24T04:03:34.721993+00:00",
+          "objective": "Check linked documents, feature coverage, source anchors and final design handoff",
+          "resolution": null,
+          "inputs": [
+            {
+              "kind": "triage",
+              "path": "reports/sdlc/webapp-parity-design/triage.md",
+              "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+            },
+            {
+              "kind": "intent",
+              "path": "docs/webapp/intent.md",
+              "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+            },
+            {
+              "kind": "investigation",
+              "path": "reports/sdlc/webapp-parity-design/investigation.md",
+              "sha256": "0e5502e37061179c695ec38b3fa2e0b8ce51b7f09932d6051f738c9eaa1f35fe"
+            },
+            {
+              "kind": "spec",
+              "path": "docs/webapp/specification.md",
+              "sha256": "f9aabd92540153ab5f420dd013f23dbd8f31d02c78a554687377dd1775c39204"
+            },
+            {
+              "kind": "technical-design",
+              "path": "docs/webapp/technical-design.md",
+              "sha256": "a8bdd82e99327ae745dd15c566a3ffac0771e45fdefeb3916305f321e9881027"
+            },
+            {
+              "kind": "design-source",
+              "path": "docs/webapp/diagrams/webapp-architecture.json",
+              "sha256": "c379cb4cf72ab009947f6fadd556ddd02ba99815f4ed928b479c299ed3e88b51"
+            },
+            {
+              "kind": "design-html",
+              "path": "docs/webapp/diagrams/webapp-architecture.html",
+              "sha256": "c8dcf67c9c923f97c777f2a95aaf7f50798ecd3d4dca350da477bb5b77536a05"
+            },
+            {
+              "kind": "design-validation",
+              "path": "reports/sdlc/webapp-parity-design/design-validation.md",
+              "sha256": "82229f9613752aae4133165c85c70ea9d193d1908fb29bb9e80521ceb5225fe8"
+            },
+            {
+              "kind": "artifact-receipt",
+              "path": "reports/sdlc/webapp-parity-design/diagram-delivery.json",
+              "sha256": "c481a398c4c2cadf92d61ff26b4b4a14e2ada86ade07e74314b37d32ab87ecf5"
+            },
+            {
+              "kind": "browser-evidence",
+              "path": "reports/sdlc/webapp-parity-design/diagram-browser-command.json",
+              "sha256": "727cc2c3243067e5bd67a6d609dd44e5c97edf329236881d23a58d5d51c4bef5"
+            },
+            {
+              "kind": "visual-review",
+              "path": "reports/sdlc/webapp-parity-design/diagram-handoff.json",
+              "sha256": "fe6d57bb4a1b9a3b0f732b7b95cf608f0b838e6b0634ff88d881a3f60884dc6c"
+            },
+            {
+              "kind": "plan",
+              "path": "docs/webapp/implementation-plan.md",
+              "sha256": "46d27be835bede6c4453a1b0dc16a8dd940c6d5c3d17e81fbb7e09f8c119cdc6"
+            },
+            {
+              "kind": "overview",
+              "path": "docs/webapp/README.md",
+              "sha256": "e0d4fdad16c1dad4b175b0cb86f4521153112a92ae80534a8428042098b16e91"
+            }
+          ],
+          "finished_at": "2026-09-24T04:05:42.631287+00:00",
+          "receipt": {
+            "iteration": 1,
+            "decision": "PROCEED",
+            "reason": "Inspected deliverable supports the local planning endpoint; implementation prerequisites remain explicit.",
+            "authority_source": "AK request for webapp planning/design and mobile-feature parity clarification, 2026-09-24",
+            "candidate": "source-baseline:87b8855f308611a07897cd3a39c45fefb3088d77; local design documents",
+            "next_action": "Continue applicable local planning stages; no application deployment.",
+            "inputs": [
+              {
+                "kind": "triage",
+                "path": "reports/sdlc/webapp-parity-design/triage.md",
+                "sha256": "fbaa8e67525793c45c93aa7e87b9255e70c7599c1ea9ea536cd26d98360a6bb5"
+              },
+              {
+                "kind": "intent",
+                "path": "docs/webapp/intent.md",
+                "sha256": "5035eaab9b61f7d05213a34e41d235c693221abad03c6462eefe02e27cbf1e13"
+              },
+              {
+                "kind": "investigation",
+                "path": "reports/sdlc/webapp-parity-design/investigation.md",
+                "sha256": "0e5502e37061179c695ec38b3fa2e0b8ce51b7f09932d6051f738c9eaa1f35fe"
+              },
+              {
+                "kind": "spec",
+                "path": "docs/webapp/specification.md",
+                "sha256": "f9aabd92540153ab5f420dd013f23dbd8f31d02c78a554687377dd1775c39204"
+              },
+              {
+                "kind": "technical-design",
+                "path": "docs/webapp/technical-design.md",
+                "sha256": "a8bdd82e99327ae745dd15c566a3ffac0771e45fdefeb3916305f321e9881027"
+              },
+              {
+                "kind": "design-source",
+                "path": "docs/webapp/diagrams/webapp-architecture.json",
+                "sha256": "c379cb4cf72ab009947f6fadd556ddd02ba99815f4ed928b479c299ed3e88b51"
+              },
+              {
+                "kind": "design-html",
+                "path": "docs/webapp/diagrams/webapp-architecture.html",
+                "sha256": "c8dcf67c9c923f97c777f2a95aaf7f50798ecd3d4dca350da477bb5b77536a05"
+              },
+              {
+                "kind": "design-validation",
+                "path": "reports/sdlc/webapp-parity-design/design-validation.md",
+                "sha256": "82229f9613752aae4133165c85c70ea9d193d1908fb29bb9e80521ceb5225fe8"
+              },
+              {
+                "kind": "artifact-receipt",
+                "path": "reports/sdlc/webapp-parity-design/diagram-delivery.json",
+                "sha256": "c481a398c4c2cadf92d61ff26b4b4a14e2ada86ade07e74314b37d32ab87ecf5"
+              },
+              {
+                "kind": "browser-evidence",
+                "path": "reports/sdlc/webapp-parity-design/diagram-browser-command.json",
+                "sha256": "727cc2c3243067e5bd67a6d609dd44e5c97edf329236881d23a58d5d51c4bef5"
+              },
+              {
+                "kind": "visual-review",
+                "path": "reports/sdlc/webapp-parity-design/diagram-handoff.json",
+                "sha256": "fe6d57bb4a1b9a3b0f732b7b95cf608f0b838e6b0634ff88d881a3f60884dc6c"
+              },
+              {
+                "kind": "plan",
+                "path": "docs/webapp/implementation-plan.md",
+                "sha256": "46d27be835bede6c4453a1b0dc16a8dd940c6d5c3d17e81fbb7e09f8c119cdc6"
+              },
+              {
+                "kind": "overview",
+                "path": "docs/webapp/README.md",
+                "sha256": "e0d4fdad16c1dad4b175b0cb86f4521153112a92ae80534a8428042098b16e91"
+              }
+            ],
+            "outputs": [
+              {
+                "kind": "completion",
+                "path": "reports/sdlc/webapp-parity-design/completion.md",
+                "sha256": "049df2194ec407fbca667ef92cc69dcbc196bdbc7f34a06788759b875de50bdb"
+              },
+              {
+                "kind": "document-check",
+                "path": "reports/sdlc/webapp-parity-design/document-check-results.json",
+                "sha256": "f441e59b8d4f23f84970961350045d4747a237939136ed72657338188f56346a"
+              },
+              {
+                "kind": "checker",
+                "path": "reports/sdlc/webapp-parity-design/check-documents.py",
+                "sha256": "55a3fc7d52265481e4e154047b0a884a806d97cd062caaeb4ccfbe58eb874399"
+              }
+            ],
+            "assessment": {
+              "assessor": "main-agent",
+              "summary": "Content checked for source/proposal separation, maximum functional parity and explicit platform/release limitations.",
+              "criteria": [
+                "AC1",
+                "AC2",
+                "AC3",
+                "AC4",
+                "AC5"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

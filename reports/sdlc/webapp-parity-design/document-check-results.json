@@ -1,0 +1,97 @@
+{
+  "scope": "Document/source/artifact checks only; no app tests or live API calls.",
+  "passed": true,
+  "checks": [
+    {
+      "name": "local-links",
+      "passed": true,
+      "detail": {
+        "checked": 54,
+        "broken": []
+      }
+    },
+    {
+      "name": "legacy-screen-coverage",
+      "passed": true,
+      "detail": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S14",
+        "S15",
+        "S16"
+      ]
+    },
+    {
+      "name": "native-and-commercial-boundaries",
+      "passed": true,
+      "detail": "Screen and platform exceptions are explicit; main agent reviewed their meaning."
+    },
+    {
+      "name": "current-source-anchors",
+      "passed": true,
+      "detail": {
+        "files": 8,
+        "missing": []
+      }
+    },
+    {
+      "name": "diagram-specification-identity",
+      "passed": true,
+      "detail": {
+        "sha256": "c379cb4cf72ab009947f6fadd556ddd02ba99815f4ed928b479c299ed3e88b51",
+        "bytes": 4796
+      }
+    },
+    {
+      "name": "diagram-artifact-identity",
+      "passed": true,
+      "detail": {
+        "sha256": "c8dcf67c9c923f97c777f2a95aaf7f50798ecd3d4dca350da477bb5b77536a05",
+        "bytes": 811453
+      }
+    },
+    {
+      "name": "showcase-artifact",
+      "passed": true,
+      "detail": {
+        "checksPassed": 9,
+        "checkCount": 9,
+        "compositionProfile": "showcase",
+        "compositionStatus": "pass",
+        "errors": 0,
+        "warnings": 0
+      }
+    },
+    {
+      "name": "artifact-bound-browser-evidence",
+      "passed": true,
+      "detail": "Four desktop sizes contained; four endpoint light/dark captures."
+    },
+    {
+      "name": "source-baseline",
+      "passed": true,
+      "detail": "87b8855f308611a07897cd3a39c45fefb3088d77"
+    },
+    {
+      "name": "tracked-diff-whitespace",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "root-discovery-link",
+      "passed": true,
+      "detail": "README links the proposal."
+    }
+  ]
+}

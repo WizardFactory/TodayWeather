@@ -1,0 +1,32 @@
+{
+  "type": "architecture",
+  "artifact_checks": {
+    "passed": 9,
+    "total": 9,
+    "errors": 0,
+    "warnings": 0
+  },
+  "browser_receipt": "diagram-browser.json",
+  "browser_status": "pass",
+  "visual_review": {
+    "assessor": "main /root, image-capable",
+    "status": "pass",
+    "inspected": [
+      "1440x900 light",
+      "1440x900 dark",
+      "2048x1320 light",
+      "2048x1320 dark"
+    ],
+    "observed": "Connected routes and semantic labels are legible without overlaps; cards fit; large viewport uses available height. English authored content and viewer match repository language."
+  },
+  "specification": {
+    "path": "docs/webapp/diagrams/webapp-implementation.json",
+    "sha256": "26aa6fe3e8f7d4ac7b87130bf8b579c8cf158dbb9480d869388c41e7e8501b63",
+    "bytes": 4708
+  },
+  "artifact": {
+    "path": "docs/webapp/diagrams/webapp-implementation.html",
+    "sha256": "1d20339a0d2b75864f24c1322c33e469eb4c2b90a72aa24c6e910b26ed4485ab",
+    "bytes": 810540
+  }
+}

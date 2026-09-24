@@ -1,0 +1,13 @@
+
+> todayweather-web@0.1.0 test
+> vitest run
+
+
+ RUN  v5.0.1 /root/.paseo/worktrees/08mqediz/shiny-elephant
+
+
+ Test Files  4 passed (4)
+      Tests  27 passed (27)
+   Start at  07:43:57
+   Duration  643ms (transform 62%, import 18%, tests 18%, worker 2%)
+

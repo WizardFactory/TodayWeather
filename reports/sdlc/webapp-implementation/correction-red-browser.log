@@ -1,0 +1,153 @@
+
+> todayweather-web@0.1.0 test:e2e
+> playwright test --grep immediate search|late geolocation|corrupt offline
+
+[WebServer] (node:3704477) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:3704485) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 web/e2e/web.spec.ts:139:1 › immediate search submission selects the submitted city (11.3s)
+(node:3704663) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 web/e2e/web.spec.ts:152:1 › late geolocation preserves newly added favorites and settings (1.9s)
+(node:3704792) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 web/e2e/web.spec.ts:186:3 › corrupt offline snapshot recovers safely: missing timestamp (11.6s)
+(node:3704936) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  4 web/e2e/web.spec.ts:186:3 › corrupt offline snapshot recovers safely: invalid hourly array (11.9s)
+
+
+  1) web/e2e/web.spec.ts:139:1 › immediate search submission selects the submitted city ────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: '부산', exact: true })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: '부산', exact: true }) with timeout 10000ms
+      - waiting for getByRole('heading', { name: '부산', exact: true })
+
+
+      148 |   await expect(
+      149 |     page.getByRole("heading", { name: "부산", exact: true }),
+    > 150 |   ).toBeVisible();
+          |     ^
+      151 | });
+      152 | test("late geolocation preserves newly added favorites and settings", async ({
+      153 |   page,
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/web.spec.ts:150:5
+
+    Error Context: test-results/web-immediate-search-submission-selects-the-submitted-city/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/web-immediate-search-submission-selects-the-submitted-city/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/web-immediate-search-submission-selects-the-submitted-city/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) web/e2e/web.spec.ts:152:1 › late geolocation preserves newly added favorites and settings ─────
+
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected value: "busan"
+    Received array: ["seoul"]
+
+      179 |     JSON.parse(localStorage.getItem("tw.web.v1.preferences")!),
+      180 |   );
+    > 181 |   expect(saved.places.map((p: any) => p.id)).toContain("busan");
+          |                                              ^
+      182 |   expect(saved.settings.units.temperatureUnit).toBe("F");
+      183 | });
+      184 |
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/web.spec.ts:181:46
+
+    Error Context: test-results/web-late-geolocation-prese-bb010-dded-favorites-and-settings/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/web-late-geolocation-prese-bb010-dded-favorites-and-settings/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/web-late-geolocation-prese-bb010-dded-favorites-and-settings/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) web/e2e/web.spec.ts:186:3 › corrupt offline snapshot recovers safely: missing timestamp ───────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: '자료를 불러오지 못했어요' })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: '자료를 불러오지 못했어요' }) with timeout 10000ms
+      - waiting for getByRole('heading', { name: '자료를 불러오지 못했어요' })
+
+
+      223 |     await expect(
+      224 |       page.getByRole("heading", { name: "자료를 불러오지 못했어요" }),
+    > 225 |     ).toBeVisible();
+          |       ^
+      226 |     await expect(
+      227 |       page.getByText("Unexpected Application Error!", { exact: false }),
+      228 |     ).toHaveCount(0);
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/web.spec.ts:225:7
+
+    Error Context: test-results/web-corrupt-offline-snapsh-0caa7-rs-safely-missing-timestamp/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/web-corrupt-offline-snapsh-0caa7-rs-safely-missing-timestamp/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/web-corrupt-offline-snapsh-0caa7-rs-safely-missing-timestamp/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) web/e2e/web.spec.ts:186:3 › corrupt offline snapshot recovers safely: invalid hourly array ────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: '자료를 불러오지 못했어요' })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: '자료를 불러오지 못했어요' }) with timeout 10000ms
+      - waiting for getByRole('heading', { name: '자료를 불러오지 못했어요' })
+
+
+      223 |     await expect(
+      224 |       page.getByRole("heading", { name: "자료를 불러오지 못했어요" }),
+    > 225 |     ).toBeVisible();
+          |       ^
+      226 |     await expect(
+      227 |       page.getByText("Unexpected Application Error!", { exact: false }),
+      228 |     ).toHaveCount(0);
+        at /root/.paseo/worktrees/08mqediz/shiny-elephant/web/e2e/web.spec.ts:225:7
+
+    Error Context: test-results/web-corrupt-offline-snapsh-607c1-safely-invalid-hourly-array/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/web-corrupt-offline-snapsh-607c1-safely-invalid-hourly-array/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/web-corrupt-offline-snapsh-607c1-safely-invalid-hourly-array/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4 failed
+    web/e2e/web.spec.ts:139:1 › immediate search submission selects the submitted city ─────────────
+    web/e2e/web.spec.ts:152:1 › late geolocation preserves newly added favorites and settings ──────
+    web/e2e/web.spec.ts:186:3 › corrupt offline snapshot recovers safely: missing timestamp ────────
+    web/e2e/web.spec.ts:186:3 › corrupt offline snapshot recovers safely: invalid hourly array ─────
