@@ -2536,4 +2536,95 @@ Manager.prototype.startMinuteScrape = function (options) {
     return self.minuteScrapeHandle;
 };
 
+/**
+ * Independent KMA AWS hourly-observation collector (AWS 60-minute table + city observation page).
+ * Runs `scrape.getStnHourlyWeather()` at fixed minutes past each hour, separate from the gather
+ * task queue and from startScrape. One run in flight at a time. The KMA hourly table for HH:00 is
+ * usually complete a few minutes after the hour, so the run minutes retry within the hour.
+ * Enabled by KMA_STN_HOURLY_ENABLED=true; run minutes via KMA_STN_HOURLY_MINUTES (default "4,9,15,30").
+ * @param {object} [options] test injection: {scrape, setInterval, now, runImmediately}
+ * @returns {object} handle {stop, isRunning, tick, run}
+ */
+Manager.prototype.startHourlyScrape = function (options) {
+    var self = this;
+    options = options || {};
+
+    var scrape = options.scrape;
+    if (!scrape) {
+        var Scrape = require('../lib/kmaScraper');
+        scrape = new Scrape();
+    }
+
+    var minutes = String(process.env.KMA_STN_HOURLY_MINUTES || '4,9,15,30')
+        .split(',')
+        .map(function (m) { return parseInt(m, 10); })
+        .filter(function (m) { return !isNaN(m) && m >= 0 && m < 60; });
+    if (minutes.length === 0) {
+        minutes = [4, 9, 15, 30];
+    }
+    var now = options.now || function () { return new Date(); };
+    var schedule = options.setInterval || setInterval;
+    var inFlight = false;
+    var lastRunMinuteKey = null;
+
+    function run() {
+        if (inFlight) {
+            log.warn('kma stn hourly: previous run still running, skip');
+            return;
+        }
+        inFlight = true;
+        var startedAt = now();
+        log.info('request kma stn hourly time=' + startedAt);
+        try {
+            scrape.getStnHourlyWeather(undefined, function (err, results) {
+                inFlight = false;
+                if (err) {
+                    if (err === 'skip') {
+                        log.info('stn hourly weather info is already updated');
+                    }
+                    else {
+                        log.error('kma stn hourly failed: ' + (err.message || err));
+                    }
+                    return;
+                }
+                var count = Array.isArray(results) ? results.length : 0;
+                log.info('kma stn hourly done stations=' + count + ' elapsedMs=' + (now().getTime() - startedAt.getTime()));
+            });
+        }
+        catch (e) {
+            inFlight = false;
+            log.error('kma stn hourly threw: ' + e.message);
+        }
+    }
+
+    function tick() {
+        var d = now();
+        var minute = d.getUTCMinutes();
+        if (minutes.indexOf(minute) === -1) {
+            return false;
+        }
+        var key = d.getUTCFullYear() + '-' + d.getUTCMonth() + '-' + d.getUTCDate() + '-' + d.getUTCHours() + '-' + minute;
+        if (key === lastRunMinuteKey) {
+            return false;
+        }
+        lastRunMinuteKey = key;
+        run();
+        return true;
+    }
+
+    log.info('start kma stn hourly collector minutes=' + minutes.join(','));
+    if (options.runImmediately) {
+        run();
+    }
+    var timer = schedule(tick, 30 * 1000);
+
+    self.hourlyScrapeHandle = {
+        stop: function () { clearInterval(timer); },
+        isRunning: function () { return inFlight; },
+        tick: tick,
+        run: run
+    };
+    return self.hourlyScrapeHandle;
+};
+
 module.exports = Manager;

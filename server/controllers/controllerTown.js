@@ -1772,6 +1772,32 @@ function ControllerTown() {
     };
 
     /**
+     * Whether an AWS/city observation value is usable for replacing a current-weather field.
+     * KMA emits 0 for t1h/vec/wsd on sensor errors and negative sentinels elsewhere; a value
+     * that fails this check must never overwrite a valid API value.
+     * @param {string} key
+     * @param {*} value
+     * @returns {boolean}
+     */
+    this._isValidObservation = function (key, value) {
+        if (typeof value !== 'number' || !isFinite(value)) {
+            return false;
+        }
+        switch (key) {
+            case 't1h':
+                return value > -50 && value < 60;
+            case 'reh':
+                return value >= 0 && value <= 100;
+            case 'vec':
+                return value >= 0 && value <= 360;
+            case 'wsd':
+                return value >= 0 && value < 100;
+            default:
+                return value >= 0;
+        }
+    };
+
+    /**
      * req.current에만 적용하고 currentlist에는 적용안함.
      * req.current에 liveTime이라고 새로운 시간 정보를 추가함.
      * @param req
@@ -1849,22 +1875,28 @@ function ControllerTown() {
 
                     reqCurrent.dongnae = JSON.parse(JSON.stringify(reqCurrent));
 
+                    // Fields the minute/hourly observation may replace when it is newer than the
+                    // current-weather publication (issue #2573 §3). Anything else keeps the old
+                    // behavior: fill only when the API value is missing or a sentinel.
+                    var observedFields = {t1h: true, reh: true, vec: true, wsd: true};
+
                     for (var key in stnWeatherInfo) {
+                        var obs = stnWeatherInfo[key];
                         if (reqCurrent[key] == undefined) {
-                            reqCurrent[key] = stnWeatherInfo[key];
+                            reqCurrent[key] = obs;
                         }
                         else if (key === 't1h') {
-                            if (reqCurrent[key] <= -50) {
-                                reqCurrent[key] = stnWeatherInfo[key];
+                            if (reqCurrent[key] <= -50 || (stnFirst && self._isValidObservation(key, obs))) {
+                                reqCurrent[key] = obs;
                             }
                         }
                         else if (key === 'rn1' || key === 'reh' || key === 'vec' || key === 'wsd') {
-                            if (reqCurrent[key] < 0) {
-                                reqCurrent[key] = stnWeatherInfo[key];
+                            if (reqCurrent[key] < 0 || (stnFirst && observedFields[key] && self._isValidObservation(key, obs))) {
+                                reqCurrent[key] = obs;
                             }
                         }
                         else {
-                            reqCurrent[key] = stnWeatherInfo[key];
+                            reqCurrent[key] = obs;
                         }
                     }
 

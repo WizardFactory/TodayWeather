@@ -142,10 +142,13 @@ if (config.mode === 'scrape' || config.mode === 'local') {
     manager.startScrape();
 }
 
-// Opt-in minute-observation collector for the gather worker (see issue #2573).
+// Opt-in observation collectors for the gather worker (see issue #2573).
 // Off by default; startScrape already covers scrape/local modes.
 if (process.env.KMA_STN_MINUTE_ENABLED === 'true' && config.mode === 'gather') {
     manager.startMinuteScrape();
+}
+if (process.env.KMA_STN_HOURLY_ENABLED === 'true' && config.mode === 'gather') {
+    manager.startHourlyScrape();
 }
 
 // catch 404 and forward to error handler
