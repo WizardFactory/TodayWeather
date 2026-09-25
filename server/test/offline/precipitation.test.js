@@ -193,6 +193,9 @@ test('AC6 strings come from the amount or category, not the retired table', () =
     const dry = {pty: 1, r06: 0, s06: 0};
     town24h._makeStrForKma(dry, {__: s => s});
     assert.equal(dry.r06Str, '0mm'); assert.equal('s06Str' in dry, false, 'no snow text for rain');
+    const observed = {pty: 0, rn1: 9}; // past row: observed rn1, no kept total, not precipitating now
+    town24h._makeStrForKma(observed, {__: s => s});
+    assert.equal('rn1Str' in observed, false, 'no string for a converted observation without pty');
     const p = precipitation();
     const approx = {pty: 1};
     p.assign(approx, 'r06', p.total([p.parse('1mm 미만', 'mm'), p.parse('30.0~50.0mm', 'mm'), p.parse('2mm', 'mm')]));

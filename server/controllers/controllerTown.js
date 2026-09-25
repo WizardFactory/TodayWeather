@@ -3795,12 +3795,17 @@ ControllerTown.prototype._makeStrForKma = function(data, res) {
     // Amount strings come from the parsed category bounds kept with the row, in the source
     // unit, so unit conversion does not change them (#2583). Present for a positive amount;
     // a zero amount is shown only for the precipitation type of pty (rain 1,2,4,5,6; snow 2,3,6,7).
+    // A value without a kept total (observed rn1) is already unit-converted: as before, it
+    // gets a string only while it precipitates.
     [['r06', 'mm', [1, 2, 4, 5, 6]], ['s06', 'cm', [2, 3, 6, 7]], ['rn1', 'mm', [1, 2, 3, 4, 5, 6, 7]]].forEach(function (rule) {
         var field = rule[0];
         if (!data.hasOwnProperty(field)) {
             return;
         }
-        var total = precipitation.get(data, field) || precipitation.parse(data[field], rule[1]);
+        var total = precipitation.get(data, field);
+        if (!total && data.pty > 0) {
+            total = precipitation.parse(data[field], rule[1]);
+        }
         if (total && (total.amount > 0 || rule[2].indexOf(data.pty) !== -1)) {
             data[field + 'Str'] = precipitation.format(total, rule[1]);
         }
