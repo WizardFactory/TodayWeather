@@ -49,3 +49,14 @@ Revert the PR commits. There is no data migration. Blast radius: every KMA curre
 | docs/architecture/mobile-api.md, operations note, test README | exact fallback scope and normalization list; `, ` wording | R6 |
 
 Order: tests first (Red on the r1 candidate, commit cee99b8d source) → source change → Green → `test:offline` → smokes → docs → CI. Risk: pty 4–7 previously displayed `맑음`; now it shows precipitation text. There are no other consumers of `updateWeather`. Rollback: revert the r2 commit.
+
+## Amendment r3 (2026-09-25): base refresh
+| File | Change | Req |
+|---|---|---|
+| server/test/offline/run.js | conflict resolution (keep both test lists), done in merge 054275c3 | R5 |
+| server/test/offline/weather-desc.test.js | add `보통비단속적` → 20 | R1 |
+| server/test/offline/weather-desc-response-smoke.js | add a scenario with no station text (the hourly-missing path) and pty 5 | R3, R5 |
+| docs/architecture/mobile-api.md, operations note | #2573 cross-links, precise smoke coverage and pty/suffix notes | R6 |
+
+Order: tests first, then Red on the merged tree (expected: the new cases pass already, because the behaviour exists; see test-plan r3), docs, full `test:offline` with master's new tests, smokes, CI.
+Risk: low. Only tests and docs change; the source is unchanged since r2 apart from the #2574 merge.

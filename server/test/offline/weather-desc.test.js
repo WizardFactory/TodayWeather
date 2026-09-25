@@ -33,7 +33,7 @@ const Town24h = load('controllers/controllerTown24h.js', {'../controllers/contro
 test('modern KMA currentweather.jsp wording maps to legacy weather types', () => {
     const cases = [
         // observed on the service host 2026-09-25
-        ['비끝', 28, '비끝'], ['약한비연속적', 19, '약한비'], ['약한비단속적', 18, '약한비단속'],
+        ['비끝', 28, '비끝'], ['약한비연속적', 19, '약한비'], ['약한비단속적', 18, '약한비단속'], ['보통비단속적', 20, '비단속'],
         ['약한비', 19, '약한비'], ['구름적음', 1, '구름적음'],
         // same suffix family
         ['비연속적', 21, '비'], ['강한비단속적', 22, '강한비단속'], ['비단속', 20, '비단속'],

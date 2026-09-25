@@ -86,17 +86,18 @@ KMA output includes `source: 'KMA'`, region/city/town names, publication fields,
 
 ### Current weather text and summary (#2576)
 
-`getKmaStnMinuteWeather` merges KMA station and city observations into `current`. `makeWeatherType` maps the station weather text to `weatherType` after `normalizeKmaWeatherStr` rewrites the 2021+ `currentweather.jsp` wording to the legacy vocabulary. The rewrites are: suffix `연속적`→`계속` and `단속적`→`단속`; `비끝`/`눈끝`→`비끝남`/`눈끝남`; `안개`→`안개변화무`. Rain or snow with only an intensity or only a suffix gets `보통`/`계속` (bare `비`/`눈` stay KMA AWS types 65/66). Drizzle and showers get `보통` when no intensity is given. Sleet maps to `약진눈깨비`/`강진눈깨비`/`진눈깨비`. `구름적음` maps to type 1. Text that still cannot be mapped yields `-1` and logs `Fail weatherStr=`.
+`getKmaStnMinuteWeather` merges KMA station and city observations into `current`. `makeWeatherType` maps the station weather text to `weatherType` after `normalizeKmaWeatherStr` rewrites the 2021+ `currentweather.jsp` wording to the legacy vocabulary. The rewrites are: suffix `연속적`→`계속` and `단속적`→`단속`; `비끝`/`눈끝`→`비끝남`/`눈끝남`; `안개`→`안개변화무`. Rain or snow with only an intensity or only a suffix gets `보통`/`계속` (bare `비`/`눈` stay KMA AWS types 65/66). Drizzle and showers get `보통` when no intensity is given and drop a `계속`/`단속` suffix. Sleet maps to `약진눈깨비`/`강진눈깨비`/`진눈깨비`. `구름적음` maps to type 1. Text that still cannot be mapped yields `-1` and logs `Fail weatherStr=`.
 
 `updateWeather` treats `-1` like a missing type:
 
 - With precipitation (pty ≥ 1), types 0–12 are replaced from `pty`: 1 `비`/65, 2 `진눈깨비`/64, 3 `눈`/66, short-term 4 소나기 → `소나기`/25, and nowcast 5 빗방울 → `약한비`/19, 6 빗방울눈날림 → `약진눈깨비`/29, 7 눈날림 → `약한눈`/33.
 - Without precipitation (pty 0), `sky` 0–4 gives `맑음`/`구름조금`/`구름많음`/`흐림`.
-- A missing or negative pty, or pty 0 with a sky outside 0–4, leaves `-1`.
+- A missing or negative pty, or pty 0 with a sky outside 0–4, leaves `-1`. A pty ≥ 1 outside the KMA codes 1–7 keeps type 0 (`맑음`).
+- The same fallback applies when there is no station text at all: the city page cell is blank, or hourly station rows are missing and `hourlyMissing` is set ([#2573](#fresh-station-observations-in-current-weather-2573)). In that case `weatherType` stays undefined.
 
 `getWeatherStr` then replaces `current.weather` with the localized label.
 
-`getWeatherStr` returns `""`, never `undefined`, for a missing, negative or out-of-range type. As a result, `current.weather` and world `desc` can be an empty string. `makeSummary` and `makeSummaryWeather` add the weather item only when `weatherType >= 0` and the text is non-empty, so the summary cannot end in `, undefined`. The regression is `node server/test/offline/weather-desc.test.js` (also part of `npm run test:offline`). `weather-desc-response-smoke.js` covers the same paths through the actual v000903 route.
+`getWeatherStr` returns `""`, never `undefined`, for a missing, negative or out-of-range type. As a result, `current.weather` and world `desc` can be an empty string. `makeSummary` and `makeSummaryWeather` add the weather item only when `weatherType >= 0` and the text is non-empty, so the summary cannot end in `, undefined`. The regression is `node server/test/offline/weather-desc.test.js` (also part of `npm run test:offline`). `weather-desc-response-smoke.js` drives the actual v000903 route through the observed wording and through the `-1` fallbacks via sky, pty 1 and nowcast pty 5. It also covers the case with no station text plus pty 5, and an invalid sky that gives `weather ""`. PTY 4, 6 and 7 are covered by the unit test only.
 
 ### RSS fallback contract (issue #2554 local repair)
 

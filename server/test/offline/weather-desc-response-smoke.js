@@ -16,6 +16,8 @@ const cases = [
   {name: 'unmapped-rain-text-falls-back-to-pty', weather: '비조금', type: 65, text: 'LOC_RAIN'},
   // -1 with stored nowcast PTY 5 (빗방울) that station text does not rewrite.
   {name: 'unmapped-with-nowcast-pty5', weather: '빗방울', pty: 5, type: 19, text: 'LOC_LIGHT_RAIN'},
+  // No station text (city page blank, or hourly rows missing since #2573) with nowcast PTY 5.
+  {name: 'no-station-text-with-nowcast-pty5', stnWeather: {hourlyMissing: true}, pty: 5, type: 19, text: 'LOC_LIGHT_RAIN'},
   // -1 with no usable sky: text stays empty and both summaries omit the weather item.
   {name: 'unmapped-with-invalid-sky', weather: '없는날씨', sky: -1, type: -1, text: ''},
 ];
@@ -30,7 +32,7 @@ async function main() {
       if (c.sky !== undefined) row.sky = c.sky;
     }
     if (c.sky !== undefined) for (const row of fixture.shortest) row.sky = c.sky;
-    fixture.stnWeather = {weather: c.weather};
+    fixture.stnWeather = c.stnWeather || {weather: c.weather};
     const env = createHarness(version, fixture);
     const {body, logs} = await env.request({temperatureUnit: 'C', windSpeedUnit: 'm/s'});
     const cur = body.current;
