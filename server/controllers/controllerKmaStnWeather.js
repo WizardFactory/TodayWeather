@@ -22,8 +22,8 @@ function controllerKmaStnWeather() {
 
 controllerKmaStnWeather.updateWeather = function (current) {
     if (current.pty >= 1) {
-        if (current.weatherType == undefined) {
-            log.warn('weather type is undefined so set by pty');
+        if (current.weatherType == undefined || current.weatherType < 0) {
+            log.warn('weather type is unknown so set by pty');
             current.weatherType = 0;
         }
 
@@ -52,6 +52,23 @@ controllerKmaStnWeather.updateWeather = function (current) {
                else if (current.pty == 3) {
                    current.weather = '눈';
                    current.weatherType = 66;
+               }
+               //단기 소나기(4), 초단기 빗방울(5), 빗방울눈날림(6), 눈날림(7)
+               else if (current.pty == 4) {
+                   current.weather = '소나기';
+                   current.weatherType = 25;
+               }
+               else if (current.pty == 5) {
+                   current.weather = '약한비';
+                   current.weatherType = 19;
+               }
+               else if (current.pty == 6) {
+                   current.weather = '약진눈깨비';
+                   current.weatherType = 29;
+               }
+               else if (current.pty == 7) {
+                   current.weather = '약한눈';
+                   current.weatherType = 33;
                }
                break;
            case 17:
@@ -88,7 +105,7 @@ controllerKmaStnWeather.updateWeather = function (current) {
        }
     }
     else if (current.pty === 0) {
-        if (current.weatherType == undefined) {
+        if (current.weatherType == undefined || current.weatherType < 0) {
             switch (current.sky) {
                 case 0:
                 case 1:
@@ -1114,7 +1131,12 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
                 fromTime.setHours(fromTime.getHours()-2);
                 self.findHourlies2(stn.stnId, fromTime, function (err, hourlyWeatherList) {
                     if (err)  {
-                        return pCallback(err);
+                        // Hourly rows are enrichment (weather text, cloud, visibility...). Minute
+                        // observations alone are enough for the fast current-weather update, so
+                        // continue without them instead of aborting (issue #2573 §3).
+                        log.warn('stn hourly unavailable, continuing with minute only: ' + err.message);
+                        stnWeather.hourlyMissing = true;
+                        return pCallback(null, stn);
                     }
                     var hourlyWeather = hourlyWeatherList[hourlyWeatherList.length-1];
                     for (var key in hourlyWeather) {

@@ -84,6 +84,21 @@ The important ordering constraints are documented in the router itself: current 
 
 KMA output includes `source: 'KMA'`, region/city/town names, publication fields, `short`, `shortest`, `current`, `midData`, `dailySummary`, `airInfoList` or `airInfo`, requested `units`, and a rounded `location` for applicable versions. Fields are conditional, not guaranteed by a formal schema. `ControllerTown24h.sendResult()` simply calls `res.json(req.result)`; it does not set a whole-weather cache TTL. `/kma/special` separately sets `Cache-Control: max-age=300`.
 
+### Current weather text and summary (#2576)
+
+`getKmaStnMinuteWeather` merges KMA station and city observations into `current`. `makeWeatherType` maps the station weather text to `weatherType` after `normalizeKmaWeatherStr` rewrites the 2021+ `currentweather.jsp` wording to the legacy vocabulary. The rewrites are: suffix `연속적`→`계속` and `단속적`→`단속`; `비끝`/`눈끝`→`비끝남`/`눈끝남`; `안개`→`안개변화무`. Rain or snow with only an intensity or only a suffix gets `보통`/`계속` (bare `비`/`눈` stay KMA AWS types 65/66). Drizzle and showers get `보통` when no intensity is given and drop a `계속`/`단속` suffix. Sleet maps to `약진눈깨비`/`강진눈깨비`/`진눈깨비`. `구름적음` maps to type 1. Text that still cannot be mapped yields `-1` and logs `Fail weatherStr=`.
+
+`updateWeather` treats `-1` like a missing type:
+
+- With precipitation (pty ≥ 1), types 0–12 are replaced from `pty`: 1 `비`/65, 2 `진눈깨비`/64, 3 `눈`/66, short-term 4 소나기 → `소나기`/25, and nowcast 5 빗방울 → `약한비`/19, 6 빗방울눈날림 → `약진눈깨비`/29, 7 눈날림 → `약한눈`/33.
+- Without precipitation (pty 0), `sky` 0–4 gives `맑음`/`구름조금`/`구름많음`/`흐림`.
+- A missing or negative pty, or pty 0 with a sky outside 0–4, leaves `-1`. A pty ≥ 1 outside the KMA codes 1–7 keeps type 0 (`맑음`).
+- The same fallback applies when there is no station text at all: the city page cell is blank, or hourly station rows are missing and `hourlyMissing` is set ([#2573](#fresh-station-observations-in-current-weather-2573)). In that case `weatherType` stays undefined.
+
+`getWeatherStr` then replaces `current.weather` with the localized label.
+
+`getWeatherStr` returns `""`, never `undefined`, for a missing, negative or out-of-range type. As a result, `current.weather` and world `desc` can be an empty string. `makeSummary` and `makeSummaryWeather` add the weather item only when `weatherType >= 0` and the text is non-empty, so the summary cannot end in `, undefined`. The regression is `node server/test/offline/weather-desc.test.js` (also part of `npm run test:offline`). `weather-desc-response-smoke.js` drives the actual v000903 route through the observed wording and through the `-1` fallbacks via sky, pty 1 and nowcast pty 5. It also covers the case with no station text plus pty 5, and an invalid sky that gives `weather ""`. PTY 4, 6 and 7 are covered by the unit test only.
+
 ### RSS fallback contract (issue #2554 local repair)
 
 `getShortRss` first requires an independently valid RSS publication aged 0–24 hours, then compares normalized RSS and usable base short publication timestamps before matching strictly future KST forecast slots. Older RSS is skipped; equal timestamps fill unusable base values; newer RSS replaces selected fields only when the corresponding RSS source is usable. The first RSS slot is included when it is future, including a single-slot result. Date/time matching happens before `convert0Hto24H`, so next-day midnight uses `YYYYMMDD0000` at this boundary.
@@ -93,6 +108,10 @@ Both DB versions project `ws` and `wd`. [Wind normalization](weather-collection.
 Later observation and shortest-forecast merges can still supersede RSS values. `shortRssPubDate` records the accepted RSS publication, including equal publication or a result with no matching future slot; it does not prove every response field came from RSS. `currentPubDate` and `shortestPubDate` retain separate freshness meanings. This repair changes neither route ordering nor requested-unit conversion.
 
 Local checks run with `node server/test/offline/rss-wind.test.js` (Node 18+; no DB/provider access). See the [verification record](../../reports/sdlc/issue-2554/self-verification.md) for actual response-path smoke coverage and limitations. No production restart/deployment is part of this change; origin/CDN comparisons must follow a separately approved deployment. Unrelated Jeju HTTP 500 and legacy historical placeholders are not explained by this patch.
+
+### Current air summary (issue #2578)
+
+`getSummaryAfterUnitConverter` fills `current.summaryWeather`, `current.summaryAir` and the combined `current.summary`; the app shows the first two as the lines under the temperature. `summaryAir` is built only from pollutant and integrated-index grades in `current.arpltn`. `getKeco` leaves `arpltn` absent when no nearby AirKorea station has an observation within eight hours of the request, and every station is compared with that same threshold. `makeSummaryAir` then returns an empty string, and `getSummaryAfterUnitConverter` (and the world-weather `ControllerWWUnits.makeSummary`) omit `summaryAir` from the response. Installed app share text checks `hasOwnProperty('summaryAir')`, so an empty string would add a blank line; the app view hides the line either way (`ng-if="summaryAir"`). Weather or life-index grades on `current` (for example `wsdGrade`) are never treated as air grades, and the combined `summary` does not write air fields onto `current`. AirKorea `dataTime` is still parsed in the host timezone, so the window is wider on a UTC host. Sources: [summary builders](../../server/controllers/controllerTown24h.js), [combined summary](../../server/controllers/controllerTown.js), [AirKorea merge](../../server/controllers/kecoController.js); checks: `air-summary.test.js` and `air-summary-smoke.js` under `server/test/offline`.
 
 ## World-weather API middleware in order
 
@@ -164,3 +183,7 @@ The daily merge runs after existing short/observation composition and before uni
 [Recovery diagram](diagrams/historical-observations.html) · [Operator/test contract](../../reports/sdlc/issue-2564/operator-contract.md). Isolated local tests cover real Mongo/loopback HTTP plus actual route and shared client parsers; native mobile runtime and production recovery are separate operator checks.
 
 Actual-data browser validation found that legacy charts print negative rain sentinels as `-1mm`. Final hourly response projection now omits invalid rain fields on rows carrying historical recovery provenance, after internal aggregation/unit conversion; valid zero/measured rain and unrelated rows are preserved. No client update is required for this correction. Internal sentinels remain unchanged, and `historyStatus` still reports missing fields.
+
+## Fresh station observations in current weather (#2573)
+
+`getKmaStnMinuteWeather` no longer depends on recent hourly station rows. When `findHourlies2` finds none, `getStnHourlyAndMinRns` marks `hourlyMissing` and still reads minute observations. If the station observation is newer than `currentPubDate`, `t1h`, `reh`, `vec` and `wsd` are replaced by values that pass `_isValidObservation` range checks. Older observations only fill missing or sentinel values, as before. `rn1`, cloud and weather handling are unchanged. The API values before the merge remain in `current.dongnae`, and `liveTime` carries the observation time. This path has no feature flag. Cached responses add delay: the CloudFront default behavior (300–600 s) for direct `/v000903/kma/...` requests, and the weather Lambda's `max-age=300` for the app's `/weather/*` path. See the [operator runbook](../operations/kma-station-observations.md).

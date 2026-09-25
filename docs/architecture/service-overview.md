@@ -40,7 +40,7 @@ The [configuration](../../server/config/config.js) defaults to `SERVER_MODE=loca
 | Mode | HTTP routes | Automatically started background work |
 | --- | --- | --- |
 | `local` (default) | All normal mounts | `startManager()` and `startScrape()` |
-| `gather` | All normal mounts | `startManager()`; listener timeout extended to 24 hours |
+| `gather` | All normal mounts | `startManager()`; listener timeout extended to 24 hours; opt-in station minute/hourly collectors (`KMA_STN_MINUTE_ENABLED`, `KMA_STN_HOURLY_ENABLED`) |
 | `scrape` | All normal mounts | `startScrape()` |
 | `push` | All normal mounts | `ControllerPush.start()`, `AlertPush.start()` |
 | `service` | All normal mounts | None of those background loops |

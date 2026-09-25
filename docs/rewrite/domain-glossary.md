@@ -238,6 +238,8 @@ No `client/www` file references `wsdGrade`, `wsdStr`, `sensorytemStr`, `ptyStr`,
 
 `weatherType > 3` raises the description's summary grade from 2.5 to 3 ([§7](#7-summary-and-description-precedence)).
 
+**Changed after `bd6640f2` by #2576 (PR #2577):** before the lookup, `normalizeKmaWeatherStr` rewrites the 2021+ `currentweather.jsp` wording (`…연속적`, `…단속적`, `비끝`, …) to the phrases above. When a KMA station phrase is still unknown (`-1`), `updateWeather` falls back to the sky or KMA PTY code. PTY 4 소나기, 5 빗방울, 6 빗방울눈날림 and 7 눈날림 map to 25/19/29/33. `getWeatherStr` returns `""` for a missing, negative or out-of-range code. See [mobile API: current weather text and summary](../architecture/mobile-api.md#current-weather-text-and-summary-2576).
+
 ## 5. Air-quality standards (server)
 
 The request query `airUnit` selects one of four server standards in [`air_pollutants_breakpoints`](../../server/lib/aqi.converter.js#L7-L44). When the key is absent or equals the literal `(null)`, `checkQueryValidation` substitutes `airkorea` ([L57-L63](../../server/controllers/controllerTown24h.js#L57-L63), [defaults](../../server/lib/unitConverter.js#L278-L281)). There is no allow-list: an unknown value makes the breakpoint lookup throw `TypeError` (synthetic execution of `value2grade('foo', 'pm10', 10)`). The client legend tables are documented separately in [AQI standard tables](client-data-contracts.md#aqi-standard-tables); the server tables below are the ones that assign grades.
@@ -359,7 +361,7 @@ v000901–v000903 KMA and the v000901/v000902 DSF chains (v000902 is also mounte
 | # | Candidate (when present) | Text | Grade |
 | --- | --- | --- | --- |
 | 1 | Yesterday comparison: current and yesterday both have `t1h` | `LOC_SIMILAR_TO_YESTERDAY` when `round(Δt1h) = 0`, else `LOC_THAN_YESTERDAY` with `+n`/`-n` ([`_diffTodayYesterday`](../../server/controllers/controllerTown.js#L3518-L3546)) | `round(\|Δt1h\|)`, raised to **2.5** when ≤ 2 |
-| 2 | Weather: current has a `weatherType` property | `current.weather` ([`weatherType` codes](#weathertype-codes)) | 2.5; **3** when `weatherType > 3` |
+| 2 | Weather: current has a `weatherType` property (after #2576: `weatherType >= 0` and non-empty `weather`) | `current.weather` ([`weatherType` codes](#weathertype-codes)) | 2.5; **3** when `weatherType > 3` |
 | 3 | Warning: `current.specialInfo` exists (v000903 KMA only) | `weatherStr + levelStr` of `specialInfo[0]` | `weather + 5`; see [weather warnings](server-response-assembly.md#domestic-currentspecialinfo) |
 | 4 | Air (combined `summary` only) | `LOC_PM25`, `LOC_PM10` or `LOC_AQI` + `<p>Str`. Start with `pm25Grade`; `pm10Grade` replaces it only if strictly higher, then `aqiGrade` likewise. `khaiGrade`/`khaiStr` take precedence over `aqi*` | The chosen raw grade (1–4 or 1–6, [§5](#grade-index-and-label-rules)) |
 | 5 | Precipitation: `rn1` and `pty` both truthy | `LOC_RAINFALL` / `LOC_PRECIPITATION` / `LOC_SNOWFALL` for `pty` 1/2/3 + `rn1` + `precipitationUnit`. **Overwrites** `current.ptyStr` and `current.rn1Str` from [§4](#4-other-code-to-text-mappings) | `rn1 + 3` |
