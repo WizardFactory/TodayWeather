@@ -16,8 +16,8 @@ const freshAir = {stationName: '중구', mangName: '도시대기', dataTime: '20
     no2Value: 0.01, no2Grade: 1, coValue: 0.3, coGrade: 1, so2Value: 0.003, so2Grade: 1};
 // getKeco stores arpltnObj.arpltn as-is; undefined is what _mergeArpltnList returns without a fresh station.
 const scenarios = [
-    {id: 'missing-air', arpltnInfo: {arpltn: undefined, list: undefined, stnList: []}, expectAir: ''},
-    {id: 'empty-air', arpltnInfo: {arpltn: {}, list: [], stnList: []}, expectAir: ''},
+    {id: 'missing-air', arpltnInfo: {arpltn: undefined, list: undefined, stnList: []}, expectAir: undefined},
+    {id: 'empty-air', arpltnInfo: {arpltn: {}, list: [], stnList: []}, expectAir: undefined},
     {id: 'fresh-good-air', arpltnInfo: {arpltn: freshAir, list: [freshAir], stnList: [[freshAir]]}, expectAir: 'LOC_AIR_QUALITY_IS_GOOD'}
 ];
 
@@ -32,7 +32,13 @@ async function main() {
         const label = version + '/' + scenario.id;
         assert.deepEqual(result.traces, harness.methods, label + ': all v000903 coordinate middleware execute');
         assert(current.wsdGrade > 0, label + ': fixture has weather grades that must not become air grades');
-        assert.equal(current.summaryAir, scenario.expectAir, label + ': air summary');
+        if (scenario.expectAir === undefined) {
+            // Installed app share text tests hasOwnProperty('summaryAir'); an empty string adds a blank line.
+            assert.equal('summaryAir' in current, false, label + ': empty air summary is omitted');
+        }
+        else {
+            assert.equal(current.summaryAir, scenario.expectAir, label + ': air summary');
+        }
         assert.equal(typeof current.summary, 'string', label + ': combined summary');
         if (scenario.id === 'missing-air') {
             assert.equal(current.arpltn, undefined, label + ': no air observation in response');

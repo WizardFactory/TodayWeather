@@ -29,6 +29,7 @@ const town = new Town();
 town._diffTodayYesterday = () => ({str: 'LOC_TEMP_DIFF', grade: 1});
 const Town24h = load('controllers/controllerTown24h.js', {'../controllers/controllerTown': Town});
 const town24h = new Town24h();
+const WWUnits = load('controllers/worldWeather/controller.ww.units.js', {'../controllerTown24h': Town24h});
 
 // Mirrors the 2026-09-25 Seoul response: no AirKorea observation, weak wind (#2578).
 function currentWithoutAir(extra) {
@@ -66,6 +67,19 @@ test('combined summary neither reads nor writes air fields on current', () => {
     const withAir = currentWithoutAir({weatherType: 3, weather: 'LOC_CLOUDY', arpltn: {pm25Grade: 3, pm25Str: 'LOC_BAD'}});
     delete withAir.wsdGrade;
     assert.equal(town.makeSummary(withAir, {t1h: 21.6}, {}, ts), 'LOC_PM25 LOC_BAD, LOC_TEMP_DIFF');
+});
+
+test('world-weather summary omits an empty air summary and keeps a real one', () => {
+    function run(arpltn) {
+        const current = {weatherType: 3, weather: 'LOC_CLOUDY', wsdGrade: 1, arpltn};
+        const req = {result: {thisTime: [{}, current]}, query: {}};
+        let calls = 0;
+        new WWUnits().makeSummary(req, ts, err => { assert.ifError(err); calls++; });
+        assert.equal(calls, 1);
+        return current;
+    }
+    assert.equal('summaryAir' in run({}), false, 'empty world air summary is omitted');
+    assert.equal(run({aqiGrade: 1, khaiGrade: 1}).summaryAir, 'LOC_AIR_QUALITY_IS_GOOD');
 });
 
 // dataTime uses the same timezone-less local form that _checkDateTime parses.

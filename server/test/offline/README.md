@@ -152,15 +152,16 @@ TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/weather
 ## Current air summary (#2578)
 
 `air-summary.test.js` runs in `test:offline` and the RSS workflow. It loads the
-actual summary builders and AirKorea merge code in isolated VMs. It checks that a
-missing `current.arpltn` yields an empty `summaryAir` (weather/life-index grades
-such as `wsdGrade` are never read as air grades), that the combined `summary`
-neither reads nor writes air fields on `current`, and that every AirKorea station
-is compared with the same eight-hour window from request time.
+actual summary builders, the world-weather summary middleware and AirKorea merge
+code in isolated VMs. It checks that a missing `current.arpltn` yields no air
+summary (weather/life-index grades such as `wsdGrade` are never read as air
+grades), that the combined `summary` neither reads nor writes air fields on
+`current`, that an empty world `summaryAir` is omitted, and that every AirKorea
+station is compared with the same eight-hour window from request time.
 
 `air-summary-smoke.js` reuses the response smoke harness to run the complete
 v000903 coordinate middleware for both DB versions with missing, empty and fresh
-air observations. Dependencies are the same as the RSS response smoke:
+air observations; `summaryAir` must be absent for the first two. Dependencies are the same as the RSS response smoke:
 
 ```sh
 TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/air-summary-smoke.js

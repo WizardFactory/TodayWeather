@@ -39,3 +39,14 @@ Endpoint pre-merge (AK, 2026-09-25). Covered: implementation, tests, smoke, comm
 ## Consumers
 
 Spec, plan, builder, independent verifier, PR description, completion.
+
+## Amendment 1 — 2026-09-25
+
+Source: PR #2579 review (Recommended 1 and 2) and AK: "제안대로 진행 세계날씨 경로도 동일하게 반영".
+Reason: installed app share text checks `hasOwnProperty('summaryAir')`, so an empty string adds a blank line ("현재 " for the air share). A server-side omission fixes installed clients without an app release.
+
+- AC5 (revised): The v000903 coordinate route smoke omits `current.summaryAir` for missing and empty air data and returns `LOC_AIR_QUALITY_IS_GOOD` for fresh good air, on DB 1.0 and 2.0. The world-weather `makeSummary` middleware also omits an empty `summaryAir` and keeps a non-empty one.
+- AC7 (revised): After deployment, the Seoul coordinate response has no `summaryAir` field whenever `current.arpltn` is absent.
+- AC1 unchanged: `makeSummaryAir` itself still returns `""`.
+- Also: the missing-air log in `makeSummaryAir` moves to debug level.
+- Downstream impact: spec R4, plan file list (`controller.ww.units.js`), tests, `mobile-api.md`. Earlier receipts attest revision 1 and are stale for this amendment.

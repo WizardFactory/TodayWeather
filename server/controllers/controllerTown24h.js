@@ -1350,7 +1350,7 @@ function ControllerTown24h() {
         var airInfo = current.arpltn;
         //대기 관측값이 없으면 current의 날씨/생활지수 grade(wsdGrade 등)를 대기 등급으로 쓰지 않음
         if (!airInfo) {
-            log.info("airInfo is empty!");
+            log.debug("airInfo is empty!");
             return "";
         }
         airInfo.aqiValue = airInfo.khaiValue || airInfo.aqiValue;
@@ -1586,6 +1586,10 @@ function ControllerTown24h() {
             var current = req.current;
             current.summaryWeather = self.makeSummaryWeather(current, current.yesterday, req.query, res);
             current.summaryAir = self.makeSummaryAir(current, req.query, res);
+            //앱 공유 문구가 hasOwnProperty('summaryAir')로 검사하므로 빈 값은 보내지 않음
+            if (!current.summaryAir) {
+                delete current.summaryAir;
+            }
             current.summary = self.makeSummary(current, current.yesterday, req.query, res);
         }
         catch (err) {

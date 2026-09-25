@@ -45,3 +45,7 @@ World weather: `_makeArpltn` always sets `arpltn`, so behavior is unchanged. Nat
 ## Risks
 
 Air line hidden more often when collection is stale (intended). Overlapping files with PR #2577 in different hunks.
+
+## Amendment 1 — 2026-09-25
+
+R4 (revised): `getSummaryAfterUnitConverter` (KMA) and `ControllerWWUnits.makeSummary` (world) delete `current.summaryAir` when the built summary is empty. A non-empty value is unchanged. Consumers checked: the app views and push test truthiness; the app share text (`controller.tabctrl.js`, also `ta.ios/www`) tests property presence and now gets no blank line; the TodayAir widget renders nil and `""` the same way; web `weather-core` ignores a missing value. `makeSummaryAir` logs a missing `arpltn` at debug level.

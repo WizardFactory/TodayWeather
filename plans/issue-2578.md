@@ -53,3 +53,7 @@ No migration. Rollback by reverting the commit. Blast radius: KMA `summaryAir`/`
 ## Gate
 
 PROCEED within the pre-merge authority. PR review cannot be satisfied (no other provider); recorded as NEEDS_HUMAN.
+
+## Amendment 1 — 2026-09-25
+
+Add `server/controllers/worldWeather/controller.ww.units.js` (omit empty `summaryAir`) and change `controllerTown24h.js` `getSummaryAfterUnitConverter` likewise, plus the `makeSummaryAir` log level. Red first: the KMA route smoke expects no `summaryAir` field for missing/empty air, and a new unit test runs world `makeSummary` with and without air grades. Then re-run the full offline set on Node 16/22, push, check CI and reply to the review comments.
