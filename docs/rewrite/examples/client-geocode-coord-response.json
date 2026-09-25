@@ -1,0 +1,23 @@
+{
+  "_example": {
+    "kind": "partial synthetic documentation example",
+    "sourceRevision": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+    "liveProviderCapture": false,
+    "request": "GET <clientConfig.serverUrl>/geocode/v000903/coord/37.564,126.985 (latitude,longitude; no unit query parameters)",
+    "note": "Shape modeled on the deployed geocoder byCoord/importGeoInfo source inspected 2026-09-20 (docs/architecture/deployed-lambda-excerpts.md); values are invented. Every field is conditional on the provider/cache record. /geocode/v000903/addr/... responses have the same shape without kmaAddress. name/address language follows the request Accept-Language. The Angular client resolves this body directly, stores name/address/country/location and never reads kmaAddress; the weather Lambda uses kmaAddress to build the KMA backend path. _example is documentation metadata outside the API body."
+  },
+  "response": {
+    "name": "명동",
+    "country": "KR",
+    "address": "대한민국 서울특별시 중구 명동",
+    "location": {
+      "lat": 37.564,
+      "long": 126.985
+    },
+    "kmaAddress": {
+      "name1": "서울특별시",
+      "name2": "중구",
+      "name3": "명동"
+    }
+  }
+}

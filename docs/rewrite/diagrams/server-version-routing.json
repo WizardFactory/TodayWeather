@@ -1,0 +1,334 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Weather API version routing",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1120,
+      620
+    ],
+    "legend": {
+      "entries": {
+        "frontend": {
+          "label": "Client caller"
+        },
+        "cloud": {
+          "label": "AWS edge (2026-09-20 obs.)"
+        },
+        "backend": {
+          "label": "Server caller / Express"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "widgets",
+      "type": "frontend",
+      "label": "iOS widgets",
+      "sublabel": "weather/coord · v000901/kma/addr",
+      "pos": [
+        30,
+        110
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "tag": "tw.ios / ta.ios"
+    },
+    {
+      "id": "app",
+      "type": "frontend",
+      "label": "App + Web PWA",
+      "sublabel": "weather/v000903/coord · (app) kma/addr",
+      "pos": [
+        30,
+        210
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "tag": "service.weatherutil.js · web/src/direct-api.ts"
+    },
+    {
+      "id": "nation",
+      "type": "backend",
+      "label": "Nation router",
+      "sublabel": "15 × API_SERVER/v000903/kma/addr",
+      "pos": [
+        30,
+        310
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "redirect",
+      "type": "backend",
+      "label": "Out-of-Korea 302",
+      "sublabel": "KMA addr → API_SERVER/weather/coord",
+      "pos": [
+        30,
+        410
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "push",
+      "type": "backend",
+      "label": "Push workers",
+      "sublabel": "alarm + alert · runtime unverified",
+      "pos": [
+        30,
+        496
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "cloudfront",
+      "type": "cloud",
+      "label": "CloudFront",
+      "sublabel": "public host",
+      "pos": [
+        300,
+        250
+      ],
+      "size": [
+        140,
+        80
+      ]
+    },
+    {
+      "id": "lambda",
+      "type": "cloud",
+      "label": "Weather Lambda",
+      "sublabel": "weatherbycoord · path version or v000901",
+      "pos": [
+        560,
+        60
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "origin",
+      "type": "backend",
+      "label": "Service origin",
+      "sublabel": "nginx → Express mounts",
+      "pos": [
+        570,
+        250
+      ],
+      "size": [
+        180,
+        80
+      ]
+    },
+    {
+      "id": "kma901",
+      "type": "backend",
+      "label": "/v000901/kma/addr",
+      "sublabel": "airInfo · CamelCase · no specialInfo",
+      "tag": "36 items · insertSkyIcon",
+      "pos": [
+        860,
+        118
+      ],
+      "size": [
+        240,
+        64
+      ]
+    },
+    {
+      "id": "dsf901",
+      "type": "backend",
+      "label": "/v000901/dsf/coord",
+      "sublabel": "airInfo if AQI · CamelCase",
+      "tag": "13 items",
+      "pos": [
+        860,
+        198
+      ],
+      "size": [
+        240,
+        64
+      ]
+    },
+    {
+      "id": "kma902",
+      "type": "backend",
+      "label": "/v000902/kma/addr|coord",
+      "sublabel": "airInfo · lower-case · no specialInfo",
+      "tag": "36 addr / 37 coord items",
+      "pos": [
+        860,
+        278
+      ],
+      "size": [
+        240,
+        64
+      ]
+    },
+    {
+      "id": "dsf902",
+      "type": "backend",
+      "label": "/v000902 + /v000903 dsf/coord",
+      "sublabel": "airInfo if AQI · lower-case",
+      "tag": "14 items · skyIconLowCase",
+      "pos": [
+        860,
+        358
+      ],
+      "size": [
+        240,
+        64
+      ]
+    },
+    {
+      "id": "kma903",
+      "type": "backend",
+      "label": "/v000903/kma/addr|coord",
+      "sublabel": "airInfoList · lower-case · specialInfo",
+      "tag": "37 addr / 38 coord items",
+      "pos": [
+        860,
+        438
+      ],
+      "size": [
+        240,
+        64
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "widgets-edge",
+      "from": "widgets",
+      "to": "cloudfront",
+      "variant": "emphasis",
+      "toSide": "top"
+    },
+    {
+      "id": "app-edge",
+      "from": "app",
+      "to": "cloudfront",
+      "variant": "emphasis",
+      "toSide": "left"
+    },
+    {
+      "id": "nation-edge",
+      "from": "nation",
+      "to": "cloudfront",
+      "toSide": "left"
+    },
+    {
+      "id": "redirect-edge",
+      "from": "redirect",
+      "to": "cloudfront",
+      "variant": "dashed",
+      "toSide": "bottom"
+    },
+    {
+      "id": "edge-lambda",
+      "from": "cloudfront",
+      "to": "lambda",
+      "label": "weather/* → API GW",
+      "fromSide": "top"
+    },
+    {
+      "id": "edge-origin",
+      "from": "cloudfront",
+      "to": "origin",
+      "label": "default behavior"
+    },
+    {
+      "id": "lambda-origin",
+      "from": "lambda",
+      "to": "origin",
+      "label": "KR → /{v}/kma/addr, else /{v}/dsf/coord",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        660,
+        187
+      ]
+    },
+    {
+      "id": "push-origin",
+      "from": "push",
+      "to": "origin",
+      "label": "SERVICE_SERVER /v000902/kma|dsf",
+      "toSide": "bottom",
+      "labelSegment": 0
+    },
+    {
+      "id": "mount-kma901",
+      "from": "origin",
+      "to": "kma901"
+    },
+    {
+      "id": "mount-dsf901",
+      "from": "origin",
+      "to": "dsf901"
+    },
+    {
+      "id": "mount-kma902",
+      "from": "origin",
+      "to": "kma902"
+    },
+    {
+      "id": "mount-dsf902",
+      "from": "origin",
+      "to": "dsf902"
+    },
+    {
+      "id": "mount-kma903",
+      "from": "origin",
+      "to": "kma903"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Envelope by version",
+      "items": [
+        "KMA: v000903 → airInfoList only; v000901/v000902 → airInfo only (always present)",
+        "skyIcon: CamelCase on v000901 KMA + DSF; lower-case on v000902/v000903",
+        "current.specialInfo: v000903 KMA only; chains: KMA 36–38, DSF 13/14 items"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Caller dependencies",
+      "items": [
+        "Widgets load weatherIcon2-color/<CamelCase>.png",
+        "Alarm air text throws without airInfo; alert skips air without airInfo.last",
+        "Nation children + app parsed-address fallback → v000903 KMA",
+        "App unparsed address → /weather/v000903/addr → Lambda 501"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Evidence levels",
+      "items": [
+        "Mounts, chains, caller paths: bd6640f2 (routes unchanged since ff7acf39)",
+        "CloudFront, API GW, Lambda, v000901 default: AWS + deployed source, 2026-09-20",
+        "302 target version is gateway-dependent; push worker runtime unverified"
+      ]
+    }
+  ]
+}

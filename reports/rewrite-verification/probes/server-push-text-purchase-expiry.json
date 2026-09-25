@@ -1,0 +1,979 @@
+{
+ "probe": "server-push-text-purchase-expiry",
+ "evidence_label": "synthetic execution",
+ "command": "node reports/rewrite-verification/probes/server-push-text-purchase-expiry.js > reports/rewrite-verification/probes/server-push-text-purchase-expiry.json",
+ "source_commit": "bd6640f22c1029c35e8937b108be4b50ea89361a",
+ "date": "2026-09-25",
+ "rebaseline": {
+  "previous_source_commit": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "note": "Re-baselined 2026-09-25 from ff7acf39 to bd6640f2. Four extracted-from files changed upstream: controllerPush.js (c80ee014 moved Firebase Admin initialization to server/lib/pushProviders.js; 45b2eb3f removed sendIOSNotification, the APNs provider and apnFeedback, and sendNotification L1111 now returns \"FCM token is required for iOS notifications\" for an iOS record without fcmToken), alert.push.controller.js (45b2eb3f, the same error in _sendNotification L671), controllerTown24h.js (2116c6bf, makeResult adds historyStatus and passes short through history/policy.hourlyResponse) and controllerTown.js (gather and history commits). Every extracted function is text-identical at both commits; only line numbers moved. receiptValidation.js, aqi.converter.js, kmaTimeLib.js and both locale files have the same blob hashes. Inputs, outputs and all 27 checks are identical to the ff7acf39 run.",
+  "node16_cross_check": "Also run on 2026-09-25 with Node v16.20.2, the server runtime pinned by server/.nvmrc and package.json engines since c80ee014: every output and check was identical; only runtime.node differed. That run is not the stored record."
+ },
+ "runtime": {
+  "node": "v24.21.0",
+  "TZ": [
+   "Asia/Seoul",
+   "UTC",
+   "America/Los_Angeles"
+  ],
+  "note": "one child process per TZ; the Asia/Seoul run is the reference for checks"
+ },
+ "source": [
+  {
+   "file": "server/controllers/controllerTown24h.js",
+   "blob_sha1": "5a284fe09a266fee2ee054407bf41ef1efc6a913",
+   "extracted": [
+    "_getWeatherEmoji: L2055-L2084",
+    "_getEmoji: L2037-L2053"
+   ]
+  },
+  {
+   "file": "server/controllers/controllerTown.js",
+   "blob_sha1": "485522394c1cb1dd6692f9d7eb79e9e59ae9177f",
+   "extracted": [
+    "_convertKmaPtyToStr: L3617-L3632"
+   ]
+  },
+  {
+   "file": "server/controllers/controllerPush.js",
+   "blob_sha1": "12b1e7f2fa8b8517b85ca7f5de407b8faef3f0f2",
+   "extracted": [
+    "_getAqiStr: L266-L299",
+    "_makeStrTmnTmx: L301-L337",
+    "_makePushAirMessage: L345-L458",
+    "_makeKmaPushWeatherMessage: L460-L609",
+    "_pty2str: L747-L763",
+    "_makeDsfPushWeatherMessage: L765-L858",
+    "_makeKmaPushMessage: L618-L658",
+    "_makeDsfPushMessage: L860-L887"
+   ]
+  },
+  {
+   "file": "server/controllers/alert.push.controller.js",
+   "blob_sha1": "3a8bf4018c12c2352698715915d2656bf06ae983",
+   "extracted": [
+    "_getMinsOfCurrent: L27-L29",
+    "_parseWeatherAirData: L120-L357",
+    "_compareWithLastInfo: L463-L517",
+    "_updateAlertPush: L385-L454",
+    "_convertToNotification: L526-L647"
+   ]
+  },
+  {
+   "file": "server/routes/v000705/receiptValidation.js",
+   "blob_sha1": "433a6580cd0a53e5911a2d5b344de53599ed7e89",
+   "extracted": [
+    "calcExpirationDate: L30-L73"
+   ]
+  },
+  {
+   "file": "server/lib/aqi.converter.js",
+   "blob_sha1": "342514e90b774b3637ed3c4e6b7ada29238fb9b1",
+   "note": "required as-is"
+  },
+  {
+   "file": "server/lib/kmaTimeLib.js",
+   "blob_sha1": "d6e9d45a2024cebd6e9364b2d478e3d0a8f0d9fb",
+   "note": "required as-is"
+  },
+  {
+   "file": "server/locales/ko.json, server/locales/en.json",
+   "note": "translator values"
+  }
+ ],
+ "stubs": "no-op log; global.manager.leadingZeros; i18n.configure stub (setLocale installs a locale-file lookup; the real i18n 0.x and sprintf packages are not loaded); positional %d/%s sprintf; fixed-clock Date in the extracted functions' scope (alert polls at the stated UTC time on 2026-09-24; purchase checks at the stated now). Alert records with \"7 h ago\" carry pushTime = fixed now - 7 h. The alert database prefilter, state writes, provider submission and HTTP routes are not executed.",
+ "inputs": {
+  "kmaFixture": {
+   "source": "KMA",
+   "townName": "역삼1동",
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea",
+    "airForecastSource": "airkorea"
+   },
+   "current": {
+    "date": "20260924",
+    "dateObj": "2026.09.24 07:00",
+    "time": 7,
+    "skyIcon": "sun_smallcloud",
+    "t1h": 18,
+    "pty": 0,
+    "rn1": 0,
+    "summaryAir": "대기질은 보통입니다.",
+    "arpltn": {
+     "pm25Grade": 2,
+     "pm25Str": "보통",
+     "pm10Grade": 1,
+     "pm10Str": "좋음",
+     "o3Grade": 1,
+     "o3Str": "좋음",
+     "khaiGrade": 2,
+     "khaiStr": "보통"
+    }
+   },
+   "midData": {
+    "dailyData": [
+     {
+      "date": "20260923",
+      "fromToday": -1,
+      "tmn": 17,
+      "tmx": 25,
+      "skyAm": "sun",
+      "skyPm": "sun",
+      "wfAm": "맑음",
+      "wfPm": "맑음",
+      "pty": 0,
+      "pop": 10
+     },
+     {
+      "date": "20260924",
+      "fromToday": 0,
+      "tmn": 18,
+      "tmx": 24.6,
+      "skyAm": "sun",
+      "skyPm": "sun_bigcloud_rain",
+      "wfAm": "맑음",
+      "wfPm": "구름많고 비",
+      "pty": 1,
+      "pop": 60,
+      "dustForecast": {
+       "pm10Grade": 2,
+       "pm10Str": "보통",
+       "pm25Grade": 2,
+       "pm25Str": "보통"
+      }
+     },
+     {
+      "date": "20260925",
+      "fromToday": 1,
+      "tmn": 15.5,
+      "tmx": 21,
+      "skyAm": "cloud_rain",
+      "skyPm": "sun_smallcloud",
+      "wfAm": "흐리고 비",
+      "wfPm": "구름적고",
+      "pty": 1,
+      "pop": 70,
+      "dustForecast": {
+       "pm10Grade": 1,
+       "pm10Str": "좋음",
+       "pm25Grade": 3,
+       "pm25Str": "나쁨",
+       "o3Grade": 1,
+       "o3Str": "좋음"
+      }
+     }
+    ]
+   },
+   "airInfo": {
+    "source": "airkorea",
+    "pollutants": {
+     "pm25": {
+      "daily": [
+       {
+        "date": "2026-09-24",
+        "fromToday": 0,
+        "val": 20,
+        "grade": 2,
+        "str": "보통"
+       },
+       {
+        "date": "2026-09-25",
+        "fromToday": 1,
+        "val": 45,
+        "grade": 3,
+        "str": "나쁨"
+       }
+      ]
+     },
+     "pm10": {
+      "daily": [
+       {
+        "date": "2026-09-24",
+        "fromToday": 0,
+        "val": 40,
+        "grade": 2,
+        "str": "보통"
+       },
+       {
+        "date": "2026-09-25",
+        "fromToday": 1,
+        "val": 25,
+        "grade": 1,
+        "str": "좋음"
+       }
+      ]
+     },
+     "aqi": {
+      "daily": [
+       {
+        "date": "2026-09-24",
+        "fromToday": 0,
+        "val": 60,
+        "grade": 2,
+        "str": "보통"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "dsfFixture": {
+   "source": "DSF",
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea",
+    "airForecastSource": "airkorea"
+   },
+   "thisTime": [
+    {
+     "date": "20260923",
+     "dateObj": "2026.09.23 19:00",
+     "pty": 0
+    },
+    {
+     "date": "20260924",
+     "dateObj": "2026.09.24 19:00",
+     "skyIcon": "sun_smallcloud",
+     "t1h": 0,
+     "pty": 0,
+     "rn1": 1.2,
+     "arpltn": {
+      "pm25Grade": 3,
+      "pm25Str": "Unhealthy",
+      "pm10Grade": 2,
+      "pm10Str": "Moderate"
+     }
+    }
+   ],
+   "daily": [
+    {
+     "date": "20260923",
+     "dateObj": "2026.09.23 00:00",
+     "skyIcon": "sun",
+     "skyAm": "sun",
+     "skyPm": "sun",
+     "tmn": 9.4,
+     "tmx": 17,
+     "pty": 0,
+     "pop": 0
+    },
+    {
+     "date": "20260924",
+     "dateObj": "2026.09.24 00:00",
+     "skyIcon": "sun_smallcloud",
+     "skyAm": "sun_smallcloud",
+     "skyPm": "sun_smallcloud",
+     "tmn": 10,
+     "tmx": 18.2,
+     "pty": 0,
+     "pop": 10
+    },
+    {
+     "date": "20260925",
+     "dateObj": "2026.09.25 00:00",
+     "skyIcon": "sun_bigcloud_rain",
+     "skyAm": "sun_bigcloud_rain",
+     "skyPm": "sun_bigcloud_rain",
+     "tmn": 11,
+     "tmx": 16,
+     "pty": 1,
+     "pop": 80
+    },
+    {
+     "date": "20260926",
+     "dateObj": "2026.09.26 00:00",
+     "skyIcon": "cloud",
+     "skyAm": "cloud",
+     "skyPm": "cloud",
+     "tmn": 8,
+     "tmx": 15,
+     "pty": 0,
+     "pop": 0
+    }
+   ],
+   "airInfo": {
+    "source": "aqicn",
+    "last": {
+     "pm25Grade": 3,
+     "pm25Str": "Unhealthy",
+     "pm10Grade": 2,
+     "pm10Str": "Moderate"
+    }
+   }
+  },
+  "alertFixture": {
+   "source": "KMA",
+   "townName": "잠실본동",
+   "cityName": "송파구",
+   "current": {
+    "dateObj": "2026.09.24 14:30",
+    "pty": 0,
+    "rns": false,
+    "weather": "비",
+    "stnName": "서울"
+   },
+   "shortestPubDate": "202609241430",
+   "shortest": [
+    {
+     "dateObj": "2026.09.24 15:00",
+     "pty": 1
+    },
+    {
+     "dateObj": "2026.09.24 16:00",
+     "pty": 1
+    },
+    {
+     "dateObj": "2026.09.24 17:00",
+     "pty": 0
+    }
+   ],
+   "short": [
+    {
+     "dateObj": "2026.09.24 18:00",
+     "pty": 1
+    }
+   ],
+   "airInfo": {
+    "source": "airkorea",
+    "last": {
+     "dataTime": "2026-09-24 14:00",
+     "stationName": "송파구",
+     "pm10Grade": 2,
+     "pm10Value": 60,
+     "pm10Str": "보통",
+     "pm25Grade": 2,
+     "pm25Value": 30,
+     "pm25Str": "보통",
+     "o3Grade": 3,
+     "o3Value": 0.1,
+     "o3Str": "나쁨"
+    }
+   }
+  },
+  "purchaseList": [
+   {
+    "product_id": "tw1year",
+    "purchase_date_ms": "1772323200000"
+   },
+   {
+    "product_id": "tw1year",
+    "purchase_date_ms": "1704844800000"
+   },
+   {
+    "product_id": "tw1year",
+    "purchase_date_ms": "1734652800000"
+   },
+   {
+    "product_id": "tw1year",
+    "purchase_date_ms": "1780272000000",
+    "cancellation_date": "2026-06-02 00:00:00 Etc/GMT"
+   },
+   {
+    "product_id": "ta1year",
+    "purchase_date_ms": "1782864000000"
+   }
+  ],
+  "twoPurchases": [
+   {
+    "product_id": "tw1year",
+    "purchase_date_ms": "1704844800000"
+   },
+   {
+    "product_id": "tw1year",
+    "purchase_date_ms": "1704931200000"
+   }
+  ]
+ },
+ "outputs": {
+  "Asia/Seoul": {
+   "alarm": {
+    "kma todayWeather 07:00": {
+     "title": "집 현재: ⛅,18˚,초미세먼지 보통",
+     "text": "오늘: 맑음🌞→비☔,최저18˚(+1) 최고24˚,미세먼지 보통"
+    },
+    "kma todayWeather 19:00 dry": {
+     "title": "집 현재: ⛅,18˚,초미세먼지 보통",
+     "text": "내일: 비☔→구름적고⛅,최저15˚(-2) 최고21˚(-4),강수확률 70%,초미세먼지 나쁨,오존 좋음"
+    },
+    "kma todayWeather 19:00 raining": {
+     "title": "집 현재: ☔,18˚,초미세먼지 보통,강수량 2.5mm",
+     "text": "내일: 비☔→구름적고⛅,최저15˚(-2) 최고21˚(-4),초미세먼지 나쁨,오존 좋음"
+    },
+    "kma todayAir 07:00": {
+     "title": "집 ",
+     "text": "현재: 대기질은 보통입니다.\n오늘: 초미세먼지 평균20 보통, 미세먼지 평균40 보통"
+    },
+    "kma todayAir 19:00": {
+     "title": "집 ",
+     "text": "현재: 대기질은 보통입니다.\n내일: 초미세먼지 평균45 나쁨"
+    },
+    "kma todayAir 07:00 no summaryAir": {
+     "title": "집 ",
+     "text": "<undefined>"
+    },
+    "dsf 19:00 dry": {
+     "title": "Paris Current: ⛅,0˚,PM2.5 Unhealthy",
+     "text": "Tomorrow: ☔→☔,Lowest11˚(+1) Highest16˚(-2)"
+    },
+    "dsf 19:00 raining": {
+     "title": "Paris Current: ☔,0˚,PM2.5 Unhealthy,Precipitation 1.2mm",
+     "text": "Tomorrow: ☔→☔,Lowest11˚(+1) Highest16˚(-2),Chance of precipitation 80%"
+    },
+    "dsf 08:00 dry": {
+     "title": "Paris Current: ⛅,0˚,PM2.5 Unhealthy",
+     "text": "Today: ⛅→⛅,Lowest10˚(+1) Highest18˚(+1)"
+    },
+    "dsf todayAir summaryAir": {
+     "title": "Paris ",
+     "text": "Current: Air quality is moderate"
+    },
+    "dsf todayAir no airInfo": {
+     "threw": "airInfo is invalid"
+    }
+   },
+   "aqiStr": {
+    "pm10Grade 3 only": {
+     "input": {
+      "pm10Grade": 3,
+      "pm10Str": "나쁨"
+     },
+     "result": "<undefined>"
+    },
+    "khaiGrade 3 + pm25Grade 2": {
+     "input": {
+      "khaiGrade": 3,
+      "khaiStr": "나쁨",
+      "pm25Grade": 2,
+      "pm25Str": "보통"
+     },
+     "result": "초미세먼지 보통"
+    },
+    "pm25 1 + pm10 3": {
+     "input": {
+      "pm25Grade": 1,
+      "pm25Str": "좋음",
+      "pm10Grade": 3,
+      "pm10Str": "나쁨"
+     },
+     "result": "미세먼지 나쁨"
+    },
+    "all grade 2": {
+     "input": {
+      "pm25Grade": 2,
+      "pm25Str": "보통",
+      "pm10Grade": 2,
+      "pm10Str": "보통",
+      "o3Grade": 2,
+      "o3Str": "보통",
+      "khaiGrade": 2,
+      "khaiStr": "보통"
+     },
+     "result": "초미세먼지 보통"
+    },
+    "o3Grade 3 without o3Str": {
+     "input": {
+      "pm25Grade": 1,
+      "pm25Str": "좋음",
+      "pm10Grade": 1,
+      "pm10Str": "좋음",
+      "o3Grade": 3,
+      "khaiGrade": 2,
+      "khaiStr": "보통"
+     },
+     "result": "<undefined>"
+    }
+   },
+   "alert": {
+    "C1": {
+     "pollUtc": "5:35",
+     "forecast": null,
+     "air": {
+      "name": "o3",
+      "grade": 3
+     },
+     "send": "air",
+     "lastState": 1,
+     "lastGrade": 3,
+     "notification": {
+      "title": "잠실본동 14:30",
+      "text": "비가 내리고 있습니다. 14시 오존이 나쁨입니다."
+     }
+    },
+    "C2": {
+     "pollUtc": "5:17",
+     "forecast": {
+      "pty": 1,
+      "dateObj": "2026.09.24 15:00"
+     },
+     "air": {
+      "name": "o3",
+      "grade": 3
+     },
+     "send": "weather",
+     "lastState": 1,
+     "lastGrade": 3,
+     "notification": {
+      "title": "잠실본동 예보",
+      "text": "15시부터 비가 내릴 예정입니다. 14시 오존이 나쁨입니다."
+     }
+    },
+    "C3": {
+     "pollUtc": "5:35",
+     "forecast": null,
+     "air": {
+      "name": "o3",
+      "grade": 3
+     },
+     "send": "none",
+     "lastState": 0,
+     "lastGrade": 3,
+     "notification": null
+    },
+    "C4": {
+     "pollUtc": "5:07",
+     "forecast": null,
+     "air": {
+      "name": "o3",
+      "grade": 3
+     },
+     "send": "none",
+     "lastState": 1,
+     "lastGrade": 3,
+     "notification": null
+    },
+    "C5 en": {
+     "pollUtc": "5:50",
+     "forecast": null,
+     "air": {
+      "name": "o3",
+      "grade": 3
+     },
+     "send": "air",
+     "lastState": 0,
+     "lastGrade": 3,
+     "notification": {
+      "title": "Jamsil AQI ",
+      "text": "14h O3 is 나쁨."
+     }
+    }
+   },
+   "purchase": {
+    "full list, now 2026-09-24": {
+     "now": "2026-09-24T00:00:00Z",
+     "productId": "tw1year",
+     "result": "Mon, 01 Mar 2027 00:00:00 GMT",
+     "sortedInPlace": [
+      "2024-01-10",
+      "2024-12-20",
+      "2026-03-01",
+      "2026-06-01",
+      "2026-07-01"
+     ]
+    },
+    "first two tw1year entries, now 2025-06-01": {
+     "now": "2025-06-01T00:00:00Z",
+     "productId": "tw1year",
+     "result": "Sat, 10 Jan 2026 00:00:00 GMT",
+     "sortedInPlace": [
+      "2024-01-10",
+      "2024-12-20"
+     ]
+    },
+    "full list, now 2027-03-02": {
+     "now": "2027-03-02T00:00:00Z",
+     "productId": "tw1year",
+     "result": "<undefined>",
+     "sortedInPlace": [
+      "2024-01-10",
+      "2024-12-20",
+      "2026-03-01",
+      "2026-06-01",
+      "2026-07-01"
+     ]
+    },
+    "two purchases 2024-01-10 and 2024-01-11, now 2024-06-01": {
+     "now": "2024-06-01T00:00:00Z",
+     "productId": "tw1year",
+     "result": "Sat, 10 Jan 2026 00:00:00 GMT",
+     "sortedInPlace": [
+      "2024-01-10",
+      "2024-01-11"
+     ]
+    },
+    "two purchases 2024-01-10 and 2024-01-11, now 2026-09-24": {
+     "now": "2026-09-24T00:00:00Z",
+     "productId": "tw1year",
+     "result": "<undefined>",
+     "sortedInPlace": [
+      "2024-01-10",
+      "2024-01-11"
+     ]
+    },
+    "id 'ta1year' on the full list, now 2026-09-24": {
+     "now": "2026-09-24T00:00:00Z",
+     "productId": "ta1year",
+     "result": "Thu, 01 Jul 2027 00:00:00 GMT",
+     "sortedInPlace": [
+      "2024-01-10",
+      "2024-12-20",
+      "2026-03-01",
+      "2026-06-01",
+      "2026-07-01"
+     ]
+    },
+    "id missing, now 2026-09-24": {
+     "now": "2026-09-24T00:00:00Z",
+     "productId": "<undefined>",
+     "result": "<undefined>",
+     "sortedInPlace": [
+      "2024-01-10",
+      "2024-12-20",
+      "2026-03-01",
+      "2026-06-01",
+      "2026-07-01"
+     ]
+    }
+   }
+  },
+  "differencesFromAsiaSeoul": {
+   "UTC": [],
+   "America/Los_Angeles": []
+  }
+ },
+ "checks": [
+  {
+   "id": "4.1 KMA todayWeather 07:00",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.1",
+   "expected": {
+    "title": "집 현재: ⛅,18˚,초미세먼지 보통",
+    "text": "오늘: 맑음🌞→비☔,최저18˚(+1) 최고24˚,미세먼지 보통"
+   },
+   "actual": {
+    "title": "집 현재: ⛅,18˚,초미세먼지 보통",
+    "text": "오늘: 맑음🌞→비☔,최저18˚(+1) 최고24˚,미세먼지 보통"
+   },
+   "match": true
+  },
+  {
+   "id": "4.1 KMA todayWeather 19:00 dry",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.1",
+   "expected": {
+    "title": "집 현재: ⛅,18˚,초미세먼지 보통",
+    "text": "내일: 비☔→구름적고⛅,최저15˚(-2) 최고21˚(-4),강수확률 70%,초미세먼지 나쁨,오존 좋음"
+   },
+   "actual": {
+    "title": "집 현재: ⛅,18˚,초미세먼지 보통",
+    "text": "내일: 비☔→구름적고⛅,최저15˚(-2) 최고21˚(-4),강수확률 70%,초미세먼지 나쁨,오존 좋음"
+   },
+   "match": true
+  },
+  {
+   "id": "4.1 KMA todayWeather 19:00 raining (same day line without 강수확률)",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.1",
+   "expected": {
+    "title": "집 현재: ☔,18˚,초미세먼지 보통,강수량 2.5mm",
+    "text": "내일: 비☔→구름적고⛅,최저15˚(-2) 최고21˚(-4),초미세먼지 나쁨,오존 좋음"
+   },
+   "actual": {
+    "title": "집 현재: ☔,18˚,초미세먼지 보통,강수량 2.5mm",
+    "text": "내일: 비☔→구름적고⛅,최저15˚(-2) 최고21˚(-4),초미세먼지 나쁨,오존 좋음"
+   },
+   "match": true
+  },
+  {
+   "id": "4.1 KMA todayAir 07:00",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.1",
+   "expected": {
+    "title": "집 ",
+    "text": "현재: 대기질은 보통입니다.\n오늘: 초미세먼지 평균20 보통, 미세먼지 평균40 보통"
+   },
+   "actual": {
+    "title": "집 ",
+    "text": "현재: 대기질은 보통입니다.\n오늘: 초미세먼지 평균20 보통, 미세먼지 평균40 보통"
+   },
+   "match": true
+  },
+  {
+   "id": "4.1 KMA todayAir 19:00",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.1",
+   "expected": {
+    "title": "집 ",
+    "text": "현재: 대기질은 보통입니다.\n내일: 초미세먼지 평균45 나쁨"
+   },
+   "actual": {
+    "title": "집 ",
+    "text": "현재: 대기질은 보통입니다.\n내일: 초미세먼지 평균45 나쁨"
+   },
+   "match": true
+  },
+  {
+   "id": "4.1 KMA todayAir 07:00 without summaryAir -> text undefined",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.1",
+   "expected": {
+    "title": "집 ",
+    "text": "<undefined>"
+   },
+   "actual": {
+    "title": "집 ",
+    "text": "<undefined>"
+   },
+   "match": true
+  },
+  {
+   "id": "4.2 DSF 19:00 pty 0",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.2",
+   "expected": {
+    "title": "Paris Current: ⛅,0˚,PM2.5 Unhealthy",
+    "text": "Tomorrow: ☔→☔,Lowest11˚(+1) Highest16˚(-2)"
+   },
+   "actual": {
+    "title": "Paris Current: ⛅,0˚,PM2.5 Unhealthy",
+    "text": "Tomorrow: ☔→☔,Lowest11˚(+1) Highest16˚(-2)"
+   },
+   "match": true
+  },
+  {
+   "id": "4.2 DSF 19:00 pty 1",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.2",
+   "expected": {
+    "title": "Paris Current: ☔,0˚,PM2.5 Unhealthy,Precipitation 1.2mm",
+    "text": "Tomorrow: ☔→☔,Lowest11˚(+1) Highest16˚(-2),Chance of precipitation 80%"
+   },
+   "actual": {
+    "title": "Paris Current: ☔,0˚,PM2.5 Unhealthy,Precipitation 1.2mm",
+    "text": "Tomorrow: ☔→☔,Lowest11˚(+1) Highest16˚(-2),Chance of precipitation 80%"
+   },
+   "match": true
+  },
+  {
+   "id": "4.2 DSF 08:00 pty 0",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.2",
+   "expected": {
+    "title": "Paris Current: ⛅,0˚,PM2.5 Unhealthy",
+    "text": "Today: ⛅→⛅,Lowest10˚(+1) Highest18˚(+1)"
+   },
+   "actual": {
+    "title": "Paris Current: ⛅,0˚,PM2.5 Unhealthy",
+    "text": "Today: ⛅→⛅,Lowest10˚(+1) Highest18˚(+1)"
+   },
+   "match": true
+  },
+  {
+   "id": "4.2 DSF todayAir with summaryAir",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.2",
+   "expected": {
+    "title": "Paris ",
+    "text": "Current: Air quality is moderate"
+   },
+   "actual": {
+    "title": "Paris ",
+    "text": "Current: Air quality is moderate"
+   },
+   "match": true
+  },
+  {
+   "id": "4.2 DSF todayAir without airInfo throws",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.2",
+   "expected": {
+    "threw": "airInfo is invalid"
+   },
+   "actual": {
+    "threw": "airInfo is invalid"
+   },
+   "match": true
+  },
+  {
+   "id": "2.4 _getAqiStr {pm10Grade:3,pm10Str} alone -> no air item",
+   "doc": "docs/rewrite/server-push-and-purchase.md §2.4",
+   "expected": "<undefined>",
+   "actual": "<undefined>",
+   "match": true
+  },
+  {
+   "id": "2.4 _getAqiStr {khaiGrade:3,pm25Grade:2} -> PM2.5 string",
+   "doc": "docs/rewrite/server-push-and-purchase.md §2.4",
+   "expected": "초미세먼지 보통",
+   "actual": "초미세먼지 보통",
+   "match": true
+  },
+  {
+   "id": "4.3 C1",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.3",
+   "expected": {
+    "send": "air",
+    "notification": {
+     "title": "잠실본동 14:30",
+     "text": "비가 내리고 있습니다. 14시 오존이 나쁨입니다."
+    },
+    "lastState": 1,
+    "lastGrade": 3
+   },
+   "actual": {
+    "send": "air",
+    "notification": {
+     "title": "잠실본동 14:30",
+     "text": "비가 내리고 있습니다. 14시 오존이 나쁨입니다."
+    },
+    "lastState": 1,
+    "lastGrade": 3
+   },
+   "match": true
+  },
+  {
+   "id": "4.3 C2",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.3",
+   "expected": {
+    "send": "weather",
+    "notification": {
+     "title": "잠실본동 예보",
+     "text": "15시부터 비가 내릴 예정입니다. 14시 오존이 나쁨입니다."
+    },
+    "lastState": 1,
+    "lastGrade": 3
+   },
+   "actual": {
+    "send": "weather",
+    "notification": {
+     "title": "잠실본동 예보",
+     "text": "15시부터 비가 내릴 예정입니다. 14시 오존이 나쁨입니다."
+    },
+    "lastState": 1,
+    "lastGrade": 3
+   },
+   "match": true
+  },
+  {
+   "id": "4.3 C3",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.3",
+   "expected": {
+    "send": "none",
+    "notification": null,
+    "lastState": 0,
+    "lastGrade": 3
+   },
+   "actual": {
+    "send": "none",
+    "notification": null,
+    "lastState": 0,
+    "lastGrade": 3
+   },
+   "match": true
+  },
+  {
+   "id": "4.3 C4",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.3",
+   "expected": {
+    "send": "none",
+    "notification": null,
+    "lastState": 1,
+    "lastGrade": 3
+   },
+   "actual": {
+    "send": "none",
+    "notification": null,
+    "lastState": 1,
+    "lastGrade": 3
+   },
+   "match": true
+  },
+  {
+   "id": "4.3 lang en air-only title \"<name> AQI \" and \"14h O3 is <o3Str>.\"",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4.3",
+   "expected": {
+    "title": "Jamsil AQI ",
+    "text": "14h O3 is 나쁨."
+   },
+   "actual": {
+    "title": "Jamsil AQI ",
+    "text": "14h O3 is 나쁨."
+   },
+   "match": true
+  },
+  {
+   "id": "5.4 full list, now 2026-09-24",
+   "doc": "docs/rewrite/server-push-and-purchase.md §5.4",
+   "expected": "Mon, 01 Mar 2027 00:00:00 GMT",
+   "actual": "Mon, 01 Mar 2027 00:00:00 GMT",
+   "match": true
+  },
+  {
+   "id": "5.4 first two entries, now 2025-06-01",
+   "doc": "docs/rewrite/server-push-and-purchase.md §5.4",
+   "expected": "Sat, 10 Jan 2026 00:00:00 GMT",
+   "actual": "Sat, 10 Jan 2026 00:00:00 GMT",
+   "match": true
+  },
+  {
+   "id": "5.4 full list, now 2027-03-02 -> undefined (6778003)",
+   "doc": "docs/rewrite/server-push-and-purchase.md §5.4",
+   "expected": "<undefined>",
+   "actual": "<undefined>",
+   "match": true
+  },
+  {
+   "id": "5.4 two purchases in one window, now 2024-06-01",
+   "doc": "docs/rewrite/server-push-and-purchase.md §5.4",
+   "expected": "Sat, 10 Jan 2026 00:00:00 GMT",
+   "actual": "Sat, 10 Jan 2026 00:00:00 GMT",
+   "match": true
+  },
+  {
+   "id": "5.4 id 'ta1year'",
+   "doc": "docs/rewrite/server-push-and-purchase.md §5.4",
+   "expected": "Thu, 01 Jul 2027 00:00:00 GMT",
+   "actual": "Thu, 01 Jul 2027 00:00:00 GMT",
+   "match": true
+  },
+  {
+   "id": "5.4 id missing -> undefined (6778003)",
+   "doc": "docs/rewrite/server-push-and-purchase.md §5.4",
+   "expected": "<undefined>",
+   "actual": "<undefined>",
+   "match": true
+  },
+  {
+   "id": "5.4 in_app sorted ascending in place",
+   "doc": "docs/rewrite/server-push-and-purchase.md §5.4",
+   "expected": [
+    "2024-01-10",
+    "2024-12-20",
+    "2026-03-01",
+    "2026-06-01",
+    "2026-07-01"
+   ],
+   "actual": [
+    "2024-01-10",
+    "2024-12-20",
+    "2026-03-01",
+    "2026-06-01",
+    "2026-07-01"
+   ],
+   "match": true
+  },
+  {
+   "id": "4 method: alarm outputs identical under Asia/Seoul, UTC and America/Los_Angeles",
+   "doc": "docs/rewrite/server-push-and-purchase.md §4 method",
+   "expected": true,
+   "actual": true,
+   "match": true
+  },
+  {
+   "id": "5.4: identical under TZ=UTC and Asia/Seoul",
+   "doc": "docs/rewrite/server-push-and-purchase.md §5.4",
+   "expected": true,
+   "actual": true,
+   "match": true
+  }
+ ],
+ "all_checks_match": true,
+ "interpretation": "Synthetic execution of the alarm and alert text builders and of calcExpirationDate, extracted verbatim from the baseline files and run with stubbed translation, logging and clock. It reproduces the worked examples in server-push-and-purchase.md sections 2.4, 4.1-4.3 and 5.4 and shows they do not change across the three process time zones tried. The i18n and sprintf stubs are simplifications of the real packages, the fixtures are synthetic (strings the server response would supply, such as wfAm, *Str and summaryAir, are fixture values), and no worker, database, push provider, store validator or HTTP endpoint ran, so this is not evidence of delivered notification text or of production purchase responses. Re-run at bd6640f2: the extracted builders are text-identical to ff7acf39 and every result is unchanged. The upstream push changes (FCM-only delivery through server/lib/pushProviders.js; see docs/architecture/push-notifications.md) sit in provider selection and submission, which this probe does not execute."
+}

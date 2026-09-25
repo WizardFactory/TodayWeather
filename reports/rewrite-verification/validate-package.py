@@ -12,7 +12,7 @@ from urllib.parse import unquote, urlsplit
 ROOT=Path(__file__).resolve().parents[2]
 AREAS=[ROOT/'docs/rewrite',ROOT/'reports/rewrite-verification']
 errors=[]
-counts={'json':0,'local_links':0,'screenshots':0,'capture_diagnostics':0,'python':0}
+counts={'json':0,'local_links':0,'line_anchors':0,'screenshots':0,'capture_diagnostics':0,'python':0}
 deliverable_files=set(subprocess.check_output(
     ['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=ROOT
 ).decode().split('\0'))
@@ -24,7 +24,12 @@ def check_link(owner, raw):
     target=(owner.parent/path).resolve()
     counts['local_links']+=1
     if not target.exists():errors.append(f'{owner.relative_to(ROOT)}: missing {raw}')
-    elif target.is_file() and any(target.is_relative_to(area) for area in AREAS):
+    elif target.is_file() and re.fullmatch(r'L\d+(-L\d+)?',unquote(urlsplit(raw).fragment)):
+        # Source line anchors must stay inside the current file (re-baseline safety net).
+        counts['line_anchors']+=1
+        last=max(int(n) for n in re.findall(r'\d+',urlsplit(raw).fragment))
+        if last>len(target.read_text(errors='ignore').splitlines()):errors.append(f'{owner.relative_to(ROOT)}: line anchor past end of file: {raw}')
+    if target.exists() and target.is_file() and any(target.is_relative_to(area) for area in AREAS):
         if target.relative_to(ROOT).as_posix() not in deliverable_files:
             errors.append(f'{owner.relative_to(ROOT)}: referenced file excluded from Git: {raw}')
 
@@ -57,8 +62,16 @@ for item in manifest:
         d=json.loads((path.parent/item['diagnostic']).resolve().read_text())
         if d['errors'] or d['brokenImages'] or d['invalidSvg']:errors.append(f'Capture diagnostics: {item["file"]}')
         counts['capture_diagnostics']+=1
+listed={item['file'] for item in manifest}
+on_disk={p.name for p in (ROOT/'docs/rewrite/screenshots').glob('*.png')}
+for name in sorted(on_disk-listed):errors.append(f'Screenshot missing from manifest: {name}')
+gallery=(ROOT/'docs/rewrite/screenshots/index.html').read_text()
+shots_readme=(ROOT/'docs/rewrite/screenshots/README.md').read_text()
+for name in sorted(listed):
+    if f'src="{name}"' not in gallery:errors.append(f'Gallery omits {name}; run capture/build-gallery.py')
+    if f']({name})' not in shots_readme:errors.append(f'Screenshot README omits {name}; run capture/build-gallery.py')
 
-result={'source_commit':'ff7acf3996ccb66c912d2ed4710cf300197d6966','checks':counts,'errors':errors,'passed':not errors,'limits':'Checks deliverable Markdown and HTML asset targets, Git inclusion, syntax and app screenshot bytes. All ignored local-only visual-check outputs are excluded; browser rendering and every prose claim are not validated.'}
+result={'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'documentation_baseline':'bd6640f2 (re-baselined 2026-09-25 from ff7acf39)','checks':counts,'errors':errors,'passed':not errors,'limits':'Checks deliverable Markdown and HTML asset targets, #Lnnn line anchors staying inside their files, Git inclusion, syntax, app screenshot bytes and manifest/gallery/README consistency. All ignored local-only visual-check outputs are excluded; browser rendering and every prose claim are not validated.'}
 (ROOT/'reports/rewrite-verification/package-validation.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))
 raise SystemExit(1 if errors else 0)

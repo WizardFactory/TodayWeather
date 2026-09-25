@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/ak/.paseo/worktrees/2hsryg27/creepy-lamprey/docs/rewrite/diagrams/server-version-routing.json",
+  "output": "/Users/ak/.paseo/worktrees/2hsryg27/creepy-lamprey/docs/rewrite/diagrams/server-version-routing.html",
+  "specification": {
+    "sha256": "b6934ba23f9a90721562c4ec421123cc10fe15e92bde563c2d077c59ae0295ce",
+    "bytes": 6828
+  },
+  "artifact": {
+    "sha256": "b112cfcca7a21b9b958e86b28ad10980c303f3ceca06bd161a3d6937c70485a7",
+    "bytes": 719508
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

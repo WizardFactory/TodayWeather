@@ -1,0 +1,1002 @@
+{
+ "probe": "server-unit-conversion",
+ "evidence_label": "synthetic execution",
+ "command": "node reports/rewrite-verification/probes/server-unit-conversion.js > reports/rewrite-verification/probes/server-unit-conversion.json",
+ "source_commit": "bd6640f22c1029c35e8937b108be4b50ea89361a",
+ "date": "2026-09-25",
+ "rebaseline": {
+  "previous_source_commit": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "note": "Re-baselined 2026-09-25 from ff7acf39 to bd6640f2. controllerTown24h.js changed upstream (2116c6bf: makeResult adds historyStatus and passes short through history/policy.hourlyResponse), but _convertWeatherData is text-identical and moved from L2093-L2156 to L2094-L2157. unitConverter.js, controller.ww.units.js, controllerWorldWeather.js, kmaTimeLib.js and controller.forecastctrl.js have the same blob hashes. Inputs, outputs and all 13 checks are identical to the ff7acf39 run; additional_observation is new in this run.",
+  "node16_cross_check": "Also run on 2026-09-25 with Node v16.20.2, the server runtime pinned by server/.nvmrc and package.json engines since c80ee014: every output and check was identical; only runtime.node differed. That run is not the stored record."
+ },
+ "runtime": {
+  "node": "v24.21.0",
+  "TZ": "Asia/Seoul"
+ },
+ "source": [
+  {
+   "file": "server/lib/unitConverter.js",
+   "blob_sha1": "2ec48a307c811737421ad8b68c3c93323143cd1b",
+   "lines": "L16-L34 _convertTemperature, L36-L76 _getBeaufort, L78-L94 _convertBeaufortToMs, L96-L182 _convertWindSpeed, L184-L223 _convertPressure, L225-L232 _convertDistance, L234-L241 _convertPrecipitation, L243-L272 convertUnits, L278-L281 getDefaultValueList",
+   "note": "required as-is"
+  },
+  {
+   "file": "server/controllers/controllerTown24h.js",
+   "blob_sha1": "5a284fe09a266fee2ee054407bf41ef1efc6a913",
+   "extracted": [
+    "_convertWeatherData: L2094-L2157"
+   ]
+  },
+  {
+   "file": "server/controllers/worldWeather/controller.ww.units.js",
+   "blob_sha1": "9ead975da3e74f467312e287e3eb99881378555d",
+   "extracted": [
+    "_convertWindDirToWdd: L136-L156",
+    "_decideHumidityIcon: L158-L168",
+    "_convertThisTimeWeather: L170-L210"
+   ]
+  },
+  {
+   "file": "client/www/js/controller.forecastctrl.js",
+   "blob_sha1": "a5db3f9dbf0fe9ef18877508a0d1e462fc190f8d",
+   "extracted": [
+    "$scope.getTemp: L645-L656"
+   ]
+  },
+  {
+   "file": "server/lib/kmaTimeLib.js",
+   "blob_sha1": "d6e9d45a2024cebd6e9364b2d478e3d0a8f0d9fb",
+   "note": "required as-is (convertDateToYYYYMMDD in the world path)"
+  },
+  {
+   "file": "server/controllers/worldWeather/controllerWorldWeather.js",
+   "lines": "L2838-L2839",
+   "note": "source reading only: temp_f = parseFloat(summary.temp.toFixed(1)); the world input temp_f 32.9 is synthetic"
+  },
+  {
+   "file": "server/lib/history/policy.js",
+   "blob_sha1": "b8455b9e254fc0df9ece179cc01355551cd3fb01",
+   "lines": "L163-L180 hourlyResponse",
+   "note": "required as-is (no requires); additional_observation only"
+  },
+  {
+   "file": "server/routes/v000903/route.kma.v000903.js",
+   "lines": "L59-L60",
+   "note": "source reading only: convertUnits, insertStrForData, getSummaryAfterUnitConverter, makeResult order; not executed"
+  },
+  {
+   "file": "server/controllers/controllerTown24h.js",
+   "lines": "L1629",
+   "note": "source reading only: makeResult sets result.short = hourlyResponse(req.short); not executed"
+  },
+  {
+   "file": "server/controllers/controllerTown.js",
+   "lines": "L1298-L1301, L4795-L4803",
+   "note": "source reading only: mergeHourly runs only when config.history.readEnabled (ASOS_HISTORY_READ_ENABLED=true); on a recovered 3 h row _convertSummaryTo3H sets pty/lgt to -1 when no hourly value is usable and rn1 to -1 unless all three are usable, and copies historyObservation; not executed"
+  }
+ ],
+ "inputs": {
+  "kmaRow": {
+   "t1h": 0.5,
+   "tmx": -0.5,
+   "tmn": -10.3,
+   "sensorytem": -50,
+   "rn1": 12.5,
+   "r06": -1,
+   "s06": -1,
+   "wsd": -1,
+   "hPa": -1,
+   "visibility": -1
+  },
+  "worldThisTime": {
+   "temp_c": 0.5,
+   "temp_f": 32.9,
+   "ftemp_c": -1.2,
+   "ftemp_f": 29.8,
+   "humid": 50,
+   "precip": 12.5,
+   "windSpd_ms": 3.3,
+   "press": 1013.2,
+   "vis": 10,
+   "windDir": 0,
+   "precType": 0,
+   "date": "2026-09-25T03:00:00.000Z"
+  },
+  "beaufortSamplesMs": [
+   0.29,
+   0.3,
+   1.49,
+   1.5,
+   3.29,
+   3.3,
+   5.49,
+   5.5,
+   7.99,
+   8,
+   10.79,
+   10.8,
+   13.89,
+   13.9,
+   17.19,
+   17.2,
+   20.69,
+   20.7,
+   24.49,
+   24.5,
+   28.39,
+   28.4,
+   32.59,
+   32.6,
+   -1
+  ],
+  "preRoundSamples": [
+   {
+    "from": "km/h",
+    "val": 1.07
+   },
+   {
+    "from": "mph",
+    "val": 3.3
+   },
+   {
+    "from": "kt",
+    "val": 2.9
+   }
+  ]
+ },
+ "outputs": {
+  "factorTable": [
+   {
+    "from": "C",
+    "to": "F",
+    "factor": "val/(5/9)+32",
+    "convert(1)": 33.8,
+    "convert(10)": 50,
+    "convert(12.34)": 54.2,
+    "formulaHolds": null
+   },
+   {
+    "from": "F",
+    "to": "C",
+    "factor": "(val-32)/(9/5)",
+    "convert(1)": -17.2,
+    "convert(10)": -12.2,
+    "convert(12.34)": -10.9,
+    "formulaHolds": null
+   },
+   {
+    "from": "mph",
+    "to": "km/h",
+    "factor": 1.609344,
+    "convert(1)": 1.6,
+    "convert(10)": 16.1,
+    "convert(12.34)": 19.9,
+    "formulaHolds": true
+   },
+   {
+    "from": "mph",
+    "to": "m/s",
+    "factor": 0.44704,
+    "convert(1)": 0.4,
+    "convert(10)": 4.5,
+    "convert(12.34)": 5.5,
+    "formulaHolds": true
+   },
+   {
+    "from": "mph",
+    "to": "kt",
+    "factor": 0.868976,
+    "convert(1)": 0.9,
+    "convert(10)": 8.7,
+    "convert(12.34)": 10.7,
+    "formulaHolds": true
+   },
+   {
+    "from": "mph",
+    "to": "bft",
+    "factor": "band(round1(val*0.44704))",
+    "convert(1)": 1,
+    "convert(10)": 3,
+    "convert(12.34)": 4,
+    "formulaHolds": null
+   },
+   {
+    "from": "km/h",
+    "to": "mph",
+    "factor": 0.621371,
+    "convert(1)": 0.6,
+    "convert(10)": 6.2,
+    "convert(12.34)": 7.7,
+    "formulaHolds": true
+   },
+   {
+    "from": "km/h",
+    "to": "m/s",
+    "factor": 0.277778,
+    "convert(1)": 0.3,
+    "convert(10)": 2.8,
+    "convert(12.34)": 3.4,
+    "formulaHolds": true
+   },
+   {
+    "from": "km/h",
+    "to": "kt",
+    "factor": 0.539957,
+    "convert(1)": 0.5,
+    "convert(10)": 5.4,
+    "convert(12.34)": 6.7,
+    "formulaHolds": true
+   },
+   {
+    "from": "km/h",
+    "to": "bft",
+    "factor": "band(round1(val*0.277778))",
+    "convert(1)": 1,
+    "convert(10)": 2,
+    "convert(12.34)": 3,
+    "formulaHolds": null
+   },
+   {
+    "from": "m/s",
+    "to": "mph",
+    "factor": 2.236936,
+    "convert(1)": 2.2,
+    "convert(10)": 22.4,
+    "convert(12.34)": 27.6,
+    "formulaHolds": true
+   },
+   {
+    "from": "m/s",
+    "to": "km/h",
+    "factor": 3.6,
+    "convert(1)": 3.6,
+    "convert(10)": 36,
+    "convert(12.34)": 44.4,
+    "formulaHolds": true
+   },
+   {
+    "from": "m/s",
+    "to": "kt",
+    "factor": 1.943844,
+    "convert(1)": 1.9,
+    "convert(10)": 19.4,
+    "convert(12.34)": 24,
+    "formulaHolds": true
+   },
+   {
+    "from": "m/s",
+    "to": "bft",
+    "factor": "band(val)",
+    "convert(1)": 1,
+    "convert(10)": 5,
+    "convert(12.34)": 6,
+    "formulaHolds": null
+   },
+   {
+    "from": "kt",
+    "to": "mph",
+    "factor": 1.150779,
+    "convert(1)": 1.2,
+    "convert(10)": 11.5,
+    "convert(12.34)": 14.2,
+    "formulaHolds": true
+   },
+   {
+    "from": "kt",
+    "to": "km/h",
+    "factor": 1.852,
+    "convert(1)": 1.9,
+    "convert(10)": 18.5,
+    "convert(12.34)": 22.9,
+    "formulaHolds": true
+   },
+   {
+    "from": "kt",
+    "to": "m/s",
+    "factor": 0.514444,
+    "convert(1)": 0.5,
+    "convert(10)": 5.1,
+    "convert(12.34)": 6.3,
+    "formulaHolds": true
+   },
+   {
+    "from": "kt",
+    "to": "bft",
+    "factor": "band(round1(val*0.514444))",
+    "convert(1)": 1,
+    "convert(10)": 3,
+    "convert(12.34)": 4,
+    "formulaHolds": null
+   },
+   {
+    "from": "bft",
+    "to": "m/s",
+    "factor": "lower band edge",
+    "convert(1)": 0.3,
+    "convert(10)": 24.5,
+    "convert(12.34)": "<undefined>",
+    "formulaHolds": null
+   },
+   {
+    "from": "bft",
+    "to": "mph",
+    "factor": "edge*2.236936",
+    "convert(1)": 0.7,
+    "convert(10)": 54.8,
+    "convert(12.34)": null,
+    "formulaHolds": null
+   },
+   {
+    "from": "bft",
+    "to": "km/h",
+    "factor": "edge*3.6",
+    "convert(1)": 1.1,
+    "convert(10)": 88.2,
+    "convert(12.34)": null,
+    "formulaHolds": null
+   },
+   {
+    "from": "bft",
+    "to": "kt",
+    "factor": "edge*1.943844",
+    "convert(1)": 0.6,
+    "convert(10)": 47.6,
+    "convert(12.34)": null,
+    "formulaHolds": null
+   },
+   {
+    "from": "mmHg",
+    "to": "inHg",
+    "factor": 0.03937,
+    "convert(1)": 0,
+    "convert(10)": 0.4,
+    "convert(12.34)": 0.5,
+    "formulaHolds": true
+   },
+   {
+    "from": "mmHg",
+    "to": "hPa",
+    "factor": 1.333224,
+    "convert(1)": 1.3,
+    "convert(10)": 13.3,
+    "convert(12.34)": 16.5,
+    "formulaHolds": true
+   },
+   {
+    "from": "inHg",
+    "to": "mmHg",
+    "factor": 25.4,
+    "convert(1)": 25.4,
+    "convert(10)": 254,
+    "convert(12.34)": 313.4,
+    "formulaHolds": true
+   },
+   {
+    "from": "inHg",
+    "to": "hPa",
+    "factor": 33.863882,
+    "convert(1)": 33.9,
+    "convert(10)": 338.6,
+    "convert(12.34)": 417.9,
+    "formulaHolds": true
+   },
+   {
+    "from": "hPa",
+    "to": "mmHg",
+    "factor": 0.750062,
+    "convert(1)": 0.8,
+    "convert(10)": 7.5,
+    "convert(12.34)": 9.3,
+    "formulaHolds": true
+   },
+   {
+    "from": "hPa",
+    "to": "inHg",
+    "factor": 0.02953,
+    "convert(1)": 0,
+    "convert(10)": 0.3,
+    "convert(12.34)": 0.4,
+    "formulaHolds": true
+   },
+   {
+    "from": "hPa",
+    "to": "mb",
+    "factor": "identity",
+    "convert(1)": 1,
+    "convert(10)": 10,
+    "convert(12.34)": 12.34,
+    "formulaHolds": null
+   },
+   {
+    "from": "km",
+    "to": "mi",
+    "factor": 0.621371,
+    "convert(1)": 0.6,
+    "convert(10)": 6.2,
+    "convert(12.34)": 7.7,
+    "formulaHolds": true
+   },
+   {
+    "from": "mi",
+    "to": "km",
+    "factor": 1.609344,
+    "convert(1)": 1.6,
+    "convert(10)": 16.1,
+    "convert(12.34)": 19.9,
+    "formulaHolds": true
+   },
+   {
+    "from": "mm",
+    "to": "in",
+    "factor": 0.03937,
+    "convert(1)": 0,
+    "convert(10)": 0.4,
+    "convert(12.34)": 0.5,
+    "formulaHolds": true
+   },
+   {
+    "from": "in",
+    "to": "mm",
+    "factor": 25.4,
+    "convert(1)": 25.4,
+    "convert(10)": 254,
+    "convert(12.34)": 313.4,
+    "formulaHolds": true
+   }
+  ],
+  "beaufort": [
+   {
+    "ms": 0.29,
+    "bft": 0
+   },
+   {
+    "ms": 0.3,
+    "bft": 1
+   },
+   {
+    "ms": 1.49,
+    "bft": 1
+   },
+   {
+    "ms": 1.5,
+    "bft": 2
+   },
+   {
+    "ms": 3.29,
+    "bft": 2
+   },
+   {
+    "ms": 3.3,
+    "bft": 3
+   },
+   {
+    "ms": 5.49,
+    "bft": 3
+   },
+   {
+    "ms": 5.5,
+    "bft": 4
+   },
+   {
+    "ms": 7.99,
+    "bft": 4
+   },
+   {
+    "ms": 8,
+    "bft": 5
+   },
+   {
+    "ms": 10.79,
+    "bft": 5
+   },
+   {
+    "ms": 10.8,
+    "bft": 6
+   },
+   {
+    "ms": 13.89,
+    "bft": 6
+   },
+   {
+    "ms": 13.9,
+    "bft": 7
+   },
+   {
+    "ms": 17.19,
+    "bft": 7
+   },
+   {
+    "ms": 17.2,
+    "bft": 8
+   },
+   {
+    "ms": 20.69,
+    "bft": 8
+   },
+   {
+    "ms": 20.7,
+    "bft": 9
+   },
+   {
+    "ms": 24.49,
+    "bft": 9
+   },
+   {
+    "ms": 24.5,
+    "bft": 10
+   },
+   {
+    "ms": 28.39,
+    "bft": 10
+   },
+   {
+    "ms": 28.4,
+    "bft": 11
+   },
+   {
+    "ms": 32.59,
+    "bft": 11
+   },
+   {
+    "ms": 32.6,
+    "bft": 12
+   },
+   {
+    "ms": -1,
+    "bft": 0
+   }
+  ],
+  "preRound": [
+   {
+    "from": "km/h",
+    "val": 1.07,
+    "rawMs": 0.29722246,
+    "bftFromRawMs": 0,
+    "bft": 1
+   },
+   {
+    "from": "mph",
+    "val": 3.3,
+    "rawMs": 1.4752319999999999,
+    "bftFromRawMs": 1,
+    "bft": 2
+   },
+   {
+    "from": "kt",
+    "val": 2.9,
+    "rawMs": 1.4918876,
+    "bftFromRawMs": 1,
+    "bft": 2
+   }
+  ],
+  "kma": {
+   "input": {
+    "t1h": 0.5,
+    "tmx": -0.5,
+    "tmn": -10.3,
+    "sensorytem": -50,
+    "rn1": 12.5,
+    "r06": -1,
+    "s06": -1,
+    "wsd": -1,
+    "hPa": -1,
+    "visibility": -1
+   },
+   "F,in,mph,inHg,mi": {
+    "t1h": 32,
+    "tmx": 31,
+    "tmn": 13,
+    "sensorytem": -50,
+    "rn1": 0.5,
+    "r06": "-0",
+    "s06": -0.4,
+    "wsd": -2.2,
+    "hPa": "-0",
+    "visibility": -0.6
+   },
+   "F,in,m/s,inHg,mi": {
+    "t1h": 32,
+    "tmx": 31,
+    "tmn": 13,
+    "sensorytem": -50,
+    "rn1": 0.5,
+    "r06": "-0",
+    "s06": -0.4,
+    "wsd": -1,
+    "hPa": "-0",
+    "visibility": -0.6
+   },
+   "C,in,km/h": {
+    "t1h": 0.5,
+    "tmx": -0.5,
+    "tmn": -10.3,
+    "sensorytem": -50,
+    "rn1": 0.5,
+    "r06": "-0",
+    "s06": -0.4,
+    "wsd": -3.6,
+    "hPa": -1,
+    "visibility": -1
+   },
+   "C,in,kt": {
+    "t1h": 0.5,
+    "tmx": -0.5,
+    "tmn": -10.3,
+    "sensorytem": -50,
+    "rn1": 0.5,
+    "r06": "-0",
+    "s06": -0.4,
+    "wsd": -1.9,
+    "hPa": -1,
+    "visibility": -1
+   },
+   "C,in,bft": {
+    "t1h": 0.5,
+    "tmx": -0.5,
+    "tmn": -10.3,
+    "sensorytem": -50,
+    "rn1": 0.5,
+    "r06": "-0",
+    "s06": -0.4,
+    "wsd": 0,
+    "hPa": -1,
+    "visibility": -1
+   },
+   "defaults (C,mm,m/s,hPa,km)": {
+    "t1h": 0.5,
+    "tmx": -0.5,
+    "tmn": -10.3,
+    "sensorytem": -50,
+    "rn1": 12.5,
+    "r06": -1,
+    "s06": -10,
+    "wsd": -1,
+    "hPa": -1,
+    "visibility": -1
+   }
+  },
+  "world": {
+   "temp_c": 0.5,
+   "temp_f": 32.9,
+   "ftemp_c": -1.2,
+   "ftemp_f": 29.8,
+   "humid": 50,
+   "precip": 12.5,
+   "windSpd_ms": 3.3,
+   "press": 1013.2,
+   "vis": 10,
+   "windDir": 0,
+   "precType": 0,
+   "date": "20260925",
+   "pty": 0,
+   "t1h": 32.9,
+   "sensorytem": 29.8,
+   "reh": 50,
+   "humidityIcon": "humidity_50",
+   "rn1": 0.5,
+   "wsd": 7.4,
+   "hPa": 29.9,
+   "visibility": 6.2,
+   "stnDateTime": "2026-09-25T03:00:00.000Z",
+   "wdd": "N",
+   "dateObj": "2026-09-25T03:00:00.000Z"
+  },
+  "display": {
+   "kmaF": {
+    "server": 32,
+    "displayed": 32
+   },
+   "worldF": {
+    "server": 32.9,
+    "displayed": 33
+   },
+   "celsius05": 0.5,
+   "f32_5": 33,
+   "fMinus0_5": 0
+  },
+  "sentinels": {
+   "convertUnits('mm','in',-1)": {
+    "value": "-0",
+    "json": "{\"v\":0}"
+   },
+   "convertUnits('m/s','mph',-1)": -2.2,
+   "convertUnits('m/s','km/h',-1)": -3.6,
+   "convertUnits('m/s','kt',-1)": -1.9,
+   "convertUnits('m/s','bft',-1)": 0,
+   "convertUnits('hPa','inHg',-1)": {
+    "value": "-0",
+    "json": "{\"v\":0}"
+   },
+   "convertUnits('hPa','mmHg',-1)": -0.8,
+   "convertUnits('km','mi',-1)": -0.6,
+   "convertUnits('C','F',-50)": -58,
+   "convertUnits('mm','in',undefined)": "<undefined>",
+   "convertUnits('mm','in',null)": null,
+   "KMA s06 -1 (cm) with precipitationUnit in": -0.4,
+   "KMA s06 -1 with default units": -10,
+   "KMA wsd -1 with windSpeedUnit bft": 0
+  },
+  "precision": {
+   "0.1 mm -> in": 0,
+   "1.2 mm -> in": 0,
+   "1.3 mm -> in": 0.1,
+   "2.5 mm -> in": 0.1
+  },
+  "a04": {
+   "convertUnits('mm','m/s',12.5)": 0.5,
+   "convertUnits('mm','in',12.5)": 0.5,
+   "kmaRn1ByWindUnit": {
+    "mph": 0.5,
+    "m/s": 0.5,
+    "km/h": 0.5,
+    "kt": 0.5,
+    "bft": 0.5
+   }
+  },
+  "logged": [
+   "warn: Fail to convert from mm to in value=undefined",
+   "warn: Fail to convert from mm to in value=null"
+  ]
+ },
+ "checks": [
+  {
+   "id": "every numeric factor conversion equals parseFloat((val*k).toFixed(1))",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": true,
+   "actual": true,
+   "match": true
+  },
+  {
+   "id": "Beaufort bands 0.3/1.5/3.3/5.5/8.0/10.8/13.9/17.2/20.7/24.5/28.4/32.6 m/s (lower edge inclusive)",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": [
+    0,
+    1,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    10,
+    10,
+    11,
+    11,
+    12,
+    0
+   ],
+   "actual": [
+    0,
+    1,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    10,
+    10,
+    11,
+    11,
+    12,
+    0
+   ],
+   "match": true
+  },
+  {
+   "id": "non-m/s sources are rounded to 1 decimal before banding",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": [
+    1,
+    2,
+    2
+   ],
+   "actual": [
+    1,
+    2,
+    2
+   ],
+   "match": true
+  },
+  {
+   "id": "KMA Fahrenheit: 0.5 C -> 32.9 -> Math.floor 32",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": {
+    "convertOnly": 32.9,
+    "kmaT1h": 32
+   },
+   "actual": {
+    "convertOnly": 32.9,
+    "kmaT1h": 32
+   },
+   "match": true
+  },
+  {
+   "id": "KMA temperature sentinel -50 is skipped",
+   "doc": "server/controllers/controllerTown24h.js _convertWeatherData",
+   "expected": -50,
+   "actual": -50,
+   "match": true
+  },
+  {
+   "id": "world Fahrenheit t1h is the stored temp_f (no floor)",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": 32.9,
+   "actual": 32.9,
+   "match": true
+  },
+  {
+   "id": "client getTemp in F: KMA 32 displays 32, world 32.9 displays 33",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": {
+    "kma": 32,
+    "world": 33
+   },
+   "actual": {
+    "kma": 32,
+    "world": 33
+   },
+   "match": true
+  },
+  {
+   "id": "A04 output-neutral: convertUnits('mm','m/s',12.5) == convertUnits('mm','in',12.5) == 0.5",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1); docs/rewrite/decisions-and-open-questions.md A04",
+   "expected": [
+    0.5,
+    0.5
+   ],
+   "actual": [
+    0.5,
+    0.5
+   ],
+   "match": true
+  },
+  {
+   "id": "A04: KMA rn1 12.5 mm -> 0.5 in for every wind unit",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": {
+    "mph": 0.5,
+    "m/s": 0.5,
+    "km/h": 0.5,
+    "kt": 0.5,
+    "bft": 0.5
+   },
+   "actual": {
+    "mph": 0.5,
+    "m/s": 0.5,
+    "km/h": 0.5,
+    "kt": 0.5,
+    "bft": 0.5
+   },
+   "match": true
+  },
+  {
+   "id": "sentinel -1 mm -> -0 in, serialized as JSON 0",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": {
+    "value": "-0",
+    "json": "{\"v\":0}"
+   },
+   "actual": {
+    "value": "-0",
+    "json": "{\"v\":0}"
+   },
+   "match": true
+  },
+  {
+   "id": "sentinel -1 m/s -> -2.2 mph",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": -2.2,
+   "actual": -2.2,
+   "match": true
+  },
+  {
+   "id": "sentinel -1 hPa -> -0 inHg",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": {
+    "value": "-0",
+    "json": "{\"v\":0}"
+   },
+   "actual": {
+    "value": "-0",
+    "json": "{\"v\":0}"
+   },
+   "match": true
+  },
+  {
+   "id": "KMA s06 -1 -> -10 mm -> -0.4 in",
+   "doc": "docs/rewrite/domain-glossary.md#8-unit-conversion (V05, D42, FIN-1)",
+   "expected": -0.4,
+   "actual": -0.4,
+   "match": true
+  }
+ ],
+ "all_checks_match": true,
+ "additional_observation": {
+  "call": "ControllerTown24h._convertWeatherData then history/policy.hourlyResponse on one short row (the v000903 order; insertStrForData and getSummaryAfterUnitConverter, which run between them, are not executed)",
+  "inputs": {
+   "recoveredRow": {
+    "historyObservation": {
+     "source": "KMA_ASOS",
+     "fields": [
+      "t1h"
+     ]
+    },
+    "t1h": 12.3,
+    "rn1": -1,
+    "r06": -1,
+    "s06": -1,
+    "pty": -1
+   },
+   "plainRow": {
+    "t1h": 12.3,
+    "rn1": -1,
+    "r06": -1,
+    "s06": -1,
+    "pty": -1
+   }
+  },
+  "results": {
+   "recovered row, precipitationUnit mm (default)": {
+    "afterConvertUnits": {
+     "rn1": -1,
+     "r06": -1,
+     "s06": -10
+    },
+    "wire": {
+     "rn1": "<omitted>",
+     "r06": "<omitted>",
+     "s06": "<omitted>"
+    }
+   },
+   "recovered row, precipitationUnit in": {
+    "afterConvertUnits": {
+     "rn1": "-0",
+     "r06": "-0",
+     "s06": -0.4
+    },
+    "wire": {
+     "rn1": 0,
+     "r06": 0,
+     "s06": "<omitted>"
+    }
+   },
+   "row without historyObservation, precipitationUnit in": {
+    "afterConvertUnits": {
+     "rn1": "-0",
+     "r06": "-0",
+     "s06": -0.4
+    },
+    "wire": {
+     "rn1": 0,
+     "r06": 0,
+     "s06": -0.4
+    }
+   }
+  },
+  "note": "Added at the bd6640f2 re-baseline; not one of the checks. hourlyResponse omits rn1/r06/s06 (and their *Str) on rows that carry historyObservation when the value is not a finite number >= 0. It runs after unit conversion, so with precipitationUnit in a -1 rn1 or r06 sentinel has already become -0, passes the < 0 test and serializes as 0, while s06 (-1 cm -> -10 mm -> -0.4 in) is omitted. With the default mm all three are omitted. Rows without historyObservation keep their converted sentinels. Recovered rows exist only when ASOS_HISTORY_READ_ENABLED is true; no request chain, database or recovered document was used."
+ },
+ "interpretation": "Synthetic execution of the checked-in unit converter and of the KMA and world per-record conversion functions extracted from source, plus the client getTemp display helper, on synthetic values. It confirms the FIN-1 statements: fixed factors with 1-decimal rounding; the Beaufort bands, with non-m/s sources rounded before banding; KMA Fahrenheit values floored after conversion while the world path passes stored temp_f through and the client rounds in Fahrenheit (0.5 C shows 32 on the KMA path, a stored 32.9 F shows 33 on the world path); A04 changes no output because _convertPrecipitation ignores its target; sentinel -1 values become -0 (JSON 0), -2.2 or -0.4 depending on the unit. Two further outcomes are not in the FIN-1 text: a -1 m/s wind sentinel becomes Beaufort 0 (calm), and 0.1-1.2 mm of precipitation becomes 0 in. It does not run a request chain, so which fields reach a response in each unit, and whether any deployed response actually carried these values, is outside this probe. Re-run at bd6640f2: _convertWeatherData is text-identical to ff7acf39 and every check result is unchanged. The new additional_observation shows that the upstream hourly projection (2116c6bf; described in docs/architecture/mobile-api.md) does not omit a converted -0 inch rain sentinel on a recovered row."
+}

@@ -1,0 +1,839 @@
+{
+ "probe": "client-push-branch-entry",
+ "evidence_label": "synthetic execution",
+ "command": "node reports/rewrite-verification/probes/client-push-branch-entry.js > reports/rewrite-verification/probes/client-push-branch-entry.json",
+ "source_commit": "bd6640f22c1029c35e8937b108be4b50ea89361a",
+ "date": "2026-09-25",
+ "rebaseline": {
+  "previous_source_commit": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "note": "Re-baselined 2026-09-25 from ff7acf39 to bd6640f2. The three client files have the same blob hashes at both commits; inputs, outputs and all 19 checks are identical to the ff7acf39 run.",
+  "node16_cross_check": "Also run on 2026-09-25 with Node v16.20.2, the server runtime pinned by server/.nvmrc and package.json engines since c80ee014: every output and check was identical; only runtime.node differed. That run is not the stored record."
+ },
+ "runtime": {
+  "node": "v24.21.0",
+  "TZ": "Asia/Seoul"
+ },
+ "source": [
+  {
+   "file": "client/www/js/service.push.js",
+   "lines": "L797-L860",
+   "blob_sha1": "8ff655b620b111176a3a72e884a15c4ddf2dc611",
+   "exercised": "init; _notificationCallback (L819-L853) captured through Firebase.init"
+  },
+  {
+   "file": "client/www/js/service.branch.js",
+   "lines": "L119-L179",
+   "blob_sha1": "ea8b714e6bb38157d5acdea13a8ea28a00c44446",
+   "exercised": "branchInit"
+  },
+  {
+   "file": "client/www/js/service.weatherinfo.js",
+   "lines": "L8-L29, L56-L112, L299-L335",
+   "blob_sha1": "10c0fc75be9ce6a23d98356ccd9c09a432854a5b",
+   "exercised": "createCity, getCityOfIndex, getCityIndex, setCityIndex, loadCities"
+  },
+  {
+   "file": "docs/rewrite/examples/push-notification-open.json",
+   "note": "variant payloads used as inputs"
+  }
+ ],
+ "stubs": "Angular DI via a factory-capturing module; TwStorage over an in-memory object with four synthetic cities (slot 0 a disabled current position) and cityIndex 1; Util.ga records trackEvent/trackException; $rootScope.$broadcast recorded; WeatherUtil photo calls are no-ops; Firebase.init captures callbacks and Firebase.inited is false; Branch plugin stub records setDebug/initSession calls. cityIndex is reset to 1 before each case.",
+ "inputs": {
+  "cities": [
+   {
+    "currentPosition": true,
+    "address": null,
+    "location": null,
+    "disable": true
+   },
+   {
+    "currentPosition": false,
+    "name": "A",
+    "address": "대한민국 서울특별시 중구 광희동",
+    "location": {
+     "lat": 37.564,
+     "long": 127.005
+    }
+   },
+   {
+    "currentPosition": false,
+    "name": "B",
+    "address": "대한민국 부산광역시 해운대구",
+    "location": {
+     "lat": 35.16,
+     "long": 129.16
+    }
+   },
+   {
+    "currentPosition": false,
+    "name": "C",
+    "address": "Tokyo, Japan",
+    "location": {
+     "lat": 35.69,
+     "long": 139.692
+    }
+   }
+  ],
+  "pushPayloads": {
+   "push:backgroundTap": {
+    "tap": true,
+    "cityIndex": "2"
+   },
+   "push:apsForeground": {
+    "tap": false,
+    "cityIndex": "2",
+    "aps": {
+     "alert": {
+      "title": "광희동 ",
+      "body": "Synthetic notification body"
+     }
+    }
+   },
+   "push:nonApsForeground": {
+    "tap": false,
+    "cityIndex": "2",
+    "title": "광희동 ",
+    "body": "Synthetic notification body"
+   },
+   "push:invalidIndexTap": {
+    "tap": true,
+    "cityIndex": "not-a-number"
+   },
+   "push:outOfRangeTap": {
+    "tap": true,
+    "cityIndex": "7"
+   },
+   "push:missingCityIndexTap": {
+    "tap": true
+   },
+   "push:nullCityIndexTap": {
+    "tap": true,
+    "cityIndex": null
+   },
+   "push:unknownTap": {
+    "tap": "x"
+   },
+   "push:pluginError": {
+    "err": "plugin error",
+    "result": "undefined"
+   }
+  },
+  "branchInitSessionResults": {
+   "branch:branchFav": {
+    "+clicked_branch_link": true,
+    "fav": "2"
+   },
+   "branch:branchFavNumberZero": {
+    "+clicked_branch_link": true,
+    "fav": 0
+   },
+   "branch:todayweatherN": {
+    "+non_branch_link": "todayweather://3"
+   },
+   "branch:todayairN": {
+    "+non_branch_link": "todayair://2"
+   },
+   "branch:bareTodayweather": {
+    "+non_branch_link": "todayweather://"
+   },
+   "branch:bareTodayair": {
+    "+non_branch_link": "todayair://"
+   },
+   "branch:outOfRange": {
+    "+non_branch_link": "todayweather://9"
+   },
+   "branch:todayweatherZero": {
+    "+non_branch_link": "todayweather://0"
+   },
+   "branch:organic": {},
+   "branch:initSessionRejected": "initSession rejects with Error(\"synthetic init failure\")",
+   "branch:pluginAbsent": "window.Branch undefined"
+  }
+ },
+ "outputs": {
+  "push:backgroundTap": {
+   "input": {
+    "tap": true,
+    "cityIndex": "2"
+   },
+   "cityIndexAfter": 2,
+   "events": [
+    [
+     "trackEvent",
+     "plugin",
+     "info",
+     "pushLinkMatch 2"
+    ],
+    [
+     "trackEvent",
+     "city",
+     "set",
+     "index",
+     2
+    ],
+    [
+     "$broadcast",
+     "reloadEvent",
+     "push"
+    ]
+   ],
+   "threw": null
+  },
+  "push:apsForeground": {
+   "input": {
+    "tap": false,
+    "cityIndex": "2",
+    "aps": {
+     "alert": {
+      "title": "광희동 ",
+      "body": "Synthetic notification body"
+     }
+    }
+   },
+   "cityIndexAfter": 1,
+   "events": [
+    [
+     "$broadcast",
+     "notificationEvent",
+     {
+      "tap": false,
+      "cityIndex": "2",
+      "aps": {
+       "alert": {
+        "title": "광희동 ",
+        "body": "Synthetic notification body"
+       }
+      },
+      "title": "광희동 ",
+      "message": "Synthetic notification body"
+     }
+    ],
+    [
+     "trackEvent",
+     "action",
+     "broadcast",
+     "notificationEvent"
+    ]
+   ],
+   "threw": null
+  },
+  "push:nonApsForeground": {
+   "input": {
+    "tap": false,
+    "cityIndex": "2",
+    "title": "광희동 ",
+    "body": "Synthetic notification body"
+   },
+   "cityIndexAfter": 1,
+   "events": [
+    [
+     "$broadcast",
+     "notificationEvent",
+     {
+      "tap": false,
+      "cityIndex": "2",
+      "title": "광희동 ",
+      "body": "Synthetic notification body",
+      "message": "Synthetic notification body"
+     }
+    ],
+    [
+     "trackEvent",
+     "action",
+     "broadcast",
+     "notificationEvent"
+    ]
+   ],
+   "threw": null
+  },
+  "push:invalidIndexTap": {
+   "input": {
+    "tap": true,
+    "cityIndex": "not-a-number"
+   },
+   "cityIndexAfter": 1,
+   "events": [
+    [
+     "trackException",
+     "Error: invalid fav:NaN"
+    ]
+   ],
+   "threw": null
+  },
+  "push:outOfRangeTap": {
+   "input": {
+    "tap": true,
+    "cityIndex": "7"
+   },
+   "cityIndexAfter": 1,
+   "events": [
+    [
+     "trackEvent",
+     "plugin",
+     "info",
+     "pushLinkMatch 7"
+    ],
+    [
+     "trackEvent",
+     "city",
+     "error",
+     "Invalid set index",
+     7
+    ],
+    [
+     "$broadcast",
+     "reloadEvent",
+     "push"
+    ]
+   ],
+   "threw": null
+  },
+  "push:missingCityIndexTap": {
+   "input": {
+    "tap": true
+   },
+   "cityIndexAfter": 1,
+   "events": [],
+   "threw": null
+  },
+  "push:nullCityIndexTap": {
+   "input": {
+    "tap": true,
+    "cityIndex": null
+   },
+   "cityIndexAfter": 1,
+   "events": [],
+   "threw": null
+  },
+  "push:unknownTap": {
+   "input": {
+    "tap": "x"
+   },
+   "cityIndexAfter": 1,
+   "events": [
+    [
+     "trackException",
+     "Error: unknown tap info"
+    ]
+   ],
+   "threw": null
+  },
+  "push:pluginError": {
+   "input": {
+    "err": "plugin error",
+    "result": "undefined"
+   },
+   "cityIndexAfter": 1,
+   "events": [],
+   "threw": "TypeError: Cannot read properties of undefined (reading 'tap')"
+  },
+  "branch:branchFav": {
+   "input": {
+    "+clicked_branch_link": true,
+    "fav": "2"
+   },
+   "pluginCalls": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "cityIndexAfter": 2,
+   "events": [
+    [
+     "trackEvent",
+     "city",
+     "set",
+     "index",
+     2
+    ],
+    [
+     "$broadcast",
+     "reloadEvent",
+     "deeplink"
+    ],
+    [
+     "trackEvent",
+     "plugin",
+     "info",
+     "deepLinkMatch 2"
+    ]
+   ]
+  },
+  "branch:branchFavNumberZero": {
+   "input": {
+    "+clicked_branch_link": true,
+    "fav": 0
+   },
+   "pluginCalls": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "cityIndexAfter": 1,
+   "events": []
+  },
+  "branch:todayweatherN": {
+   "input": {
+    "+non_branch_link": "todayweather://3"
+   },
+   "pluginCalls": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "cityIndexAfter": 3,
+   "events": [
+    [
+     "trackEvent",
+     "city",
+     "set",
+     "index",
+     3
+    ],
+    [
+     "$broadcast",
+     "reloadEvent",
+     "deeplink"
+    ],
+    [
+     "trackEvent",
+     "plugin",
+     "info",
+     "deepLinkMatch 3"
+    ]
+   ]
+  },
+  "branch:todayairN": {
+   "input": {
+    "+non_branch_link": "todayair://2"
+   },
+   "pluginCalls": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "cityIndexAfter": 1,
+   "events": [
+    [
+     "trackException",
+     "Error: invalid fav:todayair://2"
+    ]
+   ]
+  },
+  "branch:bareTodayweather": {
+   "input": {
+    "+non_branch_link": "todayweather://"
+   },
+   "pluginCalls": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "cityIndexAfter": 1,
+   "events": []
+  },
+  "branch:bareTodayair": {
+   "input": {
+    "+non_branch_link": "todayair://"
+   },
+   "pluginCalls": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "cityIndexAfter": 1,
+   "events": [
+    [
+     "trackException",
+     "Error: invalid fav:todayair://"
+    ]
+   ]
+  },
+  "branch:outOfRange": {
+   "input": {
+    "+non_branch_link": "todayweather://9"
+   },
+   "pluginCalls": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "cityIndexAfter": 1,
+   "events": [
+    [
+     "trackEvent",
+     "city",
+     "error",
+     "Invalid set index",
+     9
+    ],
+    [
+     "$broadcast",
+     "reloadEvent",
+     "deeplink"
+    ],
+    [
+     "trackEvent",
+     "plugin",
+     "info",
+     "deepLinkMatch 9"
+    ]
+   ]
+  },
+  "branch:todayweatherZero": {
+   "input": {
+    "+non_branch_link": "todayweather://0"
+   },
+   "pluginCalls": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "cityIndexAfter": 0,
+   "events": [
+    [
+     "trackEvent",
+     "city",
+     "set",
+     "index",
+     0
+    ],
+    [
+     "$broadcast",
+     "reloadEvent",
+     "deeplink"
+    ],
+    [
+     "trackEvent",
+     "plugin",
+     "info",
+     "deepLinkMatch 0"
+    ]
+   ]
+  },
+  "branch:organic": {
+   "input": {},
+   "pluginCalls": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "cityIndexAfter": 1,
+   "events": []
+  },
+  "branch:initSessionRejected": {
+   "input": "initSession rejects with Error(\"synthetic init failure\")",
+   "pluginCalls": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "cityIndexAfter": 1,
+   "events": [
+    [
+     "trackException",
+     "string: synthetic init failure"
+    ]
+   ]
+  },
+  "branch:pluginAbsent": {
+   "input": "window.Branch undefined",
+   "pluginCalls": [],
+   "cityIndexAfter": 1,
+   "events": []
+  }
+ },
+ "checks": [
+  {
+   "id": "push backgroundTap \"2\" selects 2 and broadcasts reloadEvent push",
+   "doc": "docs/rewrite/client-data-contracts.md#inbound-notification-payload",
+   "expected": {
+    "cityIndexAfter": 2,
+    "broadcast": [
+     "$broadcast",
+     "reloadEvent",
+     "push"
+    ]
+   },
+   "actual": {
+    "cityIndexAfter": 2,
+    "broadcast": [
+     "$broadcast",
+     "reloadEvent",
+     "push"
+    ]
+   },
+   "match": true
+  },
+  {
+   "id": "aps and non-aps foreground give the same notificationEvent title/message, no city change or reload",
+   "doc": "docs/rewrite/client-data-contracts.md#inbound-notification-payload",
+   "expected": {
+    "aps": {
+     "cityIndexAfter": 1,
+     "title": "광희동 ",
+     "message": "Synthetic notification body",
+     "reload": false
+    },
+    "nonAps": {
+     "cityIndexAfter": 1,
+     "title": "광희동 ",
+     "message": "Synthetic notification body",
+     "reload": false
+    }
+   },
+   "actual": {
+    "aps": {
+     "cityIndexAfter": 1,
+     "title": "광희동 ",
+     "message": "Synthetic notification body",
+     "reload": false
+    },
+    "nonAps": {
+     "cityIndexAfter": 1,
+     "title": "광희동 ",
+     "message": "Synthetic notification body",
+     "reload": false
+    }
+   },
+   "match": true
+  },
+  {
+   "id": "invalid index \"not-a-number\" -> trackException invalid fav:NaN, no reload",
+   "doc": "docs/rewrite/client-data-contracts.md#inbound-notification-payload",
+   "expected": [
+    [
+     "trackException",
+     "Error: invalid fav:NaN"
+    ]
+   ],
+   "actual": [
+    [
+     "trackException",
+     "Error: invalid fav:NaN"
+    ]
+   ],
+   "match": true
+  },
+  {
+   "id": "tap \"x\" -> trackException unknown tap info",
+   "doc": "docs/rewrite/client-data-contracts.md#inbound-notification-payload",
+   "expected": [
+    [
+     "trackException",
+     "Error: unknown tap info"
+    ]
+   ],
+   "actual": [
+    [
+     "trackException",
+     "Error: unknown tap info"
+    ]
+   ],
+   "match": true
+  },
+  {
+   "id": "out-of-range \"7\" rejected by setCityIndex but reload still broadcast",
+   "doc": "docs/rewrite/client-data-contracts.md#inbound-notification-payload",
+   "expected": {
+    "cityIndexAfter": 1,
+    "rejected": true,
+    "reload": true
+   },
+   "actual": {
+    "cityIndexAfter": 1,
+    "rejected": true,
+    "reload": true
+   },
+   "match": true
+  },
+  {
+   "id": "tap without cityIndex (absent or null) produces no event",
+   "doc": "docs/rewrite/client-data-contracts.md#inbound-notification-payload",
+   "expected": {
+    "absent": [],
+    "null": []
+   },
+   "actual": {
+    "absent": [],
+    "null": []
+   },
+   "match": true
+  },
+  {
+   "id": "plugin error callback throws TypeError reading tap",
+   "doc": "docs/rewrite/client-data-contracts.md#inbound-notification-payload; decisions-and-open-questions.md A21",
+   "expected": "TypeError: Cannot read properties of undefined (reading 'tap')",
+   "actual": "TypeError: Cannot read properties of undefined (reading 'tap')",
+   "match": true
+  },
+  {
+   "id": "Branch fav \"2\" selects 2 and broadcasts reloadEvent deeplink",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links",
+   "expected": {
+    "cityIndexAfter": 2,
+    "reloadDeeplink": true
+   },
+   "actual": {
+    "cityIndexAfter": 2,
+    "reloadDeeplink": true
+   },
+   "match": true
+  },
+  {
+   "id": "todayweather://3 selects 3",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links",
+   "expected": {
+    "cityIndexAfter": 3,
+    "reloadDeeplink": true
+   },
+   "actual": {
+    "cityIndexAfter": 3,
+    "reloadDeeplink": true
+   },
+   "match": true
+  },
+  {
+   "id": "todayair://2 -> trackException invalid fav:todayair://2, no selection",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links; A20",
+   "expected": {
+    "cityIndexAfter": 1,
+    "events": [
+     [
+      "trackException",
+      "Error: invalid fav:todayair://2"
+     ]
+    ]
+   },
+   "actual": {
+    "cityIndexAfter": 1,
+    "events": [
+     [
+      "trackException",
+      "Error: invalid fav:todayair://2"
+     ]
+    ]
+   },
+   "match": true
+  },
+  {
+   "id": "bare todayweather:// ignored silently",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links",
+   "expected": {
+    "cityIndexAfter": 1,
+    "events": []
+   },
+   "actual": {
+    "cityIndexAfter": 1,
+    "events": []
+   },
+   "match": true
+  },
+  {
+   "id": "bare todayair:// -> trackException, no selection",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links; A20",
+   "expected": {
+    "cityIndexAfter": 1,
+    "events": [
+     [
+      "trackException",
+      "Error: invalid fav:todayair://"
+     ]
+    ]
+   },
+   "actual": {
+    "cityIndexAfter": 1,
+    "events": [
+     [
+      "trackException",
+      "Error: invalid fav:todayair://"
+     ]
+    ]
+   },
+   "match": true
+  },
+  {
+   "id": "organic open does nothing",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links",
+   "expected": true,
+   "actual": true,
+   "match": true
+  },
+  {
+   "id": "todayweather://9 rejected, reload still broadcast",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links; A20",
+   "expected": {
+    "cityIndexAfter": 1,
+    "rejected": true,
+    "reload": true
+   },
+   "actual": {
+    "cityIndexAfter": 1,
+    "rejected": true,
+    "reload": true
+   },
+   "match": true
+  },
+  {
+   "id": "todayweather://0 selects the disabled current-position slot 0",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links; A20",
+   "expected": {
+    "cityIndexAfter": 0,
+    "slot0Disabled": true
+   },
+   "actual": {
+    "cityIndexAfter": 0,
+    "slot0Disabled": true
+   },
+   "match": true
+  },
+  {
+   "id": "numeric Branch fav 0 ignored",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links",
+   "expected": {
+    "cityIndexAfter": 1,
+    "events": []
+   },
+   "actual": {
+    "cityIndexAfter": 1,
+    "events": []
+   },
+   "match": true
+  },
+  {
+   "id": "initSession rejection -> trackException(err.message) (a string, not an Error)",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links",
+   "expected": [
+    [
+     "trackException",
+     "string: synthetic init failure"
+    ]
+   ],
+   "actual": [
+    [
+     "trackException",
+     "string: synthetic init failure"
+    ]
+   ],
+   "match": true
+  },
+  {
+   "id": "setDebug(true) called before initSession",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links",
+   "expected": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "actual": [
+    "setDebug(true)",
+    "initSession"
+   ],
+   "match": true
+  },
+  {
+   "id": "Branch plugin absent: nothing happens",
+   "doc": "docs/rewrite/client-data-contracts.md#app-entry-links; client-data-contracts.md build dependency",
+   "expected": {
+    "events": [],
+    "cityIndexAfter": 1
+   },
+   "actual": {
+    "events": [],
+    "cityIndexAfter": 1
+   },
+   "match": true
+  }
+ ],
+ "all_checks_match": true,
+ "interpretation": "Synthetic execution of the checked-in _notificationCallback (captured through a Firebase.init stub) and Branch.branchInit against stubbed dependencies and the real WeatherInfo selection logic. It reproduces the inbound-notification rules and the entry-link table in client-data-contracts.md, including the source anomalies A20 (todayair:// links fail to parse; disabled slot 0 selectable; reload broadcast after a rejected index) and A21 (the plugin error callback throws). It does not show how cordova-plugin-firebase flattens real FCM/APNs messages, whether the external build registers the URL schemes, how Branch reports links on a device, or what TabCtrl renders; those remain unverified. Re-run at bd6640f2: the client source is identical to ff7acf39 and every result is unchanged. Upstream 45b2eb3f removed the server's direct APNs delivery (an iOS record without fcmToken now fails with \"FCM token is required for iOS notifications\"; see docs/architecture/push-notifications.md); the probed payloads already model FCM-delivered fields, so the removal does not change this result."
+}

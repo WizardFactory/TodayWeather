@@ -15,6 +15,9 @@
         },
         "database": {
           "label": "Stored products"
+        },
+        "external": {
+          "label": "External HTTP call"
         }
       }
     }
@@ -22,11 +25,16 @@
   "lanes": [
     {
       "id": "read",
-      "label": "Ordered pipeline \u00b7 upper"
+      "label": "Ordered pipeline \u00b7 row 1"
     },
     {
       "id": "compose",
-      "label": "Ordered pipeline \u00b7 lower"
+      "label": "Row 2"
+    },
+    {
+      "id": "exits",
+      "label": "Exits",
+      "variant": "exception"
     }
   ],
   "mainPath": [
@@ -48,89 +56,142 @@
       "col": 0,
       "type": "frontend",
       "label": "1. KMA request",
-      "sublabel": "address or coordinates",
-      "width": 166
+      "sublabel": "/kma/addr/\u2026 or /kma/coord/:loc",
+      "tag": "address or lat,lon in the path",
+      "width": 168
+    },
+    {
+      "id": "coord2addr",
+      "lane": "compose",
+      "col": 0,
+      "type": "external",
+      "label": "coord2addr (/coord)",
+      "sublabel": "API_SERVER /geocode/coord \u00d73",
+      "tag": "3 tries \u00d7 3 s \u2192 kmaAddress name1\u20133",
+      "width": 168
     },
     {
       "id": "location",
       "lane": "compose",
-      "col": 0,
+      "col": 1,
       "type": "backend",
-      "label": "2. Resolve location",
-      "sublabel": "query defaults + grid",
-      "width": 166
+      "label": "2. Query + params",
+      "sublabel": "items 1\u20132 \u00b7 defaults, KR repair",
+      "tag": "unit defaults \u00b7 name checks \u00b7 KR swap",
+      "width": 168
     },
     {
       "id": "preload",
       "lane": "compose",
-      "col": 1,
+      "col": 2,
       "type": "database",
-      "label": "3. Preload products",
-      "sublabel": "town / mid in parallel",
-      "width": 166
+      "label": "3. Grid + preload",
+      "sublabel": "item 3 \u00b7 grid + town/mid reads",
+      "tag": "town and mid groups in parallel",
+      "width": 168
     },
     {
       "id": "short",
       "lane": "read",
-      "col": 1,
+      "col": 2,
       "type": "backend",
-      "label": "4. Forecast baseline",
-      "sublabel": "short + RSS + shortest",
-      "width": 166
+      "label": "4. Forecast inputs",
+      "sublabel": "items 4\u20136 \u00b7 short, RSS, shortest",
+      "tag": "getShort \u00b7 getShortRss \u00b7 getShortest",
+      "width": 168
     },
     {
       "id": "current",
       "lane": "read",
-      "col": 2,
+      "col": 3,
       "type": "backend",
-      "label": "5. Current corrections",
-      "sublabel": "grid + station readings",
-      "width": 166
+      "label": "5. Correct current",
+      "sublabel": "items 7\u201311 \u00b7 grid + station data",
+      "tag": "current, history, station, opt-in ASOS",
+      "width": 168
     },
     {
       "id": "timeline",
       "lane": "compose",
-      "col": 2,
+      "col": 3,
       "type": "backend",
-      "label": "6. Align time series",
-      "sublabel": "00:00 \u2192 prior 24:00",
-      "width": 166
+      "label": "6. Align + correct",
+      "sublabel": "items 12\u201315 \u00b7 24:00\u2192obs\u2192shortest",
+      "tag": "observed\u2192short \u00b7 adjustShort",
+      "width": 168
     },
     {
       "id": "daily",
       "lane": "compose",
-      "col": 3,
+      "col": 4,
       "type": "backend",
       "label": "7. Compose daily",
-      "sublabel": "past + short + medium",
-      "width": 166
+      "sublabel": "items 16\u201321 \u00b7 past+short+medium",
+      "tag": "mid + past + short \u00b7 dailyStatus",
+      "width": 168
     },
     {
       "id": "enrich",
       "lane": "read",
-      "col": 3,
+      "col": 4,
       "type": "backend",
       "label": "8. Enrich weather",
-      "sublabel": "life, health, air, sun",
-      "width": 166
+      "sublabel": "items 22\u201329 \u00b7 life, health, air",
+      "tag": "+ sun \u00b7 insertIndex \u00b7 airInfoList",
+      "width": 168
     },
     {
       "id": "presentation",
       "lane": "read",
-      "col": 4,
+      "col": 5,
       "type": "backend",
-      "label": "9. Format presentation",
-      "sublabel": "icons \u2192 units \u2192 text",
-      "width": 166
+      "label": "9. Icons\u2192units\u2192text",
+      "sublabel": "items 30\u201335 \u00b7 yesterday, warnings",
+      "tag": "icons\u2192yesterday\u2192warnings\u2192units\u2192text",
+      "width": 168
     },
     {
       "id": "response",
       "lane": "compose",
-      "col": 4,
+      "col": 5,
       "type": "frontend",
       "label": "10. KMA JSON",
-      "sublabel": "conditional fields",
-      "width": 166
+      "sublabel": "items 36\u201337 \u00b7 conditional fields",
+      "tag": "makeResult \u2192 sendResult res.json",
+      "width": 168
+    },
+    {
+      "id": "sink",
+      "lane": "exits",
+      "col": 0,
+      "type": "frontend",
+      "label": "Express error page",
+      "sublabel": "next(err) \u2192 finalhandler 500",
+      "tag": "coord2addr \u00b7 items 2, 30, 36",
+      "width": 168,
+      "yOffset": -4
+    },
+    {
+      "id": "reject",
+      "lane": "exits",
+      "col": 1,
+      "type": "frontend",
+      "label": "400 text/html",
+      "sublabel": "We didn't support this region",
+      "tag": "4 region names \u00b7 town JP",
+      "width": 168,
+      "yOffset": -4
+    },
+    {
+      "id": "redirect",
+      "lane": "exits",
+      "col": 2,
+      "type": "frontend",
+      "label": "302 redirect",
+      "sublabel": "API_SERVER /weather/coord",
+      "tag": "outside Korea box \u00b7 query copied",
+      "width": 168,
+      "yOffset": -4
     }
   ],
   "edges": [
@@ -138,13 +199,63 @@
       "id": "request-to-location",
       "from": "request",
       "to": "location",
-      "role": "main"
+      "label": "/addr",
+      "role": "main",
+      "fromSide": "right",
+      "toSide": "top"
+    },
+    {
+      "id": "request-to-coord2addr",
+      "from": "request",
+      "to": "coord2addr",
+      "role": "branch",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "coord2addr-to-location",
+      "from": "coord2addr",
+      "to": "location",
+      "role": "branch",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "coord2addr-to-sink",
+      "from": "coord2addr",
+      "to": "sink",
+      "role": "error",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
     },
     {
       "id": "location-to-preload",
       "from": "location",
       "to": "preload",
-      "role": "main"
+      "role": "main",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "location-to-reject",
+      "from": "location",
+      "to": "reject",
+      "role": "error",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "preload-to-redirect",
+      "from": "preload",
+      "to": "redirect",
+      "role": "error",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
     },
     {
       "id": "preload-to-short",
@@ -195,7 +306,7 @@
       "title": "Precollected inputs",
       "items": [
         "Town reads are serial; medium reads are serial. Both groups run in parallel.",
-        "Each product retains its own publication time. No shared freshness transaction."
+        "Each product keeps its own publication time and age limit (short 24 h, mid 36 h); mid RSS is retired."
       ]
     },
     {
@@ -203,7 +314,15 @@
       "title": "Order is behavior",
       "items": [
         "Observed and forecast values merge before extrema, icons, units and summaries.",
-        "Missing products can be logged and omitted; 200 does not prove completeness."
+        "Missing products are logged and omitted; midData.dailyStatus lists daily gaps. 200 does not prove completeness."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Exits and item numbers",
+      "items": [
+        "400 and 302 are sent directly. next(err) from coord2addr and items 2, 30, 36, plus sync throws, skip app.js's 3-parameter handlers.",
+        "Item numbers cite the v000903 appendix (v000901/v000902: airInfo, no warnings); coord2addr runs before item 1 on /coord only."
       ]
     }
   ]

@@ -91,7 +91,7 @@ This section and the RSS card in the collection diagram describe the local repai
 | Life and health indices | `lifeIndexKmaRequester`, `controllerHealthDay` | Weather/life advisories |
 | Sunrise/sunset | `kasi.riseset.controller` | Day/night and astronomical context |
 
-Sources: [scraper](../../server/lib/kmaScraper.js), [AirKorea controller](../../server/controllers/kecoController.js), [KAQ hourly](../../server/controllers/kaq.hourly.forecast.controller.js), [AirKorea hourly](../../server/controllers/airkorea.hourly.forecast.controller.js), [sunrise/sunset](../../server/controllers/kasi.riseset.controller.js). Some auxiliary products have their own internal due-time/cache checks; the schedule above is only the manager's dispatch contract.
+Sources: [scraper](../../server/lib/kmaScraper.js), [AirKorea controller](../../server/controllers/kecoController.js), [KAQ hourly](../../server/controllers/kaq.hourly.forecast.controller.js), [AirKorea hourly](../../server/controllers/airkorea.hourly.forecast.controller.js), [sunrise/sunset](../../server/controllers/kasi.riseset.controller.js). Some auxiliary products have their own internal due-time/cache checks; the schedule above is only the manager's dispatch contract. Per-endpoint provider hosts, timeouts, retries, credential variable names and failure detection: [external provider catalog](../rewrite/external-providers.md).
 
 ## DSF request-time collection
 
