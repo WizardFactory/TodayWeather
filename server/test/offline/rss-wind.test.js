@@ -14,10 +14,16 @@ const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const rssString = vm.runInNewContext(appSource.match(/global\.rssString = (\[[^;]+);/)[1]);
 const noop = function () {};
 const log = Object.fromEntries(['info','warn','error','debug','verbose','silly'].map(k => [k,noop]));
+// Publication fixtures and freshness policy must share a deterministic clock.
+// Noon KST also keeps the 11:00 primary-publication fixture in the past.
+class FixedDate extends Date {
+    constructor(...args) { super(...(args.length ? args : ['2026-09-24T03:00:00.000Z'])); }
+    static now() { return Date.parse('2026-09-24T03:00:00.000Z'); }
+}
 function load(relative, dependencies) {
     const module = {exports: {}};
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), {
-        module, exports: module.exports, Date, console, log, rssString,
+        module, exports: module.exports, Date:FixedDate, console, log, rssString,
         require: name => {
             if (Object.prototype.hasOwnProperty.call(dependencies, name)) return dependencies[name];
             throw new Error('Unexpected dependency: '+ name);
@@ -51,7 +57,7 @@ function environment(version, rows, pubDate = '202609240800') {
     // Non-RSS imports are not exercised by this unit suite. Unexpected execution fails.
     for (const match of source.matchAll(/require\('([^']+)'\)/g)) deps[match[1]] = function unused(){throw new Error('Unexpected collaborator '+match[1]);};
     Object.assign(deps, {'../config/config':config,'../models/modelShortRss':v1,
-        '../lib/midForecastPolicy': require('../../lib/midForecastPolicy'), '../lib/kmaTimeLib':time,'./kma/kma.town.short.rss.controller.js':Rss});
+        '../lib/midForecastPolicy': load('lib/midForecastPolicy.js',{}), '../lib/kmaTimeLib':time,'./kma/kma.town.short.rss.controller.js':Rss});
     for (const name of ['./kma/kma.town.current.controller.js','./kma/kma.town.short.controller.js',
         './kma/kma.town.shortest.controller.js','./kma/kma.town.mid.controller.js']) deps[name] = noop;
     const Town = load('controllers/controllerTown.js',deps);
@@ -98,6 +104,14 @@ test('collector absent direction remains sentinel',()=>{
     });
 });
 for (const version of ['1.0','2.0']) {
+    for (const pubDate of ['202609230800','202609241300']) {
+        test(version+' expired/future RSS publication is rejected: '+pubDate,()=>{
+            // Keep primary older too: rejection must exercise expiry, not precedence.
+            const {req}=merge(version,{pubDate,basePubDate:'202609230500'});
+            assert.deepEqual(req.short[0],base());
+            assert.equal(req.shortRssPubDate,undefined);
+        });
+    }
     test(version+' newer RSS uses real DB projection and normalizes wind',()=>{
         const {req,env}=merge(version);
         assert.equal(req.short[0].wsd,1.3);assert.equal(req.short[0].vec,270);

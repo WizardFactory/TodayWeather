@@ -48,6 +48,8 @@ visual-check.*
 /reports/architecture/aws-infrastructure/browser.json
 /reports/sdlc/push-diagram/diagram-browser.json
 /reports/sdlc/issue-2554/diagram-browser.json
+/reports/sdlc/webapp-implementation/diagram-browser.json
+/reports/sdlc/webapp-parity-design/diagram-browser-command.json
 /reports/sdlc/service-architecture/**/*-browser-command.json
 # Diagram evidence copies are local artifacts too; app screen captures stay tracked.
 /reports/rewrite-verification/server-*-1440x900-*.png
@@ -56,3 +58,8 @@ visual-check.*
 # Local EC2 SSH private key
 /.aws/aleckim.pem
 /.aws/credentials
+
+# Web workspaces and local browser verification
+/web/dist/
+/test-results/
+/playwright-report/

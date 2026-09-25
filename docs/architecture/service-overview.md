@@ -49,7 +49,7 @@ The [configuration](../../server/config/config.js) defaults to `SERVER_MODE=loca
 
 ## API surfaces and the external boundary
 
-`app.js` mounts `/` and `/v000001`, plus `/v000705`, `/v000803`, `/v000901`, `/v000902`, `/v000903`, `/ww`, `/req`, and `/health`. `v000903` combines current KMA handlers with reused DSF, push, purchase and summary handlers.
+`app.js` mounts `/` and `/v000001`, plus `/v000705`, `/v000803`, `/v000901`, `/v000902`, `/v000903`, `/ww`, `/req`, and `/health`. `v000903` combines current KMA handlers with reused DSF, push, purchase and summary handlers. Per-route inventory (mount map, handlers, gating, consumers and traffic): [API endpoint catalog](../rewrite/api-endpoint-catalog.md#mount-map).
 
 The current mobile source requests `/weather/v000903/coord/...` and `/geocode/v000903/coord/...`. These are not Express mounts here. Authorized AWS inspection establishes CloudFront -> API Gateway production -> Lambda. Deployed weather Lambda geocodes coordinates using DynamoDB/provider adapters, then forwards KR to `/{version}/kma/addr/...` and other countries to `/{version}/dsf/coord/...` at `http://tw-svc-spot.wizardfactory.net`. That hostname resolves to the current service EC2 instance. Lambda source is outside this repository; service-host SSH now identifies nginx, ten PM2 cluster workers and checkout `5bca407` with config/logger edits; see [EC2 internals](ec2-internals.md). See [AWS/code correlation](aws-code-correlation.md) for evidence, address-route 501, cache policies and exact version handling.
 

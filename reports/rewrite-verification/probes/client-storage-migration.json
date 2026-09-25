@@ -1,0 +1,3315 @@
+{
+ "probe": "client-storage-migration",
+ "evidence_label": "synthetic execution",
+ "command": "node reports/rewrite-verification/probes/client-storage-migration.js > reports/rewrite-verification/probes/client-storage-migration.json",
+ "source_commit": "bd6640f22c1029c35e8937b108be4b50ea89361a",
+ "date": "2026-09-25",
+ "rebaseline": {
+  "previous_source_commit": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "note": "Re-baselined 2026-09-25 from ff7acf39 to bd6640f2. The client files (including app.js) have the same blob hashes at both commits; inputs, outputs and all 24 checks are identical to the ff7acf39 run.",
+  "node16_cross_check": "Also run on 2026-09-25 with Node v16.20.2, the server runtime pinned by server/.nvmrc since c80ee014 (the client itself runs in a WebView, not on that runtime): 23 of 24 checks matched; variant.cityIndex malformed failed only because V8 in Node 16 words the JSON.parse error as \"Unexpected token b in JSON at position 1\", the engine-specific text this record already warns about. That run is not the stored record."
+ },
+ "runtime": {
+  "node": "v24.21.0",
+  "TZ": "Asia/Seoul",
+  "utcOffsetMinutesAtFixedNow": 540
+ },
+ "source": [
+  {
+   "file": "client/www/js/service.storage.js",
+   "lines": "L125-L248",
+   "blob_sha1": "20e50ed0edf51ce9941209c55a6d0bc33c2308cc",
+   "exercised": "_setBackwardCompatibility, setForwardCompatibility, get, set, init"
+  },
+  {
+   "file": "client/www/js/service.weatherinfo.js",
+   "lines": "L8-L29, L78-L112, L278-L380",
+   "blob_sha1": "10c0fc75be9ce6a23d98356ccd9c09a432854a5b",
+   "exercised": "createCity, getCityIndex, setCityIndex, setFirstCityIndex, loadWeatherPhotos, loadCities, _saveCitiesPreference, _loadCitiesPreference, saveCities"
+  },
+  {
+   "file": "client/www/js/service.push.js",
+   "lines": "L50-L158, L222-L265, L475-L661, L761-L779, L797-L903",
+   "blob_sha1": "8ff655b620b111176a3a72e884a15c4ddf2dc611",
+   "exercised": "loadOldPushInfo, loadPushInfo, savePushInfo, _postPushList, _getSimpleCityInfo, newPushAlert, updateCityInfo, secs2date, enableAlertForOldAlarm, init"
+  },
+  {
+   "file": "client/www/js/controller.units.js",
+   "lines": "L14-L130",
+   "blob_sha1": "8be316b72dd44a82458bd9ad614b74e132bfd27b",
+   "exercised": "_getDefaultUnits, loadUnits, saveUnits"
+  },
+  {
+   "file": "client/www/js/service.weatherutil.js",
+   "lines": "L50-L60, L925-L935",
+   "blob_sha1": "4f7176e2ba9ca1d77a95096c4158b4296b78dcd3",
+   "exercised": "loadWeatherPhotos rejects with Invalid url= for the empty weatherPhotosUrl"
+  },
+  {
+   "file": "client/www/js/app.js",
+   "lines": "L328-L341",
+   "note": "startup order mirrored; not executed"
+  }
+ ],
+ "stubs": "appPreferences present with an empty native suite; iOS platform; Util.region KR; Firebase plugin absent (Firebase.inited false); clientConfig {package todayWeather, serverUrl \"\", weatherPhotosUrl \"\"}; fixed clock 2026-09-24T09:00:00+09:00; $http throws and records the URL; setTimeout queued and the 3000 ms repost run manually; Push.updateCityInfo and Push.enableAlertForOldAlarm(false) called directly",
+ "inputs": {
+  "fixtures": [
+   "docs/rewrite/examples/storage-current.json (localStorage)",
+   "docs/rewrite/examples/storage-legacy.json (rawLocalStorage, jsonLocalStorage)"
+  ],
+  "variants": {
+   "current:empty store": "no keys",
+   "current:cityIndex over": "storage-current localStorage with cityIndex 5",
+   "current:cityIndex neg": "storage-current localStorage with cityIndex -1",
+   "current:cityIndex malformed": "storage-current localStorage with raw cityIndex \"{bad\"",
+   "legacy:updateCityInfo(1)": "storage-legacy keys; Push.updateCityInfo(1) after startup, then the Close branch",
+   "legacy:unparsable pushData2": "storage-legacy keys plus raw pushData2 \"{bad\"",
+   "legacy:several legacy alarms": {
+    "pushData.alarmList": [
+     {
+      "cityIndex": 1,
+      "time": "2017-04-30T22:30:00.000Z"
+     },
+     {
+      "cityIndex": 1,
+      "time": "2017-05-01T11:00:00.000Z"
+     },
+     {
+      "cityIndex": 0,
+      "time": "2017-05-01T12:00:00.000Z"
+     }
+    ]
+   },
+   "legacy:pushData without alarmList": {
+    "pushData": {
+     "registrationId": null,
+     "type": "android"
+    }
+   }
+  }
+ },
+ "outputs": {
+  "current": {
+   "pushInitReturned": false,
+   "localStorageAfterStartup": {
+    "removed": [],
+    "added": {},
+    "rewritten": {},
+    "unchanged": [
+     "appVersion",
+     "cities",
+     "cityIndex",
+     "cityList",
+     "disableUpdateInfo",
+     "expandShortChart",
+     "purchaseInfo",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "twAdsInfo",
+     "units"
+    ]
+   },
+   "cityIndexInMemory": 1,
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": true
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": true
+    }
+   ],
+   "pushTimeFieldTypes": [
+    "startTime:Date,endTime:Date",
+    "startTime:Date,endTime:Date",
+    "time:Date",
+    "time:Date"
+   ],
+   "pushListInMemory": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-09-19T22:00:00.000Z",
+     "endTime": "2026-09-20T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.564,
+      "long": 126.985
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-09-19T22:00:00.000Z",
+     "endTime": "2026-09-20T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-09-19T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 3,
+     "time": "2026-09-20T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    }
+   ],
+   "nativeSuiteKeysAfterStartup": [
+    "cities",
+    "cityIndex",
+    "purchaseInfo",
+    "settingsInfo",
+    "startVersion",
+    "twAdsInfo"
+   ],
+   "scheduledTimersMs": [
+    3000
+   ],
+   "analyticsEventsAtStartup": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "exceptionsAtStartup": [
+    "unhandledRejection: Invalid url="
+   ],
+   "afterRepostTimer": {
+    "httpCalls": [],
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {},
+     "unchanged": [
+      "appVersion",
+      "cities",
+      "cityIndex",
+      "cityList",
+      "disableUpdateInfo",
+      "expandShortChart",
+      "purchaseInfo",
+      "pushData2",
+      "settingsInfo",
+      "startVersion",
+      "twAdsInfo",
+      "units"
+     ]
+    }
+   },
+   "exceptions": [
+    "unhandledRejection: Invalid url="
+   ],
+   "analyticsEvents": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "broadcasts": []
+  },
+  "current:empty store": {
+   "pushInitReturned": false,
+   "localStorageAfterStartup": {
+    "removed": [],
+    "added": {
+     "settingsInfo": {
+      "startupPage": "0",
+      "refreshInterval": "0",
+      "theme": "light"
+     },
+     "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea"
+     }
+    },
+    "rewritten": {},
+    "unchanged": []
+   },
+   "cityIndexInMemory": null,
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": true,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    }
+   ],
+   "pushTimeFieldTypes": [],
+   "pushListInMemory": [],
+   "nativeSuiteKeysAfterStartup": [
+    "settingsInfo",
+    "units"
+   ],
+   "scheduledTimersMs": [],
+   "analyticsEventsAtStartup": [
+    "app/user/new",
+    "city/error/loadIndexNull",
+    "city/error/Invalid set index",
+    "push/error/loadPlugin"
+   ],
+   "exceptionsAtStartup": [
+    "unhandledRejection: Invalid url="
+   ],
+   "afterRepostTimer": {
+    "httpCalls": [],
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {},
+     "unchanged": [
+      "settingsInfo",
+      "units"
+     ]
+    }
+   },
+   "exceptions": [
+    "unhandledRejection: Invalid url="
+   ],
+   "analyticsEvents": [
+    "app/user/new",
+    "city/error/loadIndexNull",
+    "city/error/Invalid set index",
+    "push/error/loadPlugin"
+   ],
+   "broadcasts": []
+  },
+  "current:cityIndex over": {
+   "pushInitReturned": false,
+   "localStorageAfterStartup": {
+    "removed": [],
+    "added": {},
+    "rewritten": {
+     "cityIndex": 0
+    },
+    "unchanged": [
+     "appVersion",
+     "cities",
+     "cityList",
+     "disableUpdateInfo",
+     "expandShortChart",
+     "purchaseInfo",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "twAdsInfo",
+     "units"
+    ]
+   },
+   "cityIndexInMemory": 0,
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": true
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": true
+    }
+   ],
+   "pushTimeFieldTypes": [
+    "startTime:Date,endTime:Date",
+    "startTime:Date,endTime:Date",
+    "time:Date",
+    "time:Date"
+   ],
+   "pushListInMemory": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-09-19T22:00:00.000Z",
+     "endTime": "2026-09-20T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.564,
+      "long": 126.985
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-09-19T22:00:00.000Z",
+     "endTime": "2026-09-20T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-09-19T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 3,
+     "time": "2026-09-20T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    }
+   ],
+   "nativeSuiteKeysAfterStartup": [
+    "cities",
+    "cityIndex",
+    "purchaseInfo",
+    "settingsInfo",
+    "startVersion",
+    "twAdsInfo"
+   ],
+   "scheduledTimersMs": [
+    3000
+   ],
+   "analyticsEventsAtStartup": [
+    "app/user/returning",
+    "city/error/loadIndexOver",
+    "city/set/index",
+    "push/error/loadPlugin"
+   ],
+   "exceptionsAtStartup": [
+    "unhandledRejection: Invalid url="
+   ],
+   "afterRepostTimer": {
+    "httpCalls": [],
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {},
+     "unchanged": [
+      "appVersion",
+      "cities",
+      "cityIndex",
+      "cityList",
+      "disableUpdateInfo",
+      "expandShortChart",
+      "purchaseInfo",
+      "pushData2",
+      "settingsInfo",
+      "startVersion",
+      "twAdsInfo",
+      "units"
+     ]
+    }
+   },
+   "exceptions": [
+    "unhandledRejection: Invalid url="
+   ],
+   "analyticsEvents": [
+    "app/user/returning",
+    "city/error/loadIndexOver",
+    "city/set/index",
+    "push/error/loadPlugin"
+   ],
+   "broadcasts": []
+  },
+  "current:cityIndex neg": {
+   "pushInitReturned": false,
+   "localStorageAfterStartup": {
+    "removed": [],
+    "added": {},
+    "rewritten": {},
+    "unchanged": [
+     "appVersion",
+     "cities",
+     "cityIndex",
+     "cityList",
+     "disableUpdateInfo",
+     "expandShortChart",
+     "purchaseInfo",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "twAdsInfo",
+     "units"
+    ]
+   },
+   "cityIndexInMemory": -1,
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": true
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": true
+    }
+   ],
+   "pushTimeFieldTypes": [
+    "startTime:Date,endTime:Date",
+    "startTime:Date,endTime:Date",
+    "time:Date",
+    "time:Date"
+   ],
+   "pushListInMemory": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-09-19T22:00:00.000Z",
+     "endTime": "2026-09-20T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.564,
+      "long": 126.985
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-09-19T22:00:00.000Z",
+     "endTime": "2026-09-20T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-09-19T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 3,
+     "time": "2026-09-20T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    }
+   ],
+   "nativeSuiteKeysAfterStartup": [
+    "cities",
+    "cityIndex",
+    "purchaseInfo",
+    "settingsInfo",
+    "startVersion",
+    "twAdsInfo"
+   ],
+   "scheduledTimersMs": [
+    3000
+   ],
+   "analyticsEventsAtStartup": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "exceptionsAtStartup": [
+    "unhandledRejection: Invalid url="
+   ],
+   "afterRepostTimer": {
+    "httpCalls": [],
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {},
+     "unchanged": [
+      "appVersion",
+      "cities",
+      "cityIndex",
+      "cityList",
+      "disableUpdateInfo",
+      "expandShortChart",
+      "purchaseInfo",
+      "pushData2",
+      "settingsInfo",
+      "startVersion",
+      "twAdsInfo",
+      "units"
+     ]
+    }
+   },
+   "exceptions": [
+    "unhandledRejection: Invalid url="
+   ],
+   "analyticsEvents": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "broadcasts": []
+  },
+  "current:cityIndex malformed": {
+   "pushInitReturned": false,
+   "localStorageAfterStartup": {
+    "removed": [],
+    "added": {},
+    "rewritten": {},
+    "unchanged": [
+     "appVersion",
+     "cities",
+     "cityIndex",
+     "cityList",
+     "disableUpdateInfo",
+     "expandShortChart",
+     "purchaseInfo",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "twAdsInfo",
+     "units"
+    ]
+   },
+   "cityIndexInMemory": "<undefined>",
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": true
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": true
+    }
+   ],
+   "pushTimeFieldTypes": [
+    "startTime:Date,endTime:Date",
+    "startTime:Date,endTime:Date",
+    "time:Date",
+    "time:Date"
+   ],
+   "pushListInMemory": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-09-19T22:00:00.000Z",
+     "endTime": "2026-09-20T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.564,
+      "long": 126.985
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-09-19T22:00:00.000Z",
+     "endTime": "2026-09-20T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-09-19T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 3,
+     "time": "2026-09-20T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "우동",
+     "source": "KMA",
+     "location": {
+      "lat": 35.163,
+      "long": 129.163
+     },
+     "town": {
+      "first": "부산광역시",
+      "second": "해운대구",
+      "third": "우동"
+     }
+    }
+   ],
+   "nativeSuiteKeysAfterStartup": [
+    "cities",
+    "cityIndex",
+    "purchaseInfo",
+    "settingsInfo",
+    "startVersion",
+    "twAdsInfo"
+   ],
+   "scheduledTimersMs": [
+    3000
+   ],
+   "analyticsEventsAtStartup": [
+    "app/user/returning",
+    "storage/error/get cityIndex",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "exceptionsAtStartup": [
+    "trackException: Expected property name or '}' in JSON at position 1 (line 1 column 2)",
+    "unhandledRejection: Invalid url="
+   ],
+   "afterRepostTimer": {
+    "httpCalls": [],
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {},
+     "unchanged": [
+      "appVersion",
+      "cities",
+      "cityIndex",
+      "cityList",
+      "disableUpdateInfo",
+      "expandShortChart",
+      "purchaseInfo",
+      "pushData2",
+      "settingsInfo",
+      "startVersion",
+      "twAdsInfo",
+      "units"
+     ]
+    }
+   },
+   "exceptions": [
+    "trackException: Expected property name or '}' in JSON at position 1 (line 1 column 2)",
+    "unhandledRejection: Invalid url="
+   ],
+   "analyticsEvents": [
+    "app/user/returning",
+    "storage/error/get cityIndex",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "broadcasts": []
+  },
+  "legacy": {
+   "pushInitReturned": true,
+   "localStorageAfterStartup": {
+    "removed": [
+     "guideVersion",
+     "refreshInterval",
+     "startupPage"
+    ],
+    "added": {
+     "cityList": {
+      "cityList": [
+       {
+        "currentPosition": true,
+        "address": null,
+        "location": null,
+        "index": 0
+       },
+       {
+        "currentPosition": false,
+        "address": "대한민국 서울특별시 종로구 청운효자동",
+        "index": 1
+       }
+      ]
+     },
+     "settingsInfo": {
+      "startupPage": "1",
+      "refreshInterval": "60",
+      "theme": "light"
+     },
+     "startVersion": 1
+    },
+    "rewritten": {
+     "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea"
+     }
+    },
+    "unchanged": [
+     "cities",
+     "cityIndex",
+     "pushData"
+    ]
+   },
+   "cityIndexInMemory": 1,
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    }
+   ],
+   "pushTimeFieldTypes": [
+    "startTime:Date,endTime:Date",
+    "time:Date"
+   ],
+   "pushListInMemory": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-09-23T22:00:00.000Z",
+     "endTime": "2026-09-24T13:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "청운효자동",
+     "source": "KMA",
+     "town": {
+      "first": "서울특별시",
+      "second": "종로구",
+      "third": "청운효자동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "time": "2017-04-30T22:30:00.000Z",
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ],
+   "nativeSuiteKeysAfterStartup": [
+    "cities",
+    "cityIndex",
+    "cityList",
+    "pushData",
+    "settingsInfo",
+    "startVersion",
+    "units"
+   ],
+   "scheduledTimersMs": [
+    3000
+   ],
+   "analyticsEventsAtStartup": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "exceptionsAtStartup": [
+    "unhandledRejection: Invalid url="
+   ],
+   "afterRepostTimer": {
+    "httpCalls": [],
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {},
+     "unchanged": [
+      "cities",
+      "cityIndex",
+      "cityList",
+      "pushData",
+      "settingsInfo",
+      "startVersion",
+      "units"
+     ]
+    }
+   },
+   "afterAlertPopupClose": {
+    "localStorageChanged": {
+     "removed": [],
+     "added": {
+      "pushData2": {
+       "registrationId": null,
+       "type": "android",
+       "category": "",
+       "fcmToken": null,
+       "pushList": [
+        {
+         "cityIndex": 1,
+         "id": 1,
+         "startTime": "2026-09-23T22:00:00.000Z",
+         "endTime": "2026-09-24T13:00:00.000Z",
+         "enable": false,
+         "category": "alert",
+         "name": "청운효자동",
+         "source": "KMA",
+         "town": {
+          "first": "서울특별시",
+          "second": "종로구",
+          "third": "청운효자동"
+         }
+        },
+        {
+         "cityIndex": 1,
+         "time": "2017-04-30T22:30:00.000Z",
+         "category": "alarm",
+         "id": 2,
+         "enable": true,
+         "dayOfWeek": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+         ]
+        }
+       ]
+      }
+     },
+     "rewritten": {},
+     "unchanged": [
+      "cities",
+      "cityIndex",
+      "cityList",
+      "pushData",
+      "settingsInfo",
+      "startVersion",
+      "units"
+     ]
+    },
+    "nativeSuiteKeys": [
+     "cities",
+     "cityIndex",
+     "cityList",
+     "pushData",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "units"
+    ],
+    "httpCalls": [],
+    "newEvents": [
+     "push/post/{\"savePushInfo\":{\"registrationId\":null,\"type\":\"android\",\"category\":\"\",\"fcmToken\":null,\"pushList\":[{\"cityIndex\":1,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\",\"name\":\"청운효자동\",\"source\":\"KMA\",\"town\":{\"first\":\"서울특별시\",\"second\":\"종로구\",\"third\":\"청운효자동\"}},{\"cityIndex\":1,\"time\":\"2017-04-30T22:30:00.000Z\",\"category\":\"alarm\",\"id\":2,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true]}]}}"
+    ]
+   },
+   "exceptions": [
+    "unhandledRejection: Invalid url="
+   ],
+   "analyticsEvents": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin",
+    "push/post/{\"savePushInfo\":{\"registrationId\":null,\"type\":\"android\",\"category\":\"\",\"fcmToken\":null,\"pushList\":[{\"cityIndex\":1,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\",\"name\":\"청운효자동\",\"source\":\"KMA\",\"town\":{\"first\":\"서울특별시\",\"second\":\"종로구\",\"third\":\"청운효자동\"}},{\"cityIndex\":1,\"time\":\"2017-04-30T22:30:00.000Z\",\"category\":\"alarm\",\"id\":2,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true]}]}}"
+   ],
+   "broadcasts": []
+  },
+  "legacy:updateCityInfo(1)": {
+   "pushInitReturned": true,
+   "localStorageAfterStartup": {
+    "removed": [
+     "guideVersion",
+     "refreshInterval",
+     "startupPage"
+    ],
+    "added": {
+     "cityList": {
+      "cityList": [
+       {
+        "currentPosition": true,
+        "address": null,
+        "location": null,
+        "index": 0
+       },
+       {
+        "currentPosition": false,
+        "address": "대한민국 서울특별시 종로구 청운효자동",
+        "index": 1
+       }
+      ]
+     },
+     "settingsInfo": {
+      "startupPage": "1",
+      "refreshInterval": "60",
+      "theme": "light"
+     },
+     "startVersion": 1
+    },
+    "rewritten": {
+     "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea"
+     }
+    },
+    "unchanged": [
+     "cities",
+     "cityIndex",
+     "pushData"
+    ]
+   },
+   "cityIndexInMemory": 1,
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    }
+   ],
+   "pushTimeFieldTypes": [
+    "startTime:Date,endTime:Date",
+    "time:Date"
+   ],
+   "pushListInMemory": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-09-23T22:00:00.000Z",
+     "endTime": "2026-09-24T13:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "청운효자동",
+     "source": "KMA",
+     "town": {
+      "first": "서울특별시",
+      "second": "종로구",
+      "third": "청운효자동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "time": "2017-04-30T22:30:00.000Z",
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ],
+   "nativeSuiteKeysAfterStartup": [
+    "cities",
+    "cityIndex",
+    "cityList",
+    "pushData",
+    "settingsInfo",
+    "startVersion",
+    "units"
+   ],
+   "scheduledTimersMs": [
+    3000
+   ],
+   "analyticsEventsAtStartup": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "exceptionsAtStartup": [
+    "unhandledRejection: Invalid url="
+   ],
+   "afterRepostTimer": {
+    "httpCalls": [],
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {},
+     "unchanged": [
+      "cities",
+      "cityIndex",
+      "cityList",
+      "pushData",
+      "settingsInfo",
+      "startVersion",
+      "units"
+     ]
+    }
+   },
+   "afterUpdateCityInfo": {
+    "city": 1,
+    "newExceptions": [
+     "trackException: Cannot read properties of undefined (reading 'first')"
+    ],
+    "newEvents": [
+     "push/update/by name",
+     "push/update/by source"
+    ],
+    "pushListInMemory": [
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "startTime": "2026-09-23T22:00:00.000Z",
+      "endTime": "2026-09-24T13:00:00.000Z",
+      "enable": false,
+      "category": "alert",
+      "name": "청운효자동",
+      "source": "KMA",
+      "town": {
+       "first": "서울특별시",
+       "second": "종로구",
+       "third": "청운효자동"
+      }
+     },
+     {
+      "cityIndex": 1,
+      "time": "2017-04-30T22:30:00.000Z",
+      "category": "alarm",
+      "id": 2,
+      "enable": true,
+      "dayOfWeek": [
+       true,
+       true,
+       true,
+       true,
+       true,
+       true,
+       true
+      ],
+      "name": "청운효자동",
+      "source": "KMA"
+     }
+    ],
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {},
+     "unchanged": [
+      "cities",
+      "cityIndex",
+      "cityList",
+      "pushData",
+      "settingsInfo",
+      "startVersion",
+      "units"
+     ]
+    },
+    "httpCalls": []
+   },
+   "afterAlertPopupClose": {
+    "localStorageChanged": {
+     "removed": [],
+     "added": {
+      "pushData2": {
+       "registrationId": null,
+       "type": "android",
+       "category": "",
+       "fcmToken": null,
+       "pushList": [
+        {
+         "cityIndex": 1,
+         "id": 1,
+         "startTime": "2026-09-23T22:00:00.000Z",
+         "endTime": "2026-09-24T13:00:00.000Z",
+         "enable": false,
+         "category": "alert",
+         "name": "청운효자동",
+         "source": "KMA",
+         "town": {
+          "first": "서울특별시",
+          "second": "종로구",
+          "third": "청운효자동"
+         }
+        },
+        {
+         "cityIndex": 1,
+         "time": "2017-04-30T22:30:00.000Z",
+         "category": "alarm",
+         "id": 2,
+         "enable": true,
+         "dayOfWeek": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+         ],
+         "name": "청운효자동",
+         "source": "KMA"
+        }
+       ]
+      }
+     },
+     "rewritten": {},
+     "unchanged": [
+      "cities",
+      "cityIndex",
+      "cityList",
+      "pushData",
+      "settingsInfo",
+      "startVersion",
+      "units"
+     ]
+    },
+    "nativeSuiteKeys": [
+     "cities",
+     "cityIndex",
+     "cityList",
+     "pushData",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "units"
+    ],
+    "httpCalls": [],
+    "newEvents": [
+     "push/post/{\"savePushInfo\":{\"registrationId\":null,\"type\":\"android\",\"category\":\"\",\"fcmToken\":null,\"pushList\":[{\"cityIndex\":1,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\",\"name\":\"청운효자동\",\"source\":\"KMA\",\"town\":{\"first\":\"서울특별시\",\"second\":\"종로구\",\"third\":\"청운효자동\"}},{\"cityIndex\":1,\"time\":\"2017-04-30T22:30:00.000Z\",\"category\":\"alarm\",\"id\":2,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true],\"name\":\"청운효자동\",\"source\":\"KMA\"}]}}"
+    ]
+   },
+   "exceptions": [
+    "unhandledRejection: Invalid url=",
+    "trackException: Cannot read properties of undefined (reading 'first')"
+   ],
+   "analyticsEvents": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin",
+    "push/update/by name",
+    "push/update/by source",
+    "push/post/{\"savePushInfo\":{\"registrationId\":null,\"type\":\"android\",\"category\":\"\",\"fcmToken\":null,\"pushList\":[{\"cityIndex\":1,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\",\"name\":\"청운효자동\",\"source\":\"KMA\",\"town\":{\"first\":\"서울특별시\",\"second\":\"종로구\",\"third\":\"청운효자동\"}},{\"cityIndex\":1,\"time\":\"2017-04-30T22:30:00.000Z\",\"category\":\"alarm\",\"id\":2,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true],\"name\":\"청운효자동\",\"source\":\"KMA\"}]}}"
+   ],
+   "broadcasts": []
+  },
+  "legacy:unparsable pushData2": {
+   "pushInitReturned": true,
+   "localStorageAfterStartup": {
+    "removed": [
+     "guideVersion",
+     "refreshInterval",
+     "startupPage"
+    ],
+    "added": {
+     "cityList": {
+      "cityList": [
+       {
+        "currentPosition": true,
+        "address": null,
+        "location": null,
+        "index": 0
+       },
+       {
+        "currentPosition": false,
+        "address": "대한민국 서울특별시 종로구 청운효자동",
+        "index": 1
+       }
+      ]
+     },
+     "settingsInfo": {
+      "startupPage": "1",
+      "refreshInterval": "60",
+      "theme": "light"
+     },
+     "startVersion": 1
+    },
+    "rewritten": {
+     "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea"
+     }
+    },
+    "unchanged": [
+     "cities",
+     "cityIndex",
+     "pushData",
+     "pushData2"
+    ]
+   },
+   "cityIndexInMemory": 1,
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    }
+   ],
+   "pushTimeFieldTypes": [
+    "startTime:Date,endTime:Date",
+    "time:Date"
+   ],
+   "pushListInMemory": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-09-23T22:00:00.000Z",
+     "endTime": "2026-09-24T13:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "청운효자동",
+     "source": "KMA",
+     "town": {
+      "first": "서울특별시",
+      "second": "종로구",
+      "third": "청운효자동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "time": "2017-04-30T22:30:00.000Z",
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ],
+   "nativeSuiteKeysAfterStartup": [
+    "cities",
+    "cityIndex",
+    "cityList",
+    "pushData",
+    "settingsInfo",
+    "startVersion",
+    "units"
+   ],
+   "scheduledTimersMs": [
+    3000
+   ],
+   "analyticsEventsAtStartup": [
+    "app/user/returning",
+    "city/load/index",
+    "storage/error/get pushData2",
+    "push/error/loadPlugin"
+   ],
+   "exceptionsAtStartup": [
+    "trackException: Expected property name or '}' in JSON at position 1 (line 1 column 2)",
+    "unhandledRejection: Invalid url="
+   ],
+   "afterRepostTimer": {
+    "httpCalls": [],
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {},
+     "unchanged": [
+      "cities",
+      "cityIndex",
+      "cityList",
+      "pushData",
+      "pushData2",
+      "settingsInfo",
+      "startVersion",
+      "units"
+     ]
+    }
+   },
+   "afterAlertPopupClose": {
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {
+      "pushData2": {
+       "registrationId": null,
+       "type": "android",
+       "category": "",
+       "fcmToken": null,
+       "pushList": [
+        {
+         "cityIndex": 1,
+         "id": 1,
+         "startTime": "2026-09-23T22:00:00.000Z",
+         "endTime": "2026-09-24T13:00:00.000Z",
+         "enable": false,
+         "category": "alert",
+         "name": "청운효자동",
+         "source": "KMA",
+         "town": {
+          "first": "서울특별시",
+          "second": "종로구",
+          "third": "청운효자동"
+         }
+        },
+        {
+         "cityIndex": 1,
+         "time": "2017-04-30T22:30:00.000Z",
+         "category": "alarm",
+         "id": 2,
+         "enable": true,
+         "dayOfWeek": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+         ]
+        }
+       ]
+      }
+     },
+     "unchanged": [
+      "cities",
+      "cityIndex",
+      "cityList",
+      "pushData",
+      "settingsInfo",
+      "startVersion",
+      "units"
+     ]
+    },
+    "nativeSuiteKeys": [
+     "cities",
+     "cityIndex",
+     "cityList",
+     "pushData",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "units"
+    ],
+    "httpCalls": [],
+    "newEvents": [
+     "push/post/{\"savePushInfo\":{\"registrationId\":null,\"type\":\"android\",\"category\":\"\",\"fcmToken\":null,\"pushList\":[{\"cityIndex\":1,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\",\"name\":\"청운효자동\",\"source\":\"KMA\",\"town\":{\"first\":\"서울특별시\",\"second\":\"종로구\",\"third\":\"청운효자동\"}},{\"cityIndex\":1,\"time\":\"2017-04-30T22:30:00.000Z\",\"category\":\"alarm\",\"id\":2,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true]}]}}"
+    ]
+   },
+   "exceptions": [
+    "trackException: Expected property name or '}' in JSON at position 1 (line 1 column 2)",
+    "unhandledRejection: Invalid url="
+   ],
+   "analyticsEvents": [
+    "app/user/returning",
+    "city/load/index",
+    "storage/error/get pushData2",
+    "push/error/loadPlugin",
+    "push/post/{\"savePushInfo\":{\"registrationId\":null,\"type\":\"android\",\"category\":\"\",\"fcmToken\":null,\"pushList\":[{\"cityIndex\":1,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\",\"name\":\"청운효자동\",\"source\":\"KMA\",\"town\":{\"first\":\"서울특별시\",\"second\":\"종로구\",\"third\":\"청운효자동\"}},{\"cityIndex\":1,\"time\":\"2017-04-30T22:30:00.000Z\",\"category\":\"alarm\",\"id\":2,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true]}]}}"
+   ],
+   "broadcasts": []
+  },
+  "legacy:several legacy alarms": {
+   "pushInitReturned": true,
+   "localStorageAfterStartup": {
+    "removed": [
+     "guideVersion",
+     "refreshInterval",
+     "startupPage"
+    ],
+    "added": {
+     "cityList": {
+      "cityList": [
+       {
+        "currentPosition": true,
+        "address": null,
+        "location": null,
+        "index": 0
+       },
+       {
+        "currentPosition": false,
+        "address": "대한민국 서울특별시 종로구 청운효자동",
+        "index": 1
+       }
+      ]
+     },
+     "settingsInfo": {
+      "startupPage": "1",
+      "refreshInterval": "60",
+      "theme": "light"
+     },
+     "startVersion": 1
+    },
+    "rewritten": {
+     "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea"
+     }
+    },
+    "unchanged": [
+     "cities",
+     "cityIndex",
+     "pushData"
+    ]
+   },
+   "cityIndexInMemory": 1,
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    }
+   ],
+   "pushTimeFieldTypes": [
+    "startTime:Date,endTime:Date",
+    "startTime:Date,endTime:Date",
+    "startTime:Date,endTime:Date",
+    "time:Date",
+    "time:Date",
+    "time:Date"
+   ],
+   "pushListInMemory": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-09-23T22:00:00.000Z",
+     "endTime": "2026-09-24T13:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "청운효자동",
+     "source": "KMA",
+     "town": {
+      "first": "서울특별시",
+      "second": "종로구",
+      "third": "청운효자동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-09-23T22:00:00.000Z",
+     "endTime": "2026-09-24T13:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "청운효자동",
+     "source": "KMA",
+     "town": {
+      "first": "서울특별시",
+      "second": "종로구",
+      "third": "청운효자동"
+     }
+    },
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-09-23T22:00:00.000Z",
+     "endTime": "2026-09-24T13:00:00.000Z",
+     "enable": false,
+     "category": "alert"
+    },
+    {
+     "cityIndex": 1,
+     "time": "2017-04-30T22:30:00.000Z",
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    },
+    {
+     "cityIndex": 1,
+     "time": "2017-05-01T11:00:00.000Z",
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    },
+    {
+     "cityIndex": 0,
+     "time": "2017-05-01T12:00:00.000Z",
+     "category": "alarm",
+     "id": 1,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ],
+   "nativeSuiteKeysAfterStartup": [
+    "cities",
+    "cityIndex",
+    "cityList",
+    "pushData",
+    "settingsInfo",
+    "startVersion",
+    "units"
+   ],
+   "scheduledTimersMs": [
+    3000
+   ],
+   "analyticsEventsAtStartup": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "exceptionsAtStartup": [
+    "trackException: Fail to find location or address city:{\"currentPosition\":true,\"address\":null,\"location\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null,\"disable\":false,\"photo\":null,\"loadTime\":null}",
+    "unhandledRejection: Invalid url="
+   ],
+   "afterRepostTimer": {
+    "httpCalls": [],
+    "localStorageChanged": {
+     "removed": [],
+     "added": {},
+     "rewritten": {},
+     "unchanged": [
+      "cities",
+      "cityIndex",
+      "cityList",
+      "pushData",
+      "settingsInfo",
+      "startVersion",
+      "units"
+     ]
+    }
+   },
+   "afterAlertPopupClose": {
+    "localStorageChanged": {
+     "removed": [],
+     "added": {
+      "pushData2": {
+       "registrationId": null,
+       "type": "android",
+       "category": "",
+       "fcmToken": null,
+       "pushList": [
+        {
+         "cityIndex": 1,
+         "id": 1,
+         "startTime": "2026-09-23T22:00:00.000Z",
+         "endTime": "2026-09-24T13:00:00.000Z",
+         "enable": false,
+         "category": "alert",
+         "name": "청운효자동",
+         "source": "KMA",
+         "town": {
+          "first": "서울특별시",
+          "second": "종로구",
+          "third": "청운효자동"
+         }
+        },
+        {
+         "cityIndex": 1,
+         "id": 1,
+         "startTime": "2026-09-23T22:00:00.000Z",
+         "endTime": "2026-09-24T13:00:00.000Z",
+         "enable": false,
+         "category": "alert",
+         "name": "청운효자동",
+         "source": "KMA",
+         "town": {
+          "first": "서울특별시",
+          "second": "종로구",
+          "third": "청운효자동"
+         }
+        },
+        {
+         "cityIndex": 0,
+         "id": 1,
+         "startTime": "2026-09-23T22:00:00.000Z",
+         "endTime": "2026-09-24T13:00:00.000Z",
+         "enable": false,
+         "category": "alert"
+        },
+        {
+         "cityIndex": 1,
+         "time": "2017-04-30T22:30:00.000Z",
+         "category": "alarm",
+         "id": 2,
+         "enable": true,
+         "dayOfWeek": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+         ]
+        },
+        {
+         "cityIndex": 1,
+         "time": "2017-05-01T11:00:00.000Z",
+         "category": "alarm",
+         "id": 2,
+         "enable": true,
+         "dayOfWeek": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+         ]
+        },
+        {
+         "cityIndex": 0,
+         "time": "2017-05-01T12:00:00.000Z",
+         "category": "alarm",
+         "id": 1,
+         "enable": true,
+         "dayOfWeek": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+         ]
+        }
+       ]
+      }
+     },
+     "rewritten": {},
+     "unchanged": [
+      "cities",
+      "cityIndex",
+      "cityList",
+      "pushData",
+      "settingsInfo",
+      "startVersion",
+      "units"
+     ]
+    },
+    "nativeSuiteKeys": [
+     "cities",
+     "cityIndex",
+     "cityList",
+     "pushData",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "units"
+    ],
+    "httpCalls": [],
+    "newEvents": [
+     "push/post/{\"savePushInfo\":{\"registrationId\":null,\"type\":\"android\",\"category\":\"\",\"fcmToken\":null,\"pushList\":[{\"cityIndex\":1,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\",\"name\":\"청운효자동\",\"source\":\"KMA\",\"town\":{\"first\":\"서울특별시\",\"second\":\"종로구\",\"third\":\"청운효자동\"}},{\"cityIndex\":1,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\",\"name\":\"청운효자동\",\"source\":\"KMA\",\"town\":{\"first\":\"서울특별시\",\"second\":\"종로구\",\"third\":\"청운효자동\"}},{\"cityIndex\":0,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\"},{\"cityIndex\":1,\"time\":\"2017-04-30T22:30:00.000Z\",\"category\":\"alarm\",\"id\":2,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true]},{\"cityIndex\":1,\"time\":\"2017-05-01T11:00:00.000Z\",\"category\":\"alarm\",\"id\":2,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true]},{\"cityIndex\":0,\"time\":\"2017-05-01T12:00:00.000Z\",\"category\":\"alarm\",\"id\":1,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true]}]}}"
+    ]
+   },
+   "exceptions": [
+    "trackException: Fail to find location or address city:{\"currentPosition\":true,\"address\":null,\"location\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null,\"disable\":false,\"photo\":null,\"loadTime\":null}",
+    "unhandledRejection: Invalid url="
+   ],
+   "analyticsEvents": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin",
+    "push/post/{\"savePushInfo\":{\"registrationId\":null,\"type\":\"android\",\"category\":\"\",\"fcmToken\":null,\"pushList\":[{\"cityIndex\":1,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\",\"name\":\"청운효자동\",\"source\":\"KMA\",\"town\":{\"first\":\"서울특별시\",\"second\":\"종로구\",\"third\":\"청운효자동\"}},{\"cityIndex\":1,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\",\"name\":\"청운효자동\",\"source\":\"KMA\",\"town\":{\"first\":\"서울특별시\",\"second\":\"종로구\",\"third\":\"청운효자동\"}},{\"cityIndex\":0,\"id\":1,\"startTime\":\"2026-09-23T22:00:00.000Z\",\"endTime\":\"2026-09-24T13:00:00.000Z\",\"enable\":false,\"category\":\"alert\"},{\"cityIndex\":1,\"time\":\"2017-04-30T22:30:00.000Z\",\"category\":\"alarm\",\"id\":2,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true]},{\"cityIndex\":1,\"time\":\"2017-05-01T11:00:00.000Z\",\"category\":\"alarm\",\"id\":2,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true]},{\"cityIndex\":0,\"time\":\"2017-05-01T12:00:00.000Z\",\"category\":\"alarm\",\"id\":1,\"enable\":true,\"dayOfWeek\":[true,true,true,true,true,true,true]}]}}"
+   ],
+   "broadcasts": []
+  },
+  "legacy:pushData without alarmList": {
+   "startupThrew": "TypeError: Cannot read properties of undefined (reading 'map')",
+   "localStorageAfterStartup": {
+    "removed": [
+     "guideVersion",
+     "refreshInterval",
+     "startupPage"
+    ],
+    "added": {
+     "cityList": {
+      "cityList": [
+       {
+        "currentPosition": true,
+        "address": null,
+        "location": null,
+        "index": 0
+       },
+       {
+        "currentPosition": false,
+        "address": "대한민국 서울특별시 종로구 청운효자동",
+        "index": 1
+       }
+      ]
+     },
+     "settingsInfo": {
+      "startupPage": "1",
+      "refreshInterval": "60",
+      "theme": "light"
+     },
+     "startVersion": 1
+    },
+    "rewritten": {},
+    "unchanged": [
+     "cities",
+     "cityIndex",
+     "pushData",
+     "units"
+    ]
+   },
+   "cityIndexInMemory": 1,
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "photo": null,
+     "loadTime": null,
+     "hasLocation": false
+    }
+   ],
+   "pushTimeFieldTypes": [],
+   "pushListInMemory": [],
+   "nativeSuiteKeysAfterStartup": [
+    "cities",
+    "cityIndex",
+    "cityList",
+    "pushData",
+    "settingsInfo",
+    "startVersion"
+   ],
+   "scheduledTimersMs": [],
+   "analyticsEventsAtStartup": [
+    "app/user/returning",
+    "city/load/index"
+   ],
+   "exceptionsAtStartup": [
+    "unhandledRejection: Invalid url="
+   ],
+   "exceptions": [
+    "unhandledRejection: Invalid url="
+   ],
+   "analyticsEvents": [
+    "app/user/returning",
+    "city/load/index"
+   ],
+   "broadcasts": []
+  }
+ },
+ "checks": [
+  {
+   "id": "current.localStorageAfterStartup",
+   "doc": "docs/rewrite/examples/storage-current.json#expectedAfterStartup",
+   "expected": {
+    "removed": [],
+    "added": {},
+    "rewritten": {},
+    "unchanged": [
+     "appVersion",
+     "cities",
+     "cityIndex",
+     "cityList",
+     "disableUpdateInfo",
+     "expandShortChart",
+     "purchaseInfo",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "twAdsInfo",
+     "units"
+    ]
+   },
+   "actual": {
+    "removed": [],
+    "added": {},
+    "rewritten": {},
+    "unchanged": [
+     "appVersion",
+     "cities",
+     "cityIndex",
+     "cityList",
+     "disableUpdateInfo",
+     "expandShortChart",
+     "purchaseInfo",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "twAdsInfo",
+     "units"
+    ]
+   },
+   "match": true
+  },
+  {
+   "id": "current.inMemoryAfterStartup",
+   "doc": "docs/rewrite/examples/storage-current.json#expectedAfterStartup",
+   "expected": {
+    "cityIndex": 1,
+    "cities": [
+     {
+      "currentPosition": true,
+      "disable": false,
+      "photo": null,
+      "loadTime": null,
+      "hasLocation": true
+     },
+     {
+      "currentPosition": false,
+      "disable": false,
+      "photo": null,
+      "loadTime": null,
+      "hasLocation": true
+     }
+    ],
+    "pushInitReturned": false,
+    "pushTimeFieldTypes": [
+     "startTime:Date,endTime:Date",
+     "startTime:Date,endTime:Date",
+     "time:Date",
+     "time:Date"
+    ],
+    "pushList": [
+     {
+      "cityIndex": 0,
+      "id": 1,
+      "startTime": "2026-09-19T22:00:00.000Z",
+      "endTime": "2026-09-20T13:00:00.000Z",
+      "enable": true,
+      "category": "alert",
+      "name": "명동",
+      "source": "KMA",
+      "location": {
+       "lat": 37.564,
+       "long": 126.985
+      },
+      "town": {
+       "first": "서울특별시",
+       "second": "중구",
+       "third": "명동"
+      }
+     },
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "startTime": "2026-09-19T22:00:00.000Z",
+      "endTime": "2026-09-20T13:00:00.000Z",
+      "enable": true,
+      "category": "alert",
+      "name": "우동",
+      "source": "KMA",
+      "location": {
+       "lat": 35.163,
+       "long": 129.163
+      },
+      "town": {
+       "first": "부산광역시",
+       "second": "해운대구",
+       "third": "우동"
+      }
+     },
+     {
+      "cityIndex": 1,
+      "id": 2,
+      "time": "2026-09-19T22:40:00.000Z",
+      "dayOfWeek": [
+       false,
+       true,
+       true,
+       true,
+       true,
+       true,
+       false
+      ],
+      "enable": true,
+      "category": "alarm",
+      "name": "우동",
+      "source": "KMA",
+      "location": {
+       "lat": 35.163,
+       "long": 129.163
+      },
+      "town": {
+       "first": "부산광역시",
+       "second": "해운대구",
+       "third": "우동"
+      }
+     },
+     {
+      "cityIndex": 1,
+      "id": 3,
+      "time": "2026-09-20T11:20:00.000Z",
+      "dayOfWeek": [
+       false,
+       true,
+       true,
+       true,
+       true,
+       true,
+       false
+      ],
+      "enable": true,
+      "category": "alarm",
+      "name": "우동",
+      "source": "KMA",
+      "location": {
+       "lat": 35.163,
+       "long": 129.163
+      },
+      "town": {
+       "first": "부산광역시",
+       "second": "해운대구",
+       "third": "우동"
+      }
+     }
+    ]
+   },
+   "actual": {
+    "cityIndex": 1,
+    "cities": [
+     {
+      "currentPosition": true,
+      "disable": false,
+      "photo": null,
+      "loadTime": null,
+      "hasLocation": true
+     },
+     {
+      "currentPosition": false,
+      "disable": false,
+      "photo": null,
+      "loadTime": null,
+      "hasLocation": true
+     }
+    ],
+    "pushInitReturned": false,
+    "pushTimeFieldTypes": [
+     "startTime:Date,endTime:Date",
+     "startTime:Date,endTime:Date",
+     "time:Date",
+     "time:Date"
+    ],
+    "pushList": [
+     {
+      "cityIndex": 0,
+      "id": 1,
+      "startTime": "2026-09-19T22:00:00.000Z",
+      "endTime": "2026-09-20T13:00:00.000Z",
+      "enable": true,
+      "category": "alert",
+      "name": "명동",
+      "source": "KMA",
+      "location": {
+       "lat": 37.564,
+       "long": 126.985
+      },
+      "town": {
+       "first": "서울특별시",
+       "second": "중구",
+       "third": "명동"
+      }
+     },
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "startTime": "2026-09-19T22:00:00.000Z",
+      "endTime": "2026-09-20T13:00:00.000Z",
+      "enable": true,
+      "category": "alert",
+      "name": "우동",
+      "source": "KMA",
+      "location": {
+       "lat": 35.163,
+       "long": 129.163
+      },
+      "town": {
+       "first": "부산광역시",
+       "second": "해운대구",
+       "third": "우동"
+      }
+     },
+     {
+      "cityIndex": 1,
+      "id": 2,
+      "time": "2026-09-19T22:40:00.000Z",
+      "dayOfWeek": [
+       false,
+       true,
+       true,
+       true,
+       true,
+       true,
+       false
+      ],
+      "enable": true,
+      "category": "alarm",
+      "name": "우동",
+      "source": "KMA",
+      "location": {
+       "lat": 35.163,
+       "long": 129.163
+      },
+      "town": {
+       "first": "부산광역시",
+       "second": "해운대구",
+       "third": "우동"
+      }
+     },
+     {
+      "cityIndex": 1,
+      "id": 3,
+      "time": "2026-09-20T11:20:00.000Z",
+      "dayOfWeek": [
+       false,
+       true,
+       true,
+       true,
+       true,
+       true,
+       false
+      ],
+      "enable": true,
+      "category": "alarm",
+      "name": "우동",
+      "source": "KMA",
+      "location": {
+       "lat": 35.163,
+       "long": 129.163
+      },
+      "town": {
+       "first": "부산광역시",
+       "second": "해운대구",
+       "third": "우동"
+      }
+     }
+    ]
+   },
+   "match": true
+  },
+  {
+   "id": "current.scheduledTimersMs",
+   "doc": "storage-current.json#expectedAfterStartup",
+   "expected": [
+    3000
+   ],
+   "actual": [
+    3000
+   ],
+   "match": true
+  },
+  {
+   "id": "current.repostNoRequest",
+   "doc": "storage-current.json repostResult; client-state-and-behavior.md (loadPushInfo repair)",
+   "expected": {
+    "httpCalls": [],
+    "added": {},
+    "rewritten": {}
+   },
+   "actual": {
+    "httpCalls": [],
+    "added": {},
+    "rewritten": {}
+   },
+   "match": true
+  },
+  {
+   "id": "current.nativeSuiteKeysAfterStartup",
+   "doc": "storage-current.json#expectedAfterStartup",
+   "expected": [
+    "cities",
+    "cityIndex",
+    "purchaseInfo",
+    "settingsInfo",
+    "startVersion",
+    "twAdsInfo"
+   ],
+   "actual": [
+    "cities",
+    "cityIndex",
+    "purchaseInfo",
+    "settingsInfo",
+    "startVersion",
+    "twAdsInfo"
+   ],
+   "match": true
+  },
+  {
+   "id": "current.analyticsEvents",
+   "doc": "storage-current.json#expectedAfterStartup",
+   "expected": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "actual": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "match": true
+  },
+  {
+   "id": "current.harnessErrors (photo feed rejection only)",
+   "doc": "storage-current.json#expectedAfterStartup harnessErrors",
+   "expected": [
+    "unhandledRejection: Invalid url="
+   ],
+   "actual": [
+    "unhandledRejection: Invalid url="
+   ],
+   "match": true
+  },
+  {
+   "id": "current.repair.cityIndex0 stale name, location and town replaced from cities[0]",
+   "doc": "client-state-and-behavior.md loadPushInfo step 1",
+   "expected": {
+    "nameReplaced": true,
+    "locationReplaced": true,
+    "townReplaced": true,
+    "nameAfter": "명동"
+   },
+   "actual": {
+    "nameReplaced": true,
+    "locationReplaced": true,
+    "townReplaced": true,
+    "nameAfter": "명동"
+   },
+   "match": true
+  },
+  {
+   "id": "current.repair.location without lat re-derived",
+   "doc": "client-state-and-behavior.md loadPushInfo step 2",
+   "expected": {
+    "inputHasLat": false,
+    "outputHasLat": true
+   },
+   "actual": {
+    "inputHasLat": false,
+    "outputHasLat": true
+   },
+   "match": true
+  },
+  {
+   "id": "variant.empty store",
+   "doc": "storage-current.json#variantRuns[empty store (new install)]",
+   "expected": {
+    "localStorageAfterStartup": {
+     "removed": [],
+     "added": {
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      },
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      }
+     },
+     "rewritten": {},
+     "unchanged": []
+    },
+    "cityIndexInMemory": null,
+    "cities": [
+     {
+      "currentPosition": true,
+      "disable": true,
+      "photo": null,
+      "loadTime": null,
+      "hasLocation": false
+     }
+    ],
+    "citiesWritten": false,
+    "nativeSuiteKeysAfterStartup": [
+     "settingsInfo",
+     "units"
+    ],
+    "analyticsEvents": [
+     "app/user/new",
+     "city/error/loadIndexNull",
+     "city/error/Invalid set index",
+     "push/error/loadPlugin"
+    ]
+   },
+   "actual": {
+    "localStorageAfterStartup": {
+     "removed": [],
+     "added": {
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      },
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      }
+     },
+     "rewritten": {},
+     "unchanged": []
+    },
+    "cityIndexInMemory": null,
+    "cities": [
+     {
+      "currentPosition": true,
+      "disable": true,
+      "photo": null,
+      "loadTime": null,
+      "hasLocation": false
+     }
+    ],
+    "citiesWritten": false,
+    "nativeSuiteKeysAfterStartup": [
+     "settingsInfo",
+     "units"
+    ],
+    "analyticsEvents": [
+     "app/user/new",
+     "city/error/loadIndexNull",
+     "city/error/Invalid set index",
+     "push/error/loadPlugin"
+    ]
+   },
+   "match": true
+  },
+  {
+   "id": "variant.cityIndex over",
+   "doc": "storage-current.json#variantRuns[cityIndex over]",
+   "expected": {
+    "cityIndexInMemory": 0,
+    "localStorageRewritten": {
+     "cityIndex": 0
+    },
+    "analyticsEvents": [
+     "app/user/returning",
+     "city/error/loadIndexOver",
+     "city/set/index",
+     "push/error/loadPlugin"
+    ],
+    "trackedExceptions": []
+   },
+   "actual": {
+    "cityIndexInMemory": 0,
+    "localStorageRewritten": {
+     "cityIndex": 0
+    },
+    "analyticsEvents": [
+     "app/user/returning",
+     "city/error/loadIndexOver",
+     "city/set/index",
+     "push/error/loadPlugin"
+    ],
+    "trackedExceptions": []
+   },
+   "match": true
+  },
+  {
+   "id": "variant.cityIndex neg",
+   "doc": "storage-current.json#variantRuns[cityIndex neg]",
+   "expected": {
+    "cityIndexInMemory": -1,
+    "localStorageRewritten": {},
+    "analyticsEvents": [
+     "app/user/returning",
+     "city/load/index",
+     "push/error/loadPlugin"
+    ],
+    "trackedExceptions": []
+   },
+   "actual": {
+    "cityIndexInMemory": -1,
+    "localStorageRewritten": {},
+    "analyticsEvents": [
+     "app/user/returning",
+     "city/load/index",
+     "push/error/loadPlugin"
+    ],
+    "trackedExceptions": []
+   },
+   "match": true
+  },
+  {
+   "id": "variant.cityIndex malformed",
+   "doc": "storage-current.json#variantRuns[cityIndex malformed]",
+   "expected": {
+    "cityIndexInMemory": "<undefined>",
+    "localStorageRewritten": {},
+    "analyticsEvents": [
+     "app/user/returning",
+     "storage/error/get cityIndex",
+     "city/load/index",
+     "push/error/loadPlugin"
+    ],
+    "trackedExceptions": [
+     "trackException: Expected property name or '}' in JSON at position 1 (line 1 column 2)"
+    ]
+   },
+   "actual": {
+    "cityIndexInMemory": "<undefined>",
+    "localStorageRewritten": {},
+    "analyticsEvents": [
+     "app/user/returning",
+     "storage/error/get cityIndex",
+     "city/load/index",
+     "push/error/loadPlugin"
+    ],
+    "trackedExceptions": [
+     "trackException: Expected property name or '}' in JSON at position 1 (line 1 column 2)"
+    ]
+   },
+   "match": true
+  },
+  {
+   "id": "legacy.localStorageAfterStartup",
+   "doc": "storage-legacy.json#expectedAfterStartup",
+   "expected": {
+    "removed": [
+     "guideVersion",
+     "refreshInterval",
+     "startupPage"
+    ],
+    "added": {
+     "cityList": {
+      "cityList": [
+       {
+        "currentPosition": true,
+        "address": null,
+        "location": null,
+        "index": 0
+       },
+       {
+        "currentPosition": false,
+        "address": "대한민국 서울특별시 종로구 청운효자동",
+        "index": 1
+       }
+      ]
+     },
+     "settingsInfo": {
+      "startupPage": "1",
+      "refreshInterval": "60",
+      "theme": "light"
+     },
+     "startVersion": 1
+    },
+    "rewritten": {
+     "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea"
+     }
+    },
+    "unchanged": [
+     "cities",
+     "cityIndex",
+     "pushData"
+    ]
+   },
+   "actual": {
+    "removed": [
+     "guideVersion",
+     "refreshInterval",
+     "startupPage"
+    ],
+    "added": {
+     "cityList": {
+      "cityList": [
+       {
+        "currentPosition": true,
+        "address": null,
+        "location": null,
+        "index": 0
+       },
+       {
+        "currentPosition": false,
+        "address": "대한민국 서울특별시 종로구 청운효자동",
+        "index": 1
+       }
+      ]
+     },
+     "settingsInfo": {
+      "startupPage": "1",
+      "refreshInterval": "60",
+      "theme": "light"
+     },
+     "startVersion": 1
+    },
+    "rewritten": {
+     "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea"
+     }
+    },
+    "unchanged": [
+     "cities",
+     "cityIndex",
+     "pushData"
+    ]
+   },
+   "match": true
+  },
+  {
+   "id": "legacy.stillAbsent",
+   "doc": "storage-legacy.json#expectedAfterStartup",
+   "expected": [
+    "pushData2"
+   ],
+   "actual": [
+    "pushData2"
+   ],
+   "match": true
+  },
+  {
+   "id": "legacy.inMemoryAfterStartup",
+   "doc": "storage-legacy.json#expectedAfterStartup",
+   "expected": {
+    "cityIndex": 1,
+    "cities": [
+     {
+      "currentPosition": true,
+      "disable": false,
+      "photo": null,
+      "loadTime": null,
+      "hasLocation": false
+     },
+     {
+      "currentPosition": false,
+      "disable": false,
+      "photo": null,
+      "loadTime": null,
+      "hasLocation": false
+     }
+    ],
+    "pushInitReturned": true,
+    "pushTimeFieldTypes": [
+     "startTime:Date,endTime:Date",
+     "time:Date"
+    ],
+    "pushList": [
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "startTime": "2026-09-23T22:00:00.000Z",
+      "endTime": "2026-09-24T13:00:00.000Z",
+      "enable": false,
+      "category": "alert",
+      "name": "청운효자동",
+      "source": "KMA",
+      "town": {
+       "first": "서울특별시",
+       "second": "종로구",
+       "third": "청운효자동"
+      }
+     },
+     {
+      "cityIndex": 1,
+      "time": "2017-04-30T22:30:00.000Z",
+      "category": "alarm",
+      "id": 2,
+      "enable": true,
+      "dayOfWeek": [
+       true,
+       true,
+       true,
+       true,
+       true,
+       true,
+       true
+      ]
+     }
+    ]
+   },
+   "actual": {
+    "cityIndex": 1,
+    "cities": [
+     {
+      "currentPosition": true,
+      "disable": false,
+      "photo": null,
+      "loadTime": null,
+      "hasLocation": false
+     },
+     {
+      "currentPosition": false,
+      "disable": false,
+      "photo": null,
+      "loadTime": null,
+      "hasLocation": false
+     }
+    ],
+    "pushInitReturned": true,
+    "pushTimeFieldTypes": [
+     "startTime:Date,endTime:Date",
+     "time:Date"
+    ],
+    "pushList": [
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "startTime": "2026-09-23T22:00:00.000Z",
+      "endTime": "2026-09-24T13:00:00.000Z",
+      "enable": false,
+      "category": "alert",
+      "name": "청운효자동",
+      "source": "KMA",
+      "town": {
+       "first": "서울특별시",
+       "second": "종로구",
+       "third": "청운효자동"
+      }
+     },
+     {
+      "cityIndex": 1,
+      "time": "2017-04-30T22:30:00.000Z",
+      "category": "alarm",
+      "id": 2,
+      "enable": true,
+      "dayOfWeek": [
+       true,
+       true,
+       true,
+       true,
+       true,
+       true,
+       true
+      ]
+     }
+    ]
+   },
+   "match": true
+  },
+  {
+   "id": "legacy.scheduledTimersMs",
+   "doc": "storage-legacy.json#expectedAfterStartup",
+   "expected": [
+    3000
+   ],
+   "actual": [
+    3000
+   ],
+   "match": true
+  },
+  {
+   "id": "legacy.nativeSuiteKeysAfterStartup",
+   "doc": "storage-legacy.json#expectedAfterStartup",
+   "expected": [
+    "cities",
+    "cityIndex",
+    "cityList",
+    "pushData",
+    "settingsInfo",
+    "startVersion",
+    "units"
+   ],
+   "actual": [
+    "cities",
+    "cityIndex",
+    "cityList",
+    "pushData",
+    "settingsInfo",
+    "startVersion",
+    "units"
+   ],
+   "match": true
+  },
+  {
+   "id": "legacy.analyticsEvents",
+   "doc": "storage-legacy.json#expectedAfterStartup",
+   "expected": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "actual": [
+    "app/user/returning",
+    "city/load/index",
+    "push/error/loadPlugin"
+   ],
+   "match": true
+  },
+  {
+   "id": "legacy.afterAlertPopupClose",
+   "doc": "storage-legacy.json#expectedAfterStartup.afterAlertPopupClose",
+   "expected": {
+    "localStorageAdded": {
+     "pushData2": {
+      "registrationId": null,
+      "type": "android",
+      "category": "",
+      "fcmToken": null,
+      "pushList": [
+       {
+        "cityIndex": 1,
+        "id": 1,
+        "startTime": "2026-09-23T22:00:00.000Z",
+        "endTime": "2026-09-24T13:00:00.000Z",
+        "enable": false,
+        "category": "alert",
+        "name": "청운효자동",
+        "source": "KMA",
+        "town": {
+         "first": "서울특별시",
+         "second": "종로구",
+         "third": "청운효자동"
+        }
+       },
+       {
+        "cityIndex": 1,
+        "time": "2017-04-30T22:30:00.000Z",
+        "category": "alarm",
+        "id": 2,
+        "enable": true,
+        "dayOfWeek": [
+         true,
+         true,
+         true,
+         true,
+         true,
+         true,
+         true
+        ]
+       }
+      ]
+     }
+    },
+    "localStorageRewritten": {},
+    "nativeSuiteKeys": [
+     "cities",
+     "cityIndex",
+     "cityList",
+     "pushData",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "units"
+    ],
+    "httpCalls": [],
+    "postEventLabelIsSavedObject": true
+   },
+   "actual": {
+    "localStorageAdded": {
+     "pushData2": {
+      "registrationId": null,
+      "type": "android",
+      "category": "",
+      "fcmToken": null,
+      "pushList": [
+       {
+        "cityIndex": 1,
+        "id": 1,
+        "startTime": "2026-09-23T22:00:00.000Z",
+        "endTime": "2026-09-24T13:00:00.000Z",
+        "enable": false,
+        "category": "alert",
+        "name": "청운효자동",
+        "source": "KMA",
+        "town": {
+         "first": "서울특별시",
+         "second": "종로구",
+         "third": "청운효자동"
+        }
+       },
+       {
+        "cityIndex": 1,
+        "time": "2017-04-30T22:30:00.000Z",
+        "category": "alarm",
+        "id": 2,
+        "enable": true,
+        "dayOfWeek": [
+         true,
+         true,
+         true,
+         true,
+         true,
+         true,
+         true
+        ]
+       }
+      ]
+     }
+    },
+    "localStorageRewritten": {},
+    "nativeSuiteKeys": [
+     "cities",
+     "cityIndex",
+     "cityList",
+     "pushData",
+     "pushData2",
+     "settingsInfo",
+     "startVersion",
+     "units"
+    ],
+    "httpCalls": [],
+    "postEventLabelIsSavedObject": true
+   },
+   "match": true
+  },
+  {
+   "id": "variant.updateCityInfo(1) before the popup answer",
+   "doc": "storage-legacy.json#variantRuns[updateCityInfo(1) before the popup answer]",
+   "expected": {
+    "trackedExceptions": [
+     "trackException: Cannot read properties of undefined (reading 'first')"
+    ],
+    "alarmInMemory": {
+     "cityIndex": 1,
+     "time": "2017-04-30T22:30:00.000Z",
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "name": "청운효자동",
+     "source": "KMA"
+    },
+    "localStorageChanged": {
+     "added": {},
+     "rewritten": {}
+    },
+    "httpCalls": [],
+    "analyticsEventsBeforeThrow": [
+     "push/update/by name",
+     "push/update/by source"
+    ],
+    "closeThenSaved": {
+     "cityIndex": 1,
+     "time": "2017-04-30T22:30:00.000Z",
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "name": "청운효자동",
+     "source": "KMA"
+    }
+   },
+   "actual": {
+    "trackedExceptions": [
+     "trackException: Cannot read properties of undefined (reading 'first')"
+    ],
+    "alarmInMemory": {
+     "cityIndex": 1,
+     "time": "2017-04-30T22:30:00.000Z",
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "name": "청운효자동",
+     "source": "KMA"
+    },
+    "localStorageChanged": {
+     "added": {},
+     "rewritten": {}
+    },
+    "httpCalls": [],
+    "analyticsEventsBeforeThrow": [
+     "push/update/by name",
+     "push/update/by source"
+    ],
+    "closeThenSaved": {
+     "cityIndex": 1,
+     "time": "2017-04-30T22:30:00.000Z",
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "name": "청운효자동",
+     "source": "KMA"
+    }
+   },
+   "match": true
+  },
+  {
+   "id": "variant.unparsable pushData2",
+   "doc": "storage-legacy.json#variantRuns[unparsable pushData2]",
+   "expected": {
+    "pushInitReturned": true,
+    "analyticsEvents": [
+     "app/user/returning",
+     "city/load/index",
+     "storage/error/get pushData2",
+     "push/error/loadPlugin"
+    ],
+    "pushListInMemory": [
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "category": "alert",
+      "enable": false,
+      "hasCityInfo": true
+     },
+     {
+      "cityIndex": 1,
+      "id": 2,
+      "category": "alarm",
+      "enable": true,
+      "hasCityInfo": false
+     }
+    ],
+    "closeReplacedPushData2": true
+   },
+   "actual": {
+    "pushInitReturned": true,
+    "analyticsEvents": [
+     "app/user/returning",
+     "city/load/index",
+     "storage/error/get pushData2",
+     "push/error/loadPlugin"
+    ],
+    "pushListInMemory": [
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "category": "alert",
+      "enable": false,
+      "hasCityInfo": true
+     },
+     {
+      "cityIndex": 1,
+      "id": 2,
+      "category": "alarm",
+      "enable": true,
+      "hasCityInfo": false
+     }
+    ],
+    "closeReplacedPushData2": true
+   },
+   "match": true
+  },
+  {
+   "id": "variant.several legacy alarms",
+   "doc": "storage-legacy.json#variantRuns[several legacy alarms]",
+   "expected": {
+    "pushListInMemory": [
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "category": "alert",
+      "enable": false,
+      "hasCityInfo": true
+     },
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "category": "alert",
+      "enable": false,
+      "hasCityInfo": true
+     },
+     {
+      "cityIndex": 0,
+      "id": 1,
+      "category": "alert",
+      "enable": false,
+      "hasCityInfo": false
+     },
+     {
+      "cityIndex": 1,
+      "id": 2,
+      "category": "alarm",
+      "enable": true,
+      "hasCityInfo": false
+     },
+     {
+      "cityIndex": 1,
+      "id": 2,
+      "category": "alarm",
+      "enable": true,
+      "hasCityInfo": false
+     },
+     {
+      "cityIndex": 0,
+      "id": 1,
+      "category": "alarm",
+      "enable": true,
+      "hasCityInfo": false
+     }
+    ],
+    "trackedExceptions": [
+     "trackException: Fail to find location or address city:<placeholder JSON omitted>"
+    ]
+   },
+   "actual": {
+    "pushListInMemory": [
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "category": "alert",
+      "enable": false,
+      "hasCityInfo": true
+     },
+     {
+      "cityIndex": 1,
+      "id": 1,
+      "category": "alert",
+      "enable": false,
+      "hasCityInfo": true
+     },
+     {
+      "cityIndex": 0,
+      "id": 1,
+      "category": "alert",
+      "enable": false,
+      "hasCityInfo": false
+     },
+     {
+      "cityIndex": 1,
+      "id": 2,
+      "category": "alarm",
+      "enable": true,
+      "hasCityInfo": false
+     },
+     {
+      "cityIndex": 1,
+      "id": 2,
+      "category": "alarm",
+      "enable": true,
+      "hasCityInfo": false
+     },
+     {
+      "cityIndex": 0,
+      "id": 1,
+      "category": "alarm",
+      "enable": true,
+      "hasCityInfo": false
+     }
+    ],
+    "trackedExceptions": [
+     "trackException: Fail to find location or address city:<placeholder JSON omitted>"
+    ]
+   },
+   "match": true
+  },
+  {
+   "id": "variant.legacy pushData without alarmList",
+   "doc": "storage-legacy.json#variantRuns[legacy pushData without alarmList]",
+   "expected": {
+    "pushInitThrew": "TypeError: Cannot read properties of undefined (reading 'map')",
+    "unitsLoaded": false
+   },
+   "actual": {
+    "pushInitThrew": "TypeError: Cannot read properties of undefined (reading 'map')",
+    "unitsLoaded": false
+   },
+   "match": true
+  }
+ ],
+ "all_checks_match": true,
+ "interpretation": "Synthetic execution of the checked-in client storage, units, weather-info and push services in isolated Node VM contexts with stubbed dependencies. It reproduces the startup storage outcomes recorded in the two example fixtures (expectedAfterStartup and variantRuns) and the migration, selection and push-record repair statements in client-state-and-behavior.md that are labelled synthetic execution. It does not run app.js itself, Purchase.init, the TabCtrl popup, the OK branch, a WebView, the native appPreferences plugin, Firebase or any request, so it says nothing about device timing, native storage failures or production data; the fixtures are synthetic and the legacy writer's alarm fields beyond cityIndex/time are unknown. Error message texts (for example the malformed-JSON message) are Node/V8-specific. Re-run at bd6640f2: the client source is identical to ff7acf39 and every result is unchanged."
+}

@@ -1,0 +1,94 @@
+{
+  "state": "tab.forecast",
+  "viewport": [
+    402,
+    778
+  ],
+  "screen": [
+    402,
+    874
+  ],
+  "theme": "light",
+  "errors": [],
+  "brokenImages": [],
+  "svgCount": 1,
+  "invalidSvg": 0,
+  "headers": [
+    {
+      "text": "오늘날씨",
+      "x": 10,
+      "y": 0,
+      "width": 382,
+      "height": 43
+    },
+    {
+      "text": "서울",
+      "x": 10,
+      "y": 0,
+      "width": 382,
+      "height": 43
+    },
+    {
+      "text": "서울",
+      "x": 20,
+      "y": 0,
+      "width": 362,
+      "height": 43
+    }
+  ],
+  "tabs": [
+    {
+      "text": "즐겨찾기",
+      "x": 0,
+      "y": 730,
+      "width": 100.5,
+      "height": 47
+    },
+    {
+      "text": "시간별날씨",
+      "x": 100.5,
+      "y": 730,
+      "width": 100.5,
+      "height": 47
+    },
+    {
+      "text": "일별날씨",
+      "x": 201,
+      "y": 730,
+      "width": 100.5,
+      "height": 47
+    },
+    {
+      "text": "대기정보",
+      "x": 301.5,
+      "y": 730,
+      "width": 100.5,
+      "height": 47
+    }
+  ],
+  "fontStatus": "loaded",
+  "documentWidth": 402,
+  "scrollRegions": [
+    {
+      "className": "has-header menu-content scroll-content ionic-scroll overflow-scroll",
+      "clientWidth": 402,
+      "scrollWidth": 403,
+      "clientHeight": 735,
+      "scrollHeight": 735
+    },
+    {
+      "className": "main-content scroll-content ionic-scroll overflow-scroll  has-header has-tabs",
+      "clientWidth": 402,
+      "scrollWidth": 402,
+      "clientHeight": 730,
+      "scrollHeight": 1314
+    },
+    {
+      "className": "chart-scroll",
+      "clientWidth": 402,
+      "scrollWidth": 1378,
+      "clientHeight": 251,
+      "scrollHeight": 261
+    }
+  ]
+}

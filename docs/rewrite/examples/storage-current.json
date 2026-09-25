@@ -1,0 +1,530 @@
+{
+  "_example": {
+    "kind": "synthetic persisted client storage, current key set",
+    "sourceRevision": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+    "liveDeviceCapture": false,
+    "encoding": "Values under localStorage are shown parsed. TwStorage.set stores JSON.stringify(value) under the key and, when the appPreferences plugin exists, schedules the same string for the native suite <app-group> (see docs/rewrite/configuration-inventory.md section 4).",
+    "omittedKeys": {
+      "storeReceipt": "plugin receipt envelope; sensitive",
+      "daumServiceKeys": "configured provider key list; sensitive configuration",
+      "pushData": "legacy push key; see storage-legacy.json"
+    },
+    "sensitiveFields": "fcmToken and registrationId are null on purpose. No token, receipt, device ID or credential appears in this file.",
+    "truncation": "City weather members keep only their structure; see client-kma-normalized.json for a complete normalized city.",
+    "timezone": "Push Date fields are ISO instants created on 2026-09-20 in Asia/Seoul (UTC+9): alert 07:00-22:00, alarms 07:40 and 20:20 local.",
+    "deliberateDefects": [
+      "pushData2.pushList[0] (cityIndex 0) carries a stale name/location/town; loadPushInfo replaces them from cities[0].",
+      "pushData2.pushList[2] has a location without lat; loadPushInfo re-derives it from cities[1]."
+    ],
+    "reference": "docs/rewrite/client-state-and-behavior.md (Persisted record shapes)",
+    "pushListNote": "pushList is shortened: PushCtrl's first save for a city writes its alert plus two default alarms, and later saves never remove alarms, so the cityIndex 0 alarms a real save would contain are omitted here."
+  },
+  "localStorage": {
+    "cities": [
+      {
+        "currentWeather": {
+          "date": "20260920",
+          "time": 9,
+          "t1h": 21,
+          "skyIcon": "sun",
+          "today": {
+            "date": "20260920",
+            "fromToday": 0,
+            "tmn": 15,
+            "tmx": 25,
+            "index": 1
+          }
+        },
+        "timeTable": [],
+        "timeChart": [
+          {
+            "name": "yesterday",
+            "values": []
+          },
+          {
+            "name": "today",
+            "values": [],
+            "currentIndex": 0,
+            "displayItemCount": 0
+          }
+        ],
+        "dayTable": null,
+        "dayChart": [
+          {
+            "values": [],
+            "temp": 21,
+            "displayItemCount": 0
+          }
+        ],
+        "source": "KMA",
+        "name": "명동",
+        "address": "대한민국 서울특별시 중구 명동",
+        "country": "KR",
+        "location": {
+          "lat": 37.564,
+          "long": 126.985
+        },
+        "currentPosition": true,
+        "disable": false,
+        "photo": null,
+        "loadTime": "2026-09-20T00:05:00.000Z"
+      },
+      {
+        "currentWeather": {
+          "date": "20260920",
+          "time": 9,
+          "t1h": 23,
+          "skyIcon": "sun_smallcloud",
+          "today": {
+            "date": "20260920",
+            "fromToday": 0,
+            "tmn": 18,
+            "tmx": 26,
+            "index": 1
+          }
+        },
+        "timeTable": [],
+        "timeChart": [
+          {
+            "name": "yesterday",
+            "values": []
+          },
+          {
+            "name": "today",
+            "values": [],
+            "currentIndex": 0,
+            "displayItemCount": 0
+          }
+        ],
+        "dayChart": [
+          {
+            "values": [],
+            "temp": 23,
+            "displayItemCount": 0
+          }
+        ],
+        "source": "KMA",
+        "name": "우동",
+        "currentPosition": false,
+        "address": "대한민국 부산광역시 해운대구 우동",
+        "location": {
+          "lat": 35.163,
+          "long": 129.163
+        },
+        "country": "KR",
+        "disable": false,
+        "loadTime": "2026-09-20T00:06:00.000Z",
+        "photo": null
+      }
+    ],
+    "cityIndex": 1,
+    "cityList": {
+      "cityList": [
+        {
+          "name": "명동",
+          "currentPosition": true,
+          "address": "대한민국 서울특별시 중구 명동",
+          "location": {
+            "lat": 37.564,
+            "long": 126.985
+          },
+          "country": "KR",
+          "index": 0
+        },
+        {
+          "name": "우동",
+          "currentPosition": false,
+          "address": "대한민국 부산광역시 해운대구 우동",
+          "location": {
+            "lat": 35.163,
+            "long": 129.163
+          },
+          "country": "KR",
+          "index": 1
+        }
+      ]
+    },
+    "settingsInfo": {
+      "startupPage": "0",
+      "refreshInterval": "0",
+      "theme": "light"
+    },
+    "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea"
+    },
+    "pushData2": {
+      "registrationId": null,
+      "type": "ios",
+      "category": "",
+      "fcmToken": null,
+      "pushList": [
+        {
+          "cityIndex": 0,
+          "id": 1,
+          "startTime": "2026-09-19T22:00:00.000Z",
+          "endTime": "2026-09-20T13:00:00.000Z",
+          "enable": true,
+          "category": "alert",
+          "name": "이전위치",
+          "source": "KMA",
+          "location": {
+            "lat": 37.5,
+            "long": 127.0
+          },
+          "town": {
+            "first": "서울특별시",
+            "second": "강남구",
+            "third": "역삼동"
+          }
+        },
+        {
+          "cityIndex": 1,
+          "id": 1,
+          "startTime": "2026-09-19T22:00:00.000Z",
+          "endTime": "2026-09-20T13:00:00.000Z",
+          "enable": true,
+          "category": "alert",
+          "name": "우동",
+          "source": "KMA",
+          "location": {
+            "lat": 35.163,
+            "long": 129.163
+          },
+          "town": {
+            "first": "부산광역시",
+            "second": "해운대구",
+            "third": "우동"
+          }
+        },
+        {
+          "cityIndex": 1,
+          "id": 2,
+          "time": "2026-09-19T22:40:00.000Z",
+          "dayOfWeek": [
+            false,
+            true,
+            true,
+            true,
+            true,
+            true,
+            false
+          ],
+          "enable": true,
+          "category": "alarm",
+          "name": "우동",
+          "source": "KMA",
+          "location": {
+            "long": 129.163
+          },
+          "town": {
+            "first": "부산광역시",
+            "second": "해운대구",
+            "third": "우동"
+          }
+        },
+        {
+          "cityIndex": 1,
+          "id": 3,
+          "time": "2026-09-20T11:20:00.000Z",
+          "dayOfWeek": [
+            false,
+            true,
+            true,
+            true,
+            true,
+            true,
+            false
+          ],
+          "enable": true,
+          "category": "alarm",
+          "name": "우동",
+          "source": "KMA",
+          "location": {
+            "lat": 35.163,
+            "long": 129.163
+          },
+          "town": {
+            "first": "부산광역시",
+            "second": "해운대구",
+            "third": "우동"
+          }
+        }
+      ]
+    },
+    "purchaseInfo": {
+      "accountLevel": "premium",
+      "expirationDate": "2027-09-20T00:00:00.000Z"
+    },
+    "twAdsInfo": {
+      "enable": false
+    },
+    "startVersion": 1,
+    "appVersion": "0.0.0-synthetic",
+    "disableUpdateInfo": false,
+    "expandShortChart": true
+  },
+  "expectedAfterStartup": {
+    "evidence": "synthetic execution 2026-09-24: isolated Node VM (Node v24.21.0) evaluating client/www/js/service.storage.js, controller.units.js, service.weatherutil.js, service.weatherinfo.js and service.push.js at the source revision, called in app.js order TwStorage.init -> WeatherInfo.loadCities -> Push.init -> Units.loadUnits; Purchase.init and the rest of that app.js callback (daumServiceKeys write, routing, update check) were not run. Stubs: appPreferences present with an empty native suite, iOS platform, Util.region KR, Firebase plugin absent (Firebase.inited false), clientConfig package todayWeather with empty serverUrl and weatherPhotosUrl, fixed clock 2026-09-24T09:00:00+09:00, TZ Asia/Seoul, $http throws. The 3000 ms repost timer was then run manually; no request was attempted.",
+    "localStorageAfterStartup": {
+      "removed": [],
+      "added": {},
+      "rewritten": {},
+      "unchanged": [
+        "appVersion",
+        "cities",
+        "cityIndex",
+        "cityList",
+        "disableUpdateInfo",
+        "expandShortChart",
+        "purchaseInfo",
+        "pushData2",
+        "settingsInfo",
+        "startVersion",
+        "twAdsInfo",
+        "units"
+      ]
+    },
+    "inMemoryAfterStartup": {
+      "cityIndex": 1,
+      "cities": [
+        {
+          "currentPosition": true,
+          "disable": false,
+          "photo": null,
+          "loadTime": null,
+          "hasLocation": true
+        },
+        {
+          "currentPosition": false,
+          "disable": false,
+          "photo": null,
+          "loadTime": null,
+          "hasLocation": true
+        }
+      ],
+      "pushInitReturned": false,
+      "pushTimeFieldTypes": [
+        "startTime:Date,endTime:Date",
+        "startTime:Date,endTime:Date",
+        "time:Date",
+        "time:Date"
+      ],
+      "pushList": [
+        {
+          "cityIndex": 0,
+          "id": 1,
+          "startTime": "2026-09-19T22:00:00.000Z",
+          "endTime": "2026-09-20T13:00:00.000Z",
+          "enable": true,
+          "category": "alert",
+          "name": "명동",
+          "source": "KMA",
+          "location": {
+            "lat": 37.564,
+            "long": 126.985
+          },
+          "town": {
+            "first": "서울특별시",
+            "second": "중구",
+            "third": "명동"
+          }
+        },
+        {
+          "cityIndex": 1,
+          "id": 1,
+          "startTime": "2026-09-19T22:00:00.000Z",
+          "endTime": "2026-09-20T13:00:00.000Z",
+          "enable": true,
+          "category": "alert",
+          "name": "우동",
+          "source": "KMA",
+          "location": {
+            "lat": 35.163,
+            "long": 129.163
+          },
+          "town": {
+            "first": "부산광역시",
+            "second": "해운대구",
+            "third": "우동"
+          }
+        },
+        {
+          "cityIndex": 1,
+          "id": 2,
+          "time": "2026-09-19T22:40:00.000Z",
+          "dayOfWeek": [
+            false,
+            true,
+            true,
+            true,
+            true,
+            true,
+            false
+          ],
+          "enable": true,
+          "category": "alarm",
+          "name": "우동",
+          "source": "KMA",
+          "location": {
+            "lat": 35.163,
+            "long": 129.163
+          },
+          "town": {
+            "first": "부산광역시",
+            "second": "해운대구",
+            "third": "우동"
+          }
+        },
+        {
+          "cityIndex": 1,
+          "id": 3,
+          "time": "2026-09-20T11:20:00.000Z",
+          "dayOfWeek": [
+            false,
+            true,
+            true,
+            true,
+            true,
+            true,
+            false
+          ],
+          "enable": true,
+          "category": "alarm",
+          "name": "우동",
+          "source": "KMA",
+          "location": {
+            "lat": 35.163,
+            "long": 129.163
+          },
+          "town": {
+            "first": "부산광역시",
+            "second": "해운대구",
+            "third": "우동"
+          }
+        }
+      ]
+    },
+    "scheduledTimersMs": [
+      3000
+    ],
+    "repostResult": "_postPushList returned before $http because fcmToken is null; localStorage unchanged",
+    "nativeSuiteKeysAfterStartup": [
+      "cities",
+      "cityIndex",
+      "purchaseInfo",
+      "settingsInfo",
+      "startVersion",
+      "twAdsInfo"
+    ],
+    "analyticsEvents": [
+      "app/user/returning",
+      "city/load/index",
+      "push/error/loadPlugin"
+    ],
+    "harnessErrors": [
+      "WeatherInfo.loadWeatherPhotos(): WeatherUtil rejected with 'Invalid url=' because weatherPhotosUrl was '' (the checked-in client.config.js value); loadWeatherPhotos has no rejection handler, and every city kept photo null"
+    ]
+  },
+  "variantRuns": [
+    {
+      "name": "empty store (new install)",
+      "inputChange": "localStorage empty and native suite empty",
+      "observed": {
+        "localStorageAfterStartup": {
+          "removed": [],
+          "added": {
+            "settingsInfo": {
+              "startupPage": "0",
+              "refreshInterval": "0",
+              "theme": "light"
+            },
+            "units": {
+              "temperatureUnit": "C",
+              "windSpeedUnit": "m/s",
+              "pressureUnit": "hPa",
+              "distanceUnit": "km",
+              "precipitationUnit": "mm",
+              "airUnit": "airkorea"
+            }
+          },
+          "rewritten": {},
+          "unchanged": []
+        },
+        "cityIndexInMemory": null,
+        "cities": [
+          {
+            "currentPosition": true,
+            "disable": true,
+            "photo": null,
+            "loadTime": null,
+            "hasLocation": false
+          }
+        ],
+        "citiesWritten": false,
+        "nativeSuiteKeysAfterStartup": [
+          "settingsInfo",
+          "units"
+        ],
+        "analyticsEvents": [
+          "app/user/new",
+          "city/error/loadIndexNull",
+          "city/error/Invalid set index",
+          "push/error/loadPlugin"
+        ]
+      }
+    },
+    {
+      "name": "cityIndex over",
+      "inputChange": "cityIndex 5 (two cities)",
+      "observed": {
+        "cityIndexInMemory": 0,
+        "localStorageRewritten": {
+          "cityIndex": 0
+        },
+        "analyticsEvents": [
+          "app/user/returning",
+          "city/error/loadIndexOver",
+          "city/set/index",
+          "push/error/loadPlugin"
+        ],
+        "trackedExceptions": []
+      }
+    },
+    {
+      "name": "cityIndex neg",
+      "inputChange": "cityIndex -1",
+      "observed": {
+        "cityIndexInMemory": -1,
+        "localStorageRewritten": {},
+        "analyticsEvents": [
+          "app/user/returning",
+          "city/load/index",
+          "push/error/loadPlugin"
+        ],
+        "trackedExceptions": []
+      }
+    },
+    {
+      "name": "cityIndex malformed",
+      "inputChange": "cityIndex stored as the raw text {bad",
+      "observed": {
+        "cityIndexInMemory": "<undefined>",
+        "localStorageRewritten": {},
+        "analyticsEvents": [
+          "app/user/returning",
+          "storage/error/get cityIndex",
+          "city/load/index",
+          "push/error/loadPlugin"
+        ],
+        "trackedExceptions": [
+          "trackException: Expected property name or '}' in JSON at position 1 (line 1 column 2)"
+        ]
+      }
+    }
+  ]
+}

@@ -1,13 +1,15 @@
 {
-  "source_commit": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "source_commit": "bd6640f22c1029c35e8937b108be4b50ea89361a",
+  "documentation_baseline": "bd6640f2 (re-baselined 2026-09-25 from ff7acf39)",
   "checks": {
-    "json": 35,
-    "local_links": 499,
-    "screenshots": 21,
-    "capture_diagnostics": 16,
-    "python": 5
+    "json": 84,
+    "local_links": 4896,
+    "line_anchors": 2868,
+    "screenshots": 50,
+    "capture_diagnostics": 45,
+    "python": 7
   },
   "errors": [],
   "passed": true,
-  "limits": "Checks deliverable Markdown and HTML asset targets, Git inclusion, syntax and app screenshot bytes. All ignored local-only visual-check outputs are excluded; browser rendering and every prose claim are not validated."
+  "limits": "Checks deliverable Markdown and HTML asset targets, #Lnnn line anchors staying inside their files, Git inclusion, syntax, app screenshot bytes and manifest/gallery/README consistency. All ignored local-only visual-check outputs are excluded; browser rendering and every prose claim are not validated."
 }

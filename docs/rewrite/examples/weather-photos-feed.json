@@ -1,0 +1,32 @@
+[
+  {
+    "tags": [
+      "sun"
+    ],
+    "twUrls": {
+      "regular": "http://127.0.0.1:8765/synthetic-photos/sun-a.png"
+    }
+  },
+  {
+    "tags": [
+      "sun"
+    ],
+    "twUrls": {
+      "regular": "http://127.0.0.1:8765/synthetic-photos/sun-b.png"
+    }
+  },
+  {
+    "tags": [
+      "cloud"
+    ],
+    "twUrls": {
+      "regular": "http://127.0.0.1:8765/synthetic-photos/sun-b.png"
+    }
+  },
+  {
+    "id": "no-tags-entry-is-skipped",
+    "twUrls": {
+      "regular": "http://127.0.0.1:8765/synthetic-photos/sun-b.png"
+    }
+  }
+]
