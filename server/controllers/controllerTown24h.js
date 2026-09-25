@@ -1462,7 +1462,7 @@ function ControllerTown24h() {
             itemList.push(item);
         }
 
-        if (current.hasOwnProperty('weatherType')) {
+        if (self._hasWeatherText(current)) {
             tmpGrade = 2.5;
             if (current.weatherType > 3) {
                 tmpGrade = 3;

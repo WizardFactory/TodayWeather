@@ -10,6 +10,40 @@ class WeatherDescription {
 
     }
 
+    /**
+     * KMA currentweather.jsp (2021+) wording -> legacy wording used by makeWeatherType.
+     * '약한비연속적' -> '약한비계속', '비단속적' -> '보통비단속', '비끝' -> '비끝남',
+     * '약한눈' -> '약한눈계속', '약한진눈깨비' -> '약진눈깨비', '소나기' -> '보통소나기'
+     * Bare '비'/'눈' are kept for KMA AWS.
+     * @param {string} weatherStr
+     * @returns {string}
+     */
+    static normalizeKmaWeatherStr(weatherStr) {
+        var str = weatherStr.replace(/연속적$/, '계속').replace(/단속적$/, '단속');
+        var m;
+
+        if (str === '비끝' || str === '눈끝') {
+            return str + '남';
+        }
+        if (str === '안개') {
+            return '안개변화무';
+        }
+
+        m = str.match(/^(약한|보통|강한)?(이슬비|진눈깨비|소나기)(계속|단속)?$/);
+        if (m) {
+            if (m[2] === '진눈깨비') {
+                return m[1] === '약한' ? '약진눈깨비' : m[1] === '강한' ? '강진눈깨비' : '진눈깨비';
+            }
+            return (m[1] || '보통') + m[2];
+        }
+
+        m = str.match(/^(약한|보통|강한)?(비|눈)(계속|단속)?$/);
+        if (m && (m[1] || m[3])) {
+            return (m[1] || '보통') + m[2] + (m[3] || '계속');
+        }
+        return str;
+    }
+
     static makeWeatherType(weatherStr) {
         if (!weatherStr.hasOwnProperty('length') || weatherStr.length <= 0) {
             return -1;
@@ -24,11 +58,12 @@ class WeatherDescription {
             weatherStr = weatherStr.split(' and ')[0];
         }
 
-        switch (weatherStr) {
+        switch (WeatherDescription.normalizeKmaWeatherStr(weatherStr)) {
             case 'sunny':
             case 'clear':
             case '맑음': return 0;
             case 'partly cloudy':
+            case '구름적음':
             case '구름조금': return 1;
             case 'mostly cloudy':
             case '구름많음': return 2;
@@ -173,7 +208,7 @@ class WeatherDescription {
      * @returns {string}
      */
     static getWeatherStr(weatherType, ts) {
-        if (weatherType == undefined) {
+        if (weatherType == undefined || weatherType < 0) {
             return "";
         }
 
@@ -199,6 +234,10 @@ class WeatherDescription {
             'LOC_THUNDERSHOWERS', 'LOC_THUNDERSHOWERS_HAIL', 'LOC_THUNDERSHOWERS_RAIN_SNOW', 'LOC_THUNDERSHOWERS_STOPPED_RAIN', 'LOC_THUNDERSHOWERS_STOPPED_SNOW',
             'LOC_LIGHTNING', 'LOC_BOLT_FROM_THE_BLUE', 'LOC_BOLT_STOPPED', 'LOC_ICE_PELLETS', 'LOC_BREEZY',
             'LOC_HUMID', 'LOC_WINDY', 'LOC_DRY', 'LOC_VERY_STRONG_WIND', 'LOC_SLEET', 'LOC_RAIN', 'LOC_SNOW'];
+        if (weatherTypeStr[weatherType] == undefined) {
+            log.error("Unknown weatherType=" + weatherType);
+            return "";
+        }
         return ts.__(weatherTypeStr[weatherType]);
     }
 }
