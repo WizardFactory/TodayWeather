@@ -1,6 +1,6 @@
 # Configuration and build-variant inventory
 
-Source baseline: `bd6640f2`, re-baselined 2026-09-25 from `ff7acf3996ccb66c912d2ed4710cf300197d6966` (first inspected 2026-09-24). Client, iOS and Apple Watch source is identical to `ff7acf39`, so sections 2–4 carry over unchanged. Section 1 was re-verified against the upstream server changes: New Relic and direct APNs were removed, ASOS history settings were added and the server now targets Node 16 ([§1.9](#19-upstream-configuration-changes-since-ff7acf39)). Everything here is **observed source** unless it is labelled otherwise. No server, collector, build, simulator, provider, database or AWS call was run. This file lists configuration **names**, consumers and default behavior. It never reproduces credential values, ad or analytics identifiers, service-account file contents or private hostnames. Where a literal is hard-coded in source, the file and line are cited instead. Deployed values observed on the service host are **historical deployment** evidence; they stay in the [service EC2 internals](../architecture/ec2-internals.md#resolved-application-configuration) and are only linked from here.
+Source baseline: `bd6640f2`, re-baselined 2026-09-25 from `ff7acf3996ccb66c912d2ed4710cf300197d6966` (first inspected 2026-09-24). Client, iOS and Apple Watch source is identical to `ff7acf39`, so sections 2–4 carry over unchanged. Section 1 was re-verified against the upstream server changes: New Relic and direct APNs were removed, ASOS history settings were added and the server now targets Node 16 ([§1.9](#19-upstream-configuration-changes-since-ff7acf39)). [Section 5](#5-web-pwa-web-configuration) covers the static web PWA at branch `webapp-docs-gap-corrections`. Everything here is **observed source** unless it is labelled otherwise. No server, collector, build, simulator, provider, database or AWS call was run. This file lists configuration **names**, consumers and default behavior. It never reproduces credential values, ad or analytics identifiers, service-account file contents or private hostnames. Where a literal is hard-coded in source, the file and line are cited instead. Deployed values observed on the service host are **historical deployment** evidence; they stay in the [service EC2 internals](../architecture/ec2-internals.md#resolved-application-configuration) and are only linked from here.
 
 **How to use during a rewrite.**
 
@@ -294,6 +294,26 @@ Other native literals a rewrite must carry over deliberately:
 - **Apple Watch.** Its bundled web project hard-codes its own API base URL ([applewatch/www/js/services.js#L1073](../../applewatch/www/js/services.js#L1073)) and Google geocoding URLs ([#L994](../../applewatch/www/js/services.js#L994), [#L1020](../../applewatch/www/js/services.js#L1020)). No Gulp task builds it ([native consumers §1](native-consumers-and-plugins.md#1-consumer-inventory)).
 - **Android widgets.** Their source is in external plugin repositories and is absent here, so their constants are unknown ([native consumers §2.4](native-consumers-and-plugins.md#24-external-repositories-to-acquire)).
 - **Store product IDs.** Literals in the purchase controllers (section 2).
+
+## 5. Web PWA (`web/`) configuration
+
+Observed source on branch `webapp-docs-gap-corrections` (base `30e29419`, 2026-09-25). The static PWA reads no server environment name, `clientConfig` key or Gulp variable, and it holds no secret: [transport-config.ts](../../web/src/transport-config.ts) says to keep provider and notification secrets out of the build. Every `VITE_*` value is public once bundled. Architecture: [web client](../architecture/web-client.md).
+
+| Name | Read by | Unset | Validation and effect | Class |
+| --- | --- | --- | --- | --- |
+| `VITE_WEB_TRANSPORT` | [transport-config.ts](../../web/src/transport-config.ts) through [vite.config.ts](../../web/vite.config.ts) (build) and `import.meta.env` (runtime); [web-dev.mjs](../../scripts/web-dev.mjs) | `direct` | Any other value throws; the proxy runtime is removed | Behavior |
+| `VITE_WEB_MODE` | Same | `live` | `live` or `demo`, otherwise throws. `demo` reads bundled synthetic fixtures | Behavior |
+| `VITE_WEATHER_API_ORIGIN` | transport-config.ts | The public API host | Must be an HTTPS origin without credentials, path, query or fragment. The build writes it to `release.json`; the uploader accepts only the default origin | Endpoint |
+| `WEB_ORIGIN` | web-dev.mjs (development only) | `http://127.0.0.1:5173` | Must be a loopback HTTP origin; sets Vite host and strict port | Behavior |
+| `PORT` | [web-static-preview.mjs](../../scripts/web-static-preview.mjs) | `4174` | Local static preview port on `127.0.0.1`; the preview serves the stack template's CSP | Behavior |
+| `PLAYWRIGHT_EXECUTABLE_PATH`, `WEB_BROWSER_RESULTS`, `WEB_SCREENSHOTS` | [playwright.config.ts](../../playwright.config.ts), `web/e2e/web.spec.ts` | Bundled browser; default result and screenshot paths | Test tooling only | Behavior |
+| `AWS_CLI` | [deploy-web-static.mjs](../../scripts/deploy-web-static.mjs) with `--execute` | `aws` | AWS CLI executable for the read-only preflight and the upload. Credentials come from the AWS CLI's own configuration (library convention, not traced); the script sets `AWS_PAGER` empty | Behavior |
+
+Hard-coded values, not settings: the site `app.tdywx.xyz` (`SITE_DOMAIN` in the uploader and `siteOrigin` in `release.json`) and the API origin constant in the uploader must equal the build values. The uploader takes `--bucket`, `--distribution`, `--dir` and `--execute`, and without `--execute` prints a dry-run plan.
+
+The CloudFormation template [stack.json](../../infra/web/static/stack.json) has three parameters: `AppDomainName` (default `app.tdywx.xyz`, used for the alias, DNS records and the `SiteUrl` output; the default is already an alias of an existing distribution, see the [runbook](../../infra/web/static/README.md#deployment-decision)), `CertificateArn` (an issued us-east-1 ACM certificate covering it) and `HostedZoneId` (optional Route 53 zone; empty means manual DNS). Bucket and distribution IDs are account-specific Private IDs and are not in the repository.
+
+Browser storage names are fixed in code: `localStorage` key `tw.web.v1.preferences` and IndexedDB database `tw.web.v1.snapshots` (store `weather`); snapshot keys carry normalization revision `v3`. Their content and retention are in [security and privacy §3.2](security-and-privacy-inventory.md#32-web-pwa-browser-data-web).
 
 ## Limitations
 

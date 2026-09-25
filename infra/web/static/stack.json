@@ -2,15 +2,21 @@
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "TodayWeather app.tdywx.xyz private static hosting. No compute server or API deployment.",
   "Parameters": {
+    "AppDomainName": {
+      "Type": "String",
+      "Default": "app.tdywx.xyz",
+      "AllowedPattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$",
+      "Description": "Web app hostname served by the distribution. The default is already an alias of the existing distribution; see README before reusing it."
+    },
     "CertificateArn": {
       "Type": "String",
       "AllowedPattern": "arn:aws:acm:us-east-1:[0-9]{12}:certificate/[a-f0-9-]+",
-      "Description": "Issued ACM certificate in us-east-1 covering app.tdywx.xyz"
+      "Description": "Issued ACM certificate in us-east-1 covering AppDomainName"
     },
     "HostedZoneId": {
       "Type": "String",
       "Default": "",
-      "Description": "Optional public Route53 zone for tdywx.xyz; empty means external/manual DNS"
+      "Description": "Optional public Route53 zone containing AppDomainName; empty means external/manual DNS"
     }
   },
   "Conditions": {
@@ -123,7 +129,7 @@
           "SecurityHeadersConfig": {
             "ContentSecurityPolicy": {
               "Override": true,
-              "ContentSecurityPolicy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://todayweather.wizardfactory.net; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+              "ContentSecurityPolicy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://todayweather.wizardfactory.net; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
             },
             "ContentTypeOptions": {
               "Override": true
@@ -162,7 +168,9 @@
           "Enabled": true,
           "Comment": "TodayWeather static PWA; existing API distribution is unchanged",
           "Aliases": [
-            "app.tdywx.xyz"
+            {
+              "Ref": "AppDomainName"
+            }
           ],
           "DefaultRootObject": "index.html",
           "IPV6Enabled": true,
@@ -171,16 +179,10 @@
             {
               "Id": "static-assets",
               "DomainName": {
-                "Fn::GetAtt": [
-                  "Assets",
-                  "RegionalDomainName"
-                ]
+                "Fn::GetAtt": ["Assets", "RegionalDomainName"]
               },
               "OriginAccessControlId": {
-                "Fn::GetAtt": [
-                  "OriginAccess",
-                  "Id"
-                ]
+                "Fn::GetAtt": ["OriginAccess", "Id"]
               },
               "S3OriginConfig": {
                 "OriginAccessIdentity": ""
@@ -190,14 +192,8 @@
           "DefaultCacheBehavior": {
             "TargetOriginId": "static-assets",
             "ViewerProtocolPolicy": "redirect-to-https",
-            "AllowedMethods": [
-              "GET",
-              "HEAD"
-            ],
-            "CachedMethods": [
-              "GET",
-              "HEAD"
-            ],
+            "AllowedMethods": ["GET", "HEAD"],
+            "CachedMethods": ["GET", "HEAD"],
             "Compress": true,
             "CachePolicyId": {
               "Ref": "Cache"
@@ -209,10 +205,7 @@
               {
                 "EventType": "viewer-request",
                 "FunctionARN": {
-                  "Fn::GetAtt": [
-                    "Navigation",
-                    "FunctionMetadata.FunctionARN"
-                  ]
+                  "Fn::GetAtt": ["Navigation", "FunctionMetadata.FunctionARN"]
                 }
               }
             ]
@@ -271,10 +264,7 @@
               "Action": "s3:*",
               "Resource": [
                 {
-                  "Fn::GetAtt": [
-                    "Assets",
-                    "Arn"
-                  ]
+                  "Fn::GetAtt": ["Assets", "Arn"]
                 },
                 {
                   "Fn::Sub": "${Assets.Arn}/*"
@@ -297,14 +287,13 @@
         "HostedZoneId": {
           "Ref": "HostedZoneId"
         },
-        "Name": "app.tdywx.xyz",
+        "Name": {
+          "Ref": "AppDomainName"
+        },
         "Type": "A",
         "AliasTarget": {
           "DNSName": {
-            "Fn::GetAtt": [
-              "Distribution",
-              "DomainName"
-            ]
+            "Fn::GetAtt": ["Distribution", "DomainName"]
           },
           "HostedZoneId": "Z2FDTNDATAQYW2",
           "EvaluateTargetHealth": false
@@ -318,14 +307,13 @@
         "HostedZoneId": {
           "Ref": "HostedZoneId"
         },
-        "Name": "app.tdywx.xyz",
+        "Name": {
+          "Ref": "AppDomainName"
+        },
         "Type": "AAAA",
         "AliasTarget": {
           "DNSName": {
-            "Fn::GetAtt": [
-              "Distribution",
-              "DomainName"
-            ]
+            "Fn::GetAtt": ["Distribution", "DomainName"]
           },
           "HostedZoneId": "Z2FDTNDATAQYW2",
           "EvaluateTargetHealth": false
@@ -346,14 +334,13 @@
     },
     "DistributionDomain": {
       "Value": {
-        "Fn::GetAtt": [
-          "Distribution",
-          "DomainName"
-        ]
+        "Fn::GetAtt": ["Distribution", "DomainName"]
       }
     },
     "SiteUrl": {
-      "Value": "https://app.tdywx.xyz"
+      "Value": {
+        "Fn::Sub": "https://${AppDomainName}"
+      }
     }
   }
 }
