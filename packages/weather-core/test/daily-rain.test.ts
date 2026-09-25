@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { DEFAULT_UNITS, normalizeWeather } from "../src/index";
 import fixture from "../../../docs/rewrite/examples/client-kma-response.json";
-it("shows only observed daily accumulation for past KMA days (D45)", () => {
+it("uses observed accumulation for past KMA days and the server forecast from today on", () => {
   const raw: any = structuredClone(fixture.response);
   raw.current.rn1 = 0;
   raw.midData.dailyData = [
@@ -21,9 +21,10 @@ it("shows only observed daily accumulation for past KMA days (D45)", () => {
     precipitationBasis: "observed",
   });
   expect(w.daily[1]).toMatchObject({
-    precipitation: null,
-    precipitationBasis: null,
-    snowfall: null,
+    precipitation: 1,
+    precipitationHours: null,
+    precipitationBasis: "forecast",
+    snowfall: 0,
   });
   for (const rn1 of [undefined, null, -1]) {
     raw.midData.dailyData[0] = { date: "20260922", time: "0000", rn1, r06: 8 };

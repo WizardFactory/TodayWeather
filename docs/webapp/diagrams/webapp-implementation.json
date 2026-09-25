@@ -118,7 +118,7 @@
       "dot": "cyan",
       "title": "Weather data",
       "items": [
-        "KMA r06/s06 hidden; observed or approximate rain only",
+        "Past rain is observed; forecasts show server-calculated amounts",
         "KMA station times parsed; air follows its standard's grades"
       ]
     },

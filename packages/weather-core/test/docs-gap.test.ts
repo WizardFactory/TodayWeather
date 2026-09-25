@@ -46,16 +46,17 @@ describe("accumulation periods", () => {
     });
     expect(w.hourly[4].snowfallHours).toBe(3);
   });
-  it("does not show KMA daily snow or rain forecast sums", () => {
+  it("shows KMA daily snow and rain as server-calculated forecasts without a duration", () => {
     const raw = kma();
     raw.midData.dailyData = [
       { date: raw.current.date, time: "0000", r06: 1, s06: 2 },
     ];
     expect(normalizeWeather(raw).daily[0]).toMatchObject({
-      snowfall: null,
+      snowfall: 2,
       snowfallHours: null,
-      precipitation: null,
+      precipitation: 1,
       precipitationHours: null,
+      precipitationBasis: "forecast",
     });
   });
 });
@@ -163,7 +164,7 @@ describe("warnings and geography", () => {
 });
 
 describe("D45 KMA precipitation semantics", () => {
-  it("shows observed and approximate amounts only, never split r06/s06 forecasts", () => {
+  it("shows observed past amounts and server-calculated forecast amounts", () => {
     const raw = kma();
     raw.current.rn1 = 0.5;
     raw.short = [
@@ -198,16 +199,25 @@ describe("D45 KMA precipitation semantics", () => {
     });
     expect(at("2026-09-23T11:00").precipitation).toBeNull();
     expect(at("2026-09-23T12:00")).toMatchObject({
-      precipitation: null,
-      precipitationBasis: null,
-      snowfall: null,
+      precipitation: 4,
+      precipitationHours: 3,
+      precipitationBasis: "forecast",
+      snowfall: 10,
+      snowfallHours: 3,
       rainProbability: 60,
     });
-    expect(w.daily.map((p) => p.precipitation)).toEqual([7, null, null]);
+    // Past days: observed accumulation; today and later: the server's daily forecast.
+    expect(w.daily.map((p) => p.precipitation)).toEqual([7, 4, 8]);
     expect(w.daily[0]).toMatchObject({
       precipitationHours: null,
       precipitationBasis: "observed",
       snowfall: null,
+    });
+    expect(w.daily[1]).toMatchObject({
+      precipitationHours: null,
+      precipitationBasis: "forecast",
+      snowfall: 0,
+      snowfallHours: null,
     });
   });
   it("keeps DSF amounts as provider forecasts", () => {

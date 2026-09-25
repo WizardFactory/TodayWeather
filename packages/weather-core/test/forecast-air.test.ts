@@ -49,15 +49,20 @@ describe("KMA mixed-interval forecast and provider air summary", () => {
       snowfall: 1,
       snowfallHours: 1,
     });
-    // D45: short r06/s06 are split hourly categories; only pty/pop remain.
+    // No valid shortest amount at 03:00: the server's 3-hour forecast remains.
     expect(w.hourly[3]).toMatchObject({
       temperature: 59,
       humidity: 0,
-      precipitation: null,
-      precipitationHours: null,
-      snowfall: null,
+      precipitation: 1,
+      precipitationHours: 3,
+      precipitationBasis: "forecast",
+      snowfall: 1,
+      snowfallHours: 3,
     });
-    expect(w.hourly[4].precipitation).toBeNull();
+    expect(w.hourly[4]).toMatchObject({
+      precipitationHours: 3,
+      precipitationBasis: "forecast",
+    });
   });
   it("handles absent/empty shortest and leaves DSF hourly selection unchanged", () => {
     const raw = sample();

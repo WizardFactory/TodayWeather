@@ -24,7 +24,7 @@ Geocode results are named like the app: `name`, else the `getShortenAddress` tok
 
 ## Local state and privacy
 
-Weather query identity includes place ID, rounded coordinates, all six unit settings, language and schema. Normalization cache-key revision v3 (D45 precipitation basis and air forecast fields) uses new query/snapshot keys; older snapshot keys are ignored and pruned by age, while local favorites and settings are unaffected. Requests are abortable. Preferences are versioned and validated in `localStorage` key `tw.web.v1.preferences`; snapshots are records in IndexedDB database `tw.web.v1.snapshots` with a 24-hour maximum age and 30-entry bound. Expired snapshots are pruned at startup and after each write, and deleting a place (or replacing the current-location entry) deletes every snapshot keyed to its ID. Settings offers "이 브라우저의 오늘날씨 데이터 삭제", which after confirmation removes the preferences key and the snapshot database and resets state. Backup import asks for confirmation before replacing places and settings.
+Weather query identity includes place ID, rounded coordinates, all six unit settings, language and schema. Normalization cache-key revision v3 (precipitation basis and air forecast fields) uses new query/snapshot keys; older snapshot keys are ignored and pruned by age, while local favorites and settings are unaffected. Requests are abortable. Preferences are versioned and validated in `localStorage` key `tw.web.v1.preferences`; snapshots are records in IndexedDB database `tw.web.v1.snapshots` with a 24-hour maximum age and 30-entry bound. Expired snapshots are pruned at startup and after each write, and deleting a place (or replacing the current-location entry) deletes every snapshot keyed to its ID. Settings offers "이 브라우저의 오늘날씨 데이터 삭제", which after confirmation removes the preferences key and the snapshot database and resets state. Backup import asks for confirmation before replacing places and settings.
 
 The weather page renders a valid stored snapshot immediately while the network request runs ("저장된 자료를 먼저 표시하고 있습니다"); a refresh failure while live data is visible shows "최신 자료로 갱신하지 못했습니다" with the last receipt time. Offline/error snapshots retain source timestamps and display a disconnected notice. Empty air results replace previous air data instead of silently retaining it. Demo mode is explicit and never a fallback for live failures. Favorites cards preview temperature, icon, AQI grade and save time from stored snapshots only; they make no network request.
 
@@ -32,19 +32,19 @@ Selecting a place always opens its weather in the preferred view; the `locations
 
 ## Precipitation and snow (D45)
 
-Server source and three read-only live KMA coordinate responses sampled 2026-09-26 01:06 KST (a local SDLC record, not committed) show that KMA forecast `r06`/`s06` are split or summed hourly categories, neither 3-hour nor 6-hour amounts, and that the `*Str` strings apply a retired bucket table ([D45](../rewrite/decisions-and-open-questions.md), [period contract](gather-source-reconciliation.md#period-contract-and-consumer-limitations)). The web therefore reads only KMA `rn1` (rain) and `sn1` (snow) as amounts:
+Server source and three read-only live KMA coordinate responses sampled 2026-09-26 01:06 KST (a local SDLC record, not committed) show that the server's KMA forecast `r06`/`s06` are split or summed hourly categories that currently undercount, and that the `*Str` strings apply a retired bucket table ([D45](../rewrite/decisions-and-open-questions.md), [period contract](gather-source-reconciliation.md#period-contract-and-consumer-limitations)). By product decision (2026-09-26) the web shows past rain as observations and future rain as the server-calculated forecast, each with the rain probability; correcting the server calculation is tracked under D45:
 
 | KMA field | Meaning used by the web | Display |
 | --- | --- | --- |
 | `current.rn1` | Observed 1-hour amount | `N mm · 1시간 관측` |
 | `shortest[].rn1` | Lower bound of a 1-hour forecast category | `약 N mm`; `1 mm 이하` for 1 (it also covers "1mm 미만"); `30~50 mm` or `50 mm 이상` for the top categories; `· 1시간 예보(근사)` |
 | `short[].rn1` (the server fills past and current slots) | Observed 3-hour total; the slot ending after the current observation is still accumulating | `N mm · 3시간 관측`; the in-progress slot shows `N mm · 지금까지 관측` |
-| `short[].r06`, `short[].s06` | Split/summed categories | Never shown; `강수확률 N%` instead |
+| `short[].r06` (rows without a valid `rn1`) and `short[].s06` | Server-calculated 3-hour forecast | `N mm · 3시간 예보`; snow `적설량 N mm · 3시간 예보` |
 | `midData.dailyData[].rn1` for yesterday | Observed accumulation | `N mm · 관측 누적` |
-| Daily `r06`/`s06`, today and later daily amounts | Mixed sums | Never shown |
+| Daily `r06`/`s06` for today and later | Server-calculated daily forecast | `N mm · 예보`; snow `적설량 N mm · 예보` |
 | `rn1Str`, `r06Str`, `s06Str` | Retired bucket text | Never shown |
 
-DSF keeps `rn1`, else `r06`, and `sn1`, else `s1d`, else `s06`: current values are 1 hour, hourly rows are labelled 3 hours because the server sums three provider hours, and daily rows 24 hours. Rain and snow display as mm with one decimal (`<0.1` below 0.1) or inches with two decimals (`<0.01` below 0.01); zero snowfall remains in data but is hidden. KMA views add a note that 3-hour and daily forecast amounts are not shown, and the help page explains the approximation. The nationwide rain view labels its values as the latest 1-hour observation. This intentionally reverses the earlier display of KMA daily `r06` as a forecast amount. The server-side D45 fix is out of scope.
+DSF keeps `rn1`, else `r06`, and `sn1`, else `s1d`, else `s06`: current values are 1 hour, hourly rows are labelled 3 hours because the server sums three provider hours, and daily rows 24 hours. Rain and snow display as mm with one decimal (`<0.1` below 0.1) or inches with two decimals (`<0.01` below 0.01); zero snowfall remains in data but is hidden. Rows without an amount show `강수확률 N%`. The help page explains the observed/forecast split and the approximation. The nationwide rain view labels its values as the latest 1-hour observation. The server-side D45 fix is out of scope here.
 
 ## Display parity
 

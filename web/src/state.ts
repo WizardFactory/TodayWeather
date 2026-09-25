@@ -342,7 +342,9 @@ function validPoint(p: unknown): boolean {
     finiteOrNull(p.snowfall) &&
     [null, 1, 3, 24].includes(p.precipitationHours) &&
     [null, 1, 3, 24].includes(p.snowfallHours) &&
-    [null, "observed", "partial", "approx"].includes(p.precipitationBasis)
+    [null, "observed", "partial", "approx", "forecast"].includes(
+      p.precipitationBasis,
+    )
   );
 }
 function validAir(station: unknown): boolean {

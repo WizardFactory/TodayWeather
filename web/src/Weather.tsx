@@ -61,7 +61,7 @@ const pollutantLabels: Record<Pollutant, string> = {
   so2: "아황산가스",
   co: "일산화탄소",
 };
-/** Rain text that never presents KMA split forecast sums as amounts (D45). */
+/** Rain text that labels observed, approximate and server-forecast amounts. */
 function rainText(p: Point, unit: string): string {
   if (p.precipitation === null)
     return p.rainProbability === null
@@ -77,11 +77,24 @@ function rainSuffix(p: Point): string {
   if (p.precipitation === null) return "";
   if (p.precipitationBasis === "approx") return " · 1시간 예보(근사)";
   if (p.precipitationBasis === "partial") return " · 지금까지 관측";
+  if (p.precipitationBasis === "forecast")
+    return p.precipitationHours === null
+      ? " · 예보"
+      : ` · ${p.precipitationHours}시간 예보`;
   if (p.precipitationBasis === "observed")
     return p.precipitationHours === null
       ? " · 관측 누적"
       : ` · ${p.precipitationHours}시간 관측`;
   return p.precipitationHours === null ? "" : ` · ${p.precipitationHours}시간`;
+}
+/** KMA short/daily snow (s06) is the server's forecast; current sn1 is 1 hour. */
+function snowSuffix(p: Point, source: Weather["source"]): string {
+  if (p.snowfall === null) return "";
+  if (source === "KMA" && p.snowfallHours !== 1)
+    return p.snowfallHours === null
+      ? " · 예보"
+      : ` · ${p.snowfallHours}시간 예보`;
+  return p.snowfallHours === null ? "" : ` · ${p.snowfallHours}시간`;
 }
 function airValue(value: number | null, code: string) {
   const unit = pollutantUnit(code);
@@ -438,7 +451,7 @@ function WeatherDetails({
                   CloudRainIcon,
                   snowLabel,
                   `${amount(t.snowfall, unit)} ${unit}`,
-                  t.snowfallHours !== null ? ` · ${t.snowfallHours}시간` : "",
+                  snowSuffix(t, w.source),
                 ],
               ]
             : []),
@@ -509,18 +522,12 @@ function WeatherDetails({
               {p.snowfall !== null && p.snowfall > 0 && (
                 <span>
                   {snowLabel} {amount(p.snowfall, unit)} {unit}
-                  {p.snowfallHours !== null ? ` · ${p.snowfallHours}시간` : ""}
+                  {snowSuffix(p, w.source)}
                 </span>
               )}
             </div>
           ))}
         </div>
-        {w.source === "KMA" && (
-          <p className="hint">
-            기상청 단기예보의 3시간·일별 강수량은 합산 방식이 확인되지 않아
-            표시하지 않습니다. 강수확률과 관측값을 확인해 주세요.
-          </p>
-        )}
       </section>
       <section className="panel details-panel">
         <SectionHead title="날씨 자세히" />

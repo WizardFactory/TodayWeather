@@ -19,11 +19,13 @@ describe("reviewed source boundaries", () => {
     ];
     const data = normalizeWeather(raw);
     expect(data.current.precipitationHours).toBeNull();
-    // D45: short r06/s06 are never amounts; observed short rn1 is a 3-hour total.
+    // Invalid rn1 falls back to the server's 3-hour forecast amounts.
     expect(data.hourly[0]).toMatchObject({
-      precipitation: null,
-      precipitationHours: null,
-      snowfall: null,
+      precipitation: 2,
+      precipitationHours: 3,
+      precipitationBasis: "forecast",
+      snowfall: 25.4,
+      snowfallHours: 3,
     });
     // 18:00 ends after the 09:00 observation: an accumulating slot (QA F3).
     expect(data.hourly[1]).toMatchObject({
@@ -31,7 +33,11 @@ describe("reviewed source boundaries", () => {
       precipitationHours: null,
       precipitationBasis: "partial",
     });
-    expect(data.daily[0].precipitation).toBeNull();
+    expect(data.daily[0]).toMatchObject({
+      precipitation: 8,
+      precipitationHours: null,
+      precipitationBasis: "forecast",
+    });
     raw.source = "DSF";
     raw.thisTime = [{}, { ...raw.current, rn1: 1 }];
     raw.hourly = raw.short;

@@ -55,7 +55,7 @@ export type Point = {
   precipitation: number | null;
   precipitationHours: number | null;
   /** D45: KMA forecast amounts are hidden; observed and approximate (category lower bound) amounts are marked. */
-  precipitationBasis: "observed" | "partial" | "approx" | null;
+  precipitationBasis: "observed" | "partial" | "approx" | "forecast" | null;
   snowfall: number | null;
   snowfallHours: number | null;
   rainProbability: number | null;
@@ -277,6 +277,8 @@ function point(
   isKma: boolean,
   period: 1 | 3 | 24,
   role: Role = period === 24 ? "daily" : period === 3 ? "hourly" : "current",
+  /** Source date (YYYY-MM-DD) splitting observed past days from forecast days. */
+  today = "",
 ): Point | null {
   const r = record(value),
     at = rowTime(r);
@@ -294,19 +296,29 @@ function point(
   };
   const unit = (v: unknown, kind: string, key: keyof Units) =>
     convertValue(numberValue(v), kind, source[key], target[key]);
-  // D45: KMA r06/s06 are split or summed hourly categories, never shown as amounts.
-  // rn1 is observed (current 1h, short 3h, daily accumulation) or a shortest
-  // 1-hour category lower bound (approximate). Daily rows are limited to past
-  // dates in normalizeWeather.
-  const rain = isKma
-    ? numberValue(r.rn1)
-    : (numberValue(r.rn1) ?? numberValue(r.r06));
+  // KMA: rn1 is observed (current 1h, short 3h, past-day accumulation) or a
+  // shortest 1-hour category lower bound (approximate). r06/s06 are the
+  // server-calculated forecast amounts (3h short rows, daily totals); D45
+  // tracks their server-side accuracy.
+  const pastDay = role === "daily" && !!today && at.slice(0, 10) < today;
+  const observedRain = numberValue(r.rn1);
+  const forecastRain =
+    role === "short" || (role === "daily" && !pastDay)
+      ? numberValue(r.r06)
+      : null;
+  const kmaRain =
+    role === "daily" && !pastDay
+      ? forecastRain
+      : (observedRain ?? forecastRain);
+  const rain = isKma ? kmaRain : (numberValue(r.rn1) ?? numberValue(r.r06));
   const basis: Point["precipitationBasis"] =
     !isKma || rain === null
       ? null
       : role === "shortest"
         ? "approx"
-        : "observed";
+        : rain === observedRain && !(role === "daily" && !pastDay)
+          ? "observed"
+          : "forecast";
   const rainHours =
     rain === null || (isKma && role === "daily")
       ? null
@@ -315,8 +327,14 @@ function point(
           ? 3
           : 1
         : period;
+  const kmaSnow =
+    role === "short" || (role === "daily" && !pastDay)
+      ? numberValue(r.s06)
+      : role === "daily"
+        ? null
+        : numberValue(r.sn1);
   const snow = isKma
-    ? numberValue(r.sn1)
+    ? kmaSnow
     : (numberValue(r.sn1) ?? numberValue(r.s1d) ?? numberValue(r.s06));
   const dspls = numberValue(r.dspls),
     ultrv = numberValue(r.ultrv);
@@ -347,11 +365,17 @@ function point(
     snowfallHours:
       snow === null
         ? null
-        : numberValue(r.sn1) !== null
-          ? 1
-          : numberValue(r.s1d) !== null
-            ? 24
-            : period,
+        : isKma
+          ? role === "short"
+            ? 3
+            : role === "daily"
+              ? null
+              : 1
+          : numberValue(r.sn1) !== null
+            ? 1
+            : numberValue(r.s1d) !== null
+              ? 24
+              : period,
     rainProbability: numberValue(r.pop),
     feelsLike: temp(r.sensorytem ?? r.sensible),
     icon: str(r.skyIcon ?? r.skyAm) || "cloud",
@@ -495,7 +519,17 @@ export function normalizeWeather(
   };
   const points = (rows: unknown, period: 1 | 3 | 24) =>
     array(rows)
-      .map((v) => point(v, source, target, kma, period))
+      .map((v) =>
+        point(
+          v,
+          source,
+          target,
+          kma,
+          period,
+          undefined,
+          period === 24 ? current.at.slice(0, 10) : "",
+        ),
+      )
       .filter((p): p is Point => p !== null)
       .sort((a, b) => a.at.localeCompare(b.at));
   // DSF hourly rows sum three provider hours (server _makeHourlyDataFromDSF).
@@ -541,13 +575,7 @@ export function normalizeWeather(
   before.setUTCDate(before.getUTCDate() - 1);
   const yesterdayDate = before.toISOString().slice(0, 10);
   // Keep yesterday for comparison; older rows are history outside this view.
-  const recentDaily = daily
-    .filter((p) => p.at.slice(0, 10) >= yesterdayDate)
-    .map((p) =>
-      kma && p.at.slice(0, 10) >= today
-        ? { ...p, precipitation: null, precipitationBasis: null }
-        : p,
-    );
+  const recentDaily = daily.filter((p) => p.at.slice(0, 10) >= yesterdayDate);
   return {
     schemaVersion: 1,
     source: kma ? "KMA" : "DSF",
