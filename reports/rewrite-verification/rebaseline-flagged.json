@@ -1,0 +1,339 @@
+{
+  "old": "ff7acf39",
+  "new": "bd6640f2",
+  "applied": true,
+  "renumbered": 334,
+  "unchanged": 86,
+  "flagged": [
+    {
+      "doc": "docs/rewrite/api-endpoint-catalog.md",
+      "doc_line": 47,
+      "link": "../../server/app.js#L7",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/api-endpoint-catalog.md",
+      "doc_line": 169,
+      "link": "../../server/controllers/controllerManager.js#L2147",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/api-endpoint-catalog.md",
+      "doc_line": 200,
+      "link": "../../server/controllers/controllerTown.js#L3293-L3389",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 24,
+      "link": "../../server/controllers/controllerPush.js#L31",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 33,
+      "link": "../../server/app.js#L131-L148",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 33,
+      "link": "../../server/newrelic.js#L14",
+      "reason": "file deleted"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 69,
+      "link": "../../server/config/config.js#L20",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 69,
+      "link": "../../server/newrelic.js#L18",
+      "reason": "file deleted"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 69,
+      "link": "../../server/app.js#L7",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 91,
+      "link": "../../server/config/config.js#L66",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 92,
+      "link": "../../server/config/config.js#L67-L69",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 92,
+      "link": "../../server/controllers/controllerPush.js#L49-L65",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 92,
+      "link": "../../server/controllers/controllerPush.js#L27",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 92,
+      "link": "../../server/controllers/controllerPush.js#L31-L37",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 121,
+      "link": "../../server/controllers/controllerPush.js#L80-L96",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 121,
+      "link": "../../server/controllers/controllerPush.js#L82",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/configuration-inventory.md",
+      "doc_line": 121,
+      "link": "../../server/controllers/controllerPush.js#L88",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/data-model-reference.md",
+      "doc_line": 67,
+      "link": "../../server/lib/midRssKmaRequester.js#L263-L297",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/data-model-reference.md",
+      "doc_line": 72,
+      "link": "../../server/controllers/kma/kma.town.mid.controller.js#L24-L91",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/data-model-reference.md",
+      "doc_line": 73,
+      "link": "../../server/lib/midRssKmaRequester.js#L239-L261",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/data-model-reference.md",
+      "doc_line": 133,
+      "link": "../../server/controllers/kma/kma.town.mid.controller.js#L67-L83",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/data-model-reference.md",
+      "doc_line": 135,
+      "link": "../../server/lib/midRssKmaRequester.js#L239-L297",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/decisions-and-open-questions.md",
+      "doc_line": 56,
+      "link": "../../server/controllers/controllerTown.js#L1269-L1290",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 11,
+      "link": "../../server/lib/collectTownForecast.js#L142-L150",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 11,
+      "link": "../../server/lib/collectTownForecast.js#L464-L566",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 11,
+      "link": "../../server/lib/collectTownForecast.js#L573-L675",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 11,
+      "link": "../../server/lib/collectTownForecast.js#L677-L795",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 13,
+      "link": "../../server/app.js#L113-L128",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 46,
+      "link": "../../server/lib/collectTownForecast.js#L540-L556",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 46,
+      "link": "../../server/lib/collectTownForecast.js#L644-L660",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 46,
+      "link": "../../server/lib/collectTownForecast.js#L745-L778",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 53,
+      "link": "../../server/controllers/kma/kma.town.short.rss.controller.js#L239-L310",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 53,
+      "link": "../../server/controllers/controllerTown.js#L466-L592",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 59,
+      "link": "../../server/controllers/controllerTown.js#L565-L573",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 65,
+      "link": "../../server/controllers/kma/kma.town.short.rss.controller.js#L290-L303",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 67,
+      "link": "../../server/controllers/controllerTown.js#L574-L588",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 73,
+      "link": "../../server/controllers/controllerTown.js#L2054-L2150",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/domain-glossary.md",
+      "doc_line": 79,
+      "link": "../../server/controllers/controllerTown.js#L5410-L5478",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/external-providers.md",
+      "doc_line": 30,
+      "link": "../../server/lib/collectTownForecast.js#L387-L391",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/external-providers.md",
+      "doc_line": 33,
+      "link": "../../server/lib/collectTownForecast.js#L146-L149",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/external-providers.md",
+      "doc_line": 151,
+      "link": "../../server/controllers/controllerPush.js#L7-L9",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/external-providers.md",
+      "doc_line": 155,
+      "link": "../../server/app.js#L7",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/external-providers.md",
+      "doc_line": 155,
+      "link": "../../server/newrelic.js#L10-L18",
+      "reason": "file deleted"
+    },
+    {
+      "doc": "docs/rewrite/external-providers.md",
+      "doc_line": 155,
+      "link": "../../server/config/config.js#L20",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/localization-inventory.md",
+      "doc_line": 63,
+      "link": "../../server/app.js#L135-L144",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/security-and-privacy-inventory.md",
+      "doc_line": 89,
+      "link": "../../server/controllers/controllerPush.js#L338",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/security-and-privacy-inventory.md",
+      "doc_line": 105,
+      "link": "../../server/app.js#L7",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/server-push-and-purchase.md",
+      "doc_line": 7,
+      "link": "../../server/app.js#L135-L144",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/server-push-and-purchase.md",
+      "doc_line": 17,
+      "link": "../../server/controllers/controllerPush.js#L288-L318",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/server-push-and-purchase.md",
+      "doc_line": 18,
+      "link": "../../server/controllers/controllerPush.js#L337-L358",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/server-push-and-purchase.md",
+      "doc_line": 21,
+      "link": "../../server/config/config.js#L65-L70",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/server-push-and-purchase.md",
+      "doc_line": 21,
+      "link": "../../server/controllers/controllerPush.js#L48-L93",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/server-push-and-purchase.md",
+      "doc_line": 171,
+      "link": "../../server/controllers/alert.push.controller.js#L649-L680",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/server-response-assembly.md",
+      "doc_line": 36,
+      "link": "../../server/controllers/controllerTown.js#L1269-L1290",
+      "reason": "anchor touches a changed hunk"
+    },
+    {
+      "doc": "docs/rewrite/verification-matrix.md",
+      "doc_line": 44,
+      "link": "../../server/controllers/controllerTown.js#L3293-L3389",
+      "reason": "anchor touches a changed hunk"
+    }
+  ]
+}

@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Nation fan-out: /v000903/nation/KR",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      640
+    ],
+    "legend": {
+      "entries": {
+        "emphasis": {
+          "label": "request / fan-out"
+        },
+        "default": {
+          "label": "read / forward"
+        },
+        "return": {
+          "label": "return"
+        },
+        "dashed": {
+          "label": "error path"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "app",
+      "type": "frontend",
+      "label": "App",
+      "sublabel": "nation weather / air tabs"
+    },
+    {
+      "id": "edge",
+      "type": "cloud",
+      "label": "CloudFront edge",
+      "sublabel": "public API_SERVER host"
+    },
+    {
+      "id": "nation",
+      "type": "backend",
+      "label": "Nation router",
+      "sublabel": "v000803/route.nation.js"
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "MongoDB",
+      "sublabel": "SidoArpltnKeco"
+    },
+    {
+      "id": "kma",
+      "type": "backend",
+      "label": "KMA chain",
+      "sublabel": "v000903 /kma/addr \u00d7 15"
+    },
+    {
+      "id": "final",
+      "type": "backend",
+      "label": "Final handler",
+      "sublabel": "Express default HTML"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 272,
+      "label": "Validate + regional air"
+    },
+    {
+      "from": 282,
+      "to": 430,
+      "label": "15 parallel children"
+    },
+    {
+      "from": 440,
+      "to": 534,
+      "label": "Error exit"
+    }
+  ],
+  "messages": [
+    {
+      "id": "request",
+      "from": "app",
+      "to": "edge",
+      "y": 176,
+      "label": "GET /v000903/nation/KR + units",
+      "variant": "emphasis"
+    },
+    {
+      "id": "origin",
+      "from": "edge",
+      "to": "nation",
+      "y": 204,
+      "label": "default behavior \u2192 service origin"
+    },
+    {
+      "id": "air-read",
+      "from": "nation",
+      "to": "store",
+      "y": 232,
+      "label": "latest doc per sido (17), cityName ''",
+      "note": "after checkQueryValidation: version from baseUrl, unit defaults"
+    },
+    {
+      "id": "air-docs",
+      "from": "store",
+      "to": "nation",
+      "y": 260,
+      "label": "\u226417 docs \u2192 recalculateValue(airUnit)",
+      "variant": "return"
+    },
+    {
+      "id": "fanout",
+      "from": "nation",
+      "to": "edge",
+      "y": 306,
+      "label": "15 \u00d7 GET API_SERVER/v000903/kma/addr/\u2026",
+      "variant": "emphasis",
+      "note": "async.map \u00b7 9 s timeout \u00b7 query copied unencoded \u00b7 Accept-Language"
+    },
+    {
+      "id": "child-origin",
+      "from": "edge",
+      "to": "kma",
+      "y": 334,
+      "label": "edge cache or service origin"
+    },
+    {
+      "id": "child-body",
+      "from": "kma",
+      "to": "edge",
+      "y": 362,
+      "label": "v000903 KMA JSON (airInfoList)",
+      "variant": "return"
+    },
+    {
+      "id": "children-done",
+      "from": "edge",
+      "to": "nation",
+      "y": 390,
+      "label": "15 bodies \u2192 delete airInfo, airInfoList",
+      "variant": "return"
+    },
+    {
+      "id": "response",
+      "from": "nation",
+      "to": "app",
+      "y": 418,
+      "label": "200 {nation:'KR', weather[15], air}",
+      "variant": "return"
+    },
+    {
+      "id": "child-error",
+      "from": "edge",
+      "to": "nation",
+      "y": 464,
+      "label": "first child error or status \u2265 400",
+      "variant": "dashed"
+    },
+    {
+      "id": "next-err",
+      "from": "nation",
+      "to": "final",
+      "y": 492,
+      "label": "next(err); other children keep running",
+      "variant": "dashed"
+    },
+    {
+      "id": "html-error",
+      "from": "final",
+      "to": "app",
+      "y": 520,
+      "label": "HTML 500 (Express default handler)",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Order + forwarding",
+      "items": [
+        "checkQueryValidation \u2192 getSidoArpltn \u2192 getWeather \u2192 compose",
+        "Children get version from baseUrl, defaulted units + airForecastSource, Accept-Language"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Failure",
+      "items": [
+        "First child error or status \u2265 400 \u2192 next(err); 3-arity app handlers are skipped",
+        "501 branch unreachable: air is always an array once getSidoArpltn succeeds"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Dated deployment evidence",
+      "items": [
+        "API_SERVER = public host (SSH, 2026-09-20): children re-enter CloudFront",
+        "88 origin-reaching nation requests \u00d7 15 = 1,320 /v000903/kma/addr (30-day aggregate)"
+      ]
+    }
+  ]
+}
