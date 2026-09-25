@@ -19,21 +19,40 @@ describe("reviewed source boundaries", () => {
     ];
     const data = normalizeWeather(raw);
     expect(data.current.precipitationHours).toBeNull();
-    expect(data.hourly[0].precipitation).toBe(2);
-    expect(data.hourly[0].precipitationHours).toBe(3);
-    expect((data.hourly[0] as any).snowfall).toBe(25.4);
-    expect(data.hourly[1].precipitation).toBe(0);
-    expect(data.hourly[1].precipitationHours).toBe(3);
-    expect(data.daily[0].precipitationHours).toBeNull();
-    const inches = normalizeWeather(raw, {
-      units: { ...DEFAULT_UNITS, precipitationUnit: "in" },
+    // Invalid rn1 falls back to the server's 3-hour forecast amounts.
+    expect(data.hourly[0]).toMatchObject({
+      precipitation: 2,
+      precipitationHours: 3,
+      precipitationBasis: "forecast",
+      snowfall: 25.4,
+      snowfallHours: 3,
     });
-    expect((inches.hourly[0] as any).snowfall).toBeCloseTo(1);
+    // 18:00 ends after the 09:00 observation: an accumulating slot (QA F3).
+    expect(data.hourly[1]).toMatchObject({
+      precipitation: 0,
+      precipitationHours: null,
+      precipitationBasis: "partial",
+    });
+    expect(data.daily[0]).toMatchObject({
+      precipitation: 8,
+      precipitationHours: null,
+      precipitationBasis: "forecast",
+    });
     raw.source = "DSF";
     raw.thisTime = [{}, { ...raw.current, rn1: 1 }];
     raw.hourly = raw.short;
     raw.daily = raw.midData.dailyData;
-    expect(normalizeWeather(raw).hourly[0].precipitationHours).toBe(1);
+    const dsf = normalizeWeather(raw);
+    // DSF hourly rows are three-hour sums; snow keeps its provider amount.
+    expect(dsf.hourly[0]).toMatchObject({
+      precipitation: 2,
+      precipitationHours: 3,
+      snowfall: 25.4,
+    });
+    const inches = normalizeWeather(raw, {
+      units: { ...DEFAULT_UNITS, precipitationUnit: "in" },
+    });
+    expect(inches.hourly[0].snowfall).toBeCloseTo(1);
   });
   it("upgrades only trusted KMA image links and rejects deceptive hosts", () => {
     const urls = [

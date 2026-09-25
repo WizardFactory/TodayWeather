@@ -7,6 +7,7 @@ import {
   parseUnits,
   placeId,
   PLACES,
+  shortenAddress,
   type Place,
 } from "@todayweather/core";
 import type { TransportSettings } from "./transport-config";
@@ -61,13 +62,32 @@ function geo(value: any): Place {
   );
   if (!value || typeof value !== "object")
     throw new Error("지역 정보를 확인하지 못했습니다.");
+  const address = String(value.address || "");
   return {
     id: placeId(c.lat, c.lon),
-    name: String(value.name || value.address || "선택한 지역").slice(0, 160),
+    // Mobile display name: name || getShortenAddress(address).
+    name: String(
+      value.name || shortenAddress(address) || address || "선택한 지역",
+    ).slice(0, 160),
     address: String(value.address || "").slice(0, 300),
     country: String(value.country || "").slice(0, 3),
     ...c,
   };
+}
+const RETRY_DELAY_MS = 1000;
+function wait(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    const done = () => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", done);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", done, { once: true });
+  });
 }
 export async function directApi(
   path: string,
@@ -85,23 +105,35 @@ export async function directApi(
   const route = url.pathname,
     mode = settings.mode;
   const units = parseUnits(Object.fromEntries(url.searchParams));
-  const upstream = async (p: string) => {
-    let response: Response;
-    try {
-      response = await fetch(settings.apiOrigin + p, {
-        signal,
-        credentials: "omit",
-        redirect: "error",
-        headers: { Accept: "application/json", "Accept-Language": "ko" },
-      });
-    } catch {
-      if (signal.aborted) throw signal.reason;
-      // CORS prevents inspecting a failed response. Never echo provider/network details.
-      throw new Error(
-        "날씨 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-      );
+  const upstream = async (p: string, options: { noStore?: boolean } = {}) => {
+    // One delayed retry for gateway (502) or network failures; a CloudFront
+    // 502 without CORS headers surfaces as a network failure.
+    for (let attempt = 0; ; attempt++) {
+      let response: Response | undefined;
+      try {
+        response = await fetch(settings.apiOrigin + p, {
+          signal,
+          credentials: "omit",
+          redirect: "error",
+          headers: { Accept: "application/json", "Accept-Language": "ko" },
+          // Geocode results can contain the user's position; keep them out of the HTTP cache.
+          ...(options.noStore ? { cache: "no-store" as const } : {}),
+        });
+      } catch {
+        if (signal.aborted) throw signal.reason;
+      }
+      if (attempt === 0 && (!response || response.status === 502)) {
+        await response?.body?.cancel().catch(() => undefined);
+        await wait(RETRY_DELAY_MS, signal);
+        continue;
+      }
+      if (!response)
+        // CORS prevents inspecting a failed response. Never echo provider/network details.
+        throw new Error(
+          "날씨 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        );
+      return readJson(response);
     }
-    return readJson(response);
   };
   const query = new URLSearchParams({
     ...DEFAULT_UNITS,
@@ -147,7 +179,9 @@ export async function directApi(
     if (mode === "demo")
       throw new Error("예제 모드에서는 추천 지역을 선택해 주세요.");
     return geo(
-      await upstream("/geocode/v000903/addr/" + encodeURIComponent(q)),
+      await upstream("/geocode/v000903/addr/" + encodeURIComponent(q), {
+        noStore: true,
+      }),
     );
   }
   if (route === "/weather" || route === "/locations/reverse") {
@@ -167,7 +201,11 @@ export async function directApi(
     if (route === "/locations/reverse")
       return mode === "demo"
         ? { ...p, ...c }
-        : geo(await upstream(`/geocode/v000903/coord/${c.lat},${c.lon}`));
+        : geo(
+            await upstream(`/geocode/v000903/coord/${c.lat},${c.lon}`, {
+              noStore: true,
+            }),
+          );
     if (mode === "demo" && units.airUnit !== "airkorea")
       throw new Error("예제 자료는 한국 대기환경 기준만 제공합니다.");
     const raw =

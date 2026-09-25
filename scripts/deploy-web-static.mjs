@@ -1,8 +1,17 @@
 /** Explicit static artifact uploader. Defaults to dry-run; never provisions AWS resources. */
 import { readFile, readdir } from "node:fs/promises";
-import { resolve, join, extname } from "node:path";
-import { pathToFileURL } from "node:url";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve, join, extname, dirname } from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+/** Must match web/vite.config.ts release.json and web/src/transport-config.ts defaults. */
+export const SITE_DOMAIN = "app.tdywx.xyz";
+export const API_ORIGIN = "https://todayweather.wizardfactory.net";
+const ROUTE_FUNCTION = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../infra/web/static/route-request.js",
+);
 const types = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -25,8 +34,8 @@ export async function planUpload({ dir = "web/dist", bucket, distribution }) {
     release.schemaVersion !== 1 ||
     release.mode !== "live" ||
     release.transport !== "direct" ||
-    release.apiOrigin !== "https://todayweather.wizardfactory.net" ||
-    release.siteOrigin !== "https://app.tdywx.xyz"
+    release.apiOrigin !== API_ORIGIN ||
+    release.siteOrigin !== "https://" + SITE_DOMAIN
   )
     throw new Error(
       "Deployment requires a live/direct app.tdywx.xyz build using the existing API",
@@ -107,6 +116,96 @@ export async function planUpload({ dir = "web/dist", bucket, distribution }) {
       ],
     ]);
 }
+const normalize = (text) => text.replace(/\s+/g, " ").trim();
+/**
+ * Read-only destination checks run before any upload command. `run` executes
+ * one AWS CLI invocation and returns stdout. Every failure throws.
+ */
+export function preflight(run, { bucket, distribution }) {
+  const cf = JSON.parse(
+    run([
+      "cloudfront",
+      "get-distribution-config",
+      "--id",
+      distribution,
+      "--output",
+      "json",
+    ]),
+  ).DistributionConfig;
+  const behavior = cf.DefaultCacheBehavior;
+  const target = cf.Origins.Items.find((o) => o.Id === behavior.TargetOriginId);
+  if (
+    !cf.Aliases?.Items?.includes(SITE_DOMAIN) ||
+    !target?.DomainName?.startsWith(bucket + ".s3.") ||
+    !target.OriginAccessControlId ||
+    behavior.ViewerProtocolPolicy !== "redirect-to-https"
+  )
+    throw Error(
+      `Destination does not match the private ${SITE_DOMAIN} static stack`,
+    );
+  if (target.OriginPath)
+    throw Error(
+      `S3 origin ${target.Id} has OriginPath ${JSON.stringify(target.OriginPath)}; the uploader writes to the bucket root and requires an empty OriginPath`,
+    );
+  const association = behavior.FunctionAssociations?.Items?.find(
+    (f) => f.EventType === "viewer-request",
+  );
+  const functionName =
+    association?.FunctionARN?.match(/:function\/([^/]+)$/)?.[1];
+  if (!functionName)
+    throw Error(
+      "Default cache behavior has no viewer-request CloudFront Function association; publish infra/web/static/route-request.js and attach it",
+    );
+  if (!behavior.ResponseHeadersPolicyId)
+    throw Error(
+      "Default cache behavior has no response headers policy; attach a policy with the app CSP",
+    );
+  // get-function streams the code to a required outfile and prints metadata on stdout.
+  const tmp = mkdtempSync(join(tmpdir(), "tw-cf-function-"));
+  let live;
+  try {
+    const outfile = join(tmp, "function.js");
+    run([
+      "cloudfront",
+      "get-function",
+      "--name",
+      functionName,
+      "--stage",
+      "LIVE",
+      "--output",
+      "json",
+      outfile,
+    ]);
+    live = readFileSync(outfile, "utf8");
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+  if (normalize(live) !== normalize(readFileSync(ROUTE_FUNCTION, "utf8")))
+    throw Error(
+      `Viewer-request function ${functionName} LIVE code does not match infra/web/static/route-request.js; publish the repository version first`,
+    );
+  const policy = JSON.parse(
+    run([
+      "cloudfront",
+      "get-response-headers-policy",
+      "--id",
+      behavior.ResponseHeadersPolicyId,
+      "--output",
+      "json",
+    ]),
+  ).ResponseHeadersPolicy?.ResponseHeadersPolicyConfig;
+  const csp =
+    policy?.SecurityHeadersConfig?.ContentSecurityPolicy
+      ?.ContentSecurityPolicy ?? "";
+  const connect = csp
+    .split(";")
+    .map((d) => d.trim().split(/\s+/))
+    .find((d) => d[0].toLowerCase() === "connect-src");
+  if (!connect?.slice(1).includes(API_ORIGIN))
+    throw Error(
+      `Response headers policy ${behavior.ResponseHeadersPolicyId} CSP connect-src does not include ${API_ORIGIN}`,
+    );
+}
 export async function main(argv) {
   const options = {};
   for (let i = 0; i < argv.length; i++) {
@@ -122,7 +221,7 @@ export async function main(argv) {
   if (!options.execute) {
     console.log(
       JSON.stringify(
-        { dryRun: true, site: "https://app.tdywx.xyz", commands },
+        { dryRun: true, site: "https://" + SITE_DOMAIN, commands },
         null,
         2,
       ),
@@ -138,31 +237,10 @@ export async function main(argv) {
     if (p.status !== 0) throw Error(p.stderr || "AWS CLI failed");
     return p.stdout;
   };
-  const cf = JSON.parse(
-    run([
-      "cloudfront",
-      "get-distribution-config",
-      "--id",
-      options.distribution,
-      "--output",
-      "json",
-    ]),
-  ).DistributionConfig;
-  const target = cf.Origins.Items.find(
-    (o) => o.Id === cf.DefaultCacheBehavior.TargetOriginId,
-  );
-  if (
-    !cf.Aliases?.Items?.includes("app.tdywx.xyz") ||
-    !target?.DomainName?.startsWith(options.bucket + ".s3.") ||
-    !target.OriginAccessControlId ||
-    cf.DefaultCacheBehavior.ViewerProtocolPolicy !== "redirect-to-https"
-  )
-    throw Error(
-      "Destination does not match the private app.tdywx.xyz static stack",
-    );
+  preflight(run, options);
   for (const command of commands) run(command);
   console.log(
-    "Uploaded static release and requested CloudFront invalidation. Verify https://app.tdywx.xyz after invalidation completes.",
+    `Uploaded static release and requested CloudFront invalidation. Verify https://${SITE_DOMAIN} after invalidation completes.`,
   );
 }
 if (
