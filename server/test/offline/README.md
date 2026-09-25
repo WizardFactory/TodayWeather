@@ -140,3 +140,11 @@ The smoke deliberately omits production DB/provider behavior and Amazon Linux 1
 linking. OpenSSL must support `req -addext` (1.1.1+); the SDK/native import checks
 on the older target host are a separate gate. The existing legacy `npm test` /
 `e2e` suites include providers and databases; they are not part of this command.
+
+## Weather text and summary (#2576)
+
+`weather-desc.test.js` (part of `test:offline`) covers the KMA wording normalization, `getWeatherStr` empty labels, the `updateWeather` sky/pty fallback and both summary builders. `weather-desc-response-smoke.js` reuses the RSS response harness to run the actual v000903 coordinate route with station text (`비끝`, `약한비연속적`, an unmapped string) for DB 1.0/2.0. It asserts `current.weather`, `weatherType`, `summary` and `summaryWeather`. Station text is typed with the real `makeWeatherType`, as `getStnHourlyAndMinRns` does; the station query itself stays synthetic. Run it with the RSS smoke dependencies and `TZ=UTC`:
+
+```sh
+TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/weather-desc-response-smoke.js
+```

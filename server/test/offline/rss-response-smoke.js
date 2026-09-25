@@ -92,7 +92,12 @@ function createHarness(version, fixture, historyOptions = {}) {
   }
   const optional={
     'kecoController':{getArpLtnInfo:(town,date,cb)=>cb(null,{arpltn:{},list:[],stnList:[]}),getDustFrcst:(town,date,cb)=>cb(null,[])},
-    'controllerKmaStnWeather':{getCityHourlyList:(town,cb)=>cb(null,[]),getStnHourlyAndMinRns:(town,date,current,cb)=>cb(null,{t1h:20,vec:315,wsd:3,stnDateTime:'2026-09-24 08:50',rs1h:0})},
+    'controllerKmaStnWeather':{getCityHourlyList:(town,cb)=>cb(null,[]),getStnHourlyAndMinRns:(town,date,current,cb)=>{
+      const stn={t1h:20,vec:315,wsd:3,stnDateTime:'2026-09-24 08:50',rs1h:0};
+      // Optional city weather text, typed exactly as getStnHourlyAndMinRns does before returning (#2576).
+      if(fixture.stnWeather){Object.assign(stn,fixture.stnWeather);stn.weatherType=load(path.join(root,'server/controllers/controller.weather.desc.js')).makeWeatherType(stn.weather);}
+      cb(null,stn);
+    }},
     'kasi.riseset.controller':{getRiseSetList:(geo,dates,cb)=>cb(null,[])},
     'kma.town.mid.rss.controller':{overwriteData:(mid,code,cb)=>cb(null)},
     'kma.forecast.zone.controller':function(){this.findForecastZoneByName=()=>({exec:cb=>cb(null,[{regId:'11B10101'}])});},
