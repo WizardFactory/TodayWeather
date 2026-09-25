@@ -1,0 +1,73 @@
+{
+  "state": "tab.air",
+  "viewport": [
+    402,
+    778
+  ],
+  "screen": [
+    402,
+    874
+  ],
+  "theme": "dark",
+  "errors": [],
+  "brokenImages": [],
+  "svgCount": 1,
+  "invalidSvg": 0,
+  "headers": [
+    {
+      "text": "서울",
+      "x": 10,
+      "y": 0,
+      "width": 382,
+      "height": 43
+    },
+    {
+      "text": "서울",
+      "x": 20,
+      "y": 0,
+      "width": 362,
+      "height": 43
+    }
+  ],
+  "tabs": [
+    {
+      "text": "즐겨찾기",
+      "x": 0,
+      "y": 730,
+      "width": 134,
+      "height": 47
+    },
+    {
+      "text": "대기정보",
+      "x": 134,
+      "y": 730,
+      "width": 134,
+      "height": 47
+    },
+    {
+      "text": "날씨",
+      "x": 268,
+      "y": 730,
+      "width": 134,
+      "height": 47
+    }
+  ],
+  "fontStatus": "loaded",
+  "documentWidth": 402,
+  "scrollRegions": [
+    {
+      "className": "main-content scroll-content ionic-scroll overflow-scroll  has-header has-tabs",
+      "clientWidth": 402,
+      "scrollWidth": 402,
+      "clientHeight": 730,
+      "scrollHeight": 1186
+    },
+    {
+      "className": "chart-scroll",
+      "clientWidth": 402,
+      "scrollWidth": 402,
+      "clientHeight": 100,
+      "scrollHeight": 105
+    }
+  ]
+}

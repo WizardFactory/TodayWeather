@@ -1,0 +1,41 @@
+{
+  "probe": "start-popup-choice.js",
+  "source_commit": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "date": "2026-09-24",
+  "host": "WKWebView isolated harness, iPhone 17 Pro / iOS 26.5, TodayWeather, ko-KR",
+  "source": [
+    "client/www/js/controller.tabctrl.js:12",
+    "client/www/js/controller.tabctrl.js:316-377"
+  ],
+  "result": {
+    "value_true": {
+      "before": {
+        "state": "tab.forecast",
+        "currentPosDisabled": true
+      },
+      "radioLabels": [
+        "현재위치 날씨보기",
+        "지역 검색으로 시작"
+      ],
+      "after": {
+        "state": "tab.forecast",
+        "currentPosDisabled": false
+      }
+    },
+    "value_false": {
+      "before": {
+        "state": "tab.forecast",
+        "currentPosDisabled": true
+      },
+      "radioLabels": [
+        "현재위치 날씨보기",
+        "지역 검색으로 시작"
+      ],
+      "after": {
+        "state": "tab.search",
+        "currentPosDisabled": true
+      }
+    }
+  },
+  "interpretation": "Model value false renders checked on the first radio labelled LOC_USE_YOUR_CURRENT_LOCATION but navigates to /tab/search; value true (LOC_FIND_LOCATION_BY_NAME) enables the current-position city and reloads/stays on the forecast. Synthetic execution only; no native diagnostic plugin, so the initial model stays false."
+}

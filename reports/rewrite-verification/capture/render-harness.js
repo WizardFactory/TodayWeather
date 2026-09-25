@@ -28,7 +28,10 @@
         this.getPlacePredictions = function (_, callback) { callback([], 'ZERO_RESULTS'); };
     }, PlacesServiceStatus:{OK:'OK', ZERO_RESULTS:'ZERO_RESULTS'}}}};
     window.alert = function (message) { post('/__event', {type:'alert', message:String(message)}); };
-    Object.defineProperty(navigator, 'language', {get:function () { return 'ko-KR'; }});
+    // prepare.py --locale replaces this value. Region derivation reads navigator.languages.
+    var HARNESS_LOCALE = 'ko-KR';
+    Object.defineProperty(navigator, 'language', {get:function () { return HARNESS_LOCALE; }});
+    Object.defineProperty(navigator, 'languages', {get:function () { return [HARNESS_LOCALE]; }});
     setInterval(function () {
         fetch('/__command').then(function (r) { return r.json(); }).then(function (command) {
             if (!command) return;

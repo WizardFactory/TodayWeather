@@ -1,0 +1,446 @@
+{
+ "probe": "server-airkorea-station-merge",
+ "evidence_label": "synthetic execution",
+ "command": "node reports/rewrite-verification/probes/server-airkorea-station-merge.js > reports/rewrite-verification/probes/server-airkorea-station-merge.json",
+ "source_commit": "bd6640f22c1029c35e8937b108be4b50ea89361a",
+ "date": "2026-09-25",
+ "rebaseline": {
+  "previous_source_commit": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "note": "Re-baselined 2026-09-25 from ff7acf39 to bd6640f2. kecoController.js has the same blob hash at both commits; inputs, outputs and all 5 checks are identical to the ff7acf39 run. controllerTown.js changed upstream, but the getKeco middleware is text-identical and moved from L2606-L2614 to L2562-L2570.",
+  "node16_cross_check": "Also run on 2026-09-25 with Node v16.20.2, the server runtime pinned by server/.nvmrc and package.json engines since c80ee014: every output and check was identical; only runtime.node differed. That run is not the stored record."
+ },
+ "runtime": {
+  "node": "v24.21.0",
+  "TZ": "Asia/Seoul"
+ },
+ "source": [
+  {
+   "file": "server/controllers/kecoController.js",
+   "blob_sha1": "7a1e7d00c8279ec87d18ebd2b84892984cac61d7",
+   "extracted": [
+    "_checkArpltnDataValid: L177-L185",
+    "_checkDateTime: L194-L209",
+    "_mergeArpltnList: L218-L257"
+   ]
+  },
+  {
+   "file": "server/controllers/controllerTown.js",
+   "lines": "L2562-L2570",
+   "note": "source reading only: getKeco passes new Date() and assigns arpltnObj.arpltn to req.current.arpltn; not executed"
+  },
+  {
+   "file": "server/controllers/kecoController.js",
+   "lines": "L129-L166, L389-L435",
+   "note": "source reading only: 24 h Arpltn window, MsrStnInfo $near limit 6 $maxDistance 1, slice(0,3) and the stnList comparator; not executed"
+  }
+ ],
+ "inputs": {
+  "now": "2026-09-25T12:00:00+09:00",
+  "stationTemplate": {
+   "coValue": 0.4,
+   "coGrade": 1,
+   "khaiValue": 60,
+   "khaiGrade": 2,
+   "no2Value": 0.02,
+   "no2Grade": 1,
+   "o3Value": 0.03,
+   "o3Grade": 1,
+   "pm10Value": 40,
+   "pm10Grade": 2,
+   "pm25Value": 20,
+   "pm25Grade": 2,
+   "so2Value": 0.003,
+   "so2Grade": 1
+  },
+  "note": "each list entry is the latest record of one station, nearest first; missing pollutants are absent fields"
+ },
+ "outputs": {
+  "scenarios": {
+   "A 9/14/22 h, pm10 missing at S2 and S3": {
+    "input": [
+     {
+      "stationName": "S1-nearest",
+      "mangName": "도시대기",
+      "dataTime": "2026-09-25 03:00",
+      "coValue": 0.4,
+      "coGrade": 1,
+      "khaiValue": 60,
+      "khaiGrade": 2,
+      "no2Value": 0.02,
+      "no2Grade": 1,
+      "o3Value": 0.03,
+      "o3Grade": 1,
+      "pm10Value": 40,
+      "pm10Grade": 2,
+      "pm25Value": 20,
+      "pm25Grade": 2,
+      "so2Value": 0.003,
+      "so2Grade": 1
+     },
+     {
+      "stationName": "S2",
+      "mangName": "도시대기",
+      "dataTime": "2026-09-24 22:00",
+      "coValue": 0.4,
+      "coGrade": 1,
+      "khaiValue": 60,
+      "khaiGrade": 2,
+      "no2Value": 0.02,
+      "no2Grade": 1,
+      "o3Value": 0.03,
+      "o3Grade": 1,
+      "pm25Value": 20,
+      "pm25Grade": 2,
+      "so2Value": 0.003,
+      "so2Grade": 1
+     },
+     {
+      "stationName": "S3",
+      "mangName": "도시대기",
+      "dataTime": "2026-09-24 14:00",
+      "coValue": 0.4,
+      "coGrade": 1,
+      "khaiValue": 60,
+      "khaiGrade": 2,
+      "no2Value": 0.02,
+      "no2Grade": 1,
+      "o3Value": 0.03,
+      "o3Grade": 1,
+      "pm25Value": 20,
+      "pm25Grade": 2,
+      "so2Value": 0.009,
+      "so2Grade": 1
+     }
+    ],
+    "result": {
+     "stationName": "S2",
+     "mangName": "도시대기",
+     "dataTime": "2026-09-24 22:00",
+     "coValue": 0.4,
+     "coGrade": 1,
+     "khaiValue": 60,
+     "khaiGrade": 2,
+     "no2Value": 0.02,
+     "no2Grade": 1,
+     "o3Value": 0.03,
+     "o3Grade": 1,
+     "pm25Value": 20,
+     "pm25Grade": 2,
+     "so2Value": 0.003,
+     "so2Grade": 1,
+     "pm10Value": "<undefined>",
+     "pm10Grade": "<undefined>",
+     "pm10StationName": "S3"
+    },
+    "currentTimeAfterMerge": "2026-09-24T03:00:00.000Z"
+   },
+   "B 9/14/22 h, pm10 only at S3": {
+    "input": [
+     {
+      "stationName": "S1-nearest",
+      "mangName": "도시대기",
+      "dataTime": "2026-09-25 03:00",
+      "coValue": 0.4,
+      "coGrade": 1,
+      "khaiValue": 60,
+      "khaiGrade": 2,
+      "no2Value": 0.02,
+      "no2Grade": 1,
+      "o3Value": 0.03,
+      "o3Grade": 1,
+      "pm10Value": 40,
+      "pm10Grade": 2,
+      "pm25Value": 20,
+      "pm25Grade": 2,
+      "so2Value": 0.003,
+      "so2Grade": 1
+     },
+     {
+      "stationName": "S2",
+      "mangName": "도시대기",
+      "dataTime": "2026-09-24 22:00",
+      "coValue": 0.4,
+      "coGrade": 1,
+      "khaiValue": 60,
+      "khaiGrade": 2,
+      "no2Value": 0.02,
+      "no2Grade": 1,
+      "o3Value": 0.03,
+      "o3Grade": 1,
+      "pm25Value": 20,
+      "pm25Grade": 2,
+      "so2Value": 0.003,
+      "so2Grade": 1
+     },
+     {
+      "stationName": "S3",
+      "mangName": "도시대기",
+      "dataTime": "2026-09-24 14:00",
+      "coValue": 0.4,
+      "coGrade": 1,
+      "khaiValue": 60,
+      "khaiGrade": 2,
+      "no2Value": 0.02,
+      "no2Grade": 1,
+      "o3Value": 0.03,
+      "o3Grade": 1,
+      "pm10Value": 85,
+      "pm10Grade": 3,
+      "pm25Value": 20,
+      "pm25Grade": 2,
+      "so2Value": 0.003,
+      "so2Grade": 1
+     }
+    ],
+    "result": {
+     "stationName": "S2",
+     "mangName": "도시대기",
+     "dataTime": "2026-09-24 22:00",
+     "coValue": 0.4,
+     "coGrade": 1,
+     "khaiValue": 60,
+     "khaiGrade": 2,
+     "no2Value": 0.02,
+     "no2Grade": 1,
+     "o3Value": 0.03,
+     "o3Grade": 1,
+     "pm25Value": 20,
+     "pm25Grade": 2,
+     "so2Value": 0.003,
+     "so2Grade": 1,
+     "pm10Value": 85,
+     "pm10Grade": 3,
+     "pm10StationName": "S3"
+    },
+    "currentTimeAfterMerge": "2026-09-24T03:00:00.000Z"
+   },
+   "C 1/2/3 h, pm25 missing at S1": {
+    "input": [
+     {
+      "stationName": "S1-nearest",
+      "mangName": "도시대기",
+      "dataTime": "2026-09-25 11:00",
+      "coValue": 0.4,
+      "coGrade": 1,
+      "khaiValue": 60,
+      "khaiGrade": 2,
+      "no2Value": 0.02,
+      "no2Grade": 1,
+      "o3Value": 0.03,
+      "o3Grade": 1,
+      "pm10Value": 40,
+      "pm10Grade": 2,
+      "so2Value": 0.003,
+      "so2Grade": 1
+     },
+     {
+      "stationName": "S2",
+      "mangName": "도시대기",
+      "dataTime": "2026-09-25 10:00",
+      "coValue": 0.4,
+      "coGrade": 1,
+      "khaiValue": 60,
+      "khaiGrade": 2,
+      "no2Value": 0.02,
+      "no2Grade": 1,
+      "o3Value": 0.03,
+      "o3Grade": 1,
+      "pm10Value": 40,
+      "pm10Grade": 2,
+      "pm25Value": 33,
+      "pm25Grade": 2,
+      "so2Value": 0.003,
+      "so2Grade": 1
+     },
+     {
+      "stationName": "S3",
+      "mangName": "도시대기",
+      "dataTime": "2026-09-25 09:00",
+      "coValue": 0.4,
+      "coGrade": 1,
+      "khaiValue": 60,
+      "khaiGrade": 2,
+      "no2Value": 0.02,
+      "no2Grade": 1,
+      "o3Value": 0.03,
+      "o3Grade": 1,
+      "pm10Value": 40,
+      "pm10Grade": 2,
+      "pm25Value": 20,
+      "pm25Grade": 2,
+      "so2Value": 0.003,
+      "so2Grade": 1
+     }
+    ],
+    "result": {
+     "stationName": "S1-nearest",
+     "mangName": "도시대기",
+     "dataTime": "2026-09-25 11:00",
+     "coValue": 0.4,
+     "coGrade": 1,
+     "khaiValue": 60,
+     "khaiGrade": 2,
+     "no2Value": 0.02,
+     "no2Grade": 1,
+     "o3Value": 0.03,
+     "o3Grade": 1,
+     "pm10Value": 40,
+     "pm10Grade": 2,
+     "so2Value": 0.003,
+     "so2Grade": 1,
+     "pm25Value": 33,
+     "pm25Grade": 2,
+     "pm25StationName": "S2"
+    },
+    "currentTimeAfterMerge": "2026-09-24T11:00:00.000Z"
+   }
+  },
+  "acceptanceByPosition": [
+   {
+    "ageHours": 7.5,
+    "position1": "accepted",
+    "position2": "accepted",
+    "position3": "accepted"
+   },
+   {
+    "ageHours": 8.5,
+    "position1": "rejected",
+    "position2": "accepted",
+    "position3": "accepted"
+   },
+   {
+    "ageHours": 15.5,
+    "position1": "rejected",
+    "position2": "accepted",
+    "position3": "accepted"
+   },
+   {
+    "ageHours": 16.5,
+    "position1": "rejected",
+    "position2": "rejected",
+    "position3": "accepted"
+   },
+   {
+    "ageHours": 23.5,
+    "position1": "rejected",
+    "position2": "rejected",
+    "position3": "accepted"
+   }
+  ]
+ },
+ "checks": [
+  {
+   "id": "9-hour-old nearest station rejected; 14-hour-old station becomes the base record",
+   "doc": "docs/rewrite/server-response-assembly.md#station-selection-and-merge (A46, FIN-3)",
+   "expected": {
+    "base": "S2",
+    "dataTime": "2026-09-24 22:00"
+   },
+   "actual": {
+    "base": "S2",
+    "dataTime": "2026-09-24 22:00"
+   },
+   "match": true
+  },
+  {
+   "id": "pm10StationName set to the 22-hour-old donor although it has no pm10Value",
+   "doc": "docs/rewrite/server-response-assembly.md#station-selection-and-merge (A46, FIN-3)",
+   "expected": {
+    "pm10StationName": "S3",
+    "hasPm10Value": false,
+    "pm10ValueKeyPresent": true
+   },
+   "actual": {
+    "pm10StationName": "S3",
+    "hasPm10Value": false,
+    "pm10ValueKeyPresent": true
+   },
+   "match": true
+  },
+  {
+   "id": "22-hour-old station value merged when it has the pollutant",
+   "doc": "docs/rewrite/server-response-assembly.md#station-selection-and-merge (A46, FIN-3)",
+   "expected": {
+    "pm10Value": 85,
+    "pm10Grade": 3,
+    "pm10StationName": "S3",
+    "base": "S2"
+   },
+   "actual": {
+    "pm10Value": 85,
+    "pm10Grade": 3,
+    "pm10StationName": "S3",
+    "base": "S2"
+   },
+   "match": true
+  },
+  {
+   "id": "k-th candidate accepted when younger than 8*k hours (cumulative -8 h per call)",
+   "doc": "docs/rewrite/server-response-assembly.md#station-selection-and-merge (A46, FIN-3)",
+   "expected": [
+    [
+     "accepted",
+     "accepted",
+     "accepted"
+    ],
+    [
+     "rejected",
+     "accepted",
+     "accepted"
+    ],
+    [
+     "rejected",
+     "accepted",
+     "accepted"
+    ],
+    [
+     "rejected",
+     "rejected",
+     "accepted"
+    ],
+    [
+     "rejected",
+     "rejected",
+     "accepted"
+    ]
+   ],
+   "actual": [
+    [
+     "accepted",
+     "accepted",
+     "accepted"
+    ],
+    [
+     "rejected",
+     "accepted",
+     "accepted"
+    ],
+    [
+     "rejected",
+     "accepted",
+     "accepted"
+    ],
+    [
+     "rejected",
+     "rejected",
+     "accepted"
+    ],
+    [
+     "rejected",
+     "rejected",
+     "accepted"
+    ]
+   ],
+   "match": true
+  },
+  {
+   "id": "the Date passed in is mutated by -8 h per _checkDateTime call",
+   "doc": "docs/rewrite/server-response-assembly.md#station-selection-and-merge (A46, FIN-3)",
+   "expected": "2026-09-24T03:00:00.000Z",
+   "actual": "2026-09-24T03:00:00.000Z",
+   "match": true
+  }
+ ],
+ "all_checks_match": true,
+ "interpretation": "Synthetic execution of the three kecoController merge helpers extracted from source, with fixed synthetic station records under TZ=Asia/Seoul. It confirms the FIN-3 reading: _checkDateTime moves the shared Date back 8 h on every call, so the k-th candidate station is accepted when its record is younger than 8*k hours (a 9-hour-old nearest station is rejected while 14- and 22-hour-old stations are used); _mergeArpltnList copies the first accepted station and fills each missing pollutant from later accepted stations, and it records <pollutant>StationName even when the donor has no value. It does not execute the Mongo station query, the 24 h record window, the stnList ordering or the response assembly, so the probe does not show which stations a real location gets or what a deployed response contained. Re-run at bd6640f2: kecoController.js is identical to ff7acf39 and every result is unchanged."
+}

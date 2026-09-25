@@ -26,12 +26,13 @@
     "cityName": "중구",
     "townName": "",
     "shortPubDate": "202609230500",
-    "currentPubDate": "202609230900",
+    "currentPubDate": "202609230800",
     "current": {
       "date": "20260923",
       "time": 9,
       "dateObj": "2026.09.23 09:00",
-      "stnDateTime": "2026-09-23 09:00",
+      "stnDateTime": "2026.09.23.09:00",
+      "liveTime": "0900",
       "t1h": 21,
       "skyIcon": "sun",
       "weatherType": 0,
@@ -80,6 +81,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 270,
         "pty": 0
       },
       {
@@ -92,6 +94,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 270,
         "pty": 0
       },
       {
@@ -104,6 +107,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 290,
         "pty": 0
       },
       {
@@ -116,6 +120,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 315,
         "pty": 0
       },
       {
@@ -128,6 +133,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 315,
         "pty": 0
       },
       {
@@ -140,6 +146,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 340,
         "pty": 0
       },
       {
@@ -152,6 +159,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 340,
         "pty": 0
       },
       {
@@ -164,6 +172,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 0,
         "pty": 0
       },
       {
@@ -176,6 +185,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 0,
         "pty": 0
       },
       {
@@ -188,6 +198,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 20,
         "pty": 0
       },
       {
@@ -200,6 +211,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 20,
         "pty": 0
       },
       {
@@ -212,6 +224,7 @@
         "pop": 0,
         "reh": 60,
         "wsd": 2,
+        "vec": 0,
         "pty": 0,
         "currentIndex": true
       }

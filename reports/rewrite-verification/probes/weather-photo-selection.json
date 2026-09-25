@@ -1,0 +1,64 @@
+{
+  "probe": "weather-photo selection",
+  "source_commit": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+  "date": "2026-09-24",
+  "host": "WKWebView isolated harness, iPhone 17 Pro / iOS 26.5, TodayWeather, ko-KR",
+  "source": [
+    "client/www/js/service.weatherutil.js:925-1012",
+    "client/www/js/service.weatherinfo.js:278-297"
+  ],
+  "synthetic_feed": [
+    {
+      "tags": [
+        "sun"
+      ],
+      "twUrls": {
+        "regular": "http://127.0.0.1:8765/synthetic-photos/sun-a.png"
+      }
+    },
+    {
+      "tags": [
+        "sun"
+      ],
+      "twUrls": {
+        "regular": "http://127.0.0.1:8765/synthetic-photos/sun-b.png"
+      }
+    },
+    {
+      "tags": [
+        "cloud"
+      ],
+      "twUrls": {
+        "regular": "http://127.0.0.1:8765/synthetic-photos/sun-b.png"
+      }
+    },
+    {
+      "id": "no-tags-entry-is-skipped",
+      "twUrls": {
+        "regular": "http://127.0.0.1:8765/synthetic-photos/sun-b.png"
+      }
+    }
+  ],
+  "expression": "WeatherUtil.findWeatherPhoto({skyIcon}) after WeatherInfo.loadWeatherPhotos() from a loopback feed",
+  "result": {
+    "draws": 200,
+    "counts": {
+      "http://127.0.0.1:8765/synthetic-photos/sun-a.png": 200
+    },
+    "buckets": {
+      "lightning": 0,
+      "rain": 0,
+      "snow": 0,
+      "sun_smallcloud": 0,
+      "sun_bigcloud": 0,
+      "sun": 2,
+      "moon_smallcloud": 0,
+      "moon_bigcloud": 0,
+      "moon": 0,
+      "cloud": 1
+    },
+    "sunSmallCloud": "http://127.0.0.1:8765/synthetic-photos/sun-a.png",
+    "rain": null
+  },
+  "interpretation": "With two photos in the sun bucket, all 200 draws returned index 0 (Math.floor(Math.random()*(length-1))). The untagged entry was skipped. skyIcon sun_smallcloud with an empty bucket fell through to the sun bucket because the loop continues on empty buckets and indexOf matches the prefix. skyIcon rain with an empty rain bucket returned null."
+}
