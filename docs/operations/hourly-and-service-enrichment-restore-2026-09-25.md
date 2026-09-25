@@ -70,7 +70,7 @@ CDN caveat: the default behavior on `E3QLRH0LJD07QR` has MinTTL/DefaultTTL 300 s
 
 ## Known limitations / follow-ups
 
-- 25 AWS stations added since 2021 have no `KmaStnInfo` row because the gather host has no geocoding credential; they are stored in `kmastnhourly2`/`kmastnminute2` but not selectable by proximity. Backfill once a geocode key is available.
+- 25 AWS stations added since 2021 have no `KmaStnInfo` row because the gather host has no geocoding credential; they are stored in `kmastnhourly2`/`kmastnminute2` but not selectable by proximity. Backfill once a geocode key is available. *Update (PR #2574):* `_saveStnInfo` now falls back to the product geocode API (`API_SERVER/geocode/addr`), so these stations are registered on the next hourly run after redeploy, provided gather's `API_SERVER` points to the public product host; see the [runbook](kma-station-observations.md).
 - `openapi.airkorea.or.kr` pinned in `/etc/hosts` still times out (pre-existing, unrelated to this issue).
 - Timestamp convention (KST wall-clock stored as UTC) unchanged across collectors and consumers.
 - No PM2 boot-service stop/start rehearsal; dumps saved on both hosts.

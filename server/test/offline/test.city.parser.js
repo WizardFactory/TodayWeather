@@ -155,15 +155,19 @@ const saveStnSrc = slice('KmaScraper.prototype._saveStnInfo =', '\n    return th
 function runSaveStnInfo(opts) {
     const logs = { warn: [], error: [], info: [] };
     let out = 'unset';
+    const saved = [];
     const ctx = {
         KmaScraper: function () {}, JSON, Date, log: { warn: m => logs.warn.push(String(m)), error: m => logs.error.push(JSON.stringify(m)), info: () => {}, debug: () => {} },
-        KmaStnInfo: Object.assign(function (doc) { this.doc = doc; this.toString = () => JSON.stringify(doc); this.save = cb => cb(opts.saveErr || null); }, { find: (q, cb) => cb(null, opts.found || []) })
+        KmaStnInfo: Object.assign(function (doc) { this.doc = doc; this.toString = () => JSON.stringify(doc); this.save = cb => { if (opts.saveThrows) throw new Error('sync save failure'); saved.push(doc); cb(opts.saveErr || null); }; }, { find: (q, cb) => cb(null, opts.found || []) })
     };
     vm.runInNewContext(saveStnSrc, ctx);
     const inst = new ctx.KmaScraper();
     inst._recursiveConvertGeoCode = opts.geo;
-    inst._saveStnInfo(opts.input || { stnId: '42', stnName: '군산오식도', addr: '전북 군산시', isCityWeather: false, altitude: 2 }, (err, id) => { out = { err, id }; });
-    return { out, logs };
+    const apiCalls = [];
+    inst._convertGeoCodeByApiServer = (addr, cb) => { apiCalls.push(addr); (opts.api || ((a, c) => c(new Error('api unavailable'))))(addr, cb); };
+    let calls = 0;
+    inst._saveStnInfo(opts.input || { stnId: '42', stnName: '군산오식도', addr: '전북 군산시', isCityWeather: false, altitude: 2 }, (err, id) => { calls++; out = { err, id }; });
+    return { out, logs, apiCalls, saved, calls };
 }
 test('_saveStnInfo: geocode throws synchronously (missing kakao key) → callback() without error', () => {
     const r = runSaveStnInfo({ geo: () => { throw new SyntaxError('Unexpected token u in JSON at position 0'); } });
@@ -175,6 +179,30 @@ test('_saveStnInfo: geocode async error → callback() without error', () => {
     const r = runSaveStnInfo({ geo: (a, n, cb) => cb(new Error('Fail to recursive convert geo code')) });
     assert.strictEqual(r.out.err, undefined);
     assert.strictEqual(r.logs.warn.length, 1);
+    assert.deepStrictEqual(r.apiCalls, ['전북 군산시'], 'product geocode API tried after Kakao');
+});
+test('_saveStnInfo: Kakao unavailable → product geocode API coordinates create the stnInfo', () => {
+    const r = runSaveStnInfo({ geo: () => { throw new SyntaxError('Unexpected token u in JSON at position 0'); },
+        api: (a, cb) => cb(undefined, { lat: 35.958, lon: 126.559 }) });
+    assert.strictEqual(r.out.err, null);
+    assert.strictEqual(r.out.id, '42');
+    assert.strictEqual(r.calls, 1);
+    assert.strictEqual(r.saved.length, 1);
+    assert.deepStrictEqual(Array.from(r.saved[0].geo), [126.559, 35.958], 'geo is [lon, lat]');
+    assert.strictEqual(r.saved[0].stnName, '군산오식도');
+});
+test('_saveStnInfo: synchronous throw while saving → exactly one callback, no error', () => {
+    const viaKakao = runSaveStnInfo({ saveThrows: true, geo: (a, n, cb) => cb(null, { lat: 35.9, lon: 126.6 }) });
+    assert.strictEqual(viaKakao.calls, 1);
+    assert.strictEqual(viaKakao.out.err, undefined);
+    const viaApi = runSaveStnInfo({ saveThrows: true, geo: () => { throw new Error('no key'); }, api: (a, cb) => cb(undefined, { lat: 35.9, lon: 126.6 }) });
+    assert.strictEqual(viaApi.calls, 1);
+    assert.strictEqual(viaApi.out.err, undefined);
+});
+test('_saveStnInfo: Kakao ok → product geocode API not called', () => {
+    const r = runSaveStnInfo({ geo: (a, n, cb) => cb(null, { lat: 35.9, lon: 126.6 }) });
+    assert.strictEqual(r.apiCalls.length, 0);
+    assert.strictEqual(r.calls, 1);
 });
 test('_saveStnInfo: geocode ok → new stnInfo saved, id returned', () => {
     const r = runSaveStnInfo({ geo: (a, n, cb) => cb(null, { lat: 35.9, lon: 126.6 }) });
@@ -217,6 +245,32 @@ test('_saveKmaStnHourly2List: cityUnavailable marks only the stnInfo input, not 
     seen.info = [];
     inst._saveKmaStnHourly2List({ pubDate: 'p', stnList: [row] }, () => {});
     assert.strictEqual(seen.info[0], row);
+});
+
+// ---------- _convertGeoCodeByApiServer: product geocode API fallback ----------
+function runApiGeocode(respond, url) {
+    const apiSrc = slice('KmaScraper.prototype._convertGeoCodeByApiServer =', '\n};');
+    const seen = {};
+    const ctx = { KmaScraper: function () {}, encodeURIComponent, parseFloat, isFinite, Error,
+        config: { apiServer: { url: url || 'http://todayweather.test' } },
+        req: (u, o, cb) => { seen.url = u; seen.opts = o; respond(cb); } };
+    vm.runInNewContext(apiSrc, ctx);
+    let out; new ctx.KmaScraper()._convertGeoCodeByApiServer('전북특별자치도 군산시 오식도동', (e, r) => { out = { e, r }; });
+    return { out, seen };
+}
+test('_convertGeoCodeByApiServer: KR location → {lat, lon}; bounded request', () => {
+    const r = runApiGeocode(cb => cb(null, { statusCode: 200 }, { country: 'KR', address: 'x', location: { lat: 35.958, long: 126.559 } }));
+    assert.strictEqual(r.out.e, undefined);
+    assert.strictEqual(JSON.stringify(r.out.r), JSON.stringify({ lat: 35.958, lon: 126.559 })); // VM realm object
+    assert.strictEqual(r.seen.url, 'http://todayweather.test/geocode/addr/' + encodeURIComponent('전북특별자치도 군산시 오식도동'));
+    assert(r.seen.opts.timeout > 0 && r.seen.opts.json === true);
+});
+test('_convertGeoCodeByApiServer: HTTP error, non-KR, out-of-range, network error → Error', () => {
+    assert(runApiGeocode(cb => cb(null, { statusCode: 501 }, 'Error: Fail to find query')).out.e instanceof Error);
+    assert(runApiGeocode(cb => cb(null, { statusCode: 200 }, { country: 'JP', location: { lat: 35.6, long: 139.7 } })).out.e instanceof Error);
+    assert(runApiGeocode(cb => cb(null, { statusCode: 200 }, { country: 'KR', location: { lat: 0, long: 0 } })).out.e instanceof Error);
+    assert(runApiGeocode(cb => cb(null, { statusCode: 200 }, { country: 'KR' })).out.e instanceof Error);
+    assert(runApiGeocode(cb => cb(new Error('ETIMEDOUT'))).out.e instanceof Error);
 });
 
 console.log('# ' + passed + ' tests passed');

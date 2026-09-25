@@ -573,6 +573,33 @@ KmaScraper.prototype._recursiveConvertGeoCode = function(addr, retryCount, callb
 };
 
 /**
+ * Geocode an address through the product geocode API (the app's `/geocode/addr` endpoint).
+ * Fallback for new AWS stations when no Kakao key is configured on the gather host.
+ * Accepts only a Korean location inside the national bounds.
+ * @param {string} addr
+ * @param {function(Error|undefined, {lat:number, lon:number}=)} callback
+ * @private
+ */
+KmaScraper.prototype._convertGeoCodeByApiServer = function (addr, callback) {
+    var url = config.apiServer.url + '/geocode/addr/' + encodeURIComponent(addr);
+    req(url, {timeout: 10000, json: true}, function (err, response, body) {
+        if (err) {
+            return callback(err);
+        }
+        if (response.statusCode !== 200 || !body || !body.location) {
+            return callback(new Error('geocode api status=' + response.statusCode + ' addr=' + addr));
+        }
+        var lat = parseFloat(body.location.lat);
+        var lon = parseFloat(body.location.long);
+        if (body.country !== 'KR' || !isFinite(lat) || !isFinite(lon) ||
+            lat < 33 || lat > 39 || lon < 124 || lon > 132) {
+            return callback(new Error('geocode api invalid location addr=' + addr));
+        }
+        callback(undefined, {lat: lat, lon: lon});
+    });
+};
+
+/**
  *
  * @param stnWeatherInfo
  * @param callback
@@ -615,34 +642,64 @@ KmaScraper.prototype._saveStnInfo = function (stnWeatherInfo, callback) {
         else {
             var addr = stnWeatherInfo.addr.replace(/\(산간\)/g, '');
 
-            // Geocoding needs an external key (kakao). When it is not configured or the
-            // provider fails, skip the stnInfo row rather than aborting the whole hourly save:
-            // the observation row is still useful, and unknown stations are simply not
-            // selectable by geo until a stnInfo is created. convertGeocode may throw
-            // synchronously (JSON.parse of a missing key), so guard the call.
-            var geoCb = function (err, result) {
-                if (err) {
-                    log.warn('skip stnInfo (geocode unavailable) stnId=' + stnWeatherInfo.stnId + ' name=' + stnWeatherInfo.stnName + ' err=' + (err.message || err));
-                    return callback();
+            // Geocoding tries Kakao first (needs KAKAO_SECRET_KEYS), then the product geocode
+            // API (API_SERVER/geocode/addr), which needs no provider key on the gather host.
+            // When both fail, skip the stnInfo row rather than aborting the whole hourly save:
+            // the observation row is still useful, and the station is retried at the next hourly run.
+            // convertGeocode may throw synchronously (JSON.parse of a missing key), so guard it.
+            var geoDone = false;
+            var finished = false;
+            var finish = function (err, stnId) {
+                if (finished) {
+                    return;
                 }
+                finished = true;
+                callback(err, stnId);
+            };
+            var saveNewStnInfo = function (result) {
+                try {
+                    log.debug('addr='+addr+' result'+JSON.stringify(result));
+                    var kmaStnInfo = new KmaStnInfo({
+                        stnId: stnWeatherInfo.stnId,
+                        stnName: stnWeatherInfo.stnName,
+                        addr: stnWeatherInfo.addr,
+                        isCityWeather: stnWeatherInfo.isCityWeather,
+                        altitude: stnWeatherInfo.altitude,
+                        geo: [result.lon, result.lat]
+                    });
 
-                log.debug('addr='+addr+' result'+JSON.stringify(result));
-                var kmaStnInfo = new KmaStnInfo({
-                    stnId: stnWeatherInfo.stnId,
-                    stnName: stnWeatherInfo.stnName,
-                    addr: stnWeatherInfo.addr,
-                    isCityWeather: stnWeatherInfo.isCityWeather,
-                    altitude: stnWeatherInfo.altitude,
-                    geo: [result.lon, result.lat]
-                });
-
-                log.info({state: 'new', kmaStnInfo: kmaStnInfo.toString()});
-                kmaStnInfo.save(function (err) {
-                    if (err) {
-                        log.error({stnId: stnWeatherInfo.stnId, action: 'save new stnInfo', error: err.message || err});
-                        return callback();
+                    log.info({state: 'new', kmaStnInfo: kmaStnInfo.toString()});
+                    kmaStnInfo.save(function (err) {
+                        if (err) {
+                            log.error({stnId: stnWeatherInfo.stnId, action: 'save new stnInfo', error: err.message || err});
+                            return finish();
+                        }
+                        finish(err, stnWeatherInfo.stnId);
+                    });
+                }
+                catch (e) {
+                    // Never leave the hourly batch waiting on this station.
+                    log.error({stnId: stnWeatherInfo.stnId, action: 'save new stnInfo', error: e.message});
+                    finish();
+                }
+            };
+            var geoCb = function (err, result) {
+                if (geoDone) {
+                    return;
+                }
+                geoDone = true;
+                if (!err) {
+                    return saveNewStnInfo(result);
+                }
+                self._convertGeoCodeByApiServer(addr, function (apiErr, apiResult) {
+                    if (apiErr) {
+                        log.warn('skip stnInfo (geocode unavailable) stnId=' + stnWeatherInfo.stnId +
+                            ' name=' + stnWeatherInfo.stnName + ' err=' + (err.message || err) +
+                            ' api=' + (apiErr.message || apiErr));
+                        return finish();
                     }
-                    callback(err, stnWeatherInfo.stnId);
+                    log.info('stnInfo geocoded by api server stnId=' + stnWeatherInfo.stnId);
+                    saveNewStnInfo(apiResult);
                 });
             };
             try {

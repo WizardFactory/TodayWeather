@@ -18,7 +18,7 @@ Both collector flags are off by default. They are evaluated only when `config.mo
 - Writes upsert by `stnId` + `date`, so repeated polls of the same observation keep one row.
 - Existing retention applies. Minute rows older than one day are removed after each minute poll. Because the delete compares real "now" with KST-as-UTC dates, about 33 hours of minute data remain in practice. Hourly retention is ten days. AK accepted keeping this behavior.
 - City-page failures no longer abort the hourly run. The AWS rows are saved without city fields (weather text, cloud, visibility).
-- If a new station cannot be geocoded (retries lowered from 30 to 3), it is logged and skipped. The observation rows are still saved.
+- A new station gets its `KmaStnInfo` (with `geo`) on the next hourly run. Geocoding tries Kakao first (`KAKAO_SECRET_KEYS`, retries lowered from 30 to 3). If that fails, it falls back to the product geocode API `API_SERVER/geocode/addr/<address>`, which needs no provider key; only `country: KR` results inside national bounds are accepted. If both fail, the station is logged (`skip stnInfo (geocode unavailable)`) and retried at the next hourly run minute (`KMA_STN_HOURLY_MINUTES`). The observation rows are always saved.
 - When the city page is unavailable, the saved `isCityWeather` flags are left unchanged. City-station selection (`getStnList(..., true, ...)`) depends on those flags.
 
 ## Service merge rule
@@ -34,6 +34,8 @@ Both collector flags are off by default. They are evaluated only when `config.mo
 
 ## Verification (read-only)
 
+0. Gather environment: `API_SERVER` is set to the public product host (needed for the station geocoding fallback).
+
 1. Gather log: `kma stn minute done stations=<n>` every interval and `kma stn hourly done stations=<n>` hourly. No `failed`, `threw` or repeated `still running` lines.
 2. Database (read-only): the newest `kmastnminute2` rows for `stnId` 108/159/184 advance each poll. The hourly rows for the latest hour exist.
 3. API: `GET /v000903/kma/coord/37.5665,126.9780` on the origin and the public CDN. `current.liveTime` and `current.t1h` match the stored observation, and `current.dongnae` holds the forecast-derived value.
@@ -47,6 +49,6 @@ Both collector flags are off by default. They are evaluated only when `config.mo
 
 ## Known limitations
 
-- **25 stations added since 2021 have no `KmaStnInfo`.** The gather host has no geocoding credential, so `_saveStnInfo` skips them. Their minute and hourly rows are stored, but proximity selection cannot choose them; requests near them use the nearest station that has `KmaStnInfo`. Backfill the `KmaStnInfo` rows once a geocoding key is available; this needs no collector change.
+- **Stations added since 2021 (25 at the 2026-09-25 check) need the API fallback.** The gather host has no Kakao key, so these stations get `KmaStnInfo` only after the deployed `kmaScraper.js` includes the fallback and gather's `API_SERVER` points to the public product host (`http://todayweather.wizardfactory.net`, as on the service host; the default `http://localhost` does not serve `/geocode`). After deployment, the next hourly run creates them. New AWS-only stations are then used for the nearby-station rain check (`rns`/`rs15m`) and `nearStnName`. Current `t1h/reh/vec/wsd` still come from the nearest city station (`isCityWeather: true`), as before. Verify with the gather log (`stnInfo geocoded by api server`) and a read-only count of `kmastninfos`. No separate backfill is needed.
 - Cache delay is added on top of the observation age (up to two-minute collection plus the 20-minute read window). The direct `/v000903/kma/...` route uses the CloudFront default behavior (MinTTL/DefaultTTL 300 s, MaxTTL 600 s in the [2026-09-20 evidence](../architecture/aws-readonly-evidence-2026-09-20.json)). The app's `/weather/*` route goes through the weather Lambda (`max-age=300`). The 2026-09-25 live check covered only the direct route.
 - Host `/etc/hosts` repair and PM2 environment were saved on the running instances only. Replacement instances (AMI/provisioning) and a PM2 boot restart were not rehearsed.
