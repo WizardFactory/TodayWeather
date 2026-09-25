@@ -2171,7 +2171,8 @@ function ControllerTown() {
             itemList.push(item);
         }
 
-        var airInfo = current.arpltn || current;
+        //대기 관측값이 없으면 current에 aqi 필드를 만들지 않음
+        var airInfo = current.arpltn || {};
         airInfo.aqiGrade = airInfo.khaiGrade || airInfo.aqiGrade;
         airInfo.aqiStr = airInfo.khaiStr || airInfo.aqiStr;
 

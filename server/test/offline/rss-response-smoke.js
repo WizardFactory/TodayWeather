@@ -91,7 +91,7 @@ function createHarness(version, fixture, historyOptions = {}) {
     }};models.set(name,obj);return obj;
   }
   const optional={
-    'kecoController':{getArpLtnInfo:(town,date,cb)=>cb(null,{arpltn:{},list:[],stnList:[]}),getDustFrcst:(town,date,cb)=>cb(null,[])},
+    'kecoController':{getArpLtnInfo:(town,date,cb)=>cb(null,fixture.arpltnInfo?clone(fixture.arpltnInfo):{arpltn:{},list:[],stnList:[]}),getDustFrcst:(town,date,cb)=>cb(null,[])},
     'controllerKmaStnWeather':{getCityHourlyList:(town,cb)=>cb(null,[]),getStnHourlyAndMinRns:(town,date,current,cb)=>cb(null,{t1h:20,vec:315,wsd:3,stnDateTime:'2026-09-24 08:50',rs1h:0})},
     'kasi.riseset.controller':{getRiseSetList:(geo,dates,cb)=>cb(null,[])},
     'kma.town.mid.rss.controller':{overwriteData:(mid,code,cb)=>cb(null)},

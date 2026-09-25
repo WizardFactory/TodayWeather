@@ -203,9 +203,11 @@ arpltnController._checkDateTime = function(arpltn, dateTime) {
         arpltnTime = new Date(arpltn.dataTime);
     }
 
-    dateTime.setHours(dateTime.getHours()-8);
+    //호출자의 dateTime을 변경하면 관측소마다 기준 시간이 8시간씩 누적되어 앞당겨짐
+    var limitTime = new Date(dateTime);
+    limitTime.setHours(limitTime.getHours()-8);
 
-    return dateTime.getTime() < arpltnTime.getTime();
+    return limitTime.getTime() < arpltnTime.getTime();
 };
 
 /**
