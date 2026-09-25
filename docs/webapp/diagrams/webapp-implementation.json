@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "TodayWeather — browser implementation",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1220,
+      650
+    ]
+  },
+  "components": [
+    {
+      "id": "responsive-screens",
+      "type": "frontend",
+      "label": "Responsive screens",
+      "sublabel": "Weather, air, places, settings",
+      "pos": [
+        40,
+        100
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "direct-adapter",
+      "type": "frontend",
+      "label": "Direct API adapter",
+      "sublabel": "Source-aware browser normalization",
+      "pos": [
+        480,
+        100
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "existing-api",
+      "type": "external",
+      "label": "Existing public API",
+      "sublabel": "Weather / geocode / warnings",
+      "pos": [
+        930,
+        100
+      ],
+      "size": [
+        250,
+        80
+      ]
+    },
+    {
+      "id": "local-storage",
+      "type": "database",
+      "label": "Local browser state",
+      "sublabel": "Favorites + validated snapshots",
+      "pos": [
+        40,
+        400
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "shell-worker",
+      "type": "frontend",
+      "label": "Service worker",
+      "sublabel": "Versioned app-shell cache",
+      "pos": [
+        480,
+        400
+      ],
+      "size": [
+        230,
+        80
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "query-weather",
+      "from": "responsive-screens",
+      "to": "direct-adapter",
+      "label": "Typed queries",
+      "variant": "emphasis"
+    },
+    {
+      "id": "fetch-public",
+      "from": "direct-adapter",
+      "to": "existing-api",
+      "label": "HTTPS + CORS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "persist-state",
+      "from": "responsive-screens",
+      "to": "local-storage",
+      "label": "Local read / write",
+      "labelDy": 60
+    },
+    {
+      "id": "register-worker",
+      "from": "responsive-screens",
+      "to": "shell-worker",
+      "label": "Register / update",
+      "fromSide": "bottom",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Weather data",
+      "items": [
+        "Daily KMA rain uses forecasts, not observed totals",
+        "Zero snow stays in data; offset warning times use KST"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Offline behavior",
+      "items": [
+        "Cache-key revision v2 excludes old normalized snapshots",
+        "Worker updates preserve edits on first activation"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Runtime scope",
+      "items": [
+        "Network failures offer Korean retry guidance",
+        "Existing API availability remains a backend concern"
+      ]
+    }
+  ]
+}

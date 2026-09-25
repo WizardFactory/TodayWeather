@@ -1,0 +1,359 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "TodayWeather app.tdywx.xyz private static hosting. No compute server or API deployment.",
+  "Parameters": {
+    "CertificateArn": {
+      "Type": "String",
+      "AllowedPattern": "arn:aws:acm:us-east-1:[0-9]{12}:certificate/[a-f0-9-]+",
+      "Description": "Issued ACM certificate in us-east-1 covering app.tdywx.xyz"
+    },
+    "HostedZoneId": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Optional public Route53 zone for tdywx.xyz; empty means external/manual DNS"
+    }
+  },
+  "Conditions": {
+    "ManageDNS": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "HostedZoneId"
+            },
+            ""
+          ]
+        }
+      ]
+    }
+  },
+  "Resources": {
+    "Assets": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true,
+          "RestrictPublicBuckets": true
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "OriginAccess": {
+      "Type": "AWS::CloudFront::OriginAccessControl",
+      "Properties": {
+        "OriginAccessControlConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-assets"
+          },
+          "OriginAccessControlOriginType": "s3",
+          "SigningBehavior": "always",
+          "SigningProtocol": "sigv4"
+        }
+      }
+    },
+    "Navigation": {
+      "Type": "AWS::CloudFront::Function",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-navigation"
+        },
+        "AutoPublish": true,
+        "FunctionConfig": {
+          "Comment": "Known SPA routes only; no API or missing asset fallback",
+          "Runtime": "cloudfront-js-2.0"
+        },
+        "FunctionCode": "// CloudFront Function (cloudfront-js-2.0). Only known HTML routes receive the shell.\nfunction handler(event) {\n  var request = event.request;\n  if (request.method !== \"GET\" && request.method !== \"HEAD\")\n    return { statusCode: 405, statusDescription: \"Method Not Allowed\" };\n  var uri;\n  try {\n    uri = decodeURIComponent(request.uri);\n  } catch (_) {\n    return { statusCode: 400, statusDescription: \"Bad Request\" };\n  }\n  if (\n    uri.indexOf(\"..\") !== -1 ||\n    uri.indexOf(\"\\\\\") !== -1 ||\n    uri.indexOf(\"\\u0000\") !== -1\n  )\n    return { statusCode: 400, statusDescription: \"Bad Request\" };\n  var navigation =\n    /^\\/(?:$|start\\/?$|locations\\/?$|settings(?:\\/[^.]*)?$|help\\/?$|membership\\/?$|warnings\\/?$|(?:air|place|notifications)\\/[^/]+\\/?$|weather\\/[^/]+\\/(?:hourly|daily|overview)\\/?$|nation\\/(?:weather|air)\\/?$)/.test(\n      uri,\n    );\n  if (navigation) request.uri = \"/index.html\";\n  else if (\n    !/^\\/(?:assets\\/[^/]+|icons\\/[^/]+|index\\.html|sw\\.js|manifest\\.webmanifest|icon\\.svg|release\\.json)$/.test(\n      uri,\n    )\n  )\n    return { statusCode: 404, statusDescription: \"Not Found\" };\n  return request;\n}\n"
+      }
+    },
+    "Cache": {
+      "Type": "AWS::CloudFront::CachePolicy",
+      "Properties": {
+        "CachePolicyConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-static"
+          },
+          "MinTTL": 0,
+          "DefaultTTL": 0,
+          "MaxTTL": 31536000,
+          "ParametersInCacheKeyAndForwardedToOrigin": {
+            "CookiesConfig": {
+              "CookieBehavior": "none"
+            },
+            "HeadersConfig": {
+              "HeaderBehavior": "none"
+            },
+            "QueryStringsConfig": {
+              "QueryStringBehavior": "none"
+            },
+            "EnableAcceptEncodingGzip": true,
+            "EnableAcceptEncodingBrotli": true
+          }
+        }
+      }
+    },
+    "Headers": {
+      "Type": "AWS::CloudFront::ResponseHeadersPolicy",
+      "Properties": {
+        "ResponseHeadersPolicyConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-headers"
+          },
+          "SecurityHeadersConfig": {
+            "ContentSecurityPolicy": {
+              "Override": true,
+              "ContentSecurityPolicy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://todayweather.wizardfactory.net; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+            },
+            "ContentTypeOptions": {
+              "Override": true
+            },
+            "FrameOptions": {
+              "FrameOption": "DENY",
+              "Override": true
+            },
+            "ReferrerPolicy": {
+              "ReferrerPolicy": "no-referrer",
+              "Override": true
+            },
+            "StrictTransportSecurity": {
+              "AccessControlMaxAgeSec": 31536000,
+              "IncludeSubdomains": false,
+              "Preload": false,
+              "Override": true
+            }
+          },
+          "CustomHeadersConfig": {
+            "Items": [
+              {
+                "Header": "Permissions-Policy",
+                "Value": "geolocation=(self)",
+                "Override": true
+              }
+            ]
+          }
+        }
+      }
+    },
+    "Distribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "Enabled": true,
+          "Comment": "TodayWeather static PWA; existing API distribution is unchanged",
+          "Aliases": [
+            "app.tdywx.xyz"
+          ],
+          "DefaultRootObject": "index.html",
+          "IPV6Enabled": true,
+          "HttpVersion": "http2and3",
+          "Origins": [
+            {
+              "Id": "static-assets",
+              "DomainName": {
+                "Fn::GetAtt": [
+                  "Assets",
+                  "RegionalDomainName"
+                ]
+              },
+              "OriginAccessControlId": {
+                "Fn::GetAtt": [
+                  "OriginAccess",
+                  "Id"
+                ]
+              },
+              "S3OriginConfig": {
+                "OriginAccessIdentity": ""
+              }
+            }
+          ],
+          "DefaultCacheBehavior": {
+            "TargetOriginId": "static-assets",
+            "ViewerProtocolPolicy": "redirect-to-https",
+            "AllowedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "CachedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "Compress": true,
+            "CachePolicyId": {
+              "Ref": "Cache"
+            },
+            "ResponseHeadersPolicyId": {
+              "Ref": "Headers"
+            },
+            "FunctionAssociations": [
+              {
+                "EventType": "viewer-request",
+                "FunctionARN": {
+                  "Fn::GetAtt": [
+                    "Navigation",
+                    "FunctionMetadata.FunctionARN"
+                  ]
+                }
+              }
+            ]
+          },
+          "ViewerCertificate": {
+            "AcmCertificateArn": {
+              "Ref": "CertificateArn"
+            },
+            "SslSupportMethod": "sni-only",
+            "MinimumProtocolVersion": "TLSv1.2_2021"
+          },
+          "CustomErrorResponses": [
+            {
+              "ErrorCode": 403,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 404,
+              "ErrorCachingMinTTL": 0
+            }
+          ]
+        }
+      }
+    },
+    "BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "Assets"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "CloudFrontRead",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+              },
+              "Action": "s3:GetObject",
+              "Resource": {
+                "Fn::Sub": "${Assets.Arn}/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "AWS:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}"
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "DenyInsecureTransport",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "Assets",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Sub": "${Assets.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "DnsA": {
+      "Type": "AWS::Route53::RecordSet",
+      "Condition": "ManageDNS",
+      "Properties": {
+        "HostedZoneId": {
+          "Ref": "HostedZoneId"
+        },
+        "Name": "app.tdywx.xyz",
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": {
+            "Fn::GetAtt": [
+              "Distribution",
+              "DomainName"
+            ]
+          },
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "EvaluateTargetHealth": false
+        }
+      }
+    },
+    "DnsAAAA": {
+      "Type": "AWS::Route53::RecordSet",
+      "Condition": "ManageDNS",
+      "Properties": {
+        "HostedZoneId": {
+          "Ref": "HostedZoneId"
+        },
+        "Name": "app.tdywx.xyz",
+        "Type": "AAAA",
+        "AliasTarget": {
+          "DNSName": {
+            "Fn::GetAtt": [
+              "Distribution",
+              "DomainName"
+            ]
+          },
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "EvaluateTargetHealth": false
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BucketName": {
+      "Value": {
+        "Ref": "Assets"
+      }
+    },
+    "DistributionId": {
+      "Value": {
+        "Ref": "Distribution"
+      }
+    },
+    "DistributionDomain": {
+      "Value": {
+        "Fn::GetAtt": [
+          "Distribution",
+          "DomainName"
+        ]
+      }
+    },
+    "SiteUrl": {
+      "Value": "https://app.tdywx.xyz"
+    }
+  }
+}

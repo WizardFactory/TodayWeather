@@ -1,0 +1,22 @@
+{
+  "name": "@todayweather/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build && node ../scripts/web-precache.mjs"
+  },
+  "dependencies": {
+    "@todayweather/core": "0.1.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.4",
+    "@tanstack/react-query": "5.103.2",
+    "lucide-react": "1.47.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.0",
+    "@vitejs/plugin-react": "6.1.1"
+  }
+}

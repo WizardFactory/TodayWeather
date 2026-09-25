@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "TodayWeather — adopted static architecture",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1220,
+      650
+    ]
+  },
+  "components": [
+    {
+      "id": "web-browser",
+      "type": "frontend",
+      "label": "Responsive PWA",
+      "sublabel": "app.tdywx.xyz",
+      "pos": [
+        40,
+        100
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "static-edge",
+      "type": "cloud",
+      "label": "CloudFront + TLS",
+      "sublabel": "App routes and static caching",
+      "pos": [
+        480,
+        100
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "private-assets",
+      "type": "cloud",
+      "label": "Private S3",
+      "sublabel": "Static release files",
+      "pos": [
+        930,
+        100
+      ],
+      "size": [
+        250,
+        80
+      ]
+    },
+    {
+      "id": "public-weather",
+      "type": "external",
+      "label": "Existing public API",
+      "sublabel": "Weather / geocode / nation",
+      "pos": [
+        40,
+        400
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "browser-persistence",
+      "type": "database",
+      "label": "Browser storage",
+      "sublabel": "Favorites, settings, snapshots",
+      "pos": [
+        480,
+        400
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "release-files",
+      "type": "external",
+      "label": "Build + upload tools",
+      "sublabel": "Node 22 build; dry-run upload",
+      "pos": [
+        930,
+        400
+      ],
+      "size": [
+        250,
+        80
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "request-shell",
+      "from": "web-browser",
+      "to": "static-edge",
+      "label": "HTTPS app shell",
+      "variant": "emphasis"
+    },
+    {
+      "id": "read-origin",
+      "from": "static-edge",
+      "to": "private-assets",
+      "label": "OAC signed GET",
+      "variant": "emphasis"
+    },
+    {
+      "id": "direct-weather",
+      "from": "web-browser",
+      "to": "public-weather",
+      "label": "Direct v000903 GET",
+      "variant": "emphasis",
+      "labelDy": 60
+    },
+    {
+      "id": "save-browser",
+      "from": "web-browser",
+      "to": "browser-persistence",
+      "label": "Local persistence",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "upload-release",
+      "from": "release-files",
+      "to": "private-assets",
+      "label": "Ordered upload"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Static runtime",
+      "items": [
+        "Browser calls the existing HTTPS API directly",
+        "Service worker caches the app shell for offline use"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Release boundary",
+      "items": [
+        "S3 + CloudFront is the adopted hosting target",
+        "Deployment method and rollout remain operator decisions"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Notifications",
+      "items": [
+        "Web reminders and push are unavailable",
+        "Use the mobile app for supported alerts"
+      ]
+    }
+  ]
+}

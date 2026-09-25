@@ -1,0 +1,73 @@
+/* The build injects a content digest and exact hashed asset list. API data lives in IndexedDB, never this cache. */
+const VERSION = "__BUILD_VERSION__";
+const CACHE = "tw-shell-" + VERSION;
+const ASSETS = /*__PRECACHE__*/ [
+  "/",
+  "/index.html",
+  "/icon.svg",
+  "/manifest.webmanifest",
+];
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+});
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    Promise.all([
+      caches.keys().then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key.startsWith("tw-shell-") && key !== CACHE)
+            .slice(0, -1)
+            .map((key) => caches.delete(key)),
+        ),
+      ),
+      self.clients.claim(),
+    ]),
+  );
+});
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+self.addEventListener("fetch", (event) => {
+  const request = event.request,
+    url = new URL(request.url);
+  if (
+    request.method !== "GET" ||
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith("/api/")
+  )
+    return;
+  if (request.mode === "navigate") {
+    const known =
+      /^\/(?:$|start\/?$|locations\/?$|settings(?:\/[^.]*)?$|help\/?$|membership\/?$|warnings\/?$|(?:air|place|notifications)\/[^/]+\/?$|weather\/[^/]+\/(?:hourly|daily|overview)\/?$|nation\/(?:weather|air)\/?$)/.test(
+        url.pathname,
+      );
+    if (known)
+      event.respondWith(
+        fetch(request).catch(
+          async () =>
+            (await (await caches.open(CACHE)).match("/index.html")) ??
+            Response.error(),
+        ),
+      );
+    return;
+  }
+  if (ASSETS.includes(url.pathname) || url.pathname.startsWith("/assets/"))
+    event.respondWith(
+      (async () => {
+        const current = await (await caches.open(CACHE)).match(request);
+        if (current) return current;
+        // Old tabs may still request an older hashed chunk. Unhashed shell files must never fall back.
+        if (url.pathname.startsWith("/assets/")) {
+          const keys = (await caches.keys())
+            .filter((key) => key.startsWith("tw-shell-") && key !== CACHE)
+            .reverse();
+          for (const key of keys) {
+            const previous = await (await caches.open(key)).match(request);
+            if (previous) return previous;
+          }
+        }
+        return fetch(request);
+      })(),
+    );
+});

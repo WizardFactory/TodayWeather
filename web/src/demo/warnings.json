@@ -1,0 +1,20 @@
+[
+  {
+    "name": "화면 테스트 특보 (실제 발효 아님)",
+    "announcement": "2026-09-23T03:00:00Z",
+    "type": 1,
+    "situationList": [
+      {
+        "weatherStr": "강풍",
+        "levelStr": "주의보",
+        "info": [
+          {
+            "timeStr": "2026년 9월 23일 12시",
+            "location": "가상 지역"
+          }
+        ]
+      }
+    ],
+    "comment": "화면 정의서용 가상 데이터입니다.\n실제 기상특보가 아닙니다."
+  }
+]
