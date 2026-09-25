@@ -84,6 +84,12 @@ The important ordering constraints are documented in the router itself: current 
 
 KMA output includes `source: 'KMA'`, region/city/town names, publication fields, `short`, `shortest`, `current`, `midData`, `dailySummary`, `airInfoList` or `airInfo`, requested `units`, and a rounded `location` for applicable versions. Fields are conditional, not guaranteed by a formal schema. `ControllerTown24h.sendResult()` simply calls `res.json(req.result)`; it does not set a whole-weather cache TTL. `/kma/special` separately sets `Cache-Control: max-age=300`.
 
+### Current weather text and summary (#2576)
+
+`getKmaStnMinuteWeather` merges KMA station and city observations into `current`. `makeWeatherType` maps the station weather text to `weatherType` after normalizing the 2021+ `currentweather.jsp` wording to the legacy vocabulary (`연속적`→`계속`, `단속적`→`단속`, `비끝`→`비끝남`, a missing intensity becomes `보통`, `약한진눈깨비`→`약진눈깨비`). Bare `비`/`눈` stay KMA AWS types 65/66. Text that still cannot be mapped yields `-1` and logs `Fail weatherStr=`. `updateWeather` then treats `-1` like a missing type and falls back to `sky` (no precipitation) or `pty` (precipitation). `getWeatherStr` then replaces `current.weather` with the localized label.
+
+`getWeatherStr` returns `""`, never `undefined`, for a missing, negative or out-of-range type. As a result, `current.weather` and world `desc` can be an empty string. `makeSummary` and `makeSummaryWeather` add the weather item only when `weatherType >= 0` and the text is non-empty, so the summary cannot end in `, undefined`. The regression is `node server/test/offline/weather-desc.test.js`, which is also part of `npm run test:offline`.
+
 ### RSS fallback contract (issue #2554 local repair)
 
 `getShortRss` first requires an independently valid RSS publication aged 0–24 hours, then compares normalized RSS and usable base short publication timestamps before matching strictly future KST forecast slots. Older RSS is skipped; equal timestamps fill unusable base values; newer RSS replaces selected fields only when the corresponding RSS source is usable. The first RSS slot is included when it is future, including a single-slot result. Date/time matching happens before `convert0Hto24H`, so next-day midnight uses `YYYYMMDD0000` at this boundary.

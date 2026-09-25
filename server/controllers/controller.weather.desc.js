@@ -10,6 +10,40 @@ class WeatherDescription {
 
     }
 
+    /**
+     * KMA currentweather.jsp (2021+) wording -> legacy wording used by makeWeatherType.
+     * '약한비연속적' -> '약한비계속', '비단속적' -> '보통비단속', '비끝' -> '비끝남',
+     * '약한눈' -> '약한눈계속', '약한진눈깨비' -> '약진눈깨비', '소나기' -> '보통소나기'
+     * Bare '비'/'눈' are kept for KMA AWS.
+     * @param {string} weatherStr
+     * @returns {string}
+     */
+    static normalizeKmaWeatherStr(weatherStr) {
+        var str = weatherStr.replace(/연속적$/, '계속').replace(/단속적$/, '단속');
+        var m;
+
+        if (str === '비끝' || str === '눈끝') {
+            return str + '남';
+        }
+        if (str === '안개') {
+            return '안개변화무';
+        }
+
+        m = str.match(/^(약한|보통|강한)?(이슬비|진눈깨비|소나기)(계속|단속)?$/);
+        if (m) {
+            if (m[2] === '진눈깨비') {
+                return m[1] === '약한' ? '약진눈깨비' : m[1] === '강한' ? '강진눈깨비' : '진눈깨비';
+            }
+            return (m[1] || '보통') + m[2];
+        }
+
+        m = str.match(/^(약한|보통|강한)?(비|눈)(계속|단속)?$/);
+        if (m && (m[1] || m[3])) {
+            return (m[1] || '보통') + m[2] + (m[3] || '계속');
+        }
+        return str;
+    }
+
     static makeWeatherType(weatherStr) {
         if (!weatherStr.hasOwnProperty('length') || weatherStr.length <= 0) {
             return -1;
@@ -24,11 +58,12 @@ class WeatherDescription {
             weatherStr = weatherStr.split(' and ')[0];
         }
 
-        switch (weatherStr) {
+        switch (WeatherDescription.normalizeKmaWeatherStr(weatherStr)) {
             case 'sunny':
             case 'clear':
             case '맑음': return 0;
             case 'partly cloudy':
+            case '구름적음':
             case '구름조금': return 1;
             case 'mostly cloudy':
             case '구름많음': return 2;
@@ -58,37 +93,24 @@ class WeatherDescription {
             case '약한이슬비': return 14;
             case 'drizzle':
             case '비/이슬비':
-            case '이슬비':
             case '보통이슬비': return 15;
             case 'heavy drizzle':
             case '강한이슬비': return 16;
             case 'drizzle clear':
             case '이슬비끝': return 17;
-            // KMA currentweather.jsp (2021+) uses 연속적/단속적 suffixes instead of 계속/단속.
             case 'light rain at times':
-            case '약한비단속적':
             case '약한비단속': return 18;
             case 'possible light rain':
             case 'light rain':
-            case '약한비':
             case '약한언비':
-            case '약한비연속적':
             case '약한비계속': return 19;
             case 'rain at times':
-            case '비단속적':
-            case '보통비단속적':
             case '보통비단속': return 20;
             case 'rain':
-            case '보통비':
-            case '비연속적':
-            case '보통비연속적':
             case '보통비계속': return 21;
             case 'heavy rain at times':
-            case '강한비단속적':
             case '강한비단속': return 22;
             case 'heavy rain':
-            case '강한비':
-            case '강한비연속적':
             case '강한비계속': return 23;
             case 'light showers':
             case '약한소나기': return 24;
@@ -99,40 +121,26 @@ class WeatherDescription {
             case 'showers clear':
             case '소나기끝': return 27;
             case 'rain clear':
-            case '비끝':
             case '비끝남': return 28;
             case 'light sleet':
-            case '약한진눈깨비':
             case "약진눈깨비":
             case '진눈깨비약': return 29;
             case 'heavy sleet':
-            case '강한진눈깨비':
             case '강진눈깨비': return 30;
             case 'sleet clear':
             case '진눈깨비끝': return 31;
             case 'light snow at times':
-            case '약한눈단속적':
             case '약한눈단속': return 32;
             case 'possible light snow':
             case 'light snow':
-            case '약한눈':
-            case '약한눈연속적':
             case '약한눈계속': return 33;
             case 'snow at times':
-            case '눈단속적':
-            case '보통눈단속적':
             case '보통눈단속': return 34;
             case 'snow':
-            case '보통눈':
-            case '눈연속적':
-            case '보통눈연속적':
             case '보통눈계속': return 35;
             case 'heavy snow at times':
-            case '강한눈단속적':
             case '강한눈단속': return 36;
             case 'heavy snow':
-            case '강한눈':
-            case '강한눈연속적':
             case '강한눈계속': return 37;
             case 'light snow showers':
             case '소낙눈/약': return 38;
@@ -141,7 +149,6 @@ class WeatherDescription {
             case 'snow showers clear':
             case '소낙눈끝': return 40;
             case 'snow clear':
-            case '눈끝':
             case '눈끝남': return 41;
             case 'light snow pellets':
             case '싸락눈/약': return 42;

@@ -22,8 +22,8 @@ function controllerKmaStnWeather() {
 
 controllerKmaStnWeather.updateWeather = function (current) {
     if (current.pty >= 1) {
-        if (current.weatherType == undefined) {
-            log.warn('weather type is undefined so set by pty');
+        if (current.weatherType == undefined || current.weatherType < 0) {
+            log.warn('weather type is unknown so set by pty');
             current.weatherType = 0;
         }
 
@@ -88,7 +88,7 @@ controllerKmaStnWeather.updateWeather = function (current) {
        }
     }
     else if (current.pty === 0) {
-        if (current.weatherType == undefined) {
+        if (current.weatherType == undefined || current.weatherType < 0) {
             switch (current.sky) {
                 case 0:
                 case 1:

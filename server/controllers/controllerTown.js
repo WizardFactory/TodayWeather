@@ -2156,7 +2156,7 @@ function ControllerTown() {
             itemList.push(item);
         }
 
-        if (current.hasOwnProperty('weatherType')) {
+        if (self._hasWeatherText(current)) {
             tmpGrade = 2.5;
             if (current.weatherType > 3) {
                 tmpGrade = 3;
@@ -3543,6 +3543,16 @@ ControllerTown.prototype._diffTodayYesterday = function(current, yesterday, ts) 
     }
 
     return {str: str, grade: grade};
+};
+
+/**
+ * unmapped weather(weatherType -1, weather "") must not reach the summary as "undefined"
+ * @param current
+ * @returns {boolean}
+ * @private
+ */
+ControllerTown.prototype._hasWeatherText = function(current) {
+    return current.weatherType >= 0 && typeof current.weather === 'string' && current.weather.length > 0;
 };
 
 ControllerTown.prototype._calcValue3hTo1h = function(time, prvValue, nextValue) {

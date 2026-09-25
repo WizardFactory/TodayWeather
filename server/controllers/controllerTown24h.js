@@ -1457,17 +1457,13 @@ function ControllerTown24h() {
             itemList.push(item);
         }
 
-        if (current.hasOwnProperty('weatherType') && current.weatherType >= 0 &&
-            typeof current.weather === 'string' && current.weather.length > 0) {
+        if (self._hasWeatherText(current)) {
             tmpGrade = 2.5;
             if (current.weatherType > 3) {
                 tmpGrade = 3;
             }
             item = {str: current.weather, grade: tmpGrade};
             itemList.push(item);
-        }
-        else if (current.hasOwnProperty('weatherType')) {
-            log.warn("Skip weather summary item: weatherType=" + current.weatherType + " weather=" + current.weather);
         }
 
         if (current.hasOwnProperty('specialInfo')) {
