@@ -22,7 +22,7 @@ function weather() {
   ];
   return raw;
 }
-test("daily forecast rain wins over accumulated observations and zero snow stays hidden", async ({
+test("KMA daily rain shows the server forecast over accumulated observations and zero snow stays hidden", async ({
   page,
   context,
 }) => {
@@ -30,12 +30,10 @@ test("daily forecast rain wins over accumulated observations and zero snow stays
     r.fulfill({ json: weather() }),
   );
   await page.goto("/weather/seoul/daily");
-  const forecast = page
-    .locator("section.panel")
-    .filter({
-      has: page.getByRole("heading", { name: "강수·눈 예보", exact: true }),
-    });
-  await expect(forecast).toContainText("강수 4 mm");
+  const forecast = page.locator("section.panel").filter({
+    has: page.getByRole("heading", { name: "강수·눈 예보", exact: true }),
+  });
+  await expect(forecast).toContainText("강수 4 mm · 예보");
   await expect(forecast).not.toContainText("24시간");
   await expect(forecast).not.toContainText("적설량");
   await expect(
@@ -45,10 +43,10 @@ test("daily forecast rain wins over accumulated observations and zero snow stays
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   await context.setOffline(true);
   await page.reload();
-  await expect(forecast).toContainText("강수 4 mm");
+  await expect(forecast).toContainText("강수 4 mm · 예보");
   await context.setOffline(false);
   await page.goto("/weather/seoul/hourly");
-  await expect(forecast).toContainText("적설량 <0.1 mm");
+  await expect(forecast).toContainText("적설량 <0.1 mm · 3시간 예보");
   await expect(forecast).not.toContainText("적설량 0 mm");
 });
 test("warning instants display Korea time despite the viewer timezone", async ({

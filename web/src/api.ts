@@ -64,3 +64,7 @@ export type Capabilities = {
   billing: { enabled: boolean };
   search: { catalog: boolean; geocode: boolean };
 };
+/** Stored snapshot for immediate rendering; null when absent, expired or invalid. */
+export async function readStoredWeather(key: string): Promise<Weather | null> {
+  return (await readSnapshot(key)) ?? null;
+}

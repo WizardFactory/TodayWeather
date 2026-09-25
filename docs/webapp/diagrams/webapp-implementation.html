@@ -5160,8 +5160,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
         <!-- Connection paths (before components for correct z-order) -->
         <path data-edge-from="responsive-screens" data-edge-to="direct-adapter" data-edge-label="Typed queries" data-edge-key="0" data-edge-id="query-weather" data-composition-points="270,140;480,140" d="M 270 140 L 480 140" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="direct-adapter" data-edge-to="existing-api" data-edge-label="HTTPS + CORS" data-edge-key="1" data-edge-id="fetch-public" data-composition-points="710,140;930,140" d="M 710 140 L 930 140" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="responsive-screens" data-edge-to="local-storage" data-edge-label="Local read / write" data-edge-key="2" data-edge-id="persist-state" data-composition-points="148,180;148,400" d="M 148 180 L 148 400" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="direct-adapter" data-edge-to="existing-api" data-edge-label="HTTPS · 1 retry on 502" data-edge-key="1" data-edge-id="fetch-public" data-composition-points="710,140;930,140" d="M 710 140 L 930 140" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="responsive-screens" data-edge-to="local-storage" data-edge-label="Snapshot first · prune" data-edge-key="2" data-edge-id="persist-state" data-composition-points="148,180;148,400" d="M 148 180 L 148 400" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="responsive-screens" data-edge-to="shell-worker" data-edge-label="Register / update" data-edge-key="3" data-edge-id="register-worker" data-composition-points="162,180;162,204;456,204;456,440;480,440" d="M 162 180 L 162 196 Q 162 204 170 204 L 448 204 Q 456 204 456 212 L 456 432 Q 456 440 464 440 L 480 440" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
 
         <!-- Components -->
@@ -5205,8 +5205,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="context" x="1055" y="154" class="t-muted" font-size="9" text-anchor="middle">Weather / geocode / warnings</text>
         </g>
 
-        <g id="node-local-storage" data-node-id="local-storage" data-node-label="Local browser state" tabindex="0" role="button" aria-label="Focus Local browser state, Favorites + validated snapshots, Architecture component" aria-pressed="false" data-node-kind="database" data-node-sublabel="Favorites + validated snapshots" data-node-context="Architecture component">
-          <title>Local browser state · Favorites + validated snapshots · Architecture component</title>
+        <g id="node-local-storage" data-node-id="local-storage" data-node-label="Local browser state" tabindex="0" role="button" aria-label="Focus Local browser state, Favorites + 24h snapshots, Architecture component" aria-pressed="false" data-node-kind="database" data-node-sublabel="Favorites + 24h snapshots" data-node-context="Architecture component">
+          <title>Local browser state · Favorites + 24h snapshots · Architecture component</title>
           <rect x="40" y="400" width="230" height="80" rx="6" class="c-mask"/>
           <rect x="40" y="400" width="230" height="80" rx="6" class="c-database" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(46 406) scale(0.6875)">
@@ -5214,7 +5214,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="155" y="438" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Local browser state</text>
-        <text data-detail="context" x="155" y="454" class="t-muted" font-size="9" text-anchor="middle">Favorites + validated snapshots</text>
+        <text data-detail="context" x="155" y="454" class="t-muted" font-size="9" text-anchor="middle">Favorites + 24h snapshots</text>
         </g>
 
         <g id="node-shell-worker" data-node-id="shell-worker" data-node-label="Service worker" tabindex="0" role="button" aria-label="Focus Service worker, Versioned app-shell cache, Architecture component" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Versioned app-shell cache" data-node-context="Architecture component">
@@ -5236,13 +5236,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="338.8" y="120" width="72.4" height="14" rx="3" class="c-mask"/>
           <text x="375" y="130" class="t-backend" font-size="8" text-anchor="middle">Typed queries</text>
         </g>
-        <g data-detail="context" data-edge-from="direct-adapter" data-edge-to="existing-api" data-edge-label="HTTPS + CORS" data-edge-key="1" data-edge-id="fetch-public">
-          <rect x="786.2" y="120" width="67.6" height="14" rx="3" class="c-mask"/>
-          <text x="820" y="130" class="t-backend" font-size="8" text-anchor="middle">HTTPS + CORS</text>
+        <g data-detail="context" data-edge-from="direct-adapter" data-edge-to="existing-api" data-edge-label="HTTPS · 1 retry on 502" data-edge-key="1" data-edge-id="fetch-public">
+          <rect x="762.2" y="120" width="115.6" height="14" rx="3" class="c-mask"/>
+          <text x="820" y="130" class="t-backend" font-size="8" text-anchor="middle">HTTPS · 1 retry on 502</text>
         </g>
-        <g data-detail="context" data-edge-from="responsive-screens" data-edge-to="local-storage" data-edge-label="Local read / write" data-edge-key="2" data-edge-id="persist-state">
-          <rect x="99.80000000000001" y="220" width="96.39999999999999" height="14" rx="3" class="c-mask"/>
-          <text x="148" y="230" class="t-muted" font-size="8" text-anchor="middle">Local read / write</text>
+        <g data-detail="context" data-edge-from="responsive-screens" data-edge-to="local-storage" data-edge-label="Snapshot first · prune" data-edge-key="2" data-edge-id="persist-state">
+          <rect x="90.2" y="220" width="115.6" height="14" rx="3" class="c-mask"/>
+          <text x="148" y="230" class="t-muted" font-size="8" text-anchor="middle">Snapshot first · prune</text>
         </g>
         <g data-detail="context" data-edge-from="responsive-screens" data-edge-to="shell-worker" data-edge-label="Register / update" data-edge-key="3" data-edge-id="register-worker">
           <rect x="263.2" y="184" width="91.6" height="14" rx="3" class="c-mask"/>
@@ -5460,8 +5460,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Weather data</h3>
         </div>
         <ul>
-          <li>&bull; Daily KMA rain uses forecasts, not observed totals</li>
-          <li>&bull; Zero snow stays in data; offset warning times use KST</li>
+          <li>&bull; Past rain is observed; forecasts show server-calculated amounts</li>
+          <li>&bull; KMA station times parsed; air follows its standard&#39;s grades</li>
         </ul>
       </div>
 
@@ -5471,8 +5471,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Offline behavior</h3>
         </div>
         <ul>
-          <li>&bull; Cache-key revision v2 excludes old normalized snapshots</li>
-          <li>&bull; Worker updates preserve edits on first activation</li>
+          <li>&bull; Cache-key revision v3; stored weather shown while refreshing</li>
+          <li>&bull; Deleting a place or 24 hours removes its snapshots</li>
         </ul>
       </div>
 
@@ -5482,8 +5482,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Runtime scope</h3>
         </div>
         <ul>
-          <li>&bull; Network failures offer Korean retry guidance</li>
-          <li>&bull; Existing API availability remains a backend concern</li>
+          <li>&bull; One delayed retry on 502 or network failure</li>
+          <li>&bull; AirKorea, KAQ and Dark Sky credited like the app</li>
         </ul>
       </div>
     </div>

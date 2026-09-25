@@ -9,7 +9,7 @@ import {
   useParams,
   useLocation,
 } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Sun,
   Search,
@@ -45,13 +45,17 @@ import {
   type Units,
 } from "@todayweather/core";
 import { AppContext, useApp } from "./context";
-import { api, unitQuery, type Capabilities } from "./api";
+import { api, readStoredWeather, unitQuery, type Capabilities } from "./api";
 import {
   defaultState,
   restoreState,
   saveState,
   addPlace,
   removePlace,
+  clearLocalData,
+  deleteSnapshotsFor,
+  pruneSnapshots,
+  weatherKey,
   STATE_KEY,
   type SavedState,
 } from "./state";
@@ -66,15 +70,30 @@ import {
   ExternalWeather,
   isOld,
 } from "./components";
-import WeatherPage, { gradeClass, gradeLabel } from "./Weather";
+import WeatherPage from "./Weather";
+import {
+  AIR_DISCLAIMER,
+  AIR_SOURCE,
+  forecastDescription,
+  gradeClass,
+  gradeLabel,
+  standardName,
+} from "./air";
+import { amount } from "./format";
 import Notifications from "./Notifications";
 type InstallEvent = Event & { prompt: () => Promise<void> };
+/** Start-screen route for `/`; `locations` applies only there. */
 function routeFor(state: SavedState, id: string) {
   return state.settings.startup === "locations"
     ? "/locations"
-    : state.settings.startup === "air"
-      ? `/air/${id}`
-      : `/weather/${id}/${state.settings.startup}`;
+    : weatherRoute(state, id);
+}
+/** Selecting a place always opens its weather in the preferred view. */
+function weatherRoute(state: SavedState, id: string) {
+  const view = state.settings.startup;
+  return view === "air"
+    ? `/air/${id}`
+    : `/weather/${id}/${view === "locations" ? "hourly" : view}`;
 }
 export default function App() {
   const [state, setState] = useState(() => {
@@ -108,6 +127,20 @@ export default function App() {
     }
     document.documentElement.dataset.theme = state.settings.theme;
   }, [state]);
+  useEffect(() => {
+    // Another tab changed favorites or settings: adopt the stored state.
+    const changed = (e: StorageEvent) => {
+      if (e.key !== STATE_KEY && e.key !== null) return;
+      try {
+        setState(restoreState(localStorage));
+      } catch {
+        /* Keep the in-memory state. */
+      }
+    };
+    window.addEventListener("storage", changed);
+    void pruneSnapshots();
+    return () => window.removeEventListener("storage", changed);
+  }, []);
   useEffect(() => {
     setMenuOpen(false);
     window.scrollTo(0, 0);
@@ -165,13 +198,20 @@ export default function App() {
     };
   }, []);
   const select = (place: Place) => {
+    const before = latestState.current;
     try {
-      const next = addPlace(latestState.current, place);
+      const next = addPlace(before, place);
       latestState.current = next;
       setState(next);
-      navigate(routeFor(next, next.selectedId!));
-    } catch (error) {
-      setToast((error as Error).message);
+      // A replaced current-location entry must not leave its weather behind.
+      for (const old of before.places)
+        if (!next.places.some((p) => p.id === old.id))
+          void deleteSnapshotsFor(old.id);
+      navigate(weatherRoute(next, next.selectedId!));
+    } catch {
+      // Full list: show the place without saving it.
+      navigate(weatherRoute(before, place.id));
+      setToast("관심지역이 가득 차 저장하지 않고 표시합니다.");
     }
   };
   const selected = state.places.find((p) => p.id === state.selectedId);
@@ -487,7 +527,19 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
   const [search, setSearch] = useState(""),
     [query, setQuery] = useState(""),
     [locating, setLocating] = useState(false),
-    [resolving, setResolving] = useState(false);
+    [resolving, setResolving] = useState(false),
+    [permissionDenied, setPermissionDenied] = useState(false);
+  // Only the newest location request may navigate; unmount cancels it.
+  const lookup = useRef<AbortController | null>(null);
+  useEffect(() => () => lookup.current?.abort(), []);
+  const begin = () => {
+    lookup.current?.abort();
+    const controller = new AbortController();
+    lookup.current = controller;
+    return controller;
+  };
+  const current = (c: AbortController) =>
+    lookup.current === c && !c.signal.aborted;
   useEffect(() => {
     const timer = setTimeout(() => setQuery(search.trim()), 300);
     return () => clearTimeout(timer);
@@ -508,49 +560,58 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
       );
       return;
     }
+    const controller = begin();
     setLocating(true);
+    setPermissionDenied(false);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
           const p = await api<Place>(
             `/locations/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`,
+            controller.signal,
           );
-          select({ ...p, current: true });
+          if (current(controller)) select({ ...p, current: true });
         } catch (e) {
-          notify((e as Error).message);
+          if (current(controller)) notify((e as Error).message);
         } finally {
-          setLocating(false);
+          if (current(controller)) setLocating(false);
         }
       },
       (e) => {
+        if (!current(controller)) return;
         setLocating(false);
-        notify(
-          e.code === 1
-            ? "위치 권한이 거부됐습니다. 지역 검색은 계속 이용할 수 있습니다."
-            : "위치를 찾지 못했습니다. 지역을 직접 검색해 주세요.",
-        );
+        if (e.code === 1) setPermissionDenied(true);
+        else notify("위치를 찾지 못했습니다. 지역을 직접 검색해 주세요.");
       },
-      { timeout: 15000, maximumAge: 60000, enableHighAccuracy: false },
+      { timeout: 15000, maximumAge: 0, enableHighAccuracy: false },
     );
   }
   function deletePlace(p: Place) {
     setState((s) => removePlace(s, p.id));
+    void deleteSnapshotsFor(p.id);
     notify(`${p.name}을 관심지역에서 삭제했습니다.`);
   }
   async function resolve() {
+    const controller = begin();
     setResolving(true);
     try {
-      select(
-        await api<Place>(
-          "/locations/resolve?q=" + encodeURIComponent(search.trim()),
-        ),
+      const place = await api<Place>(
+        "/locations/resolve?q=" + encodeURIComponent(search.trim()),
+        controller.signal,
       );
+      if (current(controller)) select(place);
     } catch (e) {
-      notify((e as Error).message);
+      if (current(controller)) notify((e as Error).message);
     } finally {
-      setResolving(false);
+      if (current(controller)) setResolving(false);
     }
   }
+  const choose = (p: Place) => {
+    lookup.current?.abort();
+    setLocating(false);
+    setResolving(false);
+    select(p);
+  };
   return (
     <>
       {!embedded && (
@@ -573,7 +634,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
                 .toLocaleLowerCase()
                 .includes(term),
             );
-            if (match) select(match);
+            if (match) choose(match);
             else if (capabilities?.search.geocode && term.length >= 2)
               void resolve();
             else
@@ -616,7 +677,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
           {(results.data?.items ?? PLACES)
             .slice(0, embedded ? 8 : 20)
             .map((p) => (
-              <button key={p.id} onClick={() => select(p)}>
+              <button key={p.id} onClick={() => choose(p)}>
                 <MapPin size={14} />
                 {p.name}
                 <Plus size={14} />
@@ -648,6 +709,17 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
         <p className="hint">
           위치 정보는 현재 위치 버튼을 누를 때만 요청합니다.
         </p>
+        {permissionDenied && (
+          <div className="permission-help" role="alert">
+            <p>
+              위치 권한이 거부됐습니다. 브라우저 주소창의 사이트 설정에서 위치
+              권한을 허용한 뒤 다시 시도하거나, 지역을 직접 검색해 주세요.
+            </p>
+            <button className="button" onClick={() => void locate()}>
+              <LocateFixed size={16} /> 다시 시도
+            </button>
+          </div>
+        )}
       </section>
       {!embedded && (
         <>
@@ -657,7 +729,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
               <article className="panel location-card" key={p.id}>
                 <button
                   className="location-card-main"
-                  onClick={() => select(p)}
+                  onClick={() => choose(p)}
                 >
                   <MapPin size={23} />
                   <h3>{p.name}</h3>
@@ -666,6 +738,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
                       ? "현재 위치로 저장한 지역 · 자동 추적 안 함"
                       : p.address}
                   </p>
+                  <PlacePreview place={p} />
                   <span>
                     날씨 보기 <ArrowRight size={15} />
                   </span>
@@ -696,6 +769,39 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
         </>
       )}
     </>
+  );
+}
+/** Preview from the stored snapshot only; never triggers a network request. */
+function PlacePreview({ place }: { place: Place }) {
+  const { state } = useApp();
+  const key = weatherKey(place, state.settings.units);
+  const stored = useQuery({
+    queryKey: ["stored-weather", key],
+    queryFn: () => readStoredWeather(key),
+    staleTime: 60000,
+  });
+  const w = stored.data;
+  if (!w) return null;
+  const aqi = w.air[0]?.pollutants.aqi;
+  return (
+    <span className="location-preview">
+      <WeatherIcon icon={w.current.icon} size={24} />
+      <strong>
+        {formatValue(w.current.temperature)}°{w.units.temperatureUnit}
+      </strong>
+      {aqi && (
+        <b className={"grade " + gradeClass(w.units.airUnit, aqi.grade)}>
+          {aqi.label || gradeLabel(w.units.airUnit, aqi.grade)}
+        </b>
+      )}
+      <small>
+        저장{" "}
+        {new Date(w.fetchedAt).toLocaleTimeString("ko-KR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </small>
+    </span>
   );
 }
 const mapPositions: Record<string, [number, number]> = {
@@ -752,7 +858,7 @@ function NationPage() {
               m?.value,
               ["pm25", "pm10"].includes(pollutant) ? 0 : 3,
             ),
-            label: m?.label || gradeLabel(m?.grade),
+            label: m?.label || gradeLabel(data.units.airUnit, m?.grade ?? null),
             grade: m?.grade,
             at: p.station.observedAt,
             icon: "",
@@ -764,8 +870,13 @@ function NationPage() {
             mode === "temperature"
               ? `${formatValue(p.current.temperature)}°`
               : mode === "rain"
-                ? `${formatValue(p.current.precipitation, 1)} ${data.units.precipitationUnit}`
-                : `${formatValue(p.current.wind, 1)} ${data.units.windSpeedUnit}`,
+                ? `${amount(p.current.precipitation, data.units.precipitationUnit)} ${data.units.precipitationUnit}`
+                : [
+                    p.current.windDirection,
+                    `${formatValue(p.current.wind, 1)} ${data.units.windSpeedUnit}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" "),
           label: p.current.description,
           at: p.current.at,
           grade: null,
@@ -855,7 +966,18 @@ function NationPage() {
                           rx="11"
                           fill="var(--panel)"
                           stroke="var(--line)"
+                          className={
+                            air
+                              ? "map-grade " +
+                                gradeClass(data!.units.airUnit, r.grade ?? null)
+                              : undefined
+                          }
                         />
+                        {!air && r.icon && (
+                          <g transform="translate(22,-34)">
+                            <WeatherIcon icon={r.icon} size={20} />
+                          </g>
+                        )}
                         <text textAnchor="middle" y="-4" className="map-name">
                           {r.name.slice(0, 3)}
                         </text>
@@ -874,6 +996,9 @@ function NationPage() {
             </section>
             <section className="panel region-list">
               <SectionHead title="지역별 관측" />
+              {!air && mode === "rain" && (
+                <p className="hint">강수량은 최근 1시간 관측값입니다.</p>
+              )}
               {rows.map((r, i) => (
                 <div className="region-row" key={r.name + i}>
                   <div>
@@ -881,7 +1006,12 @@ function NationPage() {
                     <Stamp at={r.at} />
                   </div>
                   {air ? (
-                    <span className={"grade " + gradeClass(r.grade)}>
+                    <span
+                      className={
+                        "grade " +
+                        gradeClass(data!.units.airUnit, r.grade ?? null)
+                      }
+                    >
                       {r.label}
                     </span>
                   ) : (
@@ -959,6 +1089,7 @@ function Warnings() {
                     ))}
                   </section>
                 ))}
+                {b.note && <p className="bulletin-note">&lt;참고사항&gt;</p>}
                 <p className="bulletin-text">{b.comment}</p>
                 {b.imageUrl && (
                   <a
@@ -992,16 +1123,29 @@ const unitLabels: Record<keyof Units, string> = {
   airUnit: "대기질 기준",
 };
 const unitNames: Record<string, string> = {
-  airkorea: "한국 대기환경 기준",
-  airnow: "미국 EPA",
-  aqicn: "중국 기준",
-  airkorea_who: "WHO 권고 기준",
+  airkorea: standardName("airkorea"),
+  airnow: standardName("airnow"),
+  aqicn: standardName("aqicn"),
+  airkorea_who: standardName("airkorea_who"),
   bft: "보퍼트",
   kt: "노트",
 };
 function SettingsPage() {
   const { state, setState, notify, capabilities } = useApp();
   const upload = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  async function clearData() {
+    if (
+      !window.confirm(
+        "이 브라우저에 저장된 관심지역, 설정, 저장된 날씨 자료를 모두 삭제합니다. 계속할까요?",
+      )
+    )
+      return;
+    await clearLocalData(localStorage);
+    queryClient.removeQueries({ queryKey: ["stored-weather"] });
+    setState(defaultState());
+    notify("이 브라우저의 오늘날씨 데이터를 삭제했습니다.");
+  }
   const settings = state.settings;
   function exportData() {
     const safe = {
@@ -1028,8 +1172,16 @@ function SettingsPage() {
       if (parsed.version !== 1 || !Array.isArray(parsed.places))
         throw Error("오늘날씨 웹 내보내기 파일을 선택해 주세요.");
       const imported = restoreState({ getItem: () => raw });
-      setState(imported);
-      notify("관심지역과 설정을 가져왔습니다.");
+      if (
+        !window.confirm(
+          `현재 관심지역 ${state.places.length}곳과 설정을 가져온 파일(관심지역 ${imported.places.length}곳)로 바꿉니다. 계속할까요?`,
+        )
+      ) {
+        notify("가져오기를 취소했습니다.");
+      } else {
+        setState(imported);
+        notify("관심지역과 설정을 가져왔습니다.");
+      }
     } catch (e) {
       notify((e as Error).message);
     }
@@ -1179,6 +1331,17 @@ function SettingsPage() {
               />
             </div>
           </section>
+          <section className="panel">
+            <SectionHead title="브라우저 데이터" />
+            <p className="muted-text">
+              관심지역·설정은 이 브라우저에, 날씨 화면 자료는 최대 24시간
+              저장됩니다. 관심지역을 삭제하면 해당 지역의 저장 자료도
+              삭제됩니다.
+            </p>
+            <button className="button" onClick={() => void clearData()}>
+              <Trash2 size={16} /> 이 브라우저의 오늘날씨 데이터 삭제
+            </button>
+          </section>
         </div>
       </div>
       <section className="panel">
@@ -1223,8 +1386,9 @@ function Help() {
         <p>
           현재 위치 버튼을 눌렀을 때만 위치 권한을 요청합니다. 날씨 조회를 위해
           좌표가 서버에 전달됩니다. 위치 권한을 허용하지 않아도 지역 검색을
-          이용할 수 있습니다. 관심지역과 설정은 이 브라우저에 저장되며, 브라우저
-          데이터를 지우면 함께 삭제됩니다.
+          이용할 수 있습니다. 관심지역과 설정은 이 브라우저에 저장되며, 날씨
+          화면 자료는 최대 24시간 보관합니다. 설정의 ‘이 브라우저의 오늘날씨
+          데이터 삭제’로 언제든 지울 수 있습니다.
         </p>
         <h2>관측 시각과 오프라인</h2>
         <p>
@@ -1249,9 +1413,15 @@ function Help() {
         </p>
         <h2>정보 출처</h2>
         <p>
-          국내 날씨는 기존 기상청 연동 서비스, 해외 날씨와 대기질은 기존
-          TodayWeather 제공 경로를 사용합니다. 예제 모드는 항상 별도로
+          기상정보: 기상청. {AIR_SOURCE}. {AIR_DISCLAIMER} 해외 날씨는 기존
+          TodayWeather 제공 경로(Dark Sky)를 사용합니다. 예제 모드는 항상 별도로
           표시합니다. 제공되지 않는 값은 0 대신 ‘—’로 표시합니다.
+        </p>
+        <p>{forecastDescription("kaq")}</p>
+        <p>
+          지난 시간과 지난 날은 관측 강수량, 앞으로는 기상청 예보를 바탕으로
+          서버가 계산한 강수량과 강수확률을 표시합니다. 초단기 예보의 1시간
+          강수량은 범주 하한값이므로 ‘약’으로 표시합니다.
         </p>
         <ExternalWeather />
         <h2>접근성과 외부 지도</h2>
