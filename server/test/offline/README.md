@@ -140,3 +140,33 @@ The smoke deliberately omits production DB/provider behavior and Amazon Linux 1
 linking. OpenSSL must support `req -addext` (1.1.1+); the SDK/native import checks
 on the older target host are a separate gate. The existing legacy `npm test` /
 `e2e` suites include providers and databases; they are not part of this command.
+
+## Weather text and summary (#2576)
+
+`weather-desc.test.js` (part of `test:offline`; also on the rss-offline Node 16/22 matrix) covers the KMA wording normalization, `getWeatherStr` empty labels, the `updateWeather` sky and PTY 1–7 fallback and both summary builders. `weather-desc-response-smoke.js` reuses the RSS response harness to run the actual v000903 coordinate route for DB 1.0/2.0. The station text scenarios are: observed `비끝`/`약한비연속적`; unmapped text falling back to sky, to pty 1 (`비조금`) and to nowcast pty 5 (`빗방울`); no station text with nowcast pty 5 (the #2573 `hourlyMissing` path); and unmapped text with an invalid sky (`weather ""`). It asserts `current.weather`, `weatherType`, `summary` and `summaryWeather`, and that no programming exception is swallowed. Station text is typed with the real `makeWeatherType`, as `getStnHourlyAndMinRns` does; the station query itself stays synthetic. Run it with the RSS smoke dependencies and `TZ=UTC`:
+
+```sh
+TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/weather-desc-response-smoke.js
+```
+
+## Current air summary (#2578)
+
+`air-summary.test.js` runs in `test:offline` and the RSS workflow. It loads the
+actual summary builders, the world-weather summary middleware and AirKorea merge
+code in isolated VMs. It checks that a missing `current.arpltn` yields no air
+summary (weather/life-index grades such as `wsdGrade` are never read as air
+grades), that the combined `summary` neither reads nor writes air fields on
+`current`, that an empty world `summaryAir` is omitted, and that every AirKorea
+station is compared with the same eight-hour window from request time.
+
+`air-summary-smoke.js` reuses the response smoke harness to run the complete
+v000903 coordinate middleware for both DB versions with missing, empty and fresh
+air observations; `summaryAir` must be absent for the first two. Dependencies are the same as the RSS response smoke:
+
+```sh
+TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/air-summary-smoke.js
+```
+
+These are synthetic checks, not live AirKorea, Mongo or mobile tests. AirKorea
+`dataTime` is still parsed in the host timezone; see
+[intent](../../../intent/issue-2578.md) for that separate limitation.
