@@ -53,6 +53,23 @@ controllerKmaStnWeather.updateWeather = function (current) {
                    current.weather = '눈';
                    current.weatherType = 66;
                }
+               //단기 소나기(4), 초단기 빗방울(5), 빗방울눈날림(6), 눈날림(7)
+               else if (current.pty == 4) {
+                   current.weather = '소나기';
+                   current.weatherType = 25;
+               }
+               else if (current.pty == 5) {
+                   current.weather = '약한비';
+                   current.weatherType = 19;
+               }
+               else if (current.pty == 6) {
+                   current.weather = '약진눈깨비';
+                   current.weatherType = 29;
+               }
+               else if (current.pty == 7) {
+                   current.weather = '약한눈';
+                   current.weatherType = 33;
+               }
                break;
            case 17:
                current.weatherType = 15;

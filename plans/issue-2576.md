@@ -37,3 +37,15 @@ Revert the PR commits. There is no data migration. Blast radius: every KMA curre
 - Riskiest part: the pty ≥ 1 branch now maps `-1` to `0` and then to pty text (rain/sleet/snow). This is intended per the spec, and previously the text was lost.
 - Rejected alternative: collector-side normalization (see spec).
 - Proof: Red → Green on the regression, the route smoke over both DB formats, and CI.
+
+## Amendment r2 (2026-09-25; spec r2)
+| File | Change | Req |
+|---|---|---|
+| server/controllers/controllerKmaStnWeather.js | pty 4–7 mapping in the `case 0–12` branch | R3 |
+| server/test/offline/weather-desc.test.js | updateWeather pty 4–7 cases; `_hasWeatherText` with type ≥ 0 and `weather ""` | R3, R4 |
+| server/test/offline/rss-response-smoke.js | hook mirrors `if (stn.weather)` | R5 |
+| server/test/offline/weather-desc-response-smoke.js | pty 5 / `…비…` / invalid-sky scenarios; swallowed-exception assertion; optional current/shortest overrides | R5 |
+| .github/workflows/rss-offline.yml | run `weather-desc.test.js` on the Node 16/22 matrix | R5 |
+| docs/architecture/mobile-api.md, operations note, test README | exact fallback scope and normalization list; `, ` wording | R6 |
+
+Order: tests first (Red on the r1 candidate, commit cee99b8d source) → source change → Green → `test:offline` → smokes → docs → CI. Risk: pty 4–7 previously displayed `맑음`; now it shows precipitation text. There are no other consumers of `updateWeather`. Rollback: revert the r2 commit.

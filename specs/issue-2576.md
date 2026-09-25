@@ -33,3 +33,9 @@ No new input surface. The regular expressions are anchored and linear.
 
 ## Verification strategy
 Red: the new regression on the base source. Green and post-refactor: the regression and the full `test:offline` on the candidate. Additional smoke: the route-level v000903 smoke (real middleware and parsers, synthetic model boundaries). Documents: link and claim checks. CI on the pushed head.
+
+## Amendment r2 (2026-09-25; intent r2)
+- **R3 (amended):** in `updateWeather`'s pty ≥ 1 `case 0–12` branch, when pty is 4 the text is `보통소나기`/25, 5 `약한비`/19, 6 `약진눈깨비`/29, 7 `약한눈`/33, in addition to the existing 1/2/3 → 65/64/66. This applies to every type 0–12 in this branch, including `-1`/`undefined` after they are set to 0. Unknown pty (for example 8) keeps the existing behaviour. With pty 0 and a sky outside 0–4, the type stays `-1` and `getWeatherStr` gives `""`.
+- **R5 (amended):** the route smoke adds scenarios: unmapped text with stored pty 5 (→ 19); unmapped `…비…` text (station pty conversion → 1 → 65); unmapped text with invalid sky (→ `-1`, `weather ""`, no weather item in either summary). Every scenario asserts that no TypeError/ReferenceError/AssertionError is swallowed in logs. The smoke hook mirrors `if (stn.weather)` from `getStnHourlyAndMinRns`. CI also runs `weather-desc.test.js` on the Node 16/22 rss-offline matrix.
+- **R6 (amended):** the `mobile-api.md` and operations-note fallback wording lists the pty mapping and the cases that stay `""`. The normalization list matches `normalizeKmaWeatherStr` exactly.
+- Behavioural note: pty 4–7 with a legacy type in 0–12 (for example a mapped `맑음`) now also shows the precipitation text. This is intended: the branch only runs when pty ≥ 1.

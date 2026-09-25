@@ -34,3 +34,10 @@ Since #2573/#2575, KMA `currentweather.jsp` city text reaches `current.weather`.
 - `weather`/world `desc` becomes `""` rather than being omitted when a type is unknown. App/widget handling of the empty field is unverified.
 - Future KMA wording outside the normalization rules still logs `Fail weatherStr=` but degrades to sky/pty text.
 - The service host runs f40002d7 only. Redeployment after merge is a human decision.
+
+## Amendment 2026-09-25 r2 — AK decision on independent-verification findings
+- Source: AK in the same session, after the verifier PASS with LOW findings: "1. 이번 PR에서 pty 4–7 매핑을 추가 2. 새 경로 smoke에는 `-1`이나 pty≥1 대체 경로를 타는 시나리오 추가 3. `mobile-api.md`의 대체 동작 설명 업데이트" (1. add the pty 4–7 mapping in this PR; 2. add smoke scenarios that exercise the `-1` and pty≥1 fallback paths; 3. update the fallback description in `mobile-api.md`).
+- AC3 (clarified): when the type is unknown with precipitation, the fallback covers every KMA PTY code. Short-term PTY 4 소나기 → 25 `소나기`. Nowcast PTY 5 빗방울 → 19 `약한비`, 6 빗방울눈날림 → 29 `약진눈깨비`, 7 눈날림 → 33 `약한눈`. PTY 1/2/3 keep 65/64/66. When pty/sky are invalid, the text stays `""` and the summary omits it.
+- AC4/AC5 (strengthened): the route smoke must include scenarios where the `-1` fallback and the pty≥1 fallback run, a scenario that yields `weather ""`, and a no-swallowed-exception assertion.
+- AC6 (clarified): `mobile-api.md` and the operations note state the exact fallback scope, including the cases that remain `""`.
+- Downstream impact: investigation, spec, plan, test-design, build, self-verification and independent-verification re-run; CI re-run on the new head. The PR-review waiver is unchanged.

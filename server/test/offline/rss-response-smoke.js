@@ -94,8 +94,8 @@ function createHarness(version, fixture, historyOptions = {}) {
     'kecoController':{getArpLtnInfo:(town,date,cb)=>cb(null,{arpltn:{},list:[],stnList:[]}),getDustFrcst:(town,date,cb)=>cb(null,[])},
     'controllerKmaStnWeather':{getCityHourlyList:(town,cb)=>cb(null,[]),getStnHourlyAndMinRns:(town,date,current,cb)=>{
       const stn={t1h:20,vec:315,wsd:3,stnDateTime:'2026-09-24 08:50',rs1h:0};
-      // Optional city weather text, typed exactly as getStnHourlyAndMinRns does before returning (#2576).
-      if(fixture.stnWeather){Object.assign(stn,fixture.stnWeather);stn.weatherType=load(path.join(root,'server/controllers/controller.weather.desc.js')).makeWeatherType(stn.weather);}
+      // Optional city weather text, typed as getStnHourlyAndMinRns does before returning (#2576).
+      if(fixture.stnWeather){Object.assign(stn,fixture.stnWeather);if(stn.weather)stn.weatherType=load(path.join(root,'server/controllers/controller.weather.desc.js')).makeWeatherType(stn.weather);}
       cb(null,stn);
     }},
     'kasi.riseset.controller':{getRiseSetList:(geo,dates,cb)=>cb(null,[])},

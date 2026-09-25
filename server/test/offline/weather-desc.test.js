@@ -67,6 +67,21 @@ test('updateWeather falls back to sky/pty when the KMA text is unmapped', () => 
     const rain = {pty: 1, sky: 4, weatherType: -1};
     StnWeather.updateWeather(rain);
     assert.deepEqual([rain.weatherType, rain.weather], [65, '비']);
+
+    const unknownSky = {pty: 0, sky: 9, weatherType: -1};
+    StnWeather.updateWeather(unknownSky);
+    assert.equal(unknownSky.weatherType, -1);
+});
+
+test('updateWeather maps KMA PTY 4-7 (short-term showers, nowcast drops/flurries)', () => {
+    for (const [pty, type, text] of [[4, 25, '소나기'], [5, 19, '약한비'], [6, 29, '약진눈깨비'], [7, 33, '약한눈']]) {
+        for (const start of [-1, undefined, 0]) {
+            const cur = {pty, sky: 1, weatherType: start};
+            StnWeather.updateWeather(cur);
+            assert.deepEqual([cur.weatherType, cur.weather], [type, text], 'pty ' + pty + ' from ' + start);
+            assert.equal(Desc.getWeatherStr(cur.weatherType, ts), text);
+        }
+    }
 });
 
 test('summaries skip missing weather text instead of printing undefined', () => {
@@ -75,7 +90,7 @@ test('summaries skip missing weather text instead of printing undefined', () => 
     const units = {precipitationUnit: 'mm'};
     for (const fn of ['makeSummaryWeather', 'makeSummary']) {
         for (const current of [{t1h: 10, weatherType: -1}, {t1h: 10, weatherType: -1, weather: ''},
-            {t1h: 10, weatherType: 2}]) {
+            {t1h: 10, weatherType: 2}, {t1h: 10, weatherType: 3, weather: ''}, {t1h: 10, weatherType: -1, weather: '비'}]) {
             assert.equal(ctrl[fn](current, yesterday, units, ts), '어제보다 -3˚', fn + ' ' + JSON.stringify(current));
         }
         assert.equal(ctrl[fn]({t1h: 10, weatherType: 28, weather: '비끝'}, yesterday, units, ts),
