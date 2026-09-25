@@ -253,7 +253,10 @@ KmaScraper.prototype._convertKrToEng = function (str) {
 };
 
 /**
- *
+ * KMA city observation page ("도시별관측", 기상실황표).
+ * The legacy EUC-KR JSP now redirects to /w/weather/land/city-obs.do (UTF-8) whose table is
+ * `#weather_table` with a `#table_header2` header row; wind speed is emitted through an inline
+ * `writeWindSpeed('1.8', ...)` script. `_parseCityWeatherHtml` handles both layouts.
  * @param pubDate
  * @param callback
  */
@@ -264,168 +267,226 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
         url += '?tm='+pubDate;
     }
     log.info(url);
-    req(url, {timeout: 30000, encoding: 'binary'}, function (err, response, body) {
+    req(url, {timeout: 30000, encoding: null}, function (err, response, body) {
         if (err) {
             return callback(err);
         }
-
-        var cityWeatherList = {pubDate: '', cityList: []};
+        var cityWeatherList;
         try {
-            var strContents = new Buffer(body, 'binary');
-            var iconv = new Iconv('euc-kr', 'UTF8');
-            strContents = iconv.convert(strContents).toString();
-
-            var $ = cheerio.load(strContents);
-            cityWeatherList.pubDate = $('.table_topinfo').text();
-            cityWeatherList.pubDate = cityWeatherList.pubDate.replace('기상실황표','');
-
-            if ((new Date(cityWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
-                err = new Error('city weather is not updated yes pubDate='+cityWeatherList.pubDate);
-                log.warn(err);
-                return callback(err);
-            }
-            var propertyName = ['stnId', 'stnName'];
-
-            $('.table_develop3 thead #table_header2 th').each(function () {
-                var thName = $(this).text().replace(/\s+/, "");
-                thName = thName.replace(/(\r\n|\n|\r)/gm,"");
-                thName = thName.replace(/\s+/, "");
-                log.debug('['+thName+']');
-                switch (thName) {
-                    case '현재일기':
-                        propertyName.push('weather');
-                        break;
-                    case '시정km':
-                        propertyName.push('visibility');
-                        break;
-                    case '운량1/10':
-                        propertyName.push('cloud');
-                        break;
-                    case '중하운량':
-                        propertyName.push('heavyCloud');
-                        break;
-                    case '현재기온':
-                        propertyName.push('t1h');
-                        break;
-                    case '이슬점온도':
-                        propertyName.push('dpt');
-                        break;
-                    case '체감온도':
-                        propertyName.push('sensoryTem');
-                        break;
-                    case '불쾌지수':
-                        propertyName.push('dspls');
-                        break;
-                    case '일강수mm':
-                        propertyName.push('r1d');
-                        break;
-                    case '적설cm':
-                        propertyName.push('s1d');
-                        break;
-                    case '습도%':
-                        propertyName.push('reh');
-                        break;
-                    case '풍향':
-                        propertyName.push('wdd');
-                        break;
-                    case '풍속m/s':
-                        propertyName.push('wsd');
-                        break;
-                    case '해면기압':
-                        propertyName.push('hPa');
-                        break;
-                    default :
-                        log.error('unknown city weather property=',thName);
-                        propertyName.push('unknown');
-                        break;
-                }
-            });
-
-            $('.table_develop3 tbody tr').each(function() {
-                var cityWeather = {} ;
-
-                var i = 0;
-                $(this).children('td').filter(function() {
-                    var val = 0;
-
-                    var tdText = $(this).text().replace(/\s+/, "");
-                    tdText = tdText.replace(/(\r\n|\n|\r)/gm,"");
-                    tdText = tdText.replace(/\s+/, "");
-
-                    if ($(this).children().first().is('a')) {
-                        tdText = $(this).children().first().attr('href');
-                        var textArray = tdText.split('&');
-                        for (var j=0; j<textArray.length; j++) {
-                            if (textArray[j].indexOf('stn=') == 0) {
-                                tdText = textArray[j].slice(4);
-                                cityWeather[propertyName[i]] = tdText;
-                                i++;
-                                break;
-                            }
-                        }
-                        if (j === textArray.length) {
-                            log.error('Fail to find stnId for getting city weather!!');
-                            //skip stnId property
-                            i++;
-                        }
-
-                        tdText = $(this).children().first().text().replace(/\s+/, "");
-                        tdText = tdText.replace(/(\r\n|\n|\r)/gm,"");
-                        tdText = tdText.replace(/\s+/, "");
-                        //aws에서  station name이 백령임
-                        if (tdText === '백령도') {
-                            tdText = '백령';
-                        }
-                        cityWeather[propertyName[i]] = tdText;
-                    }
-                    else {
-                        if (propertyName[i] === 'visibility' ||
-                            propertyName[i] === 'cloud' ||
-                            propertyName[i] === 'heavyCloud' ||
-                            propertyName[i] === 'dspls' ||
-                            propertyName[i] === 'reh') {
-                            val = parseInt(tdText);
-                            if (!isNaN(val)) {
-                                cityWeather[propertyName[i]] = val;
-                            }
-                        }
-                        else if (propertyName[i] === 't1h' ||
-                            propertyName[i] === 'sensoryTem' ||
-                            propertyName[i] === 'dpt' ||
-                            propertyName[i] === 'r1d' ||
-                            propertyName[i] === 's1d' ||
-                            propertyName[i] === 'wsd' ||
-                            propertyName[i] === 'hPa') {
-                            val = parseFloat(tdText);
-                            if (!isNaN(val)) {
-                                cityWeather[propertyName[i]] = val;
-                            }
-                        }
-                        else if (propertyName[i] === 'wdd') {
-                            cityWeather[propertyName[i]] = self._convertKrToEng(tdText);
-                        }
-                        else {
-                            //weather(현재일기)가 없는 경우도 특이사항없다는 정보임
-                            //DB상에서는 city weather stn만이 weather값을 가짐
-                            cityWeather[propertyName[i]] = tdText;
-                        }
-                    }
-                    i++;
-                });
-
-                cityWeather.date = new Date(cityWeatherList.pubDate);
-
-                if (cityWeather.stnId) {
-                    //log.info(JSON.stringify(cityWeather));
-                    cityWeatherList.cityList.push(cityWeather);
-                }
-            });
-            callback(err, cityWeatherList);
+            cityWeatherList = self._parseCityWeatherHtml(self._decodeKmaHtml(body, response), pubDate);
         }
         catch(e) {
             return callback(e);
         }
+        if (cityWeatherList instanceof Error || (cityWeatherList && typeof cityWeatherList.message === 'string' && !cityWeatherList.cityList)) {
+            log.warn(cityWeatherList);
+            return callback(cityWeatherList);
+        }
+        callback(undefined, cityWeatherList);
     });
+};
+
+/**
+ * Decode a KMA HTML body honoring the declared charset. The legacy pages are EUC-KR;
+ * the 2021+ pages are UTF-8 and the EUC-KR Iconv path throws "Illegal character sequence".
+ * @param {Buffer|string} body
+ * @param {object} [response] request response (content-type header)
+ * @returns {string}
+ * @private
+ */
+KmaScraper.prototype._decodeKmaHtml = function (body, response) {
+    var buf = Buffer.isBuffer(body) ? body : new Buffer(body, 'binary');
+    var ct = (response && response.headers && response.headers['content-type']) || '';
+    var head = buf.slice(0, 2048).toString('latin1');
+    var isUtf8 = /charset\s*=\s*utf-?8/i.test(ct) || /charset\s*=\s*["']?utf-?8/i.test(head);
+    if (isUtf8) {
+        return buf.toString('utf8');
+    }
+    try {
+        return new Iconv('euc-kr', 'UTF8').convert(buf).toString();
+    }
+    catch (e) {
+        log.warn('kma html euc-kr decode failed, falling back to utf8: ' + e.message);
+        return buf.toString('utf8');
+    }
+};
+
+/**
+ * Parse the city observation table. Returns {pubDate, cityList} or an Error when the
+ * page is older than `pubDate` (caller retries).
+ * @param {string} html
+ * @param {string} [pubDate] YYYY.MM.DD.HH:MM requested time
+ * @returns {{pubDate: string, cityList: Array}|Error}
+ * @private
+ */
+KmaScraper.prototype._parseCityWeatherHtml = function (html, pubDate) {
+    var self = this;
+    var $ = cheerio.load(html);
+    var cityWeatherList = {pubDate: '', cityList: []};
+
+    var topinfo = $('.cmp-table-topinfo').text();
+    if (!topinfo) {
+        topinfo = $('.table_topinfo').text();
+    }
+    cityWeatherList.pubDate = topinfo.replace('기상실황표', '').replace(/\s+/g, '');
+    if (!cityWeatherList.pubDate) {
+        cityWeatherList.pubDate = ($('input[name=tm]').val() || '').replace(/\s+/g, '');
+    }
+    if (!/^\d{4}\.\d{1,2}\.\d{1,2}\.\d{1,2}:\d{2}$/.test(cityWeatherList.pubDate)) {
+        return new Error('Fail to get city weather pubDate=' + cityWeatherList.pubDate);
+    }
+
+    if (pubDate && (new Date(cityWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
+        return new Error('city weather is not updated yes pubDate='+cityWeatherList.pubDate);
+    }
+
+    var table = $('#weather_table');
+    if (table.length === 0) {
+        table = $('.table_develop3');
+    }
+
+    var propertyName = ['stnId', 'stnName'];
+    table.find('thead #table_header2 th').each(function (thIndex) {
+        var th = $(this).clone();
+        th.find('script').remove();
+        var thName = th.text().replace(/(\r\n|\n|\r)/gm, '').replace(/\s+/g, '').replace(/\u00a0/g, '');
+        log.debug('['+thName+']');
+        if (thIndex === 0) {
+            // station column ('지점' legacy / '이름' modern): stnId + stnName already seeded
+            return;
+        }
+        switch (thName) {
+            case '현재일기':
+                propertyName.push('weather');
+                break;
+            case '시정km':
+                propertyName.push('visibility');
+                break;
+            case '운량1/10':
+                propertyName.push('cloud');
+                break;
+            case '중하운량':
+                propertyName.push('heavyCloud');
+                break;
+            case '현재기온':
+                propertyName.push('t1h');
+                break;
+            case '이슬점온도':
+                propertyName.push('dpt');
+                break;
+            case '체감온도':
+                propertyName.push('sensoryTem');
+                break;
+            case '불쾌지수':
+                propertyName.push('dspls');
+                break;
+            case '일강수mm':
+                propertyName.push('r1d');
+                break;
+            case '적설cm':
+                propertyName.push('s1d');
+                break;
+            case '습도%':
+                propertyName.push('reh');
+                break;
+            case '풍향':
+                propertyName.push('wdd');
+                break;
+            case '풍속m/s':
+            case '풍속':
+                propertyName.push('wsd');
+                break;
+            case '해면기압':
+                propertyName.push('hPa');
+                break;
+            default :
+                log.error('unknown city weather property=',thName);
+                propertyName.push('unknown');
+                break;
+        }
+    });
+
+    if (propertyName.length <= 2) {
+        return new Error('Fail to parse city weather header');
+    }
+
+    var pubDateObj = new Date(cityWeatherList.pubDate);
+
+    table.find('tbody tr').each(function() {
+        var cityWeather = {};
+        var i = 0;
+        $(this).children('td').each(function() {
+            var td = $(this);
+            var val;
+
+            if (i === 0) {
+                var a = td.children('a').first();
+                var href = a.length ? (a.attr('href') || '') : '';
+                var m = /[?&]stn=(\d+)/.exec(href);
+                if (m) {
+                    cityWeather.stnId = m[1];
+                }
+                else {
+                    log.error('Fail to find stnId for getting city weather!!');
+                }
+                var name = (a.length ? a.text() : td.text()).replace(/(\r\n|\n|\r)/gm, '').replace(/\s+/g, '');
+                //aws에서  station name이 백령임
+                if (name === '백령도') {
+                    name = '백령';
+                }
+                cityWeather.stnName = name;
+                i = 2;
+                return;
+            }
+
+            var key = propertyName[i];
+            var tdText = td.clone().find('script').remove().end().text();
+            tdText = tdText.replace(/(\r\n|\n|\r)/gm, '').replace(/\s+/g, '').replace(/\u00a0/g, '');
+            if (key === 'wsd' && tdText === '') {
+                var script = td.find('script').html() || '';
+                var wm = /writeWindSpeed\(\s*['"]([-\d.]+)['"]/.exec(script);
+                if (wm) {
+                    tdText = wm[1];
+                }
+            }
+
+            if (key === 'visibility' || key === 'cloud' || key === 'heavyCloud' || key === 'dspls' || key === 'reh') {
+                val = parseInt(tdText);
+                if (!isNaN(val)) {
+                    cityWeather[key] = val;
+                }
+            }
+            else if (key === 't1h' || key === 'sensoryTem' || key === 'dpt' || key === 'r1d' ||
+                key === 's1d' || key === 'wsd' || key === 'hPa') {
+                val = parseFloat(tdText);
+                if (!isNaN(val)) {
+                    cityWeather[key] = val;
+                }
+            }
+            else if (key === 'wdd') {
+                if (tdText !== '') {
+                    cityWeather[key] = self._convertKrToEng(tdText);
+                }
+            }
+            else if (key === 'unknown' || key === undefined) {
+                // ignore
+            }
+            else {
+                //weather(현재일기)가 없는 경우도 특이사항없다는 정보임
+                //DB상에서는 city weather stn만이 weather값을 가짐
+                cityWeather[key] = tdText;
+            }
+            i++;
+        });
+
+        cityWeather.date = new Date(pubDateObj.getTime());
+
+        if (cityWeather.stnId) {
+            cityWeatherList.cityList.push(cityWeather);
+        }
+    });
+
+    return cityWeatherList;
 };
 
 /**
@@ -512,6 +573,33 @@ KmaScraper.prototype._recursiveConvertGeoCode = function(addr, retryCount, callb
 };
 
 /**
+ * Geocode an address through the product geocode API (the app's `/geocode/addr` endpoint).
+ * Fallback for new AWS stations when no Kakao key is configured on the gather host.
+ * Accepts only a Korean location inside the national bounds.
+ * @param {string} addr
+ * @param {function(Error|undefined, {lat:number, lon:number}=)} callback
+ * @private
+ */
+KmaScraper.prototype._convertGeoCodeByApiServer = function (addr, callback) {
+    var url = config.apiServer.url + '/geocode/addr/' + encodeURIComponent(addr);
+    req(url, {timeout: 10000, json: true}, function (err, response, body) {
+        if (err) {
+            return callback(err);
+        }
+        if (response.statusCode !== 200 || !body || !body.location) {
+            return callback(new Error('geocode api status=' + response.statusCode + ' addr=' + addr));
+        }
+        var lat = parseFloat(body.location.lat);
+        var lon = parseFloat(body.location.long);
+        if (body.country !== 'KR' || !isFinite(lat) || !isFinite(lon) ||
+            lat < 33 || lat > 39 || lon < 124 || lon > 132) {
+            return callback(new Error('geocode api invalid location addr=' + addr));
+        }
+        callback(undefined, {lat: lat, lon: lon});
+    });
+};
+
+/**
  *
  * @param stnWeatherInfo
  * @param callback
@@ -537,7 +625,7 @@ KmaScraper.prototype._saveStnInfo = function (stnWeatherInfo, callback) {
                 log.error({state: 'conflict', stnId:stnWeatherInfo.stnId});
             }
             var savedStnInfo = stnList[0];
-            if (savedStnInfo.isCityWeather !== stnWeatherInfo.isCityWeather) {
+            if (!stnWeatherInfo.keepCityWeather && savedStnInfo.isCityWeather !== stnWeatherInfo.isCityWeather) {
                savedStnInfo.isCityWeather = stnWeatherInfo.isCityWeather;
                log.info({state: 'update', kmaStnInfo: savedStnInfo.toString()});
                savedStnInfo.save(function (err) {
@@ -554,29 +642,72 @@ KmaScraper.prototype._saveStnInfo = function (stnWeatherInfo, callback) {
         else {
             var addr = stnWeatherInfo.addr.replace(/\(산간\)/g, '');
 
-            self._recursiveConvertGeoCode(addr, 30, function (err, result) {
-                if(err) {
-                    return callback(err);
+            // Geocoding tries Kakao first (needs KAKAO_SECRET_KEYS), then the product geocode
+            // API (API_SERVER/geocode/addr), which needs no provider key on the gather host.
+            // When both fail, skip the stnInfo row rather than aborting the whole hourly save:
+            // the observation row is still useful, and the station is retried at the next hourly run.
+            // convertGeocode may throw synchronously (JSON.parse of a missing key), so guard it.
+            var geoDone = false;
+            var finished = false;
+            var finish = function (err, stnId) {
+                if (finished) {
+                    return;
                 }
+                finished = true;
+                callback(err, stnId);
+            };
+            var saveNewStnInfo = function (result) {
+                try {
+                    log.debug('addr='+addr+' result'+JSON.stringify(result));
+                    var kmaStnInfo = new KmaStnInfo({
+                        stnId: stnWeatherInfo.stnId,
+                        stnName: stnWeatherInfo.stnName,
+                        addr: stnWeatherInfo.addr,
+                        isCityWeather: stnWeatherInfo.isCityWeather,
+                        altitude: stnWeatherInfo.altitude,
+                        geo: [result.lon, result.lat]
+                    });
 
-                log.debug('addr='+addr+' result'+JSON.stringify(result));
-                var kmaStnInfo = new KmaStnInfo({
-                    stnId: stnWeatherInfo.stnId,
-                    stnName: stnWeatherInfo.stnName,
-                    addr: stnWeatherInfo.addr,
-                    isCityWeather: stnWeatherInfo.isCityWeather,
-                    altitude: stnWeatherInfo.altitude,
-                    geo: [result.lon, result.lat]
-                });
-
-                log.info({state: 'new', kmaStnInfo: kmaStnInfo.toString()});
-                kmaStnInfo.save(function (err) {
-                    if (err) {
-                        return callback(err);
+                    log.info({state: 'new', kmaStnInfo: kmaStnInfo.toString()});
+                    kmaStnInfo.save(function (err) {
+                        if (err) {
+                            log.error({stnId: stnWeatherInfo.stnId, action: 'save new stnInfo', error: err.message || err});
+                            return finish();
+                        }
+                        finish(err, stnWeatherInfo.stnId);
+                    });
+                }
+                catch (e) {
+                    // Never leave the hourly batch waiting on this station.
+                    log.error({stnId: stnWeatherInfo.stnId, action: 'save new stnInfo', error: e.message});
+                    finish();
+                }
+            };
+            var geoCb = function (err, result) {
+                if (geoDone) {
+                    return;
+                }
+                geoDone = true;
+                if (!err) {
+                    return saveNewStnInfo(result);
+                }
+                self._convertGeoCodeByApiServer(addr, function (apiErr, apiResult) {
+                    if (apiErr) {
+                        log.warn('skip stnInfo (geocode unavailable) stnId=' + stnWeatherInfo.stnId +
+                            ' name=' + stnWeatherInfo.stnName + ' err=' + (err.message || err) +
+                            ' api=' + (apiErr.message || apiErr));
+                        return finish();
                     }
-                    callback(err, stnWeatherInfo.stnId);
+                    log.info('stnInfo geocoded by api server stnId=' + stnWeatherInfo.stnId);
+                    saveNewStnInfo(apiResult);
                 });
-            });
+            };
+            try {
+                self._recursiveConvertGeoCode(addr, 3, geoCb);
+            }
+            catch (e) {
+                geoCb(e);
+            }
         }
     });
 
@@ -798,9 +929,12 @@ KmaScraper.prototype._saveStnHourly = function (stnWeatherInfo, pubDate, callbac
 KmaScraper.prototype._saveKmaStnHourly2List = function (weatherList, callback) {
     var self = this;
     async.map(weatherList.stnList, function (stnWeatherInfo, mapCallback) {
+        // Without city data the rows carry no isCityWeather; do not clear it on saved stations.
+        var stnInfoInput = weatherList.cityUnavailable ?
+            Object.assign({}, stnWeatherInfo, {keepCityWeather: true}) : stnWeatherInfo;
         async.waterfall([
                 function (wfCallback) {
-                    self._saveStnInfo(stnWeatherInfo, function (err) {
+                    self._saveStnInfo(stnInfoInput, function (err) {
                         if (err) {
                             return wfCallback(err);
                         }
@@ -1080,6 +1214,14 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                     });
                 },
                 function (err, cityWeatherList) {
+                    // City data enriches the AWS rows (weather text, visibility, cloud, ...).
+                    // If it is unavailable, persist the AWS hourly observations alone rather
+                    // than aborting the whole hour (the previous code dereferenced undefined here).
+                    if (err || !cityWeatherList || !Array.isArray(cityWeatherList.cityList)) {
+                        log.error('city weather unavailable, saving AWS hourly only: ' + (err && err.message ? err.message : err));
+                        // cityUnavailable: these rows lack isCityWeather; keep the stored flags.
+                        return cb(null, {pubDate: awsWeatherList.pubDate, stnList: awsWeatherList.stnList, cityUnavailable: true});
+                    }
                     if (awsWeatherList.pubDate != cityWeatherList.pubDate) {
                         log.error("pubdate is different aws.pubDate=", awsWeatherList.pubDate,
                             " city.pubDate=", cityWeatherList.pubDate);
@@ -1089,7 +1231,7 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                     //weatherList.forEach(function (awsInfo) {
                     //   log.info(JSON.stringify(awsInfo)) ;
                     //});
-                    cb(err, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
+                    cb(null, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
                 });
         },
         function (weatherList, cb) {

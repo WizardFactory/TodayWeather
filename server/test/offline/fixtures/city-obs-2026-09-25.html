@@ -1,0 +1,2697 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <title>도시별관측 - 기상청 날씨누리</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, user-scalable=yes">
+    <meta name="format-detection" content="telephone=no">
+    
+    <link rel="shortcut icon" href="/w/logo_mark.png" />
+    <link rel="apple-touch-icon-precomposed" href="/w/logo_mark.png" />
+    <meta property="og:title" content="기상청 날씨누리">
+    <meta property="og:description" content="기상청 날씨누리">
+    <meta property="og:image" content="https://www.weather.go.kr/w/iphone-shortcut.png">
+    <meta name="google-site-verification" content="_P1iox01__-mHQsuESbKKKQF3-fHMtks8nkf7But2KY" />
+
+    <link href="/w/resources/css/styles.css?ver=202607091110" rel="stylesheet" type="text/css">
+
+    <link href="/w/resources/css-2021/slick.css?ver=202607091110" rel="stylesheet" type="text/css">
+    <link href="/w/resources/css-2021/basic.css?ver=202607091110" rel="stylesheet" type="text/css">
+    <link href="/w/resources/css-2021/common-ui.css?ver=202607091110" rel="stylesheet" type="text/css">
+    <link href="/w/resources/css-2021/common-ui-mobile.css?ver=202607091110" rel="stylesheet" type="text/css">
+    <link href="/w/resources/css-2021/common-ui-new-mobile.css?ver=202607091110" rel="stylesheet" type="text/css">
+    <link href="/w/resources/css-2021/custom.css?ver=202607091110" rel="stylesheet" type="text/css">
+    <link href="/w/resources/css-2021/component.css?ver=202607091110" rel="stylesheet" type="text/css">
+    <link href="/w/resources/css-2021/print.css?ver=202607091110" rel="stylesheet" media="print" type="text/css" />
+    <link href="/w/resources/css-2021/ie.css?ver=202607091110" rel="stylesheet" type="text/css">
+
+    <script src="/w/resources/js/lodash.min.js"></script>
+    <script src="//developers.kakao.com/sdk/js/kakao.min.js"></script>
+    <script src="/w/resources/js/clipboard.min.js"></script>
+    <script src="/w/resources/js/moment-with-locales.js"></script>
+    <script src="/w/resources/js/moment-timezone.js"></script>
+    <script src="/w/resources/js/jquery-3.5.0.min.js"></script>
+    <script src="/w/resources/js/jquery-ui.min.js"></script>
+    <script src="/w/resources/js/iscroll-probe.js"></script>
+    <script src="/w/resources/js/scrollbooster.min.js"></script>
+    <script src="/w/resources/js/slick.min.js"></script>
+    <script src="/w/resources/js/mustache.min.js"></script>
+    <script src="/w/resources/js/store.modern.min.js"></script>
+    <script src="/w/resources/js/object-assign.js"></script>
+    <script src="/w/resources/js/highcharts.js"></script>
+    <script src="/w/resources/js/fn.js?ver=202607091110"></script>
+    <script> 
+      window.appBase = "\/w\/";
+      window.vmapBaseUrl = "https:\/\/vmap.kma.go.kr";
+      window.vmapBaseParam = "HIDEMENU=Y";
+      window.wgisBaseUrl = "https:\/\/www.weather.go.kr\/wgis-nuri";
+      var hashParam = null;
+    </script>
+  
+
+	<link rel="stylesheet" href="https://www.weather.go.kr/wgis-nuri/css/ol.css?ver=202607091110" />
+	<link rel="stylesheet" href="https://www.weather.go.kr/wgis-nuri/css/kmap.css?ver=202607091110" />
+	
+	<script src="/w/resources/lib/fetch.umd-3.6.1.min.js?ver=202607091110"></script>
+	<script src="/w/resources/lib/promise-polyfill-8.min.js?ver=202607091110"></script>
+	<script src="/w/resources/lib/babel-polyfill-7.12.1.min.js?ver=202607091110"></script>
+	<script src="/w/resources/lib/abortcontroller-polyfill-1.7.1.min.js?ver=202607091110"></script>
+	<script src="/w/resources/lib/vshrt-rain-fetch.js?ver=202607091110"></script>
+	
+	
+	<script src="https://www.weather.go.kr/wgis-nuri/js/proj4/proj4.js?ver=202607091110"></script>
+	 
+	<script src="/w/resources/lib/v6.5.0-dist/ol.bb.js?ver=202607091110"></script>
+	<script src="/w/resources/js/kmap.bb.js?ver=202607091110"></script>
+	<script src="https://www.weather.go.kr/wgis-nuri/js/common/windy.js?ver=202607091110"></script>
+	<script src="/w/resources/lib/vue/vue.min.js?ver=202607091110"></script>
+	
+	<link rel="stylesheet" href="/w/resources/lib/kmap/legend.css?ver=202607091110" />
+	<script src="/w/resources/lib/kmap/dfsLegends.js?ver=202607091110"></script>
+	<script src="/w/resources/lib/kmap/legend.js?ver=202607091110"></script>
+	<script src="/w/resources/lib/kmap/kmap_overlay.js?ver=202607091110"></script>
+
+  <link rel="stylesheet" href="/w/resources/lib/tablesorter/css/theme.blue.css" />
+  <script src="/w/resources/lib/tablesorter/js/jquery.tablesorter.min.js"></script>
+  <script src="/w/resources/lib/tablesorter/widgets/jquery.tablesorter.staticrow.min.js"></script>
+  <style>
+			.over-scroll { height:1300px; overflow-y:auto; }
+			.over-scroll .table-col > thead { position:sticky; top:0px; background-color:#fff; }
+			.over-scroll .table-col { border-top:0;}
+			.over-scroll .table-col > thead tr:first-child > th { border-top:3px solid #000;}
+		</style>
+  </head>
+
+  <body class="subp">
+    <a id="skip-to-content" href="#content">본문 바로가기</a>
+    
+      <header class="mb-4 border-b border-gray-200">
+        <div class="flex items-center justify-between container mx-auto px-2 max-w-5xl">
+          <h1 id="logo-kma" class="order-2 !hidden md:!block !w-20 !h-10">
+            <span class="sr-only">기상청</span>
+          </h1>
+          <h2 class="popup-title order-1">도시별관측</h2>
+          <i id="popup-close-button" class="icon order-3 md:hidden" role="button" data-role="tab-close" aria-label="닫기 버튼">close</i>
+        </div>
+      </header>
+
+      <main class="container px-2 mx-auto space-y-4 lg:px-0 lg:space-y-8 max-w-5xl">
+        <a id="content"></a>
+        
+        <div class="flex items-center justify-between">
+            <nav aria-label="페이지 경로">
+                <ul id="breadcrumb">
+                    <li class="home">
+                        <a href="/w/index.do"><span class="sr-only">홈</span></a>
+                    </li>
+                    
+                        
+                        <li>
+                            <a href="/w/weather/land.do"><span>현재날씨</span></a>
+                        </li>
+                        
+                        
+                        
+                        
+                        <li>
+                            <a href=""><span>육상</span></a>
+                        </li>
+                    
+                </ul>
+            </nav>
+
+            <!-- <div class="flex gap-x-4">
+                <span class="share icon fill text-gray-500 !text-lg cursor-pointer">
+                    <span class="sr-only">공유하기</span>
+                </span>
+                <span class="print icon text-gray-500 !text-lg cursor-pointer">
+                    <span class="sr-only">인쇄</span>
+                </span>
+            </div> -->
+        </div>
+    
+        
+			<a id="container"></a>
+			<div class="cont-wrap">
+				<div class="cmp-city-obs">
+					<div class="cmp-stack">
+						<div class="kmap-app">
+							<div class="kmap-wrap" id="kmap"></div>
+						</div>
+					</div>
+					<form id="default-form" class="cmp-form" action="city-obs.do" method="get" autocomplete="off">
+						<input type="hidden" name="auto_man" value="m">
+						<input type="hidden" name="stn" value="0">
+						<input type="hidden" name="dtm" value="">
+						<div class="cmp-form-row">
+							<div class="cmp-form-select cmp-form-input-tripple label-on">
+								<label for="select-type">요소</label>
+								<div class="select">
+									
+									<select id="select-type" name="type">
+										<option value="t99" selected="selected">&lt;시간자료&gt;</option>
+										<option value="t99" selected="selected">종합</option>
+										<option value="t11">기온</option>
+										<option value="t12">이슬점</option>
+										<option value="t13">상대습도</option>
+										<option value="t48">일강수량</option>
+										<option value="t01">풍향</option>
+										<option value="t02">풍속</option>
+										<option value="t24">전운량</option>
+										<option value="t08">해면기압</option>
+									</select>
+								</div>
+								<input type="submit" data-form-role="submit" data-form-id="default-form" value="선택"/>
+							</div>
+							<div class="cmp-form-select cmp-form-input-tripple label-on">
+								<label for="select-reg">지역</label>
+								<div class="select"><select id="select-reg" name="reg"
+									>
+									<option value="100" selected="selected">전국</option>
+									<option value="109">서울·인천·경기도</option>
+									<option value="159">부산·울산·대구·경상도</option>
+									<option value="156">광주·전라도</option>
+									<option value="133">대전·충청도</option>
+									<option value="105">강원도</option>
+									<option value="184">제주도</option>
+								</select></div>
+								<input type="submit" data-form-role="submit" data-form-id="default-form" value="선택" aria-label="지역 선택" />
+							</div>
+							<div class="cmp-form-input cmp-form-input-tripple label-on">
+								<label for="select-tm">날짜</label>
+								<input type="text" id="select-tm" name="tm" value="2026.09.25.19:00"/>
+								<input type="submit" data-form-role="submit" data-form-id="default-form" value="선택" aria-label="날씨 선택" />
+							</div>
+						</div>
+						<div class="cmp-form-row">
+							<div class="cmp-form-buttons label-on">
+								<label>이전자료</label>
+								<a href="javascript:void(0);" class="cmp-form-button" data-form-role="button" data-action="hour-shift" data-value="-12" data-form-id="default-form">-12시간</a>
+								<a href="javascript:void(0);" class="cmp-form-button" data-form-role="button" data-action="hour-shift" data-value="-3" data-form-id="default-form">-3시간</a>
+								<a href="javascript:void(0);" class="cmp-form-button" data-form-role="button" data-action="hour-shift" data-value="-1" data-form-id="default-form">-1시간</a>
+								<a href="javascript:void(0);" class="cmp-form-button" data-form-role="button" data-action="refresh-now" data-value="0" data-form-id="default-form">현재</a>
+								<span class="cmp-form-button-wrap"></span>
+								<a href="javascript:void(0);" class="cmp-form-button" data-form-role="button" data-action="hour-shift" data-value="1" data-form-id="default-form" data-form-button-wrap="wrap">+1시간</a>
+								<a href="javascript:void(0);" class="cmp-form-button" data-form-role="button" data-action="hour-shift" data-value="3" data-form-id="default-form">+3시간</a>
+								<a href="javascript:void(0);" class="cmp-form-button" data-form-role="button" data-action="hour-shift" data-value="12" data-form-id="default-form">+12시간</a>
+							</div>
+						</div>
+					</form>
+					
+					<div class="cmp-table-topinfo"><strong>기상실황표</strong>2026.09.25.19:00</div>
+					<div class="over-scroll">
+						<table class="table-col" id="weather_table">
+							<caption>도시별 기상실황표로 지점, 날씨, 기온, 강수, 바람, 기압등을 안내한 표입니다.</caption>
+							<colgroup>
+								
+								<col style="width:calc(100% / 12)" span="12"/>
+							</colgroup>
+							<thead>
+								<tr id="table_header1" class="table_header tablesorter-ignoreRow">
+									<th scope="col">	
+										지점
+										
+									</th>
+									<th scope="col" colspan="4" id="headers-weather">날씨</th>
+									<th scope="col" colspan="3" id="headers-temp">기온(℃)</th>
+									<th scope="col" colspan="2" id="headers-rain">강수</th>
+									<th scope="col" colspan="2" id="headers-wind">바람</th>
+									<th scope="col" id="headers-press">기압(hPa)</th>
+								</tr>
+								<tr id="table_header2" class="table_header">
+									<th scope="col">
+										이름
+										
+									</th>
+									<th scope="col" headers="headers-weather">현재일기&nbsp;</th>
+									<th scope="col" headers="headers-weather">시정<br/>km</th>
+									<th scope="col" headers="headers-weather">운량<br/>1/10</th>
+									<th scope="col" headers="headers-weather">중하운량</th>
+									<th scope="col" headers="headers-temp">현재<br/>기온</th>
+									<th scope="col" headers="headers-temp">이슬점<br/>온도</th>
+									<th scope="col" headers="headers-temp"><span>체감<br/>온도</span></th>
+									<th scope="col" headers="headers-rain">일강수<br/>mm</th>
+									
+									<th scope="col" headers="headers-rain">습도<br/>%</th>
+									<th scope="col" headers="headers-wind">풍향&nbsp;</th>
+									<th scope="col" headers="headers-wind">풍속<br/><script>writeWindSpeedUnit();</script></th>
+									<th scope="col" headers="headers-press">해면<br/>기압</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=105">강릉</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>19.4</td>
+									<td>17.8</td>
+									<td>22.0</td>
+									
+									<td>2.9</td>
+									
+									<td>91</td>
+									<td>남남서</td>
+									<td><script>writeWindSpeed('1.1', false, '', '', 1);</script></td>
+									<td>1016.9</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=259">강진군</a></td>
+									<td>&nbsp;</td>
+									<td>18.9</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.6</td>
+									<td>19.5</td>
+									<td>25.4</td>
+									
+									<td>0.0</td>
+									
+									<td>78</td>
+									<td>북북동</td>
+									<td><script>writeWindSpeed('0.9', false, '', '', 1);</script></td>
+									<td>1013.3</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=201">강화</a></td>
+									<td>&nbsp;</td>
+									<td>8.7</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>18.3</td>
+									<td>18.2</td>
+									<td>21.4</td>
+									
+									<td>10.6</td>
+									
+									<td>100</td>
+									<td>북</td>
+									<td><script>writeWindSpeed('1.2', false, '', '', 1);</script></td>
+									<td>1016.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=294">거제</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.1</td>
+									<td>18.6</td>
+									<td>24.7</td>
+									
+									<td>0.0</td>
+									
+									<td>76</td>
+									<td>동</td>
+									<td><script>writeWindSpeed('1.4', false, '', '', 1);</script></td>
+									<td>1014.9</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=284">거창</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>20.6</td>
+									<td>17.0</td>
+									<td>22.5</td>
+									
+									<td>0.0</td>
+									
+									<td>80</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('1.8', false, '', '', 1);</script></td>
+									<td>1015.0</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=283">경주시</a></td>
+									<td>&nbsp;</td>
+									<td>10.9</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>20.8</td>
+									<td>19.6</td>
+									<td>23.5</td>
+									
+									<td>0.1</td>
+									
+									<td>93</td>
+									<td>북서</td>
+									<td><script>writeWindSpeed('0.6', false, '', '', 1);</script></td>
+									<td>1015.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=185">고산</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>24.5</td>
+									<td>18.8</td>
+									<td>25.8</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>71</td>
+									<td>동남동</td>
+									<td><script>writeWindSpeed('4.8', false, '', '', 1);</script></td>
+									<td>1012.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=172">고창</a></td>
+									<td>&nbsp;</td>
+									<td>18.5</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>22.0</td>
+									<td>20.6</td>
+									<td>24.7</td>
+									
+									<td>0.0</td>
+									
+									<td>92</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('2.7', false, '', '', 1);</script></td>
+									<td>1013.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=251">고창군</a></td>
+									<td>&nbsp;</td>
+									<td>18.9</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>22.6</td>
+									<td>19.5</td>
+									<td>24.7</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>83</td>
+									<td>&nbsp;</td>
+									<td><script>writeWindSpeed('2.0', false, '', '', 1);</script></td>
+									<td>1013.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=262">고흥</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.2</td>
+									<td>18.5</td>
+									<td>24.8</td>
+									
+									<td>0.0</td>
+									
+									<td>75</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.3', false, '', '', 1);</script></td>
+									<td>1013.9</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=266">광양시</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.1</td>
+									<td>17.5</td>
+									<td>24.4</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>71</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('1.0', false, '', '', 1);</script></td>
+									<td>1014.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=156">광주</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.7</td>
+									<td>18.3</td>
+									<td>25.1</td>
+									
+									<td>0.0</td>
+									
+									<td>72</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('1.4', false, '', '', 1);</script></td>
+									<td>1013.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=279">구미</a></td>
+									<td>&nbsp;</td>
+									<td>18.7</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.5</td>
+									<td>16.3</td>
+									<td>20.2</td>
+									
+									<td>4.4</td>
+									
+									<td>93</td>
+									<td>서</td>
+									<td><script>writeWindSpeed('1.8', false, '', '', 1);</script></td>
+									<td>1015.7</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=140">군산</a></td>
+									<td>&nbsp;</td>
+									<td>13.9</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>19.9</td>
+									<td>18.3</td>
+									<td>22.5</td>
+									
+									<td>1.5</td>
+									
+									<td>91</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('2.1', false, '', '', 1);</script></td>
+									<td>1015.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=238">금산</a></td>
+									<td>&nbsp;</td>
+									<td>11.1</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>19.2</td>
+									<td>19.1</td>
+									<td>22.4</td>
+									
+									<td>0.9</td>
+									
+									<td>100</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.0', false, '', '', 1);</script></td>
+									<td>1014.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=253">김해시</a></td>
+									<td>&nbsp;</td>
+									<td>19.4</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.3</td>
+									<td>18.8</td>
+									<td>24.9</td>
+									
+									<td>0.0</td>
+									
+									<td>76</td>
+									<td>동남동</td>
+									<td><script>writeWindSpeed('1.2', false, '', '', 1);</script></td>
+									<td>1015.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=247">남원</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>22.2</td>
+									<td>17.3</td>
+									<td>23.7</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>74</td>
+									<td>동</td>
+									<td><script>writeWindSpeed('0.5', false, '', '', 1);</script></td>
+									<td>1013.8</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=295">남해</a></td>
+									<td>&nbsp;</td>
+									<td>16.7</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>22.6</td>
+									<td>19.3</td>
+									<td>24.7</td>
+									
+									<td>0.0</td>
+									
+									<td>82</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.4', false, '', '', 1);</script></td>
+									<td>1014.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=100">대관령</a></td>
+									<td>&nbsp;</td>
+									<td>8.8</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>14.6</td>
+									<td>14.2</td>
+									<td>17.5</td>
+									
+									<td>9.9</td>
+									
+									<td>98</td>
+									<td>서</td>
+									<td><script>writeWindSpeed('0.7', false, '', '', 1);</script></td>
+									<td>1017.3</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=143">대구</a></td>
+									<td>약한 비 연속적</td>
+									<td>20 이상</td>
+									<td>10</td>
+									<td>4</td>
+									<td>22.1</td>
+									<td>18.6</td>
+									<td>24.1</td>
+									
+									<td>0.1</td>
+									
+									<td>81</td>
+									<td>남동</td>
+									<td><script>writeWindSpeed('1.9', false, '', '', 1);</script></td>
+									<td>1015.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=133">대전</a></td>
+									<td>보통 비 단속적</td>
+									<td>5.9</td>
+									<td>10</td>
+									<td>1</td>
+									<td>18.1</td>
+									<td>17.7</td>
+									<td>21.1</td>
+									
+									<td>2.1</td>
+									
+									<td>98</td>
+									<td>북서</td>
+									<td><script>writeWindSpeed('1.0', false, '', '', 1);</script></td>
+									<td>1015.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=98">동두천</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.7</td>
+									<td>15.5</td>
+									<td>20.0</td>
+									
+									<td>2.1</td>
+									
+									<td>87</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.2', false, '', '', 1);</script></td>
+									<td>1015.7</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=106">동해</a></td>
+									<td>&nbsp;</td>
+									<td>4.6</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.8</td>
+									<td>17.3</td>
+									<td>20.7</td>
+									
+									<td>44.8</td>
+									
+									<td>97</td>
+									<td>남</td>
+									<td><script>writeWindSpeed('1.1', false, '', '', 1);</script></td>
+									<td>1017.3</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=165">목포</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>24.4</td>
+									<td>18.1</td>
+									<td>25.5</td>
+									
+									<td>0.0</td>
+									
+									<td>68</td>
+									<td>남동</td>
+									<td><script>writeWindSpeed('3.2', false, '', '', 1);</script></td>
+									<td>1013.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=273">문경</a></td>
+									<td>&nbsp;</td>
+									<td>3.1</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>19.4</td>
+									<td>19.3</td>
+									<td>22.6</td>
+									
+									<td>3.0</td>
+									
+									<td>100</td>
+									<td>동</td>
+									<td><script>writeWindSpeed('0.6', false, '', '', 1);</script></td>
+									<td>1015.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=288">밀양</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.5</td>
+									<td>19.2</td>
+									<td>25.2</td>
+									
+									<td>0.0</td>
+									
+									<td>77</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('2.3', false, '', '', 1);</script></td>
+									<td>1013.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=102">백령도</a></td>
+									<td>&nbsp;</td>
+									<td>15.8</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>19.1</td>
+									<td>17.9</td>
+									<td>21.8</td>
+									
+									<td>0.6</td>
+									
+									<td>93</td>
+									<td>북북서</td>
+									<td><script>writeWindSpeed('1.5', false, '', '', 1);</script></td>
+									<td>1013.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=235">보령</a></td>
+									<td>&nbsp;</td>
+									<td>16.4</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>19.1</td>
+									<td>16.6</td>
+									<td>21.3</td>
+									
+									<td>1.5</td>
+									
+									<td>86</td>
+									<td>북북동</td>
+									<td><script>writeWindSpeed('3.2', false, '', '', 1);</script></td>
+									<td>1013.9</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=258">보성군</a></td>
+									<td>&nbsp;</td>
+									<td>17.3</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>22.7</td>
+									<td>20.2</td>
+									<td>25.0</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>86</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('0.6', false, '', '', 1);</script></td>
+									<td>1014.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=226">보은</a></td>
+									<td>흐림</td>
+									<td>4.5</td>
+									<td>10</td>
+									<td>9</td>
+									<td>18.7</td>
+									<td>18.6</td>
+									<td>21.8</td>
+									
+									<td>2.1</td>
+									
+									<td>100</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.2', false, '', '', 1);</script></td>
+									<td>1015.7</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=271">봉화</a></td>
+									<td>&nbsp;</td>
+									<td>9.2</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>16.7</td>
+									<td>16.2</td>
+									<td>19.6</td>
+									
+									<td>2.6</td>
+									
+									<td>97</td>
+									<td>북북동</td>
+									<td><script>writeWindSpeed('1.2', false, '', '', 1);</script></td>
+									<td>1017.3</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=159">부산</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.5</td>
+									<td>18.1</td>
+									<td>24.9</td>
+									
+									<td>0.0</td>
+									
+									<td>72</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('2.5', false, '', '', 1);</script></td>
+									<td>1013.7</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=243">부안</a></td>
+									<td>&nbsp;</td>
+									<td>15.6</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>21.0</td>
+									<td>18.9</td>
+									<td>23.4</td>
+									
+									<td>0.0</td>
+									
+									<td>88</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('2.7', false, '', '', 1);</script></td>
+									<td>1014.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=236">부여</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.9</td>
+									<td>16.5</td>
+									<td>20.5</td>
+									
+									<td>1.1</td>
+									
+									<td>92</td>
+									<td>북</td>
+									<td><script>writeWindSpeed('2.9', false, '', '', 1);</script></td>
+									<td>1015.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=104">북강릉</a></td>
+									<td>비 끝</td>
+									<td>20 이상</td>
+									<td>10</td>
+									<td>1</td>
+									<td>18.4</td>
+									<td>18.0</td>
+									<td>21.4</td>
+									
+									<td>1.9</td>
+									
+									<td>98</td>
+									<td>남남서</td>
+									<td><script>writeWindSpeed('0.7', false, '', '', 1);</script></td>
+									<td>1016.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=296">북부산</a></td>
+									<td>흐림</td>
+									<td>20 이상</td>
+									<td>10</td>
+									<td>2</td>
+									<td>23.8</td>
+									<td>19.5</td>
+									<td>25.5</td>
+									
+									<td>0.0</td>
+									
+									<td>77</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.0', false, '', '', 1);</script></td>
+									<td>1013.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=255">북창원</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>24.5</td>
+									<td>19.1</td>
+									<td>25.9</td>
+									
+									<td>0.0</td>
+									
+									<td>72</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('1.2', false, '', '', 1);</script></td>
+									<td>1013.8</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=93">북춘천</a></td>
+									<td>약한 비 단속적</td>
+									<td>16.0</td>
+									<td>10</td>
+									<td>9</td>
+									<td>17.6</td>
+									<td>17.1</td>
+									<td>20.5</td>
+									
+									<td>1.2</td>
+									
+									<td>97</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('0.8', false, '', '', 1);</script></td>
+									<td>1016.9</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=289">산청</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>21.3</td>
+									<td>18.8</td>
+									<td>23.6</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>86</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('0.5', false, '', '', 1);</script></td>
+									<td>1015.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=137">상주</a></td>
+									<td>&nbsp;</td>
+									<td>9.0</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.7</td>
+									<td>16.5</td>
+									<td>20.4</td>
+									
+									<td>5.3</td>
+									
+									<td>93</td>
+									<td>남남서</td>
+									<td><script>writeWindSpeed('1.5', false, '', '', 1);</script></td>
+									<td>1015.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=189">서귀포</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>25.4</td>
+									<td>19.2</td>
+									<td>26.6</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>69</td>
+									<td>동</td>
+									<td><script>writeWindSpeed('1.2', false, '', '', 1);</script></td>
+									<td>1013.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=129">서산</a></td>
+									<td>&nbsp;</td>
+									<td>10.2</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>18.4</td>
+									<td>17.5</td>
+									<td>21.2</td>
+									
+									<td>7.5</td>
+									
+									<td>95</td>
+									<td>북북동</td>
+									<td><script>writeWindSpeed('3.1', false, '', '', 1);</script></td>
+									<td>1015.3</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=108">서울</a></td>
+									<td>약한 비 연속적</td>
+									<td>11.1</td>
+									<td>10</td>
+									<td>8</td>
+									<td>19.3</td>
+									<td>17.0</td>
+									<td>21.6</td>
+									
+									<td>10.5</td>
+									
+									<td>87</td>
+									<td>동남동</td>
+									<td><script>writeWindSpeed('1.3', false, '', '', 1);</script></td>
+									<td>1016.0</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=181">서청주</a></td>
+									<td>&nbsp;</td>
+									<td>4.0</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>18.6</td>
+									<td>18.2</td>
+									<td>21.6</td>
+									
+									<td>2.9</td>
+									
+									<td>98</td>
+									<td>동</td>
+									<td><script>writeWindSpeed('0.6', false, '', '', 1);</script></td>
+									<td>1015.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=188">성산</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>25.1</td>
+									<td>19.4</td>
+									<td>26.4</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>71</td>
+									<td>동남동</td>
+									<td><script>writeWindSpeed('3.2', false, '', '', 1);</script></td>
+									<td>1013.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=239">세종</a></td>
+									<td>&nbsp;</td>
+									<td>4.4</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.5</td>
+									<td>17.1</td>
+									<td>20.5</td>
+									
+									<td>6.4</td>
+									
+									<td>98</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.3', false, '', '', 1);</script></td>
+									<td>1014.8</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=90">속초</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>19.4</td>
+									<td>17.1</td>
+									<td>21.7</td>
+									
+									<td>4.8</td>
+									
+									<td>87</td>
+									<td>남남동</td>
+									<td><script>writeWindSpeed('1.4', false, '', '', 1);</script></td>
+									<td>1016.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=119">수원</a></td>
+									<td>흐림</td>
+									<td>17.7</td>
+									<td>10</td>
+									<td>5</td>
+									<td>19.0</td>
+									<td>16.5</td>
+									<td>21.2</td>
+									
+									<td>5.9</td>
+									
+									<td>86</td>
+									<td>남남동</td>
+									<td><script>writeWindSpeed('1.1', false, '', '', 1);</script></td>
+									<td>1015.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=254">순창군</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>21.9</td>
+									<td>18.2</td>
+									<td>23.8</td>
+									
+									<td>0.0</td>
+									
+									<td>80</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.3', false, '', '', 1);</script></td>
+									<td>1014.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=174">순천</a></td>
+									<td>&nbsp;</td>
+									<td>15.5</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>20.5</td>
+									<td>17.8</td>
+									<td>22.7</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>85</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.0', false, '', '', 1);</script></td>
+									<td>1013.7</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=136">안동</a></td>
+									<td>약한 비 연속적</td>
+									<td>20 이상</td>
+									<td>10</td>
+									<td>10</td>
+									<td>18.7</td>
+									<td>16.8</td>
+									<td>21.1</td>
+									
+									<td>1.8</td>
+									
+									<td>89</td>
+									<td>남동</td>
+									<td><script>writeWindSpeed('0.6', false, '', '', 1);</script></td>
+									<td>1017.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=257">양산시</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.6</td>
+									<td>19.3</td>
+									<td>25.3</td>
+									
+									<td>0.0</td>
+									
+									<td>77</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('1.8', false, '', '', 1);</script></td>
+									<td>1014.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=202">양평</a></td>
+									<td>&nbsp;</td>
+									<td>18.8</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>18.8</td>
+									<td>17.8</td>
+									<td>21.6</td>
+									
+									<td>2.5</td>
+									
+									<td>94</td>
+									<td>남서</td>
+									<td><script>writeWindSpeed('0.7', false, '', '', 1);</script></td>
+									<td>1016.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=168">여수</a></td>
+									<td>약한 비 단속적</td>
+									<td>20 이상</td>
+									<td>10</td>
+									<td>3</td>
+									<td>24.2</td>
+									<td>18.6</td>
+									<td>25.5</td>
+									
+									<td>0.0</td>
+									
+									<td>71</td>
+									<td>동</td>
+									<td><script>writeWindSpeed('2.8', false, '', '', 1);</script></td>
+									<td>1014.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=252">영광군</a></td>
+									<td>&nbsp;</td>
+									<td>17.3</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>22.6</td>
+									<td>18.7</td>
+									<td>24.4</td>
+									
+									<td>0.0</td>
+									
+									<td>79</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('0.8', false, '', '', 1);</script></td>
+									<td>1013.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=277">영덕</a></td>
+									<td>&nbsp;</td>
+									<td>18.5</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.8</td>
+									<td>17.3</td>
+									<td>20.7</td>
+									
+									<td>6.9</td>
+									
+									<td>97</td>
+									<td>서북서</td>
+									<td><script>writeWindSpeed('0.7', false, '', '', 1);</script></td>
+									<td>1016.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=121">영월</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.2</td>
+									<td>15.8</td>
+									<td>19.8</td>
+									
+									<td>1.1</td>
+									
+									<td>92</td>
+									<td>동남동</td>
+									<td><script>writeWindSpeed('1.2', false, '', '', 1);</script></td>
+									<td>1017.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=272">영주</a></td>
+									<td>&nbsp;</td>
+									<td>11.9</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.1</td>
+									<td>17.0</td>
+									<td>20.2</td>
+									
+									<td>1.2</td>
+									
+									<td>100</td>
+									<td>북서</td>
+									<td><script>writeWindSpeed('1.2', false, '', '', 1);</script></td>
+									<td>1017.0</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=281">영천</a></td>
+									<td>&nbsp;</td>
+									<td>14.1</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>21.5</td>
+									<td>19.0</td>
+									<td>23.8</td>
+									
+									<td>0.0</td>
+									
+									<td>86</td>
+									<td>동</td>
+									<td><script>writeWindSpeed('0.5', false, '', '', 1);</script></td>
+									<td>1015.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=170">완도</a></td>
+									<td>흐림</td>
+									<td>20 이상</td>
+									<td>10</td>
+									<td>10</td>
+									<td>23.9</td>
+									<td>18.9</td>
+									<td>25.4</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>74</td>
+									<td>남동</td>
+									<td><script>writeWindSpeed('4.0', false, '', '', 1);</script></td>
+									<td>1013.8</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=115">울릉도</a></td>
+									<td>약한 비 연속적</td>
+									<td>20 이상</td>
+									<td>10</td>
+									<td>1</td>
+									<td>20.4</td>
+									<td>18.5</td>
+									<td>22.9</td>
+									
+									<td>0.0</td>
+									
+									<td>89</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('2.7', false, '', '', 1);</script></td>
+									<td>1016.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=152">울산</a></td>
+									<td>약한 비 단속적</td>
+									<td>19.7</td>
+									<td>10</td>
+									<td>6</td>
+									<td>21.7</td>
+									<td>18.6</td>
+									<td>23.8</td>
+									
+									<td>0.0</td>
+									
+									<td>83</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('1.9', false, '', '', 1);</script></td>
+									<td>1014.3</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=130">울진</a></td>
+									<td>&nbsp;</td>
+									<td>2.9</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>18.1</td>
+									<td>18.0</td>
+									<td>21.2</td>
+									
+									<td>27.5</td>
+									
+									<td>100</td>
+									<td>북서</td>
+									<td><script>writeWindSpeed('1.1', false, '', '', 1);</script></td>
+									<td>1016.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=114">원주</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>18.6</td>
+									<td>17.0</td>
+									<td>21.2</td>
+									
+									<td>0.8</td>
+									
+									<td>91</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('1.5', false, '', '', 1);</script></td>
+									<td>1016.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=263">의령군</a></td>
+									<td>&nbsp;</td>
+									<td>16.4</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>21.6</td>
+									<td>18.9</td>
+									<td>23.8</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>85</td>
+									<td>북</td>
+									<td><script>writeWindSpeed('0.9', false, '', '', 1);</script></td>
+									<td>1014.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=278">의성</a></td>
+									<td>&nbsp;</td>
+									<td>18.1</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>19.8</td>
+									<td>18.9</td>
+									<td>22.6</td>
+									
+									<td>1.2</td>
+									
+									<td>95</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('0.8', false, '', '', 1);</script></td>
+									<td>1015.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=203">이천</a></td>
+									<td>&nbsp;</td>
+									<td>5.1</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>19.2</td>
+									<td>19.1</td>
+									<td>22.4</td>
+									
+									<td>2.4</td>
+									
+									<td>100</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.3', false, '', '', 1);</script></td>
+									<td>1016.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=211">인제</a></td>
+									<td>&nbsp;</td>
+									<td>19.2</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>16.8</td>
+									<td>16.3</td>
+									<td>19.7</td>
+									
+									<td>6.6</td>
+									
+									<td>97</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.0', false, '', '', 1);</script></td>
+									<td>1016.8</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=112">인천</a></td>
+									<td>약한 비 연속적</td>
+									<td>7.3</td>
+									<td>10</td>
+									<td>4</td>
+									<td>19.2</td>
+									<td>18.0</td>
+									<td>21.9</td>
+									
+									<td>8.0</td>
+									
+									<td>93</td>
+									<td>남동</td>
+									<td><script>writeWindSpeed('1.5', false, '', '', 1);</script></td>
+									<td>1015.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=244">임실</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>21.4</td>
+									<td>17.7</td>
+									<td>23.3</td>
+									
+									<td>0.0</td>
+									
+									<td>80</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('0.9', false, '', '', 1);</script></td>
+									<td>1014.0</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=248">장수</a></td>
+									<td>&nbsp;</td>
+									<td>18.7</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>19.0</td>
+									<td>17.3</td>
+									<td>21.5</td>
+									
+									<td>0.0</td>
+									
+									<td>90</td>
+									<td>북</td>
+									<td><script>writeWindSpeed('1.5', false, '', '', 1);</script></td>
+									<td>1014.9</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=260">장흥</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>22.5</td>
+									<td>19.2</td>
+									<td>24.6</td>
+									
+									<td>0.0</td>
+									
+									<td>82</td>
+									<td>동남동</td>
+									<td><script>writeWindSpeed('2.0', false, '', '', 1);</script></td>
+									<td>1013.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=146">전주</a></td>
+									<td>약한 비 연속적</td>
+									<td>20 이상</td>
+									<td>10</td>
+									<td>4</td>
+									<td>19.8</td>
+									<td>17.1</td>
+									<td>22.0</td>
+									
+									<td>0.3</td>
+									
+									<td>85</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('0.8', false, '', '', 1);</script></td>
+									<td>1014.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=217">정선군</a></td>
+									<td>&nbsp;</td>
+									<td>16.7</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>16.7</td>
+									<td>15.7</td>
+									<td>19.4</td>
+									
+									<td>5.9</td>
+									
+									<td>94</td>
+									<td>서</td>
+									<td><script>writeWindSpeed('0.6', false, '', '', 1);</script></td>
+									<td>1017.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=245">정읍</a></td>
+									<td>&nbsp;</td>
+									<td>12.1</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>21.6</td>
+									<td>18.7</td>
+									<td>23.8</td>
+									
+									<td>0.0</td>
+									
+									<td>84</td>
+									<td>북</td>
+									<td><script>writeWindSpeed('2.7', false, '', '', 1);</script></td>
+									<td>1014.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=184">제주</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>26.0</td>
+									<td>18.1</td>
+									<td>26.6</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>62</td>
+									<td>동남동</td>
+									<td><script>writeWindSpeed('2.4', false, '', '', 1);</script></td>
+									<td>1012.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=221">제천</a></td>
+									<td>&nbsp;</td>
+									<td>15.3</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.1</td>
+									<td>16.7</td>
+									<td>20.1</td>
+									
+									<td>1.3</td>
+									
+									<td>98</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('0.7', false, '', '', 1);</script></td>
+									<td>1016.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=268">진도군</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>24.1</td>
+									<td>18.7</td>
+									<td>25.5</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>72</td>
+									<td>동남동</td>
+									<td><script>writeWindSpeed('2.0', false, '', '', 1);</script></td>
+									<td>1012.9</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=192">진주</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>21.3</td>
+									<td>17.7</td>
+									<td>23.2</td>
+									
+									<td>0.0</td>
+									
+									<td>80</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.1', false, '', '', 1);</script></td>
+									<td>1014.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=155">창원</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.4</td>
+									<td>19.5</td>
+									<td>25.3</td>
+									
+									<td>0.0</td>
+									
+									<td>79</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.4', false, '', '', 1);</script></td>
+									<td>1014.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=232">천안</a></td>
+									<td>&nbsp;</td>
+									<td>9.3</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.4</td>
+									<td>17.2</td>
+									<td>20.4</td>
+									
+									<td>4.4</td>
+									
+									<td>99</td>
+									<td>북</td>
+									<td><script>writeWindSpeed('0.5', false, '', '', 1);</script></td>
+									<td>1016.4</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=95">철원</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>18.0</td>
+									<td>16.8</td>
+									<td>20.7</td>
+									
+									<td>0.7</td>
+									
+									<td>93</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.2', false, '', '', 1);</script></td>
+									<td>1016.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=276">청송군</a></td>
+									<td>&nbsp;</td>
+									<td>14.7</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.7</td>
+									<td>17.6</td>
+									<td>20.8</td>
+									
+									<td>1.5</td>
+									
+									<td>100</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.2', false, '', '', 1);</script></td>
+									<td>1015.8</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=131">청주</a></td>
+									<td>약한 비 연속적</td>
+									<td>12.3</td>
+									<td>10</td>
+									<td>8</td>
+									<td>20.6</td>
+									<td>17.7</td>
+									<td>22.7</td>
+									
+									<td>2.2</td>
+									
+									<td>84</td>
+									<td>동남동</td>
+									<td><script>writeWindSpeed('0.9', false, '', '', 1);</script></td>
+									<td>1014.9</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=135">추풍령</a></td>
+									<td>&nbsp;</td>
+									<td>9.1</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>16.4</td>
+									<td>15.0</td>
+									<td>19.0</td>
+									
+									<td>2.1</td>
+									
+									<td>92</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('1.5', false, '', '', 1);</script></td>
+									<td>1015.9</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=101">춘천</a></td>
+									<td>&nbsp;</td>
+									<td>19.2</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>18.6</td>
+									<td>17.2</td>
+									<td>21.2</td>
+									
+									<td>1.3</td>
+									
+									<td>92</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('1.2', false, '', '', 1);</script></td>
+									<td>1015.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=127">충주</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.2</td>
+									<td>15.1</td>
+									<td>19.5</td>
+									
+									<td>1.0</td>
+									
+									<td>88</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('0.7', false, '', '', 1);</script></td>
+									<td>1015.2</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=216">태백</a></td>
+									<td>&nbsp;</td>
+									<td>8.7</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>14.5</td>
+									<td>14.0</td>
+									<td>17.3</td>
+									
+									<td>11.4</td>
+									
+									<td>97</td>
+									<td>북</td>
+									<td><script>writeWindSpeed('0.8', false, '', '', 1);</script></td>
+									<td>1017.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=162">통영</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.4</td>
+									<td>17.8</td>
+									<td>24.7</td>
+									
+									<td>0.0</td>
+									
+									<td>71</td>
+									<td>동남동</td>
+									<td><script>writeWindSpeed('0.7', false, '', '', 1);</script></td>
+									<td>1013.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=99">파주</a></td>
+									<td>&nbsp;</td>
+									<td>7.7</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>18.4</td>
+									<td>17.5</td>
+									<td>21.2</td>
+									
+									<td>2.2</td>
+									
+									<td>95</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.4', false, '', '', 1);</script></td>
+									<td>1016.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=138">포항</a></td>
+									<td>약한 비 연속적</td>
+									<td>20 이상</td>
+									<td>10</td>
+									<td>4</td>
+									<td>21.3</td>
+									<td>17.8</td>
+									<td>23.3</td>
+									
+									<td>0.3</td>
+									
+									<td>81</td>
+									<td>동북동</td>
+									<td><script>writeWindSpeed('2.7', false, '', '', 1);</script></td>
+									<td>1014.8</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=264">함양군</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>20.9</td>
+									<td>19.1</td>
+									<td>23.5</td>
+									
+									<td>0.0</td>
+									
+									<td>90</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.4', false, '', '', 1);</script></td>
+									<td>1014.6</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=285">합천</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>22.4</td>
+									<td>18.3</td>
+									<td>24.2</td>
+									
+									<td>&nbsp;</td>
+									
+									<td>78</td>
+									<td>북동</td>
+									<td><script>writeWindSpeed('0.9', false, '', '', 1);</script></td>
+									<td>1015.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=261">해남</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>23.7</td>
+									<td>19.4</td>
+									<td>25.4</td>
+									
+									<td>0.0</td>
+									
+									<td>77</td>
+									<td>동</td>
+									<td><script>writeWindSpeed('3.0', false, '', '', 1);</script></td>
+									<td>1013.5</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=177">홍성</a></td>
+									<td>약한 비 연속적</td>
+									<td>7.4</td>
+									<td>10</td>
+									<td>8</td>
+									<td>18.2</td>
+									<td>17.0</td>
+									<td>20.9</td>
+									
+									<td>15.4</td>
+									
+									<td>93</td>
+									<td>서북서</td>
+									<td><script>writeWindSpeed('1.3', false, '', '', 1);</script></td>
+									<td>1014.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=212">홍천</a></td>
+									<td>&nbsp;</td>
+									<td>20 이상</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>17.7</td>
+									<td>16.3</td>
+									<td>20.3</td>
+									
+									<td>4.1</td>
+									
+									<td>92</td>
+									<td>정온</td>
+									<td><script>writeWindSpeed('0.3', false, '', '', 1);</script></td>
+									<td>1017.1</td>
+								</tr>
+								<tr>
+									<td><a href="city-obs.do?tm=2026.9.25.19:00&amp;type=t99&amp;mode=0&amp;reg=100&amp;auto_man=m&amp;stn=169">흑산도</a></td>
+									<td>&nbsp;</td>
+									<td>16.9</td>
+									<td>&nbsp;</td>
+									<td>&nbsp;</td>
+									<td>22.5</td>
+									<td>21.1</td>
+									<td>25.2</td>
+									
+									<td>3.7</td>
+									
+									<td>92</td>
+									<td>남동</td>
+									<td><script>writeWindSpeed('8.6', false, '', '', 1);</script></td>
+									<td>1012.7</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					
+				</div>
+			</div>
+		
+      </main>
+    
+
+    <script src="/w/repositary/xml/wnuri_main_tab_config_dev.js?ver=202607091110"></script>
+    
+    <!-- 검색 -->
+    <div class="modal-pop search-wrap" data-pop="open-search-pop">
+        <button class="pop-close" title="읍면동(도로명) 검색 닫기"><span style="text-indent:-999999px; position:absolute;">읍면동(도로명) 검색 닫기</span></button>
+        <div class="layer-pop-wrap v2">
+            <div class="right-wrap">
+                <div class="tab-area">
+                    <div class="tab-wrap03 menu3d-btn-wrap col02">
+                        <div class="tab-btn01"><button type="button" class="on" title="선택됨">읍면동</button></div>
+                        <div class="tab-btn02"><button type="button">도로명</button></div>
+                    </div>
+                </div>
+                <div class="tab-cont-wrap03">
+                    <div class="tab-cont01 on" id="dong-config-in-search">
+                        <div class="sch-box">
+                            <div class="input-wrap">
+                                <div class="sch-btn-area">
+                                    <a href="#" class="sch-tab-01" data-role="selected-wide" tabindex="-1">시/도</a>
+                                    <a href="#" class="sch-tab-02" data-role="selected-city" tabindex="-1">구/군</a>
+                                    <a href="#" class="sch-tab-03" data-role="selected-dong" tabindex="-1">읍면동</a>
+                                </div>
+                                <!-- <a href="#" class="sch-btn txt-only" title="날씨보기" data-role="view-dong">선택</a> -->
+                            </div>
+                        </div>
+                        <div class="addr-wrap">
+                            <ul data-role="result-holder">
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">강원도</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">경기도</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">경상남도</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">경상북도</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">광주광역시</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">대구광역시</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">대전광역시</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">부산광역시</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">서울특별시</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">세종특별자치시</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">울산광역시</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">인천광역시</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">전라남도</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">전라북도</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">제주특별자치도</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">충청남도</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="radio-wrap">
+                                        <a href="#" class="addr-chk-btn">충청북도</a>
+                                    </div>
+                                </li>
+                            </ul>
+                            
+                            <p class="guide-text">
+                            	※ 지역 선택이 안 될 경우: <a href="https://www.kma.go.kr/kma/ext/noti.jsp?bid=noti&mode=view&num=6&page=1&field=&text=" target="_blank" title="새창열림"><span><strong>클릭</strong></span></a>
+                            </p>
+                            <p class="guide-text">
+							  	※ '26.7.1. 전남광주통합특별시와 인천광역시 행정구역 변경에 따라 안내드리니 참고 부탁드립니다.<br>
+							  	&nbsp;&nbsp;- (읍면동) 광주광역시내 구(광산구, 서구, 동구 등)와 전라남도내 시/군 목록은 전남광주통합특별시 내에서 확인하실 수 있습니다.<br>
+							  	&nbsp;&nbsp;- (관심지역) 기존 추가된 관심지역을 삭제하시고 새로 추가해주시기 바랍니다.
+							  </p>
+                        </div>
+                        <div class="btn-wrap">
+                            <button type="button" class="btn" data-role="view-dong">지역 선택</button>
+                        </div>
+                    </div>
+                    <div class="tab-cont02" id="load-config-in-search">
+                        <div class="sch-box">
+                            <div class="input-wrap">
+                                    <div class="sch-btn-area">
+                                        <a href="#" class="sch-tab-01" data-role="selected-wide" tabindex="-1">시/도</a>
+                                        <a href="#" class="sch-tab-02" data-role="selected-city" tabindex="-1">구/군</a>
+                                        <a href="#" class="sch-tab-03" data-role="selected-dong" tabindex="-1">도로명</a>
+                                    </div>
+                                    <!-- <a href="#" class="sch-btn txt-only" title="날씨보기" data-role="view-dong">선택</a> -->
+                                </div>
+                            </div>
+                            <!-- 도로명 검색 영역 -->
+                            <div class="sch-box02" data-role="search-box" style="display:none">
+                                <div class="input-wrap" data-role="load-search">
+                                    <input type="text" autocomplete="off" placeholder="도로명 주소 입력" title="도로명 주소 입력">
+                                    <button type="button" class="sch-btn"><span class="hid">도로명 주소 검색</span></button>
+                                </div>
+                                <div class="sch-rdo-wrap" data-role="load-ganada-search">
+                                    <button name="sch-rdo" class="ganada-sch-btn on" value="" title="선택됨">모두</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="가,나">가</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="나,다">나</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="다,라">다</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="라,마">라</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="마,바">마</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="바,사">바</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="사,아">사</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="아,자">아</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="자,차">자</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="차,카">차</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="카,타">카</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="타,파">타</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="파,하">파</button>
+                                    <button name="sch-rdo" class="ganada-sch-btn" value="하,">하</button>
+                                </div>
+                            </div>
+                            <!-- 도로명 검색 영역 end -->
+                            <div class="addr-wrap">
+                              <ul data-role="result-holder">
+                                  <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">강원도</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">경기도</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">경상남도</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">경상북도</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">광주광역시</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">대구광역시</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">대전광역시</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">부산광역시</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">서울특별시</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">세종특별자치시</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">울산광역시</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">인천광역시</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">전라남도</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">전라북도</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">제주특별자치도</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">충청남도</a>
+		                                </div>
+		                            </li>
+		                            <li>
+		                                <div class="radio-wrap">
+		                                    <a href="#" class="addr-chk-btn">충청북도</a>
+		                                </div>
+		                            </li>
+                              </ul>
+                              
+							  <p class="guide-text">
+							  	※ 지역 선택이 안 될 경우: <a href="https://www.kma.go.kr/kma/ext/noti.jsp?bid=noti&mode=view&num=6&page=1&field=&text=" target="_blank" title="새창열림"><span><strong>클릭</strong></span></a>
+							  </p>
+							  <p class="guide-text">
+							  	※ '26.7.1. 전남광주통합특별시와 인천광역시 행정구역 변경에 따라 안내드리니 참고 부탁드립니다.<br>
+							  	&nbsp;&nbsp;- (읍면동) 광주광역시내 구(광산구, 서구, 동구 등)와 전라남도내 시/군 목록은 전남광주통합특별시 내에서 확인하실 수 있습니다.<br>
+							  	&nbsp;&nbsp;- (관심지역) 기존 추가된 관심지역을 삭제하시고 새로 추가해주시기 바랍니다.
+							  </p>
+						  </div>  
+                          <div class="btn-wrap">
+                            <button type="button" class="btn" data-role="view-dong">지역 선택</button>
+                          </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+        <div class="modal-pop set-wrap" data-pop="open-set-pop">
+        <button class="pop-close" title="설정 닫기"></button>
+        <div class="layer-pop-wrap">
+            <div class="left-wrap">
+                <h2 class="title">사용자 설정</h2>
+                <div class="tab-area">
+                    <div class="tab-wrap04">
+                        <div class="tab-btn01"><button type="button" class="on" title="선택됨">화면설정</button></div>
+                        <div class="tab-btn02"><button type="button" class="" title="">도움말</button></div>
+                    </div>
+                </div>
+            </div>
+            <div class="right-wrap">
+                <div class="tab-cont-wrap04" id="weather-config">
+                    <div class="tab-cont01 on">
+                        <div class="from-wrap config-help">
+                            <ul>
+                                <li>
+                                    <label class="tit" for="data-weather-config-display-mode">화면설정</label><a href="#config-help" class="label-help">화면설정 설명보기</a>
+                                    <div class="select-wrap">
+                                        <select name="display-mode" title="화면설정" id="data-weather-config-display-mode">
+                                            <option value="default">기본화면</option>
+                                            <option value="map">지도화면</option>
+                                        </select>
+                                    </div>
+                                    <div class="cmp-help-tooltip config-help">
+                                        <div class="shadow-box">
+                                            <div class="inner">
+                                                <a href="#close" class="close-box" style="color:#000;">닫기</a>
+                                                <h5>화면설정</h5>
+                                                <p>
+                                                	<strong>기본화면</strong>: 현재날씨 및 시계열 정보가 포함된 첫화면<br>
+													<strong>지도화면</strong>: 날씨지도 화면을 첫화면으로 표출
+												</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <label class="tit" for="data-weather-config-unit-ws">풍속설정</label><a href="#config-help" class="label-help">풍속설정 설명보기</a>
+                                    <div class="select-wrap">
+                                        <select name="weather-config-unit-ws" title="풍속설정" id="data-weather-config-unit-ws">
+                                            <option value="m/s">m/s</option>
+                                            <option value="km/h">km/h</option>
+                                        </select>
+                                    </div>
+                                    <div class="cmp-help-tooltip config-help">
+                                        <div class="shadow-box">
+                                            <div class="inner">
+                                                <a href="#close" class="close-box" style="color:#000;">닫기</a>
+                                                <h5>풍속설정</h5>
+                                                <p>풍속단위를 바꿀 수 있습니다.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <label class="tit" for="data-weather-config-location-mode">지역우선설정</label><a href="#config-help" class="label-help">지역우선설정 설명보기</a>
+                                    <div class="select-wrap">
+                                        <select name="location-mode" title="지역우선설정" id="data-weather-config-location-mode">
+                                            <option value="position">현재위치 우선</option>
+                                            <option value="favorite">관심지역 우선</option>
+                                            <option value="no-location">위치 미확인</option>
+                                        </select>
+                                    </div>
+                                    <div class="cmp-help-tooltip config-help">
+                                        <div class="shadow-box">
+                                            <div class="inner">
+                                                <a href="#close" class="close-box" style="color:#000;">닫기</a>
+                                                <h5>지역우선설정</h5>
+                                                <p>
+                                                	<strong>현재위치 우선</strong>: PC브라우저의 위치정보나 스마트폰의 GPS정보로 현위치를 확인하여 표출합니다.<br>
+													<strong>관심지역 우선</strong>: 관심지역으로 추가된 지점을 우선 표출합니다.<br>
+													<strong>위치 미확인</strong>: 브라우저에서 위치확인을 요청하지 않습니다. 조회한 지역이 없을 경우 기상청 서울청사 위치를 보여줍니다.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <label class="tit" for="data-weather-config-tab-mode">탭우선설정</label><a href="#config-help" class="label-help">탭우선설정 설명보기</a>
+                                    <div class="select-wrap">
+                                        <select name="tab-mode" title="탭우선설정" id="data-weather-config-tab-mode">
+                                            <option value="weather">날씨 우선</option>
+                                            <option value="whole">전국 우선</option>
+                                        </select>
+                                    </div>
+                                    <div class="cmp-help-tooltip config-help">
+                                        <div class="shadow-box">
+                                            <div class="inner">
+                                                <a href="#close" class="close-box" style="color:#000;">닫기</a>
+                                                <h5>탭우선설정</h5>
+                                                <p>
+                                                	<strong>날씨 우선</strong>: 조회지점의 현재날씨 및 시계열 정보가 포함된 첫화면<br>
+													<strong>전국 우선</strong>: 전국지역의 날씨를 간략하게 표출
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <label class="tit" for="data-weather-config-wthema">날씨아이콘</label><a href="#config-help" class="label-help">날씨아이콘 설명보기</a>
+                                    <div class="select-wrap">
+                                        <select name="wthema" title="날씨아이콘" id="data-weather-config-wthema">
+                                            <option value="wthema-a">A타입</option>
+                                            <option value="wthema-b">B타입</option>
+                                            <option value="wthema-c">C타입</option>
+                                        </select>
+                                    </div>
+                                    <div class="cmp-help-tooltip config-help">
+                                        <div class="shadow-box">
+                                            <div class="inner">
+                                                <a href="#close" class="close-box" style="color:#000;">닫기</a>
+                                                <h5>날씨아이콘</h5>
+                                                <p>3가지 타입의 날씨아이콘을 선택할 수 있습니다.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li>
+                                	<div data-role="wthema-wrapper">
+                                    	<span class="wic DB01" title="맑음">맑음</span>
+                                    	<!-- <span class="wic DB02" title="구름조금">구름조금</span> -->
+                                    	<span class="wic DB03" title="구름많음">구름많음</span>
+                                    	<span class="wic DB04" title="흐림">흐림</span>
+                                    	<span class="wic DB05" title="비">비</span>
+                                    	<span class="wic DB06" title="비 또는 눈">비 또는 눈</span>
+                                    	<span class="wic DB07" title="눈 또는 비">눈 또는 비</span>
+                                    	<span class="wic DB08" title="눈">눈</span>
+                                    	<span class="wic DB09" title="소나기">소나기</span>
+                                    	<span class="wic DB10" title="빗방울">빗방울</span>
+                                    	<span class="wic DB11" title="빗방울/눈날림">빗방울/눈날림</span>
+                                    	<span class="wic DB12" title="눈날림">눈날림</span>
+                                    	<!--
+                                    	<span class="wic NB14" title="천둥번개">천둥번개</span>
+                                    	<span class="wic NB15" title="안개">안개</span>
+                                    	<span class="wic NB16" title="황사">황사</span>
+                                    	<span class="wic NB17" title="박무">박무</span>
+                                    	<span class="wic NB18" title="연무">연무</span>
+                                    	<span class="wic NB20" title="가끔 비, 한때 비">가끔 비, 한때 비</span>
+                                    	<span class="wic NB21" title="가끔 눈, 한때 눈">가끔 눈, 한때 눈</span>
+                                    	<span class="wic NB22" title="가끔 비 또는 눈, 한때 비 또는 눈">가끔 비 또는 눈, 한때 비 또는 눈</span>
+                                    	<span class="wic NB23" title="가끔 눈 또는 비, 한때 눈 또는 비">가끔 눈 또는 비, 한때 눈 또는 비</span>
+                                    	 -->
+                                    </div>
+                                </li>
+                                <li>
+                                    <label class="tit" for="data-weather-config-timeline-interval">시간별 예보설정</label><a href="#config-help" class="label-help">시간별 예보설정 설명보기</a>
+                                    <div class="select-wrap">
+                                        <select name="timeline-interval" title="시간별 예보설정" id="data-weather-config-timeline-interval">
+                                            <option value="3">3시간 간격</option>
+                                            <option value="1">1시간 간격</option>
+                                        </select>
+                                    </div>
+                                    <div class="cmp-help-tooltip config-help">
+                                        <div class="shadow-box">
+                                            <div class="inner">
+                                                <a href="#close" class="close-box" style="color:#000;">닫기</a>
+                                                <h5>시간별 예보설정</h5>
+                                                <p>
+                                                	<strong>3시간 간격</strong>: 시간별 예보를 3시간 간격으로 표출<br>
+													<strong>1시간 간격</strong>: 시간별 예보를 1시간 간격으로 표출
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="btn-wrap">
+                            <button type="button" class="btn" data-role="save">저장</button>
+                            <button type="button" class="btn-gray" data-role="cancel">취소</button>
+                        </div>
+                    </div>
+                    <div class="tab-cont02">
+                        <ul class="accordionsecond-wrap help-wrap">
+                            <li class="help-item">
+                                <button class="accordionsecond-tit">현재위치 확인 및 지역검색 방법</button>
+                                <div class="accordionsecond-con">
+                                	<div class="para">날씨누리 홈페이지에 방문하게 되면 이용자의 위치를 인식하여 현재 위치 기준으로 날씨와 지도 정보가 제공됩니다.</div>
+									<div class="para">현재 위치가 육상일 경우 정보 제공의 기준이 되는 현재 위치가 지도 우측에 표기되며, 현재 위치가 해상인 경우 ‘일일예보’ 페이지로 이동하여 해역 정보가 표기됩니다.</div>
+									<div class="para">특정 지역을 조회시, 첫 화면에서 지도 상단의 검색창을 통해 지역별 육상날씨를 확인할 수 있습니다.</div>
+									<div class="para">육상지역 검색은 지역의 읍면동지역 뿐만 아니라 주요건물, 유명산, 공원 등 지명을 검색창에 입력하여 조회된 검색결과를 선택하여 확인할 수 있습니다.</div>
+									<div class="para">바다날씨를 조회하고자 하는 경우, '날씨누리 바다>바다예보>일일예보' 페이지에서 해역을 선택하여 해역별 바다날씨를 확인할 수 있습니다.</div>
+                                </div>
+                            </li>
+                            <li class="help-item">
+                                <button class="accordionsecond-tit">관심지역 설정이란?</button>
+                                <div class="accordionsecond-con">
+                                	<div class="para">육상지역이나 해역을 검색하여 <strong>최대 10개소</strong>까지 내 관심지역으로 설정할 수 있습니다.</div>
+									<div class="para">현재 위치 설정 혹은 검색을 통해 조회한 육상지역 및 해역은 위치 정보 우측의 별표를 클릭하여 관심지역으로 설정할 수 있으며, 관심지역 설정 해제 또한 별표를 다시 클릭하여 해제할 수 있습니다.</div>
+									<div class="para">설정한 관심지역은 현재 위치 정보 우측의 화살표를 클릭하여 확인할 수 있으며, 사용중인 브라우저 캐시 영역에 저장되므로 캐시 삭제시 설정한 관심지역 정보가 초기화됩니다."</div>
+                                    
+                                </div>
+                            </li>
+                            <li class="help-item">
+                                <button class="accordionsecond-tit">설정기능에는 어떤 것들이 있나요?</button>
+                                <div class="accordionsecond-con">
+                                	<div class="para">첫 화면 상단의 톱니바퀴 아이콘을 클릭하여 날씨누리 홈페이지 첫 화면(기본화면, 지도화면) 및 풍속단위(m/s, km/h)를 맞춤 설정할 수 있습니다.</div>
+									<div class="para">설정 화면에서 기본화면과 지도화면 모드 중 방문 시 처음으로 보여지는 첫 화면을 설정할 수 있으며, 지도화면 모드 설정시 '날씨지도'를 전체화면으로 볼 수 있습니다.</div>
+									<div class="para">설정한 첫 화면 모드 및 풍속단위는 사용중인 브라우저 캐시 영역에 저장되므로 캐시 삭제시 설정한 관심지역 정보가 초기화됩니다.</div>
+                                </div>
+                            </li>
+                            <li class="help-item">
+                                <button class="accordionsecond-tit">첫화면 지도는 어떻게 활용할 수 있나요?</button>
+                                <div class="accordionsecond-con">
+                                	<div class="para">날씨누리 첫화면에서 육상 및 해상의 현재 기상정보, 초단기 강수예측, 특보 상황을 지도상에서 확인할 수 있습니다.</div>
+									<div class="para">표시되는 정보는 지도 좌측 상단의 버튼을 선택하여 변경할 수 있으며, 지도는 제공되는 범위안에서 확대 및 축소하여 정보를 조회할 수 있습니다.</div>
+									<div class="para">육상 및 해상의 관측정보는 지점을 클릭하여 더 상세한 내용을 확인할 수 있으며, 영상은 컨트롤 패널을 이용하여 연속된 이미지로 확인 가능합니다.</div>
+                                </div>
+                            </li>
+                            <li class="help-item">
+                                <button class="accordionsecond-tit">다양해진 시간별 예보 보기 옵션</button>
+                                <div class="accordionsecond-con">
+                                	<div class="para">동네예보 시간별 예보보기 화면을 혼합형태, 그래프형태, 표형태로 총 3종을 제공하며,  원하는 방식을 선택하여 확인할 수 있습니다.</div>
+                                </div>
+                            </li>
+                            <li class="help-item">
+                                <button class="accordionsecond-tit">날씨정보 업데이트 시각</button>
+                                <div class="accordionsecond-con">
+                                	<div class="para">날씨누리에서는 날씨정보 업데이트 시각은 정보의 종류에 따라 다르며 업데이트 시각 정보는 데이터의 근처 혹은 페이지 하단에 제공됩니다.</div>
+                                </div>
+                            </li>
+                            <li class="help-item">
+                                <button class="accordionsecond-tit">지원하는 브라우저 종류</button>
+                                <div class="accordionsecond-con">
+                                    <div class="para">날씨누리 홈페이지를 원활히 사용할 수 있는 인터넷 브라우저는 Chrome, Edge, Firefox, Safari의 최신 버전입니다.</div>
+                                </div>
+                            </li>
+                            <li class="help-item">
+                                <button class="accordionsecond-tit">저장된 관심지역 초기화</button>
+                                <div class="accordionsecond-con">
+									<div class="para">사용자 관심지역 정보는 사용중인 브라우저 캐시 영역에 저장되므로 인터넷 브라우저의 캐시/쿠키/검색기록 삭제 시 관심지역도 같이 초기화 됩니다. 브라우저에서 초기화 되지 않도록 설정하시면 관심지역 저장이 유지됩니다.</div>
+									<div class="para">익스플로러(Explorer): 브라우저 상단의 메뉴 중 <strong>도구(T) &gt; 인터넷옵션(O) &gt; 일반</strong> 에서 중앙의 <strong>검색기록 - 종료할 때 검색기록 삭제</strong> 부분을 체크 해제 후 재접속 하시기 바랍니다.<figure><img src="/w/resources/image/ex_img2.jpg" alt=""/><figcaption>익스플러러 설정 스크린샷</figcaption></figure></div>
+									<div class="para">크롬(Chrome): 브라우저 상단의 Chrome <strong>맞춤설정 및 제어 &gt; 설정(S) &gt; 고급 &gt; 인터넷 사용 기록 삭제</strong> 메뉴에서 인터넷 사용기록, 쿠키 및 기타 사이트 데이터, 캐시된 이미지 또는 파일을 삭제하였는지 확인해주시기 바랍니다.<figure><img src="/w/resources/image/ex_img3.jpg" alt=""/><figcaption>크롬(Chrome) 설정 스크린샷</figcaption></figure></div>  
+									<div class="para">파이어폭스(Firefox): 브라우저 상단에 있는 <strong>메뉴열기 &gt; 설정 &gt; 개인 정보 및 보안 &gt; 쿠키 및 사이트 데이터 &gt; Firefox를 닫을 때 쿠키와 사이트 데이터를 삭제(C)</strong>가 체크되어 있는지 확인해주시기 바랍니다. 체크가 되어 있다면 <strong>해제</strong>해 주시고 브라우저를 끈 후 다시 접속해 주십시오. 또는 개인 정보 및 보안 메뉴에서 '현재 저장된 쿠키, 사이트 데이터 및 캐시가 ** KB의 디스크를 사용하고 있습니다.'의 <strong>[데이터 지우기]</strong>를 하게되면 관심기록 설정이 초기화 됩니다.<figure><img src="/w/resources/image/ex_img4.jpg" alt=""/><figcaption>파이어폭스(Firefox) 설정 스크린샷</figcaption></figure></div> 
+									<div class="para">모바일 및 기타 웹브라우저: 브라우저 설정에서 쿠키, 캐시, 검색기록을 삭제하였는지 확인해주십시오.</div> 
+									<div class="para">설치되어 있는 프로그램 중 자동으로 캐시/쿠키/검색기록을 정리하는 프로그램(예: 알약, v3, 컴퓨터 청소/프로세스 클린 프로그램 등)이 인터넷 브라우저의 캐시와 쿠키, 검색기록을 삭제하면 관심지역 설정이 초기화 됩니다.</div>
+                                </div>
+                            </li>
+                            <li class="help-item">
+                                <button class="accordionsecond-tit">기상자료는 어디에서 확인할 수 있나요?</button>
+                                <div class="accordionsecond-con">
+                                    <div class="para">기상청에서 제공하는 다양한 기상자료는 <a href="#" target="_blank" title="새창열림">기상자료개방포털(data.kma.go.kr)</a> 홈페이지에서 확인하시기 바랍니다.</div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    	<!-- 누리집 안내지도 -->
+	<div class="modal-pop menu-wrap !bg-white" data-pop="open-menu-pop">
+        <h2 class="title">누리집 안내지도</h2>
+        <button class="pop-close" title="누리집 안내지도 닫기"><span style="text-indent:-999999px; position:absolute;">누리집 안내지도 닫기</span></button>
+        <div class="langs">
+       		<a href="https://www.kma.go.kr/neng/index.do" target="_blank" title="새창열림">ENG</a>
+       		<span>|</span>
+       		<a href="https://www.kma.go.kr/nchn/index.do" target="_blank" title="새창열림">CHN</a>
+       		<span>|</span>
+       		<a href="https://www.kma.go.kr/njpn/index.do" target="_blank" title="새창열림">JPN</a>
+       	</div>
+        <div id="snb" class="sitemap-wrap">
+			<div class="flex items-start gap-x-2">
+				<div class="basis-1/6 space-y-4">
+					<h3 class="hidden text-xl font-semibold pl-2 text-primary">특보&middot;예보</h3>
+					<nav class="rounded-lg mx-2 my-4 md:!m-0 p-4 space-y-6 bg-grayscale-5">
+						<div>
+    <h4 class="section-title">기상 특보</h4>
+    <div class="section-wrap">
+        <ul>
+            <li><a href="/w/special-report/overall.do"><span>특보(종합)</span></a></li>
+            <li><a href="/w/special-report/list.do"><span>특보 통보문</span></a></li>
+            <li><a href="/w/special-report/impact.do"><span>영향예보</span></a></li>
+            <li><a href="/w/special-report/fog.do"><span>안개정보</span></a></li>
+        </ul>
+    </div>
+</div>
+
+<div>
+    <h4 class="section-title">기상 예보</h4>
+    <div class="space-y-6">
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/w/forecast/commentary.do"><span>날씨해설&middot;옙TV</span></a></li>
+                <li><a href="/w/forecast/overall/short-term.do"><span>예보 종합</span></a></li>
+                <li><a href="/w/forecast/notice.do"><span>예보 통보문</span></a></li>
+            </ul>
+        </div>
+
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/w/forecast/ocean.do"><span>해상 예보</span></a></li>
+                <li><a href="https://marine.kma.go.kr/" target="_blank" title="새창열림"><span>해양기상기후정보<br>포털</span></a></li>
+            </ul>
+        </div>
+        
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/w/forecast/energy.do"><span>에너지기상 요약정보</span></a></li>
+            </ul>
+        </div>
+
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/w/forecast/life.do"><span>공항&middot;산악&middot;생활</span></a></li>
+                <li><a href="https://health.kdca.go.kr/healthhazard/clmtInfo/predict" target="_blank" title="새창열림"><span>온열질환예측정보</span></a></li>
+            </ul>
+        </div>
+
+        <!-- <div class="section-wrap">
+            <ul>
+                <li><a th:classappend="${currentSubCategory == 'chart'} ? 'active' : ''" href="/w/forecast/chart.do"><span>예상 일기도</span></a></li>
+            </ul>
+        </div> -->
+
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/w/forecast/guide.do"><span>이용안내</span></a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+					</nav>
+				</div>
+				<div class="basis-1/6 space-y-4">
+					<h3 class="hidden text-xl font-semibold pl-2 text-primary">현재날씨</h3>
+					<nav class="rounded-lg mx-2 my-4 md:!m-0 p-4 space-y-6 bg-grayscale-5">
+						<div>
+    <h4 class="section-title">현재날씨</h4>
+    <div class="space-y-6">
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/wnuri-map/html/map.html" target="_blank" data-target="popup"><span>날씨 지도</span></a></li>
+                <li><a href="/w/weather/land.do" class="active"><span>육상</span></a></li>
+                <li><a href="/w/weather/ocean.do"><span>해상</span></a></li>
+                <!-- <li><a th:classappend="${currentSubCategory == 'f'} ? 'active' : ''" href="#"><span>고층</span></a></li> -->
+                <li><a href="/w/weather/seasonal.do"><span>봄꽃&middot;단풍</span></a></li>
+                <li><a href="/w/weather/worldwide.do"><span>세계 기상</span></a></li>
+                <li><a href="/w/weather/overall/dashboard.do"><span>날씨 상황판</span></a></li>
+            </ul>
+        </div>
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/w/weather/radar/radar.do"><span>레이더&middot;낙뢰</span></a></li>
+                <li><a href="/w/weather/satellite.do"><span>위성</span></a></li>
+                <li><a href="https://nmsc.kma.go.kr/" target="_blank" title="새창열림"><span>국가기상위성센터</span></a></li>
+                <!-- <li><a href="https://data.kma.go.kr/" target="_blank" title="새창열림"><span>기상자료포털</span></a></li> -->
+            </ul>
+        </div>
+    </div>
+</div>
+
+					</nav>
+				</div>
+				<div class="basis-1/6 space-y-4">
+					<h3 class="hidden text-xl font-semibold pl-2 text-primary">위험기상</h3>
+					<nav class="rounded-lg mx-2 my-4 md:!m-0 p-4 space-y-6 bg-grayscale-5">
+						<div>
+    <h4 class="section-title">위험기상</h4>
+    <div class="space-y-6">
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/w/hazard/typhoon.do"><span>태풍</span></a></li>
+                <li><a href="/w/hazard/dust.do"><span>황사</span></a></li>
+                
+                <li><a href="/w/hazard/heatwave.do"><span>폭염</span></a></li>
+                <li><a href="/w/hazard/safety-guide/heavy-rain.do"><span>자연재난행동요령</span></a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+					</nav>
+				</div>
+				<div class="basis-1/6 space-y-4">
+					<h3 class="hidden text-xl font-semibold pl-2 text-primary">수치일기도</h3>
+					<nav class="rounded-lg mx-2 my-4 md:!m-0 p-4 space-y-6 bg-grayscale-5">
+						<div>
+    <h4 class="section-title">수치일기도</h4>
+    <div class="space-y-6">
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/w/image/chart/analysis.do"><span>분석일기도</span></a></li>
+                <li><a href="/w/image/chart/forecast.do"><span>예상일기도</span></a></li>
+                <li><a href="/w/image/chart/ocean/wave-model.do"><span>해상일기도</span></a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+					</nav>
+				</div>
+				<div class="basis-1/6 space-y-4">
+					<h3 class="hidden text-xl font-semibold pl-2 text-primary">기후&middot;기후변화</h3>
+					<nav class="rounded-lg mx-2 my-4 md:!m-0 p-4 space-y-6 bg-grayscale-5">
+						<div>
+    <h4 class="section-title">기후</h4>
+    <div class="section-wrap">
+        <ul>
+            <li><a href="/w/climate/prediction.do"><span>기후예측</span></a></li>
+            <li><a href="/w/climate/hydro-drought.do"><span>기상가뭄</span></a></li>
+            <li><a href="/w/climate/statistics/korea.do"><span>기후통계</span></a></li>
+            <li><a href="https://www.kma.go.kr/cpd/" target="_blank" title="새창열림"><span>기후감시&middot;예측정보</span></a></li>
+            <li><a href="https://hydro.kma.go.kr/" target="_blank" title="새창열림"><span>수문기상 가뭄정보 시스템</span></a></li>
+        </ul>
+    </div>
+</div>
+
+<div>
+    <h4 class="section-title">기후변화</h4>
+    <div class="space-y-6">
+        <div class="section-wrap">
+            <ul>
+                <li><a href="https://www.climate.go.kr/home/bbs/list.php?bname=scrap" target="_blank" title="새창열림"><span>주간기후이슈</span></a></li>
+                <li><a href="https://www.climate.go.kr" target="_blank" title="새창열림"><span>기후정보포털</span></a></li>
+                <li><a href="http://www.climate.go.kr/home/09_monitoring/index.php/main" target="_blank" title="새창열림"><span>기후변화감시정보</span></a></li>
+                <li><a href="http://climate.go.kr/atlas/" target="_blank" title="새창열림"><span>기후변화상황지도</span></a></li>
+            </ul>
+        </div>
+
+        <div class="section-wrap">
+            <ul>
+                <li><a href="https://data.kma.go.kr/" target="_blank" title="새창열림"><span>기상자료개방포털</span></a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+					</nav>
+				</div>
+				<div class="basis-1/6 space-y-4">
+					<h3 class="hidden text-xl font-semibold pl-2 text-primary">지진&middot;화산</h3>
+					<nav class="rounded-lg mx-2 my-4 md:!m-0 p-4 space-y-6 bg-grayscale-5">
+						<div>
+    <h4 class="section-title">지진&middot;화산</h4>
+    <div class="space-y-6">
+        <div class="section-wrap">
+            <ul>
+                <li><a href="https://www.weather.go.kr/pews/" target="_blank" title="새창열림"><span>실시간 감시</span></a></li>
+                <li><a href="/w/earthquake-volcano/recent.do"><span>최근 발표</span></a></li>
+                <li><a href="/w/earthquake-volcano/search/korea.do"><span>지진조회</span></a></li>
+                <li><a href="/w/earthquake-volcano/past.do"><span>과거지진</span></a></li>
+                <li><a href="https://www.kma.go.kr/kma/archive/pub.jsp?field1=grp&text1=earthquakeye" target="_blank" title="새창열림"><span>지진연보</span></a></li>
+            </ul>
+        </div>
+
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/w/earthquake-volcano/tsunami.do"><span>지진해일</span></a></li>
+                <li><a href="/w/earthquake-volcano/volcano.do"><span>화산</span></a></li>
+            </ul>
+        </div>
+
+        <div class="section-wrap">
+            <ul>
+                <li><a href="/w/earthquake-volcano/standard.do"><span>통보기준</span></a></li>
+                <li><a href="/w/earthquake-volcano/phenomenon.do"><span>진도등급 별 현상</span></a></li>
+                <li><a href="/w/earthquake-volcano/evacuation.do"><span>지진&middot;화산 대피요령</span></a></li>
+                <li><a href="https://www.kma.go.kr/eqk_pub/" target="_blank" title="새창열림"><span>지진과학관</span></a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+					</nav>
+				</div>
+			</div>
+
+		</div>
+    </div>
+
+    
+    <script src="/w/resources/js/com.ui-2021.js?ver=202607091110"></script>
+    <script src="/w/resources/js/app-2021/app-config.js?ver=202607091110"></script>
+    <script src="/w/resources/js/app-2021/dong-config.js?ver=202607091110"></script>
+    <script src="/w/resources/js/app-2021/sea-config.js?ver=202607091110"></script>
+    <script src="/w/resources/js/app-2021/app-init.js?ver=202607091110"></script>
+    <script src="/w/resources/js/kmap-wrap.js?ver=202607091110"></script>
+    <script src="/w/resources/js/global.js?ver=202607091110"></script>
+
+    
+		<script src="/w/resources/js/app-2021/app-obs-climate-land-city-obs.js?ver=202607091110"></script>
+		<script> 
+		$('#weather_table').tablesorter({
+			theme : 'blue', widgets: ['staticRow'],
+			sortInitialOrder: 'desc',
+			headers: {
+			  1: { sorter: "string", empty: "bottom" },
+			  2: { sorter: "string", empty: "bottom" },
+			  3: { sorter: "digit", string: "bottom" },
+			  4: { sorter: "digit", string: "bottom" },
+			  5: { sorter: "digit", string: "bottom" },
+			  6: { sorter: "digit", string: "bottom" },
+			  7: { sorter: "digit", string: "bottom" },
+			  8: { sorter: "digit", string: "bottom" },
+			  9: { sorter: "digit", string: "bottom" },
+			  10: { sorter: "digit", string: "bottom" },
+			  11: { sorter: "string", empty: "bottom" },
+			  12: { sorter: "digit", string: "bottom" },
+			  13: { sorter: "digit", string: "bottom" },
+			}
+		});
+		$('#weather_table2').tablesorter({
+			theme : 'blue', widgets: ['staticRow'],
+			sortInitialOrder: 'desc',
+			headers: {
+			  1: { sorter: "string", empty: "bottom" },
+			}
+		});
+		</script>
+	
+
+    <!-- START OF LOGGER TRACKING SCRIPT -->
+    <!-- 기존 logger2 로그 -->
+    <!--<script th:src="@{'/resources/js/logger2.weather.go.kr.1057.js?ver=' + ${appVersion}}"></script>
+    <noscript><img alt="로그" src="https://logger.kma.go.kr/tracker.tsp?u=7&amp;js=N" width="0" height="0" /></noscript>-->
+    
+    <script src="/w/resources/js/webstats.weather.go.kr.100000.js?ver=202607091110"></script>
+    <noscript><img alt="로그" src="http://webstats.kma.go.kr/tracker.sol.tsp?u=100000&amp;js=N" width="0" height="0" /></noscript>
+    <!-- END OF LOGGER TRACKING SCRIPT -->
+
+  	<script src="/w/resources/js/UserScriptConf.js"></script>
+  </body>
+</html>

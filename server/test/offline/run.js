@@ -11,7 +11,11 @@ var commands = [
     [path.join(__dirname, 'short-rss-daily.test.js')],
     [path.join(__dirname, 'rss-wind.test.js')],
     [path.join(__dirname, 'history-observations.test.js')],
-    [path.join(__dirname, 'history-recovery.test.js')]
+    [path.join(__dirname, 'history-recovery.test.js')],
+    [path.join(__dirname, 'test.minute.scrape.js')],
+    [path.join(__dirname, 'test.hourly.scrape.js')],
+    [path.join(__dirname, 'test.city.parser.js')],
+    [path.join(__dirname, 'test.minute.merge.js')]
 ];
 commands.forEach(function (args) {
     var result = spawnSync(process.execPath, args, {stdio: 'inherit'});

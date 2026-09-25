@@ -1114,7 +1114,12 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
                 fromTime.setHours(fromTime.getHours()-2);
                 self.findHourlies2(stn.stnId, fromTime, function (err, hourlyWeatherList) {
                     if (err)  {
-                        return pCallback(err);
+                        // Hourly rows are enrichment (weather text, cloud, visibility...). Minute
+                        // observations alone are enough for the fast current-weather update, so
+                        // continue without them instead of aborting (issue #2573 §3).
+                        log.warn('stn hourly unavailable, continuing with minute only: ' + err.message);
+                        stnWeather.hourlyMissing = true;
+                        return pCallback(null, stn);
                     }
                     var hourlyWeather = hourlyWeatherList[hourlyWeatherList.length-1];
                     for (var key in hourlyWeather) {
