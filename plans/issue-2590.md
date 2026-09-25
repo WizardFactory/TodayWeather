@@ -37,3 +37,7 @@ No migration. Revert to roll back. Blast radius: every KMA grid/mid request pass
 - What could break: a first page that previously failed now triggers a second request (only when full and `totalCount` larger).
 - Riskiest part: callback/event exactly-once across nested page callbacks.
 - Proof: exact request sequence and one-callback assertions per failure case; storage smoke; both Node versions.
+
+## Amendment 1 — 2026-09-26
+
+Correction for independent-verification F1–F3 plus master merge `5e644115` (conflict in `verification-matrix.md`: kept remapped V41 anchors and master's V42). `collectTownForecast.js` row-identity check; harness serves a missing `pageNo` as page 1; tests assert failure reasons and add the tail-repeat case; doc pointer in `gather-source-reconciliation.md`. Re-run Red on base archive, Green, Node 16/22 offline, then re-verify.

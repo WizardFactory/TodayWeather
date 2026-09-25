@@ -41,3 +41,7 @@ Callers observe only more complete results. Request count rises for multi-page p
 - `numOfRows=totalCount` second request: rejected; refetches page-1 rows and relies on an unverified maximum.
 - Larger fixed `numOfRows` (one request): deferred; unverified KMA limit (AK decision).
 - Parallel page requests: rejected; sequential keeps load bounded and matches the ASOS precedent.
+
+## Amendment 1 — 2026-09-26
+
+R3 (revised): instead of a whole-page signature, every row in a paginated product must have a unique identity (all fields except `fcstValue`/`obsrValue`, i.e. category, base/forecast date and time, grid). A repeated or shifted page therefore fails. Single-page responses are not checked (unchanged).

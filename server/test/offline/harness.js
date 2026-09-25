@@ -83,7 +83,7 @@ exports.pagedHttp = function (items, requests, mutate, echo) {
     return {get: function (url, options, callback) {
         requests.push(url);
         var query = new URL(url).searchParams;
-        var page = Number(query.get('pageNo')), size = Number(query.get('numOfRows'));
+        var page = Number(query.get('pageNo') || 1), size = Number(query.get('numOfRows'));
         var r = exports.response(items.slice((page - 1) * size, page * size));
         r.response.body[0].totalCount = [String(items.length)];
         if (echo) { r.response.body[0].pageNo = [String(page)]; r.response.body[0].numOfRows = [String(size)]; }

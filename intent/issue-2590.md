@@ -37,3 +37,7 @@ Endpoint pre-merge (AK, 2026-09-26, same contract as issue-2578). Covered: imple
 ## Consumers
 
 Spec, plan, builder, independent verifier, PR description, completion.
+
+## Amendment 1 — 2026-09-26
+
+Source: independent verification round 1 (F1, F2). AC3 (revised): "a repeated page" also covers any continuation row whose identity (all fields except `fcstValue`/`obsrValue`) already appeared on an earlier page, e.g. page 2 repeating the tail of page 1. Each AC3 failure asserts its static reason. Downstream impact: spec R3, tests, docs; earlier build/verification receipts are stale.

@@ -327,6 +327,17 @@ function queryNumber(url, name) {
     return match ? Number(match[1]) : NaN;
 }
 
+// Row identity without its value, e.g. category/date/time/grid for grid products.
+function rowKey(item) {
+    var key = {};
+    Object.keys(item).sort().forEach(function (name) {
+        if (name !== 'fcstValue' && name !== 'obsrValue') {
+            key[name] = item[name];
+        }
+    });
+    return JSON.stringify(key);
+}
+
 /*
 * Requests and validates one page. callback(reason, result, total, items, payload):
 * reason is a static diagnostic string and never includes transport/parser errors.
@@ -359,8 +370,9 @@ CollectData.prototype._requestPage = function (url, callback) {
 
 /*
 * Fetches pages 2..n sequentially after a full first page. Every page must repeat
-* totalCount, hold exactly the remaining rows up to the page size, differ from
-* earlier pages and, when echoed, match the requested pageNo/numOfRows.
+* totalCount, hold exactly the remaining rows up to the page size, add no row
+* already seen (a shifted or repeated page) and, when echoed, match the requested
+* pageNo/numOfRows.
 * callback(reason, items) with all rows in page order.
 * */
 CollectData.prototype._requestRemainingPages = function (url, total, first, callback) {
@@ -380,22 +392,32 @@ CollectData.prototype._requestRemainingPages = function (url, total, first, call
     if (!echoed(first.payload, 1)) {
         return callback('KMA incomplete or inconsistent response');
     }
-    var merged = first.items.slice();
+    var merged = [];
     var seen = {};
-    seen[JSON.stringify(first.items)] = true;
+    function addRows(items) {
+        for (var i = 0; i < items.length; i++) {
+            var key = rowKey(items[i]);
+            if (seen[key]) {
+                return false;
+            }
+            seen[key] = true;
+            merged.push(items[i]);
+        }
+        return true;
+    }
+    if (!addRows(first.items)) {
+        return callback('KMA incomplete or inconsistent response');
+    }
     (function next(pageNo) {
         var pageUrl = url.replace(/([?&]pageNo=)[0-9]+(?=&|$)/, '$1' + pageNo);
         self._requestPage(pageUrl, function (reason, result, count, items, payload) {
             if (reason) {
                 return callback(reason);
             }
-            var signature = JSON.stringify(items);
             if (count !== total || items.length !== Math.min(size, total - merged.length) ||
-                seen[signature] || !echoed(payload, pageNo)) {
+                !echoed(payload, pageNo) || !addRows(items)) {
                 return callback('KMA incomplete or inconsistent response');
             }
-            seen[signature] = true;
-            merged = merged.concat(items);
             if (merged.length === total) {
                 return callback(null, merged);
             }

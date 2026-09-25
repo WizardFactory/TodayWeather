@@ -381,8 +381,9 @@ describe('pagination before the completeness check (#2590)', function () {
         return {c: c, err: calls[0], requests: requests, failures: failures};
     }
     function withoutPage(url) { var u = new URL(url); u.searchParams.delete('pageNo'); return u.toString(); }
-    function assertFailed(r, requestCount) {
+    function assertFailed(r, requestCount, reason) {
         assert(r.err, 'failure callback must carry an error');
+        assert.strictEqual(r.err.message, reason || 'KMA incomplete or inconsistent response');
         assert.strictEqual(r.failures, 1); assert.strictEqual(r.c.recvFailed, true);
         assert.strictEqual(r.c.resultList[0].isCompleted, false);
         assert.strictEqual(r.requests.length, requestCount);
@@ -434,13 +435,15 @@ describe('pagination before the completeness check (#2590)', function () {
         }), 1);
     });
     var SMALL = 'http://offline.invalid/?serviceKey=' + KEY + '&pageNo=1&numOfRows=3';
+    // Distinct rows: the 11 hourly categories plus WAV/TMN/TMX/R06/S06 for the same hour.
+    var extra = ['WAV', 'TMN', 'TMX', 'R06', 'S06'].map(function (category) { return h.item(category, '0'); });
     it('accepts exactly five pages', function () {
-        var r = collect(h.shortItems().concat(h.shortItems().slice(0, 4)), null, {url: SMALL});
+        var r = collect(h.shortItems().concat(extra.slice(0, 4)), null, {url: SMALL});
         assert.ifError(r.err); assert.strictEqual(r.requests.length, 5);
         assert.deepStrictEqual(r.requests.map(function (u) { return new URL(u).searchParams.get('pageNo'); }), ['1', '2', '3', '4', '5']);
     });
     it('fails when the page limit would be exceeded, without continuation', function () {
-        assertFailed(collect(h.shortItems().concat(h.shortItems().slice(0, 5)), null, {url: SMALL}), 1);
+        assertFailed(collect(h.shortItems().concat(extra), null, {url: SMALL}), 1);
     });
     it('does not paginate a URL without paging parameters', function () {
         assertFailed(collect(product, null, {url: 'http://offline.invalid/?serviceKey=' + KEY + '&numOfRows=999'}), 1);
@@ -452,11 +455,15 @@ describe('pagination before the completeness check (#2590)', function () {
         'echoed pageNo mismatch': function (r) { r.response.body[0].pageNo = ['1']; },
         'echoed numOfRows mismatch': function (r) { r.response.body[0].numOfRows = ['17']; },
         'provider error': function (r) { r.response.header[0].resultCode = ['22']; },
-        'empty items': function (r) { r.response.body[0].items = [{}]; }
+        'empty items': function (r) { r.response.body[0].items = [{}]; },
+        'rows repeating the end of page 1': function (r) {
+            r.response.body[0].items[0].item = product.slice(999 - 17, 999);
+        }
     };
+    var reasons = {'provider error': 'KMA invalid or empty response', 'empty items': 'KMA invalid or empty response'};
     Object.keys(continuation).forEach(function (name) {
         it('fails the whole grid on page-2 ' + name, function () {
-            assertFailed(collect(product, function (page, r) { if (page === 2) { continuation[name](r); } }, {echo: true}), 2);
+            assertFailed(collect(product, function (page, r) { if (page === 2) { continuation[name](r); } }, {echo: true}), 2, reasons[name]);
         });
     });
     it('fails on a repeated page', function () {
@@ -466,7 +473,7 @@ describe('pagination before the completeness check (#2590)', function () {
     it('fails on echoed pageNo mismatch on page 1 when paginating', function () {
         assertFailed(collect(product, function (page, r) { r.response.body[0].pageNo = ['2']; }, {echo: true}), 1);
     });
-    function failingSecondPage(respond) {
+    function failingSecondPage(respond, reason) {
         var requests = [], logs = [], calls = [], failures = 0;
         var first = h.pagedHttp(product, requests);
         var c = h.prepare(h.collector({get: function (url, options, cb) {
@@ -478,15 +485,15 @@ describe('pagination before the completeness check (#2590)', function () {
         c.getData(0, c.DATA_TYPE.TOWN_SHORT, url, {}, function (err) { calls.push(err); });
         assert.strictEqual(calls.length, 1);
         assert(!logs.join('\n').includes(KEY)); assert(!logs.join('\n').includes('serviceKey='));
-        assertFailed({c: c, err: calls[0], requests: requests, failures: failures}, 2);
+        assertFailed({c: c, err: calls[0], requests: requests, failures: failures}, 2, reason);
     }
     it('fails on page-2 transport error without logging its URL', function () {
-        failingSecondPage(function (url, cb) { cb(new Error(url)); });
+        failingSecondPage(function (url, cb) { cb(new Error(url)); }, 'KMA transport failure');
     });
     it('fails on page-2 HTTP 500', function () {
-        failingSecondPage(function (url, cb) { cb(null, {statusCode: 500}, ''); });
+        failingSecondPage(function (url, cb) { cb(null, {statusCode: 500}, ''); }, 'KMA HTTP failure');
     });
     it('fails on page-2 malformed XML', function () {
-        failingSecondPage(function (url, cb) { cb(null, {statusCode: 200}, '<response><' + KEY); });
+        failingSecondPage(function (url, cb) { cb(null, {statusCode: 200}, '<response><' + KEY); }, 'KMA invalid or empty response');
     });
 });
