@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "TodayWeather \u2014 static web deployment",
+    "title": "TodayWeather — browser implementation",
     "locale": "en",
     "quality_profile": "showcase",
     "viewBox": [
@@ -12,10 +12,10 @@
   },
   "components": [
     {
-      "id": "browser",
+      "id": "responsive-screens",
       "type": "frontend",
-      "label": "Responsive PWA",
-      "sublabel": "app.tdywx.xyz",
+      "label": "Responsive screens",
+      "sublabel": "Weather, air, places, settings",
       "pos": [
         40,
         100
@@ -26,10 +26,10 @@
       ]
     },
     {
-      "id": "edge",
-      "type": "cloud",
-      "label": "CloudFront + TLS",
-      "sublabel": "Prepared web distribution",
+      "id": "direct-adapter",
+      "type": "frontend",
+      "label": "Direct API adapter",
+      "sublabel": "Typed browser normalization",
       "pos": [
         480,
         100
@@ -40,10 +40,10 @@
       ]
     },
     {
-      "id": "s3",
-      "type": "database",
-      "label": "Private S3 assets",
-      "sublabel": "Versioned static releases",
+      "id": "existing-api",
+      "type": "external",
+      "label": "Existing public API",
+      "sublabel": "Weather / geocode / warnings",
       "pos": [
         930,
         100
@@ -54,13 +54,13 @@
       ]
     },
     {
-      "id": "api",
-      "type": "external",
-      "label": "Existing public API",
-      "sublabel": "Weather / geocode / nation",
+      "id": "local-storage",
+      "type": "database",
+      "label": "Local browser state",
+      "sublabel": "Favorites + validated snapshots",
       "pos": [
         40,
-        370
+        400
       ],
       "size": [
         230,
@@ -68,13 +68,13 @@
       ]
     },
     {
-      "id": "storage",
-      "type": "database",
-      "label": "Browser storage",
-      "sublabel": "Preferences + offline cache",
+      "id": "shell-worker",
+      "type": "frontend",
+      "label": "Service worker",
+      "sublabel": "Versioned app-shell cache",
       "pos": [
         480,
-        370
+        400
       ],
       "size": [
         230,
@@ -84,32 +84,31 @@
   ],
   "connections": [
     {
-      "id": "shell",
-      "from": "browser",
-      "to": "edge",
-      "label": "HTTPS app shell",
+      "id": "query-weather",
+      "from": "responsive-screens",
+      "to": "direct-adapter",
+      "label": "Typed queries",
       "variant": "emphasis"
     },
     {
-      "id": "origin",
-      "from": "edge",
-      "to": "s3",
-      "label": "OAC signed GET",
+      "id": "fetch-public",
+      "from": "direct-adapter",
+      "to": "existing-api",
+      "label": "HTTPS + CORS",
       "variant": "emphasis"
     },
     {
-      "id": "reads",
-      "from": "browser",
-      "to": "api",
-      "label": "Direct v000903 GET",
-      "labelDy": 60,
-      "variant": "emphasis"
+      "id": "persist-state",
+      "from": "responsive-screens",
+      "to": "local-storage",
+      "label": "Local read / write",
+      "labelDy": 60
     },
     {
-      "id": "local",
-      "from": "browser",
-      "to": "storage",
-      "label": "Local persistence",
+      "id": "register-worker",
+      "from": "responsive-screens",
+      "to": "shell-worker",
+      "label": "Register / update",
       "fromSide": "bottom",
       "toSide": "left"
     }
@@ -117,26 +116,26 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Browser normalization",
+      "title": "Weather data",
       "items": [
-        "KMA 1h + 3h forecasts; periods retained",
-        "Air summary separate from observations"
+        "KMA 1h + 3h forecasts retain accumulation periods",
+        "Provider air summaries remain separate from observations"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Prepared AWS hosting",
+      "title": "Offline behavior",
       "items": [
-        "Private bucket, OAC, TLS and cache policy",
-        "Dry-run upload tool retains prior assets"
+        "IndexedDB snapshots expire and are validated on read",
+        "Worker updates preserve edits on first activation"
       ]
     },
     {
       "dot": "amber",
-      "title": "Explicit boundaries",
+      "title": "Runtime scope",
       "items": [
-        "Web Push unavailable in static mode",
-        "Cloud resources and DNS not deployed"
+        "Live API failures never switch to demo fixtures",
+        "Node is used only for builds and local tools"
       ]
     }
   ]

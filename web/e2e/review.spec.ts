@@ -1,10 +1,8 @@
 import { test, expect } from "./fixtures";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import rawWeather from "../../web-api/fixtures/weather.json" with { type: "json" };
-test("first worker claim preserves an edited notification form", async ({
-  page,
-}) => {
+import rawWeather from "../src/demo/weather.json" with { type: "json" };
+test("first worker claim preserves typed location search", async ({ page }) => {
   await page.addInitScript(() => {
     const original = navigator.serviceWorker.register.bind(
       navigator.serviceWorker,
@@ -16,8 +14,8 @@ test("first worker claim preserves an edited notification form", async ({
       });
   });
   page.on("dialog", (dialog) => dialog.accept());
-  await page.goto("/notifications/seoul");
-  await page.getByRole("button", { name: "일", exact: true }).click();
+  await page.goto("/locations");
+  await page.getByRole("textbox", { name: "지역 검색" }).fill("부산");
   await page.evaluate(async () => {
     const claimed = new Promise<void>((resolve) => {
       navigator.serviceWorker.addEventListener(
@@ -29,9 +27,9 @@ test("first worker claim preserves an edited notification form", async ({
     (window as any).startWorker();
     await claimed;
   });
-  await expect(
-    page.getByRole("button", { name: "일", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("textbox", { name: "지역 검색" })).toHaveValue(
+    "부산",
+  );
 });
 test("missing rain hides the period while explicit snow remains visible", async ({
   page,
@@ -56,13 +54,17 @@ test("missing rain hides the period while explicit snow remains visible", async 
     page.getByRole("heading", { name: "강수·눈 예보" }),
   ).toBeVisible();
 });
-test("static favorites delete without notification or capability network calls", async ({
+test("static favorites delete offline without a server", async ({
   page,
+  context,
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "서울", exact: true }).first().click();
   await expect(page.locator(".temperature")).toBeVisible();
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   await page.goto("/locations");
+  await context.setOffline(true);
   await page.getByRole("button", { name: "서울 삭제", exact: true }).click();
   await expect(page.locator(".location-card")).toHaveCount(0);
   await page.reload();

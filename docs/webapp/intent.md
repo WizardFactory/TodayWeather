@@ -1,6 +1,6 @@
 # Webapp design intent
 
-Date: 2026-09-24. Status: proposed design, ready for implementation scoping; not implemented or deployed.
+Original planning date: 2026-09-24. Current status: static client implemented; deployment method deferred. This document preserves the original planning acceptance and records the subsequent static-only decision.
 Source baseline: `87b8855f308611a07897cd3a39c45fefb3088d77`.
 
 AK requested planning/design for a deployable web client alongside iOS and Android, and explicitly prioritized matching existing mobile features as closely as possible.
@@ -9,7 +9,11 @@ The target is a responsive TodayWeather web application, installable as a PWA, p
 
 Feature parity means equivalent user outcomes and meteorological meaning. It does not mean copying known defects, mobile pixel layouts onto desktop, or claiming browsers provide native widgets, silent background location or store receipt access.
 
-## Acceptance of this planning task
+## Current decisions
+
+The web client calls the existing public API directly and is prepared for private S3 + CloudFront at `app.tdywx.xyz`. The requested bucket is `tdywx-app-141248341265-apne2`. The unused Node API workspace, proxy mode, Docker recipe and web reminder service are removed. Browser notifications display unavailable/mobile-app guidance; full mobile parity remains open. No additional API server is required for the current client. Deployment method selection is deferred.
+
+## Acceptance of the original planning task
 
 | ID | Observable deliverable |
 | --- | --- |
@@ -21,7 +25,7 @@ Feature parity means equivalent user outcomes and meteorological meaning. It doe
 
 ## Authority and boundaries
 
-This task ends with local planning documents and design artifacts. Application implementation, production probes, cloud changes, purchases, provider onboarding, domain registration, commits, push and PR publication are outside this task. These are not required to finish the design.
+The original planning task ended with local documents and diagrams. Later user instructions authorized implementation and PR work; that original planning boundary does not prohibit those subsequent tasks. It does not grant production deployment, purchases or provider onboarding. Current implementation and release boundaries are maintained in [implementation status](implementation.md).
 
 The eventual web rollout must preserve mobile API versions, native builds, collectors, database versions and existing push consumers. Plan new web components separately; any legacy server correction must carry its own regression evidence and compatibility review.
 
@@ -29,7 +33,7 @@ The eventual web rollout must preserve mobile API versions, native builds, colle
 
 - Confirm one combined TodayWeather web product versus separate TodayWeather/TodayAir brands.
 - Choose free/ad-supported launch versus paid web entitlements and native-purchase linking; do not silently remove commercial features from a parity promise.
-- Select production domain, budget/operations owner and target date after the API/provider spike.
+- Select the deployment method, budget/operations owner and target date for `app.tdywx.xyz`.
 - Decide whether native widget/watch alternatives are acceptable and whether login/device synchronization is desired beyond the existing local-storage experience.
 
 Recommended defaults are developed in the [specification](specification.md); the [implementation plan](implementation-plan.md) identifies when each decision is needed. An internal read-only milestone is not the final feature-parity release.

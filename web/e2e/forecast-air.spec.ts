@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures";
 import fixture from "../../docs/rewrite/examples/client-kma-response.json" with { type: "json" };
-import dsf from "../../web-api/fixtures/weather.json" with { type: "json" };
+import dsf from "../src/demo/weather.json" with { type: "json" };
 test("KMA mixed intervals and unverified air summary survive static offline reload", async ({
   page,
   context,
@@ -38,11 +38,9 @@ test("KMA mixed intervals and unverified air summary survive static offline relo
   await expect(rows).toHaveCount(5);
   await expect(rows.nth(1)).toContainText("01");
   await expect(rows.nth(1).locator("td").nth(1)).toHaveText("11");
-  const rain = page
-    .locator("section.panel")
-    .filter({
-      has: page.getByRole("heading", { name: "강수·눈 예보", exact: true }),
-    });
+  const rain = page.locator("section.panel").filter({
+    has: page.getByRole("heading", { name: "강수·눈 예보", exact: true }),
+  });
   await expect(rain).toContainText("0 mm · 1시간");
   await expect(rain).toContainText("6 mm · 3시간");
   const note = page.getByRole("note");

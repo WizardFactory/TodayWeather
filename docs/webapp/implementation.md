@@ -1,6 +1,6 @@
 # Webapp implementation and release status
 
-Issue: [WizardFactory/TodayWeather#2558](https://github.com/WizardFactory/TodayWeather/issues/2558). Implemented locally on 2026-09-24. The full mobile parity release remains open; this is an executable integration candidate, not a deployed or production-approved release.
+Issue: [WizardFactory/TodayWeather#2558](https://github.com/WizardFactory/TodayWeather/issues/2558). Initial implementation prepared on 2026-09-24; updated to a static-only client. The full mobile parity release remains open; this is an executable integration candidate, not a deployed or production-approved release.
 
 ## Run locally
 
@@ -15,8 +15,8 @@ Open http://127.0.0.1:5173. The default is **direct/live**: the browser calls th
 
 ```sh
 # Build only the static client. No API process is needed.
-npm run build:web
-npm run preview:static
+npm run build
+npm start
 ```
 
 Open http://127.0.0.1:4174 to exercise the production bundle, service worker and snapshots. Live failures never substitute demo responses; a previously received snapshot may be shown with a disconnected/stale notice for up to 24 hours. The preview is a local file server, not a production requirement.
@@ -33,7 +33,7 @@ npm run test:e2e
 
 Browser tests own a static-only server on port 4174 and intercept external API reads with synthetic raw provider fixtures. They assert that the browser makes no `/api/` requests; they do not prove live provider freshness. Set `PLAYWRIGHT_EXECUTABLE_PATH` for a preinstalled browser. CI also publishes `web-static-dist` for review.
 
-The optional older Node adapter remains available with `VITE_WEB_TRANSPORT=proxy npm run dev`. For a proxy production build use `VITE_WEB_TRANSPORT=proxy npm run build`, then configure the API and `npm start` as in the [legacy runbook](../../infra/web/README.md). This mode is not accepted by the static uploader. `WEB_API_MODE` controls that optional server; `VITE_WEB_MODE` controls a direct client at build time.
+Only direct transport is supported. Omit `VITE_WEB_TRANSPORT` or set it to `direct`; `proxy` is rejected. `VITE_WEB_MODE` selects `live` or labelled `demo` data at build time. The former web API workspace, notification sender and Docker deployment recipe have been removed. Node runs build/development/preview tools only.
 
 ## Implemented surface
 
@@ -46,7 +46,7 @@ The optional older Node adapter remains available with `VITE_WEB_TRANSPORT=proxy
 | Nationwide weather/air | Schematic regional map and complete numeric lists; weather/pollutant tabs | Repair stale upstream nationwide air feed before release |
 | Special weather reports | Structured bulletins, publication text and official links | Provider freshness and active-warning device checks |
 | Preferences | Six unit families, four themes, startup/refresh, local backup/import | Photo theme uses a sky color treatment, not native photo packs |
-| Notifications | Static mode explicitly reports unavailable; optional proxy mode retains owned subscriptions and weekday/time reminders | Static Web Push needs separate backend scheduling; conditional rain/snow/air rules and device verification remain open |
+| Notifications | Unavailable guidance recommending the existing mobile app, with a return-to-weather link; no permission request, subscription or scheduling form | Web Push and conditional rain/snow/air rules remain a separately scoped future feature |
 | Sharing/install/help | Catalog-only share links, install help, privacy/storage/provider guidance, PWA manifest and icons | HTTPS/iOS home-screen install and all supported device checks |
 | Store purchases/widgets | Honest web availability/price and native-feature guidance | No native purchase migration, billing, native widgets/watch or background tracking |
 
@@ -54,15 +54,15 @@ Four settings subpages are consolidated into `/settings`; weather/air overview i
 
 ## Architecture and contracts
 
-See [implemented architecture](../architecture/web-client.md) and its [interactive diagram](diagrams/webapp-implementation.html). The earlier [technical design](technical-design.md) and [proposed cloud diagram](diagrams/webapp-architecture.html) remain a future scaling design. The default runtime is a static PWA on private S3/CloudFront with direct calls to the existing public API. It requires no new persistent Node service or API Lambda.
+See [implemented architecture](../architecture/web-client.md) and its [interactive diagram](diagrams/webapp-implementation.html). The [technical design](technical-design.md) and [hosting diagram](diagrams/webapp-architecture.html) use the same static-only boundary. The default runtime is a static PWA on private S3/CloudFront with direct calls to the existing public API. It requires no new persistent Node service or API Lambda.
 
 - `packages/weather-core/`: source-aware, unit-aware normalization without mutating provider payloads. KMA `-50` temperatures and negative nonnegative metrics become unavailable; valid zero remains zero. Old daily rows are excluded by source date.
 - `web/`: React/TypeScript UI, versioned local preferences, IndexedDB snapshots keyed by location and all units, query cancellation and explicit stale/demo notices. Coordinates are rounded to three decimals; sharing uses a curated public city ID rather than exact current location.
 - `web/src/direct-api.ts`: fixed public API operations, bounded reads, JSON/schema checks, canonical physical units and local normalization; local catalog and capabilities.
-- `web-api/`: optional legacy proxy and owned notification routes, excluded from the static runtime.
-- `infra/web/static/`: private S3/OAC, CloudFront/TLS/DNS template, route function and guarded dry-run uploader. `infra/web/` also retains the explicitly selected legacy Docker/Caddy recipe. No resources or DNS have been created.
+- `web/src/demo/`: browser-owned synthetic raw fixtures, selected only by explicit demo mode.
+- `infra/web/static/`: private S3/OAC, CloudFront/TLS/DNS template, route function and guarded dry-run uploader. Deployment method selection and AWS changes remain separate operator tasks.
 
-The service worker caches the shell and hashed assets, not API responses. Activation is user initiated for updates; the previous shell cache is retained for existing tabs. Browser snapshots are separate and expire after 24 hours. Maps and warnings require a network connection. Losing browser storage loses local favorites and snapshots; anonymous notification ownership expires after 90 days without activity and is not an account-recovery mechanism.
+The service worker caches the shell and hashed assets, not API responses. Activation is user initiated for updates; the previous shell cache is retained for existing tabs. Browser snapshots are separate and expire after 24 hours. Maps and warnings require a network connection. Losing browser storage loses local favorites and snapshots.
 
 ## Evidence from live reads
 

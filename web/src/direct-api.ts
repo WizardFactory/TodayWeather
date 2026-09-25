@@ -164,9 +164,7 @@ export async function directApi(
     const raw =
       mode === "demo"
         ? {
-            ...structuredClone(
-              (await import("../../web-api/fixtures/weather.json")).default,
-            ),
+            ...structuredClone((await import("./demo/weather.json")).default),
             name: p.name,
             address: p.address,
             country: p.country,
@@ -180,14 +178,14 @@ export async function directApi(
       throw new Error("예제 자료는 한국 대기환경 기준만 제공합니다.");
     const raw =
       mode === "demo"
-        ? (await import("../../web-api/fixtures/nation.json")).default
+        ? (await import("./demo/nation.json")).default
         : await upstream("/v000903/nation/KR?" + query);
     return normalizeNation(raw, { units, mode });
   }
   if (route === "/warnings/KR") {
     const raw =
       mode === "demo"
-        ? (await import("../../web-api/fixtures/warnings.json")).default
+        ? (await import("./demo/warnings.json")).default
         : await upstream("/v000903/kma/special");
     return {
       mode,

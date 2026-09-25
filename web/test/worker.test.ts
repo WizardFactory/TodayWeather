@@ -43,7 +43,7 @@ it("uses the current shell but retains previous hashed assets", async () => {
   expect(await request("/manifest.webmanifest")).toBe("new manifest");
   expect(await request("/assets/old.js")).toBe("old tab chunk");
 });
-it("keeps server and worker navigation routes compatible", () => {
+it("keeps CloudFront and worker navigation routes compatible", () => {
   const regex = (file: string) =>
     new RegExp(
       readFileSync(file, "utf8")
@@ -52,7 +52,7 @@ it("keeps server and worker navigation routes compatible", () => {
         .trim()
         .slice(1, -7),
     );
-  const server = regex("web-api/src/server.ts"),
+  const server = regex("infra/web/static/route-request.js"),
     worker = regex("web/public/sw.js");
   for (const path of [
     "/",

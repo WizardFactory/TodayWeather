@@ -47,14 +47,16 @@ describe("native and development boundaries", () => {
       process: {
         env: {
           WEB_ORIGIN: "http://127.0.0.1:5182",
-          VITE_WEB_TRANSPORT: "proxy",
+          VITE_WEB_TRANSPORT: "direct",
+          WEB_API_MODE: "demo",
         },
         on() {},
       },
       setTimeout,
     });
-    expect(calls[0].options.env.WEB_ORIGIN).toBe("http://127.0.0.1:5182");
-    expect(calls[1].args).toEqual(
+    expect(calls).toHaveLength(1);
+    expect(calls[0].options.env.VITE_WEB_MODE).toBe("live");
+    expect(calls[0].args).toEqual(
       expect.arrayContaining([
         "--host",
         "127.0.0.1",

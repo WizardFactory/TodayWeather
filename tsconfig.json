@@ -15,10 +15,8 @@
   },
   "include": [
     "web/src",
-    "web-api/src",
     "packages/weather-core/src",
     "packages/weather-core/test",
-    "web-api/test",
     "web/test",
     "web/vite.config.ts",
     "playwright.config.ts",

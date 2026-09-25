@@ -4,8 +4,7 @@
   "private": true,
   "workspaces": [
     "packages/weather-core",
-    "web",
-    "web-api"
+    "web"
   ],
   "engines": {
     "node": ">=22.12.0"
@@ -14,9 +13,9 @@
     "dev": "node scripts/web-dev.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "npm run build -w @todayweather/web && npm run build -w @todayweather/api",
+    "build": "npm run build -w @todayweather/web",
     "test:e2e": "playwright test",
-    "start": "node web-api/dist/server.js",
+    "start": "node scripts/web-static-preview.mjs",
     "build:web": "npm run build -w @todayweather/web",
     "preview:static": "node scripts/web-static-preview.mjs",
     "deploy:static": "node scripts/deploy-web-static.mjs"

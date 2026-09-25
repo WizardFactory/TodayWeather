@@ -58,7 +58,5 @@ visual-check.*
 
 # Web workspaces and local browser verification
 /web/dist/
-/web-api/dist/
 /test-results/
 /playwright-report/
-/infra/web/.env

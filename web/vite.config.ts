@@ -31,9 +31,6 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "127.0.0.1",
       port: 5173,
-      ...(settings.transport === "proxy"
-        ? { proxy: { "/api": "http://127.0.0.1:4174" } }
-        : {}),
     },
     build: { target: "es2022", sourcemap: false },
   };

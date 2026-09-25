@@ -12,21 +12,27 @@ From the repository root with Node >=22.12:
 npm ci --ignore-scripts
 npm run typecheck
 npm test
-npm run build:web
-npm run preview:static
+npm run build
+npm start
 ```
 
 Open http://127.0.0.1:4174. The preview serves only `web/dist` with the same navigation function and CSP as the template; it has no API routes. Weather, geocode, nationwide data and warnings go directly to `https://todayweather.wizardfactory.net`. The browser's Network panel should show no `/api/web/v1` requests. Build output has hashed/compressed-on-delivery assets, an installable service worker and a `release.json` deployment descriptor. Never upload repository files, `.env` files or `node_modules`.
 
 | Build variable | Default and purpose |
 | --- | --- |
-| `VITE_WEB_TRANSPORT` | `direct`; `proxy` explicitly opts into the older Node adapter |
+| `VITE_WEB_TRANSPORT` | `direct` only; omit or set to `direct`, other values are rejected |
 | `VITE_WEB_MODE` | `live`; `demo` explicitly enables labelled synthetic fixtures |
 | `VITE_WEATHER_API_ORIGIN` | `https://todayweather.wizardfactory.net`; HTTPS origin only |
 
 Vite reads these at **build time**. The uploader accepts only live/direct artifacts for the existing API and `app.tdywx.xyz`. Custom API origins require corresponding CORS/CSP and deployment-policy changes. No secret belongs in a `VITE_*` variable. Demo example: `VITE_WEB_MODE=demo npm run dev`. A live failure shows an error or an explicitly labelled previous snapshot; it never selects demo data automatically.
 
-## Certificate, hosting and DNS
+## Existing resources and deployment decision
+
+The requested target bucket is `tdywx-app-141248341265-apne2` in `ap-northeast-2`, with the app at `app.tdywx.xyz`. The operator must verify its current CloudFront distribution, OAC, bucket policy, certificate, DNS and viewer-request function before upload. Do not run the new-resource template against this bucket expecting it to adopt existing resources; it creates a separate bucket/distribution. Preserve the existing public API distribution and native routes.
+
+Deployment method selection is deferred. This runbook documents the prepared manual uploader and hosting requirements; it does not establish a `workflow_dispatch` production pipeline or claim that existing AWS resources have been freshly inspected. Use current AWS read-only evidence to choose between reusing the requested resources and a reviewed new stack.
+
+## Certificate, hosting and DNS for a new stack
 
 These are operator-executed AWS changes; review the CloudFormation change set and cost before executing them. Use an appropriate named AWS profile. The template creates a new distribution and bucket; it does not modify the existing API distribution.
 
@@ -54,7 +60,7 @@ aws cloudformation describe-stacks --region ap-northeast-2 \
 
 ## Upload a release
 
-Set `WEB_BUCKET` and `WEB_DISTRIBUTION` from this stack's `BucketName` and `DistributionId` outputs. The following prints the proposed commands and does not call AWS:
+For a new stack, set `WEB_BUCKET` and `WEB_DISTRIBUTION` from its `BucketName` and `DistributionId` outputs. For the existing target, set `WEB_BUCKET=tdywx-app-141248341265-apne2` and resolve `WEB_DISTRIBUTION` from verified current CloudFront configuration for `app.tdywx.xyz`. The following prints the proposed commands and does not call AWS:
 
 ```sh
 npm run deploy:static -- --bucket "$WEB_BUCKET" --distribution "$WEB_DISTRIBUTION"

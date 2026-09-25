@@ -1,6 +1,6 @@
 import { type Place, type Units, type Weather } from "@todayweather/core";
 import { readSnapshot, weatherKey, writeSnapshot } from "./state";
-import { directApi, readJson } from "./direct-api";
+import { directApi } from "./direct-api";
 import { readTransportSettings } from "./transport-config";
 const settings = readTransportSettings(import.meta.env);
 export async function api<T>(
@@ -21,19 +21,7 @@ export async function api<T>(
   );
   try {
     if (controller.signal.aborted) throw controller.signal.reason;
-    if (settings.transport === "direct")
-      return (await directApi(path, settings, controller.signal, init)) as T;
-    return (await readJson(
-      await fetch("/api/web/v1" + path, {
-        ...init,
-        signal: controller.signal,
-        headers: {
-          Accept: "application/json",
-          ...(init?.body ? { "Content-Type": "application/json" } : {}),
-          ...init?.headers,
-        },
-      }),
-    )) as T;
+    return (await directApi(path, settings, controller.signal, init)) as T;
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener("abort", abort);
@@ -41,24 +29,6 @@ export async function api<T>(
 }
 export const unitQuery = (units: Units) =>
   new URLSearchParams(units).toString();
-/** Establish server capability and finish rule cleanup before the caller removes local state. */
-export async function deletePlaceRules(placeId: string): Promise<void> {
-  const caps = await api<Capabilities>("/capabilities");
-  if (caps.notifications?.enabled === false) return;
-  if (caps.notifications?.enabled !== true)
-    throw new Error("알림 상태를 확인하지 못했습니다.");
-  const session = await api<{ csrf: string }>("/installations", undefined, {
-    method: "POST",
-  });
-  const rules = await api<{ items: { id: string; place: Place }[] }>(
-    "/notification-rules",
-  );
-  for (const rule of rules.items.filter((rule) => rule.place.id === placeId))
-    await api("/notification-rules/" + encodeURIComponent(rule.id), undefined, {
-      method: "DELETE",
-      headers: { "X-CSRF-Token": session.csrf },
-    });
-}
 export async function fetchWeather(
   place: Place,
   units: Units,
@@ -90,7 +60,7 @@ export async function fetchWeather(
 }
 export type Capabilities = {
   mode: "live" | "demo";
-  notifications: { enabled: boolean; reason?: string; publicKey?: string };
+  notifications: { enabled: false; reason: string };
   billing: { enabled: boolean };
   search: { catalog: boolean; geocode: boolean };
 };

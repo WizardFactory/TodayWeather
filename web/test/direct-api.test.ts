@@ -110,37 +110,13 @@ describe("static browser API transport", () => {
     expect((await api<Weather>("/weather?lat=37.567&lon=126.978")).mode).toBe(
       "demo",
     );
+    expect(await api<any>("/nation/KR")).toBeDefined();
+    expect(await api<any>("/warnings/KR")).toBeDefined();
     expect(fetcher).not.toHaveBeenCalled();
   });
-  it("keeps proxy mode explicitly opt-in", async () => {
+  it("rejects removed proxy mode instead of silently changing transport", async () => {
     vi.stubEnv("VITE_WEB_TRANSPORT", "proxy");
-    fetcher.mockResolvedValue(json({ mode: "demo" }));
-    const { api } = await import("../src/api");
-    await api("/capabilities");
-    expect(fetcher.mock.calls[0][0]).toBe("/api/web/v1/capabilities");
+    await expect(import("../src/api")).rejects.toThrow("direct");
+    expect(fetcher).not.toHaveBeenCalled();
   });
-});
-
-it("optional proxy deletion still waits for capabilities and successful cleanup", async () => {
-  vi.stubEnv("VITE_WEB_TRANSPORT", "proxy");
-  const { deletePlaceRules } = await import("../src/api");
-  fetcher.mockRejectedValueOnce(new Error("capability failed"));
-  await expect(deletePlaceRules("seoul")).rejects.toThrow();
-  fetcher
-    .mockResolvedValueOnce(json({ notifications: { enabled: true } }))
-    .mockResolvedValueOnce(json({ csrf: "synthetic" }))
-    .mockResolvedValueOnce(
-      json({ items: [{ id: "r", place: { id: "seoul" } }] }),
-    )
-    .mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: { message: "delete failed" } }), {
-        status: 503,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-  await expect(deletePlaceRules("seoul")).rejects.toThrow("delete failed");
-  expect(fetcher.mock.calls.at(-1)?.[1].method).toBe("DELETE");
-  expect(fetcher.mock.calls.at(-1)?.[1].headers["X-CSRF-Token"]).toBe(
-    "synthetic",
-  );
 });

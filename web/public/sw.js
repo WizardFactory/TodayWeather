@@ -71,38 +71,3 @@ self.addEventListener("fetch", (event) => {
       })(),
     );
 });
-self.addEventListener("push", (event) => {
-  event.waitUntil(
-    (async () => {
-      let data = {};
-      try {
-        data = event.data?.json() ?? {};
-      } catch {}
-      const url =
-        typeof data.url === "string" &&
-        /^\/(weather|air|locations)(\/|$)/.test(data.url) &&
-        !data.url.startsWith("//")
-          ? data.url
-          : "/locations";
-      await self.registration.showNotification(
-        typeof data.title === "string" ? data.title : "오늘날씨",
-        {
-          body:
-            typeof data.body === "string" ? data.body : "날씨를 확인해 주세요.",
-          icon: "/icons/icon-192.png",
-          tag: typeof data.tag === "string" ? data.tag : undefined,
-          data: { url, place: data.place },
-        },
-      );
-    })(),
-  );
-});
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const url = new URL(
-    event.notification.data?.url ?? "/locations",
-    self.location.origin,
-  );
-  if (url.origin !== self.location.origin) return;
-  event.waitUntil(self.clients.openWindow(url.href));
-});

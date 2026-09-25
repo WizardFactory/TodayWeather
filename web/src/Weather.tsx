@@ -160,7 +160,7 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
           </button>
           <Link
             className="icon-button"
-            aria-label="지역 알림 설정"
+            aria-label="지역 알림 안내"
             to={"/notifications/" + place.id}
           >
             <Bell size={18} />

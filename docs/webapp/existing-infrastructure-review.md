@@ -1,16 +1,16 @@
 # Deploying the webapp without an additional Node service
 
-Reviewed 2026-09-24 at repository revision `525a4a27`. Scope: feasibility and operating evidence, not implementation or deployment. AK requested reuse of current infrastructure without an additional Node server. The existing mobile feature-parity objective remains in force.
+Reviewed 2026-09-24 at repository revision `525a4a27`. Scope: feasibility and operating evidence, not implementation or deployment. AK requested reuse of current infrastructure without an additional Node server. The existing mobile feature-parity objective remains in force. **Historical review:** references to the adapter below describe revision `525a4a27`, not the current runtime. The direct browser migration is now implemented, the Node workspace is removed, and deployment method selection is deferred. See [current implementation](implementation.md).
 
 Raw inspection and probe receipts are retained locally under ignored `reports/sdlc/`; the dated findings and limits below are the maintained summary.
 
 ## Conclusion
 
-An additional persistent Node server is **not an architectural requirement** for weather, air, geocoding, nation, warnings, favorites, settings or the PWA shell. The current web client depends on the new `/api/web/v1` adapter, but almost all of its read-side work can move into the browser while retaining the existing public API.
+An additional persistent Node server is **not an architectural requirement** for weather, air, geocoding, nation, warnings, favorites, settings or the PWA shell. At the reviewed revision the web client depended on `/api/web/v1`; the review found that its read-side work could move into the browser while retaining the existing public API. That migration has since been implemented.
 
-Recommended direction: serve `web/dist` from private S3 behind CloudFront on a dedicated web origin, and call the existing `https://todayweather.wizardfactory.net` versioned API from the browser. Keep shared normalization in `packages/weather-core`. This requires a client transport refactor and static deployment configuration; uploading the present bundle alone still leaves unresolved `/api/web/v1` calls.
+Recommended direction: serve `web/dist` from private S3 behind CloudFront on a dedicated web origin, and call the existing `https://todayweather.wizardfactory.net` versioned API from the browser. Keep shared normalization in `packages/weather-core`. This originally required a client transport refactor and static hosting configuration. The current bundle no longer depends on `/api/web/v1`; see the [static runbook](../../infra/web/static/README.md).
 
-Web Push needs server-side subscription ownership, persistent rules, scheduling and sending. It can be provided without a new always-running Node service, but cannot be completed by uploading static files. Prefer a separately deployed, supported-runtime Lambda notification API/sender, durable shared storage and EventBridge Scheduler; extending a verified existing push worker is an alternative with more legacy operational coupling. Neither is currently implemented. A temporary read-only milestone does not complete the agreed parity release.
+Web Push needs server-side subscription ownership, persistent rules, scheduling and sending. It can be provided without a new always-running Node service, but cannot be completed by uploading static files. The review considered a supported-runtime Lambda service with durable storage/scheduling or reuse of a verified existing push worker. Neither is implemented or selected by the current static-only decision; browser notifications remain unavailable. A temporary read-only milestone does not complete the agreed parity release.
 
 ## Evidence and freshness
 
@@ -29,9 +29,9 @@ The HTTP observations establish transport feasibility, not source freshness, acc
 
 ## Exact read-operation mapping
 
-Existing public base: `https://todayweather.wizardfactory.net`. Every path below is a GET unless explicitly browser-local. Source of current wrapper behavior: [web-api/src/api.ts](../../web-api/src/api.ts).
+Existing public base: `https://todayweather.wizardfactory.net`. Every path below is a GET unless explicitly browser-local. The left column records the removed wrapper at the reviewed revision. Current executable mapping: [direct browser transport](../../web/src/direct-api.ts).
 
-| Current web adapter operation | Replacement | Browser responsibility |
+| Historical adapter operation | Current direct/local equivalent | Browser responsibility |
 | --- | --- | --- |
 | `/weather?lat=&lon=&...units` | `/weather/v000903/coord/{lat},{lon}` | Request canonical physical units and requested air standard; call `normalizeWeather` with selected display units |
 | `/locations/reverse?lat=&lon=` | `/geocode/v000903/coord/{lat},{lon}` | Validate returned coordinates and convert `location.long` to `Place.lon`; retain stable place identity |
@@ -46,38 +46,37 @@ Existing public base: `https://todayweather.wizardfactory.net`. Every path below
 
 Use versioned coordinate weather. The existing weather-address Lambda is unsupported; `/geocode/.../addr` and `/weather/.../addr` are different operations. The checked Lambda bundles still report `nodejs6.10`; browser reuse does not require modifying or upgrading them, but any later Lambda code change needs a separate supported-runtime migration assessment.
 
-## Required browser and hosting changes
+## Migration findings and continuing hosting requirements
 
-1. Introduce a browser transport module behind [web/src/api.ts](../../web/src/api.ts). Move `canonicalQuery`, geocode-to-Place adaptation, catalog search and response normalization out of the HTTP wrapper. Keep UI-facing normalized shapes so existing [App](../../web/src/App.tsx), weather views, snapshots and query identities remain compatible.
+1. The migration introduced a browser transport module behind [web/src/api.ts](../../web/src/api.ts). Canonical queries, geocode-to-Place adaptation, catalog search and normalization now execute in the browser. Keep UI-facing normalized shapes so existing [App](../../web/src/App.tsx), weather views, snapshots and query identities remain compatible.
 2. Preserve canonical C/m/s/hPa/km/mm requests, `airForecastSource=kaq` and the selected `airUnit`. Convert physical units exactly once in `weather-core`. Preserve null/sentinel, precipitation-period and snowfall handling, source timestamps and air-standard checks.
 3. Direct public GETs use `credentials: 'omit'`, simple `Accept` and `Accept-Language: ko` headers, cancellation and bounded timeout/response size. Do not add JSON request Content-Type, installation cookies or CSRF headers to read-only GETs. Wildcard CORS supports credential-free reads, not credentialed access. `no-cors` would produce an unreadable opaque response and is not a fix. [MDN CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS).
 4. Preserve schema validation, HTML/error detection, offline fallback and recoverable errors. Historical Lambda error responses omit CORS, so a failed cross-origin request may be visible only as a generic network failure. Do not promise an exact HTTP error code for every failure. Record the initial address-probe failure without inventing its cause.
-5. Move CSP and other static response headers from [web-api/src/server.ts](../../web-api/src/server.ts) into the static hosting configuration. Allow only the explicit HTTPS API host in `connect-src`; the current `connect-src 'self'` would block direct API fetch. No provider/VAPID private key or session secret belongs in a browser build.
+5. Static hosting configuration now owns CSP and other response headers previously served by the removed Node wrapper. Allow only the explicit HTTPS API host in `connect-src`; the former self-only policy would block direct API fetch. No provider/VAPID private key or session secret belongs in a browser build.
 6. Publish the entire production `web/dist` with the generated service worker. Use a private regular S3 bucket with CloudFront OAC and HTTPS; preserve hashed asset retention and revalidate HTML, manifest and worker. Rewrite only known HTML navigation routes to `index.html`, retaining missing-asset and unknown-path errors. [AWS OAC](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html).
 7. Keep the existing API distribution's default EC2 origin and versioned routes intact. Replacing its default behavior with S3 could break nation, warnings and other legacy routes. A new static-only distribution avoids this change. A carefully isolated behavior on an existing distribution is possible, but needs an explicit complete route inventory; it is not a simple default-origin swap.
-8. The new BFF's process-local rate limiter and generated request IDs disappear on the direct path. Browser validation cannot enforce server-side quotas. Assess existing gateway/edge rate controls and traffic before launch; client refresh/deduplication remains useful but is not abuse protection. Direct calls still traverse the existing API caches; the BFF never bypassed those caches either.
+8. The removed wrapper's process-local rate limiter and generated request IDs do not exist on the direct path. Browser validation cannot enforce server-side quotas. Assess existing gateway/edge rate controls and traffic before launch; client refresh/deduplication remains useful but is not abuse protection. Direct calls still traverse the existing API caches; the BFF never bypassed those caches either.
 
 For a same-origin alternative, configure distinct web-CDN API behaviors to existing API Gateway and service origins, preserving versioned paths or explicitly rewriting a web-only prefix. Normalize responses in the browser. This still avoids a Node BFF, but requires more routing/cache policy work. A URI rewrite alone does not reselect the cache behavior or origin, so the correct origin must already be selected. Avoid collision between the app's `/weather/:id/hourly` navigation and the legacy `/weather/v000903/coord/...` API prefix. [AWS edge-function restrictions](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/edge-function-restrictions-all.html).
 
-## Web Push without an additional persistent Node service
+## Historical Web Push alternatives — not selected or implemented
 
-The current web sender stores rules in an atomic local file, uses an in-process timer and assumes one process. It cannot be moved unchanged into Lambda or the ten-process legacy PM2 cluster. [Current web deployment limitations](../../infra/web/README.md).
+The removed prototype used an atomic local file and in-process timer with a one-process assumption. It was not portable unchanged to Lambda or the ten-process legacy PM2 cluster. The current client contains no sender; [current hosting scope](../../infra/web/README.md) is static-only. The following alternatives are retained as historical research, not deployment instructions.
 
 | Option | Additional always-running Node service | Required changes and judgment |
 | --- | --- | --- |
 | Static web + existing read API | None | Good read-side deployment target; push is incomplete until an implementation below exists |
 | Extend the existing push system | None, if the existing worker is verified and reused | Separate web installation/subscription records, ownership/authentication, Web Push sender, rule lifecycle and stable IDs; inspect deployed runtime and actual worker before selection. Native token endpoints are not a drop-in interface |
 | Serverless web notification API/sender | None | Supported-runtime Lambda, shared durable store, EventBridge Scheduler and bounded delivery/retry/deduplication; optional queue as needed. Recommended for isolation from old native workers, with new managed resources and implementation work |
-| Keep the current file-backed web service | One | Already prepared, but does not satisfy this requested operating direction |
 
-Preserve installation ownership, rule revisions, subscriptions, endpoint validation, delivery deduplication, deletion semantics and secrets. Keep a notification API on the web origin via an uncached `/api/web/v1/...` behavior, or explicitly redesign authentication: the current `SameSite=Strict` cookie must not be assumed to work unchanged on an unrelated notification origin. Forward the required cookies, Origin and CSRF headers for that behavior only. Generic reminders and weather-condition alerts remain separate implementation scopes.
+Any future notification design must independently establish installation ownership, rule revisions, subscriptions, endpoint validation, deduplication, deletion and secrets. Do not assume the removed cookie/session model or routes still exist. Generic reminders and weather-condition alerts remain separate future scopes.
 
 Service workers receive pushes but do not provide a reliable scheduled sender while the app is closed. Web Push subscriptions carry endpoints/encryption material rather than the current native `fcmToken`/`registrationId` contract. [MDN Push API](https://developer.mozilla.org/en-US/docs/Web/API/Push_API). AWS documents scheduled Lambda invocation through EventBridge Scheduler; choosing that mechanism does not establish an implemented rule store or device delivery. [AWS scheduling guidance](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-run-lambda-schedule.html).
 
-## Implementation handoff and proof
+## Current handoff and proof
 
-The next implementation should target `web/src/api.ts`, a browser transport module, relevant app capability consumers, shared geocode/normalization helpers, static hosting infrastructure and browser tests. Retain the local Node server as an optional development/test fixture if useful; local build tooling does not imply a production Node server. Keep live and demo behavior explicit. Update the implementation architecture document and Archify source/generated artifacts when the runtime design actually changes.
+The recommended read-side migration has been implemented in `web/src/api.ts`, `web/src/direct-api.ts`, the shared core and static hosting configuration. Demo fixtures belong to the browser. The former optional Node server is removed, including its notification implementation and deployment recipe. The [implementation architecture](../architecture/web-client.md) and web diagrams describe the current boundary.
 
-Verification must serve only static files, with no web-api process or Vite API proxy, and cover: all mapped operations; API/network/CORS failure; canonical/display units and air standards; search submission races; delayed geolocation; favorite deletion with notifications enabled/disabled; snapshot corruption and offline recovery; deep links/404s; initial worker claim and version updates. Test Chromium plus supported Safari/iOS behavior. Preserve existing unit/contract regressions, and separately verify notification persistence and real-device delivery when that backend is implemented.
+Verification serves only static files and covers mapped external operations, network/CORS errors, canonical/display units and air standards, search/location races, local favorites, snapshot corruption/offline recovery, deep links/404s and worker lifecycle. Notification UI must report unavailable without attempting subscription or rule operations. Future alert support requires separate persistence and actual device-delivery evidence.
 
-Completion for this review means a supported migration recommendation and observed evidence, not a changed runtime or finished release. No application source, AWS resource, GitHub record or deployment was changed.
+The original 2026-09-24 review itself changed no application source, AWS resource, GitHub record or deployment. Subsequent implementation does not refresh the AWS/provider observations above. Final-domain and installed-device checks remain release work; deployment method selection is deferred.

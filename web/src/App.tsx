@@ -45,7 +45,7 @@ import {
   type Units,
 } from "@todayweather/core";
 import { AppContext, useApp } from "./context";
-import { api, deletePlaceRules, unitQuery, type Capabilities } from "./api";
+import { api, unitQuery, type Capabilities } from "./api";
 import {
   defaultState,
   restoreState,
@@ -350,7 +350,7 @@ export default function App() {
             {updateReady && (
               <div className="notice update">
                 <span>
-                  새 버전이 준비됐습니다. 작성 중인 알림 설정을 저장한 뒤
+                  새 버전이 준비됐습니다. 입력 중인 내용을 확인한 뒤
                   업데이트하세요.
                 </span>
                 <button
@@ -533,16 +533,9 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
       { timeout: 15000, maximumAge: 60000, enableHighAccuracy: false },
     );
   }
-  async function deletePlace(p: Place) {
-    try {
-      await deletePlaceRules(p.id);
-      setState((s) => removePlace(s, p.id));
-      notify(`${p.name}을 관심지역에서 삭제했습니다.`);
-    } catch {
-      notify(
-        "알림 해제 상태를 확인하지 못했습니다. 연결 후 다시 삭제해 주세요.",
-      );
-    }
+  function deletePlace(p: Place) {
+    setState((s) => removePlace(s, p.id));
+    notify(`${p.name}을 관심지역에서 삭제했습니다.`);
   }
   async function resolve() {
     setResolving(true);
@@ -679,7 +672,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
                 </button>
                 <div className="location-card-actions">
                   <Link
-                    aria-label={`${p.name} 알림 설정`}
+                    aria-label={`${p.name} 알림 안내`}
                     to={"/notifications/" + p.id}
                   >
                     <Bell size={17} />
@@ -1165,7 +1158,7 @@ function SettingsPage() {
           <section className="panel">
             <SectionHead title="관심지역 백업" />
             <p className="muted-text">
-              현재 위치와 알림 구독 정보는 내보내기에 포함되지 않습니다.
+              현재 위치는 내보내기에 포함되지 않습니다.
             </p>
             <div className="button-row">
               <button className="button" onClick={exportData}>
@@ -1241,10 +1234,8 @@ function Help() {
         </p>
         <h2>알림과 기존 모바일 앱</h2>
         <p>
-          웹 알림은 지원 브라우저의 설치·권한 허용과 웹 알림 서버 설정이
-          필요합니다. 기기의 절전·네트워크 설정에 따라 늦게 도착할 수 있습니다.
-          현재 위치 알림도 마지막으로 저장한 지역을 기준으로 하며 이동을 자동
-          추적하지 않습니다.
+          웹 알림은 아직 제공하지 않습니다. 날씨 알림은 기존 모바일 앱에서
+          이용해 주세요.
         </p>
         <p>
           네이티브 위젯·Apple Watch·앱 구매 복원은 기존 모바일 앱에서 이용해

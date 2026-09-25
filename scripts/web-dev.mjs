@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-const mode = process.env.WEB_API_MODE ?? "live";
+const mode = process.env.VITE_WEB_MODE ?? "live";
 const origin = new URL(process.env.WEB_ORIGIN ?? "http://127.0.0.1:5173");
 if (
   origin.protocol !== "http:" ||
@@ -12,19 +12,9 @@ if (
 )
   throw new Error("WEB_ORIGIN must be a loopback HTTP origin for development");
 const transport = process.env.VITE_WEB_TRANSPORT ?? "direct";
+if (transport !== "direct")
+  throw new Error("VITE_WEB_TRANSPORT must be direct");
 const children = [
-  ...(transport === "proxy"
-    ? [
-        spawn("npm", ["run", "dev", "-w", "@todayweather/api"], {
-          stdio: "inherit",
-          env: {
-            ...process.env,
-            WEB_API_MODE: mode,
-            WEB_ORIGIN: origin.origin,
-          },
-        }),
-      ]
-    : []),
   spawn(
     "npm",
     [
@@ -44,7 +34,7 @@ const children = [
       env: {
         ...process.env,
         VITE_WEB_TRANSPORT: transport,
-        VITE_WEB_MODE: process.env.VITE_WEB_MODE ?? mode,
+        VITE_WEB_MODE: mode,
       },
     },
   ),

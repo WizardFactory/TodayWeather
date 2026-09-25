@@ -1,5 +1,5 @@
 export type TransportSettings = {
-  transport: "direct" | "proxy";
+  transport: "direct";
   mode: "live" | "demo";
   apiOrigin: string;
 };
@@ -9,8 +9,10 @@ export function readTransportSettings(
 ): TransportSettings {
   const transport = env.VITE_WEB_TRANSPORT ?? "direct";
   const mode = env.VITE_WEB_MODE ?? "live";
-  if (transport !== "direct" && transport !== "proxy")
-    throw new Error("VITE_WEB_TRANSPORT must be direct or proxy");
+  if (transport !== "direct")
+    throw new Error(
+      "VITE_WEB_TRANSPORT must be direct; the proxy runtime has been removed",
+    );
   if (mode !== "live" && mode !== "demo")
     throw new Error("VITE_WEB_MODE must be live or demo");
   const origin = new URL(

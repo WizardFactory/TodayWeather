@@ -1,7 +1,7 @@
 import { test as base, expect } from "@playwright/test";
-import weather from "../../web-api/fixtures/weather.json" with { type: "json" };
-import nation from "../../web-api/fixtures/nation.json" with { type: "json" };
-import warnings from "../../web-api/fixtures/warnings.json" with { type: "json" };
+import weather from "../src/demo/weather.json" with { type: "json" };
+import nation from "../src/demo/nation.json" with { type: "json" };
+import warnings from "../src/demo/warnings.json" with { type: "json" };
 import { PLACES } from "@todayweather/core";
 export const test = base.extend({
   page: async ({ page }, use) => {

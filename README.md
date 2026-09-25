@@ -7,7 +7,7 @@ See the [service architecture guide](docs/architecture/README.md) for the overal
 
 For server/client replacement planning, see the [rewrite reference package](docs/rewrite/README.md): screen definitions and simulator screenshots, data contracts and examples, ordered server assembly diagrams, migration decisions, and verification criteria.
 
-For a browser client alongside iOS and Android, see the [webapp proposal](docs/webapp/README.md): mobile feature parity, responsive flows, PWA/API/push design, deployment and implementation plan.
+For a browser client alongside iOS and Android, see the [webapp documentation](docs/webapp/README.md): the static PWA, direct existing-API access, remaining mobile-parity goals and deployment preparation.
 
 ## Running Locally
 You have to run server before start mobile application.
@@ -185,7 +185,7 @@ publish on https://chrome.google.com/webstore/developer/dashboard
 
 ## Web app
 
-The new responsive web app runs independently of Cordova and the legacy server. See [run instructions and implementation status](docs/webapp/implementation.md), [S3/CloudFront deployment](infra/web/static/README.md), and [issue #2558](https://github.com/WizardFactory/TodayWeather/issues/2558).
+The responsive web app is a static PWA that calls the existing public API directly. It needs no additional Node API server and runs independently of Cordova. Browser notifications are unavailable; native apps remain the notification option. See [run instructions and implementation status](docs/webapp/implementation.md), [S3/CloudFront deployment](infra/web/static/README.md), and [issue #2558](https://github.com/WizardFactory/TodayWeather/issues/2558).
 
 ```sh
 npm ci --ignore-scripts

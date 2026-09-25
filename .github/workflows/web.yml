@@ -1,10 +1,10 @@
 name: Web app
 on:
   pull_request:
-    paths: ['web/**', 'web-api/**', 'packages/**', 'scripts/**', 'package*.json', '*config.ts', 'infra/web/**', '.github/workflows/web.yml']
+    paths: ['web/**', 'packages/**', 'scripts/**', 'package*.json', '*config.ts', 'infra/web/**', '.github/workflows/web.yml']
   push:
     branches: [master, main]
-    paths: ['web/**', 'web-api/**', 'packages/**', 'scripts/**', 'package*.json', '*config.ts', 'infra/web/**', '.github/workflows/web.yml']
+    paths: ['web/**', 'packages/**', 'scripts/**', 'package*.json', '*config.ts', 'infra/web/**', '.github/workflows/web.yml']
   workflow_dispatch:
 permissions:
   contents: read

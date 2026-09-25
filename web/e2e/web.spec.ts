@@ -95,11 +95,11 @@ test("mobile favorites, geolocation denial and unavailable notifications stay us
   await context.setGeolocation({ latitude: 37.567, longitude: 126.978 });
   await page.getByRole("button", { name: "현재 위치", exact: true }).click();
   await expect(page.locator(".toast")).toContainText("권한");
-  await page.getByRole("link", { name: "부산 알림 설정" }).click();
+  await page.getByRole("link", { name: "부산 알림 안내" }).click();
   await expect(
     page.getByRole("heading", { name: "웹 알림을 아직 사용할 수 없습니다" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "설정 저장" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "설정 저장" })).toHaveCount(0);
   await page.screenshot({
     path: screenshots + "/mobile-notifications.png",
     fullPage: true,
@@ -122,29 +122,25 @@ test("offline shell uses matching snapshot and never labels it fresh", async ({
   await context.setOffline(false);
 });
 
-test("coordinate deep links survive empty storage and unsaved alarm edits block navigation", async ({
+test("coordinate deep links and unavailable notifications remain navigable", async ({
   page,
 }) => {
   await page.goto("/weather/p_37.567_126.978/hourly");
   await expect(page.locator(".temperature")).toBeVisible();
   await page.goto("/notifications/seoul");
   await expect(page.getByRole("heading", { name: "서울 알림" })).toBeVisible();
-  await page.getByRole("button", { name: "일", exact: true }).click();
+  await expect(page.getByRole("button", { name: "설정 저장" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "일", exact: true }),
+  ).toHaveCount(0);
   let dialogs = 0;
-  page.on("dialog", () => dialogs++);
-  const cancel = page.waitForEvent("dialog").then((dialog) => dialog.dismiss());
-  await Promise.all([
-    cancel,
-    page.getByRole("link", { name: "설정", exact: true }).last().click(),
-  ]);
-  await expect(page).toHaveURL(/\/notifications\/seoul$/);
-  const accept = page.waitForEvent("dialog").then((dialog) => dialog.accept());
-  await Promise.all([
-    accept,
-    page.getByRole("link", { name: "설정", exact: true }).last().click(),
-  ]);
+  page.on("dialog", async (dialog) => {
+    dialogs++;
+    await dialog.dismiss();
+  });
+  await page.getByRole("link", { name: "설정", exact: true }).last().click();
   await expect(page).toHaveURL(/\/settings$/);
-  expect(dialogs).toBe(2);
+  expect(dialogs).toBe(0);
 });
 
 test("immediate search submission selects the submitted city", async ({
