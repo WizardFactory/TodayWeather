@@ -1350,7 +1350,7 @@ function ControllerTown24h() {
         var airInfo = current.arpltn;
         //대기 관측값이 없으면 current의 날씨/생활지수 grade(wsdGrade 등)를 대기 등급으로 쓰지 않음
         if (!airInfo) {
-            log.warn("airInfo is empty!");
+            log.info("airInfo is empty!");
             return "";
         }
         airInfo.aqiValue = airInfo.khaiValue || airInfo.aqiValue;
