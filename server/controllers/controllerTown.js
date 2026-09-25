@@ -814,9 +814,6 @@ function ControllerTown() {
                     }
 
                     req.current = resultItem;
-                    if (config.awsMinute && config.awsMinute.enrichEnabled) {
-                        require('../lib/awsMinute/policy').capture(req, currentItem, resultItem);
-                    }
                     req.currentPubDate = currentInfo.pubDate;
 
                     //재사용을 위해 req에 달아둠.
@@ -1775,6 +1772,32 @@ function ControllerTown() {
     };
 
     /**
+     * Whether an AWS/city observation value is usable for replacing a current-weather field.
+     * KMA emits 0 for t1h/vec/wsd on sensor errors and negative sentinels elsewhere; a value
+     * that fails this check must never overwrite a valid API value.
+     * @param {string} key
+     * @param {*} value
+     * @returns {boolean}
+     */
+    this._isValidObservation = function (key, value) {
+        if (typeof value !== 'number' || !isFinite(value)) {
+            return false;
+        }
+        switch (key) {
+            case 't1h':
+                return value > -50 && value < 60;
+            case 'reh':
+                return value >= 0 && value <= 100;
+            case 'vec':
+                return value >= 0 && value <= 360;
+            case 'wsd':
+                return value >= 0 && value < 100;
+            default:
+                return value >= 0;
+        }
+    };
+
+    /**
      * req.current에만 적용하고 currentlist에는 적용안함.
      * req.current에 liveTime이라고 새로운 시간 정보를 추가함.
      * @param req
@@ -1852,22 +1875,28 @@ function ControllerTown() {
 
                     reqCurrent.dongnae = JSON.parse(JSON.stringify(reqCurrent));
 
+                    // Fields the minute/hourly observation may replace when it is newer than the
+                    // current-weather publication (issue #2573 §3). Anything else keeps the old
+                    // behavior: fill only when the API value is missing or a sentinel.
+                    var observedFields = {t1h: true, reh: true, vec: true, wsd: true};
+
                     for (var key in stnWeatherInfo) {
+                        var obs = stnWeatherInfo[key];
                         if (reqCurrent[key] == undefined) {
-                            reqCurrent[key] = stnWeatherInfo[key];
+                            reqCurrent[key] = obs;
                         }
                         else if (key === 't1h') {
-                            if (reqCurrent[key] <= -50) {
-                                reqCurrent[key] = stnWeatherInfo[key];
+                            if (reqCurrent[key] <= -50 || (stnFirst && self._isValidObservation(key, obs))) {
+                                reqCurrent[key] = obs;
                             }
                         }
                         else if (key === 'rn1' || key === 'reh' || key === 'vec' || key === 'wsd') {
-                            if (reqCurrent[key] < 0) {
-                                reqCurrent[key] = stnWeatherInfo[key];
+                            if (reqCurrent[key] < 0 || (stnFirst && observedFields[key] && self._isValidObservation(key, obs))) {
+                                reqCurrent[key] = obs;
                             }
                         }
                         else {
-                            reqCurrent[key] = stnWeatherInfo[key];
+                            reqCurrent[key] = obs;
                         }
                     }
 
@@ -3131,18 +3160,6 @@ function ControllerTown() {
      * @param res
      * @param next
      */
-    this.enrichCurrentByAwsMinute = function (req, res, next) {
-        if (!config.awsMinute || !config.awsMinute.enrichEnabled || !req.current) return next();
-        var done = false;
-        var timer = setTimeout(function () { if (!done) { done = true; next(); } }, 3000);
-        self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, town) {
-            if (done) return;
-            done = true; clearTimeout(timer);
-            if (err || !town) return next();
-            require('../lib/awsMinute/service').enrich(req, res, next, {enabled:true, town:town});
-        });
-    };
-
     this.insertIndex = function (req, res, next) {
         var meta = {};
         meta.sID = req.sessionID;

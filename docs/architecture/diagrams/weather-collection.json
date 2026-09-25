@@ -98,7 +98,7 @@
       "id": "scrape",
       "type": "backend",
       "label": "Scrape timer",
-      "sublabel": "scrape / local",
+      "sublabel": "scrape/local · gather opt-in",
       "pos": [
         35,
         440
@@ -110,6 +110,9 @@
       "sources": [
         {
           "path": "server/lib/kmaScraper.js"
+        },
+        {
+          "path": "server/controllers/controllerManager.js"
         }
       ]
     },
@@ -225,7 +228,8 @@
       "title": "Scheduling details",
       "items": [
         "Immediate startup pass; queued jobs use pop() and async.series.",
-        "Current, shortest and air observations also dispatch outside the queue."
+        "Current, shortest and air observations also dispatch outside the queue.",
+        "Gather opt-in: KMA_STN_MINUTE/HOURLY_ENABLED station collectors (#2573)."
       ]
     },
     {
@@ -238,9 +242,9 @@
     },
     {
       "dot": "amber",
-      "title": "RSS fallback \u2014 issue #2554 local change",
+      "title": "RSS fallback — issue #2554 local change",
       "items": [
-        "Collector stores wdEn; service maps ws to wsd and wd \u00d7 45 to vec.",
+        "Collector stores wdEn; service maps ws to wsd and wd × 45 to vec.",
         "Newer RSS replaces valid source fields; equal fills gaps; older is skipped."
       ]
     }

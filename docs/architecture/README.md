@@ -46,5 +46,5 @@ node "$ARCHIFY_DIR/bin/archify.mjs" visual-check docs/architecture/diagrams/serv
 
 Use `architecture` for collection and `sequence` for mobile requests. Architecture sources pin repository evidence to the analyzed revision; update that revision deliberately after relevant source changes. Validation, browser execution and perceptual review are separate claims. See the [verification record](../../reports/sdlc/service-architecture/self-verification.md) for results and limitations.
 
-- [AWS minute activation and rollback](../operations/aws-minute.md): isolated default-off collection, UTC storage, current-field enrichment and operator evidence gate. [Interactive flow](diagrams/aws-minute.html) · [editable JSON](diagrams/aws-minute.json).
+- [KMA station observations](../operations/kma-station-observations.md): opt-in gather minute/hourly collectors, current-weather merge, verification, rollback and known station gaps.
 - [Static web client](web-client.md): responsive PWA, direct existing-API reads, local persistence and S3/CloudFront deployment boundaries.

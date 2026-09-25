@@ -7,9 +7,6 @@ module.exports = {
     ipAddress: (process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1'),
     port: (process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000'),
     mode: (process.env.SERVER_MODE || 'local'), //local, gather, service, push, scrape
-    awsMinute: {
-        enrichEnabled: process.env.AWS_MINUTE_ENRICH_ENABLED === 'true'
-    },
     history: {
         enabled: process.env.ASOS_HISTORY_ENABLED === 'true',
         readEnabled: process.env.ASOS_HISTORY_READ_ENABLED === 'true',

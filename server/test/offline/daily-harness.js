@@ -30,7 +30,7 @@ exports.environment = function(version='2.0', now=instant) {
         };
         ctor.docs=docs; models[name]=ctor;return ctor;
     }
-    function load(relative, extra={}, extraGlobals={}) {
+    function load(relative, extra={}) {
         const deps={};
         const code=fs.readFileSync(path.join(root,relative),'utf8');
         for(const m of code.matchAll(/require\('([^']+)'\)/g)) deps[m[1]]=function Unexpected(){throw new Error('Unexpected collaborator '+m[1]);};
@@ -46,7 +46,7 @@ exports.environment = function(version='2.0', now=instant) {
             if(key==='events')deps[key]=require('events');
             if(/kma.town.(current|short|shortest|mid|short.rss).controller.js$/.test(key) || /midRssKmaRequester|kecoRequester|lifeIndexKmaRequester/.test(key))deps[key]=function(){};
         }
-        return h.load(relative,Object.assign(deps,extra),Object.assign({},globals,extraGlobals));
+        return h.load(relative,Object.assign(deps,extra),globals);
     }
     const Mid=load('controllers/kma/kma.town.mid.controller.js');
     const mid=new Mid();
