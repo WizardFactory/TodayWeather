@@ -46,3 +46,7 @@ No migration. Rollback: revert the commit. A misconfigured service host now fail
 ## Risks
 
 Low. The riskiest part is changing the error object in `location2address` (R3); both previous and new paths end in `next(err)`.
+
+## Amendment 1 — 2026-09-26
+
+Source: independent verification (NIT). R1 (revised): the warning is one message per setting, "`<name>` is not set or not a JSON array of keys; requests that need it will fail". It does not name the individual cause. It still never contains the value. The code, tests and ACs are unchanged. Architecture and README notes were corrected: `app.js` still parses `dongnae_forecast_keys` at load, and `startManager()` also parses `airkorea_keys` and `daum_keys`.

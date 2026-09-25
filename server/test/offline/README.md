@@ -183,7 +183,8 @@ KMA address.
 
 `credential-free-load-smoke.js` needs the locked service dependency tree on
 Node 16.20.2. It runs three key scenarios in fresh child processes, refuses
-outbound sockets and stubs only the Mongo connect call. It loads the real
+outbound sockets, stubs the Mongo connect call, drops the log transport token and
+records warnings. It loads the real
 `controllerPush`, `alert.push.controller`, `geo.controller` and the service-mode
 app with no Firebase JSON or APNs files, checks the Kakao error, `/health` and
 that no Firebase app starts. The RSS workflow runs it in a Node 16.20.2 job.
@@ -195,5 +196,6 @@ npm ci --prefix /tmp/tw-2589-candidate --no-audit --no-fund
 NODE_PATH=/tmp/tw-2589-candidate/node_modules node server/test/offline/credential-free-load-smoke.js
 ```
 
-Not covered: gather mode (`startManager()` still parses `kakao_keys`), real
+Not covered: gather mode (`startManager()` still parses `airkorea_keys`,
+`daum_keys` and `kakao_keys`), real
 Kakao/Google requests and push delivery.
