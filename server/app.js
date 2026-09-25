@@ -142,6 +142,12 @@ if (config.mode === 'scrape' || config.mode === 'local') {
     manager.startScrape();
 }
 
+// Opt-in minute-observation collector for the gather worker (see issue #2573).
+// Off by default; startScrape already covers scrape/local modes.
+if (process.env.KMA_STN_MINUTE_ENABLED === 'true' && config.mode === 'gather') {
+    manager.startMinuteScrape();
+}
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found url='+req.originalUrl);
