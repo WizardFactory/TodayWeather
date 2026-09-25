@@ -32,6 +32,7 @@ var controllerKmaStnWeather = require('../controllers/controllerKmaStnWeather');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
 var kasiRiseSetController = require('../controllers/kasi.riseset.controller');
+var sunRiseSet = require('../lib/sunRiseSet');
 
 var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
 var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
@@ -3510,7 +3511,7 @@ function ControllerTown() {
                 function (geocode, callback) {
                     kasiRiseSetController.getRiseSetList(geocode, dateList, function (err, rsList) {
                         if(err) {
-                            callback(err);
+                            return callback(err);
                         }
                         callback(null, rsList);
                     });
@@ -3532,13 +3533,48 @@ function ControllerTown() {
             ],
             function (err) {
                 if (err) {
-                    e.message += ' ' + JSON.stringify(meta);
+                    err.message += ' ' + JSON.stringify(meta);
                     log.error(err);
                 }
+                self._fillMissingRiseSet(req.midData.dailyData, req.geocode || req.gCoord);
                 next();
             });
     }
 }
+
+/**
+ * Days without a KASI rise/set row get computed sunrise/sunset (#2587).
+ * @param dailyData
+ * @param geocode {lat, lon}
+ */
+ControllerTown.prototype._fillMissingRiseSet = function (dailyData, geocode) {
+    if (!geocode) {
+        log.warn('Fail to compute rise set without geocode');
+        return;
+    }
+
+    var computedCount = 0;
+    dailyData.forEach(function (dayInfo) {
+        if (dayInfo.sunrise && dayInfo.sunset) {
+            return;
+        }
+        var riseSet = sunRiseSet.compute(geocode.lat, geocode.lon, dayInfo.date);
+        if (riseSet == undefined) {
+            return;
+        }
+        if (!dayInfo.sunrise) {
+            dayInfo.sunrise = riseSet.sunrise;
+        }
+        if (!dayInfo.sunset) {
+            dayInfo.sunset = riseSet.sunset;
+        }
+        computedCount++;
+    });
+
+    if (computedCount > 0) {
+        log.info('computed rise set days='+computedCount);
+    }
+};
 
 /**
  *

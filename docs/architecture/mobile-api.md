@@ -78,6 +78,8 @@ The [v000903 KMA router](../../server/routes/v000903/route.kma.v000903.js) defin
 | Presentation | `insertSkyIconLowCase`, `setYesterday`, `getSpecialInfo`, `convertUnits`, `insertStrForData`, `getSummaryAfterUnitConverter` | Icons, yesterday comparison, warnings, requested units and text |
 | Response | `makeResult`, `sendResult` | JSON containing available product fields |
 
+`getRiseSetInfo` copies stored KASI values into `midData.dailyData`. Days without a stored row, or all days when the store lookup fails, get `sunrise`/`sunset` (`YYYY.MM.DD HH:MM`, KST) computed from the request coordinate with the NOAA solar equations; the other KASI fields (`moon*`, twilight, `suntransit`, `locationName`, `locationGeo`) appear only for stored rows. `getLifeIndexKma` adds `ultrv`/`ultrvGrade` for days with a stored UV value; a store or provider failure only omits them (#2587).
+
 `ControllerTown24h` calls the base `ControllerTown` constructor and overrides selected methods. `getAllDataFromDb` performs parallel product-family loading, with serial reads inside individual groups. It tolerates some missing product reads so later middleware can decide how to proceed. There is no single all-products freshness transaction.
 
 The important ordering constraints are documented in the router itself: current depends on short/shortest; icons precede unit conversion; descriptions and final summary follow conversion. Reordering these functions can change meaning even when the endpoint still returns 200.

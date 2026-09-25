@@ -26,13 +26,53 @@ var dnscache = require('dnscache')({
 function kasiRiseSet() {
 }
 
+// data.go.kr authorization failures: access denied, request limit, unregistered, expired, unregistered IP.
+var AUTH_REASON_CODES = ['20', '22', '30', '31', '32'];
+
+kasiRiseSet._keyIndex = 0;
+
+/**
+ * The deployed host replaced an expired normal key with test_normal, so both are candidates (#2587).
+ * @returns {Array} configured keys
+ */
+kasiRiseSet._getServiceKeys = function () {
+    var keys = [];
+    [config.keyString.normal, config.keyString.test_normal].forEach(function (key) {
+        if (key && key.indexOf('You have to set') !== 0 && keys.indexOf(key) === -1) {
+            keys.push(key);
+        }
+    });
+    return keys;
+};
+
+kasiRiseSet._getServiceKey = function () {
+    var keys = this._getServiceKeys();
+    if (keys.length === 0) {
+        return config.keyString.normal;
+    }
+    return keys[this._keyIndex % keys.length];
+};
+
+/**
+ * @returns {boolean} false if there is no other key
+ */
+kasiRiseSet._rotateServiceKey = function () {
+    var keys = this._getServiceKeys();
+    if (keys.length <= 1) {
+        return false;
+    }
+    this._keyIndex = (this._keyIndex + 1) % keys.length;
+    log.warn('kasi rise set service key changed index='+this._keyIndex);
+    return true;
+};
+
 kasiRiseSet._makeLocationApiUrl = function (geocode, date) {
     var url = kasiUrl+'/'+apiLocationName+'?';
     url += 'longitude='+geocode.lon+'&';
     url += 'latitude='+geocode.lat+'&';
     url += 'locdate='+date+'&';
     url += 'dnYn=Y&_type=json&';
-    url += 'ServiceKey='+config.keyString.normal;
+    url += 'ServiceKey='+this._getServiceKey();
 
     return url;
 };
@@ -42,24 +82,76 @@ kasiRiseSet._makeAreaApiUrl = function (location, date) {
     url += 'location='+encodeURIComponent(location)+'&';
     url += 'locdate='+date+'&';
     url += '_type=json&';
-    url += 'ServiceKey='+config.keyString.normal;
+    url += 'ServiceKey='+this._getServiceKey();
 
     return url;
 };
 
+/**
+ * @param url request url with service key
+ * @returns {string} api name and parameters without the service key
+ * @private
+ */
+kasiRiseSet._describeUrl = function (url) {
+    return url.replace(/[?&]ServiceKey=[^&]*/, '').replace(kasiUrl+'/', '');
+};
+
+/**
+ * @param body error body of data.go.kr gateway or api
+ * @returns {string|undefined}
+ * @private
+ */
+kasiRiseSet._getReasonCode = function (body) {
+    if (body && body.OpenAPI_ServiceResponse && body.OpenAPI_ServiceResponse.cmmMsgHeader) {
+        return '' + body.OpenAPI_ServiceResponse.cmmMsgHeader.returnReasonCode;
+    }
+    if (body && body.response && body.response.header && body.response.header.resultCode != undefined) {
+        return '' + body.response.header.resultCode;
+    }
+    return undefined;
+};
+
 kasiRiseSet._requestRiseSetFromApi = function (url, callback) {
-    log.debug('request rise set from api url='+url);
+    var self = this;
+    log.debug('request rise set from api '+self._describeUrl(url));
 
     req(url, {json: true, timeout: 5000}, function(err, response, body) {
         if (err) {
+            err.message = self._describeUrl(url) + ' ' + err.message;
             return callback(err);
         }
-        if (response.statusCode >= 400) {
-            err = new Error("url="+url+" statusCode="+response.statusCode);
+        var reasonCode = self._getReasonCode(body);
+        if (response.statusCode >= 400 || AUTH_REASON_CODES.indexOf(reasonCode) !== -1) {
+            err = new Error(self._describeUrl(url)+" statusCode="+response.statusCode+" reasonCode="+reasonCode);
+            err.statusCode = response.statusCode;
+            err.isAuthError = response.statusCode === 401 || response.statusCode === 403 ||
+                AUTH_REASON_CODES.indexOf(reasonCode) !== -1;
             return callback(err);
         }
         callback(err, body);
     });
+};
+
+/**
+ * Request with the current key; on an authorization failure retry once with each other key.
+ * @param makeUrl function returning the url for the current key
+ * @param callback
+ * @private
+ */
+kasiRiseSet._requestWithKeyRotation = function (makeUrl, callback) {
+    var self = this;
+    var tries = Math.max(self._getServiceKeys().length, 1);
+
+    function attempt() {
+        tries--;
+        self._requestRiseSetFromApi(makeUrl(), function (err, body) {
+            if (err && err.isAuthError && tries > 0 && self._rotateServiceKey()) {
+                return attempt();
+            }
+            callback(err, body);
+        });
+    }
+    attempt();
 };
 
 kasiRiseSet._checkDataValid = function (result) {
@@ -101,11 +193,12 @@ kasiRiseSet._checkDataValid = function (result) {
  */
 kasiRiseSet._getAreaRiseSetFromApi = function (area, date, callback) {
     var self = this;
-    var url = self._makeAreaApiUrl(area, date);
 
     async.retry({times:3, interval: 1000*5},
         function (retryCallback) {
-            self._requestRiseSetFromApi(url, function (err, result) {
+            self._requestWithKeyRotation(function () {
+                return self._makeAreaApiUrl(area, date);
+            }, function (err, result) {
                 if (err) {
                     //log.warn(url);
                     //log.warn(err);
@@ -118,7 +211,7 @@ kasiRiseSet._getAreaRiseSetFromApi = function (area, date, callback) {
                     return retryCallback(err);
                 }
 
-                callback(null, result.response.body.items.item);
+                retryCallback(null, result.response.body.items.item);
             });
         },
         function (err, result) {
@@ -145,7 +238,9 @@ kasiRiseSet._getRiseSetListFromApi = function (geocode, dateList, callback) {
         function (date, mapCallback) {
            async.retry({times:6, interval: 1000*2},
                function (retryCallback) {
-                   self._requestRiseSetFromApi(self._makeLocationApiUrl(geocode, date), function (err, result) {
+                   self._requestWithKeyRotation(function () {
+                       return self._makeLocationApiUrl(geocode, date);
+                   }, function (err, result) {
                        if(err) {
                            log.warn(err);
                            return retryCallback(err);
@@ -680,6 +775,8 @@ kasiRiseSet.gatherAreaRiseSetFromApi = function (callback) {
 
     log.info('kasi rise set - gather area rise set');
 
+    var failCount = 0;
+    var lastErr;
     async.mapSeries(areaList,
         function (area, cb) {
             var dateList = [];
@@ -690,15 +787,25 @@ kasiRiseSet.gatherAreaRiseSetFromApi = function (callback) {
             }
 
             self.updateAreaRiseSetListFromApi(area, dateList, function (err, results) {
-               if (err) {
-                   return cb(err);
-               }
+                if (err) {
+                    // One failing area must not stop the remaining areas (#2587).
+                    failCount++;
+                    lastErr = err;
+                    log.error('kasi rise set - fail area='+area+' '+err.message);
+                    return cb(null, {area: area, error: err.message});
+                }
                 cb(null, results);
             });
         },
         function (err, results) {
+            if (!err && failCount > 0 && failCount === areaList.length) {
+                err = lastErr;
+            }
             if(err) {
                 return callback(err);
+            }
+            if (failCount > 0) {
+                log.warn('kasi rise set - failed areas='+failCount+'/'+areaList.length);
             }
             callback(null, results);
         });
