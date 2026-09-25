@@ -91,7 +91,7 @@ function createHarness(version, fixture, historyOptions = {}) {
     }};models.set(name,obj);return obj;
   }
   const optional={
-    'kecoController':{getArpLtnInfo:(town,date,cb)=>cb(null,{arpltn:{},list:[],stnList:[]}),getDustFrcst:(town,date,cb)=>cb(null,[])},
+    'kecoController':{getArpLtnInfo:(town,date,cb)=>cb(null,fixture.arpltnInfo?clone(fixture.arpltnInfo):{arpltn:{},list:[],stnList:[]}),getDustFrcst:(town,date,cb)=>cb(null,[])},
     'controllerKmaStnWeather':{getCityHourlyList:(town,cb)=>cb(null,[]),getStnHourlyAndMinRns:(town,date,current,cb)=>{
       const stn={t1h:20,vec:315,wsd:3,stnDateTime:'2026-09-24 08:50',rs1h:0};
       // Optional city weather text, typed as getStnHourlyAndMinRns does before returning (#2576).

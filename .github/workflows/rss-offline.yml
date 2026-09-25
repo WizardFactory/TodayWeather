@@ -29,6 +29,8 @@ jobs:
         run: |
           node server/test/offline/rss-wind.test.js
           node server/test/offline/weather-desc.test.js
+      - name: Air summary regression tests
+        run: node server/test/offline/air-summary.test.js
       - name: Install isolated smoke dependencies
         run: >-
           npm install --prefix "$RUNNER_TEMP/rss-smoke"
@@ -47,6 +49,11 @@ jobs:
           TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
           TW_SMOKE_CONTEXT: github-actions
         run: node server/test/offline/rss-response-smoke.js
+      - name: Air summary response smoke
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+          TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
+        run: node server/test/offline/air-summary-smoke.js
       - name: Current weather text and summary smoke
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
