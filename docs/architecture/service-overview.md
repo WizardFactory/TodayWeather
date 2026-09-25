@@ -38,6 +38,8 @@ The [configuration](../../server/config/config.js) defaults to `SERVER_MODE=loca
 
 [Startup conditions](../../server/app.js) and [HTTP listener](../../server/bin/www) establish these facts. The source alone does not establish process count; the [service-host snapshot](ec2-internals.md) separately observes ten API cluster workers in service mode. `local` starts two consumers of the manager's shared in-memory task array. There is no durable message broker or distributed scheduler in that path.
 
+Every mode loads all routers, so load-time code must not need provider credentials. [Geo controller](../../server/controllers/geo.controller.js) parses `kakao_keys`/`daum_keys` on first use; a missing or invalid value logs one warning and Kakao/Daum lookups return an error, so Korean coordinate geocoding (`location2address`) fails with that error. Push Firebase apps start on first send ([push providers](../../server/lib/pushProviders.js)). The gather-mode `startManager()` still parses `kakao_keys` at start (#2589 follow-up). [Credential-free load smoke](../../server/test/offline/credential-free-load-smoke.js) checks the controllers and the service app without keys or push credentials.
+
 ## API surfaces and the external boundary
 
 `app.js` mounts `/` and `/v000001`, plus `/v000705`, `/v000803`, `/v000901`, `/v000902`, `/v000903`, `/ww`, `/req`, and `/health`. `v000903` combines current KMA handlers with reused DSF, push, purchase and summary handlers. Per-route inventory (mount map, handlers, gating, consumers and traffic): [API endpoint catalog](../rewrite/api-endpoint-catalog.md#mount-map).

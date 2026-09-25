@@ -43,6 +43,7 @@ jobs:
           node server/test/offline/history-observations.test.js
           node server/test/offline/history-recovery.test.js
           node server/test/offline/runtime-node16.test.js
+          node server/test/offline/geo-keys.test.js
       - name: Full RSS response smoke
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
@@ -58,3 +59,26 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
         run: node server/test/offline/weather-desc-response-smoke.js
+
+  credential-free-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '16.20.2'
+          package-manager-cache: false
+      - name: Install the locked service dependencies outside the checkout
+        run: |
+          mkdir -p "$RUNNER_TEMP/runtime"
+          cp server/package.json server/package-lock.json "$RUNNER_TEMP/runtime/"
+          npm ci --prefix "$RUNNER_TEMP/runtime" --no-audit --no-fund
+      - name: Load controllers and service app without provider keys or push credentials
+        env:
+          NODE_PATH: ${{ runner.temp }}/runtime/node_modules
+        run: node server/test/offline/credential-free-load-smoke.js
