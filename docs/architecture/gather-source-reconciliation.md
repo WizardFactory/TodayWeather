@@ -54,13 +54,13 @@ Inventory is the union of 16 tracked EC2-touched paths, not 16 new features or f
 | same | Disabled jobs, changed minutes/putAll, startup pass | Retained defaults; every observed condition listed below. |
 | same | Remove `keco.setKakaoApiKeys(...)` | Already-upstream initialization retained. |
 | `controllers/img.hourly.forecast.controller.js` | Suppress invalid-value warning | Retained default. |
-| `controllers/kaq.hourly.forecast.controller.js` | Minimum images 4 → 2 | Retained default 4; validation relaxation deferred. |
+| `controllers/kaq.hourly.forecast.controller.js` | Minimum images 4 → 2 | Retained default 4; configurable since #2588 (`GATHER_KAQ_MIN_MODEL_IMAGES`). |
 | `controllers/kaq.modelimg.controller.js` | Three coordinate/grid info logs and result log → debug | Retained default; no diagnostic severity change. |
 | `controllers/kasi.riseset.controller.js` | Comment about expired key; `normal` → `test_normal` | Retained default `normal`; authorization renewal is operator-owned. No secret values inspected. |
 | `controllers/kma/kma.town.short.rss.controller.js` | Publication log info → debug | Retained default. |
 | `controllers/kma/kma.town.shortest.controller.js` | Additional raw save-error log | Deferred; existing diagnostics unchanged. |
 | `controllers/kma/kma.town.current.controller.js` | EOF-only, same line content | Already upstream; no port. Existing current-field merge verified behaviorally. |
-| `lib/PastConditionGather.js` | `10` → `updateList.length/20` argument | Retained integer 10; fractional termination/batch policy not activated. |
+| `lib/PastConditionGather.js` | `10` → `updateList.length/20` argument | Retained integer 10; since #2588 `GATHER_PAST_CONDITION_RETRY_DIVISOR` selects `ceil(length/divisor)`, which terminates where the fractional host value would not. |
 | `lib/collectTownForecast.js` | Host/seven paths and success code | Ported with guarded failure handling. |
 | same | SNO/PCP/TMP mappings | Ported with complete-number/unit/no-value parser and documented provisional periods. |
 | same | `RN1: val ? val : -1` | Corrected, not copied: zero preserved, unsupported/nonfinite/negative input missing. |
@@ -88,7 +88,7 @@ Untracked `config/config-backup.js`, `config/config.js.latest`, `config/config.j
 | `requestDataByBaseTimeList` cutoff | `i >= 200`: indices 0–199 eligible | `i >= 50`: indices 0–49 eligible |
 | `PastConditionGather.start` update-list argument | 10 | `updateList.length/20`, possibly fractional; consumer termination not approved |
 
-Indices describe eligibility, not a guarantee of simultaneous requests; request callbacks, failures and retries affect concurrency. No configurable profile is introduced.
+Indices describe eligibility, not a guarantee of simultaneous requests; request callbacks, failures and retries affect concurrency. No configurable profile was introduced here. Since #2588, the retry budgets, the invalid-T1H retry, both recursion delays and the `PastConditionGather` argument (divisor mode rounds up) can be set by environment; defaults stay upstream. See [gather runtime policy](../operations/gather-runtime-policy.md). The request cutoffs remain literals.
 
 All minutes below are UTC; the air-forecast hour gate also uses UTC. Upstream's active schedule is documented in [weather collection](weather-collection.md#schedule-as-implemented).
 
@@ -109,7 +109,7 @@ All minutes below are UTC; the air-forecast hour gate also uses UTC. Upstream's 
 | `shortest` | 48/54/4/14 or putAll | 44/54/4/14 or putAll |
 | Startup `checkTimeAndRequestTask(true)` | Active | Commented out |
 
-All other scheduler behavior stays at upstream, including life/health, station air, hit-rate and sunrise/sunset work. No explanation for disabling production jobs is inferred.
+All other scheduler behavior stays at upstream, including life/health, station air, hit-rate and sunrise/sunset work. No explanation for disabling production jobs is inferred. Since #2588, `GATHER_PAST_ENABLED` and `GATHER_AIR_FORECAST_ENABLED` can disable the `past` job and the air-forecast block, and `GATHER_KAQ_MIN_MODEL_IMAGES` sets the KAQ minimum. The minute changes, `kecoSido`, the `current` `putAll` branch and the startup pass are still not configurable ([gather runtime policy](../operations/gather-runtime-policy.md#remaining-drift-not-covered-by-2588)).
 
 ## Operator deployment and rollback handoff
 

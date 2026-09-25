@@ -37,6 +37,7 @@ exports.environment = function(version='2.0', now=instant) {
         for(const key of Object.keys(deps)) {
             if(key.includes('/models/modelMid') || /\/models\/kma\/kma.town.mid.(forecast|land|sea|temp).model/.test(key)) deps[key]=model(path.basename(key,'.js'));
             if(key.endsWith('/config/config'))deps[key]=config;
+            if(key.endsWith('/config/gather'))deps[key]=require('../../config/gather').load({});
             if(key.endsWith('/kmaTimeLib'))deps[key]=time;
             if(key.endsWith('/midForecastPolicy'))deps[key]=policy;
             if(key==='async')deps[key]=require('async');

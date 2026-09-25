@@ -165,10 +165,13 @@ describe('gather drift: synthetic offline compatibility', function () {
     });
     it('preserves upstream operational defaults and inclusive request cutoffs', function () {
         var manager = source('controllers/controllerManager.js');
-        assert.strictEqual((manager.match(/self\._recursiveRequestData\([^;]*?, 70,/g) || []).length, 8);
-        assert(manager.includes('key, dateString, 50, undefined'));
+        // Retry budgets moved to config/gather.js (#2588); unset env keeps these values.
+        var policy = require('../../config/gather').load({});
+        assert.strictEqual((manager.match(/self\._recursiveRequestData\([^;]*?, gatherPolicy\.retry\.\w+,/g) || []).length, 9);
+        assert.deepStrictEqual([policy.retry.townShort, policy.retry.midSea, policy.retry.invalidCurrent], [70, 70, 50]);
         assert(manager.includes('self.checkTimeAndRequestTask(true);'));
-        assert(source('lib/PastConditionGather.js').includes('self.updateList, 10,'));
+        assert(source('lib/PastConditionGather.js').includes('self.updateList, retryCount,'));
+        assert.strictEqual(policy.pastConditionRetryCount(45), 10);
         var c = h.collector(); var sent = [];
         c.getData = function (i) { sent.push(i); };
         c.requestData(Array.from({length: 103}, function () { return {mx: 60, my: 127}; }), c.DATA_TYPE.TOWN_SHORT, KEY, '20260924', '0800');
