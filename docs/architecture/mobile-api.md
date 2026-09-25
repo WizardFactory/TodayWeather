@@ -57,6 +57,8 @@ Read-only AWS inspection and deployed Lambda code close the earlier missing-gate
 | Backend `/v000903/dsf/coord/:loc` | Weather Lambda selects this for non-KR v000903; source reuses v000902 pipeline | End-to-end result untested |
 | Backend `/v000903/geo/:loc` | Source implements KR/world redirects | Not used by inspected weather Lambda dispatch |
 
+Error responses on the weather and geocode paths carry `Access-Control-Allow-Origin: *` for browser (`Origin`) requests through CloudFront since 2026-09-25 (#2584); status codes and `text/plain` error bodies are unchanged. See [CORS on error responses](aws-code-correlation.md#cors-on-error-responses-2584).
+
 Unversioned public variants are also deployed. Weather Lambda defaults them to `v000901`; versioned app requests select `v000903`. It forwards query parameters, derives language from the request header, retries the backend up to three times (3 seconds each), and enriches weather output with geographic fields. A standard Express start alone cannot provide the public Lambda paths. `route.geo.v000903` remains a separate legacy redirect that does not explicitly forward the original query string.
 
 Sources: [server mounts](../../server/app.js), [v000903 router](../../server/routes/v000903/index.js), [geo redirect](../../server/routes/v000903/route.geo.v000903.js), [deployed Lambda excerpts](deployed-lambda-excerpts.md), [AWS evidence](aws-readonly-evidence-2026-09-20.json).

@@ -61,6 +61,18 @@ Weather/geocode behaviors forward all query parameters and `Origin` / `Accept-La
 
 Errors with no explicit status are wrapped as HTTP 501 with a successful Lambda callback. Therefore zero Lambda `Errors` does not establish zero HTTP failures. The weather-address 501 is established from deployed code, not a live endpoint probe.
 
+### CORS on error responses (#2584)
+
+The Lambda wrapper adds `Access-Control-Allow-Origin: *` only to successful responses; its 501/404 responses and API Gateway-generated errors carry no CORS header. All four public API Lambda functions run `nodejs6.10`, whose function updates AWS has blocked since 2019-08-12, so the wrapper cannot change without a runtime migration. On **2026-09-25 23:22 UTC** the `weather/*` and `geocode/*` CloudFront behaviors received the AWS managed response headers policy `Managed-SimpleCORS` (`60669652-455b-4ae9-85a4-c4c02393f86c`: `Access-Control-Allow-Origin: *`, no credentials, `OriginOverride=false`). No other distribution setting changed.
+
+| Request through CloudFront | CORS header |
+| --- | --- |
+| With `Origin`, origin response without a CORS header (Lambda 501, API Gateway 403) | `*`, added by CloudFront |
+| With `Origin`, successful Lambda response | The origin's own `*`; CloudFront adds nothing |
+| Without `Origin` | Unchanged; CloudFront adds nothing |
+
+Status codes and error bodies are unchanged. Direct `execute-api` requests bypass the policy. API Gateway `DEFAULT_4XX`/`DEFAULT_5XX` gateway responses are still uncustomized. Rollback: remove `ResponseHeadersPolicyId` from both behaviors.
+
 ## KAQ image production and consumption
 
 [Interactive KAQ pipeline](diagrams/kaq-image-pipeline.html) · [Repository collection schedules](weather-collection.md)
