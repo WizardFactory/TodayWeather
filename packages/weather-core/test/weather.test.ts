@@ -92,7 +92,9 @@ describe("source adapters preserve meteorological meaning", () => {
     const data = normalizeWeather(raw);
     expect(data.current.temperature).toBeNull();
     expect(data.yesterday?.temperature).toBeNull();
-    expect(data.daily.every((p) => p.at >= "2026-09-23")).toBe(true);
+    // R6: yesterday (D-1) stays for comparison; older history is excluded.
+    expect(data.daily.every((p) => p.at >= "2026-09-22")).toBe(true);
+    expect(data.daily.some((p) => p.at.startsWith("2025"))).toBe(false);
   });
   it("does not relabel source air standards", () => {
     expect(() =>

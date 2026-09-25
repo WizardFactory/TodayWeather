@@ -135,15 +135,42 @@ export function weatherKey(place: Place, units: Units): string {
     place.lon,
     ...Object.keys(DEFAULT_UNITS).map((k) => units[k as keyof Units]),
     "ko",
-    "v2", // Normalization revision: old daily rain cannot be recovered from snapshots.
+    "v3", // Normalization revision: D45 precipitation basis and air forecast fields.
   ]);
 }
+export const MAX_PLACES = 30;
 export function addPlace(state: SavedState, place: Place): SavedState {
   const found = state.places.find(
     (p) => p.id === place.id || (p.lat === place.lat && p.lon === place.lon),
   );
-  if (found) return { ...state, selectedId: found.id };
-  if (state.places.length >= 30)
+  if (found) {
+    // Choosing a saved place at the current-location slot's coordinates
+    // promotes the slot to a favorite so a later fix cannot replace it.
+    if (!place.current && found.current)
+      return {
+        ...state,
+        places: state.places.map((p) => (p === found ? place : p)),
+        selectedId: place.id,
+      };
+    if (!place.current || found.current)
+      return { ...state, selectedId: found.id };
+    // A new fix on a saved favorite: keep the favorite as is and retire the
+    // stale current-location entry instead of converting or duplicating it.
+    return {
+      ...state,
+      places: state.places.filter((p) => !p.current),
+      selectedId: found.id,
+    };
+  }
+  // One current-location slot: a new fix replaces the previous one in place.
+  const slot = place.current ? state.places.findIndex((p) => p.current) : -1;
+  if (slot >= 0) {
+    const places = state.places
+      .map((p, i) => (i === slot ? place : p))
+      .filter((p, i) => i === slot || (!p.current && p.id !== place.id));
+    return { ...state, places, selectedId: place.id };
+  }
+  if (state.places.length >= MAX_PLACES)
     throw new Error("관심지역은 최대 30개까지 저장할 수 있습니다.");
   return { ...state, places: [...state.places, place], selectedId: place.id };
 }
@@ -193,6 +220,71 @@ async function snapshots<T>(
     };
   }).catch(() => undefined);
 }
+/** Place id that owns a snapshot key, or null for foreign/corrupt keys. */
+export function snapshotOwner(key: string): string | null {
+  try {
+    const parsed = JSON.parse(key);
+    return Array.isArray(parsed) && typeof parsed[0] === "string"
+      ? parsed[0]
+      : null;
+  } catch {
+    return null;
+  }
+}
+const SNAPSHOT_MAX_AGE = 86400000;
+/** Snapshot keys past the 24-hour retention (or with an invalid receipt time). */
+export function expiredSnapshotKeys(
+  entries: { key: string; value: unknown }[],
+  now: number,
+): string[] {
+  return entries
+    .filter(({ value }) => {
+      const at = record(value) ? value.savedAt : undefined;
+      return (
+        typeof at !== "number" ||
+        !Number.isFinite(at) ||
+        at > now + 60000 ||
+        now - at > SNAPSHOT_MAX_AGE
+      );
+    })
+    .map((e) => e.key);
+}
+async function snapshotEntries() {
+  const keys = await snapshots("readonly", (s) => s.getAllKeys()),
+    values = await snapshots("readonly", (s) => s.getAll());
+  if (!keys || !values || keys.length !== values.length) return [];
+  return keys.map((k, i) => ({ key: String(k), value: values[i] as unknown }));
+}
+async function deleteSnapshotKeys(keys: string[]) {
+  for (const key of keys) await snapshots("readwrite", (s) => s.delete(key));
+}
+/** Remove every stored weather snapshot for a deleted or replaced place. */
+export async function deleteSnapshotsFor(placeId: string): Promise<void> {
+  await deleteSnapshotKeys(
+    (await snapshotEntries())
+      .filter((e) => snapshotOwner(e.key) === placeId)
+      .map((e) => e.key),
+  );
+}
+/** Enforce the 24-hour retention; runs at startup and after each write. */
+export async function pruneSnapshots(now = Date.now()): Promise<void> {
+  await deleteSnapshotKeys(expiredSnapshotKeys(await snapshotEntries(), now));
+}
+/** Clear this app's browser data: preferences and the snapshot database. */
+export async function clearLocalData(
+  storage: Pick<Storage, "removeItem">,
+): Promise<void> {
+  try {
+    storage.removeItem(STATE_KEY);
+  } catch {
+    /* Storage may be unavailable; the database is still cleared. */
+  }
+  if (!globalThis.indexedDB) return;
+  await new Promise<void>((resolve) => {
+    const req = indexedDB.deleteDatabase("tw.web.v1.snapshots");
+    req.onsuccess = req.onerror = req.onblocked = () => resolve();
+  });
+}
 export async function writeSnapshot(
   key: string,
   weather: Weather,
@@ -200,6 +292,7 @@ export async function writeSnapshot(
   await snapshots("readwrite", (s) =>
     s.put({ weather, savedAt: Date.now() }, key),
   );
+  await pruneSnapshots();
   const keys = await snapshots("readonly", (s) => s.getAllKeys());
   // Small fixed bound; prune by recorded save time, not lexical coordinate order.
   if (keys && keys.length > 30) {
@@ -230,6 +323,8 @@ function validPoint(p: unknown): boolean {
       "sunrise",
       "sunset",
       "uv",
+      "discomfort",
+      "foodPoisoning",
     ].every((k) => typeof p[k] === "string") &&
     [
       "temperature",
@@ -244,12 +339,10 @@ function validPoint(p: unknown): boolean {
       "feelsLike",
     ].every((k) => finiteOrNull(p[k])) &&
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(p.at) &&
-    finiteOrNull(p.precipitationHours) &&
-    ((!("snowfall" in p) && !("snowfallHours" in p)) ||
-      (finiteOrNull(p.snowfall) &&
-        finiteOrNull(p.snowfallHours) &&
-        [null, 1, 3, 24].includes(p.precipitationHours) &&
-        [null, 1, 3, 24].includes(p.snowfallHours)))
+    finiteOrNull(p.snowfall) &&
+    [null, 1, 3, 24].includes(p.precipitationHours) &&
+    [null, 1, 3, 24].includes(p.snowfallHours) &&
+    [null, "observed", "partial", "approx"].includes(p.precipitationBasis)
   );
 }
 function validAir(station: unknown): boolean {
@@ -257,6 +350,11 @@ function validAir(station: unknown): boolean {
     !record(station) ||
     typeof station.name !== "string" ||
     !(station.observedAt === null || typeof station.observedAt === "string") ||
+    typeof station.forecastSource !== "string" ||
+    !(
+      station.forecastPublishedAt === null ||
+      typeof station.forecastPublishedAt === "string"
+    ) ||
     !record(station.pollutants)
   )
     return false;
@@ -268,13 +366,15 @@ function validAir(station: unknown): boolean {
       finiteOrNull(p.grade) &&
       typeof p.label === "string" &&
       typeof p.guide === "string" &&
+      typeof p.station === "string" &&
       Array.isArray(p.hourly) &&
       p.hourly.every(
         (h: unknown) =>
           record(h) &&
           typeof h.at === "string" &&
           finiteOrNull(h.value) &&
-          finiteOrNull(h.grade),
+          finiteOrNull(h.grade) &&
+          typeof h.forecast === "boolean",
       ) &&
       Array.isArray(p.daily) &&
       p.daily.every(
@@ -351,7 +451,7 @@ export function validateSnapshot(
     )
       return;
     if (
-      !["observedAt", "publishedAt"].every(
+      !["observedAt", "publishedAt", "forecastPublishedAt"].every(
         (k) => w[k] === null || typeof w[k] === "string",
       ) ||
       !Array.isArray(w.notices) ||
@@ -361,23 +461,8 @@ export function validateSnapshot(
       !["available", "unavailable"].includes(w.availability.air)
     )
       return;
-    // Older snapshots had inferred six-hour labels. Keep their values but never repeat unverifiable periods.
-    const migrate = (p: any) =>
-      "snowfall" in p
-        ? p
-        : {
-            ...p,
-            precipitationHours: null,
-            snowfall: null,
-            snowfallHours: null,
-          };
-    return {
-      ...w,
-      current: migrate(w.current),
-      yesterday: w.yesterday && migrate(w.yesterday),
-      hourly: w.hourly.map(migrate),
-      daily: w.daily.map(migrate),
-    } as Weather;
+    // Older normalization revisions use different cache keys and never reach here.
+    return w as Weather;
   } catch {
     return;
   }

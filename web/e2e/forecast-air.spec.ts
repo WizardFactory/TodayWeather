@@ -41,8 +41,11 @@ test("KMA mixed intervals and unverified air summary survive static offline relo
   const rain = page.locator("section.panel").filter({
     has: page.getByRole("heading", { name: "강수·눈 예보", exact: true }),
   });
-  await expect(rain).toContainText("0 mm · 1시간");
-  await expect(rain).toContainText("6 mm · 3시간");
+  // D45: shortest rn1 is an approximate 1-hour category; short r06 is never an amount.
+  await expect(rain).toContainText("강수 0 mm · 1시간 예보(근사)");
+  await expect(rain).toContainText("강수 1 mm 이하 · 1시간 예보(근사)");
+  await expect(rain).not.toContainText("6 mm");
+  await expect(rain).not.toContainText("· 3시간");
   const note = page.getByRole("note");
   await expect(note).toContainText("<b>대기상태가 좋아요</b>");
   await expect(note.locator("b")).toHaveCount(0);

@@ -54,6 +54,8 @@ export type Point = {
   visibility: number | null;
   precipitation: number | null;
   precipitationHours: number | null;
+  /** D45: KMA forecast amounts are hidden; observed and approximate (category lower bound) amounts are marked. */
+  precipitationBasis: "observed" | "partial" | "approx" | null;
   snowfall: number | null;
   snowfallHours: number | null;
   rainProbability: number | null;
@@ -64,18 +66,29 @@ export type Point = {
   sunrise: string;
   sunset: string;
   uv: string;
+  discomfort: string;
+  foodPoisoning: string;
 };
 export type AirMeasure = {
   value: number | null;
   grade: number | null;
   label: string;
   guide: string;
-  hourly: { at: string; value: number | null; grade: number | null }[];
+  /** Station that supplied this pollutant when it differs from the main station. */
+  station: string;
+  hourly: {
+    at: string;
+    value: number | null;
+    grade: number | null;
+    forecast: boolean;
+  }[];
   daily: { at: string; grade: number | null; label: string }[];
 };
 export type AirStation = {
   name: string;
   observedAt: string | null;
+  forecastSource: string;
+  forecastPublishedAt: string | null;
   pollutants: Record<Pollutant, AirMeasure>;
 };
 export type Weather = {
@@ -86,6 +99,8 @@ export type Weather = {
   units: Units;
   observedAt: string | null;
   publishedAt: string | null;
+  /** KMA short forecast publication; D43 says it can be stale. */
+  forecastPublishedAt: string | null;
   fetchedAt: string;
   current: Point;
   yesterday: Point | null;
@@ -114,6 +129,9 @@ export type WarningBulletin = {
   comment: string;
   sections: { title: string; details: string[] }[];
   imageUrl?: string;
+  type: number | null;
+  /** Mobile shows the <참고사항> line only for numeric types 1 and 2. */
+  note: boolean;
 };
 type Row = Record<string, unknown>;
 const record = (v: unknown): Row =>
@@ -175,8 +193,9 @@ const factors: Record<string, Record<string, number>> = {
   distance: { km: 1, mi: 1.609344 },
   precipitation: { mm: 1, in: 25.4 },
 };
+// Server unitConverter band edges (lower-inclusive).
 const beaufort = [
-  0.3, 1.6, 3.4, 5.5, 8, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7,
+  0.3, 1.5, 3.3, 5.5, 8, 10.8, 13.9, 17.2, 20.7, 24.5, 28.4, 32.6,
 ];
 export function convertValue(
   value: number | null,
@@ -242,14 +261,22 @@ export function sourceTime(value: unknown): string | null {
   if (!s) return null;
   if (/^\d{12}$/.test(s))
     return rowTime({ date: s.slice(0, 8), time: s.slice(8) });
-  return s.replace(/^(\d{4})\.(\d{2})\.(\d{2}) /, "$1-$2-$3 ");
+  // KMA stnDateTime is YYYY.MM.DD.HH:MM; other KMA strings use a space.
+  return s.replace(
+    /^(\d{4})[.-](\d{2})[.-](\d{2})[. ](\d{2}:\d{2})/,
+    "$1-$2-$3 $4",
+  );
 }
+const clock = (v: unknown) =>
+  str(v).match(/(\d{2}:\d{2})(?::\d{2})?$/)?.[1] ?? "";
+type Role = "current" | "shortest" | "short" | "daily" | "hourly";
 function point(
   value: unknown,
   source: Units,
   target: Units,
   isKma: boolean,
   period: 1 | 3 | 24,
+  role: Role = period === 24 ? "daily" : period === 3 ? "hourly" : "current",
 ): Point | null {
   const r = record(value),
     at = rowTime(r);
@@ -267,12 +294,32 @@ function point(
   };
   const unit = (v: unknown, kind: string, key: keyof Units) =>
     convertValue(numberValue(v), kind, source[key], target[key]);
-  // A daily KMA rn1 is accumulated observations, not the day's forecast.
-  const dailyKma = isKma && period === 24;
-  const rain = dailyKma
-    ? numberValue(r.r06)
+  // D45: KMA r06/s06 are split or summed hourly categories, never shown as amounts.
+  // rn1 is observed (current 1h, short 3h, daily accumulation) or a shortest
+  // 1-hour category lower bound (approximate). Daily rows are limited to past
+  // dates in normalizeWeather.
+  const rain = isKma
+    ? numberValue(r.rn1)
     : (numberValue(r.rn1) ?? numberValue(r.r06));
-  const snow = numberValue(r.sn1) ?? numberValue(r.s1d) ?? numberValue(r.s06);
+  const basis: Point["precipitationBasis"] =
+    !isKma || rain === null
+      ? null
+      : role === "shortest"
+        ? "approx"
+        : "observed";
+  const rainHours =
+    rain === null || (isKma && role === "daily")
+      ? null
+      : isKma
+        ? role === "short"
+          ? 3
+          : 1
+        : period;
+  const snow = isKma
+    ? numberValue(r.sn1)
+    : (numberValue(r.sn1) ?? numberValue(r.s1d) ?? numberValue(r.s06));
+  const dspls = numberValue(r.dspls),
+    ultrv = numberValue(r.ultrv);
   return {
     at,
     temperature: temp(r.t1h ?? r.t3h),
@@ -289,8 +336,8 @@ function point(
       source.precipitationUnit,
       target.precipitationUnit,
     ),
-    // Daily forecast rows may cover only remaining intervals; do not claim 24 hours.
-    precipitationHours: rain === null || dailyKma ? null : period,
+    precipitationHours: rainHours,
+    precipitationBasis: basis,
     snowfall: convertValue(
       snow,
       "precipitation",
@@ -310,9 +357,20 @@ function point(
     icon: str(r.skyIcon ?? r.skyAm) || "cloud",
     iconPm: str(r.skyPm),
     description: str(r.weather),
-    sunrise: str(r.sunrise),
-    sunset: str(r.sunset),
-    uv: str(r.ultrvStr ?? r.uvIndex),
+    sunrise: clock(r.sunrise),
+    sunset: clock(r.sunset),
+    uv: str(r.ultrvStr)
+      ? ultrv === null
+        ? str(r.ultrvStr)
+        : `${str(r.ultrvStr)} (${ultrv})`
+      : str(r.uvIndex),
+    discomfort:
+      dspls !== null && dspls > 60
+        ? str(r.dsplsStr)
+          ? `${str(r.dsplsStr)} (${dspls})`
+          : String(dspls)
+        : "",
+    foodPoisoning: str(r.fsnStr),
   };
 }
 /** Keep each metric's original accumulation duration when filling hourly gaps. */
@@ -324,11 +382,11 @@ function kmaForecast(
 ): Point[] {
   const timeline = new Map<string, Point>();
   for (const row of array(short)) {
-    const p = point(row, source, target, true, 3);
+    const p = point(row, source, target, true, 3, "short");
     if (p) timeline.set(p.at, p);
   }
   for (const row of array(shortest)) {
-    const p = point(row, source, target, true, 1);
+    const p = point(row, source, target, true, 1, "shortest");
     if (!p) continue;
     const previous = timeline.get(p.at);
     if (!previous) {
@@ -354,6 +412,9 @@ export function normalizeAir(value: unknown): AirStation {
     last = record(s.last ?? value),
     series = record(s.pollutants);
   const pollutants = {} as Record<Pollutant, AirMeasure>;
+  const observed = sourceTime(last.dataTime ?? last.date);
+  // Compare wall times as YYYY-MM-DD HH:MM regardless of T/space or seconds.
+  const minuteKey = (v: string) => v.replace("T", " ").slice(0, 16);
   for (const code of POLLUTANTS) {
     const p = record(series[code]);
     pollutants[code] = {
@@ -361,12 +422,18 @@ export function normalizeAir(value: unknown): AirStation {
       grade: numberValue(last[`${code}Grade`]),
       label: str(last[`${code}Str`]),
       guide: str(last[`${code}ActionGuide`]),
+      station: str(last[`${code}StationName`]),
       hourly: array(p.hourly).map((v) => {
         const r = record(v);
         return {
           at: str(r.date),
           value: numberValue(r.val),
           grade: numberValue(r.grade),
+          // AQI forecast rows carry no pubDate; like the mobile app, rows
+          // after the latest observation are forecasts.
+          forecast:
+            !!str(r.pubDate) ||
+            (!!observed && minuteKey(str(r.date)) > minuteKey(observed)),
         };
       }),
       daily: array(p.daily).map((v) => {
@@ -381,7 +448,9 @@ export function normalizeAir(value: unknown): AirStation {
   }
   return {
     name: str(last.stationName) || str(last.sidoName) || "관측소 정보 없음",
-    observedAt: sourceTime(last.dataTime ?? last.date),
+    observedAt: observed,
+    forecastSource: str(s.forecastSource).toLowerCase(),
+    forecastPublishedAt: sourceTime(s.forecastPubDate),
     pollutants,
   };
 }
@@ -429,9 +498,22 @@ export function normalizeWeather(
       .map((v) => point(v, source, target, kma, period))
       .filter((p): p is Point => p !== null)
       .sort((a, b) => a.at.localeCompare(b.at));
+  // DSF hourly rows sum three provider hours (server _makeHourlyDataFromDSF).
+  // The observed three-hour slot that ends after the current observation is
+  // still accumulating (D45): label it partial, not a complete 3-hour total.
   const hourly = kma
-      ? kmaForecast(raw.short, raw.shortest, source, target)
-      : points(raw.hourly, 1),
+      ? kmaForecast(raw.short, raw.shortest, source, target).map((p) =>
+          p.precipitationBasis === "observed" &&
+          p.precipitationHours === 3 &&
+          p.at > current.at
+            ? {
+                ...p,
+                precipitationBasis: "partial" as const,
+                precipitationHours: null,
+              }
+            : p,
+        )
+      : points(raw.hourly, 3),
     daily = points(kma ? record(raw.midData).dailyData : raw.daily, 24);
   // Keep station emptiness authoritative; never carry an old station into a new result.
   const airRaw = Array.isArray(raw.airInfoList)
@@ -454,11 +536,18 @@ export function normalizeWeather(
     notices.push("어제 같은 시각의 기온을 제공하지 않습니다.");
   if (!air.length)
     notices.push("이 지역의 대기질 관측 자료를 제공하지 않습니다.");
-  const recentDaily = daily.filter(
-    (p) => p.at.slice(0, 10) >= current.at.slice(0, 10),
-  );
-  if (daily.some((p) => p.at.slice(0, 10) < current.at.slice(0, 10)))
-    notices.push("과거 예보 자료는 앞으로의 예보에서 제외했습니다.");
+  const today = current.at.slice(0, 10),
+    before = new Date(today + "T00:00:00Z");
+  before.setUTCDate(before.getUTCDate() - 1);
+  const yesterdayDate = before.toISOString().slice(0, 10);
+  // Keep yesterday for comparison; older rows are history outside this view.
+  const recentDaily = daily
+    .filter((p) => p.at.slice(0, 10) >= yesterdayDate)
+    .map((p) =>
+      kma && p.at.slice(0, 10) >= today
+        ? { ...p, precipitation: null, precipitationBasis: null }
+        : p,
+    );
   return {
     schemaVersion: 1,
     source: kma ? "KMA" : "DSF",
@@ -467,6 +556,7 @@ export function normalizeWeather(
     units: target,
     observedAt: sourceTime(currentRaw.stnDateTime) ?? current.at,
     publishedAt: sourceTime(kma ? raw.currentPubDate : record(raw.pubDate).DSF),
+    forecastPublishedAt: kma ? sourceTime(raw.shortPubDate) : null,
     fetchedAt: options.fetchedAt ?? new Date().toISOString(),
     current,
     yesterday,
@@ -535,8 +625,12 @@ export function normalizeWarnings(value: unknown): WarningBulletin[] {
   if (!Array.isArray(value)) throw new Error("Invalid warning response");
   return value.map((v, i) => {
     const r = record(v);
+    const type =
+      typeof r.type === "number" && Number.isInteger(r.type) ? r.type : null;
     return {
       id: String(i),
+      type,
+      note: type === 1 || type === 2,
       name: str(r.name) || "기상 특보",
       announcement: str(r.announcement),
       comment: str(r.comment),
@@ -596,6 +690,23 @@ export const PLACES: Place[] = [
   lat: Number(lat),
   lon: Number(lon),
 }));
+const shortSido = (t: string) =>
+  t.replace(/(특별시|광역시|특별자치시)$/, "시").replace(/특별자치도$/, "도");
+/** Mobile getShortenAddress token rules; parts joined by a space. */
+export function shortenAddress(address: string): string {
+  const t = str(address).split(" ");
+  const parts =
+    t.length === 2
+      ? [shortSido(t[1])]
+      : t.length === 3
+        ? [shortSido(t[1]), t[2]]
+        : t.length === 4
+          ? [shortSido(t[1].endsWith("도") ? t[2] : t[1]), t[3]]
+          : t.length === 5
+            ? [shortSido(t[2]), t[4]]
+            : [];
+  return parts.filter(Boolean).join(" ");
+}
 export function formatValue(v: number | null | undefined, digits = 0): string {
   return v === null || v === undefined || !Number.isFinite(v)
     ? "—"

@@ -35,6 +35,7 @@ describe("KMA mixed-interval forecast and provider air summary", () => {
       temperature: 53.6,
       precipitation: 0,
       precipitationHours: 1,
+      precipitationBasis: "approx",
       humidity: 80,
     });
     expect(w.hourly[1]).toMatchObject({
@@ -44,18 +45,19 @@ describe("KMA mixed-interval forecast and provider air summary", () => {
     expect(w.hourly[2]).toMatchObject({
       precipitation: 1,
       precipitationHours: 1,
+      precipitationBasis: "approx",
       snowfall: 1,
       snowfallHours: 1,
     });
+    // D45: short r06/s06 are split hourly categories; only pty/pop remain.
     expect(w.hourly[3]).toMatchObject({
       temperature: 59,
       humidity: 0,
-      precipitation: 1,
-      precipitationHours: 3,
-      snowfall: 1,
-      snowfallHours: 3,
+      precipitation: null,
+      precipitationHours: null,
+      snowfall: null,
     });
-    expect(w.hourly[4].precipitationHours).toBe(3);
+    expect(w.hourly[4].precipitation).toBeNull();
   });
   it("handles absent/empty shortest and leaves DSF hourly selection unchanged", () => {
     const raw = sample();

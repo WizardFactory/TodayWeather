@@ -57,7 +57,7 @@
       "id": "local-storage",
       "type": "database",
       "label": "Local browser state",
-      "sublabel": "Favorites + validated snapshots",
+      "sublabel": "Favorites + 24h snapshots",
       "pos": [
         40,
         400
@@ -94,14 +94,14 @@
       "id": "fetch-public",
       "from": "direct-adapter",
       "to": "existing-api",
-      "label": "HTTPS + CORS",
+      "label": "HTTPS · 1 retry on 502",
       "variant": "emphasis"
     },
     {
       "id": "persist-state",
       "from": "responsive-screens",
       "to": "local-storage",
-      "label": "Local read / write",
+      "label": "Snapshot first · prune",
       "labelDy": 60
     },
     {
@@ -118,24 +118,24 @@
       "dot": "cyan",
       "title": "Weather data",
       "items": [
-        "Daily KMA rain uses forecasts, not observed totals",
-        "Zero snow stays in data; offset warning times use KST"
+        "KMA r06/s06 hidden; observed or approximate rain only",
+        "KMA station times parsed; air follows its standard's grades"
       ]
     },
     {
       "dot": "emerald",
       "title": "Offline behavior",
       "items": [
-        "Cache-key revision v2 excludes old normalized snapshots",
-        "Worker updates preserve edits on first activation"
+        "Cache-key revision v3; stored weather shown while refreshing",
+        "Deleting a place or 24 hours removes its snapshots"
       ]
     },
     {
       "dot": "amber",
       "title": "Runtime scope",
       "items": [
-        "Network failures offer Korean retry guidance",
-        "Existing API availability remains a backend concern"
+        "One delayed retry on 502 or network failure",
+        "AirKorea, KAQ and Dark Sky credited like the app"
       ]
     }
   ]

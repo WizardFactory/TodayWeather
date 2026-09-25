@@ -1,33 +1,34 @@
 import { expect, it } from "vitest";
 import { DEFAULT_UNITS, normalizeWeather } from "../src/index";
 import fixture from "../../../docs/rewrite/examples/client-kma-response.json";
-it("uses daily KMA forecast rain independently of observed accumulated rain", () => {
+it("shows only observed daily accumulation for past KMA days (D45)", () => {
   const raw: any = structuredClone(fixture.response);
   raw.current.rn1 = 0;
-  raw.current.r06 = 9;
   raw.midData.dailyData = [
+    { date: "20260922", time: "0000", rn1: 25.4, r06: 3 },
     { date: raw.current.date, time: "0000", rn1: 0, r06: 25.4, s06: 0 },
   ];
   const w = normalizeWeather(raw, {
     units: { ...DEFAULT_UNITS, precipitationUnit: "in" },
   });
-  expect(w.current.precipitation).toBe(0);
+  expect(w.current).toMatchObject({
+    precipitation: 0,
+    precipitationBasis: "observed",
+  });
   expect(w.daily[0]).toMatchObject({
     precipitation: 1,
     precipitationHours: null,
-    snowfall: 0,
+    precipitationBasis: "observed",
   });
-  for (const r06 of [undefined, null, -1]) {
-    raw.midData.dailyData[0] = {
-      date: raw.current.date,
-      time: "0000",
-      rn1: 8,
-      r06,
-    };
+  expect(w.daily[1]).toMatchObject({
+    precipitation: null,
+    precipitationBasis: null,
+    snowfall: null,
+  });
+  for (const rn1 of [undefined, null, -1]) {
+    raw.midData.dailyData[0] = { date: "20260922", time: "0000", rn1, r06: 8 };
     expect(normalizeWeather(raw).daily[0].precipitation).toBeNull();
   }
-  raw.midData.dailyData[0].r06 = 0;
-  expect(normalizeWeather(raw).daily[0].precipitation).toBe(0);
 });
 it("preserves DSF daily rain and current/hourly zero precedence", () => {
   const raw: any = structuredClone(fixture.response);
