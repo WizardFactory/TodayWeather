@@ -37,7 +37,7 @@ Server source and three read-only live KMA coordinate responses sampled 2026-09-
 | KMA field | Meaning used by the web | Display |
 | --- | --- | --- |
 | `current.rn1` | Observed 1-hour amount | `N mm · 1시간 관측` |
-| `shortest[].rn1` | Lower bound of a 1-hour forecast category | `약 N mm`; `1 mm 이하` for 1 (it also covers "1mm 미만"); `30~50 mm` or `50 mm 이상` for the top categories; `· 1시간 예보(근사)` |
+| `shortest[].rn1` | Approximate 1-hour forecast: the lower bound of a category on the deployed server, a representative amount after #2583 (see below) | `약 N mm`; `1 mm 이하` for 1 (it also covers "1mm 미만"); `30~50 mm` or `50 mm 이상` for the top categories; `· 1시간 예보(근사)` |
 | `short[].rn1` (the server fills past and current slots) | Observed 3-hour total; the slot ending after the current observation is still accumulating | `N mm · 3시간 관측`; the in-progress slot shows `N mm · 지금까지 관측` |
 | `short[].r06` (rows without a valid `rn1`) and `short[].s06` | Server-calculated 3-hour forecast | `N mm · 3시간 예보`; snow `적설량 N mm · 3시간 예보` |
 | `midData.dailyData[].rn1` for yesterday | Observed accumulation | `N mm · 관측 누적` |

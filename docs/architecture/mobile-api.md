@@ -129,7 +129,7 @@ Since `VilageFcstInfoService_2.0`, `PCP`, `SNO` and forecast `RN1` are hourly va
 
 The collector stores the amount in `r06`/`s06`/`rn1` (legacy names) and, for a category only, the provider text in `r06Text`/`s06Text`/`rn1Text` (both DB versions). Unparseable text stays `-1`. Rows without text (for example from the older `parseFloat` gather code) are read as exact amounts. DB 1.0 keeps 192 short rows (eight days of hours) instead of 64.
 
-Composition in the v000901–v000903 KMA chains (`ControllerTown24h`). Older chains share steps 1, 2, 3 (without the `r06` replacement) and 5, but v000001 uses the base `adjustShort`, so it keeps `-1` amounts without `Hours`/`Approx` and has no `convert0Hto24H` (its day window follows its own slot times), and chains without `convertUnits` keep `s06` in cm:
+Composition in the v000901–v000903 KMA chains (`ControllerTown24h`). v000705 and v000803 also use `ControllerTown24h.adjustShort`. v000001 shares steps 1, 2, 3 (without the `r06` replacement) and 5, but uses the base `adjustShort`, so it keeps `-1` amounts without `Hours`/`Approx` and has no `convert0Hto24H` (its day window follows its own slot times), and chains without `convertUnits` keep `s06` in cm:
 
 1. `getShort` sums every stored hourly row into its 3-hour slot. Slot T holds hours T-2, T-1 and T, so the next-day 00:00 slot (`2400` after `convert0Hto24H`) holds 22h, 23h and 00h. This is the grouping already used for observations and shortest forecasts.
 2. `getShortRss` labels copied RSS `r06`/`s06` as six-hour amounts (`Hours 6`); the overwrite/fill policy is unchanged.
