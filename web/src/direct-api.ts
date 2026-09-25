@@ -85,15 +85,24 @@ export async function directApi(
   const route = url.pathname,
     mode = settings.mode;
   const units = parseUnits(Object.fromEntries(url.searchParams));
-  const upstream = async (p: string) =>
-    readJson(
-      await fetch(settings.apiOrigin + p, {
+  const upstream = async (p: string) => {
+    let response: Response;
+    try {
+      response = await fetch(settings.apiOrigin + p, {
         signal,
         credentials: "omit",
         redirect: "error",
         headers: { Accept: "application/json", "Accept-Language": "ko" },
-      }),
-    );
+      });
+    } catch {
+      if (signal.aborted) throw signal.reason;
+      // CORS prevents inspecting a failed response. Never echo provider/network details.
+      throw new Error(
+        "날씨 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      );
+    }
+    return readJson(response);
+  };
   const query = new URLSearchParams({
     ...DEFAULT_UNITS,
     airUnit: units.airUnit,

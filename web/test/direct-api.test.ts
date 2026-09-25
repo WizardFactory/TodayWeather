@@ -103,6 +103,24 @@ describe("static browser API transport", () => {
     c.abort();
     await expect(api("/places", c.signal)).rejects.toThrow();
   });
+  it("localizes network/CORS errors and preserves cancellation identity", async () => {
+    const { api } = await import("../src/api");
+    fetcher.mockRejectedValue(
+      new TypeError("Failed to fetch internal.example"),
+    );
+    await expect(api("/weather?lat=35.69&lon=139.692")).rejects.toThrow(
+      "연결하지 못했습니다",
+    );
+    const c = new AbortController();
+    const reason = new DOMException("cancelled", "AbortError");
+    fetcher.mockImplementation(async () => {
+      c.abort(reason);
+      throw new TypeError("Failed to fetch");
+    });
+    await expect(api("/weather?lat=35.69&lon=139.692", c.signal)).rejects.toBe(
+      reason,
+    );
+  });
   it("explicit demo mode works without network and labels data", async () => {
     vi.stubEnv("VITE_WEB_MODE", "demo");
     fetcher.mockRejectedValue(new Error("No network"));

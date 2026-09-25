@@ -330,12 +330,12 @@ function WeatherDetails({
             "강수량",
             `${formatValue(t.precipitation, 1)} ${w.units.precipitationUnit}`,
           ],
-          ...(t.snowfall !== null
+          ...(t.snowfall !== null && t.snowfall > 0
             ? [
                 [
                   CloudRainIcon,
                   snowLabel,
-                  `${formatValue(t.snowfall, 1)} ${w.units.precipitationUnit}`,
+                  `${snowAmount(t.snowfall)} ${w.units.precipitationUnit}`,
                 ],
               ]
             : []),
@@ -400,13 +400,17 @@ function WeatherDetails({
               <span>
                 강수 {formatValue(p.precipitation, 1)}{" "}
                 {w.units.precipitationUnit}
-                {p.precipitationHours !== null && p.precipitation !== null
-                  ? ` · ${p.precipitationHours}시간`
-                  : ""}
+                {p.precipitation !== null &&
+                view === "daily" &&
+                w.source === "KMA"
+                  ? " · 예보"
+                  : p.precipitationHours !== null && p.precipitation !== null
+                    ? ` · ${p.precipitationHours}시간`
+                    : ""}
               </span>
-              {p.snowfall !== null && (
+              {p.snowfall !== null && p.snowfall > 0 && (
                 <span>
-                  {snowLabel} {formatValue(p.snowfall, 1)}{" "}
+                  {snowLabel} {snowAmount(p.snowfall)}{" "}
                   {w.units.precipitationUnit}
                   {p.snowfallHours !== null ? ` · ${p.snowfallHours}시간` : ""}
                 </span>
@@ -626,4 +630,8 @@ function AirDetails({ weather: w }: { weather: Weather }) {
       </section>
     </>
   );
+}
+
+function snowAmount(value: number): string {
+  return value > 0 && value < 0.1 ? "<0.1" : formatValue(value, 1);
 }

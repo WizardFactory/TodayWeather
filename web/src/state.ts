@@ -135,7 +135,7 @@ export function weatherKey(place: Place, units: Units): string {
     place.lon,
     ...Object.keys(DEFAULT_UNITS).map((k) => units[k as keyof Units]),
     "ko",
-    "v1",
+    "v2", // Normalization revision: old daily rain cannot be recovered from snapshots.
   ]);
 }
 export function addPlace(state: SavedState, place: Place): SavedState {

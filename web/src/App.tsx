@@ -944,7 +944,7 @@ function Warnings() {
             q.data.items.map((b) => (
               <article className="panel bulletin" key={b.id}>
                 <h2>{b.name}</h2>
-                <Stamp at={b.announcement} label="발표" />
+                <Stamp at={b.announcement} label="발표" timeZone="Asia/Seoul" />
                 {isOld(b.announcement, 24) && (
                   <p className="warning-text">
                     발표일이 지난 자료입니다. 현재 특보 여부는 기상청에서

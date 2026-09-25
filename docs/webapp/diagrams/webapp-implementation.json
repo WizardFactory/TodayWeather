@@ -29,7 +29,7 @@
       "id": "direct-adapter",
       "type": "frontend",
       "label": "Direct API adapter",
-      "sublabel": "Typed browser normalization",
+      "sublabel": "Source-aware browser normalization",
       "pos": [
         480,
         100
@@ -118,15 +118,15 @@
       "dot": "cyan",
       "title": "Weather data",
       "items": [
-        "KMA 1h + 3h forecasts retain accumulation periods",
-        "Provider air summaries remain separate from observations"
+        "Daily KMA rain uses forecasts, not observed totals",
+        "Zero snow stays in data; offset warning times use KST"
       ]
     },
     {
       "dot": "emerald",
       "title": "Offline behavior",
       "items": [
-        "IndexedDB snapshots expire and are validated on read",
+        "Cache-key revision v2 excludes old normalized snapshots",
         "Worker updates preserve edits on first activation"
       ]
     },
@@ -134,8 +134,8 @@
       "dot": "amber",
       "title": "Runtime scope",
       "items": [
-        "Live API failures never switch to demo fixtures",
-        "Node is used only for builds and local tools"
+        "Network failures offer Korean retry guidance",
+        "Existing API availability remains a backend concern"
       ]
     }
   ]

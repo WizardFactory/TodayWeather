@@ -5179,8 +5179,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="context" x="155" y="154" class="t-muted" font-size="9" text-anchor="middle">Weather, air, places, settings</text>
         </g>
 
-        <g id="node-direct-adapter" data-node-id="direct-adapter" data-node-label="Direct API adapter" tabindex="0" role="button" aria-label="Focus Direct API adapter, Typed browser normalization, Architecture component" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Typed browser normalization" data-node-context="Architecture component">
-          <title>Direct API adapter · Typed browser normalization · Architecture component</title>
+        <g id="node-direct-adapter" data-node-id="direct-adapter" data-node-label="Direct API adapter" tabindex="0" role="button" aria-label="Focus Direct API adapter, Source-aware browser normalization, Architecture component" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Source-aware browser normalization" data-node-context="Architecture component">
+          <title>Direct API adapter · Source-aware browser normalization · Architecture component</title>
           <rect x="480" y="100" width="230" height="80" rx="6" class="c-mask"/>
           <rect x="480" y="100" width="230" height="80" rx="6" class="c-frontend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(486 106) scale(0.6875)">
@@ -5190,7 +5190,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="595" y="138" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Direct API adapter</text>
-        <text data-detail="context" x="595" y="154" class="t-muted" font-size="9" text-anchor="middle">Typed browser normalization</text>
+        <text data-detail="context" x="595" y="154" class="t-muted" font-size="9" text-anchor="middle">Source-aware browser normalization</text>
         </g>
 
         <g id="node-existing-api" data-node-id="existing-api" data-node-label="Existing public API" tabindex="0" role="button" aria-label="Focus Existing public API, Weather / geocode / warnings, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="Weather / geocode / warnings" data-node-context="Architecture component">
@@ -5460,8 +5460,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Weather data</h3>
         </div>
         <ul>
-          <li>&bull; KMA 1h + 3h forecasts retain accumulation periods</li>
-          <li>&bull; Provider air summaries remain separate from observations</li>
+          <li>&bull; Daily KMA rain uses forecasts, not observed totals</li>
+          <li>&bull; Zero snow stays in data; offset warning times use KST</li>
         </ul>
       </div>
 
@@ -5471,7 +5471,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Offline behavior</h3>
         </div>
         <ul>
-          <li>&bull; IndexedDB snapshots expire and are validated on read</li>
+          <li>&bull; Cache-key revision v2 excludes old normalized snapshots</li>
           <li>&bull; Worker updates preserve edits on first activation</li>
         </ul>
       </div>
@@ -5482,8 +5482,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Runtime scope</h3>
         </div>
         <ul>
-          <li>&bull; Live API failures never switch to demo fixtures</li>
-          <li>&bull; Node is used only for builds and local tools</li>
+          <li>&bull; Network failures offer Korean retry guidance</li>
+          <li>&bull; Existing API availability remains a backend concern</li>
         </ul>
       </div>
     </div>

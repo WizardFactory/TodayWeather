@@ -92,15 +92,42 @@ export function Empty({
 export function Stamp({
   at,
   label = "관측 시각",
+  timeZone,
 }: {
   at: string | null | undefined;
   label?: string;
+  timeZone?: "Asia/Seoul";
 }) {
   return (
     <span className="stamp">
-      {label} {at?.replace("T", " ").slice(0, 19) ?? "정보 없음"}
+      {label} {stampTime(at, timeZone)}
     </span>
   );
+}
+function stampTime(
+  at: string | null | undefined,
+  timeZone?: "Asia/Seoul",
+): string {
+  if (!at) return "정보 없음";
+  if (!timeZone) return at.replace("T", " ").slice(0, 19);
+  // Only explicit offsets identify an instant. Naive KMA wall times must not move.
+  if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(at)) return "정보 없음";
+  if (!/(?:Z|[+-]\d{2}:?\d{2})$/i.test(at))
+    return at.replace("T", " ").slice(0, 19);
+  const date = new Date(at);
+  if (!Number.isFinite(date.getTime())) return "정보 없음";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}:${values.second} KST`;
 }
 export function isOld(at: string | null, limitHours = 3) {
   if (!at) return false;

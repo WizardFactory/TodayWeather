@@ -24,7 +24,7 @@ describe("reviewed source boundaries", () => {
     expect((data.hourly[0] as any).snowfall).toBe(25.4);
     expect(data.hourly[1].precipitation).toBe(0);
     expect(data.hourly[1].precipitationHours).toBe(3);
-    expect(data.daily[0].precipitationHours).toBe(24);
+    expect(data.daily[0].precipitationHours).toBeNull();
     const inches = normalizeWeather(raw, {
       units: { ...DEFAULT_UNITS, precipitationUnit: "in" },
     });

@@ -267,7 +267,11 @@ function point(
   };
   const unit = (v: unknown, kind: string, key: keyof Units) =>
     convertValue(numberValue(v), kind, source[key], target[key]);
-  const rain = numberValue(r.rn1) ?? numberValue(r.r06);
+  // A daily KMA rn1 is accumulated observations, not the day's forecast.
+  const dailyKma = isKma && period === 24;
+  const rain = dailyKma
+    ? numberValue(r.r06)
+    : (numberValue(r.rn1) ?? numberValue(r.r06));
   const snow = numberValue(r.sn1) ?? numberValue(r.s1d) ?? numberValue(r.s06);
   return {
     at,
@@ -285,7 +289,8 @@ function point(
       source.precipitationUnit,
       target.precipitationUnit,
     ),
-    precipitationHours: rain === null ? null : period,
+    // Daily forecast rows may cover only remaining intervals; do not claim 24 hours.
+    precipitationHours: rain === null || dailyKma ? null : period,
     snowfall: convertValue(
       snow,
       "precipitation",

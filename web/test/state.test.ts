@@ -111,3 +111,25 @@ describe("untrusted persisted weather", () => {
     expect(migrated.current.snowfall).toBeNull();
   });
 });
+
+it("rejects snapshots normalized with the old daily-rain selection", async () => {
+  const { normalizeWeather, DEFAULT_UNITS, PLACES } =
+    await import("@todayweather/core");
+  const { validateSnapshot } = await import("../src/state");
+  const fixture =
+    await import("../../docs/rewrite/examples/client-kma-response.json");
+  const weather = normalizeWeather(fixture.response, { location: PLACES[0] });
+  const legacyKey = JSON.stringify([
+    PLACES[0].id,
+    PLACES[0].lat,
+    PLACES[0].lon,
+    ...Object.keys(DEFAULT_UNITS).map(
+      (k) => DEFAULT_UNITS[k as keyof typeof DEFAULT_UNITS],
+    ),
+    "ko",
+    "v1",
+  ]);
+  expect(
+    validateSnapshot({ weather, savedAt: Date.now() }, legacyKey),
+  ).toBeUndefined();
+});
