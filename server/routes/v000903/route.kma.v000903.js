@@ -55,7 +55,7 @@ var routerList = [cTown.checkQueryValidation, cTown.checkParamValidation, cTown.
     cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather, cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
     cTown.mergeByShortest, cTown.adjustShort, cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo,
     cTown.getPastMid, cTown.mergeMidWithShort, cTown.updateMidTempMaxMin, cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco,
-    cTown.getKecoDustForecast, cTown.getRiseSetInfo, cTown.insertIndex, cTown.makeAirInfoList, cTown.AirForecastList, cTown.insertSkyIconLowCase,
+    cTown.getKecoDustForecast, cTown.getRiseSetInfo, cTown.enrichCurrentByAwsMinute, cTown.insertIndex, cTown.makeAirInfoList, cTown.AirForecastList, cTown.insertSkyIconLowCase,
     cTown.setYesterday, cTown.getSpecialInfo, cTown.convertUnits, cTown.insertStrForData, cTown.getSummaryAfterUnitConverter,
     cTown.makeResult, cTown.sendResult];
 

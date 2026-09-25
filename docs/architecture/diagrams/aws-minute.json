@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Fresh minute observations",
+    "quality_profile": "showcase",
+    "animation": "none"
+  },
+  "components": [
+    {
+      "id": "aws-source",
+      "type": "external",
+      "label": "KMA AWS minute",
+      "sublabel": "Publication in KST",
+      "pos": [
+        40,
+        50
+      ],
+      "size": [
+        245,
+        70
+      ]
+    },
+    {
+      "id": "minute-worker",
+      "type": "backend",
+      "label": "Single minute worker",
+      "sublabel": "Validate, bounded poll, default off",
+      "pos": [
+        450,
+        50
+      ],
+      "size": [
+        260,
+        70
+      ]
+    },
+    {
+      "id": "minute-store",
+      "type": "database",
+      "label": "UTC observation store",
+      "sublabel": "Station / instant identity",
+      "pos": [
+        880,
+        50
+      ],
+      "size": [
+        260,
+        70
+      ]
+    },
+    {
+      "id": "normal-data",
+      "type": "backend",
+      "label": "Normal weather pipeline",
+      "sublabel": "Gather, history and forecast intact",
+      "pos": [
+        450,
+        270
+      ],
+      "size": [
+        260,
+        70
+      ]
+    },
+    {
+      "id": "minute-overlay",
+      "type": "backend",
+      "label": "Current field overlay",
+      "sublabel": "Eligible station, newer valid fields",
+      "pos": [
+        880,
+        270
+      ],
+      "size": [
+        260,
+        70
+      ]
+    },
+    {
+      "id": "api-client",
+      "type": "frontend",
+      "label": "Weather API and client",
+      "sublabel": "Indices, units and normal caching",
+      "pos": [
+        880,
+        490
+      ],
+      "size": [
+        260,
+        70
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "aws-source",
+      "to": "minute-worker",
+      "label": "Parse"
+    },
+    {
+      "from": "minute-worker",
+      "to": "minute-store",
+      "label": "Idempotent write"
+    },
+    {
+      "from": "minute-store",
+      "to": "minute-overlay"
+    },
+    {
+      "from": "normal-data",
+      "to": "minute-overlay",
+      "label": "Fallback"
+    },
+    {
+      "from": "minute-overlay",
+      "to": "api-client"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Independent controls",
+      "items": [
+        "Collector and service enrichment default off",
+        "Dry-run opens no database and performs no mutations"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Time and suitability",
+      "items": [
+        "Explicit KST to UTC, age below 20 minutes",
+        "Mapped city station; field-level source provenance"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Operational gate",
+      "items": [
+        "No automatic legacy cleanup or host change",
+        "Production verification and activation require approval"
+      ]
+    }
+  ]
+}

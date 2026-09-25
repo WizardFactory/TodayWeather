@@ -814,6 +814,9 @@ function ControllerTown() {
                     }
 
                     req.current = resultItem;
+                    if (config.awsMinute && config.awsMinute.enrichEnabled) {
+                        require('../lib/awsMinute/policy').capture(req, currentItem, resultItem);
+                    }
                     req.currentPubDate = currentInfo.pubDate;
 
                     //재사용을 위해 req에 달아둠.
@@ -3128,6 +3131,18 @@ function ControllerTown() {
      * @param res
      * @param next
      */
+    this.enrichCurrentByAwsMinute = function (req, res, next) {
+        if (!config.awsMinute || !config.awsMinute.enrichEnabled || !req.current) return next();
+        var done = false;
+        var timer = setTimeout(function () { if (!done) { done = true; next(); } }, 3000);
+        self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, town) {
+            if (done) return;
+            done = true; clearTimeout(timer);
+            if (err || !town) return next();
+            require('../lib/awsMinute/service').enrich(req, res, next, {enabled:true, town:town});
+        });
+    };
+
     this.insertIndex = function (req, res, next) {
         var meta = {};
         meta.sID = req.sessionID;

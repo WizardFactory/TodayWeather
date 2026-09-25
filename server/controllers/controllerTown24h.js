@@ -646,7 +646,7 @@ function ControllerTown24h() {
                 else {
                     time = data.time;
                 }
-                isNight = _isNight(req.midData.dailyData, data.date, time);
+                isNight = _isNight(req.midData.dailyData, data.liveDate || data.date, time);
                 data.night = isNight;
                 data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, isNight);
             }
@@ -699,7 +699,7 @@ function ControllerTown24h() {
                 else {
                     time = data.time;
                 }
-                isNight = _isNight(req.midData.dailyData, data.date, time);
+                isNight = _isNight(req.midData.dailyData, data.liveDate || data.date, time);
                 data.night = isNight;
                 data.skyIcon = self._parseSkyStateLowCase(data.sky, data.pty, data.lgt, isNight);
             }

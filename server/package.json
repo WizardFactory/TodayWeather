@@ -19,7 +19,9 @@
     "test:runtime": "node test/offline/runtime-node16.test.js",
     "test:runtime:smoke": "node test/offline/runtime-smoke.js",
     "e2e": "./node_modules/mocha/bin/mocha test/e2e",
-    "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
+    "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo",
+    "test:aws-minute": "node test/offline/aws-minute.test.js && node test/offline/aws-minute-lifecycle.test.js && node test/offline/aws-minute-service.test.js",
+    "test:aws-minute:integration": "node test/offline/aws-minute-integration.js"
   },
   "dependencies": {
     "async": "^2.5.0",

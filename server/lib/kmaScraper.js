@@ -1080,6 +1080,10 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                     });
                 },
                 function (err, cityWeatherList) {
+                    if (err) return cb(err);
+                    if (!cityWeatherList || !Array.isArray(cityWeatherList.cityList)) {
+                        return cb(new Error('Invalid city weather result'));
+                    }
                     if (awsWeatherList.pubDate != cityWeatherList.pubDate) {
                         log.error("pubdate is different aws.pubDate=", awsWeatherList.pubDate,
                             " city.pubDate=", cityWeatherList.pubDate);
