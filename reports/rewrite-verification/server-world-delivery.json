@@ -6,12 +6,12 @@
   "input": "/Users/ak/.paseo/worktrees/2hsryg27/creepy-lamprey/docs/rewrite/diagrams/server-world-cache-sequence.json",
   "output": "/Users/ak/.paseo/worktrees/2hsryg27/creepy-lamprey/docs/rewrite/diagrams/server-world-cache-sequence.html",
   "specification": {
-    "sha256": "c4bc6b53b3a62f2adbfe57ae36770cb92715f7d14ec8d28becf9664e35eeb20b",
-    "bytes": 2973
+    "sha256": "1a90bd02abf8a95edfc7a5b86b52630b9282e3dd4423847096cc25d730e6c082",
+    "bytes": 4333
   },
   "artifact": {
-    "sha256": "4ea74da819ed4bbd5eb65ad45fdab15eef96d17e7091c018a1b6ccc4c3e5fc67",
-    "bytes": 710788
+    "sha256": "51465d81dd3167c7cc23ddc97f1752e814caa500970b865b5ccbf04e6c3d027e",
+    "bytes": 715088
   },
   "validation": {
     "checksPassed": 9,

@@ -43,7 +43,7 @@ These values come from static parsing of the deployed `server/config/config.js`,
 
 | Setting | Host configuration resolution | Consequence |
 | --- | --- | --- |
-| `NODE_ENV` | `production` in process metadata | Production Express error handling |
+| `NODE_ENV` | `production` in process metadata | Route errors passed to `next(err)` or thrown synchronously, and 404s, reach Express's built-in `finalhandler`, which returns an HTML body containing only the status text (no stack) and writes the stack to `console.error` (PM2 stderr). The `app.js` "error handlers" ([L162](../../server/app.js#L162), [L173](../../server/app.js#L173)) take three parameters, so Express 4 never calls them for errors: neither the Jade `error` view nor `log.error` runs (source analysis, not a probe) |
 | `SERVER_MODE` / `config.mode` | No selected override; deployed fallback **`service`** | Startup does not call Manager gather/scrape or push loops |
 | Bind / port | `127.0.0.1` / `3000` | Matches observed shared loopback listener |
 | `DB_DATA_VERSION` | No selected override; deployed fallback **`2.0`** | Supported domestic reads select v2 controllers/models |
@@ -86,6 +86,6 @@ nginx logs use `/var/log/nginx/access.log` and `/var/log/nginx/error.log`. Worke
 
 The inspection used the user-supplied PEM without changing it, first-use host-key acceptance in an isolated local known_hosts file and strict checks afterward. Selected privileged reads used noninteractive sudo. Raw config source, full environments, credentials, webhook settings, request logs and client IPs are excluded from repository evidence. No service configuration, process state or cloud resource was intentionally changed; no restart, deployment, HTTP endpoint probe, database query or lateral SSH occurred.
 
-The separate gather instance's process mode, deployment and consumer bucket remain unverified. The Mongo server internals, shipped mobile release configuration, live weather/provider results and cause of the previously observed KAQ OCR failures also remain open.
+The separate gather instance's process mode, deployment and consumer bucket remain unverified. The Mongo server internals, shipped mobile release configuration, live weather/provider results and cause of the previously observed KAQ OCR failures also remain open. The effective process time zone is missing evidence: the environment check below did not select `TZ`, the host zone setting is not recorded, and the repository configures none, yet several persisted date encodings depend on the writing process's zone ([time representations](../rewrite/data-model-reference.md#4-time-representations)).
 
 The sanitized snapshot also retains `selected_process_environment_check`: at 15:10:34 UTC, all 12 selected override keys were absent from the process-start environments of all 10 worker PIDs. The configuration SHA-256 remained unchanged. This corroborates the static fallback resolution without publishing environment values or claiming an inspection of JavaScript heap state.
