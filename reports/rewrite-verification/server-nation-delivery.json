@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "/Users/ak/.paseo/worktrees/2hsryg27/creepy-lamprey/docs/rewrite/diagrams/server-nation-fanout.json",
+  "output": "/Users/ak/.paseo/worktrees/2hsryg27/creepy-lamprey/docs/rewrite/diagrams/server-nation-fanout.html",
+  "specification": {
+    "sha256": "23d328bbbc8cd4ac20d2576340a90821a68d2d10ddf9492b758d75df078971b7",
+    "bytes": 4773
+  },
+  "artifact": {
+    "sha256": "f770a9ce494825385641fb04f0b8b9336ff7ecac329c33ca457e95338e8fe30c",
+    "bytes": 714244
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

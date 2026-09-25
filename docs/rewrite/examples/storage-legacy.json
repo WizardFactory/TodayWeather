@@ -1,0 +1,427 @@
+{
+  "_example": {
+    "kind": "synthetic persisted client storage, legacy keys before migration",
+    "sourceRevision": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+    "liveDeviceCapture": false,
+    "encoding": "rawLocalStorage values are the exact strings returned by localStorage.getItem (the migration reads these keys without JSON.parse). jsonLocalStorage values are shown parsed; they are read through TwStorage.get (JSON.parse).",
+    "absentKeys": [
+      "settingsInfo",
+      "startVersion",
+      "cityList",
+      "pushData2"
+    ],
+    "sensitiveFields": "pushData.registrationId is null on purpose. No token, receipt, device ID or credential appears in this file.",
+    "unknownLegacyWriters": "The code that wrote startupPage, refreshInterval, guideVersion and pushData.alarmList is not in this checkout. Legacy alarm fields other than cityIndex and time are unknown; the migration keeps any extra fields unchanged.",
+    "migrationPreconditions": "guideVersion and startupPage/refreshInterval migrate only when the appPreferences plugin exists and localStorage is non-empty (TwStorage.init -> _setBackwardCompatibility). The pushData migration runs on every start while pushData2 is absent or unparsable; aircn replacement and cities repair run on every start.",
+    "deliberateCases": [
+      "cities[0] is an old current-position placeholder without disable/photo; createCity defaults disable to false.",
+      "cities[1] is an address-only favorite without location or name, with the legacy dayTable slot.",
+      "units.airUnit is the retired value aircn."
+    ],
+    "reference": "docs/rewrite/client-state-and-behavior.md (Legacy migrations)"
+  },
+  "rawLocalStorage": {
+    "guideVersion": "1",
+    "startupPage": "1",
+    "refreshInterval": "60"
+  },
+  "jsonLocalStorage": {
+    "cities": [
+      {
+        "currentPosition": true,
+        "address": null,
+        "location": null,
+        "currentWeather": null,
+        "timeTable": null,
+        "timeChart": null,
+        "dayTable": null,
+        "dayChart": null
+      },
+      {
+        "currentPosition": false,
+        "address": "대한민국 서울특별시 종로구 청운효자동",
+        "source": "KMA",
+        "currentWeather": {
+          "date": "20170501",
+          "time": 9,
+          "t1h": 18,
+          "skyIcon": "sun"
+        },
+        "timeTable": [],
+        "dayTable": []
+      }
+    ],
+    "cityIndex": 1,
+    "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "aircn"
+    },
+    "pushData": {
+      "registrationId": null,
+      "type": "android",
+      "alarmList": [
+        {
+          "cityIndex": 1,
+          "time": "2017-04-30T22:30:00.000Z"
+        }
+      ]
+    }
+  },
+  "expectedAfterStartup": {
+    "evidence": "synthetic execution 2026-09-24: isolated Node VM (Node v24.21.0) evaluating client/www/js/service.storage.js, controller.units.js, service.weatherutil.js, service.weatherinfo.js and service.push.js at the source revision, called in app.js order TwStorage.init -> WeatherInfo.loadCities -> Push.init -> Units.loadUnits; Purchase.init and the rest of that app.js callback (daumServiceKeys write, routing, update check) were not run. Stubs: appPreferences present with an empty native suite, iOS platform, Util.region KR, Firebase plugin absent (Firebase.inited false), clientConfig package todayWeather with empty serverUrl and weatherPhotosUrl, fixed clock 2026-09-24T09:00:00+09:00, TZ Asia/Seoul, $http throws. The 3000 ms repost timer was then run manually; no request was attempted.",
+    "localStorageAfterStartup": {
+      "removed": [
+        "guideVersion",
+        "refreshInterval",
+        "startupPage"
+      ],
+      "added": {
+        "cityList": {
+          "cityList": [
+            {
+              "currentPosition": true,
+              "address": null,
+              "location": null,
+              "index": 0
+            },
+            {
+              "currentPosition": false,
+              "address": "대한민국 서울특별시 종로구 청운효자동",
+              "index": 1
+            }
+          ]
+        },
+        "settingsInfo": {
+          "startupPage": "1",
+          "refreshInterval": "60",
+          "theme": "light"
+        },
+        "startVersion": 1
+      },
+      "rewritten": {
+        "units": {
+          "temperatureUnit": "C",
+          "windSpeedUnit": "m/s",
+          "pressureUnit": "hPa",
+          "distanceUnit": "km",
+          "precipitationUnit": "mm",
+          "airUnit": "airkorea"
+        }
+      },
+      "unchanged": [
+        "cities",
+        "cityIndex",
+        "pushData"
+      ],
+      "stillAbsent": [
+        "pushData2"
+      ]
+    },
+    "inMemoryAfterStartup": {
+      "cityIndex": 1,
+      "cities": [
+        {
+          "currentPosition": true,
+          "disable": false,
+          "photo": null,
+          "loadTime": null,
+          "hasLocation": false
+        },
+        {
+          "currentPosition": false,
+          "disable": false,
+          "photo": null,
+          "loadTime": null,
+          "hasLocation": false
+        }
+      ],
+      "pushInitReturned": true,
+      "pushTimeFieldTypes": [
+        "startTime:Date,endTime:Date",
+        "time:Date"
+      ],
+      "pushList": [
+        {
+          "cityIndex": 1,
+          "id": 1,
+          "startTime": "2026-09-23T22:00:00.000Z",
+          "endTime": "2026-09-24T13:00:00.000Z",
+          "enable": false,
+          "category": "alert",
+          "name": "청운효자동",
+          "source": "KMA",
+          "town": {
+            "first": "서울특별시",
+            "second": "종로구",
+            "third": "청운효자동"
+          }
+        },
+        {
+          "cityIndex": 1,
+          "time": "2017-04-30T22:30:00.000Z",
+          "category": "alarm",
+          "id": 2,
+          "enable": true,
+          "dayOfWeek": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        }
+      ]
+    },
+    "scheduledTimersMs": [
+      3000
+    ],
+    "repostResult": "_postPushList returned before $http because fcmToken is null; localStorage unchanged",
+    "nativeSuiteKeysAfterStartup": [
+      "cities",
+      "cityIndex",
+      "cityList",
+      "pushData",
+      "settingsInfo",
+      "startVersion",
+      "units"
+    ],
+    "analyticsEvents": [
+      "app/user/returning",
+      "city/load/index",
+      "push/error/loadPlugin"
+    ],
+    "harnessErrors": [
+      "WeatherInfo.loadWeatherPhotos(): WeatherUtil rejected with 'Invalid url=' because weatherPhotosUrl was '' (the checked-in client.config.js value); loadWeatherPhotos has no rejection handler, and every city kept photo null"
+    ],
+    "afterAlertPopupClose": {
+      "call": "Push.enableAlertForOldAlarm(false), the TabCtrl showAlertInfoEvent Close branch",
+      "localStorageAdded": {
+        "pushData2": {
+          "registrationId": null,
+          "type": "android",
+          "category": "",
+          "fcmToken": null,
+          "pushList": [
+            {
+              "cityIndex": 1,
+              "id": 1,
+              "startTime": "2026-09-23T22:00:00.000Z",
+              "endTime": "2026-09-24T13:00:00.000Z",
+              "enable": false,
+              "category": "alert",
+              "name": "청운효자동",
+              "source": "KMA",
+              "town": {
+                "first": "서울특별시",
+                "second": "종로구",
+                "third": "청운효자동"
+              }
+            },
+            {
+              "cityIndex": 1,
+              "time": "2017-04-30T22:30:00.000Z",
+              "category": "alarm",
+              "id": 2,
+              "enable": true,
+              "dayOfWeek": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ]
+            }
+          ]
+        }
+      },
+      "localStorageRewritten": {},
+      "nativeSuiteKeys": [
+        "cities",
+        "cityIndex",
+        "cityList",
+        "pushData",
+        "pushData2",
+        "settingsInfo",
+        "startVersion",
+        "units"
+      ],
+      "httpCalls": [],
+      "analyticsEvent": "push/post/<JSON.stringify({savePushInfo: pushData2})>; the label carried the whole saved object shown in localStorageAdded"
+    }
+  },
+  "variantRuns": [
+    {
+      "name": "updateCityInfo(1) before the popup answer",
+      "inputChange": "Push.updateCityInfo(1) called directly after startup (the app reaches it through window.updateCityInfo, installed only when Firebase initializes)",
+      "observed": {
+        "trackedExceptions": [
+          "trackException: Cannot read properties of undefined (reading 'first')"
+        ],
+        "alarmInMemory": {
+          "cityIndex": 1,
+          "time": "2017-04-30T22:30:00.000Z",
+          "category": "alarm",
+          "id": 2,
+          "enable": true,
+          "dayOfWeek": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "name": "청운효자동",
+          "source": "KMA"
+        },
+        "localStorageChanged": {
+          "added": {},
+          "rewritten": {}
+        },
+        "httpCalls": [],
+        "analyticsEventsBeforeThrow": [
+          "push/update/by name",
+          "push/update/by source"
+        ],
+        "closeThenSaved": {
+          "cityIndex": 1,
+          "time": "2017-04-30T22:30:00.000Z",
+          "category": "alarm",
+          "id": 2,
+          "enable": true,
+          "dayOfWeek": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "name": "청운효자동",
+          "source": "KMA"
+        }
+      }
+    },
+    {
+      "name": "unparsable pushData2",
+      "inputChange": "rawLocalStorage pushData2 = {bad (in addition to the legacy keys)",
+      "observed": {
+        "pushInitReturned": true,
+        "analyticsEvents": [
+          "app/user/returning",
+          "city/load/index",
+          "storage/error/get pushData2",
+          "push/error/loadPlugin"
+        ],
+        "pushListInMemory": [
+          {
+            "cityIndex": 1,
+            "id": 1,
+            "category": "alert",
+            "enable": false,
+            "hasCityInfo": true
+          },
+          {
+            "cityIndex": 1,
+            "id": 2,
+            "category": "alarm",
+            "enable": true,
+            "hasCityInfo": false
+          }
+        ],
+        "closeReplacedPushData2": true
+      }
+    },
+    {
+      "name": "several legacy alarms",
+      "inputChange": {
+        "pushData.alarmList": [
+          {
+            "cityIndex": 1,
+            "time": "2017-04-30T22:30:00.000Z"
+          },
+          {
+            "cityIndex": 1,
+            "time": "2017-05-01T11:00:00.000Z"
+          },
+          {
+            "cityIndex": 0,
+            "time": "2017-05-01T12:00:00.000Z"
+          }
+        ]
+      },
+      "observed": {
+        "pushListInMemory": [
+          {
+            "cityIndex": 1,
+            "id": 1,
+            "category": "alert",
+            "enable": false,
+            "hasCityInfo": true
+          },
+          {
+            "cityIndex": 1,
+            "id": 1,
+            "category": "alert",
+            "enable": false,
+            "hasCityInfo": true
+          },
+          {
+            "cityIndex": 0,
+            "id": 1,
+            "category": "alert",
+            "enable": false,
+            "hasCityInfo": false
+          },
+          {
+            "cityIndex": 1,
+            "id": 2,
+            "category": "alarm",
+            "enable": true,
+            "hasCityInfo": false
+          },
+          {
+            "cityIndex": 1,
+            "id": 2,
+            "category": "alarm",
+            "enable": true,
+            "hasCityInfo": false
+          },
+          {
+            "cityIndex": 0,
+            "id": 1,
+            "category": "alarm",
+            "enable": true,
+            "hasCityInfo": false
+          }
+        ],
+        "trackedExceptions": [
+          "trackException: Fail to find location or address city:<placeholder JSON omitted>"
+        ]
+      }
+    },
+    {
+      "name": "legacy pushData without alarmList",
+      "inputChange": {
+        "pushData": {
+          "registrationId": null,
+          "type": "android"
+        }
+      },
+      "observed": {
+        "pushInitThrew": "TypeError: Cannot read properties of undefined (reading 'map')",
+        "harnessEffect": "the throw ended the harness startup sequence, so its following Units.loadUnits call did not run; in app.js the same throw would occur inside the TwStorage.init().finally callback (source-level, not reproduced)"
+      }
+    }
+  ]
+}

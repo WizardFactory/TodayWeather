@@ -1,0 +1,61 @@
+{
+  "_example": {
+    "kind": "synthetic documentation example",
+    "sourceRevision": "ff7acf3996ccb66c912d2ed4710cf300197d6966",
+    "liveProviderCapture": false,
+    "note": "serverMessage is the FCM message built by server/controllers/controllerPush.js sendFcmNotification with the token omitted. Each variant payload shows only the fields that _notificationCallback in client/www/js/service.push.js reads from FirebasePlugin.onNotificationOpen. How the unpinned cordova-plugin-firebase places FCM data and APNs fields is outside the checkout; other plugin-added fields are omitted and unverified. clientHandling is documentation metadata. No tokens, device IDs or real notification text.",
+    "titleRule": "Alarm title = location prefix (pushInfo.name + ' '; KMA falls back to town/city/region names) + summary title. TodayWeather summary titles are the LOC_CURRENT hourly summary; TodayAir summary titles are always '', so this TodayAir-style title is the place name with a trailing space. Alert pushes build their own title in alert.push.controller.js.",
+    "verification": "2026-09-24 Node VM run of the checked-in service.weatherinfo.js and service.push.js with stubbed injection; the recorded outcomes match clientHandling. No device, plugin or FCM delivery."
+  },
+  "serverMessage": {
+    "notification": {
+      "title": "광희동 ",
+      "body": "Synthetic notification body"
+    },
+    "data": {
+      "cityIndex": "2"
+    }
+  },
+  "variants": [
+    {
+      "name": "backgroundTap",
+      "payload": {
+        "tap": true,
+        "cityIndex": "2"
+      },
+      "clientHandling": "parseInt('2') = 2 -> WeatherInfo.setCityIndex(2) -> $broadcast('reloadEvent', 'push'); an out-of-range index is rejected silently by setCityIndex but the reload is still broadcast"
+    },
+    {
+      "name": "apsForeground",
+      "payload": {
+        "tap": false,
+        "cityIndex": "2",
+        "aps": {
+          "alert": {
+            "title": "광희동 ",
+            "body": "Synthetic notification body"
+          }
+        }
+      },
+      "clientHandling": "title = aps.alert.title, message = aps.alert.body -> $broadcast('notificationEvent', result) -> TabCtrl popup template title + '<br>' + message; no reload, no city change"
+    },
+    {
+      "name": "nonApsForeground",
+      "payload": {
+        "tap": false,
+        "cityIndex": "2",
+        "title": "광희동 ",
+        "body": "Synthetic notification body"
+      },
+      "clientHandling": "no aps -> message = body, top-level title kept -> notificationEvent popup; no reload, no city change"
+    },
+    {
+      "name": "invalidIndexTap",
+      "payload": {
+        "tap": true,
+        "cityIndex": "not-a-number"
+      },
+      "clientHandling": "parseInt -> NaN -> Util.ga.trackException(new Error('invalid fav:NaN')); no city change, no reload"
+    }
+  ]
+}
