@@ -101,8 +101,10 @@ See [server configuration](../../CONFIGURATION.md) for runtime behavior.
 
 Run `python3 server/test/offline/paseo-env-setup.test.py` from the repository root.
 The synthetic filesystem checks cover environment copying, private permissions,
-Git exclusion, existing-file preservation, missing sources and symlink handling.
-They also check that the existing AWS-file setup is preserved. No private
+Git exclusion through existing rules or `info/exclude` with a clean `git status`,
+refusal when the file cannot be ignored, existing-file preservation, missing
+sources and symlink handling. They also check that the existing AWS-file setup
+is preserved. No private
 configuration or running Paseo daemon is required.
 
 ## Historical observations (#2564)

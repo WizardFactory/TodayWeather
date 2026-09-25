@@ -22,9 +22,14 @@ the setup runs in the new workspace. New copies have permissions `0600`.
 Existing workspace files or symlinks are preserved, and missing source files
 are reported by filename and skipped. No environment values are printed.
 
-Setup adds `/.env` to `server/.gitignore`, preserving existing rules, so copied
-credentials remain ignored even on branches without the root dotenv rules.
-Symlinked destination `server` directories or `.gitignore` files are refused.
+Setup leaves tracked files and ignore files in the work tree unchanged. If Git
+already ignores `server/.env`, for example through the root `.env` rule, nothing
+is written. Otherwise setup appends `/server/.env` to the repository's local
+exclude file (`git rev-parse --git-path info/exclude`, shared by linked
+worktrees), so copied credentials remain ignored even on branches without the
+root dotenv rules. If Git still does not ignore the file, for example because of
+a `!.env` negation, setup stops without copying it. Symlinked destination
+`server` directories or exclude files are refused.
 The source checkout must provision and ignore its own private `server/.env`.
 The source file is copied once; subsequent changes are not synchronized.
 
@@ -59,18 +64,12 @@ The example selects `service` to avoid automatically starting background workers
 startup still connects to the configured database and initializes application
 dependencies. See the [runtime modes](../docs/architecture/service-overview.md#runtime-modes).
 
-The reviewed `tw-gather.env` selects gather mode, DB version `2.0`, and port `3000`.
-It is an operator-supplied private file, not a repository artifact. It does not
-provide `DATA_GO_KR_NORMAL_KEY` or `DATA_GO_KR_CERT_KEY`. AK confirmed on
-2026-09-24 that the current production server does not use these two settings;
-they can remain unset for current operation. This is an operator-confirmed
-deployment fact, not a new live-server inspection. The configuration fields are
-retained for legacy source callers, and `TEST_*` settings do not automatically
-substitute for them. Other optional settings depend on the features used; this
-example is not a complete production configuration.
-
-`TWA_S3_REGION` and `TWA_S3_WEATHER_DATA_BUCKET_NAME` in that file have no consumers
-in the current server source. Loading them does not enable an S3 integration.
+`DATA_GO_KR_NORMAL_KEY` and `DATA_GO_KR_CERT_KEY` remain configuration fields for
+legacy source callers; `TEST_*` settings do not automatically substitute for
+them. Other optional settings depend on the features used; the example is not a
+complete production configuration. Deployment-specific observations about
+operator-supplied environment files are kept in the
+[gather environment file review](../docs/operations/tw-gather-env-review-2026-09-24.md).
 
 ## Offline verification
 
