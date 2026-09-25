@@ -15,7 +15,7 @@ Commands run from the repository root; dependency installation needs package-reg
 
 The separate smoke integrates real XML parsing, requestData/events and the short storage controller's save/read functions through synthetic HTTP and in-memory model adapters. It verifies timestamps, coordinates, exact values and no write on failure. It is not a live provider/DB/mobile test.
 
-The legacy 24h consumer characterization deliberately exposes its adjacent-record quantity split. Passing means the existing assumption is documented; it does not validate that split for hourly PCP/SNO. See [period limitations and full disposition](../../../docs/architecture/gather-source-reconciliation.md).
+The 24h consumer regression asserts that `adjustShort` no longer splits slot amounts across adjacent records (#2583). See [period contract and full disposition](../../../docs/architecture/gather-source-reconciliation.md).
 
 `test:offline` explicitly runs only the regression file, then the functional smoke, and propagates failures. The default `npm test` remains the legacy suite. The dedicated [GitHub Actions workflow](../../../.github/workflows/gather-offline.yml) runs this command with Node 22.22.2 and isolated dependencies on relevant pull requests and master pushes, with read-only repository permissions and no deployment steps. The historical Travis job is unchanged.
 
@@ -49,6 +49,19 @@ It executes the actual v000903 coordinate router in process, complete middleware
 
 Smoke dependencies and output stay under the runner's temporary directory. This workflow is independent of the legacy Mocha/Travis suite and requires no production credentials, database, provider access or service startup. Hosted runner setup and npm installation require network access; the weather checks themselves use isolated dependencies.
 
+
+## Forecast precipitation periods (#2583)
+
+`precipitation.test.js` covers the category parser (rain in mm, snow in cm), the collector's amount plus category text, slot sums in `getShort`, the next-day midnight slot, `adjustShort` without splitting, the shortest-window `pty 3` case, strings, DB 2.0 reads and the DB 1.0 per-field merge with the hourly row limit. It is part of `test:offline` and runs in any timezone.
+
+`precipitation-smoke.js` runs the real v000903 coordinate router with the mixed-period fixture (verification matrix V41): stored hourly `PCP`/`SNO` rows with categories, observed past rows, the shortest window and RSS rows, on DB 1.0 and 2.0, equal and newer RSS publications, and two unit sets. It asserts slot and daily totals, periods, approximation flags, strings and that no stored category text reaches the response.
+
+```sh
+TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/precipitation.test.js
+TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/precipitation-smoke.js
+```
+
+Both use the RSS smoke dependencies above; the [RSS offline workflow](../../../.github/workflows/rss-offline.yml) runs them on Node 16.20.2 and 22.22.2. In the DB 1.0 harness `shortest[]` is empty on the baseline too, so the smoke checks `shortest[]` fields on DB 2.0 only.
 
 ## Daily forecasts (#2560)
 

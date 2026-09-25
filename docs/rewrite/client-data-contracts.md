@@ -182,7 +182,8 @@ These are display-oriented aliases after server composition/conversion, not raw 
 | `pop` | number? percent | Probability of precipitation; many consumers hide zero |
 | `reh` | number? percent | Humidity and icon selection |
 | `wsd`, `hPa`, `visibility` | number? in selected wind/pressure/distance unit | Current and daily detail cards |
-| `rn1`, `r06`, `s06` | number? in selected precipitation unit | Observation/forecast precipitation aliases; their durations differ and world conversion reuses these names |
+| `rn1`, `r06`, `s06` | number? in selected precipitation unit | Observation/forecast precipitation aliases; their durations differ and world conversion reuses these names. KMA `short[]` `r06`/`s06` are 3-hour slot totals of hourly forecasts and daily values are day totals (#2583) |
+| `r06Hours`, `s06Hours`, `r06Approx`, `s06Approx` (KMA `short[]` and `midData.dailyData[]`); `rn1Hours`, `rn1Approx` (KMA `shortest[]`) | number / boolean | Accumulation period of the amount in forecast hours (3 per full slot, 6 for an RSS six-hour amount, 0 for a placeholder, 24 for a full day, 1 per shortest row) and whether a KMA category such as `1mm 미만` was approximated. Daily fields are omitted when the day total is unknown. Not read by `client/www`, widgets or the Web PWA ([mobile API](../architecture/mobile-api.md#forecast-precipitation-amounts-issue-2583)) |
 | `sensorytem`, `dspls`, `dsplsStr` | feels-like number?, discomfort number?/text? | Conditional current detail |
 | `summaryWeather`, `summaryAir`, `summary` | strings? | Forecast prefers summaryWeather, falls back to summary; summaryAir is a separate clickable line |
 | `yesterday` | current-shaped object? | Temperature difference display |

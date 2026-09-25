@@ -113,6 +113,43 @@ Local checks run with `node server/test/offline/rss-wind.test.js` (Node 18+; no 
 
 `getSummaryAfterUnitConverter` fills `current.summaryWeather`, `current.summaryAir` and the combined `current.summary`; the app shows the first two as the lines under the temperature. `summaryAir` is built only from pollutant and integrated-index grades in `current.arpltn`. `getKeco` leaves `arpltn` absent when no nearby AirKorea station has an observation within eight hours of the request, and every station is compared with that same threshold. `makeSummaryAir` then returns an empty string, and `getSummaryAfterUnitConverter` (and the world-weather `ControllerWWUnits.makeSummary`) omit `summaryAir` from the response. Installed app share text checks `hasOwnProperty('summaryAir')`, so an empty string would add a blank line; the app view hides the line either way (`ng-if="summaryAir"`). Weather or life-index grades on `current` (for example `wsdGrade`) are never treated as air grades, and the combined `summary` does not write air fields onto `current`. AirKorea `dataTime` is still parsed in the host timezone, so the window is wider on a UTC host. Sources: [summary builders](../../server/controllers/controllerTown24h.js), [combined summary](../../server/controllers/controllerTown.js), [AirKorea merge](../../server/controllers/kecoController.js); checks: `air-summary.test.js` and `air-summary-smoke.js` under `server/test/offline`.
 
+### Forecast precipitation amounts (issue #2583)
+
+Since `VilageFcstInfoService_2.0`, `PCP`, `SNO` and forecast `RN1` are hourly values, often given as categories. The [shared parser](../../server/lib/kmaPrecipitation.js) turns each value into an amount plus bounds:
+
+| Provider value | Stored amount | Bounds | Approximate |
+| --- | --- | --- | --- |
+| `강수없음` / `적설없음` | 0 | 0 | no |
+| `2.0mm`, `1.2cm`, `7` | the number | the number | no |
+| `1mm 미만` | 0.5 (half the threshold) | 0 to 1 | yes |
+| `30.0~50.0mm` | 40 (midpoint) | 30 to 50 | yes |
+| `50.0mm 이상`, `5.0cm 이상` | 50 / 5 (lower bound) | 50 / 5 and up | yes |
+
+The collector stores the amount in `r06`/`s06`/`rn1` (legacy names) and, for a category only, the provider text in `r06Text`/`s06Text`/`rn1Text` (both DB versions). Unparseable text stays `-1`. Rows without text (for example from the older `parseFloat` gather code) are read as exact amounts. DB 1.0 keeps 192 short rows (eight days of hours) instead of 64.
+
+Composition in the v000903 chain (and every chain that shares these middlewares):
+
+1. `getShort` sums every stored hourly row into its 3-hour slot. Slot T holds hours T-2, T-1 and T, so the next-day 00:00 slot (`2400` after `convert0Hto24H`) holds 22h, 23h and 00h. This is the grouping already used for observations and shortest forecasts.
+2. `getShortRss` labels copied RSS `r06`/`s06` as six-hour amounts (`Hours 6`); the overwrite/fill policy is unchanged.
+3. `mergeByShortest` keeps, for a slot with three valid hourly `rn1` values (observed for past hours, shortest forecast otherwise), their total. `ControllerTown24h.adjustShort` uses it as `r06`; it never goes to `s06`. Slots without it keep the `PCP` total. The old sampling and splitting across slot pairs is gone.
+4. Every `short[]` slot leaves `adjustShort` with `r06 ≥ 0` and `s06 ≥ 0`; a slot without forecast hours is a 0 placeholder with `Hours 0`.
+5. `mergeMidWithShort` sets daily `r06`/`s06` to the total of that day's slots (hours 01–24). When a six-hour RSS amount is in the day, the daily amount and its fields are omitted.
+6. `convertUnits` multiplies `s06` by 10 (cm → mm) as before; it now holds snow only.
+7. `insertStrForData` builds `r06Str`/`s06Str`/`rn1Str` from the bounds in the source unit (`10mm`, `~1mm`, `30~51mm`, `50~?mm`, `1cm`). The retired 1/5/10/20/40/70/100 table is removed. A zero amount gets a string only for the matching precipitation type of `pty`.
+
+Response fields (additive; existing names and meanings of the amounts are kept):
+
+| Location | Field | Meaning |
+| --- | --- | --- |
+| `short[]` | `r06`, `s06` | Forecast rain (mm) / new snow (cm before, mm after `convertUnits`) over the slot |
+| `short[]` | `r06Hours`, `s06Hours` | Hourly forecasts summed: 3 for a full slot, 1–2 for a partial slot, 6 for an RSS six-hour amount, 0 for a placeholder |
+| `short[]` | `r06Approx`, `s06Approx` | `true` when a category value was used |
+| `short[]` | `rn1` | Unchanged: observed rain summed over the slot, on past rows |
+| `shortest[]` | `rn1Hours` (1), `rn1Approx` | Hourly forecast rain |
+| `midData.dailyData[]` | `r06`, `s06`, `r06Hours`, `s06Hours`, `r06Approx`, `s06Approx` | Day totals; `Hours` is 24 for a fully covered day |
+
+Installed apps print `rn1`, then `s06`, then `r06` when truthy (`client/www/js/app.js`, `controller.forecastctrl.js`); they now show slot totals instead of halves or samples. The days beyond the 3-hour template come from daily snapshots and carry no amounts, as before. The precipitation branch of `_convertWeatherData` still passes `toWindUnit` (unchanged, see [client data contracts](../rewrite/client-data-contracts.md#missing-values-time-and-units-are-compatibility-rules)). Checks: `precipitation.test.js` and `precipitation-smoke.js` under `server/test/offline`.
+
 ## World-weather API middleware in order
 
 The [v000902 DSF router reused by v000903](../../server/routes/v000902/route.dsf.coord.v000902.js) performs:
@@ -168,7 +205,7 @@ See the [daily validity diagram](diagrams/daily-forecast-validity.html),
 [editable source](diagrams/daily-forecast-validity.json), and
 [contract, source policy and operator checklist](../../reports/sdlc/issue-2560/daily-forecast-contract.md).
 
-RSS-only daily fallback omits `r06`/`s06` aggregates: accepted RSS values are overlapping six-hour amounts and have not passed the mixed-hourly precipitation redistribution. Summing them would overstate the daily amount. Hourly precipitation remains unchanged; missing daily aggregates mean unavailable, not zero.
+RSS-only daily fallback omits `r06`/`s06` aggregates: accepted RSS values are overlapping six-hour amounts, not 3-hour slot totals of hourly forecasts ([amount contract](#forecast-precipitation-amounts-issue-2583)). Summing them would overstate the daily amount. Hourly precipitation remains unchanged; missing daily aggregates mean unavailable, not zero.
 
 The daily boundary also reads raw short targets beyond the unchanged hourly41-slot template. DB2 preserves each source document's publication; DB1 stores an optional current-batch `dailySource` snapshot, replaced completely on successful saves. Legacy DB1 documents without it cannot extend daily horizons until normal collection. Each raw slot is validated independently and must provide usable daily extrema/weather; raw rain totals are omitted. Shared weather acceptance/conversion includes both shower labels using existing rain icons. Humidity is optional for short daily summaries. `dailyStatus.healthy` now rejects gaps from today through the last available forecast, with unsupported trailing dates listed separately. A sanitized degraded-health warning is limited to one per minute per process. No new public provenance fields or hourly horizon expansion is introduced.
 

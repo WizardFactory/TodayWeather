@@ -110,10 +110,18 @@ describe('gather drift: synthetic offline compatibility', function () {
             assert.strictEqual(v.r06, 1.5); assert.strictEqual(v.s06, 0.5);
         });
     });
-    ['', ' ', 'unknown', '1~4', '1.0mm 미만', '50mm 이상', 'Infinity', 'NaN', '-1', '-999', '1e999', '1.2junk'].forEach(function (value) {
+    ['', ' ', 'unknown', 'Infinity', 'NaN', '-1', '-999', '1e999', '1.2junk'].forEach(function (value) {
         it('keeps unsupported precipitation missing: ' + JSON.stringify(value), function () {
             var v = h.organize('organizeShortData', h.shortItems({PCP: value, SNO: value})).data[0];
             assert.strictEqual(v.r06, -1); assert.strictEqual(v.s06, -1);
+            assert.strictEqual(v.r06Text, undefined); assert.strictEqual(v.s06Text, undefined);
+        });
+    });
+    // #2583: categories keep a representative amount plus the provider text for their bounds.
+    [['1~4', 2.5], ['1.0mm 미만', 0.5], ['50mm 이상', 50]].forEach(function (pair) {
+        it('stores precipitation category ' + JSON.stringify(pair[0]) + ' as an approximate amount', function () {
+            var v = h.organize('organizeShortData', h.shortItems({PCP: pair[0]})).data[0];
+            assert.strictEqual(v.r06, pair[1]); assert.strictEqual(v.r06Text, pair[0]);
         });
     });
     it('retains legacy categories and forecast grouping', function () {
@@ -130,7 +138,7 @@ describe('gather drift: synthetic offline compatibility', function () {
             assert(!h.organize('organizeShortData', h.shortItems({TMP: value})).isCompleted);
         });
     });
-    [0, 1.5, undefined, '', 'bad', 'Infinity', 'NaN', -1, -999, '1~4', '1mm 미만'].forEach(function (value) {
+    [0, 1.5, undefined, '', 'bad', 'Infinity', 'NaN', -1, -999].forEach(function (value) {
         it('normalizes shortest RN1 ' + JSON.stringify(value), function () {
             var items = h.shortItems().filter(function (i) { return !['TMP', 'PCP', 'SNO'].includes(i.category[0]); });
             items.push(h.item('T1H', '12.5'), h.item('LGT', '0'));
@@ -204,13 +212,14 @@ describe('upstream storage and period-contract characterization', function () {
         var r = h.organize('organizeCurrentData', items); assert(r.isCompleted);
         assert.strictEqual(r.data[0].reh, -1); assert.strictEqual(r.data[0].lgt, -1);
     });
-    it('documents legacy 24h splitting as a limitation, not hourly-to-six-hour equivalence', function () {
+    it('keeps each slot amount in 24h adjustShort instead of splitting it (#2583)', function () {
         function Base() {}
         Base.prototype._createOrGetDaySummaryList = function (list, date) {
             if (!list.length) list.push({date: date}); return list[0];
         };
         var deps = {async: require('async'), request: {}, '../controllers/controllerTown': Base,
-            '../lib/kmaTimeLib': h.load('lib/kmaTimeLib.js', {}), '../config/config': {}};
+            '../lib/kmaTimeLib': h.load('lib/kmaTimeLib.js', {}), '../config/config': {},
+            '../lib/kmaPrecipitation': h.optional('../../lib/kmaPrecipitation')};
         ['../lib/unitConverter', '../lib/aqi.converter', '../controllers/kecoController',
             '../controllers/airkorea.hourly.forecast.controller', '../controllers/kaq.hourly.forecast.controller',
             '../controllers/kma.specialweather.controller'].forEach(function (name) { deps[name] = function () {}; });
@@ -221,10 +230,9 @@ describe('upstream storage and period-contract characterization', function () {
         var called = 0;
         new Town().adjustShort({params: {}, short: rows}, {}, function () { called++; });
         assert.strictEqual(called, 1);
-        // Existing consumer splits every other record; this is NOT a correct
-        // conversion for hourly PCP/SNO. Preserve it, expose it, defer redesign.
-        assert.strictEqual(rows[1].r06, 0.8); assert.strictEqual(rows[2].r06, 0.8);
-        assert.strictEqual(rows[1].s06, 0.3); assert.strictEqual(rows[2].s06, 0.3);
+        rows.forEach(function (row) {
+            assert.strictEqual(row.r06, 1.5); assert.strictEqual(row.s06, 0.5);
+        });
         assert.strictEqual(rows[2].t3h, 12);
     });
 });

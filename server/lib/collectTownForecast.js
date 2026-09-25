@@ -23,6 +23,7 @@
 
 var events = require('events');
 var midPolicy = require('./midForecastPolicy');
+var precipitation = require('./kmaPrecipitation');
 var req = require('request');
 var xml2json  = require('xml2js').parseString;
 
@@ -402,6 +403,19 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
     });
 };
 
+// Hourly precipitation: a category keeps a representative amount plus its text,
+// which carries the bounds (#2583). Unparseable values stay missing.
+function setPrecipitation(result, field, value, unit, noValue) {
+    var parsed = precipitation.parse(value, unit, noValue);
+    result[field] = parsed ? parsed.amount : -1;
+    if (parsed && parsed.approx) {
+        result[field + 'Text'] = value.trim();
+    }
+    else {
+        delete result[field + 'Text'];
+    }
+}
+
 // Complete decimal values only: ranges/thresholds must not become exact amounts.
 function parseMeasurement(value, missing, unit, noValue) {
     if (typeof value !== 'string' && typeof value !== 'number') {
@@ -497,9 +511,9 @@ CollectData.prototype.organizeShortData = function(index, listData){
             my: -1,
             pop: -1,    /* 강수 확률 : 1% 단위, invalid : -1 */
             pty: -1,    /* 강수 형태 : 없음(0) 비(1) 비/눈(2) 눈(3) , invalid : -1 */
-            r06: -1,    /* 6시간 강수량 : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
+            r06: -1,    /* 1시간 강수량 PCP (legacy name) : mm, category → representative amount + r06Text, invalid : -1 */
             reh: -1,    /* 습도 : 1% , invalid : -1 */
-            s06: -1,    /* 6시간 신적설 : 0미만(0) ~1cm(1) 1~4cm(5) 5~9cm(10) 10~19cm(20) 20cm~(100), invalid : -1 */
+            s06: -1,    /* 1시간 신적설 SNO (legacy name) : cm, category → representative amount + s06Text, invalid : -1 */
             sky: -1,    /* 하늘 상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1 */
             t3h: -50,   /* 3시간 기온 : 0.1'c , invalid : -50 */
             tmn: -50,   /* 일 최저 기온 : 0.1'c , invalid : -50 */
@@ -545,14 +559,14 @@ CollectData.prototype.organizeShortData = function(index, listData){
                 else if(item.category[0] === 'WAV') {result.wav = parseFloat(item.fcstValue[0]);}
                 else if(item.category[0] === 'VEC') {result.vec = parseFloat(item.fcstValue[0]);}
                 else if(item.category[0] === 'WSD') {result.wsd = parseFloat(item.fcstValue[0]);}
-                // Provisional field compatibility only: PCP/SNO are hourly, and
-                // TMP is not proof of the legacy three-hour temperature cadence.
-                // Do not infer six-hour totals from the retained r06/s06 names.
+                // PCP/SNO are hourly amounts kept under the legacy r06/s06 names; the
+                // service sums them per slot (#2583). TMP is not proof of the legacy
+                // three-hour temperature cadence.
                 else if(item.category[0] === 'PCP') {
-                    result.r06 = parseMeasurement(item.fcstValue[0], -1, 'mm', '강수없음');
+                    setPrecipitation(result, 'r06', item.fcstValue[0], 'mm', '강수없음');
                 }
                 else if(item.category[0] === 'SNO') {
-                    result.s06 = parseMeasurement(item.fcstValue[0], -1, 'cm', '적설없음');
+                    setPrecipitation(result, 's06', item.fcstValue[0], 'cm', '적설없음');
                 }
                 else if(item.category[0] === 'TMP') {
                     result.t3h = parseMeasurement(item.fcstValue[0], -50);
@@ -609,7 +623,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
         mx: -1,
         my: -1,
         pty: -1, /* 강수 형태 : 1%, invalid : -1 */
-        rn1: -1, /* 1시간 강수량 : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
+        rn1: -1, /* 1시간 강수량 : mm, category → representative amount + rn1Text, invalid : -1 */
         sky: -1, /* 하늘상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1*/
         lgt: -1, /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
         t1h: -50,
@@ -657,7 +671,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
 
                 if(item.category[0] === 'PTY') {result.pty = val;}
                 else if(item.category[0] === 'RN1') {
-                    result.rn1 = parseMeasurement(value, -1, 'mm', '강수없음');
+                    setPrecipitation(result, 'rn1', value, 'mm', '강수없음');
                 }
                 else if(item.category[0] === 'SKY') {result.sky = val;}
                 else if(item.category[0] === 'LGT') {result.lgt = val;}
