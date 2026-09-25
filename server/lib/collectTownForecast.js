@@ -319,6 +319,91 @@ CollectData.prototype.resetResult = function(){
     self.recvFailed = false;
 };
 
+// Upper bound for one product; the short forecast needs 2 pages of 999 rows.
+var KMA_MAX_PAGES = 5;
+
+function queryNumber(url, name) {
+    var match = new RegExp('[?&]' + name + '=([0-9]+)(?=&|$)').exec(url);
+    return match ? Number(match[1]) : NaN;
+}
+
+/*
+* Requests and validates one page. callback(reason, result, total, items, payload):
+* reason is a static diagnostic string and never includes transport/parser errors.
+* */
+CollectData.prototype._requestPage = function (url, callback) {
+    req.get(url, {timeout: 1000*10}, function(err, response, body){
+        if (err) {
+            return callback('KMA transport failure');
+        }
+        if (!response || !(response.statusCode >= 200 && response.statusCode < 300)) {
+            return callback('KMA HTTP failure');
+        }
+        xml2json(body, function(err, result){
+            var envelope = result && result.response;
+            var header = envelope && envelope.header && envelope.header[0];
+            var payload = envelope && envelope.body && envelope.body[0];
+            var count = payload && payload.totalCount && payload.totalCount[0];
+            var items = payload && payload.items && payload.items[0] && payload.items[0].item;
+            if (err || !header || !header.resultCode || header.resultCode[0] !== '00' ||
+                !/^[0-9]+$/.test(count) || !isFinite(Number(count)) || Number(count) <= 0 ||
+                !Array.isArray(items) || items.length === 0 || items.some(function (item) {
+                    return !item || typeof item !== 'object' || Array.isArray(item);
+                })) {
+                return callback('KMA invalid or empty response');
+            }
+            callback(null, result, Number(count), items, payload);
+        });
+    });
+};
+
+/*
+* Fetches pages 2..n sequentially after a full first page. Every page must repeat
+* totalCount, hold exactly the remaining rows up to the page size, differ from
+* earlier pages and, when echoed, match the requested pageNo/numOfRows.
+* callback(reason, items) with all rows in page order.
+* */
+CollectData.prototype._requestRemainingPages = function (url, total, first, callback) {
+    var self = this;
+    var size = queryNumber(url, 'numOfRows');
+    if (first.items.length >= total) {
+        return callback(null, first.items);
+    }
+    if (queryNumber(url, 'pageNo') !== 1 || first.items.length !== size ||
+        Math.ceil(total / size) > KMA_MAX_PAGES) {
+        return callback('KMA incomplete or inconsistent response');
+    }
+    function echoed(payload, pageNo) {
+        return (!payload.pageNo || Number(payload.pageNo[0]) === pageNo) &&
+            (!payload.numOfRows || Number(payload.numOfRows[0]) === size);
+    }
+    if (!echoed(first.payload, 1)) {
+        return callback('KMA incomplete or inconsistent response');
+    }
+    var merged = first.items.slice();
+    var seen = {};
+    seen[JSON.stringify(first.items)] = true;
+    (function next(pageNo) {
+        var pageUrl = url.replace(/([?&]pageNo=)[0-9]+(?=&|$)/, '$1' + pageNo);
+        self._requestPage(pageUrl, function (reason, result, count, items, payload) {
+            if (reason) {
+                return callback(reason);
+            }
+            var signature = JSON.stringify(items);
+            if (count !== total || items.length !== Math.min(size, total - merged.length) ||
+                seen[signature] || !echoed(payload, pageNo)) {
+                return callback('KMA incomplete or inconsistent response');
+            }
+            seen[signature] = true;
+            merged = merged.concat(items);
+            if (merged.length === total) {
+                return callback(null, merged);
+            }
+            next(pageNo + 1);
+        });
+    })(2);
+};
+
 /*
 * Description : It request the weather data from server lead to url.
 *               If it successes to get data, it would send 'recvData' event to this.
@@ -338,31 +423,19 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
         }
     }
 
-    req.get(url, {timeout: 1000*10}, function(err, response, body){
-        if (err) {
-            return fail('KMA transport failure');
+    self._requestPage(url, function (reason, result, total, items, payload) {
+        if (reason) {
+            return fail(reason);
         }
-        if (!response || !(response.statusCode >= 200 && response.statusCode < 300)) {
-            return fail('KMA HTTP failure');
-        }
-        xml2json(body, function(err, result){
-            var envelope = result && result.response;
-            var header = envelope && envelope.header && envelope.header[0];
-            var payload = envelope && envelope.body && envelope.body[0];
-            var count = payload && payload.totalCount && payload.totalCount[0];
-            var items = payload && payload.items && payload.items[0] && payload.items[0].item;
-            if (err || !header || !header.resultCode || header.resultCode[0] !== '00' ||
-                !/^[0-9]+$/.test(count) || !isFinite(Number(count)) || Number(count) <= 0 ||
-                !Array.isArray(items) || items.length === 0 || items.some(function (item) {
-                    return !item || typeof item !== 'object' || Array.isArray(item);
-                })) {
-                return fail('KMA invalid or empty response');
+        self._requestRemainingPages(url, total, {items: items, payload: payload}, function (reason, allItems) {
+            if (reason) {
+                return fail(reason);
             }
-            // This requester intentionally fetches one page only. Never mark
-            // a truncated prefix complete, even if its last group is valid.
-            if (Number(count) !== items.length) {
+            // Never mark a truncated prefix complete, even if its last group is valid.
+            if (total !== allItems.length) {
                 return fail('KMA incomplete or inconsistent response');
             }
+            result.response.body[0].items[0].item = allItems;
             var organized;
             try {
                 switch(dataType) {
