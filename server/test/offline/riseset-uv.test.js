@@ -292,3 +292,55 @@ test('V5 parser handles single items, empty items and gateway errors', () => {
     assert(service.parseUvIdxV5('<xml/>').error);
     assert.deepEqual(plain(service.convertUvItemsV5([{areaNo: 'x', date: '2026092606', h0: '1'}, {areaNo: '1100000000', date: '20260926', h6: '3'}])), []);
 });
+
+const XML_DENIED = '<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg>' +
+    '<returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg><returnReasonCode>30</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>';
+
+test('XML gateway errors with HTTP 200 still rotate keys (V5 and KASI)', async () => {
+    const saved = [];
+    const request = fakeRequest(url => url.includes('serviceKey=' + encodeURIComponent(decodeURIComponent(KEYS.cert_key))) ?
+        {body: XML_DENIED} : {body: clone(fixture)});
+    const {service} = loadRequester(request, saved);
+    const result = await new Promise(resolve => service.taskUltrvV5(new Date('2026-09-25T21:30:00Z'), (err, count) => resolve({err, count})));
+    assert.ifError(result.err);
+    assert.equal(request.calls.length, 2, 'rotated once, then saved');
+    assert(saved.length > 0);
+
+    const kasiRequest = fakeRequest(url => url.includes('ServiceKey=' + KEYS.normal) ? {body: XML_DENIED} : {body: kasiItem(url)});
+    const Kasi = loadKasi(kasiRequest);
+    const kasi = await new Promise(resolve => Kasi.updateAreaRiseSetFromApi('서울', '20260926', (err, res) => resolve({err, res})));
+    assert.ifError(kasi.err);
+    assert.equal(kasiRequest.calls.length, 2);
+    assert(kasiRequest.calls[1].includes('ServiceKey=' + KEYS.test_normal));
+});
+
+test('a transient failure on the newest slot never saves an older issuance', async () => {
+    const saved = [];
+    let failNewest = false;
+    const issued = time => { const body = clone(fixture); body.response.body.items.item.forEach(item => { item.date = time; }); return body; };
+    const request = fakeRequest(url => {
+        const time = /time=(\d{10})/.exec(url)[1];
+        if (time === '2026092612') return failNewest ? new Error('ETIMEDOUT') : {body: issued(time)};
+        return {body: issued(time)};
+    });
+    const {service} = loadRequester(request, saved);
+    const now = new Date('2026-09-26T04:10:00Z'); // 13:10 KST, newest slot 12
+    const first = await new Promise(resolve => service.taskUltrvV5(now, (err, count) => resolve({err, count})));
+    assert.ifError(first.err);
+    const savedAfterFirst = saved.length;
+    assert(saved.every(r => r.lastUpdateDate === '2026092612'));
+
+    failNewest = true;
+    const second = await new Promise(resolve => service.taskUltrvV5(now, (err, count) => resolve({err, count})));
+    assert(second.err, 'transport failure fails the run');
+    assert.equal(saved.length, savedAfterFirst, 'no older issuance saved');
+    assert.equal(request.calls.filter(u => !/time=2026092612/.test(u)).length, 0, 'no fallback to older slots on transport failure');
+
+    // Provider error code (not an auth code) on the newest slot: older slot is tried but not saved over a newer save.
+    const coded = loadRequester(fakeRequest(url => /time=2026092612/.test(url) ?
+        {body: {response: {header: {resultCode: '10', resultMsg: 'INVALID_REQUEST_PARAMETER_ERROR'}}}} : {body: issued(/time=(\d{10})/.exec(url)[1])}), []);
+    coded.service.ultrv.lastIssued = '2026092612';
+    const third = await new Promise(resolve => coded.service.taskUltrvV5(now, (err, count) => resolve({err, count})));
+    assert.ifError(third.err);
+    assert.equal(third.count, 0, 'older slot skipped');
+});

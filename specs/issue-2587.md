@@ -49,3 +49,7 @@ DB 1.0/2.0 unaffected (these collections are shared). Old UV rows expire through
 ## Risks
 
 Computed times can differ from KASI by up to a minute. Unknown V5 publication slots (mitigated by the slot fallback). A key approved for V5 must exist on the gather host.
+
+## Amendment 1 — 2026-09-26
+
+Source: independent verification (fresh context), PASS_WITH_NOTES. R3/R5: authorization codes are also read from XML gateway bodies (HTTP 200). R5: only a provider result code (no data or another code) moves to an earlier slot; a transport or page failure fails the run, and a slot older than or equal to the last saved issuance is never saved. The legacy fsn request no longer logs its URL with the key.

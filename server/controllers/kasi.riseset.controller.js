@@ -102,6 +102,11 @@ kasiRiseSet._describeUrl = function (url) {
  * @private
  */
 kasiRiseSet._getReasonCode = function (body) {
+    if (typeof body === 'string') {
+        // The data.go.kr gateway can answer in XML even when JSON is requested.
+        var match = /<(returnReasonCode|resultCode)>\s*(\d+)\s*</.exec(body);
+        return match ? match[2] : undefined;
+    }
     if (body && body.OpenAPI_ServiceResponse && body.OpenAPI_ServiceResponse.cmmMsgHeader) {
         return '' + body.OpenAPI_ServiceResponse.cmmMsgHeader.returnReasonCode;
     }

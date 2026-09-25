@@ -892,7 +892,7 @@ KmaIndexService.prototype.start = function() {
 KmaIndexService.prototype.getLifeIndex2 = function (indexName, callback) {
     var url = this.getUrl(indexName, undefined, this.serviceKey);
 
-    log.info(url);
+    log.info('request '+indexName+' life list');
     if (this.requestCount[indexName] == undefined) {
         this.requestCount[indexName] = 0;
     }
@@ -1154,7 +1154,17 @@ KmaIndexService.prototype.parseUvIdxV5 = function (body) {
             body = JSON.parse(body);
         }
         catch (e) {
-            return {error: new Error('Fail to parse uv index v5 body')};
+            // The data.go.kr gateway can answer in XML even when JSON is requested.
+            var match = /<(returnReasonCode|resultCode)>\s*(\d+)\s*</.exec(body);
+            if (match && match[2] === '03') {
+                return {noData: true};
+            }
+            err = new Error('Fail to parse uv index v5 body' + (match ? ' code='+match[2] : ''));
+            if (match) {
+                err.returnCode = match[2];
+                err.isAuthError = DATA_GO_KR_AUTH_CODES.indexOf(match[2]) !== -1;
+            }
+            return {error: err};
         }
     }
 
@@ -1363,7 +1373,9 @@ KmaIndexService.prototype.taskUltrvV5 = function (now, callback) {
             if (err) {
                 lastErr = err;
                 log.warn(err.message);
-                if (err.isAuthError) {
+                // Only a provider result code means this slot has no issuance; a transport or page
+                // failure must not let an older issuance replace a newer one.
+                if (err.isAuthError || err.returnCode == undefined) {
                     return callback(err);
                 }
                 return trySlot(i+1);
@@ -1373,8 +1385,9 @@ KmaIndexService.prototype.taskUltrvV5 = function (now, callback) {
                 return trySlot(i+1);
             }
 
-            if (self.ultrv.lastIssued === slots[i]) {
-                log.info('uv index v5 already saved time='+slots[i]);
+            // Slots are YYYYMMDDHH strings, so string order is time order.
+            if (self.ultrv.lastIssued && slots[i] <= self.ultrv.lastIssued) {
+                log.info('uv index v5 already saved time='+slots[i]+' last='+self.ultrv.lastIssued);
                 return callback(null, 0);
             }
 
