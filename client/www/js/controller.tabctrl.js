@@ -1059,7 +1059,9 @@ angular.module('controller.tabctrl', [])
                         cordova.plugins.diagnostic.getLocationAuthorizationStatus(function (status) {
                             console.log('status='+status);
                             $scope.setLocationAuthorizationStatus(status);
-                            if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
+                            // diagnostic 7+ reports GRANTED_WHEN_IN_USE while background location is not granted
+                            if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED
+                                || status === cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE) {
                                 _getCurrentPosition(deferred, cityInfo, true, true);
                             } else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
                                 _getCurrentPosition(deferred, cityInfo, true, false);
