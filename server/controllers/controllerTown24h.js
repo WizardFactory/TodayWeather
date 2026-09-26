@@ -10,6 +10,7 @@ var request = require('request');
 
 var ControllerTown = require('../controllers/controllerTown');
 var kmaTimeLib = require('../lib/kmaTimeLib');
+var precipitation = require('../lib/kmaPrecipitation');
 var UnitConverter = require('../lib/unitConverter');
 var AqiConverter = require('../lib/aqi.converter');
 var KecoController = require('../controllers/kecoController');
@@ -144,92 +145,16 @@ function ControllerTown24h() {
             short.tmn = -50;
         });
 
-        //r06, s06을 3시간단위로 나눔.
-        //앞시간 뒤시간 모두 pty가 1이상이면 반반으로 나누고, 아니라면 몰아줌.
-        //todo: merge 순서 변경 필요. 1) short  2) short rss 3) r06, s06분리 4) past
-        if (req.short[0].s06 < 0) {
-            req.short[0].s06 = 0;
-        }
-        if (req.short[0].r06 < 0) {
-            req.short[0].r06 = 0;
-        }
-        var i;
-        for (i=2; i<req.short.length; i+=2) {
-            var short = req.short[i];
-            if (short.r06 > 0) {
-                if (req.short[i-1].pty > 0 && req.short[i].pty > 0) {
-                    req.short[i-1].r06 = +(short.r06/2).toFixed(1);
-                    req.short[i].r06 = +(short.r06/2).toFixed(1);
-                }
-                else if (req.short[i-1].pty > 0 ) {
-                    req.short[i-1].r06 = short.r06;
-                    req.short[i].r06 = 0;
-                }
-                else if (req.short[i].pty > 0 ) {
-                    req.short[i-1].r06 = 0;
-                    req.short[i].r06 = short.r06;
-                }
-                else {
-                    if (req.short[i-1].rn1 != undefined || req.short[i].rn1 != undefined) {
-                        //과거의 경우 예보상으로 온다고 했지만, 오지 않은 경우에 발생할 수 있음.
-                    }
-                    else {
-                        //17.01.12 05시 단기 예보에서, pty가 0이지만, R06,S06은 1이었음. 충청남도 아산시 온양4동 mx 60, my 110
-                        //kma에서는 이경우 r06,s06을 표시하지 않고, 눈,비 안옴으로 표기
-                        log.warn("It has r06 but pty is zero short date="+req.short[i].date+" time="+req.short[i].time);
-                    }
-                    req.short[i-1].r06 = 0;
-                    req.short[i].r06 = 0;
-                }
-            }
-            else {
-                req.short[i-1].r06 = 0;
-                req.short[i].r06 = 0;
-            }
-
-            if (short.s06 > 0) {
-                if (req.short[i-1].pty > 0 && req.short[i].pty > 0) {
-                    req.short[i-1].s06 = +(short.s06/2).toFixed(1);
-                    req.short[i].s06 = +(short.s06/2).toFixed(1);
-                }
-                else if (req.short[i-1].pty > 0 ) {
-                    req.short[i-1].s06 = short.s06;
-                    req.short[i].s06 = 0;
-                }
-                else if (req.short[i].pty > 0 ) {
-                    req.short[i-1].s06 = 0;
-                    req.short[i].s06 = short.s06;
-                }
-                else {
-                    if (req.short[i-1].rn1 != undefined || req.short[i].rn1 != undefined) {
-                        //과거의 경우 예보상으로 온다고 했지만, 오지 않은 경우에 발생할 수 있음.
-                    }
-                    else {
-                        //17.01.12 05시 단기 예보에서, pty가 0이지만, R06,S06은 1이었음. 충청남도 아산시 온양4동 mx 60, my 110
-                        //kma에서는 이경우 r06,s06을 표시하지 않고, 눈,비 안옴으로 표기
-                        log.warn("It has s06 but pty is zero short date="+req.short[i].date+" time="+req.short[i].time);
-                    }
-                    req.short[i-1].s06 = 0;
-                    req.short[i].s06 = 0;
-                }
-            }
-            else {
-                req.short[i-1].s06 = 0;
-                req.short[i].s06 = 0;
-            }
-        }
-
+        // r06/s06 are already slot totals of hourly forecasts (getShort) or labelled RSS
+        // six-hour amounts. In the shortest window, a complete 3-hour rn1 total replaces
+        // r06; it is precipitation in mm and never goes to s06 (#2583).
         req.short.forEach(function (short) {
-            if (short.hasOwnProperty('shortestRn1')) {
-                if (short.hasOwnProperty('pty')) {
-                    if (short.pty === 3) {
-                        short.s06 = short.shortestRn1;
-                    }
-                    else if (short.pty === 2 || short.pty === 1)  {
-                        short.r06 = short.shortestRn1;
-                    }
-                }
+            var shortestRain = precipitation.get(short, 'shortestRn1');
+            if (shortestRain) {
+                precipitation.assign(short, 'r06', shortestRain);
             }
+            precipitation.finalize(short, 'r06');
+            precipitation.finalize(short, 's06');
         });
 
         //client 하위 버전 지원 못함.
@@ -364,7 +289,7 @@ function ControllerTown24h() {
         });
 
         //앞의 invalid한 날씨정보를 제거
-        i = req.short.length - 1;
+        var i = req.short.length - 1;
         for(;i>=0;i--) {
             if(req.short[i].t3h !== -50) {
                 break;

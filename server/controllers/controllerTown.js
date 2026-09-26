@@ -5,6 +5,7 @@
 "use strict";
 
 var midPolicy = require('../lib/midForecastPolicy');
+var precipitation = require('../lib/kmaPrecipitation');
 var landString = midPolicy.landFields;
 var tempString = midPolicy.tempFields;
 var async = require('async');
@@ -467,6 +468,7 @@ function ControllerTown() {
                     self._dataListPrint(shortList, 'route S', 'original short');
 
                     basicShortlist = self._mergeShortWithBasicList(shortList,basicShortlist);
+                    self._sumShortPrecipitation(shortList, basicShortlist);
                     self._dataListPrint(basicShortlist, 'route S', 'First, merged short');
 
                     req.shortPubDate = shortInfo.pubDate;
@@ -575,9 +577,15 @@ function ControllerTown() {
                             var contribution = {date: target.date, time: target.time};
                             _mergeRssValue(target, 'pop', rss.pop, overwrite, -1, false, contribution);
                             _mergeRssValue(target, 'pty', rss.pty, overwrite, -1, false, contribution);
-                            // adjustShort later distributes six-hour precipitation.
+                            // RSS r06/s06 are six-hour amounts; label them so they are
+                            // neither read as slot totals nor summed per day (#2583).
                             _mergeRssValue(target, 'r06', rss.r06, overwrite, -1, true, contribution);
                             _mergeRssValue(target, 's06', rss.s06, overwrite, -1, true, contribution);
+                            ['r06', 's06'].forEach(function (field) {
+                                if (contribution[field] !== undefined) {
+                                    precipitation.assign(target, field, precipitation.exact(contribution[field], 6));
+                                }
+                            });
                             _mergeRssValue(target, 'reh', rss.reh, overwrite, -1, false, contribution);
                             _mergeRssValue(target, 'sky', rss.sky, overwrite, -1, false, contribution);
                             _mergeRssValue(target, 't3h', rss.temp, overwrite, -50, true, contribution);
@@ -1528,6 +1536,26 @@ function ControllerTown() {
         var tmpList = self._convert1Hto3H(filterdList, false);
         var i;
         var short;
+
+        // Hourly rn1 (observed for past hours, forecast otherwise) per 3-hour slot, with
+        // category bounds. adjustShort uses it only when all three hours are valid (#2583).
+        var rainSlots = [];
+        filterdList.forEach(function (src) {
+            var rainSlot = self._createOrGet3hSummaryList(rainSlots, src.date, src.time);
+            rainSlot.rn1 = rainSlot.rn1 || [];
+            rainSlot.rn1.push(precipitation.get(src, 'rn1') || precipitation.read(src.rn1, undefined, 'mm'));
+        });
+        rainSlots.forEach(function (rainSlot) {
+            if (rainSlot.rn1.length !== 3 || rainSlot.rn1.indexOf(null) !== -1) {
+                return;
+            }
+            var total = precipitation.total(rainSlot.rn1);
+            shortList.forEach(function (row) {
+                if (row.date === rainSlot.date3h && row.time === rainSlot.time3h) {
+                    precipitation.keep(row, 'shortestRn1', total);
+                }
+            });
+        });
         tmpList.forEach(function (shortest3h) {
             for (i=0; i<shortLen; i++) {
                 short = shortList[i];
@@ -1568,7 +1596,7 @@ function ControllerTown() {
     /**
      *   merge short/current with shortest.
      *   shortest는 temp를 가지고 있지 않기 때문에 tmx,tmn을 재조정하지 않아도 됨. 있다 해도, adjustShort에서 전체적인 보정을 해줌.
-     *   rn1이 3시간 강수/적설량이기 때문에, adjustShort에서 r06,s06를 3시간 단위로 쪼갠 후에 적용해야 함.
+     *   3시간 슬롯의 rn1 합계는 강수량(mm)이므로 adjustShort에서 r06에만 적용함 (#2583).
      * @param req
      * @param res
      * @param next
@@ -2973,6 +3001,7 @@ function ControllerTown() {
             var daySummaryList = self._getDaySummaryListByShort(shortRows).filter(function (row) {
                 return midPolicy.complete(row) && midPolicy.weather(row.wfAm) && midPolicy.weather(row.wfPm);
             });
+            var dayPrecipitation = self._sumDayPrecipitation(inputs);
             daySummaryList.forEach(function (row) {
                 // Legacy summaries turn an empty sum/lightning list into 0.
                 // Omit that value unless an actual usable source exists.
@@ -2995,6 +3024,24 @@ function ControllerTown() {
                 });
             });
             self._mergeList(req.midData.dailyData, daySummaryList);
+            req.midData.dailyData.forEach(function (row) {
+                var totals = dayPrecipitation[row.date];
+                if (!totals || !daySummaryList.some(function (summary) { return summary.date === row.date; })) {
+                    return;
+                }
+                ['r06', 's06'].forEach(function (field) {
+                    if (totals[field] === undefined) {
+                        return;
+                    }
+                    if (totals[field] === null) {
+                        // A six-hour RSS amount overlaps other slots: the day total is unknown.
+                        precipitation.clear(row, field);
+                    }
+                    else {
+                        precipitation.assign(row, field, totals[field]);
+                    }
+                });
+            });
         }
 
         var extendedRows = midPolicy.dailyShortRows(req._dailyShort).map(function (source) {
@@ -3015,7 +3062,7 @@ function ControllerTown() {
                 // extrema or defaults produced later from stale primary slots.
                 kmaTimeLib.convert0Hto24H(row);
                 // These are overlapping six-hour provider amounts, not the
-                // three-hour amounts produced by adjustShort. Their daily total
+                // three-hour slot totals of hourly forecasts. Their daily total
                 // is unknown here; keep hourly amounts but omit daily aggregates.
                 delete row.r06;
                 delete row.s06;
@@ -3711,55 +3758,6 @@ ControllerTown.prototype._convertKmaPtyToStr = function(pty, translate) {
 };
 
 /**
- * short는 r06, s06으로 나뉘고, current, shortest는 분리되지 않음.
- * @param pty
- * @param rXX
- * @returns {*}
- */
-ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
-    if (pty === 1 || pty === 2) {
-        switch(rXX) {
-            case 0: return "0mm";
-            case 1: return "~1mm";
-            case 5: return "1~4mm";
-            case 10: return "5~9mm";
-            case 20: return "10~19mm";
-            case 40: return "20~39mm";
-            case 70: return "40~69mm";
-            case 100: return "70~?mm";
-            default : log.debug('convert Kma Rain Rxx To Str : unknown data='+rXX);
-        }
-        /* spec에 없지만 2로 오는 경우가 있었음 related to #347 */
-        if (0 < rXX) {
-            if (rXX >= 10) {
-                rXX = Math.ceil(rXX);
-            }
-            return "~"+rXX+"mm";
-        }
-    }
-    else if (pty === 3) {
-        switch (rXX) {
-            case 0: return "0cm";
-            case 1: return "~1cm";
-            case 5: return "1~4cm";
-            case 10: return "5~9cm";
-            case 20: return "10~19cm";
-            case 100: return "20~?cm";
-            default : log.debug('convert Kma Snow Rxx To Str : unknown data='+rXX);
-        }
-        /* spec에 없지만 2로 오는 경우가 있었음 */
-        if (0 < rXX) {
-            if (rXX >= 10) {
-                rXX = Math.ceil(rXX);
-            }
-            return "~"+rXX+"cm";
-        }
-    }
-
-    return "";
-};
-
-/**
  *
  * v000901 에서 unitConvert에서 먼저 str을 넣기 때문에 예외처리추가.
  * @param arpltn
@@ -3828,28 +3826,26 @@ ControllerTown.prototype._makeStrForKma = function(data, res) {
      */
     if (data.hasOwnProperty('pty') && data.pty > 0) {
         data.ptyStr = self._convertKmaPtyToStr(data.pty, res);
-        if (data.pty == 1) {
-            if (data.hasOwnProperty('r06')) {
-                data.r06Str = self._convertKmaRxxToStr(data.pty, data.r06);
-            }
-        }
-        else if (data.pty == 2) {
-            if (data.hasOwnProperty('r06')) {
-                data.r06Str = self._convertKmaRxxToStr(1, data.r06);
-            }
-            if (data.hasOwnProperty('s06')) {
-                data.s06Str = self._convertKmaRxxToStr(3, data.s06);
-            }
-        }
-        else if (data.pty == 3) {
-            if (data.hasOwnProperty('s06')) {
-                data.s06Str = self._convertKmaRxxToStr(data.pty, data.s06);
-            }
-        }
-        if (data.hasOwnProperty('rn1')) {
-            data.rn1Str = self._convertKmaRxxToStr(data.pty, data.rn1);
-        }
     }
+
+    // Amount strings come from the parsed category bounds kept with the row, in the source
+    // unit, so unit conversion does not change them (#2583). Present for a positive amount;
+    // a zero amount is shown only for the precipitation type of pty (rain 1,2,4,5,6; snow 2,3,6,7).
+    // A value without a kept total (observed rn1) is already unit-converted: as before, it
+    // gets a string only while it precipitates.
+    [['r06', 'mm', [1, 2, 4, 5, 6]], ['s06', 'cm', [2, 3, 6, 7]], ['rn1', 'mm', [1, 2, 3, 4, 5, 6, 7]]].forEach(function (rule) {
+        var field = rule[0];
+        if (!data.hasOwnProperty(field)) {
+            return;
+        }
+        var total = precipitation.get(data, field);
+        if (!total && data.pty > 0) {
+            total = precipitation.parse(data[field], rule[1]);
+        }
+        if (total && (total.amount > 0 || rule[2].indexOf(data.pty) !== -1)) {
+            data[field + 'Str'] = precipitation.format(total, rule[1]);
+        }
+    });
 
     return this;
 };
@@ -4614,6 +4610,7 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
                             shortString.forEach(function(string){
                                 newItem[string] = item[string];
                             });
+                            precipitation.copyText(item, newItem, ['r06', 's06']);
                             ret.push(newItem);
                         });
                     }
@@ -4639,6 +4636,7 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
                         shortestString.forEach(function(string){
                             newItem[string] = item[string];
                         });
+                        precipitation.readShortest(newItem, item);
                         ret.push(newItem);
                     });
                 }
@@ -5210,6 +5208,46 @@ ControllerTown.prototype._makeBasicShortList = function(){
 };
 
 /**
+ * Hourly PCP/SNO amounts summed into the 3-hour slot that ends at or after each hour (#2583):
+ * slot T holds hours T-2, T-1 and T, so next-day 00:00 holds 22h, 23h and 00h.
+ * This is the grouping _createOrGet3hSummaryList uses for observations and shortest forecasts.
+ * A slot with an amount but a dry last hour takes the precipitation type of its hours, so a
+ * slot never reads as dry with a positive amount.
+ * @param shortList stored hourly rows with optional r06Text/s06Text categories
+ * @param basicList 3-hour template rows (before convert0Hto24H)
+ */
+ControllerTown.prototype._sumShortPrecipitation = function(shortList, basicList) {
+    var self = this;
+    var slots = {};
+    shortList.forEach(function (row) {
+        if (typeof row.date !== 'string' || typeof row.time !== 'string') {
+            return;
+        }
+        var hour = parseInt(row.time.slice(0, 2), 10);
+        var end = Math.ceil(hour / 3) * 3;
+        var slotTime = {date: row.date, time: (end < 10 ? '0' : '') + end + '00'};
+        kmaTimeLib.convert24Hto0H(slotTime);
+        var key = slotTime.date + slotTime.time;
+        var slot = slots[key] = slots[key] || {r06: [], s06: [], pty: []};
+        slot.r06.push(precipitation.read(row.r06, row.r06Text, 'mm'));
+        slot.s06.push(precipitation.read(row.s06, row.s06Text, 'cm'));
+        if (row.pty > 0) {
+            slot.pty.push(row.pty);
+        }
+    });
+    basicList.forEach(function (item) {
+        var slot = slots[item.date + item.time] || {r06: [], s06: [], pty: []};
+        precipitation.assign(item, 'r06', precipitation.total(slot.r06));
+        precipitation.assign(item, 's06', precipitation.total(slot.s06));
+        if (!(item.pty > 0) && (item.r06 > 0 || item.s06 > 0) && slot.pty.length) {
+            // Rain/snow mix as for observations; codes _summaryPty does not combine (e.g. shower 4) keep the latest.
+            item.pty = self._summaryPty(slot.pty) || slot.pty[slot.pty.length - 1];
+        }
+    });
+    return basicList;
+};
+
+/**
  *
  * @param shortList
  * @param basicList
@@ -5461,6 +5499,42 @@ ControllerTown.prototype._convertKorStrToSky = function (skyKorStr) {
  * @returns {Array}
  * @private
  */
+/**
+ * Daily rain/snow totals from the slot totals kept by getShort/adjustShort (#2583).
+ * Uses the rows _getDaySummaryListByShort uses, so day D holds hours 01-24 (slots 03h-24h).
+ * @param shortList slot rows, after convert0Hto24H
+ * @returns {Object} date -> {r06, s06}: a total; null when a six-hour amount is involved;
+ *   undefined (key absent) when a row has no kept total, leaving the legacy daily sum.
+ */
+ControllerTown.prototype._sumDayPrecipitation = function(shortList) {
+    var days = {};
+    shortList.forEach(function (short, i) {
+        if ((i === 0 && short.time === '2400') || (i === shortList.length-1 && short.time === '0000')) {
+            return;
+        }
+        var day = days[short.date] = days[short.date] || {r06: [], s06: []};
+        ['r06', 's06'].forEach(function (field) {
+            if (day[field]) {
+                var total = precipitation.get(short, field);
+                day[field] = total ? day[field].concat([total]) : undefined;
+            }
+        });
+    });
+    var result = {};
+    Object.keys(days).forEach(function (date) {
+        result[date] = {};
+        ['r06', 's06'].forEach(function (field) {
+            var totals = days[date][field];
+            if (!totals) {
+                return;
+            }
+            var sixHours = totals.some(function (total) { return total.hours > 3; });
+            result[date][field] = sixHours ? null : precipitation.total(totals);
+        });
+    });
+    return result;
+};
+
 ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
     var self = this;
     var dayConditionList = [];

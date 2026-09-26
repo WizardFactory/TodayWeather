@@ -5,7 +5,17 @@ import warnings from "../src/demo/warnings.json" with { type: "json" };
 import { PLACES } from "@todayweather/core";
 export const test = base.extend({
   page: async ({ page }, use) => {
-    const forbidden: string[] = [];
+    const forbidden: string[] = [],
+      cspViolations: string[] = [];
+    // The preview serves the production CSP; any violation is a release blocker.
+    page.on("console", (m) => {
+      if (
+        /Content Security Policy|Refused to (apply|load|execute|connect)/i.test(
+          m.text(),
+        )
+      )
+        cspViolations.push(m.text());
+    });
     page.on("request", (req) => {
       if (new URL(req.url()).pathname.startsWith("/api/"))
         forbidden.push(req.url());
@@ -55,6 +65,7 @@ export const test = base.extend({
       forbidden,
       "Static build must not call same-origin API routes",
     ).toEqual([]);
+    expect(cspViolations, "Content Security Policy violations").toEqual([]);
   },
 });
 export { expect };

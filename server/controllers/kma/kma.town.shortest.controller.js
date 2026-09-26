@@ -6,6 +6,7 @@ var async = require('async');
 
 var modelKmaTownShortest = require('../../models/kma/kma.town.shortest.model.js');
 var kmaTimelib = require('../../lib/kmaTimeLib');
+var precipitation = require('../../lib/kmaPrecipitation');
 
 function kmaTownShortestController(){
 }
@@ -82,6 +83,7 @@ kmaTownShortestController.prototype.getShortestFromDB = function(modelCurrent, c
                 shortestString.forEach(function(string){
                     newItem[string] = shortestData[string];
                 });
+                precipitation.readShortest(newItem, shortestData);
                 newItem.pubDate = kmaTimelib.getKoreaTimeString(item.pubDate);
                 ret.push(newItem);
             });

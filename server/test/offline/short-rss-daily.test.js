@@ -23,7 +23,7 @@ function run(version, primary='202609161400', variant='full', pubDate='202609241
  const source=currentSource;
  const deps={};for(const m of source.matchAll(/require\('([^']+)'\)/g))deps[m[1]]=function(){throw new Error('Unexpected dependency '+m[1]);};
  for(const n of ['./kma/kma.town.current.controller.js','./kma/kma.town.short.controller.js','./kma/kma.town.shortest.controller.js','./kma/kma.town.mid.controller.js'])deps[n]=noop;
- Object.assign(deps,{'../config/config':config,'../models/modelShortRss':model,'../lib/kmaTimeLib':time,'../lib/midForecastPolicy':policy,'./kma/kma.town.short.rss.controller.js':Rss});
+ Object.assign(deps,{'../config/config':config,'../models/modelShortRss':model,'../lib/kmaTimeLib':time,'../lib/midForecastPolicy':policy,'../lib/kmaPrecipitation':require('../../lib/kmaPrecipitation'),'./kma/kma.town.short.rss.controller.js':Rss});
  const mod={exports:{}};vm.runInNewContext(source,{module:mod,exports:mod.exports,require:n=>{assert(Object.hasOwn(deps,n));return deps[n]},Date:Clock,log,rssString,shortString,commonString:['date','time'],setTimeout(){throw new Error('Unexpected timer')},setInterval(){throw new Error('Unexpected timer')}});
  const town=new mod.exports();town._getCoord=(r,c,t,cb)=>cb(null,{mx:60,my:127});town._getTimeValue=()=>({date:'20260924',time:'1627'});
  const staleValid=variant!=='empty-base';

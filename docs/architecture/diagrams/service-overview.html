@@ -5521,6 +5521,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <ul>
           <li>&bull; Service-to-Mongo target sockets observed; database engine/query success untested.</li>
           <li>&bull; Dashed ingestion edge remains source-only; separate gather host not inspected.</li>
+          <li>&bull; Checkout startup: dotenv loads server/.env before app dependencies/config; process env wins.</li>
         </ul>
       </div>
     </div>
