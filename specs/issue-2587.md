@@ -69,3 +69,13 @@ Source: AK ("한국천문연구원_출몰시각 정보 사용 허가받음", the
   - UV: 5 requests, 3,851 areas, 11,553 day values; Seoul 26th 4, 27th 7, 28th 6.
   - KASI: Seoul 06:23/18:24; the computed values are 06:22/18:23.
 - The KMA API Hub UV observation service (`kma_sfctm_uv.php`, seven stations, observed UV-B index) was reviewed and not adopted: it cannot supply forecast days or area coverage.
+
+## Amendment 3 — 2026-09-26
+
+Source: [PR #2596 review](https://github.com/WizardFactory/TodayWeather/pull/2596#pullrequestreview-5324736798), required items 1–2 and recommended items 3–4.
+
+- **R5, schedule:** after the current slot's issuance is saved, or is already saved, `ultrv.nextTime` moves to the next three-hour KST slot +10 min (`updateTimeTable` `[0,3,…,21]` UTC). A failure, or an issuance older than the current slot (not published yet), leaves `nextTime` unchanged; the next tick then costs one page request.
+- **R5, issuance:** the issuance comes from `item.date`, because a request time returns the latest issuance at or before it.
+- **R5, season:** UV collection is year-round (`offerMonth` `{start: 0, end: 11}`).
+- **R3/R5, keys:** candidate keys shorter than 20 characters are skipped (unset defaults such as `["key1","key2"]`). Each request tries each key once, starting from the current one, and keeps the key that works. If every key is rejected, the previous choice is kept, and the KASI `async.retry` stops through `errorFilter`.
+- **Verified live, DB writes intercepted:** after the save, the next get was 15:10 KST and a second run before that made no request. A forced rerun of the same issuance requested one page and saved nothing.

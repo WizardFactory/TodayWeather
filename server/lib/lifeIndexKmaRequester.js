@@ -95,10 +95,11 @@ function KmaIndexService() {
     //    urlPath: 'getWinterLifeList'
     //};
 
+    // getUVIdxV5 is issued year-round every three hours (#2587).
     this.ultrv = {
         nextTime: null,
-        offerMonth: {start: 2, end: 10},
-        updateTimeTable: [9, 21], //kr 6, 18
+        offerMonth: {start: 0, end: 11},
+        updateTimeTable: [0, 3, 6, 9, 12, 15, 18, 21], //kr 9, 12, 15, 18, 21, 0, 3, 6
         urlPath: 'getUltrvLifeList'
     };
 
@@ -134,8 +135,9 @@ KmaIndexService.prototype.setServiceKey = function(key, keyBox) {
             log.warn('invalid forecast key list for kma index service');
         }
         candidates.forEach(function (candidate) {
-            if (typeof candidate === 'string' && candidate && candidate.indexOf('You have to set') !== 0 &&
-                list.indexOf(candidate) === -1) {
+            // Skip unset defaults ('You have to set ...', '["key1","key2"]'); data.go.kr keys are much longer.
+            if (typeof candidate === 'string' && candidate.length >= 20 &&
+                candidate.indexOf('You have to set') !== 0 && list.indexOf(candidate) === -1) {
                 list.push(candidate);
             }
         });
@@ -1268,14 +1270,9 @@ KmaIndexService.prototype.convertUvItemsV5 = function (items) {
     return results;
 };
 
-KmaIndexService.prototype._rotateServiceKeyV5 = function () {
-    if (this.serviceKeyList.length <= 1) {
-        return false;
-    }
-    this.serviceKeyIndex = (this.serviceKeyIndex + 1) % this.serviceKeyList.length;
-    this.serviceKey = this.serviceKeyList[this.serviceKeyIndex];
-    log.warn('uv index v5 service key changed index='+this.serviceKeyIndex);
-    return true;
+KmaIndexService.prototype._useServiceKeyV5 = function (index) {
+    this.serviceKeyIndex = index;
+    this.serviceKey = this.serviceKeyList[index];
 };
 
 /**
@@ -1286,10 +1283,14 @@ KmaIndexService.prototype._rotateServiceKeyV5 = function () {
  */
 KmaIndexService.prototype._requestUvPageV5 = function (time, pageNo, callback) {
     var self = this;
-    var tries = Math.max(self.serviceKeyList.length, 1);
+    var keyCount = Math.max(self.serviceKeyList.length, 1);
+    var startIndex = Math.max(self.serviceKeyIndex, 0) % keyCount;
+    var offset = 0;
 
     function attempt() {
-        tries--;
+        if (self.serviceKeyList.length > 0) {
+            self._useServiceKeyV5((startIndex + offset) % keyCount);
+        }
         req(self.getUvUrlV5(time, pageNo), {timeout: 1000*30, json: true}, function (err, response, body) {
             if (err) {
                 err.message = 'uv index v5 time='+time+' page='+pageNo+' '+err.message;
@@ -1303,11 +1304,19 @@ KmaIndexService.prototype._requestUvPageV5 = function (time, pageNo, callback) {
                 if (response.statusCode === 401 || response.statusCode === 403) {
                     parsed.error.isAuthError = true;
                 }
-                if (parsed.error.isAuthError && tries > 0 && self._rotateServiceKeyV5()) {
+                if (parsed.error.isAuthError && offset + 1 < keyCount) {
+                    offset++;
                     return attempt();
+                }
+                if (parsed.error.isAuthError && self.serviceKeyList.length > 0) {
+                    // Every key was rejected: keep the previous choice.
+                    self._useServiceKeyV5(startIndex);
                 }
                 parsed.error.message += ' time='+time+' page='+pageNo;
                 return callback(parsed.error);
+            }
+            if (self.serviceKeyIndex !== startIndex) {
+                log.warn('uv index v5 service key changed index='+self.serviceKeyIndex);
             }
             callback(null, parsed);
         });
@@ -1316,9 +1325,11 @@ KmaIndexService.prototype._requestUvPageV5 = function (time, pageNo, callback) {
 };
 
 /**
- * All pages of one issuance.
+ * All pages of one issuance. The service answers a request time with the latest issuance at or
+ * before it (e.g. time=11 returns the 09 issuance), so the issuance comes from the items.
  * @param time YYYYMMDDHH
- * @param callback (err, items) items is undefined when the issuance has no data
+ * @param callback (err, items, issued) items is undefined when there is no data, or when the
+ *        issuance is not newer than the last saved one (remaining pages are then not requested)
  * @private
  */
 KmaIndexService.prototype._getUvIssueV5 = function (time, callback) {
@@ -1330,6 +1341,12 @@ KmaIndexService.prototype._getUvIssueV5 = function (time, callback) {
         }
         if (first.noData) {
             return callback();
+        }
+
+        var issued = ''+first.items[0].date;
+        // Issuances are YYYYMMDDHH strings, so string order is time order.
+        if (self.ultrv.lastIssued && issued <= self.ultrv.lastIssued) {
+            return callback(null, undefined, issued);
         }
 
         var pageCount = Math.ceil(first.totalCount / UV_V5_ROWS);
@@ -1358,9 +1375,27 @@ KmaIndexService.prototype._getUvIssueV5 = function (time, callback) {
                 pages.forEach(function (pageItems) {
                     items = items.concat(pageItems);
                 });
-                callback(null, items);
+                callback(null, items, issued);
             });
     });
+};
+
+/**
+ * Once the current slot's issuance is saved, wait for the next three-hour slot.
+ * A failed run, or an issuance older than the current slot (not published yet), leaves nextTime
+ * unchanged, so the next manager tick retries with one page request.
+ * @param now
+ * @param issued YYYYMMDDHH of the saved or already-saved issuance
+ * @param currentSlot YYYYMMDDHH of the current KST three-hour slot
+ * @private
+ */
+KmaIndexService.prototype._scheduleNextUvV5 = function (now, issued, currentSlot) {
+    if (issued < currentSlot) {
+        log.info('uv index v5 slot '+currentSlot+' not published yet; latest='+issued);
+        return;
+    }
+    this.ultrv.nextTime = new Date(now.getTime());
+    this.setNextGetTime('ultrv');
 };
 
 /**
@@ -1378,7 +1413,7 @@ KmaIndexService.prototype.taskUltrvV5 = function (now, callback) {
             return callback(lastErr || new Error('uv index v5 has no data slots='+slots.join(',')));
         }
 
-        self._getUvIssueV5(slots[i], function (err, items) {
+        self._getUvIssueV5(slots[i], function (err, items, issued) {
             if (err) {
                 lastErr = err;
                 log.warn(err.message);
@@ -1389,24 +1424,24 @@ KmaIndexService.prototype.taskUltrvV5 = function (now, callback) {
                 }
                 return trySlot(i+1);
             }
+            if (!items && issued) {
+                log.info('uv index v5 already saved issued='+issued+' last='+self.ultrv.lastIssued);
+                self._scheduleNextUvV5(now, issued, slots[0]);
+                return callback(null, 0);
+            }
             if (!items) {
                 log.info('uv index v5 no data time='+slots[i]);
                 return trySlot(i+1);
             }
 
-            // Slots are YYYYMMDDHH strings, so string order is time order.
-            if (self.ultrv.lastIssued && slots[i] <= self.ultrv.lastIssued) {
-                log.info('uv index v5 already saved time='+slots[i]+' last='+self.ultrv.lastIssued);
-                return callback(null, 0);
-            }
-
             var results = self.convertUvItemsV5(items);
-            log.info('uv index v5 time='+slots[i]+' items='+items.length+' days='+results.length);
+            log.info('uv index v5 time='+slots[i]+' issued='+issued+' items='+items.length+' days='+results.length);
             self.saveLifeIndex2('ultrv', results, function (err, savedCount) {
                 if (err) {
                     return callback(err);
                 }
-                self.ultrv.lastIssued = slots[i];
+                self.ultrv.lastIssued = issued;
+                self._scheduleNextUvV5(now, issued, slots[0]);
                 callback(null, savedCount);
             });
         });

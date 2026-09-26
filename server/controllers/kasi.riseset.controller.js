@@ -47,11 +47,20 @@ kasiRiseSet._getServiceKeys = function () {
         log.warn('kasi rise set - invalid forecast key list');
     }
     candidates.forEach(function (key) {
-        if (typeof key === 'string' && key && key.indexOf('You have to set') !== 0 && keys.indexOf(key) === -1) {
+        if (kasiRiseSet._isUsableKey(key) && keys.indexOf(key) === -1) {
             keys.push(key);
         }
     });
     return keys;
+};
+
+/**
+ * Skip unset defaults ('You have to set ...', '["key1","key2"]'); data.go.kr keys are much longer.
+ * @param key
+ * @returns {boolean}
+ */
+kasiRiseSet._isUsableKey = function (key) {
+    return typeof key === 'string' && key.length >= 20 && key.indexOf('You have to set') !== 0;
 };
 
 kasiRiseSet._getServiceKey = function () {
@@ -65,15 +74,6 @@ kasiRiseSet._getServiceKey = function () {
 /**
  * @returns {boolean} false if there is no other key
  */
-kasiRiseSet._rotateServiceKey = function () {
-    var keys = this._getServiceKeys();
-    if (keys.length <= 1) {
-        return false;
-    }
-    this._keyIndex = (this._keyIndex + 1) % keys.length;
-    log.warn('kasi rise set service key changed index='+this._keyIndex);
-    return true;
-};
 
 kasiRiseSet._makeLocationApiUrl = function (geocode, date) {
     var url = kasiUrl+'/'+apiLocationName+'?';
@@ -154,18 +154,40 @@ kasiRiseSet._requestRiseSetFromApi = function (url, callback) {
  */
 kasiRiseSet._requestWithKeyRotation = function (makeUrl, callback) {
     var self = this;
-    var tries = Math.max(self._getServiceKeys().length, 1);
+    var keyCount = Math.max(self._getServiceKeys().length, 1);
+    var startIndex = self._keyIndex % keyCount;
+    var offset = 0;
 
     function attempt() {
-        tries--;
+        self._keyIndex = (startIndex + offset) % keyCount;
         self._requestRiseSetFromApi(makeUrl(), function (err, body) {
-            if (err && err.isAuthError && tries > 0 && self._rotateServiceKey()) {
+            if (err && err.isAuthError && offset + 1 < keyCount) {
+                offset++;
                 return attempt();
+            }
+            if (err && err.isAuthError) {
+                // Every key was rejected: keep the previous choice instead of cycling on each retry.
+                self._keyIndex = startIndex;
+                err.allKeysRejected = true;
+                return callback(err);
+            }
+            if (!err && self._keyIndex !== startIndex) {
+                log.warn('kasi rise set service key changed index='+self._keyIndex);
             }
             callback(err, body);
         });
     }
     attempt();
+};
+
+/**
+ * Retrying cannot help once every key is rejected.
+ * @param err
+ * @returns {boolean}
+ * @private
+ */
+kasiRiseSet._isRetryable = function (err) {
+    return !(err && err.allKeysRejected);
 };
 
 kasiRiseSet._checkDataValid = function (result) {
@@ -208,7 +230,7 @@ kasiRiseSet._checkDataValid = function (result) {
 kasiRiseSet._getAreaRiseSetFromApi = function (area, date, callback) {
     var self = this;
 
-    async.retry({times:3, interval: 1000*5},
+    async.retry({times:3, interval: 1000*5, errorFilter: self._isRetryable},
         function (retryCallback) {
             self._requestWithKeyRotation(function () {
                 return self._makeAreaApiUrl(area, date);
@@ -250,7 +272,7 @@ kasiRiseSet._getRiseSetListFromApi = function (geocode, dateList, callback) {
 
     async.map(dateList,
         function (date, mapCallback) {
-           async.retry({times:6, interval: 1000*2},
+           async.retry({times:6, interval: 1000*2, errorFilter: self._isRetryable},
                function (retryCallback) {
                    self._requestWithKeyRotation(function () {
                        return self._makeLocationApiUrl(geocode, date);
