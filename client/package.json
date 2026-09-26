@@ -1,7 +1,9 @@
 {
-  "name": "TodayWeather",
-  "version": "1.0.0",
+  "name": "net.wizardfactory.todayweather",
+  "displayName": "TodayWeather",
+  "version": "1.1.0",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "git://github.com/WizardFactory/TodayWeather.git"
@@ -10,66 +12,63 @@
     "url": "http://github.com/WizardFactory/TodayWeather/issues"
   },
   "license": "MIT",
-  "dependencies": {
-    "gulp": "^3.5.6",
-    "gulp-sass": "^3.1.0",
-    "gulp-clean-css": "^3.9.0",
-    "gulp-rename": "^1.2.0",
-    "cordova-uglify": "^0.3.0"
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "www:libs": "bower install --allow-root --config.interactive=false",
+    "www:css": "sass --no-source-map --quiet-deps --silence-deprecation=import,global-builtin,slash-div,color-functions --load-path=. scss/ionic.app.scss www/css/ionic.app.css",
+    "www:config": "node scripts/make-client-config.mjs",
+    "www:config:debug": "node scripts/make-client-config.mjs --debug",
+    "www": "npm run www:libs && npm run www:css && npm run www:config",
+    "release:fetch": "node scripts/fetch-release-files.mjs",
+    "build:android": "npm run www && cordova build android",
+    "build:ios": "npm run www && cordova build ios --emulator",
+    "emulate:android": "npm run www && cordova run android --emulator",
+    "emulate:ios": "npm run www && cordova run ios --emulator"
   },
   "devDependencies": {
-    "bower": "^1.8.2",
-    "gulp-delete-lines": "0.0.7",
-    "gulp-shell": "^0.6.3",
-    "gulp-util": "^3.0.8"
+    "bower": "1.8.14",
+    "cordova": "13.0.0",
+    "cordova-android": "15.1.0",
+    "cordova-ios": "8.1.1",
+    "cordova-plugin-app-version": "0.1.14",
+    "cordova-plugin-device": "3.0.0",
+    "cordova-plugin-geolocation": "5.0.0",
+    "cordova-plugin-inappbrowser": "7.0.0",
+    "cordova-plugin-ionic-keyboard": "2.2.0",
+    "cordova-plugin-network-information": "3.1.0",
+    "cordova-plugin-request-location-accuracy": "2.3.0",
+    "cordova-plugin-screen-orientation": "3.0.4",
+    "cordova-plugin-statusbar": "4.0.0",
+    "cordova-plugin-x-socialsharing": "6.0.4",
+    "cordova.plugins.diagnostic": "7.4.0",
+    "phonegap-plugin-mobile-accessibility": "1.0.5",
+    "sass": "1.105.0"
   },
-  "cordovaPlugins": [
-    "cordova-plugin-admobpro-firebase",
-    "cordova-plugin-firebase",
-    "cordova-plugin-google-analytics@1.8.3",
-    "cordova-plugin-request-location-accuracy",
-    "cordova.plugins.diagnostic",
-    {
-      "locator": "https://github.com/chancezeus/cordova-plugin-jumbomode.git",
-      "id": "cordova-plugin-jumbomode"
-    },
-    "cordova-plugin-device",
-    "cordova-plugin-console",
-    "cordova-plugin-splashscreen",
-    "ionic-plugin-keyboard",
-    "cordova-plugin-geolocation",
-    "cordova-plugin-statusbar",
-    "cordova-plugin-inappbrowser",
-    "cordova-plugin-x-socialsharing",
-    "cordova-plugin-whitelist",
-    "cordova-plugin-app-version",
-    {
-      "locator": "https://github.com/phonegap/phonegap-mobile-accessibility.git",
-      "id": "phonegap-plugin-mobile-accessibility"
-    },
-    "cordova-plugin-globalization",
-    {
-      "locator": "https://github.com/WizardFactory/cordova-plugin-todayweather-android-widget.git",
-      "id": "cordova-plugin-todayweather-android-widget"
-    },
-    {
-      "locator": "https://github.com/WizardFactory/cordova-plugin-todayweather-config.git",
-      "id": "cordova-plugin-todayweather-config"
-    },
-    "cordova-plugin-app-preferences",
-    "cordova-plugin-ionic-webview",
-    "cordova-plugin-screen-orientation"
-  ],
-  "cordovaPlatforms": [
-    {
-      "platform": "android",
-      "version": "",
-      "locator": "android@6.3.0"
-    },
-    {
-      "platform": "ios",
-      "version": "",
-      "locator": "ios"
+  "cordova": {
+    "platforms": [
+      "android",
+      "ios"
+    ],
+    "plugins": {
+      "cordova-plugin-app-version": {},
+      "cordova-plugin-device": {},
+      "cordova-plugin-geolocation": {
+        "GPS_REQUIRED": "false"
+      },
+      "cordova-plugin-inappbrowser": {},
+      "cordova-plugin-ionic-keyboard": {},
+      "cordova-plugin-request-location-accuracy": {},
+      "cordova-plugin-screen-orientation": {},
+      "cordova-plugin-statusbar": {},
+      "cordova-plugin-x-socialsharing": {
+        "PHOTO_LIBRARY_ADD_USAGE_DESCRIPTION": "Save shared weather images to your photo library.",
+        "PHOTO_LIBRARY_USAGE_DESCRIPTION": "Attach photos when sharing weather."
+      },
+      "cordova.plugins.diagnostic": {},
+      "cordova-plugin-network-information": {},
+      "phonegap-plugin-mobile-accessibility": {}
     }
-  ]
+  }
 }
