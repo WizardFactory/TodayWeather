@@ -374,7 +374,8 @@ CollectData.prototype._requestPage = function (url, callback) {
 * totalCount, hold exactly the remaining rows up to the page size, add no row
 * already seen (a shifted or repeated page) and, when echoed, match the requested
 * pageNo/numOfRows.
-* callback(reason, items) with all rows in page order.
+* callback(reason, items, diagnostic) with all rows in page order. On failure the
+* diagnostic {page, check} names the page and the failed check with static values only.
 * */
 CollectData.prototype._requestRemainingPages = function (url, total, first, callback) {
     var self = this;
@@ -382,16 +383,24 @@ CollectData.prototype._requestRemainingPages = function (url, total, first, call
     if (first.items.length >= total) {
         return callback(null, first.items);
     }
-    if (queryNumber(url, 'pageNo') !== 1 || first.items.length !== size ||
-        Math.ceil(total / size) > KMA_MAX_PAGES) {
-        return callback('KMA incomplete or inconsistent response');
+    function inconsistent(page, check) {
+        callback('KMA incomplete or inconsistent response', undefined, {page: page, check: check});
+    }
+    if (queryNumber(url, 'pageNo') !== 1) {
+        return inconsistent(1, 'pageNo');
+    }
+    if (first.items.length !== size) {
+        return inconsistent(1, 'rows');
+    }
+    if (Math.ceil(total / size) > KMA_MAX_PAGES) {
+        return inconsistent(1, 'limit');
     }
     function echoed(payload, pageNo) {
         return (!payload.pageNo || Number(payload.pageNo[0]) === pageNo) &&
             (!payload.numOfRows || Number(payload.numOfRows[0]) === size);
     }
     if (!echoed(first.payload, 1)) {
-        return callback('KMA incomplete or inconsistent response');
+        return inconsistent(1, 'echo');
     }
     var merged = [];
     var seen = {};
@@ -407,17 +416,25 @@ CollectData.prototype._requestRemainingPages = function (url, total, first, call
         return true;
     }
     if (!addRows(first.items)) {
-        return callback('KMA incomplete or inconsistent response');
+        return inconsistent(1, 'duplicate');
     }
     (function next(pageNo) {
         var pageUrl = url.replace(/([?&]pageNo=)[0-9]+(?=&|$)/, '$1' + pageNo);
         self._requestPage(pageUrl, function (reason, result, count, items, payload) {
             if (reason) {
-                return callback(reason);
+                return callback(reason, undefined, {page: pageNo, check: 'response'});
             }
-            if (count !== total || items.length !== Math.min(size, total - merged.length) ||
-                !echoed(payload, pageNo) || !addRows(items)) {
-                return callback('KMA incomplete or inconsistent response');
+            if (count !== total) {
+                return inconsistent(pageNo, 'totalCount');
+            }
+            if (items.length !== Math.min(size, total - merged.length)) {
+                return inconsistent(pageNo, 'rows');
+            }
+            if (!echoed(payload, pageNo)) {
+                return inconsistent(pageNo, 'echo');
+            }
+            if (!addRows(items)) {
+                return inconsistent(pageNo, 'duplicate');
             }
             if (merged.length === total) {
                 return callback(null, merged);
@@ -437,9 +454,9 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
     // Only locally constructed metadata may enter diagnostics. Transport/parser
     // errors and provider messages can echo the service-key-bearing request URL.
     var meta = {method: 'getData', index: index, dataType: dataType};
-    function fail(reason) {
+    function fail(reason, diagnostic) {
         var error = new Error(reason);
-        log.warn(reason, meta);
+        log.warn(reason, diagnostic ? Object.assign({}, meta, diagnostic) : meta);
         self.emit('recvFail', index);
         if (callback) {
             callback(error, index);
@@ -450,9 +467,9 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
         if (reason) {
             return fail(reason);
         }
-        self._requestRemainingPages(url, total, {items: items, payload: payload}, function (reason, allItems) {
+        self._requestRemainingPages(url, total, {items: items, payload: payload}, function (reason, allItems, diagnostic) {
             if (reason) {
-                return fail(reason);
+                return fail(reason, diagnostic);
             }
             // Never mark a truncated prefix complete, even if its last group is valid.
             if (total !== allItems.length) {
