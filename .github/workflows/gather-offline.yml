@@ -27,7 +27,7 @@ jobs:
           node-version: '22.22.2'
           package-manager-cache: false
       - name: Install isolated test dependencies
-        run: npm install --prefix "$RUNNER_TEMP/gather-offline" --ignore-scripts --no-audit --no-fund --package-lock=false mocha@2.5.3 cheerio@0.20.0 xml2js@0.4.23 async@2.6.4 mongoose@5.1.2 sprintf@0.1.5 express@4.13.4 iconv-lite@0.4.24
+        run: npm install --prefix "$RUNNER_TEMP/gather-offline" --ignore-scripts --no-audit --no-fund --package-lock=false mocha@2.5.3 cheerio@0.20.0 xml2js@0.4.23 async@2.6.4 mongoose@5.1.2 sprintf@0.1.5 express@4.13.4 iconv-lite@0.4.24 dotenv@10.0.0
       - name: Run synthetic regression and functional smoke
         env:
           NODE_PATH: ${{ runner.temp }}/gather-offline/node_modules
