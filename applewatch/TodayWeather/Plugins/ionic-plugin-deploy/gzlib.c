@@ -213,7 +213,7 @@ local gzFile gz_open(path, fd, mode)
 #if !defined(NO_snprintf) && !defined(NO_vsnprintf)
         snprintf(state->path, len + 1, "%s", (const char *)path);
 #else
-        strcpy(state->path, path);
+        strlcpy(state->path, (const char *)path, len + 1);
 #endif
 
     /* compute the flags for open() */
@@ -607,9 +607,12 @@ void ZLIB_INTERNAL gz_error(state, err, msg)
     snprintf(state->msg, strlen(state->path) + strlen(msg) + 3,
              "%s%s%s", state->path, ": ", msg);
 #else
-    strcpy(state->msg, state->path);
-    strcat(state->msg, ": ");
-    strcat(state->msg, msg);
+    {
+        size_t msg_size = strlen(state->path) + strlen(msg) + 3;
+        strlcpy(state->msg, state->path, msg_size);
+        strlcat(state->msg, ": ", msg_size);
+        strlcat(state->msg, msg, msg_size);
+    }
 #endif
     return;
 }
