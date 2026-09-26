@@ -26,6 +26,15 @@ Sources: [server entry](../../server/app.js), [server package](../../server/pack
 
 ## Runtime modes
 
+In the issue-2563 checkout change, [app.js](../../server/app.js) first loads
+[config/env.js](../../server/config/env.js): dotenv reads `server/.env` before
+Express and configuration imports. The path is independent of the working
+directory, and existing process variables take precedence. A missing file is
+allowed; other read failures stop startup with a sanitized error. This is a
+repository startup change, not a new observation of the deployed EC2 process.
+See [server configuration](../../server/CONFIGURATION.md) for syntax, runtime compatibility,
+provider-key applicability and local-file protection.
+
 The [configuration](../../server/config/config.js) defaults to `SERVER_MODE=local`, bind address `127.0.0.1`, and port `OPENSHIFT_NODEJS_PORT`, then `PORT`, then `3000`.
 
 | Mode | HTTP routes | Automatically started background work |

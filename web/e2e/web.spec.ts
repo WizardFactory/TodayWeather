@@ -94,7 +94,7 @@ test("mobile favorites, geolocation denial and unavailable notifications stay us
   await expect(page.locator(".location-card")).toHaveCount(1);
   await context.setGeolocation({ latitude: 37.567, longitude: 126.978 });
   await page.getByRole("button", { name: "현재 위치", exact: true }).click();
-  await expect(page.locator(".toast")).toContainText("권한");
+  await expect(page.locator(".permission-help")).toContainText("권한");
   await page.getByRole("link", { name: "부산 알림 안내" }).click();
   await expect(
     page.getByRole("heading", { name: "웹 알림을 아직 사용할 수 없습니다" }),
@@ -156,7 +156,7 @@ test("immediate search submission selects the submitted city", async ({
     page.getByRole("heading", { name: "부산", exact: true }),
   ).toBeVisible();
 });
-test("late geolocation preserves newly added favorites and settings", async ({
+test("a superseded late geolocation never navigates or overwrites newer choices", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -178,14 +178,13 @@ test("late geolocation preserves newly added favorites and settings", async ({
     .getByRole("combobox", { name: "기온", exact: true })
     .selectOption("F");
   await page.evaluate(() => (window as any).completeLocation());
-  await expect(
-    page.getByRole("heading", { name: "서울", exact: true }),
-  ).toBeVisible();
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(500);
+  // R30: picking Busan superseded the pending location request.
+  await expect(page).toHaveURL(/\/settings$/);
   const saved = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("tw.web.v1.preferences")!),
   );
-  expect(saved.places.map((p: any) => p.id)).toContain("busan");
+  expect(saved.places.map((p: any) => p.id)).toEqual(["busan"]);
   expect(saved.settings.units.temperatureUnit).toBe("F");
 });
 

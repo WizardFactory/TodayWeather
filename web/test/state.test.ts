@@ -94,21 +94,13 @@ describe("untrusted persisted weather", () => {
         validateSnapshot({ ...value, weather: { ...w, ...patch } }, key, now),
       ).toBeUndefined();
     expect(validateSnapshot(value, key + "mismatch", now)).toBeUndefined();
+    // R12: shapes from earlier normalization revisions are rejected, not migrated.
     const old = structuredClone(value) as any;
-    for (const point of [
-      old.weather.current,
-      old.weather.yesterday,
-      ...old.weather.hourly,
-      ...old.weather.daily,
-    ].filter(Boolean)) {
-      delete point.snowfall;
-      delete point.snowfallHours;
-      point.precipitationHours = 6;
-    }
-    const migrated = validateSnapshot(old, key, now)!;
-    expect(migrated.current.precipitation).toBe(w.current.precipitation);
-    expect(migrated.current.precipitationHours).toBeNull();
-    expect(migrated.current.snowfall).toBeNull();
+    delete old.weather.current.precipitationBasis;
+    expect(validateSnapshot(old, key, now)).toBeUndefined();
+    const bad = structuredClone(value) as any;
+    bad.weather.air[0].pollutants.aqi.hourly[0].forecast = "yes";
+    expect(validateSnapshot(bad, key, now)).toBeUndefined();
   });
 });
 
