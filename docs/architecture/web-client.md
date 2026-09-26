@@ -37,7 +37,7 @@ Server source and three read-only live KMA coordinate responses sampled 2026-09-
 | KMA field | Meaning used by the web | Display |
 | --- | --- | --- |
 | `current.rn1` | Observed 1-hour amount | `N mm · 1시간 관측` |
-| `shortest[].rn1` | Lower bound of a 1-hour forecast category | `약 N mm`; `1 mm 이하` for 1 (it also covers "1mm 미만"); `30~50 mm` or `50 mm 이상` for the top categories; `· 1시간 예보(근사)` |
+| `shortest[].rn1` | Approximate 1-hour forecast: the lower bound of a category on the deployed server, a representative amount after #2583 (see below) | `약 N mm`; `1 mm 이하` for 1 (it also covers "1mm 미만"); `30~50 mm` or `50 mm 이상` for the top categories; `· 1시간 예보(근사)` |
 | `short[].rn1` (the server fills past and current slots) | Observed 3-hour total; the slot ending after the current observation is still accumulating | `N mm · 3시간 관측`; the in-progress slot shows `N mm · 지금까지 관측` |
 | `short[].r06` (rows without a valid `rn1`) and `short[].s06` | Server-calculated 3-hour forecast | `N mm · 3시간 예보`; snow `적설량 N mm · 3시간 예보` |
 | `midData.dailyData[].rn1` for yesterday | Observed accumulation | `N mm · 관측 누적` |
@@ -45,6 +45,8 @@ Server source and three read-only live KMA coordinate responses sampled 2026-09-
 | `rn1Str`, `r06Str`, `s06Str` | Retired bucket text | Never shown |
 
 DSF keeps `rn1`, else `r06`, and `sn1`, else `s1d`, else `s06`: current values are 1 hour, hourly rows are labelled 3 hours because the server sums three provider hours, and daily rows 24 hours. Rain and snow display as mm with one decimal (`<0.1` below 0.1) or inches with two decimals (`<0.01` below 0.01); zero snowfall remains in data but is hidden. Rows without an amount show `강수확률 N%`. The help page explains the observed/forecast split and the approximation. The nationwide rain view labels its values as the latest 1-hour observation. The server-side D45 fix is out of scope here.
+
+Server change #2583 (source, not yet deployed) makes `short[].r06`/`s06` 3-hour totals of hourly forecasts, daily `r06`/`s06` day totals, and `shortest[].rn1` a representative amount for a category (0.5 for `1mm 미만`, 40 for `30.0~50.0mm`, 50 for `50.0mm 이상`) instead of its lower bound. `approxAmount` maps those amounts to the same labels as before. New `r06Hours`/`s06Hours`/`r06Approx`/`s06Approx` and `rn1Hours`/`rn1Approx` fields are not read by the web ([amount contract](mobile-api.md#forecast-precipitation-amounts-issue-2583)).
 
 ## Display parity
 

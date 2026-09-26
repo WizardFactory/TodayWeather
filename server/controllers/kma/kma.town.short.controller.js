@@ -8,6 +8,7 @@ var midPolicy = require('../../lib/midForecastPolicy');
 
 var modelKmaTownShort = require('../../models/kma/kma.town.short.model.js');
 var kmaTimelib = require('../../lib/kmaTimeLib');
+var precipitation = require('../../lib/kmaPrecipitation');
 
 function kmaTownShortController(){
 }
@@ -85,6 +86,8 @@ kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord, 
                 shortString.forEach(function(string){
                     newItem[string] = shortData[string];
                 });
+                // Category text for the service's slot totals; never copied to responses (#2583).
+                precipitation.copyText(shortData, newItem, ['r06', 's06']);
                 ret.push(newItem);
             });
 

@@ -57,7 +57,8 @@ function environment(version, rows, pubDate = '202609240800') {
     // Non-RSS imports are not exercised by this unit suite. Unexpected execution fails.
     for (const match of source.matchAll(/require\('([^']+)'\)/g)) deps[match[1]] = function unused(){throw new Error('Unexpected collaborator '+match[1]);};
     Object.assign(deps, {'../config/config':config,'../models/modelShortRss':v1,
-        '../lib/midForecastPolicy': load('lib/midForecastPolicy.js',{}), '../lib/kmaTimeLib':time,'./kma/kma.town.short.rss.controller.js':Rss});
+        '../lib/midForecastPolicy': load('lib/midForecastPolicy.js',{}), '../lib/kmaTimeLib':time,'./kma/kma.town.short.rss.controller.js':Rss,
+        '../lib/kmaPrecipitation': load('lib/kmaPrecipitation.js',{})});
     for (const name of ['./kma/kma.town.current.controller.js','./kma/kma.town.short.controller.js',
         './kma/kma.town.shortest.controller.js','./kma/kma.town.mid.controller.js']) deps[name] = noop;
     const Town = load('controllers/controllerTown.js',deps);

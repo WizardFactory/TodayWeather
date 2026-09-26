@@ -28,9 +28,15 @@ exports.logger = function (lines) {
     });
     return log;
 };
+// Modules introduced after a baseline may be absent when tests run against it.
+function optional(id) {
+    try { return require(id); } catch (e) { if (e.code === 'MODULE_NOT_FOUND') { return undefined; } throw e; }
+}
+exports.optional = optional;
 exports.collector = function (request, logs) {
     var Collector = exports.load('lib/collectTownForecast.js', {
         './midForecastPolicy': require('../../lib/midForecastPolicy'),
+        './kmaPrecipitation': optional('../../lib/kmaPrecipitation'),
         events: require('events'), request: request || {get: function () { throw new Error('Unexpected HTTP'); }},
         xml2js: require('xml2js'), dnscache: function () {}
     }, {log: exports.logger(logs || [])});

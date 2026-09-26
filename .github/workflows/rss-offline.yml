@@ -43,6 +43,10 @@ jobs:
           node server/test/offline/history-observations.test.js
           node server/test/offline/history-recovery.test.js
           node server/test/offline/runtime-node16.test.js
+      - name: Forecast precipitation period tests
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+        run: node server/test/offline/precipitation.test.js
       - name: Full RSS response smoke
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
@@ -58,3 +62,8 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
         run: node server/test/offline/weather-desc-response-smoke.js
+      - name: Forecast precipitation period response smoke
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+          TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
+        run: node server/test/offline/precipitation-smoke.js
