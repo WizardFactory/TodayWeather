@@ -54,7 +54,7 @@ The [configuration](../../server/config/config.js) defaults to `SERVER_MODE=loca
 The current mobile source requests `/weather/v000903/coord/...` and `/geocode/v000903/coord/...`. These are not Express mounts here. Authorized AWS inspection establishes CloudFront -> API Gateway production -> Lambda. Deployed weather Lambda geocodes coordinates using DynamoDB/provider adapters, then forwards KR to `/{version}/kma/addr/...` and other countries to `/{version}/dsf/coord/...` at `http://tw-svc-spot.wizardfactory.net`. That hostname resolves to the current service EC2 instance. Lambda source is outside this repository; service-host SSH now identifies nginx, ten PM2 cluster workers and checkout `5bca407` with config/logger edits; see [EC2 internals](ec2-internals.md). See [AWS/code correlation](aws-code-correlation.md) for evidence, address-route 501, cache policies and exact version handling.
 
 The backend also calls `API_SERVER/geocode/coord/...` in its direct coordinate-to-KMA-address route. Its deployed configuration resolves `API_SERVER` to `http://todayweather.wizardfactory.net`; this separate call must not be confused with weather Lambda's internal geocoder.
-Sources: [URL builder](../../client/www/js/service.weatherutil.js), [placeholder client config](../../client/www/client.config.js), [latest router](../../server/routes/v000903/index.js), [backend geocode dependency](../../server/controllers/controllerTown24h.js).
+Sources: [URL builder](../../client/www/js/service.weatherutil.js), [placeholder client config](../../client/www/client.config.example.js), [latest router](../../server/routes/v000903/index.js), [backend geocode dependency](../../server/controllers/controllerTown24h.js).
 
 ## Persistence and identity
 

@@ -2,7 +2,7 @@
 
 Baseline: `bd6640f2` (re-baselined 2026-09-25; client source identical to `ff7acf3996ccb66c912d2ed4710cf300197d6966`, on which this was inspected 2026-09-23 and extended 2026-09-24 and 2026-09-25). Screenshots keep their original capture dates and `ff7acf39` commit, and remain valid because nothing under `client/` changed. Server-side changes that reach these screens are in the [re-baseline summary](README.md#re-baselined-to-bd6640f2); the main one is that KMA daily rows can now skip dates (D51). This describes the existing application, not a proposed redesign. Screen IDs are documentation identifiers, not production route IDs. Repository prose is English; most captures show the Korean UI, and en-US captures exist for S01, S06 and S07.
 
-Screenshots use current `client/www` JS/templates/assets and compiled current SCSS in an isolated iOS WKWebView. Weather, air, national summaries, warnings and the photo-theme feed are **synthetic fixtures**, not real observations. Cordova readiness is simulated; native plugins, release credentials and external provider access are absent. See [capture provenance](screenshots/README.md), [data contracts](client-data-contracts.md), and [state behavior](client-state-and-behavior.md). A screenshot proves a rendered state, not an entire user journey or API integration.
+Screenshots use current `client/www` JS/templates/assets and compiled current SCSS in an isolated iOS WKWebView. Weather, air, national summaries, warnings and the photo-theme feed are **synthetic fixtures**, not real observations. Cordova readiness is simulated; native plugins, release credentials and external provider access are absent. See [capture provenance](screenshots/README.md), [data contracts](client-data-contracts.md), and [state behavior](client-state-and-behavior.md). A screenshot proves a rendered state, not an entire user journey or API integration. The 2026-09-27 `native-*` captures are different evidence: native Cordova debug builds of the #2605 PoC branch against the production API, described in [Native Cordova PoC build](#native-cordova-poc-build-2026-09-27).
 
 Two companion documents cover what this page does not repeat:
 
@@ -11,7 +11,7 @@ Two companion documents cover what this page does not repeat:
 
 ## Navigation and coverage
 
-The route registry is in [app.js](../../client/www/js/app.js). `tab` is an abstract container, and its template depends on product and platform ([app.js](../../client/www/js/app.js#L1881-L1896)):
+The route registry is in [app.js](../../client/www/js/app.js). `tab` is an abstract container, and its template depends on product and platform ([app.js](../../client/www/js/app.js#L1892-L1907)):
 
 - TodayWeather on iOS uses `tabs.html`: favorites, hourly, daily and air tabs.
 - TodayWeather on Android uses `tabs-android.html`: the same tabs with Android glyphs.
@@ -38,7 +38,7 @@ See [Product and platform differences](#product-and-platform-differences). A sel
 | S15 | TodayAir combined weather `/tab/weather?fav` | `ForecastCtrl`, `ta-tab-weather.html` | [TodayAir weather](screenshots/ta-weather.png) |
 | S16 | TodayAir primary air view `/tab/air` | `AirCtrl`, `tab-air.html`, `ta-tabs.html` | [TodayAir air](screenshots/ta-air.png), [dark](screenshots/ta-theme-dark-air.png) |
 
-All routed screens above have a capture; S06 is the non-routed side menu. The 2026-09-23 captures are Korean with the light theme. The 2026-09-24 captures add these states: favorites search/edit, TodayAir favorites, national map modes, dark/old/photo themes, en-US locale/region and Ionic Android platform mode. The 2026-09-25 captures add S03 and S04 on an iPad in portrait ([Device classes and orientation](#device-classes-and-orientation)); every other capture is an iPhone in portrait. For each capture from 2026-09-24 on, the [manifest](screenshots/manifest.json) records the `trigger` that produced the state, plus `notes`. Overlay, dialog and loading-state captures (`O` IDs) are defined in [screen-overlays.md](screen-overlays.md). No capture comes from an Android device or Android WebView. No capture shows a TodayAir iOS purchase page with a loaded store product. Native widget/watch surfaces are separate applications and are outside this screenshot set. The purchase capture is deliberately the plugin-unavailable state, not a simulated successful store purchase.
+All routed screens above have a capture; S06 is the non-routed side menu. The 2026-09-23 captures are Korean with the light theme. The 2026-09-24 captures add these states: favorites search/edit, TodayAir favorites, national map modes, dark/old/photo themes, en-US locale/region and Ionic Android platform mode. The 2026-09-25 captures add S03 and S04 on an iPad in portrait ([Device classes and orientation](#device-classes-and-orientation)); every other capture is an iPhone in portrait. For each capture from 2026-09-24 on, the [manifest](screenshots/manifest.json) records the `trigger` that produced the state, plus `notes`. Overlay, dialog and loading-state captures (`O` IDs) are defined in [screen-overlays.md](screen-overlays.md). No harness capture comes from an Android device or Android WebView; the native PoC captures add an Android emulator (folded and unfolded) and native iOS builds ([Native Cordova PoC build](#native-cordova-poc-build-2026-09-27)). No capture shows a TodayAir iOS purchase page with a loaded store product. Native widget/watch surfaces are separate applications and are outside this screenshot set. The purchase capture is deliberately the plugin-unavailable state, not a simulated successful store purchase.
 
 ## Shared presentation and data rules
 
@@ -49,12 +49,12 @@ All routed screens above have a capture; S06 is the non-routed side menu. The 20
   - Only `ForecastCtrl.switchToLocationSettings` handles taps on it, so it works on S03, S04 and S15 ([ForecastCtrl](../../client/www/js/controller.forecastctrl.js#L658-L674)). The handler acts only when `Util.isLocationEnabled()` is false: Android opens device location settings and iOS opens the app's settings page. `WeatherInfo.reloadCity` then clears the city's `loadTime` without fetching. With location on, a tap only records analytics.
   - `tab-air.html` binds the same handler, but neither `AirCtrl` nor `TabCtrl` defines it, so the glyph does nothing on S05/S16 (anomaly).
 - Text comes from [locales](../../client/www/locales); weather condition/summary strings may already arrive from the server. Preserve the distinction between localization keys and server prose. Language and region rules are in [Locale and region](#locale-and-region).
-- Horizontal forecast overflow is intentional. Page-wide overflow, clipped controls, missing fonts or hidden navigation titles are not acceptable rewrite outcomes. The [full-screen baseline](screenshots/baseline-unsafe-area.png) hides the city title under Dynamic Island; native safe-area hosting avoids this in the harness. Real Cordova status-bar/safe-area behavior remains unverified.
+- Horizontal forecast overflow is intentional. Page-wide overflow, clipped controls, missing fonts or hidden navigation titles are not acceptable rewrite outcomes. The [full-screen baseline](screenshots/baseline-unsafe-area.png) hides the city title under Dynamic Island; native safe-area hosting avoids this in the harness. Release-build status-bar/safe-area behavior remains unverified. The native PoC build keeps the iOS status bar outside the web view, so the header clears the Dynamic Island, and colours that strip per theme ([Native Cordova PoC build](#native-cordova-poc-build-2026-09-27)).
 - Most pages assume partial cached data can exist. Define loading, stale, missing, offline and error states explicitly during rewrite; do not infer an empty-state design from a successful screenshot.
 
 ### Advertising surface
 
-For free accounts, a native AdMob banner sits outside the web content. No capture includes it ([capture limits](screenshots/README.md)).
+For free accounts, a native AdMob banner sits outside the web content. No capture includes it ([capture limits](screenshots/README.md)); the native PoC build has no AdMob plugin yet.
 
 | Aspect | Current behavior | Source |
 | --- | --- | --- |
@@ -77,10 +77,10 @@ The theme is `settingsInfo.theme`. The default is `light` for both products ([de
 How themes are applied:
 
 - `<body ng-class="[package, settingsInfo.theme+'-theme']">` ([index.html](../../client/www/index.html#L73)) sets the theme class.
-- A state class comes from `$rootScope.state` ([app.js](../../client/www/js/app.js#L295-L322)). The values are `search`, `forecast` (also used by TodayAir `tab.weather`), `dailyforecast`, `air`, `start`, `setting` and `push`; national maps, bulletins, guide and purchase get none.
+- A state class comes from `$rootScope.state` ([app.js](../../client/www/js/app.js#L305-L332)). The values are `search`, `forecast` (also used by TodayAir `tab.weather`), `dailyforecast`, `air`, `start`, `setting` and `push`; national maps, bulletins, guide and purchase get none.
 - SCSS scopes rules by `<theme>-theme.<state>`.
-- Image paths are `$rootScope.iconsImgPath` and `weatherImgPath` from [`window.theme`](../../client/www/data/theme.js). They are set at startup ([app.js](../../client/www/js/app.js#L329-L330)) and on theme change ([radioList.setValue](../../client/www/js/controller.setting.radio.js#L41-L58)).
-- Theme-dependent status-bar calls run only on iOS when the `StatusBar` plugin exists ([app.js](../../client/www/js/app.js#L286-L292)). Separately, the config block calls `StatusBar.styleLightContent()` on iOS and `StatusBar.backgroundColorByHexString('#111')` on other platforms when `window.StatusBar` exists ([app.js](../../client/www/js/app.js#L1962-L1969)); Angular is bootstrapped on `deviceready`, and `cordova-plugin-statusbar` is in both product package files (source-level).
+- Image paths are `$rootScope.iconsImgPath` and `weatherImgPath` from [`window.theme`](../../client/www/data/theme.js). They are set at startup ([app.js](../../client/www/js/app.js#L339-L340)) and on theme change ([radioList.setValue](../../client/www/js/controller.setting.radio.js#L41-L53)).
+- Theme-dependent status-bar calls run only on iOS when the `StatusBar` plugin exists, on every view entry ([app.js](../../client/www/js/app.js#L302)). At `bd6640f2` they were inline `styleDefault`/`styleLightContent` calls; the #2605 PoC branch moves them into [`Util.applyIOSStatusBar`](../../client/www/js/service.util.js#L297-L321), which also colours the status-bar strip ([Native Cordova PoC build](#native-cordova-poc-build-2026-09-27)). Separately, the config block calls `StatusBar.styleLightContent()` on iOS and `StatusBar.backgroundColorByHexString('#111')` on other platforms when `window.StatusBar` exists ([app.js](../../client/www/js/app.js#L1973-L1980)); Angular is bootstrapped on `deviceready`, and `cordova-plugin-statusbar` is in both product package files (source-level).
 
 Captures: [dark hourly](screenshots/tw-theme-dark-hourly.png), [old hourly](screenshots/tw-theme-old-hourly.png), [photo hourly](screenshots/tw-theme-photo-hourly.png), [TodayAir dark air](screenshots/ta-theme-dark-air.png). They were made by persisting the theme and reloading the document; the live switch from S08 was not captured.
 
@@ -92,7 +92,7 @@ Captures: [dark hourly](screenshots/tw-theme-dark-hourly.png), [old hourly](scre
 
 **Photo theme hero (TodayWeather hourly/daily).**
 
-1. **Feed.** The feed URL is `clientConfig.weatherPhotosUrl`, fetched with a 20-second timeout. It is empty in the checked-in [client.config.js](../../client/www/client.config.js#L25), and the deployed value is unverified. Entries are `{tags:[...], twUrls:{regular}}` ([synthetic example](examples/weather-photos-feed.json)), and entries without a `tags` array are skipped. The joined tags pick a bucket in this order: lightning, rain, snow, sun (with `_smallcloud`/`_bigcloud` variants), moon (same variants), cloud ([WeatherUtil](../../client/www/js/service.weatherutil.js#L925-L993)).
+1. **Feed.** The feed URL is `clientConfig.weatherPhotosUrl`, fetched with a 20-second timeout. It is empty in the checked-in [client.config.js](../../client/www/client.config.example.js#L25), and the deployed value is unverified. Entries are `{tags:[...], twUrls:{regular}}` ([synthetic example](examples/weather-photos-feed.json)), and entries without a `tags` array are skipped. The joined tags pick a bucket in this order: lightning, rain, snow, sun (with `_smallcloud`/`_bigcloud` variants), moon (same variants), cloud ([WeatherUtil](../../client/www/js/service.weatherutil.js#L925-L993)).
 2. **Loading.** The feed loads at startup (`loadCities`), on a city add/update while no feed is loaded, and on the `online` event. Once `window.weatherPhotos` is set, later calls return immediately, so a session never refreshes the feed. After the first successful load, every city whose `photo` is null gets one, and `loadWeatherPhotosEvent` is broadcast ([WeatherInfo](../../client/www/js/service.weatherinfo.js#L278-L297)).
 3. **Selection (anomaly).** `findWeatherPhoto` walks the keys in that fixed order. It uses the first key that is a substring of `skyIcon` and has a non-empty bucket, and returns `photos[Math.floor(Math.random()*(length-1))].twUrls.regular` ([WeatherUtil](../../client/www/js/service.weatherutil.js#L995-L1012)).
    - In a bucket of two or more photos it never picks the last one; a two-photo bucket returned index 0 in 200/200 draws in the [probe](../../reports/rewrite-verification/probes/weather-photo-selection.json) (synthetic execution).
@@ -101,15 +101,15 @@ Captures: [dark hourly](screenshots/tw-theme-dark-hourly.png), [old hourly](scre
 4. **Persistence.** The URL is stored in `city.photo` whenever the city is added or updated, whatever the theme ([add](../../client/www/js/service.weatherinfo.js#L158), [update](../../client/www/js/service.weatherinfo.js#L273)).
 5. **Rendering.**
    - `ForecastCtrl` passes `city.photo` to the template only when the theme is `photo` ([apply](../../client/www/js/controller.forecastctrl.js#L362-L364), [photo event](../../client/www/js/controller.forecastctrl.js#L686-L699)).
-   - The `photo-url` directive preloads the image ([app.js](../../client/www/js/app.js#L1796-L1819)). On success it draws `linear-gradient(to bottom, rgba(0,0,0,0.3) 95%, rgba(255,255,255,0.9))` over the photo. On a load error it shows `img/bg.png`; with no URL it sets no background. `.photo-box` covers the hero at 80% opacity.
-   - Only in the photo theme, `bar-scrolled` paints the header with an `rgba(68,68,68,…)` gradient after 44 px of scroll, reaching full opacity at 132 px. Each state change clears it ([directive](../../client/www/js/app.js#L1765-L1794), [reset](../../client/www/js/app.js#L295-L300)).
+   - The `photo-url` directive preloads the image ([app.js](../../client/www/js/app.js#L1807-L1830)). On success it draws `linear-gradient(to bottom, rgba(0,0,0,0.3) 95%, rgba(255,255,255,0.9))` over the photo. On a load error it shows `img/bg.png`; with no URL it sets no background. `.photo-box` covers the hero at 80% opacity.
+   - Only in the photo theme, `bar-scrolled` paints the header with an `rgba(68,68,68,…)` gradient after 44 px of scroll, reaching full opacity at 132 px. Each state change clears it ([directive](../../client/www/js/app.js#L1776-L1805), [reset](../../client/www/js/app.js#L305-L310)).
 6. **Scope.** Only `tab-forecast.html` and `tab-dailyforecast.html` use `photo-url`. `ta-tab-weather.html` has an inline photo binding, but TodayAir does not offer the photo theme.
 
 ### Locale and region
 
 Two independent inputs drive locale behavior:
 
-- **UI text** comes from angular-translate with the static files `locales/<lang>.json` ([app.js](../../client/www/js/app.js#L422-L439)).
+- **UI text** comes from angular-translate with the static files `locales/<lang>.json` ([app.js](../../client/www/js/app.js#L432-L449)).
   - There are six languages: `en`, `de`, `ko`, `ja`, `zh-CN` and `zh-TW`, with 327 keys each at the baseline.
   - The mapping is `en_*` → `en`, `de_*` → `de`, `ko_*` → `ko`, `ja_*` → `ja`, `zh_HK`/`zh_TW` → `zh-TW` and other `zh_*` → `zh-CN`.
   - The preferred and fallback language is `en`; `determinePreferredLanguage()` reads the WebView locale.
@@ -130,6 +130,8 @@ Two independent inputs drive locale behavior:
 | Update-information text | `Util.language` before the first `-` | Matching entry, else the first entry | [TabCtrl](../../client/www/js/controller.tabctrl.js#L817-L829) |
 | Push registration | Raw `Util.language` | `Accept-Language` request header | [Push](../../client/www/js/service.push.js#L244) |
 
+The native PoC build has no `cordova-plugin-globalization`, so its region always comes from `navigator.languages` ([Native Cordova PoC build](#native-cordova-poc-build-2026-09-27)).
+
 en-US captures: [start](screenshots/tw-start-en-us.png), [menu](screenshots/tw-menu-en-us.png) with no KR-only items and no About, and [units](screenshots/tw-units-en-us.png) with US defaults. The harness overrides `navigator.language`/`navigator.languages`, so the region came from `navigator.languages`, not from the globalization plugin.
 
 ### Product and platform differences
@@ -145,17 +147,17 @@ Template platform checks use `isAndroid()`/`isIOS()`, not the product. TodayAir 
 
 | Aspect | iOS | Android | Source |
 | --- | --- | --- | --- |
-| Tab template and icons | TodayWeather: `tabs.html` with `ion-ios-star`, `ion-ios-clock-outline`, `ion-ios-calendar-outline` and `ion-ios-cloud-outline`; a selected weather/air tab shows `ion-ios-reload`. TodayAir: `ta-tabs.html` (favorites, air, weather) with `ion-ios-*` icons | TodayWeather: `tabs-android.html` with `ion-android-star`, `ion-android-time`, `ion-calendar` and `ion-android-cloud-outline`; a selected weather/air tab shows `ion-android-refresh`. TodayAir: the same `ta-tabs.html` with `ion-ios-*` icons | [app.js](../../client/www/js/app.js#L1881-L1896), [tabs](../../client/www/templates/tabs.html), [Android tabs](../../client/www/templates/tabs-android.html), [TodayAir tabs](../../client/www/templates/ta-tabs.html) |
+| Tab template and icons | TodayWeather: `tabs.html` with `ion-ios-star`, `ion-ios-clock-outline`, `ion-ios-calendar-outline` and `ion-ios-cloud-outline`; a selected weather/air tab shows `ion-ios-reload`. TodayAir: `ta-tabs.html` (favorites, air, weather) with `ion-ios-*` icons | TodayWeather: `tabs-android.html` with `ion-android-star`, `ion-android-time`, `ion-calendar` and `ion-android-cloud-outline`; a selected weather/air tab shows `ion-android-refresh`. TodayAir: the same `ta-tabs.html` with `ion-ios-*` icons | [app.js](../../client/www/js/app.js#L1892-L1907), [tabs](../../client/www/templates/tabs.html), [Android tabs](../../client/www/templates/tabs-android.html), [TodayAir tabs](../../client/www/templates/ta-tabs.html) |
 | Header bell/share (S03–S05, S15, S16) | `ion-ios-bell`/`-outline`, `ion-ios-upload-outline` | `ion-android-notifications`/`-none`, `ion-android-share-alt` (both products) | [hourly header](../../client/www/templates/tab-forecast.html#L13-L32); same in the daily, air and TodayAir weather templates |
 | S02 row bell | `ion-android-notifications`/`-none` on both platforms | Same | [template](../../client/www/templates/tab-search.html#L61-L63) |
 | Back icons | `ion-ios-arrow-back` in the menu header and on S07–S13 | `ion-android-arrow-back` | [index.html](../../client/www/index.html#L88-L91), for example [units](../../client/www/templates/units.html) |
 | Menu chevrons | Shown | Hidden on Units, Remove ads, Send feedback, Rate, the disabled Guide and About; KR-only items keep their chevrons | [index.html](../../client/www/index.html#L112-L151) |
 | Hardware back | Not applicable | Registered in `TabCtrl.init`. On `/tab/search`, `/tab/forecast`, `/tab/dailyforecast`, `/tab/air` and `/tab/weather` it opens an exit confirm (`LOC_DO_YOU_WANT_TO_EXIT`; Cancel, or OK → `ionic.Platform.exitApp()`). Elsewhere it calls `$ionicHistory.goBack()`. Dialog: O15 in [screen-overlays.md](screen-overlays.md) | [TabCtrl](../../client/www/js/controller.tabctrl.js#L34-L60) |
 | Location settings | The location-off Settings button and the header glyph open the app's settings page | Same controls open device location settings. The `DENIED_ALWAYS` retry variant adds `LOC_OPENS_THE_APP_INFO_PAGE` and a Settings button. Dialog details: O03 in [screen-overlays.md](screen-overlays.md) | [TabCtrl](../../client/www/js/controller.tabctrl.js#L449-L525), [ForecastCtrl](../../client/www/js/controller.forecastctrl.js#L658-L674) |
-| High-accuracy location request | `cordova.plugins.locationAccuracy.request` runs when location is off and the current-position city has no stored location. Only plugin presence gates it, and the plugin is in both package files | Same | [TabCtrl](../../client/www/js/controller.tabctrl.js#L1150-L1171) |
+| High-accuracy location request | `cordova.plugins.locationAccuracy.request` runs when location is off and the current-position city has no stored location. Only plugin presence gates it, and the plugin is in both package files | Same | [TabCtrl](../../client/www/js/controller.tabctrl.js#L1152-L1173) |
 | System text size | No call | `MobileAccessibility.usePreferredTextZoom(false)` | [app.js](../../client/www/js/app.js#L255-L262) |
-| Status bar | Style follows the theme | No theme-dependent call; the config block sets the background to `#111` once | [app.js](../../client/www/js/app.js#L286-L292), [config block](../../client/www/js/app.js#L1962-L1969) |
-| S02 empty-list autofocus | None ("focus doesn't work on ios") | Input focused after 100 ms | [SearchCtrl](../../client/www/js/controller.searchctrl.js#L945-L957) |
+| Status bar | Style follows the theme (the PoC also colours the strip per theme) | No theme-dependent call; the config block sets the background to `#111` once (the PoC sets it through `StatusBarBackgroundColor`, because cordova-android 15 ignores the call) | [app.js](../../client/www/js/app.js#L302), [Util.applyIOSStatusBar](../../client/www/js/service.util.js#L297-L321), [config block](../../client/www/js/app.js#L1973-L1980) |
+| S02 empty-list autofocus | None ("focus doesn't work on ios") | Input focused after 100 ms | [SearchCtrl](../../client/www/js/controller.searchctrl.js#L947-L959) |
 | Purchase (S13) | `controller.purchase.alexdisler.js` with `cordova-plugin-inapppurchase`. TodayAir iOS only: a subscription disclosure (`LOC_CHARGED_TO_YOUR_ITUNES_ACCOUNT`, `LOC_AUTO_RENEWED_24_HOURS_BEFORE_EXPIRY_DATE`, `LOC_MANAGE_SUBSCRIPTIONS_FROM_ITUNES_ACCOUNT`) and a privacy/terms block, each shown only when a store product is loaded | `controller.purchase.j3k0.js` with `cc.fovea.cordova.purchase` | [gulpfile](../../client/gulpfile.js), [template](../../client/www/templates/purchase.html#L17-L49) |
 
 Product-only differences, on both platforms:
@@ -173,7 +175,7 @@ The Ionic Android mode captures, [hourly](screenshots/tw-android-mode-hourly.png
 - Both app `Info.plist` files allow portrait and both landscape orientations on iPhone, add upside-down portrait on iPad (`~ipad`), and set `UIRequiresFullScreen` ([TodayWeather](../../tw.ios/TodayWeather/TodayWeather-Info.plist#L46-L60), [TodayAir](../../ta.ios/TodayAir/TodayAir-Info.plist#L46-L60)). Per Apple platform semantics (not verified here), the full-screen flag opts out of iPad Split View and Slide Over.
 - No `config*.xml` variant sets an `Orientation` preference (`grep -i orientation client/*config*.xml` finds nothing). Whether a Cordova `prepare` rewrites the plist keys, and what the Android manifest declares, were not checked; the Android platform files are not in this checkout.
 
-**Size rules.** `TabCtrl.initSize` ([L1352-L1398](../../client/www/js/controller.tabctrl.js#L1352-L1398)) computes the layout sizes. `ForecastCtrl.init` (S03, S04, S15) and `AirCtrl.init` (S05, S16) call it each time their controller initializes ([ForecastCtrl](../../client/www/js/controller.forecastctrl.js#L140-L149), [AirCtrl](../../client/www/js/controller.air.js#L338-L340)).
+**Size rules.** `TabCtrl.initSize` ([L1354-L1400](../../client/www/js/controller.tabctrl.js#L1354-L1400)) computes the layout sizes. `ForecastCtrl.init` (S03, S04, S15) and `AirCtrl.init` (S05, S16) call it each time their controller initializes ([ForecastCtrl](../../client/www/js/controller.forecastctrl.js#L140-L149), [AirCtrl](../../client/www/js/controller.air.js#L338-L340)).
 
 | Value | Rule |
 | --- | --- |
@@ -204,9 +206,71 @@ The diagnostics agree with the column rule: the hourly chart scroll width is 137
 
 **iPad captures** (2026-09-25, iPad Pro 11-inch (M5) / iOS 26.5, portrait, ko-KR, light theme, synthetic fixture): [hourly](screenshots/tw-ipad-hourly.png) and [daily](screenshots/tw-ipad-daily.png). They show a tall hero with the temperature at the 142.1 px cap, 60 px chart columns, an hourly chart scrolled past the earlier hours, a daily chart that starts at its first day with today in the eighth column, and 150 px tabs centred in the tab bar. Limits: portrait only, because the harness `Info.plist` allows only portrait, so landscape and rotation are not captured. The captures come from the WKWebView harness (safe-area hosting, hidden status bar), not from the app's own plist or multitasking settings. There is no banner, and no iPad capture of S05, S15, S16 or TodayAir. No Android tablet was captured.
 
+## Native Cordova PoC build (2026-09-27)
+
+Issue #2605 rebuilt TodayWeather with Cordova 13 from npm scripts on branch `review-cordova-ios-android-deployment` (based on `b8a3c504`, not merged). Its debug builds ran against the **production API** on a Pixel Fold emulator (Android 15 / API 35, folded, en-US) and an iPhone 17 Pro Simulator (iOS 26.5, ko-KR). This is **native execution**: a test-only script injected into the built `www`, never into `client/www`, tapped through the screens the way `ionic.tap` delivers taps and recorded JS errors, failed resources and requests, and the exceptions the app sends to `trackException`. Tooling, scenarios and limits: [native harness](../../reports/rewrite-verification/native/README.md). Everything else on this page still describes source at `bd6640f2` and the WKWebView harness captures.
+
+**Build facts.** `cordova-android` 15.1.0 (`minSdk` 24, `targetSdk` 36) and `cordova-ios` 8.1.1 (iOS 15.0 minimum); version 1.1.0 / `versionCode` 100090 ([config.xml](../../client/config.xml), [package.json](../../client/package.json)). Android serves `www` from `https://localhost`, iOS from `app://localhost`. iOS keeps the status bar outside the web view (`StatusBarOverlaysWebView` `false`), so the header is never under the Dynamic Island; the legacy configuration set no value and so used the plugin default, which overlays the web view.
+
+### Plugin and platform deltas
+
+| Legacy TodayWeather plugin ([tw.package.json](../../client/tw.package.json), gulp variant tasks) | PoC build | Screen-level effect observed or read in source |
+| --- | --- | --- |
+| `cordova-plugin-admobpro-firebase` | Absent (AdMob is a later phase) | No banner and no reserved bottom strip; the hide/show calls on S01, S13 and S14 find no adapter ([Advertising surface](#advertising-surface)) |
+| `cordova-plugin-firebase` | Absent (analytics/crash is a later phase) | `console.error("There is not firebase plugin")` on every launch. Push registration never runs, so `window.updateCityInfo` stays undefined and `WeatherInfo.updateCity` reports `updateCityInfo is undefined` through `trackException` after each weather load. S09 opens and edits, but Save logs `You have to register before post` and registers nothing |
+| `cordova-plugin-google-analytics@1.8.3`, `cordova-fabric-plugin`, `cordova-plugin-facebook4` | Absent (retired) | `Util.ga.*` only logs `… undefined`; no screen change |
+| `cordova-plugin-globalization` | Absent | `Util.region` comes from `navigator.languages` ([Locale and region](#locale-and-region)): `KR` on the ko-KR iOS Simulator, `US` on the en-US emulator, so the KR-only menu items follow the device language list |
+| `phonegap-plugin-mobile-accessibility` | Kept, pinned to 1.0.5 (last release); `cordova-plugin-network-information` 3.1.0 comes with it | Android still calls `usePreferredTextZoom(false)`, so the web view ignores the system font scale as before. Without the plugin, font scale 1.3 pushed the chart legend over the temperature markers and the tab labels over their icons (checked on the emulator). The plugin's own `plugin.xml` names its dependencies by Git URL, so the PoC installs `cordova-plugin-network-information` from npm first; `navigator.connection` is not used by the app |
+| `ionic-plugin-keyboard` | `cordova-plugin-ionic-keyboard` 2.2.0 plus an `app.js` alias | The new plugin defines only `window.Keyboard`. The alias restores `cordova.plugins.Keyboard` (`close`, `isVisible`, iOS-only accessory bar and scroll) for the seven call sites, so the S01/S02 rule "the first tap with the keyboard up only closes it" applies again |
+| `cordova-plugin-splashscreen`, `cordova-plugin-whitelist`, `cordova-plugin-ionic-webview`, `cordova-plugin-console` | Core platform features | Launch screen is hidden by the existing `navigator.splashscreen.hide()` call. iOS serves `www` from `app://localhost`, Android from `https://localhost` |
+| `cordova-plugin-inapppurchase` (iOS), `cc.fovea.cordova.purchase` (Android) | Absent (IAP removed) | S13 menu entry hidden (`hasInAppPurchase()` false, no paid-app URL); the route still exists |
+| `cordova-plugin-todayweather-android-widget`, `cordova-plugin-todayweather-config`, `cordova-plugin-app-preferences`, `cordova-plugin-jumbomode` | Absent (widgets deferred) | No shared preferences for widgets; no screen change |
+| `cordova-plugin-statusbar` | 4.0.0 | iOS: the bar stays outside the web view and the PoC colours the strip per theme (see the fixes below). Android: cordova-android 15 draws the status-bar area itself, so `backgroundColorByHexString('#111')` has no visible effect; the PoC sets `StatusBarBackgroundColor` `#111111` in `config.xml` |
+| `cordova.plugins.diagnostic` | 7.4.0 (unpinned in `tw.package.json`; the release the old builds used is not recorded) | On Android it reports `GRANTED_WHEN_IN_USE` when background location is not granted, which the Android location branches did not accept (see the fixes below) |
+| `device`, `geolocation`, `inappbrowser`, `request-location-accuracy`, `x-socialsharing`, `app-version`, `screen-orientation` | Kept, current majors | Share, store/mail hand-offs, location and version work as described in [screen-overlays.md](screen-overlays.md) |
+
+### Client fixes the native runs required
+
+Each defect below came from the platform or plugin upgrade, not from the legacy source, and was fixed on the PoC branch before the final runs.
+
+| Symptom in the native build | Cause | Fix on the PoC branch |
+| --- | --- | --- |
+| iOS S01 product icon broken | `ng-src` URLs on the `app:` scheme are rewritten to `unsafe:app://…` by the AngularJS sanitization whitelists | `app` added to both whitelists in [app.js](../../client/www/js/app.js) |
+| Keyboard handling silently skipped on both platforms | `cordova-plugin-ionic-keyboard` defines only `window.Keyboard` | `cordova.plugins.Keyboard` alias in [app.js](../../client/www/js/app.js) |
+| Android "find by location" (S02), S01 current location and the current-position city never resolve, with no message | `cordova.plugins.diagnostic` 7.x reports `GRANTED_WHEN_IN_USE` when background location is not granted; the Android branches accepted only `GRANTED` | `GRANTED_WHEN_IN_USE` accepted in [TabCtrl](../../client/www/js/controller.tabctrl.js), [StartCtrl](../../client/www/js/controller.start.js) and [SearchCtrl](../../client/www/js/controller.searchctrl.js) (the iOS switches already did) |
+| Android status bar light grey instead of `#111` | cordova-android 15 paints the status-bar area itself, so the plugin's `setStatusBarColor` has no visible effect | `StatusBarBackgroundColor` `#111111` for Android in [config.xml](../../client/config.xml) |
+| iOS status-bar text invisible in the photo, dark and old themes | With the strip outside the web view it stays white while those themes select light text | `Util.applyIOSStatusBar(theme, state)` in [service.util.js](../../client/www/js/service.util.js) colours the strip from the theme header colours in [ionic.app.scss](../../client/scss/ionic.app.scss) (light `#ffffff`, dark `#1b1b1b`, photo and old `#444444`, old hourly `#03a9f4`, old daily `#00bcd4`); called on every view entry and on a theme change |
+| Android text grew with the system font scale (legend over markers, tab labels over icons at 1.3) | `phonegap-plugin-mobile-accessibility` had been left out, so `usePreferredTextZoom(false)` never ran | Plugin re-added, pinned to 1.0.5 ([package.json](../../client/package.json)) |
+
+### Live observations per screen
+
+| Screen or overlay | What the native build did with live data (2026-09-27) | Captures |
+| --- | --- | --- |
+| S01 | O01 opened on entry; the product icon rendered after the `app:` fix. A chip opened S03. With the location pre-granted, "use current location" enabled the current-position city and opened S03 on both platforms | [iOS](screenshots/native-ios-start.png), [Android](screenshots/native-android-start.png) |
+| S02 | Search listed bundled towns and Places predictions; a result added the city. With the keyboard up (iOS), the first tap on a result or row only closed the keyboard. Edit and delete worked. "Find by location" listed `서울특별시 중구 명동`, and a tap added it | [iOS searching](screenshots/native-ios-search.png) |
+| S03 | Production hourly data for Seoul; the expander showed the wind and humidity rows; swiping changed city. All four themes applied; the photo theme loaded a feed photo | [iOS](screenshots/native-ios-hourly.png), [iOS dark](screenshots/native-ios-theme-dark.png), [iOS photo](screenshots/native-ios-theme-photo.png), [Android](screenshots/native-android-hourly.png), [Android unfolded](screenshots/native-android-unfolded-hourly.png) |
+| S04 | Production daily data | [iOS](screenshots/native-ios-daily.png), [Android](screenshots/native-android-daily.png) |
+| S05 | **Empty.** The production API returned no `airInfo`, `airInfoList` or `current.arpltn` for Seoul, Busan, Incheon and Jeju (checked 2026-09-27). Only the standard ruler rendered; `AirCtrl._applyWeatherData` threw on `latestAirInfo.hasOwnProperty` and `getLabelPosition` on `aqiStandard[grade-1]`, both caught and sent to `trackException` (see S05) | [iOS](screenshots/native-ios-air-empty.png), [Android](screenshots/native-android-air-empty.png) |
+| S06 | Items as specified; KR-only items on the ko-KR Simulator and none on the en-US emulator; version `1.1.0`; no Remove ads | [iOS](screenshots/native-ios-menu.png), [Android](screenshots/native-android-menu.png) |
+| S07, S08 | Changing the temperature unit re-requested weather with the new `temperatureUnit` and restoring it re-requested with the original (°C on iOS, °F on the en-US emulator). Startup and refresh radios opened with their choices | — |
+| S09 | The form opened with its defaults; Save logged `You have to register before post` and registered nothing (Firebase is not in the PoC) | — |
+| S10, S11 | Live national values in all weather modes and pollutant tabs | [iOS national air](screenshots/native-ios-nation-air.png) |
+| S12 | **Stale.** `/v000903/kma/special` returned bulletins announced 2021-06-16 and 2021-06-17 as the latest; their `http://www.weather.go.kr/…` image URLs now return HTML, so the images are blank | [iOS](screenshots/native-ios-bulletin.png) |
+| S13 | Menu entry hidden | — |
+| S14 | Rendered and paged | — |
+| O05 | Opened on every warm launch with title `v1.1.0` and the old notes | [iOS](screenshots/native-ios-update-info.png), [Android](screenshots/native-android-update-info.png) |
+| O09 | A world city (London) failed with `LOC_FAIL_TO_GET_WEATHER_INFO` | [iOS](screenshots/native-ios-world-weather-error.png) |
+| O15 | Android back on S04 opened the exit confirm; Cancel kept S04 | [Android](screenshots/native-android-exit-confirm.png) |
+| O16 | Android chooser and iOS share sheet with the text template | [Android](screenshots/native-android-share.png), [iOS](screenshots/native-ios-share.png) |
+| O19 | Store: Google Play on Android; on the iOS Simulator Safari reported an invalid address (no App Store). Mail: Gmail on Android; nothing on the iOS Simulator (no Mail). Background and resume reloaded the tab | [Android store](screenshots/native-android-store.png), [iOS store](screenshots/native-ios-store.png) |
+
+### Limits
+
+Debug builds on one emulator and one simulator, not release binaries or physical devices. Live data describes production at capture time. Permissions were pre-granted and the location was set to Seoul City Hall, so OS permission prompts (O19) were not exercised. The harness cannot tap native UI: the iOS share sheet stays open at the end of a run, and the iOS Simulator has neither the App Store nor Mail. AdMob, Firebase, purchase, widgets and push delivery are outside the PoC.
+
 ## S01 — Initial location selection
 
-**Purpose and entry.** Establish the first enabled city. `/start` is entered only by the startup gate, when saved `startVersion` is absent or older than `Util.startVersion` ([app.js](../../client/www/js/app.js#L352-L357)); no other code navigates to `/start`.
+**Purpose and entry.** Establish the first enabled city. `/start` is entered only by the startup gate, when saved `startVersion` is absent or older than `Util.startVersion` ([app.js](../../client/www/js/app.js#L362-L367)); no other code navigates to `/start`.
 
 Later, if no city is enabled, the app does not return to `/start`. These paths open the zero-city start choice `startPopup` instead (O02 in [screen-overlays.md](screen-overlays.md)):
 
@@ -311,6 +375,8 @@ Sources: [ForecastCtrl](../../client/www/js/controller.forecastctrl.js), [daily 
 
 **Actions/states and checks.** Change pollutant or station, open units, switch to weather, refresh. The header location glyph is inert here (see shared rules). Missing air data can fail inside a caught controller path rather than a polished empty state. Cover no station, no matching hourly timestamp, missing pollutant, true zero, multiple stations, incompatible air standards and stale station time. Grade text/color is distinct from numeric concentration.
 
+**Native build with live data (2026-09-27).** Production returned no air fields for the tested Korean cities, so S05 showed only the standard ruler, with no value, chart or station, and no message. The controller path threw and caught `TypeError`s as described above ([live observations](#live-observations-per-screen)). This is the missing-air state a rewrite has to design explicitly.
+
 Sources: [AirCtrl](../../client/www/js/controller.air.js), [template](../../client/www/templates/tab-air.html), [air standards](../../client/www/js/service.weatherutil.js). Element bindings: [screen-element-bindings.md](screen-element-bindings.md).
 
 ## S06 — Side menu and settings entry
@@ -364,7 +430,7 @@ Sources: [RadioCtrl/radioList](../../client/www/js/controller.setting.radio.js),
 
 **Data/actions.** `Push.getPushListByCityIndex` supplies alert/alarm records. City index, record IDs, date/time values, weekday booleans and enabled state are significant. Save builds/updates notification settings through `Push`; Cancel/back handles pending edits. Permission/token/provider state is a separate layer from visible form state.
 
-**Capture limitation and rewrite checks.** The form renders with Firebase absent; no settings were submitted and no delivery was tested. Verify midnight/overnight windows, index/ID zero, duplicate alarms, weekdays/timezone, unsaved exit, token unavailable/rotation, partial batch persistence failure and server/device confirmation separately.
+**Capture limitation and rewrite checks.** The form renders with Firebase absent; no settings were submitted and no delivery was tested. In the native PoC build (also without Firebase) Save ran and logged `You have to register before post` without registering anything. Verify midnight/overnight windows, index/ID zero, duplicate alarms, weekdays/timezone, unsaved exit, token unavailable/rotation, partial batch persistence failure and server/device confirmation separately.
 
 Sources: [PushCtrl](../../client/www/js/controller.push.js), [template](../../client/www/templates/setting-push.html), [Push service](../../client/www/js/service.push.js), [notification architecture](../architecture/push-notifications.md).
 
@@ -405,6 +471,8 @@ Sources: [NationAirCtrl](../../client/www/js/controller.nation.air.js), [templat
 - **Note block.** The `LOC_SPECIAL_WEATHER_NOTE` heading is rendered only when `special.type === 1 || special.type === 2`. The strict comparison means a string type would hide the note ([template](../../client/www/templates/kma-special.html#L24-L27)).
 - **Server assembly (source-level).** The server returns the latest record of each type in the order 4, 1, 2, 3. It drops a type-4 record once its stored announcement plus 10 hours has passed. If any type has no stored record, the whole request fails with HTTP 501 ([controller](../../server/controllers/kma.specialweather.controller.js#L64-L71), [assembly](../../server/controllers/kma.specialweather.controller.js#L97-L131), [route](../../server/routes/v000903/route.kma.v000903.js#L72-L83)).
 
+**Native build with live data (2026-09-27).** The endpoint returned bulletins announced on 2021-06-16 and 2021-06-17 as the latest ones, and their `http://www.weather.go.kr/…` image URLs now answer with HTML, so the images were blank ([capture](screenshots/native-ios-bulletin.png)). The screen gives no hint that the content is years old.
+
 **States/checks.** Empty list and request error differ; the controller sets `$scope.error`, but the current template has no dedicated error block. Preserve/decide content sanitization, timezone, long bulletin wrapping and image failure behavior. The screenshot explicitly says the warning is synthetic and omits the optional image.
 
 Sources: [KmaSpecialCtrl](../../client/www/js/controller.kma.special.js), [template](../../client/www/templates/kma-special.html).
@@ -415,7 +483,7 @@ Sources: [KmaSpecialCtrl](../../client/www/js/controller.kma.special.js), [templ
 
 **Data/states.** Product title/description/price come from the platform purchase plugin; account level and receipt/expiration state interact with persisted purchase data and validation. Free, plugin-unavailable, product-loading, premium and renewal states are distinct. Product/platform builds select different purchase controllers and plugins. The TodayAir iOS disclosure block and the ad-banner hiding are described in [Product and platform differences](#product-and-platform-differences) and [Advertising surface](#advertising-surface).
 
-**Capture and checks.** Captured plugin-unavailable presentation only: the normal menu may hide the entry, and direct route access does not establish a working purchase flow. No fabricated store price or transaction is shown. Rewriting needs real store sandbox tests for purchase, cancellation, restore, receipt failure, expiry and entitlement synchronization.
+**Capture and checks.** In the native PoC build, which has no purchase plugin, the menu entry is hidden. Captured plugin-unavailable presentation only: the normal menu may hide the entry, and direct route access does not establish a working purchase flow. No fabricated store price or transaction is shown. Rewriting needs real store sandbox tests for purchase, cancellation, restore, receipt failure, expiry and entitlement synchronization.
 
 Sources: [current Purchase service/controller](../../client/www/js/controller.purchase.js), [template](../../client/www/templates/purchase.html), [variant build selection](../../client/gulpfile.js).
 
@@ -452,6 +520,6 @@ These are required review cases, not claims that all existing states are polishe
 | Update/permission dialogs | Existing modal overlays may cover otherwise correct screens; defined and captured separately in [screen-overlays.md](screen-overlays.md) |
 | Advertising | Free accounts reserve a bottom banner outside the web view; hidden on S01, S13 and S14 ([Advertising surface](#advertising-surface)) |
 | Device class/orientation | iPhone and iPad are declared and landscape is allowed, but sizes are computed at controller init from `window.screen` and never on rotation; only S03/S04 are captured on iPad, in portrait. Decide whether to support tablets and landscape ([Device classes and orientation](#device-classes-and-orientation)) |
-| Accessibility/keyboard | Not covered by these captures. Add Dynamic Type/text size, VoiceOver, keyboard, focus and long translations; Android currently disables system text zoom |
+| Accessibility/keyboard | Not covered by these captures. Add Dynamic Type/text size, VoiceOver, keyboard, focus and long translations; Android currently disables system text zoom. On the emulator, dropping that plugin made font scale 1.3 overlap the chart legend and tab labels, so the PoC keeps it ([Native Cordova PoC build](#native-cordova-poc-build-2026-09-27)) |
 
 Use [verification matrix](verification-matrix.md) for proposed acceptance cases and [decision ledger](decisions-and-open-questions.md) for behavior changes that need an explicit migration decision.
