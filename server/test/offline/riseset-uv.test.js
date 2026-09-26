@@ -3,7 +3,8 @@
  *   TZ=UTC NODE_PATH=/tmp/tw-2587/node_modules node server/test/offline/riseset-uv.test.js
  * Loads production modules in an isolated VM. HTTP, models and config are stubs;
  * no app startup, provider call, Mongo or timer is reachable.
- * fixtures/uv-idx-v5.json follows the documented getUVIdxV5 JSON format; it is not a live recording.
+ * fixtures/uv-idx-v5.json is a live getUVIdxV5 response recorded on 2026-09-26
+ * (areaNo='' numOfRows=3 time=2026092612: the first three of 3,851 areas; no key in the body).
  */
 'use strict';
 const test = require('node:test');
@@ -16,7 +17,10 @@ const root = path.resolve(__dirname, '../..');
 const noop = function () {};
 const logs = [];
 const log = Object.fromEntries(['info','warn','error','debug','verbose','silly'].map(k => [k, (...args) => logs.push({level: k, args})]));
-const KEYS = {normal: 'NORMAL%2BKEY', test_normal: 'TEST+NORMAL', cert_key: 'CERT%2FKEY', test_cert: 'TEST_CERT'};
+const FORECAST_KEY = 'FORECAST%2FKEY';
+// As deployed on 2026-09-26: the forecast list repeats the test_normal key and adds the approved key.
+const KEYS = {normal: 'NORMAL%2BKEY', test_normal: 'TEST+NORMAL', cert_key: 'CERT%2FKEY', test_cert: 'TEST_CERT',
+    dongnae_forecast_keys: JSON.stringify(['TEST+NORMAL', FORECAST_KEY])};
 
 function Stub() {}
 function load(relative, dependencies = {}) {
@@ -32,6 +36,8 @@ const kmaTimeLib = load('lib/kmaTimeLib.js');
 const sunRiseSet = load('lib/sunRiseSet.js');
 const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/uv-idx-v5.json'), 'utf8'));
 const clone = value => JSON.parse(JSON.stringify(value));
+// The recorded page reports all 3,851 areas; tests that mean a single page set totalCount to its items.
+const onePage = () => { const body = clone(fixture); body.response.body.totalCount = body.response.body.items.item.length; return body; };
 // VM results carry the sandbox realm's prototypes; compare them as plain JSON values.
 const plain = value => value === undefined ? value : JSON.parse(JSON.stringify(value));
 
@@ -210,9 +216,10 @@ test('V5 fixture becomes daily ultrv for the requested area and appendData2 adds
     const {service} = loadRequester(request, saved);
     const records = service.convertUvItemsV5(clone(fixture).response.body.items.item);
     const seoul = records.filter(r => r.areaNo === 1100000000).map(r => [kmaTimeLib.convertDateToYYYYMMDD(r.date), r.index, r.lastUpdateDate]);
-    // 29th has only 06:00 and 09:00 values: not a full day, not emitted.
-    assert.deepEqual(plain(seoul), [['20260926', 6, '2026092606'], ['20260927', 7, '2026092606'], ['20260928', 5, '2026092606']]);
-    assert.deepEqual(plain(records.filter(r => r.areaNo === 1111051500).map(r => r.index)), [7, 8, 6]);
+    // Issued 12 KST: 26th has 12:00-21:00 (max 4); 27th and 28th are full days; h60-h75 (29th) are empty.
+    assert.deepEqual(plain(seoul), [['20260926', 4, '2026092612'], ['20260927', 7, '2026092612'], ['20260928', 6, '2026092612']]);
+    assert.deepEqual(plain(records.filter(r => r.areaNo === 1111051500).map(r => r.index)), [4, 6, 6]);
+    assert.equal(records.length, 9, 'three recorded areas, three days each');
     assert(records.every(r => r.indexType === 'ultrv'));
 
     // Read path: records stored in lifeIndexKma2 → appendData2 → ultrv/ultrvGrade on the day.
@@ -223,9 +230,10 @@ test('V5 fixture becomes daily ultrv for the requested area and appendData2 adds
     const midList = [{date: '20260925'}, {date: '20260926', taMax: 25}, {date: '20260927'}];
     await new Promise((resolve, reject) => Controller.appendData2('1100000000', midList, err => err ? reject(err) : resolve()));
     assert.equal(midList[0].ultrv, undefined);
-    assert.equal(midList[1].ultrv, 6); assert.equal(midList[1].ultrvGrade, Controller._ultrvGrade(6)); assert.equal(midList[1].taMax, 25);
-    assert.equal(midList[2].ultrv, 7);
-    assert.equal(Controller.ultrvStr(midList[1].ultrvGrade, {__: s => s}), 'LOC_HIGH');
+    assert.equal(midList[1].ultrv, 4); assert.equal(midList[1].ultrvGrade, 1); assert.equal(midList[1].taMax, 25);
+    assert.equal(Controller.ultrvStr(midList[1].ultrvGrade, {__: s => s}), 'LOC_NORMAL');
+    assert.equal(midList[2].ultrv, 7); assert.equal(midList[2].ultrvGrade, 2);
+    assert.equal(Controller.ultrvStr(midList[2].ultrvGrade, {__: s => s}), 'LOC_HIGH');
 });
 
 test('V5 request uses all areas, the latest issued slot and pages through totalCount', async () => {
@@ -299,7 +307,7 @@ const XML_DENIED = '<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR
 test('XML gateway errors with HTTP 200 still rotate keys (V5 and KASI)', async () => {
     const saved = [];
     const request = fakeRequest(url => url.includes('serviceKey=' + encodeURIComponent(decodeURIComponent(KEYS.cert_key))) ?
-        {body: XML_DENIED} : {body: clone(fixture)});
+        {body: XML_DENIED} : {body: onePage()});
     const {service} = loadRequester(request, saved);
     const result = await new Promise(resolve => service.taskUltrvV5(new Date('2026-09-25T21:30:00Z'), (err, count) => resolve({err, count})));
     assert.ifError(result.err);
@@ -343,4 +351,24 @@ test('a transient failure on the newest slot never saves an older issuance', asy
     const third = await new Promise(resolve => coded.service.taskUltrvV5(now, (err, count) => resolve({err, count})));
     assert.ifError(third.err);
     assert.equal(third.count, 0, 'older slot skipped');
+});
+
+test('the approved forecast key is reached for KASI and V5 as deployed on 2026-09-26', async () => {
+    const approved = url => url.includes('ServiceKey=' + FORECAST_KEY) || url.includes('serviceKey=' + FORECAST_KEY);
+    // Recorded gateway answers: expired (31) for the old KASI key, unregistered (30) for keys without a subscription.
+    const expired = {statusCode: 401, body: {OpenAPI_ServiceResponse: {cmmMsgHeader: {errMsg: 'SERVICE ERROR', returnAuthMsg: 'DEADLINE_HAS_EXPIRED_ERROR', returnReasonCode: '31'}}}};
+    const unregistered = {statusCode: 403, body: {OpenAPI_ServiceResponse: {cmmMsgHeader: {errMsg: 'SERVICE ERROR', returnAuthMsg: 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR', returnReasonCode: '30'}}}};
+
+    const kasiRequest = fakeRequest(url => approved(url) ? {body: kasiItem(url)} : expired);
+    const Kasi = loadKasi(kasiRequest);
+    const kasi = await new Promise(resolve => Kasi.updateAreaRiseSetFromApi('서울', '20260926', (err, res) => resolve({err, res})));
+    assert.ifError(kasi.err);
+    assert.equal(kasiRequest.calls.length, 3, 'normal, test_normal, forecast key (duplicate skipped)');
+
+    const uvRequest = fakeRequest(url => approved(url) ? {body: onePage()} : unregistered);
+    const {service} = loadRequester(uvRequest, []);
+    const uv = await new Promise(resolve => service.taskUltrvV5(new Date('2026-09-26T03:55:00Z'), (err, count) => resolve({err, count})));
+    assert.ifError(uv.err);
+    assert.equal(uv.count, 9, 'nine recorded area-days saved');
+    assert.equal(uvRequest.calls.filter(u => !approved(u)).length, 4, 'cert, test_cert, normal, test_normal before the forecast key');
 });

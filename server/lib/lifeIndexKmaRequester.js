@@ -119,14 +119,23 @@ function KmaIndexService() {
  */
 KmaIndexService.prototype.setServiceKey = function(key, keyBox) {
     this.serviceKeyList.push(key);
-    if (keyBox && keyBox.test_cert) {
+    if (keyBox && keyBox.test_cert && keyBox.test_cert !== key) {
         this.serviceKeyList.push(keyBox.test_cert);
     }
     // Any data.go.kr account key may hold the life weather index 4.0 approval (#2587).
+    // On 2026-09-26 only one forecast key was approved for it.
     if (keyBox) {
         var list = this.serviceKeyList;
-        [keyBox.normal, keyBox.test_normal].forEach(function (candidate) {
-            if (candidate && candidate.indexOf('You have to set') !== 0 && list.indexOf(candidate) === -1) {
+        var candidates = [keyBox.normal, keyBox.test_normal];
+        try {
+            candidates = candidates.concat(JSON.parse(keyBox.dongnae_forecast_keys || '[]'));
+        }
+        catch (err) {
+            log.warn('invalid forecast key list for kma index service');
+        }
+        candidates.forEach(function (candidate) {
+            if (typeof candidate === 'string' && candidate && candidate.indexOf('You have to set') !== 0 &&
+                list.indexOf(candidate) === -1) {
                 list.push(candidate);
             }
         });

@@ -53,3 +53,19 @@ Computed times can differ from KASI by up to a minute. Unknown V5 publication sl
 ## Amendment 1 — 2026-09-26
 
 Source: independent verification (fresh context), PASS_WITH_NOTES. R3/R5: authorization codes are also read from XML gateway bodies (HTTP 200). R5: only a provider result code (no data or another code) moves to an earlier slot; a transport or page failure fails the run, and a slot older than or equal to the last saved issuance is never saved. The legacy fsn request no longer logs its URL with the key.
+
+## Amendment 2 — 2026-09-26
+
+Source: AK ("한국천문연구원_출몰시각 정보 사용 허가받음", then supplied the gather configuration export) and keyed provider calls. The key values were not logged.
+
+- The deployed `DATA_GO_KR_TEST_NORMAL_KEY`, which is the same value as `DATA_GO_KR_TEST_CERT_KEY` and is also the first `DONGNAE_SECRET_KEYS` entry, gives KASI 401 with reason 31 (expired key) and V5 403 with reason 30 (key not registered). This confirms the rise/set cause. The second `DONGNAE_SECRET_KEYS` entry returns `00` for both services.
+- R3 and R5 (revised): key candidates add the `DONGNAE_SECRET_KEYS` entries after the existing keys, and duplicates are skipped.
+- A live `getUVIdxV5` check found that:
+  - The service issues every three hours, and a request for any hour returns the latest issuance at or before that hour.
+  - `areaNo=` returns 3,851 areas, paged at 1,000 rows.
+  - Night values are `"0"`, and `h60`–`h75` can be empty.
+- `fixtures/uv-idx-v5.json` is now a live recording.
+- The real collectors ran against live providers with the DB writes intercepted:
+  - UV: 5 requests, 3,851 areas, 11,553 day values; Seoul 26th 4, 27th 7, 28th 6.
+  - KASI: Seoul 06:23/18:24; the computed values are 06:22/18:23.
+- The KMA API Hub UV observation service (`kma_sfctm_uv.php`, seven stations, observed UV-B index) was reviewed and not adopted: it cannot supply forecast days or area coverage.

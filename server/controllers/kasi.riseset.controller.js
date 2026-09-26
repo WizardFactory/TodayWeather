@@ -32,13 +32,22 @@ var AUTH_REASON_CODES = ['20', '22', '30', '31', '32'];
 kasiRiseSet._keyIndex = 0;
 
 /**
- * The deployed host replaced an expired normal key with test_normal, so both are candidates (#2587).
+ * data.go.kr keys with a possible rise/set subscription (#2587): normal, test_normal, then the
+ * forecast key list. On 2026-09-26 the deployed normal/test_normal key had expired for KASI
+ * and one forecast key was approved.
  * @returns {Array} configured keys
  */
 kasiRiseSet._getServiceKeys = function () {
     var keys = [];
-    [config.keyString.normal, config.keyString.test_normal].forEach(function (key) {
-        if (key && key.indexOf('You have to set') !== 0 && keys.indexOf(key) === -1) {
+    var candidates = [config.keyString.normal, config.keyString.test_normal];
+    try {
+        candidates = candidates.concat(JSON.parse(config.keyString.dongnae_forecast_keys));
+    }
+    catch (err) {
+        log.warn('kasi rise set - invalid forecast key list');
+    }
+    candidates.forEach(function (key) {
+        if (typeof key === 'string' && key && key.indexOf('You have to set') !== 0 && keys.indexOf(key) === -1) {
             keys.push(key);
         }
     });

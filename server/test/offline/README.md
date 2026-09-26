@@ -173,7 +173,7 @@ These are synthetic checks, not live AirKorea, Mongo or mobile tests. AirKorea
 
 ## Sunrise/sunset and UV (#2587)
 
-`riseset-uv.test.js` (part of `test:offline`) loads the production modules in a VM with stubbed HTTP, models and configuration. It checks computed sunrise/sunset against KASI reference values under three host time zones, `getRiseSetInfo` fill-in and failure handling, KASI key rotation and per-area continuation, and the `getUVIdxV5` collector: slot fallback, pagination, key rotation, no partial save and conversion into daily `ultrv` read back through `appendData2`. `fixtures/uv-idx-v5.json` follows the documented V5 JSON format; it is not a keyed live recording.
+`riseset-uv.test.js` (part of `test:offline`) loads the production modules in a VM with stubbed HTTP, models and configuration. It checks computed sunrise/sunset against KASI reference values under three host time zones, `getRiseSetInfo` fill-in and failure handling, KASI key rotation and per-area continuation, and the `getUVIdxV5` collector: slot fallback, pagination, key rotation, no partial save and conversion into daily `ultrv` read back through `appendData2`. `fixtures/uv-idx-v5.json` is a live `getUVIdxV5` response recorded on 2026-09-26 (`areaNo=` `numOfRows=3` `time=2026092612`; first three of 3,851 areas; the body contains no key).
 
 `riseset-uv-smoke.js` runs the v000903 coordinate route through the RSS smoke harness with the real KASI and life index controllers on synthetic store rows (DB 1.0 and 2.0; stores present, empty and failing):
 
@@ -183,4 +183,4 @@ TZ=UTC NODE_PATH=/tmp/tw-2587/node_modules node server/test/offline/riseset-uv.t
 TZ=UTC NODE_PATH=/tmp/tw-2587/node_modules node server/test/offline/riseset-uv-smoke.js
 ```
 
-Both run in the RSS offline workflow. A keyed V5 call, the gather host and the deployed response remain operator checks.
+Both run in the RSS offline workflow. Deployment to the gather host and the deployed response remain operator checks.
