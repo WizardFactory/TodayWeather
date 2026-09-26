@@ -13,7 +13,9 @@ const zlib = require('zlib');
 
 const BASE_URL = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/';
 const RANGES = {
-    combined: 'last2days/next7days',
+    // Visual Crossing's lastNdays starts N + 1 days back: last1days = the day before yesterday
+    // (measured 2026-09-27: last1days/next7days 49 records from D-2, last2days/next7days 73 from D-3).
+    combined: 'last1days/next7days',
     recent: 'yesterday/next7days',
     forecast: 'today/next7days'
 };

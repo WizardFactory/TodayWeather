@@ -22,7 +22,7 @@ const log = Object.fromEntries(['info', 'warn', 'error', 'debug', 'verbose', 'si
 const KEY = 'SYNTHETICKEY0123456789ABCD';
 const CAPTURED = Date.parse('2026-09-26T07:04:23Z');
 const rawFixture = name => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'vc-' + name + '.json'), 'utf8'));
-// '<place>-combined' is served as range 'combined' (last2days/next7days); rawFixture keeps the recorded
+// '<place>-combined' is served as range 'combined' (last1days/next7days); rawFixture keeps the recorded
 // yesterday/next7days body (range 'recent').
 const fixture = name => /-combined$/.test(name) ? require('./vc-synthetic').withDayBefore(rawFixture(name)) : rawFixture(name);
 // VM results carry the sandbox realm's prototypes; compare them as plain JSON values.
@@ -91,7 +91,7 @@ test('requester builds the Timeline request and logs cost and latency without th
     assert.ifError(err);
     assert.equal(body.queryCost, 49);
     const url = new URL(https.calls[0].url);
-    assert.equal(url.origin + url.pathname, 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/35.68,139.76/last2days/next7days');
+    assert.equal(url.origin + url.pathname, 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/35.68,139.76/last1days/next7days');
     assert.equal(url.searchParams.get('unitGroup'), 'us');
     assert.equal(url.searchParams.get('lang'), 'en');
     assert.equal(url.searchParams.get('include'), 'days,hours,current');
@@ -823,7 +823,7 @@ test('I-F2/T7: waiters and the post-lock re-read see records stored after their 
     assert.equal(R2.calls.length, 1, 'the re-read after the lock finds the stored records');
 });
 
-test('D2: provider failures serve the newest stored current up to 3 h old; a provider-down marker stops calls', async () => {
+test('D2: provider failures serve the newest stored current up to 6 h old; a provider-down marker stops calls', async () => {
     const clock = {now: CAPTURED};
     const model = memoryDsfModel(), lockModel = memoryLockModel();
     let Requester = fakeVcRequester({combined: fixture('tokyo-combined')});
@@ -848,10 +848,10 @@ test('D2: provider failures serve the newest stored current up to 3 h old; a pro
     r = await getDsf(loadDsfController({model, lockModel, requester: Requester, clock}), TOKYO, {pollMs: 5, waitMs: 20});
     assert.ifError(r.err);
     assert.equal(Requester.calls.length, 2);
-    // Nothing within 3 h: the error is returned.
-    clock.now = CAPTURED + 4 * 3600000;
+    // Nothing within 6 h: the error is returned.
+    clock.now = CAPTURED + 7 * 3600000;
     r = await getDsf(loadDsfController({model, lockModel, requester: Requester, clock}), TOKYO, {pollMs: 5, waitMs: 20});
-    assert(r.err, 'nothing within 3 h');
+    assert(r.err, 'nothing within 6 h');
     assert.equal(Requester.calls.length, 3);
 });
 
@@ -1241,10 +1241,10 @@ test('R3-T5/R3-T6/R3-T11: budget boundary, 15-minute and 3-hour limits, save ord
     clock.now = CAPTURED + 15 * 60000 + 1000;
     await getDsf(Controller);
     assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast'], '15:01 refreshes');
-    // Stale fallback: 2 h 50 min served, 3 h 1 min not.
+    // Stale fallback: 5 h 50 min served, 6 h 1 min not.
     const failing = fakeVcRequester(() => Object.assign(new Error('VC> HTTP 500'), {statusCode: 500}));
     const lastCurrent = CAPTURED + 15 * 60000 + 1000;
-    for (const [age, ok] of [[170 * 60000, true], [181 * 60000, false]]) {
+    for (const [age, ok] of [[350 * 60000, true], [361 * 60000, false]]) {
         clock.now = lastCurrent + age;
         const r = await getDsf(loadDsfController({model, lockModel: memoryLockModel(), requester: failing, clock}), TOKYO, {pollMs: 5, waitMs: 20});
         assert.equal(!r.err, ok, 'stale ' + age / 60000 + ' min');
@@ -1290,6 +1290,21 @@ test('R4-T1: an unusable HTTP 200 body from the real requester backs the locatio
         }
         assert.equal(https.calls.length, 1, JSON.stringify(body).slice(0, 30) + ': one billed call');
     }
+});
+
+test('#2585 range: a recorded last1days/next7days response starts at the day before yesterday', () => {
+    // Recorded live 2026-09-26T23:23:23Z (Tokyo 09-27 08:23): 49 records, days 09-25 .. 10-04.
+    const vc = rawFixture('tokyo-last1days');
+    assert.equal(vc.queryCost, 49);
+    assert.equal(vc.days[0].datetime, '2026-09-25');
+    const docs = vcConverter().toDarkSkyDocs(vc, new Date('2026-09-26T23:23:23Z'));
+    const midnight = Date.parse('2026-09-27T00:00:00Z') / 1000 - 9 * 3600;
+    assert.equal(docs.twoDaysAgo.currently.time, midnight - 2 * 86400);
+    assert.equal(docs.twoDaysAgo.hourly.data.length, 24);
+    assert.equal(docs.yesterday.currently.time, midnight - 86400);
+    assert.equal(docs.today.currently.time, midnight);
+    const hours = docs.current.hourly.data;
+    assert.equal(hours[hours.length - 1].time, midnight + 3 * 86400, 'through the day after tomorrow 24:00');
 });
 
 // ---------------------------------------------------------------- push, legacy, config
@@ -1358,7 +1373,10 @@ test('T11/T15: apps, templates and the legacy geo route recognise VC', () => {
     for (const t of templates) {
         const html = fs.readFileSync(path.join(repo, t), 'utf8');
         assert.match(html, /ng-if="(showDetailWeather && )?source == 'VC'"[\s\S]{0,300}openUrl\('https:\/\/www\.visualcrossing\.com\/'\)">Weather Data Provided by Visual Crossing</, t);
-        assert.doesNotMatch(html, /darksky|source == 'DSF'/, t);
+        // Owner decision (2026-09-27): a DSF-sourced response (old server) keeps the Dark Sky credit.
+        const dsfBlock = /<div ng-if="(showDetailWeather && )?source == 'DSF'"[^>]*>\s*<img src="img\/poweredby_darksky[^"]*"[^>]*>\s*<\/div>/;
+        assert.match(html, dsfBlock, t);
+        assert.doesNotMatch(html.replace(dsfBlock, ''), /darksky/, t + ': Dark Sky only for source DSF');
     }
     assert.match(fs.readFileSync(path.join(root, 'routes/v000803/route.geo.js'), 'utf8'), /result\.source === 'VC' \|\| result\.source === 'DSF'/);
 });

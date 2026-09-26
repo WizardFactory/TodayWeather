@@ -51,7 +51,9 @@ class DsfController {
         this.pollMs = 250;
         this.responseMs = 2500;     // answer the request within the gateway's attempt ...
         this.fetchTimeoutMs = 8000; // ... while the holder keeps fetching (under lockTtlMs) and stores the result
-        this.staleMs = 3 * 60 * 60 * 1000;          // on provider failure serve a current record up to 3 h old
+        // On provider failure serve a current record up to 6 h old (owner decision 2026-09-27): a Free-plan
+        // daily limit lasts until UTC midnight, and the apps show the observation time.
+        this.staleMs = 6 * 60 * 60 * 1000;
         this.providerDownMs = 10 * 60 * 1000;       // skip calls after a daily-limit 429 or a rejected key
         this.readWindowMs = 4 * 24 * 60 * 60 * 1000;   // the day before yesterday's midnight record is up to 3 days old
     }

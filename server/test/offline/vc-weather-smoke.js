@@ -51,7 +51,7 @@ const places = [
     {name: 'New York', lat: 40.71, lon: -74.01, fixture: 'newyork', zone: 'America/New_York', offset: -240}
 ];
 const rawFixture = name => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'vc-' + name + '.json'), 'utf8'));
-// '<place>-combined' serves range 'combined' (last2days/next7days); 'recent' gets the recorded body.
+// '<place>-combined' serves range 'combined' (last1days/next7days); 'recent' gets the recorded body.
 const fixture = name => /-combined$/.test(name) ? require('./vc-synthetic').withDayBefore(rawFixture(name)) : rawFixture(name);
 
 function createHarness(bodyFor) {
@@ -186,6 +186,7 @@ function createHarness(bodyFor) {
     }
     const routers = {
         'v000903': load(path.join(root, 'routes/v000903/route.dsf.coord.v000903.js')),
+        'v000902': load(path.join(root, 'routes/v000902/route.dsf.coord.v000902.js')),   // push workers, TodayAir iOS
         'v000901': load(path.join(root, 'routes/v000901/route.dsf.coord.js')),
         'ww': load(path.join(root, 'routes/worldweather/routeWeather.js'))
     };
@@ -474,7 +475,7 @@ async function main() {
     const h = createHarness();
     const bodies = {};
     for (const place of places) {
-        for (const [kind, units] of [['v000903', 'C'], ['v000901', 'F'], ['ww', 'C']]) {
+        for (const [kind, units] of [['v000903', 'C'], ['v000902', 'C'], ['v000901', 'F'], ['ww', 'C']]) {
             const before = h.providerCalls.length;
             const body = await h.request(kind, place, {temperatureUnit: units, windSpeedUnit: 'm/s'});
             const label = place.name + ' ' + kind;

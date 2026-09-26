@@ -243,7 +243,7 @@ TZ=UTC NODE_PATH=/tmp/tw-2585-mongo/node_modules node server/test/offline/vc-loc
 ```
 
 **Re-recording fixtures**
-- Request the recorded ranges (`yesterday/next7days`, `today/next7days`); tests derive range `combined` (`last2days/next7days`) by prepending a cooler, dry copy of the recorded yesterday (`withDayBefore` in `vc-synthetic.js`) with `unitGroup=us&include=days,hours,current` and the `elements` list from `lib/VC/vcRequester.js`.
+- Request the recorded ranges (`yesterday/next7days`, `today/next7days`); tests derive range `combined` (`last1days/next7days`) by prepending a cooler, dry copy of the recorded yesterday (`withDayBefore` in `vc-synthetic.js`) with `unitGroup=us&include=days,hours,current` and the `elements` list from `lib/VC/vcRequester.js`.
 - Check that the key string does not appear in the files.
 - Update `CAPTURED` in `vc-weather.test.js`, the smoke's default instant, and the "valid window" note above.
 

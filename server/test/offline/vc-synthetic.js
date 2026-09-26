@@ -56,7 +56,7 @@ function syntheticTimeline(zone, firstDay, days, options) {
     return body;
 }
 
-// The recorded fixtures are `yesterday/next7days` bodies. For range 'combined' (`last2days/next7days`)
+// The recorded fixtures are `yesterday/next7days` bodies. For range 'combined' (`last1days/next7days`)
 // tests prepend the day before yesterday: yesterday's observations shifted back one day (no DST change
 // in the recorded zones then). Cost 49 = 25 + 24.
 function withDayBefore(body) {

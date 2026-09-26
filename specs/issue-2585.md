@@ -187,10 +187,17 @@ Source: three fresh-context reviews of `c5b61975` (design D1–D16, implementati
 - Released iOS widgets label the `/ww` daily rows by position.
 
 **Visual Crossing calls**
-- The ranges are `combined` = `last2days/next7days` (49 records), `recent` = `yesterday/next7days` (25) and `forecast` (1).
+- The ranges are `combined` = `last1days/next7days` (49 records), `recent` = `yesterday/next7days` (25) and `forecast` (1).
 - The day before yesterday is normally the previous day's stored yesterday record, so a city requested every day costs 25 records per day.
 - A missing day before yesterday or yesterday sets the `~noyesterday` marker.
 
 **Storage**
 - The read window is 4 days.
 - Retention in `maintainDB` is 4 days.
+
+## Amendment 7 — 2026-09-27 (live check and owner decisions)
+
+- **Range 'combined':** it is `last1days/next7days`. Measured live, it starts at the day before yesterday and costs 49 records. `last2days` starts one day earlier and costs 73: Visual Crossing's `lastNdays` starts N + 1 days back.
+- **`staleMs`:** changed to 6 h (was 3 h); `providerDownMs` stays at 10 min.
+- **Dark Sky credit:** templates keep the Dark Sky credit for a `source` of `DSF` next to the Visual Crossing link for `VC`.
+- **Push/alert serialization:** deferred to the planned redesign.

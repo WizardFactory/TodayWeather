@@ -94,7 +94,7 @@
       "from": "dsf",
       "to": "store",
       "y": 244,
-      "label": "read \u22644 d: day before \u00b7 yesterday \u00b7 today \u00b7 current \u226415 min \u00b7 stale \u22643 h"
+      "label": "read \u22644 d: day before \u00b7 yesterday \u00b7 today \u00b7 current \u226415 min \u00b7 stale \u22646 h"
     },
     {
       "id": "read-aqi",
@@ -155,7 +155,7 @@
       "y": 468,
       "label": "no current, no stale \u2192 next(err) \u2192 500",
       "variant": "dashed",
-      "note": "fetch failure: lock flagged failed, 2 s backoff; stored current \u22643 h is served instead when present"
+      "note": "fetch failure: lock flagged failed, 2 s backoff; stored current \u22646 h is served instead when present"
     },
     {
       "id": "write-aqi",
