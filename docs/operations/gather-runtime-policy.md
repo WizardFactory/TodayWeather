@@ -20,6 +20,8 @@ With no variable set, behaviour equals master before #2588.
 
 Empty values count as unset. An invalid value throws when the module loads, so the process fails at startup with `Invalid <NAME>: ...` rather than silently running master defaults. Check the PM2 error log after changing these variables.
 
+This applies to every `SERVER_MODE`, not only gather: `app.js` loads `controllerManager` in all modes, and service routes load the KAQ controller. An invalid `GATHER_*` value in a service process environment or its `server/.env` also stops the API server. Service processes ignore valid values, because only gather work reads them.
+
 The per-task retry values are grouped (one town, one mid variable) because the host uses the same value within each group. The `AsosHistory` task stays gated by `ASOS_HISTORY_ENABLED` (`config.history.enabled`), unchanged.
 
 The consumers require `config/gather.js` directly rather than a `config.gather` section, because the host runs its own private `config/config.js` (see [gather source reconciliation](../architecture/gather-source-reconciliation.md#complete-appendix-disposition)). Adding a section there would require patching that file as well.
@@ -50,11 +52,11 @@ The host source comment says the air-forecast block runs "from another instance 
 
 ### Operator procedure (not executed by this change)
 
-1. Back up the three host files and the PM2 dump.
-2. Add the variables to the gather process environment (the PM2 `www` app on the gather host), for example via the ecosystem file or by exporting them before `pm2 restart www --update-env`. Then run `pm2 save` and confirm the dump contains them.
+1. Back up the three host files and the PM2 dump. Read the actual literals from the backed-up files and compare them with the Production column above. The column comes from the issue inventory and the #2604 note, not from a host inspection, so correct any mismatch before continuing.
+2. Add the variables to the gather process environment (the PM2 `www` app on the gather host), for example via the ecosystem file or by exporting them before `pm2 restart www --update-env`. Then run `pm2 save` and confirm the dump contains them. Alternatively, put them in `server/.env`, which `config/env.js` loads at startup (#2566). A variable already set in the process environment takes precedence over the file.
 3. Replace `server/config/gather.js`, `controllers/controllerManager.js`, `lib/PastConditionGather.js` and `controllers/kaq.hourly.forecast.controller.js` with the master copies. First read "Remaining drift" below: the master `controllerManager.js` also changes the schedule.
 4. Verify in the log: no `Past` task at minute 2, no `getKaqHourlyForecast` at minute 7, the `start tasks counts` loop continues, `/health` returns 200.
-5. Roll back by restoring the backed-up files and the previous PM2 environment.
+5. Roll back by restoring the backed-up files and the previous PM2 environment or `server/.env`.
 
 ## Remaining drift not covered by #2588
 
