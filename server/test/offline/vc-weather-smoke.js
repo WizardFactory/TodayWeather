@@ -108,7 +108,9 @@ function createHarness(bodyFor) {
             if (body instanceof Error) return setImmediate(() => cb(body, undefined, {status: body.statusCode || 0, cost: 0, ms: 1}));
             return setImmediate(() => cb(null, body, {status: 200, cost: body.queryCost, ms: 1}));
         }
-        const place = places.find(p => p.lat === Number(params.lat) && p.lon === Number(params.lon));
+        // The server asks for the centre of the place's 0.02° grid cell.
+        const cell = v => (Math.floor(Math.round(Number(v) * 1e6) / 20000) * 20000 + 10000) / 1e6;
+        const place = places.find(p => cell(p.lat) === Number(params.lat) && cell(p.lon) === Number(params.lon));
         if (!place) return setImmediate(() => cb(new Error('no fixture for ' + params.lat + ',' + params.lon)));
         const body = params.range === 'forecast' && place.fixture === 'tokyo' ? fixture('tokyo-forecast')
             : params.range === 'recent' ? rawFixture(place.fixture + '-combined') : fixture(place.fixture + '-combined');
@@ -288,12 +290,12 @@ function checkBody(body, place, label, units, raw, opts) {
     const leaks = [];
     (function scan(value, where) {
         if (value && typeof value === 'object') return Object.keys(value).forEach(k => scan(value[k], where + '.' + k));
-        if (typeof value === 'number' && value <= -99 && !/\.oz$|^\.timezone\./.test(where)) leaks.push(where + '=' + value);
+        if (typeof value === 'number' && value <= -99 && !/\.oz$|^\.timezone\.|^\.location\./.test(where)) leaks.push(where + '=' + value);
         if (typeof value === 'string' && /NaN|Invalid Date/.test(value)) leaks.push(where + '=' + value);
         // -100 °F converted to Celsius.
         if (value === -73.3 && /(t1h|t3h|tmx|tmn|sensorytem|temp_c|ftemp_c|[Mm]ax_c|[Mm]in_c)$/.test(where)) leaks.push(where + '=' + value);
     })(body, '');
-    assert.deepEqual(leaks, [], label + ': sentinel values in the response');
+    assert.deepEqual(leaks, [], label + ': sentinel values in the response ' + JSON.stringify(leaks.slice(0, 6)));
 }
 
 // ------------------------------------------------------------ synthetic scenarios (fixture mode)

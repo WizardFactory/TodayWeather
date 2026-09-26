@@ -753,7 +753,9 @@ class DsfController {
                 }
                 // update data
                 //log.info(JSON.stringify(item));
-                res.geocode = {lat: item.geo[1], lon: item.geo[0]};
+                // The requested coordinates, not the grid cell the records are stored under.
+                res.geocode = output.geocode ? {lat: Number(output.geocode.lat), lon: Number(output.geocode.lon)}
+                    : {lat: item.geo[1], lon: item.geo[0]};
                 res.address = item.address;
                 res.dateObj = item.dateObj;
                 res.date = item.date || item.data.current.date;
@@ -777,6 +779,22 @@ class DsfController {
         output.DSF = res;
 
         return res;
+    }
+
+    /**
+     * Centre of the 0.02° grid cell (about 2 km) holding a coordinate, as [lon, lat] (owner decision
+     * 2026-09-27, #2585). Cache records, the fetch lock and the Visual Crossing request all use it, so
+     * nearby users share one fetch; the forecast models behind the data are 2-25 km.
+     * @private
+     */
+    _gridCell(lat, lon){
+        let centre = (value, limit)=>{
+            // Integer micro-degrees: 35.68 / 0.02 must not fall into the cell below.
+            let cell = Math.floor(Math.round(Number(value) * 1e6) / 20000);
+            let c = (cell * 20000 + 10000) / 1e6;
+            return parseFloat(Math.max(-limit, Math.min(limit, c)).toFixed(2));
+        };
+        return [centre(lon, 179.99), centre(lat, 89.99)];
     }
 
     _lockKey(geo){
@@ -1132,7 +1150,7 @@ class DsfController {
             method : 'getDsfData',
             sID : req.sessionID
         };
-        let geo = [req.geocode.lon, req.geocode.lat];
+        let geo = this._gridCell(req.geocode.lat, req.geocode.lon);
         async.waterfall([
                 (cb)=>{
                     // Try to get Data from DB

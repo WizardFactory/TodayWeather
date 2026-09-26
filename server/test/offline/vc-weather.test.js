@@ -579,7 +579,7 @@ test('first request fetches one combined range; a fresh cache makes no call; a s
     assert.ifError(r.err);
     assert.deepEqual(Requester.calls.map(c => c.range), ['combined']);
     assert.equal(Requester.calls[0].key, KEY);
-    assert.deepEqual([Requester.calls[0].lat, Requester.calls[0].lon], [35.68, 139.76]);
+    assert.deepEqual([Requester.calls[0].lat, Requester.calls[0].lon], [35.69, 139.77], 'the 0.02° cell centre');
     assert.equal(model.rows.size, 4, 'day before yesterday, yesterday, today and current stored');
     assert.equal(r.res.data.length, 4);
     assert.equal(r.req.result.timezone.min, 540);
@@ -621,7 +621,7 @@ test('concurrent requests for one location from separate workers make a single p
 test('an expired lock is taken over; a held lock times out waiters without a provider call', async () => {
     const clock = {now: CAPTURED};
     let model = memoryDsfModel(), lockModel = memoryLockModel();
-    const key = '139.76,35.68';
+    const key = '139.77,35.69';
     lockModel.locks.set(key, {_id: key, expireAt: new Date(CAPTURED - 1000)});
     let Requester = fakeVcRequester({combined: fixture('tokyo-combined')});
     let r = await getDsf(loadDsfController({model, lockModel, requester: Requester, clock}), TOKYO, {pollMs: 10, waitMs: 100});
@@ -649,7 +649,7 @@ test('a provider failure keeps stored current/today data and backs off with the 
     assert.ifError(r.err);
     assert.equal(r.res.data.length, 2, 'combined request without yesterday in the body still stores today and current');
     await settle();
-    assert(lockModel.locks.delete('~noyesterday:139.76,35.68'), 'R3-D1 marker set (cleared here to exercise the failure path)');
+    assert(lockModel.locks.delete('~noyesterday:139.77,35.69'), 'R3-D1 marker set (cleared here to exercise the failure path)');
     Requester = fakeVcRequester(() => Object.assign(new Error('VC> HTTP 500'), {statusCode: 500}));
     Controller = loadDsfController({model, lockModel, requester: Requester, clock});
     clock.now = CAPTURED + 5 * 60000;
@@ -680,7 +680,7 @@ test('a failing lock store still serves the request and never deletes another lo
     assert.equal(Requester.calls.length, 1);
     await settle();
     assert.deepEqual(deletes, [], 'no release without ownership');
-    assert.match(logText(), /VC fetch lock unavailable 139\.76,35\.68/, 'numeric lock key');
+    assert.match(logText(), /VC fetch lock unavailable 139\.77,35\.69/, 'numeric lock key');
 });
 
 test('F1: after a DST change the first local hour does not loop combined calls', async () => {
@@ -735,7 +735,7 @@ test('#2585 range: a combined response without the day before yesterday is not b
         assert.ifError((await getDsf(Controller)).err);
     }
     assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast']);
-    assert(lockModel.locks.has('~noyesterday:139.76,35.68'));
+    assert(lockModel.locks.has('~noyesterday:139.77,35.69'));
 });
 
 test('F3: a late release never deletes a lock another worker has taken over', async () => {
@@ -766,7 +766,7 @@ test('F6/N1: after a provider failure the location backs off for 2 s, within the
     r = await getDsf(Controller, TOKYO, {pollMs: 5, waitMs: 20});
     assert(r.err);
     assert.equal(Requester.calls.length, 1, 'no second provider call within the backoff');
-    assert(lockModel.locks.get('139.76,35.68').expireAt - clock.now <= 2000, 'backoff shortened to 2 s');
+    assert(lockModel.locks.get('139.77,35.69').expireAt - clock.now <= 2000, 'backoff shortened to 2 s');
     clock.now += 2100;   // the gateway retries after its 3 s attempt timeout
     await getDsf(Controller, TOKYO, {pollMs: 5, waitMs: 20});
     assert.equal(Requester.calls.length, 2, 'retried after the backoff');
@@ -896,7 +896,7 @@ test('D3/T4: the response returns within its budget while the fetch continues an
 test('D11: waiters stop as soon as the holder marks the fetch failed', async () => {
     const clock = {now: CAPTURED};
     const lockModel = memoryLockModel();
-    lockModel.locks.set('139.76,35.68', {_id: '139.76,35.68', expireAt: new Date(CAPTURED + 2000), failed: true});
+    lockModel.locks.set('139.77,35.69', {_id: '139.77,35.69', expireAt: new Date(CAPTURED + 2000), failed: true});
     const Controller = loadDsfController({model: memoryDsfModel(), lockModel, requester: fakeVcRequester({}), clock});
     const t0 = Date.now();
     const r = await getDsf(Controller, TOKYO, {pollMs: 20, waitMs: 2000});
@@ -912,13 +912,13 @@ test('I-F7/D10/D14: bounded reads, a failing read still fetches, startup warns a
     assert.ifError(r.err);
     assert.equal(+model.queries[0].dateObj.$gte, CAPTURED - 4 * 86400000, 'reads bounded to four days');
     const broken = memoryDsfModel();
-    broken.rows.set('x', {geo: [139.76, 35.68], dateObj: new Date(CAPTURED - 60000), address: {}});   // no timeOffset
+    broken.rows.set('x', {geo: [139.77, 35.69], dateObj: new Date(CAPTURED - 60000), address: {}});   // no timeOffset
     r = await getDsf(loadDsfController({model: broken, lockModel: memoryLockModel(), requester: fakeVcRequester({combined: fixture('tokyo-combined')}), clock}));
     assert.ifError(r.err, 'a malformed stored record does not break the request');
     // An older malformed record next to valid ones is skipped; the valid ones still serve the request.
     const Mixed = fakeVcRequester({combined: fixture('tokyo-combined')});
     const MixedController = loadDsfController({model: broken, lockModel: memoryLockModel(), requester: Mixed, clock});
-    broken.rows.set('y', {geo: [139.76, 35.68], dateObj: new Date(CAPTURED - 120000), address: {}, pubDate: 'bad'});
+    broken.rows.set('y', {geo: [139.77, 35.69], dateObj: new Date(CAPTURED - 120000), address: {}, pubDate: 'bad'});
     r = await getDsf(MixedController);
     assert.ifError(r.err);
     assert.equal(Mixed.calls.length, 0, 'served from the valid records');
@@ -1002,7 +1002,7 @@ test('R2-4: the response and waiter deadlines count from the request time', asyn
     assert(Date.now() - t0 < 600, 'answered at the request deadline: ' + (Date.now() - t0) + ' ms');
     // A waiter whose request began 3 s ago stops after one poll.
     const lockModel = memoryLockModel();
-    lockModel.locks.set('139.76,35.68', {_id: '139.76,35.68', expireAt: new Date(CAPTURED + 9000)});
+    lockModel.locks.set('139.77,35.69', {_id: '139.77,35.69', expireAt: new Date(CAPTURED + 9000)});
     const W = loadDsfController({model: memoryDsfModel(), lockModel, requester: fakeVcRequester({}), clock});
     t0 = Date.now();
     r = await new Promise(resolve => { const c = new W(); c.pollMs = 100; c.getDsfData({geocode: TOKYO, sessionID: 'w'}, new Date(CAPTURED - 3000), (err, res) => resolve({err, res})); });
@@ -1029,25 +1029,25 @@ test('R2-I5/R2-I6/R2-I7/F6/F7/F10: midnight current, takeover race, newest curre
     // Newest current within 15 min; a non-midnight record in yesterday's window is not "yesterday";
     // a current from 23:55 is not current at 00:05.
     const model = memoryDsfModel();
-    const rec = (iso, off, extra) => Object.assign({geo: [139.76, 35.68], dateObj: new Date(iso), timeOffset: off, pubDate: new Date(iso),
+    const rec = (iso, off, extra) => Object.assign({geo: [139.77, 35.69], dateObj: new Date(iso), timeOffset: off, pubDate: new Date(iso),
         address: {country: 'Asia/Tokyo'}, data: {current: {dateObj: new Date(iso)}}}, extra);
     model.rows.set('a', rec('2026-09-26T06:54:00Z', 540));
     model.rows.set('b', rec('2026-09-26T07:02:00Z', 540));
     model.rows.set('c', rec('2026-09-24T15:30:00Z', 540));   // 09-25 00:30 JST: in yesterday's window, not midnight
     const D = loadDsfController({model, lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock});
-    let found = await new Promise(resolve => new D()._findDataFromDB([139.76, 35.68], new Date(CAPTURED), (e, f) => resolve(f)));
+    let found = await new Promise(resolve => new D()._findDataFromDB([139.77, 35.69], new Date(CAPTURED), (e, f) => resolve(f)));
     assert.equal(+found.current.dateObj, Date.parse('2026-09-26T07:02:00Z'), 'newest current');
     assert.equal(found.yesterday, undefined, 'non-midnight record is not yesterday');
     const late = memoryDsfModel();
     late.rows.set('x', rec('2026-09-25T14:55:00Z', 540));      // 23:55 JST
-    found = await new Promise(resolve => new D()._findDataFromDB([139.76, 35.68], new Date('2026-09-25T15:05:00Z'), (e, f) => resolve(f)));
+    found = await new Promise(resolve => new D()._findDataFromDB([139.77, 35.69], new Date('2026-09-25T15:05:00Z'), (e, f) => resolve(f)));
     const E = loadDsfController({model: late, lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock});
-    found = await new Promise(resolve => new E()._findDataFromDB([139.76, 35.68], new Date('2026-09-25T15:05:00Z'), (e, f) => resolve(f)));
+    found = await new Promise(resolve => new E()._findDataFromDB([139.77, 35.69], new Date('2026-09-25T15:05:00Z'), (e, f) => resolve(f)));
     assert.equal(found.current, undefined, 'yesterday 23:55 is not current at 00:05');
 
     // Takeover clears a failed flag: the next holder's waiters wait for its data.
     const locks2 = memoryLockModel();
-    locks2.locks.set('139.76,35.68', {_id: '139.76,35.68', expireAt: new Date(CAPTURED - 1000), failed: true});
+    locks2.locks.set('139.77,35.69', {_id: '139.77,35.69', expireAt: new Date(CAPTURED - 1000), failed: true});
     const R3 = fakeVcRequester({combined: fixture('tokyo-combined')}, 80);
     const F = loadDsfController({model: memoryDsfModel(), lockModel: locks2, requester: R3, clock});
     const both = await Promise.all([getDsf(F, TOKYO, {pollMs: 10, waitMs: 1000}),
@@ -1124,7 +1124,7 @@ test('R3-D1: billed responses that cannot fill the cache do not repeat the call'
         assert.ifError((await getDsf(Controller)).err, minutes + ' min');
     }
     assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast'], 'no combined repeat without yesterday');
-    const marker = lockModel.locks.get('~noyesterday:139.76,35.68');
+    const marker = lockModel.locks.get('~noyesterday:139.77,35.69');
     assert(marker && +marker.expireAt === Date.parse('2026-09-26T15:00:00Z'), 'marker until the next local midnight');
     // (b) A 200 body that cannot be converted (no local today): the location backs off for 15 minutes.
     clock = {now: CAPTURED};
@@ -1159,7 +1159,7 @@ test('R3-T1: stored stale data is served when the holder answers before its fetc
     // Waiter: another worker holds the lock and stores nothing in time.
     const lockModel = memoryLockModel();
     clock.now = CAPTURED + 40 * 60000;
-    lockModel.locks.set('139.76,35.68', {_id: '139.76,35.68', expireAt: new Date(clock.now + 9000)});
+    lockModel.locks.set('139.77,35.69', {_id: '139.77,35.69', expireAt: new Date(clock.now + 9000)});
     const Idle = fakeVcRequester({});
     r = await getDsf(loadDsfController({model, lockModel, requester: Idle, clock}), TOKYO, {waitMs: 60, pollMs: 20});
     assert.ifError(r.err, 'waiter: stale current served');
@@ -1174,7 +1174,7 @@ test('R3-T2/R3-T7: the failure backoff lasts 2 s and only the owner can set it',
     const Controller = loadDsfController({model: memoryDsfModel(), lockModel, requester: Requester, clock});
     await getDsf(Controller, TOKYO, {pollMs: 5, waitMs: 20});
     await settle();
-    assert(+lockModel.locks.get('139.76,35.68').expireAt - clock.now >= 1900, 'backoff of about 2 s');
+    assert(+lockModel.locks.get('139.77,35.69').expireAt - clock.now >= 1900, 'backoff of about 2 s');
     fail = false;
     clock.now = CAPTURED + 1500;
     await getDsf(Controller, TOKYO, {pollMs: 5, waitMs: 20});
@@ -1305,6 +1305,31 @@ test('#2585 range: a recorded last1days/next7days response starts at the day bef
     assert.equal(docs.today.currently.time, midnight);
     const hours = docs.current.hourly.data;
     assert.equal(hours[hours.length - 1].time, midnight + 3 * 86400, 'through the day after tomorrow 24:00');
+});
+
+test('#2585 grid: overseas coordinates share a 0.02° cell; the response keeps the requested coordinates', async () => {
+    const clock = {now: CAPTURED};
+    const C = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock});
+    const c = new C();
+    assert.deepEqual(plain(c._gridCell('35.68', '139.76')), [139.77, 35.69], 'cell centre, [lon, lat]');
+    assert.deepEqual(plain(c._gridCell(35.6999, 139.7799)), [139.77, 35.69], 'same cell');
+    assert.deepEqual(plain(c._gridCell(35.70, 139.78)), [139.79, 35.71], 'next cell');
+    assert.deepEqual(plain(c._gridCell(-33.868, 151.209)), [151.21, -33.87], 'southern and eastern hemispheres');
+    assert.deepEqual(plain(c._gridCell(-0.001, -0.001)), [-0.01, -0.01]);
+    assert.deepEqual(plain(c._gridCell(90, 180)), [179.99, 89.99], 'clamped at the poles and the antimeridian');
+    const model = memoryDsfModel();
+    const Requester = fakeVcRequester({combined: fixture('tokyo-combined'), forecast: fixture('tokyo-forecast')});
+    const Controller = loadDsfController({model, lockModel: memoryLockModel(), requester: Requester, clock});
+    let r = await getDsf(Controller, {lat: '35.681', lon: '139.767'});
+    assert.ifError(r.err);
+    assert.deepEqual(plain(r.res.geocode), {lat: 35.681, lon: 139.767}, 'requested coordinates in the response');
+    assert.deepEqual([Requester.calls[0].lat, Requester.calls[0].lon], [35.69, 139.77], 'Visual Crossing asked for the cell centre');
+    r = await getDsf(Controller, {lat: '35.689', lon: '139.779'});
+    assert.ifError(r.err);
+    assert.equal(Requester.calls.length, 1, 'a nearby user in the same cell shares the records');
+    assert.deepEqual(plain(r.res.geocode), {lat: 35.689, lon: 139.779});
+    await getDsf(Controller, {lat: '35.701', lon: '139.767'});
+    assert.equal(Requester.calls.length, 2, 'the next cell is fetched separately');
 });
 
 // ---------------------------------------------------------------- push, legacy, config

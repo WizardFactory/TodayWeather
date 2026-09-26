@@ -201,3 +201,10 @@ Source: three fresh-context reviews of `c5b61975` (design D1–D16, implementati
 - **`staleMs`:** changed to 6 h (was 3 h); `providerDownMs` stays at 10 min.
 - **Dark Sky credit:** templates keep the Dark Sky credit for a `source` of `DSF` next to the Visual Crossing link for `VC`.
 - **Push/alert serialization:** deferred to the planned redesign.
+
+## Amendment 8 — 2026-09-27 (0.02° grid, owner decision)
+
+- `DsfController` snaps overseas coordinates to the centre of their 0.02° grid cell.
+- The snapped coordinates are used for the cache records, the lock key and the Visual Crossing request.
+- The response keeps the requested coordinates.
+- Apps and the gateway are unchanged: they still round to 0.001°.
