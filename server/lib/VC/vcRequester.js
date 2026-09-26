@@ -40,8 +40,7 @@ function logCoordinate(value) {
 
 class VcRequester {
     /**
-     * @param {{timeoutMs?: number, retryDelayMs?: number, retryJitterMs?: number, retryWindowMs?: number,
-     *          random?: function(): number}} [options]
+     * @param {{timeoutMs?: number, retryDelayMs?: number, retryWindowMs?: number}} [options]
      */
     constructor(options) {
         options = options || {};
@@ -49,9 +48,6 @@ class VcRequester {
         this.timeoutMs = options.timeoutMs || 2500;
         this.retryDelayMs = options.retryDelayMs === undefined ? 300 : options.retryDelayMs;
         this.retryWindowMs = options.retryWindowMs === undefined ? 1500 : options.retryWindowMs;
-        // Random extra delay: push/alert bursts that collide on the Free plan's single slot spread out.
-        this.retryJitterMs = options.retryJitterMs === undefined ? this.retryDelayMs : options.retryJitterMs;
-        this.random = options.random || Math.random;
     }
 
     static isValidKey(key) {
@@ -152,8 +148,7 @@ class VcRequester {
         const attempt = (retried) => {
             this._get(url, key, deadline - Date.now(), (err, status, body) => {
                 const ms = Date.now() - started;
-                const delay = this.retryDelayMs + Math.floor(this.random() * this.retryJitterMs);
-                const timeLeft = deadline - Date.now() > delay;
+                const timeLeft = deadline - Date.now() > this.retryDelayMs;
                 // Retry once: a concurrency 429 (not the daily limit) or a reset keep-alive socket.
                 const concurrency = !err && status === 429 && CONCURRENCY_429.test(String(body));
                 const reset = err && RESET_CODES.indexOf(err.code) >= 0;
@@ -162,7 +157,7 @@ class VcRequester {
                 }
                 if (!retried && timeLeft && ((concurrency && ms < this.retryWindowMs) || reset)) {
                     log.warn('VC> ' + where + ' ' + (reset ? err.code : 'status=429') + ' retrying once');
-                    return setTimeout(() => attempt(true), delay);
+                    return setTimeout(() => attempt(true), this.retryDelayMs);
                 }
                 if (!err && status >= 400) {
                     err = new Error('VC> HTTP ' + status + ': ' + VcRequester._scrub(String(body), key).slice(0, 120));

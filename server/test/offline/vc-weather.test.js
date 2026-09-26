@@ -853,7 +853,7 @@ test('D3/T4: the response returns within its budget while the fetch continues an
     assert(defaults.fetchTimeoutMs < defaults.lockTtlMs, 'the fetch ends before its lock can be taken over');
     for (let waited = 0; model.rows.size < 3 && waited < 3000; waited += 20) await new Promise(resolve => setTimeout(resolve, 20));
     assert.equal(model.rows.size, 3, 'the fetch finished and stored the records');
-    await settle();
+    for (let waited = 0; lockModel.locks.size > 0 && waited < 1000; waited += 5) await new Promise(resolve => setTimeout(resolve, 5));
     assert.equal(lockModel.locks.size, 0, 'lock released after the late fetch');
     r = await getDsf(Controller);
     assert.ifError(r.err);
@@ -1107,33 +1107,6 @@ test('R3-D1: billed responses that cannot fill the cache do not repeat the call'
     clock.now = CAPTURED + 15 * 60000 + 1000;
     await getDsf(Controller, TOKYO, {pollMs: 5, waitMs: 20});
     assert.equal(Requester.calls.length, 2, 'retried after the backoff');
-    // (c) Lock store and record store both failing: one unlocked call per location per worker in 15 minutes.
-    clock = {now: CAPTURED};
-    Requester = fakeVcRequester({combined: fixture('tokyo-combined')});
-    lockModel = memoryLockModel();
-    lockModel.create = (doc, cb) => setImmediate(() => cb(new Error('not master')));
-    const model = memoryDsfModel();
-    model.update = (q, d, o, cb) => setImmediate(() => cb(new Error('not master')));
-    Controller = loadDsfController({model, lockModel, requester: Requester, clock});
-    for (const minutes of [0, 1, 2]) {
-        clock.now = CAPTURED + minutes * 60000;
-        await getDsf(Controller);
-    }
-    assert.equal(Requester.calls.length, 1, 'unlocked calls are rate-limited per location');
-});
-
-test('R3-D2: the concurrency retry waits a random extra delay', async () => {
-    const busy = () => fakeHttps((url, n) => n === 1 ? {status: 429, body: 'Maximum concurrency exceeded'} : {status: 200, body: fixture('tokyo-forecast')});
-    for (const [random, min, max] of [[() => 0, 40, 75], [() => 0.99, 115, 400]]) {
-        const https = busy();
-        const t0 = Date.now();
-        const r = await timeline(loadRequester(https), {retryDelayMs: 40, retryJitterMs: 80, random}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
-        const ms = Date.now() - t0;
-        assert.ifError(r.err);
-        assert(ms >= min && ms < max, 'retry after ' + ms + ' ms, expected ' + min + '–' + max);
-    }
-    const R = loadRequester(busy());
-    assert.equal(new R().retryJitterMs, 300, 'default jitter up to the base delay');
 });
 
 test('R3-T1: stored stale data is served when the holder answers before its fetch ends and when a waiter times out', async () => {
@@ -1251,7 +1224,7 @@ test('R3-T5/R3-T6/R3-T11: budget boundary, 15-minute and 3-hour limits, save ord
     assert.equal(C._fetchedAfterDayEnd({pubDate: new Date(midnight - 1)}, '2026-09-26', 540), false);
 });
 
-test('R3-T8/R3-I2/R3-I3/R3-I5: requester and converter edges', async () => {
+test('R3-T8/R3-I2/R3-I3: requester edges', async () => {
     // Node emits ECONNRESET after destroy(): the timeout still calls back once.
     const https = fakeHttps(() => 'hang');
     const realGet = https.get;
@@ -1272,13 +1245,19 @@ test('R3-T8/R3-I2/R3-I3/R3-I5: requester and converter edges', async () => {
     // The key is scrubbed before the error body is truncated.
     r = await timeline(loadRequester(fakeHttps(() => ({status: 400, body: 'x'.repeat(110) + KEY}))), {}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
     assert(!r.err.message.includes(KEY.slice(0, 8)), r.err.message);
-    // A forecast answered for the next local day seconds before local midnight converts as that day.
-    const conv = vcConverter();
-    const nextDay = syntheticTimeline('Asia/Tokyo', '2026-09-27', 8, {now: Date.parse('2026-09-26T15:00:00Z')});
-    const docs = conv.toDarkSkyDocs(nextDay, new Date(Date.parse('2026-09-26T15:00:00Z') - 2000));
-    assert.equal(docs.today.currently.time, Date.parse('2026-09-26T15:00:00Z') / 1000);
-    assert.equal(docs.current.currently.time, Date.parse('2026-09-26T15:00:00Z') / 1000 + 1);
-    assert.throws(() => conv.toDarkSkyDocs(nextDay, new Date(Date.parse('2026-09-26T15:00:00Z') - 3600000)), /no local today/);
+});
+
+test('R4-T1: an unusable HTTP 200 body from the real requester backs the location off for 15 minutes', async () => {
+    for (const body of ['<html>maintenance</html>', {days: [], timezone: 'Asia/Tokyo'}]) {
+        const clock = {now: CAPTURED};
+        const https = fakeHttps(() => ({status: 200, body}));
+        const Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: loadRequester(https), clock});
+        for (const seconds of [0, 3, 10, 60]) {
+            clock.now = CAPTURED + seconds * 1000;
+            assert((await getDsf(Controller, TOKYO, {pollMs: 5, waitMs: 20})).err);
+        }
+        assert.equal(https.calls.length, 1, JSON.stringify(body).slice(0, 30) + ': one billed call');
+    }
 });
 
 // ---------------------------------------------------------------- push, legacy, config

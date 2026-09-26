@@ -19,8 +19,6 @@ const kmaTimeLib = require('../../lib/kmaTimeLib');
 const PROVIDER_KEY = '~provider';
 // Lock-collection documents, per location, after a billed `combined` call returned no local yesterday.
 const NO_YESTERDAY_PREFIX = '~noyesterday:';
-// Per worker: last fetch made without the lock (lock store unavailable), by location.
-const unlockedFetches = {};
 
 if(!VcRequester.isValidKey(config.keyString && config.keyString.vc_key) && typeof log !== 'undefined'){
     log.error('cDsf > VC_SECRET_KEY is not configured; overseas weather requests will fail');
@@ -49,7 +47,6 @@ class DsfController {
         this.lockTtlMs = 10 * 1000;
         this.failureBackoffMs = 2 * 1000;
         this.badResponseBackoffMs = 15 * 60 * 1000;  // a billed (HTTP 200) body that cannot be used
-        this.unlockedFetchMs = 15 * 60 * 1000;       // per worker and location, while the lock store fails
         this.waitMs = 2500;         // within the gateway Lambda's 3 s per-attempt budget
         this.pollMs = 250;
         this.responseMs = 2500;     // answer the request within the gateway's attempt ...
@@ -1047,13 +1044,8 @@ class DsfController {
             }
             this._acquireLock(key, (err, token)=>{
                 if(err){
-                    // Lock store unavailable: fetch without the lock rather than fail the request, at most
-                    // once per location and worker per unlockedFetchMs (the records may not be stored either).
+                    // Lock store unavailable: fetch without the lock rather than fail the request.
                     log.warn('cDsf > VC fetch lock unavailable', this._logKey(key), err.message);
-                    if(unlockedFetches[key] > Date.now() - this.unlockedFetchMs){
-                        return this._fallback(output, new Error('cDsf > VC fetch lock unavailable; recent unlocked fetch'), callback);
-                    }
-                    unlockedFetches[key] = Date.now();
                 }
                 else if(!token){
                     log.info('cDsf > VC fetch in progress elsewhere, waiting for', this._logKey(key));

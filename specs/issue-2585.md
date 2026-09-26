@@ -166,13 +166,11 @@ Source: three fresh-context reviews of `c5b61975` (design D1–D16, implementati
 - **Billed but unusable responses:**
   - After a `combined` call that returned no local yesterday, a `~noyesterday:<key>` marker (until the next local midnight) serves the location without yesterday and refreshes it with `forecast`.
   - A failure after HTTP 200 backs the location off for 15 min.
-  - With the lock store failing, each worker makes at most one unlocked fetch per location per 15 min.
-- **Retry jitter:** the concurrency retry waits 300 ms plus a random 0–300 ms.
 - **Records:** on a fall-back day the most recently fetched midnight record wins for today and yesterday.
 - **Requester:**
   - A body without `tzoffset` is accepted when it has hour rows.
   - The key is scrubbed before the error body is truncated.
-- **Converter:** a `forecast` answered for the next local day within 5 min before local midnight is converted as that day.
+- **Reverted as out of scope (owner, 2026-09-26):** the unlocked-fetch limit, retry jitter, the next-day `forecast` conversion near midnight and the Santiago scenario.
 - **Documented:**
   - Push/alert bursts on the Free plan.
   - Reconcile the host's edited `config.js` before deploying.

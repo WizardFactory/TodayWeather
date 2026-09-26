@@ -391,15 +391,6 @@ async function syntheticScenarios(output) {
         {at: '2026-09-26T22:30:00Z', fail: true, staleFrom: '2026-09-26T21:50:00Z', minHourly: 16, minDaily: 8, calls: ['combined'], skipYesterdayHour: true, kinds: [['v000903', 'C'], ['v000901', 'F'], ['ww', 'C']], check: staleCheck('2026-09-26T21:50:00.000Z')},
         {at: '2026-09-26T22:40:00Z', calls: ['combined'], skipYesterdayHour: true}
     ]);
-    // R3-T10: America/Santiago's 2026-09-06 has no local 00:00 (00:00 -04 → 01:00 -03).
-    await runScenario(output, 'Santiago DST start', 'America/Santiago', -33.45, -70.67, [
-        {at: '2026-09-05T12:00:00Z', calls: ['combined']},
-        {at: '2026-09-06T04:30:00Z', calls: ['combined'], skipYesterdayHour: true},
-        {at: '2026-09-06T04:40:00Z', calls: [], skipYesterdayHour: true},
-        {at: '2026-09-06T15:00:00Z', calls: ['forecast'], kinds: [['v000903', 'C'], ['v000901', 'F'], ['ww', 'C']]},
-        {at: '2026-09-07T03:30:00Z', calls: ['combined'], skipYesterdayHour: true},
-        {at: '2026-09-07T04:00:00Z', calls: ['forecast']}
-    ]);
     // T3: polar day: no sunrise or sunset.
     now = Date.parse('2026-06-21T12:00:00Z');
     await runScenario(output, 'Polar day', 'Arctic/Longyearbyen', 78.22, 15.65,
