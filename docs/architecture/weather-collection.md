@@ -27,21 +27,21 @@ These are scheduler trigger times, **not provider publication guarantees**. `get
 | `short` | 13 | Direct self-HTTP |
 | `keco` real-time station air | 3, 13, 23, 33, 43, 53 | Direct self-HTTP |
 | `kecoSido` regional air | 4, 14, 24, 34, 44, 54 | Direct self-HTTP |
-| `past`, `kecoForecast`, `midtemp`, `midland`, `midforecast`, `midsea`, `shortrss` | 2 | Queued, drained in reverse insertion order |
+| `past`, `kecoForecast`, `midtemp`, `midland`, `midforecast`, `midsea`, `shortrss` | 2 | Queued, drained in reverse insertion order; `past` only while `GATHER_PAST_ENABLED` is not `false` |
 | `lifeindex` | 10 | Queued |
 | `healthday` | 10, with `getUTCHours()+9 === 6 || === 18` | Queued; actual expression has no modulo 24 |
-| KAQ hourly forecast | 7, UTC hours 8, 9, 10, 11, 20, 21, 22, 13 | Queued controller call, not self-HTTP |
+| KAQ hourly forecast | 7, UTC hours 8, 9, 10, 11, 20, 21, 22, 13 | Queued controller call, not self-HTTP; only while `GATHER_AIR_FORECAST_ENABLED` is not `false` |
 | `updateStnRnsHitRate` | 50 | Direct; not forced at startup |
 | `gatherKasiRiseSet` | 55 | Direct self-HTTP |
 
-The health-day expression can reach 18 at UTC 09, but cannot reach 6 because adding 9 produces 9–32. The KAQ hour list includes 13 literally; do not silently correct it to 23. Periodic CloudFront invalidation and `updateInvalidt1h` dispatch are commented out. These observations describe existing code; this task changes no schedules.
+The health-day expression can reach 18 at UTC 09, but cannot reach 6 because adding 9 produces 9–32. The KAQ hour list includes 13 literally; do not silently correct it to 23. Periodic CloudFront invalidation and `updateInvalidt1h` dispatch are commented out. These observations describe existing code; this task changes no schedules. The [gather runtime policy](../operations/gather-runtime-policy.md) flags can disable the `past` and KAQ jobs; the minute checks stay fixed.
 
 ## KMA fetch → normalize → persist
 
 1. `/gather/current`, `/short`, and `/shortest` select a key and call the corresponding manager method with base offset `9`. Query-time helpers select product-specific base date/time; `town.getCoord()` supplies domestic grid coordinates.
-2. `_recursiveRequestData(..., 70, ...)` dispatches through `collectTownForecast.requestData()`, choosing a random key from the configured town forecast key list for each recursive pass.
+2. `_recursiveRequestData(..., retry, ...)` dispatches through `collectTownForecast.requestData()`, choosing a random key from the configured town forecast key list for each recursive pass. The retry budget defaults to 70 passes (town and mid products) and 50 for the invalid-T1H current update. [Gather runtime policy](../operations/gather-runtime-policy.md) lists the environment overrides.
 3. The requester builds `http://apis.data.go.kr` URLs for current, shortest, short and medium-range products, performs HTTP with a 10-second per-request timeout, accepts success code `00`, parses XML through `xml2js`, and maps category values into forecast records. Invalid/empty responses fail collection without logging service-key-bearing URLs. The requester's own retry count defaults to zero when constructed without options; manager recursion is a separate retry layer.
-4. `async.mapSeries` saves completed items via `getSaveFunc()`. Failed coordinates are retried using a decremented recursion count. Invalid temperature coordinates can be retried with an adjusted shortest publication time. Recursion uses zero-delay timers, not exponential backoff.
+4. `async.mapSeries` saves completed items via `getSaveFunc()`. Failed coordinates are retried using a decremented recursion count. Invalid temperature coordinates can be retried with an adjusted shortest publication time. Recursion uses a fixed timer delay (`GATHER_RETRY_DELAY_MS`, default 0), not exponential backoff.
 5. `getSaveFunc()` routes current/shortest/short to v2 KMA controllers when `DB_DATA_VERSION === '2.0'`; with `DB_DATA_VERSION === '1.0'`, legacy `saveCurrent`, `saveShortest`, `saveShort` merge/update per-grid documents. Other values have no save branch or callback in these three wrappers; there is no generic fallback. Medium-range products use their own save functions. There is no transaction covering all weather products.
 6. Product-specific cleanup removes old KMA records. `_checkPubDate()` also supports skipping already-current products in callers that use it; the three whole-grid methods shown above directly invoke collection, so do not assume publication deduplication applies uniformly.
 

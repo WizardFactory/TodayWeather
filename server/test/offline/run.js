@@ -7,6 +7,7 @@ var commands = [
     [path.join(__dirname, 'env-startup.test.js')],
     [require.resolve('mocha/bin/_mocha'), path.join(__dirname, 'gather-code-drift.test.js')],
     [path.join(__dirname, 'gather-smoke.js')],
+    [path.join(__dirname, 'gather-policy.test.js')],
     [path.join(__dirname, 'daily-forecast.test.js')],
     [path.join(__dirname, 'daily-review.test.js')],
     [path.join(__dirname, 'short-rss-daily.test.js')],
