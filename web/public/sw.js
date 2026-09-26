@@ -6,21 +6,57 @@ const ASSETS = /*__PRECACHE__*/ [
   "/index.html",
   "/icon.svg",
   "/manifest.webmanifest",
+  "/theme.js",
 ];
+// A cache is usable as a fallback only after every shell file was stored.
+const COMPLETE = "/__complete__";
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then(async (cache) => {
+        await cache.addAll(ASSETS);
+        await cache.put(COMPLETE, new Response("1"));
+      })
+      .catch(async (error) => {
+        await caches.delete(CACHE);
+        throw error;
+      }),
+  );
 });
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     Promise.all([
-      caches.keys().then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key.startsWith("tw-shell-") && key !== CACHE)
-            .slice(0, -1)
+      caches.keys().then(async (keys) => {
+        const others = keys.filter(
+          (key) => key.startsWith("tw-shell-") && key !== CACHE,
+        );
+        // A newer release may still be installing into its incomplete cache.
+        const installing = !!self.registration?.installing;
+        const complete = [];
+        const incomplete = [];
+        for (const key of others) {
+          const cache = await caches.open(key);
+          // Shells written before the marker existed are complete when they
+          // hold index.html (addAll is all-or-nothing).
+          if (
+            (await cache.match(COMPLETE)) ||
+            (await cache.match("/index.html"))
+          )
+            complete.push(key);
+          else incomplete.push(key);
+        }
+        // Keep only the newest complete previous shell for old tabs.
+        const keep = complete[complete.length - 1];
+        await Promise.all(
+          others
+            .filter(
+              (key) =>
+                key !== keep && !(installing && incomplete.includes(key)),
+            )
             .map((key) => caches.delete(key)),
-        ),
-      ),
+        );
+      }),
       self.clients.claim(),
     ]),
   );

@@ -62,6 +62,18 @@ it("keeps CloudFront and worker navigation routes compatible", () => {
     "/api/web/v1/missing",
     "/assets/missing.js",
     "/unknown",
+    "/start",
+    "/help",
+    "/membership",
+    "/warnings",
+    "/locations",
+    "/air/seoul",
+    "/place/seoul",
+    "/notifications/seoul",
+    "/settings/units",
+    "/weather/seoul/air",
+    "/weather/seoul/daily",
+    "/theme.js",
   ])
     expect(worker.test(path), path).toBe(server.test(path));
   expect(server.test("/api/web/v1/missing")).toBe(false);

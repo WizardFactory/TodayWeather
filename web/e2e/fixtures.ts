@@ -8,18 +8,30 @@ export const test = base.extend({
     const forbidden: string[] = [],
       cspViolations: string[] = [];
     // The preview serves the production CSP; any violation is a release blocker.
-    page.on("console", (m) => {
-      if (
-        /Content Security Policy|Refused to (apply|load|execute|connect)/i.test(
-          m.text(),
+    const guard = (p: import("@playwright/test").Page) => {
+      p.on("console", (m) => {
+        if (
+          /Content Security Policy|Refused to (apply|load|execute|connect)/i.test(
+            m.text(),
+          )
         )
-      )
-        cspViolations.push(m.text());
-    });
-    page.on("request", (req) => {
-      if (new URL(req.url()).pathname.startsWith("/api/"))
-        forbidden.push(req.url());
-    });
+          cspViolations.push(m.text());
+      });
+      p.on("request", (req) => {
+        if (new URL(req.url()).pathname.startsWith("/api/"))
+          forbidden.push(req.url());
+      });
+    };
+    // Guard every page of this context, including ones a test opens itself.
+    guard(page);
+    page.context().on("page", guard);
+    // Fallback below page routes: a test that unroutes the page never reaches
+    // the real public API.
+    await page
+      .context()
+      .route("https://todayweather.wizardfactory.net/**", (route) =>
+        route.abort(),
+      );
     await page.route(
       "https://todayweather.wizardfactory.net/**",
       async (route) => {

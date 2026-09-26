@@ -8,7 +8,7 @@ Users should be able to open a link on mobile or desktop and understand today's 
 
 Primary journeys: checking before leaving home, comparing saved cities, inspecting a pollutant/station, reviewing national conditions/warnings, and, in future separately scoped work, receiving scheduled/condition-based city notifications. Preserve weather meaning and actions while adapting density and interaction to the browser.
 
-Default product proposal: one TodayWeather web product with weather-first and air-first startup options. TodayAir's combined weather screen remains available. Existing translations and international weather are included where supported by data; national maps/warnings are explicitly Korean. Source definitions are in the [screen inventory](../rewrite/screen-specifications.md), not inferred from screenshots alone.
+Default product proposal: one TodayWeather web product with weather-first and air-first startup options. TodayAir's combined weather screen remains available. International weather is included where supported by data; national maps/warnings are explicitly Korean. The original proposal also included existing translations; AK has since decided on a Korean-only UI, so translations are deferred (Locale row below). Source definitions are in the [screen inventory](../rewrite/screen-specifications.md), not inferred from screenshots alone.
 
 ## Feature parity ledger
 
@@ -45,14 +45,14 @@ All rows derive from [S01–S16 definitions](../rewrite/screen-specifications.md
 | Daily/condition push | Current static client offers native-app guidance only | Future design must establish scheduling, ownership and device delivery; PWA installation alone does not enable alerts |
 | Ads/IAP/restore | Independent web policy and optional hosted billing; explicit signed entitlement service | Native store purchases and AdMob are not directly reusable web integrations |
 | Photo/light/dark/old themes | Maintain information/accessibility and recognizable palettes; curated licensed photo assets if enabled | Photo provider and asset rights are a launch dependency; do not silently substitute a broken background |
-| Locale, feedback, reviews | Reuse translation catalog after audit; browser locale override, feedback link, optional store links | No native review prompt; server summary language must match selected locale |
+| Locale, feedback, reviews | Decision: Korean-only UI (AK). Originally proposed and now deferred: reuse the translation catalog after audit with a browser-locale override. Feedback link and optional store links | No native review prompt; server prose is requested in Korean (`Accept-Language: ko`). If translations return, server summary language must match the selected locale |
 | External maps/links | Open a clearly labeled external destination with safe navigation | External service availability is distinct from core weather availability |
 
 The recommended beta is ad-free, without account sign-in. This is a proposal for AK, not approval to omit S13 from a paid parity launch. At release, the ledger must contain no unexplained omission: each Decision needs a resolved policy, owner and user-visible behavior.
 
 ## Information architecture and responsive layout
 
-Mobile, approximately 360–767 CSS px: city header plus search/refresh, current condition and yesterday delta, then active chart/detail; bottom navigation is Hourly / Daily / Air / Locations / More. Air-first mode changes the initial view, retaining access to the combined weather overview. Share and notifications are city-scoped actions.
+Mobile, approximately 360–767 CSS px: city header plus search/refresh, current condition and yesterday delta, then active chart/detail; bottom navigation is Hourly / Daily / Air / Locations / More (target; the current client uses an off-canvas menu and in-page tabs, see [implementation status](implementation.md#specification-items-not-implemented-or-adapted)). Air-first mode changes the initial view, retaining access to the combined weather overview. Share and notifications are city-scoped actions.
 
 Tablet, approximately 768–1023 px: compact sidebar or rail and one main chart column. Desktop, 1024 px and wider: saved cities/navigation on the left, hero plus hourly/daily content in the main column, air/warnings/detail panel to the right. The air screen gives the pollutant chart the main column. Maps always have a text/list alternative. Breakpoints are design starting points, to validate at 360/390/768/1024/1440 px and 200% zoom.
 
@@ -88,10 +88,10 @@ True zero, unavailable/sentinel, empty collection and unsupported product are di
 
 - Every required/adapted ledger row has browser evidence against fixtures and, where relevant, staging integrations. Commercial and native-only exceptions have explicit product disposition.
 - Supported-browser baseline: release-time current and previous major Safari/iOS Safari, Chrome/Android Chrome, Edge and Firefox for weather browsing; install behavior is separately tested; future push support requires its own device matrix. Pin exact versions in release evidence, not this timeless requirement.
-- All weather/air/map/unit/date/race/error cases in the [existing verification matrix](../rewrite/verification-matrix.md) are mapped to new tests. Existing snapshots are characterization inputs, not proof that old bugs should be preserved.
+- All weather/air/map/unit/date/race/error cases in the [existing verification matrix](../rewrite/verification-matrix.md) that apply to the web must be mapped to tests before release. The current mapping, including uncovered and manual items, is the [coverage traceability](implementation.md#coverage-traceability); not every case is covered yet. Existing snapshots are characterization inputs, not proof that old bugs should be preserved.
 - Performance targets, proposed: cached city content visible within 1 second; p75 initial LCP ≤2.5 seconds on an agreed mobile profile; API success ≥99% excluding rejected user input, with product freshness tracked separately. Establish load/traffic and sample definitions in the spike before treating these as release SLAs.
-- Fresh-data success, failed searches, source age, API latency/errors, location permission outcomes are measured separately, without precise coordinates or subscription keys in analytics.
+- Fresh-data success, failed searches, source age, API latency/errors, location permission outcomes are measured separately, without precise coordinates or subscription keys in analytics. No measurement is implemented yet ([release gaps](implementation.md#release-gaps)).
 
 ## Scope decisions
 
-AK has confirmed the parity priority, static-only operation and `app.tdywx.xyz` domain. React/Vite and direct API reads are implemented. Deployment method, monetization and schedule remain decisions. Recommended defaults and tradeoffs are in the [technical design](technical-design.md). Paid entitlement, login/sync and separate TodayAir branding remain decisions, not hidden requirements. The [implementation plan](implementation-plan.md) sequences them without blocking independent browser/domain work.
+AK has confirmed the parity priority, static-only operation, a Korean-only UI and the `app.tdywx.xyz` domain. React/Vite and direct API reads are implemented. Deployment method, monetization and schedule remain decisions. Recommended defaults and tradeoffs are in the [technical design](technical-design.md). Paid entitlement, login/sync and separate TodayAir branding remain decisions, not hidden requirements. The [implementation plan](implementation-plan.md) sequences them without blocking independent browser/domain work.

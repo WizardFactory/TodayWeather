@@ -70,7 +70,7 @@ test("KMA observation time, sources, details and the air window follow the rewri
   });
   await page.goto("/weather/seoul/hourly");
   await expect(page.locator(".data-footer .stamp")).toHaveText(
-    "관측 시각 2026-09-23 09:00",
+    "관측 시각 2026-09-23 09:00 KST",
   );
   await expect(page.getByText("관측 시각이 오래된 자료입니다")).toBeVisible();
   await expect(page.locator(".details-panel")).toContainText("06:20");

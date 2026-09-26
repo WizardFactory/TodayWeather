@@ -63,7 +63,7 @@ test("KMA mixed intervals and unverified air summary survive static offline relo
   await context.setOffline(true);
   await page.reload();
   await expect(
-    page.getByText("저장된 자료", { exact: false }).first(),
+    page.getByText("연결하지 못해 저장된 자료를 표시합니다"),
   ).toBeVisible();
   await expect(note).toContainText("관측 시각 미확인");
   await context.setOffline(false);

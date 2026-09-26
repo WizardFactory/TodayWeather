@@ -78,6 +78,7 @@ export async function planUpload({ dir = "web/dist", bucket, distribution }) {
           "sw.js",
           "manifest.webmanifest",
           "icon.svg",
+          "theme.js",
           "release.json",
         ].includes(file))
     )
@@ -134,14 +135,29 @@ export function preflight(run, { bucket, distribution }) {
   ).DistributionConfig;
   const behavior = cf.DefaultCacheBehavior;
   const target = cf.Origins.Items.find((o) => o.Id === behavior.TargetOriginId);
-  if (
-    !cf.Aliases?.Items?.includes(SITE_DOMAIN) ||
-    !target?.DomainName?.startsWith(bucket + ".s3.") ||
-    !target.OriginAccessControlId ||
-    behavior.ViewerProtocolPolicy !== "redirect-to-https"
-  )
+  if (!cf.Aliases?.Items?.includes(SITE_DOMAIN))
     throw Error(
-      `Destination does not match the private ${SITE_DOMAIN} static stack`,
+      `Distribution ${distribution} does not have the ${SITE_DOMAIN} alias`,
+    );
+  if (!target?.DomainName?.startsWith(bucket + ".s3."))
+    throw Error(
+      `Default cache behavior origin ${behavior.TargetOriginId} does not target the S3 bucket ${bucket}`,
+    );
+  if (!target.OriginAccessControlId)
+    throw Error(
+      `S3 origin ${target.Id} has no Origin Access Control; the bucket must stay private behind OAC`,
+    );
+  if (behavior.ViewerProtocolPolicy !== "redirect-to-https")
+    throw Error(
+      `Default cache behavior has ViewerProtocolPolicy ${behavior.ViewerProtocolPolicy}; redirect-to-https is required`,
+    );
+  // An error-to-page mapping would serve index.html for missing assets and API paths.
+  const errorPage = cf.CustomErrorResponses?.Items?.find(
+    (e) => e.ResponsePagePath,
+  );
+  if (errorPage)
+    throw Error(
+      `CustomErrorResponses maps ${errorPage.ErrorCode} to ResponsePagePath ${errorPage.ResponsePagePath}; remove page paths so missing files are not served as HTML`,
     );
   if (target.OriginPath)
     throw Error(
@@ -217,11 +233,32 @@ export async function main(argv) {
       options[key.slice(2)] = argv[++i];
     } else throw Error("Unknown option: " + key);
   }
+  if (options.execute) {
+    // Refuse before any planning or AWS call: a dirty build is not traceable.
+    const release = JSON.parse(
+      await readFile(
+        join(resolve(options.dir ?? "web/dist"), "release.json"),
+        "utf8",
+      ),
+    );
+    if (String(release.commit ?? "").endsWith("-dirty"))
+      throw Error(
+        "Refusing to upload a build made from uncommitted changes (release commit ends with -dirty); build from a clean commit or use the CI artifact",
+      );
+  }
   const commands = await planUpload(options);
+  const { commit = "unknown", builtAt = "unknown" } = JSON.parse(
+    await readFile(join(options.dir ?? "web/dist", "release.json"), "utf8"),
+  );
   if (!options.execute) {
     console.log(
       JSON.stringify(
-        { dryRun: true, site: "https://" + SITE_DOMAIN, commands },
+        {
+          dryRun: true,
+          site: "https://" + SITE_DOMAIN,
+          release: { commit, builtAt },
+          commands,
+        },
         null,
         2,
       ),
@@ -240,7 +277,7 @@ export async function main(argv) {
   preflight(run, options);
   for (const command of commands) run(command);
   console.log(
-    `Uploaded static release and requested CloudFront invalidation. Verify https://${SITE_DOMAIN} after invalidation completes.`,
+    `Uploaded static release ${commit} (built ${builtAt}) and requested CloudFront invalidation. Verify https://${SITE_DOMAIN} after invalidation completes.`,
   );
 }
 if (

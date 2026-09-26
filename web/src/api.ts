@@ -33,7 +33,13 @@ export async function fetchWeather(
   place: Place,
   units: Units,
   signal: AbortSignal,
-): Promise<{ weather: Weather; snapshot: boolean }> {
+): Promise<{
+  weather: Weather;
+  snapshot: boolean;
+  /** Rate limited: do not ask again before this time (Retry-After). */
+  retryAt?: number;
+  notice?: string;
+}> {
   const key = weatherKey(place, units);
   try {
     if (typeof navigator !== "undefined" && navigator.onLine === false)
@@ -54,7 +60,17 @@ export async function fetchWeather(
   } catch (error) {
     if (signal.aborted) throw error;
     const cached = await readSnapshot(key);
-    if (cached) return { weather: cached, snapshot: true };
+    if (cached) {
+      const wait = (error as { retryAfterMs?: number }).retryAfterMs;
+      return wait
+        ? {
+            weather: cached,
+            snapshot: true,
+            retryAt: Date.now() + wait,
+            notice: (error as Error).message,
+          }
+        : { weather: cached, snapshot: true };
+    }
     throw error;
   }
 }

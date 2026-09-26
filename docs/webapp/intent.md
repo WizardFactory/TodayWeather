@@ -11,7 +11,7 @@ Feature parity means equivalent user outcomes and meteorological meaning. It doe
 
 ## Current decisions
 
-The web client calls the existing public API directly and is prepared for private S3 + CloudFront at `app.tdywx.xyz`. The requested bucket is `tdywx-app-141248341265-apne2`. The unused Node API workspace, proxy mode, Docker recipe and web reminder service are removed. Browser notifications display unavailable/mobile-app guidance; full mobile parity remains open. No additional API server is required for the current client. Deployment method selection is deferred.
+The web client calls the existing public API directly and is prepared for private S3 + CloudFront at `app.tdywx.xyz`. The requested bucket is `tdywx-app-141248341265-apne2`. The unused Node API workspace, proxy mode, Docker recipe and web reminder service are removed. Browser notifications display unavailable/mobile-app guidance; full mobile parity remains open. No additional API server is required for the current client. Deployment method selection is deferred. The UI is Korean-only by AK's decision (first recorded here on 2026-09-26): the original proposal to reuse translations with a browser-locale override is deferred, not dropped from the parity ledger. Monitoring, staging and other release gaps are listed in [implementation status](implementation.md#release-gaps).
 
 ## Acceptance of the original planning task
 
@@ -20,7 +20,7 @@ The web client calls the existing public API directly and is prepared for privat
 | AC1 | All S01–S16 legacy screens and native integrations have a target, alternative or explicit decision in the parity matrix. |
 | AC2 | Mobile/desktop navigation, primary journeys, permissions, stale/partial/offline/error states and accessibility are specified. |
 | AC3 | Repository-grounded technology/API/data/storage/push boundaries and alternatives are documented; source facts and proposals are separated. |
-| AC4 | Proposed hosting, isolated environments, rollout/rollback, work packages, conditional estimates and launch prerequisites are actionable. |
+| AC4 | Proposed hosting, isolated environments, rollout/rollback, work packages, conditional estimates and launch prerequisites are actionable. (No isolated pre-production host exists yet; see [release gaps](implementation.md#release-gaps).) |
 | AC5 | Local links/source anchors and the Archify diagram are checked; artifact, browser and visual evidence are reported separately. |
 
 ## Authority and boundaries

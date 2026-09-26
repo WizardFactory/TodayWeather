@@ -1,0 +1,59 @@
+# Unmocked, read-only smoke of the static web app against the public TodayWeather API.
+# Scheduled and manual only: live upstream availability must not block pull requests.
+name: Web live smoke
+on:
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Deployed origin to check (for example https://app.tdywx.xyz). Empty builds web/dist and uses the local static preview."
+        required: false
+        default: ""
+        type: string
+      expect_commit:
+        description: "Commit SHA (at least 7 hex characters) that release.json must report, for example the deployed commit. Empty skips the comparison."
+        required: false
+        default: ""
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: web-live-smoke
+  cancel-in-progress: false
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BASE_URL: ${{ inputs.base_url }}
+      EXPECT_COMMIT: ${{ inputs.expect_commit }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - if: env.BASE_URL == ''
+        run: npm run build
+      - run: npx playwright install --with-deps chromium
+      # The script appends a Markdown summary (counts plus every WARN/FAIL
+      # line, new warnings marked apart from its KNOWN_WARNINGS list) to
+      # $GITHUB_STEP_SUMMARY. Warnings keep the exit status 0.
+      - name: Run live smoke
+        run: |
+          mkdir -p test-results
+          args=(--json test-results/web-live-smoke.json)
+          if [ -n "$BASE_URL" ]; then args+=(--base "$BASE_URL"); fi
+          if [ -n "$EXPECT_COMMIT" ]; then args+=(--expect-commit "$EXPECT_COMMIT"); fi
+          node scripts/web-live-smoke.mjs "${args[@]}"
+      # The JSON result plus one full-page screenshot per failed check.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-live-smoke
+          path: |
+            test-results/web-live-smoke.json
+            test-results/web-live-smoke.json.fail-*.png
+          if-no-files-found: warn

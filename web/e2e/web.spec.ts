@@ -2,6 +2,25 @@ import { test, expect } from "./fixtures";
 const screenshots =
   process.env.WEB_SCREENSHOTS ??
   "reports/sdlc/webapp-implementation/screenshots";
+function snapshotCount(page: import("@playwright/test").Page) {
+  return page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const open = indexedDB.open("tw.web.v1.snapshots", 1);
+        open.onupgradeneeded = () => open.result.createObjectStore("weather");
+        open.onsuccess = () => {
+          const count = open.result
+            .transaction("weather")
+            .objectStore("weather")
+            .count();
+          count.onsuccess = () => {
+            open.result.close();
+            resolve(count.result);
+          };
+        };
+      }),
+  );
+}
 async function seoul(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "서울", exact: true }).first().click();
@@ -110,13 +129,13 @@ test("offline shell uses matching snapshot and never labels it fresh", async ({
   context,
 }) => {
   await seoul(page);
-  await page.waitForTimeout(300);
+  await expect.poll(() => snapshotCount(page)).toBeGreaterThan(0);
   await page.unroute("https://todayweather.wizardfactory.net/**");
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator(".temperature")).toBeVisible();
   await expect(
-    page.getByText("저장된 자료", { exact: false }).first(),
+    page.getByText("연결하지 못해 저장된 자료를 표시합니다"),
   ).toBeVisible();
   await page.screenshot({ path: screenshots + "/offline.png", fullPage: true });
   await context.setOffline(false);
@@ -178,6 +197,7 @@ test("a superseded late geolocation never navigates or overwrites newer choices"
     .getByRole("combobox", { name: "기온", exact: true })
     .selectOption("F");
   await page.evaluate(() => (window as any).completeLocation());
+  // Asserting that nothing happens needs a short settle period.
   await page.waitForTimeout(500);
   // R30: picking Busan superseded the pending location request.
   await expect(page).toHaveURL(/\/settings$/);
@@ -194,7 +214,7 @@ for (const corruption of ["missing timestamp", "invalid hourly array"]) {
     context,
   }) => {
     await seoul(page);
-    await page.waitForTimeout(200);
+    await expect.poll(() => snapshotCount(page)).toBeGreaterThan(0);
     await page.evaluate(async (kind) => {
       await new Promise<void>((resolve, reject) => {
         const open = indexedDB.open("tw.web.v1.snapshots", 1);

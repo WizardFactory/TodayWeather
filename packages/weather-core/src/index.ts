@@ -54,7 +54,7 @@ export type Point = {
   visibility: number | null;
   precipitation: number | null;
   precipitationHours: number | null;
-  /** D45: KMA forecast amounts are hidden; observed and approximate (category lower bound) amounts are marked. */
+  /** How an amount was obtained: observed, in-progress observation, shortest category lower bound, or the server's KMA forecast (D45 tracks its accuracy). */
   precipitationBasis: "observed" | "partial" | "approx" | "forecast" | null;
   snowfall: number | null;
   snowfallHours: number | null;
@@ -609,7 +609,7 @@ export function normalizeNation(
   const raw = record(value);
   if (!Array.isArray(raw.weather) || !Array.isArray(raw.air))
     throw new Error("Invalid nationwide response");
-  // The BFF always requests canonical physical units; air standard comes from the query.
+  // The browser adapter always requests canonical physical units; the air standard comes from the query.
   const source = { ...DEFAULT_UNITS, airUnit: options.units.airUnit };
   return {
     mode: options.mode,
