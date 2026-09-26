@@ -573,7 +573,7 @@ KmaScraper.prototype._recursiveConvertGeoCode = function(addr, retryCount, callb
 };
 
 /**
- * Geocode an address through the product geocode API (the app's `/geocode/addr` endpoint).
+ * Geocode an address through the product geocode API (the app's `/geocode/v000903/addr` endpoint).
  * Fallback for new AWS stations when no Kakao key is configured on the gather host.
  * Accepts only a Korean location inside the national bounds.
  * @param {string} addr
@@ -581,7 +581,7 @@ KmaScraper.prototype._recursiveConvertGeoCode = function(addr, retryCount, callb
  * @private
  */
 KmaScraper.prototype._convertGeoCodeByApiServer = function (addr, callback) {
-    var url = config.apiServer.url + '/geocode/addr/' + encodeURIComponent(addr);
+    var url = config.apiServer.url + '/geocode/v000903/addr/' + encodeURIComponent(addr);
     req(url, {timeout: 10000, json: true}, function (err, response, body) {
         if (err) {
             return callback(err);
@@ -643,7 +643,7 @@ KmaScraper.prototype._saveStnInfo = function (stnWeatherInfo, callback) {
             var addr = stnWeatherInfo.addr.replace(/\(산간\)/g, '');
 
             // Geocoding tries Kakao first (needs KAKAO_SECRET_KEYS), then the product geocode
-            // API (API_SERVER/geocode/addr), which needs no provider key on the gather host.
+            // API (API_SERVER/geocode/v000903/addr), which needs no provider key on the gather host.
             // When both fail, skip the stnInfo row rather than aborting the whole hourly save:
             // the observation row is still useful, and the station is retried at the next hourly run.
             // convertGeocode may throw synchronously (JSON.parse of a missing key), so guard it.

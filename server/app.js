@@ -77,6 +77,10 @@ i18n.configure({
 
 app.use(cors());
 
+// Public /weather and /geocode routes (#2606); before the session middleware so
+// they never set cookies.
+app.use(require('./routes/gateway'));
+
 // Use the session middleware
 app.use(session({ secret: 'wizard factory',
                 resave: false,

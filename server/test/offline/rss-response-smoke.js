@@ -120,7 +120,7 @@ function createHarness(version, fixture, historyOptions = {}) {
       if(id==='mongoose' && historyOptions.db) return {connection:{db:historyOptions.db}};
       if(id==='dnscache')return ()=>({});
       if(id==='request')return (url,opts,cb)=>{
-        assert(url.startsWith('https://synthetic.invalid/geocode/coord/'));
+        assert(url.startsWith('https://synthetic.invalid/geocode/v000903/coord/'));
         cb(null,{statusCode:200},{kmaAddress:{name1:fixture.place.town.first,name2:fixture.place.town.second,name3:fixture.place.town.third}});
       };
       if(!id.startsWith('.'))return require(id);
