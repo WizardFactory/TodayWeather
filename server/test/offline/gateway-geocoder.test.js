@@ -61,6 +61,9 @@ function scriptedTransport(script) {
     };
 }
 
+// Stores documents the way MongoDB does: an undefined field becomes null.
+const mongoLike = v => JSON.parse(JSON.stringify(v, (k, val) => val === undefined ? null : val));
+
 function memoryCache(initial) {
     const store = new Map(Object.entries(initial || {}));
     const gets = [];
@@ -68,7 +71,7 @@ function memoryCache(initial) {
     return {
         store, gets, sets,
         get(key) { gets.push(key); return Promise.resolve(store.has(key) ? clone(store.get(key)) : null); },
-        set(key, doc) { sets.push(key); store.set(key, Object.assign({_id: key, updatedAt: new Date()}, clone(doc))); return Promise.resolve(); }
+        set(key, doc) { sets.push(key); store.set(key, Object.assign({_id: key, updatedAt: new Date()}, mongoLike(doc))); return Promise.resolve(); }
     };
 }
 
@@ -257,6 +260,34 @@ test('U-12 a cache hit equals the miss', async () => {
     assert.equal(hit.meta.cacheHit, true);
     assert.equal(JSON.stringify(hit), JSON.stringify(miss));
     assert.equal(transport.calls.length, 2, 'providers called only for the miss');
+});
+
+test('U-12 an address cache hit equals the miss, also without a country', async () => {
+    for (const fixture of ['google.addr.jamsil', 'google.addr.nocountry']) {
+        const cache = memoryCache();
+        const {geocoder, transport} = geocoderWith({google: [fixture]}, {cache});
+        const miss = await geocoder.addr('Somewhere', 'ko');
+        await miss.meta.write;
+        const hit = await geocoder.addr('Somewhere', 'ko');
+        assert.equal(hit.meta.cacheHit, true);
+        assert.equal(JSON.stringify(hit), JSON.stringify(miss), fixture);
+        assert.equal(transport.calls.length, 1);
+    }
+});
+
+test('U-17 response size caps: 1 MB by default, larger when requested (6 MB loopback)', async () => {
+    const transport = require(path.join(root, 'lib/geocoder/transport'));
+    const big = JSON.stringify({pad: 'x'.repeat(2 * 1024 * 1024)});
+    const server = http.createServer((req, res) => { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(big); });
+    await new Promise(r => server.listen(0, '127.0.0.1', r));
+    const url = 'http://127.0.0.1:' + server.address().port + '/';
+    try {
+        await assert.rejects(transport.getJson(url, {timeoutMs: 3000}), err => err.code === 'ETOOLARGE');
+        const res = await transport.getJson(url, {timeoutMs: 3000, maxBytes: 6 * 1024 * 1024});
+        assert.equal(res.status, 200);
+        assert.equal(res.body.pad.length, 2 * 1024 * 1024);
+    }
+    finally { server.close(); }
 });
 
 test('U-13 stale or invalid cache records are not used', async () => {

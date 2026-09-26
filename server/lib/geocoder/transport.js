@@ -9,16 +9,17 @@
 var http = require('http');
 var https = require('https');
 
-var MAX_BODY_BYTES = 1024 * 1024;
+var DEFAULT_MAX_BODY_BYTES = 1024 * 1024;
 
 /**
  * @param {string} url
- * @param {{headers?:Object, timeoutMs:number, agent?:Object, signal?:AbortSignal}} options
+ * @param {{headers?:Object, timeoutMs:number, agent?:Object, signal?:AbortSignal, maxBytes?:number}} options
  * @returns {Promise<{status:number, headers:Object, json:boolean, body:*, text:string}>}
  */
 function getJson(url, options) {
     return new Promise(function (resolve, reject) {
         var lib = url.indexOf('https:') === 0 ? https : http;
+        var maxBytes = options.maxBytes || DEFAULT_MAX_BODY_BYTES;
         var settled = false;
         var timer;
         var req;
@@ -27,6 +28,7 @@ function getJson(url, options) {
             if (settled) { return; }
             settled = true;
             clearTimeout(timer);
+            if (options.signal) { options.signal.removeEventListener('abort', onAbort); }
             if (req) { req.destroy(); }
             reject(err);
         }
@@ -54,7 +56,7 @@ function getJson(url, options) {
                 var size = 0;
                 res.on('data', function (chunk) {
                     size += chunk.length;
-                    if (size > MAX_BODY_BYTES) {
+                    if (size > maxBytes) {
                         var err = new Error('response too large');
                         err.code = 'ETOOLARGE';
                         return fail(err);

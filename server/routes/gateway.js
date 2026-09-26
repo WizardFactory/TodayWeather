@@ -22,6 +22,8 @@ var OWN_PATH = /^\/(?:weather|geocode)(?:\/|$)/;
 var WEATHER_MAX_AGE = 300;
 var GEOCODE_MAX_AGE = 2592000;
 var MAX_ADDRESS_LENGTH = 200;
+// The Lambda passed backend bodies through up to its 6 MB response limit.
+var LOOPBACK_MAX_BYTES = 6 * 1024 * 1024;
 var ERROR_TEXT = {400: 'Bad Request', 404: 'Not Found', 501: 'Not Implemented', 503: 'Service Unavailable'};
 
 function statusForError(err) {
@@ -70,7 +72,7 @@ function buildQuery(originalUrl) {
         return '';
     }
     var order = [];
-    var values = {};
+    var values = Object.create(null);
     originalUrl.slice(index + 1).split('&').forEach(function (pair) {
         if (!pair) { return; }
         var eq = pair.indexOf('=');
@@ -85,7 +87,7 @@ function buildQuery(originalUrl) {
         catch (e) {
             return;
         }
-        if (!Object.prototype.hasOwnProperty.call(values, key)) {
+        if (!(key in values)) {
             order.push(key);
         }
         values[key] = value;
@@ -120,7 +122,9 @@ function backendPath(version, geo) {
     return url + '/dsf/coord/' + geo.location.lat + ',' + geo.location.long;
 }
 
-var loopbackAgent = new http.Agent({keepAlive: true, maxSockets: 50});
+// Free sockets close before the server's 5 s keepAliveTimeout, so a reused socket is
+// unlikely to meet a server-side close (which would cost one of the three attempts).
+var loopbackAgent = new http.Agent({keepAlive: true, maxSockets: 50, timeout: 4000});
 
 /**
  * Default backend: this server's own port (any PM2 cluster worker may answer).
@@ -129,7 +133,7 @@ function defaultLoopback() {
     var config = require('../config/config');
     return function (path, headers, timeoutMs, signal) {
         return transport.getJson('http://' + config.ipAddress + ':' + config.port + path,
-            {headers: headers, timeoutMs: timeoutMs, agent: loopbackAgent, signal: signal});
+            {headers: headers, timeoutMs: timeoutMs, agent: loopbackAgent, signal: signal, maxBytes: LOOPBACK_MAX_BYTES});
     };
 }
 
@@ -226,7 +230,14 @@ function createGatewayRouter(deps) {
             }).then(function (result) {
                 if (ctx.expired) { return; }
                 clearTimeout(timer);
-                sendJson(res, result.body, result.maxAge);
+                try {
+                    sendJson(res, result.body, result.maxAge);
+                }
+                catch (err) {
+                    logger().warn('gateway ' + route + ' 501: ' + err.message);
+                    sendError(res, 501);
+                    return finishLog(501);
+                }
                 finishLog(200);
             }, function (err) {
                 if (ctx.expired) { return; }
@@ -316,7 +327,9 @@ function createGatewayRouter(deps) {
         });
     }
 
-    var router = express.Router();
+    // Case-sensitive like CloudFront's path patterns: other spellings keep reaching
+    // the legacy handlers, as today.
+    var router = express.Router({caseSensitive: true});
     router.get('/weather/coord/:loc', guarded('weather', weather(DEFAULT_WEATHER_VERSION)));
     router.get('/weather/:version(v000901|v000902|v000903)/coord/:loc', guarded('weather', weather()));
     router.get('/geocode/:version(v000903)/coord/:loc', guarded('geocode-coord', geocodeCoord));

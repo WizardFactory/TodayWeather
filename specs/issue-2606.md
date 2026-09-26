@@ -4,7 +4,7 @@
 - Facts: `reports/sdlc/issue-2606/investigation.md` (design-task evidence, not in the repository).
 - Test scenarios: [specs/issue-2606-test-scenarios.md](issue-2606-test-scenarios.md).
 - Issue: [#2606](https://github.com/WizardFactory/TodayWeather/issues/2606) and its [scope comment](https://github.com/WizardFactory/TodayWeather/issues/2606#issuecomment-5846716189).
-- Revision 12 (2026-09-27, implementation task `issue-2606-impl`): applies the round-11 LOW items carried from the design task, and routes the gateway log lines to stdout/stderr (§5.4).
+- Revision 12 (2026-09-27, implementation task `issue-2606-impl`): applies the round-11 LOW items carried from the design task, routes the gateway log lines to stdout/stderr (§5.4), and lists the multi-segment address deviation (§2.5).
 - Revision 11 (2026-09-26): AK decided to keep the Lambda's `Accept-Language` rule (§9); review round 10 LOWs applied.
 - Revision 10 (2026-09-26): language, `loc` parsing and backend retries now match the Lambda exactly; per-version parity uses the clients' real queries and headers; rollback checks use the Lambda-era baseline (review round 9).
 - Revision 9 (2026-09-26). This revision reduces the design to what the goal needs, as AK decided on 2026-09-26. Operational hardening from review rounds 1–8 moved to §9 (follow-ups). Internal callers change their URL only (option A). Per-version behavior is stated explicitly (§3.1). Earlier revisions and reviews are under `reports/sdlc/issue-2606/`.
@@ -74,6 +74,7 @@ None of these changes a successful response for real client requests within norm
 | Kakao address branch always failed | Works, output reduced to `{country, address, location}` | An answer where there was a 501 |
 | Backend retried on any error, including 4xx | 4xx is not retried; 9 s overall deadline | A 4xx gave 501 after 3 attempts and still gives 501 |
 | Backend redirects were followed | A 3xx → 501 | The only redirect in the chain (a town outside the Korea box → public `/weather/coord`) cannot occur for towns from the geocoder |
+| `{address}` was one path segment, so an address with a raw `/` failed at API Gateway | The rest of the path is the address | An error becomes an answer |
 | `OPTIONS` 200 from an API Gateway mock with a static `Access-Control-Allow-Headers`; `HEAD` failed | `OPTIONS` 204 from `cors()` (CloudFront does not forward `Access-Control-Request-Headers`, so no allow-headers list); `HEAD` like `GET` without body | Clients send only safelisted headers and no `OPTIONS` was seen in 30 days; clients do not send `HEAD` |
 | No `ETag` | Express adds `ETag` (304 possible) | Existing Express routes already do this |
 

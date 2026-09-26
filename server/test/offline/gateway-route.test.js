@@ -270,6 +270,14 @@ test('RT-8 excluded shapes return 404 without any call', async () => {
         }
         const post = await request(app.port, 'POST', '/weather/coord/1,2');
         assertErrorResponse(post, 404);
+        // Other spellings are not gateway paths (CloudFront patterns are case-sensitive).
+        for (const p of ['/WEATHER/coord/40.7128,-74.0060', '/Geocode/v000903/coord/1,2']) {
+            const res = await request(app.port, 'GET', p);
+            assert.equal(res.status, 404, p);
+            assert.match(res.headers['content-type'], /html/, p + ' reaches the legacy handlers');
+        }
+        // An unknown version spelling under /weather/ is an excluded shape.
+        assertErrorResponse(await request(app.port, 'GET', '/weather/V000903/coord/40.7128,-74.0060'), 404);
         assert.equal(state.geocoderCalls, 0);
         assert.equal(state.backendHits.length, 0);
     }

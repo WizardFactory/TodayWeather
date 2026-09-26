@@ -147,6 +147,10 @@ function createGeocoder(options) {
     }
 
     function write(meta, key, doc) {
+        // MongoDB stores an undefined field as null, which a later hit would return
+        // (e.g. `"country":null` for a Google address without a country). Store only
+        // the fields that are present, so a hit equals the miss.
+        doc.geoInfo = JSON.parse(JSON.stringify(doc.geoInfo));
         meta.write = cache.set(key, doc).catch(function (err) {
             log.warn('geocode cache write: ' + err.message);
         });
