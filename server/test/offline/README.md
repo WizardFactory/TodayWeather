@@ -223,3 +223,32 @@ TZ=UTC NODE_PATH=/tmp/tw-2587/node_modules node server/test/offline/riseset-uv-s
 ```
 
 Both run in the RSS offline workflow. Deployment to the gather host and the deployed response remain operator checks.
+
+## Load without provider credentials (#2589)
+
+`geo-keys.test.js` runs in `test:offline` and the RSS workflow. It loads the
+actual `geo.controller.js` in a VM with `kakao_keys`/`daum_keys` unset, not JSON,
+not an array or empty. The module must load, Kakao/Daum lookups must call back
+with a "key is not configured" error without a request, one warning is logged
+per setting (never the value) and `location2address` passes the error to
+`next`. Configured keys keep the same header, one attempt per key and the same
+KMA address.
+
+`credential-free-load-smoke.js` needs the locked service dependency tree on
+Node 16.20.2. It runs three key scenarios in fresh child processes, refuses
+outbound sockets, stubs the Mongo connect call, drops the log transport token and
+records warnings. It loads the real
+`controllerPush`, `alert.push.controller`, `geo.controller` and the service-mode
+app with no Firebase JSON or APNs files, checks the Kakao error, `/health` and
+that no Firebase app starts. The RSS workflow runs it in a Node 16.20.2 job.
+
+```sh
+mkdir -p /tmp/tw-2589-candidate
+cp server/package.json server/package-lock.json /tmp/tw-2589-candidate/
+npm ci --prefix /tmp/tw-2589-candidate --no-audit --no-fund
+NODE_PATH=/tmp/tw-2589-candidate/node_modules node server/test/offline/credential-free-load-smoke.js
+```
+
+Not covered: gather mode (`startManager()` still parses `airkorea_keys`,
+`daum_keys` and `kakao_keys`), real
+Kakao/Google requests and push delivery.
