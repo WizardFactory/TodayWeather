@@ -1926,6 +1926,80 @@ th {
     font-size: 12px;
   }
 }
+/* Native controls follow the theme; Safari otherwise draws light selects
+   with the dark theme's light text. */
+:root {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237b889e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  padding-right: 30px;
+}
+/* Notched phones and home-screen installs: keep content out of the unsafe
+   areas (all insets are 0 elsewhere). */
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.sidebar {
+  left: env(safe-area-inset-left);
+  padding-top: calc(32px + env(safe-area-inset-top));
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+.toast {
+  bottom: calc(25px + env(safe-area-inset-bottom));
+}
+/* Touch screens: 16px text keeps iOS Safari from zooming into a focused
+   field, and small icon controls get a 44px touch area. */
+@media (max-width: 680px), (pointer: coarse) {
+  input,
+  select,
+  textarea,
+  .search-field input,
+  .station-select select,
+  .setting-row select,
+  .setting-row input {
+    font-size: 16px;
+  }
+  .icon-button,
+  .sidebar-section-title a,
+  .location-card-actions a,
+  .air-summary .section-head a {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .sidebar-section-title a,
+  .location-card-actions a,
+  .air-summary .section-head a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .search-link,
+  .install-card button {
+    min-height: 44px;
+  }
+  /* Keep the three 44px actions on one row; the place name gives way. */
+  .weather-page-head > :first-child {
+    min-width: 0;
+  }
+  .weather-page-head .eyebrow {
+    max-width: 100%;
+  }
+  .weather-page-head .button-row {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    gap: 4px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *:before,

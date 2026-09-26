@@ -944,33 +944,36 @@ function PlacePreview({ place }: { place: Place }) {
     </span>
   );
 }
+// Marker centres in the 500x670 map. Markers are 68x44 (weather adds an icon
+// above-right); the cities of one view and the provinces of the other must
+// not overlap.
 const mapPositions: Record<string, [number, number]> = {
-  서울: [155, 145],
-  인천: [104, 164],
+  서울: [150, 138],
+  인천: [70, 182],
   수원: [178, 194],
   춘천: [242, 116],
   강릉: [336, 174],
-  대전: [203, 285],
+  대전: [210, 318],
   청주: [245, 236],
-  전주: [172, 371],
-  광주: [141, 455],
+  전주: [160, 384],
+  광주: [150, 446],
   대구: [321, 341],
   포항: [400, 296],
-  울산: [395, 397],
-  부산: [343, 451],
-  목포: [80, 502],
-  여수: [220, 485],
-  안동: [315, 255],
+  울산: [398, 400],
+  부산: [350, 470],
+  목포: [72, 506],
+  여수: [222, 494],
+  안동: [322, 262],
   제주: [88, 604],
   강원: [278, 146],
-  경기: [174, 189],
-  충북: [254, 242],
-  충남: [135, 285],
+  경기: [176, 196],
+  충북: [262, 236],
+  충남: [100, 290],
   경북: [344, 287],
-  경남: [285, 448],
+  경남: [270, 452],
   전북: [143, 371],
-  전남: [124, 478],
-  세종: [180, 248],
+  전남: [112, 506],
+  세종: [178, 262],
 };
 function NationPage() {
   const { kind } = useParams(),
@@ -1102,11 +1105,14 @@ function NationPage() {
                     stroke="var(--line)"
                   />
                   {rows.map((r, i) => {
-                    const pos =
-                      mapPositions[r.name] ??
-                      Object.entries(mapPositions).find(([key]) =>
-                        r.name.startsWith(key),
-                      )?.[1];
+                    // Short names ("서울특별시" -> "서울") fit the marker.
+                    const key =
+                      r.name in mapPositions
+                        ? r.name
+                        : Object.keys(mapPositions).find((k) =>
+                            r.name.startsWith(k),
+                          );
+                    const pos = key ? mapPositions[key] : undefined;
                     return pos ? (
                       <g
                         key={r.name + i}
@@ -1133,7 +1139,7 @@ function NationPage() {
                           </g>
                         )}
                         <text textAnchor="middle" y="-4" className="map-name">
-                          {r.name.slice(0, 3)}
+                          {key}
                         </text>
                         <text textAnchor="middle" y="13" className="map-value">
                           {r.value}

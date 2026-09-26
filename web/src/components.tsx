@@ -228,6 +228,8 @@ export function DataNotice({
     </>
   );
 }
+/** Smallest horizontal distance between chart points, in SVG units. */
+const CHART_MIN_GAP = 52;
 export const hourLabel = (at: string) =>
   at.slice(11, 13) + ":" + at.slice(14, 16);
 export function TemperatureChart({
@@ -247,14 +249,21 @@ export function TemperatureChart({
       .filter((v): v is number => v !== null);
   if (!data.length || !temps.length)
     return <Empty title="시간별 예보가 없습니다" />;
-  const low = Math.min(...temps) - 3,
-    range = Math.max(...temps) - low + 4,
-    width = Math.max(720, data.length * 68),
-    height = 220;
-  // Rows mix 1-hour and 3-hour steps; position by time, not by index.
+  // Rows mix 1-hour and 3-hour steps; position by time, not by index, but
+  // keep the closest points far enough apart that hour labels never touch.
   const minutes = (p: Point) => Date.parse(p.at + ":00Z") / 60000,
     start = minutes(data[0]),
-    span = Math.max(minutes(data[data.length - 1]) - start, 1);
+    span = Math.max(minutes(data[data.length - 1]) - start, 1),
+    step = Math.min(
+      ...data.slice(1).map((p, i) => minutes(p) - minutes(data[i])),
+      span,
+    );
+  const low = Math.min(...temps) - 3,
+    range = Math.max(...temps) - low + 4,
+    width = Math.ceil(
+      Math.max(720, data.length * 68, 76 + (span * CHART_MIN_GAP) / step),
+    ),
+    height = 220;
   const x = (i: number) =>
       data.length > 1
         ? 38 + ((minutes(data[i]) - start) * (width - 76)) / span
