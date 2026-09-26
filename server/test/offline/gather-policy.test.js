@@ -12,9 +12,9 @@ const vm = require('vm');
 const root = path.resolve(__dirname, '../..');
 const gather = require('../../config/gather');
 
-// Values observed on the production gather host (issue #2588).
+// Values observed on the production gather host (issue #2588; town retry per the #2604 hotfix).
 const PRODUCTION_ENV = {
-    GATHER_TOWN_RETRY: '180',
+    GATHER_TOWN_RETRY: '10',
     GATHER_INVALID_CURRENT_RETRY: '40',
     GATHER_MID_RETRY: '2',
     GATHER_RETRY_DELAY_MS: '50',
@@ -88,7 +88,7 @@ test('unset environment reproduces master literals', () => {
 test('production environment yields the host policy', () => {
     const p = gather.load(PRODUCTION_ENV);
     assert.deepStrictEqual(p.retry, {
-        townShort: 180, townShortest: 180, townCurrent: 180, invalidCurrent: 40,
+        townShort: 10, townShortest: 10, townCurrent: 10, invalidCurrent: 40,
         midForecast: 2, midLand: 2, midTemp: 2, midSea: 2
     });
     assert.strictEqual(p.retryDelayMs, 50);
@@ -168,9 +168,9 @@ test('persistent failure retries exactly the configured count with the configure
     assert.deepStrictEqual([...new Set(base.delays)], [0]);
     assert.match(base.result.message, /retryCount is zero/);
     const prod = runRecursive(gather.load(PRODUCTION_ENV));
-    assert.strictEqual(prod.requests, 180);
+    assert.strictEqual(prod.requests, 10);
     // One timer per failed pass, including the pass that then hits the zero-count stop.
-    assert.strictEqual(prod.delays.length, 180);
+    assert.strictEqual(prod.delays.length, 10);
     assert.deepStrictEqual([...new Set(prod.delays)], [50]);
 });
 

@@ -8,7 +8,7 @@ With no variable set, behaviour equals master before #2588.
 
 | Variable | Controls | Default (master) | Production (host) | Accepted |
 | --- | --- | --- | --- | --- |
-| `GATHER_TOWN_RETRY` | `_recursiveRequestData` passes for `TOWN_SHORT`, `TOWN_SHORTEST`, `TOWN_CURRENT` | `70` | `180` | integer ≥ 1 |
+| `GATHER_TOWN_RETRY` | `_recursiveRequestData` passes for `TOWN_SHORT`, `TOWN_SHORTEST`, `TOWN_CURRENT` | `70` | `10` (temporary; `180` before 2026-09-26) | integer ≥ 1 |
 | `GATHER_INVALID_CURRENT_RETRY` | passes for the invalid-T1H current update (`updateInvalidT1hData`) | `50` | `40` | integer ≥ 1 |
 | `GATHER_MID_RETRY` | passes for `MID_FORECAST`, `MID_LAND`, `MID_TEMP` (both call sites), `MID_SEA` | `70` | `2` | integer ≥ 1 |
 | `GATHER_RETRY_DELAY_MS` | `setTimeout` delay before each failed-list and invalid-list retry pass | `0` | `50` | integer ≥ 0 |
@@ -33,10 +33,10 @@ The consumers require `config/gather.js` directly rather than a `config.gather` 
 
 ## Production settings
 
-These values come from the issue's host-versus-master inventory. This change did not re-inspect the gather host. Recheck them against the host source before relying on them.
+These values come from the issue's host-versus-master inventory. The town retry reflects the 2026-09-26 quota hotfix in [#2604](https://github.com/WizardFactory/TodayWeather/issues/2604), which lowered the host literal from 180 to 10 as a temporary measure. This change did not re-inspect the gather host. Recheck the values against the host source before relying on them.
 
 ```sh
-GATHER_TOWN_RETRY=180
+GATHER_TOWN_RETRY=10
 GATHER_INVALID_CURRENT_RETRY=40
 GATHER_MID_RETRY=2
 GATHER_RETRY_DELAY_MS=50
@@ -66,3 +66,5 @@ The [gather source reconciliation](../architecture/gather-source-reconciliation.
 - The startup `checkTimeAndRequestTask(true)` disabled.
 
 The host `lib/collectTownForecast.js` also has smaller request-index cutoffs (`i > 20`, `i >= 50`), and other files carry log-level edits. These need a separate decision before the host can run master source unchanged.
+
+The 2026-09-26 quota hotfix ([#2604](https://github.com/WizardFactory/TodayWeather/issues/2604)) is also host-only. It adds quota detection in `collectTownForecast.js` `_requestPage` and an early return in `_recursiveRequestData`. Replacing the host `controllerManager.js` or `collectTownForecast.js` with master before #2604 lands in master removes that protection and restores the per-grid retry storm on a quota day.
