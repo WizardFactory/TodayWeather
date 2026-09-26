@@ -144,7 +144,7 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         assert(down.err, 'nothing stored for New York');
         await pause(100);
         const lock = await lockModel.findById('-74.01,40.71').lean();
-        assert(lock && lock.failed === true && lock.expireAt.getTime() - now <= 2000, 'backoff: failed flag, 2 s');
+        assert(lock && lock.failed === true && lock.expireAt.getTime() - now <= 2000 && lock.expireAt.getTime() - now >= 1900, 'backoff: failed flag, 2 s');
         const marker = await lockModel.findById('~provider').lean();
         assert(marker && marker.expireAt.getTime() - now > 9 * 60000, 'provider marked down for 10 min');
         const before = calls.length;
@@ -152,7 +152,12 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         const tokyo = await get(A, '35.68,139.76');
         assert.ifError(tokyo.err, 'stale Tokyo current (1 h 1 min old) served while the provider is down');
         assert.equal(calls.length, before, 'no provider call while marked down');
-        checks.push('backoff', 'provider marker', 'stale fallback');
+        // A waiter behind a live lock is served the stored stale Tokyo records.
+        await lockModel.create({_id: '139.76,35.68', expireAt: new RealDate(now + 60000)});
+        const staleWaiter = await get(loadController(), '35.68,139.76', {waitMs: 200, pollMs: 50});
+        assert.ifError(staleWaiter.err, 'waiter served stale data');
+        await lockModel.deleteOne({_id: '139.76,35.68'});
+        checks.push('backoff', 'provider marker', 'stale fallback', 'stale waiter');
 
         const evidence = {createdAt: new RealDate().toISOString(), mongoose: require('mongoose/package.json').version,
             server: (await mongoose.connection.db.admin().serverInfo()).version, outcome: 'passed', checks, providerCalls: calls,

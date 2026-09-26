@@ -25,9 +25,10 @@ function syntheticTimeline(zone, firstDay, days, options) {
     options = options || {};
     const local = localParts(zone);
     const offsetAt = epoch => { const l = local(epoch); return (Date.parse(l.date + 'T' + String(l.hour).padStart(2, '0') + ':' + String(l.minute).padStart(2, '0') + ':00Z') / 1000 - epoch) / 3600; };
-    // First local midnight of firstDay: scan quarter hours (covers +5:45 and +12:45 zones).
+    // Start of firstDay: the first quarter hour on that local date (covers +5:45 and +12:45 zones, and
+    // days whose 00:00 is skipped by a daylight-saving change, such as America/Santiago).
     let epoch = Date.parse(firstDay + 'T00:00:00Z') / 1000 - 15 * 3600;
-    while (!(local(epoch).date === firstDay && local(epoch).hour === 0 && local(epoch).minute === 0)) epoch += 900;
+    while (local(epoch).date !== firstDay) epoch += 900;
     const nowSec = Math.floor((options.now || epoch * 1000) / 1000);
     const byDay = new Map();
     for (; byDay.size <= days; epoch += 3600) {

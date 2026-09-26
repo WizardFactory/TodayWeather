@@ -48,7 +48,7 @@ npm ci && npm test && npm run typecheck   # repository root: weather-core + web
 
 - **Blast radius:** every overseas response (apps, widgets, web, push) and a new Mongo collection. Korean (KMA) paths are untouched.
 - **Rollback:** revert the commit. No data migration; the old Dark Sky path would fail again.
-- **Deployment (human-owned):** set `VC_SECRET_KEY` on the service host, deploy the server, then ship the apps and web.
+- **Deployment (human-owned):** set `VC_SECRET_KEY` on the service host; reconcile the host's hand-edited `server/config/config.js` with the new `vc` and `keyString.vc_key` entries (otherwise the key is not read); deploy the server; check AC10 (`/v000903/dsf/coord/35.68,139.76` returns 200 with `"source":"VC"`); then ship the apps and web.
 
 ## Risk review
 

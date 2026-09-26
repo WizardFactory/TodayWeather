@@ -17,6 +17,10 @@ const kmaTimeLib = require('../../lib/kmaTimeLib');
 
 // Lock-collection document that marks the provider unavailable (daily limit, rejected key, budget).
 const PROVIDER_KEY = '~provider';
+// Lock-collection documents, per location, after a billed `combined` call returned no local yesterday.
+const NO_YESTERDAY_PREFIX = '~noyesterday:';
+// Per worker: last fetch made without the lock (lock store unavailable), by location.
+const unlockedFetches = {};
 
 if(!VcRequester.isValidKey(config.keyString && config.keyString.vc_key) && typeof log !== 'undefined'){
     log.error('cDsf > VC_SECRET_KEY is not configured; overseas weather requests will fail');
@@ -44,6 +48,8 @@ class DsfController {
         // One Visual Crossing fetch per location across workers; others wait for its records.
         this.lockTtlMs = 10 * 1000;
         this.failureBackoffMs = 2 * 1000;
+        this.badResponseBackoffMs = 15 * 60 * 1000;  // a billed (HTTP 200) body that cannot be used
+        this.unlockedFetchMs = 15 * 60 * 1000;       // per worker and location, while the lock store fails
         this.waitMs = 2500;         // within the gateway Lambda's 3 s per-attempt budget
         this.pollMs = 250;
         this.responseMs = 2500;     // answer the request within the gateway's attempt ...
@@ -368,14 +374,18 @@ class DsfController {
                     let recordDay = this._localDay(item.dateObj, item.timeOffset);
                     let midnight = this._isLocalMidnight(item);
                     let age = cDate.getTime() - new Date(item.dateObj).getTime();
+                    // After a daylight-saving fall-back, two midnight records share a local day (old and
+                    // new offset): the most recently fetched one wins.
                     if(midnight && recordDay === yesterday){
                         // Visual Crossing yesterday records hold the whole local day. An hour missing on a
                         // daylight-saving change is left to the merge step instead of forcing a refetch.
-                        if(ret['yesterday'] === undefined && this._fetchedAfterDayEnd(item, today, nowOffset)){
+                        if(this._fetchedAfterDayEnd(item, today, nowOffset) && this._newer(item, ret['yesterday'])){
                             ret['yesterday'] = item;
                         }
-                    }else if(ret['today'] === undefined && midnight && recordDay === today){
-                        ret['today'] = item;
+                    }else if(midnight && recordDay === today){
+                        if(this._newer(item, ret['today'])){
+                            ret['today'] = item;
+                        }
                     }else if(age >= 0 && age <= 15 * 60 * 1000 && this._localDay(item.dateObj, nowOffset) === today){
                         ret['current'] = item;  // sorted by dateObj: the newest wins
                     }else if(age >= 0 && age <= this.staleMs){
@@ -414,6 +424,10 @@ class DsfController {
             }
         }
         return item.timeOffset;
+    }
+
+    _newer(item, than){
+        return !than || new Date(item.pubDate).getTime() >= new Date(than.pubDate).getTime() || !isFinite(new Date(than.pubDate).getTime());
     }
 
     // Local calendar date ("YYYY-MM-DD") of a time at a UTC offset in minutes.
@@ -824,8 +838,8 @@ class DsfController {
      * most one provider attempt per location runs per failureBackoffMs.
      * @private
      */
-    _backOff(key, token){
-        vcFetchLock.updateOne({_id: key, expireAt: token}, {$set: {expireAt: new Date(Date.now() + this.failureBackoffMs), failed: true}}, (err)=>{
+    _backOff(key, token, ms){
+        vcFetchLock.updateOne({_id: key, expireAt: token}, {$set: {expireAt: new Date(Date.now() + ms), failed: true}}, (err)=>{
             if(err){
                 log.warn('cDsf > Fail to shorten VC fetch lock', this._logKey(key), err.message);
             }
@@ -894,8 +908,34 @@ class DsfController {
         });
     }
 
-    _hasAll(output){
-        return !!(output.yesterday && output.today && output.current);
+    _hasAll(output, noYesterday){
+        return !!((output.yesterday || noYesterday) && output.today && output.current);
+    }
+
+    /**
+     * Whether a billed `combined` call for this location already returned no local yesterday today:
+     * then the location is served without yesterday and refreshed with `forecast` (#2585).
+     * @private
+     */
+    _noYesterday(key, output, callback){
+        if(output.yesterday){
+            return callback(false);
+        }
+        vcFetchLock.findById(NO_YESTERDAY_PREFIX + key, (err, marker)=>{
+            return callback(!err && !!marker && new Date(marker.expireAt).getTime() > Date.now());
+        });
+    }
+
+    _markNoYesterday(key, records){
+        // Until the next local midnight (today's record is stored at local midnight).
+        let expireAt = new Date(records.today ? new Date(records.today.dateObj).getTime() + 24 * 60 * 60 * 1000
+            : Date.now() + this.badResponseBackoffMs);
+        log.error('cDsf > VC combined response without the local yesterday; serving without it until ' + expireAt.toISOString(), this._logKey(key));
+        vcFetchLock.updateOne({_id: NO_YESTERDAY_PREFIX + key}, {$set: {expireAt: expireAt, failed: false}}, {upsert: true}, (err)=>{
+            if(err){
+                log.warn('cDsf > Fail to store the no-yesterday marker', this._logKey(key), err.message);
+            }
+        });
     }
 
     _merge(output, found){
@@ -995,15 +1035,25 @@ class DsfController {
             return callback(null, output);
         }
 
-        this._checkProvider(output.yesterday ? 'forecast' : 'combined', (unavailable)=>{
+        let key = this._lockKey(geo);
+        this._noYesterday(key, output, (noYesterday)=>{
+        if(this._hasAll(output, noYesterday)){
+            return callback(null, output);
+        }
+        let range = (output.yesterday || noYesterday) ? 'forecast' : 'combined';
+        this._checkProvider(range, (unavailable)=>{
             if(unavailable){
                 return this._fallback(output, unavailable, callback);
             }
-            let key = this._lockKey(geo);
             this._acquireLock(key, (err, token)=>{
                 if(err){
-                    // Lock store unavailable: fetch without the lock rather than fail the request.
+                    // Lock store unavailable: fetch without the lock rather than fail the request, at most
+                    // once per location and worker per unlockedFetchMs (the records may not be stored either).
                     log.warn('cDsf > VC fetch lock unavailable', this._logKey(key), err.message);
+                    if(unlockedFetches[key] > Date.now() - this.unlockedFetchMs){
+                        return this._fallback(output, new Error('cDsf > VC fetch lock unavailable; recent unlocked fetch'), callback);
+                    }
+                    unlockedFetches[key] = Date.now();
                 }
                 else if(!token){
                     log.info('cDsf > VC fetch in progress elsewhere, waiting for', this._logKey(key));
@@ -1015,7 +1065,7 @@ class DsfController {
                     if(!findErr){
                         this._merge(output, found);
                     }
-                    if(this._hasAll(output)){
+                    if(this._hasAll(output, noYesterday)){
                         if(token){
                             this._releaseLock(key, token);
                         }
@@ -1040,17 +1090,21 @@ class DsfController {
                     }, Math.max(0, cDate.getTime() + this.responseMs - Date.now()));
 
                     let records = {};
-                    this._fetchVc(geo, cDate, output.yesterday ? 'forecast' : 'combined', records, (err, meta)=>{
+                    this._fetchVc(geo, cDate, range, records, (err, meta)=>{
                         this._recordUsage(meta, err);
                         if(err){
                             if(token){
-                                this._backOff(key, token);
+                                // A billed body that cannot be used would fail the same way again.
+                                this._backOff(key, token, meta && meta.status === 200 ? this.badResponseBackoffMs : this.failureBackoffMs);
                             }
                             if(err.providerDown){
                                 this._markProviderDown(err);
                             }
                             log.error('cDsf > VC fetch failed; backing off', this._logKey(key), err.message);
                             return respond(err);
+                        }
+                        if(range === 'combined' && !records.yesterday){
+                            this._markNoYesterday(key, records);
                         }
                         if(token){
                             this._releaseLock(key, token);
@@ -1062,6 +1116,7 @@ class DsfController {
                     });
                 });
             });
+        });
         });
     }
 

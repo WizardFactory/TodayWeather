@@ -103,6 +103,7 @@ function createHarness(bodyFor) {
         providerCalls.push({range: params.range, lat: params.lat, lon: params.lon});
         if (bodyFor) {
             const body = bodyFor(params);
+            if (body instanceof Error) return setImmediate(() => cb(body, undefined, {status: body.statusCode || 0, cost: 0, ms: 1}));
             return setImmediate(() => cb(null, body, {status: 200, cost: body.queryCost, ms: 1}));
         }
         const place = places.find(p => p.lat === Number(params.lat) && p.lon === Number(params.lon));
@@ -216,18 +217,20 @@ function checkBody(body, place, label, units, raw, opts) {
     assert.equal(body.source, 'VC', label + ': source');
     assert(body.pubDate && body.pubDate.VC, label + ': pubDate.VC');
     assert.equal(body.pubDate.DSF, undefined, label + ': no pubDate.DSF');
-    assert.doesNotMatch(JSON.stringify(body), /"DSF"/, label + ': no DSF token in the response');
+    assert(!/"DSF"/.test(JSON.stringify(body)), label + ': no DSF token in the response');
     assert.equal(body.timezone.timezoneId, place.zone, label + ': zone');
     assert.equal(body.timezone.min, place.offset, label + ': offset');
     assert.equal(body.thisTime.length, 2, label + ': yesterday + current');
     const [yesterday, current] = body.thisTime;
-    const nowHour = localHourString(now, place.offset);
+    // A stale fallback's current row is the stored fetch time, not the request time.
+    const currentAt = opts.currentAt || now;
+    const nowHour = localHourString(currentAt, place.offset);
     const stamp = t => raw ? t.date : t.dateObj;
     assert.equal(stamp(current).slice(0, 13), nowHour.slice(0, 13), label + ': current at request hour (local)');
     if (!raw) assert.equal(current.date, nowHour.slice(0, 10).replace(/\./g, ''), label + ': current local date');
     // Known limitation (N2): on the day after a DST change the fixed display offset can hide the
     // yesterday row for the first local hour; those steps check the rest of the body.
-    if (!opts.skipYesterdayHour) assert.equal(stamp(yesterday), localHourString(now - 86400000, place.offset), label + ': yesterday same hour');
+    if (!opts.skipYesterdayHour) assert.equal(stamp(yesterday), localHourString(currentAt - 86400000, place.offset), label + ': yesterday same hour');
     const tempOf = t => raw ? (units === 'F' ? t.temp_f : t.temp_c) : t.t1h;
     for (const t of opts.skipYesterdayHour ? [current] : [yesterday, current]) {
         const temp = tempOf(t), humidity = raw ? t.humid : t.reh;
@@ -239,14 +242,15 @@ function checkBody(body, place, label, units, raw, opts) {
     // Only the current entry gets a sky icon (mergeDsfCurrentDataNewForm); yesterday never had one.
     assert.equal(typeof current.skyIcon, 'string', label + ': current sky icon');
     if (!raw) assert.equal(typeof current.summary, 'string', label + ': summary');
-    assert(body.hourly.length >= 20, label + ': hourly rows ' + body.hourly.length);
-    assert(body.daily.length >= 9, label + ': daily rows ' + body.daily.length);
+    if (process.env.VC_SMOKE_DEBUG) console.error(label, 'hourly', body.hourly.map(h => h.date + (h.time !== undefined ? ' ' + h.time : '')).join(','), 'daily', body.daily.map(d => d.date).join(','));
+    assert(body.hourly.length >= (opts.minHourly || 20), label + ': hourly rows ' + body.hourly.length);
+    assert(body.daily.length >= (opts.minDaily || 9), label + ': daily rows ' + body.daily.length);
     for (const d of body.daily) {
         const max = raw ? d.tempMax_c : d.tmx, min = raw ? d.tempMin_c : d.tmn;
         assert(typeof max === 'number' && typeof min === 'number' && max >= min, label + ': daily max/min ' + d.date);
         for (const k of ['sunrise', 'sunset']) {
             if (opts.polar) assert.equal(d[k], undefined, label + ': no ' + k + ' on a polar day');
-            else assert.match(String(d[k]), /^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}$/, label + ': ' + k + ' ' + d.date);
+            else assert(/^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}$/.test(String(d[k])), label + ': ' + k + ' ' + d[k] + ' ' + d.date);
         }
     }
     assert.equal(body.units.temperatureUnit, units);
@@ -283,9 +287,13 @@ function syntheticProvider(zone, options) {
 
 async function runScenario(output, name, zone, lat, lon, steps, options) {
     options = options || {};
-    const h = createHarness(syntheticProvider(zone, options.body));
+    const provider = syntheticProvider(zone, options.body);
+    // Steps with `fail` see a provider error (stale fallback through the routers).
+    let failing = false;
+    const h = createHarness(params => failing ? Object.assign(new Error('VC> HTTP 500: synthetic outage'), {statusCode: 500}) : provider(params));
     for (const step of steps) {
         now = Date.parse(step.at);
+        failing = !!step.fail;
         const place = {name, lat, lon, zone, offset: zoneOffset(zone, now)};
         const before = h.providerCalls.length;
         const bodies = {};
@@ -293,7 +301,8 @@ async function runScenario(output, name, zone, lat, lon, steps, options) {
             const label = name + ' ' + step.at + ' ' + kind;
             const body = bodies[kind] = await h.request(kind, place, {temperatureUnit: units, windSpeedUnit: 'm/s'});
             if (process.env.VC_SMOKE_DEBUG) console.error(label, JSON.stringify({calls: h.providerCalls.slice(before).map(c => c.range), daily: body.daily.map(d => d.date), thisTime: body.thisTime.map(t => t.dateObj), tz: body.timezone}));
-            checkBody(body, place, label, units, kind === 'ww', {skipYesterdayHour: step.skipYesterdayHour, polar: options.polar});
+            checkBody(body, place, label, units, kind === 'ww', {skipYesterdayHour: step.skipYesterdayHour, polar: options.polar,
+                currentAt: step.fail && step.staleFrom ? Date.parse(step.staleFrom) : undefined, minHourly: step.minHourly, minDaily: step.minDaily});
         }
         const calls = h.providerCalls.slice(before).map(c => c.range);
         if (step.calls) assert.deepEqual(calls, step.calls, name + ' ' + step.at + ': provider calls');
@@ -366,6 +375,31 @@ async function syntheticScenarios(output) {
     }}});
     // T9: no currentConditions in the body.
     await runScenario(output, 'Missing currentConditions', ...berlin, one, {body: {current: false}});
+    // R3-T4: provider outage 1 h after a fetch, and across local midnight: stored data through all routers.
+    const staleCheck = fetchedAt => b => {
+        for (const kind of ['v000903', 'v000901', 'ww']) {
+            assert.equal(b[kind].source, 'VC', kind + ' source');
+            assert.equal(new RealDate(b[kind].pubDate.VC).toISOString(), fetchedAt, kind + ' pubDate.VC is the stored fetch time');
+        }
+    };
+    await runScenario(output, 'Stale fallback', ...berlin, [
+        {at: '2026-09-26T07:04:30Z', calls: ['combined']},
+        {at: '2026-09-26T08:04:30Z', fail: true, staleFrom: '2026-09-26T07:04:30Z', calls: ['forecast'], kinds: [['v000903', 'C'], ['v000901', 'F'], ['ww', 'C']], check: staleCheck('2026-09-26T07:04:30.000Z')},
+        {at: '2026-09-26T21:50:00Z', calls: ['forecast']},
+        // Across local midnight the stale records still describe 09-26 (documented): the response keeps
+        // the hours from local midnight on (16 three-hour rows) and 8 daily rows.
+        {at: '2026-09-26T22:30:00Z', fail: true, staleFrom: '2026-09-26T21:50:00Z', minHourly: 16, minDaily: 8, calls: ['combined'], skipYesterdayHour: true, kinds: [['v000903', 'C'], ['v000901', 'F'], ['ww', 'C']], check: staleCheck('2026-09-26T21:50:00.000Z')},
+        {at: '2026-09-26T22:40:00Z', calls: ['combined'], skipYesterdayHour: true}
+    ]);
+    // R3-T10: America/Santiago's 2026-09-06 has no local 00:00 (00:00 -04 → 01:00 -03).
+    await runScenario(output, 'Santiago DST start', 'America/Santiago', -33.45, -70.67, [
+        {at: '2026-09-05T12:00:00Z', calls: ['combined']},
+        {at: '2026-09-06T04:30:00Z', calls: ['combined'], skipYesterdayHour: true},
+        {at: '2026-09-06T04:40:00Z', calls: [], skipYesterdayHour: true},
+        {at: '2026-09-06T15:00:00Z', calls: ['forecast'], kinds: [['v000903', 'C'], ['v000901', 'F'], ['ww', 'C']]},
+        {at: '2026-09-07T03:30:00Z', calls: ['combined'], skipYesterdayHour: true},
+        {at: '2026-09-07T04:00:00Z', calls: ['forecast']}
+    ]);
     // T3: polar day: no sunrise or sunset.
     now = Date.parse('2026-06-21T12:00:00Z');
     await runScenario(output, 'Polar day', 'Arctic/Longyearbyen', 78.22, 15.65,
@@ -380,7 +414,7 @@ function checkConsumers(h, bodies) {
     assert.equal(ny.thisTime[1].wsd, parseFloat((cur.windspeed * 0.44704).toFixed(2)), 'wind m/s from mph');
     assert.equal(ny.thisTime[1].reh, Math.round(cur.humidity), 'humidity percent');
     for (const [key, pattern] of [['tokyo-v000903', /^[a-z_]+$/], ['tokyo-v000901', /^[A-Z][A-Za-z]*$/], ['tokyo-ww', /^[A-Z][A-Za-z]*$/]]) {
-        assert.match(bodies[key].thisTime[1].skyIcon, pattern, key + ' sky icon case');
+        assert(pattern.test(bodies[key].thisTime[1].skyIcon), key + ' sky icon case ' + bodies[key].thisTime[1].skyIcon);
     }
     const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
     const Units = {getUnit: k => units[k], convertUnits: (a, b, v) => v, getDefaultUnits: () => Object.assign({}, units)};

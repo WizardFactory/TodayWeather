@@ -183,7 +183,12 @@ function localDateString(epochSec, offsetHours) {
  * @returns {{timezone: string, offsetMin: number, yesterday: Object=, today: Object, current: Object}}
  */
 function toDarkSkyDocs(vc, now) {
-    const nowSec = Math.floor(now.getTime() / 1000);
+    let nowSec = Math.floor(now.getTime() / 1000);
+    const first = (vc.days || [])[0];
+    if (first && first.datetimeEpoch > nowSec && first.datetimeEpoch - nowSec <= 5 * 60) {
+        // Visual Crossing evaluated "today" just after the local midnight that `now` precedes.
+        nowSec = first.datetimeEpoch;
+    }
     const offset = offsetAt(vc, nowSec);
     const todayStr = localDateString(nowSec, offset);
     const todayStart = Date.parse(todayStr + 'T00:00:00Z') / 1000 - offset * HOUR_SEC;

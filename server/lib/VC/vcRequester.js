@@ -40,7 +40,8 @@ function logCoordinate(value) {
 
 class VcRequester {
     /**
-     * @param {{timeoutMs?: number, retryDelayMs?: number, retryWindowMs?: number}} [options]
+     * @param {{timeoutMs?: number, retryDelayMs?: number, retryJitterMs?: number, retryWindowMs?: number,
+     *          random?: function(): number}} [options]
      */
     constructor(options) {
         options = options || {};
@@ -48,6 +49,9 @@ class VcRequester {
         this.timeoutMs = options.timeoutMs || 2500;
         this.retryDelayMs = options.retryDelayMs === undefined ? 300 : options.retryDelayMs;
         this.retryWindowMs = options.retryWindowMs === undefined ? 1500 : options.retryWindowMs;
+        // Random extra delay: push/alert bursts that collide on the Free plan's single slot spread out.
+        this.retryJitterMs = options.retryJitterMs === undefined ? this.retryDelayMs : options.retryJitterMs;
+        this.random = options.random || Math.random;
     }
 
     static isValidKey(key) {
@@ -148,7 +152,8 @@ class VcRequester {
         const attempt = (retried) => {
             this._get(url, key, deadline - Date.now(), (err, status, body) => {
                 const ms = Date.now() - started;
-                const timeLeft = deadline - Date.now() > this.retryDelayMs;
+                const delay = this.retryDelayMs + Math.floor(this.random() * this.retryJitterMs);
+                const timeLeft = deadline - Date.now() > delay;
                 // Retry once: a concurrency 429 (not the daily limit) or a reset keep-alive socket.
                 const concurrency = !err && status === 429 && CONCURRENCY_429.test(String(body));
                 const reset = err && RESET_CODES.indexOf(err.code) >= 0;
@@ -157,10 +162,10 @@ class VcRequester {
                 }
                 if (!retried && timeLeft && ((concurrency && ms < this.retryWindowMs) || reset)) {
                     log.warn('VC> ' + where + ' ' + (reset ? err.code : 'status=429') + ' retrying once');
-                    return setTimeout(() => attempt(true), this.retryDelayMs);
+                    return setTimeout(() => attempt(true), delay);
                 }
                 if (!err && status >= 400) {
-                    err = new Error('VC> HTTP ' + status + ': ' + VcRequester._scrub(String(body).slice(0, 120), key));
+                    err = new Error('VC> HTTP ' + status + ': ' + VcRequester._scrub(String(body), key).slice(0, 120));
                     err.statusCode = status;
                     err.providerDown = status === 401 || status === 403 ||
                         (status === 429 && !concurrency && LIMIT_429.test(String(body)));
@@ -174,8 +179,10 @@ class VcRequester {
                         err = new Error('VC> invalid JSON (' + String(body).length + ' bytes)');
                     }
                 }
+                // tzoffset is only a fallback: the converter takes the offset from the hour rows.
                 if (!err && !(result && Array.isArray(result.days) && result.days.length > 0 &&
-                        typeof result.timezone === 'string' && typeof result.tzoffset === 'number')) {
+                        typeof result.timezone === 'string' &&
+                        (typeof result.tzoffset === 'number' || Array.isArray(result.days[0].hours) && result.days[0].hours.length > 0))) {
                     err = new Error('VC> unexpected body');
                 }
                 const meta = {status: status || 0, cost: result ? result.queryCost : 0, ms: ms, retried: retried, http429: http429};
