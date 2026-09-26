@@ -5194,11 +5194,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="dsf" data-edge-to="store" data-edge-label="read yesterday · today · current ≤15 min" data-edge-key="3" data-edge-id="read-dsf">
+        <g data-edge-from="dsf" data-edge-to="store" data-edge-label="read ≤3 d: yesterday · today · current ≤15 min · stale ≤3 h" data-edge-key="3" data-edge-id="read-dsf">
           <path data-composition-edge-from="dsf" data-composition-edge-to="store" data-composition-edge-id="read-dsf" data-composition-points="473.7,244;796.9,244" d="M 473.7 244 L 796.9 244" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="525.3" y="224" width="220" height="16" rx="3" class="c-mask"/>
-          <text x="635.3" y="234" class="t-backend" font-size="9" text-anchor="middle">read yesterday · today · current ≤15 min</text>
+          <rect x="475.9" y="224" width="318.8" height="16" rx="3" class="c-mask"/>
+          <text x="635.3" y="234" class="t-backend" font-size="9" text-anchor="middle">read ≤3 d: yesterday · today · current ≤15 min · stale ≤3 h</text>
         </g>
         </g>
 
@@ -5210,44 +5210,45 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="dsf" data-edge-to="store" data-edge-label="record missing → take location lock (TTL 10 s)" data-edge-key="5" data-edge-id="lock">
-          <path data-composition-edge-from="dsf" data-composition-edge-to="store" data-composition-edge-id="lock" data-composition-points="473.7,300;796.9,300" d="M 473.7 300 L 796.9 300" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-edge-from="dsf" data-edge-to="store" data-edge-label="provider marker / daily budget → skip call, serve stored" data-edge-key="5" data-edge-id="check">
+          <path data-composition-edge-from="dsf" data-composition-edge-to="store" data-composition-edge-id="check" data-composition-points="473.7,300;796.9,300" d="M 473.7 300 L 796.9 300" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="509.69999999999993" y="280" width="251.20000000000002" height="16" rx="3" class="c-mask"/>
-          <text x="635.3" y="290" class="t-backend" font-size="9" text-anchor="middle">record missing → take location lock (TTL 10 s)</text>
+          <rect x="483.69999999999993" y="280" width="303.2" height="16" rx="3" class="c-mask"/>
+          <text x="635.3" y="290" class="t-backend" font-size="9" text-anchor="middle">provider marker / daily budget → skip call, serve stored</text>
         </g>
-        <text data-detail="fine" x="485.7" y="318" class="t-dim" font-size="7">lock held by another worker → re-read records every 250 ms for ≤2.5 s instead of fetching</text>
+        <text data-detail="fine" x="485.7" y="318" class="t-dim" font-size="7">marker set for 10 min after a daily-limit 429 or 401/403</text>
         </g>
 
-        <g data-edge-from="dsf" data-edge-to="provider" data-edge-label="no yesterday → yesterday/next7days (25 records)" data-edge-key="6" data-edge-id="fill-combined">
-          <path data-composition-edge-from="dsf" data-composition-edge-to="provider" data-composition-edge-id="fill-combined" data-composition-points="473.7,328;965.5,328" d="M 473.7 328 L 965.5 328" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-edge-from="dsf" data-edge-to="store" data-edge-label="record missing → take location lock (TTL 10 s)" data-edge-key="6" data-edge-id="lock">
+          <path data-composition-edge-from="dsf" data-composition-edge-to="store" data-composition-edge-id="lock" data-composition-points="473.7,328;796.9,328" d="M 473.7 328 L 796.9 328" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="591.4000000000001" y="308" width="256.4" height="16" rx="3" class="c-mask"/>
-          <text x="719.6000000000001" y="318" class="t-backend" font-size="9" text-anchor="middle">no yesterday → yesterday/next7days (25 records)</text>
+          <rect x="509.69999999999993" y="308" width="251.20000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="635.3" y="318" class="t-backend" font-size="9" text-anchor="middle">record missing → take location lock (TTL 10 s)</text>
+        </g>
+        <text data-detail="fine" x="485.7" y="346" class="t-dim" font-size="7">held elsewhere → re-read every 250 ms ≤2.5 s; stop at once if the holder flags failed</text>
+        </g>
+
+        <g data-edge-from="dsf" data-edge-to="provider" data-edge-label="no observed yesterday → combined (25) · else forecast (1), ≤8 s" data-edge-key="7" data-edge-id="fill">
+          <path data-composition-edge-from="dsf" data-composition-edge-to="provider" data-composition-edge-id="fill" data-composition-points="473.7,356;965.5,356" d="M 473.7 356 L 965.5 356" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="549.8" y="336" width="339.6" height="16" rx="3" class="c-mask"/>
+          <text x="719.5999999999999" y="346" class="t-backend" font-size="9" text-anchor="middle">no observed yesterday → combined (25) · else forecast (1), ≤8 s</text>
         </g>
         </g>
 
-        <g data-edge-from="dsf" data-edge-to="provider" data-edge-label="yesterday stored → today/next7days (1 record)" data-edge-key="7" data-edge-id="fill-forecast">
-          <path data-composition-edge-from="dsf" data-composition-edge-to="provider" data-composition-edge-id="fill-forecast" data-composition-points="473.7,356;965.5,356" d="M 473.7 356 L 965.5 356" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <g data-detail="context">
-          <rect x="596.6" y="336" width="246" height="16" rx="3" class="c-mask"/>
-          <text x="719.6" y="346" class="t-backend" font-size="9" text-anchor="middle">yesterday stored → today/next7days (1 record)</text>
-        </g>
-        </g>
-
-        <g data-edge-from="dsf" data-edge-to="store" data-edge-label="upsert yesterday · today · current, release lock" data-edge-key="8" data-edge-id="write-dsf">
+        <g data-edge-from="dsf" data-edge-to="store" data-edge-label="upsert yesterday · today · current, release lock, count usage" data-edge-key="8" data-edge-id="write-dsf">
           <path data-composition-edge-from="dsf" data-composition-edge-to="store" data-composition-edge-id="write-dsf" data-composition-points="473.7,384;796.9,384" d="M 473.7 384 L 796.9 384" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="504.49999999999994" y="364" width="261.6" height="16" rx="3" class="c-mask"/>
-          <text x="635.3" y="374" class="t-backend" font-size="9" text-anchor="middle">upsert yesterday · today · current, release lock</text>
+          <rect x="470.69999999999993" y="364" width="329.2" height="16" rx="3" class="c-mask"/>
+          <text x="635.3" y="374" class="t-backend" font-size="9" text-anchor="middle">upsert yesterday · today · current, release lock, count usage</text>
         </g>
         </g>
 
-        <g data-edge-from="dsf" data-edge-to="assembly" data-edge-label="weather records" data-edge-key="9" data-edge-id="return-dsf">
+        <g data-edge-from="dsf" data-edge-to="assembly" data-edge-label="records within 2.5 s (late fetch still stored)" data-edge-key="9" data-edge-id="return-dsf">
           <path data-composition-edge-from="dsf" data-composition-edge-to="assembly" data-composition-edge-id="return-dsf" data-composition-points="459.7,412;305.1,412" d="M 459.7 412 L 305.1 412" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="337.4" y="392" width="90" height="16" rx="3" class="c-mask"/>
-          <text x="382.4" y="402" class="t-muted" font-size="9" text-anchor="middle">weather records</text>
+          <rect x="256.79999999999995" y="392" width="251.20000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="382.4" y="402" class="t-muted" font-size="9" text-anchor="middle">records within 2.5 s (late fetch still stored)</text>
         </g>
         </g>
 
@@ -5259,13 +5260,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="dsf" data-edge-to="assembly" data-edge-label="no current after fetch/wait → next(err) → 500" data-edge-key="11" data-edge-id="error-dsf">
+        <g data-edge-from="dsf" data-edge-to="assembly" data-edge-label="no current, no stale → next(err) → 500" data-edge-key="11" data-edge-id="error-dsf">
           <path data-composition-edge-from="dsf" data-composition-edge-to="assembly" data-composition-edge-id="error-dsf" data-composition-points="459.7,468;305.1,468" d="M 459.7 468 L 305.1 468" class="a-dashed" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
         <g data-detail="context">
-          <rect x="259.4" y="448" width="246" height="16" rx="3" class="c-mask"/>
-          <text x="382.4" y="458" class="t-messagebus" font-size="9" text-anchor="middle">no current after fetch/wait → next(err) → 500</text>
+          <rect x="277.59999999999997" y="448" width="209.6" height="16" rx="3" class="c-mask"/>
+          <text x="382.4" y="458" class="t-messagebus" font-size="9" text-anchor="middle">no current, no stale → next(err) → 500</text>
         </g>
-        <text data-detail="fine" x="317.1" y="486" class="t-dim" font-size="7">stored current + today are returned without yesterday when only the fetch fails</text>
+        <text data-detail="fine" x="317.1" y="486" class="t-dim" font-size="7">fetch failure: lock flagged failed, 2 s backoff; stored current ≤3 h is served instead when present</text>
         </g>
 
         <g data-edge-from="aqi" data-edge-to="store" data-edge-label="persist fetched air" data-edge-key="12" data-edge-id="write-aqi">
@@ -5343,8 +5344,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text data-detail="context" x="635.3" y="111" class="t-muted" font-size="7" text-anchor="middle">60-minute freshness</text>
         </g>
 
-        <g id="node-store" data-node-id="store" data-node-label="MongoDB" tabindex="0" role="button" aria-label="Focus MongoDB, weather, air, fetch lock, Sequence participant" aria-pressed="false" data-node-kind="database" data-node-sublabel="weather, air, fetch lock" data-node-context="Sequence participant">
-          <title>MongoDB · weather, air, fetch lock · Sequence participant</title>
+        <g id="node-store" data-node-id="store" data-node-label="MongoDB" tabindex="0" role="button" aria-label="Focus MongoDB, weather, air, lock, usage, Sequence participant" aria-pressed="false" data-node-kind="database" data-node-sublabel="weather, air, lock, usage" data-node-context="Sequence participant">
+          <title>MongoDB · weather, air, lock, usage · Sequence participant</title>
           <rect x="736.4" y="72" width="135" height="54" rx="6" class="c-mask"/>
           <rect x="736.4" y="72" width="135" height="54" rx="6" class="c-database" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(742.4 78) scale(0.6875)">
@@ -5352,7 +5353,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="803.9" y="94" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">MongoDB</text>
-          <text data-detail="context" x="803.9" y="111" class="t-muted" font-size="7" text-anchor="middle">weather, air, fetch lock</text>
+          <text data-detail="context" x="803.9" y="111" class="t-muted" font-size="7" text-anchor="middle">weather, air, lock, usage</text>
         </g>
 
         <g id="node-provider" data-node-id="provider" data-node-label="Providers" tabindex="0" role="button" aria-label="Focus Providers, Visual Crossing / WAQI, Sequence participant" aria-pressed="false" data-node-kind="external" data-node-sublabel="Visual Crossing / WAQI" data-node-context="Sequence participant">

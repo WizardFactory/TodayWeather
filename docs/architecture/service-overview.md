@@ -62,7 +62,7 @@ Sources: [URL builder](../../client/www/js/service.weatherutil.js), [placeholder
 | --- | --- |
 | Domestic current, short, shortest | Legacy grid documents use `mCoord={mx,my}`, `pubDate`, and time-series arrays with sentinel values; `DB_DATA_VERSION=2.0` selects newer KMA controllers on supported reads |
 | Domestic medium range, RSS, station and air products | Separate product models, region/forecast-zone/station relationships, then read-time merge |
-| Overseas weather (`DsfForecast`) | Geographic `geo=[longitude,latitude]`, provider timestamps, time offset, Dark Sky-format current/hourly/daily objects converted from Visual Crossing; upsert by `geo` + `dateObj`; `vc.fetch.locks` holds short per-location fetch locks |
+| Overseas weather (`DsfForecast`) | Geographic `geo=[longitude,latitude]`, provider timestamps, time offset, Dark Sky-format current/hourly/daily objects converted from Visual Crossing; upsert by `geo` + `dateObj`; `vc.fetch.locks` holds short per-location fetch locks and a provider-down marker; `vc.usage` holds daily provider-call counters |
 | AQI | Geographic/station data with an independent freshness check and pruning |
 | Client state | In-memory cities plus JSON localStorage; Cordova app preferences mirror data for native sharing |
 | Push | Device registrations/settings persisted on the server; push processes request weather and send notifications |

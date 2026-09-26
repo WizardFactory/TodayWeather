@@ -35,7 +35,7 @@ jobs:
         run: >-
           npm install --prefix "$RUNNER_TEMP/rss-smoke"
           --ignore-scripts --no-audit --no-fund
-          async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2
+          async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3
       - name: History and runtime compatibility checks
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
@@ -81,3 +81,52 @@ jobs:
         run: |
           node server/test/offline/vc-weather.test.js
           node server/test/offline/vc-weather-smoke.js
+          TZ=Asia/Seoul node server/test/offline/vc-weather.test.js
+          TZ=Asia/Seoul node server/test/offline/vc-weather-smoke.js
+          node server/test/offline/vc-node10-check.js
+
+  vc-node10:
+    # The service host runs Node 10.15.3 (docs/architecture/ec2-internals.md).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '10.15.3'
+          package-manager-cache: false
+      - name: Install isolated dependency
+        run: npm install --prefix "$RUNNER_TEMP/vc-node10" --ignore-scripts --no-audit --no-fund --no-package-lock async@2.5.0
+      - name: Visual Crossing path on Node 10.15.3
+        env:
+          NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
+        run: node server/test/offline/vc-node10-check.js
+
+  vc-lock-mongo:
+    # Real mongod through mongodb-memory-server. mongoose 5.13 (5.x API): the service's 5.1.2
+    # driver cannot connect to the mongod versions available on hosted runners.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22.22.2'
+          package-manager-cache: false
+      - name: Install isolated dependencies
+        run: >-
+          npm install --prefix "$RUNNER_TEMP/vc-mongo"
+          --ignore-scripts --no-audit --no-fund --package-lock=false
+          mongoose@5.13.22 async@2.5.0 mongodb-memory-server-core@10.1.4
+      - name: Fetch lock and records on a real mongod
+        env:
+          NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules
+        run: node server/test/offline/vc-lock-mongo-smoke.js

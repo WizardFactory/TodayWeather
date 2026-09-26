@@ -56,7 +56,7 @@
       "id": "store",
       "type": "database",
       "label": "MongoDB",
-      "sublabel": "weather, air, fetch lock"
+      "sublabel": "weather, air, lock, usage"
     },
     {
       "id": "provider",
@@ -94,7 +94,7 @@
       "from": "dsf",
       "to": "store",
       "y": 244,
-      "label": "read yesterday \u00b7 today \u00b7 current \u226415 min"
+      "label": "read \u22643 d: yesterday \u00b7 today \u00b7 current \u226415 min \u00b7 stale \u22643 h"
     },
     {
       "id": "read-aqi",
@@ -104,40 +104,41 @@
       "label": "prune + read air records"
     },
     {
-      "id": "lock",
+      "id": "check",
       "from": "dsf",
       "to": "store",
       "y": 300,
-      "label": "record missing \u2192 take location lock (TTL 10 s)",
-      "note": "lock held by another worker \u2192 re-read records every 250 ms for \u22642.5 s instead of fetching"
+      "label": "provider marker / daily budget \u2192 skip call, serve stored",
+      "note": "marker set for 10 min after a daily-limit 429 or 401/403"
     },
     {
-      "id": "fill-combined",
+      "id": "lock",
       "from": "dsf",
-      "to": "provider",
+      "to": "store",
       "y": 328,
-      "label": "no yesterday \u2192 yesterday/next7days (25 records)"
+      "label": "record missing \u2192 take location lock (TTL 10 s)",
+      "note": "held elsewhere \u2192 re-read every 250 ms \u22642.5 s; stop at once if the holder flags failed"
     },
     {
-      "id": "fill-forecast",
+      "id": "fill",
       "from": "dsf",
       "to": "provider",
       "y": 356,
-      "label": "yesterday stored \u2192 today/next7days (1 record)"
+      "label": "no observed yesterday \u2192 combined (25) \u00b7 else forecast (1), \u22648 s"
     },
     {
       "id": "write-dsf",
       "from": "dsf",
       "to": "store",
       "y": 384,
-      "label": "upsert yesterday \u00b7 today \u00b7 current, release lock"
+      "label": "upsert yesterday \u00b7 today \u00b7 current, release lock, count usage"
     },
     {
       "id": "return-dsf",
       "from": "dsf",
       "to": "assembly",
       "y": 412,
-      "label": "weather records",
+      "label": "records within 2.5 s (late fetch still stored)",
       "variant": "return"
     },
     {
@@ -152,9 +153,9 @@
       "from": "dsf",
       "to": "assembly",
       "y": 468,
-      "label": "no current after fetch/wait \u2192 next(err) \u2192 500",
+      "label": "no current, no stale \u2192 next(err) \u2192 500",
       "variant": "dashed",
-      "note": "stored current + today are returned without yesterday when only the fetch fails"
+      "note": "fetch failure: lock flagged failed, 2 s backoff; stored current \u22643 h is served instead when present"
     },
     {
       "id": "write-aqi",

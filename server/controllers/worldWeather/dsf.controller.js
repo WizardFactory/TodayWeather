@@ -10,19 +10,47 @@ const async = require('async');
 const config = require('../../config/config');
 const dsfModel = require('../../models/worldWeather/dsf.model');
 const vcFetchLock = require('../../models/worldWeather/vc.fetch.lock.model');
+const vcUsage = require('../../models/worldWeather/vc.usage.model');
 const VcRequester = require('../../lib/VC/vcRequester');
 const vcConverter = require('../../lib/VC/vcConverter');
 const kmaTimeLib = require('../../lib/kmaTimeLib');
 
+// Lock-collection document that marks the provider unavailable (daily limit, rejected key, budget).
+const PROVIDER_KEY = '~provider';
+
+if(!VcRequester.isValidKey(config.keyString && config.keyString.vc_key) && typeof log !== 'undefined'){
+    log.error('cDsf > VC_SECRET_KEY is not configured; overseas weather requests will fail');
+}
+
+const zoneFormats = {};
+/**
+ * UTC offset in minutes of an IANA zone at `ms` (Intl; verified on the Node 10.15.3 service runtime).
+ */
+function zoneOffsetMinutes(zone, ms){
+    let fmt = zoneFormats[zone];
+    if(!fmt){
+        fmt = zoneFormats[zone] = new Intl.DateTimeFormat('en-US', {timeZone: zone, hour12: false, year: 'numeric',
+            month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'});
+    }
+    let p = {};
+    fmt.formatToParts(new Date(ms)).forEach((x)=>{ p[x.type] = x.value; });
+    let local = Date.UTC(+p.year, +p.month - 1, +p.day, p.hour === '24' ? 0 : +p.hour, +p.minute, +p.second);
+    return Math.round((local - Math.floor(ms / 1000) * 1000) / 60000);
+}
 
 class DsfController {
     constructor(){
         this._interval = 1 * 24 * 60 * 60 * 1000; // 1 day
         // One Visual Crossing fetch per location across workers; others wait for its records.
         this.lockTtlMs = 10 * 1000;
-        this.failureBackoffMs = 2 * 1000;   // expires before the gateway's next attempt (3 s timeout)
-        this.waitMs = 2500;     // within the gateway Lambda's 3 s per-attempt budget
+        this.failureBackoffMs = 2 * 1000;
+        this.waitMs = 2500;         // within the gateway Lambda's 3 s per-attempt budget
         this.pollMs = 250;
+        this.responseMs = 2500;     // answer the request within the gateway's attempt ...
+        this.fetchTimeoutMs = 8000; // ... while the holder keeps fetching (under lockTtlMs) and stores the result
+        this.staleMs = 3 * 60 * 60 * 1000;          // on provider failure serve a current record up to 3 h old
+        this.providerDownMs = 10 * 60 * 1000;       // skip calls after a daily-limit 429 or a rejected key
+        this.readWindowMs = 3 * 24 * 60 * 60 * 1000;
     }
 
     _has(obj, key){
@@ -310,11 +338,12 @@ class DsfController {
             return callback(err, {});
         }
 
+        // Records older than the read window cannot be yesterday, today, current or stale.
         let query = {
-            geo: geo
+            geo: geo,
+            dateObj: {$gte: new Date(cDate.getTime() - this.readWindowMs)}
         };
 
-        // Not sure which one is better whether to query once for three data or to query three times for each time data.
         this._findDB(query, {dateObj:1}, (err, list)=>{
             if(err){
                 err.message += 'cDsf > fail to get DSF data from DB';
@@ -322,34 +351,76 @@ class DsfController {
                 return callback(err, {});
             }
 
-            if(list.length < 3){
-                log.info('cDsf > There are few datas : ', list.length);
-            }
-
             let ret = {};
-            try{
-                list.forEach((item)=>{
-                    // Visual Crossing yesterday records hold the whole local day (#2585). An hour missing
-                    // on a daylight-saving change is left to the merge step instead of forcing a refetch.
-                    if(ret['yesterday'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
-                        if(this._fetchedAfterDayEnd(item, cDate)){
+            list.forEach((item)=>{
+                try{
+                    // Days are compared as local dates: a record's own day uses the offset it was stored
+                    // with, "today" uses the offset in effect now. Across a daylight-saving change the
+                    // stored midnights are an hour off the new offset's day boundaries (#2585).
+                    let nowOffset = this._offsetAt(item, cDate);
+                    let today = this._localDay(cDate, nowOffset);
+                    let yesterday = this._previousDay(today);
+                    let recordDay = this._localDay(item.dateObj, item.timeOffset);
+                    let midnight = this._isLocalMidnight(item);
+                    let age = cDate.getTime() - new Date(item.dateObj).getTime();
+                    if(midnight && recordDay === yesterday){
+                        // Visual Crossing yesterday records hold the whole local day. An hour missing on a
+                        // daylight-saving change is left to the merge step instead of forcing a refetch.
+                        if(ret['yesterday'] === undefined && this._fetchedAfterDayEnd(item, today, nowOffset)){
                             ret['yesterday'] = item;
                         }
-                    }else if(ret['today'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'today')){
+                    }else if(ret['today'] === undefined && midnight && recordDay === today){
                         ret['today'] = item;
-                    }else if(ret['current'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 15)){
+                    }else if(ret['current'] === undefined && age >= 0 && age <= 15 * 60 * 1000 &&
+                            this._localDay(item.dateObj, nowOffset) === today){
                         ret['current'] = item;
+                    }else if(age >= 0 && age <= this.staleMs){
+                        ret['stale'] = item;    // sorted by dateObj: the newest wins
                     }
-                });
-            }catch(e){
-                log.error(e);
-                return callback(e);
-            }
+                }catch(e){
+                    log.warn('cDsf > skip malformed record', e.message);
+                }
+            });
 
             log.debug('_findFromDB', JSON.stringify(ret));
-            // Outside the try: an exception in the caller must not call back twice.
             return callback(null, ret);
         });
+    }
+
+    /**
+     * UTC offset (minutes) at cDate for a stored record: from its IANA zone (address.country), else
+     * the offset stored at fetch time.
+     * @private
+     */
+    _offsetAt(item, cDate){
+        let zone = item.address && item.address.country;
+        if(zone){
+            try{
+                return zoneOffsetMinutes(zone, cDate.getTime());
+            }catch(e){
+                // Unknown zone name: use the stored offset.
+            }
+        }
+        return item.timeOffset;
+    }
+
+    // Local calendar date ("YYYY-MM-DD") of a time at a UTC offset in minutes.
+    _localDay(date, offsetMin){
+        let ms = new Date(date).getTime();
+        if(!isFinite(ms) || typeof offsetMin !== 'number'){
+            throw new Error('invalid record time');
+        }
+        return new Date(ms + offsetMin * 60 * 1000).toISOString().slice(0, 10);
+    }
+
+    _previousDay(day){
+        return new Date(Date.parse(day + 'T00:00:00Z') - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    }
+
+    // Yesterday/today records are stored at local midnight (their own offset); current records at fetch time.
+    _isLocalMidnight(item){
+        let local = new Date(new Date(item.dateObj).getTime() + item.timeOffset * 60 * 1000);
+        return local.getUTCHours() === 0 && local.getUTCMinutes() === 0 && local.getUTCSeconds() === 0;
     }
 
     /**
@@ -357,12 +428,12 @@ class DsfController {
      * the day's last "today" refresh still has forecasts for its later hours (#2585).
      * @private
      */
-    _fetchedAfterDayEnd(item, cDate){
+    _fetchedAfterDayEnd(item, today, nowOffset){
         if(!item.pubDate){
             return false;
         }
-        let todayStart = this._getSpecificDate(cDate, item.timeOffset, 'today');
-        return new Date(item.pubDate).getTime() + item.timeOffset * 60 * 1000 >= todayStart.getTime();
+        let todayStart = Date.parse(today + 'T00:00:00Z') - nowOffset * 60 * 1000;
+        return new Date(item.pubDate).getTime() >= todayStart;
     }
 
     _findFromDB(geo, cDate, callback){
@@ -474,6 +545,11 @@ class DsfController {
         return date;
     }
 
+    // null for a missing time (polar day, no hourly rows): no Invalid Date and no Mongo default.
+    _makeDateOrNull(time){
+        return (time === undefined || time === null) ? null : this._makeDate(time + '000');
+    }
+
     _parseData(src){
         let result = {
             current: {},
@@ -559,24 +635,24 @@ class DsfController {
                 dailyData.dateObj = this._makeDate(item.time + '000');
                 dailyData.date = parseInt(kmaTimeLib.convertDatetoString(item.time + '000'));
                 dailyData.summary = item.summary;
-                dailyData.sunrise = this._makeDate(item.sunriseTime + '000');
-                dailyData.sunset = this._makeDate(item.sunsetTime + '000');
+                dailyData.sunrise = this._makeDateOrNull(item.sunriseTime);
+                dailyData.sunset = this._makeDateOrNull(item.sunsetTime);
                 dailyData.moonphase = this._getFloatItem(item.moonPhase);
                 dailyData.pre_int = this._getFloatItem(item.precipIntensity);
                 dailyData.pre_intmax = this._getFloatItem(item.precipIntensityMax);
-                dailyData.pre_intmaxt = this._makeDate(item.precipIntensityMaxTime + '000');
+                dailyData.pre_intmaxt = this._makeDateOrNull(item.precipIntensityMaxTime);
                 dailyData.pre_pro = this._getFloatItem(item.precipProbability);
                 if(item.precipType){
                     dailyData.pre_type = item.precipType;
                 }
                 dailyData.temp_min = this._getFloatItem(item.temperatureMin);
-                dailyData.temp_mint = this._makeDate(item.temperatureMinTime + '000');
+                dailyData.temp_mint = this._makeDateOrNull(item.temperatureMinTime);
                 dailyData.temp_max = this._getFloatItem(item.temperatureMax);
-                dailyData.temp_maxt = this._makeDate(item.temperatureMaxTime + '000');
+                dailyData.temp_maxt = this._makeDateOrNull(item.temperatureMaxTime);
                 dailyData.ftemp_min = this._getFloatItem(item.apparentTemperatureMin);
-                dailyData.ftemp_mint = this._makeDate(item.apparentTemperatureMinTime + '000');
+                dailyData.ftemp_mint = this._makeDateOrNull(item.apparentTemperatureMinTime);
                 dailyData.ftemp_max = this._getFloatItem(item.apparentTemperatureMax);
-                dailyData.ftemp_maxt = this._makeDate(item.apparentTemperatureMaxTime + '000');
+                dailyData.ftemp_maxt = this._makeDateOrNull(item.apparentTemperatureMaxTime);
                 dailyData.humid = this._getFloatItem(item.humidity);
                 dailyData.windspd = this._getFloatItem(item.windSpeed);
                 dailyData.winddir = this._getFloatItem(item.windBearing);
@@ -677,6 +753,16 @@ class DsfController {
         return Number(geo[0]) + ',' + Number(geo[1]);
     }
 
+    // Location in log lines, rounded to 2 decimals (about 1 km): less location data in logs.
+    _logKey(key){
+        return String(key).split(',').map((v)=>Number(v).toFixed(2)).join(',');
+    }
+
+    // Request time for re-reads: records stored by another worker carry that worker's (later) time.
+    _now(cDate){
+        return new Date(Math.max(cDate.getTime(), Date.now()));
+    }
+
     /**
      * @param {string} key location key
      * @param {function(Error, Date=)} callback owner token (the lock's expireAt) when this worker holds the lock
@@ -693,12 +779,12 @@ class DsfController {
                 return callback(err);
             }
             // Take over a lock whose holder did not release it before expireAt.
-            vcFetchLock.findOneAndUpdate({_id: key, expireAt: {$lt: new Date(now)}}, {$set: {expireAt: expireAt}}, {new: true}, (err, doc)=>{
+            vcFetchLock.findOneAndUpdate({_id: key, expireAt: {$lt: new Date(now)}}, {$set: {expireAt: expireAt, failed: false}}, {new: true}, (err, doc)=>{
                 if(err){
                     return callback(err);
                 }
                 if(doc){
-                    log.warn('cDsf > took over an expired VC fetch lock', key);
+                    log.warn('cDsf > took over an expired VC fetch lock', this._logKey(key));
                 }
                 return callback(null, doc ? expireAt : undefined);
             });
@@ -709,20 +795,77 @@ class DsfController {
         // Delete only our own lock: a holder that outlived expireAt may have been taken over.
         vcFetchLock.deleteOne({_id: key, expireAt: token}, (err)=>{
             if(err){
-                log.warn('cDsf > Fail to release VC fetch lock', key, err.message);
+                log.warn('cDsf > Fail to release VC fetch lock', this._logKey(key), err.message);
             }
         });
     }
 
     /**
-     * After a failed fetch keep the lock only briefly: waiters cannot see the failure, and the
-     * gateway retries after 3 s, which should be able to fetch again.
+     * After a failed fetch keep the lock briefly and flag it: waiters stop waiting at once, and at
+     * most one provider attempt per location runs per failureBackoffMs.
      * @private
      */
     _backOff(key, token){
-        vcFetchLock.updateOne({_id: key, expireAt: token}, {$set: {expireAt: new Date(Date.now() + this.failureBackoffMs)}}, (err)=>{
+        vcFetchLock.updateOne({_id: key, expireAt: token}, {$set: {expireAt: new Date(Date.now() + this.failureBackoffMs), failed: true}}, (err)=>{
             if(err){
-                log.warn('cDsf > Fail to shorten VC fetch lock', key, err.message);
+                log.warn('cDsf > Fail to shorten VC fetch lock', this._logKey(key), err.message);
+            }
+        });
+    }
+
+    _usageDay(){
+        return new Date().toISOString().slice(0, 10);
+    }
+
+    /**
+     * Provider calls are skipped while the provider is marked down or the daily record budget
+     * (config.vc.dailyRecordLimit, 0 = none) would be exceeded.
+     * @param {string} range 'combined' (25 records) or 'forecast' (1 record)
+     * @param {function(Error=)} callback error when no call should be made
+     * @private
+     */
+    _checkProvider(range, callback){
+        vcFetchLock.findById(PROVIDER_KEY, (err, marker)=>{
+            if(!err && marker && new Date(marker.expireAt).getTime() > Date.now()){
+                return callback(new Error('cDsf > Visual Crossing marked unavailable until ' + new Date(marker.expireAt).toISOString()));
+            }
+            let limit = config.vc && config.vc.dailyRecordLimit;
+            if(!limit){
+                return callback();
+            }
+            vcUsage.findById(this._usageDay(), (err, usage)=>{
+                let cost = range === 'combined' ? 25 : 1;
+                if(!err && usage && usage.records + cost > limit){
+                    return callback(new Error('cDsf > daily Visual Crossing record budget reached (' + usage.records + '/' + limit + ')'));
+                }
+                return callback();
+            });
+        });
+    }
+
+    _markProviderDown(err){
+        let expireAt = new Date(Date.now() + this.providerDownMs);
+        log.error('cDsf > Visual Crossing marked unavailable until ' + expireAt.toISOString() + ': ' + err.message);
+        vcFetchLock.updateOne({_id: PROVIDER_KEY}, {$set: {expireAt: expireAt, failed: true}}, {upsert: true}, (err)=>{
+            if(err){
+                log.warn('cDsf > Fail to mark Visual Crossing unavailable', err.message);
+            }
+        });
+    }
+
+    /**
+     * Daily usage counters (vc.usage), for cost control: production logs show only errors.
+     * @private
+     */
+    _recordUsage(meta, err){
+        if(!meta){
+            return;     // no network request (for example a missing key)
+        }
+        let inc = {calls: 1, records: meta.cost || 0, failures: err ? 1 : 0, http429: meta.status === 429 ? 1 : 0,
+            slow: meta.ms > this.responseMs ? 1 : 0};
+        vcUsage.updateOne({_id: this._usageDay()}, {$inc: inc}, {upsert: true}, (err)=>{
+            if(err){
+                log.warn('cDsf > Fail to record Visual Crossing usage', err.message);
             }
         });
     }
@@ -732,7 +875,7 @@ class DsfController {
     }
 
     _merge(output, found){
-        ['yesterday', 'today', 'current'].forEach((name)=>{
+        ['yesterday', 'today', 'current', 'stale'].forEach((name)=>{
             if(found && found[name]){
                 output[name] = found[name];
             }
@@ -741,23 +884,42 @@ class DsfController {
     }
 
     /**
-     * Another worker is fetching this location: re-read the stored records until current and today exist.
+     * No fresh data can be fetched: serve the stored records when a current record exists
+     * (fresh, or up to staleMs old), else fail with `err`.
      * @private
      */
-    _waitForRecords(geo, cDate, output, callback){
+    _fallback(output, err, callback){
+        if(!output.current && output.stale){
+            output.current = output.stale;
+        }
+        if(output.current){
+            log.error('cDsf > serving stored overseas records from ' + new Date(output.current.dateObj).toISOString() + ': ' + err.message);
+            return callback(null, output);
+        }
+        return callback(err);
+    }
+
+    /**
+     * Another worker is fetching this location: re-read the stored records until current and today
+     * exist, and stop early when the holder flags the fetch as failed.
+     * @private
+     */
+    _waitForRecords(geo, cDate, output, key, callback){
         let polls = Math.max(1, Math.ceil(this.waitMs / this.pollMs));
         let check = ()=>{
-            this._findDataFromDB(geo, cDate, (err, found)=>{
+            this._findDataFromDB(geo, this._now(cDate), (err, found)=>{
                 if(!err && found && found.current && found.today){
                     return callback(null, this._merge(output, found));
                 }
-                if(--polls > 0){
-                    return setTimeout(check, this.pollMs);
-                }
-                if(output.current && output.today){
-                    return callback(null, output);
-                }
-                return callback(new Error('cDsf > VC fetch in progress; no stored record yet'));
+                vcFetchLock.findById(key, (lockErr, lock)=>{
+                    let failed = !lockErr && lock && lock.failed;
+                    if(!failed && --polls > 0){
+                        return setTimeout(check, this.pollMs);
+                    }
+                    this._merge(output, found);
+                    return this._fallback(output, new Error(failed ? 'cDsf > VC fetch failed in another worker'
+                        : 'cDsf > VC fetch in progress; no stored record yet'), callback);
+                });
             });
         };
         setTimeout(check, this.pollMs);
@@ -766,12 +928,14 @@ class DsfController {
     /**
      * Fetch one Visual Crossing range, convert it to DsfForecast records and store them.
      * @param {string} range 'combined' (yesterday..+7 days, 25 records) or 'forecast' (today..+7 days, 1 record)
+     * @param {Object} target receives the stored records
+     * @param {function(Error, Object=)} callback error and the requester's {status, cost, ms}
      * @private
      */
-    _fetchVc(geo, cDate, range, output, callback){
-        new VcRequester().getTimeline({lat: geo[1], lon: geo[0], range: range}, this._getVcKey(), (err, body)=>{
+    _fetchVc(geo, cDate, range, target, callback){
+        new VcRequester({timeoutMs: this.fetchTimeoutMs}).getTimeline({lat: geo[1], lon: geo[0], range: range}, this._getVcKey(), (err, body, meta)=>{
             if(err){
-                return callback(err);
+                return callback(err, meta);
             }
 
             let records = {};
@@ -784,69 +948,91 @@ class DsfController {
                 });
             }catch(e){
                 log.error('cDsf > wrong VC data : ', e);
-                return callback(e);
+                return callback(e, meta);
             }
 
             // Current last: waiting workers treat a stored current as the end of this fetch.
             async.eachSeries(['yesterday', 'today', 'current'].filter((name)=>records[name]), (name, cb)=>{
-                output[name] = records[name];
+                target[name] = records[name];
                 this._saveData(geo, records[name], (err)=>{
                     if(err){
                         log.warn('cDSF > Fail to save ' + name + ' Data to DB, ', err);
                     }
                     return cb();
                 });
-            }, ()=>callback(null));
+            }, ()=>callback(null, meta));
         });
     }
 
-    _requestDatas(geo, output, cDate, timeOffset, callback){
+    _requestDatas(geo, output, cDate, callback){
         if(this._hasAll(output)){
             return callback(null, output);
         }
 
-        let key = this._lockKey(geo);
-        this._acquireLock(key, (err, token)=>{
-            let release = ()=>{
-                if(token){
-                    this._releaseLock(key, token);
-                }
-            };
-            if(err){
-                // Lock store unavailable: fetch without the lock rather than fail the request.
-                log.warn('cDsf > VC fetch lock unavailable', key, err.message);
+        this._checkProvider(output.yesterday ? 'forecast' : 'combined', (unavailable)=>{
+            if(unavailable){
+                return this._fallback(output, unavailable, callback);
             }
-            else if(!token){
-                log.info('cDsf > VC fetch in progress elsewhere, waiting for', key);
-                return this._waitForRecords(geo, cDate, output, callback);
-            }
-
-            // Another worker may have stored the records between the first read and the lock.
-            this._findDataFromDB(geo, cDate, (findErr, found)=>{
-                if(!findErr){
-                    this._merge(output, found);
+            let key = this._lockKey(geo);
+            this._acquireLock(key, (err, token)=>{
+                if(err){
+                    // Lock store unavailable: fetch without the lock rather than fail the request.
+                    log.warn('cDsf > VC fetch lock unavailable', this._logKey(key), err.message);
                 }
-                if(this._hasAll(output)){
-                    release();
-                    return callback(null, output);
+                else if(!token){
+                    log.info('cDsf > VC fetch in progress elsewhere, waiting for', this._logKey(key));
+                    return this._waitForRecords(geo, cDate, output, key, callback);
                 }
 
-                let range = output.yesterday ? 'forecast' : 'combined';
-                this._fetchVc(geo, cDate, range, output, (err)=>{
-                    if(err){
-                        // Keep the lock for failureBackoffMs: at most one provider attempt per location per backoff while failing.
-                        if(token){
-                            this._backOff(key, token);
-                        }
-                        if(output.current && output.today){
-                            log.warn('cDsf > VC fetch failed, using stored records; backing off', key, err.message);
-                            return callback(null, output);
-                        }
-                        log.warn('cDsf > VC fetch failed; backing off', key, err.message);
-                        return callback(err);
+                // Another worker may have stored the records between the first read and the lock.
+                this._findDataFromDB(geo, this._now(cDate), (findErr, found)=>{
+                    if(!findErr){
+                        this._merge(output, found);
                     }
-                    release();
-                    return callback(null, output);
+                    if(this._hasAll(output)){
+                        if(token){
+                            this._releaseLock(key, token);
+                        }
+                        return callback(null, output);
+                    }
+
+                    // Answer within responseMs; the fetch itself may run to fetchTimeoutMs and still store
+                    // its records for the gateway's next attempt.
+                    let responded = false;
+                    let respond = (err)=>{
+                        if(responded){
+                            return;
+                        }
+                        responded = true;
+                        clearTimeout(timer);
+                        return err ? this._fallback(output, err, callback) : callback(null, output);
+                    };
+                    let timer = setTimeout(()=>{
+                        log.error('cDsf > VC fetch slower than ' + this.responseMs + 'ms; answering without it', this._logKey(key));
+                        respond(new Error('cDsf > VC fetch still running'));
+                    }, this.responseMs);
+
+                    let records = {};
+                    this._fetchVc(geo, cDate, output.yesterday ? 'forecast' : 'combined', records, (err, meta)=>{
+                        this._recordUsage(meta, err);
+                        if(err){
+                            if(token){
+                                this._backOff(key, token);
+                            }
+                            if(err.providerDown){
+                                this._markProviderDown(err);
+                            }
+                            log.error('cDsf > VC fetch failed; backing off', this._logKey(key), err.message);
+                            return respond(err);
+                        }
+                        if(token){
+                            this._releaseLock(key, token);
+                        }
+                        if(!responded){
+                            this._merge(output, records);
+                        }
+                        return respond();
+                    });
                 });
             });
         });
@@ -867,26 +1053,16 @@ class DsfController {
                 (cb)=>{
                     // Try to get Data from DB
                     this._findDataFromDB(geo, cDate, (err, result)=>{
-                        return cb(null, result);
+                        return cb(null, result || {});
                     });
                 },
                 (res, cb)=>{
                     // Try to get Data from Provider
-                    let timeOffset = 1440;  // 24hours
-                    ['yesterday', 'today', 'current'].forEach((str)=>{
-                        if(res[str]){
-                            timeOffset = res[str].timeOffset;
-                        }
-                    });
-
-                    log.info('dsf timeoffset :', timeOffset);
-                    this._requestDatas(geo, res, cDate, timeOffset, (err, result)=>{
+                    this._requestDatas(geo, res, cDate, (err, result)=>{
                         if(err){
                             log.error('cDsf > something wrong to get DSF data ', err, JSON.stringify(meta));
                             return cb(err);
                         }
-
-                        //log.info(JSON.stringify(result));
                         return cb(null, result);
                     });
                 }

@@ -31,7 +31,7 @@ const logText = () => logs.map(l => l.args.map(a => a && a.stack || String(a)).j
 function Stub() {}
 function load(relative, dependencies = {}, globals = {}) {
     const module = {exports: {}};
-    const sandbox = Object.assign({module, exports: module.exports, console, log, Date, setTimeout, clearTimeout, setImmediate,
+    const sandbox = Object.assign({module, exports: module.exports, console, log, Date, Buffer, setTimeout, clearTimeout, setImmediate,
         require: name => {
             if (Object.prototype.hasOwnProperty.call(dependencies, name)) return dependencies[name];
             throw new Error('Unstubbed dependency ' + name + ' in ' + relative);
@@ -62,9 +62,12 @@ function fakeHttps(handler) {
                 if (result instanceof Error) return req.emit('error', result);
                 const res = new EventEmitter();
                 res.statusCode = result.status;
+                res.headers = result.gzip ? {'content-encoding': 'gzip'} : {};
                 res.setEncoding = () => {};
                 onResponse(res);
-                res.emit('data', typeof result.body === 'string' ? result.body : JSON.stringify(result.body));
+                let data = Buffer.from(typeof result.body === 'string' ? result.body : JSON.stringify(result.body));
+                if (result.gzip) data = require('node:zlib').gzipSync(data);
+                res.emit('data', data);
                 res.emit('end');
             }, (result && result.delay) || 0);
             return req;
@@ -72,10 +75,10 @@ function fakeHttps(handler) {
     };
 }
 function loadRequester(https) {
-    return load('lib/VC/vcRequester.js', {https});
+    return load('lib/VC/vcRequester.js', {https, zlib: require('node:zlib')});
 }
 const timeline = (Requester, options, params, key) => new Promise(resolve =>
-    new Requester(options).getTimeline(params, key, (err, body) => resolve({err, body})));
+    new Requester(options).getTimeline(params, key, (err, body, meta) => resolve({err, body, meta})));
 
 test('requester builds the Timeline request and logs cost and latency without the key', async () => {
     const https = fakeHttps(() => ({status: 200, body: fixture('tokyo-combined')}));
@@ -120,12 +123,12 @@ test('requester retries a 429 once, then fails; errors never carry the key', asy
     let result = await timeline(loadRequester(flaky), {retryDelayMs: 5}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
     assert.ifError(result.err);
     assert.equal(flaky.calls.length, 2);
-    const busy = fakeHttps(() => ({status: 429, body: 'busy ' + KEY}));
+    const busy = fakeHttps(() => ({status: 429, body: 'Maximum concurrent jobs has been exceeded ' + KEY}));
     result = await timeline(loadRequester(busy), {retryDelayMs: 5}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
     assert.equal(busy.calls.length, 2, 'one retry only');
     assert.equal(result.err.statusCode, 429);
     assert.doesNotMatch(result.err.message, new RegExp(KEY));
-    const late = fakeHttps(() => ({status: 429, body: 'busy'}));
+    const late = fakeHttps(() => ({status: 429, body: 'Maximum concurrent jobs has been exceeded'}));
     result = await timeline(loadRequester(late), {retryDelayMs: 5, retryWindowMs: 0}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
     assert.equal(late.calls.length, 1, 'no retry outside the retry window');
 });
@@ -151,7 +154,7 @@ test('requester fails on HTTP errors, bad bodies and the 2.5 s timeout', async (
     const Requester = loadRequester(fakeHttps(() => 'hang'));
     assert.equal(new Requester().timeoutMs, 2500, 'default budget for the whole call');
     // F4: the retry shares one deadline with the first attempt (Lambda waits 3 s per attempt).
-    const retryHang = fakeHttps((url, n) => n === 1 ? {status: 429, body: 'busy', delay: 150} : 'hang');
+    const retryHang = fakeHttps((url, n) => n === 1 ? {status: 429, body: 'Maximum concurrent jobs has been exceeded', delay: 150} : 'hang');
     const t0 = Date.now();
     const late = await timeline(loadRequester(retryHang), {timeoutMs: 300, retryDelayMs: 20}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
     assert.equal(retryHang.calls.length, 2);
@@ -286,30 +289,7 @@ test('summaries use the existing weather vocabulary', () => {
     }
 });
 
-// Synthetic Timeline body for an IANA zone, built with Intl like Visual Crossing's local days:
-// hour rows at local wall-clock hours, day epochs at local midnight, and the top-level
-// tzoffset of the range start (observed live for Pacific/Auckland on 2026-09-26).
-function syntheticTimeline(zone, firstDay, days) {
-    const fmt = new Intl.DateTimeFormat('en-CA', {timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit'});
-    const local = epoch => { const p = Object.fromEntries(fmt.formatToParts(new Date(epoch * 1000)).map(x => [x.type, x.value])); return {date: p.year + '-' + p.month + '-' + p.day, hour: Number(p.hour)}; };
-    const offsetAt = epoch => { const l = local(epoch); return (Date.parse(l.date + 'T' + String(l.hour).padStart(2, '0') + ':00:00Z') / 1000 - epoch) / 3600; };
-    let epoch = Date.parse(firstDay + 'T00:00:00Z') / 1000 - 14 * 3600;
-    while (local(epoch).date !== firstDay || local(epoch).hour !== 0) epoch += 3600;
-    const byDay = new Map();
-    for (; byDay.size <= days; epoch += 3600) {
-        const l = local(epoch);
-        if (!byDay.has(l.date)) byDay.set(l.date, []);
-        byDay.get(l.date).push({datetime: String(l.hour).padStart(2, '0') + ':00:00', datetimeEpoch: epoch, temp: 50 + l.hour, feelslike: 50 + l.hour,
-            humidity: 60, precip: 0, precipprob: 0, preciptype: null, windspeed: 5, winddir: 90, pressure: 1010, visibility: 9, cloudcover: 30,
-            conditions: 'Partially cloudy', icon: 'partly-cloudy-day', source: 'fcst'});
-    }
-    const list = [...byDay.entries()].slice(0, days).map(([date, hours]) => ({datetime: date, datetimeEpoch: hours[0].datetimeEpoch, tempmax: 73, tempmin: 50,
-        feelslikemax: 73, feelslikemin: 50, humidity: 60, precip: 0, precipprob: 0, preciptype: null, windspeed: 5, winddir: 90, pressure: 1010,
-        visibility: 9, cloudcover: 30, conditions: 'Partially cloudy', icon: 'partly-cloudy-day', source: 'fcst',
-        sunriseEpoch: hours[0].datetimeEpoch + 6 * 3600, sunsetEpoch: hours[0].datetimeEpoch + 18 * 3600, moonphase: 0.5, hours}));
-    return {queryCost: 25, timezone: zone, tzoffset: offsetAt(list[0].datetimeEpoch), days: list,
-        currentConditions: Object.assign({}, list[1].hours[0], {source: 'obs'})};
-}
+const {syntheticTimeline} = require('./vc-synthetic');
 
 test('F1: day assignment and offset use the offset at now, not the range-start tzoffset (DST)', () => {
     const conv = vcConverter();
@@ -347,6 +327,103 @@ test('F2: an exact 0 °F temperature stays a temperature', () => {
     assert.notEqual(day.temperatureMax, 0);
 });
 
+test('D13: the current hour starts at the local hour in half-hour and 45-minute zones', () => {
+    const conv = vcConverter();
+    for (const [zone, now, localStart] of [
+        ['Asia/Kolkata', '2026-09-26T00:10:00Z', '2026-09-25T23:30:00Z'],     // 05:40 IST -> 05:00 IST
+        ['Asia/Kathmandu', '2026-09-26T00:10:00Z', '2026-09-25T23:15:00Z'],   // 05:55 NPT -> 05:00 NPT
+        ['America/St_Johns', '2026-09-26T12:10:00Z', '2026-09-26T11:30:00Z']  // 09:40 NDT -> 09:00 NDT
+    ]) {
+        const docs = conv.toDarkSkyDocs(syntheticTimeline(zone, '2026-09-25', 9, {now: Date.parse(now)}), new Date(now));
+        assert.equal(docs.current.hourly.data[0].time, Date.parse(localStart) / 1000, zone);
+    }
+});
+
+test('T9/T3: missing currentConditions uses the current hour row; polar days keep sunrise/sunset null', () => {
+    const conv = vcConverter();
+    const now = Date.parse('2026-09-26T07:04:23Z');
+    const body = syntheticTimeline('Asia/Tokyo', '2026-09-25', 9, {now, current: false});
+    const docs = conv.toDarkSkyDocs(body, new Date(now));
+    assert.equal(docs.current.currently.time, Math.floor(now / 1000));
+    assert.equal(docs.current.currently.temperature, 50 + 16, '16:00 JST hour row');
+    const polar = conv.toDarkSkyDocs(syntheticTimeline('Arctic/Longyearbyen', '2026-06-20', 9, {polar: true, now: Date.parse('2026-06-21T12:00:00Z')}), new Date('2026-06-21T12:00:00Z'));
+    assert.equal(polar.today.daily.data[0].sunriseTime, null);
+    assert.equal(polar.today.daily.data[0].sunsetTime, null);
+});
+
+test('T5: every combination of precipitation type, source and rate maps to a known weather type', () => {
+    const conv = vcConverter();
+    const base = {temp: 50, humidity: 60, windspeed: 3, winddir: 90, pressure: 1010, visibility: 9, cloudcover: 60, conditions: 'Rain'};
+    const types = [['rain'], ['snow'], ['rain', 'snow'], ['ice'], ['freezingrain'], null];
+    for (const preciptype of types) for (const source of ['obs', 'fcst', 'comb']) for (const precip of [0, 0.01, 0.097, 0.098, 0.299, 0.3, 1.2])
+        for (const icon of ['rain', 'snow', 'cloudy', 'fog', 'wind', 'clear-day']) for (const conditions of ['Rain', 'Thunderstorm, Rain', 'Clear']) {
+            const out = conv.toDarkSkyHour(Object.assign({}, base, {preciptype, source, precip, icon, conditions, precipprob: 60}));
+            assert.notEqual(WeatherDesc.makeWeatherType(out.summary), -1, JSON.stringify({preciptype, source, precip, icon, conditions, summary: out.summary}));
+        }
+    const s = o => conv.toDarkSkyHour(Object.assign({}, base, o)).summary;
+    assert.equal(s({source: 'fcst', precip: 0, preciptype: ['rain', 'snow'], icon: 'rain'}), 'light sleet', 'forecast sleet with no amount');
+    assert.equal(s({source: 'obs', precip: 0.05, preciptype: ['ice'], icon: 'cloudy'}), 'light sleet', 'ice alone');
+    assert.equal(s({source: 'obs', precip: 0, visibility: 0.5, icon: 'cloudy'}), 'fog', 'visibility alone');
+    assert.equal(s({source: 'obs', precip: 0.098, preciptype: ['rain'], icon: 'rain'}), 'rain', 'lower bound of moderate');
+    assert.equal(s({source: 'obs', precip: 0.3, preciptype: ['rain'], icon: 'rain'}), 'heavy rain', 'lower bound of heavy');
+    assert.equal(s({source: 'fcst', precip: 0, conditions: 'Thunderstorm', icon: 'cloudy', cloudcover: 90}), 'overcast', 'thunder needs precipitation');
+    assert.equal(s({source: 'obs', precip: 0.2, conditions: 'Thunderstorm, Rain', preciptype: ['rain'], icon: 'rain'}), 'thundershowers');
+});
+
+test('requester: gzip, daily-limit and auth failures, reset retry, body cap, key scrub, formatting', async () => {
+    const zlib = require('node:zlib');
+    const gz = fakeHttps(() => ({status: 200, gzip: true, body: fixture('tokyo-forecast')}));
+    let r = await timeline(loadRequester(gz), {}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+    assert.ifError(r.err);
+    assert.equal(r.body.queryCost, 1, 'gzip body decoded');
+    assert.equal(gz.calls[0].options.headers['Accept-Encoding'], 'gzip');
+    // Daily cost limit: no retry, provider marked down. Concurrency limit: one retry.
+    const daily = fakeHttps(() => ({status: 429, body: 'You have exceeded the maximum number of daily result records for your account'}));
+    r = await timeline(loadRequester(daily), {retryDelayMs: 5}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+    assert.equal(daily.calls.length, 1);
+    assert.equal(r.err.providerDown, true);
+    for (const status of [401, 403]) {
+        const auth = fakeHttps(() => ({status, body: 'No account found'}));
+        r = await timeline(loadRequester(auth), {}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+        assert.equal(r.err.providerDown, true, String(status));
+    }
+    const concurrent = fakeHttps((url, n) => n === 1 ? {status: 429, body: 'Maximum concurrent jobs has been exceeded'} : {status: 200, body: fixture('tokyo-forecast')});
+    r = await timeline(loadRequester(concurrent), {retryDelayMs: 5}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+    assert.ifError(r.err);
+    assert.equal(r.meta.retried, true);
+    // A reused keep-alive socket reset by the server is retried once.
+    const reset = fakeHttps((url, n) => n === 1 ? Object.assign(new Error('socket hang up'), {code: 'ECONNRESET'}) : {status: 200, body: fixture('tokyo-forecast')});
+    r = await timeline(loadRequester(reset), {retryDelayMs: 5}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+    assert.ifError(r.err);
+    assert.equal(reset.calls.length, 2);
+    // Oversized body, encoded key in an error message, exponent coordinates.
+    const huge = fakeHttps(() => ({status: 200, body: 'x'.repeat(5 * 1024 * 1024)}));
+    r = await timeline(loadRequester(huge), {}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+    assert.match(r.err.message, /too large/);
+    const odd = 'KEY/WITH+CHARS0123456789';
+    const leak = fakeHttps(() => new Error('connect failed for key=' + encodeURIComponent(odd) + ' and ' + odd));
+    r = await timeline(loadRequester(leak), {retryDelayMs: 5}, {lat: 35.68, lon: 139.76, range: 'forecast'}, odd);
+    assert.doesNotMatch(r.err.message, new RegExp(encodeURIComponent(odd).replace(/[+%]/g, '\\$&')));
+    assert.equal(r.err.message.includes(odd), false);
+    const tiny = fakeHttps(() => ({status: 200, body: fixture('tokyo-forecast')}));
+    await timeline(loadRequester(tiny), {}, {lat: 1e-7, lon: -0.13, range: 'forecast'}, KEY);
+    assert.match(tiny.calls[0].url, /timeline\/0,-0\.13\//);
+    const Requester = loadRequester(fakeHttps(() => 'hang'));
+    assert.equal(new Requester().retryWindowMs, 1500, 'default retry window');
+});
+
+test('requester logs failures at error level with rounded coordinates, successes at info', async () => {
+    logs.length = 0;
+    await timeline(loadRequester(fakeHttps(() => ({status: 500, body: 'boom'}))), {}, {lat: 35.6812, lon: 139.7671, range: 'forecast'}, KEY);
+    await timeline(loadRequester(fakeHttps(() => ({status: 200, body: fixture('tokyo-forecast')}))), {}, {lat: 35.6812, lon: 139.7671, range: 'forecast'}, KEY);
+    const vc = logs.filter(l => /^VC>/.test(String(l.args[0])));
+    assert.deepEqual(vc.map(l => l.level), ['error', 'info']);
+    for (const l of vc) {
+        assert.match(String(l.args[0]), /loc=35\.68,139\.77 /, 'coordinates rounded to 2 decimals');
+        assert.doesNotMatch(String(l.args[0]), /35\.6812/);
+    }
+});
+
 // ---------------------------------------------------------------- controller
 function memoryDsfModel() {
     const rows = new Map();
@@ -354,8 +431,12 @@ function memoryDsfModel() {
     const copy = v => v8clone(v);
     return {
         rows,
+        queries: [],
         find(query) {
-            const list = [...rows.values()].filter(r => JSON.stringify(r.geo) === JSON.stringify(query.geo)).map(copy);
+            this.queries.push(query);
+            if (this.fail) throw new Error(this.fail);
+            const since = query.dateObj && query.dateObj.$gte;
+            const list = [...rows.values()].filter(r => JSON.stringify(r.geo) === JSON.stringify(query.geo) && (!since || r.dateObj >= since)).map(copy);
             const q = {lean: () => q, sort: s => { list.sort((a, b) => (a.dateObj - b.dateObj) * (s.dateObj || 1)); return q; }, exec: cb => setImmediate(() => cb(null, list))};
             return q;
         },
@@ -382,9 +463,12 @@ function memoryLockModel(now) {
                 Object.assign(lock, update.$set); cb(null, lock);
             });
         },
-        updateOne(filter, update, cb) {
+        findById(id, cb) { setImmediate(() => cb(null, locks.has(id) ? Object.assign({}, locks.get(id)) : null)); },
+        updateOne(filter, update, options, cb) {
+            if (typeof options === 'function') { cb = options; options = {}; }
             setImmediate(() => {
-                const lock = locks.get(filter._id);
+                let lock = locks.get(filter._id);
+                if (!lock && options && options.upsert) { lock = {_id: filter._id}; locks.set(filter._id, lock); }
                 if (lock && (!filter.expireAt || +lock.expireAt === +filter.expireAt)) Object.assign(lock, update.$set);
                 if (cb) cb(null);
             });
@@ -398,12 +482,28 @@ function memoryLockModel(now) {
         }
     };
 }
-function loadDsfController({model, lockModel, requester, key = KEY, clock}) {
+function memoryUsageModel() {
+    const days = new Map();
+    return {
+        days,
+        updateOne(filter, update, options, cb) {
+            setImmediate(() => {
+                const doc = days.get(filter._id) || {_id: filter._id};
+                for (const [k, v] of Object.entries(update.$inc || {})) doc[k] = (doc[k] || 0) + v;
+                days.set(filter._id, doc);
+                if (cb) cb(null);
+            });
+        },
+        findById(id, cb) { setImmediate(() => cb(null, days.has(id) ? Object.assign({}, days.get(id)) : null)); }
+    };
+}
+function loadDsfController({model, lockModel, requester, key = KEY, clock, usageModel = memoryUsageModel(), dailyRecordLimit = 0}) {
     const Clock = clock ? class extends Date { constructor(...a) { super(...(a.length ? a : [clock.now])); } static now() { return clock.now; } } : Date;
     const timezoneCalls = [];
     const Controller = load('controllers/worldWeather/dsf.controller.js', {
         'async': async,
-        '../../config/config': {keyString: {vc_key: key}},
+        '../../config/config': {keyString: {vc_key: key}, vc: {dailyRecordLimit}},
+        '../../models/worldWeather/vc.usage.model': usageModel,
         '../../models/worldWeather/dsf.model': model,
         '../../models/worldWeather/vc.fetch.lock.model': lockModel,
         '../../lib/DSF/dsfRequester': function () { throw new Error('Dark Sky requester used'); },
@@ -415,17 +515,21 @@ function loadDsfController({model, lockModel, requester, key = KEY, clock}) {
     }, {Date: Clock});
     Controller.timezoneCalls = timezoneCalls;
     Controller.clock = clock;
+    Controller.usageModel = usageModel;
     return Controller;
 }
 function fakeVcRequester(replies, delayMs = 0) {
-    const calls = [];
-    function Requester() {}
+    const calls = [], options = [];
+    function Requester(opts) { options.push(opts); }
     Requester.prototype.getTimeline = function (params, key, cb) {
         calls.push(Object.assign({key}, params));
         const reply = typeof replies === 'function' ? replies(params, calls.length) : replies[params.range];
-        setTimeout(() => (reply instanceof Error ? cb(reply) : cb(null, v8clone(reply))), delayMs);
+        const meta = {status: reply instanceof Error ? (reply.statusCode || 0) : 200, cost: reply && reply.queryCost, ms: delayMs};
+        setTimeout(() => (reply instanceof Error ? cb(reply, undefined, meta) : cb(null, v8clone(reply), meta)), delayMs);
     };
     Requester.calls = calls;
+    Requester.options = options;
+    Requester.isValidKey = key => typeof key === 'string' && key.length >= 10 && !/^You have to set/.test(key);
     return Requester;
 }
 const TOKYO = {lat: 35.68, lon: 139.76};
@@ -620,6 +724,158 @@ test('F6/N1: after a provider failure the location backs off for 2 s, within the
     assert.equal(Requester.calls.length, 2, 'retried after the backoff');
 });
 
+test('T1: stored records are classified with the offset at request time after a DST change', async () => {
+    // Auckland: combined at 09-27 01:30 NZST, forecast at 13:00 NZDT, then 09-28 00:30 NZDT.
+    const clock = {now: Date.parse('2026-09-26T13:30:00Z')};
+    const body = range => range === 'combined'
+        ? syntheticTimeline('Pacific/Auckland', clock.now < Date.parse('2026-09-27T11:00:00Z') ? '2026-09-26' : '2026-09-27', 9, {now: clock.now})
+        : syntheticTimeline('Pacific/Auckland', clock.now < Date.parse('2026-09-27T11:00:00Z') ? '2026-09-27' : '2026-09-28', 8, {now: clock.now});
+    const Requester = fakeVcRequester(params => body(params.range));
+    const Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock});
+    const auckland = {lat: '-36.85', lon: '174.76'};
+    await getDsf(Controller, auckland);
+    clock.now = Date.parse('2026-09-27T00:00:00Z');
+    await getDsf(Controller, auckland);
+    clock.now = Date.parse('2026-09-27T11:30:00Z');
+    const r = await getDsf(Controller, auckland);
+    assert.ifError(r.err);
+    assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast', 'combined'], 'observed 09-27 fetched on 09-28');
+    assert.equal(r.req.result.timezone.min, 780);
+    const yesterday = r.res.data[0];   // records sorted by current time: yesterday first
+    const local = new Date(new Date(yesterday.current.dateObj).getTime() + 780 * 60000).toISOString().slice(0, 16);
+    assert.equal(local, '2026-09-27T00:00', 'yesterday record is 09-27, not the two-day-old 09-26');
+});
+
+test('I-F2/T7: waiters and the post-lock re-read see records stored after their own request time', async () => {
+    const clock = {now: CAPTURED};
+    const model = memoryDsfModel(), lockModel = memoryLockModel();
+    const Requester = fakeVcRequester({combined: fixture('tokyo-combined')}, 30);
+    const A = loadDsfController({model, lockModel, requester: Requester, clock});
+    // B starts first (older cDate), A fetches one second later.
+    const c = new A(); Object.assign(c, {pollMs: 10, waitMs: 500});
+    const reqB = {geocode: TOKYO, sessionID: 'b'};
+    const bStart = new Date(clock.now);
+    clock.now += 1000;
+    const first = getDsf(A, TOKYO, {pollMs: 10, waitMs: 500});
+    const waiter = new Promise(resolve => { setTimeout(() => c.getDsfData(reqB, bStart, (err, res) => resolve({err, res})), 5); });
+    const [a, b] = await Promise.all([first, waiter]);
+    assert.ifError(a.err);
+    assert.ifError(b.err, 'waiter with an older request time still finds the stored current');
+    assert.equal(Requester.calls.length, 1);
+    // T7: a worker that read an empty DB, then gets the lock after another worker stored everything, makes no call.
+    const late = new A();
+    const origAcquire = late._acquireLock.bind(late);
+    late._acquireLock = (key, cb) => setTimeout(() => origAcquire(key, cb), 50);
+    const model2 = memoryDsfModel(), lock2 = memoryLockModel(), R2 = fakeVcRequester({combined: fixture('tokyo-combined')});
+    const B2 = loadDsfController({model: model2, lockModel: lock2, requester: R2, clock});
+    const slow = new B2();
+    slow._acquireLock = (key, cb) => setTimeout(() => B2.prototype._acquireLock.call(slow, key, cb), 60);
+    const fast = getDsf(B2, TOKYO);
+    const slowRes = new Promise(resolve => slow.getDsfData({geocode: TOKYO, sessionID: 's'}, new Date(clock.now), (err, res) => resolve({err, res})));
+    const results = await Promise.all([fast, slowRes]);
+    results.forEach(x => assert.ifError(x.err));
+    assert.equal(R2.calls.length, 1, 'the re-read after the lock finds the stored records');
+});
+
+test('D2: provider failures serve the newest stored current up to 3 h old; a provider-down marker stops calls', async () => {
+    const clock = {now: CAPTURED};
+    const model = memoryDsfModel(), lockModel = memoryLockModel();
+    let Requester = fakeVcRequester({combined: fixture('tokyo-combined')});
+    await getDsf(loadDsfController({model, lockModel, requester: Requester, clock}));
+    // 1 h later the provider reports the daily limit: stale current served, marker set.
+    clock.now = CAPTURED + 3600000;
+    const limit = Object.assign(new Error('VC> HTTP 429: daily limit'), {statusCode: 429, providerDown: true});
+    Requester = fakeVcRequester(() => limit);
+    let r = await getDsf(loadDsfController({model, lockModel, requester: Requester, clock}));
+    assert.ifError(r.err);
+    assert.equal(r.req.cWeatherDate.getTime(), Math.floor(CAPTURED / 1000) * 1000, 'stale current served with its own time');
+    assert.equal(Requester.calls.length, 1);
+    await settle();
+    assert(lockModel.locks.has('~provider'), 'provider-down marker stored');
+    // While the marker lasts no call is made.
+    clock.now += 60000;
+    r = await getDsf(loadDsfController({model, lockModel, requester: Requester, clock}));
+    assert.ifError(r.err);
+    assert.equal(Requester.calls.length, 1, 'no provider call while marked down');
+    // After the marker expires (10 min) the provider is tried again; stale data still served.
+    clock.now = CAPTURED + 3600000 + 12 * 60000;
+    r = await getDsf(loadDsfController({model, lockModel, requester: Requester, clock}), TOKYO, {pollMs: 5, waitMs: 20});
+    assert.ifError(r.err);
+    assert.equal(Requester.calls.length, 2);
+    // Nothing within 3 h: the error is returned.
+    clock.now = CAPTURED + 4 * 3600000;
+    r = await getDsf(loadDsfController({model, lockModel, requester: Requester, clock}), TOKYO, {pollMs: 5, waitMs: 20});
+    assert(r.err, 'nothing within 3 h');
+    assert.equal(Requester.calls.length, 3);
+});
+
+test('D7/D1: daily record budget and usage counter', async () => {
+    const clock = {now: CAPTURED};
+    const usageModel = memoryUsageModel();
+    const Requester = fakeVcRequester({combined: fixture('tokyo-combined'), forecast: fixture('tokyo-forecast')});
+    let Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock, usageModel, dailyRecordLimit: 30});
+    await getDsf(Controller);
+    await settle();
+    const day = '2026-09-26';
+    assert.deepEqual(plain(usageModel.days.get(day)), {_id: day, calls: 1, records: 25, failures: 0, http429: 0, slow: 0});
+    // 25 + 25 would exceed 30: London is not fetched, and the budget error is returned.
+    const r = await getDsf(Controller, {lat: 51.51, lon: -0.13});
+    assert(r.err);
+    assert.match(String(r.err.message), /budget/);
+    assert.equal(Requester.calls.length, 1);
+});
+
+test('D3/T4: the response returns within its budget while the fetch continues and stores the records', async () => {
+    const clock = {now: CAPTURED};
+    const model = memoryDsfModel(), lockModel = memoryLockModel();
+    const Requester = fakeVcRequester({combined: fixture('tokyo-combined')}, 150);
+    const Controller = loadDsfController({model, lockModel, requester: Requester, clock});
+    const t0 = Date.now();
+    let r = await getDsf(Controller, TOKYO, {responseMs: 40});
+    assert(Date.now() - t0 < 140, 'answered before the provider finished');
+    assert(r.err, 'nothing stored yet: error from the response budget');
+    assert.equal(Requester.options[0].timeoutMs, 8000, 'fetch budget longer than the response budget');
+    const defaults = new Controller();
+    assert(defaults.responseMs <= 2500 && defaults.waitMs + defaults.pollMs <= 2800, 'answers fit the gateway 3 s attempt');
+    assert(defaults.fetchTimeoutMs < defaults.lockTtlMs, 'the fetch ends before its lock can be taken over');
+    await new Promise(resolve => setTimeout(resolve, 200));
+    assert.equal(model.rows.size, 3, 'the fetch finished and stored the records');
+    await settle();
+    assert.equal(lockModel.locks.size, 0, 'lock released after the late fetch');
+    r = await getDsf(Controller);
+    assert.ifError(r.err);
+    assert.equal(Requester.calls.length, 1, 'the gateway retry reads the stored records');
+});
+
+test('D11: waiters stop as soon as the holder marks the fetch failed', async () => {
+    const clock = {now: CAPTURED};
+    const lockModel = memoryLockModel();
+    lockModel.locks.set('139.76,35.68', {_id: '139.76,35.68', expireAt: new Date(CAPTURED + 2000), failed: true});
+    const Controller = loadDsfController({model: memoryDsfModel(), lockModel, requester: fakeVcRequester({}), clock});
+    const t0 = Date.now();
+    const r = await getDsf(Controller, TOKYO, {pollMs: 20, waitMs: 2000});
+    assert(r.err);
+    assert(Date.now() - t0 < 500, 'no full wait: ' + (Date.now() - t0) + ' ms');
+});
+
+test('I-F7/D10/D14: bounded reads, a failing read still fetches, startup warns about a missing key', async () => {
+    const clock = {now: CAPTURED};
+    const model = memoryDsfModel();
+    const Requester = fakeVcRequester({combined: fixture('tokyo-combined')});
+    let r = await getDsf(loadDsfController({model, lockModel: memoryLockModel(), requester: Requester, clock}));
+    assert.ifError(r.err);
+    assert.equal(+model.queries[0].dateObj.$gte, CAPTURED - 3 * 86400000, 'reads bounded to three days');
+    const broken = memoryDsfModel();
+    broken.rows.set('x', {geo: [139.76, 35.68], dateObj: new Date(CAPTURED - 60000), address: {}});   // no timeOffset
+    r = await getDsf(loadDsfController({model: broken, lockModel: memoryLockModel(), requester: fakeVcRequester({combined: fixture('tokyo-combined')}), clock}));
+    assert.ifError(r.err, 'a malformed stored record does not break the request');
+    logs.length = 0;
+    loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock, key: ''});
+    assert(logs.some(l => l.level === 'error' && /VC_SECRET_KEY/.test(String(l.args[0]))), 'missing key logged at load');
+    const Plain = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock});
+    assert.equal(new Plain()._logKey('139.7671,35.6812'), '139.77,35.68', 'D15: lock keys are rounded in log lines');
+});
+
 // ---------------------------------------------------------------- push, legacy, config
 test('push paths accept VC and legacy DSF registrations', async () => {
     const AlertPush = load('controllers/alert.push.controller.js', {
@@ -674,6 +930,21 @@ test('no runtime server source calls Dark Sky; the legacy requester fails withou
     const config = fs.readFileSync(path.join(root, 'config/config.js'), 'utf8');
     assert.match(config, /vc_key\s*:\s*\(?process\.env\.VC_SECRET_KEY/);
     assert.match(fs.readFileSync(path.join(root, '.env.example'), 'utf8'), /^VC_SECRET_KEY=/m);
+});
+
+test('T11/T15: apps, templates and the legacy geo route recognise VC', () => {
+    for (const app of ['client/www', 'tw.ios/www', 'ta.ios/www']) {
+        assert.match(fs.readFileSync(path.join(repo, app, 'js/service.weatherutil.js'), 'utf8'), /pubDate\.hasOwnProperty\('VC'\)[\s\S]{0,40}data\.source = "VC"/, app);
+    }
+    assert.match(fs.readFileSync(path.join(repo, 'tw.ios/www/js/controller.forecastctrl.js'), 'utf8'), /cityData\.source = "VC"/);
+    const templates = ['client/www/templates/tab-forecast.html', 'client/www/templates/tab-dailyforecast.html', 'client/www/templates/ta-tab-weather.html',
+        'tw.ios/www/templates/tab-forecast.html', 'tw.ios/www/templates/tab-dailyforecast.html', 'ta.ios/www/templates/tab-forecast.html', 'ta.ios/www/templates/tab-dailyforecast.html'];
+    for (const t of templates) {
+        const html = fs.readFileSync(path.join(repo, t), 'utf8');
+        assert.match(html, /ng-if="(showDetailWeather && )?source == 'VC'"[\s\S]{0,300}openUrl\('https:\/\/www\.visualcrossing\.com\/'\)">Weather Data Provided by Visual Crossing</, t);
+        assert.doesNotMatch(html, /darksky|source == 'DSF'/, t);
+    }
+    assert.match(fs.readFileSync(path.join(root, 'routes/v000803/route.geo.js'), 'utf8'), /result\.source === 'VC' \|\| result\.source === 'DSF'/);
 });
 
 test('the world response reports Visual Crossing as its source', () => {

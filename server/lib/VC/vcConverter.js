@@ -135,8 +135,9 @@ function toDarkSkyDay(day, time) {
     point.precipIntensity = total / 24;
     point.precipIntensityMax = wettest.value === undefined ? 0 : wettest.value;
     point.precipIntensityMaxTime = wettest.time === undefined ? time : wettest.time;
-    point.sunriseTime = num(day.sunriseEpoch);
-    point.sunsetTime = num(day.sunsetEpoch);
+    // null (not undefined) when the sun does not rise or set: no NaN dates, no Mongo defaults.
+    point.sunriseTime = num(day.sunriseEpoch) === undefined ? null : day.sunriseEpoch;
+    point.sunsetTime = num(day.sunsetEpoch) === undefined ? null : day.sunsetEpoch;
     point.moonPhase = num(day.moonphase);
     point.temperatureMax = temperature(day.tempmax);
     point.temperatureMaxTime = extreme(hours, 'temp', true).time;
@@ -213,7 +214,9 @@ function toDarkSkyDocs(vc, now) {
     }
     docs.today = dayRecord(days[todayIndex], todayStart);
 
-    const hourStart = Math.floor(nowSec / HOUR_SEC) * HOUR_SEC;
+    // Start of the current local hour: +5:30 or +5:45 zones start hours at :30 or :15 UTC.
+    const offsetSec = Math.round(offset * HOUR_SEC);
+    const hourStart = Math.floor((nowSec + offsetSec) / HOUR_SEC) * HOUR_SEC - offsetSec;
     const ahead = [];
     days.slice(todayIndex).forEach((day) => {
         (day.hours || []).forEach((hour) => {
@@ -223,7 +226,8 @@ function toDarkSkyDocs(vc, now) {
         });
     });
     const dailyAhead = days.slice(todayIndex, todayIndex + 8).map((day, i) => toDarkSkyDay(day, todayStart + i * DAY_SEC));
-    const current = vc.currentConditions || (days[todayIndex].hours || []).find((hour) => hour.datetimeEpoch === hourStart) || days[todayIndex];
+    // Without currentConditions, the current local hour's row stands in.
+    const current = vc.currentConditions || (ahead[0] && ahead[0].datetimeEpoch === hourStart ? ahead[0] : days[todayIndex]);
     docs.current = make(toDarkSkyHour(current, nowSec), ahead, dailyAhead);
     return docs;
 }

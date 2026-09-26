@@ -7,6 +7,7 @@
 'use strict';
 
 const https = require('https');
+const zlib = require('zlib');
 
 const BASE_URL = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/';
 const RANGES = {
@@ -16,9 +17,21 @@ const RANGES = {
 const ELEMENTS = ['datetime', 'datetimeEpoch', 'temp', 'tempmax', 'tempmin', 'feelslike', 'feelslikemax', 'feelslikemin',
     'humidity', 'precip', 'precipprob', 'preciptype', 'snow', 'windspeed', 'winddir', 'pressure', 'visibility',
     'cloudcover', 'conditions', 'icon', 'source', 'sunriseEpoch', 'sunsetEpoch', 'moonphase'];
+const MAX_BODY_BYTES = 4 * 1024 * 1024;    // a combined body is about 70 KB
+const RESET_CODES = ['ECONNRESET', 'EPIPE'];
 
 // Shared keep-alive agent: repeated calls from one worker reuse the TLS connection.
 const agent = new https.Agent({keepAlive: true, maxSockets: 8});
+
+// Coordinates as plain decimals (never exponent notation), at most 6 decimals.
+function formatCoordinate(value) {
+    return String(parseFloat(value.toFixed(6)));
+}
+
+// Log coordinates at 2 decimals (about 1 km): enough to identify the request, less location data.
+function logCoordinate(value) {
+    return value.toFixed(2);
+}
 
 class VcRequester {
     /**
@@ -26,7 +39,7 @@ class VcRequester {
      */
     constructor(options) {
         options = options || {};
-        // Budget for the whole call, including a 429 retry: the gateway Lambda waits 3 s per backend attempt.
+        // Budget for the whole call, including one retry.
         this.timeoutMs = options.timeoutMs || 2500;
         this.retryDelayMs = options.retryDelayMs === undefined ? 300 : options.retryDelayMs;
         this.retryWindowMs = options.retryWindowMs === undefined ? 1500 : options.retryWindowMs;
@@ -38,11 +51,14 @@ class VcRequester {
 
     static _scrub(text, key) {
         text = String(text);
-        return key ? text.split(key).join('***') : text;
+        if (!key) {
+            return text;
+        }
+        return text.split(key).join('***').split(encodeURIComponent(key)).join('***');
     }
 
     _makeUrl(lat, lon, range, key) {
-        return BASE_URL + lat + ',' + lon + '/' + RANGES[range] +
+        return BASE_URL + formatCoordinate(lat) + ',' + formatCoordinate(lon) + '/' + RANGES[range] +
             '?unitGroup=us&lang=en&include=days,hours,current&elements=' + ELEMENTS.join(',') +
             '&key=' + encodeURIComponent(key);
     }
@@ -58,6 +74,11 @@ class VcRequester {
             clearTimeout(timer);
             callback(err, status, body);
         };
+        const fail = (prefix, err) => {
+            const wrapped = new Error('VC> ' + prefix + ' ' + VcRequester._scrub(err.code || err.message, key));
+            wrapped.code = err.code;
+            finish(wrapped);
+        };
         const timer = setTimeout(() => {
             finish(new Error('VC> timeout after ' + this.timeoutMs + 'ms'));
             if (req) {
@@ -65,20 +86,40 @@ class VcRequester {
             }
         }, Math.max(0, timeoutMs));
 
-        req = https.get(url, {agent: agent}, (res) => {
-            let body = '';
-            res.setEncoding('utf8');
-            res.on('data', (chunk) => { body += chunk; });
-            res.on('end', () => finish(null, res.statusCode, body));
-            res.on('error', (err) => finish(new Error('VC> response error ' + VcRequester._scrub(err.code || err.message, key))));
+        req = https.get(url, {agent: agent, headers: {'Accept-Encoding': 'gzip'}}, (res) => {
+            const chunks = [];
+            let size = 0;
+            res.on('data', (chunk) => {
+                size += chunk.length;
+                if (size > MAX_BODY_BYTES) {
+                    finish(new Error('VC> response too large (> ' + MAX_BODY_BYTES + ' bytes)'));
+                    req.destroy();
+                    return;
+                }
+                chunks.push(chunk);
+            });
+            res.on('end', () => {
+                const raw = Buffer.concat(chunks);
+                if ((res.headers || {})['content-encoding'] !== 'gzip') {
+                    return finish(null, res.statusCode, raw.toString('utf8'));
+                }
+                zlib.gunzip(raw, (err, body) => {
+                    if (err) {
+                        return fail('gzip error', err);
+                    }
+                    finish(null, res.statusCode, body.toString('utf8'));
+                });
+            });
+            res.on('error', (err) => fail('response error', err));
         });
-        req.on('error', (err) => finish(new Error('VC> request error ' + VcRequester._scrub(err.code || err.message, key))));
+        req.on('error', (err) => fail('request error', err));
     }
 
     /**
      * @param {{lat: number, lon: number, range: string}} params range 'combined' or 'forecast'
      * @param {string} key VC_SECRET_KEY
-     * @param {function(Error, Object=)} callback parsed Timeline body
+     * @param {function(Error, Object=, Object=)} callback parsed Timeline body and
+     *        {status, cost, ms, retried}; err.providerDown marks daily-limit 429s and 401/403
      */
     getTimeline(params, key, callback) {
         if (!VcRequester.isValidKey(key)) {
@@ -94,19 +135,24 @@ class VcRequester {
         }
 
         const url = this._makeUrl(lat, lon, params.range, key);
+        const where = 'range=' + params.range + ' loc=' + logCoordinate(lat) + ',' + logCoordinate(lon);
         const started = Date.now();
         const deadline = started + this.timeoutMs;
         const attempt = (retried) => {
             this._get(url, key, deadline - Date.now(), (err, status, body) => {
                 const ms = Date.now() - started;
-                if (!err && status === 429 && !retried && ms < this.retryWindowMs &&
-                        deadline - Date.now() > this.retryDelayMs) {
-                    log.warn('VC> range=' + params.range + ' status=429 retrying once');
+                const timeLeft = deadline - Date.now() > this.retryDelayMs;
+                // Retry once: a concurrency 429 (not the daily limit) or a reset keep-alive socket.
+                const concurrency = !err && status === 429 && /concurren/i.test(String(body));
+                const reset = err && RESET_CODES.indexOf(err.code) >= 0;
+                if (!retried && timeLeft && ((concurrency && ms < this.retryWindowMs) || reset)) {
+                    log.warn('VC> ' + where + ' ' + (reset ? err.code : 'status=429') + ' retrying once');
                     return setTimeout(() => attempt(true), this.retryDelayMs);
                 }
                 if (!err && status >= 400) {
                     err = new Error('VC> HTTP ' + status + ': ' + VcRequester._scrub(String(body).slice(0, 120), key));
                     err.statusCode = status;
+                    err.providerDown = status === 401 || status === 403 || (status === 429 && !concurrency);
                 }
                 let result;
                 if (!err) {
@@ -121,13 +167,14 @@ class VcRequester {
                         typeof result.timezone === 'string' && typeof result.tzoffset === 'number')) {
                     err = new Error('VC> unexpected body');
                 }
+                const meta = {status: status || 0, cost: result ? result.queryCost : 0, ms: ms, retried: retried};
                 if (err) {
-                    log.warn('VC> range=' + params.range + ' loc=' + lat + ',' + lon + ' failed ms=' + ms + ' ' + err.message);
-                    return callback(err);
+                    // The service host's console logs only errors (NODE_ENV=production).
+                    log.error('VC> ' + where + ' failed ms=' + ms + ' ' + err.message);
+                    return callback(err, undefined, meta);
                 }
-                log.info('VC> range=' + params.range + ' loc=' + lat + ',' + lon + ' status=' + status +
-                    ' cost=' + result.queryCost + ' ms=' + ms + (retried ? ' retried' : ''));
-                callback(null, result);
+                log.info('VC> ' + where + ' status=' + status + ' cost=' + result.queryCost + ' ms=' + ms + (retried ? ' retried' : ''));
+                callback(null, result, meta);
             });
         };
         attempt(false);

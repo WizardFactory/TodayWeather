@@ -18,6 +18,10 @@ module.exports = {
         path: (process.env.MONGOLAB_MONGODB_URL || 'mongodb://localhost/'),
         database: (process.env.MONGOLAB_MONGODB_DATABASE || 'test')
     },
+    // Overseas weather (Visual Crossing, #2585). 0 = no daily record budget.
+    vc: {
+        dailyRecordLimit: Number(process.env.VC_DAILY_RECORD_LIMIT) || 0
+    },
     keyString: {
         test_normal: (process.env.DATA_GO_KR_TEST_NORMAL_KEY || 'You have to set key of data.go.kr'),
         test_cert: (process.env.DATA_GO_KR_TEST_CERT_KEY || 'You have to set key of data.go.kr'),

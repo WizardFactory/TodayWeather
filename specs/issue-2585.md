@@ -99,3 +99,39 @@ Source: independent verification iteration 2 (PASS_WITH_NOTES), finding N1 MEDIU
 **R5 (revised):** after a failed fetch, the holder moves its lock's `expireAt` to 2 s ahead (`updateOne` matching its own token) instead of releasing it. A failing location makes at most one provider attempt per 2 s, and the gateway's next attempt (after its 3 s timeout) can take over and fetch.
 
 N2 (DST display limitation), N3 (a fetch at exactly local 00:00:00 costs one extra `forecast`) and N4 (25 records per location per local day, as intended by AC2) are accepted and recorded in the PR.
+
+## Amendment 3 — 2026-09-26 (review round 1)
+
+Source: three fresh-context reviews of `c5b61975` (design D1–D16, implementation F1–F7, tests T1–T16). Triage: `reports/sdlc/issue-2585/review-round1/triage.md` (local).
+
+- **R1:**
+  - `timeoutMs` is the whole-call budget.
+  - `Accept-Encoding: gzip`.
+  - One retry only for a concurrency 429 or a reset socket. A daily-limit 429 and 401/403 set `providerDown`.
+  - Body capped at 4 MB. The encoded key is scrubbed too.
+  - Failures are logged at `error` (the production console shows only errors). Log coordinates are rounded to 2 decimals.
+- **R2:**
+  - The current hour starts at the local hour boundary (half-hour zones).
+  - Missing `currentConditions` → the current hour row.
+  - Missing sunrise/sunset → `null`.
+- **R4:**
+  - Reads are bounded to 3 days.
+  - Days are compared as local dates: a record's own day at its stored offset, "today" at the offset now, taken from its IANA zone via `Intl` (verified on Node 10.15.3). This fixes spring-forward misclassification and the fall-back extra call.
+  - Yesterday/today must be local-midnight records. Malformed records are skipped.
+  - The response is answered within `responseMs` (2.5 s). The holder's fetch may run to `fetchTimeoutMs` (8 s) and still stores its records.
+  - `_fallback` serves stored data when a current record exists: fresh, or the newest up to 3 h old.
+  - A provider-down marker (`~provider`, 10 min) is set after a daily-limit 429 or 401/403.
+  - An optional daily budget (`VC_DAILY_RECORD_LIMIT`) is checked against the new `vc.usage` counters.
+- **R5:**
+  - The lock gains `failed`, and waiters stop when it is set.
+  - Re-reads use max(request time, now).
+- **R6 (world merge):**
+  - A 0 offset is a real offset. This fixes a 500 on the UTC+0 autumn DST day.
+  - The −100 sentinel is ignored for temperature, wind direction, pressure and humidity.
+  - Null sunrise/sunset are not formatted.
+- **R8:** a missing `VC_SECRET_KEY` is logged at controller load.
+- **Not changed (owner decisions, recorded in `decisions-and-open-questions.md`):**
+  - Global concurrency limiting for the Free plan.
+  - Cache grid and freshness window.
+  - Acceptance of the released apps' Dark Sky attribution.
+  - Deployment path (Node 10 host).
