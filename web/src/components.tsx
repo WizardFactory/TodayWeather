@@ -3,6 +3,8 @@ import {
   CloudRain,
   CloudSnow,
   CloudSun,
+  CloudMoon,
+  CloudHail,
   Sun,
   Moon,
   CloudLightning,
@@ -14,6 +16,20 @@ import {
 } from "lucide-react";
 import { formatValue, type Point, type Weather } from "@todayweather/core";
 import type { ReactNode } from "react";
+import { dayLabel, iconKind, relativeDay, type IconKind } from "./format";
+export { dayLabel };
+const ICONS: Record<IconKind, typeof Cloud> = {
+  lightning: CloudLightning,
+  rainsnow: CloudHail,
+  rain: CloudRain,
+  snow: CloudSnow,
+  "cloud-moon": CloudMoon,
+  "cloud-sun": CloudSun,
+  moon: Moon,
+  sun: Sun,
+  wind: Wind,
+  cloud: Cloud,
+};
 export function WeatherIcon({
   icon = "",
   size = 40,
@@ -21,21 +37,7 @@ export function WeatherIcon({
   icon?: string;
   size?: number;
 }) {
-  const Icon = /rain|shower/.test(icon)
-    ? CloudRain
-    : /snow/.test(icon)
-      ? CloudSnow
-      : /thunder|lightning/.test(icon)
-        ? CloudLightning
-        : /moon/.test(icon)
-          ? Moon
-          : /sun.*cloud|cloud.*sun/.test(icon)
-            ? CloudSun
-            : /sun|clear/.test(icon)
-              ? Sun
-              : /wind/.test(icon)
-                ? Wind
-                : Cloud;
+  const Icon = ICONS[iconKind(icon)];
   return (
     <Icon
       size={size}
@@ -142,9 +144,13 @@ export function isOld(at: string | null, limitHours = 3) {
 export function DataNotice({
   weather,
   snapshot,
+  refreshing = false,
+  refreshFailed = false,
 }: {
   weather: Weather;
   snapshot: boolean;
+  refreshing?: boolean;
+  refreshFailed?: boolean;
 }) {
   return (
     <>
@@ -153,6 +159,25 @@ export function DataNotice({
           <span className="dot" />
           <strong>예제 데이터</strong>
           <span>화면 체험용 가상 날씨입니다. 실제 날씨가 아닙니다.</span>
+        </div>
+      )}
+      {refreshing && (
+        <div className="notice" role="status">
+          <LoaderCircle className="spin" size={16} />
+          <span>
+            저장된 자료를 먼저 표시하고 있습니다. 마지막 수신{" "}
+            {new Date(weather.fetchedAt).toLocaleString("ko-KR")} · 최신 자료를
+            불러오는 중입니다.
+          </span>
+        </div>
+      )}
+      {refreshFailed && (
+        <div className="notice warning" role="status">
+          <TriangleAlert size={16} />
+          <span>
+            최신 자료로 갱신하지 못했습니다. 마지막 수신{" "}
+            {new Date(weather.fetchedAt).toLocaleString("ko-KR")}
+          </span>
         </div>
       )}
       {snapshot && (
@@ -172,27 +197,18 @@ export function DataNotice({
     </>
   );
 }
-export const dayLabel = (at: string) => {
-  const d = new Date(at.slice(0, 10) + "T12:00:00Z");
-  return Number.isNaN(d.getTime())
-    ? "—"
-    : new Intl.DateTimeFormat("ko-KR", {
-        month: "numeric",
-        day: "numeric",
-        weekday: "short",
-        timeZone: "UTC",
-      }).format(d);
-};
 export const hourLabel = (at: string) =>
   at.slice(11, 13) + ":" + at.slice(14, 16);
 export function TemperatureChart({
   points,
   yesterday,
   unit,
+  reference,
 }: {
   points: Point[];
   yesterday: Point[];
   unit: string;
+  reference: string;
 }) {
   const data = points.slice(0, 16),
     temps = [...data, ...yesterday]
@@ -204,9 +220,20 @@ export function TemperatureChart({
     range = Math.max(...temps) - low + 4,
     width = Math.max(720, data.length * 68),
     height = 220;
+  // Rows mix 1-hour and 3-hour steps; position by time, not by index.
+  const minutes = (p: Point) => Date.parse(p.at + ":00Z") / 60000,
+    start = minutes(data[0]),
+    span = Math.max(minutes(data[data.length - 1]) - start, 1);
   const x = (i: number) =>
-      38 + (i * (width - 76)) / Math.max(data.length - 1, 1),
+      data.length > 1
+        ? 38 + ((minutes(data[i]) - start) * (width - 76)) / span
+        : width / 2,
     y = (v: number) => height - 36 - ((v - low) / range) * (height - 70);
+  const midnights = data
+    .map((p, i) => ({ p, i }))
+    .filter(
+      ({ p, i }) => i > 0 && p.at.slice(0, 10) !== data[i - 1].at.slice(0, 10),
+    );
   const segments = (rows: Point[]) => {
     let previous = false;
     return rows
@@ -247,6 +274,24 @@ export function TemperatureChart({
               strokeDasharray="3 5"
             />
           ))}
+          {midnights.map(({ p, i }) => {
+            const mx = (x(i - 1) + x(i)) / 2;
+            return (
+              <g key={"day" + p.at}>
+                <line
+                  x1={mx}
+                  x2={mx}
+                  y1={20}
+                  y2={height - 28}
+                  stroke="var(--line)"
+                  strokeWidth="2"
+                />
+                <text x={mx + 6} y={30} className="chart-day-label">
+                  {relativeDay(p.at, reference) || dayLabel(p.at)}
+                </text>
+              </g>
+            );
+          })}
           <path
             d={segments(yesterday.slice(0, data.length))}
             fill="none"
@@ -295,10 +340,10 @@ export function TemperatureChart({
           ))}
         </svg>
         <div className="hour-icons" style={{ minWidth: width }}>
-          {data.map((p) => (
-            <div key={p.at}>
+          {data.map((p, i) => (
+            <div key={p.at} style={{ left: `${(x(i) / width) * 100}%` }}>
               <WeatherIcon icon={p.icon} size={23} />
-              <span>{formatValue(p.rainProbability)}%</span>
+              <span>{percent(p.rainProbability)}</span>
             </div>
           ))}
         </div>
@@ -319,10 +364,10 @@ export function TemperatureChart({
               {data.map((p) => (
                 <tr key={p.at}>
                   <td>
-                    {dayLabel(p.at)} {hourLabel(p.at)}
+                    {dayLabel(p.at, reference)} {hourLabel(p.at)}
                   </td>
                   <td>{formatValue(p.temperature, 1)}</td>
-                  <td>{formatValue(p.rainProbability)}%</td>
+                  <td>{percent(p.rainProbability)}</td>
                   <td>{formatValue(p.humidity)}%</td>
                 </tr>
               ))}
@@ -333,6 +378,8 @@ export function TemperatureChart({
     </>
   );
 }
+export const percent = (v: number | null) =>
+  v === null ? "—" : `${formatValue(v)}%`;
 export function PageTitle({
   eyebrow,
   title,

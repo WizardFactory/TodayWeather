@@ -26,15 +26,18 @@ build/Release
 # https://www.npmjs.org/doc/misc/npm-faq.html#should-i-check-my-node_modules-folder-into-git
 node_modules
 
+# Local environment files may contain credentials. Keep sanitized examples.
+.env
+.env.*
+!.env.example
+
 .idea
 
 .DS_Store
 
-# Skill working state and temporary diff snapshots
+# Local skill working state and execution reports
 /.planning/
 /reports/sdlc/
-/reports/sdlc/**/.state.lock
-/reports/sdlc/**/changes.patch
 
 # Archify visual-check outputs are local-only, regardless of directory or format.
 # Keep the main diagram HTML and editable JSON; exclude browser-check receipts too.

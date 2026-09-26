@@ -4,6 +4,8 @@
 
 'use strict';
 
+require('./config/env');
+
 var express = require('express');
 var cors = require('cors');
 var path = require('path');

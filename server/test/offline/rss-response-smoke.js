@@ -65,7 +65,11 @@ function createHarness(version, fixture, historyOptions = {}) {
   function modelData(name) {
     if(name==='town') return locations;
     if(name==='modelKmaStnInfo') return historyOptions.stations || [];
-    if(name==='modelAreaNo'||name==='modelHealthDay') return [];
+    if(name==='modelHealthDay') return [];
+    // Optional life index and KASI rise/set store rows (#2587); defaults keep the earlier empty stores.
+    if(name==='modelAreaNo') return fixture.areaNoRows || [];
+    if(name==='kma.lifeindex.model') return fixture.lifeIndexRows || [];
+    if(name==='modelKasiRiseSet') return fixture.kasiRows || [];
     const isV2=name.startsWith('kma.');
     const map={'modelShort':'short','modelCurrent':'current','modelShortest':'shortest','modelShortRss':'rss','kma.town.short.model':'short','kma.town.current.model':'current','kma.town.shortest.model':'shortest','kma.town.short.rss.model':'rss'};
     if(map[name]) {
@@ -84,11 +88,14 @@ function createHarness(version, fixture, historyOptions = {}) {
     const obj={find:(query,projection,cb)=>{
       queries.push({model:name,query:clone(query)});
       const data=()=>clone(modelData(name));
-      const q={sort(){return q;},batchSize(){return q;},limit(){return q;},lean(){return q;},exec(callback){callback(null,data());}};
+      const failure=fixture.modelErrors&&fixture.modelErrors[name];
+      const q={sort(){return q;},batchSize(){return q;},limit(){return q;},lean(){return q;},exec(callback){if(failure)return callback(new Error(failure));callback(null,data());}};
       if(typeof projection==='function')projection(null,data());
       if(typeof cb==='function')cb(null,data());
       return q;
-    }};models.set(name,obj);return obj;
+    }};
+    if(name==='modelKasiRiseSet') obj.getDataPropertyList=()=>['sunrise','suntransit','sunset','moonrise','moontransit','moonset','civilm','civile','nautm','naute','astm','aste'];
+    models.set(name,obj);return obj;
   }
   const optional={
     'kecoController':{getArpLtnInfo:(town,date,cb)=>cb(null,fixture.arpltnInfo?clone(fixture.arpltnInfo):{arpltn:{},list:[],stnList:[]}),getDustFrcst:(town,date,cb)=>cb(null,[])},
@@ -121,6 +128,7 @@ function createHarness(version, fixture, historyOptions = {}) {
       if(resolved.endsWith('/config/config.js'))return config;
       const name=path.basename(resolved,'.js');
       if(resolved.includes('/models/'))return getModel(name);
+      if(name==='kasi.riseset.controller' && fixture.kasiRows) return load(resolved);
       if(Object.hasOwn(optional,name)) { if(['controllerKmaStnWeather','kecoController'].includes(name)) return Object.assign(load(resolved),optional[name]); return optional[name]; }
       if(name==='kecoRequester') return function(){};
       if(name==='convertGeocode')return ()=>{throw new Error('Unexpected geocode fallback');};

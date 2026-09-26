@@ -538,26 +538,6 @@ main:focus {
   font-size: 11px;
   margin-top: 4px;
 }
-.air-orb.moderate {
-  color: #a78c3b;
-  border-color: #f5eacb;
-  background: #fcf9ef;
-}
-.air-orb.poor {
-  color: #d48852;
-  border-color: #f8e4d6;
-  background: #fff7ef;
-}
-.air-orb.bad {
-  color: #c9626f;
-  border-color: #f4d9df;
-  background: #fff6f8;
-}
-.air-orb.unknown {
-  color: var(--muted);
-  border-color: var(--line);
-  background: var(--soft);
-}
 .air-small-values {
   display: flex;
   justify-content: center;
@@ -648,16 +628,18 @@ main:focus {
   font-size: 11px;
 }
 .hour-icons {
-  display: flex;
-  justify-content: space-between;
-  padding: 9px 12px 14px;
+  position: relative;
+  height: 64px;
+  margin: 9px 0 14px;
 }
 .hour-icons > div {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  flex: 1;
   font-size: 10px;
   color: #81a3c7;
 }
@@ -1106,22 +1088,6 @@ th {
   color: var(--muted);
   white-space: nowrap;
 }
-.grade.good {
-  background: #edf7f2;
-  color: #4da68b;
-}
-.grade.moderate {
-  background: #faf4e7;
-  color: #b59341;
-}
-.grade.poor {
-  background: #fff1e5;
-  color: #d28c50;
-}
-.grade.bad {
-  background: #faedf1;
-  color: #cc7381;
-}
 .bar-chart {
   display: flex;
   gap: 13px;
@@ -1143,18 +1109,6 @@ th {
   background: #a4c6de;
   border-radius: 5px;
   margin: 10px 0;
-}
-.bar-chart i.good {
-  background: #8dceb8;
-}
-.bar-chart i.moderate {
-  background: #e4c786;
-}
-.bar-chart i.poor {
-  background: #ecb795;
-}
-.bar-chart i.bad {
-  background: #e8a2b1;
 }
 .bar-chart small {
   font-size: 9px;
@@ -1982,5 +1936,163 @@ th {
   }
 }
 
-.provider-air-summary { padding: 0 1rem 1rem; overflow-wrap: anywhere; }
-.provider-air-summary h3 { font-size: 1rem; }
+.provider-air-summary {
+  padding: 0 1rem 1rem;
+  overflow-wrap: anywhere;
+}
+.provider-air-summary h3 {
+  font-size: 1rem;
+}
+
+/* Air grades follow the mobile aqiStandard colors (4-grade Korean, 6-grade EPA/China). */
+.grade-4-1 {
+  --g: #32a1ff;
+}
+.grade-4-2 {
+  --g: #00c73c;
+}
+.grade-4-3 {
+  --g: #fd9b5a;
+}
+.grade-4-4 {
+  --g: #ff5959;
+}
+.grade-6-1 {
+  --g: #00c73c;
+}
+.grade-6-2 {
+  --g: #d2d211;
+}
+.grade-6-3 {
+  --g: #ff6f00;
+}
+.grade-6-4 {
+  --g: #ff0000;
+}
+.grade-6-5 {
+  --g: #b4004b;
+}
+.grade-6-6 {
+  --g: #940021;
+}
+.grade-none {
+  --g: var(--muted);
+}
+.air-orb[class*="grade-"] {
+  color: color-mix(in srgb, var(--g) 78%, var(--text));
+  border-color: color-mix(in srgb, var(--g) 28%, transparent);
+  background: color-mix(in srgb, var(--g) 8%, var(--panel));
+}
+.grade[class*="grade-"] {
+  color: color-mix(in srgb, var(--g) 78%, var(--text));
+  background: color-mix(in srgb, var(--g) 12%, var(--panel));
+}
+.bar-chart i[class*="grade-"] {
+  background: color-mix(in srgb, var(--g) 65%, var(--panel));
+}
+.bar-chart i.forecast {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    color-mix(in srgb, var(--panel) 55%, transparent) 4px 7px
+  );
+}
+.bar-chart small.date {
+  font-weight: 600;
+  color: var(--text);
+}
+.bar-chart > div.empty i {
+  background: var(--line);
+}
+.air-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.air-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 5px;
+  background: #a4c6de;
+  vertical-align: -1px;
+}
+.air-legend i.forecast {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 3px,
+    #fff 3px 5px
+  );
+}
+.air-attribution,
+.source-credit {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-top: 12px;
+}
+.air-attribution p,
+.source-credit p {
+  margin: 2px 0;
+}
+.air-attribution details summary {
+  cursor: pointer;
+}
+.pollutant-station {
+  display: block;
+  font-size: 9px;
+  color: var(--muted);
+}
+.air-forecast {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 10px;
+}
+.air-forecast span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.chart-day-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--muted);
+}
+.permission-help {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--soft);
+  font-size: 13px;
+}
+.permission-help p {
+  margin: 0 0 8px;
+}
+.location-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.location-preview strong {
+  color: var(--text);
+  font-size: 18px;
+}
+.bulletin-note {
+  font-weight: 700;
+  margin: 8px 0 0;
+}
+.powered-by {
+  font-size: 11px;
+}
+.map-canvas rect.map-grade[class*="grade-"] {
+  fill: color-mix(in srgb, var(--g) 16%, var(--panel));
+  stroke: var(--g);
+}

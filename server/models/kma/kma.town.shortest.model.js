@@ -18,6 +18,7 @@ var townShortestSchema = new mongoose.Schema({
         my: {type:Number, default:-1},
         pty: {type:Number, default:-1},
         rn1: {type:Number, default:-1},
+        rn1Text: String, // provider category for an approximate forecast rn1, e.g. "1mm 미만" (#2583)
         sky: {type:Number, default:-1},
         lgt: {type:Number, default:-1},
         t1h: {type:Number, default:-50},

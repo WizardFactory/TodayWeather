@@ -110,10 +110,18 @@ describe('gather drift: synthetic offline compatibility', function () {
             assert.strictEqual(v.r06, 1.5); assert.strictEqual(v.s06, 0.5);
         });
     });
-    ['', ' ', 'unknown', '1~4', '1.0mm 미만', '50mm 이상', 'Infinity', 'NaN', '-1', '-999', '1e999', '1.2junk'].forEach(function (value) {
+    ['', ' ', 'unknown', 'Infinity', 'NaN', '-1', '-999', '1e999', '1.2junk'].forEach(function (value) {
         it('keeps unsupported precipitation missing: ' + JSON.stringify(value), function () {
             var v = h.organize('organizeShortData', h.shortItems({PCP: value, SNO: value})).data[0];
             assert.strictEqual(v.r06, -1); assert.strictEqual(v.s06, -1);
+            assert.strictEqual(v.r06Text, undefined); assert.strictEqual(v.s06Text, undefined);
+        });
+    });
+    // #2583: categories keep a representative amount plus the provider text for their bounds.
+    [['1~4', 2.5], ['1.0mm 미만', 0.5], ['50mm 이상', 50]].forEach(function (pair) {
+        it('stores precipitation category ' + JSON.stringify(pair[0]) + ' as an approximate amount', function () {
+            var v = h.organize('organizeShortData', h.shortItems({PCP: pair[0]})).data[0];
+            assert.strictEqual(v.r06, pair[1]); assert.strictEqual(v.r06Text, pair[0]);
         });
     });
     it('retains legacy categories and forecast grouping', function () {
@@ -130,7 +138,7 @@ describe('gather drift: synthetic offline compatibility', function () {
             assert(!h.organize('organizeShortData', h.shortItems({TMP: value})).isCompleted);
         });
     });
-    [0, 1.5, undefined, '', 'bad', 'Infinity', 'NaN', -1, -999, '1~4', '1mm 미만'].forEach(function (value) {
+    [0, 1.5, undefined, '', 'bad', 'Infinity', 'NaN', -1, -999].forEach(function (value) {
         it('normalizes shortest RN1 ' + JSON.stringify(value), function () {
             var items = h.shortItems().filter(function (i) { return !['TMP', 'PCP', 'SNO'].includes(i.category[0]); });
             items.push(h.item('T1H', '12.5'), h.item('LGT', '0'));
@@ -207,13 +215,14 @@ describe('upstream storage and period-contract characterization', function () {
         var r = h.organize('organizeCurrentData', items); assert(r.isCompleted);
         assert.strictEqual(r.data[0].reh, -1); assert.strictEqual(r.data[0].lgt, -1);
     });
-    it('documents legacy 24h splitting as a limitation, not hourly-to-six-hour equivalence', function () {
+    it('keeps each slot amount in 24h adjustShort instead of splitting it (#2583)', function () {
         function Base() {}
         Base.prototype._createOrGetDaySummaryList = function (list, date) {
             if (!list.length) list.push({date: date}); return list[0];
         };
         var deps = {async: require('async'), request: {}, '../controllers/controllerTown': Base,
-            '../lib/kmaTimeLib': h.load('lib/kmaTimeLib.js', {}), '../config/config': {}};
+            '../lib/kmaTimeLib': h.load('lib/kmaTimeLib.js', {}), '../config/config': {},
+            '../lib/kmaPrecipitation': h.optional('../../lib/kmaPrecipitation')};
         ['../lib/unitConverter', '../lib/aqi.converter', '../controllers/kecoController',
             '../controllers/airkorea.hourly.forecast.controller', '../controllers/kaq.hourly.forecast.controller',
             '../controllers/kma.specialweather.controller'].forEach(function (name) { deps[name] = function () {}; });
@@ -224,10 +233,9 @@ describe('upstream storage and period-contract characterization', function () {
         var called = 0;
         new Town().adjustShort({params: {}, short: rows}, {}, function () { called++; });
         assert.strictEqual(called, 1);
-        // Existing consumer splits every other record; this is NOT a correct
-        // conversion for hourly PCP/SNO. Preserve it, expose it, defer redesign.
-        assert.strictEqual(rows[1].r06, 0.8); assert.strictEqual(rows[2].r06, 0.8);
-        assert.strictEqual(rows[1].s06, 0.3); assert.strictEqual(rows[2].s06, 0.3);
+        rows.forEach(function (row) {
+            assert.strictEqual(row.r06, 1.5); assert.strictEqual(row.s06, 0.5);
+        });
         assert.strictEqual(rows[2].t3h, 12);
     });
 });
@@ -366,5 +374,146 @@ describe('review corrections: complete responses and key representation', functi
         c.getData(0, c.DATA_TYPE.TOWN_SHORT, url, {}, function (err) { assert(err); });
         assert(!logs.join(' ').includes(key)); assert(!logs.join(' ').includes(encodeURIComponent(key)));
         assert(!logs.join(' ').includes('serviceKey='));
+    });
+});
+
+describe('pagination before the completeness check (#2590)', function () {
+    var product = h.shortProduct();
+    function collect(items, mutate, options) {
+        options = options || {};
+        var requests = [], logs = [], calls = [], failures = 0;
+        var c = h.prepare(h.collector(h.pagedHttp(items, requests, mutate, options.echo), logs));
+        c.on('recvFail', function () { failures++; });
+        var type = c.DATA_TYPE[options.type || 'TOWN_SHORT'];
+        var url = options.url || c.getUrl(type, KEY, '20260924', '0500', {mx: 60, my: 127});
+        c.getData(0, type, url, {}, function (err) { calls.push(err); });
+        assert.strictEqual(calls.length, 1, 'exactly one completion callback');
+        assert(!logs.join('\n').includes(KEY)); assert(!logs.join('\n').includes('serviceKey='));
+        return {c: c, err: calls[0], requests: requests, failures: failures, logs: logs};
+    }
+    function withoutPage(url) { var u = new URL(url); u.searchParams.delete('pageNo'); return u.toString(); }
+    // tag: [page, check] expected in the static warning diagnostic (#2593 review).
+    function assertFailed(r, requestCount, reason, tag) {
+        assert(r.err, 'failure callback must carry an error');
+        assert.strictEqual(r.err.message, reason || 'KMA incomplete or inconsistent response');
+        if (tag) {
+            var warning = r.logs.filter(function (line) { return line.indexOf(r.err.message) === 0; });
+            assert.strictEqual(warning.length, 1, 'one warning');
+            assert(warning[0].replace(/\s+/g, ' ').includes("page: " + tag[0] + ", check: '" + tag[1] + "'"), warning[0]);
+        }
+        assert.strictEqual(r.failures, 1); assert.strictEqual(r.c.recvFailed, true);
+        assert.strictEqual(r.c.resultList[0].isCompleted, false);
+        assert.strictEqual(r.requests.length, requestCount);
+    }
+    [false, true].forEach(function (echo) {
+        it('collects the 1,016-row short product from pages 1 and 2' + (echo ? ' with echoed paging' : ''), function () {
+            var r = collect(product, null, {echo: echo});
+            assert.ifError(r.err); assert.strictEqual(r.failures, 0);
+            assert.deepStrictEqual(r.requests.map(function (u) { return new URL(u).searchParams.get('pageNo'); }), ['1', '2']);
+            assert.strictEqual(withoutPage(r.requests[0]), withoutPage(r.requests[1]));
+            assert.strictEqual(new URL(r.requests[1]).searchParams.get('numOfRows'), '999');
+            var data = r.c.resultList[0].data;
+            assert(r.c.resultList[0].isCompleted); assert.strictEqual(data.length, 84);
+            var last = data[data.length - 1];
+            assert.strictEqual(last.date + last.time, '202609271700');
+            assert.strictEqual(last.t3h, 13); assert.strictEqual(last.sky, 1); assert.strictEqual(last.wsd, 0);
+            var split = data[data.length - 2];
+            assert.strictEqual(split.date + split.time, '202609271600');
+            assert.strictEqual(split.t3h, 12); assert.strictEqual(split.wsd, 0); assert.strictEqual(split.reh, 60);
+        });
+    });
+    it('keeps a single complete page to one request with identical organized data', function () {
+        var items = h.shortItems();
+        var r = collect(items);
+        assert.ifError(r.err); assert.strictEqual(r.requests.length, 1);
+        assert.strictEqual(JSON.stringify(r.c.resultList[0].data), JSON.stringify(h.organize('organizeShortData', items).data));
+    });
+    it('paginates shortest data with the same contract', function () {
+        var items = [];
+        ['0600', '0700', '0800', '0900', '1000', '1100'].forEach(function (time) {
+            ['T1H', 'RN1', 'SKY', 'UUU', 'VVV', 'REH', 'PTY', 'LGT', 'VEC', 'WSD'].forEach(function (category) {
+                items.push(h.item(category, {RN1: '강수없음', SKY: '1', T1H: '11', REH: '50'}[category] || '0', time));
+            });
+        });
+        var r = collect(items, null, {type: 'TOWN_SHORTEST',
+            url: 'http://offline.invalid/?serviceKey=' + KEY + '&pageNo=1&numOfRows=25'});
+        assert.ifError(r.err); assert.strictEqual(r.requests.length, 3);
+        assert.strictEqual(r.c.resultList[0].data.length, 6);
+        assert.strictEqual(r.c.resultList[0].data[5].time, '1100');
+    });
+    [12, 999, 1000].forEach(function (count) {
+        it('fails a short first page with totalCount ' + count + ' without continuation', function () {
+            assertFailed(collect(h.shortItems(), function (page, r) { r.response.body[0].totalCount = [String(count)]; }), 1, null, [1, 'rows']);
+        });
+    });
+    it('fails a first page shorter than numOfRows', function () {
+        assertFailed(collect(product, function (page, r) {
+            if (page === 1) { r.response.body[0].items[0].item.pop(); }
+        }), 1, null, [1, 'rows']);
+    });
+    var SMALL = 'http://offline.invalid/?serviceKey=' + KEY + '&pageNo=1&numOfRows=3';
+    // Distinct rows: the 11 hourly categories plus WAV/TMN/TMX/R06/S06 for the same hour.
+    var extra = ['WAV', 'TMN', 'TMX', 'R06', 'S06'].map(function (category) { return h.item(category, '0'); });
+    it('accepts exactly five pages', function () {
+        var r = collect(h.shortItems().concat(extra.slice(0, 4)), null, {url: SMALL});
+        assert.ifError(r.err); assert.strictEqual(r.requests.length, 5);
+        assert.deepStrictEqual(r.requests.map(function (u) { return new URL(u).searchParams.get('pageNo'); }), ['1', '2', '3', '4', '5']);
+    });
+    it('fails when the page limit would be exceeded, without continuation', function () {
+        assertFailed(collect(h.shortItems().concat(extra), null, {url: SMALL}), 1, null, [1, 'limit']);
+    });
+    it('does not paginate a URL without paging parameters', function () {
+        assertFailed(collect(product, null, {url: 'http://offline.invalid/?serviceKey=' + KEY + '&numOfRows=999'}), 1, null, [1, 'pageNo']);
+    });
+    var continuation = {
+        'changed totalCount': function (r) { r.response.body[0].totalCount = ['1017']; },
+        'short final page': function (r) { r.response.body[0].items[0].item.pop(); },
+        'extra final item': function (r) { r.response.body[0].items[0].item.push(h.item('TMP', '1', '1800')); },
+        'echoed pageNo mismatch': function (r) { r.response.body[0].pageNo = ['1']; },
+        'echoed numOfRows mismatch': function (r) { r.response.body[0].numOfRows = ['17']; },
+        'provider error': function (r) { r.response.header[0].resultCode = ['22']; },
+        'empty items': function (r) { r.response.body[0].items = [{}]; },
+        'rows repeating the end of page 1': function (r) {
+            r.response.body[0].items[0].item = product.slice(999 - 17, 999);
+        }
+    };
+    var reasons = {'provider error': 'KMA invalid or empty response', 'empty items': 'KMA invalid or empty response'};
+    var checks = {'changed totalCount': 'totalCount', 'short final page': 'rows', 'extra final item': 'rows',
+        'echoed pageNo mismatch': 'echo', 'echoed numOfRows mismatch': 'echo', 'provider error': 'response',
+        'empty items': 'response', 'rows repeating the end of page 1': 'duplicate'};
+    Object.keys(continuation).forEach(function (name) {
+        it('fails the whole grid on page-2 ' + name, function () {
+            assertFailed(collect(product, function (page, r) { if (page === 2) { continuation[name](r); } }, {echo: true}), 2, reasons[name], [2, checks[name]]);
+        });
+    });
+    it('fails on a repeated page', function () {
+        var doubled = product.slice(0, 999).concat(product.slice(0, 999));
+        assertFailed(collect(doubled), 2, null, [2, 'duplicate']);
+    });
+    it('fails on echoed pageNo mismatch on page 1 when paginating', function () {
+        assertFailed(collect(product, function (page, r) { r.response.body[0].pageNo = ['2']; }, {echo: true}), 1, null, [1, 'echo']);
+    });
+    function failingSecondPage(respond, reason) {
+        var requests = [], logs = [], calls = [], failures = 0;
+        var first = h.pagedHttp(product, requests);
+        var c = h.prepare(h.collector({get: function (url, options, cb) {
+            if (requests.length === 0) { return first.get(url, options, cb); }
+            requests.push(url); respond(url, cb);
+        }}, logs));
+        c.on('recvFail', function () { failures++; });
+        var url = c.getUrl(c.DATA_TYPE.TOWN_SHORT, KEY, '20260924', '0500', {mx: 60, my: 127});
+        c.getData(0, c.DATA_TYPE.TOWN_SHORT, url, {}, function (err) { calls.push(err); });
+        assert.strictEqual(calls.length, 1);
+        assert(!logs.join('\n').includes(KEY)); assert(!logs.join('\n').includes('serviceKey='));
+        assertFailed({c: c, err: calls[0], requests: requests, failures: failures, logs: logs}, 2, reason, [2, 'response']);
+    }
+    it('fails on page-2 transport error without logging its URL', function () {
+        failingSecondPage(function (url, cb) { cb(new Error(url)); }, 'KMA transport failure');
+    });
+    it('fails on page-2 HTTP 500', function () {
+        failingSecondPage(function (url, cb) { cb(null, {statusCode: 500}, ''); }, 'KMA HTTP failure');
+    });
+    it('fails on page-2 malformed XML', function () {
+        failingSecondPage(function (url, cb) { cb(null, {statusCode: 200}, '<response><' + KEY); }, 'KMA invalid or empty response');
     });
 });
