@@ -149,9 +149,9 @@ The fallback tile and the detail row both use the label `LOC_AQI`, but they read
 
 | Element | Template | Normalized source | Visibility | Action |
 | --- | --- | --- | --- | --- |
-| Powered by Dark Sky | [F:352-354](../../client/www/templates/tab-forecast.html#L352-L354) `img/poweredby_darksky.png` | `city.source`. It is `"DSF"` only when the world response `pubDate` has a `DSF` key ([service.weatherutil.js:624-628](../../client/www/js/service.weatherutil.js#L624-L628)); domestic responses give `"KMA"` ([service.weatherutil.js:472](../../client/www/js/service.weatherutil.js#L472)) | `showDetailWeather && source == 'DSF'` | `openUrl('https://darksky.net/poweredby')`: with the InAppBrowser plugin it opens with target `_system` and logs `action/click/open weather source`; otherwise it calls `window.open(..., "_blank")` ([FC:125-138](../../client/www/js/controller.forecastctrl.js#L125-L138)) |
+| Weather Data Provided by Visual Crossing (Powered by Dark Sky image before #2585) | [F:352-354](../../client/www/templates/tab-forecast.html#L352-L354) text link | `city.source`. It is `"VC"` only when the world response `pubDate` has a `VC` key ([service.weatherutil.js:624-629](../../client/www/js/service.weatherutil.js#L624-L629)); released apps look for `DSF` and so keep a city's stored `source`: cities stored as `DSF` (every non-KR current position in released TodayWeather iOS builds, overseas cities stored before #2585) still show the Powered by Dark Sky image over Visual Crossing data, and other overseas cities show no attribution; domestic responses give `"KMA"` ([service.weatherutil.js:472](../../client/www/js/service.weatherutil.js#L472)) | `showDetailWeather && source == 'VC'` | `openUrl('https://www.visualcrossing.com/')`: with the InAppBrowser plugin it opens with target `_system` and logs `action/click/open weather source`; otherwise it calls `window.open(..., "_blank")` ([FC:125-138](../../client/www/js/controller.forecastctrl.js#L125-L138)) |
 
-The same light-background image is used in every theme; the checked-in `img/poweredby_darksky_darkbackground.png` is not referenced by any template.
+The link is plain text in every theme; the checked-in `img/poweredby_darksky.png` and `img/poweredby_darksky_darkbackground.png` are no longer referenced by any template. The attribution rows in this document describe the #2585 source, after the `bd6640f2` baseline.
 
 ## S04 — Daily weather
 
@@ -204,7 +204,7 @@ The card is `ng-if="dayChart"`, so unlike S03 it is **not** gated by `showDetail
 
 | Element | Template | Visibility | Action |
 | --- | --- | --- | --- |
-| Powered by Dark Sky | [D:173-175](../../client/www/templates/tab-dailyforecast.html#L173-L175) | `source == 'DSF'` **only**, with no `showDetailWeather` gate, unlike S03 and S15 | `openUrl('https://darksky.net/poweredby')` |
+| Weather Data Provided by Visual Crossing | [D:173-175](../../client/www/templates/tab-dailyforecast.html#L173-L175) | `source == 'VC'` **only**, with no `showDetailWeather` gate, unlike S03 and S15 | `openUrl('https://www.visualcrossing.com/')` |
 
 ## S15 — TodayAir combined weather
 
@@ -218,7 +218,7 @@ Template W, ForecastCtrl with `forecastType="weather"`, so both the hourly and t
 | Daily chart | [W:95-113](../../client/www/templates/ta-tab-weather.html#L95-L113) | S04 daily chart | The card has no `ng-if`. There is no daily AQI card and no three-day detail card |
 | Detail weather card | [W:114-206](../../client/www/templates/ta-tab-weather.html#L114-L206) | S03 detail weather card | Identical rows and rules, from weather ([W:117](../../client/www/templates/ta-tab-weather.html#L117)) to update time ([W:199-204](../../client/www/templates/ta-tab-weather.html#L199-L204)) |
 | Air cards | — | — | None. S15 has no hourly AQI card, no fallback tiles and no detail AQI card; air data lives on S16 |
-| Powered by Dark Sky | [W:207-209](../../client/www/templates/ta-tab-weather.html#L207-L209) | S03 attribution | Same gate as S03: `showDetailWeather && source == 'DSF'` |
+| Weather Data Provided by Visual Crossing | [W:207-209](../../client/www/templates/ta-tab-weather.html#L207-L209) | S03 attribution | Same gate as S03: `showDetailWeather && source == 'VC'` |
 
 ## Expander state: TodayWeather versus TodayAir
 
@@ -335,9 +335,9 @@ The list is shown when `isSearching===false && package === 'todayAir'` ([S:78](.
 
 | Attribution | Template | Visibility | Tap |
 | --- | --- | --- | --- |
-| Powered by Dark Sky, S03 | [F:352-354](../../client/www/templates/tab-forecast.html#L352-L354) | `showDetailWeather && source == 'DSF'` | `openUrl` |
-| Powered by Dark Sky, S04 | [D:173-175](../../client/www/templates/tab-dailyforecast.html#L173-L175) | `source == 'DSF'` | `openUrl` |
-| Powered by Dark Sky, S15 | [W:207-209](../../client/www/templates/ta-tab-weather.html#L207-L209) | `showDetailWeather && source == 'DSF'` | `openUrl` |
+| Visual Crossing text link, S03 | [F:352-354](../../client/www/templates/tab-forecast.html#L352-L354) | `showDetailWeather && source == 'VC'` | `openUrl` |
+| Visual Crossing text link, S04 | [D:173-175](../../client/www/templates/tab-dailyforecast.html#L173-L175) | `source == 'VC'` | `openUrl` |
+| Visual Crossing text link, S15 | [W:207-209](../../client/www/templates/ta-tab-weather.html#L207-L209) | `showDetailWeather && source == 'VC'` | `openUrl` |
 | Powered by Google, S02 | [S:43-45](../../client/www/templates/tab-search.html#L43-L45) | `searchResults2.length > 0` | none |
 | Powered by Google, S01 | [St:30-32](../../client/www/templates/start.html#L30-L32) | `searchResults2.length > 0`. The city chips and the current-location button show only while `searchResults2` is undefined or empty ([St:16](../../client/www/templates/start.html#L16), [St:35](../../client/www/templates/start.html#L35)) | none |
 | Powered by TodayWeather, S02 | [S:32-34](../../client/www/templates/tab-search.html#L32-L34) | `searchResults.length > 0` | none |
@@ -371,7 +371,7 @@ S01 has no TodayWeather divider because `StartCtrl` queries only Places ([start.
 These are candidates for characterization tests or decisions, not confirmed production defects. Unless a capture is cited, each one is source-level and was not reproduced.
 
 1. **Location glyph does nothing on S05/S16.** `tab-air.html` binds `switchToLocationSettings()` ([A:8-9](../../client/www/templates/tab-air.html#L8-L9)), but only ForecastCtrl defines it ([FC:658](../../client/www/js/controller.forecastctrl.js#L658)).
-2. **Dark Sky badge can go stale within a visit.** ForecastCtrl assigns `$scope.source` only when `cityData.source` is truthy ([FC:359-361](../../client/www/js/controller.forecastctrl.js#L359-L361)). A world city whose response lacks `pubDate.DSF` has no `source`, so swiping to it from a DSF city keeps the badge.
+2. **Provider attribution can go stale within a visit.** ForecastCtrl assigns `$scope.source` only when `cityData.source` is truthy ([FC:359-361](../../client/www/js/controller.forecastctrl.js#L359-L361)). A world city whose response lacks `pubDate.VC` has no `source`, so swiping to it from a `VC` city keeps the Visual Crossing link (before #2585: the Dark Sky badge with `pubDate.DSF`).
 3. **Forecast rows can go stale on S05/S16.** AirCtrl does not clear `forecastPubdate`/`forecastSource` for a city without `airInfo`/`airInfoList` ([AC:261-263](../../client/www/js/controller.air.js#L261-L263)).
 4. **Single-station air forecast never shows on weather pages.** ForecastCtrl's `airInfo` fallback repeats the `airInfoList` condition ([FC:379-384](../../client/www/js/controller.forecastctrl.js#L379-L384)), so a city with only a single `airInfo` never shows the hourly/daily AQI forecast or the forecast pubdate/source rows. See [client data contracts](client-data-contracts.md#air-contract-and-station-selection).
 5. **Legacy daily dust rows use fixed positions.** They use `dayChart` indexes 7 and 8 ([D:90](../../client/www/templates/tab-dailyforecast.html#L90)), while the card gate checks the `fromToday == 0` row.

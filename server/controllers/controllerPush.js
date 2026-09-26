@@ -1046,7 +1046,8 @@ ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
         log.warn('cityIndex is 0, so request daily summary by geo'+JSON.stringify(pushInfo));
         self._requestDailySummaryByGeo(pushInfo, callback);
     }
-    else if (pushInfo.source == 'DSF') {
+    else if (pushInfo.source == 'VC' || pushInfo.source == 'DSF') {
+        // VC: Visual Crossing (#2585); DSF: registrations from app versions before it.
         self._requestDsfDailySummary(pushInfo, callback);
     }
     else if (pushInfo.source == 'KMA') {

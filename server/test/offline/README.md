@@ -223,3 +223,28 @@ TZ=UTC NODE_PATH=/tmp/tw-2587/node_modules node server/test/offline/riseset-uv-s
 ```
 
 Both run in the RSS offline workflow. Deployment to the gather host and the deployed response remain operator checks.
+
+## Overseas weather on Visual Crossing (#2585)
+
+| File | What it covers |
+| --- | --- |
+| `vc-weather.test.js` | Unit tests; also run by `test:offline`. The real requester, converter and `DsfController` are loaded in a VM with a fake `https` and in-memory models. Covers: request shape and gzip; timeout budget; 429 handling (concurrency vs daily limit); key scrubbing; the conversion to Dark Sky format; the summary vocabulary; DST and half-hour zones; single-flight lock, takeover, backoff and failed flag; stale fallback; provider-down marker; daily budget; usage counter; push paths; retired Dark Sky; app and template checks. |
+| `vc-weather-smoke.js` | Runs the real v000903/v000901 and `/ww` routers with full middleware. **Fixture mode (default):** recorded responses for Tokyo, London and New York at a fixed clock, 2026-09-26 07:04:30 UTC. The fixtures cover about 04:05–14:49 UTC that day; other `TW_SMOKE_NOW` values fail. It also runs synthetic `vc-synthetic.js` scenarios with stored-record sequences: London, Auckland and New York DST changes; +5:30, +5:45, +14, −11 and −2:30 zones; calm and clear days; missing fields; polar days; no `currentConditions`; precipitation types. It checks exact unit conversions, the three apps' parsers and the push/alert consumers. **Live mode** (`TW_VC_LIVE=1`) uses the real requester and `VC_SECRET_KEY` from the environment or `server/.env`. It costs about 76 records per run. Synthetic scenarios also cover a stale fallback through the routers. CI's `vc-node10` job also runs this smoke on Node 10.15.3. |
+| `vc-lock-mongo-smoke.js` | Real models and controller on a real mongod (mongodb-memory-server, or `TW_MONGO_URL`). Covers the TTL index, single flight, geo casting, bounded reads, takeover, the failed flag, owner-token release, backoff, the provider marker, stale fallback and the usage counter. It uses mongoose 5.13, because the service's 5.1.2 driver cannot connect to mongod ≥ 5.1. |
+| `vc-node10-check.js` | Plain Node 10.15.3 script (the service host's runtime): requester with gzip, converter, and the controller flow including `Intl` zone offsets, with stale (`Asia/Almaty`), renamed (`Europe/Kyiv`) and unknown zones falling back to the stored offset. The world merge and route middleware are covered on Node 16/22 by the smoke, not here. It fails on exit unless every step ran; the smoke also has a 10-second per-request timeout and the same completion guard. |
+
+```sh
+npm install --prefix /tmp/tw-2585 --ignore-scripts --no-audit --no-fund --package-lock=false async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3
+TZ=UTC NODE_PATH=/tmp/tw-2585/node_modules node server/test/offline/vc-weather.test.js
+TZ=UTC NODE_PATH=/tmp/tw-2585/node_modules node server/test/offline/vc-weather-smoke.js
+TZ=UTC NODE_PATH=/tmp/tw-2585/node_modules TW_VC_LIVE=1 node server/test/offline/vc-weather-smoke.js   # live, costs records
+npm install --prefix /tmp/tw-2585-mongo --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.13.22 async@2.5.0 mongodb-memory-server-core@10.1.4
+TZ=UTC NODE_PATH=/tmp/tw-2585-mongo/node_modules node server/test/offline/vc-lock-mongo-smoke.js
+```
+
+**Re-recording fixtures**
+- Request the production ranges (`yesterday/next7days`, `today/next7days`) with `unitGroup=us&include=days,hours,current` and the `elements` list from `lib/VC/vcRequester.js`.
+- Check that the key string does not appear in the files.
+- Update `CAPTURED` in `vc-weather.test.js`, the smoke's default instant, and the "valid window" note above.
+
+All four run in the RSS offline workflow. The workflow runs on Node 16 and 22 under UTC and Asia/Seoul, plus separate Node 10.15.3 and mongod jobs.
