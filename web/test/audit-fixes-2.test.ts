@@ -29,6 +29,18 @@ describe("rate-limited snapshots wait for Retry-After (round 2, N1)", () => {
     expect(weatherStaleTime({ snapshot: true })).toBe(0);
     expect(weatherStaleTime({ snapshot: true, retryAt: now - 1 })).toBe(0);
   });
+  it("measures the wait from when the snapshot was stored, not from now", () => {
+    // React Query adds staleTime to dataUpdatedAt, so a "remaining time"
+    // value would expire the wait halfway through.
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(20000);
+      const data = { snapshot: true, retryAt: 30000 };
+      expect(weatherStaleTime(data, 0)).toBe(30000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("Retry-After as an HTTP date (round 3, T7)", () => {

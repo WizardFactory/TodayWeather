@@ -138,7 +138,7 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
     queryKey: ["weather", key],
     queryFn: ({ signal }) => fetchWeather(place!, units, signal),
     enabled: !!place,
-    staleTime: (q) => weatherStaleTime(q.state.data),
+    staleTime: (q) => weatherStaleTime(q.state.data, q.state.dataUpdatedAt),
     refetchOnWindowFocus: true,
     refetchInterval: state.settings.refreshMinutes
       ? state.settings.refreshMinutes * 60000

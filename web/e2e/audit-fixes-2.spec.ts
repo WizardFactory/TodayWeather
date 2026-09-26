@@ -173,14 +173,18 @@ test("a rate-limited refresh keeps the snapshot, explains the wait and does not 
       await page.evaluate(() => window.dispatchEvent(new Event("online")));
   };
   await revisit(true);
+  // Two thirds into the wait it is still too early.
+  await page.clock.runFor(20000);
   await revisit(true);
   await page.waitForTimeout(500);
   expect(calls, "no request before Retry-After").toBe(1);
   // Once the wait has passed, returning to the view alone refreshes the
   // snapshot (the online handler would refetch regardless of staleTime).
-  await page.clock.runFor(31000);
-  await revisit(false);
-  await expect.poll(() => calls).toBeGreaterThan(1);
+  await page.clock.runFor(11000);
+  await expect(async () => {
+    await revisit(false);
+    expect(calls).toBeGreaterThan(1);
+  }).toPass({ timeout: 15000 });
 });
 
 test("nation weather shows no unit for missing values (N6)", async ({

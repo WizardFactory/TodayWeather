@@ -131,13 +131,17 @@ export function matchPlace<
   const prefix = places.filter((p) => p.name.toLocaleLowerCase().startsWith(q));
   return prefix.length === 1 ? prefix[0] : undefined;
 }
-/** React Query staleness for a weather result. */
-export function weatherStaleTime(data?: {
-  snapshot: boolean;
-  retryAt?: number;
-}) {
+/**
+ * React Query staleness for a weather result. React Query adds it to
+ * `updatedAt` (the query's dataUpdatedAt), so a rate-limit wait is measured
+ * from then.
+ */
+export function weatherStaleTime(
+  data?: { snapshot: boolean; retryAt?: number },
+  updatedAt = Date.now(),
+) {
   // A stored snapshot shown after a failure must refresh on reconnect/focus,
   // except while a rate limit asks us to wait (Retry-After).
   if (!data?.snapshot) return 600000;
-  return data.retryAt ? Math.max(0, data.retryAt - Date.now()) : 0;
+  return data.retryAt ? Math.max(0, data.retryAt - updatedAt) : 0;
 }
