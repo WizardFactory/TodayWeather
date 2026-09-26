@@ -12,6 +12,7 @@ var async = require('async');
 var collectTown = require('../lib/collectTownForecast');
 var town = require('../models/town');
 var config = require('../config/config');
+var gatherPolicy = require('../config/gather');
 var convert = require('../utils/coordinate2xy');
 var convertGeocode = require('../utils/convertGeocode');
 
@@ -1057,7 +1058,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 if (failedList.length) {
                     setTimeout(function() {
                         self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback);
-                    }, 0);
+                    }, gatherPolicy.retryDelayMs);
                     return;
                 }
 
@@ -1065,7 +1066,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                     var adjustedDateString = self.getShortestQueryTime(8);
                     setTimeout(function() {
                         self._recursiveRequestData(invalidList, dataType, key, adjustedDateString, --retryCount, undefined, callback);
-                    }, 0);
+                    }, gatherPolicy.retryDelayMs);
                     return;
                 }
                 log.info('received All ', dataTypeName, ' of ', dateString);
@@ -1333,7 +1334,7 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
             return this;
         }
 
-        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_SHORT, key, dateString, 70, undefined, function (err, results) {
+        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_SHORT, key, dateString, gatherPolicy.retry.townShort, undefined, function (err, results) {
             log.info('S> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1370,7 +1371,7 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
             return this;
         }
         //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
-        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 70, undefined, function (err, results) {
+        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, gatherPolicy.retry.townShortest, undefined, function (err, results) {
             log.info('ST> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1408,7 +1409,7 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
         }
 
 
-        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 70, undefined, function (err, results) {
+        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_CURRENT, key, dateString, gatherPolicy.retry.townCurrent, undefined, function (err, results) {
             log.info('C> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1482,7 +1483,7 @@ Manager.prototype.updateInvalidT1hData = function(baseTime, key, callback){
 
         log.info('C> need to update :', dateString, 'count : ', invalidList.length);
         // 위 loop에서 필터링 된 invalid t1h값을 가지는 mx, my 좌표에 대해서 업데이트를 실행 한다
-        self._recursiveRequestData(invalidList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 50, undefined, function (err, results) {
+        self._recursiveRequestData(invalidList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, gatherPolicy.retry.invalidCurrent, undefined, function (err, results) {
             log.info('C> update OK for invalid t1h');
             if (callback) {
                 return callback(err, results);
@@ -1546,7 +1547,7 @@ Manager.prototype.getMidForecast = function(gmt, key, callback){
             log.info('MF> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_FORECAST, key, dateString, 70, undefined, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_FORECAST, key, dateString, gatherPolicy.retry.midForecast, undefined, function (err, results) {
             log.info('MF> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1615,7 +1616,7 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
             log.info('ML> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_LAND, key, dateString, 70, undefined, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_LAND, key, dateString, gatherPolicy.retry.midLand, undefined, function (err, results) {
             log.info('ML> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1733,7 +1734,7 @@ Manager.prototype.getMidTempByForecastZone = function(gmt, key, callback) {
                 });
             },
             function (srcList, callback) {
-                self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 70,
+                self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, gatherPolicy.retry.midTemp,
                     undefined,
                     function (err, results) {
                         log.info('MT> save OK');
@@ -1818,7 +1819,7 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
             log.info('MT> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 70, undefined, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, gatherPolicy.retry.midTemp, undefined, function (err, results) {
             log.info('MT> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1880,7 +1881,7 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
             log.info('Ms> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_SEA, key, dateString, 70, undefined, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_SEA, key, dateString, gatherPolicy.retry.midSea, undefined, function (err, results) {
             log.info('MD> save OK');
             if (callback) {
                 return callback(err, results);
@@ -2105,7 +2106,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
 
     log.verbose('check time and request task');
 
-    if (time === 7 || putAll) {
+    if (gatherPolicy.tasks.airForecast && (time === 7 || putAll)) {
         if (hours === 8 || hours === 9 || hours === 10 || hours === 11 ||
             hours === 20 || hours === 21 || hours === 22 || hours === 13 || putAll) {
             log.info('push kaq hourly forecast');
@@ -2135,10 +2136,12 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
             });
         }
         //spend long time
-        log.info('push past');
-        self.asyncTasks.push(function Past(callback) {
-            self._requestApi("past", callback);
-        });
+        if (gatherPolicy.tasks.past) {
+            log.info('push past');
+            self.asyncTasks.push(function Past(callback) {
+                self._requestApi("past", callback);
+            });
+        }
 
         log.info('push keco_forecast');
         self.asyncTasks.push(function KecoForecast(callback) {

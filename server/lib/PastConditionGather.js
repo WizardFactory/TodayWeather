@@ -10,6 +10,7 @@ var modelCurrent = require('../models/modelCurrent');
 var KmaTownCurrent = require('../models/kma/kma.town.current.model');
 
 var config = require('../config/config');
+var gatherPolicy = require('../config/gather');
 
 function PastConditionGather() {
     this.pubDateList; //{date: String, time: String}
@@ -250,7 +251,8 @@ PastConditionGather.prototype.start = function (days, key, callback) {
         //    });
         //},
         function (callback) {
-            manager.requestDataByUpdateList(manager.DATA_TYPE.TOWN_CURRENT, key, self.updateList, 10, function (err, results) {
+            var retryCount = gatherPolicy.pastConditionRetryCount(self.updateList.length);
+            manager.requestDataByUpdateList(manager.DATA_TYPE.TOWN_CURRENT, key, self.updateList, retryCount, function (err, results) {
                 callback(err);
             });
         }
