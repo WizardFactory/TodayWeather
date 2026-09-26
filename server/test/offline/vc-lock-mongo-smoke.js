@@ -21,7 +21,8 @@ function Clock(...a) { return a.length ? new RealDate(...a) : new RealDate(now);
 Clock.now = () => now; Clock.parse = RealDate.parse; Clock.UTC = RealDate.UTC; Clock.prototype = RealDate.prototype;
 const logs = [];
 global.log = Object.fromEntries(['info', 'warn', 'error', 'debug', 'verbose', 'silly'].map(k => [k, (...a) => logs.push(k + ' ' + a.map(String).join(' '))]));
-const fixture = name => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'vc-' + name + '.json'), 'utf8'));
+const rawFixture = name => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'vc-' + name + '.json'), 'utf8'));
+const fixture = name => /-combined$/.test(name) ? require('./vc-synthetic').withDayBefore(rawFixture(name)) : rawFixture(name);
 const places = {'35.68': 'tokyo', '51.51': 'london', '40.71': 'newyork'};
 const calls = [];
 let failNext = null;
@@ -75,23 +76,23 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         checks.push('ttl index');
         const readIndex = (await mongoose.connection.db.collection(dsfModel.collection.collectionName).indexes()).find(i => i.key.geo === 1 && i.key.dateObj === 1);
         assert(readIndex, 'per-location read index {geo: 1, dateObj: 1}');
-        const plan = await dsfModel.find({geo: [139.76, 35.68], dateObj: {$gte: new RealDate(now - 3 * 86400000)}}).explain();
+        const plan = await dsfModel.find({geo: [139.76, 35.68], dateObj: {$gte: new RealDate(now - 4 * 86400000)}}).explain();
         assert(JSON.stringify(plan).includes('"geo_1_dateObj_1"'), 'the read uses the index');
         checks.push('read index');
         const A = loadController(), B = loadController();
 
         // Three concurrent requests from two "workers" for one location: one provider call.
         const r = await Promise.all([get(A, '35.68,139.76'), get(B, '35.68,139.76'), get(B, '35.68,139.76')]);
-        r.forEach(x => { assert.ifError(x.err); assert.equal(x.res.data.length, 3); });
+        r.forEach(x => { assert.ifError(x.err); assert.equal(x.res.data.length, 4); });
         assert.deepEqual(calls, ['combined:35.68']);
         await pause(50);
         assert.equal(await lockModel.countDocuments(), 0, 'lock released');
-        const stored = await dsfModel.find({geo: ['139.76', '35.68'], dateObj: {$gte: new RealDate(now - 3 * 86400000)}}).lean();
-        assert.equal(stored.length, 3, 'string coordinates and the bounded read match the stored numeric geo');
+        const stored = await dsfModel.find({geo: ['139.76', '35.68'], dateObj: {$gte: new RealDate(now - 4 * 86400000)}}).lean();
+        assert.equal(stored.length, 4, 'string coordinates and the bounded read match the stored numeric geo');
         assert.deepEqual(stored[0].geo, [139.76, 35.68]);
         assert(stored.every(d => d.timeOffset === 540 && d.address.country === 'Asia/Tokyo' && d.dateObj instanceof RealDate));
         const usage = await usageModel.findById(new RealDate(now).toISOString().slice(0, 10)).lean();
-        assert.equal(usage.calls, 1); assert.equal(usage.records, 25);
+        assert.equal(usage.calls, 1); assert.equal(usage.records, 49);
         checks.push('single flight', 'geo cast + bounded read', 'usage counter');
 
         // Fresh cache: no call. 20 minutes later: forecast only.

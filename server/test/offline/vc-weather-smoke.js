@@ -50,7 +50,9 @@ const places = [
     {name: 'London', lat: 51.51, lon: -0.13, fixture: 'london', zone: 'Europe/London', offset: 60},
     {name: 'New York', lat: 40.71, lon: -74.01, fixture: 'newyork', zone: 'America/New_York', offset: -240}
 ];
-const fixture = name => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'vc-' + name + '.json'), 'utf8'));
+const rawFixture = name => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'vc-' + name + '.json'), 'utf8'));
+// '<place>-combined' serves range 'combined' (last2days/next7days); 'recent' gets the recorded body.
+const fixture = name => /-combined$/.test(name) ? require('./vc-synthetic').withDayBefore(rawFixture(name)) : rawFixture(name);
 
 function createHarness(bodyFor) {
     const logs = [], providerCalls = [], dsfRows = new Map(), locks = new Map(), cache = new Map(), stubbedPackages = new Set();
@@ -108,7 +110,8 @@ function createHarness(bodyFor) {
         }
         const place = places.find(p => p.lat === Number(params.lat) && p.lon === Number(params.lon));
         if (!place) return setImmediate(() => cb(new Error('no fixture for ' + params.lat + ',' + params.lon)));
-        const body = params.range === 'forecast' && place.fixture === 'tokyo' ? fixture('tokyo-forecast') : fixture(place.fixture + '-combined');
+        const body = params.range === 'forecast' && place.fixture === 'tokyo' ? fixture('tokyo-forecast')
+            : params.range === 'recent' ? rawFixture(place.fixture + '-combined') : fixture(place.fixture + '-combined');
         setImmediate(() => cb(null, body, {status: 200, cost: body.queryCost, ms: 1}));
     };
     function AqiStub() {}
@@ -182,7 +185,7 @@ function createHarness(bodyFor) {
         return mod.exports;
     }
     const routers = {
-        'v000903': load(path.join(root, 'routes/v000902/route.dsf.coord.v000902.js')),
+        'v000903': load(path.join(root, 'routes/v000903/route.dsf.coord.v000903.js')),
         'v000901': load(path.join(root, 'routes/v000901/route.dsf.coord.js')),
         'ww': load(path.join(root, 'routes/worldweather/routeWeather.js'))
     };
@@ -212,8 +215,32 @@ function localHourString(epochMs, offsetMin) {
 
 // The /dsf/coord routes run convertUnits (t1h, reh, dateObj, tmx/tmn); the widgets' /ww route
 // returns the merged fields as they are (date string, temp_c/temp_f, humid, tempMax_c/tempMin_c).
+// Row range per route (#2585): v000903 from the day before yesterday 00:00 through the day after tomorrow
+// 24:00 hourly, and the day before yesterday .. +7 daily; v000901 and /ww keep yesterday 00:00 .. now+48 h
+// and yesterday .. +7.
+function checkRange(body, place, label, kind) {
+    const day = shift => localHourString(Date.parse(localHourString(now, place.offset).slice(0, 10).replace(/\./g, '-') + 'T00:00:00Z') - place.offset * 60000 + shift * 86400000, place.offset).slice(0, 10).replace(/\./g, '');
+    const key = row => String(row.date).replace(/\D/g, '').slice(0, 8) + ':' + (row.time !== undefined ? Number(row.time) : Number(String(row.date).slice(11, 13)));
+    const hourly = body.hourly, daily = body.daily;
+    if (kind === 'v000903') {
+        assert.equal(key(hourly[0]), day(-2) + ':0', label + ': hourly from the day before yesterday 00:00');
+        assert.equal(key(hourly[hourly.length - 1]), day(3) + ':0', label + ': hourly through the day after tomorrow 24:00');
+        assert.equal(key(daily[0]).slice(0, 8), day(-2), label + ': daily from the day before yesterday');
+        assert.equal(daily.length, 10, label + ': 10 daily rows');
+    }
+    else {
+        assert.equal(key(hourly[0]), day(-1) + ':0', label + ': hourly from yesterday 00:00');
+        const [ymd, hour] = key(hourly[hourly.length - 1]).split(':');
+        const last = Date.UTC(+ymd.slice(0, 4), +ymd.slice(4, 6) - 1, +ymd.slice(6, 8), +hour) - place.offset * 60000;
+        assert(last <= now + 48 * 3600000, label + ': hourly at most now + 48 h');
+        assert.equal(key(daily[0]).slice(0, 8), day(-1), label + ': daily from yesterday');
+        assert.equal(daily.length, 9, label + ': 9 daily rows');
+    }
+}
+
 function checkBody(body, place, label, units, raw, opts) {
     opts = opts || {};
+    if (opts.kind && !opts.currentAt && !opts.polar) checkRange(body, place, label, opts.kind);
     assert.equal(body.source, 'VC', label + ': source');
     assert(body.pubDate && body.pubDate.VC, label + ': pubDate.VC');
     assert.equal(body.pubDate.DSF, undefined, label + ': no pubDate.DSF');
@@ -281,6 +308,8 @@ function localDay(zone, ms, shiftDays) {
 // Bodies the way Visual Crossing builds them for the requested range at the harness clock.
 function syntheticProvider(zone, options) {
     return params => params.range === 'combined'
+        ? syntheticTimeline(zone, localDay(zone, now, -2), 10, Object.assign({now}, options))
+        : params.range === 'recent'
         ? syntheticTimeline(zone, localDay(zone, now, -1), 9, Object.assign({now}, options))
         : syntheticTimeline(zone, localDay(zone, now), 8, Object.assign({now}, options));
 }
@@ -301,7 +330,7 @@ async function runScenario(output, name, zone, lat, lon, steps, options) {
             const label = name + ' ' + step.at + ' ' + kind;
             const body = bodies[kind] = await h.request(kind, place, {temperatureUnit: units, windSpeedUnit: 'm/s'});
             if (process.env.VC_SMOKE_DEBUG) console.error(label, JSON.stringify({calls: h.providerCalls.slice(before).map(c => c.range), daily: body.daily.map(d => d.date), thisTime: body.thisTime.map(t => t.dateObj), tz: body.timezone}));
-            checkBody(body, place, label, units, kind === 'ww', {skipYesterdayHour: step.skipYesterdayHour, polar: options.polar,
+            checkBody(body, place, label, units, kind === 'ww', {kind, skipYesterdayHour: step.skipYesterdayHour, polar: options.polar,
                 currentAt: step.fail && step.staleFrom ? Date.parse(step.staleFrom) : undefined, minHourly: step.minHourly, minDaily: step.minDaily});
         }
         const calls = h.providerCalls.slice(before).map(c => c.range);
@@ -322,26 +351,26 @@ async function syntheticScenarios(output) {
     // I-F1: London (UTC+0 after the change) on the day BST ends; records stored before the change.
     await runScenario(output, 'London DST end', 'Europe/London', 51.51, -0.13, [
         {at: '2026-10-24T12:00:00Z', calls: ['combined']},
-        {at: '2026-10-25T00:30:00Z', calls: ['combined']},          // 01:30 BST: records stored at +1
+        {at: '2026-10-25T00:30:00Z', calls: ['recent']},            // 01:30 BST: records stored at +1; 10-23 reused
         {at: '2026-10-25T01:30:00Z', calls: ['forecast']},          // 01:30 GMT: current at 0, others at +1
         {at: '2026-10-25T10:00:00Z', calls: ['forecast'], kinds: [['v000903', 'C'], ['v000901', 'F'], ['ww', 'C']]},
         {at: '2026-10-25T22:00:00Z', calls: ['forecast']},
-        {at: '2026-10-26T00:30:00Z', calls: ['combined'], skipYesterdayHour: true},
+        {at: '2026-10-26T00:30:00Z', calls: ['recent'], skipYesterdayHour: true},
         {at: '2026-10-26T02:00:00Z', calls: ['forecast']}
     ]);
     // T1: Auckland spring-forward with stored records; the 00:30 request must see 09-27 as yesterday.
     await runScenario(output, 'Auckland DST start', 'Pacific/Auckland', -36.85, 174.76, [
         {at: '2026-09-26T13:30:00Z', calls: ['combined']},
         {at: '2026-09-27T00:00:00Z', calls: ['forecast']},
-        {at: '2026-09-27T11:30:00Z', calls: ['combined'], skipYesterdayHour: true,
-            check: b => assert.equal(b.v000903.daily[0].date, '20260927', 'first daily row is yesterday 09-27')},
+        {at: '2026-09-27T11:30:00Z', calls: ['recent'], skipYesterdayHour: true,
+            check: b => assert.equal(b.v000903.daily[1].date, '20260927', 'daily row after the day before yesterday is yesterday 09-27')},
         {at: '2026-09-27T13:00:00Z', calls: ['forecast']}
     ]);
     // T12: New York fall-back: one combined per local day, no extra call.
     await runScenario(output, 'New York DST end', 'America/New_York', 40.71, -74.01, [
         {at: '2026-11-01T03:00:00Z', calls: ['combined']},
-        {at: '2026-11-02T04:30:00Z', calls: ['combined']},
-        {at: '2026-11-02T05:10:00Z', calls: ['combined'], skipYesterdayHour: true},
+        {at: '2026-11-02T04:30:00Z', calls: ['recent']},
+        {at: '2026-11-02T05:10:00Z', calls: ['recent'], skipYesterdayHour: true},
         {at: '2026-11-02T06:10:00Z', calls: ['forecast']}
     ]);
     // D13: half-hour, 45-minute and date-line zones.
@@ -388,8 +417,8 @@ async function syntheticScenarios(output) {
         {at: '2026-09-26T21:50:00Z', calls: ['forecast']},
         // Across local midnight the stale records still describe 09-26 (documented): the response keeps
         // the hours from local midnight on (16 three-hour rows) and 8 daily rows.
-        {at: '2026-09-26T22:30:00Z', fail: true, staleFrom: '2026-09-26T21:50:00Z', minHourly: 16, minDaily: 8, calls: ['combined'], skipYesterdayHour: true, kinds: [['v000903', 'C'], ['v000901', 'F'], ['ww', 'C']], check: staleCheck('2026-09-26T21:50:00.000Z')},
-        {at: '2026-09-26T22:40:00Z', calls: ['combined'], skipYesterdayHour: true}
+        {at: '2026-09-26T22:30:00Z', fail: true, staleFrom: '2026-09-26T21:50:00Z', minHourly: 16, minDaily: 8, calls: ['recent'], skipYesterdayHour: true, kinds: [['v000903', 'C'], ['v000901', 'F'], ['ww', 'C']], check: staleCheck('2026-09-26T21:50:00.000Z')},
+        {at: '2026-09-26T22:40:00Z', calls: ['recent'], skipYesterdayHour: true}
     ]);
     // T3: polar day: no sunrise or sunset.
     now = Date.parse('2026-06-21T12:00:00Z');
@@ -450,7 +479,7 @@ async function main() {
             const body = await h.request(kind, place, {temperatureUnit: units, windSpeedUnit: 'm/s'});
             const label = place.name + ' ' + kind;
             fs.writeFileSync(path.join(outputDir, 'vc-' + place.fixture + '-' + kind + '.json'), JSON.stringify(body, null, 2));
-            checkBody(body, place, label, units, kind === 'ww');
+            checkBody(body, place, label, units, kind === 'ww', {kind});
             bodies[place.fixture + '-' + kind] = body;
             const calls = h.providerCalls.slice(before).map(c => c.range);
             assert.deepEqual(calls, kind === 'v000903' ? ['combined'] : [], label + ': provider calls ' + JSON.stringify(calls));

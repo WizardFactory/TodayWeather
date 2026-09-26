@@ -17,7 +17,7 @@ const kmaTimeLib = require('../../lib/kmaTimeLib');
 
 // Lock-collection document that marks the provider unavailable (daily limit, rejected key, budget).
 const PROVIDER_KEY = '~provider';
-// Lock-collection documents, per location, after a billed `combined` call returned no local yesterday.
+// Lock-collection documents, per location, after a billed call returned no local yesterday or day before.
 const NO_YESTERDAY_PREFIX = '~noyesterday:';
 
 if(!VcRequester.isValidKey(config.keyString && config.keyString.vc_key) && typeof log !== 'undefined'){
@@ -53,7 +53,7 @@ class DsfController {
         this.fetchTimeoutMs = 8000; // ... while the holder keeps fetching (under lockTtlMs) and stores the result
         this.staleMs = 3 * 60 * 60 * 1000;          // on provider failure serve a current record up to 3 h old
         this.providerDownMs = 10 * 60 * 1000;       // skip calls after a daily-limit 429 or a rejected key
-        this.readWindowMs = 3 * 24 * 60 * 60 * 1000;
+        this.readWindowMs = 4 * 24 * 60 * 60 * 1000;   // the day before yesterday's midnight record is up to 3 days old
     }
 
     _has(obj, key){
@@ -358,11 +358,12 @@ class DsfController {
             // Days are compared as local dates: a record's own day uses the offset it was stored
             // with, "today" uses the offset in effect now. Across a daylight-saving change the
             // stored midnights are an hour off the new offset's day boundaries (#2585).
-            let today, yesterday, nowOffset;
+            let today, yesterday, twoDaysAgo, nowOffset;
             try{
                 nowOffset = this._offsetAt(list[list.length - 1], cDate);
                 today = this._localDay(cDate, nowOffset);
                 yesterday = this._previousDay(today);
+                twoDaysAgo = this._previousDay(yesterday);
             }catch(e){
                 list = [];   // no records, or the newest is malformed: fetch
             }
@@ -373,7 +374,12 @@ class DsfController {
                     let age = cDate.getTime() - new Date(item.dateObj).getTime();
                     // After a daylight-saving fall-back, two midnight records share a local day (old and
                     // new offset): the most recently fetched one wins.
-                    if(midnight && recordDay === yesterday){
+                    if(midnight && recordDay === twoDaysAgo){
+                        // Yesterday's `yesterday` record is today's day before yesterday: reused, no call.
+                        if(this._fetchedAfterDayEnd(item, yesterday, nowOffset) && this._newer(item, ret['twoDaysAgo'])){
+                            ret['twoDaysAgo'] = item;
+                        }
+                    }else if(midnight && recordDay === yesterday){
                         // Visual Crossing yesterday records hold the whole local day. An hour missing on a
                         // daylight-saving change is left to the merge step instead of forcing a refetch.
                         if(this._fetchedAfterDayEnd(item, today, nowOffset) && this._newer(item, ret['yesterday'])){
@@ -725,7 +731,7 @@ class DsfController {
             output.result = {};
         }
 
-        ['yesterday', 'today', 'current'].forEach((name)=>{
+        ['twoDaysAgo', 'yesterday', 'today', 'current'].forEach((name)=>{
             let item = input[name];
             if(item){
                 // update TimeOffset
@@ -850,7 +856,7 @@ class DsfController {
     /**
      * Provider calls are skipped while the provider is marked down or the daily record budget
      * (config.vc.dailyRecordLimit, 0 = none) would be exceeded.
-     * @param {string} range 'combined' (25 records) or 'forecast' (1 record)
+     * @param {string} range 'combined' (49 records), 'recent' (25) or 'forecast' (1)
      * @param {function(Error=)} callback error when no call should be made
      * @private
      */
@@ -864,7 +870,7 @@ class DsfController {
                 return callback();
             }
             vcUsage.findById(this._usageDay(), (err, usage)=>{
-                let cost = range === 'combined' ? 25 : 1;
+                let cost = range === 'combined' ? 49 : range === 'recent' ? 25 : 1;
                 if(!err && usage && usage.records + cost > limit){
                     return callback(new Error('cDsf > daily Visual Crossing record budget reached (' + usage.records + '/' + limit + ')'));
                 }
@@ -906,16 +912,16 @@ class DsfController {
     }
 
     _hasAll(output, noYesterday){
-        return !!((output.yesterday || noYesterday) && output.today && output.current);
+        return !!(((output.twoDaysAgo && output.yesterday) || noYesterday) && output.today && output.current);
     }
 
     /**
-     * Whether a billed `combined` call for this location already returned no local yesterday today:
-     * then the location is served without yesterday and refreshed with `forecast` (#2585).
+     * Whether a billed call for this location already returned no local yesterday or day before
+     * today: then the location is served without them and refreshed with `forecast` (#2585).
      * @private
      */
     _noYesterday(key, output, callback){
-        if(output.yesterday){
+        if(output.yesterday && output.twoDaysAgo){
             return callback(false);
         }
         vcFetchLock.findById(NO_YESTERDAY_PREFIX + key, (err, marker)=>{
@@ -927,7 +933,7 @@ class DsfController {
         // Until the next local midnight (today's record is stored at local midnight).
         let expireAt = new Date(records.today ? new Date(records.today.dateObj).getTime() + 24 * 60 * 60 * 1000
             : Date.now() + this.badResponseBackoffMs);
-        log.error('cDsf > VC combined response without the local yesterday; serving without it until ' + expireAt.toISOString(), this._logKey(key));
+        log.error('cDsf > VC response without the local yesterday or day before; serving without them until ' + expireAt.toISOString(), this._logKey(key));
         vcFetchLock.updateOne({_id: NO_YESTERDAY_PREFIX + key}, {$set: {expireAt: expireAt, failed: false}}, {upsert: true}, (err)=>{
             if(err){
                 log.warn('cDsf > Fail to store the no-yesterday marker', this._logKey(key), err.message);
@@ -936,7 +942,7 @@ class DsfController {
     }
 
     _merge(output, found){
-        ['yesterday', 'today', 'current', 'stale'].forEach((name)=>{
+        ['twoDaysAgo', 'yesterday', 'today', 'current', 'stale'].forEach((name)=>{
             if(found && found[name]){
                 output[name] = found[name];
             }
@@ -1004,7 +1010,7 @@ class DsfController {
             let records = {};
             try{
                 let docs = vcConverter.toDarkSkyDocs(body, cDate);
-                ['yesterday', 'today', 'current'].forEach((name)=>{
+                ['twoDaysAgo', 'yesterday', 'today', 'current'].forEach((name)=>{
                     if(docs[name]){
                         records[name] = this._makeDbFormat(geo, cDate, docs.offsetMin, this._parseData(docs[name]));
                     }
@@ -1015,7 +1021,7 @@ class DsfController {
             }
 
             // Current last: waiting workers treat a stored current as the end of this fetch.
-            async.eachSeries(['yesterday', 'today', 'current'].filter((name)=>records[name]), (name, cb)=>{
+            async.eachSeries(['twoDaysAgo', 'yesterday', 'today', 'current'].filter((name)=>records[name]), (name, cb)=>{
                 target[name] = records[name];
                 this._saveData(geo, records[name], (err)=>{
                     if(err){
@@ -1037,7 +1043,9 @@ class DsfController {
         if(this._hasAll(output, noYesterday)){
             return callback(null, output);
         }
-        let range = (output.yesterday || noYesterday) ? 'forecast' : 'combined';
+        // The day before yesterday is normally yesterday's stored `yesterday` record, so a city requested
+        // every day costs 25 records a day; a new city (or after a gap) costs 49.
+        let range = noYesterday ? 'forecast' : !output.twoDaysAgo ? 'combined' : !output.yesterday ? 'recent' : 'forecast';
         this._checkProvider(range, (unavailable)=>{
             if(unavailable){
                 return this._fallback(output, unavailable, callback);
@@ -1095,7 +1103,7 @@ class DsfController {
                             log.error('cDsf > VC fetch failed; backing off', this._logKey(key), err.message);
                             return respond(err);
                         }
-                        if(range === 'combined' && !records.yesterday){
+                        if((range !== 'forecast' && !records.yesterday) || (range === 'combined' && !records.twoDaysAgo)){
                             this._markNoYesterday(key, records);
                         }
                         if(token){
@@ -1165,7 +1173,7 @@ class DsfController {
     maintainDB(callback){
         log.info('cDSF > Start DB maintain');
         setInterval(()=>{
-            this._removePastData(2, ()=>{
+            this._removePastData(4, ()=>{
                 //log.info('cDsf > remove past data : ', new Date().toString());
                 if(callback) callback();
             });

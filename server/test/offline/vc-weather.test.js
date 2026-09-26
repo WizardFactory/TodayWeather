@@ -21,7 +21,10 @@ const logs = [];
 const log = Object.fromEntries(['info', 'warn', 'error', 'debug', 'verbose', 'silly'].map(k => [k, (...args) => logs.push({level: k, args})]));
 const KEY = 'SYNTHETICKEY0123456789ABCD';
 const CAPTURED = Date.parse('2026-09-26T07:04:23Z');
-const fixture = name => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'vc-' + name + '.json'), 'utf8'));
+const rawFixture = name => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'vc-' + name + '.json'), 'utf8'));
+// '<place>-combined' is served as range 'combined' (last2days/next7days); rawFixture keeps the recorded
+// yesterday/next7days body (range 'recent').
+const fixture = name => /-combined$/.test(name) ? require('./vc-synthetic').withDayBefore(rawFixture(name)) : rawFixture(name);
 // VM results carry the sandbox realm's prototypes; compare them as plain JSON values.
 const plain = value => value === undefined ? value : JSON.parse(JSON.stringify(value));
 // Lock release is fire-and-forget after the response; let its model callback run.
@@ -86,9 +89,9 @@ test('requester builds the Timeline request and logs cost and latency without th
     logs.length = 0;
     const {err, body} = await timeline(Requester, {}, {lat: 35.68, lon: 139.76, range: 'combined'}, KEY);
     assert.ifError(err);
-    assert.equal(body.queryCost, 25);
+    assert.equal(body.queryCost, 49);
     const url = new URL(https.calls[0].url);
-    assert.equal(url.origin + url.pathname, 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/35.68,139.76/yesterday/next7days');
+    assert.equal(url.origin + url.pathname, 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/35.68,139.76/last2days/next7days');
     assert.equal(url.searchParams.get('unitGroup'), 'us');
     assert.equal(url.searchParams.get('lang'), 'en');
     assert.equal(url.searchParams.get('include'), 'days,hours,current');
@@ -101,7 +104,10 @@ test('requester builds the Timeline request and logs cost and latency without th
     const forecast = fakeHttps(() => ({status: 200, body: fixture('tokyo-forecast')}));
     await timeline(loadRequester(forecast), {}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
     assert.match(forecast.calls[0].url, /timeline\/35\.68,139\.76\/today\/next7days\?/);
-    assert.match(logText(), /VC> .*combined.*status=200.*cost=25.*ms=\d+/);
+    const recent = fakeHttps(() => ({status: 200, body: rawFixture('tokyo-combined')}));
+    await timeline(loadRequester(recent), {}, {lat: 35.68, lon: 139.76, range: 'recent'}, KEY);
+    assert.match(recent.calls[0].url, /timeline\/35\.68,139\.76\/yesterday\/next7days\?/);
+    assert.match(logText(), /VC> .*combined.*status=200.*cost=49.*ms=\d+/);
     assert.doesNotMatch(logText(), new RegExp(KEY));
 });
 
@@ -168,7 +174,7 @@ test('requester fails on HTTP errors, bad bodies and the 2.5 s timeout', async (
 const localDate = (epochSec, offsetHours) => new Date((epochSec + offsetHours * 3600) * 1000).toISOString().slice(0, 10);
 const localHour = (epochSec, offsetHours) => new Date((epochSec + offsetHours * 3600) * 1000).getUTCHours();
 
-test('converter splits a combined response into yesterday, today and current Dark Sky documents', () => {
+test('converter splits a combined response into day-before-yesterday, yesterday, today and current Dark Sky documents', () => {
     const conv = vcConverter();
     for (const [name, offset, today] of [['tokyo', 9, '2026-09-26'], ['london', 1, '2026-09-26'], ['newyork', -4, '2026-09-26']]) {
         const vc = fixture(name + '-combined');
@@ -178,6 +184,9 @@ test('converter splits a combined response into yesterday, today and current Dar
         const midnight = Date.parse(today + 'T00:00:00Z') / 1000 - offset * 3600;
         assert.equal(docs.today.currently.time, midnight, name + ': today record at local midnight');
         assert.equal(docs.yesterday.currently.time, midnight - 86400, name + ': yesterday record at local midnight');
+        assert.equal(docs.twoDaysAgo.currently.time, midnight - 2 * 86400, name + ': day-before-yesterday record at local midnight');
+        assert.equal(docs.twoDaysAgo.hourly.data.length, 24);
+        assert.deepEqual(plain(docs.twoDaysAgo.daily.data.map(d => localDate(d.time, offset))), ['2026-09-24']);
         assert.equal(docs.current.currently.time, Math.floor(CAPTURED / 1000), name + ': current record at fetch time');
         for (const doc of [docs.yesterday, docs.today, docs.current]) {
             assert.equal(doc.timezone, vc.timezone);
@@ -192,7 +201,9 @@ test('converter splits a combined response into yesterday, today and current Dar
         assert.deepEqual(plain(docs.today.daily.data.map(d => localDate(d.time, offset))), [today]);
         const firstHour = Math.floor(CAPTURED / 3600000) * 3600;
         assert.equal(docs.current.hourly.data[0].time, firstHour, name + ': current hourly starts at the current hour');
-        assert.equal(docs.current.hourly.data.length, 49, name + ': 48 h ahead');
+        const hours = docs.current.hourly.data;
+        assert.equal(hours[hours.length - 1].time, midnight + 3 * 86400, name + ': through the day after tomorrow 24:00');
+        assert.equal(hours.length, (midnight + 3 * 86400 - firstHour) / 3600 + 1, name + ': every hour');
         assert.equal(docs.current.daily.data.length, 8, name + ': today + 7 days');
         assert.equal(localDate(docs.current.daily.data[0].time, offset), today);
     }
@@ -202,7 +213,7 @@ test('converter reproduces Dark Sky units, fractions and derived daily fields', 
     const conv = vcConverter();
     const vc = fixture('tokyo-combined');
     const docs = conv.toDarkSkyDocs(vc, new Date(CAPTURED));
-    const day = vc.days[0], hour = day.hours[14], c = vc.currentConditions;
+    const day = vc.days.find(d => d.datetime === '2026-09-25'), hour = day.hours[14], c = vc.currentConditions;
     const h = docs.yesterday.hourly.data[14];
     assert.equal(h.time, hour.datetimeEpoch);
     assert.equal(h.temperature, hour.temp, '°F kept');
@@ -290,6 +301,14 @@ test('summaries use the existing weather vocabulary', () => {
 });
 
 const {syntheticTimeline, localParts} = require('./vc-synthetic');
+// Synthetic body for a range at `nowMs`: combined = day before yesterday + 9 days, recent = yesterday +
+// 8 days, forecast = today + 7 days, as Visual Crossing evaluates them in the location's local time.
+const vcBody = (zone, range, nowMs, options) => {
+    const today = localParts(zone)(Math.floor(nowMs / 1000)).date;
+    const back = {combined: 2, recent: 1, forecast: 0}[range];
+    const first = new Date(Date.parse(today + 'T00:00:00Z') - back * 86400000).toISOString().slice(0, 10);
+    return syntheticTimeline(zone, first, 8 + back, Object.assign({now: nowMs}, options));
+};
 
 test('F1: day assignment and offset use the offset at now, not the range-start tzoffset (DST)', () => {
     const conv = vcConverter();
@@ -561,8 +580,8 @@ test('first request fetches one combined range; a fresh cache makes no call; a s
     assert.deepEqual(Requester.calls.map(c => c.range), ['combined']);
     assert.equal(Requester.calls[0].key, KEY);
     assert.deepEqual([Requester.calls[0].lat, Requester.calls[0].lon], [35.68, 139.76]);
-    assert.equal(model.rows.size, 3, 'yesterday, today and current stored');
-    assert.equal(r.res.data.length, 3);
+    assert.equal(model.rows.size, 4, 'day before yesterday, yesterday, today and current stored');
+    assert.equal(r.res.data.length, 4);
     assert.equal(r.req.result.timezone.min, 540);
     assert.equal(r.req.result.timezone.timezoneId, 'Asia/Tokyo');
     assert.equal(r.req.cWeatherDate.getTime(), Math.floor(CAPTURED / 1000) * 1000);
@@ -578,8 +597,8 @@ test('first request fetches one combined range; a fresh cache makes no call; a s
     r = await getDsf(Controller);
     assert.ifError(r.err);
     assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast'], 'yesterday stored: forecast only');
-    assert.equal(r.res.data.length, 3);
-    assert.equal(model.rows.size, 4, 'new current record; today upserted');
+    assert.equal(r.res.data.length, 4);
+    assert.equal(model.rows.size, 5, 'new current record; today upserted');
     assert.equal(Controller.timezoneCalls.length, 0, 'Google time zone lookup not used');
 });
 
@@ -592,7 +611,7 @@ test('concurrent requests for one location from separate workers make a single p
     const workerB = loadDsfController({model, lockModel, requester: Requester, clock});
     const fast = {pollMs: 10, waitMs: 1000};
     const results = await Promise.all([getDsf(workerA, TOKYO, fast), getDsf(workerB, TOKYO, fast), getDsf(workerB, TOKYO, fast)]);
-    for (const r of results) { assert.ifError(r.err); assert.equal(r.res.data.length, 3); }
+    for (const r of results) { assert.ifError(r.err); assert.equal(r.res.data.length, 4); }
     assert.equal(Requester.calls.length, 1);
     await settle();
     assert.equal(lockModel.locks.size, 0);
@@ -666,7 +685,7 @@ test('a failing lock store still serves the request and never deletes another lo
 
 test('F1: after a DST change the first local hour does not loop combined calls', async () => {
     const clock = {now: Date.parse('2026-09-27T11:30:00Z')};
-    const Requester = fakeVcRequester({combined: syntheticTimeline('Pacific/Auckland', '2026-09-27', 9), forecast: syntheticTimeline('Pacific/Auckland', '2026-09-28', 8)});
+    const Requester = fakeVcRequester(params => vcBody('Pacific/Auckland', params.range, clock.now));
     const Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock});
     const auckland = {lat: '-36.85', lon: '174.76'};
     let r = await getDsf(Controller, auckland);
@@ -684,9 +703,7 @@ test('F5: yesterday must have been fetched after its local day ended', async () 
     // Day D: requests at 09:00 and 20:00 JST store today/current only (forecast values for later hours).
     const clock = {now: Date.parse('2026-09-26T00:00:00Z')};
     const model = memoryDsfModel(), lockModel = memoryLockModel();
-    const Requester = fakeVcRequester(params => params.range === 'combined'
-        ? syntheticTimeline('Asia/Tokyo', clock.now < Date.parse('2026-09-26T15:00:00Z') ? '2026-09-25' : '2026-09-26', 9)
-        : syntheticTimeline('Asia/Tokyo', clock.now < Date.parse('2026-09-26T15:00:00Z') ? '2026-09-26' : '2026-09-27', 8));
+    const Requester = fakeVcRequester(params => vcBody('Asia/Tokyo', params.range, clock.now));
     const Controller = loadDsfController({model, lockModel, requester: Requester, clock});
     await getDsf(Controller);
     clock.now = Date.parse('2026-09-26T11:00:00Z');
@@ -696,11 +713,29 @@ test('F5: yesterday must have been fetched after its local day ended', async () 
     clock.now = Date.parse('2026-09-27T01:00:00Z');
     let r = await getDsf(Controller);
     assert.ifError(r.err);
-    assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast', 'combined'], 'observed yesterday fetched once');
+    assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast', 'recent'], 'observed yesterday fetched once; the day before reused');
     clock.now = Date.parse('2026-09-27T01:30:00Z');
     r = await getDsf(Controller);
     assert.ifError(r.err);
-    assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast', 'combined', 'forecast'], 'then forecast refreshes only');
+    assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast', 'recent', 'forecast'], 'then forecast refreshes only');
+    // After a day without requests the stored day before yesterday is missing: the full range again.
+    clock.now = Date.parse('2026-09-29T01:00:00Z');
+    r = await getDsf(Controller);
+    assert.ifError(r.err);
+    assert.deepEqual(Requester.calls.slice(4).map(c => c.range), ['combined'], 'a gap refetches the day before yesterday');
+});
+
+test('#2585 range: a combined response without the day before yesterday is not bought again', async () => {
+    const clock = {now: CAPTURED};
+    const lockModel = memoryLockModel();
+    const Requester = fakeVcRequester(params => params.range === 'combined' ? rawFixture('tokyo-combined') : fixture('tokyo-forecast'));
+    const Controller = loadDsfController({model: memoryDsfModel(), lockModel, requester: Requester, clock});
+    for (const minutes of [0, 1, 20]) {
+        clock.now = CAPTURED + minutes * 60000;
+        assert.ifError((await getDsf(Controller)).err);
+    }
+    assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast']);
+    assert(lockModel.locks.has('~noyesterday:139.76,35.68'));
 });
 
 test('F3: a late release never deletes a lock another worker has taken over', async () => {
@@ -740,10 +775,7 @@ test('F6/N1: after a provider failure the location backs off for 2 s, within the
 test('T1: stored records are classified with the offset at request time after a DST change', async () => {
     // Auckland: combined at 09-27 01:30 NZST, forecast at 13:00 NZDT, then 09-28 00:30 NZDT.
     const clock = {now: Date.parse('2026-09-26T13:30:00Z')};
-    const body = range => range === 'combined'
-        ? syntheticTimeline('Pacific/Auckland', clock.now < Date.parse('2026-09-27T11:00:00Z') ? '2026-09-26' : '2026-09-27', 9, {now: clock.now})
-        : syntheticTimeline('Pacific/Auckland', clock.now < Date.parse('2026-09-27T11:00:00Z') ? '2026-09-27' : '2026-09-28', 8, {now: clock.now});
-    const Requester = fakeVcRequester(params => body(params.range));
+    const Requester = fakeVcRequester(params => vcBody('Pacific/Auckland', params.range, clock.now));
     const Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock});
     const auckland = {lat: '-36.85', lon: '174.76'};
     await getDsf(Controller, auckland);
@@ -752,9 +784,10 @@ test('T1: stored records are classified with the offset at request time after a 
     clock.now = Date.parse('2026-09-27T11:30:00Z');
     const r = await getDsf(Controller, auckland);
     assert.ifError(r.err);
-    assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast', 'combined'], 'observed 09-27 fetched on 09-28');
+    assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast', 'recent'], 'observed 09-27 fetched on 09-28; 09-26 reused');
     assert.equal(r.req.result.timezone.min, 780);
-    const yesterday = r.res.data[0];   // records sorted by current time: yesterday first
+    assert.equal(r.res.data.length, 4, 'day before yesterday, yesterday, today, current');
+    const yesterday = r.res.data[1];   // records sorted by current time: the day before yesterday first
     const local = new Date(new Date(yesterday.current.dateObj).getTime() + 780 * 60000).toISOString().slice(0, 16);
     assert.equal(local, '2026-09-27T00:00', 'yesterday record is 09-27, not the two-day-old 09-26');
 });
@@ -830,7 +863,7 @@ test('D7/D1: daily record budget and usage counter', async () => {
     await getDsf(Controller);
     await settle();
     const day = '2026-09-26';
-    assert.deepEqual(plain(usageModel.days.get(day)), {_id: day, calls: 1, records: 25, failures: 0, http429: 0, slow: 0});
+    assert.deepEqual(plain(usageModel.days.get(day)), {_id: day, calls: 1, records: 49, failures: 0, http429: 0, slow: 0});
     // 25 + 25 would exceed 30: London is not fetched, and the budget error is returned.
     const r = await getDsf(Controller, {lat: 51.51, lon: -0.13});
     assert(r.err);
@@ -851,8 +884,8 @@ test('D3/T4: the response returns within its budget while the fetch continues an
     const defaults = new Controller();
     assert(defaults.responseMs <= 2500 && defaults.waitMs + defaults.pollMs <= 2800, 'answers fit the gateway 3 s attempt');
     assert(defaults.fetchTimeoutMs < defaults.lockTtlMs, 'the fetch ends before its lock can be taken over');
-    for (let waited = 0; model.rows.size < 3 && waited < 3000; waited += 20) await new Promise(resolve => setTimeout(resolve, 20));
-    assert.equal(model.rows.size, 3, 'the fetch finished and stored the records');
+    for (let waited = 0; model.rows.size < 4 && waited < 3000; waited += 20) await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(model.rows.size, 4, 'the fetch finished and stored the records');
     for (let waited = 0; lockModel.locks.size > 0 && waited < 1000; waited += 5) await new Promise(resolve => setTimeout(resolve, 5));
     assert.equal(lockModel.locks.size, 0, 'lock released after the late fetch');
     r = await getDsf(Controller);
@@ -877,7 +910,7 @@ test('I-F7/D10/D14: bounded reads, a failing read still fetches, startup warns a
     const Requester = fakeVcRequester({combined: fixture('tokyo-combined')});
     let r = await getDsf(loadDsfController({model, lockModel: memoryLockModel(), requester: Requester, clock}));
     assert.ifError(r.err);
-    assert.equal(+model.queries[0].dateObj.$gte, CAPTURED - 3 * 86400000, 'reads bounded to three days');
+    assert.equal(+model.queries[0].dateObj.$gte, CAPTURED - 4 * 86400000, 'reads bounded to four days');
     const broken = memoryDsfModel();
     broken.rows.set('x', {geo: [139.76, 35.68], dateObj: new Date(CAPTURED - 60000), address: {}});   // no timeOffset
     r = await getDsf(loadDsfController({model: broken, lockModel: memoryLockModel(), requester: fakeVcRequester({combined: fixture('tokyo-combined')}), clock}));
@@ -905,8 +938,7 @@ test('R2-I1/F2: stale or unknown runtime zone data does not misclassify records 
         const offsetH = (Date.parse(date + 'T' + String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':00Z') - Date.parse('2026-07-13T12:00:00Z')) / 3600000;
         const base = Date.parse('2026-07-13T19:35:00Z') - offsetH * 3600000;   // 19:35 local
         const clock = {now: base};
-        const body = range => syntheticTimeline(zone, new Date(clock.now + offsetH * 3600000 - (range === 'combined' ? 86400000 : 0)).toISOString().slice(0, 10), range === 'combined' ? 9 : 8, {now: clock.now});
-        const Requester = fakeVcRequester(params => body(params.range));
+        const Requester = fakeVcRequester(params => vcBody(zone, params.range, clock.now));
         const Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock, intl});
         const at = [];
         for (const minutesAfterLocalEvening of [0, 215, 225, 295, 305]) {   // 19:35, 23:10, 23:20, 00:30, 00:40 local
@@ -915,7 +947,7 @@ test('R2-I1/F2: stale or unknown runtime zone data does not misclassify records 
             assert.ifError(r.err);
             at.push(Requester.calls.length);
         }
-        assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast', 'combined'], zone + ': ' + label);
+        assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast', 'recent'], zone + ': ' + label);
     }
     // A zone name the runtime does not know (e.g. Europe/Kyiv on Node 10) uses the provider offset.
     const clock = {now: CAPTURED};
@@ -937,7 +969,7 @@ test('R2-2/F4/R2-I3: usage counts every 429, failures and slow calls; a missing 
     let Requester = fakeVcRequester({combined: Object.assign(fixture('tokyo-combined'), {meta: {http429: 1, ms: 3000}})});
     await getDsf(loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock, usageModel}));
     await settle();
-    assert.deepEqual(plain(usageModel.days.get(day)), {_id: day, calls: 1, records: 25, failures: 0, http429: 1, slow: 1}, 'a 429 recovered by the retry is counted');
+    assert.deepEqual(plain(usageModel.days.get(day)), {_id: day, calls: 1, records: 49, failures: 0, http429: 1, slow: 1}, 'a 429 recovered by the retry is counted');
     usageModel = memoryUsageModel();
     const limited = Object.assign(new Error('VC> HTTP 429: busy'), {statusCode: 429});
     Requester = fakeVcRequester(() => limited);
@@ -1186,8 +1218,8 @@ test('R3-T3/R3-I1: on a fall-back day the newest today record wins', async () =>
 
 test('R3-T5/R3-T6/R3-T11: budget boundary, 15-minute and 3-hour limits, save order, day-end boundary', async () => {
     const clock = {now: CAPTURED};
-    // Budget: a call is allowed while used + cost <= limit; combined costs 25, forecast 1.
-    for (const [used, range, allowed] of [[975, 'combined', true], [976, 'combined', false], [999, 'forecast', true], [1000, 'forecast', false]]) {
+    // Budget: a call is allowed while used + cost <= limit; combined costs 49, recent 25, forecast 1.
+    for (const [used, range, allowed] of [[951, 'combined', true], [952, 'combined', false], [975, 'recent', true], [976, 'recent', false], [999, 'forecast', true], [1000, 'forecast', false]]) {
         const usageModel = memoryUsageModel();
         usageModel.days.set('2026-09-26', {_id: '2026-09-26', records: used});
         const C = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock, usageModel, dailyRecordLimit: 1000});
@@ -1202,7 +1234,7 @@ test('R3-T5/R3-T6/R3-T11: budget boundary, 15-minute and 3-hour limits, save ord
     const Controller = loadDsfController({model, lockModel: memoryLockModel(), requester: Requester, clock});
     await getDsf(Controller);
     assert.deepEqual(order, [...order].sort((a, b) => a - b), 'yesterday, today, then current');
-    assert.equal(order[2], CAPTURED, 'current saved last');
+    assert.equal(order[order.length - 1], CAPTURED, 'current saved last');
     clock.now = CAPTURED + 14 * 60000 + 59000;
     await getDsf(Controller);
     assert.equal(Requester.calls.length, 1, 'current at 14:59 is fresh');

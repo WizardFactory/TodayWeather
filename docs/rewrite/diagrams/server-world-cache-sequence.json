@@ -94,7 +94,7 @@
       "from": "dsf",
       "to": "store",
       "y": 244,
-      "label": "read \u22643 d: yesterday \u00b7 today \u00b7 current \u226415 min \u00b7 stale \u22643 h"
+      "label": "read \u22644 d: day before \u00b7 yesterday \u00b7 today \u00b7 current \u226415 min \u00b7 stale \u22643 h"
     },
     {
       "id": "read-aqi",
@@ -124,14 +124,14 @@
       "from": "dsf",
       "to": "provider",
       "y": 356,
-      "label": "no observed yesterday \u2192 combined (25) \u00b7 else forecast (1), \u22648 s"
+      "label": "no day before \u2192 combined (49) \u00b7 no yesterday \u2192 recent (25) \u00b7 else forecast (1), \u22648 s"
     },
     {
       "id": "write-dsf",
       "from": "dsf",
       "to": "store",
       "y": 384,
-      "label": "upsert yesterday \u00b7 today \u00b7 current, release lock, count usage"
+      "label": "upsert day before \u00b7 yesterday \u00b7 today \u00b7 current, release lock, count usage"
     },
     {
       "id": "return-dsf",

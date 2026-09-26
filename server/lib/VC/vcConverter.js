@@ -188,6 +188,7 @@ function toDarkSkyDocs(vc, now) {
     const todayStr = localDateString(nowSec, offset);
     const todayStart = Date.parse(todayStr + 'T00:00:00Z') / 1000 - offset * HOUR_SEC;
     const yesterdayStr = localDateString(todayStart - DAY_SEC, offset);
+    const twoDaysAgoStr = localDateString(todayStart - 2 * DAY_SEC, offset);
     const days = vc.days || [];
     const todayIndex = days.findIndex((day) => day.datetime === todayStr);
     if (todayIndex < 0) {
@@ -208,6 +209,12 @@ function toDarkSkyDocs(vc, now) {
     };
 
     const docs = {timezone: vc.timezone, offsetMin: Math.round(offset * 60)};
+    // The day before yesterday (range 'combined'): the hourly chart starts at yesterday 00:00 like the
+    // domestic one, and the daily chart at the day before yesterday.
+    const twoDaysAgo = days.find((day) => day.datetime === twoDaysAgoStr);
+    if (twoDaysAgo) {
+        docs.twoDaysAgo = dayRecord(twoDaysAgo, todayStart - 2 * DAY_SEC);
+    }
     const yesterday = days.find((day) => day.datetime === yesterdayStr);
     if (yesterday) {
         docs.yesterday = dayRecord(yesterday, todayStart - DAY_SEC);
@@ -220,7 +227,8 @@ function toDarkSkyDocs(vc, now) {
     const ahead = [];
     days.slice(todayIndex).forEach((day) => {
         (day.hours || []).forEach((hour) => {
-            if (hour.datetimeEpoch >= hourStart && hour.datetimeEpoch <= hourStart + 48 * HOUR_SEC) {
+            // Through the end of the day after tomorrow (its 24:00), like the domestic hourly forecast.
+            if (hour.datetimeEpoch >= hourStart && hour.datetimeEpoch <= todayStart + 3 * DAY_SEC) {
                 ahead.push(hour);
             }
         });

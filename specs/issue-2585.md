@@ -175,3 +175,22 @@ Source: three fresh-context reviews of `c5b61975` (design D1–D16, implementati
   - Push/alert bursts on the Free plan.
   - Reconcile the host's edited `config.js` before deploying.
   - No unique `(geo, dateObj)` index.
+
+## Amendment 6 — 2026-09-27 (overseas chart range, owner request)
+
+**Ranges on v000903**
+- Hourly rows run from the day before yesterday 00:00 through the day after tomorrow 24:00. The apps drop the first day, so the chart starts at yesterday 00:00, as in the domestic view.
+- Daily rows run from the day before yesterday to +7 days (10 days).
+
+**Other versions and `/ww`**
+- v000901, v000902, v000803 and `/ww` keep yesterday 00:00 to now + 48 h hourly, and yesterday to +7 daily.
+- Released iOS widgets label the `/ww` daily rows by position.
+
+**Visual Crossing calls**
+- The ranges are `combined` = `last2days/next7days` (49 records), `recent` = `yesterday/next7days` (25) and `forecast` (1).
+- The day before yesterday is normally the previous day's stored yesterday record, so a city requested every day costs 25 records per day.
+- A missing day before yesterday or yesterday sets the `~noyesterday` marker.
+
+**Storage**
+- The read window is 4 days.
+- Retention in `maintainDB` is 4 days.

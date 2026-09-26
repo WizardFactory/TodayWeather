@@ -194,7 +194,7 @@ For the unversioned coordinate path and `v000901/kma/addr`, as long as installed
 
 1. Keep both paths, the `lat,lon` coordinate order and the tolerance for `(null)` unit values.
 2. Keep CamelCase `skyIcon` values, or ship widgets that bundle the new names.
-3. Keep `source`, the gateway's top-level `name` and `country`, the `[yesterday, current]` world `thisTime` pair, a `daily[]` that starts with yesterday, and `YYYYMMDD` `date` strings in current and daily rows. Keep daily dates contiguous from yesterday for the show-more labels. At `bd6640f2` KMA `midData.dailyData` omits incomplete dates by design (§4.2).
+3. Keep `source`, the gateway's top-level `name` and `country`, the `[yesterday, current]` world `thisTime` pair, a `daily[]` that starts with yesterday, and `YYYYMMDD` `date` strings in current and daily rows. Keep daily dates contiguous from yesterday for the show-more labels; since #2585 only v000903 starts overseas daily rows at the day before yesterday, while `/ww` keeps yesterday first for these widgets. At `bd6640f2` KMA `midData.dailyData` omits incomplete dates by design (§4.2).
 4. Keep the `khai*` aliases on world `arpltn`, and the `pm10*`, `pm25*` and `o3*` members on both sources.
 5. Decide whether grade strings stay Korean for widget requests. The TodayWeather coloring and the TodayAir headline depend on them.
 6. Decide the error envelope. Installed widgets cache any JSON object and stop rendering when it has no weather rows.

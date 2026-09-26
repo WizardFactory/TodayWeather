@@ -1624,6 +1624,16 @@ function controllerWorldWeather() {
         next();
     };
 
+    /**
+     * First local time of the overseas hourly/daily rows: the day before yesterday 00:00 for v000903
+     * (req.dsfFromDayBeforeYesterday, #2585; clients drop the first day of hourly rows like the domestic
+     * view), otherwise yesterday 00:00 as before. Local time strings "YYYY.MM.DD HH:MM".
+     */
+    self._dsfStartDate = function(req, timeOffset, cWeatherDate) {
+        var daysBack = req.dsfFromDayBeforeYesterday ? 48 : 24;
+        return self._getTimeString((0 - daysBack) * 60 + timeOffset, cWeatherDate).slice(0, 11) + '00:00';
+    };
+
     self.mergeDsfDailyData = function(req, res, next){
         var meta = {};
         meta.sID = req.sessionID;
@@ -1632,7 +1642,7 @@ function controllerWorldWeather() {
             var timeOffset = req.result.timezone.min;
             //current date of data
             var cWeatherDate = req.cWeatherDate;
-            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, cWeatherDate).slice(0,14) + '00';
+            var startDate = self._dsfStartDate(req, timeOffset, cWeatherDate);
             var curDate = self._getTimeString(timeOffset, cWeatherDate).slice(0,14) + '00';
 
             if(req.result === undefined){
@@ -1697,7 +1707,10 @@ function controllerWorldWeather() {
 
         if(req.DSF && req.DSF.data){
             var timeOffset = req.result.timezone.min;
-            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, req.cWeatherDate).slice(0,14) + '00';
+            var startDate = self._dsfStartDate(req, timeOffset, req.cWeatherDate);
+            // Other than v000903: at most 48 h ahead, as with Dark Sky.
+            var endDate = req.dsfFromDayBeforeYesterday ? undefined :
+                self._getTimeString(48 * 60 + timeOffset, req.cWeatherDate).slice(0, 14) + '00';
             var yesterdayDate = self._getTimeString((0 - 24) * 60 + timeOffset, req.cWeatherDate).slice(0, 14) + '00';
             var curDate = self._getTimeString(timeOffset, req.cWeatherDate).slice(0, 14) + '00';
 
@@ -1786,7 +1799,8 @@ function controllerWorldWeather() {
 
                 isExist = false;
                 if(self._checkHour(dbItem.dateObj, ['00','03','06','09','12','15','18','21','24']) &&
-                    new Date(dbItem.dateObj).getTime() >= new Date(startDate).getTime()) {
+                    new Date(dbItem.dateObj).getTime() >= new Date(startDate).getTime() &&
+                    (endDate === undefined || new Date(dbItem.dateObj).getTime() <= new Date(endDate).getTime())) {
 
                     for (var index = 0; index<req.result.hourly.length-1; index++) {
                         var hourly =  req.result.hourly[index];

@@ -20,7 +20,8 @@ Clock.now = function () { return clock; }; Clock.parse = RealDate.parse; Clock.U
 var lines = [];
 var log = {};
 ['info', 'warn', 'error', 'debug', 'verbose', 'silly'].forEach(function (k) { log[k] = function (m) { lines.push(k + ' ' + m); }; });
-function fixture(name) { return JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'vc-' + name + '.json'), 'utf8')); }
+function rawFixture(name) { return JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'vc-' + name + '.json'), 'utf8')); }
+function fixture(name) { return /-combined$/.test(name) ? require('./vc-synthetic').withDayBefore(rawFixture(name)) : rawFixture(name); }
 function load(relative, deps, globals) {
     var module = {exports: {}};
     var sandbox = Object.assign({module: module, exports: module.exports, console: console, log: log, Date: Clock, Buffer: Buffer, Intl: Intl,
@@ -113,12 +114,12 @@ new VcRequester().getTimeline({lat: 35.68, lon: 139.76, range: 'forecast'}, 'NOD
     });
     var get = function (cb) { new Controller().getDsfData({geocode: {lat: '35.68', lon: '139.76'}, sessionID: 'n10'}, new Clock(), cb); };
     async.series([
-        function (cb) { get(function (err, res) { assert.ifError(err); assert.equal(res.data.length, 3); cb(); }); },
+        function (cb) { get(function (err, res) { assert.ifError(err); assert.equal(res.data.length, 4); cb(); }); },
         function (cb) { clock += 10 * 60000; get(function (err) { assert.ifError(err); cb(); }); },
         function (cb) { clock += 10 * 60000; get(function (err) { assert.ifError(err); cb(); }); }
     ], function () {
         assert.deepEqual(ranges, ['combined', 'forecast']);
-        assert.equal(usage['2026-09-26'].records, 26);
+        assert.equal(usage['2026-09-26'].records, 50);
         var at = function (zone, offset, date) { return {address: {country: zone}, timeOffset: offset, dateObj: new RealDate(date)}; };
         var c = new Controller();
         assert.equal(c._offsetAt(at('Pacific/Auckland', 720, '2026-09-26T07:00:00Z'), new RealDate('2026-09-27T11:30:00Z')), 780, 'Intl zone offset');

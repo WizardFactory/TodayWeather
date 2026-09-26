@@ -56,4 +56,24 @@ function syntheticTimeline(zone, firstDay, days, options) {
     return body;
 }
 
-module.exports = {syntheticTimeline, localParts};
+// The recorded fixtures are `yesterday/next7days` bodies. For range 'combined' (`last2days/next7days`)
+// tests prepend the day before yesterday: yesterday's observations shifted back one day (no DST change
+// in the recorded zones then). Cost 49 = 25 + 24.
+function withDayBefore(body) {
+    const out = JSON.parse(JSON.stringify(body));
+    const day = JSON.parse(JSON.stringify(out.days[0]));
+    day.datetime = new Date(Date.parse(day.datetime + 'T00:00:00Z') - 86400000).toISOString().slice(0, 10);
+    day.datetimeEpoch -= 86400;
+    ['sunriseEpoch', 'sunsetEpoch'].forEach(k => { if (typeof day[k] === 'number') day[k] -= 86400; });
+    day.source = 'obs';
+    // A little cooler and dry, so charts can tell the day before yesterday from yesterday.
+    const cooler = o => ['temp', 'tempmax', 'tempmin', 'feelslike', 'feelslikemax', 'feelslikemin'].forEach(k => { if (typeof o[k] === 'number') o[k] -= 3; });
+    const dry = o => { o.precip = 0; o.precipprob = 0; o.preciptype = null; };
+    cooler(day); dry(day);
+    (day.hours || []).forEach(h => { h.datetimeEpoch -= 86400; h.source = 'obs'; cooler(h); dry(h); });
+    out.days.unshift(day);
+    out.queryCost = (out.queryCost || 0) + 24;
+    return out;
+}
+
+module.exports = {syntheticTimeline, localParts, withDayBefore};

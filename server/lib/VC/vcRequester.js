@@ -1,7 +1,9 @@
 /**
  * Visual Crossing Timeline API requester for overseas weather (#2585).
  * One call returns history, current conditions and forecast in Dark Sky-like `us` units.
- * Cost: 'combined' (yesterday + today..+7 days) = 25 records, 'forecast' (today..+7 days) = 1 record.
+ * Cost (measured): a past day is 24 records, the forecast part 1 record.
+ *   'combined' (day before yesterday .. +7 days) = 49, 'recent' (yesterday .. +7 days) = 25,
+ *   'forecast' (today .. +7 days) = 1.
  */
 
 'use strict';
@@ -11,7 +13,8 @@ const zlib = require('zlib');
 
 const BASE_URL = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/';
 const RANGES = {
-    combined: 'yesterday/next7days',
+    combined: 'last2days/next7days',
+    recent: 'yesterday/next7days',
     forecast: 'today/next7days'
 };
 const ELEMENTS = ['datetime', 'datetimeEpoch', 'temp', 'tempmax', 'tempmin', 'feelslike', 'feelslikemax', 'feelslikemin',
@@ -121,7 +124,7 @@ class VcRequester {
     }
 
     /**
-     * @param {{lat: number, lon: number, range: string}} params range 'combined' or 'forecast'
+     * @param {{lat: number, lon: number, range: string}} params range 'combined', 'recent' or 'forecast'
      * @param {string} key VC_SECRET_KEY
      * @param {function(Error, Object=, Object=)} callback parsed Timeline body and
      *        {status, cost, ms, retried, http429}; err.providerDown marks 401/403 and 429s whose
