@@ -18,7 +18,7 @@ With no variable set, behaviour equals master before #2588.
 | `GATHER_PAST_CONDITION_RETRY_DIVISOR` | when > 0, the retry count is `ceil(updateList.length / divisor)` instead | `0` (off) | `20` | integer ≥ 0 |
 | `GATHER_KAQ_MIN_MODEL_IMAGES` | minimum `PM2_5.09KM` model images before KAQ forecasts are parsed | `4` | `2` | integer 1–4 |
 
-Empty values count as unset. An invalid value throws when the module loads, so the process fails at startup with `Invalid <NAME>: ...` rather than silently running master defaults. Check the PM2 error log after changing these variables.
+Empty values count as unset. Integer values are limited to 9007199254740991 (`Number.MAX_SAFE_INTEGER`): a retry count above that cannot be decremented exactly, so the retry loop would never end. An invalid value throws when the module loads, so the process fails at startup with `Invalid <NAME>: ...` rather than silently running master defaults. Check the PM2 error log after changing these variables.
 
 This applies to every `SERVER_MODE`, not only gather: `app.js` loads `controllerManager` in all modes, and service routes load the KAQ controller. An invalid `GATHER_*` value in a service process environment or its `server/.env` also stops the API server. Service processes ignore valid values, because only gather work reads them.
 

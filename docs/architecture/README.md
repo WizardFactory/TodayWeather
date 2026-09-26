@@ -47,4 +47,5 @@ node "$ARCHIFY_DIR/bin/archify.mjs" visual-check docs/architecture/diagrams/serv
 Use `architecture` for collection and `sequence` for mobile requests. Architecture sources pin repository evidence to the analyzed revision; update that revision deliberately after relevant source changes. Validation, browser execution and perceptual review are separate claims. See the [verification record](../../reports/sdlc/service-architecture/self-verification.md) for results and limitations.
 
 - [KMA station observations](../operations/kma-station-observations.md): opt-in gather minute/hourly collectors, current-weather merge, verification, rollback and known station gaps.
+- [Gather runtime policy](../operations/gather-runtime-policy.md): `GATHER_*` environment variables for retry counts, retry delay, task flags and the KAQ minimum (#2588), production values, operator procedure and remaining host-only drift.
 - [Static web client](web-client.md): responsive PWA, direct existing-API reads, local persistence and S3/CloudFront deployment boundaries.

@@ -12,16 +12,20 @@
  */
 'use strict';
 
+// Values above MAX_SAFE_INTEGER are rejected: a retry count that large cannot be
+// decremented exactly (1e20 - 1 === 1e20), so the retry loop would never end.
 function integer(env, name, defaultValue, min, max) {
     var raw = env[name];
     if (raw === undefined || String(raw).trim() === '') {
         return defaultValue;
     }
+    if (max === undefined) {
+        max = Number.MAX_SAFE_INTEGER;
+    }
     var text = String(raw).trim();
     var value = Number(text);
-    if (!/^\d+$/.test(text) || value < min || (max !== undefined && value > max)) {
-        throw new Error('Invalid ' + name + ': expected an integer from ' + min +
-            (max !== undefined ? ' to ' + max : ' or more'));
+    if (!/^\d+$/.test(text) || value < min || value > max) {
+        throw new Error('Invalid ' + name + ': expected an integer from ' + min + ' to ' + max);
     }
     return value;
 }

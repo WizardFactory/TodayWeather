@@ -82,6 +82,7 @@ test('unset environment reproduces master literals', () => {
     assert.strictEqual(p.kaqMinModelImages, 4);
     [0, 1, 19, 20, 400].forEach(n => assert.strictEqual(p.pastConditionRetryCount(n), 10));
     assert.strictEqual(gather.load({GATHER_RETRY_DELAY_MS: '2147483647'}).retryDelayMs, 2147483647);
+    assert.strictEqual(gather.load({GATHER_TOWN_RETRY: '9007199254740991'}).retry.townShort, Number.MAX_SAFE_INTEGER);
     // Empty strings are treated as unset.
     assert.deepStrictEqual(gather.load({GATHER_TOWN_RETRY: '', GATHER_PAST_ENABLED: ' '}).retry, p.retry);
 });
@@ -110,6 +111,8 @@ test('divisor retry equals the host updateList.length/20 when integral, else rou
 test('invalid values fail at load instead of silently reverting to defaults', () => {
     [
         ['GATHER_TOWN_RETRY', '0'], ['GATHER_TOWN_RETRY', 'abc'], ['GATHER_TOWN_RETRY', '1.5'],
+        // Above MAX_SAFE_INTEGER the decrement is lost (1e20 - 1 === 1e20): the retry loop would never end.
+        ['GATHER_TOWN_RETRY', '9007199254740992'], ['GATHER_MID_RETRY', '99999999999999999999'],
         ['GATHER_MID_RETRY', '-1'], ['GATHER_INVALID_CURRENT_RETRY', '1e3'],
         ['GATHER_RETRY_DELAY_MS', '-5'], ['GATHER_RETRY_DELAY_MS', '2147483648'], ['GATHER_PAST_CONDITION_RETRY', '0'],
         ['GATHER_PAST_CONDITION_RETRY_DIVISOR', 'x'],
