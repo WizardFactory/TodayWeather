@@ -6,18 +6,21 @@ var h = require('./harness');
 var logs = [];
 var log = h.logger(logs);
 var time = h.load('lib/kmaTimeLib.js', {}, {log: log});
+function memoryModel(records) {
+    return {
+        update: function (query, record, options, callback) {
+            assert.strictEqual(options.upsert, true);
+            records.push(record); callback();
+        },
+        find: function () {
+            var query = {sort: function () { return query; }, batchSize: function () { return query; },
+                lean: function () { return query; }, exec: function (callback) { callback(null, records); }};
+            return query;
+        }
+    };
+}
 var records = [];
-var model = {
-    update: function (query, record, options, callback) {
-        assert.strictEqual(options.upsert, true);
-        records.push(record); callback();
-    },
-    find: function () {
-        var query = {sort: function () { return query; }, batchSize: function () { return query; },
-            lean: function () { return query; }, exec: function (callback) { callback(null, records); }};
-        return query;
-    }
-};
+var model = memoryModel(records);
 var Short = h.load('controllers/kma/kma.town.short.controller.js', {
     async: require('async'), '../../models/kma/kma.town.short.model.js': model, '../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'),
     '../../lib/kmaTimeLib': time, '../../lib/kmaPrecipitation': require('../../lib/kmaPrecipitation')
@@ -73,6 +76,35 @@ paged.requestData([{mx: 60, my: 127}], paged.DATA_TYPE.TOWN_SHORT, 'OFFLINE_SMOK
 assert.strictEqual(callbacks, 3); assert.strictEqual(records.length, 1); assert.strictEqual(pageRequests, 1);
 assert(!logs.join(' ').includes('OFFLINE_SMOKE')); assert(!logs.join(' ').includes('serviceKey='));
 console.log('PASS truncated XML page -> failed requestData -> no additional persistence; encoded/raw dummy keys safe');
+
+// #2590: a 1,016-row short product spans two 999-row pages. Both pages are
+// requested, merged and checked before the actual storage controller runs.
+var pagedRecords = [];
+var PagedShort = h.load('controllers/kma/kma.town.short.controller.js', {
+    async: require('async'), '../../models/kma/kma.town.short.model.js': memoryModel(pagedRecords),
+    '../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'), '../../lib/kmaTimeLib': time,
+    '../../lib/kmaPrecipitation': require('../../lib/kmaPrecipitation')
+}, {log: log, commonString: ['date', 'time', 'mx', 'my'], shortString: ['r06', 's06', 't3h', 'sky', 'reh', 'pty']});
+var twoPageRequests = [];
+var twoPage = h.collector(h.pagedHttp(h.shortProduct(), twoPageRequests, null, true), logs);
+twoPage.requestData([{mx: 60, my: 127}], twoPage.DATA_TYPE.TOWN_SHORT, 'OFFLINE_SMOKE+a/b=', '20260924', '0500', function (failed, results) {
+    assert.strictEqual(failed, false); assert(results[0].isCompleted);
+    new PagedShort().saveShort(results[0].data, function (err) {
+        assert.ifError(err);
+        new PagedShort().getShortFromDB(null, {mx: 60, my: 127}, {}, function (err, result) {
+            assert.ifError(err); assert.strictEqual(result.pubDate, '202609240500');
+            assert.strictEqual(result.ret.length, 84);
+            var last = result.ret[83];
+            assert.strictEqual(last.date + last.time, '202609271700');
+            assert.strictEqual(last.t3h, 13); assert.strictEqual(last.reh, 60); callbacks++;
+        });
+    });
+});
+assert.strictEqual(callbacks, 4); assert.strictEqual(pagedRecords.length, 84);
+assert.strictEqual(pagedRecords[83].fcsDate.toISOString(), '2026-09-27T08:00:00.000Z');
+assert.deepStrictEqual(twoPageRequests.map(function (u) { return new URL(u).searchParams.get('pageNo'); }), ['1', '2']);
+assert(!logs.join(' ').includes('OFFLINE_SMOKE')); assert(!logs.join(' ').includes('serviceKey='));
+console.log('PASS 1,016-row short XML over pages 1-2 -> requestData -> saveShort -> getShortFromDB (84 hours, last 2026-09-27 17:00 KST)');
 
 // Sea XML -> requester/events -> actual mid controller save with memory model.
 var seaItem = {regId: ['11B00000']};

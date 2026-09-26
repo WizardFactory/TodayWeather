@@ -320,31 +320,36 @@ CollectData.prototype.resetResult = function(){
     self.recvFailed = false;
 };
 
-/*
-* Description : It request the weather data from server lead to url.
-*               If it successes to get data, it would send 'recvData' event to this.
-*               If it fail to get data, it would send 'recvFail' event to this.
-* */
-CollectData.prototype.getData = function(index, dataType, url, options, callback){
-    var self = this;
-    // Only locally constructed metadata may enter diagnostics. Transport/parser
-    // errors and provider messages can echo the service-key-bearing request URL.
-    var meta = {method: 'getData', index: index, dataType: dataType};
-    function fail(reason) {
-        var error = new Error(reason);
-        log.warn(reason, meta);
-        self.emit('recvFail', index);
-        if (callback) {
-            callback(error, index);
-        }
-    }
+// Upper bound for one product; the short forecast needs 2 pages of 999 rows.
+var KMA_MAX_PAGES = 5;
 
+function queryNumber(url, name) {
+    var match = new RegExp('[?&]' + name + '=([0-9]+)(?=&|$)').exec(url);
+    return match ? Number(match[1]) : NaN;
+}
+
+// Row identity without its value, e.g. category/date/time/grid for grid products.
+function rowKey(item) {
+    var key = {};
+    Object.keys(item).sort().forEach(function (name) {
+        if (name !== 'fcstValue' && name !== 'obsrValue') {
+            key[name] = item[name];
+        }
+    });
+    return JSON.stringify(key);
+}
+
+/*
+* Requests and validates one page. callback(reason, result, total, items, payload):
+* reason is a static diagnostic string and never includes transport/parser errors.
+* */
+CollectData.prototype._requestPage = function (url, callback) {
     req.get(url, {timeout: 1000*10}, function(err, response, body){
         if (err) {
-            return fail('KMA transport failure');
+            return callback('KMA transport failure');
         }
         if (!response || !(response.statusCode >= 200 && response.statusCode < 300)) {
-            return fail('KMA HTTP failure');
+            return callback('KMA HTTP failure');
         }
         xml2json(body, function(err, result){
             var envelope = result && result.response;
@@ -357,13 +362,120 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
                 !Array.isArray(items) || items.length === 0 || items.some(function (item) {
                     return !item || typeof item !== 'object' || Array.isArray(item);
                 })) {
-                return fail('KMA invalid or empty response');
+                return callback('KMA invalid or empty response');
             }
-            // This requester intentionally fetches one page only. Never mark
-            // a truncated prefix complete, even if its last group is valid.
-            if (Number(count) !== items.length) {
+            callback(null, result, Number(count), items, payload);
+        });
+    });
+};
+
+/*
+* Fetches pages 2..n sequentially after a full first page. Every page must repeat
+* totalCount, hold exactly the remaining rows up to the page size, add no row
+* already seen (a shifted or repeated page) and, when echoed, match the requested
+* pageNo/numOfRows.
+* callback(reason, items, diagnostic) with all rows in page order. On failure the
+* diagnostic {page, check} names the page and the failed check with static values only.
+* */
+CollectData.prototype._requestRemainingPages = function (url, total, first, callback) {
+    var self = this;
+    var size = queryNumber(url, 'numOfRows');
+    if (first.items.length >= total) {
+        return callback(null, first.items);
+    }
+    function inconsistent(page, check) {
+        callback('KMA incomplete or inconsistent response', undefined, {page: page, check: check});
+    }
+    if (queryNumber(url, 'pageNo') !== 1) {
+        return inconsistent(1, 'pageNo');
+    }
+    if (first.items.length !== size) {
+        return inconsistent(1, 'rows');
+    }
+    if (Math.ceil(total / size) > KMA_MAX_PAGES) {
+        return inconsistent(1, 'limit');
+    }
+    function echoed(payload, pageNo) {
+        return (!payload.pageNo || Number(payload.pageNo[0]) === pageNo) &&
+            (!payload.numOfRows || Number(payload.numOfRows[0]) === size);
+    }
+    if (!echoed(first.payload, 1)) {
+        return inconsistent(1, 'echo');
+    }
+    var merged = [];
+    var seen = {};
+    function addRows(items) {
+        for (var i = 0; i < items.length; i++) {
+            var key = rowKey(items[i]);
+            if (seen[key]) {
+                return false;
+            }
+            seen[key] = true;
+            merged.push(items[i]);
+        }
+        return true;
+    }
+    if (!addRows(first.items)) {
+        return inconsistent(1, 'duplicate');
+    }
+    (function next(pageNo) {
+        var pageUrl = url.replace(/([?&]pageNo=)[0-9]+(?=&|$)/, '$1' + pageNo);
+        self._requestPage(pageUrl, function (reason, result, count, items, payload) {
+            if (reason) {
+                return callback(reason, undefined, {page: pageNo, check: 'response'});
+            }
+            if (count !== total) {
+                return inconsistent(pageNo, 'totalCount');
+            }
+            if (items.length !== Math.min(size, total - merged.length)) {
+                return inconsistent(pageNo, 'rows');
+            }
+            if (!echoed(payload, pageNo)) {
+                return inconsistent(pageNo, 'echo');
+            }
+            if (!addRows(items)) {
+                return inconsistent(pageNo, 'duplicate');
+            }
+            if (merged.length === total) {
+                return callback(null, merged);
+            }
+            next(pageNo + 1);
+        });
+    })(2);
+};
+
+/*
+* Description : It request the weather data from server lead to url.
+*               If it successes to get data, it would send 'recvData' event to this.
+*               If it fail to get data, it would send 'recvFail' event to this.
+* */
+CollectData.prototype.getData = function(index, dataType, url, options, callback){
+    var self = this;
+    // Only locally constructed metadata may enter diagnostics. Transport/parser
+    // errors and provider messages can echo the service-key-bearing request URL.
+    var meta = {method: 'getData', index: index, dataType: dataType};
+    function fail(reason, diagnostic) {
+        var error = new Error(reason);
+        log.warn(reason, diagnostic ? Object.assign({}, meta, diagnostic) : meta);
+        self.emit('recvFail', index);
+        if (callback) {
+            callback(error, index);
+        }
+    }
+
+    self._requestPage(url, function (reason, result, total, items, payload) {
+        if (reason) {
+            return fail(reason);
+        }
+        self._requestRemainingPages(url, total, {items: items, payload: payload}, function (reason, allItems, diagnostic) {
+            if (reason) {
+                return fail(reason, diagnostic);
+            }
+            // Never mark a truncated prefix complete, even if its last group is valid.
+            if (total !== allItems.length) {
                 return fail('KMA incomplete or inconsistent response');
             }
+            result.response.body[0].items[0].item = allItems;
             var organized;
             try {
                 switch(dataType) {

@@ -66,3 +66,34 @@ exports.organize = function (kind, items) {
     c[kind](0, exports.response(items));
     return c.resultList[0];
 };
+// SYNTHETIC short product sized like the reported live getVilageFcst response
+// (#2590): 84 hours x 12 hourly categories + TMN/TMX for 4 days = 1,016 rows.
+exports.shortProduct = function () {
+    var items = [];
+    var start = Date.UTC(2026, 8, 24, 6);
+    for (var h = 0; h < 84; h++) {
+        var at = new Date(start + h * 3600000).toISOString();
+        var date = at.slice(0, 10).replace(/-/g, ''), time = at.slice(11, 13) + '00';
+        var hourly = exports.shortItems({TMP: String(10 + h % 10), WAV: '0'}, time);
+        if (time === '0600') { hourly.push(exports.item('TMN', '8.0', time)); }
+        if (time === '1500') { hourly.push(exports.item('TMX', '20.0', time)); }
+        hourly.forEach(function (item) {
+            item.baseTime = ['0500']; item.fcstDate = [date]; items.push(item);
+        });
+    }
+    return items;
+};
+// HTTP stub serving `items` by the requested pageNo/numOfRows. `mutate(page, response)`
+// may alter a page before XML serialization; every requested URL is recorded.
+exports.pagedHttp = function (items, requests, mutate, echo) {
+    return {get: function (url, options, callback) {
+        requests.push(url);
+        var query = new URL(url).searchParams;
+        var page = Number(query.get('pageNo') || 1), size = Number(query.get('numOfRows'));
+        var r = exports.response(items.slice((page - 1) * size, page * size));
+        r.response.body[0].totalCount = [String(items.length)];
+        if (echo) { r.response.body[0].pageNo = [String(page)]; r.response.body[0].numOfRows = [String(size)]; }
+        if (mutate) { mutate(page, r); }
+        callback(null, {statusCode: 200}, exports.xml(r));
+    }};
+};

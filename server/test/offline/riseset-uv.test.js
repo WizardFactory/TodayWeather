@@ -25,9 +25,17 @@ const KEYS = {normal: pad('NORMAL%2BKEY'), test_normal: pad('TEST+NORMAL'), cert
     dongnae_forecast_keys: JSON.stringify([pad('TEST+NORMAL'), FORECAST_KEY])};
 
 function Stub() {}
-function load(relative, dependencies = {}) {
+// A Date whose argument-less form reads a fixed instant, so clock-driven paths are reproducible.
+function fixedClock(iso) {
+    const fixed = new Date(iso).getTime();
+    return class FixedDate extends Date {
+        constructor(...args) { if (args.length) { super(...args); } else { super(fixed); } }
+        static now() { return fixed; }
+    };
+}
+function load(relative, dependencies = {}, clock = Date) {
     const module = {exports: {}};
-    const sandbox = {module, exports: module.exports, console, log, Date, setTimeout, clearTimeout, setImmediate,
+    const sandbox = {module, exports: module.exports, console, log, Date: clock, setTimeout, clearTimeout, setImmediate,
         require: name => Object.prototype.hasOwnProperty.call(dependencies, name) ? dependencies[name] : Stub};
     sandbox.global = sandbox;
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), sandbox, {filename: relative});
@@ -193,7 +201,7 @@ test('KASI gather continues after one failing area and fails only when all fail'
     assert.equal(err && err.message, 'down');
 });
 
-function loadRequester(request, saved = []) {
+function loadRequester(request, saved = [], clock = Date) {
     const LifeIndexKma2 = {
         update: (query, doc, opts, cb) => { saved.push(doc); setImmediate(cb); },
         remove: (query, cb) => cb && cb(null)
@@ -201,15 +209,11 @@ function loadRequester(request, saved = []) {
     const Requester = load('lib/lifeIndexKmaRequester.js', {
         'request': request, 'async': async, '../lib/kmaTimeLib': kmaTimeLib,
         '../models/kma/kma.lifeindex.model': LifeIndexKma2
-    });
+    }, clock);
     const service = new Requester();
     service.setServiceKey(KEYS.cert_key, KEYS);
     service.setNextGetTime('ultrv', new Date(0));
     return {service, LifeIndexKma2};
-}
-
-function runUltrv(service, now) {
-    return new Promise(resolve => service.taskLifeIndex2('ultrv', (err, count) => resolve({err, count})));
 }
 
 test('V5 fixture becomes daily ultrv for the requested area and appendData2 adds ultrvGrade', async () => {
@@ -379,11 +383,13 @@ test('review: UV waits for the next three-hour slot after saving, retries after 
     const saved = [];
     let fail = false;
     const request = fakeRequest(url => fail ? new Error('ETIMEDOUT') : {body: onePage()});
-    const {service} = loadRequester(request, saved);
-    // 12:55 KST: the current slot 12 is published (recorded fixture issuance 2026092612).
+    // taskLifeIndex2 reads the clock. At 12:55 KST the current slot 12 is published
+    // (recorded fixture issuance 2026092612); the real clock would make this date-bound.
+    const clock = fixedClock('2026-09-26T03:55:00Z');
+    const {service} = loadRequester(request, saved, clock);
     const first = await new Promise(resolve => service.taskLifeIndex2('ultrv', (err, count) => resolve({err, count})));
     assert.equal(first.err, null);
-    const now = new Date();
+    const now = new clock();
     const nextKst = new Date(service.ultrv.nextTime.getTime() + 9 * 3600e3);
     assert(service.ultrv.nextTime > now, 'next get time moved forward');
     assert.equal(nextKst.getUTCHours() % 3, 0, 'next get time on a three-hour KST slot');
