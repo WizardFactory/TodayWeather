@@ -80,7 +80,7 @@ angular.module('service.push', [])
                 town: alarmInfo.town,               //first, second, third
                 name: alarmInfo.name,
                 location: alarmInfo.location,       //lat, long
-                source: alarmInfo.source,           //KMA or DSF, ...
+                source: alarmInfo.source,           //KMA or VC, ...
                 units: Units.getAllUnits()
             };
             //name, units

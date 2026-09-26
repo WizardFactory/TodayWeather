@@ -2016,8 +2016,9 @@ angular.module('service.weatherutil', [])
                 }];
 
                 if (weatherData.hasOwnProperty('pubDate')) {
-                    if (weatherData.pubDate.hasOwnProperty('DSF')) {
-                       data.source = "DSF";
+                    // Overseas weather: Visual Crossing (#2585), formerly Dark Sky (DSF).
+                    if (weatherData.pubDate.hasOwnProperty('VC')) {
+                       data.source = "VC";
                     }
                 }
             }

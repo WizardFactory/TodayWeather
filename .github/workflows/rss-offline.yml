@@ -74,3 +74,10 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
           TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
         run: node server/test/offline/precipitation-smoke.js
+      - name: Overseas weather (Visual Crossing) checks
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+          TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
+        run: |
+          node server/test/offline/vc-weather.test.js
+          node server/test/offline/vc-weather-smoke.js

@@ -37,6 +37,8 @@ module.exports = {
         dsf_keys : [{
             key: (process.env.DSF_SECRET_KEY || 'You have to set key of Dark Sky')
         }],
+        // Visual Crossing Timeline API key for overseas weather (#2585).
+        vc_key: (process.env.VC_SECRET_KEY || ''),
         aw_keys : [{
             key : (process.env.AW_SECRET_KEY || 'You have to set key of AW')
         }],

@@ -1,5 +1,7 @@
 /**
  * Created by Peter on 2018. 5. 9..
+ * Overseas weather from Visual Crossing since #2585 (Dark Sky was retired in 2023).
+ * Records keep the Dark Sky format of DsfForecast; see lib/VC/vcConverter.js.
  */
 
 "use strict";
@@ -7,16 +9,20 @@
 const async = require('async');
 const config = require('../../config/config');
 const dsfModel = require('../../models/worldWeather/dsf.model');
-const dsfRequester = require('../../lib/DSF/dsfRequester');
-const controllerKeys = require('./controllerKeys');
+const vcFetchLock = require('../../models/worldWeather/vc.fetch.lock.model');
+const VcRequester = require('../../lib/VC/vcRequester');
+const vcConverter = require('../../lib/VC/vcConverter');
 const kmaTimeLib = require('../../lib/kmaTimeLib');
-const timezoneController = require('../timezone.controller');
 
 
 class DsfController {
     constructor(){
-        this.Keys = new controllerKeys();
         this._interval = 1 * 24 * 60 * 60 * 1000; // 1 day
+        // One Visual Crossing fetch per location across workers; others wait for its records.
+        this.lockTtlMs = 10 * 1000;
+        this.failureBackoffMs = 2 * 1000;   // expires before the gateway's next attempt (3 s timeout)
+        this.waitMs = 2500;     // within the gateway Lambda's 3 s per-attempt budget
+        this.pollMs = 250;
     }
 
     _has(obj, key){
@@ -320,45 +326,43 @@ class DsfController {
                 log.info('cDsf > There are few datas : ', list.length);
             }
 
+            let ret = {};
             try{
-                // log.info(JSON.stringify(list));
-                let ret = {};
-                let missedHourData = [];
                 list.forEach((item)=>{
-                    //log.info(JSON.stringify(item));
-                    //log.info('---> ', item.dateObj, item.timeOffset);
-
+                    // Visual Crossing yesterday records hold the whole local day (#2585). An hour missing
+                    // on a daylight-saving change is left to the merge step instead of forcing a refetch.
                     if(ret['yesterday'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'yesterday')){
-                        ret['yesterday'] = this._hasYesterdayData(cDate, item, item.timeOffset);
-                        missedHourData = this._checkMissedHourData(ret['yesterday'], item.timeOffset);
-                        log.info('cDsf > 1. missed Hour Datas : ', JSON.stringify(missedHourData));
+                        if(this._fetchedAfterDayEnd(item, cDate)){
+                            ret['yesterday'] = item;
+                        }
                     }else if(ret['today'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 'today')){
                         ret['today'] = item;
                     }else if(ret['current'] === undefined && this._checkDate(cDate, item.dateObj, item.timeOffset, 15)){
                         ret['current'] = item;
-                    }else if(missedHourData.length > 0 && this._getDiffDate2(ret['yesterday'].dateObj, item.dateObj, item.timeOffset) === 0){
-                        // The only data which has the same date with yesterday is a subject.
-                        // Try to find missed data to other DB's data.
-                        ret['yesterday'] = this._fulfillMissedHourData(missedHourData, ret['yesterday'], item, item.timeOffset);
-                        missedHourData = this._checkMissedHourData(ret['yesterday'], item.timeOffset);
-                        log.info('cDsf > 2. missed Hour Datas : ', JSON.stringify(missedHourData));
                     }
                 });
-
-                // Finally, there is missed hour data on the yesterday's data, it should be dropped.
-                if(missedHourData.length > 0){
-                    log.info('cDsf > Lack of yesterday data : ', JSON.stringify(ret['yesterday']));
-                    ret['yesterday'] = undefined;
-                }
-
-                log.debug('_findFromDB', JSON.stringify(ret));
-
-                return callback(null, ret);
             }catch(e){
                 log.error(e);
                 return callback(e);
             }
+
+            log.debug('_findFromDB', JSON.stringify(ret));
+            // Outside the try: an exception in the caller must not call back twice.
+            return callback(null, ret);
         });
+    }
+
+    /**
+     * A yesterday record holds observations only when it was fetched after that local day ended;
+     * the day's last "today" refresh still has forecasts for its later hours (#2585).
+     * @private
+     */
+    _fetchedAfterDayEnd(item, cDate){
+        if(!item.pubDate){
+            return false;
+        }
+        let todayStart = this._getSpecificDate(cDate, item.timeOffset, 'today');
+        return new Date(item.pubDate).getTime() + item.timeOffset * 60 * 1000 >= todayStart.getTime();
     }
 
     _findFromDB(geo, cDate, callback){
@@ -456,8 +460,8 @@ class DsfController {
         });
     }
 
-    _getKey(){
-        return this.Keys.getDsfKey();
+    _getVcKey(){
+        return config.keyString.vc_key;
     }
 
     _getFloatItem(item){
@@ -668,335 +672,184 @@ class DsfController {
         return res;
     }
 
-    _reqData(geo, date, callback){
-        let dsfKey = this._getKey();
-        let requester = new dsfRequester;
-        let reqForm = {
-            lat: geo[1],
-            lon: geo[0]
-        };
+    _lockKey(geo){
+        // Numeric form: "35.680" and "35.68" address the same stored records.
+        return Number(geo[0]) + ',' + Number(geo[1]);
+    }
 
-        requester.getForecast(reqForm, date, dsfKey.key, (err,result)=>{
-            if(err){
-                log.warn('cDsf > Failed to get dsf data :', geo, date);
+    /**
+     * @param {string} key location key
+     * @param {function(Error, Date=)} callback owner token (the lock's expireAt) when this worker holds the lock
+     * @private
+     */
+    _acquireLock(key, callback){
+        let now = Date.now();
+        let expireAt = new Date(now + this.lockTtlMs);
+        vcFetchLock.create({_id: key, expireAt: expireAt}, (err)=>{
+            if(!err){
+                return callback(null, expireAt);
+            }
+            if(err.code !== 11000){
                 return callback(err);
             }
+            // Take over a lock whose holder did not release it before expireAt.
+            vcFetchLock.findOneAndUpdate({_id: key, expireAt: {$lt: new Date(now)}}, {$set: {expireAt: expireAt}}, {new: true}, (err, doc)=>{
+                if(err){
+                    return callback(err);
+                }
+                if(doc){
+                    log.warn('cDsf > took over an expired VC fetch lock', key);
+                }
+                return callback(null, doc ? expireAt : undefined);
+            });
+        });
+    }
 
-            if(result.code && result.code === 400){
-                log.error('cDsf > Get Failed', geo, result.err);
-                return callback(result.err);
+    _releaseLock(key, token){
+        // Delete only our own lock: a holder that outlived expireAt may have been taken over.
+        vcFetchLock.deleteOne({_id: key, expireAt: token}, (err)=>{
+            if(err){
+                log.warn('cDsf > Fail to release VC fetch lock', key, err.message);
             }
-
-            return callback(null, result);
         });
     }
 
     /**
-     * Description : To retrieve Timezone offset sequentially.
-     *                  1st. By using timezone string.
-     *                  2nd. By using geo directly
-     *                  3rd. if the Timezone string has  "GMT-", it would be use timeoffset directly.
-     * @param timezone
-     * @param geo
-     * @param callback
+     * After a failed fetch keep the lock only briefly: waiters cannot see the failure, and the
+     * gateway retries after 3 s, which should be able to fetch again.
      * @private
      */
-    _getTimeOffset(timezone, geo, callback){
-        let tz = new timezoneController(timezone);
-        let first = (cb)=> {
-            tz.requestTimezoneOffset(undefined, 'get', (err, tzOffset) => {
-                if (err) {
-                    log.warn(new Error(`cDSF > Failed to run first step : ${err}`));
-                    return cb(null);
-                }
-                return cb('1. Found timezone Offset', tzOffset);
-            });
-        };
-        let second = (cb)=>{
-            tz.requestTimezoneOffsetByGeo({lat: geo[1], lon:geo[0]}, timezone, (err, tzOffset)=>{
-                if(err){
-                    log.warn(new Error(`cDSF > Failed to run second step : ${err}`));
-                    return cb(null);
-                }
-                return cb('2. Found timezone Offset', tzOffset);
-            });
-        };
-        let third = (cb)=>{
-            let tzOffset = timezone.match(/\d+/g).map(Number);  // extract number from timezone string
-            log.debug(`cDsf> TZ Offset : ${tzOffset[0]}`);
-            if(tzOffset.length > 0 && tzOffset[0] >= 0 && tzOffset[0] < 24){
-                return cb('3. Found timezone Offset', tzOffset[0] * 60 /* to make Minute*/);
+    _backOff(key, token){
+        vcFetchLock.updateOne({_id: key, expireAt: token}, {$set: {expireAt: new Date(Date.now() + this.failureBackoffMs)}}, (err)=>{
+            if(err){
+                log.warn('cDsf > Fail to shorten VC fetch lock', key, err.message);
             }
-            return cb(null);
-        };
+        });
+    }
 
-        async.waterfall([first, second, third],
-            (err, tzOffset)=>{
-                if(tzOffset === undefined){
-                    err = new Error(`cDsf > Fail to get timezone!! tz[${timezone}], geo[${geo[0]}, ${geo[1]}`);
-                    log.error(err);
-                    return callback(err);
-                }
-                return callback(undefined, tzOffset);
+    _hasAll(output){
+        return !!(output.yesterday && output.today && output.current);
+    }
+
+    _merge(output, found){
+        ['yesterday', 'today', 'current'].forEach((name)=>{
+            if(found && found[name]){
+                output[name] = found[name];
             }
-        );
+        });
+        return output;
+    }
+
+    /**
+     * Another worker is fetching this location: re-read the stored records until current and today exist.
+     * @private
+     */
+    _waitForRecords(geo, cDate, output, callback){
+        let polls = Math.max(1, Math.ceil(this.waitMs / this.pollMs));
+        let check = ()=>{
+            this._findDataFromDB(geo, cDate, (err, found)=>{
+                if(!err && found && found.current && found.today){
+                    return callback(null, this._merge(output, found));
+                }
+                if(--polls > 0){
+                    return setTimeout(check, this.pollMs);
+                }
+                if(output.current && output.today){
+                    return callback(null, output);
+                }
+                return callback(new Error('cDsf > VC fetch in progress; no stored record yet'));
+            });
+        };
+        setTimeout(check, this.pollMs);
+    }
+
+    /**
+     * Fetch one Visual Crossing range, convert it to DsfForecast records and store them.
+     * @param {string} range 'combined' (yesterday..+7 days, 25 records) or 'forecast' (today..+7 days, 1 record)
+     * @private
+     */
+    _fetchVc(geo, cDate, range, output, callback){
+        new VcRequester().getTimeline({lat: geo[1], lon: geo[0], range: range}, this._getVcKey(), (err, body)=>{
+            if(err){
+                return callback(err);
+            }
+
+            let records = {};
+            try{
+                let docs = vcConverter.toDarkSkyDocs(body, cDate);
+                ['yesterday', 'today', 'current'].forEach((name)=>{
+                    if(docs[name]){
+                        records[name] = this._makeDbFormat(geo, cDate, docs.offsetMin, this._parseData(docs[name]));
+                    }
+                });
+            }catch(e){
+                log.error('cDsf > wrong VC data : ', e);
+                return callback(e);
+            }
+
+            // Current last: waiting workers treat a stored current as the end of this fetch.
+            async.eachSeries(['yesterday', 'today', 'current'].filter((name)=>records[name]), (name, cb)=>{
+                output[name] = records[name];
+                this._saveData(geo, records[name], (err)=>{
+                    if(err){
+                        log.warn('cDSF > Fail to save ' + name + ' Data to DB, ', err);
+                    }
+                    return cb();
+                });
+            }, ()=>callback(null));
+        });
     }
 
     _requestDatas(geo, output, cDate, timeOffset, callback){
-        let curRenewal = false;
-        async.waterfall([
-                (cb)=>{
-                    // 1. get current data
-                    if(timeOffset === 1440 || output.current === undefined){
-                        this._reqData(geo, undefined, (err, result)=>{
-                            if(err){
-                                log.error('cDsf > Failed to get current data :', geo);
-                                return cb(err);
-                            }
+        if(this._hasAll(output)){
+            return callback(null, output);
+        }
 
-                            let curData = {};
-                            try{
-                                curData = this._makeDbFormat(geo, cDate, timeOffset, this._parseData(result));
-                                log.debug('_requestDatas', JSON.stringify(curData));
-                                if(timeOffset != 1440 && curData.timeOffset != timeOffset){
-                                    // For notifying
-                                    log.warn('cDSF > !!! 1. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset, 'geo:', geo);
-                                }
-
-                                output.current = curData;
-                                log.info('cDSF > 1. system cur Date : ', cDate.toString());
-                                log.info('cDSF > 2. data cur Date : ', curData.data.current.dateObj);
-                                curRenewal = true;
-                            }catch(e){
-                                log.error('cDsf > wrong data : ', e, JSON.stringify(result));
-                                return cb('1. FAIL TO GET DSF!');
-                            }
-                            return cb(null, output.current);
-                        });
-                    }else{
-                        return cb(null, output.current);
-                    }
-                },
-                (curData, cb)=>{
-                    // 2. check timezone
-
-                    /*
-                    Try to find timeoffset from DB data even though curData has it because it can be updated by DayLightSaving
-                    if(timeOffset != 1440){
-                        log.info('No need to receive timezone');
-                        return cb(null, curData);
-                    }
-                    */
-
-                    if(curData.address.country === undefined){
-                        log.warn('cDSF > There is no timezone string');
-                        if(timeOffset === 1440 && curData.timeOffset === undefined){
-                            return cb('2. No TIMEZONE INFO');
-                        }
-
-                        curData.timeOffset = (timeOffset != 1440)? timeOffset:curData.timeOffset;
-                        return cb(null, curData);
-                    }
-
-                    this._getTimeOffset(curData.address.country, geo, (err, timeOffset_MIN)=>{
-                        if(err && curData.timeOffset === undefined){
-                            err.message += ' ' + 'cDSF > Fail to get timeOffset';
-                            log.warn(err);
-                            timeOffset = 0;
-                            return cb('3. FAIL TO GET TIMEOFFSET');
-                        }
-
-                        if(timeOffset_MIN != undefined){
-                            if(curData.timeOffset != timeOffset_MIN){
-                                // For notifying
-                                log.warn('cDSF > !!! 2. Timeoffset is different , ', curData.timeOffset, ' | ', timeOffset_MIN, ' | ', timeOffset, 'geo:', geo);
-                            }
-
-                            timeOffset = curData.timeOffset = timeOffset_MIN;
-                        }else{
-                            timeOffset = curData.timeOffset || 0;
-                        }
-                        return cb(null, curData);
-                    });
-                },
-                (curData, cb)=>{
-                    // 3. store current data
-                    if(curRenewal){
-                        this._saveData(geo, curData, (err)=>{
-                            if(err){
-                                log.warn('cDSF > Fail to save current Data to DB, ', err);
-                            }
-
-                            return cb(null);
-                        });
-                    }else{
-                        return cb(null);
-                    }
-                },
-                (cb)=>{
-
-                    /**
-                     * sequence : 1. check output, if there is no yesterday data on output.
-                     *              1-1. generate reqtime as yesterday 00:00 and request data.
-                     *            2. if there is yesterday data on output, check missed hourly data on it.
-                     *              2-1. if there are missed hourly data, get missed data's hour and generate reqTime for missed data
-                     *              2-2. if there is no missed hourly data. exit and go next step.
-                     *            3. request missed data and merge into yesterday data of output
-                     *            4. if there are still missed data, goto 2-1.
-                     *
-                     * Exit Condition : retry count is reached to threshold(default is 3)
-                     *                  hourly data is fully fulfilled.
-                     *                  data has been broken(exception)
-                     */
-
-                    // Function to generate request time.
-                    let getReqTime = (missedDate)=>{
-                        let nextReqTime = this._getLocalLast0H(timeOffset);
-                        nextReqTime.setUTCDate(nextReqTime.getUTCDate() - 1);
-
-                        if(missedDate !== undefined){
-                            // generate reqTime for requesting missed hourly data.
-                            log.info(`cDSF > set Req Time for missed data [${JSON.stringify(missedDate)}]`);
-                            nextReqTime.setHours(missedDate.h);
-                        }
-                        return parseInt(nextReqTime.getTime() / 1000);
-                    };
-
-                    // Recursive function that try to request yesterday data data until hourly is fulfilled or retry count is over 0.
-                    let fnReceive = (geo, reqTime, retryCount, callback)=>{
-                        if(retryCount === 0){
-                            log.error(new Error(`cDSF > Failed to get Yesterday data : ${JSON.stringify({geo, reqTime})}`));
-                            return callback(null);
-                        }
-
-                        this._reqData(geo, reqTime, (err, result)=>{
-                            if(err){
-                                log.warn('cDSF > Fail to get Yesterday data : ', err);
-                                return fnReceive(geo, reqTime, --retryCount, callback);
-                            }
-
-                            let yesterdayData = {};
-                            try{
-                                yesterdayData = this._makeDbFormat(geo, cDate, timeOffset, this._parseData(result));
-                                if(output.yesterday === undefined){
-                                    output.yesterday = yesterdayData;
-                                    /* for Test
-                                    if(retryCount ===3){
-                                        output.yesterday.data.hourly.data.splice(4,1);
-                                        output.yesterday.data.hourly.data.splice(8,1);
-                                    }
-                                    */
-                                }else {
-                                    // fulfill missed hourly data
-                                    log.info(`Timeoffset : ${timeOffset}, ${output.yesterday.timeOffset}`);
-                                    let missedHourlyData = this._checkMissedHourData(output.yesterday, timeOffset);
-                                    output.yesterday = this._fulfillMissedHourData(missedHourlyData, output.yesterday, yesterdayData, timeOffset);
-                                }
-                            }catch(e){
-                                log.error('cDsf > wrong yesterday data : ', e, JSON.stringify(result));
-                                return callback(null);
-                            }
-
-                            // check whether data is valid or not
-                            let missedHourlyData = this._checkMissedHourData(output.yesterday, timeOffset);
-                            if(missedHourlyData.length > 0){
-                                log.info(`cDSF > Missed Yesterday Data : ${JSON.stringify({geo, reqTime, retryCount})}, datelist[${JSON.stringify(missedHourlyData)}]`);
-
-                                // Try to get missed hourly data with generated reqTime.
-                                return fnReceive(geo, getReqTime(missedHourlyData[0]), --retryCount, callback);
-                            }
-
-                            this._saveData(geo, yesterdayData, (err)=>{
-                                if(err){
-                                    log.warn('cDSF > Fail to save yesterday Data to DB, ', err);
-                                }
-
-                                return callback(null);
-                            });
-                        });
-                    };
-
-                    /**
-                     * If there is no yesterday or there is missed hourly data, it would request a new data to fulfill hourly data array.
-                     */
-                    if(output.yesterday === undefined || this._checkMissedHourData(output.yesterday, timeOffset).length > 0){
-                        fnReceive(geo, getReqTime(), 3, cb);
-                    }else{
-                        cb(null);
-                    }
-/*
-                    if(output.yesterday === undefined){
-                        // 4. try to get&save yesterday data
-                        let time = this._getLocalLast0H(timeOffset);
-                        time.setUTCDate(time.getUTCDate() - 1);
-                        let reqTime = parseInt(time.getTime() / 1000);
-
-                        // log.info(`cDsf> Req yesterday's data date[${time.toString()}], timeoffset[${timeOffset}], UTC[${reqTime}]`);
-                        this._reqData(geo, reqTime, (err, result)=>{
-                            if(err){
-                                log.error('cDSF > Fail to get Yesterday data : ', err);
-                                return cb(null);
-                            }
-                            let yesterdayData = {};
-                            try{
-                                yesterdayData = this._makeDbFormat(geo, cDate, timeOffset, this._parseData(result));
-                                output.yesterday = yesterdayData;
-                            }catch(e){
-                                log.error('cDsf > wrong yesterday data : ', e, JSON.stringify(result));
-                                return cb(null);
-                            }
-
-                            this._saveData(geo, yesterdayData, (err)=>{
-                                if(err){
-                                    log.warn('cDSF > Fail to save yesterday Data to DB, ', err);
-                                }
-
-                                return cb(null);
-                            });
-                        });
-                    }else{
-                        return cb(null);
-                    }
-*/
-                },
-                (cb)=>{
-                    if(output.today === undefined){
-                        // 5. try to get&save today data
-                        let time = this._getLocalLast0H(timeOffset);
-                        let reqTime = parseInt(time.getTime() / 1000);
-
-                        // log.info(`cDsf> Req yesterday's data date[${time.toString()}], timeoffset[${timeOffset}], UTC[${reqTime}]`);
-                        this._reqData(geo, reqTime, (err, result)=>{
-                            if(err){
-                                log.error('cDSF > Fail to get today data : ', err);
-                                return cb(null);
-                            }
-                            let todayData = {};
-                            try{
-                                todayData = this._makeDbFormat(geo, cDate, timeOffset, this._parseData(result));
-                                output.today = todayData;
-                            }catch(e){
-                                log.error('cDsf > wrong today data : ', e, JSON.stringify(result));
-                                return cb(null);
-                            }
-
-                            this._saveData(geo, todayData, (err)=>{
-                                if(err){
-                                    log.warn('cDSF > Fail to save today Data to DB, ', err);
-                                }
-
-                                return cb(null);
-                            });
-                        });
-                    }else{
-                        return cb(null);
-                    }
+        let key = this._lockKey(geo);
+        this._acquireLock(key, (err, token)=>{
+            let release = ()=>{
+                if(token){
+                    this._releaseLock(key, token);
                 }
-            ],
-            (err)=>{
-                return callback(err, output);
+            };
+            if(err){
+                // Lock store unavailable: fetch without the lock rather than fail the request.
+                log.warn('cDsf > VC fetch lock unavailable', key, err.message);
             }
-        );
+            else if(!token){
+                log.info('cDsf > VC fetch in progress elsewhere, waiting for', key);
+                return this._waitForRecords(geo, cDate, output, callback);
+            }
+
+            // Another worker may have stored the records between the first read and the lock.
+            this._findDataFromDB(geo, cDate, (findErr, found)=>{
+                if(!findErr){
+                    this._merge(output, found);
+                }
+                if(this._hasAll(output)){
+                    release();
+                    return callback(null, output);
+                }
+
+                let range = output.yesterday ? 'forecast' : 'combined';
+                this._fetchVc(geo, cDate, range, output, (err)=>{
+                    if(err){
+                        // Keep the lock for failureBackoffMs: at most one provider attempt per location per backoff while failing.
+                        if(token){
+                            this._backOff(key, token);
+                        }
+                        if(output.current && output.today){
+                            log.warn('cDsf > VC fetch failed, using stored records; backing off', key, err.message);
+                            return callback(null, output);
+                        }
+                        log.warn('cDsf > VC fetch failed; backing off', key, err.message);
+                        return callback(err);
+                    }
+                    release();
+                    return callback(null, output);
+                });
+            });
+        });
     }
 
     /**

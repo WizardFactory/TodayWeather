@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "World weather request and cache fill",
+    "title": "World weather request and cache fill (Visual Crossing)",
     "locale": "en",
     "quality_profile": "showcase",
     "column_fit": "spread",
@@ -32,18 +32,18 @@
       "id": "client",
       "type": "frontend",
       "label": "Client",
-      "sublabel": "v000903 DSF route"
+      "sublabel": "/{v}/dsf/coord \u00b7 /ww"
     },
     {
       "id": "assembly",
       "type": "backend",
       "label": "Controller",
-      "sublabel": "DSF + AQI in parallel"
+      "sublabel": "weather + AQI in parallel"
     },
     {
       "id": "dsf",
       "type": "backend",
-      "label": "DSF cache",
+      "label": "World cache",
       "sublabel": "15-minute current"
     },
     {
@@ -56,13 +56,13 @@
       "id": "store",
       "type": "database",
       "label": "MongoDB",
-      "sublabel": "weather, air, tz cache"
+      "sublabel": "weather, air, fetch lock"
     },
     {
       "id": "provider",
       "type": "external",
       "label": "Providers",
-      "sublabel": "DSF / timezone / WAQI"
+      "sublabel": "Visual Crossing / WAQI"
     }
   ],
   "messages": [
@@ -94,7 +94,7 @@
       "from": "dsf",
       "to": "store",
       "y": 244,
-      "label": "read records: yesterday, today, current \u226415 min"
+      "label": "read yesterday \u00b7 today \u00b7 current \u226415 min"
     },
     {
       "id": "read-aqi",
@@ -104,52 +104,39 @@
       "label": "prune + read air records"
     },
     {
-      "id": "fill-current",
-      "from": "dsf",
-      "to": "provider",
-      "y": 300,
-      "label": "no current \u226415 min \u2192 fetch current"
-    },
-    {
-      "id": "tz-cache",
+      "id": "lock",
       "from": "dsf",
       "to": "store",
-      "y": 328,
-      "label": "zone id known \u2192 tz cache read, every request"
+      "y": 300,
+      "label": "record missing \u2192 take location lock (TTL 10 s)",
+      "note": "lock held by another worker \u2192 re-read records every 250 ms for \u22642.5 s instead of fetching"
     },
     {
-      "id": "tz-google",
+      "id": "fill-combined",
+      "from": "dsf",
+      "to": "provider",
+      "y": 328,
+      "label": "no yesterday \u2192 yesterday/next7days (25 records)"
+    },
+    {
+      "id": "fill-forecast",
       "from": "dsf",
       "to": "provider",
       "y": 356,
-      "label": "tz cache miss \u2192 Google geocode + timezone"
-    },
-    {
-      "id": "fill-history",
-      "from": "dsf",
-      "to": "provider",
-      "y": 384,
-      "label": "yesterday missing/incomplete \u2192 \u22643 history fetches"
-    },
-    {
-      "id": "fill-today",
-      "from": "dsf",
-      "to": "provider",
-      "y": 412,
-      "label": "today missing \u2192 fetch today"
+      "label": "yesterday stored \u2192 today/next7days (1 record)"
     },
     {
       "id": "write-dsf",
       "from": "dsf",
       "to": "store",
-      "y": 440,
-      "label": "upsert per step: renewed current \u00b7 yesterday once gap-free \u00b7 today"
+      "y": 384,
+      "label": "upsert yesterday \u00b7 today \u00b7 current, release lock"
     },
     {
       "id": "return-dsf",
       "from": "dsf",
       "to": "assembly",
-      "y": 468,
+      "y": 412,
       "label": "weather records",
       "variant": "return"
     },
@@ -157,23 +144,23 @@
       "id": "fill-aqi",
       "from": "aqi",
       "to": "provider",
-      "y": 468,
+      "y": 440,
       "label": "if missing/stale: known feed \u2192 geographic fallback"
     },
     {
       "id": "error-dsf",
       "from": "dsf",
       "to": "assembly",
-      "y": 496,
-      "label": "Error \u2192 next(err) \u2192 HTML 500; string err \u2192 TypeError throw",
+      "y": 468,
+      "label": "no current after fetch/wait \u2192 next(err) \u2192 500",
       "variant": "dashed",
-      "note": "strings '1.'\u2013'3.' fail at err.message += in getDsfData (source anomaly, not reproduced)"
+      "note": "stored current + today are returned without yesterday when only the fetch fails"
     },
     {
       "id": "write-aqi",
       "from": "aqi",
       "to": "store",
-      "y": 496,
+      "y": 506,
       "label": "persist fetched air"
     },
     {
@@ -189,7 +176,7 @@
       "from": "assembly",
       "to": "client",
       "y": 562,
-      "label": "local time \u2192 merge \u2192 units \u2192 summary \u2192 JSON",
+      "label": "local time \u2192 merge \u2192 units \u2192 JSON, source VC",
       "variant": "return"
     }
   ]

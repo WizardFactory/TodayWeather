@@ -35,7 +35,7 @@ describe("source time and value formats from the rewrite contracts", () => {
 });
 
 describe("accumulation periods", () => {
-  it("labels DSF hourly rows as three-hour sums", () => {
+  it("labels overseas (VC) hourly rows as three-hour sums", () => {
     const raw = world();
     raw.hourly[3].rn1 = 2.4;
     raw.hourly[4].s06 = 1;
@@ -220,7 +220,7 @@ describe("D45 KMA precipitation semantics", () => {
       snowfallHours: null,
     });
   });
-  it("keeps DSF amounts as provider forecasts", () => {
+  it("keeps overseas (VC) amounts as provider forecasts", () => {
     const raw = world();
     raw.daily[1].r06 = 4;
     const d = normalizeWeather(raw).daily[1];

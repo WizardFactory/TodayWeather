@@ -29,11 +29,21 @@ describe("source adapters preserve meteorological meaning", () => {
   it("recognizes world provider metadata and does not mutate the payload", () => {
     const before = JSON.stringify(world.response);
     const result = normalizeWeather(world.response);
-    expect(result.source).toBe("DSF");
+    expect(result.source).toBe("VC");
     expect(result.current.temperature).toBe(21);
     expect(result.yesterday?.temperature).toBe(20);
     expect(result.daily.length).toBeGreaterThan(0);
     expect(JSON.stringify(world.response)).toBe(before);
+  });
+  it("identifies Visual Crossing by pubDate.VC and rejects the retired DSF source", () => {
+    const raw = structuredClone(world.response) as any;
+    delete raw.source;
+    const result = normalizeWeather(raw);
+    expect(result.source).toBe("VC");
+    expect(result.publishedAt).toBe(raw.pubDate.VC);
+    raw.source = "DSF";
+    raw.pubDate = { DSF: raw.pubDate.VC };
+    expect(() => normalizeWeather(raw)).toThrow("Unsupported weather response");
   });
   it("keeps station timestamp, pollutant zero and missing air independently", () => {
     const data = structuredClone(full);

@@ -41,7 +41,7 @@ describe("one delayed retry for gateway failures", () => {
     const r = await settle(
       api<any>("/weather?lat=48.85&lon=2.35&airUnit=airnow"),
     );
-    expect(r.value?.source).toBe("DSF");
+    expect(r.value?.source).toBe("VC");
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
   it("retries a network failure once and gives up after the second failure", async () => {

@@ -68,6 +68,10 @@ class AlertPushController {
         if (source == undefined || source == '') {
             log.error('unknown source pushInfo:'+JSON.stringify(pushInfo));
         }
+        // Overseas weather keeps the /dsf/coord route; VC (Visual Crossing, #2585) and legacy DSF share it.
+        if (source === 'vc') {
+            source = 'dsf';
+        }
 
         if (pushInfo.geo) {
             url += '/'+apiVersion+'/'+source+'/coord';
@@ -102,6 +106,10 @@ class AlertPushController {
     }
 
     _getWeatherData(pushInfo, callback) {
+        if (!pushInfo.source) {
+            // Released apps do not recognise VC (#2585): their new overseas registrations carry no source.
+            return callback(new Error('Unknown source pushInfo:'+JSON.stringify({id: pushInfo.id, geo: pushInfo.geo})));
+        }
         let url = this._makeRequestUrl(pushInfo);
         async.retry(2,
             (callback)=> {
@@ -110,6 +118,28 @@ class AlertPushController {
             (err, result)=> {
                 callback(err, result);
             });
+    }
+
+    /**
+     * Current weather of a KMA or overseas (VC, legacy DSF) response.
+     * @param resData
+     * @private
+     */
+    _getCurrentWeather(resData) {
+        let current;
+        if (resData.source === 'KMA') {
+            current = resData.current;
+        }
+        else if (resData.source === 'VC' || resData.source === 'DSF') {
+            current = resData.thisTime[1];
+            if (current && current.pty > 0) {
+                current.rns = true;
+            }
+        }
+        else {
+            throw new Error("Unknown source "+JSON.stringify({resData:resData}));
+        }
+        return current;
     }
 
     /**
@@ -127,18 +157,7 @@ class AlertPushController {
             throw new Error("weather air data is undefined");
         }
 
-        if (resData.source === 'KMA') {
-            current = resData.current;
-        }
-        else if (resData.source === 'DSF') {
-            current = resData.thisTime[1];
-            if (current.pty > 0) {
-                current.rns = true;
-            }
-        }
-        else {
-            throw new Error("Unknown source "+JSON.stringify({resData:resData}));
-        }
+        current = this._getCurrentWeather(resData);
 
         if (current == undefined) {
             throw new Error("data current is undefined "+JSON.stringify({resData:resData}));

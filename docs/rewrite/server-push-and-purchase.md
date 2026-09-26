@@ -39,6 +39,10 @@ Commits `c80ee014` (Node 16 preparation, lazy providers) and `45b2eb3f` (direct 
 
 Stored iOS `registrationId`-only records remain in both collections. Whenever they are due, the workers still select them and request weather before failing. The retirement or migration decision is listed in [§6](#6-rewrite-decisions-to-make-explicitly).
 
+### 1.2 Overseas source since #2585
+
+World responses now carry `source:'VC'` (Visual Crossing) instead of `'DSF'`; the route stays `/v000902/dsf/coord`. Current apps register overseas cities with `source` `VC`, while records from released app versions keep `DSF`. The alarm selects the overseas request for either value ([requestDailySummary](../../server/controllers/controllerPush.js#L1049-L1052)). The alert worker maps `vc` to the `dsf` URL segment ([`_makeRequestUrl`](../../server/controllers/alert.push.controller.js#L71-L74)) and reads `thisTime[1]` for both ([`_getCurrentWeather`](../../server/controllers/alert.push.controller.js#L123-L143)). Released app versions derive the city source from `pubDate.DSF`, which the server no longer sends, so their new overseas registrations carry no `source` (source reading): the alarm takes the geocode path (§2.1 row 4), and the alert worker reaches the `toLowerCase` anomaly in §3.1. The DSF text builders and labels below apply unchanged to `VC` responses.
+
 ## 2. Scheduled alarm (`ControllerPush`)
 
 Every 60 s the worker selects records whose `pushTime` equals the current UTC seconds-of-day (minute resolution), filters by local weekday, and processes six at a time ([schedule and filters](../architecture/push-notifications.md#persistence-and-scheduling)). For each record, `sendNotification` requests weather, builds `{title, text}` and submits it. Any error is logged per record; the worker retries nothing, although the legacy GCM branch passes a retry count of 5 to `node-gcm` ([GCM](../../server/controllers/controllerPush.js#L216), [sendPush](../../server/controllers/controllerPush.js#L1262-L1326)).
@@ -47,8 +51,8 @@ Every 60 s the worker selects records whose `pushTime` equals the current UTC se
 
 | # | Condition on the stored record | Action |
 | --- | --- | --- |
-| 1 | `cityIndex === 0` and `geo` present | Geocode first (below), then KMA or DSF by the geocoded country. The source comment says this path should go once `source` is always set. |
-| 2 | `source == 'DSF'` | DSF request |
+| 1 | `cityIndex === 0` and `geo` present | Geocode first (below), then KMA or overseas (DSF route) by the geocoded country. The source comment says this path should go once `source` is always set. |
+| 2 | `source == 'VC'` or `'DSF'` (#2585) | DSF-route request |
 | 3 | `source == 'KMA'` | KMA request |
 | 4 | `geo` present (unknown `source`, logged as an error) | Same as 1 |
 | 5 | `town.first` non-empty (older clients) | KMA request |
@@ -59,7 +63,7 @@ Geocode step ([`_requestGeoInfo`, `_geoInfo2pushInfo`, `_requestDailySummaryByGe
 | Request | URL | Notes |
 | --- | --- | --- |
 | KMA | `${SERVICE_SERVER}/v000902/kma/coord/<lat>,<lon>` when `geo` exists, else `/v000902/kma/addr/<first>[/<second>[/<third>]]` (each segment `encodeURIComponent`), else error `Fail to find geo or town info` | [`_requestKmaDailySummary`](../../server/controllers/controllerPush.js#L667-L745) |
-| DSF | `${SERVICE_SERVER}/v000902/dsf/coord/<lat>,<lon>` | Reads `geo[1]` without a check; a DSF record without `geo` throws synchronously outside the callback path (**anomaly**, not reproduced). [`_requestDsfDailySummary`](../../server/controllers/controllerPush.js#L896-L950) |
+| DSF route (`VC` or `DSF`) | `${SERVICE_SERVER}/v000902/dsf/coord/<lat>,<lon>` | Reads `geo[1]` without a check; such a record without `geo` throws synchronously outside the callback path (**anomaly**, not reproduced). [`_requestDsfDailySummary`](../../server/controllers/controllerPush.js#L896-L950) |
 
 Both requests add the unit query ([§1](#1-inputs-shared-by-both-push-workers)), send `Accept-Language: <lang>`, parse JSON, set no timeout option and do not retry. A transport error or HTTP ≥ 400 fails the record. A body without `units` gets `{C, m/s, hPa, km, mm, airkorea}`. Builder exceptions are caught and fail the record.
 
@@ -137,12 +141,12 @@ No matching record for the minute; a weekday filter of `false` or a missing `tim
 - **Polls.** A 60 s interval runs the job only at UTC minutes **7, 17, 35 and 50** with `time = UTC seconds-of-day`; the parse step's `minute = (time/60) % 60`, so "minute < 30" means :07/:17 and "minute > 30" means :35/:50 ([start](../../server/controllers/alert.push.controller.js#L929-L941), [`_getMinsOfCurrent`](../../server/controllers/alert.push.controller.js#L27-L29)).
 - **Records.** `enable: true` and inside the window: `startTime ≤ time ≤ endTime`, or for `reverseTime` records `startTime ≤ time` **or** `endTime ≥ time`. A `$where` prefilter skips the record when **either** `precipAlerts.pushTime` or `airAlerts.pushTime` is within the last 6 hours. Six records are processed at a time ([`_getAlertPushByTime`](../../server/controllers/alert.push.controller.js#L774-L818), [`_streamAlertPush`](../../server/controllers/alert.push.controller.js#L748-L765)). Unlike the alarm worker, the alert controller never reads `dayOfWeek` or `timezoneOffset`, although the model stores them ([model](../../server/models/alert.push.model.js#L40-L41)).
 - **Housekeeping per poll.** Before selection, `_removeDuplicates` groups records by `registrationId`, `cityIndex` and `id`; for each group with more than one record and a defined `registrationId`, it deletes the records whose `updatedAt` equals the earlier of the first two collected values. FCM-only records (no `registrationId`) are never de-duplicated. The 60-day cleanup (§1) is also started at each poll minute ([`_removeDuplicates`](../../server/controllers/alert.push.controller.js#L820-L869), [`sendAlertPushList`](../../server/controllers/alert.push.controller.js#L871-L915), [start](../../server/controllers/alert.push.controller.js#L929-L941)).
-- **Request** ([`_makeRequestUrl`, `_getWeatherData`](../../server/controllers/alert.push.controller.js#L56-L113)): `lang` defaults to `ko`; units as in [§1](#1-inputs-shared-by-both-push-workers). With `geo`: `${SERVICE_SERVER}/v000902/<source lower-cased>/coord/<lat>,<lon>`; otherwise `/v000902/kma/addr/<first>[/<second>[/<third>]]` whatever the source; with neither, an error is only logged and the request goes to the bare `SERVICE_SERVER` URL plus the unit query. `Accept-Language: <lang>`, 10 s timeout, JSON, HTTP ≥ 400 is an error. `async.retry(2)` makes at most **2 attempts** (one retry) with no delay.
+- **Request** ([`_makeRequestUrl`, `_getWeatherData`](../../server/controllers/alert.push.controller.js#L56-L121)): `lang` defaults to `ko`; units as in [§1](#1-inputs-shared-by-both-push-workers). With `geo`: `${SERVICE_SERVER}/v000902/<source lower-cased, vc → dsf>/coord/<lat>,<lon>`; otherwise `/v000902/kma/addr/<first>[/<second>[/<third>]]` whatever the source; with neither, an error is only logged and the request goes to the bare `SERVICE_SERVER` URL plus the unit query. `Accept-Language: <lang>`, 10 s timeout, JSON, HTTP ≥ 400 is an error. `async.retry(2)` makes at most **2 attempts** (one retry) with no delay.
 - **Anomalies.** `pushInfo.source.toLowerCase()` runs before its own empty-source check, so a record without `source` throws synchronously outside the waterfall's error path; the check is dead. The final error logger reads `alertPush.geo[1]`, which throws for a town-only record. Neither was reproduced.
 
 ### 3.2 Parse (`_parseWeatherAirData`)
 
-[Source](../../server/controllers/alert.push.controller.js#L120-L357). The response must have `source` `KMA` (current row = `current`) or `DSF` (current row = `thisTime[1]`, and `rns` is forced to `true` when `pty > 0`); anything else throws.
+[Source](../../server/controllers/alert.push.controller.js#L123-L376). The response must have `source` `KMA` (current row = `current`) or `VC`/legacy `DSF` (current row = `thisTime[1]`, and `rns` is forced to `true` when `pty > 0`); anything else throws.
 
 | Field | Rule |
 | --- | --- |

@@ -19,7 +19,7 @@ var pushSchema = new mongoose.Schema({
     },
     lang: String,       //ko, ja, zh-CN, zh-TW, ...
     name: String,       //name of location
-    source: String,     //KMA, DSF
+    source: String,     //KMA, VC (DSF: before #2585)
     units: {
         temperatureUnit: String, //C, F
         windSpeedUnit: String,  //m/s mph ..

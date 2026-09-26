@@ -14,8 +14,8 @@ This repository contains a Node.js/Express weather backend, an Ionic 1/AngularJS
 | `server/routes/v000001` … `v000903` | Versioned APIs; newer routers reuse selected older handlers rather than copying every endpoint |
 | `server/controllers/controllerManager.js` | Domestic product scheduling, self-HTTP `/gather/*` dispatch, normalization and saving |
 | `server/controllers/controllerTown.js`, `controllerTown24h.js` | Load domestic products, merge observations/forecasts, add air/life indices, convert units and summarize |
-| `server/controllers/worldWeather/` | World-weather API assembly, DSF cache/fill, AQI and historical collection machinery |
-| `server/lib/` | Provider HTTP/XML/JSON access, KMA scraping, units and image parsing |
+| `server/controllers/worldWeather/` | World-weather API assembly, overseas cache/fill (DSF-named; Visual Crossing since #2585), AQI and historical collection machinery |
+| `server/lib/` | Provider HTTP/XML/JSON access (Visual Crossing in `lib/VC`), KMA scraping, units and image parsing |
 | `server/models/` | Mongoose weather, geographic, push and purchase-related models |
 | `client/www/js/` | App startup and screens; `WeatherUtil` HTTP/conversion, `WeatherInfo` city state, `TwStorage` persistence |
 | `client/gulpfile.js`, `tw.*`, `ta.*` | Product/platform build variants; copy configuration, select purchase plugin, resources and native projects |
@@ -62,7 +62,7 @@ Sources: [URL builder](../../client/www/js/service.weatherutil.js), [placeholder
 | --- | --- |
 | Domestic current, short, shortest | Legacy grid documents use `mCoord={mx,my}`, `pubDate`, and time-series arrays with sentinel values; `DB_DATA_VERSION=2.0` selects newer KMA controllers on supported reads |
 | Domestic medium range, RSS, station and air products | Separate product models, region/forecast-zone/station relationships, then read-time merge |
-| DSF | Geographic `geo=[longitude,latitude]`, provider timestamps, time offset, current/hourly/daily objects; upsert by `geo` + `dateObj` |
+| Overseas weather (`DsfForecast`) | Geographic `geo=[longitude,latitude]`, provider timestamps, time offset, Dark Sky-format current/hourly/daily objects converted from Visual Crossing; upsert by `geo` + `dateObj`; `vc.fetch.locks` holds short per-location fetch locks |
 | AQI | Geographic/station data with an independent freshness check and pruning |
 | Client state | In-memory cities plus JSON localStorage; Cordova app preferences mirror data for native sharing |
 | Push | Device registrations/settings persisted on the server; push processes request weather and send notifications |

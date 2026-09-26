@@ -87,7 +87,7 @@ test("KMA observation time, sources, details and the air window follow the rewri
   );
   // AQI rows after the 09:00 observation are forecasts even without pubDate.
   await expect(page.locator(".air-forecast > span")).toHaveCount(4);
-  await expect(page.getByText("Powered by Dark Sky")).toHaveCount(0);
+  await expect(page.getByText("Weather Data Provided by Visual Crossing")).toHaveCount(0);
   await page.getByRole("button", { name: "미세먼지", exact: true }).click();
   const attribution = page.locator(".air-attribution");
   await expect(attribution).toContainText("인증되지 않은 실시간 자료");
@@ -101,13 +101,13 @@ test("KMA observation time, sources, details and the air window follow the rewri
   await expect(page.locator(".bar-chart")).toContainText("9/23");
 });
 
-test("overseas weather credits Dark Sky like the mobile app", async ({
+test("overseas weather credits Visual Crossing like the mobile app", async ({
   page,
 }) => {
   await page.goto("/weather/tokyo/hourly");
   await expect(
-    page.getByRole("link", { name: "Powered by Dark Sky" }),
-  ).toHaveAttribute("href", "https://darksky.net/poweredby/");
+    page.getByRole("link", { name: "Weather Data Provided by Visual Crossing" }),
+  ).toHaveAttribute("href", "https://www.visualcrossing.com/");
   await expect(page.locator(".air-attribution")).toHaveCount(0);
 });
 

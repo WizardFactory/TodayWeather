@@ -49,7 +49,7 @@ Only [the `SERVER_MODE=push` startup branch](../../server/app.js) starts both wo
 
 These are intervals, not durable scheduler guarantees. The alert database prefilter skips records when either recorded weather or air send falls within the preceding six hours; the later per-category comparison also checks six-hour limits. Do not infer independent unrestricted hourly delivery from the four polling minutes.
 
-Workers fetch weather from configured `SERVICE_SERVER`: `/v000902/kma/coord/...`, `/v000902/kma/addr/...` or `/v000902/dsf/coord/...`, with units and language. Alarm fallback can geocode a record before choosing KMA/DSF. They format localized notification text after obtaining weather. The diagram's `weather GET` represents a request/response dependency, not a separate scheduled collector.
+Workers fetch weather from configured `SERVICE_SERVER`: `/v000902/kma/coord/...`, `/v000902/kma/addr/...` or `/v000902/dsf/coord/...`, with units and language. Records with `source` `VC` (Visual Crossing, #2585) or legacy `DSF` use the overseas `/dsf/coord` route; alarm fallback can geocode a record before choosing KMA or overseas. They format localized notification text after obtaining weather. The diagram's `weather GET` represents a request/response dependency, not a separate scheduled collector.
 
 Text assembly, alert parse/send rules and worked examples: [server push text and purchase validation](../rewrite/server-push-and-purchase.md).
 

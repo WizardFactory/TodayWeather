@@ -51,7 +51,7 @@ describe("static browser API transport", () => {
     fetcher.mockResolvedValueOnce(json(world.response));
     expect(
       (await api<Weather>("/weather?lat=48.85&lon=2.35&airUnit=airnow")).source,
-    ).toBe("DSF");
+    ).toBe("VC");
     fetcher.mockImplementation(() =>
       json({
         address: "서울",

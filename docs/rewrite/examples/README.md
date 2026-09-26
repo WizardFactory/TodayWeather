@@ -10,8 +10,8 @@ Re-baselined 2026-09-25 to `bd6640f2`: the client converters are identical to `f
 | --- | --- | --- |
 | [client-kma-response.json](client-kma-response.json) | Partial raw KMA response in the legacy client-facing format, for current WeatherUtil characterization. Carries `vec` on short rows and `current.liveTime` (`'0900'` with `time` 9, and `currentPubDate` 08:00 earlier than the station time, the server condition for emitting `liveTime`) | Hand-written input; `stnDateTime` corrected on 2026-09-25 to the server's `YYYY.MM.DD.HH:MM` form |
 | [client-kma-normalized.json](client-kma-normalized.json) | Output of the current KMA client parser for the file above | Regenerated on 2026-09-24 and 2026-09-25 with the [isolated Node VM command](../client-data-contracts.md#reproduce-the-saved-normalization-examples); the command's exact-match assertion passes |
-| [client-world-response.json](client-world-response.json) | Partial public-gateway-shaped world response: gateway `location.long` differs from direct DSF `location.lon`; carries `source: "DSF"`, which backend `dataSort` always sets; air `*Str` values are English to match the single-language prose | Hand-written input; `source` added 2026-09-24, air strings corrected 2026-09-25 |
-| [client-world-normalized.json](client-world-normalized.json) | Output of the current world client parser (the parser ignores body `source` and derives it from `pubDate.DSF`) | Regenerated with the same command; exact-match assertion passes |
+| [client-world-response.json](client-world-response.json) | Partial public-gateway-shaped world response: gateway `location.long` differs from direct world backend `location.lon`; carries `source: "VC"` and `pubDate.VC`, which backend `dataSort` and the merges set since the Visual Crossing switch (#2585); air `*Str` values are English to match the single-language prose | Hand-written input; `source` added 2026-09-24, air strings corrected 2026-09-25, `DSF` → `VC` 2026-09-26 |
+| [client-world-normalized.json](client-world-normalized.json) | Output of the current world client parser (the parser ignores body `source` and derives it from `pubDate.VC`) | Regenerated 2026-09-26 with the same command; exact-match assertion passes |
 
 The command runs only `client/www/js/service.weatherutil.js` with registration and analytics stubs; it fails on any network attempt and involves no DB, provider, Cordova or storage operation.
 
@@ -29,11 +29,11 @@ The command runs only `client/www/js/service.weatherutil.js` with registration a
 
 | File | Boundary and use |
 | --- | --- |
-| [screenshot-weather.json](screenshot-weather.json) | Broader world-shaped fixture with synthetic air station/history/forecast for visual captures; Seoul is a test label |
+| [screenshot-weather.json](screenshot-weather.json) | Broader world-shaped fixture with synthetic air station/history/forecast for visual captures; Seoul is a test label. `source`/`pubDate` changed from `DSF` to `VC` on 2026-09-26 (#2585); screenshots captured earlier show the Dark Sky attribution |
 | [screenshot-weather-basic.json](screenshot-weather-basic.json) | Earlier same-day basic visual fixture, used for compact captures and safe-area comparison |
 | [screenshot-nation.json](screenshot-nation.json) | Synthetic `weather` and `air` arrays for national-map layout |
 | [screenshot-special.json](screenshot-special.json) | Explicitly fictional weather bulletin with no optional image |
 
-Screenshot fixtures travel through the existing client HTTP/parser/controller path against the loopback server staged by [capture tooling](../../../reports/rewrite-verification/capture/README.md). They test representative rendering, not server composition or meteorological correctness. `vec` in the two DSF-shaped weather fixtures (49 occurrences each) is a rendering convenience for the wind arrow: the world server path emits `windDir`/`wdd` and never `vec`, so do not treat these fixtures as a world API contract.
+Screenshot fixtures travel through the existing client HTTP/parser/controller path against the loopback server staged by [capture tooling](../../../reports/rewrite-verification/capture/README.md). They test representative rendering, not server composition or meteorological correctness. `vec` in the two world-shaped (formerly Dark Sky) weather fixtures (49 occurrences each) is a rendering convenience for the wind arrow: the world server path emits `windDir`/`wdd` and never `vec`, so do not treat these fixtures as a world API contract.
 
 Weather `date`/`time`, dotted `dateObj`, AQI `YYYY-MM-DD HH:mm`, publication timestamps and timezone offsets are separate contracts. Do not infer one universal date parser. Similarly, app/geocoder `{lat,long}`, direct world backend `{lat,lon}` and Mongo `[longitude,latitude]` are not interchangeable.
