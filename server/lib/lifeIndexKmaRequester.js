@@ -25,6 +25,14 @@ var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
 // var DOMAIN_KMA_INDEX_SERVICE = "http://newsky2.kma.go.kr";
 // var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService3";
 
+// The legacy UV list answers 307 -> /503.html; UV moved to the data.go.kr life weather index 4.0 (#2587).
+var UV_V5_URL = "http://apis.data.go.kr/1360000/LivingWthrIdxServiceV5/getUVIdxV5";
+var UV_V5_ROWS = 1000;
+// Current three-hour KST slot and earlier ones, to reach the latest issuance.
+var UV_V5_SLOT_COUNT = 5;
+// data.go.kr authorization failures: access denied, request limit, unregistered, expired, unregistered IP.
+var DATA_GO_KR_AUTH_CODES = ['20', '22', '30', '31', '32'];
+
 /**
  * fsn 식중독지수, rot 부패지수, Sensorytem 체감온도, Frostbite 동상가능 지수, Heat 열, Dspls 불쾌
  * Winter 동파, Ultrv 자외선, Airpollution 대기 확산
@@ -87,10 +95,11 @@ function KmaIndexService() {
     //    urlPath: 'getWinterLifeList'
     //};
 
+    // getUVIdxV5 is issued year-round every three hours (#2587).
     this.ultrv = {
         nextTime: null,
-        offerMonth: {start: 2, end: 10},
-        updateTimeTable: [9, 21], //kr 6, 18
+        offerMonth: {start: 0, end: 11},
+        updateTimeTable: [0, 3, 6, 9, 12, 15, 18, 21], //kr 9, 12, 15, 18, 21, 0, 3, 6
         urlPath: 'getUltrvLifeList'
     };
 
@@ -111,8 +120,27 @@ function KmaIndexService() {
  */
 KmaIndexService.prototype.setServiceKey = function(key, keyBox) {
     this.serviceKeyList.push(key);
-    if (keyBox && keyBox.test_cert) {
+    if (keyBox && keyBox.test_cert && keyBox.test_cert !== key) {
         this.serviceKeyList.push(keyBox.test_cert);
+    }
+    // Any data.go.kr account key may hold the life weather index 4.0 approval (#2587).
+    // On 2026-09-26 only one forecast key was approved for it.
+    if (keyBox) {
+        var list = this.serviceKeyList;
+        var candidates = [keyBox.normal, keyBox.test_normal];
+        try {
+            candidates = candidates.concat(JSON.parse(keyBox.dongnae_forecast_keys || '[]'));
+        }
+        catch (err) {
+            log.warn('invalid forecast key list for kma index service');
+        }
+        candidates.forEach(function (candidate) {
+            // Skip unset defaults ('You have to set ...', '["key1","key2"]'); data.go.kr keys are much longer.
+            if (typeof candidate === 'string' && candidate.length >= 20 &&
+                candidate.indexOf('You have to set') !== 0 && list.indexOf(candidate) === -1) {
+                list.push(candidate);
+            }
+        });
     }
     this.serviceKeyIndex = 0;
     this.serviceKey = this.serviceKeyList[this.serviceKeyIndex];
@@ -875,7 +903,7 @@ KmaIndexService.prototype.start = function() {
 KmaIndexService.prototype.getLifeIndex2 = function (indexName, callback) {
     var url = this.getUrl(indexName, undefined, this.serviceKey);
 
-    log.info(url);
+    log.info('request '+indexName+' life list');
     if (this.requestCount[indexName] == undefined) {
         this.requestCount[indexName] = 0;
     }
@@ -1058,6 +1086,11 @@ KmaIndexService.prototype.taskLifeIndex2 = function (indexName, callback) {
         return callback();
     }
 
+    if (indexName === 'ultrv') {
+        this._removeOldData();
+        return this.taskUltrvV5(time, callback);
+    }
+
     async.waterfall([
         function(cb) {
             self.getLifeIndex2(indexName, function(err, body){
@@ -1081,6 +1114,340 @@ KmaIndexService.prototype.taskLifeIndex2 = function (indexName, callback) {
     });
 
     this._removeOldData();
+    return this;
+};
+
+/**
+ * @param key raw or percent-encoded data.go.kr key
+ * @returns {string} key encoded once as a query component
+ * @private
+ */
+KmaIndexService.prototype._encodeServiceKey = function (key) {
+    try {
+        return encodeURIComponent(decodeURIComponent(key));
+    }
+    catch (err) {
+        return encodeURIComponent(key);
+    }
+};
+
+KmaIndexService.prototype.getUvUrlV5 = function (time, pageNo, svcKey) {
+    return UV_V5_URL + '?serviceKey=' + this._encodeServiceKey(svcKey || this.serviceKey) +
+        '&pageNo=' + pageNo + '&numOfRows=' + UV_V5_ROWS + '&dataType=JSON&areaNo=&time=' + time;
+};
+
+/**
+ * @param now
+ * @returns {Array} YYYYMMDDHH issuance candidates in KST, newest first
+ */
+KmaIndexService.prototype.getUvTimeSlotsV5 = function (now) {
+    var kst = new Date(now.getTime() + 9*3600*1000);
+    var base = Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate(),
+                        Math.floor(kst.getUTCHours()/3)*3);
+    var slots = [];
+    for (var i=0; i<UV_V5_SLOT_COUNT; i++) {
+        var d = new Date(base - i*3*3600*1000);
+        slots.push(d.getUTCFullYear() + ('0'+(d.getUTCMonth()+1)).slice(-2) + ('0'+d.getUTCDate()).slice(-2) +
+                   ('0'+d.getUTCHours()).slice(-2));
+    }
+    return slots;
+};
+
+/**
+ * @param body response of getUVIdxV5 (dataType=JSON) or of the data.go.kr gateway
+ * @returns {{error: Error}|{noData: boolean}|{items: Array, totalCount: number}}
+ */
+KmaIndexService.prototype.parseUvIdxV5 = function (body) {
+    var err;
+
+    if (typeof body === 'string') {
+        try {
+            body = JSON.parse(body);
+        }
+        catch (e) {
+            // The data.go.kr gateway can answer in XML even when JSON is requested.
+            var match = /<(returnReasonCode|resultCode)>\s*(\d+)\s*</.exec(body);
+            if (match && match[2] === '03') {
+                return {noData: true};
+            }
+            err = new Error('Fail to parse uv index v5 body' + (match ? ' code='+match[2] : ''));
+            if (match) {
+                err.returnCode = match[2];
+                err.isAuthError = DATA_GO_KR_AUTH_CODES.indexOf(match[2]) !== -1;
+            }
+            return {error: err};
+        }
+    }
+
+    if (body && body.OpenAPI_ServiceResponse && body.OpenAPI_ServiceResponse.cmmMsgHeader) {
+        var gateway = body.OpenAPI_ServiceResponse.cmmMsgHeader;
+        err = new Error('uv index v5 reasonCode='+gateway.returnReasonCode+' errMsg='+gateway.errMsg);
+        err.returnCode = ''+gateway.returnReasonCode;
+        err.isAuthError = DATA_GO_KR_AUTH_CODES.indexOf(err.returnCode) !== -1;
+        return {error: err};
+    }
+
+    if (!body || !body.response || !body.response.header) {
+        return {error: new Error('Fail to find header of uv index v5')};
+    }
+
+    var resultCode = ''+body.response.header.resultCode;
+    if (resultCode === '03') {
+        return {noData: true};
+    }
+    if (resultCode !== '00' && resultCode !== '0') {
+        err = new Error('uv index v5 resultCode='+resultCode+' resultMsg='+body.response.header.resultMsg);
+        err.returnCode = resultCode;
+        err.isAuthError = DATA_GO_KR_AUTH_CODES.indexOf(resultCode) !== -1;
+        return {error: err};
+    }
+
+    var resBody = body.response.body || {};
+    var items = resBody.items && resBody.items.item;
+    if (items == undefined || items === '') {
+        return {noData: true};
+    }
+    if (!Array.isArray(items)) {
+        items = [items];
+    }
+    if (items.length === 0) {
+        return {noData: true};
+    }
+
+    var totalCount = parseInt(resBody.totalCount, 10);
+    return {items: items, totalCount: isNaN(totalCount) ? items.length : totalCount};
+};
+
+/**
+ * One life index record per area and KST day. hN is N hours after the issuance time (KST).
+ * A day is emitted only when its 12:00 value is present, so a partly covered day keeps its earlier value.
+ * @param items getUVIdxV5 items
+ * @returns {Array} {areaNo, date, index, indexType, lastUpdateDate}
+ */
+KmaIndexService.prototype.convertUvItemsV5 = function (items) {
+    var results = [];
+
+    items.forEach(function (item) {
+        var issued = ''+item.date;
+        var areaNo = parseInt(item.areaNo, 10);
+        if (!/^\d{10}$/.test(issued) || isNaN(areaNo)) {
+            log.warn('skip invalid uv item areaNo='+item.areaNo+' date='+item.date);
+            return;
+        }
+
+        var base = Date.UTC(parseInt(issued.slice(0,4), 10), parseInt(issued.slice(4,6), 10)-1,
+                            parseInt(issued.slice(6,8), 10), parseInt(issued.slice(8,10), 10));
+        var days = {};
+        for (var n=0; n<=78; n+=3) {
+            var value = item['h'+n];
+            if (value === undefined || value === null || value === '') {
+                continue;
+            }
+            var index = Number(value);
+            if (!isFinite(index) || index < 0) {
+                continue;
+            }
+            var t = new Date(base + n*3600*1000);
+            var day = t.getUTCFullYear() + ('0'+(t.getUTCMonth()+1)).slice(-2) + ('0'+t.getUTCDate()).slice(-2);
+            if (days[day] === undefined) {
+                days[day] = {index: index, noon: false};
+            }
+            days[day].index = Math.max(days[day].index, index);
+            if (t.getUTCHours() === 12) {
+                days[day].noon = true;
+            }
+        }
+
+        Object.keys(days).sort().forEach(function (day) {
+            if (!days[day].noon) {
+                return;
+            }
+            results.push({areaNo: areaNo, date: kmaTimeLib.convertStringToDate(day), index: days[day].index,
+                          indexType: 'ultrv', lastUpdateDate: issued});
+        });
+    });
+
+    return results;
+};
+
+KmaIndexService.prototype._useServiceKeyV5 = function (index) {
+    this.serviceKeyIndex = index;
+    this.serviceKey = this.serviceKeyList[index];
+};
+
+/**
+ * @param time YYYYMMDDHH
+ * @param pageNo
+ * @param callback (err, parsed)
+ * @private
+ */
+KmaIndexService.prototype._requestUvPageV5 = function (time, pageNo, callback) {
+    var self = this;
+    var keyCount = Math.max(self.serviceKeyList.length, 1);
+    var startIndex = Math.max(self.serviceKeyIndex, 0) % keyCount;
+    var offset = 0;
+
+    function attempt() {
+        if (self.serviceKeyList.length > 0) {
+            self._useServiceKeyV5((startIndex + offset) % keyCount);
+        }
+        req(self.getUvUrlV5(time, pageNo), {timeout: 1000*30, json: true}, function (err, response, body) {
+            if (err) {
+                err.message = 'uv index v5 time='+time+' page='+pageNo+' '+err.message;
+                return callback(err);
+            }
+            var parsed = self.parseUvIdxV5(body);
+            if (!parsed.error && response.statusCode >= 400) {
+                parsed = {error: new Error('uv index v5 statusCode='+response.statusCode)};
+            }
+            if (parsed.error) {
+                if (response.statusCode === 401 || response.statusCode === 403) {
+                    parsed.error.isAuthError = true;
+                }
+                if (parsed.error.isAuthError && offset + 1 < keyCount) {
+                    offset++;
+                    return attempt();
+                }
+                if (parsed.error.isAuthError && self.serviceKeyList.length > 0) {
+                    // Every key was rejected: keep the previous choice.
+                    self._useServiceKeyV5(startIndex);
+                }
+                parsed.error.message += ' time='+time+' page='+pageNo;
+                return callback(parsed.error);
+            }
+            if (self.serviceKeyIndex !== startIndex) {
+                log.warn('uv index v5 service key changed index='+self.serviceKeyIndex);
+            }
+            callback(null, parsed);
+        });
+    }
+    attempt();
+};
+
+/**
+ * All pages of one issuance. The service answers a request time with the latest issuance at or
+ * before it (e.g. time=11 returns the 09 issuance), so the issuance comes from the items.
+ * @param time YYYYMMDDHH
+ * @param callback (err, items, issued) items is undefined when there is no data, or when the
+ *        issuance is not newer than the last saved one (remaining pages are then not requested)
+ * @private
+ */
+KmaIndexService.prototype._getUvIssueV5 = function (time, callback) {
+    var self = this;
+
+    self._requestUvPageV5(time, 1, function (err, first) {
+        if (err) {
+            return callback(err);
+        }
+        if (first.noData) {
+            return callback();
+        }
+
+        var issued = ''+first.items[0].date;
+        // Issuances are YYYYMMDDHH strings, so string order is time order.
+        if (self.ultrv.lastIssued && issued <= self.ultrv.lastIssued) {
+            return callback(null, undefined, issued);
+        }
+
+        var pageCount = Math.ceil(first.totalCount / UV_V5_ROWS);
+        var pageList = [];
+        for (var pageNo=2; pageNo<=pageCount; pageNo++) {
+            pageList.push(pageNo);
+        }
+
+        async.mapSeries(pageList,
+            function (pageNo, cb) {
+                self._requestUvPageV5(time, pageNo, function (err, page) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    if (page.noData) {
+                        return cb(new Error('uv index v5 missing page='+pageNo+' time='+time));
+                    }
+                    cb(null, page.items);
+                });
+            },
+            function (err, pages) {
+                if (err) {
+                    return callback(err);
+                }
+                var items = first.items;
+                pages.forEach(function (pageItems) {
+                    items = items.concat(pageItems);
+                });
+                callback(null, items, issued);
+            });
+    });
+};
+
+/**
+ * Once the current slot's issuance is saved, wait for the next three-hour slot.
+ * A failed run, or an issuance older than the current slot (not published yet), leaves nextTime
+ * unchanged, so the next manager tick retries with one page request.
+ * @param now
+ * @param issued YYYYMMDDHH of the saved or already-saved issuance
+ * @param currentSlot YYYYMMDDHH of the current KST three-hour slot
+ * @private
+ */
+KmaIndexService.prototype._scheduleNextUvV5 = function (now, issued, currentSlot) {
+    if (issued < currentSlot) {
+        log.info('uv index v5 slot '+currentSlot+' not published yet; latest='+issued);
+        return;
+    }
+    this.ultrv.nextTime = new Date(now.getTime());
+    this.setNextGetTime('ultrv');
+};
+
+/**
+ * Get the latest UV issuance of all areas and save daily values (#2587).
+ * @param now
+ * @param callback
+ */
+KmaIndexService.prototype.taskUltrvV5 = function (now, callback) {
+    var self = this;
+    var slots = self.getUvTimeSlotsV5(now);
+    var lastErr;
+
+    function trySlot(i) {
+        if (i >= slots.length) {
+            return callback(lastErr || new Error('uv index v5 has no data slots='+slots.join(',')));
+        }
+
+        self._getUvIssueV5(slots[i], function (err, items, issued) {
+            if (err) {
+                lastErr = err;
+                log.warn(err.message);
+                // Only a provider result code means this slot has no issuance; a transport or page
+                // failure must not let an older issuance replace a newer one.
+                if (err.isAuthError || err.returnCode == undefined) {
+                    return callback(err);
+                }
+                return trySlot(i+1);
+            }
+            if (!items && issued) {
+                log.info('uv index v5 already saved issued='+issued+' last='+self.ultrv.lastIssued);
+                self._scheduleNextUvV5(now, issued, slots[0]);
+                return callback(null, 0);
+            }
+            if (!items) {
+                log.info('uv index v5 no data time='+slots[i]);
+                return trySlot(i+1);
+            }
+
+            var results = self.convertUvItemsV5(items);
+            log.info('uv index v5 time='+slots[i]+' issued='+issued+' items='+items.length+' days='+results.length);
+            self.saveLifeIndex2('ultrv', results, function (err, savedCount) {
+                if (err) {
+                    return callback(err);
+                }
+                self.ultrv.lastIssued = issued;
+                self._scheduleNextUvV5(now, issued, slots[0]);
+                callback(null, savedCount);
+            });
+        });
+    }
+
+    trySlot(0);
     return this;
 };
 

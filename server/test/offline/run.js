@@ -19,6 +19,7 @@ var commands = [
     [path.join(__dirname, 'test.minute.merge.js')],
     [path.join(__dirname, 'weather-desc.test.js')],
     [path.join(__dirname, 'air-summary.test.js')],
+    [path.join(__dirname, 'riseset-uv.test.js')],
     [path.join(__dirname, 'precipitation.test.js')]
 ];
 commands.forEach(function (args) {
