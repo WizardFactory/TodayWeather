@@ -7,7 +7,7 @@ All provider fixtures are synthetic. These tests load real exported functions wi
 Use an isolated harness instead of installing the whole legacy application:
 
 ```sh
-npm install --prefix /tmp/issue-2555-harness --ignore-scripts --no-audit --no-fund --package-lock=false mocha@2.5.3 xml2js@0.4.23 async@2.6.4
+npm install --prefix /tmp/issue-2555-harness --ignore-scripts --no-audit --no-fund --package-lock=false mocha@2.5.3 xml2js@0.4.23 async@2.6.4 mongoose@5.1.2 express@4.13.4 sprintf@0.1.5 dotenv@10.0.0
 NODE_PATH=/tmp/issue-2555-harness/node_modules npm --prefix server run test:offline
 ```
 
@@ -15,9 +15,9 @@ Commands run from the repository root; dependency installation needs package-reg
 
 The separate smoke integrates real XML parsing, requestData/events and the short storage controller's save/read functions through synthetic HTTP and in-memory model adapters. It verifies timestamps, coordinates, exact values and no write on failure. It is not a live provider/DB/mobile test.
 
-The legacy 24h consumer characterization deliberately exposes its adjacent-record quantity split. Passing means the existing assumption is documented; it does not validate that split for hourly PCP/SNO. See [period limitations and full disposition](../../../docs/architecture/gather-source-reconciliation.md).
+The 24h consumer regression asserts that `adjustShort` no longer splits slot amounts across adjacent records (#2583). See [period contract and full disposition](../../../docs/architecture/gather-source-reconciliation.md).
 
-`test:offline` explicitly runs only the regression file, then the functional smoke, and propagates failures. The default `npm test` remains the legacy suite. The dedicated [GitHub Actions workflow](../../../.github/workflows/gather-offline.yml) runs this command with Node 22.22.2 and isolated dependencies on relevant pull requests and master pushes, with read-only repository permissions and no deployment steps. The historical Travis job is unchanged.
+`test:offline` explicitly selects the offline regression files and gather functional smoke, and propagates failures. The default `npm test` remains the legacy suite. The dedicated [GitHub Actions workflow](../../../.github/workflows/gather-offline.yml) runs this command with Node 22.22.2 and isolated dependencies on relevant pull requests and master pushes, with read-only repository permissions and no deployment steps. The historical Travis job is unchanged.
 
 Correction coverage uses distinct values for every sea wave field, nonfinite values in later days, mismatched item counts and raw/once-percent-encoded dummy keys. Pagination (#2590) uses a synthetic 1,016-row short product (84 hours × 12 categories + TMN/TMX, sized like the issue-reported live count): pages 1 and 2 are requested sequentially and merged before the unchanged count check; the smoke stores all 84 hours. Continuation pages with a changed `totalCount`, a wrong row count, a row already seen on an earlier page, a mismatching echoed `pageNo`/`numOfRows`, a provider/HTTP/transport/XML error, or a product over 5 pages fail the grid once, without a stored prefix. A first page shorter than 999 rows with a different `totalCount` still fails after one request. Key strings decode URI escapes exactly once and re-encode as a query component; raw plus is preserved, malformed escapes fail, literal percent must be supplied as `%25`.
 
@@ -50,6 +50,19 @@ It executes the actual v000903 coordinate router in process, complete middleware
 Smoke dependencies and output stay under the runner's temporary directory. This workflow is independent of the legacy Mocha/Travis suite and requires no production credentials, database, provider access or service startup. Hosted runner setup and npm installation require network access; the weather checks themselves use isolated dependencies.
 
 
+## Forecast precipitation periods (#2583)
+
+`precipitation.test.js` covers the category parser (rain in mm, snow in cm), the collector's amount plus category text and its once-per-batch warning for unparsed values, slot sums and the slot precipitation type in `getShort`, the next-day midnight slot, `adjustShort` without splitting, the shortest-window `pty 3` case, strings, DB 2.0 reads and the DB 1.0 per-field merge with the hourly row limit. It is part of `test:offline` and runs in any timezone.
+
+`precipitation-smoke.js` runs the real v000903 coordinate router with the mixed-period fixture (verification matrix V41): stored hourly `PCP`/`SNO` rows with categories, observed past rows, the shortest window and RSS rows, on DB 1.0 and 2.0, equal and newer RSS publications, and two unit sets. It asserts slot and daily totals, periods, approximation flags, strings and that no stored category text reaches the response.
+
+```sh
+TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/precipitation.test.js
+TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/precipitation-smoke.js
+```
+
+Both use the RSS smoke dependencies above; the [RSS offline workflow](../../../.github/workflows/rss-offline.yml) runs them on Node 16.20.2 and 22.22.2. In the DB 1.0 harness `shortest[]` is empty on the baseline too, so the smoke checks `shortest[]` fields on DB 2.0 only.
+
 ## Daily forecasts (#2560)
 
 `daily-forecast.test.js` runs the captured day-4–10 regression plus synthetic
@@ -60,7 +73,7 @@ with in-memory persistence adapters and a fixed clock; no Mongo connection.
 Install an isolated test environment (no repository dependency changes):
 
 ```sh
-npm install --prefix /tmp/issue-2560-offline --ignore-scripts --no-audit --no-fund async@2.6.4 xml2js@0.4.23 mocha@2.5.3 express@4.13.4 sprintf@0.1.5 mongoose@5.1.2
+npm install --prefix /tmp/issue-2560-offline --ignore-scripts --no-audit --no-fund async@2.6.4 xml2js@0.4.23 mocha@2.5.3 express@4.13.4 sprintf@0.1.5 mongoose@5.1.2 dotenv@10.0.0
 NODE_PATH=/tmp/issue-2560-offline/node_modules npm --prefix server run test:offline
 TZ=UTC NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/daily-response-smoke.js
 ```
@@ -80,6 +93,32 @@ deployment behavior remain operator checks.
 See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/daily-forecast-contract.md).
 
 `daily-review.test.js` adds shower mapping/storage, forecast-gap health, retired scheduler, raw short source publication bounds, DB1 complete snapshot replacement, KST year/midnight and shared JS consumer compatibility checks. Full-route smoke covers D+3 available, absent, partial, stale and DB1 legacy-without-snapshot, showers and optional RSS humidity. Raw additional daily fields do not expand the hourly template or invent daily precipitation totals. Native runtime tests remain operator-owned.
+
+## Environment startup (#2563)
+
+`env-startup.test.js` adds 12 checks using real dotenv 10.0.0 and temporary
+server layouts. It verifies loading before the first Express import for direct
+app imports, `bin/www`, and `npm start`; working-directory independence; existing
+process values including empty strings; missing files; documented dotenv syntax;
+and sanitized read failures. It intercepts Express before any application
+provider, database, timer or listener can initialize. The operator's actual
+`server/.env` is never read by these regression checks.
+
+```sh
+NODE_PATH=/tmp/issue-2560-offline/node_modules node server/test/offline/env-startup.test.js
+```
+
+See [server configuration](../../CONFIGURATION.md) for runtime behavior.
+
+## Paseo workspace environment setup
+
+Run `python3 server/test/offline/paseo-env-setup.test.py` from the repository root.
+The synthetic filesystem checks cover environment copying, private permissions,
+Git exclusion through existing rules or `info/exclude` with a clean `git status`,
+refusal when the file cannot be ignored, existing-file preservation, missing
+sources and symlink handling. They also check that the existing AWS-file setup
+is preserved. No private
+configuration or running Paseo daemon is required.
 
 ## Historical observations (#2564)
 
@@ -170,3 +209,17 @@ TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/air-sum
 These are synthetic checks, not live AirKorea, Mongo or mobile tests. AirKorea
 `dataTime` is still parsed in the host timezone; see
 [intent](../../../intent/issue-2578.md) for that separate limitation.
+
+## Sunrise/sunset and UV (#2587)
+
+`riseset-uv.test.js` (part of `test:offline`) loads the production modules in a VM with stubbed HTTP, models and configuration. It checks computed sunrise/sunset against KASI reference values under three host time zones, `getRiseSetInfo` fill-in and failure handling, KASI key rotation and per-area continuation, and the `getUVIdxV5` collector: slot fallback, pagination, key rotation, no partial save and conversion into daily `ultrv` read back through `appendData2`. `fixtures/uv-idx-v5.json` is a live `getUVIdxV5` response recorded on 2026-09-26 (`areaNo=` `numOfRows=3` `time=2026092612`; first three of 3,851 areas; the body contains no key).
+
+`riseset-uv-smoke.js` runs the v000903 coordinate route through the RSS smoke harness with the real KASI and life index controllers on synthetic store rows (DB 1.0 and 2.0; stores present, empty and failing):
+
+```sh
+npm install --prefix /tmp/tw-2587 --ignore-scripts --no-audit --no-fund async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 mocha@2.5.3 cheerio@^0.20.0
+TZ=UTC NODE_PATH=/tmp/tw-2587/node_modules node server/test/offline/riseset-uv.test.js
+TZ=UTC NODE_PATH=/tmp/tw-2587/node_modules node server/test/offline/riseset-uv-smoke.js
+```
+
+Both run in the RSS offline workflow. Deployment to the gather host and the deployed response remain operator checks.

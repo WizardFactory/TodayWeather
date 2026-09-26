@@ -23,11 +23,12 @@ var records = [];
 var model = memoryModel(records);
 var Short = h.load('controllers/kma/kma.town.short.controller.js', {
     async: require('async'), '../../models/kma/kma.town.short.model.js': model, '../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'),
-    '../../lib/kmaTimeLib': time
+    '../../lib/kmaTimeLib': time, '../../lib/kmaPrecipitation': require('../../lib/kmaPrecipitation')
 }, {log: log, commonString: ['date', 'time', 'mx', 'my'], shortString: ['r06', 's06', 't3h', 'sky', 'reh', 'pty']});
 var short = new Short();
 var callbacks = 0;
-var body = h.xml(h.response(h.shortItems({PCP: '1.5mm', SNO: '0.5cm'})));
+// SNO is a category (#2583): its representative amount and text survive XML, storage and read.
+var body = h.xml(h.response(h.shortItems({PCP: '1.5mm', SNO: '1cm 미만'})));
 var collector = h.collector({get: function (url, options, callback) {
     assert(url.startsWith('http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?'));
     assert.strictEqual(new URL(url).searchParams.get('serviceKey'), 'OFFLINE_SMOKE+a/b=');
@@ -41,6 +42,7 @@ collector.requestData([{mx: 60, my: 127}], collector.DATA_TYPE.TOWN_SHORT, 'OFFL
             assert.ifError(err); assert.strictEqual(result.pubDate, '202609240800');
             var v = result.ret[0];
             assert.strictEqual(v.r06, 1.5); assert.strictEqual(v.s06, 0.5); assert.strictEqual(v.t3h, 12.5);
+            assert.strictEqual(v.r06Text, undefined); assert.strictEqual(v.s06Text, '1cm 미만');
             assert.strictEqual(v.date, '20260924'); assert.strictEqual(v.time, '0900');
             assert.strictEqual(v.mx, 60); assert.strictEqual(v.my, 127); callbacks++;
         });
@@ -57,7 +59,7 @@ bad.requestData([{mx: 60, my: 127}], bad.DATA_TYPE.TOWN_SHORT, 'OFFLINE_SMOKE_DU
 });
 assert.strictEqual(callbacks, 2); assert.strictEqual(records.length, 1);
 assert(!logs.join('\n').includes('OFFLINE_SMOKE_DUMMY')); assert(!logs.join('\n').includes('serviceKey='));
-console.log('PASS synthetic XML -> requester -> events -> saveShort -> getShortFromDB (1 write, exact quantities/timestamps/grid)');
+console.log('PASS synthetic XML -> requester -> events -> saveShort -> getShortFromDB (1 write, exact quantities/categories/timestamps/grid)');
 console.log('PASS provider-error XML -> failed collection, no additional persistence; no key-bearing logs');
 
 // A truncated page must never reach the actual storage controller, even when
@@ -80,7 +82,8 @@ console.log('PASS truncated XML page -> failed requestData -> no additional pers
 var pagedRecords = [];
 var PagedShort = h.load('controllers/kma/kma.town.short.controller.js', {
     async: require('async'), '../../models/kma/kma.town.short.model.js': memoryModel(pagedRecords),
-    '../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'), '../../lib/kmaTimeLib': time
+    '../../lib/midForecastPolicy': require('../../lib/midForecastPolicy'), '../../lib/kmaTimeLib': time,
+    '../../lib/kmaPrecipitation': require('../../lib/kmaPrecipitation')
 }, {log: log, commonString: ['date', 'time', 'mx', 'my'], shortString: ['r06', 's06', 't3h', 'sky', 'reh', 'pty']});
 var twoPageRequests = [];
 var twoPage = h.collector(h.pagedHttp(h.shortProduct(), twoPageRequests, null, true), logs);

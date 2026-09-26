@@ -24,8 +24,10 @@ var shortSchema = new mongoose.Schema({
         pop: {type : Number, default : -1},
         pty: {type : Number, default : -1},
         r06: {type : Number, default : -1},
+        r06Text: String, // provider category for an approximate r06, e.g. "1mm 미만" (#2583)
         reh: {type : Number, default : -1},
         s06: {type : Number, default : -1},
+        s06Text: String, // provider category for an approximate s06, e.g. "1cm 미만"
         sky: {type : Number, default : -1},
         t3h: {type : Number, default : -50},
         tmn: {type : Number, default : -50},

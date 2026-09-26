@@ -62,7 +62,7 @@ function Manager(){
     };
 
     self.saveOnlyLastOne = true;
-    self.MAX_SHORT_COUNT = 64;    //8days * 8times
+    self.MAX_SHORT_COUNT = 192;   //8days * 24 hours: short forecasts are hourly since VilageFcstInfoService_2.0 (#2583)
     self.MAX_CURRENT_COUNT = 192; //8days * 24hours
     self.MAX_SHORTEST_COUNT = 192; //8days * 24 hours
     self.MAX_MID_COUNT = 20;
@@ -296,12 +296,15 @@ Manager.prototype.saveShort = function(newData, callback){
                                 }
                                 if (newItem.r06 !== -1) {
                                     dbShortList.shortData[i].r06 = newItem.r06;
+                                    // The category text belongs to this amount; an exact amount clears it.
+                                    dbShortList.shortData[i].r06Text = newItem.r06Text;
                                 }
                                 if (newItem.reh !== -1) {
                                     dbShortList.shortData[i].reh = newItem.reh;
                                 }
                                 if (newItem.s06 !== -1) {
                                     dbShortList.shortData[i].s06 = newItem.s06;
+                                    dbShortList.shortData[i].s06Text = newItem.s06Text;
                                 }
                                 if (newItem.sky !== -1) {
                                     dbShortList.shortData[i].sky = newItem.sky;
@@ -683,6 +686,7 @@ Manager.prototype.saveShortest = function(newData, callback){
                                 }
                                 if (newItem.rn1 !== -1) {
                                     dbShortestList.shortestData[i].rn1 = newItem.rn1;
+                                    dbShortestList.shortestData[i].rn1Text = newItem.rn1Text;
                                 }
                                 if (newItem.sky !== -1) {
                                     dbShortestList.shortestData[i].sky = newItem.sky;
