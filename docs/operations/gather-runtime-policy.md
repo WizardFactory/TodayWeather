@@ -1,6 +1,6 @@
 # Gather runtime policy (#2588)
 
-The production gather host runs hand-edited copies of `controllerManager.js`, `lib/PastConditionGather.js` and `kaq.hourly.forecast.controller.js`. A redeploy from master would silently revert those values. Issue [#2588](https://github.com/WizardFactory/TodayWeather/issues/2588) moves them into environment variables read by [`server/config/gather.js`](../../server/config/gather.js). The host can then set them in its PM2 environment instead of patching source.
+The production gather host runs hand-edited copies of `controllerManager.js`, `lib/PastConditionGather.js` and `kaq.hourly.forecast.controller.js`. A redeploy from master would silently revert those values. Issue [#2588](https://github.com/WizardFactory/TodayWeather/issues/2588) moves them into environment variables read by [`server/config/gather.js`](../../server/config/gather.js). The host can then set them in its process environment instead of patching source.
 
 With no variable set, behaviour equals master before #2588.
 
@@ -11,7 +11,7 @@ With no variable set, behaviour equals master before #2588.
 | `GATHER_TOWN_RETRY` | `_recursiveRequestData` passes for `TOWN_SHORT`, `TOWN_SHORTEST`, `TOWN_CURRENT` | `70` | `10` (temporary; `180` before 2026-09-26) | integer ≥ 1 |
 | `GATHER_INVALID_CURRENT_RETRY` | passes for the invalid-T1H current update (`updateInvalidT1hData`) | `50` | `40` | integer ≥ 1 |
 | `GATHER_MID_RETRY` | passes for `MID_FORECAST`, `MID_LAND`, `MID_TEMP` (both call sites), `MID_SEA` | `70` | `2` | integer ≥ 1 |
-| `GATHER_RETRY_DELAY_MS` | `setTimeout` delay before each failed-list and invalid-list retry pass | `0` | `50` | integer ≥ 0 |
+| `GATHER_RETRY_DELAY_MS` | `setTimeout` delay before each failed-list and invalid-list retry pass | `0` | `50` | integer 0–2147483647 (`setTimeout` limit) |
 | `GATHER_PAST_ENABLED` | queue the `Past` task at UTC minute 2 / startup | `true` | `false` | `true` / `false` |
 | `GATHER_AIR_FORECAST_ENABLED` | queue the KAQ hourly forecast block (UTC minute 7, existing hour gate) / startup | `true` | `false` | `true` / `false` |
 | `GATHER_PAST_CONDITION_RETRY` | per-coordinate retry count `PastConditionGather.start` passes to `requestDataByUpdateList` | `10` | (unused; divisor set) | integer ≥ 1 |
@@ -53,8 +53,10 @@ The host source comment says the air-forecast block runs "from another instance 
 ### Operator procedure (not executed by this change)
 
 1. Back up the three host files and the PM2 dump. Read the actual literals from the backed-up files and compare them with the Production column above. The column comes from the issue inventory and the #2604 note, not from a host inspection, so correct any mismatch before continuing.
-2. Add the variables to the gather process environment (the PM2 `www` app on the gather host), for example via the ecosystem file or by exporting them before `pm2 restart www --update-env`. Then run `pm2 save` and confirm the dump contains them. Alternatively, put them in `server/.env`, which `config/env.js` loads at startup (#2566). A variable already set in the process environment takes precedence over the file.
+2. Add the variables to the gather process environment (the PM2 `www` app on the gather host), for example via the ecosystem file or by exporting them before `pm2 restart www --update-env`. Then run `pm2 save` and confirm the dump contains them. `server/.env` is an alternative only when the host runs master `app.js` and `config/env.js` (#2566) with `dotenv` installed. The inspected host revision `c9220de3` has neither, so use the PM2 environment there. When both are set, the process environment takes precedence over the file.
 3. Replace `server/config/gather.js`, `controllers/controllerManager.js`, `lib/PastConditionGather.js` and `controllers/kaq.hourly.forecast.controller.js` with the master copies. First read "Remaining drift" below: the master `controllerManager.js` also changes the schedule.
+
+   Copying single master files onto the host checkout (`c9220de3` plus local overrides) is not proven compatible. For example, master `controllerManager.js` requires `lib/history/service.js`, which that revision lacks. It is loaded lazily, only with `ASOS_HISTORY_ENABLED=true`, and the file also expects current versions of its collaborators. Prefer deploying a full master revision. If you copy single files, first confirm that every `require` resolves and run `node --check` on the host.
 4. Verify in the log: no `Past` task at minute 2, no `getKaqHourlyForecast` at minute 7, the `start tasks counts` loop continues, `/health` returns 200.
 5. Roll back by restoring the backed-up files and the previous PM2 environment or `server/.env`.
 

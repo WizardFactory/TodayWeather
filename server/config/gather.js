@@ -58,7 +58,8 @@ function load(env) {
             midSea: midRetry
         },
         // Delay before each recursive retry pass of _recursiveRequestData.
-        retryDelayMs: integer(env, 'GATHER_RETRY_DELAY_MS', 0, 0),
+        // setTimeout turns larger values into 1 ms, so they are rejected.
+        retryDelayMs: integer(env, 'GATHER_RETRY_DELAY_MS', 0, 0, 2147483647),
         tasks: {
             past: flag(env, 'GATHER_PAST_ENABLED', true),
             airForecast: flag(env, 'GATHER_AIR_FORECAST_ENABLED', true)
