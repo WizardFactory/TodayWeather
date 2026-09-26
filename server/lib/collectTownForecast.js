@@ -404,15 +404,29 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
 };
 
 // Hourly precipitation: a category keeps a representative amount plus its text,
-// which carries the bounds (#2583). Unparseable values stay missing.
-function setPrecipitation(result, field, value, unit, noValue) {
+// which carries the bounds (#2583). Unparseable values stay missing and are counted
+// so that a new KMA notation is noticed (see warnUnparsed).
+function setPrecipitation(result, field, value, unit, noValue, unparsed) {
     var parsed = precipitation.parse(value, unit, noValue);
+    if (!parsed && unparsed) {
+        unparsed.count += 1;
+        if (unparsed.example === undefined) {
+            unparsed.example = field + '=' + String(value).trim().slice(0, 16);
+        }
+    }
     result[field] = parsed ? parsed.amount : -1;
     if (parsed && parsed.approx) {
         result[field + 'Text'] = value.trim();
     }
     else {
         delete result[field + 'Text'];
+    }
+}
+
+// One warning per batch: the count and a short example, never the raw response.
+function warnUnparsed(index, unparsed) {
+    if (unparsed.count) {
+        log.warn('KMA unparsed precipitation values', {index: index, count: unparsed.count, example: unparsed.example});
     }
 }
 
@@ -525,6 +539,7 @@ CollectData.prototype.organizeShortData = function(index, listData){
             wsd: -1     /* 풍속 : 1 , invalid : -1 */
         };
 
+        var unparsed = {count: 0};
         for(i=0 ; i < listItem.length ; i++){
             var item = listItem[i];
             //log.info(item);
@@ -563,10 +578,10 @@ CollectData.prototype.organizeShortData = function(index, listData){
                 // service sums them per slot (#2583). TMP is not proof of the legacy
                 // three-hour temperature cadence.
                 else if(item.category[0] === 'PCP') {
-                    setPrecipitation(result, 'r06', item.fcstValue[0], 'mm', '강수없음');
+                    setPrecipitation(result, 'r06', item.fcstValue[0], 'mm', '강수없음', unparsed);
                 }
                 else if(item.category[0] === 'SNO') {
-                    setPrecipitation(result, 's06', item.fcstValue[0], 'cm', '적설없음');
+                    setPrecipitation(result, 's06', item.fcstValue[0], 'cm', '적설없음', unparsed);
                 }
                 else if(item.category[0] === 'TMP') {
                     result.t3h = parseMeasurement(item.fcstValue[0], -50);
@@ -576,6 +591,8 @@ CollectData.prototype.organizeShortData = function(index, listData){
                 }
             }
         }
+
+        warnUnparsed(index, unparsed);
 
         var data = listResult[0];
         if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
@@ -645,6 +662,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
 
         var listItem = listData.response.body[0].items[0].item;
 
+        var unparsed = {count: 0};
         for(var i=0 ; i < listItem.length ; i++){
             var item = listItem[i];
             if((item.fcstDate === undefined)
@@ -671,7 +689,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
 
                 if(item.category[0] === 'PTY') {result.pty = val;}
                 else if(item.category[0] === 'RN1') {
-                    setPrecipitation(result, 'rn1', value, 'mm', '강수없음');
+                    setPrecipitation(result, 'rn1', value, 'mm', '강수없음', unparsed);
                 }
                 else if(item.category[0] === 'SKY') {result.sky = val;}
                 else if(item.category[0] === 'LGT') {result.lgt = val;}
@@ -686,6 +704,8 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                 }
             }
         }
+
+        warnUnparsed(index, unparsed);
 
         var data = listResult[0];
         if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||

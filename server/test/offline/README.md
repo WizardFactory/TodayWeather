@@ -52,7 +52,7 @@ Smoke dependencies and output stay under the runner's temporary directory. This 
 
 ## Forecast precipitation periods (#2583)
 
-`precipitation.test.js` covers the category parser (rain in mm, snow in cm), the collector's amount plus category text, slot sums in `getShort`, the next-day midnight slot, `adjustShort` without splitting, the shortest-window `pty 3` case, strings, DB 2.0 reads and the DB 1.0 per-field merge with the hourly row limit. It is part of `test:offline` and runs in any timezone.
+`precipitation.test.js` covers the category parser (rain in mm, snow in cm), the collector's amount plus category text and its once-per-batch warning for unparsed values, slot sums and the slot precipitation type in `getShort`, the next-day midnight slot, `adjustShort` without splitting, the shortest-window `pty 3` case, strings, DB 2.0 reads and the DB 1.0 per-field merge with the hourly row limit. It is part of `test:offline` and runs in any timezone.
 
 `precipitation-smoke.js` runs the real v000903 coordinate router with the mixed-period fixture (verification matrix V41): stored hourly `PCP`/`SNO` rows with categories, observed past rows, the shortest window and RSS rows, on DB 1.0 and 2.0, equal and newer RSS publications, and two unit sets. It asserts slot and daily totals, periods, approximation flags, strings and that no stored category text reaches the response.
 

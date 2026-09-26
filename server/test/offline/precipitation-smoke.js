@@ -100,6 +100,7 @@ async function main() {
         // AC6: 10 mm stays 10 mm.
         const s1315 = at('20260925', 15);
         assert.equal(s1315.r06, 10, label + ': 13h hourly value reaches its slot'); assert.equal(s1315.r06Str, '10mm');
+        assert.equal(s1315.pty, 1, label + ': slot with rain at 13h is not reported dry');
         assert.notEqual(s1315.r06Str, '5~9mm');
         const s0921 = at('20260925', 21);
         assert.equal(s0921.r06, 50); assert.equal(s0921.r06Approx, true); assert.equal(s0921.r06Str, '50~?mm');

@@ -137,6 +137,36 @@ test('AC1 hourly PCP 2, 4 and 1 in one slot give r06 7 over 3 hours; neighbours 
     assert.equal(slot(req.short, '20260924', '1800').r06Hours, 3);
 });
 
+test('review: a slot with rain before its last hour reports that precipitation type', () => {
+    const req = getShort(hourlyRows({
+        '2026092416': {r06: 2, pty: 1}, '2026092417': {r06: 1, pty: 1},             // 18h row itself dry
+        '2026092419': {r06: 1, pty: 4},                                             // shower only
+        '2026092501': {s06: 1, pty: 3}, '2026092502': {r06: 1, pty: 1},             // rain and snow
+        '2026092504': {pty: 1}}));                                                  // pty without amount
+    assert.equal(slot(req.short, '20260924', '1800').r06, 3);
+    assert.equal(slot(req.short, '20260924', '1800').pty, 1);
+    assert.equal(slot(req.short, '20260924', '2100').pty, 4);
+    assert.equal(slot(req.short, '20260925', '0300').pty, 2);
+    assert.equal(slot(req.short, '20260925', '0600').pty, 0, 'no amount: slot-hour pty kept');
+    assert.equal(slot(req.short, '20260924', '1500').pty, 0);
+});
+
+test('review: unparsed precipitation values are logged once per batch without the full text', () => {
+    const logs = [];
+    const c = h.prepare(h.collector(undefined, logs));
+    const items = h.shortItems({PCP: '2~3cm 이상 새표기 매우 긴 카테고리 문자열입니다', SNO: '적설없음'})
+        .concat(h.shortItems({PCP: '???'}, '1000'));
+    c.organizeShortData(0, h.response(items));
+    const warned = logs.filter(line => /unparsed precipitation/.test(line));
+    assert.equal(warned.length, 1, logs.join('\n'));
+    assert.match(warned[0], /count: 2/);
+    assert.equal(/매우 긴 카테고리 문자열입니다/.test(warned[0]), false, 'example is truncated');
+    const quiet = [];
+    const d = h.prepare(h.collector(undefined, quiet));
+    d.organizeShortData(0, h.response(h.shortItems({PCP: '1mm 미만', SNO: '1cm 미만'})));
+    assert.equal(quiet.filter(line => /unparsed precipitation/.test(line)).length, 0);
+});
+
 test('AC1 next-day midnight slot holds 22h, 23h and 00h', () => {
     const req = getShort(hourlyRows({'2026092422': {r06: 1}, '2026092423': {r06: 2}, '2026092500': {r06: 4}, '2026092501': {r06: 8}}));
     assert.equal(slot(req.short, '20260925', '0000').r06, 7);

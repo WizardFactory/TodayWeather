@@ -5175,10 +5175,13 @@ ControllerTown.prototype._makeBasicShortList = function(){
  * Hourly PCP/SNO amounts summed into the 3-hour slot that ends at or after each hour (#2583):
  * slot T holds hours T-2, T-1 and T, so next-day 00:00 holds 22h, 23h and 00h.
  * This is the grouping _createOrGet3hSummaryList uses for observations and shortest forecasts.
+ * A slot with an amount but a dry last hour takes the precipitation type of its hours, so a
+ * slot never reads as dry with a positive amount.
  * @param shortList stored hourly rows with optional r06Text/s06Text categories
  * @param basicList 3-hour template rows (before convert0Hto24H)
  */
 ControllerTown.prototype._sumShortPrecipitation = function(shortList, basicList) {
+    var self = this;
     var slots = {};
     shortList.forEach(function (row) {
         if (typeof row.date !== 'string' || typeof row.time !== 'string') {
@@ -5189,14 +5192,21 @@ ControllerTown.prototype._sumShortPrecipitation = function(shortList, basicList)
         var slotTime = {date: row.date, time: (end < 10 ? '0' : '') + end + '00'};
         kmaTimeLib.convert24Hto0H(slotTime);
         var key = slotTime.date + slotTime.time;
-        var slot = slots[key] = slots[key] || {r06: [], s06: []};
+        var slot = slots[key] = slots[key] || {r06: [], s06: [], pty: []};
         slot.r06.push(precipitation.read(row.r06, row.r06Text, 'mm'));
         slot.s06.push(precipitation.read(row.s06, row.s06Text, 'cm'));
+        if (row.pty > 0) {
+            slot.pty.push(row.pty);
+        }
     });
     basicList.forEach(function (item) {
-        var slot = slots[item.date + item.time] || {r06: [], s06: []};
+        var slot = slots[item.date + item.time] || {r06: [], s06: [], pty: []};
         precipitation.assign(item, 'r06', precipitation.total(slot.r06));
         precipitation.assign(item, 's06', precipitation.total(slot.s06));
+        if (!(item.pty > 0) && (item.r06 > 0 || item.s06 > 0) && slot.pty.length) {
+            // Rain/snow mix as for observations; codes _summaryPty does not combine (e.g. shower 4) keep the latest.
+            item.pty = self._summaryPty(slot.pty) || slot.pty[slot.pty.length - 1];
+        }
     });
     return basicList;
 };
