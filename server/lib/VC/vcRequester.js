@@ -19,6 +19,11 @@ const ELEMENTS = ['datetime', 'datetimeEpoch', 'temp', 'tempmax', 'tempmin', 'fe
     'cloudcover', 'conditions', 'icon', 'source', 'sunriseEpoch', 'sunsetEpoch', 'moonphase'];
 const MAX_BODY_BYTES = 4 * 1024 * 1024;    // a combined body is about 70 KB
 const RESET_CODES = ['ECONNRESET', 'EPIPE'];
+// 429 bodies. Concurrency, observed live on the Free plan: "Maximum concurrency exceeded".
+// Only an explicit daily/monthly/usage limit stops calls for all locations; any other 429 is
+// treated as transient for this location.
+const CONCURRENCY_429 = /concurren/i;
+const LIMIT_429 = /daily|monthly|per day|usage|quota|cost|records/i;
 
 // Shared keep-alive agent: repeated calls from one worker reuse the TLS connection.
 const agent = new https.Agent({keepAlive: true, maxSockets: 8});
@@ -119,7 +124,8 @@ class VcRequester {
      * @param {{lat: number, lon: number, range: string}} params range 'combined' or 'forecast'
      * @param {string} key VC_SECRET_KEY
      * @param {function(Error, Object=, Object=)} callback parsed Timeline body and
-     *        {status, cost, ms, retried}; err.providerDown marks daily-limit 429s and 401/403
+     *        {status, cost, ms, retried, http429}; err.providerDown marks 401/403 and 429s whose
+     *        body names a daily/monthly/usage limit
      */
     getTimeline(params, key, callback) {
         if (!VcRequester.isValidKey(key)) {
@@ -138,13 +144,17 @@ class VcRequester {
         const where = 'range=' + params.range + ' loc=' + logCoordinate(lat) + ',' + logCoordinate(lon);
         const started = Date.now();
         const deadline = started + this.timeoutMs;
+        let http429 = 0;
         const attempt = (retried) => {
             this._get(url, key, deadline - Date.now(), (err, status, body) => {
                 const ms = Date.now() - started;
                 const timeLeft = deadline - Date.now() > this.retryDelayMs;
                 // Retry once: a concurrency 429 (not the daily limit) or a reset keep-alive socket.
-                const concurrency = !err && status === 429 && /concurren/i.test(String(body));
+                const concurrency = !err && status === 429 && CONCURRENCY_429.test(String(body));
                 const reset = err && RESET_CODES.indexOf(err.code) >= 0;
+                if (!err && status === 429) {
+                    http429++;
+                }
                 if (!retried && timeLeft && ((concurrency && ms < this.retryWindowMs) || reset)) {
                     log.warn('VC> ' + where + ' ' + (reset ? err.code : 'status=429') + ' retrying once');
                     return setTimeout(() => attempt(true), this.retryDelayMs);
@@ -152,7 +162,8 @@ class VcRequester {
                 if (!err && status >= 400) {
                     err = new Error('VC> HTTP ' + status + ': ' + VcRequester._scrub(String(body).slice(0, 120), key));
                     err.statusCode = status;
-                    err.providerDown = status === 401 || status === 403 || (status === 429 && !concurrency);
+                    err.providerDown = status === 401 || status === 403 ||
+                        (status === 429 && !concurrency && LIMIT_429.test(String(body)));
                 }
                 let result;
                 if (!err) {
@@ -167,7 +178,7 @@ class VcRequester {
                         typeof result.timezone === 'string' && typeof result.tzoffset === 'number')) {
                     err = new Error('VC> unexpected body');
                 }
-                const meta = {status: status || 0, cost: result ? result.queryCost : 0, ms: ms, retried: retried};
+                const meta = {status: status || 0, cost: result ? result.queryCost : 0, ms: ms, retried: retried, http429: http429};
                 if (err) {
                     // The service host's console logs only errors (NODE_ENV=production).
                     log.error('VC> ' + where + ' failed ms=' + ms + ' ' + err.message);

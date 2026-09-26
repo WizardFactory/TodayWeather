@@ -55,6 +55,9 @@ var fakeHttps = {
 var VcRequester = load('lib/VC/vcRequester.js', {https: fakeHttps, zlib: zlib});
 var converter = load('lib/VC/vcConverter.js', {});
 var steps = [];
+var completed = false;
+// A callback that never fires lets Node exit with code 0 before the checks ran: fail instead.
+process.on('exit', function () { if (!completed && !process.exitCode) { console.error('vc-node10-check did not complete'); process.exitCode = 1; } });
 
 new VcRequester().getTimeline({lat: 35.68, lon: 139.76, range: 'forecast'}, 'NODE10CHECKKEY0123456789', function (err, body, meta) {
     assert.ifError(err);
@@ -116,9 +119,15 @@ new VcRequester().getTimeline({lat: 35.68, lon: 139.76, range: 'forecast'}, 'NOD
     ], function () {
         assert.deepEqual(ranges, ['combined', 'forecast']);
         assert.equal(usage['2026-09-26'].records, 26);
-        var auckland = {address: {country: 'Pacific/Auckland'}, timeOffset: 720};
-        assert.equal(new Controller()._offsetAt(auckland, new RealDate('2026-09-27T11:30:00Z')), 780, 'Intl zone offset');
-        steps.push('controller', 'intl');
+        var at = function (zone, offset, date) { return {address: {country: zone}, timeOffset: offset, dateObj: new RealDate(date)}; };
+        var c = new Controller();
+        assert.equal(c._offsetAt(at('Pacific/Auckland', 720, '2026-09-26T07:00:00Z'), new RealDate('2026-09-27T11:30:00Z')), 780, 'Intl zone offset');
+        // Zone data this runtime lacks or has wrong (tzdata 2018e on 10.15.3): the stored offset stands.
+        assert.equal(c._offsetAt(at('Asia/Almaty', 300, '2026-09-26T07:00:00Z'), new RealDate('2026-09-26T07:10:00Z')), 300, 'stale zone');
+        assert.equal(c._offsetAt(at('Europe/Kyiv', 180, '2026-09-26T07:00:00Z'), new RealDate('2026-09-26T07:10:00Z')), 180, 'zone renamed after 2018');
+        assert.equal(c._offsetAt(at('Invalid/Zone', 540, '2026-09-26T07:00:00Z'), new RealDate('2026-09-26T07:10:00Z')), 540, 'unknown zone');
+        steps.push('controller', 'intl', 'stale/unknown zones');
+        completed = true;
         console.log(JSON.stringify({outcome: 'passed', node: process.version, steps: steps}));
     });
 });

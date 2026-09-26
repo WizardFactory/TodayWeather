@@ -131,6 +131,12 @@ class AlertPushController {
             current = resData.current;
         }
         else if (resData.source === 'VC' || resData.source === 'DSF') {
+            // On a provider outage the server serves stored overseas records up to 3 h old;
+            // alerts are about the present, so skip anything older than 30 minutes (#2585).
+            let pubDate = resData.pubDate && (resData.pubDate.VC || resData.pubDate.DSF);
+            if (pubDate && Date.now() - new Date(pubDate).getTime() > 30 * 60 * 1000) {
+                throw new Error("stale overseas weather "+JSON.stringify({pubDate: pubDate}));
+            }
             current = resData.thisTime[1];
             if (current && current.pty > 0) {
                 current.rns = true;

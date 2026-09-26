@@ -228,7 +228,8 @@ function toDarkSkyDocs(vc, now) {
     const dailyAhead = days.slice(todayIndex, todayIndex + 8).map((day, i) => toDarkSkyDay(day, todayStart + i * DAY_SEC));
     // Without currentConditions, the current local hour's row stands in.
     const current = vc.currentConditions || (ahead[0] && ahead[0].datetimeEpoch === hourStart ? ahead[0] : days[todayIndex]);
-    docs.current = make(toDarkSkyHour(current, nowSec), ahead, dailyAhead);
+    // Records are keyed by time: a fetch at exactly local midnight must not replace today's record.
+    docs.current = make(toDarkSkyHour(current, nowSec === todayStart ? nowSec + 1 : nowSec), ahead, dailyAhead);
     return docs;
 }
 

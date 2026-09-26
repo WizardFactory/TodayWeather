@@ -135,3 +135,28 @@ Source: three fresh-context reviews of `c5b61975` (design D1–D16, implementati
   - Cache grid and freshness window.
   - Acceptance of the released apps' Dark Sky attribution.
   - Deployment path (Node 10 host).
+
+## Amendment 4 — 2026-09-26 (review round 2)
+
+- **Zone data.** "Today" uses one offset per read: the newest record's stored (provider) offset. `Intl` moves it across a later daylight-saving change only when it reproduces that stored offset at the record's time. The Node 10.15.3 host has 2018 zone data (wrong for zones such as `Asia/Almaty`; missing names such as `Europe/Kyiv`), so stale or unknown zones keep the provider offset.
+- **429s.**
+  - Only a 401/403, or a 429 whose body names a daily, monthly, usage, quota, cost or records limit, marks the provider down (10 min).
+  - A concurrency 429 (live body `Maximum concurrency exceeded`) is retried once.
+  - Any other 429 backs off that location only.
+  - `vc.usage.http429` counts every 429 received.
+- **Deadlines.** The response budget (2.5 s) and the waiters' wait (2.5 s) count from the request time; the poll count stays an upper bound.
+- **Records.**
+  - Current is the newest record within 15 minutes.
+  - A fetch at exactly local midnight stores current at +1 s.
+  - The index `{geo: 1, dateObj: 1}` serves the reads.
+- **Lock and usage.**
+  - When the takeover finds no lock (released or expired meanwhile), the create is retried once.
+  - A duplicate-key race on the day's first usage upsert is retried once.
+  - The daily budget is approximate across workers.
+- **Alerts.** The alert worker skips overseas data whose `pubDate.VC` (or `DSF`) is more than 30 minutes old.
+- **Documented, not changed:**
+  - Released apps' new overseas alert registrations carry no `source` and are skipped.
+  - A stale fallback across local midnight keeps the previous day's labels.
+  - A missing humidity or visibility shows as 0.
+  - The 8 s fetch holds the Free plan's single concurrency slot.
+  - The `staleMs` and `providerDownMs` defaults are for the owner to confirm (D52).

@@ -187,6 +187,10 @@ function createHarness(bodyFor) {
     };
     function request(kind, place, query) {
         return new Promise((resolve, reject) => {
+            // A route that never answers fails the smoke instead of letting the process exit early.
+            const timer = setTimeout(() => reject(new Error('No response within 10 s: ' + kind + ' ' + place.name)), 10000);
+            const done = f => v => { clearTimeout(timer); f(v); };
+            resolve = done(resolve); reject = done(reject);
             const loc = place.lat + ',' + place.lon;
             const url = kind === 'ww' ? '/010000/current/2?gcode=' + loc : '/' + loc;
             const q = Object.assign({}, query, kind === 'ww' ? {gcode: loc} : {});
@@ -348,7 +352,7 @@ async function syntheticScenarios(output) {
     // I-F4: fields Visual Crossing omits (null) never surface as -100.
     await runScenario(output, 'Missing fields', ...berlin, one, {body: {
         hour: row => (row.datetimeEpoch / 3600) % 2 === 0 ? {pressure: null, winddir: null, humidity: null, visibility: null, feelslike: null, temp: null} : {},
-        day: () => ({pressure: null, winddir: null}),
+        day: () => ({pressure: null, winddir: null, humidity: null}),
         current: {temp: 55, feelslike: null, pressure: null}}});
     // T5: precipitation types through the whole route.
     await runScenario(output, 'Precipitation types', ...berlin, one, {body: {hour: row => {
@@ -456,4 +460,7 @@ async function main() {
     fs.writeFileSync(path.join(outputDir, 'vc-weather-evidence' + (live ? '-live' : '') + '.json'), JSON.stringify(report, null, 2));
     console.log(JSON.stringify({outcome: report.outcome, mode: report.mode, scenarios: output.length, providerCalls: report.providerCalls, vcLog: vcLines, evidence: outputDir}, null, 2));
 }
-main().catch(err => { console.error(err.stack); process.exitCode = 1; });
+let completed = false;
+// An unsettled promise lets Node exit with code 0 before the checks ran: fail instead.
+process.on('exit', () => { if (!completed && !process.exitCode) { console.error('vc-weather-smoke did not complete'); process.exitCode = 1; } });
+main().then(() => { completed = true; }, err => { console.error(err.stack); process.exitCode = 1; });

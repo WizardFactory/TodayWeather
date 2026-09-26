@@ -73,6 +73,11 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         const ttl = (await mongoose.connection.db.collection('vc.fetch.locks').indexes()).find(i => i.key.expireAt === 1);
         assert(ttl && ttl.expireAfterSeconds === 0, 'TTL index on vc.fetch.locks.expireAt');
         checks.push('ttl index');
+        const readIndex = (await mongoose.connection.db.collection(dsfModel.collection.collectionName).indexes()).find(i => i.key.geo === 1 && i.key.dateObj === 1);
+        assert(readIndex, 'per-location read index {geo: 1, dateObj: 1}');
+        const plan = await dsfModel.find({geo: [139.76, 35.68], dateObj: {$gte: new RealDate(now - 3 * 86400000)}}).explain();
+        assert(JSON.stringify(plan).includes('"geo_1_dateObj_1"'), 'the read uses the index');
+        checks.push('read index');
         const A = loadController(), B = loadController();
 
         // Three concurrent requests from two "workers" for one location: one provider call.

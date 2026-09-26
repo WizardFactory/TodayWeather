@@ -66,7 +66,7 @@ function fakeHttps(handler) {
                 res.setEncoding = () => {};
                 onResponse(res);
                 let data = Buffer.from(typeof result.body === 'string' ? result.body : JSON.stringify(result.body));
-                if (result.gzip) data = require('node:zlib').gzipSync(data);
+                if (result.gzip === true) data = require('node:zlib').gzipSync(data);
                 res.emit('data', data);
                 res.emit('end');
             }, (result && result.delay) || 0);
@@ -289,7 +289,7 @@ test('summaries use the existing weather vocabulary', () => {
     }
 });
 
-const {syntheticTimeline} = require('./vc-synthetic');
+const {syntheticTimeline, localParts} = require('./vc-synthetic');
 
 test('F1: day assignment and offset use the offset at now, not the range-start tzoffset (DST)', () => {
     const conv = vcConverter();
@@ -497,7 +497,15 @@ function memoryUsageModel() {
         findById(id, cb) { setImmediate(() => cb(null, days.has(id) ? Object.assign({}, days.get(id)) : null)); }
     };
 }
-function loadDsfController({model, lockModel, requester, key = KEY, clock, usageModel = memoryUsageModel(), dailyRecordLimit = 0}) {
+// An Intl whose zone data is shifted by `shifts[zone]` minutes: the production runtime (Node 10.15.3,
+// tzdata 2018e) has outdated offsets for zones such as Asia/Almaty and Asia/Tehran.
+function staleIntl(shifts) {
+    return {DateTimeFormat: function (locale, options) {
+        const real = new Intl.DateTimeFormat(locale, options), shift = (shifts[options && options.timeZone] || 0) * 60000;
+        this.formatToParts = date => real.formatToParts(new Date(+date + shift));
+    }};
+}
+function loadDsfController({model, lockModel, requester, key = KEY, clock, usageModel = memoryUsageModel(), dailyRecordLimit = 0, intl = Intl}) {
     const Clock = clock ? class extends Date { constructor(...a) { super(...(a.length ? a : [clock.now])); } static now() { return clock.now; } } : Date;
     const timezoneCalls = [];
     const Controller = load('controllers/worldWeather/dsf.controller.js', {
@@ -512,7 +520,7 @@ function loadDsfController({model, lockModel, requester, key = KEY, clock, usage
         './controllerKeys': function () {},
         '../../lib/kmaTimeLib': kmaTimeLib,
         '../timezone.controller': function () { timezoneCalls.push(arguments); throw new Error('Google time zone used'); }
-    }, {Date: Clock});
+    }, {Date: Clock, Intl: intl});
     Controller.timezoneCalls = timezoneCalls;
     Controller.clock = clock;
     Controller.usageModel = usageModel;
@@ -524,7 +532,9 @@ function fakeVcRequester(replies, delayMs = 0) {
     Requester.prototype.getTimeline = function (params, key, cb) {
         calls.push(Object.assign({key}, params));
         const reply = typeof replies === 'function' ? replies(params, calls.length) : replies[params.range];
-        const meta = {status: reply instanceof Error ? (reply.statusCode || 0) : 200, cost: reply && reply.queryCost, ms: delayMs};
+        const meta = Object.assign({status: reply instanceof Error ? (reply.statusCode || 0) : 200, cost: reply && reply.queryCost, ms: delayMs,
+            http429: reply instanceof Error && reply.statusCode === 429 ? 1 : 0},
+            reply && reply.meta);
         setTimeout(() => (reply instanceof Error ? cb(reply, undefined, meta) : cb(null, v8clone(reply), meta)), delayMs);
     };
     Requester.calls = calls;
@@ -574,6 +584,7 @@ test('first request fetches one combined range; a fresh cache makes no call; a s
 });
 
 test('concurrent requests for one location from separate workers make a single provider call', async () => {
+    logs.length = 0;
     const clock = {now: CAPTURED};
     const model = memoryDsfModel(), lockModel = memoryLockModel();
     const Requester = fakeVcRequester({combined: fixture('tokyo-combined')}, 60);
@@ -752,7 +763,7 @@ test('I-F2/T7: waiters and the post-lock re-read see records stored after their 
     const Requester = fakeVcRequester({combined: fixture('tokyo-combined')}, 30);
     const A = loadDsfController({model, lockModel, requester: Requester, clock});
     // B starts first (older cDate), A fetches one second later.
-    const c = new A(); Object.assign(c, {pollMs: 10, waitMs: 500});
+    const c = new A(); Object.assign(c, {pollMs: 10, waitMs: 2500});   // waits count from bStart
     const reqB = {geocode: TOKYO, sessionID: 'b'};
     const bStart = new Date(clock.now);
     clock.now += 1000;
@@ -828,17 +839,17 @@ test('D7/D1: daily record budget and usage counter', async () => {
 test('D3/T4: the response returns within its budget while the fetch continues and stores the records', async () => {
     const clock = {now: CAPTURED};
     const model = memoryDsfModel(), lockModel = memoryLockModel();
-    const Requester = fakeVcRequester({combined: fixture('tokyo-combined')}, 150);
+    const Requester = fakeVcRequester({combined: fixture('tokyo-combined')}, 1000);
     const Controller = loadDsfController({model, lockModel, requester: Requester, clock});
     const t0 = Date.now();
     let r = await getDsf(Controller, TOKYO, {responseMs: 40});
-    assert(Date.now() - t0 < 140, 'answered before the provider finished');
+    assert(Date.now() - t0 < 600, 'answered before the provider finished');
     assert(r.err, 'nothing stored yet: error from the response budget');
     assert.equal(Requester.options[0].timeoutMs, 8000, 'fetch budget longer than the response budget');
     const defaults = new Controller();
     assert(defaults.responseMs <= 2500 && defaults.waitMs + defaults.pollMs <= 2800, 'answers fit the gateway 3 s attempt');
     assert(defaults.fetchTimeoutMs < defaults.lockTtlMs, 'the fetch ends before its lock can be taken over');
-    await new Promise(resolve => setTimeout(resolve, 200));
+    for (let waited = 0; model.rows.size < 3 && waited < 3000; waited += 20) await new Promise(resolve => setTimeout(resolve, 20));
     assert.equal(model.rows.size, 3, 'the fetch finished and stored the records');
     await settle();
     assert.equal(lockModel.locks.size, 0, 'lock released after the late fetch');
@@ -869,11 +880,202 @@ test('I-F7/D10/D14: bounded reads, a failing read still fetches, startup warns a
     broken.rows.set('x', {geo: [139.76, 35.68], dateObj: new Date(CAPTURED - 60000), address: {}});   // no timeOffset
     r = await getDsf(loadDsfController({model: broken, lockModel: memoryLockModel(), requester: fakeVcRequester({combined: fixture('tokyo-combined')}), clock}));
     assert.ifError(r.err, 'a malformed stored record does not break the request');
+    // An older malformed record next to valid ones is skipped; the valid ones still serve the request.
+    const Mixed = fakeVcRequester({combined: fixture('tokyo-combined')});
+    const MixedController = loadDsfController({model: broken, lockModel: memoryLockModel(), requester: Mixed, clock});
+    broken.rows.set('y', {geo: [139.76, 35.68], dateObj: new Date(CAPTURED - 120000), address: {}, pubDate: 'bad'});
+    r = await getDsf(MixedController);
+    assert.ifError(r.err);
+    assert.equal(Mixed.calls.length, 0, 'served from the valid records');
     logs.length = 0;
     loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock, key: ''});
     assert(logs.some(l => l.level === 'error' && /VC_SECRET_KEY/.test(String(l.args[0]))), 'missing key logged at load');
     const Plain = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock});
     assert.equal(new Plain()._logKey('139.7671,35.6812'), '139.77,35.68', 'D15: lock keys are rounded in log lines');
+});
+
+test('R2-I1/F2: stale or unknown runtime zone data does not misclassify records or bypass the cache', async () => {
+    for (const [zone, lat, lon, intl, label] of [
+        ['Asia/Almaty', '43.24', '76.89', staleIntl({'Asia/Almaty': 60}), 'stale tzdata (+6 instead of +5)'],
+        ['Asia/Tehran', '35.69', '51.39', staleIntl({'Asia/Tehran': 60}), 'stale DST (+4:30 instead of +3:30)']]) {
+        // The provider's offset: this runtime's own zone data (Node 16 still has Almaty at +6).
+        const {date, hour, minute} = localParts(zone)(Date.parse('2026-07-13T12:00:00Z') / 1000);
+        const offsetH = (Date.parse(date + 'T' + String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':00Z') - Date.parse('2026-07-13T12:00:00Z')) / 3600000;
+        const base = Date.parse('2026-07-13T19:35:00Z') - offsetH * 3600000;   // 19:35 local
+        const clock = {now: base};
+        const body = range => syntheticTimeline(zone, new Date(clock.now + offsetH * 3600000 - (range === 'combined' ? 86400000 : 0)).toISOString().slice(0, 10), range === 'combined' ? 9 : 8, {now: clock.now});
+        const Requester = fakeVcRequester(params => body(params.range));
+        const Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock, intl});
+        const at = [];
+        for (const minutesAfterLocalEvening of [0, 215, 225, 295, 305]) {   // 19:35, 23:10, 23:20, 00:30, 00:40 local
+            clock.now = base + minutesAfterLocalEvening * 60000;
+            const r = await getDsf(Controller, {lat, lon}, {pollMs: 5, waitMs: 20});
+            assert.ifError(r.err);
+            at.push(Requester.calls.length);
+        }
+        assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast', 'combined'], zone + ': ' + label);
+    }
+    // A zone name the runtime does not know (e.g. Europe/Kyiv on Node 10) uses the provider offset.
+    const clock = {now: CAPTURED};
+    const unknown = Object.assign(fixture('tokyo-combined'), {timezone: 'Invalid/Zone'});
+    const forecast = Object.assign(fixture('tokyo-forecast'), {timezone: 'Invalid/Zone'});
+    const Requester = fakeVcRequester({combined: unknown, forecast});
+    const Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock});
+    for (const step of [0, 10, 20]) {
+        clock.now = CAPTURED + step * 60000;
+        assert.ifError((await getDsf(Controller)).err);
+    }
+    assert.deepEqual(Requester.calls.map(c => c.range), ['combined', 'forecast'], 'unknown zone: cache hit, then forecast');
+});
+
+test('R2-2/F4/R2-I3: usage counts every 429, failures and slow calls; a missing key records nothing; upsert retried', async () => {
+    const clock = {now: CAPTURED};
+    const day = '2026-09-26';
+    let usageModel = memoryUsageModel();
+    let Requester = fakeVcRequester({combined: Object.assign(fixture('tokyo-combined'), {meta: {http429: 1, ms: 3000}})});
+    await getDsf(loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock, usageModel}));
+    await settle();
+    assert.deepEqual(plain(usageModel.days.get(day)), {_id: day, calls: 1, records: 25, failures: 0, http429: 1, slow: 1}, 'a 429 recovered by the retry is counted');
+    usageModel = memoryUsageModel();
+    const limited = Object.assign(new Error('VC> HTTP 429: busy'), {statusCode: 429});
+    Requester = fakeVcRequester(() => limited);
+    await getDsf(loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock, usageModel}));
+    await settle();
+    assert.deepEqual(plain(usageModel.days.get(day)), {_id: day, calls: 1, records: 0, failures: 1, http429: 1, slow: 0});
+    usageModel = memoryUsageModel();
+    await getDsf(loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), clock, usageModel, key: 'short',
+        requester: loadRequester(fakeHttps(() => { throw new Error('network'); }))}));
+    await settle();
+    assert.equal(usageModel.days.size, 0, 'no network request, nothing recorded');
+    // Two workers' first increments of the day race on the upsert: the duplicate-key loser retries.
+    usageModel = memoryUsageModel();
+    const orig = usageModel.updateOne.bind(usageModel);
+    let first = true;
+    usageModel.updateOne = (f, u, o, cb) => { if (first) { first = false; return setImmediate(() => cb(Object.assign(new Error('E11000'), {code: 11000}))); } return orig(f, u, o, cb); };
+    await getDsf(loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: fakeVcRequester({combined: fixture('tokyo-combined')}), clock, usageModel}));
+    await settle(); await settle();
+    assert.equal(plain(usageModel.days.get(day)).calls, 1, 'counted after the retry');
+});
+
+test('R2-4: the response and waiter deadlines count from the request time', async () => {
+    const clock = {now: CAPTURED};
+    const Requester = fakeVcRequester({combined: fixture('tokyo-combined')}, 800);
+    const Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock});
+    // The request began 2.4 s ago (slow reads): only ~100 ms of the 2.5 s budget remain.
+    let t0 = Date.now();
+    let r = await new Promise(resolve => new Controller().getDsfData({geocode: TOKYO, sessionID: 't'}, new Date(CAPTURED - 2400), (err, res) => resolve({err, res})));
+    assert(r.err);
+    assert(Date.now() - t0 < 600, 'answered at the request deadline: ' + (Date.now() - t0) + ' ms');
+    // A waiter whose request began 3 s ago stops after one poll.
+    const lockModel = memoryLockModel();
+    lockModel.locks.set('139.76,35.68', {_id: '139.76,35.68', expireAt: new Date(CAPTURED + 9000)});
+    const W = loadDsfController({model: memoryDsfModel(), lockModel, requester: fakeVcRequester({}), clock});
+    t0 = Date.now();
+    r = await new Promise(resolve => { const c = new W(); c.pollMs = 100; c.getDsfData({geocode: TOKYO, sessionID: 'w'}, new Date(CAPTURED - 3000), (err, res) => resolve({err, res})); });
+    assert(r.err);
+    assert(Date.now() - t0 < 600, 'waiter stopped at the request deadline: ' + (Date.now() - t0) + ' ms');
+});
+
+test('R2-I5/R2-I6/R2-I7/F6/F7/F10: midnight current, takeover race, newest current, cleared failed flag, day guards, read errors', async () => {
+    const conv = vcConverter();
+    const midnight = Date.parse('2026-09-25T15:00:00Z');     // 00:00:00 JST
+    const docs = conv.toDarkSkyDocs(fixture('tokyo-combined'), new Date(midnight));
+    assert.equal(docs.current.currently.time, midnight / 1000 + 1, 'current never shares today\'s midnight key');
+
+    const clock = {now: CAPTURED};
+    // Takeover finds nothing (the TTL monitor removed the lock in between): create is retried.
+    const lockModel = memoryLockModel();
+    const create = lockModel.create.bind(lockModel);
+    let n = 0;
+    lockModel.create = (doc, cb) => (++n === 1 ? setImmediate(() => cb(Object.assign(new Error('E11000'), {code: 11000}))) : create(doc, cb));
+    const C = loadDsfController({model: memoryDsfModel(), lockModel, requester: fakeVcRequester({combined: fixture('tokyo-combined')}), clock});
+    const token = await new Promise(resolve => new C()._acquireLock('k', (err, t) => resolve(t)));
+    assert(token, 'lock acquired on the second create');
+
+    // Newest current within 15 min; a non-midnight record in yesterday's window is not "yesterday";
+    // a current from 23:55 is not current at 00:05.
+    const model = memoryDsfModel();
+    const rec = (iso, off, extra) => Object.assign({geo: [139.76, 35.68], dateObj: new Date(iso), timeOffset: off, pubDate: new Date(iso),
+        address: {country: 'Asia/Tokyo'}, data: {current: {dateObj: new Date(iso)}}}, extra);
+    model.rows.set('a', rec('2026-09-26T06:54:00Z', 540));
+    model.rows.set('b', rec('2026-09-26T07:02:00Z', 540));
+    model.rows.set('c', rec('2026-09-24T15:30:00Z', 540));   // 09-25 00:30 JST: in yesterday's window, not midnight
+    const D = loadDsfController({model, lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock});
+    let found = await new Promise(resolve => new D()._findDataFromDB([139.76, 35.68], new Date(CAPTURED), (e, f) => resolve(f)));
+    assert.equal(+found.current.dateObj, Date.parse('2026-09-26T07:02:00Z'), 'newest current');
+    assert.equal(found.yesterday, undefined, 'non-midnight record is not yesterday');
+    const late = memoryDsfModel();
+    late.rows.set('x', rec('2026-09-25T14:55:00Z', 540));      // 23:55 JST
+    found = await new Promise(resolve => new D()._findDataFromDB([139.76, 35.68], new Date('2026-09-25T15:05:00Z'), (e, f) => resolve(f)));
+    const E = loadDsfController({model: late, lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock});
+    found = await new Promise(resolve => new E()._findDataFromDB([139.76, 35.68], new Date('2026-09-25T15:05:00Z'), (e, f) => resolve(f)));
+    assert.equal(found.current, undefined, 'yesterday 23:55 is not current at 00:05');
+
+    // Takeover clears a failed flag: the next holder's waiters wait for its data.
+    const locks2 = memoryLockModel();
+    locks2.locks.set('139.76,35.68', {_id: '139.76,35.68', expireAt: new Date(CAPTURED - 1000), failed: true});
+    const R3 = fakeVcRequester({combined: fixture('tokyo-combined')}, 80);
+    const F = loadDsfController({model: memoryDsfModel(), lockModel: locks2, requester: R3, clock});
+    const both = await Promise.all([getDsf(F, TOKYO, {pollMs: 10, waitMs: 1000}),
+        new Promise(resolve => setTimeout(() => getDsf(F, TOKYO, {pollMs: 10, waitMs: 1000}).then(resolve), 20))]);
+    both.forEach(x => assert.ifError(x.err));
+    assert.equal(R3.calls.length, 1);
+
+    // A failing read (model error) still serves the request with one fetch.
+    const failing = memoryDsfModel();
+    const origFind = failing.find.bind(failing);
+    let reads = 0;
+    failing.find = q => { if (++reads === 1) { const qq = {lean: () => qq, sort: () => qq, exec: cb => setImmediate(() => cb(new Error('read failed')))}; return qq; } return origFind(q); };
+    const R4 = fakeVcRequester({combined: fixture('tokyo-combined')});
+    const r = await getDsf(loadDsfController({model: failing, lockModel: memoryLockModel(), requester: R4, clock}));
+    assert.ifError(r.err);
+    assert.deepEqual(R4.calls.map(c => c.range), ['combined']);
+});
+
+test('F5: the daily summary uses the average hourly rate', () => {
+    const conv = vcConverter();
+    const day = precip => conv.toDarkSkyDay({precip, preciptype: ['rain'], icon: 'rain', source: 'obs', cloudcover: 80, hours: []}, 0).summary;
+    assert.equal(day(0.5), 'light rain', '0.5 in/day');
+    assert.equal(day(2.4), 'rain', '0.1 in/h average');
+    assert.equal(day(7.2), 'heavy rain', '0.3 in/h average');
+});
+
+test('R2-1/F9: 429s are classified by body; requester edge cases', async () => {
+    // Observed live: "Maximum concurrency exceeded" (review-round2/vc-429-probe.md).
+    const concurrent = fakeHttps((url, n) => n === 1 ? {status: 429, body: 'Maximum concurrency exceeded'} : {status: 200, body: fixture('tokyo-forecast')});
+    let r = await timeline(loadRequester(concurrent), {retryDelayMs: 5}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+    assert.ifError(r.err);
+    assert.equal(r.meta.http429, 1, 'the retried 429 is reported');
+    const unknown = fakeHttps(() => ({status: 429, body: 'Too Many Requests'}));
+    r = await timeline(loadRequester(unknown), {retryDelayMs: 5}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+    assert.equal(unknown.calls.length, 1, 'no retry for an unrecognised 429');
+    assert.equal(r.err.providerDown, false, 'an unrecognised 429 does not stop all locations');
+    for (const body of ['You have exceeded the maximum number of daily result records for your account', 'Maximum daily cost exceeded', 'Monthly usage limit reached']) {
+        r = await timeline(loadRequester(fakeHttps(() => ({status: 429, body}))), {retryDelayMs: 5}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+        assert.equal(r.err.providerDown, true, body);
+    }
+    const noOffset = fakeHttps(() => ({status: 200, body: {days: [{datetime: '2026-09-26'}], timezone: 'Asia/Tokyo'}}));
+    r = await timeline(loadRequester(noOffset), {}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+    assert.match(r.err.message, /unexpected body/);
+    const lateReset = fakeHttps(() => Object.assign(new Error('socket hang up'), {code: 'ECONNRESET'}));
+    r = await timeline(loadRequester(lateReset), {retryDelayMs: 50, timeoutMs: 40}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+    assert.equal(lateReset.calls.length, 1, 'no reset retry when the budget is spent');
+    const badGzip = fakeHttps(() => ({status: 200, gzip: 'corrupt', body: 'not gzip'}));
+    r = await timeline(loadRequester(badGzip), {}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
+    assert.match(r.err.message, /gzip error/);
+});
+
+test('R2-8: alerts skip overseas weather older than 30 minutes', () => {
+    const AlertPush = load('controllers/alert.push.controller.js', {
+        'async': async, 'request': () => { throw new Error('network'); }, 'i18n': {}, 'sprintf': {},
+        '../config/config': {serviceServer: {url: 'http://service.invalid'}}, '../models/alert.push.model': {},
+        '../lib/kmaTimeLib': kmaTimeLib, './controllerPush': function () {}, '../lib/aqi.converter': {},
+        '../lib/unitConverter': {initUnits: units => units || {}}
+    });
+    const alert = new AlertPush();
+    const body = minutes => ({source: 'VC', pubDate: {VC: new Date(Date.now() - minutes * 60000).toISOString()}, thisTime: [{}, {t1h: 20, pty: 0}]});
+    assert.equal(alert._getCurrentWeather(body(5)).t1h, 20);
+    assert.throws(() => alert._getCurrentWeather(body(40)), /stale/);
 });
 
 // ---------------------------------------------------------------- push, legacy, config
