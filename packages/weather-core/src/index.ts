@@ -93,7 +93,7 @@ export type AirStation = {
 };
 export type Weather = {
   schemaVersion: 1;
-  source: "KMA" | "DSF";
+  source: "KMA" | "VC";
   mode: "live" | "demo";
   location: Place;
   units: Units;
@@ -489,11 +489,12 @@ export function normalizeWeather(
 ): Weather {
   const raw = record(value),
     kma = raw.source === "KMA";
-  const dsf =
-    raw.source === "DSF" ||
-    (!raw.source && record(raw.pubDate).DSF !== undefined);
+  // Overseas weather: Visual Crossing (#2585). Retired Dark Sky ("DSF") responses are rejected.
+  const vc =
+    raw.source === "VC" ||
+    (!raw.source && record(raw.pubDate).VC !== undefined);
   if (
-    (!kma && !dsf) ||
+    (!kma && !vc) ||
     raw.error ||
     (raw.code !== undefined && Number(raw.code) >= 400)
   )
@@ -532,7 +533,7 @@ export function normalizeWeather(
       )
       .filter((p): p is Point => p !== null)
       .sort((a, b) => a.at.localeCompare(b.at));
-  // DSF hourly rows sum three provider hours (server _makeHourlyDataFromDSF).
+  // Overseas hourly rows sum three provider hours (server _makeHourlyDataFromDSF).
   // The observed three-hour slot that ends after the current observation is
   // still accumulating (D45): label it partial, not a complete 3-hour total.
   const hourly = kma
@@ -578,12 +579,12 @@ export function normalizeWeather(
   const recentDaily = daily.filter((p) => p.at.slice(0, 10) >= yesterdayDate);
   return {
     schemaVersion: 1,
-    source: kma ? "KMA" : "DSF",
+    source: kma ? "KMA" : "VC",
     mode: options.mode ?? "live",
     location,
     units: target,
     observedAt: sourceTime(currentRaw.stnDateTime) ?? current.at,
-    publishedAt: sourceTime(kma ? raw.currentPubDate : record(raw.pubDate).DSF),
+    publishedAt: sourceTime(kma ? raw.currentPubDate : record(raw.pubDate).VC),
     forecastPublishedAt: kma ? sourceTime(raw.shortPubDate) : null,
     fetchedAt: options.fetchedAt ?? new Date().toISOString(),
     current,

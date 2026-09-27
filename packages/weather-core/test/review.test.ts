@@ -38,12 +38,12 @@ describe("reviewed source boundaries", () => {
       precipitationHours: null,
       precipitationBasis: "forecast",
     });
-    raw.source = "DSF";
+    raw.source = "VC";
     raw.thisTime = [{}, { ...raw.current, rn1: 1 }];
     raw.hourly = raw.short;
     raw.daily = raw.midData.dailyData;
     const dsf = normalizeWeather(raw);
-    // DSF hourly rows are three-hour sums; snow keeps its provider amount.
+    // Overseas (VC) hourly rows are three-hour sums; snow keeps its provider amount.
     expect(dsf.hourly[0]).toMatchObject({
       precipitation: 2,
       precipitationHours: 3,

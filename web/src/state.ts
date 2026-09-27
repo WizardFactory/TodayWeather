@@ -436,7 +436,7 @@ export function validateSnapshot(
     if (
       !record(w) ||
       w.schemaVersion !== 1 ||
-      !["KMA", "DSF"].includes(w.source) ||
+      !["KMA", "VC"].includes(w.source) ||
       !["live", "demo"].includes(w.mode) ||
       !record(w.location) ||
       !record(w.units)

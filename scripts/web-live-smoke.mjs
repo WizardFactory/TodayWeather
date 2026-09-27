@@ -76,7 +76,8 @@ export const KNOWN_WARNINGS = {
   "Seoul air page renders":
     "the API returns no Seoul air stations (backend follow-up)",
   "non-KR weather (Tokyo) renders or reports an upstream error": {
-    reason: "overseas (DSF) weather returns 501 (known backend gap)",
+    reason:
+      "overseas weather returns 501 until the Visual Crossing backend (#2585) is deployed",
     // Any other status or failure is a new problem.
     match: (evidence) =>
       evidence?.status === 501 || evidence?.directProbe?.status === 501,
@@ -118,15 +119,15 @@ const rows = (v) => (Array.isArray(v) ? v.length : 0);
 /**
  * Forecast-shape problems of a weather/coord body; [] when it can render.
  * KMA: rows in `short` or `shortest`, at least 3 `midData.dailyData` rows and
- * a numeric `current.t1h`. DSF: `hourly` rows, at least 3 `daily` rows and a
+ * a numeric `current.t1h`. Overseas (`VC`): `hourly` rows, at least 3 `daily` rows and a
  * numeric `thisTime[1].t1h` (the current observation).
  */
 export function weatherBodyProblems(json) {
   if (!json || typeof json !== "object" || Array.isArray(json))
     return ["body is not an object"];
   const problems = [];
-  const dsf =
-    json.source === "DSF" || (!json.source && json.pubDate?.DSF !== undefined);
+  const overseas =
+    json.source === "VC" || (!json.source && json.pubDate?.VC !== undefined);
   if (json.source === "KMA") {
     if (!rows(json.short) && !rows(json.shortest))
       problems.push("no short or shortest forecast rows");
@@ -136,7 +137,7 @@ export function weatherBodyProblems(json) {
       problems.push(
         "current.t1h is not numeric: " + JSON.stringify(json.current?.t1h),
       );
-  } else if (dsf) {
+  } else if (overseas) {
     if (!rows(json.hourly)) problems.push("no hourly rows");
     const daily = rows(json.daily);
     if (daily < 3) problems.push(`daily has ${daily} rows (< 3)`);
@@ -1201,7 +1202,7 @@ export async function runSmoke({ base, target, expectCommit, screenshots }) {
     await visit("/settings");
     await visit("/help");
 
-    // --- Non-KR place: the DSF path (currently a known upstream 501) ---
+    // --- Non-KR place: the overseas (VC) path (a known upstream 501 until #2585 is deployed) ---
     await visit("/weather/tokyo/hourly", weatherReady);
     await check(
       "non-KR weather (Tokyo) renders or reports an upstream error",
@@ -1285,10 +1286,12 @@ export async function runSmoke({ base, target, expectCommit, screenshots }) {
         if (!/\d/.test(temperature))
           appProblems.push("temperature " + JSON.stringify(temperature));
         if (
-          json.source === "DSF" &&
-          !credit.some((t) => t.includes("Powered by Dark Sky"))
+          json.source === "VC" &&
+          !credit.some((t) =>
+            t.includes("Weather Data Provided by Visual Crossing"),
+          )
         )
-          appProblems.push("no Powered by Dark Sky credit");
+          appProblems.push("no Visual Crossing credit");
         if (appProblems.length)
           throw Object.assign(Error(appProblems.join(", ")), {
             category: "app",

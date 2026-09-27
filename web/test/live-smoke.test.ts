@@ -86,14 +86,14 @@ it("warns when Seoul observation or forecast times are stale (KST, pinned clock)
   expect(notice.observation.status).toBe("warn");
   expect(notice.observation.evidence.note).toMatch(/stale-data notice/);
   expect(notice.forecast.status).toBe("warn");
-  // Missing times warn; DSF bodies are not domestic and are skipped.
+  // Missing times warn; overseas (VC) bodies are not domestic and are skipped.
   const missing = smoke.domesticFreshness(
     { source: "KMA", current: {} },
     { now },
   );
   expect(missing.observation.evidence.note).toBe("no parseable time");
   expect(missing.forecast.status).toBe("warn");
-  expect(smoke.domesticFreshness({ source: "DSF" }, { now })).toMatchObject({
+  expect(smoke.domesticFreshness({ source: "VC" }, { now })).toMatchObject({
     observation: { status: "skip" },
     forecast: { status: "skip" },
   });
