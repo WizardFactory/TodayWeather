@@ -4832,13 +4832,17 @@ ControllerTown.prototype._convertSummaryTo3H = function (summary) {
         else if (key === 'lgt') {
             newItem[key] = self._summaryLgt(summary[key], -1);
         }
-        else if(key === 't1h' || key === 'wsd' || key == 'reh' || key === 'uuu' || key === 'vvv' || key === 'vec' ||
-                key === 'pop') {
+        else if (key === 'pop') {
+            // Short slot T carries the hourly POP of hour T; only hour T may replace it (#2620).
+            var pop = summary[key][summary[key].length-1];
+            if (parseInt(summary.time[summary.time.length-1].substr(0, 2)) % 3 === 0 && pop != undefined && pop !== -1) {
+                newItem[key] = pop;
+            }
+        }
+        else if(key === 't1h' || key === 'wsd' || key == 'reh' || key === 'uuu' || key === 'vvv' || key === 'vec') {
             var invalidValue = -50;
             switch (key) {
                 case 't1h': invalidValue = -50; break;
-                // Short slot T carries the hourly POP of hour T, so shortest uses the same hour (#2620).
-                case 'pop': invalidValue = -1; break;
                 case 'wsd': invalidValue = -1; break;
                 case 'reh': invalidValue = -1; break;
                 case 'uuu': invalidValue = -100; break;

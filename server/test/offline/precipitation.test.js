@@ -293,7 +293,7 @@ test('#2620 shortest POP at hour T replaces the short slot T probability', () =>
     const shortest = [shortestRow(10, 90), shortestRow(11, 80), shortestRow(12, 60), shortestRow(13, 70), shortestRow(14, 70), shortestRow(15, -1)];
     town24h._mergeShortByShortest(req.short, shortest, undefined, {date: '20260924', time: '0900'});
     assert.equal(slot(req.short, '20260924', '1200').pop, 60, 'slot end hour, like short slot rows');
-    assert.equal(slot(req.short, '20260924', '1500').pop, 70, 'missing end hour uses the latest valid hour, like t1h');
+    assert.equal(slot(req.short, '20260924', '1500').pop, 30, 'a missing end hour keeps the short value, never hour T-1');
     assert.equal(slot(req.short, '20260924', '1800').pop, 10, 'slots beyond shortest keep the short value');
 });
 
@@ -329,10 +329,13 @@ test('#2620 shortest storage keeps POP in DB 2.0 reads and DB 1.0 merges', () =>
     const ShortestCtl = load('controllers/kma/kma.town.shortest.controller.js', {'../../models/kma/kma.town.shortest.model.js':
         {find: () => ({sort() { return this; }, batchSize() { return this; }, lean() { return this; },
             exec: cb => cb(null, [{pubDate: pub, shortestData: {date: '20260927', time: '2200', pop: 30, pty: 0, rn1: 0}}])})}});
+    let read = false;
     new ShortestCtl().getShortestFromDB(null, {mx: 60, my: 127}, undefined, (err, info) => {
         assert.ifError(err);
         assert.equal(info.ret[0].pop, 30);
+        read = true;
     });
+    assert.equal(read, true);
     const saved = [];
     const existing = {shortestData: [Object.assign(shortestRow(10, 20), {pop: 20}), shortestRow(11, 20)], save(cb) { saved.push(this); cb(null); }};
     const Manager = load('controllers/controllerManager.js', {'../models/modelShortest': {find: (query, cb) => cb(null, [existing])},
