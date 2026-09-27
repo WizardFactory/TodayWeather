@@ -90,7 +90,8 @@ class VcRequester {
             finish(wrapped);
         };
         const timer = setTimeout(() => {
-            finish(new Error('VC> timeout after ' + this.timeoutMs + 'ms'));
+            // The attempt's own limit: after a retry it is what remains of the call budget.
+            finish(new Error('VC> timeout after ' + Math.max(0, timeoutMs) + 'ms (call budget ' + this.timeoutMs + 'ms)'));
             if (req) {
                 req.destroy();
             }

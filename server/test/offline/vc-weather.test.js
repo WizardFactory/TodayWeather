@@ -155,7 +155,7 @@ test('requester fails on HTTP errors, bad bodies and the 2.5 s timeout', async (
     const hang = fakeHttps(() => 'hang');
     const started = Date.now();
     const {err} = await timeline(loadRequester(hang), {timeoutMs: 40}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
-    assert.match(err.message, /timeout after 40ms/);
+    assert.match(err.message, /timeout after \d+ms \(call budget 40ms\)/);
     assert(Date.now() - started < 1000);
     const Requester = loadRequester(fakeHttps(() => 'hang'));
     assert.equal(new Requester().timeoutMs, 2500, 'default budget for the whole call');
@@ -164,7 +164,8 @@ test('requester fails on HTTP errors, bad bodies and the 2.5 s timeout', async (
     const t0 = Date.now();
     const late = await timeline(loadRequester(retryHang), {timeoutMs: 300, retryDelayMs: 20}, {lat: 35.68, lon: 139.76, range: 'forecast'}, KEY);
     assert.equal(retryHang.calls.length, 2);
-    assert.match(late.err.message, /timeout/);
+    const left = Number((late.err.message.match(/timeout after (\d+)ms \(call budget 300ms\)/) || [])[1]);
+    assert(left < 300, 'the retry reports the remaining budget: ' + late.err.message);
     // A fresh per-attempt timeout would end at about 150 + 20 + 300 = 470 ms.
     assert(Date.now() - t0 < 400, 'retry ends within the original budget: ' + (Date.now() - t0) + 'ms');
     assert.doesNotMatch(logText(), new RegExp(KEY));
