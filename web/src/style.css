@@ -133,6 +133,9 @@ small {
 .brand {
   display: flex;
   align-items: center;
+  /* The product name never hyphenates or wraps. */
+  hyphens: manual;
+  white-space: nowrap;
   gap: 11px;
   font-size: 20px;
   font-weight: 800;
@@ -418,10 +421,21 @@ main:focus {
 }
 .section-head {
   display: flex;
+  /* The aside (station picker, legend) moves under a long title. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 24px;
+}
+/* Last resort for long compounds where the engine has no hyphenation
+   dictionary (e.g. German in some WebKit builds). */
+.section-head > h2,
+.section-head > h3,
+.section-head > div,
+.pollutant-grid button > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .section-head > a {
   color: #8d9bb0;
@@ -1054,11 +1068,19 @@ th {
 .station-select {
   font-size: 11px;
   color: var(--muted);
+  /* A grid column with a zero minimum makes the picker shrink in every
+     engine (Safari keeps a select at its longest option otherwise). */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 300px;
 }
 .station-select select {
   font-size: 11px;
-  margin-left: 6px;
-  max-width: 230px;
+  width: 100%;
+  min-width: 0;
 }
 .pollutant-grid {
   display: grid;
@@ -1949,6 +1971,11 @@ th {
 select {
   -webkit-appearance: none;
   appearance: none;
+  /* Safari does not clip the text of a page-drawn select: keep long values
+     (station names) inside the box. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237b889e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;

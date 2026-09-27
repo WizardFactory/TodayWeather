@@ -96,7 +96,7 @@ Server language support observed on 2026-09-27 (read-only, backend unchanged): t
 | Tablet | 820×1180, 1205×753, 1280×800, 1334×800, 1180×688, 1180×629, 800×1280, 753×1205, 768×1024, 810×1080 |
 | Desktop screen | 1920×1080, 2560×1440, 1536×864, 1024×768, 3440×1440, 1440×900, 1280×720, 2048×1152, 800×600, 1707×1067 (viewport about 135 px shorter for browser and taskbar) |
 
-iPhone and iPad sizes are reviewed on WebKit, Android and desktop on Chromium, and Mac-typical desktop sizes on both. Results are in the [coverage traceability](implementation.md#coverage-traceability).
+Phone and tablet sizes are checked in Chrome and Safari, desktop sizes in Chrome, Safari and Edge, each in every UI language ([test guide](testing.md#3-layout-check), `npm run test:layout`). Results are in the [coverage traceability](implementation.md#coverage-traceability).
 
 ## Primary flows
 
