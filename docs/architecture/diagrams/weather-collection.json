@@ -11,7 +11,7 @@
     "title": "Weather collection and persistence",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "87b8855f308611a07897cd3a39c45fefb3088d77",
+      "revision": "82ad45192aac1aa190c27a39a255cbcecf287757",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -229,8 +229,7 @@
       "items": [
         "Immediate startup pass; queued jobs use pop() and async.series.",
         "Current, shortest and air observations also dispatch outside the queue.",
-        "Gather opt-in KMA_STN_MINUTE/HOURLY_ENABLED collectors; new stations geocoded via API_SERVER (#2573).",
-        "Warnings: the scrape job calls the WthrWrnInfoService collector (#2609; kma-warnings diagram)."
+        "Gather opt-in KMA_STN_MINUTE/HOURLY_ENABLED collectors; new stations geocoded via API_SERVER (#2573)."
       ]
     },
     {

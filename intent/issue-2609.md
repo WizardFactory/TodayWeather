@@ -29,7 +29,7 @@ Out of scope: 읍면동-level sub-zone mapping (decision 8), app/widget/web rend
 
 ## Constraints
 
-Node 16.20.2 runtime; mongoose 5.1.2; `DB_DATA_VERSION` 1.0/2.0 unaffected (warning collections are unversioned); `/kma/special` wire shape and `Cache-Control` unchanged except the additive `bulletin`; `getSpecialInfo` output shape unchanged; no provider or production database access in automated tests; no secrets in code, logs, docs or commits (public repository).
+Node 16.20.2 runtime (see amendment for the service host); mongoose 5.1.2; `DB_DATA_VERSION` 1.0/2.0 unaffected (warning collections are unversioned); `/kma/special` wire shape and `Cache-Control` unchanged except the additive `bulletin`; `getSpecialInfo` output shape unchanged; no provider or production database access in automated tests; no secrets in code, logs, docs or commits (public repository).
 
 ## Authority and endpoint
 
@@ -41,3 +41,7 @@ Endpoint pre-merge, matching the #2587 contract: implementation, tests, commits,
 - Unstable page order in `getPwnCd` could drop a boundary row; overlapping windows, deduplication and the hourly resync limit the exposure, and a `t6` comparison logs drift.
 - Split parents over-warn by design (decision 8).
 - The deployed scrape host's time zone is unknown; the new write path is host-independent.
+
+## Amendment 2026-09-27 (r1a)
+
+Source: rebase onto `master` `3ab19ca8` (#2585 merged during the build). Master documents Node.js 10.15.3 on the service host ([EC2 internals](../docs/architecture/ec2-internals.md)), which serves `/v000903/kma/special` and `current.specialInfo`. Constraint added: the warning modules run on Node 10.15.3; `kma-warning-node10-check.js` covers it in the `vc-node10` CI job. Acceptance criteria unchanged; downstream verification renewed on the rebased candidate.

@@ -8,7 +8,7 @@
     "title": "KMA warning collection and town warnings (#2609)",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f950df292c8337a7e43c9ae8c92502a20bcdcab5",
+      "revision": "82ad45192aac1aa190c27a39a255cbcecf287757",
       "provider": "github",
       "link_mode": "local-only"
     }

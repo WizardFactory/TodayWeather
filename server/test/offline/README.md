@@ -270,6 +270,8 @@ The route test composes the app in `app.js` order (`cors()` → gateway → `exp
 TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/kma-warning.test.js
 ```
 
+`kma-warning-node10-check.js` runs one collection cycle and both readers with the real modules on the service host's Node 10.15.3 (CI job `vc-node10`).
+
 `kma-warning-smoke.js` needs a disposable local MongoDB (its database is dropped). It runs the real requester over HTTP against a local provider stub, the real collector and models, the real `/v000903/kma` router with i18n, and the v000903 town response from the rss-response-smoke harness with the real special weather controller reading the stored zone state. Beyond the RSS smoke dependencies it needs `mongoose@5.1.2 request i18n@0.8.3` and the route's `axios get-pixels aws-sdk dnscache`:
 
 ```sh
