@@ -3,7 +3,7 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function(TwStorage, Util, admobClean, admobPro) {
+    .factory('TwAds', function(TwStorage, Util, admobClean, admobPro, admobEmi) {
         var obj = {};
         obj.enableAds = null;
         obj.showAds = null;
@@ -172,6 +172,17 @@ angular.module('service.twads', [])
                     // Util.ga.trackException(e, false);
                 });
 
+            admobEmi.init({
+                bannerAdUnit: self.bannerAdUnit,
+                interstitialAdUnit: self.interstitialAdUnit },
+                function () {
+                    self.admob = admobEmi;
+                    console.log('Set options of emi AdMob');
+                    self.loadTwAdsInfo();
+                },
+                function (e) {
+                    Util.ga.trackException(e, false);
+                });
             window.addEventListener("orientationchange", function(){
                 console.log('orientationType', screen.orientation.type); // e.g. portrait
                 if (self.enableAds === true) {

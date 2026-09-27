@@ -15,6 +15,7 @@ angular.module('starter', [
     'service.util',
     'service.admobclean',
     'service.admobpro',
+    'service.admobemi',
     'service.twads',
     'service.push',
     'service.storage',
@@ -389,29 +390,18 @@ angular.module('starter', [
                 }
             }
 
-            function showUpdateInfo(triggerTime) {
+            // The update-information popup was removed in 1.1.0; only the version change is recorded.
+            function recordAppVersion() {
                 var lastAppVersion = TwStorage.get("appVersion");
                 if (lastAppVersion != Util.version) {
                     var logMsg = 'from '+lastAppVersion+' to '+Util.version;
                     Util.ga.trackEvent('app', 'update', logMsg);
                     TwStorage.set('appVersion', Util.version);
-                    if (window[clientConfig.package] && window[clientConfig.package].enablePopup === true) {
-                        console.log('disable update info ');
-                        TwStorage.set('disableUpdateInfo', false);
-                    }
-                }
-
-                if (TwStorage.get('disableUpdateInfo') !== true) {
-                    //바로 보내면, tabCtrl에서 못 받음.
-                    setTimeout(function () {
-                        Util.ga.trackEvent('app', 'update', 'triggerShowUpdateInfo');
-                        $rootScope.$broadcast('showUpdateInfoEvent');
-                    }, triggerTime);
                 }
             }
 
             if (Util.version) {
-               showUpdateInfo(500);
+               recordAppVersion();
             }
             else {
                 Util.ga.trackEvent('app', 'update', 'waitGetAppVersion');
@@ -421,7 +411,7 @@ angular.module('starter', [
                         return;
                     }
 
-                    showUpdateInfo(100);
+                    recordAppVersion();
                 });
             }
         });
