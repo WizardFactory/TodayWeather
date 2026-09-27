@@ -75,17 +75,10 @@ export const KNOWN_WARNINGS = {
     "the API returns no Seoul air observation (backend follow-up)",
   "Seoul air page renders":
     "the API returns no Seoul air stations (backend follow-up)",
-  "non-KR weather (Tokyo) renders or reports an upstream error": {
-    reason:
-      "overseas weather returns 501 until the Visual Crossing backend (#2585) is deployed",
-    // Any other status or failure is a new problem.
-    match: (evidence) =>
-      evidence?.status === 501 || evidence?.directProbe?.status === 501,
-  },
   [`nation air observation times are within ${FRESH_HOURS} h`]:
     "nationwide air observations stopped in 2021 (backend follow-up)",
-  [`newest warning announcement is within ${FRESH_HOURS} h`]:
-    "warning announcements stopped updating about 2021 (backend follow-up)",
+  // Overseas weather (#2585) and warnings (#2609) were fixed on 2026-09-27;
+  // a Tokyo failure or stale warnings are new problems again.
 };
 const NATION_WARN_BYTES = 1_000_000;
 const NATION_MAX_BYTES = 1_500_000; // The client rejects bodies above 2 MB.

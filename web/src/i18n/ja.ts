@@ -457,5 +457,22 @@ const ja: Catalog = {
   "region.jeonbuk": "全北",
   "region.jeonnam": "全南",
   "region.sejong": "世宗",
+  // Wind direction (16 compass points)
+  "wind.N": "北",
+  "wind.NNE": "北北東",
+  "wind.NE": "北東",
+  "wind.ENE": "東北東",
+  "wind.E": "東",
+  "wind.ESE": "東南東",
+  "wind.SE": "南東",
+  "wind.SSE": "南南東",
+  "wind.S": "南",
+  "wind.SSW": "南南西",
+  "wind.SW": "南西",
+  "wind.WSW": "西南西",
+  "wind.W": "西",
+  "wind.WNW": "西北西",
+  "wind.NW": "北西",
+  "wind.NNW": "北北西",
 };
 export default ja;

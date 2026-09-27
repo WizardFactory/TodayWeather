@@ -254,8 +254,14 @@ it("keeps crafted values from reshaping the job summary (round 4, R4-2)", () => 
   expect(md).toContain("\\*\\*bold\\*\\*");
 });
 
-it("treats only the documented Tokyo 501 as a known warning (round 4, R4-3)", () => {
+it("counts a warning as known only when its evidence condition matches (round 4, R4-3)", () => {
   const name = "non-KR weather (Tokyo) renders or reports an upstream error";
+  const known = {
+    [name]: {
+      reason: "overseas weather returns 501",
+      match: (e: any) => e?.status === 501 || e?.directProbe?.status === 501,
+    },
+  };
   const checks = [
     { name, status: "warn", category: "upstream", evidence: { status: 501 } },
     {
@@ -272,8 +278,10 @@ it("treats only the documented Tokyo 501 as a known warning (round 4, R4-3)", ()
       evidence: { directProbe: { error: "getaddrinfo ENOTFOUND" } },
     },
   ];
-  expect(smoke.labelWarnings(checks)).toEqual({ known: 2, new: 2 });
+  expect(smoke.labelWarnings(checks, known)).toEqual({ known: 2, new: 2 });
   expect(checks.map((c: any) => c.known)).toEqual([true, true, false, false]);
+  // Fixed on 2026-09-27: an overseas failure is no longer a known warning.
+  expect(Object.keys(smoke.KNOWN_WARNINGS)).not.toContain(name);
 });
 
 it("redacts URLs from upstream body snippets", () => {

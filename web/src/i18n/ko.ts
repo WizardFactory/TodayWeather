@@ -448,5 +448,22 @@ const ko = {
   "region.jeonbuk": "전북",
   "region.jeonnam": "전남",
   "region.sejong": "세종",
+  // Wind direction (16 compass points)
+  "wind.N": "북",
+  "wind.NNE": "북북동",
+  "wind.NE": "북동",
+  "wind.ENE": "동북동",
+  "wind.E": "동",
+  "wind.ESE": "동남동",
+  "wind.SE": "남동",
+  "wind.SSE": "남남동",
+  "wind.S": "남",
+  "wind.SSW": "남남서",
+  "wind.SW": "남서",
+  "wind.WSW": "서남서",
+  "wind.W": "서",
+  "wind.WNW": "서북서",
+  "wind.NW": "북서",
+  "wind.NNW": "북북서",
 } as const;
 export default ko;

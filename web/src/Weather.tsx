@@ -57,7 +57,7 @@ import {
   pollutantUnit,
   standardName,
 } from "./air";
-import { amount, approxAmount, weatherStaleTime } from "./format";
+import { amount, approxAmount, weatherStaleTime, windText } from "./format";
 import { coreText, t, useLanguage } from "./i18n";
 import { placeArea, placeName } from "./places";
 const pollutantLabel = (code: Pollutant) => t(`pollutant.${code}`);
@@ -199,7 +199,18 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
             {placeArea(place)}
           </div>
           <h1>
-            {placeName({ ...place, name: data?.location.name || place.name })}
+            {(() => {
+              const title = placeName({
+                ...place,
+                name: data?.location.name || place.name,
+              });
+              // Server place names can be long: ellipsis, full name on hover.
+              return (
+                <span className="place-title" title={title}>
+                  {title}
+                </span>
+              );
+            })()}
             <span className="live-dot" />
           </h1>
         </div>
@@ -345,7 +356,7 @@ function WeatherDetails({
         .slice(0, 4)
     : [];
   const wind = [
-    now.windDirection,
+    windText(now.windDirection),
     `${formatValue(now.wind, 1)} ${w.units.windSpeedUnit}`,
   ]
     .filter(Boolean)

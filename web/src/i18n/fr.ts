@@ -477,5 +477,22 @@ const fr: Catalog = {
   "region.jeonbuk": "Jeonbuk",
   "region.jeonnam": "Jeonnam",
   "region.sejong": "Sejong",
+  // Wind direction (16 compass points)
+  "wind.N": "N",
+  "wind.NNE": "NNE",
+  "wind.NE": "NE",
+  "wind.ENE": "ENE",
+  "wind.E": "E",
+  "wind.ESE": "ESE",
+  "wind.SE": "SE",
+  "wind.SSE": "SSE",
+  "wind.S": "S",
+  "wind.SSW": "SSO",
+  "wind.SW": "SO",
+  "wind.WSW": "OSO",
+  "wind.W": "O",
+  "wind.WNW": "ONO",
+  "wind.NW": "NO",
+  "wind.NNW": "NNO",
 };
 export default fr;

@@ -1,5 +1,5 @@
-import { formatValue } from "@todayweather/core";
-import { language, t } from "./i18n";
+import { COMPASS_POINTS, formatValue } from "@todayweather/core";
+import { language, t, type MessageKey } from "./i18n";
 import { placeName } from "./places";
 import { dateText } from "./locale";
 /** Positive amounts never round to zero: mm one decimal, inches two. */
@@ -157,4 +157,14 @@ export function weatherStaleTime(
   // except while a rate limit asks us to wait (Retry-After).
   if (!data?.snapshot) return 600000;
   return data.retryAt ? Math.max(0, data.retryAt - updatedAt) : 0;
+}
+
+/**
+ * Wind direction for display: compass codes (from overseas degrees, or a
+ * server that sends codes) in the UI language; other text as received.
+ */
+export function windText(direction: string) {
+  return (COMPASS_POINTS as readonly string[]).includes(direction)
+    ? t(`wind.${direction}` as MessageKey)
+    : direction;
 }

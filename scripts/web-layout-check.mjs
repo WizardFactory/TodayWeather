@@ -113,8 +113,9 @@ const DARK_VIEWS = [
   "/nation/air",
   "/settings",
 ];
-/** Place names may be ellipsized (address line, station picker). */
-const PLACE_NAME = ".eyebrow, .station-select, .station-select *";
+/** Place names may be ellipsized (address line, heading, station picker). */
+export const PLACE_NAME =
+  ".eyebrow, .place-title, .station-select, .station-select *";
 
 function options(argv) {
   const o = {
@@ -162,7 +163,7 @@ async function startPreview() {
 }
 
 /** Runs in the page: layout findings for the current view. */
-function measure({ touch, placeName }) {
+export function measure({ touch, placeName }) {
   const out = [];
   const vw = document.documentElement.clientWidth;
   if (document.documentElement.scrollWidth > vw)

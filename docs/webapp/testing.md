@@ -42,7 +42,7 @@ npm run test:layout -- --json layout.json
 Every size runs in all UI languages (`ko`, `en`, `es`, `ja`, `de`, `pt`, `fr`) on ten views (hourly, daily, air, overview, locations, nationwide weather and air, warnings, settings, help), in the light theme, and in the dark theme for the hourly, air, nationwide-air and settings views in Korean and German. The script fails on:
 
 - horizontal page overflow;
-- text wider or taller than its box (ellipsis is allowed only for place names: the address line and the station picker);
+- text wider or taller than its box (ellipsis is allowed only for place names: the address line, the weather heading and the station picker);
 - weather actions wrapping to a second row;
 - on phones and tablets, form text under 16 px (iOS zooms into it) and icon targets under 44 px.
 

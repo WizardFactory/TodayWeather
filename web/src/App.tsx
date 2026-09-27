@@ -83,7 +83,7 @@ import {
   pollutantUnit,
   standardName,
 } from "./air";
-import { amount, matchPlace } from "./format";
+import { amount, matchPlace, windText } from "./format";
 import Notifications from "./Notifications";
 import {
   detectLanguage,
@@ -1061,7 +1061,7 @@ function NationPage() {
                 : p.current.wind === null
                   ? "—"
                   : [
-                      p.current.windDirection,
+                      windText(p.current.windDirection),
                       `${formatValue(p.current.wind, 1)} ${data.units.windSpeedUnit}`,
                     ]
                       .filter(Boolean)

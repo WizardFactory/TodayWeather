@@ -369,6 +369,13 @@ main:focus {
   align-items: center;
   gap: 12px;
   margin: 0;
+  min-width: 0;
+}
+.place-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .live-dot {
   background: #67b99e;
@@ -468,6 +475,8 @@ main:focus {
 }
 .hero-top {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 6px;
   align-items: center;
   justify-content: space-between;
   font-size: 11px;
@@ -519,6 +528,7 @@ main:focus {
 .hero-bottom {
   border-top: 1px solid #ffffff2b;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   padding-top: 15px;
   font-size: 11px;
@@ -581,7 +591,8 @@ main:focus {
 }
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* minmax(0, …): long values ("NNO 42,5 km/h") wrap instead of widening. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 20px;
 }
@@ -601,11 +612,15 @@ main:focus {
   display: block;
   margin-bottom: 2px;
 }
+.metric > div {
+  min-width: 0;
+}
 .metric strong {
   display: block;
   font-size: 17px;
   font-weight: 600;
-  white-space: nowrap;
+  /* Long values ("NNO 42,5 km/h") wrap at spaces rather than widen the card. */
+  overflow-wrap: anywhere;
 }
 .chart-panel {
   padding-bottom: 12px;
@@ -1507,7 +1522,7 @@ th {
     font-size: 10px;
   }
   .metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .nation-grid,
   .settings-grid {

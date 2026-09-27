@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatValue } from "@todayweather/core";
+import { compassPoint, formatValue } from "@todayweather/core";
+import { windText } from "../src/format";
 import {
   configureFormats,
   dateText,
@@ -160,5 +161,24 @@ describe("demo builds (independent verification MEDIUM-1)", () => {
     configureFormats(["en-US"]);
     expect(autoUnits().airUnit).toBe("airkorea");
     expect(autoUnits().temperatureUnit).toBe("F");
+  });
+});
+
+describe("overseas wind direction", () => {
+  afterEach(async () => {
+    await setLanguage("ko");
+  });
+  it("turns degrees into the 16 compass points and shows them in the UI language", async () => {
+    expect(
+      [0, 11, 12, 83, 180, 206, 350, 359, -10, 720].map(compassPoint),
+    ).toEqual(["N", "N", "NNE", "E", "S", "SSW", "N", "N", "N", "N"]);
+    await setLanguage("ko");
+    expect(windText("E")).toBe("동");
+    await setLanguage("de");
+    expect(windText("E")).toBe("O");
+    await setLanguage("ja");
+    expect(windText("SSW")).toBe("南南西");
+    // Server text that is not a code stays as received.
+    expect(windText("북북동")).toBe("북북동");
   });
 });
