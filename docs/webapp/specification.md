@@ -52,11 +52,32 @@ The recommended beta is ad-free, without account sign-in. This is a proposal for
 
 ## Information architecture and responsive layout
 
-Mobile, approximately 360–767 CSS px: city header plus search/refresh, current condition and yesterday delta, then active chart/detail; bottom navigation is Hourly / Daily / Air / Locations / More (target; the current client uses an off-canvas menu and in-page tabs, see [implementation status](implementation.md#specification-items-not-implemented-or-adapted)). Air-first mode changes the initial view, retaining access to the combined weather overview. Share and notifications are city-scoped actions.
+Mobile, approximately 320–767 CSS px: city header plus search/refresh, current condition and yesterday delta, then active chart/detail; bottom navigation is Hourly / Daily / Air / Locations / More (target; the current client uses an off-canvas menu and in-page tabs, see [implementation status](implementation.md#specification-items-not-implemented-or-adapted)). Air-first mode changes the initial view, retaining access to the combined weather overview. Share and notifications are city-scoped actions.
 
-Tablet, approximately 768–1023 px: compact sidebar or rail and one main chart column. Desktop, 1024 px and wider: saved cities/navigation on the left, hero plus hourly/daily content in the main column, air/warnings/detail panel to the right. The air screen gives the pollutant chart the main column. Maps always have a text/list alternative. Breakpoints are design starting points, to validate at 360/390/768/1024/1440 px and 200% zoom.
+Tablet, approximately 768–1023 px: compact sidebar or rail and one main chart column. Desktop, 1024 px and wider: saved cities/navigation on the left, hero plus hourly/daily content in the main column, air/warnings/detail panel to the right. The air screen gives the pollutant chart the main column. Maps always have a text/list alternative. Breakpoints are design starting points, to validate at the [reference sizes](#supported-languages-and-screen-sizes) and 200% zoom.
 
 Do not stretch a phone screenshot to desktop. Keep horizontal scrolling inside forecast strips, not the whole page. Show source/publication time close to data; never encode AQI state solely by color. Charts need labels, focusable interactions and a table alternative. Respect reduced motion, keyboard navigation, focus after dialog dismissal, safe areas and sufficient touch targets. Target WCAG 2.2 AA through implementation review/testing, not a compliance claim from this document.
+
+## Supported languages and screen sizes
+
+**Languages.** The UI is Korean-only (AK). Browser language must not change the web app: the same Korean text, number/date formats and layout for any browser language, with `<html lang="ko">` and every API request sent with `Accept-Language: ko`. The web review covers only the web app's own layout and built-in text; backend language support (localized server prose and place names) is reviewed in a separate issue. A future translation catalog would add locales here and must keep server prose in the selected locale.
+
+| Browser setting | Status |
+| --- | --- |
+| Korean (`ko-KR`, Asia/Seoul) | Supported |
+| English (`en-US`, America/New_York) | Korean UI, verified identical to Korean |
+| Japanese (`ja-JP`, Asia/Tokyo) | Korean UI, verified identical to Korean |
+
+**Screen sizes.** Supported CSS widths are 320 px and up: phones 320–440 px, tablets about 750–1340 px, desktops up to 3440 px (content keeps its maximum width). Touch screens need 16 px form text (iOS zooms into smaller fields) and 44 px icon targets. The reference set for layout reviews is the top 10 South Korean CSS sizes per class (StatCounter, June–August 2026; phones from [#2605 (comment)](https://github.com/WizardFactory/TodayWeather/issues/2605#issuecomment-5850835358)); refresh it when device shares change:
+
+| Class | Reference sizes (CSS px) |
+| --- | --- |
+| iPhone | 402×874, 393×852, 390×844, 440×956, 375×812, 430×932, 375×667, 414×896, 428×926, 420×912 |
+| Android phone | 384×832, 360×780, 412×892, 412×915, 360×800, 320×694, 360×880, 412×883, 384×854, 412×869 |
+| Tablet | 820×1180, 1205×753, 1280×800, 1334×800, 1180×688, 1180×629, 800×1280, 753×1205, 768×1024, 810×1080 |
+| Desktop screen | 1920×1080, 2560×1440, 1536×864, 1024×768, 3440×1440, 1440×900, 1280×720, 2048×1152, 800×600, 1707×1067 (viewport about 135 px shorter for browser and taskbar) |
+
+iPhone and iPad sizes are reviewed on WebKit, Android and desktop on Chromium, and Mac-typical desktop sizes on both. Results are in the [coverage traceability](implementation.md#coverage-traceability).
 
 ## Primary flows
 
