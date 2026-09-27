@@ -8,16 +8,13 @@ export const KNOWN = [
     [/You have to register before post/, 'ios: no FCM token before the native notification grant (harness cannot tap it)'],
     [/Publisher misconfiguration|no form\(s\) configured/, 'admob: no UMP consent message in the AdMob console; the app starts ads without UMP'],
     [/latestAirInfo|controller\.air\.js:(22\d|3[0-9]):|aqiStandard\[grade-1\]/, 'server: production API returns no air data'],
-    [/KTKO50_|weather\.go\.kr/, 'server: stale 2021 KMA bulletin, http image'],
-    [/coord\/51\.507,-0\.128/, 'server: world weather (DSF) 502'],
     [/invalid day chart in has dust forecast/, 'pre-existing: template evaluated before data (telemetry only)'],
 ];
 
-// Failed checks whose cause is outside the client (same evidence as above).
+// Failed checks whose cause is outside the client (same evidence as above). The stale 2021 bulletin and
+// the world-weather 502 were removed after both were fixed in production (rechecked 2026-09-28).
 export const KNOWN_CHECKS = [
     [/^fail air-codes count=0/, 'server: production API returns no air data'],
-    [/^fail images kma-special .*weather\.go\.kr/, 'server: stale 2021 KMA bulletin, http image'],
-    [/^fail world-weather /, 'server: world weather (DSF) 502'],
 ];
 export const classifyCheck = (msg) => (KNOWN_CHECKS.find(([re]) => re.test(msg)) || [null, 'UNCLASSIFIED'])[1];
 

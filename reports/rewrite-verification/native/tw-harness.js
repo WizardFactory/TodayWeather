@@ -870,6 +870,56 @@
     ];
     if (window.TW_HARNESS_MODE === 'layout') { S = LAYOUT; }
 
+    // ---------- world mode (window.TW_HARNESS_MODE === 'world'): add Tokyo through search ----------
+    function worldCity(query, tag) {
+        var before = 0;
+        return Promise.resolve()
+            .then(function () { return waitFor(function () { return /^tab\./.test(stateName()); }, 20000, 'tab'); })
+            .then(function () { return idle(30000); })
+            .then(function () { return tab(0); })
+            .then(function () {
+                before = cityRows().length;
+                typeInto(find('#searchInput'), query);
+                return waitFor(function () { return all('[ng-click="OnSelectResult(result)"]').filter(visible).length > 0; }, 15000, 'search-results-' + tag);
+            })
+            .then(function () { return shot(tag + '-search'); })
+            .then(function () {
+                var first = all('[ng-click="OnSelectResult(result)"]').filter(visible)[0];
+                emit('STEP', 'first result "' + ((first && first.textContent) || '').replace(/\s+/g, ' ').trim().slice(0, 80) + '"');
+                return tapResult(function () { return all('[ng-click="OnSelectResult(result)"]').filter(visible)[0]; }, 'search-result-' + tag + '[0]')
+                    .then(function () { return sleep(2000); }).then(function () { return idle(30000); }).then(function () { return sleep(1500); });
+            })
+            .then(function () {
+                var p = find('.popup-container .popup-buttons button');
+                if (p) {
+                    var body = ((find('.popup-container .popup-body') || {}).textContent || '').trim();
+                    check('world-weather ' + tag, false, 'error popup "' + body + '" state=' + stateName());
+                    return shot(tag + '-error').then(popupOk);
+                }
+                var req = lastHttp(/\/weather\/v000903\/coord\//);
+                check('world-weather ' + tag, stateName() === 'tab.forecast', stateName() + ' ' + (req || 'no request'));
+                var title = ((find('.bar .title') || {}).textContent || '').trim();
+                emit('STEP', tag + ' title "' + title + '"');
+                forecastRendered(tag + '-hourly');
+                return shot(tag + '-hourly')
+                    .then(function () { click(byNg('clickExpander()'), 'expander'); return sleep(1500); })
+                    .then(function () {
+                        var vc = find('a', function (el) { return /Visual Crossing/.test(el.textContent) && visible(el); });
+                        check('vc-attribution ' + tag, !!vc, vc ? vc.textContent.trim() : 'no Visual Crossing link');
+                        return shot(tag + '-expanded');
+                    })
+                    .then(function () { return tab(2); })
+                    .then(function () { forecastRendered(tag + '-daily'); return shot(tag + '-daily'); })
+                    .then(function () { return tab(3); })
+                    .then(function () { checkImages(tag + '-air'); return shot(tag + '-air'); })
+                    .then(function () { return tab(0); })
+                    .then(function () { check('city-added ' + tag, cityRows().length === before + 1, before + '->' + cityRows().length); return shot(tag + '-favorites'); });
+            });
+    }
+    if (window.TW_HARNESS_MODE === 'world') {
+        S = [S[0], { name: 'W2_world_tokyo', run: function () { return worldCity(/iPhone|iPad/.test(navigator.userAgent) ? '도쿄' : 'Tokyo', 'tokyo'); } }];
+    }
+
     // The update-info popup (O05) was removed, so a popup after a warm launch is a failure. Record it and
     // close it like a user would so the scenario can continue.
     function dismissLaunchPopup(i) {
