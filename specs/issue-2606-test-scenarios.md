@@ -42,6 +42,7 @@ Offline fixtures live in `server/test/offline/fixtures/gateway/`: provider respo
 | U-16 | RQ4 | Coordinate flow with `lang` values `ko`, `ko,en`, `KO` and `en` on the same Kakao and Google fixtures | Each output equals the `a4c1deb` golden for the same `lang` value (for `ko,en` and `KO`, Kakao's label and address are dropped and Google's are used) | Any difference |
 | U-17 | RQ10 | Transport size caps with a 2 MB response | The default 1 MB cap rejects it (`ETOOLARGE`); the loopback's 6 MB cap accepts it | Wrong cap |
 | U-18 | RQ5 | `GEOCODER_GOOGLE_KEY` unset, empty, another key, a list | Only a key with fingerprint `ecd5fdb1` is used; others are ignored and reported by fingerprint | Another key used |
+| U-19 | RQ10 | Loopback host for listen addresses `127.0.0.1`, `0.0.0.0`, `::`, empty, `::1`, `10.0.0.5` | Wildcards and empty become `127.0.0.1`; IPv6 literals are bracketed; others unchanged | Wrong host |
 
 ## RT — routes and versions (RQ1, RQ2, RQ3, RQ7, RQ10, RQ13)
 
@@ -143,7 +144,7 @@ git grep -nE "apiServer\.url \+ '/geocode/(coord|addr)/'" b8a3c504 -- server | w
 | RQ7 | RT-14, RT-15, LD-1 |
 | RQ8 | IC-1–IC-3, DO-5 |
 | RQ9 | DO-6, OP-3 |
-| RQ10 | U-17, RT-11–RT-13 |
+| RQ10 | U-17, U-19, RT-11–RT-13 |
 | RQ11 | OP-1–OP-4 |
 | RQ12 | CO-1, CO-2, PC-1–PC-4, RB-1 |
 | RQ13 | U-10, RT-10, RT-16 |

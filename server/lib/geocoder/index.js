@@ -283,9 +283,11 @@ function getDefaultGeocoder() {
         cache.ensureIndex();
         var kakaoKeys = keys.parseKeys(process.env.GEOCODER_KAKAO_KEYS);
         var google = keys.googleKey(process.env.GEOCODER_GOOGLE_KEY, {stub: !!process.env.GEOCODER_GOOGLE_BASE_URL});
-        console.log('gateway geocoder keys: kakao=[' + kakaoKeys.map(keys.fingerprint).join(',') +
+        var keyLine = 'gateway geocoder keys: kakao=[' + kakaoKeys.map(keys.fingerprint).join(',') +
             '] google=[' + (google.key ? keys.fingerprint(google.key) : '') + ']' +
-            (google.ignored ? ' ignored google=[' + google.ignored + ']' : ''));
+            (google.ignored ? ' ignored google=[' + google.ignored + ']' : '');
+        // A missing provider key is a deployment mistake: report it on stderr.
+        (kakaoKeys.length && google.key ? console.log : console.error)(keyLine);
         defaultGeocoder = createGeocoder({
             kakaoKeys: kakaoKeys,
             googleKey: google.key,

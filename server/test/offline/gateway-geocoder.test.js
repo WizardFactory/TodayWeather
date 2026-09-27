@@ -228,11 +228,14 @@ test('U-9 key lists: unset or invalid values are empty; shared names are not rea
         process.env.GOOGLE_SECRET_KEY = 'shared-google';
         const printed = [];
         const originalLog = console.log;
-        console.log = (...args) => printed.push(args.join(' '));
+        const originalError = console.error;
+        console.log = (...args) => printed.push('log ' + args.join(' '));
+        console.error = (...args) => printed.push('error ' + args.join(' '));
         let geocoder;
         try { geocoder = geocoderModule.getDefaultGeocoder(); }
-        finally { console.log = originalLog; }
-        const keyLine = printed.find(l => l.startsWith('gateway geocoder keys:'));
+        finally { console.log = originalLog; console.error = originalError; }
+        // Missing keys are reported on stderr (a deployment mistake).
+        const keyLine = printed.filter(l => l.startsWith('error gateway geocoder keys:')).map(l => l.slice('error '.length))[0];
         assert.equal(keyLine, 'gateway geocoder keys: kakao=[] google=[] ignored google=[' + keys.fingerprint('not-the-allowed-key') + ']');
         await assert.rejects(geocoder.coord([37.566, 126.978], 'ko'), err => err.code === 'EPROVIDER' && /no keys/.test(err.message));
         await assert.rejects(geocoder.coord([51.507, -0.128], 'en'), err => err.code === 'EPROVIDER' && /no keys/.test(err.message));
@@ -369,6 +372,16 @@ test('U-18 a single Google key, used only with fingerprint ecd5fdb1', () => {
     // Only against a test stub (GEOCODER_GOOGLE_BASE_URL) is another key accepted.
     assert.deepEqual(keys.googleKey('key-a', {stub: true}), {key: 'key-a', ignored: null});
     assert.deepEqual(keys.googleKey('key-a', {stub: false}), {key: null, ignored: keys.fingerprint('key-a')});
+});
+
+test('U-19 loopback host for wildcard and IPv6 listen addresses', () => {
+    assert.equal(gateway.loopbackHost('127.0.0.1'), '127.0.0.1');
+    assert.equal(gateway.loopbackHost('0.0.0.0'), '127.0.0.1');
+    assert.equal(gateway.loopbackHost('::'), '127.0.0.1');
+    assert.equal(gateway.loopbackHost(''), '127.0.0.1');
+    assert.equal(gateway.loopbackHost(undefined), '127.0.0.1');
+    assert.equal(gateway.loopbackHost('::1'), '[::1]');
+    assert.equal(gateway.loopbackHost('10.0.0.5'), '10.0.0.5');
 });
 
 test('U-16 language values follow the Lambda rule', () => {

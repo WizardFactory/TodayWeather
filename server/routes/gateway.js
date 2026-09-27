@@ -127,12 +127,24 @@ function backendPath(version, geo) {
 var loopbackAgent = new http.Agent({keepAlive: true, maxSockets: 50, timeout: 4000});
 
 /**
+ * Host for requests to this server: a wildcard listen address (0.0.0.0, ::, empty)
+ * means "this machine", so use 127.0.0.1; an IPv6 literal needs brackets.
+ */
+function loopbackHost(ipAddress) {
+    if (!ipAddress || ipAddress === '0.0.0.0' || ipAddress === '::') {
+        return '127.0.0.1';
+    }
+    return ipAddress.indexOf(':') >= 0 ? '[' + ipAddress + ']' : ipAddress;
+}
+
+/**
  * Default backend: this server's own port (any PM2 cluster worker may answer).
  */
 function defaultLoopback() {
     var config = require('../config/config');
+    var host = loopbackHost(config.ipAddress);
     return function (path, headers, timeoutMs, signal) {
-        return transport.getJson('http://' + config.ipAddress + ':' + config.port + path,
+        return transport.getJson('http://' + host + ':' + config.port + path,
             {headers: headers, timeoutMs: timeoutMs, agent: loopbackAgent, signal: signal, maxBytes: LOOPBACK_MAX_BYTES});
     };
 }
@@ -358,3 +370,4 @@ module.exports.createGatewayRouter = createGatewayRouter;
 module.exports.parseLoc = parseLoc;
 module.exports.buildQuery = buildQuery;
 module.exports.backendPath = backendPath;
+module.exports.loopbackHost = loopbackHost;

@@ -135,7 +135,7 @@ Ported from tw-backend-functions `a4c1deb` (`geoinfo/controller.kakao.js`, `cont
 - Keys come from `process.env`: `GEOCODER_KAKAO_KEYS` (a JSON array of strings; unset or unparseable counts as no key) and `GEOCODER_GOOGLE_KEY` (one key). A missing provider key makes that provider unavailable (501 on use); nothing throws at load. Dedicated names keep the existing `KAKAO_SECRET_KEYS`/`GOOGLE_SECRET_KEY` users (KECO station lookup, time zone, `geo.controller`) unaffected.
 - **Kakao:** `GEOCODER_KAKAO_KEYS` holds the two keys the Lambda and the service host already use (both answer the coordinate and address APIs, checked 2026-09-27). Start at a random key and try each key at most once. Move to the next key on auth errors (401/403 or an auth error code), quota errors (429 or a quota error code) and transient errors (timeout, network, 5xx). An empty result (no documents) or another request error ends the attempt.
 - **Google (AK, 2026-09-27):** a single key and no rotation. The code uses `GEOCODER_GOOGLE_KEY` only if its fingerprint (first 8 hex digits of its SHA-256) is `ecd5fdb1` (`lib/geocoder/keys.js`); any other value is ignored and logged by fingerprint only. Using another Google key needs a code change. Any Google error, including `ZERO_RESULTS`, ends the lookup, because there is no other key. (The check is skipped only when `GEOCODER_GOOGLE_BASE_URL` points the geocoder at a test stub.)
-- **Key values** go only into the service host's environment for `www` (for example `server/.env`, which `config/env.js` loads, or the PM2 environment, then `pm2 save`); never into the repository or logs. Log lines mask the Google `key=` parameter. Each worker logs the fingerprints of its keys once, when it handles its first gateway request.
+- **Key values** go only into the service host's environment for `www` (for example `server/.env`, which `config/env.js` loads, or the PM2 environment, then `pm2 save`); never into the repository or logs. Log lines mask the Google `key=` parameter. Each worker logs the fingerprints of its keys once, when it handles its first gateway request; if the Kakao list is empty or the Google key is missing or ignored, the line goes to stderr.
 
 ### 3.6 Cache (MongoDB)
 
@@ -209,6 +209,8 @@ Merging the implementation authorizes no production step. Each checkpoint needs 
 | Backend loopback attempt | 3 s, up to 3 attempts, capped by the deadline |
 | Whole request | 9 s → 501 (below CloudFront's 30 s origin timeout) |
 | In-flight requests per worker (`GATEWAY_MAX_INFLIGHT`, default 40) | Excess → 503 with `Retry-After: 5`. The slot is released exactly once, when the handler finishes or the deadline fires, independent of the connection state |
+
+When the deadline fires, outstanding provider and loopback requests are aborted, but a geocode cache write that started before it may still complete (bounded at 500 ms, §3.6).
 
 ### 5.4 Monitoring
 
