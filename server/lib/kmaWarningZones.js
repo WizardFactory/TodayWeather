@@ -2,10 +2,10 @@
  * KMA warning zones (#2609): getPwnCd event replay and town-to-zone mapping.
  * Pure functions; the collector persists the state (models/modelKmaSpecialWeatherZone.js).
  *
- * Replay rules, checked against 60 days of getPwnCd rows on 2026-09-27:
- * - command 1 발표, 3 연장, 6 정정, 7 변경발표 → active with warnStress; 2 해제, 8 변경해제 → inactive.
- * - A release row with a nonzero allEndTime ends every warning of its zone (without this rule
- *   열대야 and 호우 releases are missed and zones stay active while t6 is "없음").
+ * Replay rules, checked against 60 days of getPwnCd rows fetched one KST day per request on 2026-09-27:
+ * - command 1 발표, 3 연장, 6 정정, 7 변경발표 → active with warnStress; 2 해제, 8 변경해제 → inactive, for
+ *   that zone and warning type only. allEndTime does not end the zone's other types (부산서부 폭염 stayed
+ *   active a day after the 열대야 release that carried an allEndTime).
  * - cancel 1 rows are ignored; an event applies only if it is newer than the stored one, ordered by
  *   (tmFc, tmSeq, rank) with releases (rank 0) before issues (rank 1) of the same announcement.
  */
@@ -339,27 +339,9 @@ function applyEvents(state, events) {
             return;
         }
         var key = stateKey(event.areaCode, event.warnVar);
-        var allClear = state[stateKey(event.areaCode, 0)];
         if (isNewer(event, state[key]) > 0) {
-            // An issue older than the zone's latest all-clear is already over.
-            state[key] = entryFor(event, event.warnVar, isIssue && isNewer(event, allClear) > 0);
+            state[key] = entryFor(event, event.warnVar, isIssue);
             mark(key);
-        }
-        if (isRelease && event.allEndTime > 0) {
-            var markerKey = stateKey(event.areaCode, 0);
-            if (isNewer(event, state[markerKey]) > 0) {
-                state[markerKey] = entryFor(event, 0, false);
-                mark(markerKey);
-            }
-            Object.keys(state).forEach(function (other) {
-                var entry = state[other];
-                if (entry.areaCode === event.areaCode && entry.warnVar > 0 && entry.active && isNewer(event, entry) > 0) {
-                    state[other] = entryFor(event, entry.warnVar, false);
-                    state[other].areaName = entry.areaName;
-                    state[other].warnStress = entry.warnStress;
-                    mark(other);
-                }
-            });
         }
     });
     return changed;
@@ -383,8 +365,9 @@ function specialInfoFor(entries, areaCodes) {
         }
         var weather = weatherOf(entry.warnVar);
         var level = levelOf(entry.warnStress);
+        // The zone table name; provider areaName values are occasionally garbled.
         var item = {weather: weather.weather, weatherStr: weather.weatherStr, level: level.level, levelStr: level.levelStr,
-                    locationName: entry.areaName};
+                    locationName: zoneName(entry.areaCode) || entry.areaName};
         var id = [item.weather, item.level, item.locationName].join('|');
         if (!seen[id]) {
             seen[id] = true;

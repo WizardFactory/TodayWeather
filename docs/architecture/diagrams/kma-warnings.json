@@ -119,9 +119,9 @@
       "dot": "amber",
       "title": "Replay rules (decision 7)",
       "items": [
-        "Commands 1/3/6/7 set active, 2/8 clear, allEndTime clears the zone.",
+        "Commands 1/3/6/7 set active, 2/8 clear that zone and type.",
         "Newest event per zone and warnVar wins; cancelled rows are ignored.",
-        "Empty state bootstraps 60 days; drift from t6 is logged."
+        "getPwnCd one KST day per call; 60-day bootstrap; t6 drift logged."
       ]
     },
     {

@@ -8,7 +8,9 @@
  * (tmFc, tmSeq) is the change signal; getWthrWrnMsg and getPwnCd are called only while an announcement
  * is unprocessed. It is processed once both reflect it, retried on later cycles while either lags, and
  * stored without a bulletin after MAX_PENDING_CYCLES. getPwnCd windows overlap by a day and are
- * resynced hourly so that late rows are applied.
+ * resynced hourly so that late rows are applied. getPwnCd is requested one KST day at a time: multi-page
+ * windows repeat and drop rows at page boundaries (release rows went missing on 2026-09-27), while one
+ * day fits one page (at most 275 rows a day over 60 days).
  */
 
 "use strict";
@@ -111,7 +113,20 @@ KmaWarningCollector.prototype.syncZones = function (callback) {
             from = earliest;
         }
         var to = kstDate(now);
-        self.requester.getAll('getPwnCd', {fromTmFc: from, toTmFc: to}, function (err, rows) {
+        var days = [];
+        for (var offset = 0; kstDate(now, -ZONE_LOOKBACK_DAYS + offset) <= to; offset++) {
+            var day = kstDate(now, -ZONE_LOOKBACK_DAYS + offset);
+            if (day >= from) {
+                days.push(day);
+            }
+        }
+        var rows = [];
+        async.eachSeries(days, function (day, done) {
+            self.requester.getAll('getPwnCd', {fromTmFc: day, toTmFc: day}, function (err, items) {
+                rows = rows.concat(items || []);
+                done(err);
+            });
+        }, function (err) {
             if (err) {
                 return callback(err);
             }

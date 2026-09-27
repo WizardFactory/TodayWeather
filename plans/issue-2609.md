@@ -24,7 +24,7 @@ Revision 2, 2026-09-27. Consumes [intent](../intent/issue-2609.md) r1 and [spec]
 
 ## Order
 
-1. Record fixtures (live read-only, keys stripped): `getPwnStatus`, `getWthrWrnMsg`, `getWthrPwn`, `getWthrInfo`, `getWthrBrkNews`, a `getPwnCd` excerpt with `allEndTime`, `warnStress 2`, `warnVar 13` rows.
+1. Record fixtures (live read-only, keys stripped): `getPwnStatus`, `getWthrWrnMsg`, `getWthrPwn`, `getWthrInfo`, `getWthrBrkNews`, `getPwnCd` excerpts (a 6-day window, and full histories of five zones fetched one day per request).
 2. Tests first; Red on base (missing modules, old parser codes, scraper URL present).
 3. Implement R1–R6; Green under `TZ=UTC`, `Asia/Seoul`, `America/Los_Angeles`.
 4. Regression: `test:offline`, `rss-response-smoke.js`, `gather-code-drift`.

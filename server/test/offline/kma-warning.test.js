@@ -5,8 +5,9 @@
  * no app startup, provider call, Mongo or timer is reachable.
  * fixtures/kma-warning/*.json are live WthrWrnInfoService responses recorded on 2026-09-27
  * (no key in any body). pwn-cd-0921-0927.json is the getPwnCd window 2026-09-21..27 in the
- * provider's newest-first order; pwn-cd-allend-excerpt.json holds every 2026-07-29..09-27 row of
- * 합천군서북부, 김천시북부 and 김천시남부 plus six warnStress 2 rows.
+ * provider's newest-first order; pwn-cd-daily-excerpt.json holds every 2026-07-30..09-27 row of
+ * 합천군서북부, 김천시북부, 김천시남부, 부산서부 and 상주시, fetched one KST day per request (multi-page
+ * windows dropped release rows at page boundaries).
  */
 'use strict';
 const test = require('node:test');
@@ -227,19 +228,18 @@ test('requester: pages until a short page, ignoring totalCount', async () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-test('replay: 60-day rows with allEndTime match t6 "없음" (AC5)', () => {
-    // Full histories only: the excerpt's six warnStress 2 rows lack their releases.
-    const covered = ['L1083410', 'L1072610', 'L1072620'];
-    const rows = itemsOf(fixture('pwn-cd-allend-excerpt')).filter(r => covered.indexOf(r.areaCode) !== -1).concat(pwnCdRows);
-    const events = zones.prepareEvents(rows);
-    const state = {};
-    zones.applyEvents(state, events);
-    const active = Object.values(state).filter(e => e.active && e.warnVar > 0);
-    assert.deepEqual(plain(active), [], 'no phantom 열대야 (합천군서북부) or 호우 (김천시남부)');
-    // Without the allEndTime rule the replay leaves both phantoms active.
-    const naive = {};
-    zones.applyEvents(naive, events.map(e => Object.assign({}, e, {allEndTime: 0})));
-    assert.deepEqual(Object.values(naive).filter(e => e.active && e.warnVar > 0).map(e => e.areaName + e.warnVar).sort(), ['김천시남부2', '합천군서북부13']);
+test('replay: per-type releases over day-by-day rows (AC5, re-review 1)', () => {
+    const rows = itemsOf(fixture('pwn-cd-daily-excerpt'));
+    const activeAt = until => {
+        const state = {};
+        zones.applyEvents(state, zones.prepareEvents(rows.filter(r => r.tmFc <= until)));
+        return Object.values(state).filter(e => e.active && e.warnVar > 0).map(e => e.areaCode + ':' + e.warnVar + '/' + e.warnStress).sort();
+    };
+    assert.deepEqual(plain(activeAt(202609271200)), [], 'no active zone on 2026-09-27, as t6 "o 없 음"');
+    // A release with a nonzero allEndTime ends only its own type: 부산서부 폭염 outlives the 열대야 release.
+    assert.deepEqual(plain(activeAt(202609021500)).filter(k => k.indexOf('L1082700:') === 0), ['L1082700:12/0', 'L1082700:13/0']);
+    assert.deepEqual(plain(activeAt(202609030300)).filter(k => k.indexOf('L1082700:') === 0), ['L1082700:12/0']);
+    assert.deepEqual(plain(activeAt(202608090300)).filter(k => k.indexOf('L1071200:') === 0), ['L1071200:12/1'], '상주시 폭염경보 still active');
 });
 
 test('replay: order, dedupe, cancel, change-issue, idempotence and late rows (AC5)', () => {
@@ -267,14 +267,11 @@ test('replay: order, dedupe, cancel, change-issue, idempotence and late rows (AC
     const s2 = {};
     zones.applyEvents(s2, zones.prepareEvents([row(202609261000, 125, 1, {warnStress: 1}), row(202609261000, 125, 2)]));
     assert.deepEqual([s2[key].active, s2[key].warnStress], [true, 1]);
-    // allEndTime clears other warnVars of the zone, and a late older issue stays cleared.
+    // Releasing one type leaves the zone's other types active.
     const s3 = {};
-    zones.applyEvents(s3, zones.prepareEvents([row(202609010000, 1, 1, {warnVar: 13}), row(202609020000, 2, 2, {warnVar: 12, allEndTime: 202609020000})]));
-    assert.equal(s3[zones.stateKey('L1091430', 13)].active, false);
-    zones.applyEvents(s3, zones.prepareEvents([row(202609011200, 1, 1, {warnVar: 1})]));
-    assert.equal(s3[zones.stateKey('L1091430', 1)].active, false, 'issued before the all-clear');
-    zones.applyEvents(s3, zones.prepareEvents([row(202609030000, 3, 1, {warnVar: 1})]));
-    assert.equal(s3[zones.stateKey('L1091430', 1)].active, true, 'issued after the all-clear');
+    zones.applyEvents(s3, zones.prepareEvents([row(202609010000, 1, 1, {warnVar: 13}), row(202609010000, 1, 1, {warnVar: 12}),
+        row(202609020000, 2, 2, {warnVar: 13, allEndTime: 202609020000})]));
+    assert.deepEqual([s3[zones.stateKey('L1091430', 13)].active, s3[zones.stateKey('L1091430', 12)].active], [false, true]);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -322,6 +319,7 @@ test('specialInfo from active zones (AC6, AC7)', () => {
         {weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '서귀포시남부'},
         {weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '서귀포시동부'},
         {weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '제주도산지'}]);
+    assert.equal(plain(zones.specialInfoFor([entry('L1091430', '서귀\ufffd\ufffd동부', 2, 0)], zones.zonesForTown(town)))[0].locationName, '서귀포시동부', 'zone table name over a garbled provider name');
     const jeju = plain(zones.specialInfoFor(active, zones.zonesForTown({first: '제주특별자치도', second: '제주시', third: '노형동'})));
     assert.deepEqual(jeju, [{weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '제주도산지'}], '서귀포 sub-zones do not reach 제주시; the mountain zone does');
 });
@@ -348,8 +346,9 @@ test('collector: stores types 1-4, applies zone state, skips repeats (AC1, AC2, 
     // Zone state at 11:30: 서귀포시동부 has 강풍주의보 and 호우주의보.
     const active = zoneStore.docs.filter(d => d.active && d.warnVar > 0 && d.areaCode === 'L1091430').map(d => d.warnVar + '/' + d.warnStress).sort();
     assert.deepEqual(active, ['1/0', '2/0']);
-    const pwnCd = request.calls.find(c => c.operation === 'getPwnCd');
-    assert.deepEqual([pwnCd.params.fromTmFc, pwnCd.params.toTmFc], ['20260729', '20260926'], 'empty state bootstraps 60 days');
+    const days = request.calls.filter(c => c.operation === 'getPwnCd');
+    assert.equal(days.length, 60, 'empty state bootstraps 60 days, one KST day per request');
+    assert.deepEqual([days[0].params.fromTmFc, days[0].params.toTmFc, days[59].params.fromTmFc, days[59].params.toTmFc], ['20260729', '20260729', '20260926', '20260926']);
     const msgCall = request.calls.find(c => c.operation === 'getWthrWrnMsg');
     assert.deepEqual([msgCall.params.stnId, msgCall.params.fromTmFc, msgCall.params.toTmFc], ['108', '20260926', '20260926']);
     assert.deepEqual(request.calls.map(c => c.operation).filter(op => op !== 'getPwnCd'), ['getPwnStatus', 'getWthrWrnMsg', 'getWthrPwn', 'getWthrInfo', 'getWthrBrkNews']);
@@ -377,7 +376,7 @@ test('collector: a lagging announcement stays pending and is retried (AC4, decis
     await gather(collector);
     assert.equal(situations.docs.filter(d => d.type === 1).length, 0, 'zone rows missing: not processed');
     const windows = request.calls.filter(c => c.operation === 'getPwnCd').map(c => c.params.fromTmFc);
-    assert.equal(windows[1], '20260925', 'incremental window overlaps the previous sync by a day');
+    assert.deepEqual(windows.slice(60), ['20260925', '20260926'], 'incremental sync overlaps the previous sync by a day');
     cdReady = true; clock.now += 3 * 60000;
     await gather(collector);
     assert.equal(situations.docs.filter(d => d.type === 1).length, 1, 'processed once both operations reflect it');
@@ -388,7 +387,7 @@ test('collector: a lagging announcement stays pending and is retried (AC4, decis
     clock.now += 61 * 60000;
     request.calls.length = 0;
     await gather(collector);
-    assert.equal(request.calls.filter(c => c.operation === 'getPwnCd').length, 1, 'hourly resync without a change');
+    assert.equal(request.calls.filter(c => c.operation === 'getPwnCd').length, 2, 'hourly resync without a change (yesterday and today)');
 });
 
 test('collector: bulletin permanently missing is stored without it after the retry budget', async () => {

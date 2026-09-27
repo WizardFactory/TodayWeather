@@ -75,8 +75,7 @@ assert.deepEqual(plain(Situation.parseSpecialText('o 폭풍해일주의보 : 부
 assert.equal(Situation.parsePreliminaryText('o 없음')[0].weatherStr, '없음');
 
 // Replay: recorded rows end with no active zone, as t6 "o 없 음".
-var covered = ['L1083410', 'L1072610', 'L1072620'];
-var rows = items(fixture('pwn-cd-allend-excerpt')).filter(function (r) { return covered.indexOf(r.areaCode) !== -1; }).concat(items(fixture('pwn-cd-0921-0927')));
+var rows = items(fixture('pwn-cd-daily-excerpt')).concat(items(fixture('pwn-cd-0921-0927')));
 var state = {};
 zones.applyEvents(state, zones.prepareEvents(rows));
 assert.equal(Object.keys(state).filter(function (k) { return state[k].active && state[k].warnVar > 0; }).length, 0);

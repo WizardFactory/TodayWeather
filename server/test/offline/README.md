@@ -264,7 +264,7 @@ The route test composes the app in `app.js` order (`cors()` → gateway → `exp
 
 ## KMA warning checks (#2609)
 
-`kma-warning.test.js` (part of `test:offline` and the RSS offline workflow) loads the WthrWrnInfoService requester, collector, zone replay/mapping, model parsers and the special weather controller in isolated VMs with live responses recorded on 2026-09-27 (`fixtures/kma-warning/`, no keys). It covers key encoding and rotation, error classes (codes 30, 22, 99, NODATA), paging without `totalCount`, event replay (including `allEndTime`), change-driven calls with retries while an operation lags, the hourly resync, town-to-zone mapping and `/kma/special` output under any host time zone:
+`kma-warning.test.js` (part of `test:offline` and the RSS offline workflow) loads the WthrWrnInfoService requester, collector, zone replay/mapping, model parsers and the special weather controller in isolated VMs with live responses recorded on 2026-09-27 (`fixtures/kma-warning/`, no keys). It covers key encoding and rotation, error classes (codes 30, 22, 99, NODATA), paging without `totalCount`, event replay (per-type releases over day-by-day rows), change-driven calls with retries while an operation lags, the hourly resync, town-to-zone mapping and `/kma/special` output under any host time zone:
 
 ```sh
 TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/kma-warning.test.js

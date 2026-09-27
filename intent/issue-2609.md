@@ -12,7 +12,7 @@ The warning scraper requests `www.weather.go.kr/weather/warning/status.jsp`, whi
 - AC2: Recorded `getWthrPwn`, `getWthrInfo`, `getWthrBrkNews` store type 2 (`pwn`, `rem`), type 3 (`t1`) and type 4 (`ann`) documents.
 - AC3: `tmFc` `202609271000` is served by `/v000903/kma/special` as `announcement` `2026-09-27T01:00:00.000Z` under `TZ=UTC` (and independent of host time zone).
 - AC4: A second run on the same responses returns `'skip'`, calls neither `getWthrWrnMsg` nor `getPwnCd`, and adds no document. Per AK decision 6, a change in `getPwnStatus` is detected on the next poll regardless of schedule; when `getWthrWrnMsg` or `getPwnCd` does not yet reflect it, the announcement stays unprocessed and is retried on later cycles; `getPwnCd` windows overlap and resync hourly.
-- AC5: A recorded `getPwnCd` sequence (issue, change-issue with higher stress, release, cancelled event, `allEndTime` release, duplicate boundary rows, unordered pages) yields the expected persisted active state.
+- AC5: A recorded `getPwnCd` sequence (issue, change-issue with higher stress, release, cancelled event, per-type release, duplicate boundary rows, unordered pages) yields the expected persisted active state.
 - AC6: With 호우경보 active on `L1091430` (서귀포시동부), a 서귀포시 town gets `{weather: 3, level: 2, levelStr: '경보', locationName: '서귀포시동부'}`; a 제주시 town does not.
 - AC7: Active 열대야주의보 (`warnVar 13`) and a `warnStress 2` 호우 event give `{weather: 13, weatherStr: '열대야', level: 1}` and `{weather: 3, level: 4, levelStr: '중대경보'}`.
 - AC8: `t6: "o 없 음"` with an empty active state yields no `current.specialInfo`.
@@ -49,4 +49,8 @@ Source: rebase onto `master` `3ab19ca8` (#2585 merged during the build). Master 
 ## Amendment 2026-09-27 (r1b)
 
 Source: independent verification `reports/sdlc/issue-2609/independent-verification.md` (CHANGES_REQUIRED) and AK's answer on F2 ("두 시 모두에 포함"): `제주도산지` warnings reach every 제주시 and 서귀포시 town. AC6 is extended accordingly: a 서귀포시 town also receives the `제주도산지` entries, which now lead its summary when the mountain has a higher level. F1 (legacy city names) and F3 (Node 10 sort) are corrected as defects within the existing ACs. F4/F5 (LOW) are deferred and recorded in the correction report.
+
+## Amendment 2026-09-27 (r1c)
+
+Source: AK request "목표에서 벗어나지 않는 상태에서 재검토 3회" and re-review round 1 (HIGH). The `allEndTime` zone-wide release rule dropped active warnings, for example 부산서부 폭염 for a day. The two phantom zones that motivated it came from release rows dropped by multi-page `getPwnCd` windows. Releases now apply per zone and type, and `getPwnCd` is fetched one KST day per request. AC5 now reads "per-type release" instead of "`allEndTime` release". Quota: the one-time bootstrap is 60 requests; each change or hourly resync is 2 requests.
 

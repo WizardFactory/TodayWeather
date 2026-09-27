@@ -1,6 +1,6 @@
 /**
  * Active KMA warning state per warning zone and type, rebuilt from WthrWrnInfoService getPwnCd events (#2609).
- * warnVar 0 marks the latest all-clear (allEndTime) of a zone; areaCode '_sync' holds the last sync.
+ * areaCode '_sync' holds the last sync.
  * Event order is (eventTmFc, eventTmSeq, eventRank); see lib/kmaWarningZones.js.
  */
 
