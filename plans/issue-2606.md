@@ -20,9 +20,9 @@ This plan defines the work; none of it is executed here.
 8. **Operator steps**, each under its approval (spec §5.1):
    1. (A1) Set `GEOCODER_KAKAO_KEYS` (the 2 existing Kakao keys) and `GEOCODER_GOOGLE_KEY` (the key with fingerprint `ecd5fdb1`) on the host (OP-4).
    2. (A2) Confirm PM2 `www` runs Node ≥ 16 (`pm2 jlist`), then deploy to the service host by the patch procedure; gather and push URL changes (spec §5.2 steps 1–2); record the deployment in `docs/operations/` at this point.
-   3. (A2) DO-2 first, then DO-1 and DO-3 to DO-6, including the DO-3 Lambda-era baseline; then OP-1 (the key-fingerprint line appears after a worker's first gateway request).
+   3. (A2) DO-2 first, then DO-1 and DO-3 to DO-6 (`scripts/gateway-parity.mjs --direct … --gateway … --save-baseline <file>`, which also saves the Lambda-era headers and the direct-side statuses); then OP-1 (the key-fingerprint line appears after a worker's first gateway request).
    4. (A3) Probe path change in `AttachEIPToSpot`; new AMIs, templates and fleets; full-map `AttachEIPToSpot` update (OP-3). CloudFront 5xx alarm with a us-east-1 topic (OP-2).
-   5. (A4) Cutover with CO-1 (including the prepared RB-1 reverse edit) and CO-2; PC-1 at +5 min; PC-2 to PC-4 over 24 h. On failure, RB-1.
+   5. (A4) Cutover with CO-1 (including the prepared RB-1 reverse edit) and CO-2; PC-1 at +5 min (`--public … --expect <file>`); RB-1 checks use `--baseline <file>`; PC-2 to PC-4 over 24 h. On failure, RB-1.
    6. Post-cutover docs PR (DOC-1).
 
 ## Files

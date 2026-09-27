@@ -8,7 +8,9 @@
 //     node scripts/gateway-parity.mjs --direct http://<service-origin> \
 //       --gateway https://todayweather.wizardfactory.net --save-baseline baseline.json
 //   After cutover (PC-1):   node scripts/gateway-parity.mjs --public https://todayweather.wizardfactory.net --expect baseline.json
-//     (a PC-1 cell must be 200 only where the direct origin answered 200 before cutover)
+//     (a PC-1 cell must be 200 where the direct origin answered 200 before cutover; elsewhere
+//     it may keep that status or recover to 200). --save-baseline is required for a DO run.
+//     Warnings (e.g. no non-KR cell answered 200) are printed to stderr.
 //   After a rollback (RB-1): node scripts/gateway-parity.mjs --public https://todayweather.wizardfactory.net --baseline baseline.json
 //   Offline self-test (loopback servers only): node scripts/gateway-parity.mjs --self-test
 //
@@ -80,6 +82,16 @@ export function diffPaths(a, b, prefix = '') {
 
 export function unexplained(paths, ignore) {
     return paths.filter(p => ![...ignore].some(i => p === i || p.startsWith(i + '/')));
+}
+
+const NON_KR_CELL = /\/(40|51)\./;
+
+/** Warn when no non-KR weather cell answered 200 on the direct origin. */
+export function nonKrWarning(directStatus, report, scenario) {
+    const nonKr = Object.entries(directStatus).filter(([k]) => NON_KR_CELL.test(k));
+    if (nonKr.length && !nonKr.some(([, v]) => v === 200)) {
+        report.warn(scenario, 'no non-KR weather cell answered 200 on the direct origin; non-KR success parity is unproven (deploy #2585 Visual Crossing before DO-1)');
+    }
 }
 
 export function pick(obj, keys) {
@@ -165,6 +177,8 @@ export async function runDirectVsGateway(direct, gateway, report, saveBaseline) 
             unexplained(diffPaths(r1.json, r2.json), new Set(diffPaths(r1.json, (await fetchOnce(direct, withBust(weatherPath(null, loc, '')), {lang: 'ko-KR'})).json))).length === 0);
     }
 
+    nonKrWarning(directStatus, report, 'DO-1');
+
     // DO-3: headers on the direct origin; the gateway's headers become the RB-1 baseline.
     const baseline = {};
     for (const [label, p, method, maxAge] of headerRequests()) {
@@ -180,8 +194,8 @@ export async function runDirectVsGateway(direct, gateway, report, saveBaseline) 
     }
     if (saveBaseline) {
         fs.writeFileSync(saveBaseline, JSON.stringify({headers: baseline, direct: directStatus}, null, 1) + '\n');
-        report.info('DO-3', 'baseline saved', {file: saveBaseline});
     }
+    report.check('DO-3', 'baseline saved (RB-1 headers, PC-1 direct statuses)', !!saveBaseline && readBaseline(saveBaseline) !== null, {file: saveBaseline || null});
 
     // DO-4: excluded shapes (and POST) on the direct origin.
     for (const p of EXCLUDED) {
@@ -209,10 +223,21 @@ function headerRequests() {
     ];
 }
 
+/** A saved DO baseline {headers, direct}, or null when missing or malformed. */
+export function readBaseline(file) {
+    try {
+        const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+        const ok = data && typeof data.headers === 'object' && data.headers && typeof data.direct === 'object' && data.direct &&
+            headerRequests().every(([label]) => Object.hasOwn(data.headers, label));
+        return ok ? data : null;
+    }
+    catch { return null; }
+}
+
 export async function runPublic(base, report, baselineFile, expectFile) {
     if (baselineFile) {
         // RB-1: after a rollback the headers must equal the Lambda-era baseline.
-        const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8')).headers;
+        const baseline = readBaseline(baselineFile).headers;
         for (const [label, p, method] of headerRequests()) {
             const opts = method === 'OPTIONS' ? {method, headers: {'Origin': 'https://example.test', 'Access-Control-Request-Method': 'GET'}} : {lang: 'ko-KR'};
             const res = await fetchMiss(base, p, opts);
@@ -223,22 +248,19 @@ export async function runPublic(base, report, baselineFile, expectFile) {
     }
     // PC-1. With --expect, a cell must be 200 only where the direct origin answered 200
     // before cutover (DO-1/DO-2); otherwise it must keep the direct-side status.
-    const expected = expectFile ? JSON.parse(fs.readFileSync(expectFile, 'utf8')).direct : null;
+    const expected = expectFile ? readBaseline(expectFile).direct : null;
     const cell = (name, res, ok200) => {
         const before = expected ? expected[name] : 200;
         if (before === 200 || before === undefined) {
             report.check('PC-1', name, ok200, {status: res.status});
         }
         else {
-            report.check('PC-1', name, res.status === before, {status: res.status, directBeforeCutover: before});
+            // Unchanged (still failing as before cutover) or recovered (now 200) both pass.
+            report.check('PC-1', name, ok200 || res.status === before,
+                {status: res.status, directBeforeCutover: before, recovered: ok200});
         }
     };
-    if (expected) {
-        const nonKr = Object.entries(expected).filter(([k]) => /\/(40|51)\./.test(k));
-        if (!nonKr.some(([, v]) => v === 200)) {
-            report.info('PC-1', 'warning', {note: 'no non-KR cell answered 200 before cutover; non-KR success parity is unproven (deploy #2585 Visual Crossing before DO-1)'});
-        }
-    }
+    if (expected) { nonKrWarning(expected, report, 'PC-1'); }
     for (const p of ['/weather/coord/37.5665,126.9780', '/weather/v000903/coord/37.5665,126.9780']) {
         const res = await fetchMiss(base, p, {lang: 'ko-KR'});
         report.check('PC-1', p + ' (issue URL)', res.status === 200 && !!(res.json && res.json.name));
@@ -276,9 +298,11 @@ export function createReport() {
         results,
         check(scenario, name, ok, detail) { results.push({scenario, name, ok: !!ok, detail}); },
         info(scenario, name, detail) { results.push({scenario, name, ok: true, informational: true, detail}); },
+        warn(scenario, message) { results.push({scenario, name: 'WARNING', ok: true, informational: true, warning: message}); },
         summary() {
             const failed = results.filter(r => !r.ok);
-            return {checks: results.filter(r => !r.informational).length, failed: failed.length, failures: failed, results};
+            const warnings = results.filter(r => r.warning).map(r => r.scenario + ': ' + r.warning);
+            return {checks: results.filter(r => !r.informational).length, failed: failed.length, warnings, failures: failed, results};
         }
     };
 }
@@ -334,6 +358,12 @@ async function selfTest() {
     const londonDown = (p) => (p.includes('/v000902/') && p.includes('/51.') ? 501 : false);
     const directDown = fakeService('direct', londonDown);
     const gatewayDown = fakeService('gateway', londonDown);
+    const nonKrDown = (p) => (/\/(40|51)\./.test(p) && p.startsWith('/weather') ? 501 : false);
+    const nonKrDirect = fakeService('direct', nonKrDown);
+    const nonKrGateway = fakeService('gateway', nonKrDown);
+    const ndd = await listen(nonKrDirect);
+    const ndg = await listen(nonKrGateway);
+    const nonKrBaseline = baselineFileFor();
     const d = await listen(direct);
     const g = await listen(gateway);
     const b = await listen(broken);
@@ -346,9 +376,9 @@ async function selfTest() {
         let report = createReport();
         await runDirectVsGateway(d, g, report, baselineFile);
         let s = report.summary();
-        outcomes.push(['identical services pass', s.failed === 0 && s.checks === 294, s.checks + ' checks, ' + s.failed + ' failed']);
+        outcomes.push(['identical services pass', s.failed === 0 && s.checks === 295 && s.warnings.length === 0, s.checks + ' checks, ' + s.failed + ' failed']);
         report = createReport();
-        await runDirectVsGateway(d, b, report, null);
+        await runDirectVsGateway(d, b, report, baselineFileFor());
         s = report.summary();
         outcomes.push(['a v000902 difference is detected', s.failed > 0 && s.failures.every(f => f.name.includes('/v000902/')), s.failed + ' failed']);
         report = createReport();
@@ -375,11 +405,23 @@ async function selfTest() {
         await runPublic(dd, report, null, null);
         s = report.summary();
         outcomes.push(['PC-1 without --expect would fail that cell', s.failed === 2 && s.failures.every(f => f.name.includes('/v000902/') && f.name.includes('/51.')), s.failed + ' failed']);
+        report = createReport();
+        await runPublic(d, report, null, downBaseline);
+        s = report.summary();
+        outcomes.push(['PC-1 --expect accepts a recovered cell (501 before, 200 after)', s.failed === 0, s.checks + ' checks']);
+        report = createReport();
+        await runDirectVsGateway(ndd, ndg, report, nonKrBaseline);
+        s = report.summary();
+        outcomes.push(['DO-1 warns when no non-KR cell answers 200', s.failed === 0 && s.warnings.length === 1 && s.warnings[0].startsWith('DO-1'), s.warnings.length + ' warning(s)']);
+        report = createReport();
+        await runPublic(ndd, report, null, nonKrBaseline);
+        s = report.summary();
+        outcomes.push(['PC-1 repeats that warning', s.failed === 0 && s.warnings.length === 1 && s.warnings[0].startsWith('PC-1'), s.warnings.length + ' warning(s)']);
+        outcomes.push(['a malformed baseline is rejected', readBaseline(downBaseline) !== null && readBaseline('/nonexistent') === null, 'readBaseline']);
     }
     finally {
-        [direct, gateway, broken, directDown, gatewayDown].forEach(server => server.close());
-        fs.rmSync(baselineFile, {force: true});
-        fs.rmSync(downBaseline, {force: true});
+        [direct, gateway, broken, directDown, gatewayDown, nonKrDirect, nonKrGateway].forEach(server => server.close());
+        [baselineFile, downBaseline, nonKrBaseline].forEach(f => fs.rmSync(f, {force: true}));
     }
     for (const [name, ok, detail] of outcomes) { console.log((ok ? 'ok     ' : 'FAILED ') + name + ' — ' + detail); }
     return outcomes.every(o => o[1]);
@@ -395,10 +437,15 @@ async function main() {
         process.exit((await selfTest()) ? 0 : 1);
     }
     const report = createReport();
+    const usage = message => { console.error(message + '; see the header of scripts/gateway-parity.mjs'); process.exit(2); };
     if (arg('--direct') && arg('--gateway')) {
+        if (!arg('--save-baseline')) { usage('--save-baseline <file> is required (RB-1 and PC-1 need it)'); }
         await runDirectVsGateway(arg('--direct'), arg('--gateway'), report, arg('--save-baseline'));
     }
     else if (arg('--public')) {
+        if (arg('--baseline') && arg('--expect')) { usage('use --expect (PC-1) or --baseline (RB-1), not both'); }
+        const file = arg('--baseline') || arg('--expect');
+        if (file && !readBaseline(file)) { usage('not a valid baseline file from --save-baseline: ' + file); }
         await runPublic(arg('--public'), report, arg('--baseline'), arg('--expect'));
     }
     else {
@@ -407,6 +454,7 @@ async function main() {
     }
     const summary = report.summary();
     console.log(JSON.stringify(summary, null, 1));
+    summary.warnings.forEach(w => console.error('WARNING ' + w));
     process.exit(summary.failed ? 1 : 0);
 }
 
