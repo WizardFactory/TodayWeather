@@ -1195,6 +1195,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
       }
       .day-button {
         margin: 4px;
+        min-width: 0;
         line-height: 32px;
         font-size: 15px;
         font-weight: 500;
@@ -1205,6 +1206,17 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
         &.activated {
           border-color: #a2a2a2;
           background-color: #e5e5e5;
+        }
+      }
+      // Seven weekday buttons overflow a 320 px row with 16 px item padding and 4 px margins.
+      @media (max-width: 359px) {
+        .item.row {
+          padding-left: 8px;
+          padding-right: 8px;
+        }
+        .day-button {
+          margin: 4px 2px;
+          font-size: 14px;
         }
       }
     }
