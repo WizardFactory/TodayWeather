@@ -1,0 +1,261 @@
+{
+ "coord": [
+  {
+   "id": "seoul-ko",
+   "loc": "37.5665,126.9780",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "kakao": [
+    "kakao.coord.seoul"
+   ],
+   "google": [
+    "google.coord.seoul.ko"
+   ]
+  },
+  {
+   "id": "seoul-en",
+   "loc": "37.5665,126.9780",
+   "acceptLanguage": "en-US,en;q=0.9",
+   "kakao": [
+    "kakao.coord.seoul"
+   ],
+   "google": [
+    "google.coord.seoul.en"
+   ]
+  },
+  {
+   "id": "seoul-chrome",
+   "loc": "37.5665,126.9780",
+   "acceptLanguage": "ko,en-US;q=0.9,en;q=0.8",
+   "kakao": [
+    "kakao.coord.seoul"
+   ],
+   "google": [
+    "google.coord.seoul.en"
+   ]
+  },
+  {
+   "id": "seoul-upper",
+   "loc": "37.5665,126.9780",
+   "acceptLanguage": "KO-KR",
+   "kakao": [
+    "kakao.coord.seoul"
+   ],
+   "google": [
+    "google.coord.seoul.en"
+   ]
+  },
+  {
+   "id": "seoul-none",
+   "loc": "37.5665,126.9780",
+   "acceptLanguage": null,
+   "kakao": [
+    "kakao.coord.seoul"
+   ],
+   "google": [
+    "google.coord.seoul.en"
+   ]
+  },
+  {
+   "id": "seoul-3parts",
+   "loc": "37.5665,126.9780,5",
+   "acceptLanguage": "ko-KR",
+   "kakao": [
+    "kakao.coord.seoul"
+   ],
+   "google": [
+    "google.coord.seoul.ko"
+   ]
+  },
+  {
+   "id": "jeju-ko",
+   "loc": "33.4996,126.5312",
+   "acceptLanguage": "ko-KR",
+   "kakao": [
+    "kakao.coord.jeju"
+   ],
+   "google": []
+  },
+  {
+   "id": "island-ko",
+   "loc": "37.4842,130.9057",
+   "acceptLanguage": "ko-KR",
+   "kakao": [
+    "kakao.coord.island"
+   ],
+   "google": []
+  },
+  {
+   "id": "space-ko",
+   "loc": "37.3,127.0",
+   "acceptLanguage": "ko",
+   "kakao": [
+    "kakao.coord.space"
+   ],
+   "google": []
+  },
+  {
+   "id": "tsushima-ko",
+   "loc": "34.2,129.3",
+   "acceptLanguage": "ko-KR",
+   "kakao": [
+    "kakao.coord.empty"
+   ],
+   "google": [
+    "google.coord.tsushima"
+   ]
+  },
+  {
+   "id": "newyork-en",
+   "loc": "40.7128,-74.0060",
+   "acceptLanguage": "en-US",
+   "kakao": [],
+   "google": [
+    "google.coord.newyork"
+   ]
+  },
+  {
+   "id": "london-en",
+   "loc": "51.5074,-0.1278",
+   "acceptLanguage": "en-GB,en;q=0.9",
+   "kakao": [],
+   "google": [
+    "google.coord.london"
+   ]
+  },
+  {
+   "id": "fallback-en",
+   "loc": "70,-90",
+   "acceptLanguage": "en",
+   "kakao": [],
+   "google": [
+    "google.coord.fallback"
+   ]
+  },
+  {
+   "id": "noformatted-en",
+   "loc": "10,10",
+   "acceptLanguage": "en",
+   "kakao": [],
+   "google": [
+    "google.coord.noformatted"
+   ],
+   "expectError": 501
+  },
+  {
+   "id": "kr-google-zero-en",
+   "loc": "37.5665,126.9780",
+   "acceptLanguage": "en",
+   "kakao": [
+    "kakao.coord.seoul"
+   ],
+   "google": [
+    "google.coord.zero"
+   ],
+   "expectError": 501
+  },
+  {
+   "id": "outside-zero",
+   "loc": "40.7128,-74.0060",
+   "acceptLanguage": "en",
+   "kakao": [],
+   "google": [
+    "google.coord.zero"
+   ],
+   "expectError": 501
+  },
+  {
+   "id": "kakao-500",
+   "loc": "37.5665,126.9780",
+   "acceptLanguage": "ko",
+   "kakao": [
+    "http:500"
+   ],
+   "google": [],
+   "expectError": 501
+  },
+  {
+   "id": "zero",
+   "loc": "0,0",
+   "acceptLanguage": "ko",
+   "kakao": [],
+   "google": [],
+   "expectError": 404
+  },
+  {
+   "id": "near-zero",
+   "loc": "0.0004,-0.0004",
+   "acceptLanguage": "ko",
+   "kakao": [],
+   "google": [],
+   "expectError": 404
+  }
+ ],
+ "addr": [
+  {
+   "id": "jamsil-google",
+   "address": "서울특별시 송파구 잠실동",
+   "google": [
+    "google.addr.jamsil"
+   ],
+   "kakao": []
+  },
+  {
+   "id": "nocountry-google",
+   "address": "Somewhere",
+   "google": [
+    "google.addr.nocountry"
+   ],
+   "kakao": []
+  },
+  {
+   "id": "jamsil-kakao-fallback",
+   "address": "서울 송파구 잠실본동",
+   "google": [
+    "google.addr.zero"
+   ],
+   "kakao": [
+    "kakao.addr.jamsil"
+   ],
+   "deviation": "The Lambda fails here (string coordinates reach toFixed); the port parses numbers (spec 2.5)",
+   "expectedPort": {
+    "country": "KR",
+    "address": "서울 송파구 잠실본동",
+    "location": {
+     "lat": 37.506,
+     "long": 127.084
+    }
+   }
+  }
+ ],
+ "queries": {
+  "none": "",
+  "app": "temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "widget-null": "temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)"
+ },
+ "weather": {
+  "cases": [
+   "seoul-ko",
+   "seoul-en",
+   "seoul-chrome",
+   "seoul-none",
+   "jeju-ko",
+   "space-ko",
+   "tsushima-ko",
+   "newyork-en",
+   "london-en",
+   "kr-google-zero-en",
+   "kakao-500"
+  ],
+  "versions": [
+   null,
+   "v000901",
+   "v000902",
+   "v000903"
+  ],
+  "queries": [
+   "none",
+   "app",
+   "widget-null"
+  ]
+ }
+}

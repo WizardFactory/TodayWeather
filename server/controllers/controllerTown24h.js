@@ -1810,7 +1810,7 @@ function ControllerTown24h() {
             lang = req.headers['accept-language'];
         }
 
-        var url = config.apiServer.url + '/geocode/coord/'+loc;
+        var url = config.apiServer.url + '/geocode/v000903/coord/'+loc;
         _retryRequest(url, lang, (err, geoInfo)=> {
             if (err) {
                 return next(err);

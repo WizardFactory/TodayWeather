@@ -22,7 +22,10 @@ var commands = [
     [path.join(__dirname, 'air-summary.test.js')],
     [path.join(__dirname, 'riseset-uv.test.js')],
     [path.join(__dirname, 'precipitation.test.js')],
-    [path.join(__dirname, 'vc-weather.test.js')]
+    [path.join(__dirname, 'vc-weather.test.js')],
+    [path.join(__dirname, 'gateway-geocoder.test.js')],
+    [path.join(__dirname, 'gateway-route.test.js')],
+    [path.join(__dirname, 'gateway-callers.test.js')]
 ];
 commands.forEach(function (args) {
     var result = spawnSync(process.execPath, args, {stdio: 'inherit'});

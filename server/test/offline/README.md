@@ -248,3 +248,16 @@ TZ=UTC NODE_PATH=/tmp/tw-2585-mongo/node_modules node server/test/offline/vc-loc
 - Update `CAPTURED` in `vc-weather.test.js`, the smoke's default instant, and the "valid window" note above.
 
 All four run in the RSS offline workflow. The workflow runs on Node 16 and 22 under UTC and Asia/Seoul, plus separate Node 10.15.3 and mongod jobs.
+
+## Gateway routes (#2606)
+
+`gateway-geocoder.test.js`, `gateway-route.test.js` and `gateway-callers.test.js` cover the public `/weather` and `/geocode` routes that replace the tw-backend-functions Lambdas (scenarios U, RT and IC in [the test scenarios](../../../specs/issue-2606-test-scenarios.md)). All three are part of `test:offline`. Besides the gather dependencies above, the route test needs `cors` and `express-session`:
+
+```sh
+npm install --prefix /tmp/issue-2606-harness --ignore-scripts --no-audit --no-fund --package-lock=false mocha@2.5.3 cheerio@0.20.0 xml2js@0.4.23 async@2.6.4 mongoose@5.1.2 sprintf@0.1.5 express@4.13.4 iconv-lite@0.4.24 dotenv@10.0.0 cors@2.8.5 express-session@1.15.6
+NODE_PATH=/tmp/issue-2606-harness/node_modules npm --prefix server run test:offline
+```
+
+The provider responses in `fixtures/gateway/providers.json` are synthetic and follow the real Kakao and Google response structures. `fixtures/gateway/goldens.json` is the output of the tw-backend-functions `a4c1deb` modules (geoinfo and weather, identical to the production handlers at `1b489a9`) on those fixtures and on the per-version backend samples in `backend.json`. It covers 19 coordinate cases, 3 address cases and 132 weather requests (versions × client queries × `Accept-Language` forms). Regenerate it with `fixtures/gateway/make-goldens.js` (the command is in its header). The Kakao address fallback case has no golden, because the Lambda crashes on it; the port's intended output is recorded in `cases.json`.
+
+The route test composes the app in `app.js` order (`cors()` → gateway → `express-session` → a stub backend) and reaches the stub over 127.0.0.1. `gateway-local-smoke.js` runs the real `bin/www` with mongod and stub providers in a loopback-only network namespace (scenario LD-1). It needs the full server dependency install, so it is not part of `test:offline`.

@@ -951,7 +951,7 @@ ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback)
 
 ControllerPush.prototype._requestGeoInfo = function (pushInfo, callback) {
     var url;
-    url = config.apiServer.url + '/geocode/coord/';
+    url = config.apiServer.url + '/geocode/v000903/coord/';
     url += pushInfo.geo[1]+","+pushInfo.geo[0];
 
     log.info('request url:'+url);

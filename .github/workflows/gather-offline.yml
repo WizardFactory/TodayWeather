@@ -27,7 +27,7 @@ jobs:
           node-version: '22.22.2'
           package-manager-cache: false
       - name: Install isolated test dependencies
-        run: npm install --prefix "$RUNNER_TEMP/gather-offline" --ignore-scripts --no-audit --no-fund --package-lock=false mocha@2.5.3 cheerio@0.20.0 xml2js@0.4.23 async@2.6.4 mongoose@5.1.2 sprintf@0.1.5 express@4.13.4 iconv-lite@0.4.24 dotenv@10.0.0
+        run: npm install --prefix "$RUNNER_TEMP/gather-offline" --ignore-scripts --no-audit --no-fund --package-lock=false mocha@2.5.3 cheerio@0.20.0 xml2js@0.4.23 async@2.6.4 mongoose@5.1.2 sprintf@0.1.5 express@4.13.4 iconv-lite@0.4.24 dotenv@10.0.0 cors@2.8.5 express-session@1.15.6
       - name: Run synthetic regression and functional smoke
         env:
           NODE_PATH: ${{ runner.temp }}/gather-offline/node_modules
@@ -37,6 +37,28 @@ jobs:
           TZ: UTC
           NODE_PATH: ${{ runner.temp }}/gather-offline/node_modules
         run: node server/test/offline/daily-response-smoke.js
+
+  gateway-node16:
+    # The gateway routes (#2606) run on the production Node 16.20.2 as well.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '16.20.2'
+          package-manager-cache: false
+      - name: Install isolated test dependencies
+        run: npm install --prefix "$RUNNER_TEMP/gateway-offline" --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.1.2 express@4.13.4 cors@2.8.5 express-session@1.15.6
+      - name: Run gateway tests
+        env:
+          NODE_PATH: ${{ runner.temp }}/gateway-offline/node_modules
+        run: |
+          node server/test/offline/gateway-geocoder.test.js
+          node server/test/offline/gateway-route.test.js
+          node server/test/offline/gateway-callers.test.js
 
   history-integration:
     runs-on: ubuntu-latest
