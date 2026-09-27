@@ -593,10 +593,10 @@ function warnUnknownCategories(index, product, unknown) {
     }
 }
 
-// Probability in %: 0..100, otherwise the -1 sentinel.
+// Probability in whole %: 0..100, otherwise the -1 sentinel.
 function parsePercent(value) {
     var number = parseMeasurement(value, -1);
-    return number >= 0 && number <= 100 ? number : -1;
+    return number >= 0 && number <= 100 ? Math.round(number) : -1;
 }
 
 // Complete decimal values only: ranges/thresholds must not become exact amounts.

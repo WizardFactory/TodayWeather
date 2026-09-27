@@ -4834,9 +4834,8 @@ ControllerTown.prototype._convertSummaryTo3H = function (summary) {
         }
         else if (key === 'pop') {
             // Short slot T carries the hourly POP of hour T; only hour T may replace it (#2620).
-            var pop = summary[key][summary[key].length-1];
-            if (parseInt(summary.time[summary.time.length-1].substr(0, 2)) % 3 === 0 && pop != undefined && pop !== -1) {
-                newItem[key] = pop;
+            if (summary.popAtT != undefined && summary.popAtT !== -1) {
+                newItem[key] = summary.popAtT;
             }
         }
         else if(key === 't1h' || key === 'wsd' || key == 'reh' || key === 'uuu' || key === 'vvv' || key === 'vec') {
@@ -4909,6 +4908,10 @@ ControllerTown.prototype._convert1Hto3H = function (srcList, usePartial) {
 
     srcList.forEach(function (src) {
         summary = self._createOrGet3hSummaryList(summaryList, src.date, src.time);
+        // summary.pop skips rows without pop (observations), so its index is not the hour's (#2620).
+        if (src.time === summary.time3h && src.pop != undefined) {
+            summary.popAtT = src.pop;
+        }
         for (key in src) {
             if (summary[key] == undefined) {
                 summary[key] = [];

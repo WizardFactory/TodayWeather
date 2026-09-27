@@ -297,6 +297,14 @@ test('#2620 shortest POP at hour T replaces the short slot T probability', () =>
     assert.equal(slot(req.short, '20260924', '1800').pop, 10, 'slots beyond shortest keep the short value');
 });
 
+test('#2620 slot pop comes from hour T regardless of row order and observation rows', () => {
+    const req = getShort(hourlyRows({'2026092412': {pop: 30}}));
+    const current = {date: '20260924', time: '1000', t1h: 18, rn1: 0, pty: 0, sky: 1, lgt: 0, reh: 60, uuu: 0, vvv: 0, vec: 0, wsd: 1};
+    // The observation at 10h has no pop; shortest rows arrive out of order.
+    town24h._mergeShortByShortest(req.short, [shortestRow(12, 60), shortestRow(11, 40)], [current], {date: '20260924', time: '1000'});
+    assert.equal(slot(req.short, '20260924', '1200').pop, 60);
+});
+
 test('#2620 shortest rows without POP keep the short probability', () => {
     const req = getShort(hourlyRows({'2026092412': {pop: 30}}));
     const shortest = [10, 11, 12].map(hour => shortestRow(hour, -1));

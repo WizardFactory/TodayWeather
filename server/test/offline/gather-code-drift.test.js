@@ -169,6 +169,10 @@ describe('gather drift: synthetic offline compatibility', function () {
             assert.strictEqual(r.data[0].pop, -1);
         });
     });
+    it('rounds a decimal shortest POP to a whole percent', function () {
+        assert.strictEqual(h.organize('organizeShortestData', h.shortestItems({POP: '30.4'})).data[0].pop, 30);
+        assert.strictEqual(h.organize('organizeShortestData', h.shortestItems({POP: '99.5'})).data[0].pop, 100);
+    });
     it('shortest without POP keeps the -1 sentinel', function () {
         var items = h.shortestItems().filter(function (i) { return i.category[0] !== 'POP'; });
         var r = h.organize('organizeShortestData', items); assert(r.isCompleted);
