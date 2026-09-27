@@ -233,7 +233,10 @@ test('budget: OpenWeather minute cap', async () => {
     for (let i = 0; i < 60; i++) { await record(budget, 'openweather', 'free', {}); }
     assert.equal(usage.rows['openweather:min:2026-09-27T15:20'].calls, 60);
     eq(await check(budget, 'openweather', 'free'), {allowed: false, reason: 'minute-cap'});
-    const later = budgetSetup({owmMinuteCap: 60}, '2026-09-27T15:21:00Z');
+    const nextMinute = budgetSetup({owmMinuteCap: 60}, '2026-09-27T15:21:00Z');
+    nextMinute.usage.rows = Object.assign(nextMinute.usage.rows, usage.rows);
+    eq(await check(nextMinute.budget, 'openweather', 'free'), {allowed: false, reason: 'minute-cap'}, 'rolling: the previous minute still counts fully');
+    const later = budgetSetup({owmMinuteCap: 60}, '2026-09-27T15:22:00Z');
     later.usage.rows = Object.assign(later.usage.rows, usage.rows);
     eq(await check(later.budget, 'openweather', 'free'), {allowed: true});
 });
@@ -376,7 +379,7 @@ test('chain: WAQI is not called twice when it already failed in the free phase',
     const r = await run(s.chain);
     assert.equal(r.outcome, 'failed');
     assert.equal(s.providers.aqicn.calls.length, 1);
-    eq(r.attempts.map(x => x.provider + ':' + x.phase), ['google:free', 'openweather:free', 'aqicn:free', 'openweather:paid', 'visualcrossing:paid', 'google:paid']);
+    eq(r.attempts.map(x => x.provider + ':' + x.phase), ['google:free', 'openweather:free', 'aqicn:free', 'visualcrossing:paid']);
 });
 
 test('budget: a caller exception is not swallowed by a store answering synchronously, and callbacks run once', async () => {
@@ -387,4 +390,73 @@ test('budget: a caller exception is not swallowed by a store answering synchrono
     assert.throws(() => budget.record('google', 'free', {}, () => { records++; throw boom; }), err => err === boom, 'record propagates');
     await new Promise(r => setImmediate(r));
     assert.equal(checks, 1); assert.equal(records, 1);
+});
+
+// ---- review round 1 (F1-F4) ----------------------------------------------------------------
+test('F1: a status field that cannot be coerced or is not a string is a classified failure, never a throw', async () => {
+    const bodies = [{status: {toString: null}}, {status: {valueOf: null, toString: null}, data: {}}, {status: 42, data: {}}, {status: ['ok'], data: {}},
+        {status: 'nope-' + KEYS.aqicn}];
+    const lines = [];
+    for (const body of bodies) {
+        const {http, providers} = adapters(() => ({status: 200, data: body}), lines);
+        for (const id of ['google', 'openweather', 'visualcrossing', 'aqicn']) {
+            let calls = 0;
+            const r = await new Promise(resolve => providers[id].fetchCurrent(seoul, {axios: http.axios, keyString, timeoutMs: 3000}, x => { calls++; resolve(x); }));
+            assert.equal(r.outcome, 'failed', id);
+            assert.ok(['invalid-body', 'status'].includes(r.kind), id + ' ' + JSON.stringify(r));
+            assert.equal(calls, 1);
+        }
+    }
+    const {http, providers} = adapters(() => ({status: 200, data: {status: 'nope-' + KEYS.aqicn}}), lines);
+    const r = await fetch(providers.aqicn, {axios: http.axios, keyString, timeoutMs: 3000});
+    assert.equal(r.reason, 'status-other', 'unknown status text is not reflected');
+    noKeyLeak(lines, JSON.stringify(r));
+});
+
+test('F2: a zero cap blocks the first call on an empty store, in every window', async () => {
+    const s = budgetSetup({googleMonthlyCap: 0, owmMonthlyCap: 0, owmMinuteCap: 0, paidProvidersEnabled: true, paidMonthlyCallCap: 0});
+    eq(await check(s.budget, 'google', 'free'), {allowed: false, reason: 'free-cap'});
+    eq(await check(s.budget, 'openweather', 'free'), {allowed: false, reason: 'free-cap'});
+    eq(await check(s.budget, 'google', 'paid'), {allowed: false, reason: 'paid-cap'});
+    eq(await check(s.budget, 'visualcrossing', 'paid'), {allowed: false, reason: 'paid-cap'});
+    const minuteOnly = budgetSetup({owmMinuteCap: 0});
+    eq(await check(minuteOnly.budget, 'openweather', 'free'), {allowed: false, reason: 'minute-cap'});
+    const one = budgetSetup({googleMonthlyCap: 1});
+    eq(await check(one.budget, 'google', 'free'), {allowed: true}, 'cap 1 with reserve still admits the first call');
+    await record(one.budget, 'google', 'free', {});
+    eq(await check(one.budget, 'google', 'free'), {allowed: false, reason: 'free-cap'});
+});
+
+test('F3: the OpenWeather minute cap is a rolling minute across the bucket boundary', async () => {
+    const late = budgetSetup({owmMinuteCap: 60}, '2026-09-27T23:59:59Z');
+    for (let i = 0; i < 60; i++) { await record(late.budget, 'openweather', 'free', {}); }
+    const atMidnight = budgetSetup({owmMinuteCap: 60}, '2026-09-28T00:00:00Z');
+    Object.assign(atMidnight.usage.rows, late.usage.rows);
+    eq(await check(atMidnight.budget, 'openweather', 'free'), {allowed: false, reason: 'minute-cap'}, '60 calls one second ago still count');
+    const halfway = budgetSetup({owmMinuteCap: 60}, '2026-09-28T00:00:30Z');
+    Object.assign(halfway.usage.rows, late.usage.rows);
+    for (let i = 0; i < 29; i++) { await record(halfway.budget, 'openweather', 'free', {}); }
+    eq(await check(halfway.budget, 'openweather', 'free'), {allowed: true}, '30 weighted from the previous minute + 29 = 59');
+    await record(halfway.budget, 'openweather', 'free', {});
+    eq(await check(halfway.budget, 'openweather', 'free'), {allowed: false, reason: 'minute-cap'}, '30 + 30 = 60');
+    const later = budgetSetup({owmMinuteCap: 60}, '2026-09-28T00:00:59Z');
+    Object.assign(later.usage.rows, halfway.usage.rows);
+    eq(await check(later.budget, 'openweather', 'free'), {allowed: true}, '30 this minute + 60 weighted 1/60 = 31');
+    const clear = budgetSetup({owmMinuteCap: 60}, '2026-09-28T00:02:00Z');
+    Object.assign(clear.usage.rows, halfway.usage.rows);
+    eq(await check(clear.budget, 'openweather', 'free'), {allowed: true});
+});
+
+test('F4: each provider is attempted at most once per request, across phases (at most four attempts)', async () => {
+    const s = chainSetup({config: {paidProvidersEnabled: true}, scripts: {google: failed('timeout'), openweather: failed('timeout'), aqicn: failed('timeout'), visualcrossing: failed('timeout')}});
+    const r = await run(s.chain);
+    assert.equal(r.outcome, 'failed');
+    eq(r.attempts.map(x => x.provider + ':' + x.phase), ['google:free', 'openweather:free', 'aqicn:free', 'visualcrossing:paid']);
+    for (const id of ['google', 'openweather', 'visualcrossing', 'aqicn']) { assert.equal(s.providers[id].calls.length, 1, id); }
+    // a provider skipped by its free budget is still eligible in the paid phase
+    const capped = chainSetup({config: {paidProvidersEnabled: true}, usageRows: {'google:m:2026-09': {_id: 'google:m:2026-09', calls: 9500, expireAt: 'x'}},
+        scripts: {openweather: failed('timeout'), aqicn: failed('timeout'), visualcrossing: failed('timeout')}});
+    const r2 = await run(capped.chain);
+    assert.equal(r2.provider, 'google');
+    eq(r2.attempts.map(x => x.provider + ':' + x.phase), ['openweather:free', 'aqicn:free', 'visualcrossing:paid', 'google:paid']);
 });

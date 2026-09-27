@@ -86,14 +86,16 @@ module.exports = {
         };
         http.request(deps.axios, {method: 'post', url: URL + encodeURIComponent(key(deps.keyString)), data: body,
             timeoutMs: deps.timeoutMs}, function (result) {
-            if (!result.ok) {
-                return callback({outcome: 'failed', kind: result.kind, reason: result.reason});
-            }
-            var obs = parse(result.body);
-            if (!obs) {
-                return callback({outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'});
-            }
-            callback({outcome: 'ok', observation: obs, cost: 1});
+            callback(http.guarded(function () {
+                if (!result.ok) {
+                    return {outcome: 'failed', kind: result.kind, reason: result.reason};
+                }
+                var obs = parse(result.body);
+                if (!obs) {
+                    return {outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'};
+                }
+                return {outcome: 'ok', observation: obs, cost: 1};
+            }));
         });
     }
 };

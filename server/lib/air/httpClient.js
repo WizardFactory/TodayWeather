@@ -74,6 +74,20 @@ function classify(err) {
     return {ok: false, kind: 'transport', reason: 'transport'};
 }
 
+/**
+ * Run an adapter's synchronous response handling; any exception (a provider field of an
+ * unexpected shape, a throwing getter, a non-coercible value) becomes one classified failure
+ * instead of an uncaught error in the worker.
+ */
+function guarded(handle) {
+    try {
+        return handle();
+    }
+    catch (err) {
+        return {outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'};
+    }
+}
+
 function isValidKey(key) {
     return typeof key === 'string' && key.length >= 10 && !/^You have to set/.test(key);
 }
@@ -81,5 +95,6 @@ function isValidKey(key) {
 module.exports = {
     request: request,
     classify: classify,
+    guarded: guarded,
     isValidKey: isValidKey
 };

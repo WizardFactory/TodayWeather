@@ -159,7 +159,9 @@ failure classification (timeout, transport, 401/403 → auth, 429 → quota, mal
 logs or reasons; `evaluate` (8 h, 30 km for stations only, PM required); budgets (monthly cap with 5 % reserve,
 OpenWeather minute cap, down markers, paid phase off by default, per-provider paid cap, Visual Crossing on the
 overseas day budget, store errors not blocking); and the ordering rules (free phase, exhausted phase, paid phase,
-skipping unconfigured/down/capped providers, no double WAQI call).
+skipping unconfigured/down/capped providers, one attempt per provider per request), and the review-round regressions: a
+non-string or non-coercible provider status is a classified failure, zero caps block on an empty store, the OpenWeather
+rolling minute across the bucket boundary, at most four attempts across phases.
 
 `air-fallback.test.js` keeps the #2622 fallback checks against the chain with only WAQI configured: AirKorea-shaped
 mapping, limits, no key, failures and their cache periods, cache reuse across module instances, answer after the

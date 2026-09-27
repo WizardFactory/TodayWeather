@@ -116,15 +116,29 @@ function createBudget(options) {
         return undefined;
     }
 
+    function calls(row) {
+        return row && typeof row.calls === 'number' ? row.calls : 0;
+    }
+
+    /**
+     * Rolling minute (D5): the current minute's calls plus the previous minute's, weighted by the
+     * part of the previous minute that is still inside the last 60 seconds. Shared across workers;
+     * a cap of 0 blocks the provider.
+     */
     function checkMinute(provider, callback) {
-        if (provider !== 'openweather' || !config.owmMinuteCap) {
+        if (provider !== 'openweather') {
             return callback();
         }
-        readById(AirProviderUsage, provider + ':min:' + minuteKey(new Date()), function (row) {
-            if (row && (row.calls || 0) >= config.owmMinuteCap) {
-                return callback('minute-cap');
-            }
-            callback();
+        var now = new Date();
+        var fraction = (60000 - (now.getTime() % 60000)) / 60000;
+        readById(AirProviderUsage, provider + ':min:' + minuteKey(now), function (current) {
+            readById(AirProviderUsage, provider + ':min:' + minuteKey(new Date(now.getTime() - 60000)), function (previous) {
+                var estimate = calls(current) + calls(previous) * fraction;
+                if (estimate >= config.owmMinuteCap) {
+                    return callback('minute-cap');
+                }
+                callback();
+            });
         });
     }
 
@@ -151,7 +165,8 @@ function createBudget(options) {
             return checkMinute(provider, callback);
         }
         readById(AirProviderUsage, provider + ':m:' + monthKey(new Date()), function (row) {
-            if (row && (row.calls || 0) >= cap * (1 - config.RESERVE)) {
+            // a missing document is zero calls; a cap of 0 therefore blocks the first call
+            if (calls(row) >= cap * (1 - config.RESERVE)) {
                 return callback('free-cap');
             }
             checkMinute(provider, callback);
@@ -163,7 +178,7 @@ function createBudget(options) {
             return callback('paid-disabled');
         }
         readById(AirProviderUsage, provider + ':paid:m:' + monthKey(new Date()), function (row) {
-            if (row && (row.calls || 0) >= config.paidMonthlyCallCap) {
+            if (calls(row) >= config.paidMonthlyCallCap) {
                 return callback('paid-cap');
             }
             if (provider === 'visualcrossing') {
@@ -206,7 +221,7 @@ function createBudget(options) {
             var updates = [[AirProviderUsage, id, {$inc: inc, $set: {expireAt: monthExpiry(now)}}]];
             if (provider === 'openweather') {
                 updates.push([AirProviderUsage, provider + ':min:' + minuteKey(now),
-                    {$inc: {calls: 1}, $set: {expireAt: new Date(now.getTime() + 2 * 60 * 1000)}}]);
+                    {$inc: {calls: 1}, $set: {expireAt: new Date(now.getTime() + 3 * 60 * 1000)}}]);
             }
             if (provider === 'visualcrossing') {
                 updates.push([VcUsage, dayKey(now), {$inc: {calls: 1, records: result.cost || 0, failures: result.failed ? 1 : 0}}]);

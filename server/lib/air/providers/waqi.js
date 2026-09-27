@@ -13,6 +13,8 @@ var AqiConverter = require('../../aqi.converter');
 
 var BASE_URL = 'https://api.waqi.info/feed/';
 var PPB_CODES = ['o3', 'no2', 'so2'];
+// documented WAQI status values; anything else is reported as 'status-other'
+var KNOWN_STATUSES = ['error', 'nug'];
 
 function key(keyString) {
     var keys = keyString ? keyString.aqi_keys : undefined;
@@ -83,21 +85,24 @@ module.exports = {
     fetchCurrent: function (gCoord, deps, callback) {
         var url = BASE_URL + 'geo:' + Number(gCoord.lat) + ';' + Number(gCoord.lon) + '/?token=' + encodeURIComponent(key(deps.keyString));
         http.request(deps.axios, {method: 'get', url: url, timeoutMs: deps.timeoutMs}, function (result) {
-            if (!result.ok) {
-                return callback({outcome: 'failed', kind: result.kind, reason: result.reason});
-            }
-            var body = result.body;
-            if (!Object.prototype.hasOwnProperty.call(body, 'status')) {
-                return callback({outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'});
-            }
-            if (body.status !== 'ok') {
-                return callback({outcome: 'failed', kind: 'status', reason: 'status-' + String(body.status).slice(0, 20)});
-            }
-            var obs = parse(body);
-            if (!obs) {
-                return callback({outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'});
-            }
-            callback({outcome: 'ok', observation: obs, cost: 1});
+            callback(http.guarded(function () {
+                if (!result.ok) {
+                    return {outcome: 'failed', kind: result.kind, reason: result.reason};
+                }
+                var body = result.body;
+                // status must be a plain string; unknown texts are not reflected into reasons or logs
+                if (typeof body.status !== 'string') {
+                    return {outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'};
+                }
+                if (body.status !== 'ok') {
+                    return {outcome: 'failed', kind: 'status', reason: KNOWN_STATUSES.indexOf(body.status) === -1 ? 'status-other' : 'status-' + body.status};
+                }
+                var obs = parse(body);
+                if (!obs) {
+                    return {outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'};
+                }
+                return {outcome: 'ok', observation: obs, cost: 1};
+            }));
         });
     }
 };

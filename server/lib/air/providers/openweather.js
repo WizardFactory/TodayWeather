@@ -54,14 +54,16 @@ module.exports = {
         var url = URL + '?lat=' + Number(gCoord.lat) + '&lon=' + Number(gCoord.lon) +
             '&appid=' + encodeURIComponent(key(deps.keyString));
         http.request(deps.axios, {method: 'get', url: url, timeoutMs: deps.timeoutMs}, function (result) {
-            if (!result.ok) {
-                return callback({outcome: 'failed', kind: result.kind, reason: result.reason});
-            }
-            var obs = parse(result.body);
-            if (!obs) {
-                return callback({outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'});
-            }
-            callback({outcome: 'ok', observation: obs, cost: 1});
+            callback(http.guarded(function () {
+                if (!result.ok) {
+                    return {outcome: 'failed', kind: result.kind, reason: result.reason};
+                }
+                var obs = parse(result.body);
+                if (!obs) {
+                    return {outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'};
+                }
+                return {outcome: 'ok', observation: obs, cost: 1};
+            }));
         });
     }
 };

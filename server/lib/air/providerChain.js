@@ -4,8 +4,9 @@
  * Free phase: FREE_ORDER (Google → OpenWeather → WAQI), each skipped when unconfigured, marked
  * down or over its free budget. When no free provider is left: WAQI (no cost) if not yet tried,
  * then — only with AIR_PAID_PROVIDERS_ENABLED — PAID_ORDER (OpenWeather → Visual Crossing →
- * Google) within the paid caps. The first observation that passes evaluate() wins; an auth or
- * quota rejection marks that provider down for every worker. Every request is counted.
+ * Google) within the paid caps. Each provider is attempted at most once per request (at most four
+ * attempts). The first observation that passes evaluate() wins; an auth or quota rejection marks
+ * that provider down for every worker. Every request is counted.
  */
 
 "use strict";
@@ -81,7 +82,9 @@ function createChain(options) {
                     return next();
                 }
                 var id = ids[index++];
-                if (!configured(id) || tried[id] && phase === 'free') {
+                // one attempt per provider per request: a provider that already failed is not retried in
+                // the paid phase; one skipped by its free budget is still eligible there
+                if (!configured(id) || tried[id]) {
                     return step();
                 }
                 budget.check(id, phase, 1, function (state) {

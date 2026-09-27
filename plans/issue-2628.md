@@ -1,6 +1,6 @@
 # Plan: air quality provider chain — PR 1 — issue 2628
 
-Revision 2, 2026-09-27 (r2: spec r2; `air-harness.js`; `httpClient.js`; smoke/check names as built). Consumes [intent](../intent/issue-2628.md) r1, [spec](../specs/issue-2628.md) r2. Owner: main agent (builder). Branch `feat/2628-air-provider-chain` from `fix/2622-waqi-air-fallback` afde7c77 (stacked on PR #2625).
+Revision 3, 2026-09-27 (r3: review round 1 corrections F1–F4 with regression tests 22–25; r2: spec r2; `air-harness.js`; `httpClient.js`; smoke/check names as built). Consumes [intent](../intent/issue-2628.md) r1, [spec](../specs/issue-2628.md) r2. Owner: main agent (builder). Branch `feat/2628-air-provider-chain` from `fix/2622-waqi-air-fallback` afde7c77 (stacked on PR #2625).
 
 ## File operations
 

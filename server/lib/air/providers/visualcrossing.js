@@ -56,15 +56,17 @@ module.exports = {
         var url = BASE_URL + Number(gCoord.lat) + ',' + Number(gCoord.lon) + '/today' +
             '?unitGroup=metric&include=current&elements=' + ELEMENTS + '&key=' + encodeURIComponent(key(deps.keyString));
         http.request(deps.axios, {method: 'get', url: url, timeoutMs: deps.timeoutMs}, function (result) {
-            if (!result.ok) {
-                return callback({outcome: 'failed', kind: result.kind, reason: result.reason});
-            }
-            var obs = parse(result.body);
-            if (!obs) {
-                return callback({outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'});
-            }
-            var cost = observation.finite(result.body.queryCost) ? result.body.queryCost : 1;
-            callback({outcome: 'ok', observation: obs, cost: cost});
+            callback(http.guarded(function () {
+                if (!result.ok) {
+                    return {outcome: 'failed', kind: result.kind, reason: result.reason};
+                }
+                var obs = parse(result.body);
+                if (!obs) {
+                    return {outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'};
+                }
+                var cost = observation.finite(result.body.queryCost) ? result.body.queryCost : 1;
+                return {outcome: 'ok', observation: obs, cost: cost};
+            }));
         });
     }
 };
