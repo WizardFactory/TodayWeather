@@ -37,7 +37,7 @@ From the repository root, run `npm run typecheck`, `npm test`, `npm run build` a
 
 | Layer | Required coverage |
 | --- | --- |
-| Domain/provider fixtures | Source discriminators; KMA/DSF current/hourly/daily/air; malformed arrays and application errors |
+| Domain/provider fixtures | Source discriminators (`KMA`, `VC`; retired `DSF` rejected); KMA/VC current/hourly/daily/air; malformed arrays and application errors |
 | Units and time | All six settings, midnight/yesterday, zero/sentinel handling, mixed forecast durations, snow and optional air summaries |
 | Direct transport | Exact public paths, encoded address, omitted credentials, abort/size/error handling, no live-to-demo fallback |
 | State/concurrency | Search submission freshness, late location results, city/unit changes, favorite deletion and preference restoration |

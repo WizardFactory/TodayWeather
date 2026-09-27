@@ -92,5 +92,7 @@ var dsfForecastSchema = new mongoose.Schema({
 
 dsfForecastSchema.index({geo: "2d", pubDate: 1, dateObj: 1});
 dsfForecastSchema.index({dateObj: 1});
+// Per-location reads of the last days (dsf.controller _findDataFromDB, #2585).
+dsfForecastSchema.index({geo: 1, dateObj: 1});
 
 module.exports = mongoose.model('DsfForecast', dsfForecastSchema);

@@ -835,7 +835,7 @@ angular.module('controller.forecastctrl', [])
                             if (geoInfo.country === "KR") {
                                 cityData.source = "KMA";
                             } else {
-                                cityData.source = "DSF"; // default source로 설정해야 함
+                                cityData.source = "VC"; // default source로 설정해야 함 (Visual Crossing, #2585)
                             }
                             WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
                             deferred.resolve();

@@ -251,17 +251,18 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
           )}
           <footer className="data-footer">
             <span>
-              제공 {data.source === "KMA" ? "기상청 (KMA)" : "해외 날씨 (DSF)"}{" "}
+              제공{" "}
+              {data.source === "KMA" ? "기상청 (KMA)" : "해외 날씨 (Visual Crossing)"}{" "}
               · 요청 단위 °{data.units.temperatureUnit}
             </span>
-            {data.source === "DSF" && (
+            {data.source === "VC" && (
               <a
                 className="text-link powered-by"
-                href="https://darksky.net/poweredby/"
+                href="https://www.visualcrossing.com/"
                 target="_blank"
                 rel="noreferrer"
               >
-                Powered by Dark Sky
+                Weather Data Provided by Visual Crossing
               </a>
             )}
             <Stamp at={data.observedAt} />
