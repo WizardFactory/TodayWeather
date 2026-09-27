@@ -114,7 +114,16 @@ async function main() {
     const indexes = await Zone.collection.indexes();
     assert.ok(indexes.some(i => i.unique && i.key.areaCode === 1 && i.key.warnVar === 1), 'unique zone index');
 
-    // S2: an unchanged announcement stores nothing and calls neither getWthrWrnMsg nor getPwnCd.
+    // S2: the 60-day bootstrap continues 10 days per cycle; afterwards an unchanged announcement stores
+    // nothing and calls neither getWthrWrnMsg nor getPwnCd.
+    let cycles = 1;
+    for (; cycles < 12; cycles++) {
+        const marker = await Zone.findOne({areaCode: '_sync'}).lean().exec();
+        if (marker.oldestSyncedTmFc <= KmaWarningCollector.kstDate(new Date(), -59)) { break; }
+        assert.equal(await gather(collector), 'skip');
+    }
+    assert.ok(cycles <= 8, 'bootstrap finished in ' + cycles + ' cycles');
+    assert.ok(providerCalls.filter(c => c.operation === 'getWthrWrnMsg').length === 1, 'bulletin requested once');
     const before = providerCalls.length;
     assert.equal(await gather(collector), 'skip');
     assert.deepEqual(providerCalls.slice(before).map(c => c.operation), ['getPwnStatus', 'getWthrPwn', 'getWthrInfo', 'getWthrBrkNews']);

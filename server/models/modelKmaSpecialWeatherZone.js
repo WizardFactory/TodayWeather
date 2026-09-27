@@ -19,6 +19,7 @@ var kmaSpecialWeatherZoneSchema = new mongoose.Schema({
     eventTmSeq: Number,
     eventRank: Number,      //0 release, 1 issue within one announcement
     lastSyncAt: Date,       //'_sync' only
+    oldestSyncedTmFc: String, //'_sync' only, YYYYMMDD: start of the covered day range (bootstrap progress)
     lastFromTmFc: String,   //'_sync' only, YYYYMMDD
     lastToTmFc: String,     //'_sync' only, YYYYMMDD
     updatedAt: Date

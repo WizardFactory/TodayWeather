@@ -18,10 +18,10 @@
       "id": "timer",
       "type": "backend",
       "label": "Scrape timer",
-      "sublabel": "Every 3 min · scrape/local",
+      "sublabel": "3 min · scrape/local; gather flag",
       "pos": [35, 90],
       "size": [185, 70],
-      "sources": [{"path": "server/controllers/controllerManager.js"}]
+      "sources": [{"path": "server/controllers/controllerManager.js"}, {"path": "server/app.js"}]
     },
     {
       "id": "collector",

@@ -2634,4 +2634,59 @@ Manager.prototype.startHourlyScrape = function (options) {
     return self.hourlyScrapeHandle;
 };
 
+
+/**
+ * KMA warning collector for the gather worker (#2609). startScrape covers scrape/local modes; the gather
+ * host runs SERVER_MODE=gather (docs/operations/kma-station-observations.md), so warnings need their own
+ * timer there, gated by KMA_WARNING_ENABLED in app.js. One run in flight at a time; the same KmaScraper
+ * instance keeps the collector state (pending announcement, sync marker) between runs.
+ * @param options {scrape?, setInterval?, intervalMs?, runImmediately?} injectable for tests
+ */
+Manager.prototype.startWarningScrape = function (options) {
+    options = options || {};
+    var scrape = options.scrape;
+    if (!scrape) {
+        var Scrape = require('../lib/kmaScraper');
+        scrape = new Scrape();
+    }
+    var intervalMs = options.intervalMs || 3 * 60 * 1000;
+    var schedule = options.setInterval || setInterval;
+    var inFlight = false;
+
+    function poll() {
+        if (inFlight) {
+            log.warn('kma warning: previous run still running, skip');
+            return;
+        }
+        inFlight = true;
+        var startedAt = Date.now();
+        try {
+            scrape.gatherSpecialWeatherSituation(function (err) {
+                inFlight = false;
+                if (err && err !== 'skip') {
+                    log.error('kma warning failed: ' + (err.message || err));
+                    return;
+                }
+                log.info('kma warning done ' + (err === 'skip' ? 'unchanged' : 'stored') + ' elapsedMs=' + (Date.now() - startedAt));
+            });
+        }
+        catch (e) {
+            inFlight = false;
+            log.error('kma warning threw: ' + e.message);
+        }
+    }
+
+    log.info('start kma warning collector intervalMs=' + intervalMs);
+    if (options.runImmediately !== false) {
+        poll();
+    }
+    var timer = schedule(poll, intervalMs);
+    this.warningScrapeHandle = {
+        stop: function () { clearInterval(timer); },
+        isRunning: function () { return inFlight; },
+        poll: poll
+    };
+    return this.warningScrapeHandle;
+};
+
 module.exports = Manager;

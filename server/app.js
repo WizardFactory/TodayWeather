@@ -156,6 +156,10 @@ if (process.env.KMA_STN_MINUTE_ENABLED === 'true' && config.mode === 'gather') {
 if (process.env.KMA_STN_HOURLY_ENABLED === 'true' && config.mode === 'gather') {
     manager.startHourlyScrape();
 }
+// KMA warnings (#2609) on the gather worker; scrape/local modes run them inside startScrape.
+if (process.env.KMA_WARNING_ENABLED === 'true' && config.mode === 'gather') {
+    manager.startWarningScrape();
+}
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

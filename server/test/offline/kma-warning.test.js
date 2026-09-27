@@ -164,6 +164,10 @@ test('situation codes: 폭풍해일/지진해일 reachable, 열대야 and 중대
     assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13].map(v => zones.weatherOf(v).weather), [1, 3, 9, 5, 7, 2, 10, 4, 11, 12, 13]);
     assert.deepEqual([0, 1, 2].map(s => plain(zones.levelOf(s))), [{level: 1, levelStr: '주의보'}, {level: 2, levelStr: '경보'}, {level: 4, levelStr: '중대경보'}]);
     assert.ok(ZoneModelDef.schema, 'zone model defined');
+    // mongoose drops undeclared fields: every field the collector writes must be in the schema.
+    const collectorSource = fs.readFileSync(path.join(root, 'lib/kmaWarningCollector.js'), 'utf8');
+    const written = ['lastSyncAt', 'oldestSyncedTmFc', 'lastFromTmFc', 'lastToTmFc', 'updatedAt'].filter(f => collectorSource.indexOf(f + ':') !== -1);
+    written.forEach(f => assert.ok(f in ZoneModelDef.schema.definition, 'schema declares ' + f));
 });
 
 test('t6 and preliminary texts keep readable locations', () => {
@@ -347,8 +351,9 @@ test('collector: stores types 1-4, applies zone state, skips repeats (AC1, AC2, 
     const active = zoneStore.docs.filter(d => d.active && d.warnVar > 0 && d.areaCode === 'L1091430').map(d => d.warnVar + '/' + d.warnStress).sort();
     assert.deepEqual(active, ['1/0', '2/0']);
     const days = request.calls.filter(c => c.operation === 'getPwnCd');
-    assert.equal(days.length, 60, 'empty state bootstraps 60 days, one KST day per request');
-    assert.deepEqual([days[0].params.fromTmFc, days[0].params.toTmFc, days[59].params.fromTmFc, days[59].params.toTmFc], ['20260729', '20260729', '20260926', '20260926']);
+    // Review 5328551599: the 60-day bootstrap is split into at most 10 KST days per sync, newest first.
+    assert.deepEqual(days.map(c => c.params.fromTmFc), ['20260926', '20260925', '20260924', '20260923', '20260922', '20260921', '20260920', '20260919', '20260918', '20260917']);
+    assert.ok(days.every(c => c.params.toTmFc === c.params.fromTmFc));
     // A single page per day (re-review 2): numOfRows 10000 returned all 4,499 rows of 60 days in one page.
     assert.ok(days.every(c => c.params.numOfRows === '10000' && c.params.pageNo === '1'));
     const msgCall = request.calls.find(c => c.operation === 'getWthrWrnMsg');
@@ -358,7 +363,16 @@ test('collector: stores types 1-4, applies zone state, skips repeats (AC1, AC2, 
     const count = situations.docs.length;
     request.calls.length = 0;
     assert.equal(await gather(collector), 'skip');
-    assert.deepEqual(request.calls.map(c => c.operation), ['getPwnStatus', 'getWthrPwn', 'getWthrInfo', 'getWthrBrkNews'], 'no bulletin or zone call without a change');
+    assert.equal(request.calls.filter(c => c.operation === 'getWthrWrnMsg').length, 0, 'no bulletin call without a change');
+    // While the bootstrap is incomplete each cycle backfills older days (at most 10 calls including yesterday and today).
+    const backfill = request.calls.filter(c => c.operation === 'getPwnCd').map(c => c.params.fromTmFc);
+    assert.deepEqual(backfill, ['20260926', '20260925', '20260916', '20260915', '20260914', '20260913', '20260912', '20260911', '20260910', '20260909']);
+    for (let i = 0; i < 6; i++) { await gather(collector); }
+    request.calls.length = 0;
+    assert.equal(await gather(collector), 'skip');
+    assert.deepEqual(request.calls.map(c => c.operation), ['getPwnStatus', 'getWthrPwn', 'getWthrInfo', 'getWthrBrkNews'], 'after the bootstrap (8 syncs), no zone call without a change');
+    const marker = zoneStore.docs.find(d => d.areaCode === '_sync');
+    assert.ok(marker.oldestSyncedTmFc <= '20260729', 'bootstrap reached the 60-day limit: ' + marker.oldestSyncedTmFc);
     assert.equal(situations.docs.length, count);
 });
 
@@ -378,18 +392,19 @@ test('collector: a lagging announcement stays pending and is retried (AC4, decis
     await gather(collector);
     assert.equal(situations.docs.filter(d => d.type === 1).length, 0, 'zone rows missing: not processed');
     const windows = request.calls.filter(c => c.operation === 'getPwnCd').map(c => c.params.fromTmFc);
-    assert.deepEqual(windows.slice(60), ['20260925', '20260926'], 'incremental sync overlaps the previous sync by a day');
+    assert.deepEqual(windows.slice(10, 12), ['20260926', '20260925'], 'the next sync covers today and yesterday first');
     cdReady = true; clock.now += 3 * 60000;
     await gather(collector);
     assert.equal(situations.docs.filter(d => d.type === 1).length, 1, 'processed once both operations reflect it');
     // Early or late announcements need no schedule: a new tmSeq is picked up on the next poll.
+    for (let i = 0; i < 6; i++) { clock.now += 3 * 60000; await gather(collector); }
     request.calls.length = 0; clock.now += 60000;
     await gather(collector);
-    assert.ok(request.calls.every(c => c.operation !== 'getPwnCd'), 'no resync within the hour');
+    assert.ok(request.calls.every(c => c.operation !== 'getPwnCd'), 'bootstrap done: no resync within the hour');
     clock.now += 61 * 60000;
     request.calls.length = 0;
     await gather(collector);
-    assert.equal(request.calls.filter(c => c.operation === 'getPwnCd').length, 2, 'hourly resync without a change (yesterday and today)');
+    assert.ok(request.calls.filter(c => c.operation === 'getPwnCd').length >= 2, 'resync without a change (today and yesterday)');
 });
 
 test('collector: bulletin permanently missing is stored without it after the retry budget', async () => {
@@ -437,6 +452,9 @@ test('collector: drift between zone state and t6 is logged', async () => {
     const handler = routes({getPwnStatus: () => ({body: fixture('pwn-status')}), getWthrWrnMsg: () => ({body: page(wrnMsgDay)})});
     const {collector} = makeCollector({handler, situationModel: situations, zoneModel: zoneStore});
     await gather(collector);
+    assert.ok(!logs.some(l => l.level === 'warn' && /t6/.test(l.args.join(' '))), 'no drift warning while the bootstrap is incomplete');
+    // 10 days in the first sync and 8 older days per later sync: the 60-day window is covered after 8 syncs.
+    for (let i = 0; i < 7; i++) { await gather(collector); }
     assert.ok(logs.some(l => l.level === 'warn' && /t6/.test(l.args.join(' '))), 'state at tmSeq 128 is active while t6 is none');
 });
 
@@ -490,6 +508,39 @@ test('controller getSpecialInfo reads active zones for the town (AC6, AC8)', asy
     await gather(later.collector);
     assert.deepEqual(await info({first: '제주특별자치도', second: '서귀포시', third: '성산읍'}), []);
     await assert.rejects(new Promise((resolve, reject) => new Controller().getSpecialInfo(undefined, '', (err, l) => err ? reject(err) : resolve(l))));
+});
+
+test('gather-mode warning timer: 3 minutes, one run in flight, app.js gate (review 5328551599)', () => {
+    const src = fs.readFileSync(path.join(root, 'controllers/controllerManager.js'), 'utf8');
+    const start = src.indexOf('Manager.prototype.startWarningScrape =');
+    assert.ok(start > 0, 'startWarningScrape defined');
+    const end = src.indexOf('\n};', start) + 3;
+    const warnings = [];
+    function Manager() {}
+    vm.runInNewContext(src.slice(start, end), {Manager, Date, clearInterval, log: {info() {}, warn: m => warnings.push(m), error: m => warnings.push(m)},
+        require: () => { throw new Error('scrape is injected'); }});
+    const pending = [];
+    let interval;
+    const handle = new Manager().startWarningScrape({scrape: {gatherSpecialWeatherSituation: cb => pending.push(cb)}, setInterval: (f, ms) => { interval = ms; return 1; }});
+    assert.equal(interval, 180000);
+    assert.equal(pending.length, 1, 'immediate run');
+    handle.poll();
+    assert.equal(pending.length, 1, 'overlapping tick skipped');
+    pending[0]('skip');
+    handle.poll();
+    pending[1](new Error('boom'));
+    assert.ok(warnings.some(m => /boom/.test(m)));
+    handle.poll();
+    assert.equal(pending.length, 3, 'runs again after an error');
+    const appSrc = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+    const gate = appSrc.match(/if \(process\.env\.KMA_WARNING_ENABLED[\s\S]*?\n}/);
+    assert.ok(gate, 'gate in app.js');
+    for (const [env, mode, expected] of [[{KMA_WARNING_ENABLED: 'true'}, 'gather', 1], [{KMA_WARNING_ENABLED: 'true'}, 'service', 0],
+        [{KMA_WARNING_ENABLED: 'true'}, 'scrape', 0], [{}, 'gather', 0], [{KMA_WARNING_ENABLED: 'false'}, 'gather', 0]]) {
+        let calls = 0;
+        vm.runInNewContext(gate[0], {process: {env}, config: {mode}, manager: {startWarningScrape: () => calls++}});
+        assert.equal(calls, expected, JSON.stringify({env, mode}));
+    }
 });
 
 test('scraper delegates to the collector and no longer scrapes status.jsp (AC10)', () => {

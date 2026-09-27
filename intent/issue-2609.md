@@ -54,3 +54,7 @@ Source: independent verification `reports/sdlc/issue-2609/independent-verificati
 
 Source: AK request "목표에서 벗어나지 않는 상태에서 재검토 3회" and re-review round 1 (HIGH). The `allEndTime` zone-wide release rule dropped active warnings, for example 부산서부 폭염 for a day. The two phantom zones that motivated it came from release rows dropped by multi-page `getPwnCd` windows. Releases now apply per zone and type, and `getPwnCd` is fetched one KST day per request. AC5 now reads "per-type release" instead of "`allEndTime` release". Quota: the one-time bootstrap is 60 requests; each change or hourly resync is 2 requests.
 
+## Amendment 2026-09-27 (r1d)
+
+Source: PR review 5328551599 (ak-ongyeol), required item 1 and recommendation 3. The gather host runs `SERVER_MODE=gather` (docs/operations/kma-station-observations.md), where `startScrape` does not run, so warnings are collected there by a `KMA_WARNING_ENABLED` gather timer (as #2573 did for station observations). The 60-day bootstrap is split into at most 10 days per sync. Recommendation 2 (quota) is answered in the PR Operations section; no cadence change. ACs are unchanged. The deployment step now includes setting `KMA_WARNING_ENABLED=true` on the gather host.
+

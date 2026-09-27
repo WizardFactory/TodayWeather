@@ -8,7 +8,9 @@
  * (tmFc, tmSeq) is the change signal; getWthrWrnMsg and getPwnCd are called only while an announcement
  * is unprocessed. It is processed once both reflect it, retried on later cycles while either lags, and
  * stored without a bulletin after MAX_PENDING_CYCLES. getPwnCd windows overlap by a day and are
- * resynced hourly so that late rows are applied. getPwnCd is requested one KST day at a time: multi-page
+ * resynced hourly so that late rows are applied. An incomplete 60-day bootstrap continues every cycle,
+ * ZONE_DAYS_PER_SYNC days at a time, newest first; replay applies only newer events per zone and type, so
+ * the fetch order does not change the result. getPwnCd is requested one KST day at a time: multi-page
  * windows repeat and drop rows at page boundaries (release rows went missing on 2026-09-27), while one
  * day fits one page (at most 275 rows a day over 60 days).
  */
@@ -28,6 +30,9 @@ var RESYNC_MS = 60*60*1000;
 var ZONE_LOOKBACK_DAYS = 59;
 // One page per KST day: numOfRows 10000 returned all 4,499 rows of 60 days in one page on 2026-09-27.
 var ZONE_PAGE_ROWS = 10000;
+// At most this many KST days per sync, newest first: the 60-day bootstrap spreads over cycles and resumes
+// where it stopped, so a slow or failing provider holds a cycle for at most 10 requests.
+var ZONE_DAYS_PER_SYNC = 10;
 var SYNC_MARKER = '_sync';
 
 var TYPE_SPECIAL = 1;
@@ -43,6 +48,16 @@ var TYPE_WEATHER_FLASH = 4;
 function kstDate(date, offsetDays) {
     var kst = new Date(date.getTime() + 9*3600*1000 + (offsetDays || 0)*24*3600*1000);
     return kst.toISOString().slice(0, 10).replace(/-/g, '');
+}
+
+/**
+ * @param day YYYYMMDD
+ * @param n days to add
+ * @returns {string} YYYYMMDD
+ */
+function shiftDay(day, n) {
+    return new Date(Date.UTC(+day.slice(0, 4), +day.slice(4, 6) - 1, +day.slice(6, 8)) + n*24*3600*1000)
+        .toISOString().slice(0, 10).replace(/-/g, '');
 }
 
 /**
@@ -90,6 +105,44 @@ KmaWarningCollector.prototype._store = function (doc, callback) {
 };
 
 /**
+ * KST days for one sync, newest first, at most ZONE_DAYS_PER_SYNC: days since the previous sync (today and
+ * yesterday at least), then older days until the 60-day window is covered.
+ * @param now
+ * @param marker '_sync' document or undefined
+ * @returns {{days: string[], oldest: string}} oldest is the start of the contiguous covered range afterwards
+ */
+function planDays(now, marker) {
+    var today = kstDate(now);
+    var earliest = kstDate(now, -ZONE_LOOKBACK_DAYS);
+    var from = marker && marker.lastSyncAt ? kstDate(new Date(marker.lastSyncAt), -1) : today;
+    if (from < earliest) {
+        from = earliest;
+    }
+    if (from > today) {
+        from = today;
+    }
+    var days = [];
+    for (var offset = 0; kstDate(now, -offset) >= from; offset++) {
+        days.push(kstDate(now, -offset));
+    }
+    var covered = marker && marker.oldestSyncedTmFc && days.length <= ZONE_DAYS_PER_SYNC ? marker.oldestSyncedTmFc : null;
+    days = days.slice(0, ZONE_DAYS_PER_SYNC);
+    var oldest = covered && covered < days[days.length - 1] ? covered : days[days.length - 1];
+    // Backfill older days below the covered range.
+    for (var back = 1; days.length < ZONE_DAYS_PER_SYNC; back++) {
+        var day = shiftDay(oldest, -back);
+        if (day < earliest) {
+            break;
+        }
+        days.push(day);
+    }
+    if (days[days.length - 1] < oldest) {
+        oldest = days[days.length - 1];
+    }
+    return {days: days, oldest: oldest};
+}
+
+/**
  * Apply getPwnCd rows since the previous sync (60 days when the state is empty) and persist changed zones.
  * @param callback (err, {rows, entries})
  */
@@ -109,19 +162,8 @@ KmaWarningCollector.prototype.syncZones = function (callback) {
                 state[zones.stateKey(doc.areaCode, doc.warnVar)] = doc;
             }
         });
-        var earliest = kstDate(now, -ZONE_LOOKBACK_DAYS);
-        var from = marker && marker.lastSyncAt ? kstDate(new Date(marker.lastSyncAt), -1) : earliest;
-        if (from < earliest) {
-            from = earliest;
-        }
-        var to = kstDate(now);
-        var days = [];
-        for (var offset = 0; kstDate(now, -ZONE_LOOKBACK_DAYS + offset) <= to; offset++) {
-            var day = kstDate(now, -ZONE_LOOKBACK_DAYS + offset);
-            if (day >= from) {
-                days.push(day);
-            }
-        }
+        var plan = planDays(now, marker);
+        var days = plan.days;
         var rows = [];
         async.eachSeries(days, function (day, done) {
             self.requester.getAll('getPwnCd', {fromTmFc: day, toTmFc: day}, ZONE_PAGE_ROWS, function (err, items) {
@@ -142,19 +184,22 @@ KmaWarningCollector.prototype.syncZones = function (callback) {
                 if (err) {
                     return callback(err);
                 }
+                var complete = plan.oldest <= kstDate(now, -ZONE_LOOKBACK_DAYS);
                 KmaSpecialWeatherZone.update({areaCode: SYNC_MARKER, warnVar: -1},
-                    {areaCode: SYNC_MARKER, warnVar: -1, lastSyncAt: now, lastFromTmFc: from, lastToTmFc: to, updatedAt: now},
+                    {areaCode: SYNC_MARKER, warnVar: -1, lastSyncAt: now, oldestSyncedTmFc: plan.oldest,
+                     lastFromTmFc: days[days.length - 1], lastToTmFc: days[0], updatedAt: now},
                     {upsert: true}, function (err) {
                         if (err) {
                             return callback(err);
                         }
                         self.lastSyncAt = now;
-                        log.info('kma warning zones synced from=' + from + ' to=' + to + ' rows=' + rows.length +
-                                 ' changed=' + changed.length);
+                        self.bootstrapComplete = complete;
+                        log.info('kma warning zones synced days=' + days.length + ' newest=' + days[0] + ' oldest=' + plan.oldest +
+                                 (complete ? '' : ' (bootstrap continues)') + ' rows=' + rows.length + ' changed=' + changed.length);
                         var entries = Object.keys(state).map(function (key) {
                             return state[key];
                         });
-                        callback(null, {rows: rows, entries: entries});
+                        callback(null, {rows: rows, entries: entries, complete: complete});
                     });
             });
         });
@@ -223,14 +268,14 @@ KmaWarningCollector.prototype._specialStep = function (result, callback) {
                 }
                 result.synced = !!zoneResult;
                 var drift = zoneResult ? zones.driftFromT6(zoneResult.entries, status.t6) : null;
-                if (drift && drift.missing.length > 0) {
+                if (drift && zoneResult.complete && drift.missing.length > 0) {
                     log.warn('kma warning zone state differs from t6 active=' + drift.active + ' none=' + drift.none +
                              ' missing=' + drift.missing.join(','));
                 }
                 var hasRows = zoneResult && zoneResult.rows.some(function (row) {
                     return String(row.tmFc) === String(status.tmFc) && String(row.tmSeq) === String(status.tmSeq);
                 });
-                var quiet = zoneResult && drift.none && drift.active === 0;
+                var quiet = zoneResult && zoneResult.complete && drift.none && drift.active === 0;
                 var ready = !!bulletin && !!(hasRows || quiet);
                 if (errors.length > 0 || (!ready && self.pending.cycles < MAX_PENDING_CYCLES)) {
                     log.info('kma warning announcement ' + key + ' pending cycle=' + self.pending.cycles +
@@ -276,7 +321,7 @@ KmaWarningCollector.prototype._resyncStep = function (result, callback) {
             callback(err);
         });
     }
-    if (self.lastSyncAt && Date.now() - self.lastSyncAt.getTime() < RESYNC_MS) {
+    if (self.lastSyncAt && self.bootstrapComplete && Date.now() - self.lastSyncAt.getTime() < RESYNC_MS) {
         return callback();
     }
     KmaSpecialWeatherZone.find({areaCode: SYNC_MARKER}).lean().exec(function (err, list) {
@@ -284,8 +329,10 @@ KmaWarningCollector.prototype._resyncStep = function (result, callback) {
             return callback(err);
         }
         var last = list[0] && list[0].lastSyncAt ? new Date(list[0].lastSyncAt) : null;
-        if (last && Date.now() - last.getTime() < RESYNC_MS) {
+        var complete = !!(list[0] && list[0].oldestSyncedTmFc && list[0].oldestSyncedTmFc <= kstDate(new Date(), -ZONE_LOOKBACK_DAYS));
+        if (last && complete && Date.now() - last.getTime() < RESYNC_MS) {
             self.lastSyncAt = last;
+            self.bootstrapComplete = true;
             return callback();
         }
         sync();
