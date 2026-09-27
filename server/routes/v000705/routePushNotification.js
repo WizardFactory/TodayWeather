@@ -200,7 +200,7 @@ router.delete('/', function(req, res) {
     }
     if (tasks.length <= 0) {
         log.error('invalid push info for delete', pushInfo);
-        return res.status(403).send(err.message);
+        return res.status(403).send('invalid push info category');
     }
 
     async.parallel(tasks, function (err, results) {

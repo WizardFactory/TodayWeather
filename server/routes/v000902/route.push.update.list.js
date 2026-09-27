@@ -118,6 +118,10 @@ router.post('/', function(req, res) {
            if (!obj.hasOwnProperty('location') && !obj.hasOwnProperty('town')) {
                throw new Error('invalid push info location or town is empty');
            }
+
+           if (obj.category !== undefined && obj.category !== 'alarm' && obj.category !== 'alert') {
+               throw new Error('invalid push info category');
+           }
         });
     }
     catch (err) {

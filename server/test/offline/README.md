@@ -291,3 +291,16 @@ TZ=UTC TW_MONGO_URL=mongodb://127.0.0.1:27099/tw2609 TW_CLIENT_LIB=/tmp/tw-clien
 
 jQuery (`lib/jquery/dist`) is not in `bower.json`; copy it from the `jquery@3.3.1` npm package. Screenshots and results go to `TW_SMOKE_OUTPUT_DIR`.
 
+## Push store (#2626)
+
+`push-store.test.js` (in `test:offline`) runs the real push routers and controllers with `PUSH_STORE=sqlite` on a temporary file. It covers push-list upserts, token changes on every record (including collisions), `DELETE` of city 0, 403 for an unknown category, alarm and alert selection, the 6-hour alert guard, a corrupt file, another `user_version`, and the Mongo store's query shapes with fake models. `push-store-concurrency.js` starts 10 writer processes (200 records), checks that a waiting writer keeps its event loop free, recovers a dead owner's lock and two waiters on it, and opens the file with Python `sqlite3` when available. Both need `sql.js@1.8.0 body-parser@1.13.3` besides the RSS smoke dependencies and run on Node 10.15.3, 16.20.2 and 22.
+
+`push-worker-smoke.js` needs the locked service dependencies (`npm ci` of `server/package-lock.json`). It sends alarms and alerts through the real controllers from the SQLite store, with weather from a loopback stub serving `fixtures/push-kma-weather.json` (the RSS response smoke's v000903 KMA response with rain in `current`) and FCM replaced. It then starts `bin/push-worker` and fails on any listener, MongoDB connection or non-loopback socket.
+
+```sh
+NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/push-store.test.js
+NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/push-store-concurrency.js
+NODE_PATH=/tmp/tw-runtime-candidate/node_modules node server/test/offline/push-worker-smoke.js
+```
+
+These are local checks; FCM delivery to devices and the tw-svc deployment are operator checks in #2626.

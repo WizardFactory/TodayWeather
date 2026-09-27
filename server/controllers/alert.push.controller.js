@@ -11,7 +11,7 @@ const sprintf = require('sprintf');
 
 const config = require('../config/config');
 
-const AlertPush = require('../models/alert.push.model');
+const pushStore = require('../lib/pushStore');
 const kmaTimeLib = require('../lib/kmaTimeLib');
 const ControllerPush = require('./controllerPush');
 const AqiConverter = require('../lib/aqi.converter');
@@ -389,15 +389,7 @@ class AlertPushController {
      */
     _updateDb(alertPush, callback) {
         log.info(JSON.stringify({alertPush: alertPush}));
-        AlertPush.update(
-            {_id: alertPush._id},
-            {$set: {"airAlerts": alertPush.airAlerts, "precipAlerts": alertPush.precipAlerts}},
-            function (err, result) {
-                if (err) {
-                    return callback(err);
-                }
-                return callback(undefined, result);
-            });
+        pushStore.get().updateAlertState(alertPush, callback);
     }
 
     /**
@@ -797,100 +789,12 @@ class AlertPushController {
      * @private
      */
     _getAlertPushByTime(time, callback) {
-
-        /**
-         * 둘다 push한 시간이 6시간 이내여만 추가로 검토하지 않음.
-         * 아래 function이 mongodb 내부에서 도는지 es6를 지원하지 않는 경우도 있음.
-         * @returns {boolean}
-         */
-        function checkUpdateInterval() {
-            var limitPushTime = new Date();
-            limitPushTime.setHours(limitPushTime.getHours()-6);
-            var needToCheck = true;
-            if (this.precipAlerts) {
-                   if (this.precipAlerts.pushTime >= limitPushTime) {
-                       needToCheck = false;
-                   }
-            }
-
-            if (this.airAlerts) {
-                if (this.airAlerts.pushTime >= limitPushTime) {
-                    needToCheck = false;
-                }
-            }
-
-            return needToCheck;
-        }
-
-        /**
-         * 기준시(time)보다 시작시간이 작아야 하고, 기준시보다 종료가 커야 함.
-         * |--------|-----------|-------------|-------|
-         * 0시  startTime     {time}       endtime   24시
-         * @type {{reverseTime: boolean, startTime: {$lte: *}, endTime: {$gte: *}}}
-         */
-        let queryN = {enable: true, reverseTime: false, startTime: {$lte:time}, endTime: {$gte:time}};
-        let queryR = {enable: true, reverseTime: true, $or: [{startTime: {$lte:time}}, {endTime: {$gte:time}}]};
-        let queryList = [];
-        queryList.push(queryN);
-        queryList.push(queryR);
-        let query = {$or: queryList};
-        AlertPush.find(query).$where(checkUpdateInterval).lean().exec( (err, list) => {
-            if (err) {
-                return callback(err);
-            }
-            callback(undefined, list);
-        });
+        // Enabled alerts whose window contains time; skipped when an alert was sent in the last 6 hours.
+        pushStore.get().getAlertsByTime(time, callback);
     }
 
     _removeDuplicates(callback) {
-        var query = [
-            {
-                $group: {
-                    _id: {registrationId: "$registrationId", cityIndex:"$cityIndex", id:"$id"},
-                    updatedAts:{"$addToSet": {updatedAt: "$updatedAt"}},
-                    count:{"$sum": 1}
-                }
-            },
-            {
-                $match:{count:{"$gt":1}}
-            }];
-        AlertPush.aggregate(query).exec((err, results) => {
-            if (err) {
-                log.error(err);
-                return callback(null);
-            }
-            results = results.filter((obj) => {
-                return obj._id.registrationId != undefined;
-            });
-
-            log.info(`alertPushDuplicates:${results.length}`);
-            if (results.length <=0 ) {
-                return callback(null);
-            }
-            log.info('duplicates:',JSON.stringify(results));
-
-            async.mapSeries(results,
-                (obj, callback) => {
-                    if (obj._id.registrationId == undefined) {
-                        log.info('skip ', obj);
-                        return callback(null);
-                    }
-                    var updatedAt = obj.updatedAts[0].updatedAt < obj.updatedAts[1].updatedAt ? obj.updatedAts[0].updatedAt : obj.updatedAts[1].updatedAt;
-                    var removeQuery = {
-                        registrationId: obj._id.registrationId,
-                        cityIndex: obj._id.cityIndex,
-                        id: obj._id.id,
-                        updatedAt: updatedAt
-                    };
-                    AlertPush.remove(removeQuery).exec(callback);
-                },
-                (err) => {
-                    if (err) {
-                        log.error(err);
-                    }
-                    callback(null);
-                });
-        });
+        pushStore.get().removeDuplicateAlerts(callback);
     }
 
     sendAlertPushList(time, callback) {
@@ -943,7 +847,7 @@ class AlertPushController {
         let current = new Date();
         current.setDate(current.getDate()-60);
 
-        AlertPush.remove({"updateAt": {$lt:current} }, function (err) {
+        pushStore.get().removeOldAlerts(current, function (err) {
             if (err) {
                 log.error(err);
             }
@@ -990,83 +894,23 @@ class AlertPushController {
         alertPush.updatedBy = 'user';
         alertPush.reverseTime = alertPush.startTime > alertPush.endTime;
 
-        let query = {
-            type: alertPush.type,
-            cityIndex: alertPush.cityIndex,
-            id: alertPush.id};
-
-        if (alertPush.registrationId) {
-           query.registrationId = alertPush.registrationId;
-        }
-        else if (alertPush.fcmToken) {
-            query.fcmToken = alertPush.fcmToken;
-        }
-
-        AlertPush.find(query)
-            .lean()
-            .exec((err, list) => {
-                if (err) {
-                    return callback(err);
-                }
-                if (list.length === 0) {
-                    (new AlertPush(alertPush)).save(callback);
-                }
-                else {
-                    if (list.length > 1) {
-                        log.error('alert push was duplicated list:'+JSON.stringify(list));
-                    }
-
-                    AlertPush.update(query, {$set: alertPush}, callback);
-                }
-            });
+        pushStore.get().upsertAlert(alertPush, callback);
     }
 
     removeAlertPush(pushInfo, callback) {
-        let query = {};
-
-        if (pushInfo.fcmToken) {
-            query.fcmToken = pushInfo.fcmToken;
-        }
-        else if (pushInfo.registrationId) {
-            query.registrationId = pushInfo.registrationId;
-        }
-        else {
+        let selector = ControllerPush.prototype.makeRemoveSelector(pushInfo);
+        if (!selector) {
             return callback(new Error(`unknown fcm token or registrationId pushInfo:${JSON.stringify(pushInfo)}`));
         }
-
-        if (pushInfo.cityIndex) {
-            query.cityIndex = pushInfo.cityIndex;
-
-            if (pushInfo.id) {
-                query.id = pushInfo.id;
-            }
-        }
-
-        log.info(`remove alert push ${JSON.stringify(query)}`);
-
-        AlertPush.remove(query,
-            function (err, result) {
-                if (err) {
-                    return callback(err);
-                }
-                if (!result) {
-                    return callback(new Error(`Fail to get alert result query:${JSON.stringify(query)}`));
-                }
-                log.debug(`remove alert result ${JSON.stringify(result)}`);
-                callback(undefined, result);
-            });
+        pushStore.get().removeAlerts(selector, callback);
     }
 
     updateRegistrationId(newId, oldId, callback) {
-        AlertPush.update({registrationId: oldId},
-            {$set: {registrationId: newId}},
-            callback);
+        pushStore.get().updateAlertToken('registrationId', newId, oldId, callback);
     }
 
     updateFcmToken(newId, oldId, callback) {
-        AlertPush.update({fcmToken: oldId},
-            {$set : {fcmToken: newId}},
-            callback);
+        pushStore.get().updateAlertToken('fcmToken', newId, oldId, callback);
     }
 
     /**
@@ -1076,9 +920,7 @@ class AlertPushController {
      * @private
      */
     _disableByFcm(fcmToken, callback) {
-        AlertPush.update({fcmToken: fcmToken},
-            {$set : {enable: false, updatedAt: new Date(), updatedBy: 'push'}},
-            callback);
+        pushStore.get().disableAlertsByFcm(fcmToken, callback);
     }
 }
 

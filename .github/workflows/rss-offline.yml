@@ -36,6 +36,13 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/rss-smoke"
           --ignore-scripts --no-audit --no-fund
           async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3
+          sql.js@1.8.0 body-parser@1.13.3
+      - name: Push store (SQLite) checks (#2626)
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+        run: |
+          node server/test/offline/push-store.test.js
+          node server/test/offline/push-store-concurrency.js
       - name: History and runtime compatibility checks
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
@@ -108,6 +115,13 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/vc-node10"
           --ignore-scripts --no-audit --no-fund --no-package-lock
           async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3
+          sql.js@1.8.0 body-parser@1.13.3
+      - name: Push store (SQLite) on Node 10.15.3 (#2626)
+        env:
+          NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
+        run: |
+          node server/test/offline/push-store.test.js
+          node server/test/offline/push-store-concurrency.js
       - name: Visual Crossing path on Node 10.15.3
         env:
           NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
@@ -146,3 +160,31 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules
         run: node server/test/offline/vc-lock-mongo-smoke.js
+
+  push-worker:
+    # Alarm/alert delivery from the SQLite push store with the locked service dependencies (#2626).
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['10.15.3', '16.20.2']
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - name: Install the locked service dependencies outside the checkout
+        run: |
+          mkdir -p "$RUNNER_TEMP/runtime"
+          cp server/package.json server/package-lock.json "$RUNNER_TEMP/runtime/"
+          npm ci --prefix "$RUNNER_TEMP/runtime" --no-audit --no-fund
+      - name: Push worker smoke on the SQLite store
+        env:
+          NODE_PATH: ${{ runner.temp }}/runtime/node_modules
+        run: node server/test/offline/push-worker-smoke.js

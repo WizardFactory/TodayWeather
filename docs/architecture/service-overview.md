@@ -42,7 +42,7 @@ The [configuration](../../server/config/config.js) defaults to `SERVER_MODE=loca
 | `local` (default) | All normal mounts | `startManager()` and `startScrape()` |
 | `gather` | All normal mounts | `startManager()`; listener timeout extended to 24 hours; opt-in station minute/hourly collectors (`KMA_STN_MINUTE_ENABLED`, `KMA_STN_HOURLY_ENABLED`) |
 | `scrape` | All normal mounts | `startScrape()` |
-| `push` | All normal mounts | `ControllerPush.start()`, `AlertPush.start()` |
+| `push` | All normal mounts | `ControllerPush.start()`, `AlertPush.start()` (MongoDB store; with `PUSH_STORE=sqlite` use `bin/push-worker` instead, #2626) |
 | `service` | All normal mounts | None of those background loops |
 
 [Startup conditions](../../server/app.js) and [HTTP listener](../../server/bin/www) establish these facts. The source alone does not establish process count; the [service-host snapshot](ec2-internals.md) separately observes ten API cluster workers in service mode. `local` starts two consumers of the manager's shared in-memory task array. There is no durable message broker or distributed scheduler in that path.

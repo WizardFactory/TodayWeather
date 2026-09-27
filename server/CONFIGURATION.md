@@ -71,6 +71,13 @@ complete production configuration. Deployment-specific observations about
 operator-supplied environment files are kept in the
 [gather environment file review](../docs/operations/tw-gather-env-review-2026-09-24.md).
 
+## Push store
+
+`PUSH_STORE=sqlite` with `PUSH_DB_PATH` keeps push registrations in a SQLite file
+on this host instead of MongoDB (#2626). Every service worker and the single
+[push worker](bin/push-worker) must see the same settings. Unset `PUSH_STORE` to
+return to MongoDB. See the [push store runbook](../docs/operations/push-sqlite.md).
+
 ## Offline verification
 
 With the isolated dependencies described in [test/offline/README.md](test/offline/README.md):

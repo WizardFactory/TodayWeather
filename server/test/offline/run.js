@@ -27,7 +27,8 @@ var commands = [
     [path.join(__dirname, 'gateway-geocoder.test.js')],
     [path.join(__dirname, 'gateway-route.test.js')],
     [path.join(__dirname, 'gateway-callers.test.js')],
-    [path.join(__dirname, 'kma-warning.test.js')]
+    [path.join(__dirname, 'kma-warning.test.js')],
+    [path.join(__dirname, 'push-store.test.js')]
 ];
 commands.forEach(function (args) {
     var result = spawnSync(process.execPath, args, {stdio: 'inherit'});
