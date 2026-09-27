@@ -11,7 +11,7 @@
  *
  * <deps>: async express@4.13 i18n@0.8 mongoose@5.1.2 request sprintf xml2js, plus what the route's controllers
  * load (axios get-pixels aws-sdk dnscache). TW_E2E_PORT keeps the server running for the client/www E2E
- * (kma-warning-client-e2e.mjs) and also serves client/www, with TW_CLIENT_LIB (bower lib) and TW_CLIENT_CSS.
+ * (kma-warning-client-e2e.js) and also serves client/www, with TW_CLIENT_LIB (bower lib) and TW_CLIENT_CSS.
  * The database named in TW_MONGO_URL is dropped first; never point it at a shared database.
  */
 'use strict';
@@ -141,9 +141,10 @@ async function main() {
     };
     const town = await townResponse(seogwipo, zoneRows);
     assert.deepEqual(town.current.specialInfo.map(s => s.weatherStr + s.levelStr + '@' + s.locationName),
-        ['호우주의보@서귀포시남부', '호우주의보@서귀포시동부', '호우주의보@서귀포시중산간', '강풍주의보@서귀포시동부', '강풍주의보@서귀포시중산간']);
-    assert.ok(town.current.summaryWeather.indexOf('호우주의보') !== -1, 'summaryWeather: ' + town.current.summaryWeather);
-    assert.ok(town.current.summary.indexOf('호우주의보') !== -1, 'summary: ' + town.current.summary);
+        ['호우경보@제주도산지', '호우주의보@서귀포시남부', '호우주의보@서귀포시동부', '호우주의보@서귀포시중산간', '강풍주의보@서귀포시동부', '강풍주의보@서귀포시중산간', '강풍주의보@제주도산지']);
+    // The 제주도산지 호우경보 reaches 서귀포시 towns (AK decision 2026-09-27) and leads the summary.
+    assert.ok(town.current.summaryWeather.indexOf('호우경보') !== -1, 'summaryWeather: ' + town.current.summaryWeather);
+    assert.ok(town.current.summary.indexOf('호우경보') !== -1, 'summary: ' + town.current.summary);
     const seoul = await townResponse(locations[0], zoneRows);
     assert.equal(seoul.current.specialInfo, undefined, 'no Seoul warning');
     fs.writeFileSync(path.join(outputDir, 'town-seogwipo.json'), JSON.stringify(town, null, 1));

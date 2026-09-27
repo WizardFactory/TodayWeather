@@ -45,3 +45,8 @@ Endpoint pre-merge, matching the #2587 contract: implementation, tests, commits,
 ## Amendment 2026-09-27 (r1a)
 
 Source: rebase onto `master` `3ab19ca8` (#2585 merged during the build). Master documents Node.js 10.15.3 on the service host ([EC2 internals](../docs/architecture/ec2-internals.md)), which serves `/v000903/kma/special` and `current.specialInfo`. Constraint added: the warning modules run on Node 10.15.3; `kma-warning-node10-check.js` covers it in the `vc-node10` CI job. Acceptance criteria unchanged; downstream verification renewed on the rebased candidate.
+
+## Amendment 2026-09-27 (r1b)
+
+Source: independent verification `reports/sdlc/issue-2609/independent-verification.md` (CHANGES_REQUIRED) and AK's answer on F2 ("두 시 모두에 포함"): `제주도산지` warnings reach every 제주시 and 서귀포시 town. AC6 is extended accordingly: a 서귀포시 town also receives the `제주도산지` entries, which now lead its summary when the mountain has a higher level. F1 (legacy city names) and F3 (Node 10 sort) are corrected as defects within the existing ACs. F4/F5 (LOW) are deferred and recorded in the correction report.
+

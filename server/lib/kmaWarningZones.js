@@ -47,6 +47,15 @@ var PROVINCE_ALIASES = {
     '전라북도': '전북자치도',
     '제주특별자치도': '제주도'
 };
+// Town city names that no longer exist in the zone table (merged cities).
+var LEGACY_CITIES = {
+    '청원군': '청주시'  //merged 2014
+};
+// Zones that span several cities without being a sub-zone of either, added to those cities' towns
+// (AK decision 2026-09-27: 제주도산지 covers the mountain between 제주시 and 서귀포시).
+var SHARED_ZONES = [
+    {province: '제주도', cities: ['제주시', '서귀포시'], zone: '제주도산지'}
+];
 // Island zones inside a city or county, matched on the town's city and town names.
 var ISLAND_ZONES = [
     {second: '울릉', third: '', zone: '울릉도.독도'},
@@ -134,8 +143,8 @@ function expand(table, roots) {
 }
 
 /**
- * Warning zones of a town (decision 8): the city/county zone with its sub-zones and ancestors.
- * Split parents therefore over-warn; there is no 읍면동-level mapping.
+ * Warning zones of a town (decision 8): the city/county zone with its sub-zones and ancestors, plus shared
+ * zones such as 제주도산지. Split parents therefore over-warn; there is no 읍면동-level mapping.
  * @param {{first: string, second: string, third: string}} town
  * @returns {string[]} areaCodes
  */
@@ -158,29 +167,30 @@ function zonesForTown(town) {
         return second.indexOf(rule.second) !== -1 && third.indexOf(rule.third) !== -1;
     })[0];
     if (island) {
-        return expand(table, Object.keys(table.byId).map(function (id) {
-            return table.byId[id];
-        }).filter(function (zone) {
-            return zone.name === island.zone;
-        }));
+        return expand(table, zonesNamed(table, island.zone));
     }
 
     if (second.length === 0) {
         return expand(table, [province]);
     }
 
-    var subtree = descendants(table, province, []);
-    var candidates = subtree.filter(function (zone) {
-        var base = baseName(zone.name);
-        return base === second || (/[시군구]$/.test(base) && second.indexOf(base) === 0);
-    });
-    candidates = candidates.filter(function (zone) {
-        return !candidates.some(function (other) {
-            return other !== zone && descendants(table, other, []).indexOf(zone) !== -1;
-        });
-    });
+    var candidates = cityZones(table, descendants(table, province, []), LEGACY_CITIES[second] || second);
     if (candidates.length > 0) {
+        SHARED_ZONES.forEach(function (rule) {
+            if (rule.province === province.name && rule.cities.some(function (city) { return second.indexOf(city) === 0; })) {
+                candidates = candidates.concat(zonesNamed(table, rule.zone));
+            }
+        });
         return expand(table, candidates);
+    }
+
+    if (!/(특별시|광역시|특별자치시)$/.test(province.name)) {
+        // A province town whose city moved (경상북도/군위군 → 대구) or is unknown: the city anywhere, else
+        // province-level zones only, never every sub-zone of the province.
+        var elsewhere = cityZones(table, Object.keys(table.byId).map(function (id) {
+            return table.byId[id];
+        }), second);
+        return elsewhere.length > 0 ? expand(table, elsewhere) : ancestorsAndSelf(table, province);
     }
 
     // Metropolitan district: the remainder zone named like the city (인천광역시), else every sub-zone
@@ -196,6 +206,37 @@ function zonesForTown(town) {
         return !/[시군]$/.test(baseName(zone.name));
     });
     return expand(table, rest.length > 0 ? rest : [province]);
+}
+
+/**
+ * Top-most zones whose name without a parenthetical equals the city or prefixes it (수원시장안구 → 수원시).
+ */
+function cityZones(table, zones, second) {
+    var candidates = zones.filter(function (zone) {
+        var base = baseName(zone.name);
+        return base === second || (/[시군구]$/.test(base) && second.indexOf(base) === 0);
+    });
+    return candidates.filter(function (zone) {
+        return !candidates.some(function (other) {
+            return other !== zone && descendants(table, other, []).indexOf(zone) !== -1;
+        });
+    });
+}
+
+function zonesNamed(table, name) {
+    return Object.keys(table.byId).map(function (id) {
+        return table.byId[id];
+    }).filter(function (zone) {
+        return zone.name === name;
+    });
+}
+
+function ancestorsAndSelf(table, zone) {
+    var ids = [];
+    for (var z = zone; z; z = table.byId[z.up]) {
+        ids.push(z.id);
+    }
+    return ids;
 }
 
 function zoneName(areaCode) {

@@ -1,6 +1,6 @@
 # Spec: KMA warnings from WthrWrnInfoService and zone-coded town warnings — issue 2609
 
-Revision 2, 2026-09-27. Consumes [intent](../intent/issue-2609.md) r1 and the issue's Decisions 1–9. r2 records build-time refinements: numeric event order fields, the `warnVar`/`warnStress` mapping in `kmaWarningZones`, a `baseUrl` requester option for local smoke servers, readable location text, and an issue older than a zone's all-clear being stored inactive.
+Revision 3, 2026-09-27. r3 (independent verification F1–F3, AK decision on F2): shared zone `제주도산지` for 제주시/서귀포시 towns; legacy city names; no province-wide fallback for provinces; full comparator in the controller sort. Revision 2: Consumes [intent](../intent/issue-2609.md) r1 and the issue's Decisions 1–9. r2 records build-time refinements: numeric event order fields, the `warnVar`/`warnStress` mapping in `kmaWarningZones`, a `baseUrl` requester option for local smoke servers, readable location text, and an issue older than a zone's all-clear being stored inactive.
 
 ## R1 Requester (`server/lib/kmaWarningRequester.js`, new)
 
@@ -37,8 +37,10 @@ One `gather(callback)` per scrape cycle; the existing 3-minute scheduler and the
 - Province: `town.first` normalized to the zone table's first-level names (for example `강원특별자치도` → `강원도`, `전북특별자치도`/`전라북도` → `전북자치도`, `제주특별자치도` → `제주도`).
 - Island overrides first, matched on city and town names so that same-named towns elsewhere (부산 대청동, 인천/울산 삼산동) do not match: 울릉 → 울릉도.독도; 신안+흑산 → 흑산도.홍도; 제주시+추자 → 추자도; 여수+삼산 → 거문도.초도; 옹진+백령/대청 → 백령도.대청도; 옹진+연평 → 연평도.우도.
 - City/county: in the province subtree, the zone whose `REG_NAME` without a parenthetical equals `second` or is a prefix of it (`수원시장안구` → `수원시`). The selected set is that zone, its descendants and its ancestors.
+- Shared zones spanning several cities are added to those cities' towns: `제주도산지` for 제주시 and 서귀포시 (AK decision after verification F2).
+- Legacy city names map to current zones (`청원군` → `청주시`). A province town whose city is not in its province is matched nationwide (`경상북도/군위군` → 대구 `군위군`); an unknown city gets only the province's own zone and ancestors.
 - Region-level request (`second` empty): the province and all descendants. Metropolitan district without its own zone: the child named like the city (`인천광역시`, `대전광역시`, `광주광역시`, `세종특별자치시`) when present, else every child that is not a separate county or city (서울 4 권역, 부산 3 zones, `대구중부`; over-warn by decision 8).
-- `getSpecialInfo(town, stnName, cb)` reads active zones in the set and returns `[{weather, weatherStr, level, levelStr, locationName: areaName}]`, unique per (`weather`, `level`, `locationName`), sorted by `weather` descending, then `level` descending, then zone name. Empty → `[]` (the route then omits the field as today).
+- `getSpecialInfo(town, stnName, cb)` reads active zones in the set and returns `[{weather, weatherStr, level, levelStr, locationName: areaName}]`, unique per (`weather`, `level`, `locationName`), sorted by `weather` descending, then `level` descending, then zone name; the controller's `_sort` uses the same full comparator because Node 10's `Array#sort` is unstable. Empty → `[]` (the route then omits the field as today).
 
 ## R5 Codes (`server/models/modelKmaSpecialWeatherSituation.js`)
 

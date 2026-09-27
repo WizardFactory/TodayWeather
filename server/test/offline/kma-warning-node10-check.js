@@ -82,6 +82,20 @@ zones.applyEvents(state, zones.prepareEvents(rows));
 assert.equal(Object.keys(state).filter(function (k) { return state[k].active && state[k].warnVar > 0; }).length, 0);
 assert.ok(zones.zonesForTown({first: '제주특별자치도', second: '서귀포시', third: '성산읍'}).indexOf('L1091430') !== -1);
 
+// Controller order on Node 10's unstable sort (independent verification F3): 경보 first, then zone name.
+(function () {
+    var ControllerForSort = load('controllers/kma.specialweather.controller.js', {async: async, '../models/modelKmaSpecialWeatherSituation': {},
+        '../models/modelKmaSpecialWeatherZone': {}, '../lib/kmaWarningZones': zones});
+    var list = [];
+    for (var i = 0; i < 40; i++) { list.push({weather: 3, level: i % 5 === 0 ? 2 : 1, locationName: 'Z' + (100 - i)}); }
+    var sorted = new ControllerForSort()._sort(list);
+    for (var j = 1; j < sorted.length; j++) {
+        var a = sorted[j - 1], b = sorted[j];
+        assert.ok(a.level > b.level || (a.level === b.level && a.locationName <= b.locationName), 'order at ' + j);
+    }
+})();
+assert.deepEqual(zones.zonesForTown({first: '경상북도', second: '군위군', third: ''}).map(zones.zoneName).sort(), ['군위군', '대구광역시', '전국']);
+
 // One collection cycle at 2026-09-26 11:30 KST and both readers.
 var wrnMsgDay = items(fixture('wrn-msg-0926'));
 var at1130 = wrnMsgDay.filter(function (i) { return i.tmSeq === 128; })[0];
@@ -114,7 +128,7 @@ collector.gather(function (err) {
         controller.getSpecialInfo({first: '제주특별자치도', second: '서귀포시', third: '성산읍'}, '', function (err, info) {
             assert.ifError(err);
             assert.deepEqual(info.map(function (s) { return s.weatherStr + s.levelStr + '@' + s.locationName; }).slice(0, 2),
-                ['호우주의보@서귀포시남부', '호우주의보@서귀포시동부']);
+                ['호우경보@제주도산지', '호우주의보@서귀포시남부']);
             collector.gather(function (err) {
                 assert.equal(err, 'skip');
                 console.log('kma warning Node ' + process.version + ' check passed');

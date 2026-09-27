@@ -138,8 +138,15 @@ class KmaSpecialWeatherController {
      * @private
      */
     _sort(specialList) {
+        // Full comparator: Node 10's sort is not stable, so a hazard-only key could put a 주의보 before a 경보.
         return specialList.sort((a, b)=> {
-            return b.weather - a.weather;
+            if (a.weather !== b.weather) {
+                return b.weather - a.weather;
+            }
+            if (a.level !== b.level) {
+                return b.level - a.level;
+            }
+            return a.locationName < b.locationName ? -1 : (a.locationName > b.locationName ? 1 : 0);
         });
     }
 

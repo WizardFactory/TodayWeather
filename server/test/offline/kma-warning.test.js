@@ -281,7 +281,9 @@ test('replay: order, dedupe, cancel, change-issue, idempotence and late rows (AC
 test('town mapping: zone table, islands, metropolitan cities and split parents (decision 8)', () => {
     const names = town => plain(zones.zonesForTown(town).map(code => zones.zoneName(code))).sort();
     const seogwipo = names({first: '제주특별자치도', second: '서귀포시', third: '성산읍'});
-    assert.deepEqual(seogwipo, ['서귀포시(산지 제외)', '서귀포시남부', '서귀포시동부', '서귀포시서부', '서귀포시중산간', '전국', '제주도'].sort());
+    assert.deepEqual(seogwipo, ['서귀포시(산지 제외)', '서귀포시남부', '서귀포시동부', '서귀포시서부', '서귀포시중산간', '전국', '제주도', '제주도산지'].sort());
+    // AK decision (2026-09-27, verification F2): the shared mountain zone reaches both cities.
+    assert.ok(names({first: '제주특별자치도', second: '제주시', third: '노형동'}).indexOf('제주도산지') !== -1);
     assert.ok(names({first: '제주특별자치도', second: '제주시', third: '노형동'}).indexOf('서귀포시동부') === -1);
     assert.deepEqual(names({first: '제주특별자치도', second: '제주시', third: '추자면'}), ['전국', '제주도', '추자도']);
     assert.ok(names({first: '경기도', second: '수원시장안구', third: '파장동'}).indexOf('수원시') !== -1);
@@ -301,6 +303,11 @@ test('town mapping: zone table, islands, metropolitan cities and split parents (
     assert.ok(names({first: '전북특별자치도', second: '군산시', third: ''}).indexOf('군산어청도') !== -1);
     assert.ok(names({first: '경상남도', second: '', third: ''}).indexOf('창원시') !== -1, 'region-level request covers the province');
     assert.deepEqual(plain(zones.zonesForTown({first: '', second: '', third: ''})), []);
+    // Legacy town names in base.csv/town.js (independent verification F1): no province-wide fallback.
+    assert.deepEqual(names({first: '경상북도', second: '군위군', third: '군위읍'}), ['군위군', '대구광역시', '전국'], '군위군 moved to 대구 in 2023');
+    assert.ok(names({first: '충청북도', second: '청원군', third: ''}).indexOf('청주시') !== -1, '청원군 merged into 청주시');
+    assert.ok(names({first: '충청북도', second: '청원군', third: ''}).indexOf('충주시') === -1);
+    assert.deepEqual(names({first: '경상북도', second: '없는군', third: ''}), ['경상북도', '전국'], 'unknown city: province-level zones only');
 });
 
 test('specialInfo from active zones (AC6, AC7)', () => {
@@ -313,9 +320,10 @@ test('specialInfo from active zones (AC6, AC7)', () => {
         {weather: 13, weatherStr: '열대야', level: 1, levelStr: '주의보', locationName: '서귀포시남부'},
         {weather: 3, weatherStr: '호우', level: 4, levelStr: '중대경보', locationName: '서귀포시서부'},
         {weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '서귀포시남부'},
-        {weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '서귀포시동부'}]);
+        {weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '서귀포시동부'},
+        {weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '제주도산지'}]);
     const jeju = plain(zones.specialInfoFor(active, zones.zonesForTown({first: '제주특별자치도', second: '제주시', third: '노형동'})));
-    assert.deepEqual(jeju, [], '제주도산지 and 서귀포 sub-zones do not reach 제주시');
+    assert.deepEqual(jeju, [{weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '제주도산지'}], '서귀포 sub-zones do not reach 제주시; the mountain zone does');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -453,6 +461,18 @@ test('controller getCurrent: announcement instant, bulletin, missing comment (AC
     assert.equal(list.find(s => s.type === 4).announcement, '2026-09-27T00:10:00.000Z');
 });
 
+test('controller keeps hazard, level and zone order for long lists (independent verification F3)', () => {
+    const Controller = loadController(memoryModel(situationStatics()), memoryModel());
+    const list = [];
+    for (let i = 0; i < 24; i++) { list.push({weather: 3, weatherStr: '호우', level: i % 3 === 0 ? 2 : 1, levelStr: '', locationName: 'Z' + String(100 - i)}); }
+    const sorted = plain(new Controller()._sort(list));
+    assert.equal(sorted[0].level, 2, 'a 경보 leads the summary');
+    for (let i = 1; i < sorted.length; i++) {
+        const a = sorted[i - 1], b = sorted[i];
+        assert.ok(a.weather > b.weather || (a.weather === b.weather && (a.level > b.level || (a.level === b.level && a.locationName <= b.locationName))), 'order at ' + i);
+    }
+});
+
 test('controller getSpecialInfo reads active zones for the town (AC6, AC8)', async () => {
     const situations = memoryModel(situationStatics()); const zoneStore = memoryModel();
     const {collector} = makeCollector({handler: routes(), situationModel: situations, zoneModel: zoneStore});
@@ -461,7 +481,7 @@ test('controller getSpecialInfo reads active zones for the town (AC6, AC8)', asy
     const info = town => new Promise((resolve, reject) => new Controller().getSpecialInfo(town, '서귀포', (err, l) => err ? reject(err) : resolve(plain(l))));
     const seogwipo = await info({first: '제주특별자치도', second: '서귀포시', third: '성산읍'});
     assert.deepEqual(seogwipo.map(s => s.weatherStr + s.levelStr + '@' + s.locationName),
-        ['호우주의보@서귀포시남부', '호우주의보@서귀포시동부', '호우주의보@서귀포시중산간', '강풍주의보@서귀포시동부', '강풍주의보@서귀포시중산간']);
+        ['호우경보@제주도산지', '호우주의보@서귀포시남부', '호우주의보@서귀포시동부', '호우주의보@서귀포시중산간', '강풍주의보@서귀포시동부', '강풍주의보@서귀포시중산간', '강풍주의보@제주도산지']);
     assert.deepEqual(await info({first: '서울특별시', second: '강남구', third: '역삼동'}), []);
     // After the 12:00 release (t6 "o 없 음") the state is empty.
     const later = makeCollector({handler: routes({getPwnStatus: () => ({body: fixture('pwn-status')}),

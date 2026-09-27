@@ -128,7 +128,7 @@
       "dot": "amber",
       "title": "Town mapping (decisions 8, 9)",
       "items": [
-        "City/county zone plus sub-zones; split parents over-warn.",
+        "City/county zone, sub-zones and 제주도산지; split parents over-warn.",
         "warnVar → weather code, warnStress → 주의보/경보/중대경보."
       ]
     }

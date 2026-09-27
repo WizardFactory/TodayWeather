@@ -3,7 +3,7 @@
  * Starts kma-warning-smoke.js in server mode (real collector → MongoDB → real /v000903/kma router, and the
  * v000903 town response with the real special weather controller), serves client/www from the same origin
  * and drives it in Chromium:
- *   - forecast tab of a stored 서귀포시 성산읍 city: the summary shows the town warning (호우주의보);
+ *   - forecast tab of a stored 서귀포시 성산읍 city: the summary shows the town warning (호우경보 on 제주도산지);
  *   - S12 screen (#/kma-special): every bulletin type with the new warning texts.
  *
  *   TZ=UTC TW_MONGO_URL=mongodb://127.0.0.1:27099/tw2609 TW_CLIENT_LIB=<bower lib> TW_CLIENT_CSS=<ionic.app.css> \
@@ -69,9 +69,9 @@ async function main() {
         await page.goto(origin + '/index.html');
         const summary = page.locator('.main-box-summary').first();
         await summary.waitFor({state: 'visible', timeout: 30000});
-        await page.waitForFunction(() => Array.from(document.querySelectorAll('.main-box-summary')).some(el => /호우주의보/.test(el.textContent)), null, {timeout: 30000});
+        await page.waitForFunction(() => Array.from(document.querySelectorAll('.main-box-summary')).some(el => /호우경보/.test(el.textContent)), null, {timeout: 30000});
         result.checks.summary = (await summary.textContent()).trim();
-        assert.ok(/호우주의보/.test(result.checks.summary), 'forecast summary shows the town warning');
+        assert.ok(/호우경보/.test(result.checks.summary), 'forecast summary shows the town warning');
         assert.ok(result.requests.some(r => r.indexOf('/weather/v000903/coord/33.4588,126.9425') !== -1), 'coordinate weather request');
         await page.screenshot({path: path.join(outputDir, 'client-forecast.png')});
 
