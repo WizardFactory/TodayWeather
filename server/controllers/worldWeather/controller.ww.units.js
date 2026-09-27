@@ -9,6 +9,7 @@ var UnitConverter = require('../../lib/unitConverter');
 var ControllerTown24 = require('../controllerTown24h');
 var kmaTimeLib = require('../../lib/kmaTimeLib');
 var AqiConverter = require('../../lib/aqi.converter');
+var WaqiStationName = require('../../lib/AQI/waqiStationName');
 
 function ControllerWWUnits() {
     var self = this;
@@ -133,7 +134,7 @@ ControllerWWUnits.prototype._makeArpltn = function (current, units) {
         arpltn.dataTime = current.mTime;
     }
     if (current.hasOwnProperty('mCity')) {
-        arpltn.stationName = current.mCity;
+        arpltn.stationName = WaqiStationName.shorten(current.mCity);
     }
 };
 

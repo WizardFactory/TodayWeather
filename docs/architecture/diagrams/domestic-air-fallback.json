@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Domestic air: AirKorea first, WAQI fallback with shared cache",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      620
+    ]
+  },
+  "participants": [
+    {
+      "id": "route",
+      "type": "backend",
+      "label": "KMA route",
+      "sublabel": "v000903 addr / coord"
+    },
+    {
+      "id": "airkorea",
+      "type": "database",
+      "label": "AirKorea store",
+      "sublabel": "Mongo arpltns"
+    },
+    {
+      "id": "fallback",
+      "type": "backend",
+      "label": "WAQI fallback",
+      "sublabel": "per worker, in-flight shared"
+    },
+    {
+      "id": "cache",
+      "type": "database",
+      "label": "WAQI cache",
+      "sublabel": "Mongo waqi.air.caches"
+    },
+    {
+      "id": "waqi",
+      "type": "external",
+      "label": "WAQI API",
+      "sublabel": "feed geo:lat;lon"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 215,
+      "label": "AirKorea"
+    },
+    {
+      "from": 230,
+      "to": 435,
+      "label": "Fallback"
+    },
+    {
+      "from": 450,
+      "to": 510,
+      "label": "Response"
+    }
+  ],
+  "messages": [
+    {
+      "id": "keco-read",
+      "from": "route",
+      "to": "airkorea",
+      "y": 165,
+      "label": "getKeco: nearest stations, last 24 h",
+      "variant": "default"
+    },
+    {
+      "id": "keco-none",
+      "from": "airkorea",
+      "to": "route",
+      "y": 200,
+      "label": "no observation within 8 h",
+      "variant": "return"
+    },
+    {
+      "id": "fallback-call",
+      "from": "route",
+      "to": "fallback",
+      "y": 245,
+      "label": "getWaqiAirFallback(town gCoord)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cache-read",
+      "from": "fallback",
+      "to": "cache",
+      "y": 280,
+      "label": "find cell (0.01°), expireAt > now",
+      "variant": "default"
+    },
+    {
+      "id": "cache-miss",
+      "from": "cache",
+      "to": "fallback",
+      "y": 315,
+      "label": "miss (hit skips WAQI)",
+      "variant": "return"
+    },
+    {
+      "id": "waqi-get",
+      "from": "fallback",
+      "to": "waqi",
+      "y": 350,
+      "label": "GET feed, 3 s timeout, no retry",
+      "variant": "default"
+    },
+    {
+      "id": "waqi-feed",
+      "from": "waqi",
+      "to": "fallback",
+      "y": 385,
+      "label": "station, time, iaqi",
+      "variant": "return"
+    },
+    {
+      "id": "cache-write",
+      "from": "fallback",
+      "to": "cache",
+      "y": 420,
+      "label": "upsert: ok 30 min / failed 2 min",
+      "variant": "default"
+    },
+    {
+      "id": "arpltn",
+      "from": "fallback",
+      "to": "route",
+      "y": 465,
+      "label": "arpltn source aqicn if ≤ 8 h and ≤ 30 km",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Response contract",
+      "items": [
+        "current.arpltn and airInfoList[0] come from WAQI with source aqicn; grades follow the requested airUnit.",
+        "Any WAQI failure keeps the response without air, as before."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Limits",
+      "items": [
+        "WAQI republishes AirKorea: covers our collection gaps, not an AirKorea outage.",
+        "Values are converted back from US EPA sub-indices; the cache is shared by all ten API workers."
+      ]
+    }
+  ]
+}

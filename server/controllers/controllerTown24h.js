@@ -17,6 +17,7 @@ var KecoController = require('../controllers/kecoController');
 var AirkoreaHourlyForecastCtrl = require('../controllers/airkorea.hourly.forecast.controller');
 var KaqHourlyForecastCtrl = require('../controllers/kaq.hourly.forecast.controller');
 var KmaSpecialWeatherController = require('../controllers/kma.specialweather.controller');
+var WaqiAirFallback = require('../lib/AQI/waqiAirFallback');
 
 var config = require('../config/config');
 
@@ -1037,6 +1038,75 @@ function ControllerTown24h() {
         return this;
     };
 
+    function _hasAirValue(arpltn) {
+        if (!arpltn) {
+            return false;
+        }
+        return ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2', 'khai'].some(function (name) {
+            var value = arpltn[name+'Value'];
+            return typeof value === 'number' && isFinite(value) && value !== -1;
+        });
+    }
+
+    /**
+     * When no nearby AirKorea station has a current observation, use the WAQI geo feed (#2622).
+     * The WAQI observation replaces the (stale) AirKorea station lists for makeAirInfoList.
+     */
+    this.getWaqiAirFallback = function (req, res, next) {
+        var meta = {};
+        meta.sID = req.sessionID;
+        meta.method = 'getWaqiAirFallback';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+
+        var called = false;
+        function done() {
+            if (!called) {
+                called = true;
+                next();
+            }
+        }
+
+        try {
+            if (!req.current || _hasAirValue(req.current.arpltn)) {
+                return done();
+            }
+            var gCoord = req.gCoord || req.airGCoord;
+            if (!gCoord) {
+                log.info('skip WAQI air fallback: no coordinate', meta);
+                return done();
+            }
+            WaqiAirFallback.getArpltn(gCoord, new Date(), function (err, arpltn, reason) {
+                try {
+                    if (err) {
+                        err.message += ' ' + JSON.stringify(meta);
+                        log.error(err);
+                    }
+                    else if (arpltn) {
+                        req.current.arpltn = arpltn;
+                        req.arpltnList = [arpltn];
+                        req.arpltnStnList = [[arpltn]];
+                    }
+                    else {
+                        log.info('no WAQI air fallback reason=' + reason, meta);
+                    }
+                }
+                catch (e) {
+                    e.message += ' ' + JSON.stringify(meta);
+                    log.error(e);
+                }
+                done();
+            });
+        }
+        catch (err) {
+            err.message += ' ' + JSON.stringify(meta);
+            log.error(err);
+            done();
+        }
+        return this;
+    };
+
     /**
      * make 3 objects
      * @param req
@@ -1059,7 +1129,7 @@ function ControllerTown24h() {
                 var airInfoList = [];
                 for (var i=0; i<req.arpltnStnList.length; i++) {
                     var arpltnList = req.arpltnStnList[i];
-                    var airInfo = {source: "airkorea"};
+                    var airInfo = {source: arpltnList[0] && arpltnList[0].source === 'aqicn' ? 'aqicn' : 'airkorea'};
                     airInfo.last = arpltnList[0];
                     airInfo.pollutants = {};
                     self._insertHourlyPollutants(airInfo.pollutants, arpltnList, airUnit, airInfo.last.dataTime);
@@ -1102,6 +1172,10 @@ function ControllerTown24h() {
     this._getAirForecast = function(airInfo, forecastSource, airUnit, callback) {
         var ctrl;
         var stnName;
+        // station forecasts are keyed by AirKorea station name; WAQI stations have none (#2622)
+        if (airInfo && airInfo.source === 'aqicn') {
+            return callback(null, airInfo);
+        }
         try {
             stnName = airInfo.last.stationName;
             if (forecastSource === 'kaq') {

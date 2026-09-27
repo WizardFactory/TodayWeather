@@ -149,6 +149,36 @@ and actual v000903 route/shared client parsing in 16 DB-version/unit/data-availa
 scenarios. No application startup, production secrets, KMA requests or mobile build.
 See the [operator contract](../../../reports/sdlc/issue-2564/operator-contract.md).
 
+## WAQI domestic air fallback (#2622)
+
+`waqi-air.test.js` (in `test:offline` and the RSS workflow) loads the real fallback module, station-name helper and
+v000903 air middleware in VMs with a stubbed `axios` and cache model. It covers the AirKorea-shaped mapping, the 8-hour
+and 30 km limits, a missing or placeholder key, provider failures and their cache periods, reuse of the shared cache by a
+second module instance (another worker), in-flight sharing, cache read/write errors, a caller exception on a cache hit
+(no second call), the middleware on present/missing/failed air, `airInfo.source`, the skipped station forecast, the
+`getKeco` error path, the route order and the overseas station name.
+
+`waqi-air-smoke.js` runs the complete v000903 coordinate and address routes through the response smoke harness with real
+`axios` HTTP to a loopback fake WAQI feed: fallback on DB 1.0/2.0 for `airkorea` and `airnow`, an unchanged fresh
+AirKorea response, stale/distant/HTTP 500/status/timeout/no-key/placeholder-key and failing AirKorea lookups, cache
+reuse across two harness instances, address/coordinate equality and a shortened Jeju name. `waqi-cache-mongo-smoke.js`
+runs six separate worker processes against one mongod (mongodb-memory-server, mongoose 5.13 as in
+`vc-lock-mongo-smoke.js`): a second process is served from Mongo, rows expire after 30 minutes (ok) or 2 minutes
+(failure), and the TTL index exists. `waqi-air-node10-check.js` repeats the module, cache and middleware checks on the
+host's Node 10.15.3.
+
+```sh
+npm install --prefix /tmp/tw-waqi --ignore-scripts --no-audit --no-fund async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3 axios@0.18.1
+TZ=UTC NODE_PATH=/tmp/tw-waqi/node_modules node server/test/offline/waqi-air.test.js
+TZ=UTC NODE_PATH=/tmp/tw-waqi/node_modules node server/test/offline/waqi-air-smoke.js
+TZ=UTC NODE_PATH=/tmp/tw-waqi/node_modules node server/test/offline/waqi-air-node10-check.js
+npm install --prefix /tmp/tw-waqi-mongo --ignore-scripts --no-audit --no-fund mongoose@5.13.22 async@2.5.0 mongodb-memory-server-core@10.1.4 axios@0.18.1
+TZ=UTC NODE_PATH=/tmp/tw-waqi-mongo/node_modules node server/test/offline/waqi-cache-mongo-smoke.js
+```
+
+No check calls the real WAQI API or a production database. The fixtures in `fixtures/waqi-*.json` are read-only captures
+of the WAQI geo feed from 2026-09-27 without the token.
+
 ## Node 16 runtime and push compatibility (#2565)
 
 The service target is Node 16.20.2 / npm 8.19.4 (`server/.nvmrc`), an interim

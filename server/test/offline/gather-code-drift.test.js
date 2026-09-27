@@ -274,7 +274,7 @@ describe('upstream storage and period-contract characterization', function () {
             '../lib/kmaPrecipitation': h.optional('../../lib/kmaPrecipitation')};
         ['../lib/unitConverter', '../lib/aqi.converter', '../controllers/kecoController',
             '../controllers/airkorea.hourly.forecast.controller', '../controllers/kaq.hourly.forecast.controller',
-            '../controllers/kma.specialweather.controller'].forEach(function (name) { deps[name] = function () {}; });
+            '../controllers/kma.specialweather.controller', '../lib/AQI/waqiAirFallback'].forEach(function (name) { deps[name] = function () {}; });
         var Town = h.load('controllers/controllerTown24h.js', deps, {log: h.logger([])});
         var rows = ['0600', '0900', '1200'].map(function (t, i) {
             return {date: '20260924', time: t, pty: 2, reh: 60, t3h: 10 + i, tmn: -50, tmx: -50, r06: 1.5, s06: 0.5};
