@@ -660,6 +660,154 @@
             .then(function () { return shot('s9-after-share'); });
     } });
 
+    // ---------- layout mode (window.TW_HARNESS_MODE === 'layout') ----------
+    // Per screen: page-level horizontal overflow, elements outside the viewport that are not inside a
+    // horizontal scroller, and clipped text. Charts: scrollability, initial position, current column,
+    // both ends reachable, no vertical clipping; on Android a real touch swipe via the host.
+    function hScroller(el) {
+        for (var n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+            var ox = getComputedStyle(n).overflowX;
+            if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 1) { return n; }
+        }
+        return null;
+    }
+    function describe(el) {
+        var t = (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 24);
+        return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + '.' + String(el.className && el.className.baseVal !== undefined ? el.className.baseVal : el.className || '').split(' ').filter(Boolean).slice(0, 2).join('.') + (t ? '"' + t + '"' : '');
+    }
+    // Visible part of an element: its rect cut by every ancestor that clips (overflow other than visible).
+    function visibleRect(el) {
+        var r = el.getBoundingClientRect(), L = r.left, R = r.right;
+        for (var n = el.parentElement; n && n !== document.documentElement; n = n.parentElement) {
+            if (getComputedStyle(n).overflowX !== 'visible') { var p = n.getBoundingClientRect(); L = Math.max(L, p.left); R = Math.min(R, p.right); }
+        }
+        return { left: L, right: R, empty: R - L < 1 };
+    }
+    function truncatedByEllipsis(el) {
+        for (var n = el; n && n !== document.body; n = n.parentElement) {
+            var cs = getComputedStyle(n);
+            if (cs.textOverflow === 'ellipsis' && n.scrollWidth > n.clientWidth + 1) { return true; }
+        }
+        return false;
+    }
+    function audit(name) {
+        var W = window.innerWidth, issues = [];
+        var de = document.documentElement;
+        if (de.scrollWidth > W + 1 || document.body.scrollWidth > W + 1) { issues.push('page-overflow-x ' + Math.max(de.scrollWidth, document.body.scrollWidth) + '>' + W); }
+        var offscreen = [], truncated = [];
+        all('body *').forEach(function (el) {
+            if (el.children.length > 0 && !/^(BUTTON|LABEL|A|svg)$/i.test(el.tagName)) { return; }
+            if (!visible(el) || el.closest('.click-block')) { return; }
+            if (el.closest('svg') && el.tagName.toLowerCase() !== 'svg') { return; }
+            var r = el.getBoundingClientRect();
+            if (r.right < -1000 || r.left > W + 1000) { return; }            // Ionic's off-screen parking (-9999px)
+            if (hScroller(el) || el.closest('.menu-left')) { return; }      // inside a horizontal scroller / closed menu
+            var v = visibleRect(el);
+            if (v.empty) { return; }                                         // clipped away on purpose (slides, tabs)
+            if (v.right > W + 1 || v.left < -1) { offscreen.push(describe(el) + ' [' + Math.round(v.left) + ',' + Math.round(v.right) + ']'); }
+            if ((el.textContent || '').trim() && truncatedByEllipsis(el)) { truncated.push(describe(el)); }
+        });
+        if (offscreen.length) { issues.push('offscreen x' + offscreen.length + ': ' + offscreen.slice(0, 4).join(' | ')); }
+        check('layout ' + name, issues.length === 0, 'W=' + W + ' screen=' + screen.width + 'x' + screen.height + ' ' + issues.join(' ; '));
+        if (truncated.length) { emit('STEP', 'ellipsis ' + name + ' x' + truncated.length + ': ' + truncated.slice(0, 6).join(' | ')); }
+    }
+    function chartCheck(kind) {
+        var el = document.getElementById(kind === 'short' ? 'chartShortScroll' : 'chartMidScroll');
+        if (!el || !visible(el)) { check('chart-' + kind + ' present', false); return Promise.resolve(); }
+        var max = el.scrollWidth - el.clientWidth, sw = screen.width;
+        var colWidth = Math.min(sw / 7, 60);
+        var ox = getComputedStyle(el).overflowX;
+        var start = el.scrollLeft;
+        var cur = el.querySelector('.current-rect');
+        var er = el.getBoundingClientRect();
+        var curVisible = null;
+        if (cur) { var cr = cur.getBoundingClientRect(); curVisible = cr.left >= er.left - 1 && cr.right <= er.right + 1; }
+        var svgs = all('#' + el.id + ' svg').filter(visible);
+        var vclip = svgs.filter(function (g) { var p = g.parentElement.getBoundingClientRect(), r = g.getBoundingClientRect(); return r.bottom > p.bottom + 1 || r.top < p.top - 1; }).length;
+        var detail = 'overflowX=' + ox + ' client=' + el.clientWidth + ' scroll=' + el.scrollWidth + ' colWidth=' + colWidth.toFixed(1) + ' start=' + Math.round(start) + ' max=' + max + ' currentVisible=' + curVisible + ' svg=' + svgs.length + ' vclip=' + vclip;
+        var scrollExpected = kind === 'short' || el.scrollWidth > el.clientWidth + 1;
+        check('chart-' + kind + ' scrollable', ox === 'auto' && (!scrollExpected || max > 0), detail);
+        check('chart-' + kind + ' initial-position', kind === 'short' ? start > 0 || max === 0 : (sw >= 640 ? start === 0 : true), detail);
+        if (cur) { check('chart-' + kind + ' current-column-visible', curVisible, detail); }
+        check('chart-' + kind + ' no-vertical-clip', vclip === 0, detail);
+        return shot('L-chart-' + kind + '-initial').then(function () {
+            el.scrollLeft = max; return sleep(600);
+        }).then(function () {
+            var inner = el.firstElementChild.getBoundingClientRect(), er2 = el.getBoundingClientRect();
+            var ok = el.scrollLeft >= max - 1 && Math.abs(inner.right - er2.right) <= 2;
+            check('chart-' + kind + ' reaches-end', ok, 'scrollLeft=' + Math.round(el.scrollLeft) + ' max=' + max + ' contentRight=' + Math.round(inner.right) + ' boxRight=' + Math.round(er2.right));
+            return shot('L-chart-' + kind + '-end');
+        }).then(function () {
+            el.scrollLeft = 0; return sleep(600);
+        }).then(function () {
+            var inner = el.firstElementChild.getBoundingClientRect(), er2 = el.getBoundingClientRect();
+            check('chart-' + kind + ' reaches-start', el.scrollLeft <= 1 && Math.abs(inner.left - er2.left) <= 2, 'scrollLeft=' + Math.round(el.scrollLeft));
+            el.scrollLeft = start;
+            if (!/Android/.test(navigator.userAgent) || max <= 0) { return sleep(300); }
+            // Real touch swipe (host sends a DevTools scroll gesture): the chart must scroll, the city must not change.
+            var city = svc('WeatherInfo').getCityIndex(), before = el.scrollLeft, r = el.getBoundingClientRect();
+            var x = Math.round(r.left + r.width * 0.7), y = Math.round(r.top + Math.min(r.height / 2, 120));
+            return host('cdp-swipe ' + x + ' ' + y + ' ' + (before > max / 2 ? 250 : -250), 3500).then(function () {
+                check('chart-' + kind + ' touch-swipe', Math.abs(el.scrollLeft - before) > 50 && svc('WeatherInfo').getCityIndex() === city, 'scrollLeft ' + Math.round(before) + '->' + Math.round(el.scrollLeft) + ' city ' + city + '->' + svc('WeatherInfo').getCityIndex());
+                el.scrollLeft = start; return sleep(300);
+            });
+        });
+    }
+    function screenStep(name, fn) {
+        return Promise.resolve().then(fn).then(function () { return idle(20000); }).then(function () { return sleep(900); })
+            .then(function () { audit(name); return shot('L-' + name); });
+    }
+    function goBackTo(re) { return (re.test(stateName()) ? Promise.resolve() : back()).then(function () { if (!re.test(stateName())) { return back(); } }); }
+    var LAYOUT = [
+        { name: 'L1_layout_screens', run: function () {
+            return Promise.resolve()
+                .then(function () { return waitFor(function () { return stateName() === 'start'; }, 15000, 'start-state'); })
+                .then(function () { return sleep(1500); })
+                .then(function () { audit('O01-access'); return shot('L-O01-access'); })
+                .then(popupOk)
+                .then(function () { return screenStep('S01-start', function () {}); })
+                .then(function () {
+                    var seoul = byText('button.button-outline', '서울') || all('button.button-outline').filter(visible)[0];
+                    click(seoul, 'favorite-first(서울)');
+                    return waitFor(function () { return stateName() === 'tab.forecast'; }, 20000, 'forecast');
+                })
+                .then(function () { return screenStep('S03-hourly', function () { return idle(30000).then(function () { return sleep(1200); }); }); })
+                .then(function () { return chartCheck('short'); })
+                .then(function () { return screenStep('S03-expanded', function () { click(byNg('clickExpander()'), 'expander'); return sleep(1200); }); })
+                .then(function () { click(byNg('clickExpander()'), 'expander-close'); return sleep(800); })
+                .then(function () { return screenStep('S04-daily', function () { return tab(2).then(function () { return sleep(1200); }); }); })
+                .then(function () { return chartCheck('mid'); })
+                .then(function () { return screenStep('S05-air', function () { return tab(3); }); })
+                .then(function () { return screenStep('S02-favorites', function () { return tab(0); }); })
+                .then(function () { return screenStep('S02-search', function () {
+                    typeInto(find('#searchInput'), '부산');
+                    return waitFor(function () { return all('[ng-click="OnSelectResult(result)"]').filter(visible).length > 0; }, 15000, 'search-results');
+                }); })
+                .then(function () { click(byNg('OnEdit()'), 'cancel-search'); var kb = window.cordova && cordova.plugins && cordova.plugins.Keyboard; if (kb) { kb.close(); } return sleep(1200); })
+                .then(function () { return tab(1); })
+                .then(function () { return screenStep('S06-menu', openMenu); })
+                .then(function () { return screenStep('S07-units', function () { click(menuItem('units'), 'menu-units'); return sleep(1500); }); })
+                .then(function () { return screenStep('S08-radio', function () { click(all('[ng-click="settingRadio(unit)"]').filter(visible)[0], 'unit[0]'); return sleep(1500); }); })
+                .then(function () { return goBackTo(/^tab\./); })
+                .then(function () { return screenStep('S10-nation', function () { svc('$state').go('nation'); return sleep(2000); }); })
+                .then(back)
+                .then(function () { return screenStep('S11-nation-air', function () { svc('$state').go('nation-air'); return sleep(2000); }); })
+                .then(back)
+                .then(function () { return screenStep('S12-bulletin', function () { svc('$state').go('kma-special'); return sleep(2000); }); })
+                .then(back)
+                .then(function () { return screenStep('S14-guide', function () { svc('$state').go('guide'); return sleep(2000); }); })
+                .then(function () { click(byNg('onClose()'), 'guide-close'); return sleep(1500); })
+                .then(function () { if (!/^tab\./.test(stateName())) { return go('tab.forecast'); } })
+                .then(function () { return screenStep('S09-push', function () { click(byNg('goPushPage()'), 'bell'); return sleep(2000); }); });
+        } },
+        { name: 'L2_layout_launch_popup', run: function () {
+            // dismissLaunchPopup() already captured and closed O05 for i === 1; audit the tab under it.
+            return waitFor(function () { return /^tab\./.test(stateName()); }, 20000, 'tab')
+                .then(function () { return screenStep('S03-warm', function () { return sleep(800); }); });
+        } },
+    ];
+    if (window.TW_HARNESS_MODE === 'layout') { S = LAYOUT; }
+
     // The update-info popup opens ~0.5 s after every warm launch until "Disable update info" is
     // ticked (app.js showUpdateInfo). Record it and close it like a user would.
     function dismissLaunchPopup(i) {
@@ -670,6 +818,7 @@
                 if (!shown) { emit('STEP', 'no launch popup'); return; }
                 var title = (find('.popup-container .popup-title') || {}).textContent || '';
                 emit('STEP', 'launch popup "' + title.trim() + '"');
+                if (window.TW_HARNESS_MODE === 'layout') { audit('O05-update-info'); }
                 return (i === 1 ? shot('launch-popup') : Promise.resolve()).then(function () {
                     var bs = all('.popup-container .popup-buttons button').filter(visible);
                     click(bs[bs.length - 1], 'launch-popup-close');

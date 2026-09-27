@@ -10,6 +10,8 @@ import path from 'node:path';
 import { report } from './triage.mjs';
 
 const [platform, artifact, outDir, extra] = process.argv.slice(2);
+// --size=WxH (Android): emulate a CSS screen of W x H at device pixel ratio 3 via wm size/density.
+const sizeArg = (process.argv.find((a) => a.startsWith('--size=')) || '').slice(7);
 const PKG = 'net.wizardfactory.todayweather';
 const ADB = `${process.env.HOME}/Library/Android/sdk/platform-tools/adb`;
 const ENV = { ...process.env, DEVELOPER_DIR: '/Applications/Xcode.app/Contents/Developer' };
@@ -30,6 +32,12 @@ const android = {
         if (extra === '--fold') { try { sh(ADB, ['emu', 'fold']); } catch { /* not foldable */ } }
         if (extra === '--unfold') { try { sh(ADB, ['emu', 'unfold']); } catch { /* not foldable */ } }
         await sleep(2000);
+        if (sizeArg) {
+            const [w, h] = sizeArg.split('x').map(Number);
+            sh(ADB, ['shell', 'wm', 'size', `${w * 3}x${h * 3}`]);
+            sh(ADB, ['shell', 'wm', 'density', '480']);
+            await sleep(2500);
+        }
         try { sh(ADB, ['uninstall', PKG]); } catch { /* not installed */ }
         sh(ADB, ['install', '-r', artifact]);
         for (const p of ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION']) sh(ADB, ['shell', 'pm', 'grant', PKG, `android.permission.${p}`]);
@@ -51,6 +59,7 @@ const android = {
     focused() { return sh(ADB, ['shell', 'dumpsys', 'window']).toString().split('\n').filter((l) => /mCurrentFocus|mFocusedApp/.test(l)).join(' ').trim(); },
     async host(action) {
         if (action === 'back') sh(ADB, ['shell', 'input', 'keyevent', 'KEYCODE_BACK']);
+        if (action.startsWith('cdp-swipe ')) { const [x, y, dx] = action.split(' ').slice(1).map(Number); await cdpSwipe(x, y, dx); }
         if (action === 'bgresume') {
             sh(ADB, ['shell', 'input', 'keyevent', 'KEYCODE_HOME']); await sleep(3000);
             sh(ADB, ['shell', 'am', 'start', '-n', `${PKG}/.MainActivity`]);
@@ -61,8 +70,29 @@ const android = {
             if (!this.focused().includes(`${PKG}/`)) sh(ADB, ['shell', 'am', 'start', '-n', `${PKG}/.MainActivity`]);
         }
     },
-    finish() { this.logcat?.kill(); },
+    finish() {
+        this.logcat?.kill();
+        if (sizeArg) { try { sh(ADB, ['shell', 'wm', 'size', 'reset']); sh(ADB, ['shell', 'wm', 'density', 'reset']); } catch { /* ignore */ } }
+    },
 };
+
+// Touch scroll gesture inside the debug WebView (DevTools Input.synthesizeScrollGesture), CSS px.
+async function cdpSwipe(x, y, dx) {
+    const unix = sh(ADB, ['shell', 'cat', '/proc/net/unix']).toString();
+    const sock = [...unix.matchAll(/@(webview_devtools_remote_\d+)/g)].map((m) => m[1]).pop();
+    sh(ADB, ['forward', 'tcp:9334', `localabstract:${sock}`]);
+    try {
+        const page = (await (await fetch('http://127.0.0.1:9334/json')).json()).find((p) => p.type === 'page');
+        const ws = new WebSocket(page.webSocketDebuggerUrl);
+        await new Promise((r) => { ws.onopen = r; });
+        await new Promise((resolve) => {
+            ws.onmessage = (m) => { if (JSON.parse(m.data).id === 1) resolve(); };
+            ws.send(JSON.stringify({ id: 1, method: 'Input.synthesizeScrollGesture',
+                params: { x, y, xDistance: dx, yDistance: 0, gestureSourceType: 'touch', speed: 600 } }));
+        });
+        ws.close();
+    } finally { sh(ADB, ['forward', '--remove', 'tcp:9334']); }
+}
 
 const ios = {
     udid: extra,

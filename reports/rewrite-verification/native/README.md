@@ -26,6 +26,30 @@ node reports/rewrite-verification/native/triage.mjs /tmp/tw-verify/android /tmp/
 
 The driver uninstalls and reinstalls the app on the selected device, so use a dedicated test emulator/simulator. It calls only the public app API through the app, never `/gather` routes. Rebuild with `cordova build` afterwards if a harness-free build is needed on the device.
 
+## Layout mode (screen sizes)
+
+`build-harness.sh <android|ios> layout` injects `window.TW_HARNESS_MODE = 'layout'`. The harness then runs two launches:
+
+- It walks O01, S01–S14 and O05, and audits each screen:
+  - horizontal page overflow;
+  - the visible part of an element falling outside the viewport (Ionic's parked elements and clipped slides are ignored);
+  - text cut with an ellipsis.
+- It checks both charts:
+  - `overflow-x`;
+  - the initial scroll position and whether the current column is visible;
+  - both ends reachable;
+  - no vertical clipping;
+  - on Android, a real touch swipe (`cdp-swipe`, DevTools `Input.synthesizeScrollGesture`) that must scroll the chart without changing the city.
+
+`run.mjs … --size=WxH` emulates a CSS screen on Android with `wm size (3W)x(3H)` and `wm density 480`, and resets both at the end. On iOS, use a simulator of the target model.
+
+```sh
+reports/rewrite-verification/native/build-harness.sh android layout
+node reports/rewrite-verification/native/run.mjs android /tmp/tw-harness/app-debug.apk /tmp/tw-layout/a-320x694 --fold --size=320x694
+```
+
+The audit does not catch a control clipped by an `overflow: hidden` parent, for example the S09 weekday row at 320 px. Review the screenshots as well.
+
 ## Evidence boundaries
 
 Live data changes over time, so a capture shows the production response at capture time. The harness cannot tap native UI: permissions are pre-granted, the iOS share sheet is left open at the end, and the iOS Simulator has neither App Store nor Mail. Real-device behavior, release signing, push delivery, AdMob, Firebase and purchase are outside these runs.
