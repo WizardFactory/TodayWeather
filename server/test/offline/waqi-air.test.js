@@ -36,7 +36,7 @@ const StationName = loadNew('lib/AQI/waqiStationName.js');
 // Shared Mongo stand-in: separate module instances (API workers) see the same rows.
 function cacheStore() {
     const rows = new Map();
-    const store = {rows, reads: 0, writes: 0, failRead: false, failWrite: false};
+    const store = {rows, reads: 0, writes: 0, failRead: false, failWrite: false, holdWrites: false, pendingWrites: []};
     store.model = {
         find(query) {
             store.reads++;
@@ -50,8 +50,12 @@ function cacheStore() {
             store.writes++;
             assert.equal(options.upsert, true);
             if (store.failWrite) { return cb(new Error('write failed')); }
-            rows.set(query._id, Object.assign({_id: query._id}, rows.get(query._id), JSON.parse(JSON.stringify(update.$set))));
-            cb(null);
+            const apply = () => {
+                rows.set(query._id, Object.assign({_id: query._id}, rows.get(query._id), JSON.parse(JSON.stringify(update.$set))));
+                cb(null);
+            };
+            // `holdWrites` models Mongo acknowledging the write later than the request would otherwise finish
+            if (store.holdWrites) { store.pendingWrites.push(apply); } else { apply(); }
         }
     };
     return store;
@@ -327,4 +331,60 @@ test('an exception in the caller on a cache hit is not taken as a cache failure'
     await new Promise(r => setImmediate(r));
     assert.equal(calls, 1, 'callback invoked once');
     assert.equal(http.calls.length, 1, 'no second WAQI call');
+});
+
+test('a request answers only after the shared cache write, so the next request on any worker reuses it', async () => {
+    const store = cacheStore();
+    store.holdWrites = true;
+    const http = fakeAxios(() => ({data: feed('seoul')}));
+    const workerA = fallbackModule(store, http);
+    let answered = false;
+    const first = call(workerA, seoul, at('2026-09-27T15:00:00Z')).then(r => { answered = true; return r; });
+    for (let i = 0; i < 5; i++) { await new Promise(r => setImmediate(r)); }
+    assert.equal(http.calls.length, 1);
+    assert.equal(store.pendingWrites.length, 1, 'cache write started');
+    assert.equal(answered, false, 'no answer before the cache write is acknowledged');
+    const sameWorker = call(workerA, seoul, at('2026-09-27T15:00:00Z'));
+    for (let i = 0; i < 5; i++) { await new Promise(r => setImmediate(r)); }
+    assert.equal(http.calls.length, 1, 'a same-worker request during the write joins the call');
+    store.pendingWrites.splice(0).forEach(fn => fn());
+    const a = await first;
+    assert.ok(a.arpltn); assert.ok((await sameWorker).arpltn);
+    const b = await call(fallbackModule(store, http), seoul, at('2026-09-27T15:00:00Z'));
+    assert.ok(b.arpltn);
+    assert.equal(http.calls.length, 1, 'worker B right after A is served from the cache');
+});
+
+test('malformed WAQI bodies become one failed outcome and every waiter is answered once', async () => {
+    const rejections = [];
+    const onRejection = reason => rejections.push(String(reason));
+    process.on('unhandledRejection', onRejection);
+    try {
+        const bodies = [
+            {status: 'ok', data: {city: {name: 'x', geo: [37.57, 126.98]}, time: {s: 123, tz: '+09:00'}, iaqi: {pm25: {v: 50}}}},
+            {status: 'ok', data: {city: {name: 42, geo: 'nowhere'}, time: {iso: 7}, iaqi: {pm25: {v: 50}}}},
+            {status: 'ok', data: {city: null, time: null, iaqi: 'none'}}
+        ];
+        for (const body of bodies) {
+            const store = cacheStore();
+            const http = fakeAxios(() => ({data: body}));
+            http.hold = true;
+            const mod = fallbackModule(store, http);
+            let calls = 0;
+            const count = p => p.then(r => { calls++; return r; });
+            const waiting = [count(call(mod, seoul, at('2026-09-27T15:00:00Z'))), count(call(mod, seoul, at('2026-09-27T15:00:00Z')))];
+            await new Promise(r => setImmediate(r));
+            http.release();
+            const results = await Promise.race([Promise.all(waiting), new Promise(r => setTimeout(() => r('hung'), 500))]);
+            assert.notEqual(results, 'hung', 'every waiter is answered: ' + JSON.stringify(body));
+            for (const r of results) { assert.equal(r.err, null); assert.equal(r.arpltn, undefined); assert.ok(r.reason); }
+            assert.equal(calls, 2);
+            assert.equal(http.calls.length, 1);
+        }
+        await new Promise(r => setImmediate(r));
+        assert.deepEqual(rejections, [], 'no unhandled promise rejection');
+    }
+    finally {
+        process.removeListener('unhandledRejection', onRejection);
+    }
 });

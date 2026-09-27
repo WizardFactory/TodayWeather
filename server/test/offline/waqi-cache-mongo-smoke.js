@@ -48,13 +48,7 @@ async function worker(uri, port, nowMs, lat, lon) {
         {filename: 'waqiAirFallback.js'});
     const result = await new Promise(resolve => module.exports.getArpltn({lat, lon}, new FixedDate(nowMs),
         (err, arpltn, reason) => resolve({err: err && err.message, arpltn, reason})));
-    // The cache write is fire-and-forget; wait until this worker's row is visible before exiting.
-    const cell = lat.toFixed(2) + ',' + lon.toFixed(2);
-    for (let i = 0; i < 50; i++) {
-        const row = await Model.findById(cell).lean();
-        if (row && new Date(row.fetchedAt).getTime() <= nowMs && new Date(row.expireAt).getTime() > nowMs) { break; }
-        await new Promise(r => setTimeout(r, 40));
-    }
+    // Exit as soon as the request is answered: its cache row must already be readable by the next worker.
     await mongoose.disconnect();
     process.stdout.write(JSON.stringify(result));
 }

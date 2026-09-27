@@ -1,8 +1,9 @@
 /**
  * Domestic air fallback from the WAQI geo feed (#2622).
  * Used by the v000903 KMA routes when no nearby AirKorea station has an observation within
- * eight hours. Results are shared by all API workers through a Mongo cache; one worker makes
- * at most one call per cell at a time. Provider failures never reach the caller as errors.
+ * eight hours. Results are shared by all API workers through a Mongo cache; a request finishes
+ * only after its result is written, and one worker makes at most one call per cell at a time.
+ * Provider failures never reach the caller as errors.
  */
 
 "use strict";
@@ -64,23 +65,32 @@ function _kstDataTime(date) {
  * Keep only what the fallback needs from a WAQI feed body.
  */
 function _compactFeed(data) {
+    // provider fields are untrusted; anything of an unexpected type is dropped
     var time;
-    if (data.time && data.time.iso) {
-        time = data.time.iso;
+    var t = data.time && typeof data.time === 'object' ? data.time : {};
+    if (typeof t.iso === 'string') {
+        time = t.iso;
     }
-    else if (data.time && data.time.s && data.time.tz) {
-        time = data.time.s.replace(' ', 'T') + data.time.tz;
+    else if (typeof t.s === 'string' && typeof t.tz === 'string') {
+        time = t.s.replace(' ', 'T') + t.tz;
+    }
+    var city = data.city && typeof data.city === 'object' ? data.city : {};
+    var geo;
+    if (Array.isArray(city.geo) && city.geo.length >= 2 &&
+        typeof city.geo[0] === 'number' && isFinite(city.geo[0]) &&
+        typeof city.geo[1] === 'number' && isFinite(city.geo[1])) {
+        geo = [city.geo[0], city.geo[1]];
     }
     var iaqi = {};
     POLLUTANTS.forEach(function (code) {
-        var item = data.iaqi && data.iaqi[code];
+        var item = data.iaqi && typeof data.iaqi === 'object' ? data.iaqi[code] : undefined;
         if (item && typeof item.v === 'number' && isFinite(item.v)) {
             iaqi[code] = item.v;
         }
     });
     return {
-        name: data.city && data.city.name,
-        geo: data.city && Array.isArray(data.city.geo) ? data.city.geo : undefined,
+        name: typeof city.name === 'string' ? city.name : undefined,
+        geo: geo,
         time: time,
         iaqi: iaqi
     };
@@ -98,7 +108,12 @@ function _failureReason(err) {
 
 function _fetch(gCoord, key, callback) {
     var url = BASE_URL + 'geo:' + gCoord.lat + ';' + gCoord.lon + '/?token=' + encodeURIComponent(key);
+    var settled = false;
     var done = function (outcome) {
+        if (settled) {
+            return;
+        }
+        settled = true;
         // leave the promise chain so a callback exception is not taken as a request failure
         setImmediate(function () {
             callback(outcome);
@@ -106,11 +121,16 @@ function _fetch(gCoord, key, callback) {
     };
     try {
         require('axios').get(url, {timeout: REQUEST_TIMEOUT_MS}).then(function (response) {
-            var body = response && response.data;
-            if (!body || body.status !== 'ok' || !body.data || typeof body.data !== 'object') {
-                return done({outcome: 'failed', reason: 'status-' + (body && body.status)});
+            try {
+                var body = response && response.data;
+                if (!body || body.status !== 'ok' || !body.data || typeof body.data !== 'object') {
+                    return done({outcome: 'failed', reason: 'status-' + (body && body.status)});
+                }
+                done({outcome: 'ok', feed: _compactFeed(body.data)});
             }
-            done({outcome: 'ok', feed: _compactFeed(body.data)});
+            catch (err) {
+                done({outcome: 'failed', reason: 'invalid-body'});
+            }
         }, function (err) {
             done({outcome: 'failed', reason: _failureReason(err)});
         });
@@ -146,17 +166,34 @@ function _readCache(cell, now, callback) {
     }
 }
 
-function _writeCache(row) {
+/**
+ * Calls back once the write is acknowledged (or failed), so a request finishes only when
+ * other workers can already read its result.
+ */
+function _writeCache(row, callback) {
+    var answered = false;
+    function answer() {
+        if (!answered) {
+            answered = true;
+            callback();
+        }
+    }
     try {
         var set = {outcome: row.outcome, reason: row.reason, feed: row.feed, fetchedAt: row.fetchedAt, expireAt: row.expireAt};
         WaqiAirCache.updateOne({_id: row._id}, {$set: set}, {upsert: true}, function (err) {
             if (err) {
                 log.warn('WAQI air cache write failed cell=' + row._id + ' ' + err.message);
             }
+            answer();
         });
     }
     catch (err) {
+        if (answered) {
+            // thrown by a waiting caller, not by the cache write
+            throw err;
+        }
         log.warn('WAQI air cache write failed cell=' + row._id + ' ' + err.message);
+        answer();
     }
 }
 
@@ -182,11 +219,13 @@ function _fetchShared(cell, gCoord, key, callback) {
         if (row.outcome !== 'ok') {
             log.warn('WAQI air fallback request failed cell=' + cell + ' reason=' + row.reason);
         }
-        _writeCache(row);
-        var waiting = inFlight[cell];
-        delete inFlight[cell];
-        waiting.forEach(function (cb) {
-            cb(row);
+        // requests for this cell keep joining until the cache holds the result
+        _writeCache(row, function () {
+            var waiting = inFlight[cell];
+            delete inFlight[cell];
+            waiting.forEach(function (cb) {
+                cb(row);
+            });
         });
     });
 }

@@ -154,7 +154,9 @@ See the [operator contract](../../../reports/sdlc/issue-2564/operator-contract.m
 `waqi-air.test.js` (in `test:offline` and the RSS workflow) loads the real fallback module, station-name helper and
 v000903 air middleware in VMs with a stubbed `axios` and cache model. It covers the AirKorea-shaped mapping, the 8-hour
 and 30 km limits, a missing or placeholder key, provider failures and their cache periods, reuse of the shared cache by a
-second module instance (another worker), in-flight sharing, cache read/write errors, a caller exception on a cache hit
+second module instance (another worker), answering only after the cache write is acknowledged (a held write keeps
+the request and same-worker joiners waiting; the next worker then reads the row), in-flight sharing, cache read/write
+errors, malformed provider bodies (every waiter answered once, no unhandled rejection), a caller exception on a cache hit
 (no second call), the middleware on present/missing/failed air, `airInfo.source`, the skipped station forecast, the
 `getKeco` error path, the route order and the overseas station name.
 
@@ -162,7 +164,8 @@ second module instance (another worker), in-flight sharing, cache read/write err
 `axios` HTTP to a loopback fake WAQI feed: fallback on DB 1.0/2.0 for `airkorea` and `airnow`, an unchanged fresh
 AirKorea response, stale/distant/HTTP 500/status/timeout/no-key/placeholder-key and failing AirKorea lookups, cache
 reuse across two harness instances, address/coordinate equality and a shortened Jeju name. `waqi-cache-mongo-smoke.js`
-runs six separate worker processes against one mongod (mongodb-memory-server, mongoose 5.13 as in
+runs six separate worker processes against one mongod (each exits right after its answer; process start-up is slower
+than the write, so the held-write unit test is the regression for write ordering) (mongodb-memory-server, mongoose 5.13 as in
 `vc-lock-mongo-smoke.js`): a second process is served from Mongo, rows expire after 30 minutes (ok) or 2 minutes
 (failure), and the TTL index exists. `waqi-air-node10-check.js` repeats the module, cache and middleware checks on the
 host's Node 10.15.3.

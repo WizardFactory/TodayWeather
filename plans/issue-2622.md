@@ -1,6 +1,6 @@
 # Plan: WAQI fallback for domestic air and short WAQI station names — issue 2622
 
-Revision 2, 2026-09-27. Consumes [intent](../intent/issue-2622.md) r1b and [spec](../specs/issue-2622.md) r3. r2: Node 10.15.3 check (`waqi-air-node10-check.js`, CI `vc-node10`), Mongo smoke with mongoose 5.13.22 (CI `vc-lock-mongo`), docs `external-providers.md` W4. Owner: main agent (builder, Claude/Anthropic). Branch `fix/2622-waqi-air-fallback` from `master` 65943c6e in worktree `tall-dog`.
+Revision 3, 2026-09-27. Consumes [intent](../intent/issue-2622.md) r1b and [spec](../specs/issue-2622.md) r4. r3: PR review corrections R1 (answer after the cache write; Mongo smoke no longer waits for visibility) and R2 (malformed bodies), with regression tests. r2: Node 10.15.3 check (`waqi-air-node10-check.js`, CI `vc-node10`), Mongo smoke with mongoose 5.13.22 (CI `vc-lock-mongo`), docs `external-providers.md` W4. Owner: main agent (builder, Claude/Anthropic). Branch `fix/2622-waqi-air-fallback` from `master` 65943c6e in worktree `tall-dog`.
 
 ## File operations
 
@@ -44,7 +44,7 @@ docker run --rm --network none -e NODE_PATH=/deps -v $PWD:/repo:ro -v /tmp/tw-26
 
 ## Risks, blast radius, rollback
 
-- Blast radius: every v000903 KMA response without fresh AirKorea air (adds one Mongo read, at most one WAQI call per town cell per 2–30 min across all workers); overseas `stationName` text for long names.
+- Blast radius: every v000903 KMA response without fresh AirKorea air (adds one Mongo read; one WAQI call and one Mongo write per town cell per 2–30 min, except simultaneous first requests on different workers); overseas `stationName` text for long names.
 - Riskiest part: middleware must call `next()` exactly once on every path (timeouts, cache errors, exceptions) — covered by unit tests counting calls and the route smoke.
 - Could break: app air tab if the WAQI airInfo shape differs (mitigated by reusing `makeAirInfoList`/`_convertAirInfo`); `AirForecastList` errors (skipped for aqicn).
 - Load: WAQI quota unknown; failure TTL prevents hammering during WAQI outages.
