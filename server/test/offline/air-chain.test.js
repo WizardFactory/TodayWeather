@@ -54,6 +54,17 @@ test('air policy config: defaults, parsing and validation', () => {
     assert.throws(() => air.load({AIR_PROVIDER_TIMEOUT_MS: '100'}), /AIR_PROVIDER_TIMEOUT_MS/);
 });
 
+test('air policy config loads with defaults in a sandbox without a process global', () => {
+    const vm = require('node:vm');
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const module = {exports: {}};
+    const sandbox = {module, exports: module.exports, require: () => { throw new Error('no requires expected'); }};
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../config/air.js'), 'utf8'), sandbox, {filename: 'config/air.js'});
+    assert.equal(module.exports.googleMonthlyCap, 10000);
+    assert.equal(module.exports.paidProvidersEnabled, false);
+});
+
 // ---- adapters -------------------------------------------------------------------------------
 function adapters(respond, lines) {
     const http = fakeAxios(respond);

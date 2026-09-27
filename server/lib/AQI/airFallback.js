@@ -11,7 +11,8 @@
 
 var config = require('../../config/config');
 var policy = require('../../config/air');
-var providers = require('../air/providers');
+// explicit index: the isolated harnesses resolve files, not directories
+var providers = require('../air/providers/index');
 var providerBudget = require('../air/providerBudget');
 var providerChain = require('../air/providerChain');
 var observation = require('../air/observation');

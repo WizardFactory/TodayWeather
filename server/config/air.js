@@ -63,4 +63,6 @@ function load(env) {
     };
 }
 
-module.exports = load(process.env);
+// Isolated harnesses load production modules in a VM without a `process` global (the overseas
+// route smoke found this in CI); defaults apply there.
+module.exports = load(typeof process !== 'undefined' && process && process.env ? process.env : {});
