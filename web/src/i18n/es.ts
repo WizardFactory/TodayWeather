@@ -1,0 +1,479 @@
+import type { Catalog } from ".";
+const es: Catalog = {
+  "app.title": "TodayWeather",
+  "common.noInfo": "Sin datos",
+  "place.selected": "Ubicación seleccionada",
+  "air.noStation": "Sin datos de estación",
+  "warnings.defaultName": "Aviso meteorológico",
+  "notice.noYesterday":
+    "No hay datos de la temperatura de ayer a esta misma hora.",
+  "notice.noAir": "No hay observaciones de calidad del aire para esta zona.",
+  "settings.language": "Idioma",
+  "settings.languageAuto": "Idioma del navegador ({language})",
+  "settings.languageHint":
+    "Al principio se usa el idioma del navegador. Los nombres de lugares, resúmenes y textos de avisos que envía el servidor se muestran en los idiomas que admite el servidor.",
+  "error.timeout": "Se agotó el tiempo de espera de la solicitud.",
+  "error.offline": "Estás sin conexión.",
+  "error.rateLimitSeconds":
+    "Demasiadas solicitudes. Vuelve a intentarlo en {seconds} segundos.",
+  "error.rateLimit":
+    "Demasiadas solicitudes. Vuelve a intentarlo en unos momentos.",
+  "error.unavailable":
+    "El servicio meteorológico no está disponible temporalmente. Vuelve a intentarlo en unos momentos.",
+  "error.badResponse":
+    "No se pudo leer la respuesta del servidor. Vuelve a intentarlo en unos momentos.",
+  "error.empty": "Los datos están vacíos.",
+  "error.tooLarge": "Los datos superan el tamaño permitido.",
+  "error.unreadable":
+    "No se pudieron leer los datos del servicio meteorológico.",
+  "error.connect":
+    "No se pudo conectar con el servicio meteorológico. Vuelve a intentarlo en unos momentos.",
+  "error.geocode": "No se pudo identificar la ubicación.",
+  "error.notificationsUnavailable":
+    "Las notificaciones web aún no están disponibles en la app web.",
+  "error.notificationsUseApp":
+    "La app web aún no ofrece notificaciones web. Usa las notificaciones de la app móvil.",
+  "error.unsupported": "Esta solicitud no es compatible.",
+  "error.sharedPlace": "No se encontró la ubicación compartida.",
+  "error.searchTooShort": "Escribe al menos dos caracteres.",
+  "error.demoSearch":
+    "En el modo de demostración, elige una ubicación sugerida.",
+  "error.demoAirUnit":
+    "Los datos de demostración solo admiten el estándar coreano de calidad del aire.",
+  "error.featureUnavailable": "La función solicitada no está disponible.",
+  "error.maxPlaces": "Puedes guardar hasta {max} ubicaciones.",
+  "air.grade.good": "Buena",
+  "air.grade.moderate": "Moderada",
+  "air.grade.sensitive": "Mala para grupos sensibles",
+  "air.grade.unhealthy": "Mala",
+  "air.grade.veryUnhealthy": "Muy mala",
+  "air.grade.hazardous": "Peligrosa",
+  "air.standard.airkorea": "Estándar coreano",
+  "air.standard.airkorea_who": "Guía de la OMS",
+  "air.standard.airnow": "Estándar EPA (EE. UU.)",
+  "air.standard.aqicn": "Estándar de China",
+  "air.source":
+    "Datos de calidad del aire: Ministerio de Medio Ambiente / Korea Environment Corporation (AirKorea)",
+  "air.disclaimer":
+    "Son datos en tiempo real no verificados y pueden contener errores.",
+  "air.forecast.kaq":
+    "Los pronósticos de calidad del aire los proporciona el Instituto de Investigación Convergente de Clima, Energía y Medio Ambiente de la Universidad de Anyang (abreviado: Instituto de Convergencia Climática de la Universidad de Anyang; director: Prof. Youn-Seo Koo, Departamento de Ingeniería Ambiental y Energética).",
+  "air.forecast.airkorea":
+    "El Ministerio de Medio Ambiente pronostica los niveles de contaminación del aire para reducir al mínimo sus daños a la salud pública.",
+  "amount.atLeast": "{value} {unit} o más",
+  "amount.atMost": "{value} {unit} o menos",
+  "amount.about": "aprox. {value} {unit}",
+  "time.kst": "KST",
+  "time.local": "(hora local)",
+  "stamp.observed": "Observado",
+  "city.seoul": "Seúl",
+  "cityArea.seoul": "Jung-gu, Seúl",
+  "city.busan": "Busan",
+  "cityArea.busan": "Jung-gu, Busan",
+  "city.incheon": "Incheon",
+  "cityArea.incheon": "Namdong-gu, Incheon",
+  "city.daegu": "Daegu",
+  "cityArea.daegu": "Jung-gu, Daegu",
+  "city.daejeon": "Daejeon",
+  "cityArea.daejeon": "Seo-gu, Daejeon",
+  "city.gwangju": "Gwangju",
+  "cityArea.gwangju": "Seo-gu, Gwangju",
+  "city.ulsan": "Ulsan",
+  "cityArea.ulsan": "Nam-gu, Ulsan",
+  "city.jeju": "Jeju",
+  "cityArea.jeju": "Ciudad de Jeju, Jeju",
+  "city.gangneung": "Gangneung",
+  "cityArea.gangneung": "Gangneung, Gangwon",
+  "city.suwon": "Suwon",
+  "cityArea.suwon": "Suwon, Gyeonggi-do",
+  "city.chuncheon": "Chuncheon",
+  "cityArea.chuncheon": "Chuncheon, Gangwon",
+  "city.cheongju": "Cheongju",
+  "cityArea.cheongju": "Cheongju, Chungcheong del Norte",
+  "city.jeonju": "Jeonju",
+  "cityArea.jeonju": "Jeonju, Jeonbuk",
+  "city.pohang": "Pohang",
+  "cityArea.pohang": "Pohang, Gyeongsang del Norte",
+  "city.mokpo": "Mokpo",
+  "cityArea.mokpo": "Mokpo, Jeolla del Sur",
+  "city.yeosu": "Yeosu",
+  "cityArea.yeosu": "Yeosu, Jeolla del Sur",
+  "city.andong": "Andong",
+  "cityArea.andong": "Andong, Gyeongsang del Norte",
+  "city.tokyo": "Tokio",
+  "cityArea.tokyo": "Tokio, Japón",
+  "city.london": "Londres",
+  "cityArea.london": "Londres, Reino Unido",
+  "city.new-york": "Nueva York",
+  "cityArea.new-york": "Nueva York, Estados Unidos",
+  "city.berlin": "Berlín",
+  "cityArea.berlin": "Berlín, Alemania",
+  "city.singapore": "Singapur",
+  "cityArea.singapore": "Singapur",
+  // App shell: navigation, sidebar, top bar, status banners, footer.
+  // "\n" marks a line break the layout keeps (rendered as <br>).
+  "app.name": "TodayWeather",
+  "common.retry": "Reintentar",
+  "common.viewWeather": "Ver el tiempo",
+  "country.KR": "Corea del Sur",
+  "shell.skipToContent": "Ir al contenido",
+  "shell.mainMenu": "Menú principal",
+  "shell.openMenu": "Abrir menú",
+  "shell.closeMenu": "Cerrar menú",
+  "shell.myWeather": "Mi tiempo",
+  "nav.weather": "Tiempo",
+  "nav.air": "Calidad del aire",
+  "nav.locations": "Ubicaciones",
+  "nav.nationWeather": "Tiempo en el país",
+  "nav.nationAir": "Calidad del aire en el país",
+  "nav.warnings": "Avisos",
+  "nav.settings": "Ajustes",
+  "nav.help": "Ayuda",
+  "sidebar.saved": "Ubicaciones guardadas",
+  "sidebar.addPlace": "Añadir ubicación",
+  "sidebar.empty": "Añade los lugares\nque consultas a menudo.",
+  "install.title": "Como una app, más cómodo",
+  "install.body": "Añade TodayWeather\na tu pantalla de inicio.",
+  "install.button": "Cómo instalar",
+  "topbar.tagline": "Un pequeño hábito para preparar tu día",
+  "topbar.search": "Buscar otra ubicación",
+  "topbar.searchKey": "Buscar",
+  "status.offline":
+    "Estás sin conexión. Los datos guardados pueden no estar actualizados.",
+  "status.storageUnavailable":
+    "El almacenamiento del navegador no está disponible; los ajustes solo se conservarán durante esta visita.",
+  "update.ready":
+    "Hay una nueva versión lista. Revisa lo que estés escribiendo y luego actualiza.",
+  "update.apply": "Actualizar",
+  "update.applied":
+    "Se aplicó la nueva versión. Recarga para ver la pantalla más reciente.",
+  "update.reload": "Recargar",
+  "notFound.title": "No se encontró la página",
+  "notFound.home": "Volver al inicio",
+  "footer.tagline": "Entiende el hoy, prepárate para el mañana.",
+  "toast.offlineSetupFailed":
+    "No se pudieron preparar las funciones sin conexión. Las consultas en línea siguen disponibles.",
+  "toast.listFull":
+    "Tu lista de ubicaciones está llena; se muestra sin guardarla.",
+  // Shared place link and welcome screen.
+  "public.eyebrow": "Ubicación compartida",
+  "public.title": "El tiempo en {name}",
+  "public.body":
+    "Guárdala en tus ubicaciones para ver el tiempo por hora y la calidad del aire.",
+  "public.open": "Ver el tiempo aquí",
+  "public.notFound": "No se encontró la ubicación compartida",
+  "welcome.kicker": "El tiempo para hoy",
+  "welcome.headline": "¿Hará más calor que ayer?",
+  "welcome.headlineAccent": "Descúbrelo en TodayWeather.",
+  "welcome.intro":
+    "Del tiempo a la calidad del aire: todo lo que necesitas para tu día en un solo lugar.",
+  "welcome.introStart":
+    "Elige los lugares que consultas a menudo y empieza con tu propio tiempo.",
+  "welcome.feature.compare.title": "Comparado con ayer",
+  "welcome.feature.compare.body": "Mira de un vistazo cuánto más calor hace",
+  "welcome.feature.air.title": "Calidad del aire al detalle",
+  "welcome.feature.air.body": "Partículas finas y datos por estación",
+  "welcome.feature.anywhere.title": "Cómodo en cualquier lugar",
+  "welcome.feature.anywhere.body": "La misma experiencia en móvil y escritorio",
+  // Locations (favorites, search, current location).
+  "locations.description":
+    "Guarda los lugares que consultas a menudo y revísalos rápidamente.",
+  "locations.search.title": "¿De qué lugar quieres ver el tiempo?",
+  "locations.search.label": "Buscar ubicación",
+  "locations.search.placeholder": "Escribe el nombre de una ciudad o zona",
+  "locations.search.clear": "Borrar búsqueda",
+  "locations.search.noMatch":
+    "No hay ubicaciones sugeridas que coincidan. Prueba con otro nombre.",
+  "locations.search.failed":
+    "No se pudo cargar la lista de ubicaciones sugeridas. Aún puedes elegir una de las ubicaciones predeterminadas de abajo.",
+  "locations.search.notListed": "Esta ubicación no está en las sugerencias.",
+  "locations.search.resolving": "Buscando ubicación…",
+  "locations.search.resolve": "Buscar la dirección “{query}”",
+  "locations.search.demo":
+    "En el modo de demostración, usa las ubicaciones sugeridas.",
+  "locations.locate": "Ubicación actual",
+  "locations.locating": "Localizando",
+  "locations.locateHint":
+    "Tu ubicación solo se solicita cuando pulsas el botón de ubicación actual.",
+  "locations.locateUnsupported":
+    "Este navegador no puede determinar tu ubicación. Busca una ubicación.",
+  "locations.locateFailed":
+    "No se encontró tu ubicación. Busca una ubicación manualmente.",
+  "locations.permissionDenied":
+    "Se denegó el permiso de ubicación. Permite el acceso a la ubicación en la configuración del sitio desde la barra de direcciones del navegador y vuelve a intentarlo, o busca una ubicación manualmente.",
+  "locations.savedCount": "Ubicaciones guardadas {count}",
+  "locations.currentPlace":
+    "Guardada desde la ubicación actual · sin seguimiento",
+  "locations.notificationsFor": "Notificaciones de {name}",
+  "locations.delete": "Eliminar {name}",
+  "locations.deleted": "Se eliminó {name} de tus ubicaciones.",
+  "locations.empty.title": "No hay ubicaciones guardadas",
+  "locations.empty.body": "Elige una ciudad arriba para guardarla aquí.",
+  "locations.previewSaved": "Guardado {time}",
+  // Nationwide weather and air pages.
+  "nation.description": "Compara las observaciones de cada región.",
+  "nation.tab.temperature": "Temperatura",
+  "nation.tab.rain": "Lluvia",
+  "nation.tab.wind": "Viento",
+  "nation.demo": "Datos de demostración · no son observaciones reales.",
+  "nation.stale":
+    "Algunas observaciones están desactualizadas. Revisa la hora de observación de cada región.",
+  "nation.mapLabel": "Mapa de Corea del Sur por regiones",
+  "nation.mapHint":
+    "Esquema de regiones · no está a escala. Consulta todos los valores en la lista.",
+  "nation.listTitle": "Observaciones por región",
+  "nation.rainHint":
+    "La precipitación es el valor observado en la última hora.",
+  "nation.viewWeather": "Ver el tiempo en {name}",
+  // Weather warnings page.
+  "warnings.eyebrow": "Un día seguro",
+  "warnings.description":
+    "Consulta los avisos de la Administración Meteorológica de Corea y su hora de emisión.",
+  "warnings.demo":
+    "Aviso de ejemplo · no es información real de emergencias ni de seguridad.",
+  "warnings.announced": "Emitido",
+  "warnings.stale":
+    "Estos datos están desactualizados. Consulta los avisos vigentes en la Administración Meteorológica de Corea.",
+  "warnings.note": "<Nota>",
+  "warnings.image": "Abrir imagen del aviso",
+  "warnings.empty.title": "No hay avisos disponibles",
+  "warnings.empty.body":
+    "No juzgues tu seguridad solo con esta pantalla. Consulta los avisos más recientes.",
+  // Settings page.
+  "settings.eyebrow": "A tu medida",
+  "settings.title": "Ajustes",
+  "settings.description":
+    "Los cambios se guardan en este navegador al instante.",
+  "settings.units.title": "Unidades y estándar de calidad del aire",
+  "settings.unit.temperatureUnit": "Temperatura",
+  "settings.unit.windSpeedUnit": "Velocidad del viento",
+  "settings.unit.pressureUnit": "Presión",
+  "settings.unit.distanceUnit": "Distancia",
+  "settings.unit.precipitationUnit": "Precipitación",
+  "settings.unit.airUnit": "Estándar de calidad del aire",
+  "settings.unitName.bft": "Beaufort",
+  "settings.unitName.kt": "Nudos",
+  "settings.units.demo":
+    "Los datos de demostración usan siempre el estándar coreano de calidad del aire.",
+  "settings.display.title": "Pantalla y actualizaciones",
+  "settings.theme.label": "Tema",
+  "settings.theme.light": "Claro",
+  "settings.theme.dark": "Oscuro",
+  "settings.theme.photo": "Cielo",
+  "settings.theme.classic": "Clásico",
+  "settings.startup.label": "Pantalla de inicio",
+  "settings.startup.hourly": "Tiempo por hora",
+  "settings.startup.daily": "Tiempo por día",
+  "settings.startup.air": "Calidad del aire",
+  "settings.startup.overview": "Resumen",
+  "settings.startup.locations": "Ubicaciones",
+  "settings.refresh.label": "Actualización automática",
+  "settings.refresh.manual": "Manual",
+  "settings.refresh.minutes": "{minutes} min",
+  "settings.refresh.hours": "{hours} h",
+  "settings.refresh.hint":
+    "Solo se actualiza automáticamente mientras la pantalla está abierta. Al volver, también comprueba si los datos están al día.",
+  "settings.backup.title": "Copia de seguridad de ubicaciones",
+  "settings.backup.hint": "La ubicación actual no se incluye al exportar.",
+  "settings.backup.export": "Exportar",
+  "settings.backup.import": "Importar",
+  "settings.import.tooLarge": "El archivo es demasiado grande.",
+  "settings.import.invalid":
+    "Elige un archivo exportado desde TodayWeather web.",
+  "settings.import.confirm":
+    "Tus {current} ubicaciones y tus ajustes actuales se reemplazarán por los del archivo importado ({imported} ubicaciones). ¿Quieres continuar?",
+  "settings.import.cancelled": "Se canceló la importación.",
+  "settings.import.done": "Se importaron las ubicaciones y los ajustes.",
+  "settings.data.title": "Datos del navegador",
+  "settings.data.hint":
+    "Las ubicaciones y los ajustes se guardan en este navegador, y los datos de las pantallas del tiempo se conservan hasta 24 horas. Al eliminar una ubicación, también se eliminan sus datos guardados.",
+  "settings.data.clear": "Eliminar los datos de TodayWeather de este navegador",
+  "settings.data.confirm":
+    "Se eliminarán todas las ubicaciones, los ajustes y los datos del tiempo guardados en este navegador. ¿Quieres continuar?",
+  "settings.data.cleared":
+    "Se eliminaron los datos de TodayWeather de este navegador.",
+  "settings.service.title": "Información del servicio",
+  "settings.service.privacy": "Privacidad y datos",
+  "settings.service.pricing": "Precios y compras en la app",
+  "settings.service.report": "Informar de un problema",
+  // Help page (one key per paragraph).
+  "help.eyebrow": "¿Necesitas ayuda?",
+  "help.title": "Cómo usar TodayWeather",
+  "help.description":
+    "Pruébalo sin instalar nada y añádelo a tu pantalla de inicio para usarlo con más comodidad.",
+  "help.install.title": "Añadir a la pantalla de inicio",
+  "help.install.body":
+    "En iPhone y iPad, elige ‘Agregar a inicio’ en el menú Compartir del navegador. En Android y en equipos de escritorio, usa la opción de instalar del menú del navegador. Aunque el navegador no tenga opción de instalar, puedes consultar el tiempo igualmente.",
+  "help.privacy.title": "Ubicación actual y privacidad",
+  "help.privacy.body":
+    "El permiso de ubicación solo se solicita cuando pulsas el botón de ubicación actual. Las coordenadas se envían al servidor para consultar el tiempo. Puedes buscar ubicaciones sin conceder el permiso de ubicación. Las ubicaciones y los ajustes se guardan en este navegador, y los datos de las pantallas del tiempo se conservan hasta 24 horas. Puedes borrarlos en cualquier momento con ‘Eliminar los datos de TodayWeather de este navegador’ en Ajustes.",
+  "help.offline.title": "Hora de observación y uso sin conexión",
+  "help.offline.body":
+    "La hora en que actualizaste la pantalla no es la hora de la observación meteorológica. Revisa la hora de observación que se muestra en cada elemento. Sin conexión, se pueden mostrar datos guardados en las últimas 24 horas, pero no se garantiza que reflejen el tiempo ni los avisos actuales.",
+  "help.notifications.title": "Notificaciones y app móvil",
+  "help.notifications.body":
+    "Las notificaciones web aún no están disponibles. Usa las notificaciones del tiempo de la app móvil.",
+  "help.notifications.app":
+    "Para los widgets nativos, el Apple Watch y la restauración de compras, usa la app móvil. El navegador web no puede leer automáticamente las ubicaciones ni las compras de la app móvil.",
+  "help.skyTheme.title": "Tema Cielo",
+  "help.skyTheme.body":
+    "El tema Cielo de la web es un tema de colores que no depende de un servicio de fotos en línea. Es distinto de los fondos fotográficos de la app móvil.",
+  "help.units.title": "Unidades y estándares",
+  "help.units.body":
+    "En Ajustes puedes elegir la temperatura (°C/°F), la velocidad del viento (m/s, km/h, mph, nudos, Beaufort), la presión (hPa, mb, mmHg, inHg), la distancia (km, mi), la precipitación (mm, in) y el estándar de calidad del aire (Corea, guía de la OMS, EPA de EE. UU., China). Las solicitudes al servidor siempre usan las unidades predeterminadas y los valores se convierten una sola vez en pantalla. Las partículas finas se muestran en ㎍/㎥, los gases en ppm y el índice de calidad del aire es un índice sin unidades.",
+  "help.sources.title": "Fuentes de datos",
+  "help.sources.body":
+    "Datos meteorológicos: Administración Meteorológica de Corea (KMA). {source}. {disclaimer} El tiempo en el extranjero usa el proveedor habitual de TodayWeather (Visual Crossing). El modo de demostración siempre se indica. Los valores no disponibles se muestran como ‘—’ en lugar de 0.",
+  "help.sources.precipitation":
+    "Para las horas y los días pasados se muestra la precipitación observada; para los próximos, la cantidad y la probabilidad de precipitación que calcula el servidor a partir de los pronósticos de la KMA. La cantidad de 1 hora del pronóstico a muy corto plazo es el límite inferior de un rango, por lo que se muestra como ‘aprox.’.",
+  "help.accessibility.title": "Accesibilidad y mapa externo",
+  "help.accessibility.body":
+    "Los mismos valores aparecen en la tabla de detalles bajo el gráfico por hora y en la lista por regiones de las pantallas nacionales. El mapa de viento externo es un servicio independiente.",
+  "help.windMap": "Abrir mapa de viento externo",
+  // Pricing / purchases page.
+  "membership.title": "Precios y compras",
+  "membership.description": "Actualmente, la versión web es gratuita.",
+  "membership.heading": "Los pagos web aún no están disponibles",
+  "membership.body":
+    "Las compras de las apps de iOS y Android no se transfieren automáticamente a este navegador. Restaura tus compras y usa las funciones de pago en la app móvil donde las realizaste.",
+  "membership.future":
+    "Si se introducen compras web o la vinculación de cuentas, primero anunciaremos los precios y lo que incluyen.",
+  // Notifications page.
+  "notifications.notFound": "No se encontró la ubicación",
+  "notifications.viewLocations": "Ver ubicaciones",
+  "notifications.title": "Notificaciones de {name}",
+  "notifications.description":
+    "Usa las notificaciones del tiempo de la app móvil.",
+  "notifications.heading": "Las notificaciones web aún no están disponibles",
+  "notifications.body":
+    "Por ahora, la app web no permite programar ni suscribirse a notificaciones. El tiempo y tus ubicaciones siguen disponibles.",
+  // Weather page: header, tabs, footer.
+  "weather.selectFirst": "Primero elige una ubicación",
+  "weather.manageLocations": "Gestionar ubicaciones",
+  "weather.refresh": "Actualizar el tiempo",
+  "weather.share": "Compartir ubicación",
+  "weather.notifications": "Notificaciones de la ubicación",
+  "weather.share.pickCity":
+    "Antes de compartir, elige una ciudad sugerida en lugar de tu ubicación exacta.",
+  "weather.share.title": "{name} · TodayWeather",
+  "weather.share.copied": "Enlace de la ubicación copiado.",
+  "weather.share.copyManually":
+    "Copia el enlace de la ubicación desde la barra de direcciones.",
+  "weather.tabs": "Vistas del tiempo",
+  "weather.tab.hourly": "Por hora",
+  "weather.tab.daily": "Por día",
+  "weather.tab.air": "Calidad del aire",
+  "weather.tab.overview": "Resumen",
+  "weather.footer": "Fuente: {source} · Unidad solicitada °{unit}",
+  "weather.source.kma": "Administración Meteorológica de Corea (KMA)",
+  "weather.source.vc": "Tiempo global (Visual Crossing)",
+  // Weather page: current conditions, metrics, forecasts.
+  "weather.now": "Tiempo actual",
+  "weather.nowFallback": "Observación actual",
+  "weather.yesterday.none": "Sin datos de ayer",
+  "weather.yesterday.same": "La misma temperatura que ayer",
+  "weather.yesterday.warmer": "{delta}° más que ayer",
+  "weather.yesterday.colder": "{delta}° menos que ayer",
+  "weather.air.title": "Calidad del aire ahora",
+  "weather.air.more": "Detalles de calidad del aire",
+  "weather.air.aqiForecast": "Pronóstico del ICA",
+  "weather.air.stale": "Observaciones antiguas",
+  "weather.air.none": "Sin observaciones",
+  "weather.air.noneBody": "La temperatura sigue disponible.",
+  "metric.humidity": "Humedad",
+  "metric.wind": "Viento",
+  "metric.feelsLike": "Sensación térmica",
+  "metric.precipitation": "Precipitación",
+  "metric.snowDepth": "Nieve acumulada",
+  "metric.snowfall": "Nevada",
+  "detail.pressure": "Presión",
+  "detail.visibility": "Visibilidad",
+  "detail.sunrise": "Amanecer",
+  "detail.sunset": "Atardecer",
+  "detail.uv": "Índice UV",
+  "detail.discomfort": "Índice de incomodidad",
+  "detail.foodPoisoning": "Intoxicación alimentaria",
+  "weather.hourly.title": "Pronóstico por hora",
+  "weather.legend.forecast": "Pronóstico",
+  "weather.legend.yesterday": "Ayer",
+  "weather.forecastPublished": "Pronóstico emitido",
+  "weather.forecastStale":
+    "Este pronóstico se emitió hace tiempo. Consulta el pronóstico más reciente.",
+  "weather.precipitation.title": "Pronóstico de lluvia y nieve",
+  "weather.details.title": "Detalles del tiempo",
+  "rain.none": "Precipitación —",
+  "rain.probability": "Probabilidad de precipitación {value}",
+  "rain.amount": "Precipitación {value}{suffix}",
+  "rain.suffix.approx": "pronóstico de 1 hora (aproximado)",
+  "rain.suffix.partial": "observado hasta ahora",
+  "rain.suffix.forecast": "pronóstico",
+  "rain.suffix.forecastHours": "pronóstico de {hours} h",
+  "rain.suffix.observed": "acumulado observado",
+  "rain.suffix.observedHours": "observado en {hours} h",
+  "rain.suffix.hours": "{hours} h",
+  "daily.title": "Pronóstico por día",
+  "daily.legend": "Mínima / Máxima",
+  "daily.empty": "No hay pronóstico por día",
+  // Air quality details.
+  "pollutant.aqi": "ICA",
+  "pollutant.pm25": "PM2.5",
+  "pollutant.pm10": "PM10",
+  "pollutant.o3": "Ozono",
+  "pollutant.no2": "NO₂",
+  "pollutant.so2": "SO₂",
+  "pollutant.co": "CO",
+  "air.title": "Observaciones de calidad del aire",
+  "air.stationLabel": "Estación",
+  "air.guideFallback":
+    "Revisa las observaciones junto con las indicaciones de la KMA y del Ministerio de Medio Ambiente.",
+  "air.otherStation": "Estación: {name}",
+  "air.stale": "No son las observaciones más recientes.",
+  "air.hourlyTitle": "{pollutant} por hora",
+  "air.legend.observed": "Observado",
+  "air.legend.forecast": "Pronóstico",
+  "air.hourlyEmpty": "No hay datos de calidad del aire por hora",
+  "air.none.title": "No hay observaciones de calidad del aire",
+  "air.none.body":
+    "Las observaciones de esta zona aparecerán cuando lleguen. Consulta el pronóstico en la pestaña Tiempo.",
+  "air.provider.title": "Resumen de calidad del aire del proveedor",
+  "air.provider.note":
+    "Hora de observación desconocida · resumen del proveedor, no valores medidos.",
+  "air.forecastSource": "Datos de pronóstico: {source}",
+  // Shared components: loading/error states, data notices, chart.
+  "loading.weather": "Cargando el tiempo",
+  "error.title": "No se pudieron cargar los datos",
+  "error.retryLater": "Vuelve a intentarlo en unos momentos.",
+  "notice.demo.title": "Datos de demostración",
+  "notice.demo.body":
+    "Tiempo ficticio para probar la app. No es el tiempo real.",
+  "notice.refreshing":
+    "Mostrando primero los datos guardados. Última recepción: {time} · cargando los datos más recientes.",
+  "notice.refreshFailed":
+    "No se pudieron actualizar los datos. Última recepción: {time}",
+  "notice.snapshotReason":
+    "{reason} Se muestran datos guardados. Última recepción: {time}",
+  "notice.snapshot":
+    "No se pudo conectar; se muestran datos guardados. Última recepción: {time}",
+  "notice.staleObservation":
+    "Estas observaciones son antiguas. Consulta el tiempo más reciente antes de salir.",
+  "chart.label":
+    "Evolución de la temperatura por hora; los valores están en la tabla de abajo",
+  "chart.empty": "No hay pronóstico por hora",
+  "chart.table": "Ver detalles por hora",
+  "chart.col.time": "Hora",
+  "chart.col.temperature": "Temperatura (°{unit})",
+  "chart.col.rainProbability": "Probabilidad de precipitación",
+  "chart.col.humidity": "Humedad",
+  "external.kma": "KMA Weather Nuri",
+  // Provinces on the nationwide map (cities reuse city.*)
+  "region.gangwon": "Gangwon",
+  "region.gyeonggi": "Gyeonggi",
+  "region.chungbuk": "Chungbuk",
+  "region.chungnam": "Chungnam",
+  "region.gyeongbuk": "Gyeongbuk",
+  "region.gyeongnam": "Gyeongnam",
+  "region.jeonbuk": "Jeonbuk",
+  "region.jeonnam": "Jeonnam",
+  "region.sejong": "Sejong",
+};
+export default es;

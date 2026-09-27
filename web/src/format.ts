@@ -1,4 +1,7 @@
 import { formatValue } from "@todayweather/core";
+import { language, t } from "./i18n";
+import { placeName } from "./places";
+import { dateText } from "./locale";
 /** Positive amounts never round to zero: mm one decimal, inches two. */
 export function amount(value: number | null, unit: string) {
   if (value === null || !Number.isFinite(value)) return "—";
@@ -17,11 +20,11 @@ export function approxAmount(value: number | null, unit: string) {
   if (value === 0) return `0 ${unit}`;
   const mm = unit === "in" ? value * 25.4 : value,
     to = (v: number) => amount(unit === "in" ? v / 25.4 : v, unit);
-  if (mm >= 50 - 1e-6) return `${to(50)} ${unit} 이상`;
+  if (mm >= 50 - 1e-6) return t("amount.atLeast", { value: to(50), unit });
   if (mm >= 30 - 1e-6) return `${to(30)}~${to(50)} ${unit}`;
   // "1mm 미만" and "1.0mm" both parse to 1: only an upper bound is known.
-  if (mm <= 1 + 1e-6) return `${to(1)} ${unit} 이하`;
-  return `약 ${amount(value, unit)} ${unit}`;
+  if (mm <= 1 + 1e-6) return t("amount.atMost", { value: to(1), unit });
+  return t("amount.about", { value: amount(value, unit), unit });
 }
 const WORDS: Record<number, string> = {
   [-3]: "엊그제",
@@ -32,22 +35,29 @@ const WORDS: Record<number, string> = {
   2: "모레",
   3: "글피",
 };
-/** Relative day word against the source's current date (wall time, no timezone). */
+/**
+ * Relative day word against the source's current date (wall time, no
+ * timezone). Korean keeps the app's seven words; other languages use their
+ * own words for up to two days either side.
+ */
 export function relativeDay(at: string, reference: string) {
   const a = Date.parse(at.slice(0, 10) + "T00:00:00Z"),
     b = Date.parse(reference.slice(0, 10) + "T00:00:00Z");
   if (!Number.isFinite(a) || !Number.isFinite(b)) return "";
-  return WORDS[Math.round((a - b) / 86400000)] ?? "";
+  const days = Math.round((a - b) / 86400000);
+  const lang = language();
+  if (lang === "ko") return WORDS[days] ?? "";
+  if (Math.abs(days) > 2) return "";
+  const word = new Intl.RelativeTimeFormat(lang, { numeric: "auto" }).format(
+    days,
+    "day",
+  );
+  return word.charAt(0).toLocaleUpperCase(lang) + word.slice(1);
 }
 export const dayLabel = (at: string, reference?: string) => {
   const d = new Date(at.slice(0, 10) + "T12:00:00Z");
   if (Number.isNaN(d.getTime())) return "—";
-  const date = new Intl.DateTimeFormat("ko-KR", {
-    month: "numeric",
-    day: "numeric",
-    weekday: "short",
-    timeZone: "UTC",
-  }).format(d);
+  const date = dateText(at, true);
   const word = reference ? relativeDay(at, reference) : "";
   return word ? `${word} ${date}` : date;
 };
@@ -124,11 +134,14 @@ export function matchPlace<
 >(term: string, places: T[]): T | undefined {
   const q = term.trim().toLocaleLowerCase();
   if (!q) return;
+  // Stored (Korean) and UI-language names both match.
+  const names = (p: T) =>
+    [p.name, placeName(p)].map((n) => n.toLocaleLowerCase());
   const exact = places.find(
-    (p) => p.name.toLocaleLowerCase() === q || p.id.toLocaleLowerCase() === q,
+    (p) => names(p).includes(q) || p.id.toLocaleLowerCase() === q,
   );
   if (exact) return exact;
-  const prefix = places.filter((p) => p.name.toLocaleLowerCase().startsWith(q));
+  const prefix = places.filter((p) => names(p).some((n) => n.startsWith(q)));
   return prefix.length === 1 ? prefix[0] : undefined;
 }
 /**

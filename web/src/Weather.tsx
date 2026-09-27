@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { dateText, hourText } from "./locale";
 import {
   useParams,
   useNavigate,
@@ -47,8 +48,8 @@ import {
   percent,
 } from "./components";
 import {
-  AIR_DISCLAIMER,
-  AIR_SOURCE,
+  airDisclaimer,
+  airSource,
   airWindow,
   forecastDescription,
   gradeClass,
@@ -57,49 +58,55 @@ import {
   standardName,
 } from "./air";
 import { amount, approxAmount, weatherStaleTime } from "./format";
-const pollutantLabels: Record<Pollutant, string> = {
-  aqi: "통합대기지수",
-  pm25: "초미세먼지",
-  pm10: "미세먼지",
-  o3: "오존",
-  no2: "이산화질소",
-  so2: "아황산가스",
-  co: "일산화탄소",
-};
+import { coreText, t, useLanguage } from "./i18n";
+import { placeArea, placeName } from "./places";
+const pollutantLabel = (code: Pollutant) => t(`pollutant.${code}`);
 /** Rain text that labels observed, approximate and server-forecast amounts. */
 function rainText(p: Point, unit: string): string {
   if (p.precipitation === null)
     return p.rainProbability === null
-      ? "강수 —"
-      : `강수확률 ${percent(p.rainProbability)}`;
+      ? t("rain.none")
+      : t("rain.probability", { value: percent(p.rainProbability) });
   const value =
     p.precipitationBasis === "approx"
       ? approxAmount(p.precipitation, unit)
       : `${amount(p.precipitation, unit)} ${unit}`;
-  return `강수 ${value}${rainSuffix(p)}`;
+  return t("rain.amount", { value, suffix: rainSuffix(p) });
 }
 function rainSuffix(p: Point): string {
   if (p.precipitation === null) return "";
-  if (p.precipitationBasis === "approx") return " · 1시간 예보(근사)";
-  if (p.precipitationBasis === "partial") return " · 지금까지 관측";
+  const hours = p.precipitationHours;
+  if (p.precipitationBasis === "approx") return " · " + t("rain.suffix.approx");
+  if (p.precipitationBasis === "partial")
+    return " · " + t("rain.suffix.partial");
   if (p.precipitationBasis === "forecast")
-    return p.precipitationHours === null
-      ? " · 예보"
-      : ` · ${p.precipitationHours}시간 예보`;
+    return (
+      " · " +
+      (hours === null
+        ? t("rain.suffix.forecast")
+        : t("rain.suffix.forecastHours", { hours }))
+    );
   if (p.precipitationBasis === "observed")
-    return p.precipitationHours === null
-      ? " · 관측 누적"
-      : ` · ${p.precipitationHours}시간 관측`;
-  return p.precipitationHours === null ? "" : ` · ${p.precipitationHours}시간`;
+    return (
+      " · " +
+      (hours === null
+        ? t("rain.suffix.observed")
+        : t("rain.suffix.observedHours", { hours }))
+    );
+  return hours === null ? "" : " · " + t("rain.suffix.hours", { hours });
 }
 /** KMA short/daily snow (s06) is the server's forecast; current sn1 is 1 hour. */
 function snowSuffix(p: Point, source: Weather["source"]): string {
   if (p.snowfall === null) return "";
-  if (source === "KMA" && p.snowfallHours !== 1)
-    return p.snowfallHours === null
-      ? " · 예보"
-      : ` · ${p.snowfallHours}시간 예보`;
-  return p.snowfallHours === null ? "" : ` · ${p.snowfallHours}시간`;
+  const hours = p.snowfallHours;
+  if (source === "KMA" && hours !== 1)
+    return (
+      " · " +
+      (hours === null
+        ? t("rain.suffix.forecast")
+        : t("rain.suffix.forecastHours", { hours }))
+    );
+  return hours === null ? "" : " · " + t("rain.suffix.hours", { hours });
 }
 function airValue(value: number | null, code: string) {
   const unit = pollutantUnit(code);
@@ -110,6 +117,7 @@ function airValue(value: number | null, code: string) {
   return value === null || !unit ? text : `${text} ${unit}`;
 }
 export default function WeatherPage({ view: fixedView }: { view?: string }) {
+  useLanguage();
   const [search] = useSearchParams();
   const linkedPollutant = POLLUTANTS.find((c) => c === search.get("pollutant"));
   const { locationId, view: paramView } = useParams(),
@@ -147,8 +155,8 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
   });
   if (!place)
     return (
-      <Empty title="먼저 지역을 선택해 주세요">
-        <Link to="/locations">관심지역 관리로 이동</Link>
+      <Empty title={t("weather.selectFirst")}>
+        <Link to="/locations">{t("weather.manageLocations")}</Link>
       </Empty>
     );
   const live = query.data;
@@ -162,20 +170,23 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
           Math.abs(p.lon - place!.lon) < 0.04),
     );
     if (!publicPlace) {
-      notify("정확한 현재 위치 대신 추천 도시를 선택한 뒤 공유해 주세요.");
+      notify(t("weather.share.pickCity"));
       return;
     }
     const url = new URL("/place/" + publicPlace.id, location.origin).href;
     try {
       if (navigator.share)
-        await navigator.share({ title: `${publicPlace.name} · 오늘날씨`, url });
+        await navigator.share({
+          title: t("weather.share.title", { name: placeName(publicPlace) }),
+          url,
+        });
       else {
         await navigator.clipboard.writeText(url);
-        notify("지역 링크를 복사했습니다.");
+        notify(t("weather.share.copied"));
       }
     } catch (error) {
       if (error instanceof Error && error.name !== "AbortError")
-        notify("주소창의 지역 링크를 복사해 주세요.");
+        notify(t("weather.share.copyManually"));
     }
   }
   return (
@@ -184,18 +195,18 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
         <div>
           <div className="eyebrow">
             <MapPin size={13} />{" "}
-            {place.country === "KR" ? "대한민국" : place.country} ·{" "}
-            {place.address}
+            {place.country === "KR" ? t("country.KR") : place.country} ·{" "}
+            {placeArea(place)}
           </div>
           <h1>
-            {data?.location.name || place.name}
+            {placeName({ ...place, name: data?.location.name || place.name })}
             <span className="live-dot" />
           </h1>
         </div>
         <div className="button-row">
           <button
             className="icon-button"
-            aria-label="날씨 새로고침"
+            aria-label={t("weather.refresh")}
             disabled={query.isFetching}
             onClick={() => void query.refetch()}
           >
@@ -203,27 +214,22 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
           </button>
           <button
             className="icon-button"
-            aria-label="지역 공유"
+            aria-label={t("weather.share")}
             onClick={share}
           >
             <Share2 size={18} />
           </button>
           <Link
             className="icon-button"
-            aria-label="지역 알림 안내"
+            aria-label={t("weather.notifications")}
             to={"/notifications/" + place.id}
           >
             <Bell size={18} />
           </Link>
         </div>
       </div>
-      <nav className="view-tabs" aria-label="날씨 화면">
-        {[
-          ["hourly", "시간별"],
-          ["daily", "일별"],
-          ["air", "미세먼지"],
-          ["overview", "한눈에"],
-        ].map(([id, label]) => (
+      <nav className="view-tabs" aria-label={t("weather.tabs")}>
+        {(["hourly", "daily", "air", "overview"] as const).map((id) => (
           <button
             key={id}
             className={view === id ? "active" : ""}
@@ -237,7 +243,7 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
               )
             }
           >
-            {label}
+            {t(`weather.tab.${id}`)}
           </button>
         ))}
       </nav>
@@ -265,9 +271,14 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
           )}
           <footer className="data-footer">
             <span>
-              제공{" "}
-              {data.source === "KMA" ? "기상청 (KMA)" : "해외 날씨 (Visual Crossing)"}{" "}
-              · 요청 단위 °{data.units.temperatureUnit}
+              {t("weather.footer", {
+                source: t(
+                  data.source === "KMA"
+                    ? "weather.source.kma"
+                    : "weather.source.vc",
+                ),
+                unit: data.units.temperatureUnit,
+              })}
             </span>
             {data.source === "VC" && (
               <a
@@ -297,20 +308,22 @@ function WeatherDetails({
   view: string;
 }) {
   const zone = w.source === "KMA" ? ("KST" as const) : ("local" as const);
-  const t = w.current,
+  const now = w.current,
     unit = w.units.precipitationUnit,
     standard = w.units.airUnit,
     delta =
-      t.temperature !== null &&
+      now.temperature !== null &&
       w.yesterday?.temperature !== null &&
       w.yesterday?.temperature !== undefined
-        ? t.temperature - w.yesterday.temperature
+        ? now.temperature - w.yesterday.temperature
         : null;
   // Mobile rounds the yesterday difference in °F and keeps one decimal in °C.
   const deltaDigits = w.units.temperatureUnit === "F" ? 0 : 1;
-  const today = w.daily.find((p) => p.at.slice(0, 10) === t.at.slice(0, 10));
-  const hourly = w.hourly.filter((p) => p.at >= t.at).slice(0, 16);
-  const snowLabel = w.source === "KMA" ? "적설량" : "눈 강수량";
+  const today = w.daily.find((p) => p.at.slice(0, 10) === now.at.slice(0, 10));
+  const hourly = w.hourly.filter((p) => p.at >= now.at).slice(0, 16);
+  const snowLabel = t(
+    w.source === "KMA" ? "metric.snowDepth" : "metric.snowfall",
+  );
   const previous = hourly.map((p) => {
     const date = new Date(p.at.slice(0, 10) + "T12:00:00Z");
     date.setUTCDate(date.getUTCDate() - 1);
@@ -332,55 +345,72 @@ function WeatherDetails({
         .slice(0, 4)
     : [];
   const wind = [
-    t.windDirection,
-    `${formatValue(t.wind, 1)} ${w.units.windSpeedUnit}`,
+    now.windDirection,
+    `${formatValue(now.wind, 1)} ${w.units.windSpeedUnit}`,
   ]
     .filter(Boolean)
     .join(" ");
   const details: [typeof Gauge, string, string][] = [
-    [Gauge, "기압", `${formatValue(t.pressure, 1)} ${w.units.pressureUnit}`],
+    [
+      Gauge,
+      t("detail.pressure"),
+      `${formatValue(now.pressure, 1)} ${w.units.pressureUnit}`,
+    ],
     [
       Eye,
-      "가시거리",
-      `${formatValue(t.visibility, 1)} ${w.units.distanceUnit}`,
+      t("detail.visibility"),
+      `${formatValue(now.visibility, 1)} ${w.units.distanceUnit}`,
     ],
-    [Sun, "일출", today?.sunrise || t.sunrise || "정보 없음"],
-    [MoonIcon, "일몰", today?.sunset || t.sunset || "정보 없음"],
+    [
+      Sun,
+      t("detail.sunrise"),
+      today?.sunrise || now.sunrise || t("common.noInfo"),
+    ],
+    [
+      MoonIcon,
+      t("detail.sunset"),
+      today?.sunset || now.sunset || t("common.noInfo"),
+    ],
   ];
-  const uv = today?.uv || t.uv;
-  if (uv) details.push([Sun, "자외선", uv]);
-  if (t.discomfort) details.push([Thermometer, "불쾌지수", t.discomfort]);
+  const uv = today?.uv || now.uv;
+  if (uv) details.push([Sun, t("detail.uv"), uv]);
+  if (now.discomfort)
+    details.push([Thermometer, t("detail.discomfort"), now.discomfort]);
   if (today?.foodPoisoning)
-    details.push([Droplets, "식중독", today.foodPoisoning]);
+    details.push([Droplets, t("detail.foodPoisoning"), today.foodPoisoning]);
   return (
     <>
       <div className="overview-grid">
         <section className="hero-card">
           <div className="hero-top">
-            <span className="pill">현재 날씨</span>
+            <span className="pill">{t("weather.now")}</span>
             <span>
-              {dayLabel(t.at, t.at)} · {t.at.slice(11)}
+              {dayLabel(now.at, now.at)} · {hourText(now.at)}
             </span>
           </div>
           <div className="hero-weather">
             <div>
               <div className="temperature">
-                {formatValue(t.temperature)}
+                {formatValue(now.temperature)}
                 <span>°{w.units.temperatureUnit}</span>
               </div>
-              <h2>{t.description || "현재 기상 관측"}</h2>
+              <h2>{now.description || t("weather.nowFallback")}</h2>
             </div>
-            <WeatherIcon icon={t.icon} size={110} />
+            <WeatherIcon icon={now.icon} size={110} />
           </div>
           <div className="hero-bottom">
             <span>
               {delta === null
-                ? "어제 비교 자료 없음"
+                ? t("weather.yesterday.none")
                 : Number(formatValue(Math.abs(delta), deltaDigits)) === 0
-                  ? "어제와 기온이 같아요"
+                  ? t("weather.yesterday.same")
                   : delta > 0
-                    ? `어제보다 ${formatValue(delta, deltaDigits)}° 높아요`
-                    : `어제보다 ${formatValue(-delta, deltaDigits)}° 낮아요`}
+                    ? t("weather.yesterday.warmer", {
+                        delta: formatValue(delta, deltaDigits),
+                      })
+                    : t("weather.yesterday.colder", {
+                        delta: formatValue(-delta, deltaDigits),
+                      })}
             </span>
             <span>
               <ArrowDown size={14} />
@@ -391,9 +421,12 @@ function WeatherDetails({
         </section>
         <section className="panel air-summary">
           <SectionHead
-            title="지금 대기질"
+            title={t("weather.air.title")}
             aside={
-              <Link aria-label="대기질 자세히" to={"/air/" + w.location.id}>
+              <Link
+                aria-label={t("weather.air.more")}
+                to={"/air/" + w.location.id}
+              >
                 <ArrowUpRight size={18} />
               </Link>
             }
@@ -411,18 +444,22 @@ function WeatherDetails({
               </div>
               <div className="air-small-values">
                 <span>
-                  미세먼지 <b>{airValue(air.pollutants.pm10.value, "pm10")}</b>
+                  {pollutantLabel("pm10")}{" "}
+                  <b>{airValue(air.pollutants.pm10.value, "pm10")}</b>
                 </span>
                 <span>
-                  초미세먼지{" "}
+                  {pollutantLabel("pm25")}{" "}
                   <b>{airValue(air.pollutants.pm25.value, "pm25")}</b>
                 </span>
               </div>
               {aqiForecast.length > 0 && (
-                <div className="air-forecast" aria-label="통합대기지수 예보">
+                <div
+                  className="air-forecast"
+                  aria-label={t("weather.air.aqiForecast")}
+                >
                   {aqiForecast.map((h) => (
                     <span key={h.at}>
-                      <small>{h.at.slice(11, 16)}</small>
+                      <small>{hourText(h.at)}</small>
                       <b className={"grade " + gradeClass(standard, h.grade)}>
                         {gradeLabel(standard, h.grade)}
                       </b>
@@ -432,45 +469,50 @@ function WeatherDetails({
               )}
               <Stamp at={air.observedAt} zone={zone} />
               {isOld(air.observedAt, 3, Date.now(), zone) && (
-                <p className="warning-text">오래된 관측 자료</p>
+                <p className="warning-text">{t("weather.air.stale")}</p>
               )}
             </>
           ) : (
             <>
-              <Empty title="관측 자료 없음">
-                기온 정보는 계속 확인할 수 있어요.
+              <Empty title={t("weather.air.none")}>
+                {t("weather.air.noneBody")}
               </Empty>
               <ProviderAirSummary weather={w} />
             </>
           )}
           {w.source === "KMA" && (air || w.airSummary) && (
             <div className="source-credit">
-              <p>{AIR_SOURCE}</p>
-              <p>{AIR_DISCLAIMER}</p>
+              <p>{airSource()}</p>
+              <p>{airDisclaimer()}</p>
             </div>
           )}
         </section>
       </div>
       <div className="metrics-grid">
         {[
-          [Droplets, "습도", `${formatValue(t.humidity)}%`, ""],
-          [Wind, "바람", wind, ""],
-          [Thermometer, "체감기온", `${formatValue(t.feelsLike)}°`, ""],
+          [Droplets, t("metric.humidity"), `${formatValue(now.humidity)}%`, ""],
+          [Wind, t("metric.wind"), wind, ""],
+          [
+            Thermometer,
+            t("metric.feelsLike"),
+            `${formatValue(now.feelsLike)}°`,
+            "",
+          ],
           [
             CloudRainIcon,
-            "강수량",
-            t.precipitationBasis === "approx"
-              ? approxAmount(t.precipitation, unit)
-              : `${amount(t.precipitation, unit)} ${unit}`,
-            rainSuffix(t),
+            t("metric.precipitation"),
+            now.precipitationBasis === "approx"
+              ? approxAmount(now.precipitation, unit)
+              : `${amount(now.precipitation, unit)} ${unit}`,
+            rainSuffix(now),
           ],
-          ...(t.snowfall !== null && t.snowfall > 0
+          ...(now.snowfall !== null && now.snowfall > 0
             ? [
                 [
                   CloudRainIcon,
                   snowLabel,
-                  `${amount(t.snowfall, unit)} ${unit}`,
-                  snowSuffix(t, w.source),
+                  `${amount(now.snowfall, unit)} ${unit}`,
+                  snowSuffix(now, w.source),
                 ],
               ]
             : []),
@@ -493,16 +535,16 @@ function WeatherDetails({
       {view !== "daily" && (
         <section className="panel chart-panel">
           <SectionHead
-            title="시간별 예보"
+            title={t("weather.hourly.title")}
             aside={
               <div className="chart-legend">
                 <span>
                   <i />
-                  예보
+                  {t("weather.legend.forecast")}
                 </span>
                 <span>
                   <i className="muted" />
-                  어제
+                  {t("weather.legend.yesterday")}
                 </span>
               </div>
             }
@@ -511,15 +553,19 @@ function WeatherDetails({
             points={hourly}
             yesterday={previous}
             unit={w.units.temperatureUnit}
-            reference={t.at}
+            reference={now.at}
           />
           {w.forecastPublishedAt && (
             <p className="muted-text">
-              <Stamp at={w.forecastPublishedAt} label="예보 발표" zone="KST" />
+              <Stamp
+                at={w.forecastPublishedAt}
+                label={t("weather.forecastPublished")}
+                zone="KST"
+              />
               {isOld(w.forecastPublishedAt, 24) && (
                 <span className="warning-text">
                   {" "}
-                  · 발표 후 오래된 예보입니다. 최신 예보를 확인해 주세요.
+                  · {t("weather.forecastStale")}
                 </span>
               )}
             </p>
@@ -530,12 +576,12 @@ function WeatherDetails({
         <DailyForecast weather={w} />
       )}
       <section className="panel">
-        <SectionHead title="강수·눈 예보" />
+        <SectionHead title={t("weather.precipitation.title")} />
         <div className="detail-grid">
           {(view === "daily" ? w.daily : hourly).slice(0, 8).map((p) => (
             <div key={p.at}>
               <span>
-                {dayLabel(p.at, t.at)} {view !== "daily" && p.at.slice(11)}
+                {dayLabel(p.at, now.at)} {view !== "daily" && hourText(p.at)}
               </span>
               <span>{rainText(p, unit)}</span>
               {p.snowfall !== null && p.snowfall > 0 && (
@@ -549,7 +595,7 @@ function WeatherDetails({
         </div>
       </section>
       <section className="panel details-panel">
-        <SectionHead title="날씨 자세히" />
+        <SectionHead title={t("weather.details.title")} />
         <div className="detail-grid">
           {details.map(([I, label, value]) => (
             <div key={label}>
@@ -563,7 +609,7 @@ function WeatherDetails({
       {w.notices.length > 0 && (
         <div className="source-notes">
           {w.notices.map((n) => (
-            <p key={n}>{n}</p>
+            <p key={n}>{coreText(n)}</p>
           ))}
         </div>
       )}
@@ -581,11 +627,11 @@ function DailyForecast({ weather: w }: { weather: Weather }) {
   return (
     <section className="panel">
       <SectionHead
-        title="일별 예보"
-        aside={<span className="muted-text">최저 / 최고 기온</span>}
+        title={t("daily.title")}
+        aside={<span className="muted-text">{t("daily.legend")}</span>}
       />
       {!w.daily.length ? (
-        <Empty title="일별 예보가 없습니다" />
+        <Empty title={t("daily.empty")} />
       ) : (
         <div className="daily-list">
           {w.daily.slice(0, 14).map((p) => (
@@ -619,11 +665,9 @@ function ProviderAirSummary({ weather: w }: { weather: Weather }) {
   if (!w.airSummary) return null;
   return (
     <div role="note" className="provider-air-summary">
-      <h3>제공사 대기질 요약</h3>
+      <h3>{t("air.provider.title")}</h3>
       <p>{w.airSummary}</p>
-      <p className="warning-text">
-        관측 시각 미확인 · 측정값이 아닌 제공사 요약입니다.
-      </p>
+      <p className="warning-text">{t("air.provider.note")}</p>
     </div>
   );
 }
@@ -638,17 +682,17 @@ function AirAttribution({
   const source = station?.forecastSource ?? "";
   return (
     <div className="air-attribution">
-      <p>{AIR_SOURCE}</p>
-      <p>{AIR_DISCLAIMER}</p>
+      <p>{airSource()}</p>
+      <p>{airDisclaimer()}</p>
       {source && (
         <p>
-          예보자료: {source.toUpperCase()}
+          {t("air.forecastSource", { source: source.toUpperCase() })}
           {forecastDescription(source) &&
             ` · ${forecastDescription(source)}`}{" "}
           {station?.forecastPublishedAt && (
             <Stamp
               at={station.forecastPublishedAt}
-              label="예보 발표"
+              label={t("weather.forecastPublished")}
               zone="KST"
             />
           )}
@@ -657,8 +701,6 @@ function AirAttribution({
     </div>
   );
 }
-const monthDay = (at: string) =>
-  `${Number(at.slice(5, 7))}/${Number(at.slice(8, 10))}`;
 function AirDetails({
   weather: w,
   initialCode,
@@ -674,10 +716,7 @@ function AirDetails({
   if (!station)
     return (
       <section className="panel">
-        <Empty title="대기질 관측 자료가 없습니다">
-          이 지역에 대한 관측 자료가 도착하면 표시됩니다. 날씨 탭에서 기상
-          예보를 확인해 주세요.
-        </Empty>
+        <Empty title={t("air.none.title")}>{t("air.none.body")}</Empty>
         <ProviderAirSummary weather={w} />
         {w.airSummary && <AirAttribution weather={w} />}
       </section>
@@ -694,16 +733,16 @@ function AirDetails({
     <>
       <section className="panel air-detail">
         <div className="section-head">
-          <h2>대기질 관측</h2>
+          <h2>{t("air.title")}</h2>
           <label className="station-select">
-            관측소{" "}
+            {t("air.stationLabel")}{" "}
             <select
               value={stationIndex}
               onChange={(e) => setStationIndex(Number(e.target.value))}
             >
               {w.air.map((s, i) => (
                 <option key={i} value={i}>
-                  {s.name}
+                  {coreText(s.name)}
                 </option>
               ))}
             </select>
@@ -711,23 +750,22 @@ function AirDetails({
         </div>
         <div className="air-detail-main">
           <div className={`air-orb large ${gradeClass(standard, p.grade)}`}>
-            <span>{pollutantLabels[code]}</span>
+            <span>{pollutantLabel(code)}</span>
             <strong>{airValue(p.value, code)}</strong>
             <span>{p.label || gradeLabel(standard, p.grade)}</span>
           </div>
           <div>
             <span className="eyebrow">{standardName(standard)}</span>
             <h2>{p.label || gradeLabel(standard, p.grade)}</h2>
-            <p>
-              {p.guide ||
-                "관측 자료와 기상청·환경부 안내를 함께 확인해 주세요."}
-            </p>
+            <p>{p.guide || t("air.guideFallback")}</p>
             {otherStation(code) && (
-              <p className="muted-text">측정소: {otherStation(code)}</p>
+              <p className="muted-text">
+                {t("air.otherStation", { name: otherStation(code) })}
+              </p>
             )}
             <Stamp at={station.observedAt} zone={zone} />
             {isOld(station.observedAt, 3, Date.now(), zone) && (
-              <p className="warning-text">최신 관측 자료가 아닙니다.</p>
+              <p className="warning-text">{t("air.stale")}</p>
             )}
           </div>
         </div>
@@ -739,7 +777,7 @@ function AirDetails({
               aria-pressed={code === c}
               onClick={() => setCode(c)}
             >
-              <span>{pollutantLabels[c]}</span>
+              <span>{pollutantLabel(c)}</span>
               <strong>{airValue(station.pollutants[c].value, c)}</strong>
               <small
                 className={
@@ -758,16 +796,16 @@ function AirDetails({
       </section>
       <section className="panel">
         <SectionHead
-          title={`${pollutantLabels[code]} 시간별 변화`}
+          title={t("air.hourlyTitle", { pollutant: pollutantLabel(code) })}
           aside={
             <div className="air-legend">
               <span>
                 <i />
-                관측
+                {t("air.legend.observed")}
               </span>
               <span>
                 <i className="forecast" />
-                예보
+                {t("air.legend.forecast")}
               </span>
             </div>
           }
@@ -784,7 +822,7 @@ function AirDetails({
               return v ? (
                 <div
                   key={i}
-                  title={`${v.at} ${formatValue(v.value, 2)} ${v.forecast ? "예보" : "관측"}`}
+                  title={`${v.at} ${formatValue(v.value, 2)} ${t(v.forecast ? "air.legend.forecast" : "air.legend.observed")}`}
                 >
                   <span>{formatValue(v.value, 1)}</span>
                   <i
@@ -794,7 +832,7 @@ function AirDetails({
                     }}
                   />
                   <small className={showDate ? "date" : ""}>
-                    {showDate ? monthDay(v.at) : v.at.slice(11, 16)}
+                    {showDate ? dateText(v.at) : hourText(v.at)}
                   </small>
                 </div>
               ) : (
@@ -807,7 +845,7 @@ function AirDetails({
             })}
           </div>
         ) : (
-          <Empty title="시간별 대기질 자료가 없습니다" />
+          <Empty title={t("air.hourlyEmpty")} />
         )}
         {p.daily.length > 0 && (
           <div className="daily-air">

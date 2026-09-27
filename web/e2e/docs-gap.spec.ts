@@ -98,7 +98,14 @@ test("KMA observation time, sources, details and the air window follow the rewri
   await expect(bars.nth(12)).toHaveAttribute("title", /2026-09-23 09:00/);
   await expect(bars.nth(12)).toHaveAttribute("title", /관측$/);
   await expect(bars.nth(13)).toHaveAttribute("title", /예보$/);
-  await expect(page.locator(".bar-chart")).toContainText("9/23");
+  // Date labels follow the browser's locale data (ko-KR here).
+  await expect(page.locator(".bar-chart")).toContainText(
+    new Intl.DateTimeFormat("ko-KR", {
+      month: "numeric",
+      day: "numeric",
+      timeZone: "UTC",
+    }).format(new Date("2026-09-23T12:00:00Z")),
+  );
 });
 
 test("overseas weather credits Visual Crossing like the mobile app", async ({

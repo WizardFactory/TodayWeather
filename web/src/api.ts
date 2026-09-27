@@ -2,6 +2,7 @@ import { type Place, type Units, type Weather } from "@todayweather/core";
 import { readSnapshot, weatherKey, writeSnapshot } from "./state";
 import { directApi } from "./direct-api";
 import { readTransportSettings } from "./transport-config";
+import { t } from "./i18n";
 const settings = readTransportSettings(import.meta.env);
 export async function api<T>(
   path: string,
@@ -14,9 +15,7 @@ export async function api<T>(
   signal?.addEventListener("abort", abort, { once: true });
   const timer = setTimeout(
     () =>
-      controller.abort(
-        new DOMException("요청 시간이 초과되었습니다.", "TimeoutError"),
-      ),
+      controller.abort(new DOMException(t("error.timeout"), "TimeoutError")),
     15000,
   );
   try {
@@ -43,7 +42,7 @@ export async function fetchWeather(
   const key = weatherKey(place, units);
   try {
     if (typeof navigator !== "undefined" && navigator.onLine === false)
-      throw new Error("오프라인 상태입니다.");
+      throw new Error(t("error.offline"));
     const weather = await api<Weather>(
       `/weather?lat=${place.lat}&lon=${place.lon}&${unitQuery(units)}`,
       signal,

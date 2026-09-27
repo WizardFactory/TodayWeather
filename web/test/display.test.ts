@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { configureFormats } from "../src/locale";
 import {
   airWindow,
   gradeClass,
@@ -86,6 +87,7 @@ describe("display formatting", () => {
     expect(approxAmount(50 / 25.4, "in")).toBe("1.97 in 이상");
   });
   it("uses mobile relative day words around the source date", () => {
+    configureFormats(["ko-KR"]);
     const ref = "2026-09-23T09:00";
     expect(
       [

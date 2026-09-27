@@ -4,14 +4,23 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import { restoreState } from "./state";
+import { detectLanguage, setLanguage } from "./i18n";
+import { configureFormats } from "./locale";
 import "./style.css";
 // Apply the saved theme before the first render to avoid a light flash.
+let saved: ReturnType<typeof restoreState> | undefined;
 try {
-  document.documentElement.dataset.theme =
-    restoreState(localStorage).settings.theme;
+  saved = restoreState(localStorage);
+  document.documentElement.dataset.theme = saved.settings.theme;
 } catch {
-  /* Storage unavailable: the default theme applies. */
+  /* Storage unavailable: the default theme and browser language apply. */
 }
+// Regional date/number conventions come from the browser locale.
+configureFormats(navigator.languages ?? []);
+// Render once the UI language (saved, else the browser's) is loaded.
+await setLanguage(
+  saved?.settings.language ?? detectLanguage(navigator.languages ?? []),
+).catch(() => setLanguage("ko"));
 const client = new QueryClient({
   defaultOptions: {
     queries: {

@@ -736,10 +736,15 @@ export function shortenAddress(address: string): string {
             : [];
   return parts.filter(Boolean).join(" ");
 }
+let numberLocale = "ko-KR";
+/** Language used by formatValue (the web app's selected UI language). */
+export function setNumberLocale(locale: string) {
+  numberLocale = locale;
+}
 export function formatValue(v: number | null | undefined, digits = 0): string {
   return v === null || v === undefined || !Number.isFinite(v)
     ? "—"
-    : new Intl.NumberFormat("ko-KR", { maximumFractionDigits: digits }).format(
-        v,
-      );
+    : new Intl.NumberFormat(numberLocale, {
+        maximumFractionDigits: digits,
+      }).format(v);
 }
