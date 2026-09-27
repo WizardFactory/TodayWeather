@@ -261,3 +261,31 @@ NODE_PATH=/tmp/issue-2606-harness/node_modules npm --prefix server run test:offl
 The provider responses in `fixtures/gateway/providers.json` are synthetic and follow the real Kakao and Google response structures. `fixtures/gateway/goldens.json` is the output of the tw-backend-functions `a4c1deb` modules (geoinfo and weather, identical to the production handlers at `1b489a9`) on those fixtures and on the per-version backend samples in `backend.json`. It covers 19 coordinate cases, 3 address cases and 132 weather requests (versions × client queries × `Accept-Language` forms). Regenerate it with `fixtures/gateway/make-goldens.js` (the command is in its header). The Kakao address fallback case has no golden, because the Lambda crashes on it; the port's intended output is recorded in `cases.json`.
 
 The route test composes the app in `app.js` order (`cors()` → gateway → `express-session` → a stub backend) and reaches the stub over 127.0.0.1. `gateway-local-smoke.js` runs the real `bin/www` with mongod and stub providers in a loopback-only network namespace (scenario LD-1). It needs the full server dependency install, so it is not part of `test:offline`.
+
+## KMA warning checks (#2609)
+
+`kma-warning.test.js` (part of `test:offline` and the RSS offline workflow) loads the WthrWrnInfoService requester, collector, zone replay/mapping, model parsers and the special weather controller in isolated VMs with live responses recorded on 2026-09-27 (`fixtures/kma-warning/`, no keys). It covers key encoding and rotation, error classes (codes 30, 22, 99, NODATA), paging without `totalCount`, event replay (including `allEndTime`), change-driven calls with retries while an operation lags, the hourly resync, town-to-zone mapping and `/kma/special` output under any host time zone:
+
+```sh
+TZ=UTC NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/kma-warning.test.js
+```
+
+`kma-warning-smoke.js` needs a disposable local MongoDB (its database is dropped). It runs the real requester over HTTP against a local provider stub, the real collector and models, the real `/v000903/kma` router with i18n, and the v000903 town response from the rss-response-smoke harness with the real special weather controller reading the stored zone state. Beyond the RSS smoke dependencies it needs `mongoose@5.1.2 request i18n@0.8.3` and the route's `axios get-pixels aws-sdk dnscache`:
+
+```sh
+docker run -d --rm --name tw2609-mongo -p 127.0.0.1:27099:27017 mongo:3.4.15
+TZ=UTC TW_MONGO_URL=mongodb://127.0.0.1:27099/tw2609 NODE_PATH=<deps> node server/test/offline/kma-warning-smoke.js
+```
+
+`kma-warning-client-e2e.js` starts that smoke in server mode, serves `client/www` from the same origin (a `cordova.js` stub emits `deviceready`) and checks in Chromium (`ko-KR`, `Asia/Seoul`) that the forecast summary shows the town warning and that S12 (`#/kma-special`) lists every bulletin type. `client/www` has no bower libraries or compiled CSS in the repository; prepare them outside the checkout:
+
+```sh
+(cd /tmp/tw-client && cp <repo>/client/bower.json . && echo '{"directory":"lib"}' > .bowerrc && npx bower@1.8.14 install --allow-root)
+mkdir -p /tmp/tw-client/www && ln -s /tmp/tw-client/lib /tmp/tw-client/www/lib
+npx sass@1.32.13 --no-source-map --load-path=/tmp/tw-client client/scss/ionic.app.scss /tmp/tw-client/css/ionic.app.css
+TZ=UTC TW_MONGO_URL=mongodb://127.0.0.1:27099/tw2609 TW_CLIENT_LIB=/tmp/tw-client/lib TW_CLIENT_CSS=/tmp/tw-client/css/ionic.app.css \
+  PLAYWRIGHT_EXECUTABLE_PATH=<chromium> NODE_PATH=<deps + playwright> node server/test/offline/kma-warning-client-e2e.js
+```
+
+jQuery (`lib/jquery/dist`) is not in `bower.json`; copy it from the `jquery@3.3.1` npm package. Screenshots and results go to `TW_SMOKE_OUTPUT_DIR`.
+

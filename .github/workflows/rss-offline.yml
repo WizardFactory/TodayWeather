@@ -84,6 +84,10 @@ jobs:
           TZ=Asia/Seoul node server/test/offline/vc-weather.test.js
           TZ=Asia/Seoul node server/test/offline/vc-weather-smoke.js
           node server/test/offline/vc-node10-check.js
+      - name: KMA warning collection checks
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+        run: node server/test/offline/kma-warning.test.js
 
   vc-node10:
     # The service host runs Node 10.15.3 (docs/architecture/ec2-internals.md).

@@ -334,7 +334,7 @@ The four test routes are mounted at `/test` under v000803, v000901, v000902 and 
 | ---: | --- | --- | --- | --- | --- | --- |
 | 80 | `GET /stnWeatherHourly/*` | [#L24](../../server/routes/v000803/route.test.js#L24) | `divideParams` → town lookup → nearest-station hourly observations as JSON; 500 text on error ([route.test.controller.js#L12-L91](../../server/controllers/route.test.controller.js#L12-L91)) | DB reads only | None found | 0 (in scope) |
 | 81 | `GET /stnWeatherMinute/*` | [#L25](../../server/routes/v000803/route.test.js#L25) | Same for minute observations ([#L93-L161](../../server/controllers/route.test.controller.js#L93-L161)) | DB reads only | None found | 0 (in scope) |
-| 82 | `GET /special` | [#L29-L38](../../server/routes/v000803/route.test.js#L29-L38) | `gatherSpecialWeatherSituation`; the result, or 501 text | **KMA special-weather scrape and DB update** ([kmaScraper.js#L1735-L1790](../../server/lib/kmaScraper.js#L1735-L1790)) | None found | 0 (in scope) |
+| 82 | `GET /special` | [#L29-L38](../../server/routes/v000803/route.test.js#L29-L38) | `gatherSpecialWeatherSituation`; the result, or 501 text | **KMA warning collection and DB update** via `WthrWrnInfoService` ([kmaWarningCollector.js](../../server/lib/kmaWarningCollector.js), #2609) | None found | 0 (in scope) |
 | 83 | `GET /gatherKasiRiseSet` | [#L42-L50](../../server/routes/v000803/route.test.js#L42-L50) | Same work as row 31; 500 with `err.message` | **KASI provider calls and DB update** | None found | 0 (in scope) |
 
 ### Legacy world routers: `/ww` and `/req` (6 registrations)

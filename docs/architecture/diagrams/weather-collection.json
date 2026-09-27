@@ -120,7 +120,7 @@
       "id": "station",
       "type": "backend",
       "label": "Station scraper",
-      "sublabel": "Minute / hourly / alerts",
+      "sublabel": "Minute / hourly; alerts via API",
       "pos": [
         355,
         440
@@ -229,7 +229,8 @@
       "items": [
         "Immediate startup pass; queued jobs use pop() and async.series.",
         "Current, shortest and air observations also dispatch outside the queue.",
-        "Gather opt-in KMA_STN_MINUTE/HOURLY_ENABLED collectors; new stations geocoded via API_SERVER (#2573)."
+        "Gather opt-in KMA_STN_MINUTE/HOURLY_ENABLED collectors; new stations geocoded via API_SERVER (#2573).",
+        "Warnings: the scrape job calls the WthrWrnInfoService collector (#2609; kma-warnings diagram)."
       ]
     },
     {
