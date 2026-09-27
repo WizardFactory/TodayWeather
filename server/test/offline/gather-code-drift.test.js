@@ -149,6 +149,47 @@ describe('gather drift: synthetic offline compatibility', function () {
             assert.strictEqual(r.data[0].pty, 0);
         });
     });
+    it('stores shortest POP per hour without unknown-category logs (#2620)', function () {
+        var items = [];
+        ['2200', '2300', '0000', '0100', '0200', '0300'].forEach(function (time, i) {
+            items = items.concat(h.shortestItems({POP: String(i * 10)}, time));
+        });
+        var logs = []; var c = h.prepare(h.collector(undefined, logs));
+        c.organizeShortestData(0, h.response(items));
+        var r = c.resultList[0]; assert(r.isCompleted); assert.strictEqual(r.data.length, 6);
+        assert.deepStrictEqual(Array.from(r.data, function (row) { return row.pop; }).sort(function (a, b) { return a - b; }),
+            [0, 10, 20, 30, 40, 50]);
+        assert.deepStrictEqual(logs.filter(function (line) { return /unknown/i.test(line); }), []);
+    });
+    ['', 'bad', '-1', '101', 'Infinity', undefined].forEach(function (value) {
+        it('stores invalid shortest POP ' + JSON.stringify(value) + ' as -1', function () {
+            var items = h.shortestItems({POP: value});
+            if (value === undefined) { delete items[items.length - 1].fcstValue; }
+            var r = h.organize('organizeShortestData', items); assert(r.isCompleted);
+            assert.strictEqual(r.data[0].pop, -1);
+        });
+    });
+    it('shortest without POP keeps the -1 sentinel', function () {
+        var items = h.shortestItems().filter(function (i) { return i.category[0] !== 'POP'; });
+        var r = h.organize('organizeShortestData', items); assert(r.isCompleted);
+        assert.strictEqual(r.data[0].pop, -1);
+    });
+    [['organizeShortestData', 'shortestItems'], ['organizeShortData', 'shortItems']].forEach(function (pair) {
+        it(pair[0] + ' warns once per grid with unknown category names (#2620)', function () {
+            var items = [];
+            ['0900', '1000', '1100'].forEach(function (time) {
+                items = items.concat(h[pair[1]]({}, time), [h.item('XYZ', '1', time)]);
+            });
+            items.push(h.item('ABC', '2', '1000'));
+            var logs = []; var c = h.prepare(h.collector(undefined, logs));
+            c[pair[0]](0, h.response(items));
+            assert(c.resultList[0].isCompleted);
+            var unknown = logs.filter(function (line) { return /unknown|Known property/i.test(line); });
+            assert.strictEqual(unknown.length, 1, unknown.join('\n'));
+            assert(/KMA unknown forecast categories/.test(unknown[0]));
+            assert(unknown[0].indexOf('XYZ') !== -1 && unknown[0].indexOf('ABC') !== -1, unknown[0]);
+        });
+    });
     it('does not leak keys for empty request lists or callback exceptions', function () {
         var logs = []; var c = h.collector(undefined, logs);
         c.requestData([], c.DATA_TYPE.TOWN_SHORT, KEY, '20260924', '0800');

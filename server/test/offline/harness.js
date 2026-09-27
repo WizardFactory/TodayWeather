@@ -57,6 +57,12 @@ exports.shortItems = function (overrides, time) {
         REH: '60', PTY: '0', POP: '0', UUU: '0', VVV: '0', VEC: '0', WSD: '0'}, overrides);
     return Object.keys(fields).map(function (key) { return exports.item(key, fields[key], time); });
 };
+// getUltraSrtFcst rows as observed 2026-09-27 (#2620): 11 categories including POP.
+exports.shortestItems = function (overrides, time) {
+    var fields = Object.assign({LGT: '0', PTY: '0', RN1: '강수없음', SKY: '1', T1H: '12.5', REH: '60',
+        UUU: '0', VVV: '0', VEC: '0', WSD: '0', POP: '0'}, overrides);
+    return Object.keys(fields).map(function (key) { return exports.item(key, fields[key], time); });
+};
 exports.response = function (items) {
     return {response: {header: [{resultCode: ['00'], resultMsg: ['NORMAL_SERVICE']}],
         body: [{totalCount: [String(items.length)], items: [{item: items}]}]}};

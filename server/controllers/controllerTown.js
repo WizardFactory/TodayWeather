@@ -934,6 +934,10 @@ function ControllerTown() {
                 if(shortestItem.date === currentTime.date && shortestItem.time === currentTime.time){
                     log.silly('MRbyST> update current data');
                     shortestString.forEach(function(string){
+                        if (string == 'pop') {
+                            // A forecast probability, not an observation (#2620).
+                            return;
+                        }
                         if (string == 't1h'){
                             if (shortestItem[string] != -50) {
                                 current[string] = shortestItem[string];
@@ -4828,10 +4832,13 @@ ControllerTown.prototype._convertSummaryTo3H = function (summary) {
         else if (key === 'lgt') {
             newItem[key] = self._summaryLgt(summary[key], -1);
         }
-        else if(key === 't1h' || key === 'wsd' || key == 'reh' || key === 'uuu' || key === 'vvv' || key === 'vec') {
+        else if(key === 't1h' || key === 'wsd' || key == 'reh' || key === 'uuu' || key === 'vvv' || key === 'vec' ||
+                key === 'pop') {
             var invalidValue = -50;
             switch (key) {
                 case 't1h': invalidValue = -50; break;
+                // Short slot T carries the hourly POP of hour T, so shortest uses the same hour (#2620).
+                case 'pop': invalidValue = -1; break;
                 case 'wsd': invalidValue = -1; break;
                 case 'reh': invalidValue = -1; break;
                 case 'uuu': invalidValue = -100; break;

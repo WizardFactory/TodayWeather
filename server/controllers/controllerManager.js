@@ -698,6 +698,9 @@ Manager.prototype.saveShortest = function(newData, callback){
                                 if (newItem.lgt !== -1) {
                                     dbShortestList.shortestData[i].lgt = newItem.lgt;
                                 }
+                                if (newItem.pop !== undefined && newItem.pop !== -1) {
+                                    dbShortestList.shortestData[i].pop = newItem.pop;
+                                }
                                 if (newItem.t1h !== -50) {
                                     dbShortestList.shortestData[i].t1h = newItem.t1h;
                                 }
