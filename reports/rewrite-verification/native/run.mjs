@@ -50,6 +50,13 @@ const android = {
     },
     async launch() { sh(ADB, ['shell', 'am', 'start', '-n', `${PKG}/.MainActivity`]); },
     async stop() { sh(ADB, ['shell', 'am', 'force-stop', PKG]); await sleep(1500); },
+    // Upgrade simulation: drop the WebView's storage but keep SharedPreferences (debug builds allow run-as).
+    async wipeWebStorage() {
+        // adb shell re-joins arguments into one shell command, so quote the path with a space.
+        sh(ADB, ['shell', `run-as ${PKG} rm -rf 'app_webview/Default/Local Storage' app_webview/Default/IndexedDB`]);
+        const left = sh(ADB, ['shell', `run-as ${PKG} ls app_webview/Default`]).toString();
+        if (left.includes('Local Storage')) throw new Error('Local Storage still present');
+    },
     async shot(file) {
         // Foldables expose two displays; screencap prints a warning before the PNG, so cut at the signature.
         const out = sh(ADB, ['exec-out', 'screencap', '-p'], { maxBuffer: 64 << 20 });
@@ -116,6 +123,11 @@ const ios = {
     },
     async stop() { this.stopping = true; this.proc?.kill(); await sleep(1500); try { sh('xcrun', ['simctl', 'terminate', this.udid, PKG]); } catch { /* ok */ } this.stopping = false; },
     async shot(file) { sh('xcrun', ['simctl', 'io', this.udid, 'screenshot', file]); },
+    // Upgrade simulation: drop WKWebView website data but keep NSUserDefaults and the App Group container.
+    async wipeWebStorage() {
+        const data = sh('xcrun', ['simctl', 'get_app_container', this.udid, PKG, 'data']).toString().trim();
+        fs.rmSync(path.join(data, 'Library', 'WebKit'), { recursive: true, force: true });
+    },
     async host(action) {
         if (action === 'bgresume' || action === 'external-return') {
             if (action === 'bgresume') { sh('xcrun', ['simctl', 'launch', this.udid, 'com.apple.Preferences']); await sleep(3000); }
@@ -132,6 +144,7 @@ let current = null;
 let lastActivity = Date.now();
 let pending = Promise.resolve();
 let allDone = false;
+let wipeOnStop = false;
 let shotSeq = 0;
 
 function onLine(raw) {
@@ -140,7 +153,8 @@ function onLine(raw) {
         summary.native.push(raw.trim());
     }
     if (platform === 'android' && /E\/chromium.*Uncaught|INFO:CONSOLE.*Uncaught/.test(raw)) summary.native.push(raw.trim());
-    const m = raw.match(/(TW[A-Z]+) ([\d.]+) ?(.*)$/);
+    // "[early]" marks lines re-emitted on iOS after cordova's console existed (see tw-harness.js).
+    const m = raw.match(/(TW[A-Z]+) (?:\[early\] )?([\d.]+) ?(.*)$/);
     if (!m) return;
     let [, kind, , msg] = m;
     msg = msg.replace(/", source: .*$/, '');
@@ -158,6 +172,8 @@ function onLine(raw) {
         const name = `${String(++shotSeq).padStart(2, '0')}-${msg.slice(9).trim()}.png`;
         pending = pending.then(() => sleep(5000)).then(() => P.shot(path.join(outDir, name)))
             .then(() => P.host('external-return')).catch((e) => note(`external ${msg} failed ${e}`));
+    } else if (kind === 'TWHOST' && msg.trim() === 'wipe-web-storage') {
+        wipeOnStop = true;   // performed after the app is stopped, so the scenario can still report TWEND
     } else if (kind === 'TWHOST') pending = pending.then(() => P.host(msg.trim())).catch((e) => note(`host ${msg} failed ${e}`));
     if (kind === 'TWSTEP' && /^scenario \d+ /.test(msg)) {
         const [, idx, name] = msg.match(/^scenario (\d+) (\S+)/);
@@ -192,6 +208,10 @@ for (let launchNo = 0; launchNo < 20 && !allDone; launchNo++) {
     await pending;
     await sleep(1500);
     await P.stop();
+    if (wipeOnStop) {
+        wipeOnStop = false;
+        try { await P.wipeWebStorage(); note('web storage wiped (upgrade simulation)'); } catch (e) { note(`wipe failed ${e.stderr || e}`); }
+    }
 }
 P.finish();
 await sleep(500);
@@ -199,4 +219,6 @@ await sleep(500);
 summary.finished = new Date().toISOString();
 console.log('\n' + report(summary));
 fs.writeFileSync(path.join(outDir, 'summary.json'), JSON.stringify(summary, null, 2));
-process.exit(0);
+// Non-zero when the run is not clean, so automation cannot mistake it for a pass.
+const incomplete = !allDone || summary.scenarios.some((s) => s.result !== 'done');
+process.exit(incomplete || summary.unclassified || summary.unclassifiedChecks || summary.native.length ? 1 : 0);

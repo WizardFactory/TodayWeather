@@ -916,6 +916,54 @@
                     .then(function () { check('city-added ' + tag, cityRows().length === before + 1, before + '->' + cityRows().length); return shot(tag + '-favorites'); });
             });
     }
+    // ---------- upgrade mode (window.TW_HARNESS_MODE === 'upgrade') ----------
+    // Launch 1 seeds data (S1 plus a push record), leaves a marker in the native App Group preferences and asks the
+    // host to wipe only the web storage, as an upgrade to a new web origin does. Launch 2 starts with an empty
+    // localStorage and must come back with the cities and push record restored from the native copy.
+    var UPGRADE_SUITE = 'group.net.wizardfactory.todayweather';
+    var UPGRADE_MARKER = 'twHarnessUpgradeSeed';
+    function nativePrefs() { return window.plugins && plugins.appPreferences && plugins.appPreferences.suite(UPGRADE_SUITE); }
+    function nativeFetch(key) {
+        return new Promise(function (res) { var p = nativePrefs(); if (!p) { return res(null); } p.fetch(res, function () { res(null); }, key); });
+    }
+    function cityCount(storage) { var v = storage.get('cityList') || {}; return (v.cityList || []).length; }   // stored as {cityList: [...]}
+    function upgradeScenario(s1) {
+        return function () {
+            check('app-preferences-plugin', !!nativePrefs(), 'window.plugins.appPreferences');
+            return nativeFetch(UPGRADE_MARKER).then(function (marker) {
+                if (!marker) {
+                    return s1().then(function () {
+                        var storage = svc('TwStorage');
+                        var push = storage.get('pushData2') || { pushList: [] };
+                        push.pushList = (push.pushList || []).concat([{ category: 'alarm', id: 901, cityIndex: 0, enable: true, time: new Date().toISOString(), dayOfWeek: [false, true, true, true, true, true, false] }]);
+                        storage.set('pushData2', push);   // TwStorage.set also writes the native copy
+                        var seed = { cities: cityCount(storage), push: push.pushList.length };
+                        emit('STEP', 'upgrade seed ' + JSON.stringify(seed));
+                        return new Promise(function (res) { nativePrefs().store(res, res, UPGRADE_MARKER, JSON.stringify(seed)); })
+                            .then(function () { return sleep(1500); })
+                            .then(function () { emit('HOST', 'wipe-web-storage'); });
+                    });
+                }
+                var seed = typeof marker === 'string' ? JSON.parse(marker) : marker;
+                return waitFor(function () { return /^tab\./.test(stateName()) || stateName() === 'start'; }, 20000, 'state')
+                    .then(function () { return idle(30000); })
+                    .then(function () {
+                        var storage = svc('TwStorage');
+                        var cities = cityCount(storage);
+                        var push = ((storage.get('pushData2') || {}).pushList || []).length;
+                        check('upgrade-restored-state', /^tab\./.test(stateName()), stateName() + ' (start = data lost)');
+                        check('upgrade-restored-cities', seed.cities > 0 && cities === seed.cities, cities + ' of ' + seed.cities);
+                        check('upgrade-restored-push', push === seed.push, push + ' of ' + seed.push);
+                        forecastRendered('upgrade-restored');
+                        return shot('upgrade-restored');
+                    })
+                    .then(function () { return new Promise(function (res) { nativePrefs().remove(res, res, UPGRADE_MARKER); }); });
+            });
+        };
+    }
+    if (window.TW_HARNESS_MODE === 'upgrade') {
+        S = [{ name: 'U1_upgrade_restore', run: upgradeScenario(S[0].run) }];
+    }
     if (window.TW_HARNESS_MODE === 'world') {
         S = [S[0], { name: 'W2_world_tokyo', run: function () { return worldCity(/iPhone|iPad/.test(navigator.userAgent) ? '도쿄' : 'Tokyo', 'tokyo'); } }];
     }

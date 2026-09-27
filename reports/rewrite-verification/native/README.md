@@ -54,6 +54,12 @@ The audit does not catch a control clipped by an `overflow: hidden` parent, for 
 
 `build-harness.sh <android|ios> world` runs a fresh start and then adds Tokyo through the search tab ("Tokyo" on Android, "도쿄" on the ko-KR simulator). It checks that the weather request succeeds, the hourly and daily charts render, the expanded details show the Visual Crossing attribution, and the city is added to the favorites.
 
+## Upgrade mode (store update simulation)
+
+`build-harness.sh <android|ios> upgrade` checks that an update from the store version keeps the user's data although the web origin changes. Launch 1 runs S1 and adds a push record, leaves a marker in the native App Group preferences and prints `TWHOST wipe-web-storage`. After stopping the app, the driver deletes only the web storage (Android `app_webview/…/Local Storage` via `run-as`; iOS `Library/WebKit`) and keeps the native preferences. Launch 2 must open a tab screen, not S01, with the same number of cities and push records restored by `TwStorage.init`.
+
+`run.mjs` exits with 1 when a scenario did not finish or any unclassified error, unclassified failed check or native crash was recorded.
+
 ## Evidence boundaries
 
 Live data changes over time, so a capture shows the production response at capture time. The harness cannot tap native UI: permissions are pre-granted, the iOS share sheet is left open at the end, and the iOS Simulator has neither App Store nor Mail. The iOS notification permission alert is native too, so iOS runs check only that the app requests it; FCM registration and the push-list `POST` are checked on Android, where `POST_NOTIFICATIONS` is pre-granted. Real-device behavior, release signing, push delivery, real ad units and purchase are outside these runs.
