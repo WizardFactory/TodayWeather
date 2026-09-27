@@ -11,15 +11,13 @@
 
 var req = require('request');
 var config = require('../config/config');
+var rejection = require('./dataGoKrRejection');
 
 var BASE_URL = 'http://apis.data.go.kr/1360000/WthrWrnInfoService/';
 var PAGE_ROWS = 1000;
 var MAX_PAGES = 20;
 var TIMEOUT_MS = 30*1000;
-// data.go.kr gateway codes: 20 access denied, 30 unregistered key, 31 expired key, 32 unregistered IP;
-// 22 is the daily request limit (#2604: never retried within the cycle).
-var AUTH_CODES = ['20', '30', '31', '32'];
-var QUOTA_CODE = '22';
+// Auth and quota codes come from dataGoKrRejection; a quota error is never retried within the cycle (#2604).
 
 /**
  * Candidate keys in the #2587 order; unset defaults ('You have to set ...', '["key1","key2"]') are skipped.
@@ -93,8 +91,8 @@ function codeError(operation, code, statusCode, message) {
     return makeError(operation, 'code=' + code + (statusCode ? ' status=' + statusCode : '') + (message ? ' ' + message : ''), {
         returnCode: code,
         statusCode: statusCode,
-        isAuthError: AUTH_CODES.indexOf(code) !== -1 || statusCode === 401 || statusCode === 403,
-        isQuotaError: code === QUOTA_CODE || statusCode === 429
+        isAuthError: rejection.isAuth(statusCode, code),
+        isQuotaError: rejection.isQuota(statusCode, code)
     });
 }
 
@@ -108,12 +106,12 @@ KmaWarningRequester.prototype.classify = function (operation, statusCode, body) 
         }
         catch (e) {
             // The gateway can answer XML even when JSON is requested.
-            var match = /<(returnReasonCode|resultCode)>\s*(\d+)\s*</.exec(body);
-            if (match && match[2] === '03') {
+            var code = rejection.code(body);
+            if (code === '03') {
                 return {noData: true};
             }
-            if (match) {
-                return {error: codeError(operation, match[2], statusCode)};
+            if (code) {
+                return {error: codeError(operation, code, statusCode)};
             }
             return {error: codeError(operation, 'unparsed', statusCode)};
         }

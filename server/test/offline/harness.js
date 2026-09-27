@@ -37,6 +37,7 @@ exports.collector = function (request, logs) {
     var Collector = exports.load('lib/collectTownForecast.js', {
         './midForecastPolicy': require('../../lib/midForecastPolicy'),
         './kmaPrecipitation': optional('../../lib/kmaPrecipitation'),
+        './dataGoKrRejection': optional('../../lib/dataGoKrRejection'),
         events: require('events'), request: request || {get: function () { throw new Error('Unexpected HTTP'); }},
         xml2js: require('xml2js'), dnscache: function () {}
     }, {log: exports.logger(logs || [])});

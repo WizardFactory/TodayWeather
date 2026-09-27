@@ -61,6 +61,9 @@ function load(env) {
             midTemp: midRetry,
             midSea: midRetry
         },
+        // Requests in flight while one _recursiveRequestData pass walks its list (#2604);
+        // the default equals the former TW-461 cutoff of 101 requests per pass.
+        requestConcurrency: integer(env, 'GATHER_REQUEST_CONCURRENCY', 101, 1, 1000),
         // Delay before each recursive retry pass of _recursiveRequestData.
         // setTimeout turns larger values into 1 ms, so they are rejected.
         retryDelayMs: integer(env, 'GATHER_RETRY_DELAY_MS', 0, 0, 2147483647),
