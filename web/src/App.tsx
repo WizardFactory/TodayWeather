@@ -1414,7 +1414,7 @@ function Help() {
         <h2>정보 출처</h2>
         <p>
           기상정보: 기상청. {AIR_SOURCE}. {AIR_DISCLAIMER} 해외 날씨는 기존
-          TodayWeather 제공 경로(Dark Sky)를 사용합니다. 예제 모드는 항상 별도로
+          TodayWeather 제공 경로(Visual Crossing)를 사용합니다. 예제 모드는 항상 별도로
           표시합니다. 제공되지 않는 값은 0 대신 ‘—’로 표시합니다.
         </p>
         <p>{forecastDescription("kaq")}</p>

@@ -9,6 +9,7 @@ const reqeust = require('request');
 
 const kmaTimeLib = require('../lib/kmaTimeLib');
 const config = require('../config/config');
+const gatherPolicy = require('../config/gather');
 
 const ModelimgCase4DustImageController = require('./kaq.modelimg.case.controller.js');
 const ModelimgDustImageController = require('./kaq.modelimg.controller');
@@ -363,7 +364,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                     return obj.Key.indexOf('PM2_5.09KM') > 0;
                 });
 
-                if (list.length < 4) {
+                if (list.length < gatherPolicy.kaqMinModelImages) {
                     throw new Error('It is not get all modelimg yet');
                 }
                 else if (list.length > 4) {

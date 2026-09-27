@@ -176,7 +176,7 @@ angular.module('service.push', [])
                 name: pushInfo.name,
                 location: pushInfo.location,       //lat, long
                 town: pushInfo.town,               //first, second, third
-                source: pushInfo.source,           //KMA or DSF, ...
+                source: pushInfo.source,           //KMA or VC, ...
                 units: units,
                 timezoneOffset: new Date().getTimezoneOffset()*-1,   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
                 package: clientConfig.package,

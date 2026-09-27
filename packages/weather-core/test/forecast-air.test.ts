@@ -64,14 +64,14 @@ describe("KMA mixed-interval forecast and provider air summary", () => {
       precipitationBasis: "forecast",
     });
   });
-  it("handles absent/empty shortest and leaves DSF hourly selection unchanged", () => {
+  it("handles absent/empty shortest and leaves overseas (VC) hourly selection unchanged", () => {
     const raw = sample();
     delete raw.shortest;
     const short = normalizeWeather(raw).hourly;
     raw.shortest = [];
     expect(normalizeWeather(raw).hourly).toEqual(short);
     raw.shortest = [{ date: "20260925", time: "0100", t1h: 88 }];
-    raw.source = "DSF";
+    raw.source = "VC";
     raw.thisTime = [raw.current, raw.current];
     raw.hourly = [{ date: "20260925", time: 2, t1h: 7, rn1: 0 }];
     raw.daily = [];

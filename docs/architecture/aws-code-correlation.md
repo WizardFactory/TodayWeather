@@ -55,7 +55,7 @@ Geocoder cache lookup precedes external provider requests. Coordinate keys round
 | Lambda DynamoDB coordinate cache | 30-day `updatedAt` check | Address cache hits do not apply this expiry check |
 | API Gateway production | Stage cache disabled | No observed stage-cache layer |
 | CloudFront default | `300 / 300 / 600` seconds | Applies to legacy paths using default behavior; distinct from Lambda weather |
-| Express DSF/AQI | 15-minute weather current check / 60-minute air check, plus completeness rules | Can fetch providers inside a request |
+| Express overseas (Visual Crossing, #2585)/AQI | 15-minute weather current check with a per-location fetch lock / 60-minute air check | Can fetch providers inside a request |
 
 Weather/geocode behaviors forward all query parameters and `Origin` / `Accept-Language`, without cookies. Lambda timeout is 20 seconds; current API resource integration configuration has a 29-second timeout (the deployed stage export omits this field). App overlapping attempts at roughly 0/2/4 seconds can amplify one refresh independently of Lambda's sequential backend retries. No whole-chain latency upper bound is inferred from adding these timeouts.
 

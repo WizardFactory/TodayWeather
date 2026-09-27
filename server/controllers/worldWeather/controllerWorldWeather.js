@@ -1536,7 +1536,8 @@ function controllerWorldWeather() {
             log.info('cervert DSF LocalTime > root Timeoffset : ', timeOffset);
             dsf.data.forEach(function(dsfItem){
                 if(dsfItem.current){
-                    if(dsfItem.current.timeOffset){
+                    // 0 (UTC+0, e.g. London in winter) is an offset, not a missing value (#2585).
+                    if(dsfItem.current.timeOffset !== undefined && dsfItem.current.timeOffset !== null){
                         timeOffset = dsfItem.current.timeOffset * 60 * 1000;
                         log.info('DSF LocalTime > overwrite timeoffset to : ', dsfItem.current.timeOffset);
                     }
@@ -1563,11 +1564,15 @@ function controllerWorldWeather() {
                         time.setTime(new Date(dailyItem.dateObj).getTime() + timeOffset);
                         dailyItem.dateObj = self._convertTimeString(time);
 
-                        time.setTime(new Date(dailyItem.sunrise).getTime() + timeOffset);
-                        dailyItem.sunrise = self._convertTimeString(time);
-
-                        time.setTime(new Date(dailyItem.sunset).getTime() + timeOffset);
-                        dailyItem.sunset = self._convertTimeString(time);
+                        // No sunrise/sunset on polar days (null): leave them out rather than format NaN.
+                        if(dailyItem.sunrise){
+                            time.setTime(new Date(dailyItem.sunrise).getTime() + timeOffset);
+                            dailyItem.sunrise = self._convertTimeString(time);
+                        }
+                        if(dailyItem.sunset){
+                            time.setTime(new Date(dailyItem.sunset).getTime() + timeOffset);
+                            dailyItem.sunset = self._convertTimeString(time);
+                        }
 
                         //mint, maxt, pre_intmaxt
                     });
@@ -1604,19 +1609,29 @@ function controllerWorldWeather() {
                 if(req.result.pubDate === undefined){
                     req.result.pubDate = {};
                 }
-                req.result.pubDate.DSF = dsf.date;
+                req.result.pubDate.VC = dsf.date;
             }
             if(dsf.dateObj){
                 if(req.result.pubDate === undefined){
                     req.result.pubDate = {};
                 }
-                req.result.pubDate.DSF = dsf.dateObj;
+                req.result.pubDate.VC = dsf.dateObj;
             }
 
             // TODO : Need to merge DSF data
             //req.result.DSF = req.DSF;
         }
         next();
+    };
+
+    /**
+     * First local time of the overseas hourly/daily rows: the day before yesterday 00:00 for v000903
+     * (req.dsfFromDayBeforeYesterday, #2585; clients drop the first day of hourly rows like the domestic
+     * view), otherwise yesterday 00:00 as before. Local time strings "YYYY.MM.DD HH:MM".
+     */
+    self._dsfStartDate = function(req, timeOffset, cWeatherDate) {
+        var daysBack = req.dsfFromDayBeforeYesterday ? 48 : 24;
+        return self._getTimeString((0 - daysBack) * 60 + timeOffset, cWeatherDate).slice(0, 11) + '00:00';
     };
 
     self.mergeDsfDailyData = function(req, res, next){
@@ -1627,7 +1642,7 @@ function controllerWorldWeather() {
             var timeOffset = req.result.timezone.min;
             //current date of data
             var cWeatherDate = req.cWeatherDate;
-            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, cWeatherDate).slice(0,14) + '00';
+            var startDate = self._dsfStartDate(req, timeOffset, cWeatherDate);
             var curDate = self._getTimeString(timeOffset, cWeatherDate).slice(0,14) + '00';
 
             if(req.result === undefined){
@@ -1645,14 +1660,14 @@ function controllerWorldWeather() {
                 if(req.result.pubDate === undefined){
                     req.result.pubDate = {};
                 }
-                req.result.pubDate.DSF = dsf.date;
+                req.result.pubDate.VC = dsf.date;
             }
 
             if(dsf.dateObj != undefined){
                 if(req.result.pubDate === undefined){
                     req.result.pubDate = {};
                 }
-                req.result.pubDate.DSF = dsf.dateObj;
+                req.result.pubDate.VC = dsf.dateObj;
             }
 
             if(req.result.daily === undefined){
@@ -1692,7 +1707,10 @@ function controllerWorldWeather() {
 
         if(req.DSF && req.DSF.data){
             var timeOffset = req.result.timezone.min;
-            var startDate = self._getTimeString((0 - 48) * 60 + timeOffset, req.cWeatherDate).slice(0,14) + '00';
+            var startDate = self._dsfStartDate(req, timeOffset, req.cWeatherDate);
+            // Other than v000903: at most 48 h ahead, as with Dark Sky.
+            var endDate = req.dsfFromDayBeforeYesterday ? undefined :
+                self._getTimeString(48 * 60 + timeOffset, req.cWeatherDate).slice(0, 14) + '00';
             var yesterdayDate = self._getTimeString((0 - 24) * 60 + timeOffset, req.cWeatherDate).slice(0, 14) + '00';
             var curDate = self._getTimeString(timeOffset, req.cWeatherDate).slice(0, 14) + '00';
 
@@ -1712,14 +1730,14 @@ function controllerWorldWeather() {
                 if(req.result.pubDate === undefined){
                     req.result.pubDate = {};
                 }
-                req.result.pubDate.DSF = dsf.date;
+                req.result.pubDate.VC = dsf.date;
             }
 
             if(dsf.dateObj){
                 if(req.result.pubDate === undefined){
                     req.result.pubDate = {};
                 }
-                req.result.pubDate.DSF = dsf.dateObj;
+                req.result.pubDate.VC = dsf.dateObj;
             }
 
             if(req.result.hourly === undefined){
@@ -1781,7 +1799,8 @@ function controllerWorldWeather() {
 
                 isExist = false;
                 if(self._checkHour(dbItem.dateObj, ['00','03','06','09','12','15','18','21','24']) &&
-                    new Date(dbItem.dateObj).getTime() >= new Date(startDate).getTime()) {
+                    new Date(dbItem.dateObj).getTime() >= new Date(startDate).getTime() &&
+                    (endDate === undefined || new Date(dbItem.dateObj).getTime() <= new Date(endDate).getTime())) {
 
                     for (var index = 0; index<req.result.hourly.length-1; index++) {
                         var hourly =  req.result.hourly[index];
@@ -1843,14 +1862,14 @@ function controllerWorldWeather() {
                 if (req.result.pubDate === undefined) {
                     req.result.pubDate = {};
                 }
-                req.result.pubDate.DSF = dsf.date;
+                req.result.pubDate.VC = dsf.date;
             }
 
             if (dsf.dateObj) {
                 if (req.result.pubDate === undefined) {
                     req.result.pubDate = {};
                 }
-                req.result.pubDate.DSF = dsf.dateObj;
+                req.result.pubDate.VC = dsf.dateObj;
             }
 
             if (req.result.thisTime === undefined) {
@@ -1921,14 +1940,14 @@ function controllerWorldWeather() {
                 if (req.result.pubDate === undefined) {
                     req.result.pubDate = {};
                 }
-                req.result.pubDate.DSF = dsf.date;
+                req.result.pubDate.VC = dsf.date;
             }
 
             if (dsf.dateObj) {
                 if (req.result.pubDate === undefined) {
                     req.result.pubDate = {};
                 }
-                req.result.pubDate.DSF = dsf.dateObj;
+                req.result.pubDate.VC = dsf.dateObj;
             }
 
             if (req.result.thisTime === undefined) {
@@ -2168,7 +2187,8 @@ function controllerWorldWeather() {
             });
         }
 
-        req.result.source = "DSF";
+        // Overseas weather comes from Visual Crossing (#2585); internal names keep "DSF".
+        req.result.source = "VC";
         next();
     };
 
@@ -2507,6 +2527,16 @@ function controllerWorldWeather() {
         return skyIconName;
     };
 
+    /**
+     * _parseData stores -100 for a missing (or zero) provider value; keep it out of the response.
+     * @param value
+     * @returns {boolean}
+     * @private
+     */
+    self._isValue = function (value) {
+        return value !== undefined && value !== null && value !== -100;
+    };
+
     self._makeDailyDataFromDSF = function(summary){
         var day = {};
 
@@ -2526,24 +2556,25 @@ function controllerWorldWeather() {
         if(summary.sunset){
             day.sunset = summary.sunset;
         }
-        if(summary.temp_max){
+        if(self._isValue(summary.temp_max)){
             day.tempMax_c = parseFloat(((summary.temp_max - 32) / (9/5)).toFixed(1));
             day.tempMax_f = parseFloat((summary.temp_max).toFixed(1));
         }
-        if(summary.temp_min){
+        if(self._isValue(summary.temp_min)){
             day.tempMin_c = parseFloat(((summary.temp_min - 32) / (9/5)).toFixed(1));
             day.tempMin_f = parseFloat((summary.temp_min).toFixed(1));
         }
-        if(summary.ftemp_max){
+        if(self._isValue(summary.ftemp_max)){
             day.ftempMax_c = parseFloat(((summary.ftemp_max - 32) / (9/5)).toFixed(1));
             day.ftempMax_f = parseFloat((summary.ftemp_max).toFixed(1));
         }
-        if(summary.ftemp_min){
+        if(self._isValue(summary.ftemp_min)){
             day.ftempMin_c = parseFloat(((summary.ftemp_min - 32) / (9/5)).toFixed(1));
             day.ftempMin_f = parseFloat((summary.ftemp_min).toFixed(1));
         }
         if(summary.cloud){
-            day.cloud = Math.round(summary.cloud * 100);
+            // -100 is _parseData's sentinel for a 0 value (clear day).
+            day.cloud = summary.cloud > 0 ? Math.round(summary.cloud * 100) : 0;
         }
         day.precType = 0;
 
@@ -2566,17 +2597,18 @@ function controllerWorldWeather() {
                 day.precip = 0;
             }
         }
-        if(summary.humid){
+        if(summary.humid > 0){
             day.humid = Math.round(summary.humid * 100);
         }
         if(summary.windspd){
-            day.windSpd_mh = summary.windspd;
-            day.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
+            // -100 is _parseData's sentinel for a calm (0) day.
+            day.windSpd_mh = summary.windspd > 0 ? summary.windspd : 0;
+            day.windSpd_ms = parseFloat((day.windSpd_mh * 0.44704).toFixed(2));
         }
-        if(summary.winddir){
+        if(summary.winddir > 0){
             day.windDir = summary.winddir;
         }
-        if(summary.pres){
+        if(summary.pres > 0){
             day.press = summary.pres;
         }
         if(summary.vis && summary.vis != -100){
@@ -2688,11 +2720,11 @@ function controllerWorldWeather() {
             hourly.date = summary.date;
         }
 
-        if(summary.temp){
+        if(self._isValue(summary.temp)){
             hourly.temp_c = parseFloat(((summary.temp - 32) / (9/5)).toFixed(1));
             hourly.temp_f = parseFloat(summary.temp.toFixed(1));
         }
-        if(summary.ftemp){
+        if(self._isValue(summary.ftemp)){
             hourly.ftemp_c = parseFloat(((summary.ftemp - 32) / (9/5)).toFixed(1));
             hourly.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
@@ -2735,7 +2767,7 @@ function controllerWorldWeather() {
             }
         }
 
-        if(summary.winddir){
+        if(summary.winddir > 0){
             hourly.windDir = summary.winddir;
         }
 
@@ -2785,7 +2817,7 @@ function controllerWorldWeather() {
         list.push(summary1.vis>0?summary1.vis:undefined);
         hourly.vis = parseFloat((self._avg(list) * 1.609344).toFixed(2));
 
-        if(summary.pres){
+        if(summary.pres > 0){
             hourly.press = summary.pres;
         }
 
@@ -2834,11 +2866,11 @@ function controllerWorldWeather() {
             current.weatherType = ControllerWeatherDesc.makeWeatherType(summary.summary);
             current.desc = ControllerWeatherDesc.getWeatherStr(current.weatherType, ts);
         }
-        if(summary.temp){
+        if(self._isValue(summary.temp)){
             current.temp_c = parseFloat(((summary.temp - 32) / (9/5)).toFixed(1));
             current.temp_f = parseFloat(summary.temp.toFixed(1));
         }
-        if(summary.ftemp){
+        if(self._isValue(summary.ftemp)){
             current.ftemp_c = parseFloat(((summary.ftemp - 32) / (9/5)).toFixed(1));
             current.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
@@ -2863,7 +2895,7 @@ function controllerWorldWeather() {
             }
         }
 
-        if(summary.winddir){
+        if(summary.winddir > 0){
             current.windDir = summary.winddir;
         }
 
@@ -2906,7 +2938,7 @@ function controllerWorldWeather() {
             }
         }
 
-        if(summary.pres){
+        if(summary.pres > 0){
             current.press = summary.pres;
         }
 
