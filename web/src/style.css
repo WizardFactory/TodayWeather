@@ -1987,6 +1987,19 @@ body {
   .install-card button {
     min-height: 44px;
   }
+  /* Settings: show the whole chosen value; on the narrowest phones the
+     select moves under its label instead of cutting the text. */
+  .setting-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .setting-row > span {
+    white-space: nowrap;
+  }
+  .setting-row select {
+    max-width: 100%;
+    margin-left: auto;
+  }
   /* Keep the three 44px actions on one row; the place name gives way. */
   .weather-page-head > :first-child {
     min-width: 0;

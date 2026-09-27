@@ -110,3 +110,34 @@ test("weather actions keep a 44px touch area on one row", async ({ page }) => {
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(320);
 });
+
+test("settings show each chosen value in full and labels on one line", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+  const rows = await page.locator(".setting-row").evaluateAll((els) =>
+    els
+      .filter((row) => row.querySelector("select"))
+      .map((row) => {
+        const select = row.querySelector("select")!;
+        const label = row.querySelector("span")!;
+        const style = getComputedStyle(select);
+        const ctx = document.createElement("canvas").getContext("2d")!;
+        ctx.font = `${style.fontSize} ${style.fontFamily}`;
+        const text = select.selectedOptions[0].textContent!;
+        const room =
+          select.clientWidth -
+          parseFloat(style.paddingLeft) -
+          parseFloat(style.paddingRight);
+        return {
+          text,
+          fits: ctx.measureText(text).width <= room + 1,
+          oneLine:
+            label.getBoundingClientRect().height <=
+            parseFloat(getComputedStyle(label).lineHeight) * 1.5,
+        };
+      }),
+  );
+  expect(rows.length).toBeGreaterThan(8);
+  expect(rows.filter((r) => !r.fits || !r.oneLine)).toEqual([]);
+});
