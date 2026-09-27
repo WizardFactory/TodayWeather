@@ -31,13 +31,13 @@ it("uses observed accumulation for past KMA days and the server forecast from to
     expect(normalizeWeather(raw).daily[0].precipitation).toBeNull();
   }
 });
-it("preserves DSF daily rain and current/hourly zero precedence", () => {
+it("preserves overseas (VC) daily rain and current/hourly zero precedence", () => {
   const raw: any = structuredClone(fixture.response);
   raw.current.rn1 = 0;
   raw.current.r06 = 8;
   raw.short = [{ date: raw.current.date, time: 15, rn1: 0, r06: 8 }];
   expect(normalizeWeather(raw).hourly[0].precipitation).toBe(0);
-  raw.source = "DSF";
+  raw.source = "VC";
   raw.thisTime = [raw.current, raw.current];
   raw.hourly = raw.short;
   raw.daily = [{ date: raw.current.date, time: "0000", rn1: 0, r06: 8 }];

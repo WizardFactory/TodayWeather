@@ -31,7 +31,7 @@ router.use('/nation', require('../v000803/route.nation'));
 
 router.use('/kma', require('./route.kma.v000903'));
 //router.use('/dsf/addr', require('./route.dsf.addr'));
-router.use('/dsf/coord', require('../v000902/route.dsf.coord.v000902'));
+router.use('/dsf/coord', require('./route.dsf.coord.v000903'));
 
 /**
  * make html error page

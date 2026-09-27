@@ -7,7 +7,7 @@
     "boundary": "Synthetic public weather envelope after geographic enrichment, modeled on deployed Lambda source inspected 2026-09-20; not a direct DSF backend response or live capture. Direct DSF uses location.lon; this public envelope uses location.long."
   },
   "response": {
-    "source": "DSF",
+    "source": "VC",
     "name": "Tokyo",
     "address": "Tokyo, Japan",
     "country": "JP",
@@ -24,7 +24,7 @@
       "airUnit": "airnow"
     },
     "pubDate": {
-      "DSF": "2026-09-23T00:00:00.000Z"
+      "VC": "2026-09-23T00:00:00.000Z"
     },
     "thisTime": [
       {

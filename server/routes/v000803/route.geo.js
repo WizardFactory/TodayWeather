@@ -106,7 +106,7 @@ router.get('/:lat/:lon',
             result = {result: 'Unknown result'};
         }
         else {
-            if (result.source === 'DSF') {
+            if (result.source === 'VC' || result.source === 'DSF') {
                 if (req.result.thisTime.length != 2) {
                     log.error("thisTime's length is not 2 loc="+JSON.stringify(req.result.location));
                 }
