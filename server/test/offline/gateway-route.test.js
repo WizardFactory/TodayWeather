@@ -45,7 +45,7 @@ function scriptedTransport(script) {
 }
 function realGeocoder(script) {
     return geocoderModule.createGeocoder({
-        kakaoKeys: ['kakao-key'], googleKeys: ['google-key'],
+        kakaoKeys: ['kakao-key'], googleKey: 'google-key',
         kakaoBaseUrl: 'http://kakao.test', googleBaseUrl: 'http://google.test',
         transport: scriptedTransport(script), random: () => 0, log: quietLog
     });

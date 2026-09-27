@@ -18,7 +18,7 @@ This plan defines the work; none of it is executed here.
 6. **Config inventory:** add the new environment names to `docs/rewrite/configuration-inventory.md` (DOC-0).
 7. **PR and review** per the repository SDLC. Merging authorizes no production step.
 8. **Operator steps**, each under its approval (spec §5.1):
-   1. (A1) New provider keys, at least 2 per provider (OP-4).
+   1. (A1) Set `GEOCODER_KAKAO_KEYS` (the 2 existing Kakao keys) and `GEOCODER_GOOGLE_KEY` (the key with fingerprint `ecd5fdb1`) on the host (OP-4).
    2. (A2) Service host deploy by the patch procedure; gather and push URL changes (spec §5.2 steps 1–2); record the deployment in `docs/operations/` at this point.
    3. (A2) OP-1, then DO-2 first, then DO-1 and DO-3 to DO-6, including the DO-3 Lambda-era baseline.
    4. (A3) Probe path change in `AttachEIPToSpot`; new AMIs, templates and fleets; full-map `AttachEIPToSpot` update (OP-3). CloudFront 5xx alarm with a us-east-1 topic (OP-2).

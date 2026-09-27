@@ -4,7 +4,7 @@
 - Facts: `reports/sdlc/issue-2606/investigation.md` (design-task evidence, not in the repository).
 - Test scenarios: [specs/issue-2606-test-scenarios.md](issue-2606-test-scenarios.md).
 - Issue: [#2606](https://github.com/WizardFactory/TodayWeather/issues/2606) and its [scope comment](https://github.com/WizardFactory/TodayWeather/issues/2606#issuecomment-5846716189).
-- Revision 12 (2026-09-27, implementation task `issue-2606-impl`): applies the round-11 LOW items carried from the design task, routes the gateway log lines to stdout/stderr (§5.4), and lists the multi-segment address deviation (§2.5).
+- Revision 12 (2026-09-27, implementation task `issue-2606-impl`; amended the same day with AK's single-Google-key decision, §3.5): applies the round-11 LOW items carried from the design task, routes the gateway log lines to stdout/stderr (§5.4), and lists the multi-segment address deviation (§2.5).
 - Revision 11 (2026-09-26): AK decided to keep the Lambda's `Accept-Language` rule (§9); review round 10 LOWs applied.
 - Revision 10 (2026-09-26): language, `loc` parsing and backend retries now match the Lambda exactly; per-version parity uses the clients' real queries and headers; rollback checks use the Lambda-era baseline (review round 9).
 - Revision 9 (2026-09-26). This revision reduces the design to what the goal needs, as AK decided on 2026-09-26. Operational hardening from review rounds 1–8 moved to §9 (follow-ups). Internal callers change their URL only (option A). Per-version behavior is stated explicitly (§3.1). Earlier revisions and reviews are under `reports/sdlc/issue-2606/`.
@@ -68,7 +68,7 @@ None of these changes a successful response for real client requests within norm
 | Errors had no `Cache-Control` | `no-store` | Fresher retries |
 | Latitude/longitude out of range and addresses over 200 characters were passed to the providers | 400 | Not produced by any known client |
 | Malformed percent-encoding | nginx answers its own HTML 400 before Express; behind nginx the router answers `text/plain` 400 | 0 such requests; no client parses error bodies |
-| Slow requests: no overall deadline before the 29 s API Gateway limit; the same Google key retried up to 3 times | 9 s overall deadline including geocoding; each key tried once | A request that needed more than 9 s or a retried key could now give 501 instead of 200; the app gives up after 10 s anyway. Provision at least 2 keys per provider (§3.5) |
+| Slow requests: no overall deadline before the 29 s API Gateway limit; the same Google key retried up to 3 times | 9 s overall deadline including geocoding; each key tried once | A request that needed more than 9 s or a retried key could now give 501 instead of 200; the app gives up after 10 s anyway (§3.5) |
 | Any `Accept-Language` value used | A value longer than 64 characters before its first `-` becomes `en` | Not sent by browsers or the apps |
 | Dark Sky reverse-geocoding fallback | Removed (#2601); a coordinate result without `label` or `address` → 501, as when Dark Sky failed | Its failures already gave 501 |
 | Kakao address branch always failed | Works, output reduced to `{country, address, location}` | An answer where there was a 501 |
@@ -130,9 +130,11 @@ Ported from tw-backend-functions `a4c1deb` (`geoinfo/controller.kakao.js`, `cont
 
 - Every provider request has a 3 s total timer; the geocoder as a whole has 5 s.
 - Provider base URLs default to the real endpoints; `GEOCODER_KAKAO_BASE_URL` and `GEOCODER_GOOGLE_BASE_URL` override them for the offline tests and LD-1 only.
-- Keys come from `process.env`: `GEOCODER_KAKAO_KEYS` and `GEOCODER_GOOGLE_KEYS`, each a JSON array of strings. An unset or unparseable value counts as no key (provider unavailable → 501 on use; nothing throws at load). Dedicated names keep the existing `KAKAO_SECRET_KEYS`/`GOOGLE_SECRET_KEY` users (KECO station lookup, time zone, `geo.controller`) unaffected.
-- Start at a random key, try each key at most once. Move to the next key on auth errors (Kakao 401/403; Google `REQUEST_DENIED`), quota errors (Kakao 429 or a quota error code; Google `OVER_QUERY_LIMIT`/`OVER_DAILY_LIMIT`) and transient errors (timeout, network, 5xx; Google `UNKNOWN_ERROR`). An empty result (Kakao without documents; Google `ZERO_RESULTS`) or another request error ends the attempt.
-- Provision at least 2 keys per provider. Keys are **new** (no key bundled in the Lambda configuration is reused), restricted to the geocoding API, with a provider-side quota. Values go only into the host's PM2 environment for `www` (then `pm2 save`); never into the repository or logs. Log lines mask the Google `key=` parameter.
+- Keys come from `process.env`: `GEOCODER_KAKAO_KEYS` (a JSON array of strings; unset or unparseable counts as no key) and `GEOCODER_GOOGLE_KEY` (one key). A missing provider key makes that provider unavailable (501 on use); nothing throws at load. Dedicated names keep the existing `KAKAO_SECRET_KEYS`/`GOOGLE_SECRET_KEY` users (KECO station lookup, time zone, `geo.controller`) unaffected.
+- Kakao: start at a random key, try each key at most once. Move to the next key on auth errors (Kakao 401/403; Google `REQUEST_DENIED`), quota errors (Kakao 429 or a quota error code; Google `OVER_QUERY_LIMIT`/`OVER_DAILY_LIMIT`) and transient errors (timeout, network, 5xx; Google `UNKNOWN_ERROR`). An empty result (Kakao without documents; Google `ZERO_RESULTS`) or another request error ends the attempt.
+- **Google (AK, 2026-09-27):** a single key and no rotation. The code uses `GEOCODER_GOOGLE_KEY` only if its fingerprint (first 8 hex digits of its SHA-256) is `ecd5fdb1` (`lib/geocoder/keys.js`); any other value is ignored and logged by fingerprint only. Using another Google key needs a code change. (The check is skipped only when `GEOCODER_GOOGLE_BASE_URL` points the geocoder at a test stub.)
+- **Kakao:** the two keys the Lambda and the service host already use (both answer the coordinate and address APIs, checked 2026-09-27); rotation as below.
+- **Kakao:** provision at least 2 keys, restricted to the Local API, with a provider-side quota. Values go only into the host's PM2 environment for `www` (then `pm2 save`); never into the repository or logs. Log lines mask the Google `key=` parameter.
 
 ### 3.6 Cache (MongoDB)
 
@@ -271,7 +273,7 @@ The test-scenario document maps each requirement to scenarios.
 - Internal callers: the issue says to switch `coord2addr` and `route.geo` to the in-process geocoder. AK chose option A: all four callers keep the public API and only switch to versioned paths (§4.2).
 - Scope comment: its version list for the shared geocode handler (`v000901` for `coord`) conflicts with its own exclusion of `/geocode/v000901/coord`; the route-level traffic rule applies (R3 is `v000903` only).
 - The acceptance item `grep -rn "apiServer.url + '/geocode" …` returns nothing" no longer applies; replace it with IC-1 (no unversioned gateway path).
-- Key names: dedicated `GEOCODER_KAKAO_KEYS`/`GEOCODER_GOOGLE_KEYS` instead of the shared names (§3.5).
+- Key names: dedicated `GEOCODER_KAKAO_KEYS`/`GEOCODER_GOOGLE_KEY` instead of the shared names; a single Google key (§3.5).
 - `Accept-Language`: the issue lists the Lambda's cut at the first `-` as a defect not to reproduce and asks for the primary subtag. AK decided on 2026-09-26 to keep the Lambda rule, so that successful responses stay identical for every client (`ko,en-US;q=0.9` keeps giving Google's name and address). The issue's required change and its defect list should say so; the fix is a follow-up.
 - Fixture parity: compare fresh resolutions (DO-2) because the Lambda may answer from older DynamoDB records.
 - Add the probe path change (§4.3) to the required changes.

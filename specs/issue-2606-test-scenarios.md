@@ -31,7 +31,8 @@ Offline fixtures live in `server/test/offline/fixtures/gateway/`: provider respo
 | U-5 | RQ4 | KR with `lang=en`: Kakao ok, Google fills `label`/`address`; then Google fails | Equals the golden; with Google failing, the Kakao result without label → 501 | Differs |
 | U-6 | RQ4 | Google result without `formatted_address`; KR result without `kmaAddress` | First → `EPROVIDER`, not cached. Second → returned, not cached | Wrong status or caching |
 | U-7 | RQ5 | Provider stub never answers; stub drips one byte every 500 ms | Each attempt aborted at 3 s total; geocoder rejects `EPROVIDER` within 5 s | Hangs or exceeds 5 s |
-| U-8 | RQ5 | Random start fixed at index 0. Kakao keys answer [401, 200]; then [429, 500]; Google [`OVER_QUERY_LIMIT`, `OK`]; Kakao 200 without documents | Success on the second key; `EPROVIDER` after one attempt per key; Google success on the second key; the empty result does not try another key | Key retried, success missed, or empty retried |
+| U-8 | RQ5 | Random start fixed at index 0. Kakao keys answer [401, 200]; then [429, 500]; Google (single key) `OVER_QUERY_LIMIT`; Kakao 200 without documents | Success on the second key; `EPROVIDER` after one attempt per key; Google fails after its one attempt; the empty result does not try another key | Key retried, success missed, or empty retried |
+| U-18 | RQ5 | `GEOCODER_GOOGLE_KEY` unset, empty, another key, a list | Only a key with fingerprint `ecd5fdb1` is used; others are ignored and reported by fingerprint | Another key used |
 | U-9 | RQ5 | `GEOCODER_KAKAO_KEYS` unset, `not-json`, `{}` and `[]` while `KAKAO_SECRET_KEYS` is set | Module loads without throwing; Kakao unavailable (`EPROVIDER`); the shared name is not read | Throw at load, or shared name used |
 | U-10 | RQ13 | All log lines from U-2, U-8 and U-9, and the per-request line of RT-1 and RT-6 | No key substring; Google URL logged with `key=***`; the per-request line has route, version, cache, provider, backend status, ms and status, and no coordinate with more than 3 decimals | A key appears, a field is missing, or a longer coordinate |
 | U-11 | RQ6 | Keys for `(37.5665,126.9780,ko)` and address `잠실` | `c:37.566,126.978,ko`; `a:잠실` | Different |
@@ -104,10 +105,10 @@ git grep -nE "apiServer\.url \+ '/geocode/(coord|addr)/'" b8a3c504 -- server | w
 
 | ID | Scenario | Expected | Failure |
 | --- | --- | --- | --- |
-| OP-1 | `db.geocodecaches.getIndexes()` on the production DB; a boolean check over `pm2 jlist` that prints no values | TTL index `{updatedAt:1}` 2592000 s; every `www` worker has JSON arrays with at least 2 entries in `GEOCODER_KAKAO_KEYS` and `GEOCODER_GOOGLE_KEYS` | Missing, or fewer than 2 keys |
+| OP-1 | `db.geocodecaches.getIndexes()` on the production DB; a boolean check over `pm2 jlist` that prints no values | TTL index `{updatedAt:1}` 2592000 s; every `www` worker has the 2 Kakao keys; the startup log line `gateway geocoder keys:` shows `google=[ecd5fdb1]` | Missing Kakao keys, or a Google fingerprint other than `ecd5fdb1` |
 | OP-2 | `describe-alarms` (us-east-1) for the new alarm and its topic subscription; `set-alarm-state` to ALARM and back | `5xxErrorRate`, the distribution, > 10% for 3 × 5 min; confirmed email subscription; both test emails arrive | Missing, wrong region, or no email |
 | OP-3 | After spec §5.2 steps 2, 4 and 5, a boolean script that prints no values | The IC-1 pattern (`apiServer.url + '/geocode/(coord|addr)/'`) matches no non-test file in any checkout on the service or gather host; the deployed `AttachEIPToSpot` constant equals, byte for byte, the one DO-6 passed with; the service fleet's launch template version uses the new AMI (created after the last host change and `pm2 save`) with the recorded overrides; the variable map equals the recorded map except `TARGET_AMI_ID` = new AMI; the gather fleet uses the new gather AMI | Any mismatch → re-bake; cutover blocked |
-| OP-4 | Key provisioning checklist, kept privately | Keys are new (hashes differ from the Lambda's bundled keys), API-restricted, with a quota | Unconfirmed → block deploy |
+| OP-4 | Key checklist, kept privately | `GEOCODER_KAKAO_KEYS` holds the 2 working Kakao keys (`5273c28e`, `5a1eba50`); `GEOCODER_GOOGLE_KEY` holds the key with fingerprint `ecd5fdb1` (AK 2026-09-27) | Unconfirmed → block deploy |
 
 ## CO / PC / RB — cutover, post-cutover, rollback (RQ12)
 
@@ -125,7 +126,7 @@ git grep -nE "apiServer\.url \+ '/geocode/(coord|addr)/'" b8a3c504 -- server | w
 
 | ID | Scenario | Expected | Failure |
 | --- | --- | --- | --- |
-| DOC-0 | Implementation PR | `docs/rewrite/configuration-inventory.md` lists `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEYS`, `GEOCODER_*_BASE_URL` and `GATEWAY_MAX_INFLIGHT` by name, with no values | Missing name or a value |
+| DOC-0 | Implementation PR | `docs/rewrite/configuration-inventory.md` lists `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `GEOCODER_*_BASE_URL` and `GATEWAY_MAX_INFLIGHT` by name, with no values | Missing name or a value |
 | DOC-1 | Post-cutover PR: the spec §7 files; link check; Archify validate/deliver for the two diagrams | The docs and both diagrams show CloudFront → service EC2 for `weather/*` and `geocode/*`, Lambdas rollback-only; 0 new broken links; Archify validation passes | Any unmet |
 
 ## Coverage
@@ -136,7 +137,7 @@ git grep -nE "apiServer\.url \+ '/geocode/(coord|addr)/'" b8a3c504 -- server | w
 | RQ2 | RT-8, DO-4 |
 | RQ3 | RT-1–RT-3, LD-1, DO-1, PC-1 |
 | RQ4 | U-1–U-6, U-12, U-16, RT-6, RT-7, DO-2 |
-| RQ5 | U-7–U-9, DO-2 |
+| RQ5 | U-7–U-9, U-18, DO-2 |
 | RQ6 | U-11–U-15, OP-1 |
 | RQ7 | RT-14, RT-15, LD-1 |
 | RQ8 | IC-1–IC-3, DO-5 |

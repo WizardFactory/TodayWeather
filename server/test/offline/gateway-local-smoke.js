@@ -55,6 +55,7 @@ function stubProviders() {
         providerCalls.push(url.pathname);
         let body;
         if (url.pathname === '/v2/local/geo/coord2regioncode.json') { body = providers['kakao.coord.seoul']; }
+        else if (url.pathname === '/v2/local/search/address.json') { body = providers['kakao.addr.jamsil']; }
         else if (url.pathname === '/maps/api/geocode/json' && url.searchParams.has('address')) { body = providers['google.addr.jamsil']; }
         else if (url.pathname === '/maps/api/geocode/json') { body = providers['google.coord.london']; }
         else { res.writeHead(404); return res.end(); }
@@ -116,7 +117,9 @@ async function main() {
         MONGOLAB_MONGODB_DATABASE: 'tw_gateway_smoke',
         API_SERVER: 'http://127.0.0.1:' + APP_PORT,
         GEOCODER_KAKAO_KEYS: '["ld-kakao-key"]',
-        GEOCODER_GOOGLE_KEYS: '["ld-google-key"]',
+        // Accepted only because GEOCODER_GOOGLE_BASE_URL points at the stub; against the
+        // real endpoint only the key with fingerprint ecd5fdb1 is used (keys.js).
+        GEOCODER_GOOGLE_KEY: 'ld-google-key',
         GEOCODER_KAKAO_BASE_URL: 'http://127.0.0.1:' + STUB_PORT,
         GEOCODER_GOOGLE_BASE_URL: 'http://127.0.0.1:' + STUB_PORT
     };
@@ -160,6 +163,7 @@ async function main() {
     // R4, X1, OPTIONS.
     res = await get('/geocode/v000903/addr/' + encodeURIComponent('서울특별시 송파구 잠실동'));
     record('R4 200', res.status === 200 && JSON.parse(res.text).country === 'KR', res.text.slice(0, 80));
+    record('startup log shows key fingerprints only', /gateway geocoder keys: kakao=\[[0-9a-f]{8}\] google=\[[0-9a-f]{8}\]/.test(appLog.join('')) && !appLog.join('').includes('ld-google-key'));
     res = await get('/weather/addr/x');
     record('X1 → 404 text/plain', res.status === 404 && res.text === 'Not Found' && res.headers['cache-control'] === 'no-store');
     res = await get('/weather/v000903/coord/1,2', {'Origin': 'https://example.test', 'Access-Control-Request-Method': 'GET'}, 'OPTIONS');

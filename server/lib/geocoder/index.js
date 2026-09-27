@@ -36,7 +36,7 @@ function isAbort(err) {
 /**
  * @param {Object} options
  * @param {string[]} options.kakaoKeys
- * @param {string[]} options.googleKeys
+ * @param {string=} options.googleKey  the single Google key
  * @param {string=} options.kakaoBaseUrl  test override
  * @param {string=} options.googleBaseUrl test override
  * @param {Object=} options.cache  {get, set} (createMongoCache or createNullCache)
@@ -49,7 +49,7 @@ function isAbort(err) {
  */
 function createGeocoder(options) {
     var kakaoKeys = options.kakaoKeys || [];
-    var googleKeys = options.googleKeys || [];
+    var googleKeys = options.googleKey ? [options.googleKey] : [];
     var cache = options.cache || cacheModule.createNullCache();
     var http = options.transport || transport;
     var random = options.random || Math.random;
@@ -267,7 +267,8 @@ var defaultGeocoder;
 
 /**
  * The process-wide geocoder, configured from the environment on first use:
- * GEOCODER_KAKAO_KEYS / GEOCODER_GOOGLE_KEYS (JSON lists), and
+ * GEOCODER_KAKAO_KEYS (JSON list); GEOCODER_GOOGLE_KEY (one key, used only if its
+ * fingerprint is keys.GOOGLE_KEY_FINGERPRINT); and
  * GEOCODER_KAKAO_BASE_URL / GEOCODER_GOOGLE_BASE_URL (tests and local smoke only).
  */
 function getDefaultGeocoder() {
@@ -280,9 +281,14 @@ function getDefaultGeocoder() {
             log: console
         });
         cache.ensureIndex();
+        var kakaoKeys = keys.parseKeys(process.env.GEOCODER_KAKAO_KEYS);
+        var google = keys.googleKey(process.env.GEOCODER_GOOGLE_KEY, {stub: !!process.env.GEOCODER_GOOGLE_BASE_URL});
+        console.log('gateway geocoder keys: kakao=[' + kakaoKeys.map(keys.fingerprint).join(',') +
+            '] google=[' + (google.key ? keys.fingerprint(google.key) : '') + ']' +
+            (google.ignored ? ' ignored google=[' + google.ignored + ']' : ''));
         defaultGeocoder = createGeocoder({
-            kakaoKeys: keys.parseKeys(process.env.GEOCODER_KAKAO_KEYS),
-            googleKeys: keys.parseKeys(process.env.GEOCODER_GOOGLE_KEYS),
+            kakaoKeys: kakaoKeys,
+            googleKey: google.key,
             kakaoBaseUrl: process.env.GEOCODER_KAKAO_BASE_URL,
             googleBaseUrl: process.env.GEOCODER_GOOGLE_BASE_URL,
             cache: cache,

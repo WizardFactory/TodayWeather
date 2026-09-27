@@ -79,7 +79,7 @@ function geocoderWith(script, extra) {
     const transport = scriptedTransport(script);
     const {log, lines} = makeLog();
     const geocoder = geocoderModule.createGeocoder(Object.assign({
-        kakaoKeys: ['kakao-key'], googleKeys: ['google-key'],
+        kakaoKeys: ['kakao-key'], googleKey: 'google-key',
         kakaoBaseUrl: KAKAO, googleBaseUrl: GOOGLE,
         transport, random: () => 0, log
     }, extra || {}));
@@ -164,7 +164,7 @@ test('U-7 provider requests have a total timer (silent and slow-drip servers)', 
         for (mode of ['silent', 'drip']) {
             const {log} = makeLog();
             const geocoder = geocoderModule.createGeocoder({
-                kakaoKeys: ['k1', 'k2'], googleKeys: ['g1'], kakaoBaseUrl: base, googleBaseUrl: base,
+                kakaoKeys: ['k1', 'k2'], googleKey: 'g1', kakaoBaseUrl: base, googleBaseUrl: base,
                 random: () => 0, log, providerTimeoutMs: 300, budgetMs: 500
             });
             const started = Date.now();
@@ -199,16 +199,17 @@ test('U-8 key rotation per outcome', async () => {
     r = geocoderWith({kakao: [{status: 400, body: {code: -2, msg: 'bad parameter'}}]}, {kakaoKeys: ['k1', 'k2']});
     await assert.rejects(r.geocoder.coord([37.566, 126.978], 'ko'));
     assert.equal(r.transport.calls.length, 1);
-    // Google OVER_QUERY_LIMIT then OK: success on the second key.
-    r = geocoderWith({google: ['google.coord.overlimit', 'google.coord.london']}, {googleKeys: ['g1', 'g2']});
-    assert.equal((await r.geocoder.coord([51.507, -0.128], 'en')).name, 'London');
-    assert.match(r.transport.calls[1].url, /key=g2$/);
+    // Google has a single key: OVER_QUERY_LIMIT fails after one attempt.
+    r = geocoderWith({google: ['google.coord.overlimit', 'google.coord.london']});
+    await assert.rejects(r.geocoder.coord([51.507, -0.128], 'en'), err => err.code === 'EPROVIDER');
+    assert.equal(r.transport.calls.length, 1);
+    assert.match(r.transport.calls[0].url, /key=google-key$/);
     // An empty Kakao answer does not try another key; the flow continues with Google.
     r = geocoderWith({kakao: ['kakao.coord.empty'], google: ['google.coord.tsushima']}, {kakaoKeys: ['k1', 'k2']});
     await r.geocoder.coord([34.2, 129.3], 'ko');
     assert.deepEqual(r.transport.calls.map(c => c.provider), ['kakao', 'google']);
     // Google ZERO_RESULTS does not try another key.
-    r = geocoderWith({google: ['google.coord.zero']}, {googleKeys: ['g1', 'g2']});
+    r = geocoderWith({google: ['google.coord.zero']});
     await assert.rejects(r.geocoder.coord([40.713, -74.006], 'en'));
     assert.equal(r.transport.calls.length, 1);
 });
@@ -221,10 +222,18 @@ test('U-9 key lists: unset or invalid values are empty; shared names are not rea
     const saved = Object.assign({}, process.env);
     try {
         delete process.env.GEOCODER_KAKAO_KEYS;
-        delete process.env.GEOCODER_GOOGLE_KEYS;
+        // A Google key with another fingerprint is ignored (U-18).
+        process.env.GEOCODER_GOOGLE_KEY = 'not-the-allowed-key';
         process.env.KAKAO_SECRET_KEYS = '["shared-kakao"]';
         process.env.GOOGLE_SECRET_KEY = 'shared-google';
-        const geocoder = geocoderModule.getDefaultGeocoder();
+        const printed = [];
+        const originalLog = console.log;
+        console.log = (...args) => printed.push(args.join(' '));
+        let geocoder;
+        try { geocoder = geocoderModule.getDefaultGeocoder(); }
+        finally { console.log = originalLog; }
+        const keyLine = printed.find(l => l.startsWith('gateway geocoder keys:'));
+        assert.equal(keyLine, 'gateway geocoder keys: kakao=[] google=[] ignored google=[' + keys.fingerprint('not-the-allowed-key') + ']');
         await assert.rejects(geocoder.coord([37.566, 126.978], 'ko'), err => err.code === 'EPROVIDER' && /no keys/.test(err.message));
         await assert.rejects(geocoder.coord([51.507, -0.128], 'en'), err => err.code === 'EPROVIDER' && /no keys/.test(err.message));
     }
@@ -235,8 +244,8 @@ test('U-9 key lists: unset or invalid values are empty; shared names are not rea
 
 test('U-10 logs never contain a key', async () => {
     const secret = 'secret-google-key-123';
-    const {geocoder, lines} = geocoderWith({google: ['google.coord.denied', 'google.coord.london']}, {googleKeys: [secret, secret + '-2']});
-    await geocoder.coord([51.507, -0.128], 'en');
+    const {geocoder, lines} = geocoderWith({google: ['google.coord.denied']}, {googleKey: secret});
+    await assert.rejects(geocoder.coord([51.507, -0.128], 'en'));
     assert.ok(lines.length > 0);
     assert.ok(lines.every(line => !line.includes('secret-google-key')), lines.join('\n'));
     assert.ok(lines.some(line => line.includes('key=***')));
@@ -348,6 +357,18 @@ test('U-15 TTL index is created once after the connection opens; errors are logg
     assert.equal(created.length, 0, 'not before open');
     connection.emit('open');
     assert.equal(created.length, 1);
+});
+
+test('U-18 a single Google key, used only with fingerprint ecd5fdb1', () => {
+    assert.equal(keys.GOOGLE_KEY_FINGERPRINT, 'ecd5fdb1');
+    assert.equal(keys.fingerprint('abc'), 'ba7816bf');
+    assert.deepEqual(keys.googleKey(undefined), {key: null, ignored: null});
+    assert.deepEqual(keys.googleKey(''), {key: null, ignored: null});
+    assert.deepEqual(keys.googleKey('key-a'), {key: null, ignored: keys.fingerprint('key-a')});
+    assert.deepEqual(keys.googleKey('["key-a","key-b"]'), {key: null, ignored: keys.fingerprint('["key-a","key-b"]')}, 'a list is not a key');
+    // Only against a test stub (GEOCODER_GOOGLE_BASE_URL) is another key accepted.
+    assert.deepEqual(keys.googleKey('key-a', {stub: true}), {key: 'key-a', ignored: null});
+    assert.deepEqual(keys.googleKey('key-a', {stub: false}), {key: null, ignored: keys.fingerprint('key-a')});
 });
 
 test('U-16 language values follow the Lambda rule', () => {
