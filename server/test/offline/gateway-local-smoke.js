@@ -157,13 +157,23 @@ async function main() {
         record(label + ' reaches the ' + (label === 'R1' ? 'v000901' : label.slice(3)) + ' chain within 9 s',
             ok && res.ms < 9500, res.status + ' in ' + res.ms + ' ms');
     }
+    // Non-KR: the real dsf/coord chain of each version (Visual Crossing since #2585; it
+    // fails without network, so a quick 501 is the expected outcome here).
+    const london = '51.5074,-0.1278';
+    for (const [label, p] of [['R1 London', '/weather/coord/'], ['R2 v000901 London', '/weather/v000901/coord/'], ['R2 v000902 London', '/weather/v000902/coord/'], ['R2 v000903 London', '/weather/v000903/coord/']]) {
+        res = await get(p + london, {'Accept-Language': 'en-GB'});
+        assertNotHtml(res);
+        const ok = (res.status === 200 && /application\/json/.test(res.headers['content-type'])) ||
+            (res.status === 501 && res.text === 'Not Implemented');
+        record(label + ' reaches the dsf/coord chain within 9 s', ok && res.ms < 9500, res.status + ' in ' + res.ms + ' ms');
+    }
     res = await get('/weather/coord/' + seoul + '?_twcb=1', ko);
     record('R1 with _twcb has the same status', res.status === weather.R1.status);
 
     // R4, X1, OPTIONS.
     res = await get('/geocode/v000903/addr/' + encodeURIComponent('서울특별시 송파구 잠실동'));
     record('R4 200', res.status === 200 && JSON.parse(res.text).country === 'KR', res.text.slice(0, 80));
-    record('startup log shows key fingerprints only', /gateway geocoder keys: kakao=\[[0-9a-f]{8}\] google=\[[0-9a-f]{8}\]/.test(appLog.join('')) && !appLog.join('').includes('ld-google-key'));
+    record('key-fingerprint log line (first gateway request) shows fingerprints only', /gateway geocoder keys: kakao=\[[0-9a-f]{8}\] google=\[[0-9a-f]{8}\]/.test(appLog.join('')) && !appLog.join('').includes('ld-google-key'));
     res = await get('/weather/addr/x');
     record('X1 → 404 text/plain', res.status === 404 && res.text === 'Not Found' && res.headers['cache-control'] === 'no-store');
     res = await get('/weather/v000903/coord/1,2', {'Origin': 'https://example.test', 'Access-Control-Request-Method': 'GET'}, 'OPTIONS');
@@ -175,8 +185,12 @@ async function main() {
 
     // One gateway log line per gateway request, with the version.
     const lines = appLog.join('').split('\n').filter(l => l.includes('gateway {'));
-    const versions = lines.map(l => { try { return JSON.parse(l.slice(l.indexOf('{'))).version; } catch (e) { return null; } });
-    record('gateway log lines carry the version', ['v000901', 'v000902', 'v000903'].every(v => versions.includes(v)), lines.length + ' lines');
+    const infos = lines.map(l => { try { return JSON.parse(l.slice(l.indexOf('{'))); } catch (e) { return null; } }).filter(Boolean);
+    const weatherInfos = infos.filter(i => i.route === 'weather');
+    record('gateway log lines carry the version', ['v000901', 'v000902', 'v000903'].every(v => weatherInfos.some(i => i.version === v)), lines.length + ' lines');
+    record('every weather request reached its backend (numeric backend status in the log)',
+        weatherInfos.length >= 9 && weatherInfos.every(i => typeof i.backend === 'number'),
+        weatherInfos.map(i => i.version + ':' + i.backend).join(' '));
 
     // TTL index created by the first geocoder use.
     const indexes = await caches().indexes();

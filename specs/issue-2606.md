@@ -89,7 +89,9 @@ None of these changes a successful response for real client requests within norm
 | R1 `/weather/coord` | `/v000901/kma/addr/…` | `/v000901/dsf/coord/…` | `v000901/route.kma.addr`, `v000901/route.dsf.coord` |
 | R2 `v000901` | `/v000901/kma/addr/…` | `/v000901/dsf/coord/…` | same as R1 |
 | R2 `v000902` | `/v000902/kma/addr/…` | `/v000902/dsf/coord/…` | `v000902/route.kma.v000902`, `v000902/route.dsf.coord.v000902` |
-| R2 `v000903` | `/v000903/kma/addr/…` | `/v000903/dsf/coord/…` | `v000903/route.kma.v000903`, `v000902/route.dsf.coord.v000902` |
+| R2 `v000903` | `/v000903/kma/addr/…` | `/v000903/dsf/coord/…` | `v000903/route.kma.v000903`, `v000903/route.dsf.coord.v000903` (since #2585) |
+
+The non-KR `dsf/coord` chains call Visual Crossing since #2585. Their 2.5 s request budget (`dsf.controller.js`) was sized to fit the 3 s per-attempt timer, which the gateway keeps (§3.1 step 3), so do not shorten the attempt timer below 3 s.
 
 So the design requirement is: **for each version, the backend request (path, query, `Accept-Language`) equals the one the Lambda sends, and the backend response is passed through with the same merge.** Nothing in the new route may branch on the version other than building the path. The backend's per-version outcome, including its errors, is reproduced: today `/weather/v000901/coord` answered 501 on 45 of 51 requests, and the new route must return the same status as the Lambda for the same request, apart from the §2.5 deviations (DO-1).
 
@@ -131,10 +133,9 @@ Ported from tw-backend-functions `a4c1deb` (`geoinfo/controller.kakao.js`, `cont
 - Every provider request has a 3 s total timer; the geocoder as a whole has 5 s.
 - Provider base URLs default to the real endpoints; `GEOCODER_KAKAO_BASE_URL` and `GEOCODER_GOOGLE_BASE_URL` override them for the offline tests and LD-1 only.
 - Keys come from `process.env`: `GEOCODER_KAKAO_KEYS` (a JSON array of strings; unset or unparseable counts as no key) and `GEOCODER_GOOGLE_KEY` (one key). A missing provider key makes that provider unavailable (501 on use); nothing throws at load. Dedicated names keep the existing `KAKAO_SECRET_KEYS`/`GOOGLE_SECRET_KEY` users (KECO station lookup, time zone, `geo.controller`) unaffected.
-- Kakao: start at a random key, try each key at most once. Move to the next key on auth errors (Kakao 401/403; Google `REQUEST_DENIED`), quota errors (Kakao 429 or a quota error code; Google `OVER_QUERY_LIMIT`/`OVER_DAILY_LIMIT`) and transient errors (timeout, network, 5xx; Google `UNKNOWN_ERROR`). An empty result (Kakao without documents; Google `ZERO_RESULTS`) or another request error ends the attempt.
-- **Google (AK, 2026-09-27):** a single key and no rotation. The code uses `GEOCODER_GOOGLE_KEY` only if its fingerprint (first 8 hex digits of its SHA-256) is `ecd5fdb1` (`lib/geocoder/keys.js`); any other value is ignored and logged by fingerprint only. Using another Google key needs a code change. (The check is skipped only when `GEOCODER_GOOGLE_BASE_URL` points the geocoder at a test stub.)
-- **Kakao:** the two keys the Lambda and the service host already use (both answer the coordinate and address APIs, checked 2026-09-27); rotation as below.
-- **Kakao:** provision at least 2 keys, restricted to the Local API, with a provider-side quota. Values go only into the host's PM2 environment for `www` (then `pm2 save`); never into the repository or logs. Log lines mask the Google `key=` parameter.
+- **Kakao:** `GEOCODER_KAKAO_KEYS` holds the two keys the Lambda and the service host already use (both answer the coordinate and address APIs, checked 2026-09-27). Start at a random key and try each key at most once. Move to the next key on auth errors (401/403 or an auth error code), quota errors (429 or a quota error code) and transient errors (timeout, network, 5xx). An empty result (no documents) or another request error ends the attempt.
+- **Google (AK, 2026-09-27):** a single key and no rotation. The code uses `GEOCODER_GOOGLE_KEY` only if its fingerprint (first 8 hex digits of its SHA-256) is `ecd5fdb1` (`lib/geocoder/keys.js`); any other value is ignored and logged by fingerprint only. Using another Google key needs a code change. Any Google error, including `ZERO_RESULTS`, ends the lookup, because there is no other key. (The check is skipped only when `GEOCODER_GOOGLE_BASE_URL` points the geocoder at a test stub.)
+- **Key values** go only into the service host's environment for `www` (for example `server/.env`, which `config/env.js` loads, or the PM2 environment, then `pm2 save`); never into the repository or logs. Log lines mask the Google `key=` parameter. Each worker logs the fingerprints of its keys once, when it handles its first gateway request.
 
 ### 3.6 Cache (MongoDB)
 
@@ -181,14 +182,14 @@ Merging the implementation authorizes no production step. Each checkpoint needs 
 
 | Checkpoint | Covers |
 | --- | --- |
-| A1 | Issuing the provider keys (§3.5) |
+| A1 | Placing the provider keys on the host: the two existing Kakao keys and the Google key `ecd5fdb1` (§3.5) |
 | A2 | Deploying to the service host, the URL change in the gather host's checkouts (§5.2 steps 1–2), and the direct-origin checks, which write cache records and spend provider quota (§5.2 step 3) |
 | A3 | AWS changes before cutover: the probe path (§4.3), the AMI, launch template, spot fleet and `AttachEIPToSpot` target, the alarm (§5.2 steps 4–6) |
 | A4 | The CloudFront cutover and, if needed, its rollback and the cache clean-up (§5.5, §5.6) |
 
 ### 5.2 Deployment (all before cutover)
 
-1. **Service host (A2).** The host runs a patched legacy tree, so deploy by the established patch procedure: back up every touched file; copy the new files; apply the `app.js` mount line and the §4.2 URL changes; `node --check`; run the gateway offline tests on the host's Node; add the key variables to the PM2 environment; `pm2 reload www --update-env`; confirm the workers are `online` and `/health` answers; `pm2 save`. Record the deployment in `docs/operations/` now. On failure, restore the backup and reload. Only the U tests run on the host (RT needs dev dependencies such as `supertest`); CI runs the rest.
+1. **Service host (A2).** The host runs a patched legacy tree, so deploy by the established patch procedure: back up every touched file; copy the new files; apply the `app.js` mount line and the §4.2 URL changes; `node --check`; run the gateway offline tests on the host's Node; add the key variables to the PM2 environment; `pm2 reload www --update-env`; confirm the workers are `online` and `/health` answers; `pm2 save`. Record the deployment in `docs/operations/` now. On failure, restore the backup and reload. The gateway needs Node 16 or later (it uses the global `AbortController`). PM2's `www` interpreter was Node 16.20.2 when checked on 2026-09-27; the #2585 notes that mention Node 10.15.3 predate that check, so confirm the interpreter with `pm2 jlist` before deploying. The gateway offline tests (U, RT, IC) can run on the host with its installed dependencies; CI runs them too.
 2. **Gather host (A2):** apply the `kmaScraper` URL change to the gather checkout and the `controllerPush` change to the `tw-push` and `tw-alert-push` checkouts on the same host (not running when last observed), the same way. They work with the Lambda too. A host-side grep confirms that no checkout still contains an unversioned `/geocode/(coord|addr)/` URL (OP-3).
 3. **Direct-origin verification:** OP-1 and all DO-* pass (test scenarios).
 4. **Probe path (A3):** deploy the §4.3 change; OP-3.
@@ -235,7 +236,7 @@ Change only the `TargetOriginId` of the `weather/*` and `geocode/*` behaviors to
 
 ## 7. Documentation
 
-After cutover (separate PR, DOC-1): update `docs/architecture/mobile-api.md`, `docs/architecture/aws-code-correlation.md`, the `AGENTS.md` gateway constraint line, and the AWS infrastructure and mobile-request diagrams (Archify JSON, regenerated HTML) to show CloudFront → service EC2 for `weather/*` and `geocode/*`, with the Lambdas as rollback-only. With the implementation PR, add the new environment names to `docs/rewrite/configuration-inventory.md` (names only), and correct the code statements the change makes stale: the internal callers' geocode URLs (`service-overview.md`, `weather-collection.md`, `kma-station-observations.md`, `server-push-and-purchase.md`, `api-endpoint-catalog.md`) and the statements that Express does not implement these paths (`service-overview.md`, `rewrite-playbook.md`, `api-endpoint-catalog.md`). Topology statements stay until cutover.
+After cutover (separate PR, DOC-1): update `docs/architecture/mobile-api.md`, `docs/architecture/aws-code-correlation.md`, the `AGENTS.md` gateway constraint line, and the AWS infrastructure and mobile-request diagrams (Archify JSON, regenerated HTML) (and the Lambda-geocoder mentions in `docs/operations/visual-crossing-deploy.md`, the `coord2addr` label in `docs/rewrite/diagrams/server-domestic-assembly.json`, and a "since #2606" note in `docs/operations/hourly-and-service-enrichment-restore-2026-09-25.md`) to show CloudFront → service EC2 for `weather/*` and `geocode/*`, with the Lambdas as rollback-only. With the implementation PR, add the new environment names to `docs/rewrite/configuration-inventory.md` (names only), and correct the code statements the change makes stale: the internal callers' geocode URLs (`service-overview.md`, `weather-collection.md`, `kma-station-observations.md`, `server-push-and-purchase.md`, `api-endpoint-catalog.md`) and the statements that Express does not implement these paths (`service-overview.md`, `rewrite-playbook.md`, `api-endpoint-catalog.md`). Topology statements stay until cutover.
 
 ## 8. Requirements index
 

@@ -1,4 +1,4 @@
-/* Gateway geocoder regressions (#2606), scenarios U-1 to U-16 of
+/* Gateway geocoder regressions (#2606), scenarios U-1 to U-18 of
  * specs/issue-2606-test-scenarios.md.
  *   NODE_PATH=<isolated deps> node server/test/offline/gateway-geocoder.test.js
  * Provider responses come from fixtures/gateway/providers.json; the expected outputs
@@ -113,7 +113,7 @@ for (const c of cases.coord) {
     });
 }
 
-// U-3, U-18: address cases.
+// U-3: address cases.
 for (const a of cases.addr) {
     const golden = goldens.addr[a.id];
     test(`U-3 addr ${a.id}`, async () => {
