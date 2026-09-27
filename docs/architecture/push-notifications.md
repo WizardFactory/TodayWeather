@@ -99,3 +99,5 @@ The batch settings handler logs individual alarm/alert persistence errors and pa
 ## Artifact verification
 
 [Delivery receipt](../../reports/sdlc/push-diagram/diagram-delivery.json) records **9/9 showcase checks, zero errors and warnings**, with 14 revision-pinned repository references. Browser evidence (local-only `reports/sdlc/push-diagram/diagram-browser.json`) records containment at 1440×900, 1600×1000, 1920×1080 and 2048×1320. [Visual review](../../reports/sdlc/push-diagram/visual-review.md) separately records actual light/dark screenshot inspection. Independent source verification is recorded in the task's verification report.
+
+The #2626 update of the diagram (SQLite store and push worker) is pinned to `125e821b`. Archify `validate --quality showcase --repo-root` passed 9/9 checks with zero errors and warnings. `deliver` passed (specification sha256 `4788b69d…c542`, artifact sha256 `ccb5e613…9aa6`). `visual-check` passed containment and readability at 1440×900 and 2048×1320, light and dark. The light 1440×900 and dark 1440×900 and 2048×1320 screenshots were also inspected by eye. The receipts are local-only under `reports/sdlc/issue-2626/design/final/`.

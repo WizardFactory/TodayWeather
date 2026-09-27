@@ -11,7 +11,7 @@
     ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "c9220de35fe31838e10e692494731b90106b0f65",
+      "revision": "125e821bc029b9830cf7d8b23f5211e7c20867e2",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -57,7 +57,7 @@
       "id": "push-api",
       "type": "backend",
       "label": "Service push API",
-      "sublabel": "POST settings / PUT token / DELETE",
+      "sublabel": "tw-svc POST / PUT / DELETE",
       "pos": [
         760,
         85
@@ -68,21 +68,21 @@
       ],
       "sources": [
         {
-          "path": "server/routes/v000902/index.js"
-        },
-        {
           "path": "server/routes/v000902/route.push.update.list.js"
         },
         {
           "path": "server/routes/v000705/routePushNotification.js"
+        },
+        {
+          "path": "server/lib/pushStore/index.js"
         }
       ]
     },
     {
       "id": "push-store",
       "type": "database",
-      "label": "MongoDB settings",
-      "sublabel": "push + AlertPush models",
+      "label": "SQLite push file",
+      "sublabel": "tw-svc PUSH_DB_PATH",
       "pos": [
         1120,
         85
@@ -93,10 +93,13 @@
       ],
       "sources": [
         {
-          "path": "server/models/modelPush.js"
+          "path": "server/lib/pushStore/sqlite.js"
         },
         {
-          "path": "server/models/alert.push.model.js"
+          "path": "server/lib/sqliteFileStore.js"
+        },
+        {
+          "path": "server/lib/pushStore/mongo.js"
         }
       ]
     },
@@ -141,8 +144,8 @@
     {
       "id": "jobs",
       "type": "backend",
-      "label": "Alarm + alert workers",
-      "sublabel": "Only SERVER_MODE=push",
+      "label": "push-worker on tw-svc",
+      "sublabel": "one PM2 process",
       "pos": [
         760,
         365
@@ -153,7 +156,7 @@
       ],
       "sources": [
         {
-          "path": "server/app.js"
+          "path": "server/bin/push-worker"
         },
         {
           "path": "server/controllers/controllerPush.js"
@@ -205,14 +208,14 @@
       "id": "persist-settings",
       "from": "push-api",
       "to": "push-store",
-      "label": "write settings",
+      "label": "locked file write",
       "variant": "emphasis"
     },
     {
       "id": "read-due",
       "from": "jobs",
       "to": "push-store",
-      "label": "read / update",
+      "label": "read / update (lock)",
       "variant": "default",
       "fromSide": "top",
       "toSide": "bottom"
@@ -244,26 +247,27 @@
       "dot": "cyan",
       "title": "Settings and token changes",
       "items": [
-        "POST /v000902/push-list saves alarm / alert settings.",
-        "PUT /v000902/push replaces old + new tokens; DELETE removes settings."
+        "POST /v000902/push-list saves alarm / alert settings on tw-svc.",
+        "PUT /v000902/push moves every record of the old token; DELETE by city.",
+        "Ten service workers write one SQLite file: async lock, temp file, rename."
       ]
     },
     {
       "dot": "emerald",
-      "title": "Independent background jobs",
+      "title": "One delivery process on tw-svc",
       "items": [
         "Alarm: every minute; match UTC time and local weekday.",
-        "Alert: UTC minutes 7 / 17 / 35 / 50; time window and rain / air rules.",
-        "FCM initializes on first send; iOS without an FCM token fails."
+        "Alert: UTC minutes 7 / 17 / 35 / 50; window and 6-hour repeat guard.",
+        "No MongoDB connection with PUSH_STORE=sqlite; FCM on first send."
       ]
     },
     {
       "dot": "rose",
-      "title": "Observed errors and evidence limits",
+      "title": "Switch, rollback and limits",
       "items": [
-        "30-day PUT /push: 16,337 HTTP 403; 1,834 HTTP 502.",
-        "Missing token pair can yield 403; logged cause unproven.",
-        "Inspected hosts: no active push worker; delivery unverified."
+        "PUSH_STORE=sqlite + PUSH_DB_PATH; unset to return to MongoDB.",
+        "Existing Mongo records are not imported; clients re-post on launch.",
+        "Deployment, Firebase credentials and device delivery unverified."
       ]
     }
   ]
