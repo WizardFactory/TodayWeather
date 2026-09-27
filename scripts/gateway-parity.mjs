@@ -4,10 +4,11 @@
 // answers from the origin. Prints a JSON report and exits non-zero on any failure.
 //
 //   Before cutover (A2): compare the direct service origin with the current gateway,
-//   and save the Lambda-era header baseline for RB-1:
+//   and save the Lambda-era header baseline (RB-1) and the direct-side statuses (PC-1):
 //     node scripts/gateway-parity.mjs --direct http://<service-origin> \
 //       --gateway https://todayweather.wizardfactory.net --save-baseline baseline.json
-//   After cutover (PC-1):   node scripts/gateway-parity.mjs --public https://todayweather.wizardfactory.net
+//   After cutover (PC-1):   node scripts/gateway-parity.mjs --public https://todayweather.wizardfactory.net --expect baseline.json
+//     (a PC-1 cell must be 200 only where the direct origin answered 200 before cutover)
 //   After a rollback (RB-1): node scripts/gateway-parity.mjs --public https://todayweather.wizardfactory.net --baseline baseline.json
 //   Offline self-test (loopback servers only): node scripts/gateway-parity.mjs --self-test
 //
@@ -91,6 +92,7 @@ function headerSnapshot(res) {
 
 export async function runDirectVsGateway(direct, gateway, report, saveBaseline) {
     const directGeo = {};
+    const directStatus = {};           // PC-1 cell name -> direct-origin status
     // DO-2 (first): fresh coordinates and the address.
     for (const fixture of FIXTURES) {
         for (const delta of OFFSETS) {
@@ -101,6 +103,7 @@ export async function runDirectVsGateway(direct, gateway, report, saveBaseline) 
                 const hit = await fetchOnce(direct, withBust(p), {lang});
                 const gw = await fetchMiss(gateway, p, {lang});
                 directGeo[loc + '|' + lang] = miss.json;
+                if (delta === OFFSETS[0] && lang === 'ko-KR') { directStatus['R3 ' + loc] = miss.status; }
                 const ok = miss.status === 200 && hit.status === 200 && gw.status === 200 &&
                     JSON.stringify(pick(miss.json, GEO_FIELDS)) === JSON.stringify(pick(gw.json, GEO_FIELDS)) &&
                     JSON.stringify(miss.json) === JSON.stringify(hit.json);
@@ -114,6 +117,7 @@ export async function runDirectVsGateway(direct, gateway, report, saveBaseline) 
         const p = '/geocode/' + v + '/addr/' + encodeURIComponent(ADDRESS);
         const d = await fetchOnce(direct, withBust(p));
         const g = await fetchMiss(gateway, p);
+        directStatus['R4 ' + v] = d.status;
         addrBodies.push(d.text);
         const same = d.status === 200 && g.status === 200 && JSON.stringify(pick(d.json, ['country', 'address', 'location'])) === JSON.stringify(pick(g.json, ['country', 'address', 'location']));
         report.check('DO-2', p, same, same ? {} : {direct: d.json, gateway: g.json,
@@ -132,6 +136,9 @@ export async function runDirectVsGateway(direct, gateway, report, saveBaseline) 
                 for (const lang of LANGUAGES) {
                     const p = weatherPath(version, loc, query);
                     const d = await fetchOnce(direct, withBust(p), {lang});
+                    if (lang === 'ko-KR' && qname !== 'none') {
+                        directStatus[weatherPath(version, loc, '') + ' [' + qname + ']'] = d.status;
+                    }
                     let g = await fetchMiss(gateway, p, {lang});
                     const name = p + ' ' + (lang || 'no-language') + ' [' + qname + ']';
                     if (d.status === 200 && g.status === 501) {
@@ -172,7 +179,7 @@ export async function runDirectVsGateway(direct, gateway, report, saveBaseline) 
         report.check('DO-3', label, ok, headerSnapshot(d));
     }
     if (saveBaseline) {
-        fs.writeFileSync(saveBaseline, JSON.stringify(baseline, null, 1) + '\n');
+        fs.writeFileSync(saveBaseline, JSON.stringify({headers: baseline, direct: directStatus}, null, 1) + '\n');
         report.info('DO-3', 'baseline saved', {file: saveBaseline});
     }
 
@@ -202,10 +209,10 @@ function headerRequests() {
     ];
 }
 
-export async function runPublic(base, report, baselineFile) {
+export async function runPublic(base, report, baselineFile, expectFile) {
     if (baselineFile) {
         // RB-1: after a rollback the headers must equal the Lambda-era baseline.
-        const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
+        const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8')).headers;
         for (const [label, p, method] of headerRequests()) {
             const opts = method === 'OPTIONS' ? {method, headers: {'Origin': 'https://example.test', 'Access-Control-Request-Method': 'GET'}} : {lang: 'ko-KR'};
             const res = await fetchMiss(base, p, opts);
@@ -214,7 +221,24 @@ export async function runPublic(base, report, baselineFile) {
         }
         return;
     }
-    // PC-1
+    // PC-1. With --expect, a cell must be 200 only where the direct origin answered 200
+    // before cutover (DO-1/DO-2); otherwise it must keep the direct-side status.
+    const expected = expectFile ? JSON.parse(fs.readFileSync(expectFile, 'utf8')).direct : null;
+    const cell = (name, res, ok200) => {
+        const before = expected ? expected[name] : 200;
+        if (before === 200 || before === undefined) {
+            report.check('PC-1', name, ok200, {status: res.status});
+        }
+        else {
+            report.check('PC-1', name, res.status === before, {status: res.status, directBeforeCutover: before});
+        }
+    };
+    if (expected) {
+        const nonKr = Object.entries(expected).filter(([k]) => /\/(40|51)\./.test(k));
+        if (!nonKr.some(([, v]) => v === 200)) {
+            report.info('PC-1', 'warning', {note: 'no non-KR cell answered 200 before cutover; non-KR success parity is unproven (deploy #2585 Visual Crossing before DO-1)'});
+        }
+    }
     for (const p of ['/weather/coord/37.5665,126.9780', '/weather/v000903/coord/37.5665,126.9780']) {
         const res = await fetchMiss(base, p, {lang: 'ko-KR'});
         report.check('PC-1', p + ' (issue URL)', res.status === 200 && !!(res.json && res.json.name));
@@ -224,15 +248,15 @@ export async function runPublic(base, report, baselineFile) {
         for (const version of VERSIONS) {
             for (const qname of ['app', 'widget']) {
                 const res = await fetchMiss(base, weatherPath(version, loc, QUERIES[qname]), {lang: 'ko-KR'});
-                report.check('PC-1', weatherPath(version, loc, '') + ' [' + qname + ']', res.status === 200 && !!(res.json && res.json.name), {status: res.status});
+                cell(weatherPath(version, loc, '') + ' [' + qname + ']', res, res.status === 200 && !!(res.json && res.json.name));
             }
         }
         const r3 = await fetchMiss(base, '/geocode/v000903/coord/' + loc, {lang: 'ko-KR'});
-        report.check('PC-1', 'R3 ' + loc, r3.status === 200 && !!(r3.json && r3.json.name));
+        cell('R3 ' + loc, r3, r3.status === 200 && !!(r3.json && r3.json.name));
     }
     for (const v of ['v000901', 'v000903']) {
         const res = await fetchMiss(base, '/geocode/' + v + '/addr/' + encodeURIComponent(ADDRESS));
-        report.check('PC-1', 'R4 ' + v, res.status === 200 && !!(res.json && res.json.location));
+        cell('R4 ' + v, res, res.status === 200 && !!(res.json && res.json.location));
     }
     for (const [label, p, method, maxAge] of headerRequests()) {
         const opts = method === 'OPTIONS' ? {method, headers: {'Origin': 'https://example.test', 'Access-Control-Request-Method': 'GET'}} : {lang: 'ko-KR'};
@@ -277,7 +301,8 @@ function fakeService(kind, mutate) {
         if ((m = p.match(/^\/weather(?:\/(v00090[123]))?\/coord\/([^/]+)$/)) && req.method === 'GET') {
             const body = Object.assign({version: m[1] || 'v000901', query: [...url.searchParams.keys()].filter(k => k !== '_twcb').join(','), now: kind + (counter++)}, geoFor(m[2]));
             delete body.kmaAddress;
-            if (mutate && mutate(p, body)) { /* mutated */ }
+            const status = (mutate && mutate(p, body)) === 501 ? 501 : 200;
+            if (status === 501) { return send(501, 'Not Implemented', {'Content-Type': 'text/plain', 'Cache-Control': 'no-store'}); }
             return send(200, JSON.stringify(body), Object.assign({'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=300'}, xcache));
         }
         if ((m = p.match(/^\/geocode\/v000903\/coord\/([^/]+)$/)) && req.method === 'GET') {
@@ -297,14 +322,25 @@ async function listen(server) {
     return 'http://127.0.0.1:' + server.address().port;
 }
 
+function baselineFileFor() {
+    return fs.mkdtempSync('/tmp/gateway-parity-') + '/baseline.json';
+}
+
 async function selfTest() {
     const direct = fakeService('direct');
     const gateway = fakeService('gateway');
     const broken = fakeService('gateway', (p, body) => { if (p.includes('/v000902/')) { body.name = 'different'; return true; } return false; });
+    // London v000902 fails on both sides (e.g. Visual Crossing not yet deployed).
+    const londonDown = (p) => (p.includes('/v000902/') && p.includes('/51.') ? 501 : false);
+    const directDown = fakeService('direct', londonDown);
+    const gatewayDown = fakeService('gateway', londonDown);
     const d = await listen(direct);
     const g = await listen(gateway);
     const b = await listen(broken);
-    const baselineFile = fs.mkdtempSync('/tmp/gateway-parity-') + '/baseline.json';
+    const dd = await listen(directDown);
+    const gd = await listen(gatewayDown);
+    const downBaseline = baselineFileFor();
+    const baselineFile = baselineFileFor();
     const outcomes = [];
     try {
         let report = createReport();
@@ -327,10 +363,23 @@ async function selfTest() {
         await runPublic(d, report, baselineFile);
         s = report.summary();
         outcomes.push(['RB-1 detects the new-route headers', s.failed > 0, s.failed + ' failed']);
+        report = createReport();
+        await runDirectVsGateway(dd, gd, report, downBaseline);
+        s = report.summary();
+        outcomes.push(['a cell failing on both sides passes DO-1', s.failed === 0, s.checks + ' checks']);
+        report = createReport();
+        await runPublic(dd, report, null, downBaseline);
+        s = report.summary();
+        outcomes.push(['PC-1 --expect accepts the cell that failed before cutover', s.failed === 0, s.checks + ' checks']);
+        report = createReport();
+        await runPublic(dd, report, null, null);
+        s = report.summary();
+        outcomes.push(['PC-1 without --expect would fail that cell', s.failed === 2 && s.failures.every(f => f.name.includes('/v000902/') && f.name.includes('/51.')), s.failed + ' failed']);
     }
     finally {
-        [direct, gateway, broken].forEach(server => server.close());
+        [direct, gateway, broken, directDown, gatewayDown].forEach(server => server.close());
         fs.rmSync(baselineFile, {force: true});
+        fs.rmSync(downBaseline, {force: true});
     }
     for (const [name, ok, detail] of outcomes) { console.log((ok ? 'ok     ' : 'FAILED ') + name + ' — ' + detail); }
     return outcomes.every(o => o[1]);
@@ -350,7 +399,7 @@ async function main() {
         await runDirectVsGateway(arg('--direct'), arg('--gateway'), report, arg('--save-baseline'));
     }
     else if (arg('--public')) {
-        await runPublic(arg('--public'), report, arg('--baseline'));
+        await runPublic(arg('--public'), report, arg('--baseline'), arg('--expect'));
     }
     else {
         console.error('usage: see the header of scripts/gateway-parity.mjs');

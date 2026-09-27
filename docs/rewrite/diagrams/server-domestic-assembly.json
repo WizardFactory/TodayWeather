@@ -66,7 +66,7 @@
       "col": 0,
       "type": "external",
       "label": "coord2addr (/coord)",
-      "sublabel": "API_SERVER /geocode/coord \u00d73",
+      "sublabel": "/geocode/v000903/coord \u00d73",
       "tag": "3 tries \u00d7 3 s \u2192 kmaAddress name1\u20133",
       "width": 168
     },

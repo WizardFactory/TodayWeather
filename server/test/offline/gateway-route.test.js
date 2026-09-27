@@ -1,4 +1,4 @@
-/* Gateway route regressions (#2606), scenarios RT-1 to RT-15 of
+/* Gateway route regressions (#2606), scenarios RT-1 to RT-16 of
  * specs/issue-2606-test-scenarios.md.
  *   NODE_PATH=<isolated deps incl. express@4.13.4, cors, express-session> \
  *     node server/test/offline/gateway-route.test.js

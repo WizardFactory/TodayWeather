@@ -1,6 +1,6 @@
 # Intent: #2606 implementation (pre-merge)
 
-Source: AK, 2026-09-27: "구현진행", then "Premerge까지, 다만 다른 provider 모델 리뷰는 skip". Design inputs: [intent/issue-2606.md](issue-2606.md), [specs/issue-2606.md](../specs/issue-2606.md) (revision 12), [test scenarios](../specs/issue-2606-test-scenarios.md), [plan](../plans/issue-2606.md), and issue [#2606](https://github.com/WizardFactory/TodayWeather/issues/2606) as updated on 2026-09-26.
+Source: AK, 2026-09-27: "구현진행", then "Premerge까지, 다만 다른 provider 모델 리뷰는 skip". Design inputs: [intent/issue-2606.md](issue-2606.md), [specs/issue-2606.md](../specs/issue-2606.md) (revision 12), [test scenarios](../specs/issue-2606-test-scenarios.md), [plan](../plans/issue-2606.md), and issue [#2606](https://github.com/WizardFactory/TodayWeather/issues/2606) as updated on 2026-09-26 and 2026-09-27 (single Google key).
 
 ## Outcome
 
