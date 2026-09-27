@@ -88,8 +88,8 @@ function createHarness(version, fixture, historyOptions = {}) {
     return [];
   }
   function getModel(name) {
-    // Optional shared WAQI air cache store (#2622); several harnesses may share it like API workers.
-    if(name==='waqi.air.cache.model' && historyOptions.waqiCache) return historyOptions.waqiCache.model;
+    // Optional shared air provider stores (#2622/#2628: observation cache, usage counters, VC usage/lock); several harnesses may share them like API workers.
+    if(historyOptions.airModels && Object.hasOwn(historyOptions.airModels,name)) return historyOptions.airModels[name];
     if(models.has(name))return models.get(name);
     const obj={find:(query,projection,cb)=>{
       queries.push({model:name,query:clone(query)});
@@ -132,8 +132,11 @@ function createHarness(version, fixture, historyOptions = {}) {
         cb(null,{statusCode:200},{kmaAddress:{name1:fixture.place.town.first,name2:fixture.place.town.second,name3:fixture.place.town.third}});
       };
       if(!id.startsWith('.'))return require(id);
-      const resolved=path.resolve(path.dirname(filename),id)+(path.extname(id)==='.js'?'':'.js');
+      let resolved=path.resolve(path.dirname(filename),id);
+      resolved=fs.existsSync(resolved)&&fs.statSync(resolved).isDirectory()?path.join(resolved,'index.js'):resolved+(path.extname(id)==='.js'?'':'.js');
       if(resolved.endsWith('/config/config.js'))return config;
+      // Air provider policy (#2628): defaults plus per-scenario overrides; the sandbox has no process.env.
+      if(resolved.endsWith('/config/air.js'))return Object.assign({},require(resolved).load({}),historyOptions.airConfig||{});
       const name=path.basename(resolved,'.js');
       if(resolved.includes('/models/'))return getModel(name);
       if(name==='kasi.riseset.controller' && fixture.kasiRows) return load(resolved);

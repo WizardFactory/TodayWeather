@@ -58,13 +58,14 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
           TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
         run: node server/test/offline/air-summary-smoke.js
-      - name: WAQI domestic air fallback checks (#2622)
+      - name: Air provider chain and domestic air fallback checks (#2622, #2628)
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
           TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
         run: |
-          node server/test/offline/waqi-air.test.js
-          node server/test/offline/waqi-air-smoke.js
+          node server/test/offline/air-chain.test.js
+          node server/test/offline/air-fallback.test.js
+          node server/test/offline/air-chain-smoke.js
       - name: Current weather text and summary smoke
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
@@ -128,10 +129,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
         run: node server/test/offline/kma-warning-node10-check.js
-      - name: WAQI domestic air fallback on Node 10.15.3 (#2622)
+      - name: Air provider chain on Node 10.15.3 (#2622, #2628)
         env:
           NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
-        run: node server/test/offline/waqi-air-node10-check.js
+        run: node server/test/offline/air-chain-node10-check.js
 
   vc-lock-mongo:
     # Real mongod through mongodb-memory-server. mongoose 5.13 (5.x API): the service's 5.1.2
@@ -157,7 +158,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules
         run: node server/test/offline/vc-lock-mongo-smoke.js
-      - name: Shared WAQI air cache across worker processes on a real mongod (#2622)
+      - name: Shared air budgets and cache across worker processes on a real mongod (#2622, #2628)
         env:
           NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules
-        run: node server/test/offline/waqi-cache-mongo-smoke.js
+        run: node server/test/offline/air-budget-mongo-smoke.js

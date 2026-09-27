@@ -2,13 +2,13 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "Domestic air: AirKorea first, WAQI fallback with shared cache",
+    "title": "Domestic air: AirKorea first, then the provider chain with shared budgets and cache",
     "locale": "en",
     "quality_profile": "showcase",
     "column_fit": "spread",
     "viewBox": [
       1080,
-      620
+      596
     ]
   },
   "participants": [
@@ -27,36 +27,36 @@
     {
       "id": "fallback",
       "type": "backend",
-      "label": "WAQI fallback",
+      "label": "Air fallback + chain",
       "sublabel": "per worker, in-flight shared"
     },
     {
-      "id": "cache",
+      "id": "store",
       "type": "database",
-      "label": "WAQI cache",
-      "sublabel": "Mongo waqi.air.caches"
+      "label": "Shared Mongo",
+      "sublabel": "cache + usage counters"
     },
     {
-      "id": "waqi",
+      "id": "providers",
       "type": "external",
-      "label": "WAQI API",
-      "sublabel": "feed geo:lat;lon"
+      "label": "Providers",
+      "sublabel": "Google · OpenWeather · VC · WAQI"
     }
   ],
   "segments": [
     {
-      "from": 150,
-      "to": 215,
+      "from": 146,
+      "to": 206,
       "label": "AirKorea"
     },
     {
-      "from": 230,
-      "to": 435,
-      "label": "Fallback"
+      "from": 218,
+      "to": 458,
+      "label": "Provider chain"
     },
     {
-      "from": 450,
-      "to": 510,
+      "from": 470,
+      "to": 518,
       "label": "Response"
     }
   ],
@@ -65,7 +65,7 @@
       "id": "keco-read",
       "from": "route",
       "to": "airkorea",
-      "y": 165,
+      "y": 160,
       "label": "getKeco: nearest stations, last 24 h",
       "variant": "default"
     },
@@ -73,7 +73,7 @@
       "id": "keco-none",
       "from": "airkorea",
       "to": "route",
-      "y": 200,
+      "y": 190,
       "label": "no observation within 8 h",
       "variant": "return"
     },
@@ -81,74 +81,90 @@
       "id": "fallback-call",
       "from": "route",
       "to": "fallback",
-      "y": 245,
-      "label": "getWaqiAirFallback(town gCoord)",
+      "y": 232,
+      "label": "getAirFallback(town gCoord)",
       "variant": "emphasis"
     },
     {
       "id": "cache-read",
       "from": "fallback",
-      "to": "cache",
-      "y": 280,
+      "to": "store",
+      "y": 262,
       "label": "find cell (0.01°), expireAt > now",
       "variant": "default"
     },
     {
       "id": "cache-miss",
-      "from": "cache",
+      "from": "store",
       "to": "fallback",
-      "y": 315,
-      "label": "miss (hit skips WAQI)",
+      "y": 292,
+      "label": "miss (hit skips providers)",
       "variant": "return"
     },
     {
-      "id": "waqi-get",
+      "id": "budget-check",
       "from": "fallback",
-      "to": "waqi",
-      "y": 350,
-      "label": "GET feed, 3 s timeout, no retry",
+      "to": "store",
+      "y": 322,
+      "label": "check free caps, minute cap, down markers",
       "variant": "default"
     },
     {
-      "id": "waqi-feed",
-      "from": "waqi",
+      "id": "provider-get",
+      "from": "fallback",
+      "to": "providers",
+      "y": 352,
+      "label": "next allowed provider, 3 s timeout, no retry",
+      "variant": "default"
+    },
+    {
+      "id": "provider-feed",
+      "from": "providers",
       "to": "fallback",
-      "y": 385,
-      "label": "station, time, iaqi",
+      "y": 382,
+      "label": "observation → concentrations, evaluate (8 h, 30 km, PM)",
       "variant": "return"
+    },
+    {
+      "id": "budget-record",
+      "from": "fallback",
+      "to": "store",
+      "y": 412,
+      "label": "count call; 401/403/429 → down 10 min",
+      "variant": "default"
     },
     {
       "id": "cache-write",
       "from": "fallback",
-      "to": "cache",
-      "y": 420,
-      "label": "upsert: ok 30 min / failed 2 min",
+      "to": "store",
+      "y": 442,
+      "label": "upsert cell: ok 30 min / failed 2 min",
       "variant": "default"
     },
     {
       "id": "arpltn",
       "from": "fallback",
       "to": "route",
-      "y": 465,
-      "label": "arpltn source aqicn if ≤ 8 h and ≤ 30 km",
+      "y": 484,
+      "label": "arpltn with source = provider id (after the write)",
       "variant": "return"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Response contract",
+      "title": "Order",
       "items": [
-        "current.arpltn and airInfoList[0] come from WAQI with source aqicn; grades follow the requested airUnit.",
-        "Any WAQI failure keeps the response without air, as before."
+        "Free phase: Google → OpenWeather → WAQI; capped, down or unconfigured providers are skipped.",
+        "Free budgets exhausted: WAQI first; paid OpenWeather → Visual Crossing → Google only with AIR_PAID_PROVIDERS_ENABLED."
       ]
     },
     {
       "dot": "amber",
       "title": "Limits",
       "items": [
-        "WAQI republishes AirKorea: covers our collection gaps, not an AirKorea outage.",
-        "Values are converted back from US EPA sub-indices; the cache is shared by all ten API workers."
+        "Budgets are shared by all API workers (read-then-increment; 5 % reserve).",
+        "Any failure keeps the response without air; unusable observations are kept and re-evaluated per request."
       ]
     }
   ]

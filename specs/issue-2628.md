@@ -1,0 +1,45 @@
+# Spec: air quality provider chain — PR 1 — issue 2628
+
+Revision 2, 2026-09-27 (r2: build decisions D11–D14 — WAQI adapter id `aqicn`, unusable observations cached 30 min, `invalid-body`/`status` kinds, store-callback guards, harness). Consumes [intent](../intent/issue-2628.md) r1, `reports/sdlc/issue-2628/investigation.md`, issue decision log D1–D14.
+
+## R1 Policy config `server/config/air.js`
+
+Env (all optional, parsed like `config/gather.js`; invalid values throw): `AIR_GOOGLE_MONTHLY_CAP` (default 10000), `AIR_OWM_MONTHLY_CAP` (1000000), `AIR_OWM_MINUTE_CAP` (60), `AIR_PAID_PROVIDERS_ENABLED` (false), `AIR_PAID_MONTHLY_CALL_CAP` (100000, per paid provider), `AIR_PROVIDER_TIMEOUT_MS` (3000, 500–10000). Constants: `RESERVE = 0.05`, `FREE_ORDER = ['google','openweather','aqicn']`, `PAID_ORDER = ['openweather','visualcrossing','google']`, `DOWN_MS = 10 min`, plus the #2622 constants (`FRESHNESS_HOURS` 8, `MAX_STATION_DISTANCE_KM` 30, `CACHE_TTL_MS` 30 min, `FAILURE_CACHE_TTL_MS` 2 min). The WAQI adapter id is `aqicn` (D11): it is the existing `airUnit`/`source` name of #2622, so the response contract does not change.
+
+## R2 Adapters `server/lib/air/providers/<id>.js`
+
+Common shape: `{id, label, stationBased, isConfigured(keyString), fetchCurrent(gCoord, deps, callback)}` where `deps = {axios, keyString, timeoutMs}`. Callback `(result)` never errors: `{outcome:'ok', observation, cost}` or `{outcome:'failed', reason, kind}` with `kind ∈ {timeout, transport, http, auth, quota, invalid-body, status}` (`status` = WAQI `status !== 'ok'`; a body without a `status` field is `invalid-body`). Shared classified request in `server/lib/air/httpClient.js`. Classification: axios `ECONNABORTED` → timeout; response 401/403 → auth; 429 → quota; other status → http (`reason: http-<n>`); body parse/type problems → invalid-body. Keys are URL-encoded and scrubbed from any message.
+- google: POST currentConditions:lookup with `extraComputations: ['LOCAL_AQI','POLLUTANT_CONCENTRATION']`, `universalAqi: true`, `languageCode: 'en'`; `observedAt` from `dateTime`; pollutants by `code` (`pm25`, `pm10`, `o3`, `no2`, `so2`, `co`) and `concentration.units`: `MICROGRAMS_PER_CUBIC_METER` (PM as-is; gases → `um2ppm`), `PARTS_PER_BILLION` → `ppb2ppm`, `PARTS_PER_MILLION` as-is; indexes: `uaqi` → `us`? no — recorded as `indexes.uaqi`, local index code recorded as `indexes.local`.
+- openweather: GET air_pollution; `observedAt` from `list[0].dt`; `pm2_5`, `pm10` as-is; `o3`,`no2`,`so2`,`co` µg/m³ → `um2ppm`; `indexes.owm = main.aqi`.
+- visualcrossing: GET Timeline `today`, `unitGroup=metric`, `include=current`, `elements=datetime,datetimeEpoch,pm2p5,pm10,o3,no2,so2,co,aqius,aqieur`; `observedAt` from `currentConditions.datetimeEpoch`; PM as-is, gases `um2ppm`; `indexes.us = aqius`, `indexes.eu = aqieur`; `cost = queryCost` (default 1) reported for `vc.usage`.
+- waqi (id `aqicn`): current #2622 logic; `stationBased: true`; sub-index → `extractValue` (+`ppb2ppm` for o3/no2/so2; co is already ppm); `stationName` (shortened), `stationGeo`; `indexes.us = aqi`; attribution names appended.
+
+## R3 Observation `server/lib/air/observation.js`
+
+`{provider, observedAt: Date, stationName?, stationGeo?: [lat, lon], pollutants: {pm10?, pm25? (µg/m³), o3?, no2?, so2?, co? (ppm)}, indexes: {...}, attribution: string}`. Only finite, non-negative numbers are kept. `evaluate(observation, gCoord, requestTime)` → `{reason}` for `no-time`, `stale` (> 8 h), `future` (> 1 h ahead), `too-far` (station-based only, > 30 km), `no-pm`; else `{arpltn}`: `{source: provider, stationName?, dataTime (KST 'YYYY-MM-DD HH:mm'), <code>Value…}`. Attribution strings: Google "Google Air Quality", OpenWeather "OpenWeather", Visual Crossing "Visual Crossing", WAQI "World Air Quality Index Project" + station attributions when present.
+
+## R4 Budgets `server/lib/air/providerBudget.js` + model `server/models/air.provider.usage.model.js` (`air.provider.usage`)
+
+Documents `_id`: `google:m:<YYYY-MM>`, `openweather:m:<YYYY-MM>`, `openweather:min:<YYYY-MM-DDTHH:mm>`, `<id>:paid:m:<YYYY-MM>`, `<id>:down`; fields `calls`, `failures`, `expireAt` (TTL: month docs +40 days, minute docs +2 min, down marker `DOWN_MS`). API: `check(provider, phase, cb(state))` returns `{allowed, reason}` where reason ∈ `down`, `free-cap`, `minute-cap`, `paid-cap`, `paid-disabled`; `record(provider, phase, {failed, cost})` `$inc` (duplicate-key retry once); `markDown(provider)`. Free cap comparison uses `cap × (1 − RESERVE)`. Visual Crossing: `check` reads `vc.fetch.locks` `~provider` and `vc.usage[day].records + cost > VC_DAILY_RECORD_LIMIT` (0 = no limit) — in the free phase VC is never selected; in the paid phase it is allowed while the record limit allows; `record` increments `vc.usage` `{calls, records: cost, failures}` and the paid counter. Errors reading budgets → treat as allowed (log warn); errors writing → log warn. Read/write helpers guard against a store answering synchronously: a caller's exception is rethrown, not taken as a store failure, and callbacks run once (D14; defect found by the Node 10 check).
+
+## R5 Chain `server/lib/air/providerChain.js`
+
+`fetch(gCoord, requestTime, deps, cb(result))`. Order: free phase candidates = `FREE_ORDER` filtered by configured & not down & free budget allowed; attempt in order; on `ok` + `evaluate` success → return `{outcome:'ok', arpltn, observation, provider, attempts}`; on failure or unusable observation continue. When no free candidate remains (all exhausted/down/unconfigured): WAQI if configured and not down and not already attempted; then, if `paidProvidersEnabled`, `PAID_ORDER` filtered by configured, not down, paid cap; Google/OpenWeather in the paid phase count against the paid counter (not the free one). `auth`/`quota` → `markDown` and continue. Every attempt is recorded (`record`) including failures. Result when nothing succeeds: `{outcome:'failed', reason, observation?, attempts, skipped}` — `reason` is `'<provider>:<reason>'` for a failed request, the plain evaluation reason (`stale`, `too-far`, `no-pm`, …) when the last attempt returned an unusable observation, or `no-provider`; `observation` is the last unusable one. Skipped providers (`skipped`) are listed separately from attempts.
+
+## R6 Fallback `server/lib/AQI/airFallback.js` (replaces `waqiAirFallback.js`)
+
+Same middleware contract as #2622 (`getArpltn(gCoord, requestTime, cb(err, arpltn, reason))`, answer-after-write, in-flight per cell), cache model renamed `server/models/air.observation.cache.model.js` (`air.observation.caches`): `{_id: cell, outcome, provider, reason, observation (JSON), fetchedAt, expireAt}` (absent fields stored as `null`); a result with an observation — usable or not — is cached `ok` for 30 min and `evaluate`d per request (D12: refetching a stale or distant station returns the same data); only a result without any observation is cached `failed` for 2 min. Skips entirely when no provider is configured (`no-provider`). `ControllerTown24h`: `getWaqiAirFallback` renamed `getAirFallback` (route list updated); `makeAirInfoList` sets `airInfo.source = last.source || 'airkorea'`; `_getAirForecast` skips any `source !== 'airkorea'`; `convertUnits` unchanged. `controller.ww.units` unchanged.
+
+## Failure behavior / security / observability
+
+Every provider failure leaves the response as before. Added latency per cache miss ≤ providers attempted × timeout; bounded by the chain (at most 4 attempts). Logs: one `info` per success (`provider`, cell, age, cost), one `warn` per failed attempt (`provider`, kind, reason), no keys. Budget documents contain counts only.
+
+## Alternatives rejected
+
+- Per-process budgets: ten workers would overrun free caps ×10.
+- Using provider indexes for grades: inconsistent with `airUnit` selection; concentrations keep one grading path.
+- Including Visual Crossing in the free phase: would consume the overseas weather budget.
+
+## Verification strategy
+
+Unit (node:test; `server/test/offline/air-harness.js` loads real modules with relative requires resolved from disk and injected axios/models/config); route smoke via `rss-response-smoke` harness with loopback servers for all four providers (host redirect in an axios instance) and a stub budget store; Mongo multi-process smoke for budgets/breaker/cache (mongoose 5.13.22); Node 10 check; docs link check; Archify diagram update.
