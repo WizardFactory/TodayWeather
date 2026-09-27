@@ -1,0 +1,3879 @@
+{
+ "source": "tw-backend-functions a4c1deb (geoinfo/ and weather/ identical to 1b489a9)",
+ "coord": {
+  "seoul-ko": {
+   "status": 200,
+   "body": {
+    "name": "명동",
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    },
+    "kmaAddress": {
+     "name1": "서울특별시",
+     "name2": "중구",
+     "name3": "명동"
+    }
+   },
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=126.978&y=37.566&input_coord=WGS84"
+   ]
+  },
+  "seoul-en": {
+   "status": 200,
+   "body": {
+    "name": "Myeong-dong",
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    },
+    "kmaAddress": {
+     "name1": "서울특별시",
+     "name2": "중구",
+     "name3": "명동"
+    }
+   },
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=126.978&y=37.566&input_coord=WGS84",
+    "google ?latlng=37.566,126.978&language=en"
+   ]
+  },
+  "seoul-chrome": {
+   "status": 200,
+   "body": {
+    "name": "Myeong-dong",
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    },
+    "kmaAddress": {
+     "name1": "서울특별시",
+     "name2": "중구",
+     "name3": "명동"
+    }
+   },
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=126.978&y=37.566&input_coord=WGS84",
+    "google ?latlng=37.566,126.978&language=ko,en"
+   ]
+  },
+  "seoul-upper": {
+   "status": 200,
+   "body": {
+    "name": "Myeong-dong",
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    },
+    "kmaAddress": {
+     "name1": "서울특별시",
+     "name2": "중구",
+     "name3": "명동"
+    }
+   },
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=126.978&y=37.566&input_coord=WGS84",
+    "google ?latlng=37.566,126.978&language=KO"
+   ]
+  },
+  "seoul-none": {
+   "status": 200,
+   "body": {
+    "name": "Myeong-dong",
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    },
+    "kmaAddress": {
+     "name1": "서울특별시",
+     "name2": "중구",
+     "name3": "명동"
+    }
+   },
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=126.978&y=37.566&input_coord=WGS84",
+    "google ?latlng=37.566,126.978&language=en"
+   ]
+  },
+  "seoul-3parts": {
+   "status": 200,
+   "body": {
+    "name": "명동",
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    },
+    "kmaAddress": {
+     "name1": "서울특별시",
+     "name2": "중구",
+     "name3": "명동"
+    }
+   },
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=126.978&y=37.566&input_coord=WGS84"
+   ]
+  },
+  "jeju-ko": {
+   "status": 200,
+   "body": {
+    "name": "이도1동",
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    },
+    "kmaAddress": {
+     "name1": "제주특별자치도",
+     "name2": "제주시",
+     "name3": "이도1동"
+    }
+   },
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=126.531&y=33.5&input_coord=WGS84"
+   ]
+  },
+  "island-ko": {
+   "status": 200,
+   "body": {
+    "name": "울릉읍",
+    "country": "KR",
+    "address": "경상북도 울릉군 울릉읍",
+    "location": {
+     "lat": 37.484,
+     "long": 130.906
+    },
+    "kmaAddress": {
+     "name1": "경상북도",
+     "name2": "울릉군",
+     "name3": "울릉읍"
+    }
+   },
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=130.906&y=37.484&input_coord=WGS84"
+   ]
+  },
+  "space-ko": {
+   "status": 200,
+   "body": {
+    "name": "파장동",
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    },
+    "kmaAddress": {
+     "name1": "경기도",
+     "name2": "수원시장안구",
+     "name3": "파장동"
+    }
+   },
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=127&y=37.3&input_coord=WGS84"
+   ]
+  },
+  "tsushima-ko": {
+   "status": 200,
+   "body": {
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    }
+   },
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=129.3&y=34.2&input_coord=WGS84",
+    "google ?latlng=34.2,129.3&language=ko"
+   ]
+  },
+  "newyork-en": {
+   "status": 200,
+   "body": {
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    }
+   },
+   "calls": [
+    "google ?latlng=40.713,-74.006&language=en"
+   ]
+  },
+  "london-en": {
+   "status": 200,
+   "body": {
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    }
+   },
+   "calls": [
+    "google ?latlng=51.507,-0.128&language=en"
+   ]
+  },
+  "fallback-en": {
+   "status": 200,
+   "body": {
+    "name": "Canada",
+    "country": "CA",
+    "address": " Canada",
+    "location": {
+     "lat": 70,
+     "long": -90
+    }
+   },
+   "calls": [
+    "google ?latlng=70,-90&language=en"
+   ]
+  },
+  "noformatted-en": {
+   "status": 501,
+   "calls": [
+    "google ?latlng=10,10&language=en",
+    "darksky",
+    "darksky",
+    "darksky"
+   ]
+  },
+  "kr-google-zero-en": {
+   "status": 501,
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=126.978&y=37.566&input_coord=WGS84",
+    "google ?latlng=37.566,126.978&language=en",
+    "darksky",
+    "darksky",
+    "darksky"
+   ]
+  },
+  "outside-zero": {
+   "status": 501,
+   "calls": [
+    "google ?latlng=40.713,-74.006&language=en",
+    "darksky",
+    "darksky",
+    "darksky"
+   ]
+  },
+  "kakao-500": {
+   "status": 501,
+   "calls": [
+    "kakao /v2/local/geo/coord2regioncode.json?x=126.978&y=37.566&input_coord=WGS84"
+   ]
+  },
+  "zero": {
+   "status": 404,
+   "calls": []
+  },
+  "near-zero": {
+   "status": 404,
+   "calls": []
+  }
+ },
+ "addr": {
+  "jamsil-google": {
+   "status": 200,
+   "body": {
+    "country": "KR",
+    "address": "서울특별시 송파구 잠실동",
+    "location": {
+     "lat": 37.506,
+     "long": 127.084
+    }
+   },
+   "calls": [
+    "google ?address=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C%20%EC%86%A1%ED%8C%8C%EA%B5%AC%20%EC%9E%A0%EC%8B%A4%EB%8F%99"
+   ]
+  },
+  "nocountry-google": {
+   "status": 200,
+   "body": {
+    "address": "Somewhere",
+    "location": {
+     "lat": 12.346,
+     "long": 56.789
+    }
+   },
+   "calls": [
+    "google ?address=Somewhere"
+   ]
+  },
+  "jamsil-kakao-fallback": {
+   "status": "lambda-crash",
+   "reason": "The Lambda fails here (string coordinates reach toFixed); the port parses numbers (spec 2.5)"
+  }
+ },
+ "weather": {
+  "seoul-ko|unversioned|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "명동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|unversioned|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "명동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|unversioned|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "명동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|v000901|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "명동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|v000901|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "명동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|v000901|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "명동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|v000902|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "명동",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|v000902|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "명동",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|v000902|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "명동",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|v000903|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "명동",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|v000903|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "명동",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-ko|v000903|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "명동",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "서울특별시 중구 명동",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "seoul-en|unversioned|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|unversioned|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|unversioned|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|v000901|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|v000901|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|v000901|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|v000902|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "Myeong-dong",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|v000902|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "Myeong-dong",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|v000902|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "Myeong-dong",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|v000903|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "Myeong-dong",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|v000903|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "Myeong-dong",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-en|v000903|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "Myeong-dong",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-chrome|unversioned|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|unversioned|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|unversioned|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|v000901|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|v000901|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|v000901|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|v000902|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "Myeong-dong",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|v000902|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "Myeong-dong",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|v000902|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "Myeong-dong",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|v000903|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "Myeong-dong",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|v000903|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "Myeong-dong",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-chrome|v000903|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "Myeong-dong",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko,en"
+    }
+   ]
+  },
+  "seoul-none|unversioned|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|unversioned|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|unversioned|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|v000901|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|v000901|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|v000901|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "Myeong-dong",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|v000902|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "Myeong-dong",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|v000902|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "Myeong-dong",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|v000902|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "Myeong-dong",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|v000903|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "Myeong-dong",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|v000903|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "Myeong-dong",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "seoul-none|v000903|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "Myeong-dong",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+    "location": {
+     "lat": 37.566,
+     "long": 126.978
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EB%AA%85%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "jeju-ko|unversioned|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "이도1동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|unversioned|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "이도1동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|unversioned|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "이도1동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|v000901|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "이도1동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|v000901|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "이도1동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|v000901|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "이도1동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|v000902|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "이도1동",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|v000902|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "이도1동",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|v000902|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "이도1동",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|v000903|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "이도1동",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|v000903|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "이도1동",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "jeju-ko|v000903|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "이도1동",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "제주특별자치도 제주시 이도1동",
+    "location": {
+     "lat": 33.5,
+     "long": 126.531
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%B4%EB%8F%841%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|unversioned|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "파장동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|unversioned|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "파장동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|unversioned|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "파장동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|v000901|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "파장동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|v000901|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "파장동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|v000901|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000901",
+    "name": "파장동",
+    "version": "v000901",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000901/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|v000902|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "파장동",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|v000902|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "파장동",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|v000902|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000902",
+    "name": "파장동",
+    "version": "v000902",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000902/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|v000903|none": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "파장동",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|v000903|app": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "파장동",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "space-ko|v000903|widget-null": {
+   "status": 200,
+   "body": {
+    "regionName": "backend-v000903",
+    "name": "파장동",
+    "version": "v000903",
+    "currentPubDate": "202609270900",
+    "current": {
+     "t1h": 21.5,
+     "reh": 60
+    },
+    "shortest": [
+     {
+      "date": "20260927",
+      "t1h": 21
+     }
+    ],
+    "units": {
+     "temperatureUnit": "C"
+    },
+    "country": "KR",
+    "address": "경기도 수원시 장안구 파장동",
+    "location": {
+     "lat": 37.3,
+     "long": 127
+    }
+   },
+   "backend": [
+    {
+     "url": "/v000903/kma/addr/%EA%B2%BD%EA%B8%B0%EB%8F%84/%EC%88%98%EC%9B%90%EC%8B%9C%EC%9E%A5%EC%95%88%EA%B5%AC/%ED%8C%8C%EC%9E%A5%EB%8F%99?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|unversioned|none": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/34.2,129.3",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|unversioned|app": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/34.2,129.3?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|unversioned|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/34.2,129.3?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|v000901|none": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/34.2,129.3",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|v000901|app": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/34.2,129.3?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|v000901|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/34.2,129.3?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|v000902|none": {
+   "status": 200,
+   "body": {
+    "version": "v000902",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000902/dsf/coord/34.2,129.3",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|v000902|app": {
+   "status": 200,
+   "body": {
+    "version": "v000902",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000902/dsf/coord/34.2,129.3?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|v000902|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000902",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000902/dsf/coord/34.2,129.3?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|v000903|none": {
+   "status": 200,
+   "body": {
+    "version": "v000903",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000903/dsf/coord/34.2,129.3",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|v000903|app": {
+   "status": 200,
+   "body": {
+    "version": "v000903",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000903/dsf/coord/34.2,129.3?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "tsushima-ko|v000903|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000903",
+    "source": "DSF",
+    "location": {
+     "lat": 34.2,
+     "long": 129.3
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Tsushima",
+    "country": "JP",
+    "address": "Tsushima, Nagasaki, Japan"
+   },
+   "backend": [
+    {
+     "url": "/v000903/dsf/coord/34.2,129.3?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "ko"
+    }
+   ]
+  },
+  "newyork-en|unversioned|none": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/40.713,-74.006",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|unversioned|app": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/40.713,-74.006?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|unversioned|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/40.713,-74.006?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|v000901|none": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/40.713,-74.006",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|v000901|app": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/40.713,-74.006?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|v000901|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/40.713,-74.006?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|v000902|none": {
+   "status": 200,
+   "body": {
+    "version": "v000902",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000902/dsf/coord/40.713,-74.006",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|v000902|app": {
+   "status": 200,
+   "body": {
+    "version": "v000902",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000902/dsf/coord/40.713,-74.006?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|v000902|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000902",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000902/dsf/coord/40.713,-74.006?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|v000903|none": {
+   "status": 200,
+   "body": {
+    "version": "v000903",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000903/dsf/coord/40.713,-74.006",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|v000903|app": {
+   "status": 200,
+   "body": {
+    "version": "v000903",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000903/dsf/coord/40.713,-74.006?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "newyork-en|v000903|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000903",
+    "source": "DSF",
+    "location": {
+     "lat": 40.713,
+     "long": -74.006
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "Manhattan",
+    "country": "US",
+    "address": "Manhattan, New York, NY, USA"
+   },
+   "backend": [
+    {
+     "url": "/v000903/dsf/coord/40.713,-74.006?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|unversioned|none": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/51.507,-0.128",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|unversioned|app": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/51.507,-0.128?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|unversioned|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/51.507,-0.128?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|v000901|none": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/51.507,-0.128",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|v000901|app": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/51.507,-0.128?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|v000901|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000901",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000901/dsf/coord/51.507,-0.128?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|v000902|none": {
+   "status": 200,
+   "body": {
+    "version": "v000902",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000902/dsf/coord/51.507,-0.128",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|v000902|app": {
+   "status": 200,
+   "body": {
+    "version": "v000902",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000902/dsf/coord/51.507,-0.128?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|v000902|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000902",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000902/dsf/coord/51.507,-0.128?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|v000903|none": {
+   "status": 200,
+   "body": {
+    "version": "v000903",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000903/dsf/coord/51.507,-0.128",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|v000903|app": {
+   "status": 200,
+   "body": {
+    "version": "v000903",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000903/dsf/coord/51.507,-0.128?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "london-en|v000903|widget-null": {
+   "status": 200,
+   "body": {
+    "version": "v000903",
+    "source": "DSF",
+    "location": {
+     "lat": 51.507,
+     "long": -0.128
+    },
+    "current": {
+     "temperature": 18
+    },
+    "daily": [
+     {
+      "date": "20260927"
+     }
+    ],
+    "name": "London",
+    "country": "GB",
+    "address": "London, UK"
+   },
+   "backend": [
+    {
+     "url": "/v000903/dsf/coord/51.507,-0.128?temperatureUnit=(null)&windSpeedUnit=(null)&pressureUnit=(null)&distanceUnit=(null)&precipitationUnit=(null)&airUnit=(null)",
+     "acceptLanguage": "en"
+    }
+   ]
+  },
+  "kr-google-zero-en|unversioned|none": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|unversioned|app": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|unversioned|widget-null": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|v000901|none": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|v000901|app": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|v000901|widget-null": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|v000902|none": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|v000902|app": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|v000902|widget-null": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|v000903|none": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|v000903|app": {
+   "status": 501,
+   "backend": []
+  },
+  "kr-google-zero-en|v000903|widget-null": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|unversioned|none": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|unversioned|app": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|unversioned|widget-null": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|v000901|none": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|v000901|app": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|v000901|widget-null": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|v000902|none": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|v000902|app": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|v000902|widget-null": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|v000903|none": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|v000903|app": {
+   "status": 501,
+   "backend": []
+  },
+  "kakao-500|v000903|widget-null": {
+   "status": 501,
+   "backend": []
+  }
+ }
+}

@@ -262,7 +262,7 @@ test('_convertGeoCodeByApiServer: KR location → {lat, lon}; bounded request', 
     const r = runApiGeocode(cb => cb(null, { statusCode: 200 }, { country: 'KR', address: 'x', location: { lat: 35.958, long: 126.559 } }));
     assert.strictEqual(r.out.e, undefined);
     assert.strictEqual(JSON.stringify(r.out.r), JSON.stringify({ lat: 35.958, lon: 126.559 })); // VM realm object
-    assert.strictEqual(r.seen.url, 'http://todayweather.test/geocode/addr/' + encodeURIComponent('전북특별자치도 군산시 오식도동'));
+    assert.strictEqual(r.seen.url, 'http://todayweather.test/geocode/v000903/addr/' + encodeURIComponent('전북특별자치도 군산시 오식도동'));
     assert(r.seen.opts.timeout > 0 && r.seen.opts.json === true);
 });
 test('_convertGeoCodeByApiServer: HTTP error, non-KR, out-of-range, network error → Error', () => {
