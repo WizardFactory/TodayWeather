@@ -152,6 +152,32 @@ test('AC2 a rejection on a continuation page also stops the walk', () => {
     assert.strictEqual(r.results.filter(item => item.isCompleted).length, 0);
 });
 
+test('AC2 a collector retry scheduled before a stop fails at once instead of requesting (PR review 5329215929)', () => {
+    const timers = [];
+    const pending = [];
+    let requests = 0;
+    const Collector = h.load('lib/collectTownForecast.js', {
+        './midForecastPolicy': require('../../lib/midForecastPolicy'),
+        './kmaPrecipitation': h.optional('../../lib/kmaPrecipitation'),
+        './dataGoKrRejection': h.optional('../../lib/dataGoKrRejection'),
+        events: require('events'), xml2js: require('xml2js'), dnscache: function () {},
+        request: {get: function (url, options, callback) { requests++; pending.push(callback); }}
+    }, {log: leveled([]), setTimeout: fn => { timers.push(fn); }});
+    const c = new Collector({retryCount: 1});
+    let calls = 0, results;
+    c.requestData(grids(2), c.DATA_TYPE.TOWN_SHORT, KEY_A, '20260926', '0800', (err, res) => { calls++; results = res; });
+    assert.strictEqual(requests, 2);
+    pending.shift()(null, {statusCode: 500}, OK_BODY);
+    assert.strictEqual(timers.length, 1, 'collector-level retry scheduled for grid 0');
+    pending.shift()(null, {statusCode: 429}, QUOTA_BODY);
+    assert.strictEqual(c.stopReason, 'quota');
+    assert.strictEqual(calls, 0, 'grid 0 is still pending on its retry timer');
+    timers.shift()();
+    assert.strictEqual(requests, 2, 'no request with the rejected key after the stop');
+    assert.strictEqual(calls, 1);
+    assert.strictEqual(results.filter(item => item.isCompleted).length, 0);
+});
+
 // ---- AC4: other failures keep their behaviour ----
 
 [

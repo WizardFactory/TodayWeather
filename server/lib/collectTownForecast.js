@@ -191,6 +191,10 @@ function CollectData(options, callback){
 
             setTimeout(function(){
                 self.resultList[listIndex].retryCount--;
+                // The walk stopped while this retry waited: fail it instead of using the rejected key.
+                if (self.stopReason) {
+                    return self.emit('recvFail', listIndex);
+                }
                 self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url,
                     self.resultList[listIndex].options);
             }, self.timeout);
