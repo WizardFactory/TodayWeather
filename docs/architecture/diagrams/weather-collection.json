@@ -11,7 +11,7 @@
     "title": "Weather collection and persistence",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "87b8855f308611a07897cd3a39c45fefb3088d77",
+      "revision": "82ad45192aac1aa190c27a39a255cbcecf287757",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -120,7 +120,7 @@
       "id": "station",
       "type": "backend",
       "label": "Station scraper",
-      "sublabel": "Minute / hourly / alerts",
+      "sublabel": "Minute / hourly; alerts via API",
       "pos": [
         355,
         440

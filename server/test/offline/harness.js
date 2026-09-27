@@ -37,6 +37,7 @@ exports.collector = function (request, logs) {
     var Collector = exports.load('lib/collectTownForecast.js', {
         './midForecastPolicy': require('../../lib/midForecastPolicy'),
         './kmaPrecipitation': optional('../../lib/kmaPrecipitation'),
+        './dataGoKrRejection': optional('../../lib/dataGoKrRejection'),
         events: require('events'), request: request || {get: function () { throw new Error('Unexpected HTTP'); }},
         xml2js: require('xml2js'), dnscache: function () {}
     }, {log: exports.logger(logs || [])});
@@ -54,6 +55,12 @@ exports.item = function (category, value, time) {
 exports.shortItems = function (overrides, time) {
     var fields = Object.assign({TMP: '12.5', PCP: '강수없음', SNO: '적설없음', SKY: '1',
         REH: '60', PTY: '0', POP: '0', UUU: '0', VVV: '0', VEC: '0', WSD: '0'}, overrides);
+    return Object.keys(fields).map(function (key) { return exports.item(key, fields[key], time); });
+};
+// getUltraSrtFcst rows as observed 2026-09-27 (#2620): 11 categories including POP.
+exports.shortestItems = function (overrides, time) {
+    var fields = Object.assign({LGT: '0', PTY: '0', RN1: '강수없음', SKY: '1', T1H: '12.5', REH: '60',
+        UUU: '0', VVV: '0', VEC: '0', WSD: '0', POP: '0'}, overrides);
     return Object.keys(fields).map(function (key) { return exports.item(key, fields[key], time); });
 };
 exports.response = function (items) {

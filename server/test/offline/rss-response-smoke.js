@@ -53,7 +53,9 @@ function createHarness(version, fixture, historyOptions = {}) {
   const manager={MAX_CURRENT_COUNT:200,leadingZeros:(n,l)=>String(n).padStart(l,'0'),getRegIdByTown:(r,c,cb)=>cb(null,{pointNumber:'109',cityCode:'11B10101'})};
   const logger={};
   for(const level of ['info','silly','debug','verbose','warn','error']) logger[level]=(...args)=>{if(level==='error'||level==='warn')logs.push({method:activeMethod,level,args:args.map(a=>a&&a.stack||a)});};
-  const sandbox={console,Buffer,Date:FixedDate,setTimeout(){throw new Error('Unexpected timer');},setInterval(){throw new Error('Unexpected interval');},clearTimeout,setImmediate,log:logger,manager,__:s=>s};
+  // Optional translation (#2609 client E2E shows server-built texts); the default keeps message keys.
+  const translate=historyOptions.translate || (s=>s);
+  const sandbox={console,Buffer,Date:FixedDate,setTimeout(){throw new Error('Unexpected timer');},setInterval(){throw new Error('Unexpected interval');},clearTimeout,setImmediate,log:logger,manager,__:translate};
   if (historyOptions.db) { sandbox.setTimeout=setTimeout; sandbox.clearTimeout=clearTimeout; }
   sandbox.global=sandbox;
   const context=vm.createContext(sandbox);
@@ -70,6 +72,8 @@ function createHarness(version, fixture, historyOptions = {}) {
     if(name==='modelAreaNo') return fixture.areaNoRows || [];
     if(name==='kma.lifeindex.model') return fixture.lifeIndexRows || [];
     if(name==='modelKasiRiseSet') return fixture.kasiRows || [];
+    // Optional warning zone state rows for the real kma.specialweather.controller (#2609).
+    if(name==='modelKmaSpecialWeatherZone') return fixture.zoneRows || [];
     const isV2=name.startsWith('kma.');
     const map={'modelShort':'short','modelCurrent':'current','modelShortest':'shortest','modelShortRss':'rss','kma.town.short.model':'short','kma.town.current.model':'current','kma.town.shortest.model':'shortest','kma.town.short.rss.model':'rss'};
     if(map[name]) {
@@ -129,6 +133,7 @@ function createHarness(version, fixture, historyOptions = {}) {
       const name=path.basename(resolved,'.js');
       if(resolved.includes('/models/'))return getModel(name);
       if(name==='kasi.riseset.controller' && fixture.kasiRows) return load(resolved);
+      if(name==='kma.specialweather.controller' && fixture.zoneRows) return load(resolved);
       if(Object.hasOwn(optional,name)) { if(['controllerKmaStnWeather','kecoController'].includes(name)) return Object.assign(load(resolved),optional[name]); return optional[name]; }
       if(name==='kecoRequester') return function(){};
       if(name==='convertGeocode')return ()=>{throw new Error('Unexpected geocode fallback');};
@@ -165,7 +170,7 @@ function createHarness(version, fixture, historyOptions = {}) {
   function request(query) { return new Promise((resolve,reject)=>{
     const url='/coord/'+fixture.place.gCoord.lat+','+fixture.place.gCoord.lon;
     const req={method:'GET',url,originalUrl:'/v000903/kma'+url,baseUrl:'/v000903/kma',headers:{},query,sessionID:'synthetic-smoke'};
-    const res={__:s=>s,status(code){this.statusCode=code;return this;},send(body){reject(new Error('Unexpected response '+this.statusCode+': '+body));},json(body){resolve({body:JSON.parse(JSON.stringify(body)),traces,queries,logs});},redirect(url){reject(new Error('Unexpected redirect '+url));},setHeader(){}};
+    const res={__:translate,status(code){this.statusCode=code;return this;},send(body){reject(new Error('Unexpected response '+this.statusCode+': '+body));},json(body){resolve({body:JSON.parse(JSON.stringify(body)),traces,queries,logs});},redirect(url){reject(new Error('Unexpected redirect '+url));},setHeader(){}};
     router.handle(req,res,err=>reject(err||new Error('No JSON response')));
   }); }
   return {request,methods};

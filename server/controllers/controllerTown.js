@@ -934,6 +934,10 @@ function ControllerTown() {
                 if(shortestItem.date === currentTime.date && shortestItem.time === currentTime.time){
                     log.silly('MRbyST> update current data');
                     shortestString.forEach(function(string){
+                        if (string == 'pop') {
+                            // A forecast probability, not an observation (#2620).
+                            return;
+                        }
                         if (string == 't1h'){
                             if (shortestItem[string] != -50) {
                                 current[string] = shortestItem[string];
@@ -4828,6 +4832,12 @@ ControllerTown.prototype._convertSummaryTo3H = function (summary) {
         else if (key === 'lgt') {
             newItem[key] = self._summaryLgt(summary[key], -1);
         }
+        else if (key === 'pop') {
+            // Short slot T carries the hourly POP of hour T; only hour T may replace it (#2620).
+            if (summary.popAtT != undefined && summary.popAtT !== -1) {
+                newItem[key] = summary.popAtT;
+            }
+        }
         else if(key === 't1h' || key === 'wsd' || key == 'reh' || key === 'uuu' || key === 'vvv' || key === 'vec') {
             var invalidValue = -50;
             switch (key) {
@@ -4898,6 +4908,10 @@ ControllerTown.prototype._convert1Hto3H = function (srcList, usePartial) {
 
     srcList.forEach(function (src) {
         summary = self._createOrGet3hSummaryList(summaryList, src.date, src.time);
+        // summary.pop skips rows without pop (observations), so its index is not the hour's (#2620).
+        if (src.time === summary.time3h && src.pop != undefined) {
+            summary.popAtT = src.pop;
+        }
         for (key in src) {
             if (summary[key] == undefined) {
                 summary[key] = [];

@@ -84,6 +84,10 @@ jobs:
           TZ=Asia/Seoul node server/test/offline/vc-weather.test.js
           TZ=Asia/Seoul node server/test/offline/vc-weather-smoke.js
           node server/test/offline/vc-node10-check.js
+      - name: KMA warning collection checks
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+        run: node server/test/offline/kma-warning.test.js
 
   vc-node10:
     # The service host runs Node 10.15.3 (docs/architecture/ec2-internals.md).
@@ -113,6 +117,10 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
           TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/vc-node10/output
         run: node server/test/offline/vc-weather-smoke.js
+      - name: KMA warning path on Node 10.15.3 (#2609)
+        env:
+          NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
+        run: node server/test/offline/kma-warning-node10-check.js
 
   vc-lock-mongo:
     # Real mongod through mongodb-memory-server. mongoose 5.13 (5.x API): the service's 5.1.2

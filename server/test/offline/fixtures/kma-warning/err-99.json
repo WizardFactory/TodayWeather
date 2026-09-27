@@ -1,0 +1,8 @@
+{
+ "response": {
+  "header": {
+   "resultCode": "99",
+   "resultMsg": "최대 조회 기간은 오늘 기준으로 6일 전까지입니다."
+  }
+ }
+}

@@ -8,6 +8,7 @@ var commands = [
     [require.resolve('mocha/bin/_mocha'), path.join(__dirname, 'gather-code-drift.test.js')],
     [path.join(__dirname, 'gather-smoke.js')],
     [path.join(__dirname, 'gather-policy.test.js')],
+    [path.join(__dirname, 'gather-quota.test.js')],
     [path.join(__dirname, 'daily-forecast.test.js')],
     [path.join(__dirname, 'daily-review.test.js')],
     [path.join(__dirname, 'short-rss-daily.test.js')],
@@ -25,7 +26,8 @@ var commands = [
     [path.join(__dirname, 'vc-weather.test.js')],
     [path.join(__dirname, 'gateway-geocoder.test.js')],
     [path.join(__dirname, 'gateway-route.test.js')],
-    [path.join(__dirname, 'gateway-callers.test.js')]
+    [path.join(__dirname, 'gateway-callers.test.js')],
+    [path.join(__dirname, 'kma-warning.test.js')]
 ];
 commands.forEach(function (args) {
     var result = spawnSync(process.execPath, args, {stdio: 'inherit'});
