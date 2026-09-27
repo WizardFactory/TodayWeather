@@ -284,3 +284,76 @@ test('AC8 DB 1.0 per-field merge replaces the category with its amount and keeps
     assert.equal(row.r06, 2); assert.equal(row.r06Text, undefined, 'exact amount replaces the old category');
     assert.equal(row.s06Text, '1cm 미만');
 });
+
+// #2620: getUltraSrtFcst POP reaches the short slots it covers, never the current observation.
+const shortestRow = (hour, pop) => ({date: '20260924', time: hour + '00', pop, pty: 0, rn1: 0, sky: 1, lgt: 0, t1h: 20, reh: 60, uuu: 0, vvv: 0, vec: 0, wsd: 1});
+
+test('#2620 shortest POP at hour T replaces the short slot T probability', () => {
+    const req = getShort(hourlyRows({'2026092412': {pop: 30}, '2026092415': {pop: 30}}));
+    const shortest = [shortestRow(10, 90), shortestRow(11, 80), shortestRow(12, 60), shortestRow(13, 70), shortestRow(14, 70), shortestRow(15, -1)];
+    town24h._mergeShortByShortest(req.short, shortest, undefined, {date: '20260924', time: '0900'});
+    assert.equal(slot(req.short, '20260924', '1200').pop, 60, 'slot end hour, like short slot rows');
+    assert.equal(slot(req.short, '20260924', '1500').pop, 30, 'a missing end hour keeps the short value, never hour T-1');
+    assert.equal(slot(req.short, '20260924', '1800').pop, 10, 'slots beyond shortest keep the short value');
+});
+
+test('#2620 slot pop comes from hour T regardless of row order and observation rows', () => {
+    const req = getShort(hourlyRows({'2026092412': {pop: 30}}));
+    const current = {date: '20260924', time: '1000', t1h: 18, rn1: 0, pty: 0, sky: 1, lgt: 0, reh: 60, uuu: 0, vvv: 0, vec: 0, wsd: 1};
+    // The observation at 10h has no pop; shortest rows arrive out of order.
+    town24h._mergeShortByShortest(req.short, [shortestRow(12, 60), shortestRow(11, 40)], [current], {date: '20260924', time: '1000'});
+    assert.equal(slot(req.short, '20260924', '1200').pop, 60);
+});
+
+test('#2620 shortest rows without POP keep the short probability', () => {
+    const req = getShort(hourlyRows({'2026092412': {pop: 30}}));
+    const shortest = [10, 11, 12].map(hour => shortestRow(hour, -1));
+    town24h._mergeShortByShortest(req.short, shortest, undefined, {date: '20260924', time: '0900'});
+    assert.equal(slot(req.short, '20260924', '1200').pop, 30);
+    const legacy = [10, 11, 12].map(hour => { const row = shortestRow(hour); delete row.pop; return row; });
+    town24h._mergeShortByShortest(req.short, legacy, undefined, {date: '20260924', time: '0900'});
+    assert.equal(slot(req.short, '20260924', '1200').pop, 30, 'rows read before the field existed');
+});
+
+test('#2620 current merge ignores shortest POP and logs no invalid pop', () => {
+    const errors = [];
+    const original = log.error;
+    log.error = (...args) => errors.push(args.join(' '));
+    try {
+        for (const pop of [40, -1]) {
+            const current = {date: '20260924', time: '0800', t1h: 18, pty: 0, sky: 1, reh: 50};
+            const merged = town24h._mergeCurrentByShortest(current, [shortestRow('09', pop)], {date: '20260924', time: '0900'});
+            assert.equal(merged, true);
+            assert.equal('pop' in current, false);
+        }
+    } finally {
+        log.error = original;
+    }
+    assert.deepEqual(errors.filter(line => line.includes('pop')), []);
+});
+
+test('#2620 shortest storage keeps POP in DB 2.0 reads and DB 1.0 merges', () => {
+    const pub = new RealDate('2026-09-27T12:30:00Z');
+    const ShortestCtl = load('controllers/kma/kma.town.shortest.controller.js', {'../../models/kma/kma.town.shortest.model.js':
+        {find: () => ({sort() { return this; }, batchSize() { return this; }, lean() { return this; },
+            exec: cb => cb(null, [{pubDate: pub, shortestData: {date: '20260927', time: '2200', pop: 30, pty: 0, rn1: 0}}])})}});
+    let read = false;
+    new ShortestCtl().getShortestFromDB(null, {mx: 60, my: 127}, undefined, (err, info) => {
+        assert.ifError(err);
+        assert.equal(info.ret[0].pop, 30);
+        read = true;
+    });
+    assert.equal(read, true);
+    const saved = [];
+    const existing = {shortestData: [Object.assign(shortestRow(10, 20), {pop: 20}), shortestRow(11, 20)], save(cb) { saved.push(this); cb(null); }};
+    const Manager = load('controllers/controllerManager.js', {'../models/modelShortest': {find: (query, cb) => cb(null, [existing])},
+        '../config/config': {keyString: {dongnae_forecast_keys: '[]'}}});
+    const manager = Object.create(Manager.prototype);
+    manager.MAX_SHORTEST_COUNT = +managerCode.match(/self\.MAX_SHORTEST_COUNT = (\d+);/)[1];
+    const incoming = [Object.assign(shortestRow(10, 50), {mx: 60, my: 127, pubDate: '202609240930'}),
+        Object.assign(shortestRow(11, -1), {mx: 60, my: 127, pubDate: '202609240930'})];
+    manager.saveShortest(incoming, err => assert.ifError(err));
+    assert.equal(saved.length, 1);
+    assert.equal(existing.shortestData[0].pop, 50);
+    assert.equal(existing.shortestData[1].pop, 20, 'a missing POP does not erase the stored one');
+});

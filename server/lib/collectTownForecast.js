@@ -585,6 +585,20 @@ function warnUnparsed(index, unparsed) {
     }
 }
 
+// One warning per grid and product per cycle, never one per row (#2620).
+function warnUnknownCategories(index, product, unknown) {
+    var categories = Object.keys(unknown);
+    if (categories.length) {
+        log.warn('KMA unknown forecast categories', {index: index, product: product, categories: categories});
+    }
+}
+
+// Probability in whole %: 0..100, otherwise the -1 sentinel.
+function parsePercent(value) {
+    var number = parseMeasurement(value, -1);
+    return number >= 0 && number <= 100 ? Math.round(number) : -1;
+}
+
 // Complete decimal values only: ranges/thresholds must not become exact amounts.
 function parseMeasurement(value, missing, unit, noValue) {
     if (typeof value !== 'string' && typeof value !== 'number') {
@@ -695,6 +709,7 @@ CollectData.prototype.organizeShortData = function(index, listData){
         };
 
         var unparsed = {count: 0};
+        var unknown = {};
         for(i=0 ; i < listItem.length ; i++){
             var item = listItem[i];
             //log.info(item);
@@ -742,12 +757,13 @@ CollectData.prototype.organizeShortData = function(index, listData){
                     result.t3h = parseMeasurement(item.fcstValue[0], -50);
                 }
                 else{
-                    log.error(new Error('Known property', item.category[0]));
+                    unknown[item.category[0]] = true;
                 }
             }
         }
 
         warnUnparsed(index, unparsed);
+        warnUnknownCategories(index, 'short', unknown);
 
         var data = listResult[0];
         if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
@@ -798,6 +814,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
         rn1: -1, /* 1시간 강수량 : mm, category → representative amount + rn1Text, invalid : -1 */
         sky: -1, /* 하늘상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1*/
         lgt: -1, /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
+        pop: -1, /* 강수 확률 : 1%, invalid : -1 (getUltraSrtFcst since 2026-09, #2620) */
         t1h: -50,
         reh: -1,
         uuu: -100,
@@ -818,6 +835,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
         var listItem = listData.response.body[0].items[0].item;
 
         var unparsed = {count: 0};
+        var unknown = {};
         for(var i=0 ; i < listItem.length ; i++){
             var item = listItem[i];
             if((item.fcstDate === undefined)
@@ -854,13 +872,15 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                 else if(item.category[0] === 'VVV') {result.vvv = val;}
                 else if(item.category[0] === 'VEC') {result.vec = val;}
                 else if(item.category[0] === 'WSD') {result.wsd = val;}
+                else if(item.category[0] === 'POP') {result.pop = parsePercent(value);}
                 else{
-                    log.error('Unknown shortest category');
+                    unknown[item.category[0]] = true;
                 }
             }
         }
 
         warnUnparsed(index, unparsed);
+        warnUnknownCategories(index, 'shortest', unknown);
 
         var data = listResult[0];
         if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||

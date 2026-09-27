@@ -20,6 +20,7 @@ var shortestSchema = new mongoose.Schema({
         rn1Text: String, // provider category for an approximate forecast rn1, e.g. "1mm 미만" (#2583)
         sky: {type:Number, default:-1},
         lgt: {type:Number, default:-1},
+        pop: {type:Number, default:-1}, // probability of precipitation, % (#2620)
         t1h: {type:Number, default:-50},
         reh: {type:Number, default:-1},
         uuu: {type:Number, default:-100},
