@@ -54,6 +54,8 @@ if (!release) {
         admobIOSInterstitialAdUnit: 'ca-app-pub-3940256099942544/4411468910',
     });
 }
+// Release builds follow Google's consent guidance strictly (no ads while UMP fails); see service.admobemi.js.
+config.releaseAds = release;
 config.isPaidApp = false;
 config.debug = process.argv.includes('--debug');
 config.package = 'todayWeather';

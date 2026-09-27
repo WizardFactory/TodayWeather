@@ -26,7 +26,9 @@ angular.module('service.admobemi', [])
                 size: 'adaptive',
                 collapsible: false,
                 autoShow: false,
-                isOverlapping: false
+                isOverlapping: false,
+                // cordova-android 15 layout: resize the web view by the banner height (also on Android 16+).
+                isCordova15: true
             }, function () {}, error);
         };
 
@@ -50,8 +52,10 @@ angular.module('service.admobemi', [])
             }
             bannerAdUnit = options.bannerAdUnit;
 
+            var started = false;
             document.addEventListener('on.sdkInitialization', function onInit(data) {
                 document.removeEventListener('on.sdkInitialization', onInit);
+                started = true;
                 console.log('admob sdk initialized ' + (data && data.version));
                 success();
             });
@@ -65,31 +69,54 @@ angular.module('service.admobemi', [])
                 isResponseInfo: clientConfig.debug,
                 isConsentDebug: false
             };
+
+            /**
+             * The plugin starts the Ads SDK only when UMP already allows ads at the moment initialize runs. On a
+             * first launch the consent result arrives later (Android success events, the iOS callback after the
+             * form), so the SDK stays off until the next launch. Once the consent flow has finished, initialize
+             * again: consent is cached by then, and the plugin starts the SDK only if UMP allows ads.
+             */
+            var retried = false;
+            function startAfterConsent() {
+                setTimeout(function () {
+                    if (started || retried) {
+                        return;
+                    }
+                    retried = true;
+                    console.log('admob consent finished, initialize again');
+                    plugin().initialize(options, function () {}, onConsentError);
+                }, 1000);
+            }
+            ['on.consent.status.not_required', 'on.consent.status.obtained', 'on.personalization.state'].forEach(function (name) {
+                document.addEventListener(name, startAfterConsent);
+            });
+
             var fallenBack = false;
             /**
-             * The plugin starts the Ads SDK only after UMP succeeds. Until a consent message is set up in
-             * the AdMob console, UMP fails ("no form(s) configured"), so start the SDK without it;
-             * Google then serves limited ads where consent is required.
+             * UMP fails ("no form(s) configured") while no consent message is published in the AdMob console.
+             * Release builds then show no ads, as Google's consent guidance requires. Builds with Google's test ad
+             * units start the SDK without UMP so the ad path stays testable.
              */
-            function startWithoutUmp(reason) {
-                // A consent decision (not a UMP failure) must not be bypassed.
-                if (fallenBack || /consent is required|status unknown/i.test(String(reason))) {
+            function onConsentError(reason) {
+                console.log('admob consent failed: ' + JSON.stringify(reason));
+                Util.ga.trackEvent('plugin', 'error', 'admobConsent ' + JSON.stringify(reason && reason.message || reason));
+                // A consent decision (not a UMP failure) must never be bypassed.
+                if (clientConfig.releaseAds || fallenBack || /consent is required|status unknown/i.test(String(reason))) {
                     if (error) { error(reason); }
                     return;
                 }
                 fallenBack = true;
-                console.log('admob consent failed, start without UMP: ' + JSON.stringify(reason));
-                Util.ga.trackEvent('plugin', 'error', 'admobConsent ' + JSON.stringify(reason && reason.message || reason));
                 plugin().metaData({useCustomConsentManager: true});
                 plugin().initialize(options, function () {}, error);
             }
             // Android reports the failure as an event; iOS through the initialize error callback.
             document.addEventListener('on.consent.info.update.failed', function onFailed(data) {
                 document.removeEventListener('on.consent.info.update.failed', onFailed);
-                startWithoutUmp(data);
+                onConsentError(data);
             });
 
-            plugin().initialize(options, function () {}, startWithoutUmp);
+            // iOS calls back when UMP finished (SDK started, or the consent form was answered).
+            plugin().initialize(options, startAfterConsent, onConsentError);
         };
 
         return obj;

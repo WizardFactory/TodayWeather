@@ -27,13 +27,17 @@
     "emulate:android": "npm run www && cordova run android --emulator",
     "emulate:ios": "npm run www && cordova run ios --emulator",
     "www:firebase": "node scripts/copy-firebase-config.mjs",
-    "www:config:release": "node scripts/make-client-config.mjs --release"
+    "www:config:release": "node scripts/make-client-config.mjs --release",
+    "www:release": "npm run www:libs && npm run www:css && npm run www:config:release && npm run www:firebase",
+    "build:android:release": "node scripts/build-release.mjs android",
+    "build:ios:release": "node scripts/build-release.mjs ios"
   },
   "devDependencies": {
     "bower": "1.8.14",
     "cordova": "13.0.0",
     "cordova-android": "15.1.0",
     "cordova-ios": "8.1.1",
+    "cordova-plugin-app-preferences": "file:local-plugins/cordova-plugin-app-preferences",
     "cordova-plugin-app-version": "0.1.14",
     "cordova-plugin-device": "3.0.0",
     "cordova-plugin-firebasex-analytics": "2.0.2",
@@ -119,7 +123,8 @@
         "ANDROID_X": "1.2.0",
         "USAGE": "This identifier will be used to deliver personalized ads to you.",
         "APP_ID_IOS": "ca-app-pub-3940256099942544~1458002511"
-      }
+      },
+      "cordova-plugin-app-preferences": {}
     }
   }
 }

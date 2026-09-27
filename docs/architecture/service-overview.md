@@ -18,11 +18,12 @@ This repository contains a Node.js/Express weather backend, an Ionic 1/AngularJS
 | `server/lib/` | Provider HTTP/XML/JSON access (Visual Crossing in `lib/VC`), KMA scraping, units and image parsing |
 | `server/models/` | Mongoose weather, geographic, push and purchase-related models |
 | `client/www/js/` | App startup and screens; `WeatherUtil` HTTP/conversion, `WeatherInfo` city state, `TwStorage` persistence |
-| `client/gulpfile.js`, `tw.*`, `ta.*` | Product/platform build variants; copy configuration, select purchase plugin, resources and native projects |
+| `client/package.json`, `client/config.xml`, `client/scripts/` | TodayWeather build since #2605: Cordova 13 from npm scripts (`www`, `build:*`, `build:*:release`), release files fetched from S3, prepare hooks for AdMob IDs and iOS tracking settings ([client README](../../client/README.md#mobile-application)) |
+| `client/gulpfile.js`, `tw.*`, `ta.*` | Legacy product/platform build variants (TodayAir, widgets, purchase plugins); copy configuration, select purchase plugin, resources and native projects |
 | `tw.ios/`, `ta.ios/` | TodayWeather/TodayAir native shells, Objective-C widgets, platform web assets |
 | `applewatch/` | Older WatchKit application/extension and its own bundled web assets |
 
-Sources: [server entry](../../server/app.js), [server package](../../server/package.json), [Ionic dependency](../../client/bower.json), [build variants](../../client/gulpfile.js).
+Sources: [server entry](../../server/app.js), [server package](../../server/package.json), [Ionic dependency](../../client/bower.json), [build variants](../../client/gulpfile.js), [Cordova build](../../client/package.json).
 
 ## Runtime modes
 

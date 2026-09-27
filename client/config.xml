@@ -28,6 +28,7 @@
     <preference name="cordova.plugins.diagnostic.modules" value="LOCATION" />
     <!-- Real AdMob app IDs come from client/.env at prepare time; package.json keeps Google's sample IDs. -->
     <hook type="after_prepare" src="scripts/admob-app-id.js" />
+    <hook type="after_prepare" src="scripts/ios-no-tracking.js" />
     <platform name="android">
         <allow-intent href="market:*" />
         <preference name="android-minSdkVersion" value="24" />
@@ -56,6 +57,68 @@
         <!-- App Store icons must not have an alpha channel; icon-1024.png has one. -->
         <icon src="tw.resources/icon.png" width="1024" height="1024" />
         <splash src="tw.resources/ios/splash/Default@2x~universal~anyany.png" />
+        <!-- The legacy app kept a native copy of TwStorage in this App Group (widget sharing); upgrades restore from it. -->
+        <config-file target="*/Entitlements-Debug.plist" parent="com.apple.security.application-groups">
+            <array>
+                <string>group.net.wizardfactory.todayweather</string>
+            </array>
+        </config-file>
+        <config-file target="*/Entitlements-Release.plist" parent="com.apple.security.application-groups">
+            <array>
+                <string>group.net.wizardfactory.todayweather</string>
+            </array>
+        </config-file>
+        <!--
+          App-level privacy manifest. Firebase and Google Mobile Ads ship their own manifests for what they collect.
+          The app sends the device position (rounded to 3 decimals) for weather and a device/push identifier for
+          push settings; neither is linked to an account or used for tracking. The plugins compiled into the app
+          (firebasex, emi admob, app-preferences) use NSUserDefaults, including the App Group suite.
+        -->
+        <privacy-manifest>
+            <key>NSPrivacyTracking</key>
+            <false/>
+            <key>NSPrivacyTrackingDomains</key>
+            <array/>
+            <key>NSPrivacyAccessedAPITypes</key>
+            <array>
+                <dict>
+                    <key>NSPrivacyAccessedAPIType</key>
+                    <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+                    <key>NSPrivacyAccessedAPITypeReasons</key>
+                    <array>
+                        <string>CA92.1</string>
+                        <string>1C8F.1</string>
+                    </array>
+                </dict>
+            </array>
+            <key>NSPrivacyCollectedDataTypes</key>
+            <array>
+                <dict>
+                    <key>NSPrivacyCollectedDataType</key>
+                    <string>NSPrivacyCollectedDataTypePreciseLocation</string>
+                    <key>NSPrivacyCollectedDataTypeLinked</key>
+                    <false/>
+                    <key>NSPrivacyCollectedDataTypeTracking</key>
+                    <false/>
+                    <key>NSPrivacyCollectedDataTypePurposes</key>
+                    <array>
+                        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+                    </array>
+                </dict>
+                <dict>
+                    <key>NSPrivacyCollectedDataType</key>
+                    <string>NSPrivacyCollectedDataTypeDeviceID</string>
+                    <key>NSPrivacyCollectedDataTypeLinked</key>
+                    <false/>
+                    <key>NSPrivacyCollectedDataTypeTracking</key>
+                    <false/>
+                    <key>NSPrivacyCollectedDataTypePurposes</key>
+                    <array>
+                        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+                    </array>
+                </dict>
+            </array>
+        </privacy-manifest>
         <edit-config file="*-Info.plist" mode="merge" target="NSLocationWhenInUseUsageDescription">
             <string>TodayWeather uses your location to show the weather where you are.</string>
         </edit-config>

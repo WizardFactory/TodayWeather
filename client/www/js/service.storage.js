@@ -24,7 +24,7 @@ angular.module('service.storage', [])
         // localStorage가 clear 된 경우 appPreference의 data를 localStorage로 update
         function _appPref2localStorage() {
             var deferred = $q.defer();
-            var keys = ['cities', 'cityIndex', 'storeReceipt', 'pushData', 'twAdsInfo', 'startVersion', 'settingsInfo',
+            var keys = ['cities', 'cityIndex', 'storeReceipt', 'pushData', 'pushData2', 'twAdsInfo', 'startVersion', 'settingsInfo',
                 'purchaseInfo', 'units', 'cityList', 'daumServiceKeys', 'disableUpdateInfo', 'appVersion', 'expandShortChart'];
             var count = keys.length;
 
@@ -216,8 +216,10 @@ angular.module('service.storage', [])
             if (_hasAppPreferences()) {
                 suitePrefs = plugins.appPreferences.suite(suiteName);
 
-                // localStorage가 clear 된 경우 appPreference의 data를 localStorage로 update
-                if (localStorage.length === 0) {
+                // localStorage가 clear 된 경우 appPreference의 data를 localStorage로 update.
+                // A new web origin (file:// → app://localhost or https://localhost) also starts empty; test the
+                // city keys, not length, so an unrelated early write cannot skip the restore.
+                if (localStorage.getItem('cityList') === null && localStorage.getItem('cities') === null) {
                     _appPref2localStorage().finally(function () {
                         that.setForwardCompatibility();
                         deferred.resolve();
