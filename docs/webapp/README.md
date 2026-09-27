@@ -2,7 +2,7 @@
 
 Prepared 2026-09-24 for AK. The [implemented client](implementation.md) now defaults to direct existing-API calls and has a [static S3/CloudFront deployment recipe](../../infra/web/static/README.md) for `app.tdywx.xyz`. This implementation created no AWS resources; an existing CloudFront distribution and bucket already hold the domain (see runbook [Option A](../../infra/web/static/README.md#option-a-reuse-the-existing-distribution-and-bucket)), and the deployment method awaits AK's decision. The documents below reflect the static-only implementation and distinguish remaining mobile-parity scope.
 
-Current decision: maintain a **responsive PWA in a separate `web/` client** and call the existing versioned weather service directly from the browser. The Node API workspace, Docker recipe and web sender are removed; browser notifications are unavailable. The UI is Korean-only by AK's decision; translations are deferred. Preserve hourly/daily weather, yesterday comparisons, air quality, saved locations, nationwide views, warnings and settings. Treat native widgets and store purchases as explicit product decisions.
+Current decision: maintain a **responsive PWA in a separate `web/` client** and call the existing versioned weather service directly from the browser. The Node API workspace, Docker recipe and web sender are removed; browser notifications are unavailable. The UI supports Korean, English, Spanish, Japanese, German, Portuguese and French (AK, 2026-09-27). Preserve hourly/daily weather, yesterday comparisons, air quality, saved locations, nationwide views, warnings and settings. Treat native widgets and store purchases as explicit product decisions.
 
 | Read | Purpose |
 | --- | --- |

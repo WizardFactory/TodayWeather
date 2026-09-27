@@ -202,7 +202,10 @@ export default function App() {
   const wantedLanguage =
     state.settings.language ?? detectLanguage(navigator.languages ?? []);
   useEffect(() => {
-    if (wantedLanguage !== language()) void setLanguage(wantedLanguage);
+    if (wantedLanguage !== language())
+      // A language chunk that cannot load (offline before it was cached)
+      // keeps the current language.
+      setLanguage(wantedLanguage).catch(() => setToast(t("error.connect")));
   }, [wantedLanguage]);
   useEffect(() => {
     // Another tab changed favorites or settings: adopt the stored state.

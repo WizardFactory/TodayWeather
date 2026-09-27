@@ -157,3 +157,65 @@ for (const locale of ["de-DE", "fr-FR", "es-ES", "pt-BR"])
       }
     });
   });
+
+test.describe("secondary browser languages", () => {
+  test.use({ locale: "de-DE" });
+  test("an en-US fallback language does not make the user American (independent verification HIGH-1)", async ({
+    page,
+  }) => {
+    await page.addInitScript(() =>
+      Object.defineProperty(navigator, "languages", {
+        get: () => ["de", "en-US", "en"],
+      }),
+    );
+    await page.goto("/settings");
+    await expect(page.locator("html")).toHaveAttribute("lang", "de");
+    // No German country: the international standard (m/s, °C).
+    await expect(
+      page.getByRole("combobox", { name: "Windgeschwindigkeit" }),
+    ).toHaveValue("m/s");
+    await expect(
+      page.getByRole("combobox", { name: "Temperatur" }),
+    ).toHaveValue("C");
+  });
+});
+
+test("switching language offline keeps the stored weather (independent verification LOW-1)", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/weather/seoul/hourly");
+  await expect(page.locator(".temperature")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<number>((resolve) => {
+            const open = indexedDB.open("tw.web.v1.snapshots", 1);
+            open.onsuccess = () => {
+              const r = open.result
+                .transaction("weather")
+                .objectStore("weather")
+                .count();
+              r.onsuccess = () => resolve(r.result);
+            };
+          }),
+      ),
+    )
+    .toBeGreaterThan(0);
+  // English is precached by the service worker before going offline.
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+  await page.unroute("https://todayweather.wizardfactory.net/**");
+  await context.setOffline(true);
+  await page.goto("/settings");
+  await page
+    .getByRole("combobox", { name: "언어", exact: true })
+    .selectOption("en");
+  await expect(
+    page.getByRole("heading", { name: "Settings", level: 1 }),
+  ).toBeVisible();
+  await page.goto("/weather/seoul/hourly");
+  await expect(page.locator(".temperature")).toBeVisible();
+  await context.setOffline(false);
+});

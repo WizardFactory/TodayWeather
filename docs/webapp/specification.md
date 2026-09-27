@@ -8,7 +8,7 @@ Users should be able to open a link on mobile or desktop and understand today's 
 
 Primary journeys: checking before leaving home, comparing saved cities, inspecting a pollutant/station, reviewing national conditions/warnings, and, in future separately scoped work, receiving scheduled/condition-based city notifications. Preserve weather meaning and actions while adapting density and interaction to the browser.
 
-Default product proposal: one TodayWeather web product with weather-first and air-first startup options. TodayAir's combined weather screen remains available. International weather is included where supported by data; national maps/warnings are explicitly Korean. The original proposal also included existing translations; AK has since decided on a Korean-only UI, so translations are deferred (Locale row below). Source definitions are in the [screen inventory](../rewrite/screen-specifications.md), not inferred from screenshots alone.
+Default product proposal: one TodayWeather web product with weather-first and air-first startup options. TodayAir's combined weather screen remains available. International weather is included where supported by data; national maps/warnings are explicitly Korean. The UI supports seven languages (AK, 2026-09-27; see the Locale row below and [supported languages](#supported-languages-and-screen-sizes)). Source definitions are in the [screen inventory](../rewrite/screen-specifications.md), not inferred from screenshots alone.
 
 ## Feature parity ledger
 

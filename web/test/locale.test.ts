@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatValue } from "@todayweather/core";
 import {
   configureFormats,
@@ -7,6 +7,7 @@ import {
   detectRegion,
   hourText,
   MANAGED_REGIONS,
+  autoUnits,
 } from "../src/locale";
 import { setLanguage } from "../src/i18n";
 import { defaultState, restoreState } from "../src/state";
@@ -40,11 +41,15 @@ describe("default units by country (#2613)", () => {
         "C m/s hPa km mm airnow",
       );
   });
-  it("reads the country from the first browser language with a region", () => {
+  it("reads the country from the device language only", () => {
     expect(detectRegion(["pt-BR"])).toBe("BR");
-    expect(detectRegion(["ko", "en-US"])).toBe("US");
+    expect(detectRegion(["ko", "ko-KR", "en-US"])).toBe("KR");
     expect(detectRegion(["zh-Hant-TW"])).toBe("TW");
     expect(detectRegion(["fr"])).toBeNull();
+    // Another language's region is not the user's country.
+    expect(detectRegion(["ko", "en-US", "en"])).toBeNull();
+    expect(detectRegion(["de", "en-US", "en"])).toBeNull();
+    expect(detectRegion([])).toBeNull();
   });
 });
 
@@ -142,5 +147,18 @@ describe("date, hour and number conventions", () => {
         }).format(new Date("2000-01-01T15:00:00Z")),
       );
     }
+  });
+});
+
+describe("demo builds (independent verification MEDIUM-1)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    configureFormats(["ko-KR"]);
+  });
+  it("keep the Korean air standard the demo data has, in any country", () => {
+    vi.stubEnv("VITE_WEB_MODE", "demo");
+    configureFormats(["en-US"]);
+    expect(autoUnits().airUnit).toBe("airkorea");
+    expect(autoUnits().temperatureUnit).toBe("F");
   });
 });

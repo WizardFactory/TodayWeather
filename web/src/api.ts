@@ -2,7 +2,7 @@ import { type Place, type Units, type Weather } from "@todayweather/core";
 import { readSnapshot, weatherKey, writeSnapshot } from "./state";
 import { directApi } from "./direct-api";
 import { readTransportSettings } from "./transport-config";
-import { t } from "./i18n";
+import { LANGUAGES, t } from "./i18n";
 const settings = readTransportSettings(import.meta.env);
 export async function api<T>(
   path: string,
@@ -58,7 +58,7 @@ export async function fetchWeather(
     return { weather, snapshot: false };
   } catch (error) {
     if (signal.aborted) throw error;
-    const cached = await readSnapshot(key);
+    const cached = await readAnySnapshot(key);
     if (cached) {
       const wait = (error as { retryAfterMs?: number }).retryAfterMs;
       return wait
@@ -81,5 +81,28 @@ export type Capabilities = {
 };
 /** Stored snapshot for immediate rendering; null when absent, expired or invalid. */
 export async function readStoredWeather(key: string): Promise<Weather | null> {
-  return (await readSnapshot(key)) ?? null;
+  return (await readAnySnapshot(key)) ?? null;
+}
+/**
+ * The snapshot for this language, else the same place and units saved in
+ * another UI language (only server text differs), so switching language
+ * offline keeps the stored weather.
+ */
+async function readAnySnapshot(key: string): Promise<Weather | undefined> {
+  const own = await readSnapshot(key);
+  if (own) return own;
+  let parts: unknown[];
+  try {
+    parts = JSON.parse(key);
+  } catch {
+    return;
+  }
+  const at = parts.length - 2; // [..., language, normalization revision]
+  for (const other of LANGUAGES) {
+    if (other === parts[at]) continue;
+    const found = await readSnapshot(
+      JSON.stringify([...parts.slice(0, at), other, ...parts.slice(at + 1)]),
+    );
+    if (found) return found;
+  }
 }

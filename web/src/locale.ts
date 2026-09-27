@@ -31,15 +31,25 @@ export const MANAGED_REGIONS = [
 ] as const;
 const managed = new Set<string>(MANAGED_REGIONS);
 
-/** Region subtag of the first browser language that has one (e.g. pt-BR → BR). */
+const regionOf = (tag: string) =>
+  tag
+    .split(/[-_]/)
+    .slice(1)
+    .find((part) => /^[a-z]{2}$/i.test(part))
+    ?.toUpperCase() ?? null;
+/**
+ * Country of the device language: the region of the first browser language,
+ * else of a later tag in the same language (["ko", "ko-KR"]). A region from
+ * another language (the "en-US" in ["de", "en-US"]) is not the user's
+ * country; without one the international standard applies.
+ */
 export function detectRegion(tags: readonly string[]): string | null {
-  for (const tag of tags) {
-    const region = tag
-      .split(/[-_]/)
-      .slice(1)
-      .find((part) => /^[a-z]{2}$/i.test(part));
-    if (region) return region.toUpperCase();
-  }
+  const first = tags[0];
+  if (!first) return null;
+  const primary = first.toLowerCase().split(/[-_]/)[0];
+  for (const tag of tags)
+    if (tag.toLowerCase().split(/[-_]/)[0] === primary && regionOf(tag))
+      return regionOf(tag);
   return null;
 }
 
@@ -68,8 +78,14 @@ const TABLE: Record<string, Units> = {
 for (const region of MANAGED_REGIONS)
   if (!(region in TABLE)) TABLE[region] = KMH;
 
-/** Automatic units for the browser's country (see configureFormats). */
-export const autoUnits = () => defaultUnits(unitRegion);
+/**
+ * Automatic units for the browser's country (see configureFormats). Demo data
+ * exists only in the Korean air standard.
+ */
+export const autoUnits = (): Units =>
+  import.meta.env.VITE_WEB_MODE === "demo"
+    ? { ...defaultUnits(unitRegion), airUnit: "airkorea" }
+    : defaultUnits(unitRegion);
 /** Unit defaults for a country; unknown or unmanaged → international standard. */
 export function defaultUnits(region: string | null): Units {
   return { ...(region && TABLE[region] ? TABLE[region] : INTERNATIONAL) };

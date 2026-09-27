@@ -151,13 +151,17 @@ export function saveState(
     return false;
   }
 }
-export function weatherKey(place: Place, units: Units): string {
+export function weatherKey(
+  place: Place,
+  units: Units,
+  lang: string = language(),
+): string {
   return JSON.stringify([
     place.id,
     place.lat,
     place.lon,
     ...Object.keys(DEFAULT_UNITS).map((k) => units[k as keyof Units]),
-    language(), // Server text (names, summaries) follows the request language.
+    lang, // Server text (names, summaries) follows the request language.
     "v3", // Normalization revision: D45 precipitation basis and air forecast fields.
   ]);
 }
@@ -440,6 +444,14 @@ function validAir(station: unknown): boolean {
     );
   });
 }
+const keyLanguage = (key: string) => {
+  try {
+    const parts = JSON.parse(key);
+    return Array.isArray(parts) ? String(parts[parts.length - 2]) : "";
+  } catch {
+    return "";
+  }
+};
 /** Cache is untrusted browser persistence: require complete normalized shape and a bounded receipt time. */
 export function validateSnapshot(
   value: unknown,
@@ -485,7 +497,9 @@ export function validateSnapshot(
       !Object.keys(DEFAULT_UNITS).every(
         (k) => w.units[k] === units[k as keyof Units],
       ) ||
-      weatherKey(w.location as Place, units) !== key
+      // A snapshot is valid under the language it was saved in, whatever
+      // the current UI language is.
+      weatherKey(w.location as Place, units, keyLanguage(key)) !== key
     )
       return;
     if (
