@@ -26,6 +26,8 @@ var MAX_PENDING_CYCLES = 20;
 var RESYNC_MS = 60*60*1000;
 // getPwnCd accepts fromTmFc up to 60 days back; the other operations up to 6 days.
 var ZONE_LOOKBACK_DAYS = 59;
+// One page per KST day: numOfRows 10000 returned all 4,499 rows of 60 days in one page on 2026-09-27.
+var ZONE_PAGE_ROWS = 10000;
 var SYNC_MARKER = '_sync';
 
 var TYPE_SPECIAL = 1;
@@ -122,7 +124,7 @@ KmaWarningCollector.prototype.syncZones = function (callback) {
         }
         var rows = [];
         async.eachSeries(days, function (day, done) {
-            self.requester.getAll('getPwnCd', {fromTmFc: day, toTmFc: day}, function (err, items) {
+            self.requester.getAll('getPwnCd', {fromTmFc: day, toTmFc: day}, ZONE_PAGE_ROWS, function (err, items) {
                 rows = rows.concat(items || []);
                 done(err);
             });

@@ -184,14 +184,20 @@ KmaWarningRequester.prototype.get = function (operation, params, callback) {
 
 /**
  * Every page until a page shorter than numOfRows (totalCount is unreliable).
+ * @param pageRows optional numOfRows (default 1000); a full page is logged because further pages can
+ *        repeat or drop rows (getPwnCd, 2026-09-27)
  * @param callback (err, items) items is [] when there is no data
  */
-KmaWarningRequester.prototype.getAll = function (operation, params, callback) {
+KmaWarningRequester.prototype.getAll = function (operation, params, pageRows, callback) {
     var self = this;
     var rows = [];
+    if (typeof pageRows === 'function') {
+        callback = pageRows;
+        pageRows = PAGE_ROWS;
+    }
 
     function next(pageNo) {
-        var query = Object.assign({}, params, {pageNo: pageNo, numOfRows: PAGE_ROWS});
+        var query = Object.assign({}, params, {pageNo: pageNo, numOfRows: pageRows});
         self.get(operation, query, function (err, result) {
             if (err) {
                 err.message += ' page=' + pageNo;
@@ -201,9 +207,10 @@ KmaWarningRequester.prototype.getAll = function (operation, params, callback) {
                 return callback(null, rows);
             }
             rows = rows.concat(result.items);
-            if (result.items.length < PAGE_ROWS) {
+            if (result.items.length < pageRows) {
                 return callback(null, rows);
             }
+            log.error('kma warning ' + operation + ' page ' + pageNo + ' is full (' + pageRows + ' rows); requesting the next page');
             if (pageNo >= MAX_PAGES) {
                 return callback(makeError(operation, 'more than ' + MAX_PAGES + ' pages'));
             }

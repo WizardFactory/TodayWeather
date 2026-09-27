@@ -349,6 +349,8 @@ test('collector: stores types 1-4, applies zone state, skips repeats (AC1, AC2, 
     const days = request.calls.filter(c => c.operation === 'getPwnCd');
     assert.equal(days.length, 60, 'empty state bootstraps 60 days, one KST day per request');
     assert.deepEqual([days[0].params.fromTmFc, days[0].params.toTmFc, days[59].params.fromTmFc, days[59].params.toTmFc], ['20260729', '20260729', '20260926', '20260926']);
+    // A single page per day (re-review 2): numOfRows 10000 returned all 4,499 rows of 60 days in one page.
+    assert.ok(days.every(c => c.params.numOfRows === '10000' && c.params.pageNo === '1'));
     const msgCall = request.calls.find(c => c.operation === 'getWthrWrnMsg');
     assert.deepEqual([msgCall.params.stnId, msgCall.params.fromTmFc, msgCall.params.toTmFc], ['108', '20260926', '20260926']);
     assert.deepEqual(request.calls.map(c => c.operation).filter(op => op !== 'getPwnCd'), ['getPwnStatus', 'getWthrWrnMsg', 'getWthrPwn', 'getWthrInfo', 'getWthrBrkNews']);
