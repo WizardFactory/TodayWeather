@@ -20,12 +20,14 @@
     "www:css": "sass --no-source-map --quiet-deps --silence-deprecation=import,global-builtin,slash-div,color-functions --load-path=. scss/ionic.app.scss www/css/ionic.app.css",
     "www:config": "node scripts/make-client-config.mjs",
     "www:config:debug": "node scripts/make-client-config.mjs --debug",
-    "www": "npm run www:libs && npm run www:css && npm run www:config",
+    "www": "npm run www:libs && npm run www:css && npm run www:config && npm run www:firebase",
     "release:fetch": "node scripts/fetch-release-files.mjs",
     "build:android": "npm run www && cordova build android",
     "build:ios": "npm run www && cordova build ios --emulator",
     "emulate:android": "npm run www && cordova run android --emulator",
-    "emulate:ios": "npm run www && cordova run ios --emulator"
+    "emulate:ios": "npm run www && cordova run ios --emulator",
+    "www:firebase": "node scripts/copy-firebase-config.mjs",
+    "www:config:release": "node scripts/make-client-config.mjs --release"
   },
   "devDependencies": {
     "bower": "1.8.14",
@@ -34,6 +36,10 @@
     "cordova-ios": "8.1.1",
     "cordova-plugin-app-version": "0.1.14",
     "cordova-plugin-device": "3.0.0",
+    "cordova-plugin-firebasex-analytics": "2.0.2",
+    "cordova-plugin-firebasex-core": "2.0.1",
+    "cordova-plugin-firebasex-crashlytics": "2.0.2",
+    "cordova-plugin-firebasex-messaging": "2.0.3",
     "cordova-plugin-geolocation": "5.0.0",
     "cordova-plugin-inappbrowser": "7.0.0",
     "cordova-plugin-ionic-keyboard": "2.2.0",
@@ -43,6 +49,7 @@
     "cordova-plugin-statusbar": "4.0.0",
     "cordova-plugin-x-socialsharing": "6.0.4",
     "cordova.plugins.diagnostic": "7.4.0",
+    "emi-indo-cordova-plugin-admob": "3.0.4",
     "phonegap-plugin-mobile-accessibility": "1.0.5",
     "sass": "1.105.0"
   },
@@ -68,7 +75,51 @@
       },
       "cordova.plugins.diagnostic": {},
       "cordova-plugin-network-information": {},
-      "phonegap-plugin-mobile-accessibility": {}
+      "phonegap-plugin-mobile-accessibility": {},
+      "cordova-plugin-firebasex-core": {
+        "ANDROID_FIREBASE_CORE_VERSION": "21.1.1",
+        "ANDROID_FIREBASE_INSTALLATIONS_VERSION": "19.1.0",
+        "ANDROID_GSON_VERSION": "2.14.0",
+        "IOS_FIREBASE_SDK_VERSION": "12.14.0"
+      },
+      "cordova-plugin-firebasex-messaging": {
+        "FIREBASE_FCM_AUTOINIT_ENABLED": "true",
+        "FIREBASE_MESSAGING_IMMEDIATE_PAYLOAD_DELIVERY": "false",
+        "IOS_FCM_ENABLED": "true",
+        "IOS_ENABLE_CRITICAL_ALERTS_ENABLED": "false",
+        "ANDROID_ICON_ACCENT": "#FFFFFF",
+        "ANDROID_FIREBASE_MESSAGING_VERSION": "25.0.2",
+        "IOS_FIREBASE_SDK_VERSION": "12.14.0"
+      },
+      "cordova-plugin-firebasex-analytics": {
+        "FIREBASE_ANALYTICS_COLLECTION_ENABLED": "true",
+        "FIREBASE_ANALYTICS_WITHOUT_ADS": "false",
+        "GOOGLE_ANALYTICS_ADID_COLLECTION_ENABLED": "true",
+        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_ANALYTICS_STORAGE": "true",
+        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_STORAGE": "true",
+        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_USER_DATA": "true",
+        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS": "true",
+        "IOS_ON_DEVICE_CONVERSION_ANALYTICS": "false",
+        "ANDROID_FIREBASE_ANALYTICS_VERSION": "23.2.0",
+        "ANDROID_PLAY_SERVICES_TAGMANAGER_VERSION": "18.3.0",
+        "IOS_FIREBASE_SDK_VERSION": "12.14.0",
+        "IOS_GOOGLE_TAG_MANAGER_VERSION": "9.1.0"
+      },
+      "cordova-plugin-firebasex-crashlytics": {
+        "FIREBASE_CRASHLYTICS_COLLECTION_ENABLED": "true",
+        "ANDROID_FIREBASE_CRASHLYTICS_VERSION": "20.0.6",
+        "ANDROID_FIREBASE_CRASHLYTICS_NDK_VERSION": "20.0.6",
+        "IOS_FIREBASE_SDK_VERSION": "12.14.0"
+      },
+      "emi-indo-cordova-plugin-admob": {
+        "APP_ID_ANDROID": "ca-app-pub-3940256099942544~3347511713",
+        "PLAY_SERVICES_VERSION": "25.3.0",
+        "ADD_AD_ID": "false",
+        "UMP": "4.0.0",
+        "ANDROID_X": "1.2.0",
+        "USAGE": "This identifier will be used to deliver personalized ads to you.",
+        "APP_ID_IOS": "ca-app-pub-3940256099942544~1458002511"
+      }
     }
   }
 }

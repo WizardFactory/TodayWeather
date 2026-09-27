@@ -26,10 +26,16 @@
     <preference name="StatusBarOverlaysWebView" value="false" />
     <preference name="KeyboardResize" value="false" />
     <preference name="cordova.plugins.diagnostic.modules" value="LOCATION" />
+    <!-- Real AdMob app IDs come from client/.env at prepare time; package.json keeps Google's sample IDs. -->
+    <hook type="after_prepare" src="scripts/admob-app-id.js" />
     <platform name="android">
         <allow-intent href="market:*" />
         <preference name="android-minSdkVersion" value="24" />
         <preference name="android-targetSdkVersion" value="36" />
+        <!-- emi-indo-cordova-plugin-admob ships Kotlin sources; without this they are not compiled and startup crashes. -->
+        <preference name="GradlePluginKotlinEnabled" value="true" />
+        <!-- play-services-ads 25.3 carries Kotlin 2.3 metadata; cordova-android 15 defaults to 2.1.21. -->
+        <preference name="GradlePluginKotlinVersion" value="2.3.0" />
         <preference name="AndroidWindowSplashScreenAnimatedIcon" value="tw.resources/android-launcher-icon.png" />
         <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
         <!-- cordova-android 15 paints the status bar area itself; StatusBar.backgroundColorByHexString('#111') in app.js no longer shows. -->
