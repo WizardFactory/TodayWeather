@@ -171,7 +171,7 @@ describe('gather drift: synthetic offline compatibility', function () {
         }, {process: {env: {NODE_ENV: 'production'}}, console: {log: function (e) { messages.push(e.message); }}});
         assert.strictEqual(logger().transports.length, 1); assert.strictEqual(messages.length, 1);
     });
-    it('preserves upstream operational defaults and inclusive request cutoffs', function () {
+    it('preserves upstream operational defaults, the request walk and the base-time cutoff', function () {
         var manager = source('controllers/controllerManager.js');
         // Retry budgets moved to config/gather.js (#2588); unset env keeps these values.
         var policy = require('../../config/gather').load({});
@@ -180,11 +180,15 @@ describe('gather drift: synthetic offline compatibility', function () {
         assert(manager.includes('self.checkTimeAndRequestTask(true);'));
         assert(source('lib/PastConditionGather.js').includes('self.updateList, retryCount,'));
         assert.strictEqual(policy.pastConditionRetryCount(45), 10);
+        // #2604: requestData walks the whole list with 101 requests in flight instead of failing indices > 100.
         var c = h.collector(); var sent = [];
         c.getData = function (i) { sent.push(i); };
         c.requestData(Array.from({length: 103}, function () { return {mx: 60, my: 127}; }), c.DATA_TYPE.TOWN_SHORT, KEY, '20260924', '0800');
         assert.strictEqual(sent.length, 101); assert.strictEqual(sent[100], 100);
-        sent = [];
+        c.emit('recvData', 0, []);
+        assert.strictEqual(sent.length, 102); assert.strictEqual(sent[101], 101);
+        c = h.collector(); sent = [];
+        c.getData = function (i) { sent.push(i); };
         c.requestDataByBaseTimeList({mx: 60, my: 127}, c.DATA_TYPE.TOWN_CURRENT, KEY, Array.from({length: 202}, function () { return {date: '20260924', time: '0800'}; }));
         assert.strictEqual(sent.length, 200); assert.strictEqual(sent[199], 199);
     });
@@ -471,7 +475,7 @@ describe('pagination before the completeness check (#2590)', function () {
         'extra final item': function (r) { r.response.body[0].items[0].item.push(h.item('TMP', '1', '1800')); },
         'echoed pageNo mismatch': function (r) { r.response.body[0].pageNo = ['1']; },
         'echoed numOfRows mismatch': function (r) { r.response.body[0].numOfRows = ['17']; },
-        'provider error': function (r) { r.response.header[0].resultCode = ['22']; },
+        'provider error': function (r) { r.response.header[0].resultCode = ['99']; },  // 22 is quota (#2604, gather-quota.test.js)
         'empty items': function (r) { r.response.body[0].items = [{}]; },
         'rows repeating the end of page 1': function (r) {
             r.response.body[0].items[0].item = product.slice(999 - 17, 999);

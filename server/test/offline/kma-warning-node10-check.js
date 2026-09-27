@@ -68,7 +68,7 @@ var Situation = load('models/modelKmaSpecialWeatherSituation.js', {mongoose: fak
 load('models/modelKmaSpecialWeatherZone.js', {mongoose: fakeMongoose});
 var zones = load('lib/kmaWarningZones.js', {fs: fs, path: path});
 var keyBox = {dongnae_forecast_keys: JSON.stringify(['NODE10%2BKEYxxxxxxxxxxxxxxxxxxxx'])};
-var Requester = load('lib/kmaWarningRequester.js', {request: function () {}, '../config/config': {keyString: keyBox}});
+var Requester = load('lib/kmaWarningRequester.js', {request: function () {}, '../config/config': {keyString: keyBox}, './dataGoKrRejection': require('../../lib/dataGoKrRejection')});
 
 // Parsers and codes.
 assert.deepEqual(plain(Situation.parseSpecialText('o 폭풍해일주의보 : 부산\r\no 폭염중대경보 : 대구')).map(function (s) { return [s.weather, s.level]; }), [[7, 1], [12, 4]]);

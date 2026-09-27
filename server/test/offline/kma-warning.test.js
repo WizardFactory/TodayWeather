@@ -117,7 +117,7 @@ function fakeProvider(handler) {
 }
 
 const keyBox = {normal: 'You have to set key of data.go.kr', test_normal: 'You have to set key of data.go.kr', dongnae_forecast_keys: JSON.stringify([REJECTED, APPROVED])};
-const Requester = tryLoad('lib/kmaWarningRequester.js', {request: Stub, '../config/config': {keyString: keyBox}});
+const Requester = tryLoad('lib/kmaWarningRequester.js', {request: Stub, '../config/config': {keyString: keyBox}, './dataGoKrRejection': require('../../lib/dataGoKrRejection')});
 
 function makeCollector({handler, clock = fixedClock('2026-09-26T02:35:00Z'), situationModel, zoneModel, keys = [APPROVED]}) {
     const request = fakeProvider(handler);

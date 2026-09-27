@@ -25,6 +25,9 @@ var modelMidSea = require('../models/modelMidSea');
 var modelMidTemp = require('../models/modelMidTemp');
 
 var dongnae_keys = JSON.parse(require('../config/config').keyString.dongnae_forecast_keys);
+// #2604: index of the forecast key in use per data.go.kr service. It is kept across cycles
+// and moves on only when data.go.kr rejects the key (quota or authorization).
+var forecastKeyIndex = {};
 
 var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
 //var PastConditionGather = require('../lib/PastConditionGather');
@@ -976,7 +979,24 @@ Manager.prototype.saveMidSea = function(newData, callback) {
     return this;
 };
 
-Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateString, retryCount, invalidDataList, callback) {
+/**
+ * @param dataType
+ * @returns {string} data.go.kr service whose key state the product shares
+ */
+Manager.prototype._getForecastService = function (dataType) {
+    var town = [this.DATA_TYPE.TOWN_CURRENT, this.DATA_TYPE.TOWN_SHORTEST, this.DATA_TYPE.TOWN_SHORT];
+    return town.indexOf(dataType) !== -1 ? 'VilageFcstInfoService' : 'MidFcstInfoService';
+};
+
+/**
+ * The first pass requests every item of srcList; failed items are retried up to retryCount - 1
+ * passes of at most gatherPolicy.requestConcurrency requests each (the rest wait for the next
+ * pass), so a cycle sends at most srcList.length + (retryCount - 1) * requestConcurrency requests.
+ * A quota/key rejection moves to the next forecast key and requests all items not yet
+ * collected; when every key was rejected in this cycle it ends with an error (#2604).
+ * @param cycle internal, shared by the passes of one cycle: {keysTried, retrying}
+ */
+Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateString, retryCount, invalidDataList, callback, cycle) {
     var self = this;
     var failedList = [];
     var invalidList = [];
@@ -1013,16 +1033,20 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
         return this;
     }
 
-    /**
-     * TW-396 key가 limit에 걸리는 경우를 대비하여 키 변경
-     */
-    key = dongnae_keys[Math.floor(Math.random() * dongnae_keys.length)];
+    cycle = cycle || {keysTried: 1, retrying: false};
+    var service = self._getForecastService(dataType);
+    var keyCount = Math.max(dongnae_keys.length, 1);
+    var keyIndex = (forecastKeyIndex[service] || 0) % keyCount;
+    var rejectedCount = 0;
+    if (dongnae_keys.length) {
+        key = dongnae_keys[keyIndex];
+    }
+    collectInfo.concurrency = gatherPolicy.requestConcurrency;
+    if (cycle.retrying) {
+        collectInfo.requestLimit = gatherPolicy.requestConcurrency;
+    }
 
     collectInfo.requestData(srcList, dataType, key, dateString.date, dateString.time, function(err, dataList) {
-        if (err) {
-            log.verbose(dataTypeName, " It has items rcvFailed ");
-            log.verbose(err);
-        }
         log.info(dataTypeName, 'data receive completed : ', dataList.length);
 
         //log.info(JSON.stringify(dataList));
@@ -1041,9 +1065,12 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                         cb(err);
                     });
                 }
+                else if (item.rejected) {
+                    // data.go.kr rejected this request itself (4xx); a retry fails the same way.
+                    rejectedCount++;
+                    cb();
+                }
                 else {
-                    log.silly(item);
-                    log.verbose(dataTypeName, " request retry mx:",item.mCoord.mx,' my:',item.mCoord.my);
                     failedList.push(item.mCoord);
                     //this index was not rcvData
                     cb();
@@ -1054,18 +1081,45 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 if (err) {
                     log.error(err);
                 }
+                if (rejectedCount) {
+                    log.warn(dataTypeName + ' not retried: rejected=' + rejectedCount);
+                }
+
+                if (collectInfo.stopReason) {
+                    log.warn(dataTypeName + ' stopped: reason=' + collectInfo.stopReason + ' pending=' + failedList.length +
+                        ' keyIndex=' + keyIndex + ' keysTried=' + cycle.keysTried + '/' + keyCount);
+                    if (cycle.keysTried < keyCount) {
+                        cycle.keysTried++;
+                        cycle.retrying = false;
+                        forecastKeyIndex[service] = (keyIndex + 1) % keyCount;
+                        self._recursiveRequestData(failedList, dataType, key, dateString, retryCount, invalidList, callback, cycle);
+                        return;
+                    }
+                    err = new Error(dataTypeName + ' stopped for this cycle: every forecast key was rejected, last reason=' +
+                        collectInfo.stopReason);
+                    if (callback) {
+                        callback(err);
+                    }
+                    else {
+                        log.error(err);
+                    }
+                    return;
+                }
 
                 if (failedList.length) {
+                    log.verbose(dataTypeName + ' retry pass: failed=' + failedList.length + ' retryCount=' + (retryCount - 1));
+                    cycle.retrying = true;
                     setTimeout(function() {
-                        self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback);
+                        self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback, cycle);
                     }, gatherPolicy.retryDelayMs);
                     return;
                 }
 
                 if(invalidList.length){
                     var adjustedDateString = self.getShortestQueryTime(8);
+                    cycle.retrying = true;
                     setTimeout(function() {
-                        self._recursiveRequestData(invalidList, dataType, key, adjustedDateString, --retryCount, undefined, callback);
+                        self._recursiveRequestData(invalidList, dataType, key, adjustedDateString, --retryCount, undefined, callback, cycle);
                     }, gatherPolicy.retryDelayMs);
                     return;
                 }

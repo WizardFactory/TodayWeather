@@ -26,6 +26,7 @@ var midPolicy = require('./midForecastPolicy');
 var precipitation = require('./kmaPrecipitation');
 var req = require('request');
 var xml2json  = require('xml2js').parseString;
+var rejection = require('./dataGoKrRejection');
 
 var dnscache = require('dnscache')({
     "enable" : true,
@@ -153,6 +154,11 @@ function CollectData(options, callback){
 
     events.EventEmitter.call(this);
 
+    // Requests in flight while requestData walks its list (#2604; the former TW-461 cutoff was 101).
+    self.concurrency = REQUEST_CONCURRENCY;
+    // Requests one requestData call may send; the remaining items count as failed.
+    self.requestLimit = Infinity;
+
     if(options){
         if(options.timeout){
             self.timeout = options.timeout;
@@ -177,7 +183,8 @@ function CollectData(options, callback){
     */
     self.on('recvFail', function(listIndex){
         log.debug('Fail index[%d], totalCount[%d], receivedCount[%d]', listIndex, self.listCount, self.receivedCount);
-        if(self.resultList[listIndex].retryCount > 0){
+        // A rejected key or request fails the same way again, so it is not retried here.
+        if(self.resultList[listIndex].retryCount > 0 && !self.stopReason && !self.resultList[listIndex].rejected){
             //log.error('try again:', listIndex);
             //log.error('URL : ', self.resultList[listIndex].url);
             //log.error(self.resultList[listIndex].options);
@@ -201,6 +208,7 @@ function CollectData(options, callback){
             if(self.receivedCount === self.listCount){
                 self.emit('dataCompleted');
             }
+            self._settle();
         }
     });
 
@@ -217,6 +225,7 @@ function CollectData(options, callback){
         if(self.receivedCount === self.listCount){
             self.emit('dataCompleted');
         }
+        self._settle();
     });
 
     //log.info('The list was created for the weather data');
@@ -318,10 +327,18 @@ CollectData.prototype.resetResult = function(){
     }
     self.receivedCount = 0;
     self.recvFailed = false;
+    self.stopReason = undefined;
+    self._walk = undefined;
 };
 
 // Upper bound for one product; the short forecast needs 2 pages of 999 rows.
 var KMA_MAX_PAGES = 5;
+
+var REQUEST_CONCURRENCY = 101;
+// Rejections by data.go.kr (#2604): quota and key failures stop the walk; other 4xx are not retried.
+var QUOTA_FAILURE = 'KMA quota exceeded';
+var KEY_FAILURE = 'KMA key rejected';
+var REJECTED_FAILURE = 'KMA request rejected';
 
 function queryNumber(url, name) {
     var match = new RegExp('[?&]' + name + '=([0-9]+)(?=&|$)').exec(url);
@@ -348,7 +365,18 @@ CollectData.prototype._requestPage = function (url, callback) {
         if (err) {
             return callback('KMA transport failure');
         }
-        if (!response || !(response.statusCode >= 200 && response.statusCode < 300)) {
+        var statusCode = response && response.statusCode;
+        var reasonCode = rejection.code(body);
+        if (rejection.isQuota(statusCode, reasonCode)) {
+            return callback(QUOTA_FAILURE);
+        }
+        if (rejection.isAuth(statusCode, reasonCode)) {
+            return callback(KEY_FAILURE);
+        }
+        if (statusCode >= 400 && statusCode < 500) {
+            return callback(REJECTED_FAILURE);
+        }
+        if (!response || !(statusCode >= 200 && statusCode < 300)) {
             return callback('KMA HTTP failure');
         }
         xml2json(body, function(err, result){
@@ -456,7 +484,18 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
     var meta = {method: 'getData', index: index, dataType: dataType};
     function fail(reason, diagnostic) {
         var error = new Error(reason);
-        log.warn(reason, diagnostic ? Object.assign({}, meta, diagnostic) : meta);
+        var details = diagnostic ? Object.assign({}, meta, diagnostic) : meta;
+        if (reason === QUOTA_FAILURE || reason === KEY_FAILURE) {
+            // The Manager logs one summary per stop instead of one warning per request (#2604).
+            self.stopReason = self.stopReason || (reason === QUOTA_FAILURE ? 'quota' : 'auth');
+            log.debug(reason, details);
+        }
+        else {
+            if (reason === REJECTED_FAILURE) {
+                self.resultList[index].rejected = true;
+            }
+            log.warn(reason, details);
+        }
         self.emit('recvFail', index);
         if (callback) {
             callback(error, index);
@@ -1212,6 +1251,57 @@ CollectData.prototype.requestDataByBaseTimeList = function (src, dataType, key, 
     return this;
 };
 
+/*
+* Starts requests until `concurrency` are in flight (#2604). Completions call _settle,
+* which pumps again; a completion inside _pump only flags another round, so synchronous
+* responses do not recurse. After a quota/key rejection or `requestLimit` requests nothing
+* new is sent: once the requests in flight have settled, the unsent items are counted as failed.
+* */
+CollectData.prototype._pump = function () {
+    var self = this;
+    var walk = self._walk;
+    if (!walk) {
+        return;
+    }
+    if (walk.pumping) {
+        walk.again = true;
+        return;
+    }
+    walk.pumping = true;
+    do {
+        walk.again = false;
+        while (!self.stopReason && walk.inFlight < self.concurrency && walk.next < self.listCount &&
+                walk.sent < self.requestLimit) {
+            var index = walk.next++;
+            var item = self.resultList[index];
+            if (item.url !== '') {
+                walk.inFlight++;
+                walk.sent++;
+                self.getData(index, item.options.dataType, item.url, item.options);
+            }
+        }
+        if ((self.stopReason || walk.sent >= self.requestLimit) && walk.inFlight === 0 && walk.next < self.listCount) {
+            for (; walk.next < self.listCount; walk.next++) {
+                if (self.resultList[walk.next].url !== '') {
+                    self.receivedCount++;
+                    self.recvFailed = true;
+                }
+            }
+            if (self.receivedCount === self.listCount) {
+                self.emit('dataCompleted');
+            }
+        }
+    } while (walk.again);
+    walk.pumping = false;
+};
+
+CollectData.prototype._settle = function () {
+    if (this._walk) {
+        this._walk.inFlight--;
+        this._pump();
+    }
+};
+
 CollectData.prototype.requestData = function(srcList, dataType, key, date, time, callback){
     var self = this;
     var meta = {};
@@ -1267,15 +1357,9 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
             if(srcList[i].code !== undefined){
                 self.resultList[i].options.code = srcList[i].code;
             }
-
-            if(self.resultList[i].url !== ''){
-                if(parseInt(i) > 100){
-                    self.emit('recvFail', parseInt(i));
-                    continue;
-                }
-                self.getData(parseInt(i), dataType, self.resultList[i].url, self.resultList[i].options);
-            }
         }
+        self._walk = {next: 0, inFlight: 0, sent: 0};
+        self._pump();
     }
     catch(e){
         if (callback) {
