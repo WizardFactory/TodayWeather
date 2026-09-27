@@ -4,7 +4,7 @@ Verification tooling for the Cordova 13 PoC build of TodayWeather, not part of t
 
 | File | Role |
 | --- | --- |
-| [`tw-harness.js`](tw-harness.js) | Injected as the first `<head>` script of a built `www` (never `client/www`). Hooks `window` errors (JS and resources), `unhandledrejection`, `console.error`, XHR failures and `Util.ga.trackException`, then runs one scenario per app launch (S1 fresh start … S9 external hand-offs). It taps the way `ionic.tap` does: a `click` with `isIonicTap = true` at the element centre, redirected to the control of an enclosing `<label>`, and it refuses to tap an element covered by another one (for example a popup backdrop) |
+| [`tw-harness.js`](tw-harness.js) | Injected as the first `<head>` script of a built `www` (never `client/www`). Hooks `window` errors (JS and resources), `unhandledrejection`, `console.error`, XHR failures and `Util.ga.trackException`, then runs one scenario per app launch (S1 fresh start … S9 external hand-offs). S1 also checks the platform integrations: AdMob SDK start and banner load (Google test units), the FCM token `PUT` on Android, and the Android text zoom kept at 100 by the accessibility plugin. Push writes (`PUT /push`, `POST /push-list`, `DELETE`) are answered locally with `200 {}` and never reach production. It taps the way `ionic.tap` does: a `click` with `isIonicTap = true` at the element centre, redirected to the control of an enclosing `<label>`, and it refuses to tap an element covered by another one (for example a popup backdrop) |
 | [`run.mjs`](run.mjs) | Host driver. Installs fresh, grants location, sets the Seoul location, launches once per scenario, saves a screenshot for every `TWSHOT` line and performs `TWHOST` actions (Android back, background/resume) and, for hand-offs to other apps, takes the screenshot and brings the app back itself because iOS suspends the web view's timers |
 | [`triage.mjs`](triage.mjs) | Summarizes a run and classifies each error and failed check by its known cause; anything else is `UNCLASSIFIED` |
 | [`build-harness.sh`](build-harness.sh) | Builds the injected artifacts without touching `client/www`: Android `prepare` → inject → `compile` → `prepare` again; iOS `build` → copy the `.app` → inject → ad-hoc re-sign |
@@ -30,7 +30,7 @@ The driver uninstalls and reinstalls the app on the selected device, so use a de
 
 `build-harness.sh <android|ios> layout` injects `window.TW_HARNESS_MODE = 'layout'`. The harness then runs two launches:
 
-- It walks O01, S01–S14 and O05, and audits each screen:
+- It walks O01 and S01–S14, and audits each screen:
   - horizontal page overflow;
   - the visible part of an element falling outside the viewport (Ionic's parked elements and clipped slides are ignored);
   - text cut with an ellipsis.
@@ -52,4 +52,4 @@ The audit does not catch a control clipped by an `overflow: hidden` parent, for 
 
 ## Evidence boundaries
 
-Live data changes over time, so a capture shows the production response at capture time. The harness cannot tap native UI: permissions are pre-granted, the iOS share sheet is left open at the end, and the iOS Simulator has neither App Store nor Mail. Real-device behavior, release signing, push delivery, AdMob, Firebase and purchase are outside these runs.
+Live data changes over time, so a capture shows the production response at capture time. The harness cannot tap native UI: permissions are pre-granted, the iOS share sheet is left open at the end, and the iOS Simulator has neither App Store nor Mail. The iOS notification permission alert is native too, so iOS runs check only that the app requests it; FCM registration and the push-list `POST` are checked on Android, where `POST_NOTIFICATIONS` is pre-granted. Real-device behavior, release signing, push delivery, real ad units and purchase are outside these runs.

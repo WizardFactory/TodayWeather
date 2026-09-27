@@ -9,9 +9,9 @@ Evidence labels follow the [package README](README.md). Every statement below is
 - Every web dialog is an Ionic 1 `$ionicPopup`. [`client/bower.json`](../../client/bower.json) pins `ionic-bower#1.3.5`, and the bundled copy under [`tw.ios/www/lib/ionic`](../../tw.ios/www/lib/ionic/js/ionic.bundle.js) is v1.3.5. `client/www/lib` is not in this checkout.
 - A button's `onTap` return value resolves the popup promise. A button without `onTap` resolves `undefined`. `$ionicPopup.alert` without `okText` or `buttons` shows the Ionic default English `OK` ([bundle L56918-L56928](../../tw.ios/www/lib/ionic/js/ionic.bundle.js#L56918-L56928)).
 - On Android, hardware back while a popup is open resolves the top popup with `undefined`, without running any `onTap`. Popups use back priority 400 and loading uses 500, which disables back while the overlay is shown ([L56842-L56862](../../tw.ios/www/lib/ionic/js/ionic.bundle.js#L56842-L56862), [L55517-L55521](../../tw.ios/www/lib/ionic/js/ionic.bundle.js#L55517-L55521), [priority map L56078-L56085](../../tw.ios/www/lib/ionic/js/ionic.bundle.js#L56078-L56085)). The highest priority wins; on a tie the last registered action wins ([L56178-L56191](../../tw.ios/www/lib/ionic/js/ionic.bundle.js#L56178-L56191)). This is source-level and not reproduced. Where it matters, the dialog sections below give the `undefined` branch.
-- Titles, bodies and button labels are resolved through `$translate([...])` before the popup opens. `app.js` registers en/de/ko/ja/zh-CN/zh-TW with `en` as the fallback language ([app.js L432-L449](../../client/www/js/app.js#L432-L449)). In the bundled angular-translate 2.16.0, an array call always resolves; an id that is missing in both the current and the fallback language resolves to the id itself ([angular-translate.js L1473-L1500](../../tw.ios/www/lib/angular-translate/angular-translate.js#L1473-L1500), [L1979-L2004](../../tw.ios/www/lib/angular-translate/angular-translate.js#L1979-L2004)). The controllers' rejection branches and their `translate/error/...` events therefore do not run with that version (source-level). `client/bower.json` allows `^2.13.0`, and `client/www/lib` is absent, so the shipped version is unverified. The English literals that controllers pre-assign are visible only when a controller-level string is read before its translation resolves. Two titles are always English: the push `"Permission"` and `"Save"` titles.
+- Titles, bodies and button labels are resolved through `$translate([...])` before the popup opens. `app.js` registers en/de/ko/ja/zh-CN/zh-TW with `en` as the fallback language ([app.js L422-L439](../../client/www/js/app.js#L422-L439)). In the bundled angular-translate 2.16.0, an array call always resolves; an id that is missing in both the current and the fallback language resolves to the id itself ([angular-translate.js L1473-L1500](../../tw.ios/www/lib/angular-translate/angular-translate.js#L1473-L1500), [L1979-L2004](../../tw.ios/www/lib/angular-translate/angular-translate.js#L1979-L2004)). The controllers' rejection branches and their `translate/error/...` events therefore do not run with that version (source-level). `client/bower.json` allows `^2.13.0`, and `client/www/lib` is absent, so the shipped version is unverified. The English literals that controllers pre-assign are visible only when a controller-level string is read before its translation resolves. Two titles are always English: the push `"Permission"` and `"Save"` titles.
 - Analytics calls are written as `category/action/label[/value]` for `Util.ga.trackEvent`.
-- `$rootScope.title` is `LOC_TODAYWEATHER` or `LOC_TODAYAIR` ([app.js L65](../../client/www/js/app.js#L65)).
+- `$rootScope.title` is `LOC_TODAYWEATHER` or `LOC_TODAYAIR` ([app.js L66](../../client/www/js/app.js#L66)).
 
 ## Catalog
 
@@ -21,7 +21,7 @@ Evidence labels follow the [package README](README.md). Every statement below is
 | O02 | Zero-city start choice | S03/S04/S15 init or tab tap with no enabled city; share with no selected city or one without `location` | [tw-overlay-start-popup.png](screenshots/tw-overlay-start-popup.png) |
 | O03 | TabCtrl retry confirm | Tab screens and S02: weather or position failure | [tw-overlay-retry-weather.png](screenshots/tw-overlay-retry-weather.png) (weather variant only) |
 | O04 | StartCtrl retry confirm | S01 current-location failure | Not captured |
-| O05 | Update information | Startup past the `startVersion` gate | [tw-overlay-update-info.png](screenshots/tw-overlay-update-info.png); native: [iOS](screenshots/native-ios-update-info.png), [Android](screenshots/native-android-update-info.png) |
+| O05 | Update information (removed on the #2605 branch) | Startup past the `startVersion` gate | [tw-overlay-update-info.png](screenshots/tw-overlay-update-info.png); native, before the removal: [iOS](screenshots/native-ios-update-info.png), [Android](screenshots/native-android-update-info.png) |
 | O06 | Weather-alert introduction | Startup after legacy alarm migration | [tw-overlay-alert-intro.png](screenshots/tw-overlay-alert-intro.png) |
 | O07 | Foreground notification | Push received while foregrounded | [tw-overlay-foreground-notification.png](screenshots/tw-overlay-foreground-notification.png) |
 | O08 | Air-forecast source information | S03, S05/S16 source row | [tw-overlay-air-source-info.png](screenshots/tw-overlay-air-source-info.png) |
@@ -39,7 +39,7 @@ Evidence labels follow the [package README](README.md). Every statement below is
 
 ## O01 — Start access explanation
 
-- **Trigger/host:** `StartCtrl.init()` runs this dialog unconditionally ([controller.start.js L201-L241](../../client/www/js/controller.start.js#L201-L241), called at [L825](../../client/www/js/controller.start.js#L825)). It therefore appears on every S01 entry on every platform, iOS included. S01 is entered only through the `startVersion` gate: no stored `startVersion`, or `Util.startVersion` (`1.0`, [service.util.js L209](../../client/www/js/service.util.js#L209)) greater than the stored value ([app.js L362-L366](../../client/www/js/app.js#L362-L366)). `close()` stores it after a city is added ([start.js L129-L132](../../client/www/js/controller.start.js#L129-L132)).
+- **Trigger/host:** `StartCtrl.init()` runs this dialog unconditionally ([controller.start.js L201-L241](../../client/www/js/controller.start.js#L201-L241), called at [L825](../../client/www/js/controller.start.js#L825)). It therefore appears on every S01 entry on every platform, iOS included. S01 is entered only through the `startVersion` gate: no stored `startVersion`, or `Util.startVersion` (`1.0`, [service.util.js L209](../../client/www/js/service.util.js#L209)) greater than the stored value ([app.js L363-L367](../../client/www/js/app.js#L363-L367)). `close()` stores it after a city is added ([start.js L129-L132](../../client/www/js/controller.start.js#L129-L132)).
 - **Text:**
   - Title: `LOC_NEEDS_ACCESS_TO`.
   - Body: `LOC_STORAGE_SPACE` `<br>` `LOC_LOCATION_ACCESS` `<br>` `LOC_CALL_INFORMATION`.
@@ -92,16 +92,16 @@ Source: [controller.tabctrl.js L399-L600](../../client/www/js/controller.tabctrl
 
 | `type` | Caller | Body text |
 | --- | --- | --- |
-| `weather` | `loadWeatherData` when `updateWeatherData` rejects on an HTTP failure or unconvertible response ([L950](../../client/www/js/controller.tabctrl.js#L950), [L1181-L1218](../../client/www/js/controller.tabctrl.js#L1181-L1218)) | `LOC_FAIL_TO_GET_WEATHER_INFO` |
-| `forecast` | `loadWeatherData` when the current-position update rejects with a message ([L1001-L1009](../../client/www/js/controller.tabctrl.js#L1001-L1009)) | One of four messages: `LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION` (on Android, `<br>` plus `LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI` is appended); `LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED`; `LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY` (Android request denied); `LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION` (location off and no stored position). See [L1087-L1179](../../client/www/js/controller.tabctrl.js#L1087-L1179) |
+| `weather` | `loadWeatherData` when `updateWeatherData` rejects on an HTTP failure or unconvertible response ([L831](../../client/www/js/controller.tabctrl.js#L831), [L1062-L1099](../../client/www/js/controller.tabctrl.js#L1062-L1099)) | `LOC_FAIL_TO_GET_WEATHER_INFO` |
+| `forecast` | `loadWeatherData` when the current-position update rejects with a message ([L882-L890](../../client/www/js/controller.tabctrl.js#L882-L890)) | One of four messages: `LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION` (on Android, `<br>` plus `LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI` is appended); `LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED`; `LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY` (Android request denied); `LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION` (location off and no stored position). See [L968-L1060](../../client/www/js/controller.tabctrl.js#L968-L1060) |
 | `search` | S02 find-by-location (`OnSearchCurrentPosition`) and the current-position row refresh (`updateCurrentPositionWeather`) ([searchctrl.js L257-L265](../../client/www/js/controller.searchctrl.js#L257-L265), [L567-L576](../../client/www/js/controller.searchctrl.js#L567-L576)) | `LOC_FAIL_TO_GET_LOCATION_INFORMATION` (reverse geocode failed); `LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION` (on Android plus `<br>` `LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI`); `LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED`, also used for an Android request denial. See [L686-L828](../../client/www/js/controller.searchctrl.js#L686-L828) |
 
 Rejections without a message open no popup:
-- `TabCtrl` ignores `null` and `undefined` (`if (msg)`). `undefined` comes from `WeatherUtil.getCurrentPosition()` rejecting with `'alreadyCalled'` ([L1099-L1102](../../client/www/js/controller.tabctrl.js#L1099-L1102)).
+- `TabCtrl` ignores `null` and `undefined` (`if (msg)`). `undefined` comes from `WeatherUtil.getCurrentPosition()` rejecting with `'alreadyCalled'` ([L980-L983](../../client/www/js/controller.tabctrl.js#L980-L983)).
 - `SearchCtrl` immediately re-broadcasts the event that started the lookup (`searchCurrentPositionEvent` or `updateCurrentPositionWeatherEvent`), a silent retry.
 
 **Variant selection.** Branches are evaluated in order. Selection depends on two inputs, not on the message:
-- `gLocationAuthorizationStatus`: the last status recorded through TabCtrl's `setLocationAuthorizationStatus`. It starts `undefined`. TabCtrl records it only on Android ([L1061](../../client/www/js/controller.tabctrl.js#L1061), [L1123](../../client/www/js/controller.tabctrl.js#L1123)). SearchCtrl has no setter of its own and writes the same variable through scope inheritance: on Android at [searchctrl.js L659](../../client/www/js/controller.searchctrl.js#L659), [L724](../../client/www/js/controller.searchctrl.js#L724) and [L798](../../client/www/js/controller.searchctrl.js#L798), and on every platform for the location-off `DENIED` case ([L782-L787](../../client/www/js/controller.searchctrl.js#L782-L787)). On iOS that last case is the only writer.
+- `gLocationAuthorizationStatus`: the last status recorded through TabCtrl's `setLocationAuthorizationStatus`. It starts `undefined`. TabCtrl records it only on Android ([L942](../../client/www/js/controller.tabctrl.js#L942), [L1004](../../client/www/js/controller.tabctrl.js#L1004)). SearchCtrl has no setter of its own and writes the same variable through scope inheritance: on Android at [searchctrl.js L659](../../client/www/js/controller.searchctrl.js#L659), [L724](../../client/www/js/controller.searchctrl.js#L724) and [L798](../../client/www/js/controller.searchctrl.js#L798), and on every platform for the location-off `DENIED` case ([L782-L787](../../client/www/js/controller.searchctrl.js#L782-L787)). On iOS that last case is the only writer.
 - `Util.isLocationEnabled()`: on iOS this means permission granted; on Android it means a location mode is on. It returns `true` when the plugin is missing ([service.util.js L223-L243](../../client/www/js/service.util.js#L223-L243)).
 
 Buttons are listed in display order with their return values. A `search` type always prepends `LOC_CLOSE`→`close` ([L421-L428](../../client/www/js/controller.tabctrl.js#L421-L428)).
@@ -125,10 +125,10 @@ Every open also sends `show/popup/retryConfirm`.
 | `close` or `undefined` | Sends `action/click/close` |
 
 Notes:
-- The retry button label is `LOC_OK` (`strOkay`, [L1429](../../client/www/js/controller.tabctrl.js#L1429)). `LOC_RETRY` is translated into `strRetry` ([L1424](../../client/www/js/controller.tabctrl.js#L1424)) but never displayed.
+- The retry button label is `LOC_OK` (`strOkay`, [L1310](../../client/www/js/controller.tabctrl.js#L1310)). `LOC_RETRY` is translated into `strRetry` ([L1305](../../client/www/js/controller.tabctrl.js#L1305)) but never displayed.
 - The Android `DENIED_ALWAYS` variant has no retry button.
 - `LOC_OPENS_THE_APP_INFO_PAGE` names TodayWeather in every locale (for example "[Settings]>[App]>[TodayWeather]"), including in TodayAir.
-- Only one TabCtrl confirm is shown at a time: an open one is closed first ([L401-L403](../../client/www/js/controller.tabctrl.js#L401-L403)); the closed one resolves `undefined` and logs `action/click/close`. For the current-position city, `loadWeatherData` runs the weather request and the position update in parallel, so a `weather` confirm can be replaced by a `forecast` confirm or the reverse ([L940-L1009](../../client/www/js/controller.tabctrl.js#L940-L1009)). When the position has moved, the follow-up weather request for the new coordinates only logs a failure; no confirm opens ([L992-L996](../../client/www/js/controller.tabctrl.js#L992-L996)). While a confirm is open, every `reloadEvent` is skipped with `reload/skip/popup` ([L773-L776](../../client/www/js/controller.tabctrl.js#L773-L776)).
+- Only one TabCtrl confirm is shown at a time: an open one is closed first ([L401-L403](../../client/www/js/controller.tabctrl.js#L401-L403)); the closed one resolves `undefined` and logs `action/click/close`. For the current-position city, `loadWeatherData` runs the weather request and the position update in parallel, so a `weather` confirm can be replaced by a `forecast` confirm or the reverse ([L821-L890](../../client/www/js/controller.tabctrl.js#L821-L890)). When the position has moved, the follow-up weather request for the new coordinates only logs a failure; no confirm opens ([L873-L877](../../client/www/js/controller.tabctrl.js#L873-L877)). While a confirm is open, every `reloadEvent` is skipped with `reload/skip/popup` ([L773-L776](../../client/www/js/controller.tabctrl.js#L773-L776)).
 - The Close, Search, Settings and app-info strings are translated per call ([L410-L419](../../client/www/js/controller.tabctrl.js#L410-L419)); `strOkay` comes from TabCtrl's startup translation; the messages come from the calling controller's startup translation or from `$translate.instant`. The `translate/error/showRetryConfirm` branch does not run with the bundled angular-translate.
 - **Anomaly: `search` retry target** (source-level). Retry always broadcasts `searchCurrentPositionEvent`, which runs `OnSearchCurrentPosition` ([searchctrl.js L231-L234](../../client/www/js/controller.searchctrl.js#L231-L234)). When the failed flow was the current-position row refresh, Retry therefore starts a find-by-location search instead of repeating the row refresh.
 - **Unguarded plugin access** (source-level): non-`weather` types read `cordova.plugins.diagnostic.permissionStatus` without a guard. [L450](../../client/www/js/controller.tabctrl.js#L449-L450) does this on Android; [L472](../../client/www/js/controller.tabctrl.js#L472) does it on every platform. Without the plugin, the `finally` callback throws before `$ionicPopup.show`, so no popup appears. For this reason the harness rendered only the `weather` variant.
@@ -174,21 +174,21 @@ The (unreachable, see Shared popup mechanics) translation-failure event is spell
 
 ## O05 — Update information
 
-**Scheduling** ([app.js L392-L426](../../client/www/js/app.js#L392-L426)):
-1. After `TwStorage.init()`, the `startVersion` gate returns before scheduling ([L362-L366](../../client/www/js/app.js#L362-L366)). The popup therefore never runs on a launch that opens S01.
-2. If the stored `appVersion` differs from `Util.version`, the new version is stored. `disableUpdateInfo` is reset to `false` only when `window[package].enablePopup === true`. Both products set `enablePopup: false` ([update.info.js L1](../../client/www/data/update.info.js#L1), [L30](../../client/www/data/update.info.js#L30)).
+**Scheduling** ([app.js L382-L416](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/app.js#L382-L416)):
+1. After `TwStorage.init()`, the `startVersion` gate returns before scheduling ([L363-L367](../../client/www/js/app.js#L363-L367)). The popup therefore never runs on a launch that opens S01.
+2. If the stored `appVersion` differs from `Util.version`, the new version is stored. `disableUpdateInfo` is reset to `false` only when `window[package].enablePopup === true`. Both products set `enablePopup: false` ([update.info.js L1](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/data/update.info.js#L1), [L30](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/data/update.info.js#L30)).
 3. If `TwStorage.get('disableUpdateInfo') !== true`, `showUpdateInfoEvent` is broadcast after 500 ms, or 100 ms after a late `$rootScope.version`.
 4. `disableUpdateInfo` has no default; it only appears in the restore key list ([service.storage.js L27-L28](../../client/www/js/service.storage.js#L27-L28)). The popup therefore recurs on every cold launch past the gate until the user disables it.
-5. The listener exists only in `TabCtrl` ([L799-L916](../../client/www/js/controller.tabctrl.js#L799-L916)).
+5. The listener exists only in `TabCtrl` ([L799-L916](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.tabctrl.js#L799-L916)).
 
 **Content:**
-- Title: `'v' + Util.version`. The version comes from the app-version plugin, else from `update.info.js` `appVersion` ([app.js L158-L169](../../client/www/js/app.js#L158-L169)). The capture shows `v1.0.0`.
+- Title: `'v' + Util.version`. The version comes from the app-version plugin, else from `update.info.js` `appVersion` ([app.js L159-L170](../../client/www/js/app.js#L159-L170)). The capture shows `v1.0.0`.
 - Body entry: `Util.language.split('-')[0]` is matched against `lang`, falling back to the first entry (`en`). Only `en` and `ko` entries exist, so de/ja/zh users see English.
 - Body lines: the entry's `android` lines on Android, then its `ios` lines on iOS, then its `all` lines. Each is followed by `<br>` and inserted into the template as HTML.
 - A checkbox bound to `data.disable` with label `LOC_DISABLE_UPDATE_POPUP` follows the lines.
 - CSS class: `update_information_popup` (85% width, max 600 px).
 
-**Buttons:** None return values, and all close the popup. If the box is ticked, each first stores `disableUpdateInfo = true` and sends `action/popup/disableUpdateInfo` ([L857-L912](../../client/www/js/controller.tabctrl.js#L857-L912)). `data.disable` lives on the shared `TabCtrl` `data` object (see O02).
+**Buttons:** None return values, and all close the popup. If the box is ticked, each first stores `disableUpdateInfo = true` and sends `action/popup/disableUpdateInfo` ([L857-L912](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.tabctrl.js#L857-L912)). `data.disable` lives on the shared `TabCtrl` `data` object (see O02).
 
 | Button | Action |
 | --- | --- |
@@ -206,7 +206,9 @@ The (unreachable, see Shared popup mechanics) translation-failure event is spell
 
 **Capture:** [tw-overlay-update-info.png](screenshots/tw-overlay-update-info.png) shows the iOS lines before the shared lines. Per the manifest note, recurrence after reload was observed until the box was ticked and a button tapped (synthetic execution).
 
-**Native PoC build (2026-09-27, native execution).** The popup opened on every warm launch on both platforms, as scheduled above. The title is `v1.1.0`, read by the app-version plugin from the native build, while the body is the unchanged `update.info.js` text written for an earlier release (iOS ko-KR: 위젯오류개선, 알림설정개선, 알림오류수정; Android en-US: "Popup for checking alarm setting", "Fix push notification error"). A 1.1.0 release therefore needs new text or `enablePopup` handling. Captures: [iOS](screenshots/native-ios-update-info.png), [Android](screenshots/native-android-update-info.png). See [native Cordova PoC build](screen-specifications.md#native-cordova-poc-build-2026-09-27).
+**Native PoC build (2026-09-27, native execution).** The popup opened on every warm launch on both platforms, as scheduled above. The title is `v1.1.0`, read by the app-version plugin from the native build, while the body is the unchanged `update.info.js` text written for an earlier release (iOS ko-KR: 위젯오류개선, 알림설정개선, 알림오류수정; Android en-US: "Popup for checking alarm setting", "Fix push notification error"). Captures (before the removal): [iOS](screenshots/native-ios-update-info.png), [Android](screenshots/native-android-update-info.png). See [native Cordova PoC build](screen-specifications.md#native-cordova-poc-build-2026-09-27).
+
+**Removed on the #2605 branch (AK decision, 2026-09-27).** `app.js` now only stores the running `appVersion` and tracks `app/update/from X to Y`. The TabCtrl listener, the popup and the release notes in `update.info.js` are gone, so no popup shows on any launch. `disableUpdateInfo` stays in the storage restore list, but nothing reads it.
 
 ## O06 — Weather-alert introduction (legacy alarm migration)
 
@@ -214,8 +216,8 @@ The (unreachable, see Shared popup mechanics) translation-failure event is spell
 - `Push.init()` returns `true` when `pushData2` is absent or unparsable but legacy `pushData` exists ([service.push.js L797-L806](../../client/www/js/service.push.js#L797-L806)).
 - The migration builds one alert per legacy alarm (`alarmList.map`, so a city with two legacy alarms gets two alerts), with `enable: false` and a 07–22 window. It converts old alarms to every-day alarms (`id = cityIndex + 1`) and schedules a server repost after 3 s ([L50-L83](../../client/www/js/service.push.js#L50-L83)). The result is kept in memory; `pushData2` is written by the next `savePushInfo`: a popup button, `updateCityInfo` when a record changed, a push-settings save, or a push-record removal (see [legacy migrations](client-state-and-behavior.md#legacy-migrations), step 6).
 - Every migrated alert is created with `id: 1` (`newPushAlert(1, …)`), and the alarm for `cityIndex` 0 also gets `id: 1`. A source comment on the post object describes the identifier as unique within a registration ([L167-L173](../../client/www/js/service.push.js#L167-L173)), yet migrated entries can share one. Synthetic execution ([storage probe](../../reports/rewrite-verification/probes/client-storage-migration.json), variant `several legacy alarms`): two legacy alarms for city 1 and one for city 0 gave six records in which `(1,1)`, `(1,2)` and `(0,1)` each occur twice. The server-side effect was not checked.
-- `showAlertInfoEvent` is broadcast 500 ms later ([app.js L343-L349](../../client/www/js/app.js#L343-L349)).
-- The listener exists only in `TabCtrl` ([L1278-L1324](../../client/www/js/controller.tabctrl.js#L1278-L1324)). On a launch that routes to S01, nothing handles it (source-level).
+- `showAlertInfoEvent` is broadcast 500 ms later ([app.js L344-L350](../../client/www/js/app.js#L344-L350)).
+- The listener exists only in `TabCtrl` ([L1159-L1205](../../client/www/js/controller.tabctrl.js#L1159-L1205)). On a launch that routes to S01, nothing handles it (source-level).
 
 **Text:**
 - Title: `LOC_WEATHER_ALERT`.
@@ -228,13 +230,13 @@ The (unreachable, see Shared popup mechanics) translation-failure event is spell
 | `LOC_OK` (`button-dark`) | `ok` | `Push.enableAlertForOldAlarm(true)`: sets `enable = true` on every alert entry, posts the whole list (skipped without an FCM token) and saves `pushData2` ([L768-L779](../../client/www/js/service.push.js#L768-L779)) |
 | Android back | `undefined` | Nothing is saved. Unless another push save writes `pushData2` first, the migration, the 3 s repost and the popup repeat on the next launch (source-level) |
 
-**Analytics:** `app/event/triggerShowAlertInfoEvent`, `app/event/showAlertInfoPopup`, and `app/event/enableAlertForOldAlarm` with value `res===true?1:0` ([L1315](../../client/www/js/controller.tabctrl.js#L1315)). **Anomaly:** that value is always `0`, because `res` is `'ok'`, `'close'` or `undefined`, never `true`.
+**Analytics:** `app/event/triggerShowAlertInfoEvent`, `app/event/showAlertInfoPopup`, and `app/event/enableAlertForOldAlarm` with value `res===true?1:0` ([L1196](../../client/www/js/controller.tabctrl.js#L1196)). **Anomaly:** that value is always `0`, because `res` is `'ok'`, `'close'` or `undefined`, never `true`.
 
 **Capture:** [tw-overlay-alert-intro.png](screenshots/tw-overlay-alert-intro.png), triggered by broadcasting the event directly.
 
 ## O07 — Foreground notification
 
-**Trigger:** `Push` broadcasts `notificationEvent` when the Firebase notification callback reports `tap === false` ([service.push.js L819-L850](../../client/www/js/service.push.js#L819-L850)):
+**Trigger:** `Push` broadcasts `notificationEvent` when the Firebase notification callback reports `tap === false` ([service.push.js L826-L857](../../client/www/js/service.push.js#L826-L857)):
 - When the payload has `aps` (the iOS shape), `aps.alert.title` and `aps.alert.body` become `title` and `message`.
 - Otherwise, `message = body`; `title` is whatever the payload carries.
 - A tapped notification (`tap === true`) with a numeric `cityIndex` selects that city and broadcasts `reloadEvent` `'push'`, with no popup.
@@ -242,7 +244,7 @@ The (unreachable, see Shared popup mechanics) translation-failure event is spell
 - Only `TabCtrl` listens, so nothing is shown on S01 before `TabCtrl` exists. Delivery while a non-tab route (S07–S14) is active was not checked.
 - The `aps`/non-`aps` and tap rules above were reproduced by the [push probe](../../reports/rewrite-verification/probes/client-push-branch-entry.json) (synthetic execution of the captured callback in a Node VM; no plugin or FCM delivery). The full field table is in [inbound notification payload](client-data-contracts.md#inbound-notification-payload).
 
-**Content** ([controller.tabctrl.js L1256-L1276](../../client/www/js/controller.tabctrl.js#L1256-L1276)):
+**Content** ([controller.tabctrl.js L1137-L1157](../../client/www/js/controller.tabctrl.js#L1137-L1157)):
 - Title: `LOC_WEATHER`. TabCtrl's `strWeather` starts as the literal `"Weather"`, so the `'Notification'` fallback in `strWeather||'Notification'` is unreachable.
 - Body: `data.title`, then `<br>` only when both parts are non-empty, then `data.message`, concatenated as HTML. Either part may be absent; the source comment says iOS has no title.
 - One `LOC_OK` button (`button-dark`) with no action.
@@ -258,7 +260,7 @@ The (unreachable, see Shared popup mechanics) translation-failure event is spell
 - S05/S16: the row is shown when `forecastSource` is set ([tab-air.html L155](../../client/www/templates/tab-air.html#L155), [air.js L263](../../client/www/js/controller.air.js#L263)).
 - The publication-date row above it is display-only.
 
-**Content** ([L1326-L1352](../../client/www/js/controller.tabctrl.js#L1326-L1352)): `$ionicPopup.alert` with no title and one `LOC_CLOSE` button. The label is TabCtrl's startup translation of `LOC_CLOSE`.
+**Content** ([L1207-L1233](../../client/www/js/controller.tabctrl.js#L1207-L1233)): `$ionicPopup.alert` with no title and one `LOC_CLOSE` button. The label is TabCtrl's startup translation of `LOC_CLOSE`.
 
 | Source value | Body |
 | --- | --- |
@@ -295,7 +297,7 @@ No analytics or persistence.
 
 ## O10 — About attribution
 
-**Trigger:** The S06 item is visible only when `Util.language` contains `ko` ([index.html L148](../../client/www/index.html#L148), [settingctrl.js L89-L91](../../client/www/js/controller.settingctrl.js#L89-L91)). It calls `clickMenu('openInfo')`, which runs `openInfo()` ([L63-L83](../../client/www/js/controller.settingctrl.js#L63-L83)). The side menu is not closed.
+**Trigger:** The S06 item is visible only when `Util.language` contains `ko` ([index.html L149](../../client/www/index.html#L149), [settingctrl.js L89-L91](../../client/www/js/controller.settingctrl.js#L89-L91)). It calls `clickMenu('openInfo')`, which runs `openInfo()` ([L63-L83](../../client/www/js/controller.settingctrl.js#L63-L83)). The side menu is not closed.
 
 **Content** (via O09 `showAlert`, OK only):
 - Title: the translated product name.
@@ -311,11 +313,11 @@ No analytics or persistence.
 
 ## O11 — Push permission popup
 
-Source: `PushCtrl._showPermissionPopUp()` ([controller.push.js L190-L245](../../client/www/js/controller.push.js#L190-L245)).
+Source: `PushCtrl._showPermissionPopUp()` ([controller.push.js L181-L236](../../client/www/js/controller.push.js#L181-L236)).
 
 **Triggers:**
-- `PushCtrl` init, when `Push.inited` is true, an FCM token exists and `hasPermission` reports `isEnabled === false`. On iOS, `Push.grantPermission` runs first; this is the OS prompt in O19 ([L85-L116](../../client/www/js/controller.push.js#L85-L116)).
-- `onOkay()` (the bottom `LOC_SAVE` button or O12 Save), when `Push.inited` is true and `hasPermission` reports permission off. Nothing is saved and the page stays open ([L358-L368](../../client/www/js/controller.push.js#L358-L368)).
+- `PushCtrl` init, when `Push.inited` is true, an FCM token exists and `hasPermission` reports `isEnabled === false`. On iOS, `Push.grantPermission` runs first; this is the OS prompt in O19 ([L85-L116](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.push.js#L85-L116)).
+- `onOkay()` (the bottom `LOC_SAVE` button or O12 Save), when `Push.inited` is true and `hasPermission` reports permission off. Nothing is saved and the page stays open ([L349-L359](../../client/www/js/controller.push.js#L349-L359)).
 
 **Text:**
 - Title: hard-coded English `"Permission"`.
@@ -324,13 +326,13 @@ Source: `PushCtrl._showPermissionPopUp()` ([controller.push.js L190-L245](../../
 **Buttons:**
 - `LOC_CLOSE`→`close`: sends `action/click/close`. Android back (`undefined`) takes the same branch.
 - `LOC_SETTING` (`button-dark`)→`settings`: sends `action/click/settings` and calls `diagnostic.switchToSettings()` (unguarded).
-- The unreachable translation-failure branch would log `translate/error/showRetryConfirm`, a label copied from TabCtrl ([L196-L203](../../client/www/js/controller.push.js#L196-L203)).
+- The unreachable translation-failure branch would log `translate/error/showRetryConfirm`, a label copied from TabCtrl ([L187-L194](../../client/www/js/controller.push.js#L187-L194)).
 
 **Capture:** not captured, because it needs Firebase and a token.
 
 ## O12 — Push save-changes confirm
 
-**Trigger:** `PushCtrl.onClose()` sends `action/click/arrow back` on every call, then goes back directly when `updated` is false and opens this confirm when it is true ([L257-L310](../../client/www/js/controller.push.js#L257-L310)). It is bound to both the header back arrow and the bottom `LOC_CANCEL` button ([setting-push.html L4](../../client/www/templates/setting-push.html#L4), [L53](../../client/www/templates/setting-push.html#L53)). `updated` is set by:
+**Trigger:** `PushCtrl.onClose()` sends `action/click/arrow back` on every call, then goes back directly when `updated` is false and opens this confirm when it is true ([L248-L301](../../client/www/js/controller.push.js#L248-L301)). It is bound to both the header back arrow and the bottom `LOC_CANCEL` button ([setting-push.html L4](../../client/www/templates/setting-push.html#L4), [L53](../../client/www/templates/setting-push.html#L53)). `updated` is set by:
 - Defaults applied at init.
 - The range slider.
 - The alert toggle.
@@ -344,10 +346,10 @@ Source: `PushCtrl._showPermissionPopUp()` ([controller.push.js L190-L245](../../
 | Button (order) | Returns | Result |
 | --- | --- | --- |
 | `LOC_CLOSE` | `close` | `action/click/close`, then `$ionicHistory.goBack()`; edits are discarded |
-| `LOC_SAVE` (`button-dark`) | `save` | Calls `onOkay()` ([L326-L369](../../client/www/js/controller.push.js#L326-L369)). If start = end, shows O13 and stays. If `!Push.inited`, saves locally and goes back. Otherwise, if permission is on, saves and goes back; if off, shows O11 and stays |
+| `LOC_SAVE` (`button-dark`) | `save` | Calls `onOkay()` ([L317-L360](../../client/www/js/controller.push.js#L317-L360)). If start = end, shows O13 and stays. If `!Push.inited`, saves locally and goes back. Otherwise, if permission is on, saves and goes back; if off, shows O11 and stays |
 | Android back while the confirm is open | `undefined` | Same as Close |
 
-Saving calls `Push.updatePushListByCityIndex`, which POSTs the list (skipped without a token) and stores `pushData2` ([service.push.js L663-L674](../../client/www/js/service.push.js#L663-L674)). Save with `updated` false saves nothing and goes back ([L169-L188](../../client/www/js/controller.push.js#L169-L188)).
+Saving calls `Push.updatePushListByCityIndex`, which POSTs the list (skipped without a token) and stores `pushData2` ([service.push.js L663-L674](../../client/www/js/service.push.js#L663-L674)). Save with `updated` false saves nothing and goes back ([L160-L179](../../client/www/js/controller.push.js#L160-L179)).
 
 **Android hardware back bypasses this confirm** (source-level). S09 (`/setting-push`) is not a tab route, so the O15 handler that `TabCtrl` registered and never deregisters calls `$ionicHistory.goBack()` directly; pending edits are discarded without a prompt.
 
@@ -360,7 +362,7 @@ Saving calls `Push.updatePushListByCityIndex`, which POSTs the list (skipped wit
 
 ## O13 — Push equal-time alert
 
-**Trigger:** `onOkay()` (bottom `LOC_SAVE` button or O12 Save) when the slider's `startTime === endTime` ([L327-L349](../../client/www/js/controller.push.js#L327-L349)). The check ignores `alert.enable`, so it also blocks saving while the alert toggle is off and the slider is hidden (`ng-hide="alert.enable === false"`, [setting-push.html L27](../../client/www/templates/setting-push.html#L27)).
+**Trigger:** `onOkay()` (bottom `LOC_SAVE` button or O12 Save) when the slider's `startTime === endTime` ([L318-L340](../../client/www/js/controller.push.js#L318-L340)). The check ignores `alert.enable`, so it also blocks saving while the alert toggle is off and the slider is hidden (`ng-hide="alert.enable === false"`, [setting-push.html L27](../../client/www/templates/setting-push.html#L27)).
 
 **Content:** `$ionicPopup.alert` with no title, body `LOC_START_TIME_AND_END_TIME_CAN_NOT_BE_THE_SAME_TIME` and one `LOC_CLOSE` button.
 
@@ -370,9 +372,9 @@ Saving calls `Push.updatePushListByCityIndex`, which POSTs the list (skipped wit
 
 ## O14 — Push time picker
 
-**Trigger:** tapping an enabled alarm row, or the `HH:MM` add row. The add row is shown while fewer than 5 alarms are enabled ([L371-L376](../../client/www/js/controller.push.js#L371-L376)). Either calls `onOpenTimePicker(index)` ([L383-L451](../../client/www/js/controller.push.js#L383-L451)).
+**Trigger:** tapping an enabled alarm row, or the `HH:MM` add row. The add row is shown while fewer than 5 alarms are enabled ([L362-L367](../../client/www/js/controller.push.js#L362-L367)). Either calls `onOpenTimePicker(index)` ([L374-L442](../../client/www/js/controller.push.js#L374-L442)).
 
-**Library:** `ionicTimePicker`, from the fork `WizardFactory/ionic-timepicker#e2d5cd3` ([client/bower.json](../../client/bower.json)). It is not vendored in `client/www`; the same commit is bundled at [tw.ios/www/lib/ionic-timepicker](../../tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js#L113-L163) (the app loads its `dist` bundle, [index.html L29](../../client/www/index.html#L29); the provider source was read). App configuration: 12-hour format, 5-minute step, 3 buttons ([app.js L1987-L1991](../../client/www/js/app.js#L1987-L1991)). The initial time is the alarm's time, or 08:00 for a new alarm.
+**Library:** `ionicTimePicker`, from the fork `WizardFactory/ionic-timepicker#e2d5cd3` ([client/bower.json](../../client/bower.json)). It is not vendored in `client/www`; the same commit is bundled at [tw.ios/www/lib/ionic-timepicker](../../tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js#L113-L163) (the app loads its `dist` bundle, [index.html L29](../../client/www/index.html#L29); the provider source was read). App configuration: 12-hour format, 5-minute step, 3 buttons ([app.js L1977-L1981](../../client/www/js/app.js#L1977-L1981)). The initial time is the alarm's time, or 08:00 for a new alarm.
 
 | Button (library order) | Callback value | PushCtrl result |
 | --- | --- | --- |
@@ -400,7 +402,7 @@ Every opening sends `alarm/open/timePicker`. Deleted alarms stay in the list wit
 - `LOC_OK`: calls `ionic.Platform.exitApp()`.
 - No analytics.
 
-An open side menu (priority 150, closes the menu), open popups (400) and loading (500) take precedence over this handler ([side menu L61163-L61172](../../tw.ios/www/lib/ionic/js/ionic.bundle.js#L61163-L61172)). Pressing back again while the exit confirm is open resolves it with `undefined`, which does nothing. `TabCtrl.init()` registers the handler only after TabCtrl's startup translation settles, so the texts are already translated ([L1402-L1440](../../client/www/js/controller.tabctrl.js#L1402-L1440)).
+An open side menu (priority 150, closes the menu), open popups (400) and loading (500) take precedence over this handler ([side menu L61163-L61172](../../tw.ios/www/lib/ionic/js/ionic.bundle.js#L61163-L61172)). Pressing back again while the exit confirm is open resolves it with `undefined`, which does nothing. `TabCtrl.init()` registers the handler only after TabCtrl's startup translation settles, so the texts are already translated ([L1283-L1321](../../client/www/js/controller.tabctrl.js#L1283-L1321)).
 
 **Capture:** not captured in the WKWebView harness. The iOS harness has no hardware back; the Ionic-android-mode captures do not exercise it. The native PoC build on the Android emulator shows it: hardware back on S04 opened "Do you want to exit?" with Cancel and OK, and Cancel kept S04 ([capture](screenshots/native-android-exit-confirm.png), native execution 2026-09-27).
 
@@ -442,7 +444,7 @@ Branch share URLs ([L239-L258](../../client/www/js/controller.tabctrl.js#L239-L2
 
 ## O17 — Loading: `$ionicLoading` overlay and header spinner
 
-**Full-screen overlay.** The default template is `<ion-spinner icon="bubbles" class="spinner-stable">` ([app.js L1993-L1995](../../client/www/js/app.js#L1993-L1995)). It blocks input and disables Android back while shown. It is used only by:
+**Full-screen overlay.** The default template is `<ion-spinner icon="bubbles" class="spinner-stable">` ([app.js L1983-L1985](../../client/www/js/app.js#L1983-L1985)). It blocks input and disables Android back while shown. It is used only by:
 
 | Flow | Source |
 | --- | --- |
@@ -464,13 +466,13 @@ Branch share URLs ([L239-L258](../../client/www/js/controller.tabctrl.js#L239-L2
 
 An example trigger is Android with location mode off and permission granted. The Android location-on path has the same gap: a status other than the four handled ones, or the status error callback, never settles ([start.js L409-L425](../../client/www/js/controller.start.js#L409-L425), [searchctrl.js L656-L672](../../client/www/js/controller.searchctrl.js#L656-L672)).
 
-**Header spinner.** `TabCtrl` toggles `showLoadingIndicator` ([L1019-L1025](../../client/www/js/controller.tabctrl.js#L1019-L1025)):
-- `loadWeatherData` sets it ([L939](../../client/www/js/controller.tabctrl.js#L939)).
+**Header spinner.** `TabCtrl` toggles `showLoadingIndicator` ([L900-L906](../../client/www/js/controller.tabctrl.js#L900-L906)):
+- `loadWeatherData` sets it ([L820](../../client/www/js/controller.tabctrl.js#L820)).
 - For saved cities, the weather result clears it.
-- For the current-position city, it clears only when the position update settles ([L940-L1009](../../client/www/js/controller.tabctrl.js#L940-L1009)).
+- For the current-position city, it clears only when the position update settles ([L821-L890](../../client/www/js/controller.tabctrl.js#L821-L890)).
 - It renders `<ion-spinner icon="bubbles">` in the nav title of `tab-forecast.html`, `tab-dailyforecast.html`, `tab-air.html` and `ta-tab-weather.html` ([tab-forecast.html L5-L11](../../client/www/templates/tab-forecast.html#L5-L11)).
 - It replaces the location glyph and does not block input.
-- **Anomaly: spinner can stay on** (source-level; one status reproduced in the native PoC build, below). On Android with location on, `updateCurrentPosition()` settles only for the statuses `GRANTED`, `DENIED_ALWAYS`, `NOT_REQUESTED` and `DENIED`. Any other status, or the error callback of `getLocationAuthorizationStatus`, leaves the promise pending. Nothing then clears the spinner until another city's load finishes ([L1057-L1074](../../client/www/js/controller.tabctrl.js#L1057-L1074)). Reproduced in the native PoC build on 2026-09-27 (native execution): `cordova.plugins.diagnostic` 7.x reports `GRANTED_WHEN_IN_USE` whenever background location is not granted, so find-by-location and S01 current location never settled on Android. The PoC accepts `GRANTED_WHEN_IN_USE` in the three Android branches; any other status and the error callback still leave the promise pending.
+- **Anomaly: spinner can stay on** (source-level; one status reproduced in the native PoC build, below). On Android with location on, `updateCurrentPosition()` settles only for the statuses `GRANTED`, `DENIED_ALWAYS`, `NOT_REQUESTED` and `DENIED`. Any other status, or the error callback of `getLocationAuthorizationStatus`, leaves the promise pending. Nothing then clears the spinner until another city's load finishes ([L938-L955](../../client/www/js/controller.tabctrl.js#L938-L955)). Reproduced in the native PoC build on 2026-09-27 (native execution): `cordova.plugins.diagnostic` 7.x reports `GRANTED_WHEN_IN_USE` whenever background location is not granted, so find-by-location and S01 current location never settled on Android. The PoC accepts `GRANTED_WHEN_IN_USE` in the three Android branches; any other status and the error callback still leave the promise pending.
 
 **Anomaly: invisible in the light theme.** `.body-content .bar p svg {stroke: #fff; fill: #fff}` ([ionic.app.scss L170-L182](../../client/scss/ionic.app.scss#L170-L182)) paints the spinner white on the white `.light-theme` header ([L103-L114](../../client/scss/ionic.app.scss#L103-L114)). Light is the default theme ([service.storage.js L202-L214](../../client/www/js/service.storage.js#L202-L214), also the fallback for a stored setting without a theme at [L160-L161](../../client/www/js/service.storage.js#L160-L161)) and the only non-dark choice in TodayAir. The captures confirm it (synthetic execution): [light](screenshots/tw-loading-header-spinner-light.png) shows the spinner in the DOM but invisible, and [dark](screenshots/tw-loading-header-spinner-dark.png) shows it visible.
 
@@ -496,17 +498,17 @@ None of these render in the plugin-less harness. The screenshots also omit the b
 
 | Surface | Trigger / owner | Behavior and failure path |
 | --- | --- | --- |
-| AdMob bottom banner | `TwAds.init()` from `TabCtrl.init()` ([L63](../../client/www/js/controller.tabctrl.js#L63), [service.twads.js L140-L186](../../client/www/js/service.twads.js#L140-L186)) | Banner at the bottom center with `overlap: false`, so the web view shrinks. `SMART_BANNER` on iOS, `BANNER` on Android ([service.admobpro.js L34-L45](../../client/www/js/service.admobpro.js#L34-L45)). Enabled when `twAdsInfo` is absent ([twads L28-L30](../../client/www/js/service.twads.js#L28-L30)). Hidden on S01 (re-shown on its `close()` for free accounts), S13 and S14. Recreated on `orientationchange`. Configuration uses the `clientConfig.admob*` unit names |
-| OS location-permission prompt | `diagnostic.requestLocationAuthorization(WHEN_IN_USE)` when status is `NOT_REQUESTED` (on Android, also `DENIED`), from TabCtrl [L1116-L1150](../../client/www/js/controller.tabctrl.js#L1116-L1150), StartCtrl [L471-L501](../../client/www/js/controller.start.js#L471-L501) and SearchCtrl [L717-L747](../../client/www/js/controller.searchctrl.js#L717-L747). Start and Search also request it for location off with status `NOT_REQUESTED` ([start.js L548-L571](../../client/www/js/controller.start.js#L548-L571), [searchctrl.js L794-L817](../../client/www/js/controller.searchctrl.js#L794-L817)). Only their location-on branch hides the loading overlay first | Android `DENIED` produces a message and O03/O04. Every other result, and every iOS result, rejects `null` without a popup. TabCtrl then waits: on iOS for `reloadEvent` `'locationOn'` from `registerLocationStateChangeHandler` ([app.js L235-L247](../../client/www/js/app.js#L235-L247)), on Android for the `resume` reload ([app.js L228-L231](../../client/www/js/app.js#L228-L231)). Start and Search re-run their flow immediately on a `null` rejection |
-| Location-accuracy (turn-on) prompt | `cordova.plugins.locationAccuracy.request(HIGH_ACCURACY)`. In TabCtrl it runs only when location is off and the current-position city has `address === null && location === null` ([L1152-L1173](../../client/www/js/controller.tabctrl.js#L1152-L1173)). Not platform-gated | Success is silent; the app reloads on `locationOn`. Error or missing plugin produces `LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION` and O03 `forecast`. The Start/Search branches ([start.js L503-L524](../../client/www/js/controller.start.js#L503-L524), [searchctrl.js L749-L769](../../client/www/js/controller.searchctrl.js#L749-L769)) need `enabled=false, authorized=true`, which their `updateCurrentPosition()` never passes: they are unreachable (source-level) |
+| AdMob bottom banner | `TwAds.init()` from `TabCtrl.init()` ([L63](../../client/www/js/controller.tabctrl.js#L63), [service.twads.js L140-L186](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/service.twads.js#L140-L186)) | Banner at the bottom center with `overlap: false`, so the web view shrinks. `SMART_BANNER` on iOS, `BANNER` on Android ([service.admobpro.js L34-L45](../../client/www/js/service.admobpro.js#L34-L45)). Enabled when `twAdsInfo` is absent ([twads L28-L30](../../client/www/js/service.twads.js#L28-L30)). Hidden on S01 (re-shown on its `close()` for free accounts), S13 and S14. Recreated on `orientationchange`. Configuration uses the `clientConfig.admob*` unit names |
+| OS location-permission prompt | `diagnostic.requestLocationAuthorization(WHEN_IN_USE)` when status is `NOT_REQUESTED` (on Android, also `DENIED`), from TabCtrl [L997-L1031](../../client/www/js/controller.tabctrl.js#L997-L1031), StartCtrl [L471-L501](../../client/www/js/controller.start.js#L471-L501) and SearchCtrl [L717-L747](../../client/www/js/controller.searchctrl.js#L717-L747). Start and Search also request it for location off with status `NOT_REQUESTED` ([start.js L548-L571](../../client/www/js/controller.start.js#L548-L571), [searchctrl.js L794-L817](../../client/www/js/controller.searchctrl.js#L794-L817)). Only their location-on branch hides the loading overlay first | Android `DENIED` produces a message and O03/O04. Every other result, and every iOS result, rejects `null` without a popup. TabCtrl then waits: on iOS for `reloadEvent` `'locationOn'` from `registerLocationStateChangeHandler` ([app.js L236-L248](../../client/www/js/app.js#L236-L248)), on Android for the `resume` reload ([app.js L229-L232](../../client/www/js/app.js#L229-L232)). Start and Search re-run their flow immediately on a `null` rejection |
+| Location-accuracy (turn-on) prompt | `cordova.plugins.locationAccuracy.request(HIGH_ACCURACY)`. In TabCtrl it runs only when location is off and the current-position city has `address === null && location === null` ([L1033-L1054](../../client/www/js/controller.tabctrl.js#L1033-L1054)). Not platform-gated | Success is silent; the app reloads on `locationOn`. Error or missing plugin produces `LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION` and O03 `forecast`. The Start/Search branches ([start.js L503-L524](../../client/www/js/controller.start.js#L503-L524), [searchctrl.js L749-L769](../../client/www/js/controller.searchctrl.js#L749-L769)) need `enabled=false, authorized=true`, which their `updateCurrentPosition()` never passes: they are unreachable (source-level) |
 | Settings deep links | `switchToSettings()` (app settings) and `switchToLocationSettings()` (Android) from O03, O04 and O11, and from the header location glyph ([forecastctrl.js L658-L674](../../client/www/js/controller.forecastctrl.js#L658-L674)) | The glyph acts only while location is disabled, then calls `WeatherInfo.reloadCity`. The glyph handler exists only in ForecastCtrl screens |
-| iOS notification permission | `Push.grantPermission()` on every S09 init when `Push.inited` is true and an FCM token exists ([push.js L85-L106](../../client/www/js/controller.push.js#L85-L106)) | Followed by `hasPermission`; if off, shows O11 |
+| iOS notification permission | `Push.grantPermission()` on every S09 init when `Push.inited` is true and an FCM token exists ([push.js L85-L106](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.push.js#L85-L106)) | Followed by `hasPermission`; if off, shows O11. On the #2605 branch it runs on every S09 entry on both platforms, with or without a token |
 | Feedback mail | Menu `sendMail` (closes the menu) and O05 Feedback, through `Util.sendMail` ([service.util.js L251-L266](../../client/www/js/service.util.js#L251-L266)) | `mailto:` to `clientConfig.mailTo`, subject `LOC_SEND_FEEDBACK`. The body contains the app version, device UUID and user agent. Reads `window.device.uuid` without a guard. Sends `action/click/send mail` |
 | Store page | Menu `openMarket` (closes the menu) and O05 Review, through `Util.openMarket` ([L268-L295](../../client/www/js/service.util.js#L268-L295)) | Opens `clientConfig.iOSStoreUrl`, `androidStoreUrl` or `etcUrl` via InAppBrowser `_system` and sends `action/click/open market`; without the plugin it sends `inappbrowser/error/loadPlugin` and calls `window.open(_blank)` |
 | Wind map | Menu `nullschool`, KR region only ([settingctrl.js L39-L53](../../client/www/js/controller.settingctrl.js#L39-L53)) | Opens `earth.nullschool.net` externally (`_system`, else `window.open`). The menu stays open. Sends `action/click/open nullschool` |
 | Share sheet, store purchase UI | O16, O18 | — |
 
-**Native PoC build (2026-09-27, native execution).** The PoC has no AdMob plugin, so no banner or reserved strip appears. With location permission pre-granted, no OS prompt was shown. Hand-offs observed:
+**Native PoC build (2026-09-27, native execution).** The AdMob banner comes from `emi-indo-cordova-plugin-admob` through `admobEmi`. With Google's test units it loaded at the bottom on both platforms, and the web view shrank above it ([plugin deltas](screen-specifications.md#plugin-and-platform-deltas)). The notification permission is now requested on every S09 entry on both platforms, whether or not a token exists: firebasex gets the iOS token only after the grant, and Android 13+ needs `POST_NOTIFICATIONS`. The harness cannot tap the iOS permission alert. With location permission pre-granted, no location prompt was shown. Hand-offs observed:
 
 - **Store page.** Android opened Google Play (unauthenticated on the emulator; [capture](screenshots/native-android-store.png)). The iOS Simulator has no App Store, so Safari reported an invalid address ([capture](screenshots/native-ios-store.png)). `iOSStoreUrl` is `https://itunes.apple.com/app/todayweather/id1041700694`, which redirects to `apps.apple.com`. That page answers 404 outside the Korean storefront and 200 under `/kr/`; the iTunes lookup finds the app only with `country=kr` (checked 2026-09-27).
 - **Feedback mail.** Android opened Gmail's welcome screen; the iOS Simulator has no Mail app, so nothing opened.
@@ -517,7 +519,7 @@ None of these render in the plugin-less harness. The screenshots also omit the b
 These are proposals for the decision register, not implemented changes.
 
 1. **O02 label/action inversion.** Keep the shipped action mapping, or restore the label mapping (as before `61be2230` and in `GuideCtrl`) and make search the explicit default regardless of location state (the #2018 intent). Also decide on the hidden title and the Android-back → search branch.
-2. **O05 recurrence.** The popup shows on every cold launch past the `startVersion` gate until disabled, and disabling is permanent despite the ko label "until the next update" (`enablePopup: false`). Android back ignores the checkbox. Define a per-version "seen" rule and a single language-fallback policy.
+2. **O05 recurrence.** The popup shows on every cold launch past the `startVersion` gate until disabled, and disabling is permanent despite the ko label "until the next update" (`enablePopup: false`). Android back ignores the checkbox. Define a per-version "seen" rule and a single language-fallback policy. The Cordova 1.1.0 release on the #2605 branch removes the popup instead.
 3. **O06 migration popup.** The analytics value is always 0, dismissing with back leaves the migration unsaved so it re-prompts and re-posts, and migrated entries can share `id: 1`. Decide whether legacy `pushData` migration is still needed at all.
 4. **O12/O14 push defaults.** First-open Back or Cancel prompts to save defaults the user never edited, and Save registers a 07–22 alert plus 07:40/20:20 Mon–Fri alarms. Android hardware back skips the prompt and discards edits. Midnight equals Delete. The titles `"Permission"` and `"Save"` are English-only.
 5. **O03/O04 retry sets.** The retry button reads `LOC_OK` (`LOC_RETRY` is unused). The two controllers offer different button sets and messages for the same permission states. The `search` Retry re-runs find-by-location even after a row-refresh failure. Plugin reads are unguarded, so failures are silent without the plugin, and the app-info hint text names TodayWeather in TodayAir. Specify one variant table for all flows.

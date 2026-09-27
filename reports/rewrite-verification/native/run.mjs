@@ -40,7 +40,7 @@ const android = {
         }
         try { sh(ADB, ['uninstall', PKG]); } catch { /* not installed */ }
         sh(ADB, ['install', '-r', artifact]);
-        for (const p of ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION']) sh(ADB, ['shell', 'pm', 'grant', PKG, `android.permission.${p}`]);
+        for (const p of ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'POST_NOTIFICATIONS']) sh(ADB, ['shell', 'pm', 'grant', PKG, `android.permission.${p}`]);
         sh(ADB, ['emu', 'geo', 'fix', SEOUL.lon, SEOUL.lat]);
         sh(ADB, ['logcat', '-c']);
         this.logcat = spawn(ADB, ['logcat', '-v', 'time'], { env: ENV });
@@ -65,8 +65,11 @@ const android = {
             sh(ADB, ['shell', 'am', 'start', '-n', `${PKG}/.MainActivity`]);
         }
         if (action === 'external-return') {
-            note(`focus before return: ${this.focused()}`);
-            sh(ADB, ['shell', 'input', 'keyevent', 'KEYCODE_BACK']); await sleep(1500);
+            const focus = this.focused();
+            note(`focus before return: ${focus}`);
+            // Back only leaves another app. If the hand-off target closed itself (e.g. a stale Gmail
+            // welcome task), back would reach the app and open its exit confirm.
+            if (!focus.includes(`${PKG}/`)) { sh(ADB, ['shell', 'input', 'keyevent', 'KEYCODE_BACK']); await sleep(1500); }
             if (!this.focused().includes(`${PKG}/`)) sh(ADB, ['shell', 'am', 'start', '-n', `${PKG}/.MainActivity`]);
         }
     },

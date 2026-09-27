@@ -1,6 +1,6 @@
 #!/bin/sh
-# Android system text size vs. the WebView: legacy builds called MobileAccessibility.usePreferredTextZoom(false);
-# the PoC has no such plugin. Captures hourly at font_scale 1.0 and 1.3, then restores the original scale.
+# Android system text size vs. the WebView: the app calls MobileAccessibility.usePreferredTextZoom(false)
+# (phonegap-plugin-mobile-accessibility). Captures hourly at font_scale 1.0 and 1.3, then restores the original scale.
 # Usage: font-scale-check.sh <outDir>   (app must be installed with at least one city)
 set -eu
 ADB="$HOME/Library/Android/sdk/platform-tools/adb"
@@ -12,7 +12,6 @@ for scale in 1.0 1.3; do
     "$ADB" shell settings put system font_scale "$scale"
     "$ADB" shell am force-stop "$PKG"; sleep 2
     "$ADB" shell am start -n "$PKG/.MainActivity" >/dev/null; sleep 14
-    "$ADB" shell input keyevent KEYCODE_BACK; sleep 1   # closes the update-info popup (Android back resolves it)
     shot "font-scale-$scale"
     "$ADB" logcat -d | grep -o '"TWSTEP [^"]*deviceready[^"]*"' | tail -1 || true
 done

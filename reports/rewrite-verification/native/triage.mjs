@@ -5,7 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const KNOWN = [
-    [/There is not firebase plugin|You have to register before post|updateCityInfo is undefined/, 'poc-scope: Firebase/push not in PoC'],
+    [/You have to register before post/, 'ios: no FCM token before the native notification grant (harness cannot tap it)'],
+    [/Publisher misconfiguration|no form\(s\) configured/, 'admob: no UMP consent message in the AdMob console; the app starts ads without UMP'],
     [/latestAirInfo|controller\.air\.js:(22\d|3[0-9]):|aqiStandard\[grade-1\]/, 'server: production API returns no air data'],
     [/KTKO50_|weather\.go\.kr/, 'server: stale 2021 KMA bulletin, http image'],
     [/coord\/51\.507,-0\.128/, 'server: world weather (DSF) 502'],

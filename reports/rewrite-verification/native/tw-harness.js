@@ -62,8 +62,22 @@
 
     var XO = XMLHttpRequest.prototype.open, XS = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.open = function (m, u) { this.__tw = { m: m, u: u }; return XO.apply(this, arguments); };
-    XMLHttpRequest.prototype.send = function () {
+    // Push registration writes (PUT/POST/DELETE /vNNNNNN/push, /push-list) must not reach production
+    // during test runs: record the request and answer it locally with 200 {}.
+    var IS_ANDROID = /Android/.test(navigator.userAgent);
+    var PUSH_WRITE = /\/v\d+\/push(-list)?(\?|$)/;
+    XMLHttpRequest.prototype.send = function (body) {
         var x = this, t = Date.now();
+        if (x.__tw && x.__tw.m !== 'GET' && PUSH_WRITE.test(String(x.__tw.u))) {
+            emit('STEP', 'push-write intercepted ' + x.__tw.m + ' ' + x.__tw.u + ' ' + String(body || '').slice(0, 300));
+            window.__twPushWrites = (window.__twPushWrites || []).concat([{ m: x.__tw.m, u: x.__tw.u, body: String(body || '') }]);
+            ['readyState', 'status', 'statusText', 'responseText', 'response'].forEach(function (k, i) {
+                Object.defineProperty(x, k, { configurable: true, value: [4, 200, 'OK', '{}', '{}'][i] });
+            });
+            x.getAllResponseHeaders = function () { return 'content-type: application/json\r\n'; };
+            setTimeout(function () { if (x.onload) { x.onload(); } }, 10);
+            return;
+        }
         x.addEventListener('loadend', function () {
             var info = x.__tw || {};
             var u = String(info.u || '');
@@ -86,8 +100,26 @@
         }
         buffer = [];
         emit('STEP', 'deviceready ua=' + navigator.userAgent.slice(0, 80));
+        // Record notification permission requests (the iOS alert itself is native and not tappable here).
+        var fm = window.FirebasexMessaging;
+        if (fm && fm.grantPermission) {
+            var grant = fm.grantPermission;
+            fm.grantPermission = function () {
+                window.__twGrantRequests = (window.__twGrantRequests || 0) + 1;
+                emit('STEP', 'push grantPermission');
+                return grant.apply(this, arguments);
+            };
+        }
     }, false);
     document.addEventListener('resume', function () { emit('CHECK', 'ok resume-event'); }, false);
+    window.__twAds = {};
+    ['on.sdkInitialization', 'on.banner.load', 'on.banner.failed.load', 'on.banner.hide', 'on.banner.impression',
+        'on.consent.info.update.failed'].forEach(function (name) {
+        document.addEventListener(name, function (e) {
+            window.__twAds[name] = (window.__twAds[name] || 0) + 1;
+            emit('STEP', 'admob ' + name + (e && e.message ? ' ' + String(e.message).slice(0, 120) : ''));
+        }, false);
+    });
     document.addEventListener('pause', function () { emit('STEP', 'pause-event'); }, false);
 
     // ---------- helpers ----------
@@ -176,6 +208,9 @@
     }
     function typeInto(input, text) {
         input.focus();
+        // On Android the native AdMob banner holds window focus after launch, so focus() fires no focus
+        // event (ng-focus) until a real touch. Deliver it the way a tap would.
+        if (!document.hasFocus()) { input.dispatchEvent(new FocusEvent('focus')); }
         input.value = text;
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -249,6 +284,21 @@
     var XO2 = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (m, u) { window.__twHttpLog.push(String(u)); return XO2.apply(this, arguments); };
 
+    function pushWrites(method) { return (window.__twPushWrites || []).filter(function (w) { return w.m === method; }); }
+    function checkPlatformIntegrations(where) {
+        var put = pushWrites('PUT').filter(function (w) { return /"newToken":"[^"]{20,}"/.test(w.body); });
+        // iOS gets a token only after the notification permission is granted, which the harness cannot tap.
+        if (IS_ANDROID) { check('fcm-token-registered ' + where, put.length > 0, put.length ? put[0].body.slice(0, 60) : 'no PUT /push with newToken'); }
+        check('admob-sdk-initialized ' + where, !!window.__twAds['on.sdkInitialization'], JSON.stringify(window.__twAds));
+        var ma = window.MobileAccessibility;
+        if (!ma) { check('accessibility-plugin', false, 'window.MobileAccessibility missing'); return Promise.resolve(); }
+        if (!/Android/.test(navigator.userAgent)) { check('accessibility-plugin', true, 'loaded (iOS: app does not call it)'); return Promise.resolve(); }
+        return new Promise(function (res) {
+            ma.getTextZoom(function (zoom) { check('accessibility-text-zoom', zoom === 100, 'textZoom=' + zoom); res(); });
+            setTimeout(res, 3000);
+        });
+    }
+
     // ---------- scenarios ----------
     var S = [];
 
@@ -269,7 +319,9 @@
             })
             .then(function () { return idle(30000); })
             .then(function () { return sleep(1500); })
-            .then(function () { forecastRendered('s1-hourly'); return shot('s1-hourly'); })
+            .then(function () { forecastRendered('s1-hourly'); return waitFor(function () { return window.__twAds['on.banner.load'] || window.__twAds['on.banner.failed.load']; }, 15000, 'admob-banner-event'); })
+            .then(function () { check('admob-banner-loaded', !!window.__twAds['on.banner.load'], JSON.stringify(window.__twAds)); return checkPlatformIntegrations('s1'); })
+            .then(function () { return shot('s1-hourly'); })
             .then(function () {
                 var ex = byNg('clickExpander()');
                 click(ex, 'expander');
@@ -316,6 +368,7 @@
         return Promise.resolve()
             .then(function () { return waitFor(function () { return /^tab\./.test(stateName()); }, 20000, 'warm-start-tab'); })
             .then(function () { return idle(30000); })
+            .then(function () { check('no-update-popup', !find('.popup-container .popup-buttons button'), 'warm launch'); })
             .then(function () { origUnit = tempUnit(); check('warm-start-state', stateName() === 'tab.forecast', stateName() + ' unit=' + origUnit); forecastRendered('s2-warm'); return shot('s2-warm'); })
             .then(openMenu)
             .then(function () { checkImages('menu'); return shot('s2-menu'); })
@@ -583,9 +636,18 @@
                 window.__twToggle = function () { return t && t.querySelector('input').checked !== before; };
                 return sleep(1500).then(function () { check('push-toggle', window.__twToggle(), 'alert.enable changed'); return shot('s6-push-toggled'); })
                     .then(function () { var ok = byNg('onOkay()'); if (ok) { click(ok, 'push-ok'); } else { return back(); } return sleep(2000); })
-                    .then(function () { var b = find('.popup-container .popup-buttons button'); if (b) { return shot('s6-push-popup').then(popupOk); } });
+                    .then(function () { var b = find('.popup-container .popup-buttons button'); if (b) { return shot('s6-push-popup').then(popupOk); } })
+                    .then(function () {
+                        check('push-permission-requested', window.__twGrantRequests > 0, 'grantPermission calls=' + (window.__twGrantRequests || 0));
+                        var post = pushWrites('POST');
+                        if (!IS_ANDROID) { return; }   // no token before the native grant (see checkPlatformIntegrations)
+                        check('push-list-posted', post.length > 0 && /fcmToken/.test(post[post.length - 1].body), post.length ? post[post.length - 1].body.slice(0, 120) : 'no POST /push-list');
+                    });
             })
-            .then(function () { if (stateName() === 'setting-push') { return back(); } })
+            .then(function () {
+                // Unsaved changes (iOS without the permission) ask "Save changes?"; close it.
+                if (stateName() === 'setting-push') { return back().then(function () { if (find('.popup-container .popup-buttons button')) { return popupOk().then(function () { return sleep(1200); }); } }); }
+            })
             .then(function () { check('after-push', /^tab\./.test(stateName()), stateName()); });
     } });
 
@@ -801,24 +863,23 @@
                 .then(function () { return screenStep('S09-push', function () { click(byNg('goPushPage()'), 'bell'); return sleep(2000); }); });
         } },
         { name: 'L2_layout_launch_popup', run: function () {
-            // dismissLaunchPopup() already captured and closed O05 for i === 1; audit the tab under it.
+            // Warm launch: no popup is expected since the update-info popup (O05) was removed.
             return waitFor(function () { return /^tab\./.test(stateName()); }, 20000, 'tab')
                 .then(function () { return screenStep('S03-warm', function () { return sleep(800); }); });
         } },
     ];
     if (window.TW_HARNESS_MODE === 'layout') { S = LAYOUT; }
 
-    // The update-info popup opens ~0.5 s after every warm launch until "Disable update info" is
-    // ticked (app.js showUpdateInfo). Record it and close it like a user would.
+    // The update-info popup (O05) was removed, so a popup after a warm launch is a failure. Record it and
+    // close it like a user would so the scenario can continue.
     function dismissLaunchPopup(i) {
-        // S01 shows only its own access popup (the startVersion gate skips update info); scenarios check it.
+        // S01 shows only its own access popup; scenarios check it.
         if (i === 0 || stateName() === 'start') { return Promise.resolve(); }
         return waitFor(function () { return !!find('.popup-container .popup-buttons button'); }, 4000)
             .then(function (shown) {
                 if (!shown) { emit('STEP', 'no launch popup'); return; }
                 var title = (find('.popup-container .popup-title') || {}).textContent || '';
-                emit('STEP', 'launch popup "' + title.trim() + '"');
-                if (window.TW_HARNESS_MODE === 'layout') { audit('O05-update-info'); }
+                check('no-launch-popup', false, 'launch popup "' + title.trim() + '"');
                 return (i === 1 ? shot('launch-popup') : Promise.resolve()).then(function () {
                     var bs = all('.popup-container .popup-buttons button').filter(visible);
                     click(bs[bs.length - 1], 'launch-popup-close');
