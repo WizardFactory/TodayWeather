@@ -1103,7 +1103,7 @@ test('R2-1/F9: 429s are classified by body; requester edge cases', async () => {
 test('R2-8: alerts skip overseas weather older than 30 minutes', () => {
     const AlertPush = load('controllers/alert.push.controller.js', {
         'async': async, 'request': () => { throw new Error('network'); }, 'i18n': {}, 'sprintf': {},
-        '../config/config': {serviceServer: {url: 'http://service.invalid'}}, '../models/alert.push.model': {},
+        '../config/config': {serviceServer: {url: 'http://service.invalid'}}, '../lib/pushStore': {},
         '../lib/kmaTimeLib': kmaTimeLib, './controllerPush': function () {}, '../lib/aqi.converter': {},
         '../lib/unitConverter': {initUnits: units => units || {}}
     });
@@ -1337,7 +1337,7 @@ test('#2585 grid: overseas coordinates share a 0.02° cell; the response keeps t
 test('push paths accept VC and legacy DSF registrations', async () => {
     const AlertPush = load('controllers/alert.push.controller.js', {
         'async': async, 'request': () => { throw new Error('network'); }, 'i18n': {}, 'sprintf': {},
-        '../config/config': {serviceServer: {url: 'http://service.invalid'}}, '../models/alert.push.model': {},
+        '../config/config': {serviceServer: {url: 'http://service.invalid'}}, '../lib/pushStore': {},
         '../lib/kmaTimeLib': kmaTimeLib, './controllerPush': function () {}, '../lib/aqi.converter': {},
         '../lib/unitConverter': {initUnits: units => units || {temperatureUnit: 'C'}}
     });
@@ -1357,7 +1357,7 @@ test('push paths accept VC and legacy DSF registrations', async () => {
     const routed = [];
     const Push = load('controllers/controllerPush.js', {
         '../lib/pushProviders': {}, 'node-gcm': {Sender: function () {}}, '../config/config': {serviceServer: {url: 'http://service.invalid'}, push: {}},
-        '../models/modelPush': {}, 'async': async, 'request': () => { throw new Error('network'); },
+        '../lib/pushStore': {}, 'async': async, 'request': () => { throw new Error('network'); },
         './controllerTown24h': function () {}, '../lib/unitConverter': {initUnits: u => u || {}}, '../lib/aqi.converter': {},
         '../lib/kmaTimeLib': kmaTimeLib, 'dnscache': () => ({}), 'i18n': {}
     });

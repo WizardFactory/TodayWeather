@@ -7,7 +7,7 @@
 var pushProviders = require('../lib/pushProviders');
 var gcm = require('node-gcm');
 var config = require('../config/config');
-var PushInfo = require('../models/modelPush');
+var pushStore = require('../lib/pushStore');
 var async = require('async');
 var req = require('request');
 var ControllerTown24h = require('./controllerTown24h');
@@ -40,20 +40,11 @@ function ControllerPush() {
  * @param callback
  */
 ControllerPush.prototype.disableByFcm = function (fcmToken, callback) {
-    PushInfo.update({fcmToken: fcmToken},
-        {$set : {enable: false, updatedAt: this._getCurrentTime(), updatedBy: 'push'}},
-        function (err, result) {
-            callback(err, result);
-        });
+    pushStore.get().disableAlarmsByFcm(fcmToken, callback);
 };
 
 ControllerPush.prototype.updateRegistrationId = function (newId, oldId, callback) {
-    PushInfo.update({registrationId: oldId},
-        {$set: {registrationId: newId}},
-        function (err, result) {
-            return callback(err, result);
-        });
-
+    pushStore.get().updateAlarmToken('registrationId', newId, oldId, callback);
     return this;
 };
 
@@ -64,11 +55,7 @@ ControllerPush.prototype.updateRegistrationId = function (newId, oldId, callback
  * @param {string} callback 
  */
 ControllerPush.prototype.updateFcmToken = function (newId, oldId, callback) {
-    PushInfo.update({fcmToken: oldId},
-        {$set : {fcmToken: newId}},
-        function (err, result) {
-            callback(err, result);
-        });
+    pushStore.get().updateAlarmToken('fcmToken', newId, oldId, callback);
 };
 
 ControllerPush.prototype._getCurrentTime = function () {
@@ -100,79 +87,47 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
         pushInfo.id = pushInfo.cityIndex;
     }
 
-    var query = {
-        type: pushInfo.type, 
-        cityIndex: pushInfo.cityIndex, 
-        id: pushInfo.id
-    };
-
-    if (pushInfo.registrationId) {
-        query.registrationId = pushInfo.registrationId;
-    }
-    else if (pushInfo.fcmToken) {
-        query.fcmToken = pushInfo.fcmToken;
-    }
-
-    PushInfo.update(
-        query,
-        pushInfo,
-        {upsert : true},
-        function (err, result) {
-            if (err) {
-                return callback(err);
-            }
-            return callback(undefined, result);
-        });
+    pushStore.get().upsertAlarm(pushInfo, callback);
 
     return this;
 };
 
-ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
-    var query = {};
-
+/**
+ * Selector for removing records of one token, narrowed by cityIndex and id when they are given (0 included).
+ */
+ControllerPush.prototype.makeRemoveSelector = function (pushInfo) {
+    var selector;
     if (pushInfo.fcmToken) {
-        query.fcmToken = pushInfo.fcmToken;
+        selector = {tokenKind: 'fcmToken', token: pushInfo.fcmToken};
     }
     else if (pushInfo.registrationId) {
-        query.registrationId = pushInfo.registrationId;
+        selector = {tokenKind: 'registrationId', token: pushInfo.registrationId};
     }
     else {
+        return null;
+    }
+    if (pushInfo.cityIndex !== undefined && pushInfo.cityIndex !== null) {
+        selector.cityIndex = pushInfo.cityIndex;
+        if (pushInfo.id !== undefined && pushInfo.id !== null) {
+            selector.id = pushInfo.id;
+        }
+    }
+    return selector;
+};
+
+ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
+    var selector = this.makeRemoveSelector(pushInfo);
+    if (!selector) {
         return callback(new Error(`unknown fcm token or registrationId pushInfo:${JSON.stringify(pushInfo)}`));
     }
 
-    if (pushInfo.cityIndex) {
-        query.cityIndex = pushInfo.cityIndex;
-
-        if (pushInfo.id) {
-            query.id = pushInfo.id;
-        }
-    }
-
-    log.info(`remove alarm push ${JSON.stringify(query)}`);
-
-    PushInfo.remove(query,
-        function (err, result) {
-            if (err) {
-                return callback(err);
-            }
-            if (!result) {
-                return callback(new Error(`Fail to get alarm result query:${JSON.stringify(query)}`));
-            }
-            log.debug(`remove alarm result ${JSON.stringify(result)}`);
-            callback(undefined, result);
-        });
+    pushStore.get().removeAlarms(selector, callback);
 
     return this;
 };
 
 ControllerPush.prototype.getPushByTime = function (time, callback) {
-
-    function enable() {
-        //enable이 없거나, true이면 true
-        return this.enable !== false;
-    }
-
-    PushInfo.find({pushTime: time}, {__v: 0}).$where(enable).lean().exec(function (err, pushList) {
+    pushStore.get().getAlarmsByTime(time, function (err, pushList) {
         if (err) {
             return callback(err);
         }
@@ -1204,60 +1159,12 @@ ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
 };
 
 /**
- * (fcmToken or registration id) + cityIndex + id가 중복된 경우 updatedAt이 오래된 데이터 삭제
- * db.pushes.aggregate([{$group: {_id: {registrationId: "$registrationId", cityIndex:"$cityIndex", id:"$id"}, updatedAts:{$addToSet: "$updatedAt"}, count:{$sum:1}}}, {$match:{count:{"$gt":1}}}]);
+ * (registration id) + cityIndex + id가 중복된 경우 updatedAt이 오래된 데이터 삭제
  * @param callback
  * @private
  */
 ControllerPush.prototype._removeDuplicates = function(callback) {
-    var query = [
-        {
-            $group: {
-                _id: {registrationId: "$registrationId", cityIndex:"$cityIndex", id:"$id"},
-                updatedAts:{"$addToSet": {updatedAt: "$updatedAt"}},
-                count:{"$sum": 1}
-            }
-        },
-        {
-            $match:{count:{"$gt":1}}
-        }];
-    PushInfo.aggregate(query).exec(function(err, results) {
-        if (err) {
-            log.error(err);
-            return callback(null);
-        }
-        results = results.filter(function (obj) {
-            return obj._id.registrationId != undefined;
-        });
-
-        log.info(`pushDuplicates:${results.length}`);
-        if (results.length <=0 ) {
-            return callback(null);
-        }
-        log.info('duplicates:',JSON.stringify(results));
-
-        async.mapSeries(results,
-            function (obj, callback) {
-                if (obj._id.registrationId == undefined) {
-                    log.info('skip ', obj);
-                    return callback(null);
-                }
-                var updatedAt = obj.updatedAts[0].updatedAt < obj.updatedAts[1].updatedAt ? obj.updatedAts[0].updatedAt : obj.updatedAts[1].updatedAt;
-                var removeQuery = {
-                    registrationId: obj._id.registrationId,
-                    cityIndex: obj._id.cityIndex,
-                    id: obj._id.id,
-                    updatedAt: updatedAt
-                };
-                PushInfo.remove(removeQuery).exec(callback);
-            },
-            function (err, result) {
-                if (err) {
-                    log.error(err);
-                }
-                callback(null);
-            });
-    });
+    pushStore.get().removeDuplicateAlarms(callback);
 };
 
 ControllerPush.prototype.sendPush = function (time, callback) {

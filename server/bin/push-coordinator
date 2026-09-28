@@ -1,0 +1,93 @@
+#!/usr/bin/env node
+'use strict';
+require('../config/env');
+var fs = require('fs');
+var Registry = require('../lib/pushCoordinator/registry').Registry;
+var Dispatcher = require('../lib/pushCoordinator/dispatcher').Dispatcher;
+var Engine = require('../lib/pushCoordinator/engine').Engine;
+var Feed = require('../lib/pushCoordinator/warningFeed').Feed;
+var ipc = require('../lib/pushCoordinator/ipc');
+// Legacy formatting code logs full registration bodies. Keep these private; emit aggregate metrics below.
+global.log = {};
+['debug', 'info', 'warn', 'error', 'verbose', 'silly'].forEach(function (k) {
+    global.log[k] = function () {};
+});
+async function main() {
+    if (process.env.PUSH_STORE !== 's3') throw new Error('PUSH_STORE=s3 is required');
+    var socket = process.env.PUSH_SOCKET_PATH;
+    if (!socket || socket[0] !== '/') throw new Error('PUSH_SOCKET_PATH must be absolute');
+    if (fs.existsSync(socket))
+        throw new Error('Push socket already exists; verify old owner is stopped before removing it');
+    var storage = require('../lib/pushCoordinator/storage').create({
+        bucket: process.env.PUSH_S3_BUCKET,
+        prefix: process.env.PUSH_S3_PREFIX,
+        region: process.env.AWS_REGION
+    });
+    // Formatting helper required by legacy kmaTimeLib; no collector constructor/startup.
+    global.manager = {
+        leadingZeros: function (n, digits) {
+            var s = String(n);
+            while (s.length < digits) s = '0' + s;
+            return s;
+        }
+    };
+    var runtime = require('../lib/pushCoordinator/runtime').create();
+    var registry = new Registry({ storage: storage, resolve: runtime.resolve });
+    await registry.init();
+    var dispatcher = new Dispatcher({
+        send: runtime.send,
+        concurrency: Number(process.env.PUSH_SEND_CONCURRENCY) || 128,
+        rate: Number(process.env.PUSH_SEND_RATE) || 500
+    });
+    var engine = new Engine({
+        registry: registry,
+        storage: storage,
+        dispatcher: dispatcher,
+        runtime: runtime,
+        feed: new Feed({ storage: storage }),
+        warnings: process.env.WARNING_PUSH_ENABLED === 'true'
+    });
+    await engine.init();
+    var server = await ipc.listen(socket, registry);
+    engine.start();
+    console.log(
+        JSON.stringify({
+            event: 'push-coordinator-ready',
+            devices: registry.devices.size,
+            registrations: registry.records.size
+        })
+    );
+    var metrics = setInterval(function () {
+        console.log(
+            JSON.stringify({
+                event: 'push-metrics',
+                queued: dispatcher.total,
+                inflight: dispatcher.inflight,
+                unresolvedDevices: registry.retryAt.size,
+                regionLookups: registry.resolving,
+                results: dispatcher.metrics,
+                rss: process.memoryUsage().rss
+            })
+        );
+    }, 60000);
+    var stopping = false;
+    async function stop() {
+        if (stopping) return;
+        stopping = true;
+        clearInterval(metrics);
+        registry.ready = false;
+        server.close();
+        try {
+            await engine.stop();
+        } catch (e) {
+            console.error('Push checkpoint failed during shutdown');
+        }
+        process.exit(0);
+    }
+    process.on('SIGTERM', stop);
+    process.on('SIGINT', stop);
+}
+main().catch(function (e) {
+    console.error(e.message);
+    process.exitCode = 1;
+});

@@ -18,7 +18,7 @@ function items(body) { return body.response.body.items.item; }
 function page(list) { return {response: {header: {resultCode: '00', resultMsg: 'NORMAL_SERVICE'}, body: {items: {item: list}, numOfRows: 1000}}}; }
 function load(relative, deps) {
     var module = {exports: {}};
-    var sandbox = {module: module, exports: module.exports, console: console, log: log, Date: Date,
+    var sandbox = {process: {env: {}}, module: module, exports: module.exports, console: console, log: log, Date: Date,
         setTimeout: setTimeout, clearTimeout: clearTimeout, setImmediate: setImmediate, __dirname: path.dirname(path.join(root, relative)),
         require: function (name) { if (!(name in deps)) { throw new Error('Unstubbed ' + name); } return deps[name]; }};
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), sandbox, {filename: relative});

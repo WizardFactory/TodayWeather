@@ -27,7 +27,7 @@ const REJECTED = pad('REJECTED%2FKEY');
 function Stub() {}
 function load(relative, dependencies = {}, clock = Date) {
     const module = {exports: {}};
-    const sandbox = {module, exports: module.exports, console, log, Date: clock, setTimeout, clearTimeout, setImmediate, __dirname: path.dirname(path.join(root, relative)),
+    const sandbox = {process: {env: {}}, module, exports: module.exports, console, log, Date: clock, setTimeout, clearTimeout, setImmediate, __dirname: path.dirname(path.join(root, relative)),
         require: name => Object.prototype.hasOwnProperty.call(dependencies, name) ? dependencies[name] : Stub};
     sandbox.global = sandbox;
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), sandbox, {filename: relative});

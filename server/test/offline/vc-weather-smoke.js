@@ -174,7 +174,9 @@ function createHarness(bodyFor, options) {
                         apply() { throw new Error('Unexpected use of ' + id); }, construct() { throw new Error('Unexpected use of ' + id); }});
                 }
             }
-            const resolved = path.resolve(path.dirname(filename), id) + (path.extname(id) === '.js' ? '' : '.js');
+            let resolved = path.resolve(path.dirname(filename), id) + (path.extname(id) === '.js' ? '' : '.js');
+            const index = path.resolve(path.dirname(filename), id, 'index.js');
+            if (!fs.existsSync(resolved) && fs.existsSync(index)) resolved = index;
             if (resolved.endsWith('/config/config.js')) return config;
             if (resolved.endsWith('/config/air.js') && options.airPolicy) return Object.assign({}, load(resolved), options.airPolicy);
             const name = path.basename(resolved, '.js');
