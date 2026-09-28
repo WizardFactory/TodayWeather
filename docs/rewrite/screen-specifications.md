@@ -250,6 +250,17 @@ Each defect below came from the platform or plugin upgrade, not from the legacy 
 | (Review) iOS store risks | `NSUserTrackingUsageDescription` present without a tracking prompt; empty app privacy manifest | Key removed at prepare; `<privacy-manifest>` in [config.xml](../../client/config.xml) declares UserDefaults (CA92.1, 1C8F.1), precise location and device ID for app functionality, no tracking |
 | iOS push could never be turned on: S09 showed "notifications are off" and the iOS Settings app had no notification switch | firebasex registers with APNs, and so gets an FCM token, only after the permission; S09 requested the permission only when a token already existed | [PushCtrl](../../client/www/js/controller.push.js) requests the permission on entry on both platforms (Android 13+ needs `POST_NOTIFICATIONS`), and [Push](../../client/www/js/service.push.js) posts saved alarms when the first token arrives |
 
+### Backend integration update (2026-09-29; deployment pending)
+
+Master `d4858b59` is integrated into the Cordova branch. The changes are source-ready, **not production-verified**: push registration/persistence and prioritized dispatch (#2626 / PR #2629), domestic air fallback/provider budgets (#2622, #2628 / PR #2630), and shared overseas air (#2628 / PR #2631). The dated native captures below remain historical evidence.
+
+- **S09:** `/v000902/push` and `/v000902/push-list` retain their client contract. Follow [push activation and rollback](../operations/push-s3.md); actual device delivery remains tracked in #2626.
+- **S05 domestic:** AirKorea remains primary; fallback supplies current observations when available. S1 is now a backend deployment/reverification item, not an unimplemented fix. Provider failure can still leave air absent.
+- **S05 overseas:** shared providers supply current air only, using the requested standard and regional observation time. Do not expect new air history/forecast or yesterday values from this change. Weather can succeed without air.
+- **Client limitations:** the existing app does not consume top-level `airStatus: {state: "pending", retryAfterSeconds: 3}` or render the added provider attribution. No automatic three-second retry is implemented; source/attribution presentation remains a release follow-up. The existing empty-air behavior is unchanged.
+
+Offline results and the deployment checklist are maintained in the [native verification guide](../../reports/rewrite-verification/native/README.md#backend-integration-before-deployment-2026-09-29). They do not establish native rendering, live provider availability, or notification receipt.
+
 ### Live observations per screen
 
 | Screen or overlay | What the native build did with live data (2026-09-27) | Captures |

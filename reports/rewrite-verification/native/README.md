@@ -63,3 +63,26 @@ The audit does not catch a control clipped by an `overflow: hidden` parent, for 
 ## Evidence boundaries
 
 Live data changes over time, so a capture shows the production response at capture time. The harness cannot tap native UI: permissions are pre-granted, the iOS share sheet is left open at the end, and the iOS Simulator has neither App Store nor Mail. The iOS notification permission alert is native too, so iOS runs check only that the app requests it; FCM registration and the push-list `POST` are checked on Android, where `POST_NOTIFICATIONS` is pre-granted. Real-device behavior, release signing, push delivery, real ad units and purchase are outside these runs.
+
+## Backend integration before deployment (2026-09-29)
+
+Integrated master `d4858b59` (PRs #2629, #2630, #2631). No upstream mobile source changes. AK reports these backend changes are not yet deployed; the previous production S1 observation remains historical, not a test of the new code.
+
+Local checks use synthetic providers and credentials, isolated models, and loopback peers. No production writes or notifications:
+
+```sh
+TZ=UTC NODE_PATH=<test-dependencies> node --test server/test/offline/air-fallback.test.js server/test/offline/air-chain.test.js server/test/offline/world-air.test.js server/test/offline/push-s3.test.js
+TZ=UTC NODE_PATH=<test-dependencies> node server/test/offline/air-chain-smoke.js
+TZ=UTC NODE_PATH=<test-dependencies> node server/test/offline/world-air-smoke.js
+TZ=UTC NODE_PATH=<locked-server-dependencies> node server/test/offline/push-s3-smoke.js --client
+```
+
+Run these from the repository root. The air suites passed 74 tests, the push coordinator suite passed 27 cases, and domestic/world HTTP smokes passed 16/17 scenarios respectively on Node 24.21.0. These are local compatibility checks, not deployed Node 10 or native-app evidence. The actual Cordova branch `service.push.js` also passed registration, reopen, location change, token rotation, deletion, alarm and disable against real local routers/IPC/S3 peers with the locked server dependencies installed using npm 8. No native push receipt was tested.
+
+After deployment:
+
+- Verify Seoul/Busan/Incheon/Jeju air observations and Tokyo/London current air through the public v000903 endpoint, including requested air units, source, observation time, and available pollutants.
+- Run native `full`, `world`, and `layout` scenarios on Android and iOS. Inspect S05 with actual air values and chart scrolling; current-only air does not imply a historical or forecast series.
+- Explicitly inspect air failures: `triage.mjs` still classifies missing-air exceptions and `air-codes count=0` as the historical S1 issue. **Zero unclassified failures alone does not prove air recovery.** Remove or narrow those exceptions only after deployment evidence supports doing so.
+- Record the pending-air path separately. The app currently ignores `airStatus` and does not schedule the suggested retry; supplier attribution is not rendered either. Track presentation work before treating provider display as release-ready.
+- Follow [the S3 push runbook](../../../docs/operations/push-s3.md) and #2626 for activation, actual registrations, token rotation, alarm/alert delivery, disabled/deleted registrations and monitoring. The native harness intercepts push writes, so it cannot prove production registration or receipt.
