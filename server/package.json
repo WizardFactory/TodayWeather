@@ -25,7 +25,7 @@
     "async": "^2.5.0",
     "aws-sdk": "^2.2.35",
     "axios": "^0.18.0",
-    "body-parser": "~1.13.1",
+    "body-parser": "~1.20.6",
     "cheerio": "^0.20.0",
     "compress": "^0.99.0",
     "compression": "^1.5.2",
