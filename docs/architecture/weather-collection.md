@@ -91,7 +91,7 @@ In `gather` mode, two opt-in collectors (#2573) run outside that task array. `KM
 | Warnings (#2609) | `kmaWarningCollector` → `kmaspecials` (bulletin types 1–4), `kmaspecialweatherzones` (active zone state) | `/v000903/kma/special`; town `current.specialInfo` via the zone table [`kma_warning_zones.csv`](../../server/utils/data/kma_warning_zones.csv) |
 | Short RSS | `kma.town.short.rss.controller` | Supplement short API forecasts |
 | Legacy mid RSS (retired, #2560) | `midRssKmaRequester` | Collection/storage disabled; cached medium data is not applied |
-| AirKorea observations and forecast | `kecoController`, `kecoRequester` | Station/regional pollutants, forecast and air indices |
+| AirKorea observations and forecast | `kecoController`, `kecoRequester` | Station/regional pollutants, forecast and air indices. When no nearby station has an observation within 8 hours, v000903 KMA requests ask the air provider chain (Google, OpenWeather, WAQI; paid Visual Crossing/Google only when enabled) at request time instead ([fallback](mobile-api.md#domestic-air-fallback-and-the-air-provider-chain-issues-2622-2628), #2622/#2628); nothing is collected |
 | KAQ / AirKorea hourly image forecasts | `kaq.hourly.forecast.controller`, `airkorea.hourly.forecast.controller`, image parsers | Hourly pollutant projections; selected by `airForecastSource` |
 | Life and health indices | `lifeIndexKmaRequester` (UV from `LivingWthrIdxServiceV5/getUVIdxV5`, #2587), `controllerHealthDay` | Weather/life advisories |
 | Sunrise/sunset | `kasi.riseset.controller`; days without a stored row are computed by `lib/sunRiseSet.js` at request time | Day/night and astronomical context |

@@ -2625,10 +2625,18 @@ function ControllerTown() {
                     next();
                     return;
                 }
+                // town coordinate for the WAQI fallback (#2622)
+                if (townInfo && townInfo.gCoord) {
+                    req.airGCoord = townInfo.gCoord;
+                }
                 KecoController.getArpLtnInfo(townInfo, new Date(), function (err, arpltnObj) {
                     if (err) {
                         err.message += ' ' + JSON.stringify(meta);
                         log.error(err);
+                    }
+                    if (!arpltnObj) {
+                        next();
+                        return;
                     }
                     req.current.arpltn = arpltnObj.arpltn;
                     req.arpltnList = arpltnObj.list;
