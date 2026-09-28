@@ -56,7 +56,8 @@ versions indefinitely. Operational lifecycle/IAM setup is not performed by this 
 1. Provision the private prefix/socket directory and verify IAM with synthetic data.
    Verify each project's FCM quota, credential project ID and controlled device delivery.
    The current capacity result uses synthetic transport; it does not establish FCM quota.
-2. Start the coordinator without warning sending. It lists/restores device objects,
+2. Start the coordinator without warning sending. It lists/reads device objects and
+   conditionally reseals each registration with a unique nonce (16 concurrent PUTs),
    resolves regions through a bounded queue of eight, restores checkpoints and then
    opens its socket. Any failed initial region lookup prevents readiness. API writes
    return 503 while the coordinator is unavailable. Later accepted location changes
@@ -69,7 +70,10 @@ versions indefinitely. Operational lifecycle/IAM setup is not performed by this 
    switch: the S3 path requires an FCM token (not legacy APNs/GCM delivery). Missing UUID
    plus a new token without old-token linkage can create a new identity. Re-registration
    is the repair path accepted for registration inconsistencies.
-4. Enable the existing gather collector's `PUSH_WARNING_FEED_ENABLED=true`; first export
+4. On the gather host set `KMA_WARNING_ENABLED=true` as well as
+   `PUSH_WARNING_FEED_ENABLED=true`; `SERVER_MODE=gather` alone does not start this collector.
+   Configure the same `PUSH_S3_BUCKET`, `PUSH_S3_PREFIX` and `AWS_REGION`, and verify the
+   collector's GetObject/PutObject access to `warning-feed/`. The first durable export
    establishes a non-broadcast baseline. Then enable `WARNING_PUSH_ENABLED=true` on the
    coordinator after confirming mapping/audience and a controlled-device test. Target is
    enabled `category=alert` users inside their existing windows, not alarm-only users.
@@ -89,7 +93,9 @@ for later investigation. No deployment, data migration or automatic deletion is 
   expires solely because of age. Fixed cities retain their own positions. A late GPS
   report can replace an earlier arrival because the existing app sends no sample order.
 - Sparse commands serialize through a bounded FIFO. Success follows S3 publication;
-  timeouts can still be ambiguous. Reconciliation blocks sends for affected devices.
+  timeouts can still be ambiguous. Failed registration writes keep affected devices
+  fenced from sends until a conditional re-registration succeeds or restart reseals
+  their durable objects. Immediate GET alone does not lift the fence.
   Multi-object token merges are not transactions, and duplicates after a crash remain possible.
 - Normal minute jobs and warnings expire after five minutes. Warning source publication
   must also be recent; late historical rows update state only. Release cancels unsent
@@ -139,3 +145,30 @@ an alert/alarm and confirm receipt; move its current location and verify the upd
 region, then disable/delete the setting. Do not infer end-to-end operation from a
 valid service account or local protocol tests alone. Mongo registration import is
 not a prerequisite and must not be performed.
+
+## Review corrections — 2026-09-29
+
+- Registration PUTs use `If-None-Match: *` for absent keys or `If-Match: ETag` for
+  existing keys. The locked AWS SDK injects these headers before signing. Every write
+  has a fresh persistence nonce; retries keep the same precondition. A delayed old PUT
+  cannot overwrite a subsequently accepted registration. Restore reseals all existing
+  registrations before ready, adding one PUT per device to cold-start cost. Failed
+  reseal prevents startup; do not bypass it or run multiple coordinators.
+- Only the first durable warning feed is a silent baseline. Fresh announcements after
+  that publish even while the collector's 60-day backfill is incomplete; old source
+  rows remain non-notifying through the five-minute freshness gate.
+- A 429 holds all admissions for its Firebase project through Retry-After (60s when
+  absent; the configured retry floor still applies), even if the failing job expires
+  or exhausts retries. Already in-flight sends cannot be recalled; other projects proceed.
+- Per-project rate shares reserve 20% for normal work and 80% for warnings, under the
+  shared total cap. Normal work can borrow unused warning tokens only with no queued
+  or active warning work. Warning traffic cannot consume the normal reservation.
+- Conditional-result checkpoints are saved only for the same current device revision
+  and endpoint generation, including callbacks after FCM accepts a send.
+
+The revised local synthetic profile accepted 10,000 warnings in 25.366s (first251ms),
+with 100,000 normal jobs queued and zero per-recipient S3 reads. Restore took3.728s
+including simulated reseal PUTs. Event-loop p99 was57ms, above the exploratory50ms
+measurement budget; the selected30s warning target passed. These are synthetic results.
+
+S3 preconditions: [AWS conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html).

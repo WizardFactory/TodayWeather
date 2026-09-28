@@ -111,7 +111,7 @@ runner.test(
             throw new Error('unavailable');
         };
         await assert.rejects(r.upsert([record({ location: { lat: 38, long: 128 } })]));
-        assert.equal(r.warningRefs(['37']).length, 1);
+        assert.equal(r.warningRefs(['37']).length, 0, 'uncertain device is fenced');
         s.put = put;
         var restored = await registry(s);
         assert.equal(restored.warningRefs(['37']).length, 1);
@@ -574,6 +574,221 @@ runner.test(
         assert.deepEqual(sent, ['a', 'b']);
     }
 );
+runner.test('review R2: continuing backfill does not reset the durable feed baseline', async function () {
+    var f = new (feature('warningFeed').Feed)({
+        storage: memory(),
+        now: function () {
+            return Date.parse('2026-09-28T08:01:00Z');
+        }
+    });
+    await f.publish([], { bootstrap: true });
+    await f.publish(
+        [{ areaCode: '37', warnVar: 2, warnStress: 1, command: 1, tmFc: 202609281701, tmSeq: 1 }],
+        { bootstrap: true }
+    );
+    assert.equal(
+        (await f.read()).filter(function (x) {
+            return x.notify;
+        }).length,
+        1
+    );
+});
+runner.test(
+    'review R3: project cooldown also holds fresh queued work and other projects proceed',
+    async function () {
+        var now = 0,
+            calls = [];
+        var d = new (feature('dispatcher').Dispatcher)({
+            concurrency: 1,
+            rate: 100,
+            retryFloorMs: 0,
+            now: function () {
+                return now;
+            },
+            send: async function (p) {
+                calls.push(p.project);
+                if (p.project === 'limited') {
+                    var e = new Error('quota');
+                    e.statusCode = 429;
+                    e.retryAfterMs = 500;
+                    throw e;
+                }
+            }
+        });
+        try {
+            d.enqueue({ project: 'limited', deadline: 100 }); // expires instead of retry; still cool down project
+            await new Promise(function (r) {
+                setTimeout(r, 25);
+            });
+            d.enqueue({ project: 'limited' });
+            d.enqueue({ project: 'other' });
+            await new Promise(function (r) {
+                setTimeout(r, 30);
+            });
+            assert.deepEqual(calls, ['limited', 'other']);
+            now = 501;
+            await new Promise(function (r) {
+                setTimeout(r, 30);
+            });
+            assert.equal(
+                calls.filter(function (x) {
+                    return x === 'limited';
+                }).length,
+                2
+            );
+        } finally {
+            d.close();
+        }
+    }
+);
+runner.test('review R5: sustained warnings cannot consume normal project token reserve', async function () {
+    var now = 0,
+        d = new (feature('dispatcher').Dispatcher)({
+            rate: 100,
+            now: function () {
+                return now;
+            }
+        });
+    try {
+        for (var step = 0; step < 10; step++) {
+            now += 100;
+            var warnings = 0;
+            while (d.budget('project', 'warning') === true) warnings++;
+            assert(warnings > 0);
+            assert.equal(d.budget('project', 'normal'), true, 'normal rate share survives warning pressure');
+        }
+    } finally {
+        d.close();
+    }
+});
+runner.test(
+    'review R1: uncertain registration remains fenced even when immediate GET reads old data',
+    async function () {
+        var s = memory(),
+            r = await registry(s);
+        await r.upsert([record()]);
+        await r.settled();
+        var ref = Array.from(r.records.keys())[0];
+        s.put = async function () {
+            throw new Error('timeout');
+        };
+        await assert.rejects(r.upsert([record({ location: { lat: 38, long: 128 } })]));
+        assert.equal(r.get(ref), null, 'old read is not proof that the timed-out write cannot arrive later');
+    }
+);
+
+runner.test(
+    'review R5: warning backlog leaves normal admission even with one physical slot',
+    async function () {
+        var sent = [],
+            d = new (feature('dispatcher').Dispatcher)({
+                concurrency: 1,
+                rate: 100,
+                send: async function (p) {
+                    sent.push(p.priority);
+                }
+            });
+        try {
+            for (var i = 0; i < 30; i++) d.enqueue({ priority: 'warning' });
+            var normal = d.enqueue({ priority: 'normal' });
+            var result = await Promise.race([
+                normal,
+                new Promise(function (r) {
+                    setTimeout(function () {
+                        r({ status: 'timeout' });
+                    }, 150);
+                })
+            ]);
+            assert.equal(result.status, 'accepted');
+            assert(sent.indexOf('normal') < 10, 'normal is admitted while warnings remain queued');
+        } finally {
+            d.close();
+        }
+    }
+);
+async function reviewConditional(runtime) {
+    var s = memory(),
+        r = await registry(s);
+    await r.upsert([record()]);
+    await r.settled();
+    var e = new (feature('engine').Engine)({
+        storage: s,
+        registry: r,
+        runtime: runtime,
+        now: function () {
+            return Date.parse('2026-09-28T08:01:00Z');
+        }
+    });
+    return { r: r, e: e, ref: Array.from(r.records.keys())[0] };
+}
+runner.test(
+    'review R4: no-send conditional result cannot write state after position changes',
+    async function () {
+        var release,
+            x = await reviewConditional({
+                conditional: function () {
+                    return new Promise(function (r) {
+                        release = r;
+                    });
+                }
+            });
+        var work = x.e.prepare({ kind: 'conditional' }, {}, x.r.get(x.ref));
+        await x.r.upsert([record({ location: { lat: 38, long: 128 } })]);
+        await x.r.settled();
+        release({ state: { precipAlerts: { lastState: 1, pushTime: new Date() } }, notification: null });
+        await work;
+        assert.equal(x.e.state[x.ref], undefined);
+    }
+);
+runner.test(
+    'review R4: accepted old-generation send cannot checkpoint onto rotated token',
+    async function () {
+        var release,
+            handed = false;
+        var x = await reviewConditional({
+            conditional: async function () {
+                return {
+                    state: { precipAlerts: { lastState: 1, pushTime: new Date() } },
+                    notification: { title: 'old' }
+                };
+            }
+        });
+        var d = new (feature('dispatcher').Dispatcher)({
+            now: x.e.now,
+            send: function () {
+                handed = true;
+                return new Promise(function (r) {
+                    release = r;
+                });
+            }
+        });
+        x.e.dispatcher = d;
+        var c = {
+            kind: 'conditional',
+            id: 'review',
+            deadline: x.e.now() + 300000,
+            jobs: [{ ref: x.ref, status: 'pending' }],
+            inflight: new Set()
+        };
+        try {
+            await x.e.admit(c);
+            for (var i = 0; i < 100 && !handed; i++)
+                await new Promise(function (r) {
+                    setTimeout(r, 5);
+                });
+            assert(handed, 'send must reach the transport');
+            await x.r.rotate('token1', 'new-token');
+            await x.r.settled();
+            release();
+            await d.idle();
+            assert.equal(x.e.state[x.ref], undefined);
+        } finally {
+            if (release) release();
+            d.close();
+        }
+    }
+);
+
 if (require.main === module)
     runner.run().then(function (failed) {
         process.exitCode = failed ? 1 : 0;

@@ -37,6 +37,8 @@ async function main() {
         puts = 0,
         gets = 0,
         fail = false,
+        delayNextPut = false,
+        delayedPut,
         sends = [],
         providerStatus = 200;
     var peer = http.createServer(function (req, res) {
@@ -69,8 +71,39 @@ async function main() {
                     res.statusCode = 503;
                     return res.end('<Error><Code>ServiceUnavailable</Code></Error>');
                 }
-                objects.set(key, body);
-                res.setHeader('ETag', '"local"');
+                function commit() {
+                    var previous = objects.get(key);
+                    var etag =
+                        previous === undefined
+                            ? null
+                            : '"' + require('crypto').createHash('md5').update(previous).digest('hex') + '"';
+                    if (
+                        (req.headers['if-none-match'] === '*' && previous !== undefined) ||
+                        (req.headers['if-match'] && req.headers['if-match'] !== etag)
+                    )
+                        return false;
+                    if (key.indexOf('/registrations/') >= 0)
+                        assert(
+                            req.headers['if-match'] || req.headers['if-none-match'],
+                            'registration writes must be conditional'
+                        );
+                    objects.set(key, body);
+                    return true;
+                }
+                if (delayNextPut) {
+                    delayNextPut = false;
+                    delayedPut = commit;
+                    res.statusCode = 503; // ambiguous response; server-side operation can finish later
+                    return res.end('<Error><Code>ServiceUnavailable</Code></Error>');
+                }
+                if (!commit()) {
+                    res.statusCode = 412;
+                    return res.end('<Error><Code>PreconditionFailed</Code></Error>');
+                }
+                res.setHeader(
+                    'ETag',
+                    '"' + require('crypto').createHash('md5').update(body).digest('hex') + '"'
+                );
                 return res.end();
             }
             if (req.method === 'GET') {
@@ -79,6 +112,10 @@ async function main() {
                     res.statusCode = 404;
                     return res.end('<Error><Code>NoSuchKey</Code></Error>');
                 }
+                res.setHeader(
+                    'ETag',
+                    '"' + require('crypto').createHash('md5').update(objects.get(key)).digest('hex') + '"'
+                );
                 return res.end(objects.get(key));
             }
             res.statusCode = 405;
@@ -303,14 +340,21 @@ async function main() {
             client.push.updatePushListByCityIndex(client.push.getPushListByCityIndex(1).concat([alarm]), 1);
             await client.flush();
             await registry.settled();
-            var alarmRecord = Array.from(registry.records.values()).filter(function (r) { return r.category === 'alarm'; })[0];
+            var alarmRecord = Array.from(registry.records.values()).filter(function (r) {
+                return r.category === 'alarm';
+            })[0];
             assert(alarmRecord && alarmRecord.enable);
             assert.equal(alarmRecord.pushTime, client.push.date2utcSecs(alarm.time));
             assert.equal(alarmRecord.fcmToken, 'rotated-token');
             alarm.enable = false;
             client.push.updatePushListByCityIndex(client.push.getPushListByCityIndex(1), 1);
             await client.flush();
-            assert.equal(Array.from(registry.records.values()).filter(function (r) { return r.category === 'alarm'; })[0].enable, false);
+            assert.equal(
+                Array.from(registry.records.values()).filter(function (r) {
+                    return r.category === 'alarm';
+                })[0].enable,
+                false
+            );
         }
         providerStatus = 429;
         var error;
@@ -327,10 +371,44 @@ async function main() {
         assert.equal(error.statusCode, 429);
         assert.equal(error.retryAfterMs, 1000);
         assert.equal(sends.length, 2, 'no transport-internal retry');
+        // R1: a failed response followed by a late conditional commit must never
+        // overwrite a later acknowledged registration, including across restoration.
+        var lateRow = Object.assign({}, row, { uuid: 'late-write', fcmToken: 'late-token' });
+        var isolated = new Registry({ storage: storage, resolve: resolve });
+        await isolated.init();
+        await isolated.upsert([lateRow]);
+        await isolated.settled();
+        var lateRef = Array.from(isolated.records.values()).find(function (r) {
+            return r.fcmToken === 'late-token';
+        }).ref;
+        delayNextPut = true;
+        await assert.rejects(
+            isolated.upsert([Object.assign({}, lateRow, { location: { lat: 38, long: 128 } })])
+        );
+        assert.equal(isolated.get(lateRef), null);
+        await isolated.upsert([Object.assign({}, lateRow, { location: { lat: 39, long: 129 } })]);
+        assert.equal(delayedPut(), false, 'late old PUT rejected by ETag after acknowledged new PUT');
+        await isolated.settled();
+        assert.equal(isolated.get(lateRef).location.lat, 39);
+        delayNextPut = true;
+        await assert.rejects(
+            isolated.upsert([Object.assign({}, lateRow, { location: { lat: 40, long: 130 } })])
+        );
+        var restartStorage = storageFactory.create({ bucket: 'bucket', prefix: 'test', client: sdk });
+        var restarted = new Registry({ storage: restartStorage, resolve: resolve });
+        await restarted.init();
+        assert.equal(
+            delayedPut(),
+            false,
+            'restore reseal rejects outstanding writes before enabling delivery'
+        );
+        assert.equal(restarted.get(lateRef).location.lat, 39);
         console.log(
             JSON.stringify({
                 result: 'PASS',
-                clientFactory: client ? 'actual service.push.js: register, reopen, location, rotate, delete, alarm, disable' : 'not exercised',
+                clientFactory: client
+                    ? 'actual service.push.js: register, reopen, location, rotate, delete, alarm, disable'
+                    : 'not exercised',
                 checks: [
                     'real HTTP routers',
                     'Unix socket',
@@ -341,7 +419,8 @@ async function main() {
                     'token rotation',
                     '503 persistence failure',
                     'restart',
-                    'city zero deletion'
+                    'city zero deletion',
+                    'conditional ETag late PUT and restart fencing'
                 ],
                 puts: puts,
                 gets: gets,

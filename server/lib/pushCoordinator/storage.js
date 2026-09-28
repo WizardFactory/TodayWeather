@@ -19,26 +19,49 @@ function create(options) {
         }
         return prefix + value;
     }
-    return {
+    var bucket = options.bucket;
+    var versions = new Map();
+    var store = {
         get: async function (name) {
             try {
                 var r = await client.getObject({ Bucket: options.bucket, Key: key(name) }).promise();
+                if (name.indexOf('registrations/') === 0) versions.set(name, r.ETag);
                 return JSON.parse(r.Body.toString('utf8'));
             } catch (e) {
-                if (e.code === 'NoSuchKey' || e.statusCode === 404) return null;
+                if (e.code === 'NoSuchKey' || e.statusCode === 404) {
+                    if (name.indexOf('registrations/') === 0) versions.set(name, null);
+                    return null;
+                }
                 throw new Error('Push S3 read failed');
             }
         },
-        put: async function (name, value) {
-            await client
-                .putObject({
-                    Bucket: options.bucket,
-                    Key: key(name),
-                    Body: JSON.stringify(value),
-                    ContentType: 'application/json',
-                    ServerSideEncryption: 'AES256'
-                })
-                .promise();
+        put: async function (name, value, writeOptions) {
+            var conditional = writeOptions && writeOptions.conditional;
+            if (conditional && !versions.has(name)) await store.get(name);
+            var expected = versions.get(name);
+            if (conditional && expected === undefined) throw new Error('Push S3 ETag missing');
+            var request = client.putObject({
+                Bucket: bucket,
+                Key: key(name),
+                Body: JSON.stringify(value),
+                ContentType: 'application/json',
+                ServerSideEncryption: 'AES256'
+            });
+            // The locked SDK predates these PutObject model fields. Set the headers
+            // before signing; keep the same precondition on every SDK retry.
+            if (conditional)
+                request.on('build', function () {
+                    request.httpRequest.headers[expected === null ? 'If-None-Match' : 'If-Match'] =
+                        expected === null ? '*' : expected;
+                });
+            try {
+                var result = await request.promise();
+                if (conditional && !result.ETag) throw new Error('Push S3 ETag missing');
+                if (conditional) versions.set(name, result.ETag);
+            } catch (err) {
+                versions.delete(name);
+                throw err;
+            }
         },
         list: async function (name) {
             var token,
@@ -55,6 +78,7 @@ function create(options) {
             return keys;
         }
     };
+    return store;
 }
 async function mapLimit(items, limit, fn) {
     var index = 0,

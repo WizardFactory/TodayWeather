@@ -34,7 +34,7 @@ class Feed {
             var seen = new Set(head.seen),
                 events = zones.prepareEvents(rows),
                 now = self.now();
-            var bootstrap = (options || {}).bootstrap || !head.baseline;
+            var bootstrap = !head.baseline; // Only the durable first feed is a silent baseline.
             for (var e of events) {
                 var id = eventId(e);
                 if (seen.has(id)) continue;

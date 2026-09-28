@@ -40,6 +40,7 @@ class Dispatcher {
         this.stopped = false;
         this.timers = new Set();
         this.scheduled = false;
+        this.laneTurn = 0;
         this.metrics = { accepted: 0, expired: 0, superseded: 0, failed: 0, retries: 0, peak: 0 };
     }
     enqueue(job) {
@@ -81,15 +82,32 @@ class Dispatcher {
     budget(project, lane) {
         var now = this.now(),
             b = this.projects.get(project);
+        var cap = Math.max(1, this.rate / 10);
         if (!b) {
-            b = { tokens: Math.max(1, this.rate / 10), time: now, paused: false };
+            b = {
+                tokens: cap,
+                normal: Math.max(1, cap * 0.2),
+                warning: Math.max(1, cap * 0.8),
+                time: now,
+                paused: false,
+                cooldownUntil: 0
+            };
             this.projects.set(project, b);
         }
-        b.tokens = Math.min(this.rate / 10, b.tokens + ((now - b.time) * this.rate) / 1000);
+        var refill = (Math.max(0, now - b.time) * this.rate) / 1000;
+        b.tokens = Math.min(cap, b.tokens + refill);
+        b.normal = Math.min(Math.max(1, cap * 0.2), b.normal + refill * 0.2);
+        b.warning = Math.min(Math.max(1, cap * 0.8), b.warning + refill * 0.8);
         b.time = now;
         if (b.paused) return 'paused';
-        var floor = lane === 'normal' ? (this.rate / 10) * 0.2 : 0;
-        if (b.tokens < floor + 1) return false;
+        if (now < b.cooldownUntil || b.tokens < 1) return false;
+        var source = lane;
+        // Warnings never borrow the normal reservation. Normal traffic can use spare
+        // warning capacity only when no urgent work is queued or being prepared/sent.
+        if (lane === 'normal' && b.normal < 1 && !this.queues.warning.length && !this.active.warning)
+            source = 'warning';
+        if (b[source] < 1) return false;
+        b[source]--;
         b.tokens--;
         return true;
     }
@@ -109,7 +127,9 @@ class Dispatcher {
             var urgent = this.queues.warning.length > 0;
             var warnCap = Math.max(1, Math.floor(this.concurrency * 0.8));
             var normalCap = Math.max(1, Math.floor(this.concurrency * (urgent ? 0.2 : 0.8)));
-            var lane = urgent && this.active.warning < warnCap ? 'warning' : 'normal';
+            var normalTurn =
+                this.queues.normal.length && this.active.normal < normalCap && this.laneTurn++ % 5 === 4;
+            var lane = urgent && !normalTurn && this.active.warning < warnCap ? 'warning' : 'normal';
             if (lane === 'normal' && (!this.queues.normal.length || this.active.normal >= normalCap)) {
                 if (urgent && this.active.warning < warnCap) lane = 'warning';
                 else break;
@@ -183,6 +203,16 @@ class Dispatcher {
             delete item.payload;
             var code = e.code || (e.errorInfo && e.errorInfo.code),
                 status = e.statusCode || e.status;
+            if (status === 429) {
+                var projectBudget = this.projects.get(item.project || job.project || 'default');
+                var retryAfter =
+                    Number.isFinite(e.retryAfterMs) && e.retryAfterMs >= 0 ? e.retryAfterMs : 60000;
+                if (projectBudget)
+                    projectBudget.cooldownUntil = Math.max(
+                        projectBudget.cooldownUntil,
+                        this.now() + Math.max(this.retryFloor, retryAfter)
+                    );
+            }
             if (code === 'messaging/registration-token-not-registered') {
                 this.onInvalid(job);
                 this.finish(item, 'invalid');

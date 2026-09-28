@@ -235,7 +235,9 @@ class Engine {
         var result = await this.runtime.conditional(r, stateDate(current), new Date(this.now()));
         j.nextState = Object.assign(result.state, { generation: r.generation });
         if (!result.notification) {
-            this.setState(r.ref, j.nextState);
+            var fresh = this.registry.get(r.ref);
+            if (fresh && fresh.deviceRevision === r.deviceRevision && fresh.generation === r.generation)
+                this.setState(r.ref, j.nextState);
             return null;
         }
         return { notification: result.notification, record: r, eventId: c.id };
@@ -312,9 +314,20 @@ class Engine {
                     .then(
                         function (result) {
                             job.status = result.status === 'superseded' ? 'pending' : result.status;
-                            if (result.status === 'accepted' && job.nextState)
-                                self.setState(job.ref, job.nextState);
-                            if (result.status === 'invalid') {
+                            var fresh = self.registry.get(record.ref);
+                            if (
+                                result.status === 'accepted' &&
+                                job.nextState &&
+                                fresh &&
+                                fresh.deviceRevision === revision &&
+                                fresh.generation === record.generation
+                            )
+                                self.setState(record.ref, job.nextState);
+                            if (
+                                result.status === 'invalid' &&
+                                fresh &&
+                                fresh.generation === record.generation
+                            ) {
                                 (self.registry.members.get(record.deviceKey) || []).forEach(function (ref) {
                                     self.setState(ref, { disabled: true, generation: record.generation });
                                 });

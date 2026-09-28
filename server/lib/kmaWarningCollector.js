@@ -201,7 +201,7 @@ KmaWarningCollector.prototype.syncZones = function (callback) {
                         });
                         var result = {rows: rows, entries: entries, complete: complete};
                         if (process.env.PUSH_WARNING_FEED_ENABLED !== 'true') { return callback(null, result); }
-                        self._publishPushFeed(rows, !complete, function (feedError) {
+                        self._publishPushFeed(rows, false, function (feedError) {
                             if (feedError) { return callback(feedError); }
                             callback(null, result);
                         });

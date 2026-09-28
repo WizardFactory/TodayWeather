@@ -268,3 +268,16 @@ about 302MiB RSS, no recipient-level S3 reads. Configuration: 128 active slots,
 500 attempts/s/project, 200ms simulated transport, 3ms simulated object PUT.
 This replaces the earlier statement that no load tests ran, but is neither a live FCM
 measurement nor a production SLA. Final validation/CI are recorded with the PR candidate.
+
+### Review amendment — 2026-09-29
+
+Review5345324410 tightened five failure boundaries: conditional ETag writes and unique
+nonces fence delayed registration PUTs; restore conditionally reseals all registrations
+before ready (one extra PUT per device). First-feed baseline suppression is independent
+of multi-cycle KMA backfill. FCM429 creates a project-wide cooldown; separate80/20
+warning/normal token buckets prevent starvation while retaining the total project cap.
+Conditional state checkpoints require the captured current revision and generation.
+These supersede the earlier read-only reconciliation/cold-start cost descriptions;
+see the [operational details](../operations/push-s3.md). The revised synthetic10k
+warning run took25.366s, rather than the earlier20.8s without an enforced normal-rate
+reservation. No production deployment or real provider sends are implied.

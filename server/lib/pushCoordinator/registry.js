@@ -93,6 +93,12 @@ class Registry extends EventEmitter {
             self.sequence = Math.max(self.sequence, d.acceptedSequence || 0);
             self.devices.set(d.key, d);
         });
+        // Fence outstanding writes from an earlier process before exposing restored
+        // recipients. A unique body prevents ETag ABA, including identical settings.
+        await mapLimit(docs, 16, async function (d) {
+            d.persistenceNonce = crypto.randomBytes(16).toString('hex');
+            await self.storage.put(keyOf(d), d, { conditional: true });
+        });
         for (var d of docs) {
             if (!d.supersededBy) self.publish(d);
             if (self.records.size % 256 === 0) await new Promise(setImmediate);
@@ -137,27 +143,19 @@ class Registry extends EventEmitter {
         });
         try {
             for (var d of docs) {
-                await this.storage.put(keyOf(d), d);
+                d.persistenceNonce = crypto.randomBytes(16).toString('hex');
+                await this.storage.put(keyOf(d), d, { conditional: true });
             }
             docs.forEach(function (d) {
                 self.publish(d);
             });
-        } catch (err) {
-            // PUT timeouts may have committed. Reconcile before another command/send for each affected device.
-            for (var candidate of docs) {
-                try {
-                    var actual = await this.storage.get(keyOf(candidate));
-                    if (actual) this.publish(actual);
-                } catch (readError) {
-                    this.ready = false;
-                    throw new Error('Push persistence uncertain; coordinator restart required');
-                }
-            }
-            throw new Error('Push registration persistence failed');
-        } finally {
             docs.forEach(function (d) {
-                if (self.ready) self.blocked.delete(d.key);
+                self.blocked.delete(d.key);
             });
+        } catch (err) {
+            // A read cannot settle a timed-out PUT. Keep all affected devices fenced
+            // until a subsequent conditional registration succeeds or init reseals them.
+            throw new Error('Push registration persistence uncertain; re-register or restart');
         }
     }
     async upsert(rows) {

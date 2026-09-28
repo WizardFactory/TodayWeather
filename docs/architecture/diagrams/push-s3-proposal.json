@@ -75,7 +75,7 @@
       "id": "dispatch",
       "type": "messagebus",
       "label": "Dispatch lanes",
-      "sublabel": "Warnings first",
+      "sublabel": "80/20 rate shares",
       "pos": [
         750,
         280
@@ -103,7 +103,7 @@
       "id": "s3",
       "type": "database",
       "label": "Private S3",
-      "sublabel": "Records + checkpoints",
+      "sublabel": "Conditional records",
       "pos": [
         490,
         80
@@ -117,7 +117,7 @@
       "id": "warnings",
       "type": "backend",
       "label": "KMA adapter",
-      "sublabel": "Zone events",
+      "sublabel": "One feed baseline",
       "pos": [
         490,
         490
