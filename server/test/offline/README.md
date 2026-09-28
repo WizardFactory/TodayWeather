@@ -336,3 +336,20 @@ TZ=UTC TW_MONGO_URL=mongodb://127.0.0.1:27099/tw2609 TW_CLIENT_LIB=/tmp/tw-clien
 
 jQuery (`lib/jquery/dist`) is not in `bower.json`; copy it from the `jquery@3.3.1` npm package. Screenshots and results go to `TW_SMOKE_OUTPUT_DIR`.
 
+
+## Overseas request-time air (#2628 PR 2)
+
+`world-air.test.js` (registered in `run.js`) exercises the real shared-service callback and world query/merge/unit/summary code with injected dependencies: concentration-based grading, provider source, regional observation time, no copied yesterday air and nonfatal air failure. It preserves a legacy WAQI merge regression. Run it under UTC, Asia/Seoul and America/St_Johns to catch host-timezone assumptions.
+
+`world-air-smoke.js` drives the real DSF v000901/v000902/v000903 and widget middleware through the Visual Crossing weather fixture harness, with actual axios HTTP to a loopback server for all four air providers. It checks requested airUnit/source/time/concentrations and client-visible summaries, shared cache reuse, free-cap fallback, the paid Visual Crossing path (reservation and shared weather record usage), weather-cache hits with an expired air failure cache, no-key/all-failure/timeout behavior and current-only air. Synthetic keys only; no live provider calls. Servers are closed after the run; `TW_SMOKE_OUTPUT_DIR` selects evidence output. This smoke also runs on Node 10.15.3.
+
+```sh
+NODE_PATH=/tmp/tw-2622/node_modules node server/test/offline/world-air.test.js
+TZ=UTC NODE_PATH=/tmp/tw-2622/node_modules node server/test/offline/world-air-smoke.js
+```
+
+Existing `vc-weather-smoke.js` remains weather-focused and stubs the optional shared air service by default. Its opt-in harness injection supports the air smoke without changing weather fixture behavior. Domestic air tests, budget/Mongo smoke and D20 reservation tests remain separate regression coverage. No new cache collection, provider quota or deployment is introduced.
+
+PR2631 D22 regressions cover the whole overseas optional-air deadline, late success/cache reuse without duplicate callbacks or paid accounting, and additive source/attribution in DSF and raw widget responses. Tests use synthetic provider metadata and local HTTP; client attribution rendering and licensing approval are not tested.
+
+D23 also verifies the request-local pending/3-second advisory hint on deadline responses, no hint on completed success/failure, and disappearance after late cache fill; no automatic client retry is exercised or implemented.

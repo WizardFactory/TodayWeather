@@ -23,6 +23,7 @@ var commands = [
     [path.join(__dirname, 'air-summary.test.js')],
     [path.join(__dirname, 'air-chain.test.js')],
     [path.join(__dirname, 'air-fallback.test.js')],
+    [path.join(__dirname, 'world-air.test.js')],
     [path.join(__dirname, 'riseset-uv.test.js')],
     [path.join(__dirname, 'precipitation.test.js')],
     [path.join(__dirname, 'vc-weather.test.js')],

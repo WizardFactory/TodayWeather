@@ -30,6 +30,7 @@ Each provider is asked at most once per request (a provider that failed in the f
 | `AIR_PAID_PROVIDERS_ENABLED` | `false` | Allow paid calls after the free budgets are exhausted |
 | `AIR_PAID_MONTHLY_CALL_CAP` | `100000` | Paid call reservations per provider per UTC month while enabled |
 | `AIR_PROVIDER_TIMEOUT_MS` | `3000` | Per-request timeout (500–10000); no retry |
+| `AIR_RESPONSE_DEADLINE_MS` | `4000` | Whole overseas optional-air branch deadline (500–8000); late work can fill cache |
 | `VC_DAILY_RECORD_LIMIT` | (unset = none) | Existing overseas budget; air calls count their `queryCost` (1) against it |
 
 Invalid values stop the process at start-up, like `config/gather.js`. A cap of `0` blocks the provider in that window from the first call. Google's billing month is not UTC; the UTC month plus the 5 % reserve approximates it.
@@ -53,3 +54,16 @@ If AirKorea stops entirely, the fallback fetches once per 0.01° town cell per 3
 ## Rollback
 
 Revert the change or set `AIR_PAID_PROVIDERS_ENABLED=false` (restart) to stop paid calls. Unsetting `WAQI_SECRET_KEY` or `VC_SECRET_KEY` also disables overseas air or weather, so they are not domestic-only switches.
+
+## Overseas requests (#2628 PR 2)
+
+Active overseas DSF v000901–v000903 and widget new-form weather requests use this same policy and Mongo observation cache, in parallel with weather retrieval. Weather cache hits still check the air cache; they do not force a new provider request. Free allowances and paid caps are shared with domestic fallback, not separate regional allocations. Existing environment variables and D20 paid reservation apply unchanged.
+
+Current air is rendered using the request's airUnit and response timezone, with the actual provider source. A missing or failed air result does not fail weather. No current observation is presented as yesterday's air or a forecast. Legacy aqi documents are not migrated or deleted by this request path. Reverting PR2 restores the previous overseas WAQI path while retaining PR1 domestic behavior. A server deployment is required for production to use the new path.
+
+### Overseas optional-air response deadline and attribution (D22)
+`AIR_RESPONSE_DEADLINE_MS` defaults to 4000 ms (integer 500–8000). It bounds the entire overseas air branch including Mongo waits, so serial provider timeouts cannot hold the weather join indefinitely. Timed-out requests omit air; in-flight work may finish caching for later requests, without late response mutation, duplicate continuation or an extra billing attempt. It does not bound earlier geocoding, weather work, or domestic requests. A background Mongo operation that never finishes remains an underlying store availability concern.
+
+`source` remains the provider id. Accepted metadata includes optional plain-text `attribution`: DSF `current.arpltn`, `airInfo` and `airInfo.last`; `/ww` keeps raw `airSource`/`airAttribution`. Shared domestic arpltn also carries attribution when supplied. The client owns source labels/links and safe text display of the WAQI/original-agency attribution. This server contract does not implement client UI or approve provider terms; confirm display and operator licensing readiness before deployment.
+
+D23 response hint: when the overseas air deadline expires with work outstanding, both DSF and `/ww` add top-level `airStatus: {"state":"pending","retryAfterSeconds":3}`. It describes the cutoff state and suggests a delay; the client decides whether to request again. It guarantees neither success nor completion within three seconds. Early success and terminal no-air failures omit it. The hint is request-local, never cached, and late callbacks cannot alter it. No automatic retry or HTTP Retry-After is added.
