@@ -48,3 +48,13 @@ docker run --rm --network none -e NODE_PATH=/deps -v $PWD:/repo:ro -v /tmp/tw-26
 - Rollback: revert; collections disposable. Setting `AIR_PAID_PROVIDERS_ENABLED=false` stops paid calls at runtime (restart needed).
 - Rejected: per-process budgets; provider indexes for grades; VC in the free phase.
 - Proof: unit + route smoke (4 loopback providers) + multi-process Mongo smoke + Node 10 check + independent verification and OpenAI review.
+
+## Revision 4 — paid admission correction (2026-09-28)
+
+Consumes spec r4/D20 and review 5339346212. Main owns records/docs; a bounded Claude builder owns server code/tests, independently reviewed by Codex after correction.
+1. Red: storage-failure, pre-HTTP reservation, last-slot concurrency, no-double-count and month-boundary regressions.
+2. Green: strict paid reads and atomic monthly reservation, carried through chain result accounting; leave free behavior unchanged.
+3. Extend isolated harness, Node10 and actual Mongo smoke only as required to prove paid reservation semantics.
+4. Update policy/mobile architecture/sequence source and regenerate diagram via Archify; retain local visual evidence.
+5. Run offline suite and route/Mongo/runtime checks on candidate; independent review, commit/push, CI and concise review reply.
+No rebasing onto unmerged #2629; master remains 1ff466b0. Main does not change the RSS workflow merely to preempt future merge ordering. No merge/deployment.

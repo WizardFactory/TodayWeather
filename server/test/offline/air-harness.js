@@ -71,7 +71,14 @@ function createLoader(options) {
     };
 }
 
-/** In-memory stand-in for a mongoose model: findById(id, cb) / find({_id}).limit().lean().exec(cb) / updateOne(q, u, {upsert}, cb). */
+/** In-memory stand-in for a mongoose model: findById(id, cb) / find({_id}).limit().lean().exec(cb) / updateOne(q, u, {upsert}, cb).
+ * updateOne honours `{field: {$lt: n}}` conditions beside `_id` like Mongo: an upsert whose filter does not match an
+ * existing document fails with a duplicate-key error (code 11000). Conditions are evaluated when the write applies,
+ * so held writes (holdWrites) model concurrent workers. failRead/failWrite may be a boolean or a predicate on the id. */
+function failing(flag, id) {
+    return typeof flag === 'function' ? !!flag(id) : !!flag;
+}
+
 function memoryModel(options) {
     options = options || {};
     var rows = {};
@@ -85,29 +92,40 @@ function memoryModel(options) {
         pendingWrites: [],
         findById: function (id, cb) {
             model.reads++;
-            if (model.failRead) { return cb(new Error('read failed')); }
+            if (failing(model.failRead, id)) { return cb(new Error('read failed')); }
             cb(null, rows[id] ? JSON.parse(JSON.stringify(rows[id])) : null);
         },
         find: function (query) {
             var q = {limit: function () { return q; }, lean: function () { return q; }, exec: function (cb) {
                 model.reads++;
-                if (model.failRead) { return cb(new Error('read failed')); }
+                if (failing(model.failRead, query._id)) { return cb(new Error('read failed')); }
                 cb(null, rows[query._id] ? [JSON.parse(JSON.stringify(rows[query._id]))] : []);
             }};
             return q;
         },
         updateOne: function (query, update, opts, cb) {
             model.writes++;
-            if (model.failWrite) { return cb(new Error('write failed')); }
+            if (failing(model.failWrite, query._id)) { return cb(new Error('write failed')); }
             var apply = function () {
-                var row = rows[query._id] || {_id: query._id};
+                var existing = rows[query._id];
+                var matches = Object.keys(query).every(function (k) {
+                    var c = query[k];
+                    if (k === '_id' || !c || typeof c !== 'object') { return true; }
+                    return !!existing && typeof existing[k] === 'number' && existing[k] < c.$lt;
+                });
+                if (existing && !matches) {
+                    var dup = new Error('E11000 duplicate key error _id: ' + query._id);
+                    dup.code = 11000;
+                    return cb(dup);
+                }
+                var row = existing || {_id: query._id};
                 if (update.$set) { Object.keys(update.$set).forEach(function (k) { row[k] = JSON.parse(JSON.stringify(update.$set[k])); }); }
                 if (update.$inc) { Object.keys(update.$inc).forEach(function (k) { row[k] = (row[k] || 0) + update.$inc[k]; }); }
                 if (update.$setOnInsert && !rows[query._id]) {
                     Object.keys(update.$setOnInsert).forEach(function (k) { row[k] = JSON.parse(JSON.stringify(update.$setOnInsert[k])); });
                 }
                 rows[query._id] = row;
-                cb(null);
+                cb(null, existing ? {n: 1, nModified: 1, ok: 1} : {n: 1, nModified: 0, upserted: [{index: 0, _id: query._id}], ok: 1});
             };
             if (model.holdWrites) { model.pendingWrites.push(apply); } else { apply(); }
         }

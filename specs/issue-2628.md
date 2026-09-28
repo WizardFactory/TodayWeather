@@ -1,6 +1,6 @@
 # Spec: air quality provider chain — PR 1 — issue 2628
 
-Revision 3, 2026-09-27 (r3: review round 1 F1–F4 → D16–D19: one attempt per provider per request, rolling minute, zero caps block, status not reflected; r2: build decisions D11–D14 — WAQI adapter id `aqicn`, unusable observations cached 30 min, `invalid-body`/`status` kinds, store-callback guards, harness). Consumes [intent](../intent/issue-2628.md) r1, `reports/sdlc/issue-2628/investigation.md`, issue decision log D1–D14.
+Revision 4, 2026-09-28 (D20 paid admission correction; prior r3 retained below) (r3: review round 1 F1–F4 → D16–D19: one attempt per provider per request, rolling minute, zero caps block, status not reflected; r2: build decisions D11–D14 — WAQI adapter id `aqicn`, unusable observations cached 30 min, `invalid-body`/`status` kinds, store-callback guards, harness). Consumes [intent](../intent/issue-2628.md) r1, `reports/sdlc/issue-2628/investigation.md`, issue decision log D1–D14.
 
 ## R1 Policy config `server/config/air.js`
 
@@ -43,3 +43,11 @@ Every provider failure leaves the response as before. Added latency per cache mi
 ## Verification strategy
 
 Unit (node:test; `server/test/offline/air-harness.js` loads real modules with relative requires resolved from disk and injected axios/models/config); route smoke via `rss-response-smoke` harness with loopback servers for all four providers (host redirect in an axios instance) and a stub budget store; Mongo multi-process smoke for budgets/breaker/cache (mongoose 5.13.22); Node 10 check; docs link check; Archify diagram update.
+
+## D20 amendment: paid admission during storage failure
+
+Review 5339346212 overrides R4/D14 for paid monthly admission only. Before any paid provider request, all applicable budget/breaker reads must succeed and one monthly call must be atomically reserved with a cap predicate in shared Mongo. Read errors, reservation errors or an exhausted cap deny that paid candidate; the chain continues to another eligible candidate and completes if none remain. Free-phase behavior and minute-window approximation are unchanged.
+
+The reservation is acknowledged before HTTP, shared across workers, and is never refunded: unknown outcomes or a crash may consume unused allowance conservatively. Post-call accounting must not increment the paid call count again or undo the reservation on failure. Bind completion accounting to the reservation's UTC month so an in-flight call crossing midnight/month-end remains charged to its admission window. Existing paid rows remain compatible.
+
+Verification must inject paid policy-read errors, reservation failure and post-call accounting failure; prove no unreserved HTTP, no double count, recovery, zero-cap/last-slot/concurrent behavior and rollover. Real Mongo smoke must race independent workers for a limited paid allowance and observe no excess admissions. Node 10 compatibility remains required.

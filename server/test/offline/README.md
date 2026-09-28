@@ -158,10 +158,10 @@ injected). It covers: config defaults/validation; each adapter's request and uni
 failure classification (timeout, transport, 401/403 → auth, 429 → quota, malformed bodies) with the key never in
 logs or reasons; `evaluate` (8 h, 30 km for stations only, PM required); budgets (monthly cap with 5 % reserve,
 OpenWeather minute cap, down markers, paid phase off by default, per-provider paid cap, Visual Crossing on the
-overseas day budget, store errors not blocking); and the ordering rules (free phase, exhausted phase, paid phase,
+overseas day budget, free store errors not blocking, paid reads/reservations failing closed); and the ordering rules (free phase, exhausted phase, paid phase,
 skipping unconfigured/down/capped providers, one attempt per provider per request), and the review-round regressions: a
 non-string or non-coercible provider status is a classified failure, zero caps block on an empty store, the OpenWeather
-rolling minute across the bucket boundary, at most four attempts across phases.
+rolling minute across the bucket boundary, at most four attempts across phases; paid pre-call reservation, storage failure, no double counting and reservation-month rollover (D20).
 
 `air-fallback.test.js` keeps the #2622 fallback checks against the chain with only WAQI configured: AirKorea-shaped
 mapping, limits, no key, failures and their cache periods, cache reuse across module instances, answer after the
@@ -173,10 +173,10 @@ real `axios` HTTP to one loopback server that plays Google, OpenWeather, Visual 
 the free phase (DB 1.0/2.0 × `airkorea`/`airnow`), an unchanged fresh AirKorea response, capped Google → OpenWeather,
 both capped → WAQI, exhausted budgets with the paid flag off/on, an auth rejection marking Google down for a later
 request, a hanging provider bounded by the timeout, every provider failing (cached 2 min), a stale observation moving
-on, address = coordinate, and the Jeju WAQI name. `air-budget-mongo-smoke.js` runs twelve worker processes against
+on, address = coordinate, and the Jeju WAQI name. `air-budget-mongo-smoke.js` runs worker processes against
 one mongod (mongodb-memory-server, mongoose 5.13 as in `vc-lock-mongo-smoke.js`): the OpenWeather minute cap and the
 Google month cap are shared across processes, a down marker is seen by another process and expires, a cached
-observation serves the next process, and both collections have TTL indexes. `air-chain-node10-check.js` repeats the
+observation serves the next process, both collections have TTL indexes, and concurrent workers compete for a limited paid allowance (D20). `air-chain-node10-check.js` repeats the
 adapter, chain, fallback and middleware checks on the host's Node 10.15.3.
 
 ```sh

@@ -5213,11 +5213,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="fallback" data-edge-to="store" data-edge-label="check free caps, minute cap, down markers" data-edge-key="5" data-edge-id="budget-check">
+        <g data-edge-from="fallback" data-edge-to="store" data-edge-label="check policy; reserve paid slot (deny on error)" data-edge-key="5" data-edge-id="budget-check">
           <path data-composition-edge-from="fallback" data-composition-edge-to="store" data-composition-edge-id="budget-check" data-composition-points="558,322;746.75,322" d="M 558 322 L 746.75 322" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="539.775" y="302" width="225.20000000000002" height="16" rx="3" class="c-mask"/>
-          <text x="652.375" y="312" class="t-backend" font-size="9" text-anchor="middle">check free caps, minute cap, down markers</text>
+          <rect x="524.175" y="302" width="256.4" height="16" rx="3" class="c-mask"/>
+          <text x="652.375" y="312" class="t-backend" font-size="9" text-anchor="middle">check policy; reserve paid slot (deny on error)</text>
         </g>
         </g>
 
@@ -5237,11 +5237,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="fallback" data-edge-to="store" data-edge-label="count call; 401/403/429 → down 10 min" data-edge-key="8" data-edge-id="budget-record">
+        <g data-edge-from="fallback" data-edge-to="store" data-edge-label="record outcome; 401/403/429 → down 10 min" data-edge-key="8" data-edge-id="budget-record">
           <path data-composition-edge-from="fallback" data-composition-edge-to="store" data-composition-edge-id="budget-record" data-composition-points="558,412;746.75,412" d="M 558 412 L 746.75 412" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="550.175" y="392" width="204.4" height="16" rx="3" class="c-mask"/>
-          <text x="652.375" y="402" class="t-backend" font-size="9" text-anchor="middle">count call; 401/403/429 → down 10 min</text>
+          <rect x="539.775" y="392" width="225.20000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="652.375" y="402" class="t-backend" font-size="9" text-anchor="middle">record outcome; 401/403/429 → down 10 min</text>
         </g>
         </g>
 
@@ -5553,8 +5553,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Limits</h3>
         </div>
         <ul>
-          <li>&bull; Budgets are shared by all API workers (read-then-increment; 5 % reserve).</li>
-          <li>&bull; Any failure keeps the response without air; unusable observations are kept and re-evaluated per request.</li>
+          <li>&bull; Free counters are approximate (5 % reserve). Paid calls require an acknowledged atomic monthly reservation; read/write errors deny paid admission.</li>
+          <li>&bull; Reservations are not refunded or counted twice; result accounting retains the admission month. Cache policy is unchanged.</li>
         </ul>
       </div>
     </div>

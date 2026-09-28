@@ -2,7 +2,9 @@
  * Each "worker" is a separate Node process that loads the real budget/chain/fallback modules and
  * models, connects to one local mongodb-memory-server and, where a provider is called, talks to a
  * loopback fake WAQI over axios. Counters, down markers and cached observations must be visible
- * to the next process.
+ * to the next process. The paid race (D20) starts independent worker processes at one instant, each
+ * running concurrent chain requests whose only candidate is paid OpenWeather on a loopback server;
+ * the server must see no more requests than the shared monthly paid cap.
  * The service's mongoose 5.1.2 driver cannot talk to mongod >= 5.1 (OP_QUERY removed), so like
  * vc-lock-mongo-smoke.js this runs with mongoose 5.13 (same 5.x model API) against mongod 7.0.14.
  * Run: TZ=UTC NODE_PATH=<mongoose@5.13.22, mongodb-memory-server-core@10.1.4, axios@0.18.1> \
@@ -18,11 +20,13 @@ const {spawn} = require('child_process');
 const {createLoader, fixture} = require('./air-harness');
 const root = path.resolve(__dirname, '../..');
 const TOKEN = 'smoke-token-0000001';
+const OWM_KEY = 'smoke-owm-key-00001';
+const PAID_CAP = 5, RACE_WORKERS = 6, RACE_PER_WORKER = 4;
 const SEOUL = {lat: 37.5665, lon: 126.978};
 const T0 = Date.parse('2026-09-27T15:00:00.000Z');
 
 async function worker(args) {
-    const [uri, port, nowMs, task] = [args[0], Number(args[1]), Number(args[2]), args[3]];
+    const [uri, port, nowMs, task, startAt] = [args[0], Number(args[1]), Number(args[2]), args[3], Number(args[4] || 0)];
     const mongoose = require('mongoose');
     const lines = [];
     const log = {};
@@ -36,14 +40,16 @@ async function worker(args) {
     };
     for (const m of Object.values(models)) { await m.init(); }
     const axios = require('axios').create();
-    axios.interceptors.request.use(c => Object.assign(c, {url: c.url.replace('https://api.waqi.info', 'http://127.0.0.1:' + port)}));
+    axios.interceptors.request.use(c => Object.assign(c, {url: c.url.replace('https://api.waqi.info', 'http://127.0.0.1:' + port)
+        .replace('https://api.openweathermap.org', 'http://127.0.0.1:' + port)}));
+    const keyString = task === 'paid-race' ? {owm_keys: [{key: OWM_KEY}]} : {aqi_keys: [{key: TOKEN}]};
     const RealDate = Date;
     class FixedDate extends RealDate {
         constructor(...args) { super(...(args.length ? args : [nowMs])); }
         static now() { return nowMs; }
     }
     const l = createLoader({log, globals: {Date: FixedDate}, overrides: Object.assign({
-        'config/config.js': {keyString: {aqi_keys: [{key: TOKEN}]}, vc: {dailyRecordLimit: 0}},
+        'config/config.js': {keyString, vc: {dailyRecordLimit: 0}},
         axios
     }, models)});
     const policy = l.load('config/air.js');
@@ -70,6 +76,18 @@ async function worker(args) {
         await new Promise(r => budget.markDown('google', 'auth', r));
         result.check = await check('google', 'free');
     }
+    else if (task === 'paid-race') {
+        // free OpenWeather blocked by a zero cap: every request's only candidate is the paid phase
+        const paidConfig = Object.assign({}, config, {paidProvidersEnabled: true, paidMonthlyCallCap: PAID_CAP, owmMonthlyCap: 0, owmMinuteCap: 1000});
+        const paidBudget = l.load('lib/air/providerBudget.js').createBudget({config: paidConfig});
+        const providers = l.load('lib/air/providers/index.js').byId;
+        const chain = l.load('lib/air/providerChain.js').createChain({providers, budget: paidBudget, config: paidConfig, keyString, axios});
+        while (RealDate.now() < startAt) { await new Promise(r => setTimeout(r, 5)); }
+        result.startedAt = RealDate.now();
+        const runs = await Promise.all(Array.from({length: RACE_PER_WORKER}, () => new Promise(r => chain.fetch(SEOUL, new FixedDate(nowMs), r))));
+        result.finishedAt = RealDate.now();
+        result.runs = runs.map(r => ({outcome: r.outcome, provider: r.provider, attempts: r.attempts, skipped: r.skipped}));
+    }
     else if (task === 'fetch') {
         const fallback = l.load('lib/AQI/airFallback.js');
         result.fetch = await new Promise(resolve => fallback.getArpltn(SEOUL, new FixedDate(nowMs), (err, arpltn, reason) => resolve({err: err && err.message, arpltn, reason})));
@@ -79,9 +97,9 @@ async function worker(args) {
     process.stdout.write(JSON.stringify(result));
 }
 
-function runWorker(uri, port, nowMs, task) {
+function runWorker(uri, port, nowMs, task, startAt) {
     return new Promise((resolve, reject) => {
-        const child = spawn(process.execPath, [__filename, '--worker', uri, String(port), String(nowMs), task], {env: process.env, stdio: ['ignore', 'pipe', 'inherit']});
+        const child = spawn(process.execPath, [__filename, '--worker', uri, String(port), String(nowMs), task, String(startAt || 0)], {env: process.env, stdio: ['ignore', 'pipe', 'inherit']});
         let out = '';
         child.stdout.on('data', d => { out += d; });
         child.on('exit', code => code === 0 ? resolve(Object.assign(JSON.parse(out), {pid: child.pid})) : reject(new Error('worker exit ' + code + ' task ' + task)));
@@ -95,7 +113,14 @@ async function main() {
     fs.mkdirSync(outputDir, {recursive: true});
     const feed = fixture('waqi-seoul');
     const requests = [];
+    const paidRequests = [];
+    const owmFeed = fixture('air/openweather-seoul');
     const server = http.createServer((req, res) => {
+        if (req.url.indexOf('/data/2.5/air_pollution') === 0) {
+            paidRequests.push(req.url.replace(/appid=.*/, 'appid=<redacted>'));
+            res.writeHead(200, {'content-type': 'application/json'}); res.end(JSON.stringify(owmFeed));
+            return;
+        }
         requests.push(req.url.replace(/token=.*/, 'token=<redacted>'));
         const b = JSON.parse(JSON.stringify(feed));
         b.data.time = {iso: new Date(T0 + 9 * 3600000 - 3600000).toISOString().slice(0, 19) + '+09:00'};
@@ -138,6 +163,23 @@ async function main() {
         assert.deepEqual(steps.fetchB.fetch.arpltn, steps.fetchA.fetch.arpltn);
         steps.fetchC = await runWorker(uri, port, T0 + 31 * 60000, 'fetch');
         assert.equal(requests.length, 2, 'expired row refetched');
+        // M5 (D20): independent workers race for the shared paid monthly cap at one instant.
+        const tRace = T0 + 10 * 60000;
+        const startAt = Date.now() + 4000;
+        const race = await Promise.all(Array.from({length: RACE_WORKERS}, () => runWorker(uri, port, tRace, 'paid-race', startAt)));
+        steps.paidRace = race;
+        assert.equal(new Set(race.map(w => w.pid)).size, RACE_WORKERS, 'independent processes');
+        race.forEach(w => assert(w.startedAt >= startAt, 'worker waited for the start barrier'));
+        const runs = [].concat(...race.map(w => w.runs));
+        assert.equal(runs.length, RACE_WORKERS * RACE_PER_WORKER);
+        const admitted = runs.filter(r => r.attempts.some(a => a.provider === 'openweather' && a.phase === 'paid'));
+        const denied = runs.filter(r => r.skipped.some(x => x.provider === 'openweather' && x.phase === 'paid' && x.reason === 'paid-cap'));
+        assert(paidRequests.length <= PAID_CAP, 'paid HTTP requests ' + paidRequests.length + ' exceed cap ' + PAID_CAP);
+        assert.equal(paidRequests.length, PAID_CAP, 'the whole allowance is used when contenders exceed it');
+        assert.equal(admitted.length, paidRequests.length, 'every admitted request made exactly one HTTP call');
+        assert.equal(denied.length, runs.length - admitted.length, 'every other request was denied by the paid cap');
+        admitted.forEach(r => assert.equal(r.provider, 'openweather', JSON.stringify(r)));
+        assert(race.filter(w => w.startedAt < Math.min(...race.map(x => x.finishedAt))).length === RACE_WORKERS, 'all workers started before any finished');
 
         await mongoose.connect(uri, {useNewUrlParser: true, useUnifiedTopology: true});
         const Usage = require(path.join(root, 'models/air.provider.usage.model.js'));
@@ -151,15 +193,23 @@ async function main() {
         const usageRows = await Usage.find({}).lean();
         const ids = usageRows.map(r => r._id).sort();
         // owm-check in the next minute only reads, so no 15:01 minute document exists
-        assert.deepEqual(ids, ['aqicn:m:2026-09', 'google:down', 'google:m:2026-09', 'openweather:m:2026-09', 'openweather:min:2026-09-27T15:00'].sort(), JSON.stringify(ids));
+        assert.deepEqual(ids, ['aqicn:m:2026-09', 'google:down', 'google:m:2026-09', 'openweather:m:2026-09', 'openweather:min:2026-09-27T15:00',
+            'openweather:min:2026-09-27T15:10', 'openweather:paid:m:2026-09'].sort(), JSON.stringify(ids));
+        const paidRow = usageRows.find(r => r._id === 'openweather:paid:m:2026-09');
+        assert.equal(paidRow.calls, PAID_CAP, 'reservations only, no double count'); assert.equal(paidRow.failures || 0, 0);
+        assert.equal(new Date(paidRow.expireAt).toISOString(), '2026-11-01T00:00:00.000Z');
+        assert.equal(usageRows.find(r => r._id === 'openweather:min:2026-09-27T15:10').calls, PAID_CAP);
         assert.equal(usageRows.find(r => r._id === 'openweather:m:2026-09').calls, 60);
         assert.equal(usageRows.find(r => r._id === 'google:m:2026-09').calls, 4);
         const cacheRows = await Cache.find({}).lean();
         assert(!JSON.stringify(cacheRows).includes(TOKEN) && !JSON.stringify(usageRows).includes(TOKEN), 'token not stored');
+        assert(![JSON.stringify(steps), JSON.stringify(usageRows)].some(t => t.includes(OWM_KEY)), 'paid key not stored');
         const report = {createdAt: new Date().toISOString(), node: process.version, mongod: '7.0.14', mongoose: require('mongoose/package.json').version,
-            axios: require('axios/package.json').version, outcome: 'passed', waqiRequests: requests, usageRows, cacheRows, steps};
+            axios: require('axios/package.json').version, outcome: 'passed', waqiRequests: requests, paidRace: {cap: PAID_CAP, workers: RACE_WORKERS,
+                perWorker: RACE_PER_WORKER, paidRequests: paidRequests.length, admitted: admitted.length, denied: denied.length}, usageRows, cacheRows, steps};
         fs.writeFileSync(path.join(outputDir, 'air-budget-mongo-evidence.json'), JSON.stringify(report, null, 2));
-        console.log(JSON.stringify({outcome: 'passed', workers: Object.keys(steps).length, waqiRequests: requests.length, evidence: path.join(outputDir, 'air-budget-mongo-evidence.json')}, null, 2));
+        console.log(JSON.stringify({outcome: 'passed', workers: Object.keys(steps).length - 1 + RACE_WORKERS, waqiRequests: requests.length,
+            paidRace: {cap: PAID_CAP, contenders: runs.length, paidRequests: paidRequests.length, admitted: admitted.length, denied: denied.length}, evidence: path.join(outputDir, 'air-budget-mongo-evidence.json')}, null, 2));
     }
     finally {
         await mongoose.disconnect().catch(() => {});

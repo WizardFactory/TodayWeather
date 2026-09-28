@@ -18,7 +18,7 @@ A provider whose key is missing or still the placeholder is skipped without a re
 1. **Free phase**, while the free budgets last: Google → OpenWeather → WAQI. Visual Crossing is not used here because its free records are the overseas weather budget.
 2. **Free budgets exhausted:** WAQI first (no cost), then — only when `AIR_PAID_PROVIDERS_ENABLED=true` — OpenWeather → Visual Crossing → Google, cheapest first, each within `AIR_PAID_MONTHLY_CALL_CAP`.
 
-Each provider is asked at most once per request (a provider that failed in the free phase is not retried in the paid phase), so a request makes at most four provider calls. The first observation that is at most 8 hours old, from a station at most 30 km away (WAQI only; the others are modeled for the requested point) and has PM10 or PM2.5 wins. A `401`/`403` or `429` answer marks the provider down for 10 minutes for all workers. Every request, including failures, is counted.
+Each provider is asked at most once per request (a provider that failed in the free phase is not retried in the paid phase), so a request makes at most four provider calls. The first observation that is at most 8 hours old, from a station at most 30 km away (WAQI only; the others are modeled for the requested point) and has PM10 or PM2.5 wins. A `401`/`403` or `429` answer marks the provider down for 10 minutes for all workers. Every request, including failures, is counted. Paid requests require an acknowledged atomic monthly reservation before HTTP; a paid policy-read or reservation failure skips that candidate (D20).
 
 ## Variables
 
@@ -28,11 +28,17 @@ Each provider is asked at most once per request (a provider that failed in the f
 | `AIR_OWM_MONTHLY_CAP` | `1000000` | OpenWeather free calls per UTC calendar month (95 % rule) |
 | `AIR_OWM_MINUTE_CAP` | `60` | OpenWeather calls per rolling minute across all workers (current minute plus the weighted previous minute) |
 | `AIR_PAID_PROVIDERS_ENABLED` | `false` | Allow paid calls after the free budgets are exhausted |
-| `AIR_PAID_MONTHLY_CALL_CAP` | `100000` | Paid calls per provider per UTC month while enabled |
+| `AIR_PAID_MONTHLY_CALL_CAP` | `100000` | Paid call reservations per provider per UTC month while enabled |
 | `AIR_PROVIDER_TIMEOUT_MS` | `3000` | Per-request timeout (500–10000); no retry |
 | `VC_DAILY_RECORD_LIMIT` | (unset = none) | Existing overseas budget; air calls count their `queryCost` (1) against it |
 
 Invalid values stop the process at start-up, like `config/gather.js`. A cap of `0` blocks the provider in that window from the first call. Google's billing month is not UTC; the UTC month plus the 5 % reserve approximates it.
+
+## Paid admission and storage failures (D20)
+
+Before contacting a paid provider, the chain checks its applicable down marker, monthly allowance, OpenWeather minute window or Visual Crossing shared policy, then atomically reserves one monthly call in Mongo. A failed paid-policy read denies the request with `store-error`; a failed or unacknowledged reservation returns `reserve-error`, and an exhausted allowance returns `paid-cap`. Concurrent workers cannot reserve beyond `AIR_PAID_MONTHLY_CALL_CAP`; free counters and the minute-window approximation retain their existing behavior.
+
+The reserved call is not counted again after HTTP. Result accounting uses the reservation's month even if the response crosses UTC month-end. Reservations are never refunded: a crash or an ambiguous write result may conservatively consume an allowance without an external call. A later accounting failure does not erase the reserved call. Recovery permits only the remaining allowance. Free-phase reads remain fail-open; neither this policy nor the provider HTTP timeout bounds a hung Mongo operation.
 
 ## Demand and cost
 

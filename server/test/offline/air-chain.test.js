@@ -205,10 +205,10 @@ test('evaluate: freshness for all providers, distance for station-based only, PM
 });
 
 // ---- budgets ------------------------------------------------------------------------------------
-function budgetSetup(configOverrides = {}, nowIso = '2026-09-27T15:20:00Z') {
+function budgetSetup(configOverrides = {}, nowIso = '2026-09-27T15:20:00Z', DateClass = fixedDate(nowIso)) {
     const usage = memoryModel(), vcUsage = memoryModel(), vcLock = memoryModel();
     const lines = [];
-    const l = loader({overrides: {'models/air.provider.usage.model.js': usage, 'models/worldWeather/vc.usage.model.js': vcUsage, 'models/worldWeather/vc.fetch.lock.model.js': vcLock}, globals: {Date: fixedDate(nowIso)}}, lines);
+    const l = loader({overrides: {'models/air.provider.usage.model.js': usage, 'models/worldWeather/vc.usage.model.js': vcUsage, 'models/worldWeather/vc.fetch.lock.model.js': vcLock}, globals: {Date: DateClass}}, lines);
     const airConfig = Object.assign({}, l.load('config/air.js'), configOverrides);
     const budget = l.load('lib/air/providerBudget.js').createBudget({config: airConfig, vcDailyRecordLimit: configOverrides.vcDailyRecordLimit});
     return {budget, usage, vcUsage, vcLock, lines, airConfig};
@@ -251,29 +251,34 @@ test('budget: down marker for ten minutes', async () => {
     assert.equal((await check(later.budget, 'google', 'free')).allowed, true, 'expired marker');
 });
 
-test('budget: paid phase disabled by default, per-provider paid cap', async () => {
+test('budget: paid phase disabled by default, per-provider paid cap reserved at admission', async () => {
     const off = budgetSetup();
     eq(await check(off.budget, 'google', 'paid'), {allowed: false, reason: 'paid-disabled'});
+    assert.equal(off.usage.writes, 0);
     const on = budgetSetup({paidProvidersEnabled: true, paidMonthlyCallCap: 3});
-    eq(await check(on.budget, 'openweather', 'paid'), {allowed: true});
-    for (let i = 0; i < 3; i++) { await record(on.budget, 'openweather', 'paid', {}); }
-    assert.equal(on.usage.rows['openweather:paid:m:2026-09'].calls, 3);
+    for (let i = 0; i < 3; i++) {
+        eq(await check(on.budget, 'openweather', 'paid'), {allowed: true, reservation: 'openweather:paid:m:2026-09'});
+        await record(on.budget, 'openweather', 'paid', {reservation: 'openweather:paid:m:2026-09'});
+    }
+    assert.equal(on.usage.rows['openweather:paid:m:2026-09'].calls, 3, 'one call per admission, none added at completion');
     eq(await check(on.budget, 'openweather', 'paid'), {allowed: false, reason: 'paid-cap'});
-    eq(await check(on.budget, 'google', 'paid'), {allowed: true});
+    assert.equal(on.usage.rows['openweather:paid:m:2026-09'].calls, 3, 'a denied admission reserves nothing');
+    eq(await check(on.budget, 'google', 'paid'), {allowed: true, reservation: 'google:paid:m:2026-09'});
 });
 
 test('budget: Visual Crossing uses the overseas weather day budget and provider marker', async () => {
     const s = budgetSetup({paidProvidersEnabled: true, vcDailyRecordLimit: 100});
     eq(await check(s.budget, 'visualcrossing', 'free'), {allowed: false, reason: 'free-phase-excluded'});
     s.vcUsage.rows['2026-09-27'] = {_id: '2026-09-27', calls: 5, records: 99};
-    eq(await check(s.budget, 'visualcrossing', 'paid'), {allowed: true});
+    eq(await check(s.budget, 'visualcrossing', 'paid'), {allowed: true, reservation: 'visualcrossing:paid:m:2026-09'});
     s.vcUsage.rows['2026-09-27'].records = 100;
     eq(await check(s.budget, 'visualcrossing', 'paid'), {allowed: false, reason: 'vc-record-limit'});
     s.vcUsage.rows['2026-09-27'].records = 10;
     s.vcLock.rows['~provider'] = {_id: '~provider', expireAt: '2026-09-27T15:25:00Z', failed: true};
     eq(await check(s.budget, 'visualcrossing', 'paid'), {allowed: false, reason: 'down'});
     delete s.vcLock.rows['~provider'];
-    await record(s.budget, 'visualcrossing', 'paid', {cost: 1});
+    assert.equal(s.usage.rows['visualcrossing:paid:m:2026-09'].calls, 1, 'record-limit and marker denials reserve nothing');
+    await record(s.budget, 'visualcrossing', 'paid', {cost: 1, reservation: 'visualcrossing:paid:m:2026-09'});
     assert.equal(s.vcUsage.rows['2026-09-27'].records, 11); assert.equal(s.vcUsage.rows['2026-09-27'].calls, 6);
     assert.equal(s.usage.rows['visualcrossing:paid:m:2026-09'].calls, 1);
 });
@@ -459,4 +464,158 @@ test('F4: each provider is attempted at most once per request, across phases (at
     const r2 = await run(capped.chain);
     assert.equal(r2.provider, 'google');
     eq(r2.attempts.map(x => x.provider + ':' + x.phase), ['openweather:free', 'aqicn:free', 'visualcrossing:paid', 'google:paid']);
+});
+
+// ---- review 5339346212 (D20): paid admission during storage failure --------------------------
+function clock(iso) {
+    const RealDate = Date;
+    let ms = new RealDate(iso).getTime();
+    const C = class extends RealDate {
+        constructor(...args) { super(...(args.length ? args : [ms])); }
+        static now() { return ms; }
+    };
+    C.set = next => { ms = new RealDate(next).getTime(); };
+    return C;
+}
+const paidRow = (s, id = 'openweather') => s.usage.rows[id + ':paid:m:2026-09'];
+const exhaustedFree = {'google:m:2026-09': {_id: 'google:m:2026-09', calls: 9500, expireAt: 'x'}, 'openweather:m:2026-09': {_id: 'openweather:m:2026-09', calls: 950000, expireAt: 'x'}};
+const tick = () => new Promise(r => setImmediate(r));
+
+test('D20: every applicable paid policy read fails closed; free reads stay fail-open', async () => {
+    const all = budgetSetup({paidProvidersEnabled: true});
+    all.usage.failRead = true;
+    for (const id of ['openweather', 'google', 'visualcrossing']) {
+        eq(await check(all.budget, id, 'paid'), {allowed: false, reason: 'store-error'}, id);
+    }
+    eq(await check(all.budget, 'google', 'free'), {allowed: true}, 'free phase unchanged');
+    assert.equal(all.usage.writes, 0, 'nothing reserved after a failed read');
+    // each read on its own: down marker, OpenWeather minute buckets, Visual Crossing marker and day usage
+    const cases = [
+        ['openweather', s => { s.usage.failRead = id => id === 'openweather:down'; }],
+        ['openweather', s => { s.usage.failRead = id => id.indexOf('openweather:min:') === 0; }],
+        ['visualcrossing', s => { s.vcLock.failRead = true; }],
+        ['visualcrossing', s => { s.vcUsage.failRead = true; }]
+    ];
+    for (const [id, inject] of cases) {
+        const s = budgetSetup({paidProvidersEnabled: true, vcDailyRecordLimit: 100});
+        inject(s);
+        eq(await check(s.budget, id, 'paid'), {allowed: false, reason: 'store-error'}, inject.toString());
+        assert.equal(paidRow(s, id), undefined, 'no reservation');
+        assert.ok(s.lines.some(l => l.level === 'warn'));
+    }
+});
+
+test('D20: a failed reservation denies the paid candidate; the chain moves on without HTTP', async () => {
+    const s = budgetSetup({paidProvidersEnabled: true});
+    s.usage.failWrite = true;
+    eq(await check(s.budget, 'openweather', 'paid'), {allowed: false, reason: 'reserve-error'});
+    const c = chainSetup({usageRows: exhaustedFree, config: {paidProvidersEnabled: true}, configured: {aqicn: false}});
+    c.usage.failWrite = id => id === 'openweather:paid:m:2026-09';
+    const r = await run(c.chain);
+    assert.equal(r.provider, 'visualcrossing', JSON.stringify(r));
+    assert.equal(c.providers.openweather.calls.length, 0, 'no unreserved paid HTTP');
+    eq(r.skipped.filter(x => x.phase === 'paid'), [{provider: 'openweather', phase: 'paid', reason: 'reserve-error'}]);
+    const none = chainSetup({usageRows: exhaustedFree, config: {paidProvidersEnabled: true}, configured: {aqicn: false}});
+    none.usage.failWrite = id => id.indexOf(':paid:') !== -1;
+    const r2 = await run(none.chain);
+    assert.equal(r2.outcome, 'failed'); assert.equal(r2.reason, 'no-provider');
+    eq(called(none.providers), []);
+});
+
+test('D20: paid HTTP starts only after the reservation is acknowledged', async () => {
+    const c = chainSetup({usageRows: exhaustedFree, config: {paidProvidersEnabled: true}, configured: {aqicn: false}});
+    c.usage.holdWrites = true;
+    const pending = run(c.chain);
+    for (let i = 0; i < 5; i++) { await tick(); }
+    assert.equal(c.usage.pendingWrites.length, 1, 'reservation in flight');
+    assert.equal(c.providers.openweather.calls.length, 0, 'no HTTP before acknowledgement');
+    c.usage.holdWrites = false;
+    c.usage.pendingWrites.splice(0).forEach(fn => fn());
+    const r = await pending;
+    assert.equal(r.provider, 'openweather');
+    eq(c.providers.openweather.calls, ['paid']);
+    assert.equal(paidRow(c).calls, 1, 'no double count at completion');
+    assert.equal(paidRow(c).failures || 0, 0);
+});
+
+test('D20: a post-call accounting failure keeps the reservation; failures add no calls', async () => {
+    const s = budgetSetup({paidProvidersEnabled: true, paidMonthlyCallCap: 2});
+    const a = await check(s.budget, 'openweather', 'paid');
+    assert.equal(a.allowed, true);
+    s.usage.failWrite = true;
+    await record(s.budget, 'openweather', 'paid', {failed: true, reservation: a.reservation});
+    s.usage.failWrite = false;
+    assert.equal(paidRow(s).calls, 1, 'the reservation is not refunded');
+    const b = await check(s.budget, 'openweather', 'paid');
+    await record(s.budget, 'openweather', 'paid', {failed: true, reservation: b.reservation});
+    assert.equal(paidRow(s).calls, 2); assert.equal(paidRow(s).failures, 1);
+    eq(await check(s.budget, 'openweather', 'paid'), {allowed: false, reason: 'paid-cap'}, 'cap consumed despite the lost write');
+    // through the chain: a failing paid provider is counted once
+    const c = chainSetup({usageRows: exhaustedFree, config: {paidProvidersEnabled: true}, configured: {aqicn: false}, scripts: {openweather: failed('http', 'http-500')}});
+    await run(c.chain);
+    assert.equal(paidRow(c).calls, 1); assert.equal(paidRow(c).failures, 1);
+});
+
+test('D20: concurrent admissions for the last slot admit exactly one; existing rows stay compatible', async () => {
+    const s = budgetSetup({paidProvidersEnabled: true, paidMonthlyCallCap: 3});
+    s.usage.rows['openweather:paid:m:2026-09'] = {_id: 'openweather:paid:m:2026-09', calls: 2, failures: 1, expireAt: '2026-11-01T00:00:00.000Z'};
+    s.usage.holdWrites = true;
+    const results = [1, 2, 3, 4, 5].map(() => check(s.budget, 'openweather', 'paid'));
+    for (let i = 0; i < 5; i++) { await tick(); }
+    s.usage.holdWrites = false;
+    while (s.usage.pendingWrites.length) { s.usage.pendingWrites.splice(0).forEach(fn => fn()); await tick(); }
+    const states = await Promise.all(results);
+    assert.equal(states.filter(x => x.allowed).length, 1, canon(states));
+    assert.ok(states.filter(x => !x.allowed).every(x => x.reason === 'paid-cap'), canon(states));
+    assert.equal(paidRow(s).calls, 3); assert.equal(paidRow(s).failures, 1);
+    // two requests racing through the chain: one paid HTTP call
+    const c = chainSetup({usageRows: Object.assign({'openweather:paid:m:2026-09': {_id: 'openweather:paid:m:2026-09', calls: 99999, expireAt: 'x'}}, exhaustedFree),
+        config: {paidProvidersEnabled: true}, configured: {aqicn: false, visualcrossing: false, google: false}});
+    const [r1, r2] = await Promise.all([run(c.chain), run(c.chain)]);
+    assert.equal(c.providers.openweather.calls.length, 1);
+    eq([r1.outcome, r2.outcome].sort(), ['failed', 'ok']);
+    assert.equal(paidRow(c).calls, 100000);
+});
+
+test('D20: zero paid cap reserves nothing; a slot reserved before month end stays charged to that month', async () => {
+    const zero = budgetSetup({paidProvidersEnabled: true, paidMonthlyCallCap: 0});
+    eq(await check(zero.budget, 'openweather', 'paid'), {allowed: false, reason: 'paid-cap'});
+    assert.equal(zero.usage.writes, 0); assert.equal(paidRow(zero), undefined);
+    const C = clock('2026-09-30T23:59:59.500Z');
+    const s = budgetSetup({paidProvidersEnabled: true, paidMonthlyCallCap: 1}, undefined, C);
+    const a = await check(s.budget, 'openweather', 'paid');
+    eq(a, {allowed: true, reservation: 'openweather:paid:m:2026-09'});
+    eq(await check(s.budget, 'openweather', 'paid'), {allowed: false, reason: 'paid-cap'});
+    C.set('2026-10-01T00:00:01Z');
+    await record(s.budget, 'openweather', 'paid', {failed: true, reservation: a.reservation});
+    assert.equal(paidRow(s).calls, 1); assert.equal(paidRow(s).failures, 1, 'late completion charged to the admission month');
+    assert.equal(s.usage.rows['openweather:paid:m:2026-10'], undefined, 'nothing written to the new month');
+    assert.ok(new Date(paidRow(s).expireAt) >= new Date('2026-11-01T00:00:00Z'));
+    eq(await check(s.budget, 'openweather', 'paid'), {allowed: true, reservation: 'openweather:paid:m:2026-10'}, 'new month starts empty');
+    assert.equal(s.usage.rows['openweather:paid:m:2026-10'].calls, 1);
+});
+
+test('D20: only an acknowledged single-row reservation admits a paid call', async () => {
+    const answers = [
+        [undefined, false], [null, false], [{}, false], [{acknowledged: false}, false], [{acknowledged: false, n: 1}, false],
+        [{n: 0, nModified: 0, ok: 1}, false], [{n: 1, nModified: 1, ok: 0}, false], [{n: 2, nModified: 2, ok: 1}, false],
+        [{acknowledged: true, matchedCount: 0, modifiedCount: 0, upsertedCount: 0}, false],
+        [{result: {ok: 1}}, false], [{result: {ok: 1, n: 0, nModified: 0}, matchedCount: 0, modifiedCount: 0, upsertedCount: 0}, false],
+        [{ok: 0, n: 0, nModified: 0}, false],
+        // mongoose 5.1.2 + driver 3.0.8 (production): the driver result with the server result nested
+        [{result: {ok: 1, n: 1, nModified: 1}, matchedCount: 1, modifiedCount: 1, upsertedCount: 0}, true],
+        [{result: {ok: 1, n: 1, nModified: 0, upserted: [{index: 0, _id: 'x'}]}, matchedCount: 0, modifiedCount: 0, upsertedCount: 1}, true],
+        // mongoose 5.13: the unwrapped server result
+        [{n: 1, nModified: 1, ok: 1}, true], [{n: 1, nModified: 0, upserted: [{index: 0, _id: 'x'}], ok: 1}, true],
+        [{acknowledged: true, matchedCount: 1, modifiedCount: 1, upsertedCount: 0}, true],
+        [{acknowledged: true, matchedCount: 0, modifiedCount: 0, upsertedCount: 1}, true]
+    ];
+    for (const [raw, admitted] of answers) {
+        const c = chainSetup({usageRows: exhaustedFree, config: {paidProvidersEnabled: true}, configured: {aqicn: false, visualcrossing: false, google: false}});
+        const updateOne = c.usage.updateOne;
+        c.usage.updateOne = (q, u, o, cb) => q.calls ? cb(null, raw) : updateOne(q, u, o, cb);
+        const r = await run(c.chain);
+        assert.equal(c.providers.openweather.calls.length, admitted ? 1 : 0, canon(raw));
+        if (!admitted) { eq(r.skipped, [{provider: 'google', phase: 'free', reason: 'free-cap'}, {provider: 'openweather', phase: 'free', reason: 'free-cap'}, {provider: 'openweather', phase: 'paid', reason: 'reserve-error'}].filter(x => x.provider !== 'google'), canon(raw)); }
+    }
 });

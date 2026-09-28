@@ -106,7 +106,7 @@
       "from": "fallback",
       "to": "store",
       "y": 322,
-      "label": "check free caps, minute cap, down markers",
+      "label": "check policy; reserve paid slot (deny on error)",
       "variant": "default"
     },
     {
@@ -130,7 +130,7 @@
       "from": "fallback",
       "to": "store",
       "y": 412,
-      "label": "count call; 401/403/429 → down 10 min",
+      "label": "record outcome; 401/403/429 → down 10 min",
       "variant": "default"
     },
     {
@@ -163,8 +163,8 @@
       "dot": "amber",
       "title": "Limits",
       "items": [
-        "Budgets are shared by all API workers (read-then-increment; 5 % reserve).",
-        "Any failure keeps the response without air; unusable observations are kept and re-evaluated per request."
+        "Free counters are approximate (5 % reserve). Paid calls require an acknowledged atomic monthly reservation; read/write errors deny paid admission.",
+        "Reservations are not refunded or counted twice; result accounting retains the admission month. Cache policy is unchanged."
       ]
     }
   ]

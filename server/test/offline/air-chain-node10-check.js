@@ -90,10 +90,67 @@ function chainChecks() {
             c2.fetch(seoul, requestTime, function (r3) {
                 assert.strictEqual(r3.provider, 'aqicn', JSON.stringify(r3.attempts));
                 assert(usage.rows['openweather:down'], 'down marker');
-                fallbackChecks();
+                paidChecks();
             });
         });
     });
+}
+
+// 3b. Paid admission (D20): strict reads, reservation before HTTP, last slot under concurrency, no double count.
+function paidChecks() {
+    var paidUsage = harness.memoryModel();
+    var lp = harness.createLoader({log: log, overrides: {'config/config.js': {keyString: KEYS}, axios: fake.axios, 'models/air.provider.usage.model.js': paidUsage,
+        'models/worldWeather/vc.usage.model.js': harness.memoryModel(), 'models/worldWeather/vc.fetch.lock.model.js': harness.memoryModel()}});
+    var policy = Object.assign({}, lp.load('config/air.js'), {paidProvidersEnabled: true, paidMonthlyCallCap: 2});
+    var budget = lp.load('lib/air/providerBudget.js').createBudget({config: policy});
+    var id = 'openweather:paid:m:' + new Date().toISOString().slice(0, 7);
+    paidUsage.failRead = true;
+    budget.check('openweather', 'paid', 1, function (denied) {
+        assert.strictEqual(canon(denied), canon({allowed: false, reason: 'store-error'}));
+        paidUsage.failRead = false;
+        paidUsage.failWrite = true;
+        budget.check('openweather', 'paid', 1, function (unreserved) {
+            assert.strictEqual(canon(unreserved), canon({allowed: false, reason: 'reserve-error'}));
+            paidUsage.failWrite = false;
+            // mongoose 5.1.2 on the host answers the driver 3.0.8 result; an unacknowledged write has no n
+            var realUpdate = paidUsage.updateOne;
+            paidUsage.updateOne = function (q, u, o, cb) { cb(null, {result: {ok: 1}}); };
+            budget.check('openweather', 'paid', 1, function (unacknowledged) {
+                assert.strictEqual(canon(unacknowledged), canon({allowed: false, reason: 'reserve-error'}));
+                paidUsage.updateOne = function (q, u, o, cb) {
+                    realUpdate(q, u, o, function (err, raw) { cb(err, raw && {result: raw, matchedCount: raw.upserted ? 0 : raw.n, modifiedCount: raw.nModified, upsertedCount: raw.upserted ? 1 : 0}); });
+                };
+                paidUsage.rows[id] = {_id: id, calls: 1, failures: 0, expireAt: '2026-11-01T00:00:00.000Z'};
+                paidUsage.holdWrites = true;
+                var states = [], n = 0;
+                for (var i = 0; i < 3; i++) {
+                    budget.check('openweather', 'paid', 1, function (state) {
+                        states.push(state);
+                        if (++n === 3) { lastSlot(states); }
+                    });
+                }
+                setImmediate(function () {
+                    paidUsage.holdWrites = false;
+                    (function flush() {
+                        var p = paidUsage.pendingWrites.splice(0);
+                        p.forEach(function (fn) { fn(); });
+                        if (p.length) { setImmediate(flush); }
+                    })();
+                });
+            });
+        });
+    });
+    function lastSlot(states) {
+        assert.strictEqual(states.filter(function (x) { return x.allowed; }).length, 1, canon(states));
+        var admitted = states.filter(function (x) { return x.allowed; })[0];
+        assert.strictEqual(admitted.reservation, id);
+        assert.strictEqual(paidUsage.rows[id].calls, 2);
+        budget.record('openweather', 'paid', {failed: true, reservation: admitted.reservation}, function () {
+            assert.strictEqual(paidUsage.rows[id].calls, 2, 'no double count');
+            assert.strictEqual(paidUsage.rows[id].failures, 1);
+            fallbackChecks();
+        });
+    }
 }
 
 // 4. Fallback with a loopback WAQI over real axios (only WAQI configured), shared cache between two instances.

@@ -6,7 +6,8 @@
  * then — only with AIR_PAID_PROVIDERS_ENABLED — PAID_ORDER (OpenWeather → Visual Crossing →
  * Google) within the paid caps. Each provider is attempted at most once per request (at most four
  * attempts). The first observation that passes evaluate() wins; an auth or quota rejection marks
- * that provider down for every worker. Every request is counted.
+ * that provider down for every worker. Every request is counted; a paid request by the reservation
+ * its admission took before the call (D20).
  */
 
 "use strict";
@@ -46,12 +47,12 @@ function createChain(options) {
             callback(result);
         }
 
-        function attempt(id, phase, next) {
+        function attempt(id, phase, reservation, next) {
             tried[id] = true;
             var provider = providers[id];
             provider.fetchCurrent(gCoord, {axios: axios, keyString: keyString, timeoutMs: timeoutMs, phase: phase}, function (result) {
                 var failed = !result || result.outcome !== 'ok';
-                budget.record(id, phase, {failed: failed, cost: result && result.cost}, function () {
+                budget.record(id, phase, {failed: failed, cost: result && result.cost, reservation: reservation}, function () {
                     if (failed) {
                         var kind = result ? result.kind : 'transport';
                         var reason = result ? result.reason : 'transport';
@@ -92,7 +93,7 @@ function createChain(options) {
                         skipped.push({provider: id, phase: phase, reason: state.reason});
                         return step();
                     }
-                    attempt(id, phase, step);
+                    attempt(id, phase, state.reservation, step);
                 });
             })();
         }
