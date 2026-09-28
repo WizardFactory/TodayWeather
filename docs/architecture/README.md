@@ -51,3 +51,5 @@ Use `architecture` for collection and `sequence` for mobile requests. Architectu
 - [Visual Crossing deployment checklist](../operations/visual-crossing-deploy.md): overseas weather (#2585) host configuration, `VC_SECRET_KEY`/`VC_DAILY_RECORD_LIMIT`, post-deploy smoke, usage and log monitoring, retention, kill switch and rollback.
 - [Gather runtime policy](../operations/gather-runtime-policy.md): `GATHER_*` environment variables for retry counts, retry delay, task flags and the KAQ minimum (#2588), production values, operator procedure and remaining host-only drift.
 - [Static web client](web-client.md): responsive PWA, direct existing-API reads, local persistence and S3/CloudFront deployment boundaries.
+
+The opt-in [S3 push coordinator](push-s3-design.md) has a separate [interactive diagram](diagrams/push-s3-proposal.html) and [Archify source](diagrams/push-s3-proposal.json); it is repository implementation, not a deployed-topology claim.

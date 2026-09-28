@@ -85,3 +85,12 @@ The iOS widgets are independent HTTP consumers: their constants include `weather
 The [historical Travis configuration](../../.travis.yml) specifies Node 6.13, `cd server && npm install && npm test`, copies release configuration from S3, and configures Elastic Beanstalk deployment on `master`. [`.ebextensions`](../../server/.ebextensions/01_add_cors.config) modifies nginx CORS configuration. These are checked-in deployment recipes, not evidence of current environments. Gulp references release configuration files outside `client/` that are absent from this checkout; the checked-in client base URL is `https://localhost`.
 
 AWS routing and deployed Lambda behavior are now documented in [AWS/code correlation](aws-code-correlation.md). [Service EC2 inspection](ec2-internals.md) now records the actual API worker inventory, service mode, DB version 2.0, remote database-target sockets and deployed source differences. Separate gather/Mongo server internals, release app configuration and provider success remain unverified.
+
+### Optional S3 push coordinator (#2626)
+
+With `PUSH_STORE=s3`, service workers forward push registration routes over a private
+Unix socket to one `bin/push-coordinator`. It owns S3 writes, restored in-memory
+minute/region indexes and bounded FCM HTTP v1 delivery. `SERVER_MODE=push` is rejected
+in this mode. The existing gather warning collector exports its normalized feed only
+with `PUSH_WARNING_FEED_ENABLED=true`; warning sends also require `WARNING_PUSH_ENABLED=true`.
+Both flags default off. See [S3 push design](push-s3-design.md) and [operations](../operations/push-s3.md).

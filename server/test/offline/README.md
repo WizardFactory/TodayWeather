@@ -304,3 +304,21 @@ NODE_PATH=/tmp/tw-runtime-candidate/node_modules node server/test/offline/push-w
 ```
 
 These are local checks; FCM delivery to devices and the tw-svc deployment are operator checks in #2626.
+
+## S3 push coordinator (#2626 revision 2)
+
+- `node server/test/offline/push-s3.test.js`: dependency-free contract/race tests;
+  also in `test:offline` and RSS CI.
+- `NODE_PATH=<locked-deps> node server/test/offline/push-s3-smoke.js`: real routes,
+  Unix IPC, AWS SDK with loopback S3 peer and direct HTTP v1 sender with a loopback
+  FCM peer, including Retry-After. No actual AWS/FCM calls.
+- `NODE_PATH=<locked-deps> node server/test/offline/push-s3-runtime-smoke.js`: actual
+  geocode/weather HTTP and legacy formatters, synthetic OAuth, nonlocal sockets refused.
+- `node server/test/offline/push-s3-capacity.js`: 10k warning targets behind 100k normal
+  queued jobs, 200ms synthetic transport and 3ms synthetic S3 PUT; 30s provisional goal.
+- `node server/test/offline/push-burst-benchmark.js`: isolated dispatcher profile at
+  256 slots/1k attempts/s; not production or device-receipt evidence.
+
+The new integrated smokes/capacity check run in the Node 16.20.2 `push-worker` CI job;
+existing SQLite checks remain. S3 activation/rollback prerequisites are in
+[the runbook](../../../docs/operations/push-s3.md).

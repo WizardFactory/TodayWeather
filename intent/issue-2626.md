@@ -36,3 +36,37 @@ Endpoint `pr`: implementation, tests, commits, push to `ak-fork`, PR to master, 
 - Whole-file rewrite per write grows with the record count; measured size is unknown until import or re-registration.
 - The worker and service workers share one file; a bug in lock recovery could lose an update.
 - `sql.js` loads ~1 MB WASM per process (10 workers + 1 worker).
+
+## Revision 2 — S3 and burst delivery design (2026-09-28)
+
+**This amendment supersedes r1's SQLite choice and scope for future work. R1 describes the existing PR, not the proposed system.** AK requests design first; no implementation, commit/push, merge or deployment in this turn. Concise decisions on existing #2626 remain authorized. The corresponding spec and plan r2 are the canonical handoff.
+
+Registration writes are dispersed and modest; strict registration transactions are not critical and re-registration may repair inconsistencies. The primary requirement is timely large scheduled sends and priority fan-out of a severe-weather warning to all eligible registrations in affected regions. S3 is the durable-store baseline; no SQLite/Mongo dependency for push registration or dispatch state. The existing weather collector's Mongo use is outside this storage change.
+
+Current-location registrations use the latest server-accepted reported location and are never expired solely because that position is old. No background GPS tracking or claim of actual real-time position. Preserve the current mobile route and body contracts; AK selected existing enabled regional alert registrations as severe-warning subscribers; alarm-only registrations are excluded. The rollout flag remains off until implementation and deployment verification.
+
+### Design acceptance (not runtime test passes)
+
+| ID | Required design evidence | Historical domain |
+| --- | --- | --- |
+| D-AC1 | S3 keys, records, identity/token rotation, mutation ownership and API compatibility | AC1, AC2 |
+| D-AC2 | Time/region indexes, latest-location order and stale-job handling, without per-send S3 reads | AC3, AC4 |
+| D-AC3 | Bounded parallel sending, warning priority and capacity arithmetic under concurrent regular load | AC5 |
+| D-AC4 | KMA zone/event feed, revisions/releases and independent collection vs dispatch latency | AC5 |
+| D-AC5 | Restart/rebuild, partial writes, retry/checkpoint semantics and duplicate/missed-send bounds | AC4, AC7 |
+| D-AC6 | FCM/runtime dependencies, payload/tap compatibility and privacy constraints | AC2, AC6 |
+| D-AC7 | Measurable 10k/100k/1m test profiles, deadlines labeled provisional and production unknowns listed | AC3, AC5, AC6 |
+| D-AC8 | Implementation sequence, migration/rollback, validated diagram and independent design findings | AC8 |
+
+AK selected 10,000 recipients within 30 seconds from detection to FCM acceptance as the provisional target (not a device-receipt SLA). Actual peak population, production runtime/FCM quota and recovery capacity remain unverified. Preserve existing alert windows as the initial design rule; exclude the precipitation/air six-hour cooldown for severe warnings. Use exploratory larger profiles and explicit activation prerequisites. No deployment readiness is claimed by a design review.
+
+## Implementation authority — 2026-09-28
+
+AK requested “pre-merge까지 진행”: implement revision 2, run scoped tests and local functional smoke, independently verify, commit/push this branch and update existing PR #2629, inspect CI and stop before merge. No deployment, live bulk sends, production data mutations, auto-merge or merge queue. The earlier explicit other-provider review waiver remains in force; fresh-context independent verification still applies. Target: 10k warning recipients / 30 seconds provisional FCM acceptance under scheduled backlog, existing enabled regional alerts inside their configured windows, latest accepted location with no age expiry.
+
+### Pre-merge authorization (2026-09-28)
+
+AK explicitly requested implementation through pre-merge. This covers code, verification,
+commit/push, updating existing PR #2629 and CI. It excludes merge, auto-merge, queue
+entry and production deployment. Earlier cross-provider review waiver remains in force;
+independent implementation verification is still required.

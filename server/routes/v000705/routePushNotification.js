@@ -6,6 +6,11 @@ var express = require('express');
 var async = require('async');
 
 var router = express.Router();
+// S3 mode forwards the complete mutation to its single state owner before legacy controllers run.
+router.use(function (req, res, next) {
+    if (process.env.PUSH_STORE !== 's3') { return next(); }
+    return require('../../lib/pushCoordinator/ipc').middleware(false)(req, res, next);
+});
 var config = require('../../config/config');
 var ControllerPush = require('../../controllers/controllerPush');
 var CtrlAlertPush = require('../../controllers/alert.push.controller');

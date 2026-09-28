@@ -199,7 +199,12 @@ KmaWarningCollector.prototype.syncZones = function (callback) {
                         var entries = Object.keys(state).map(function (key) {
                             return state[key];
                         });
-                        callback(null, {rows: rows, entries: entries, complete: complete});
+                        var result = {rows: rows, entries: entries, complete: complete};
+                        if (process.env.PUSH_WARNING_FEED_ENABLED !== 'true') { return callback(null, result); }
+                        self._publishPushFeed(rows, !complete, function (feedError) {
+                            if (feedError) { return callback(feedError); }
+                            callback(null, result);
+                        });
                     });
             });
         });
@@ -379,6 +384,12 @@ KmaWarningCollector.prototype.gather = function (callback) {
     var result = {stored: 0, synced: false};
     var errors = [];
     var steps = [
+        function (done) {
+            if (process.env.PUSH_WARNING_FEED_ENABLED === 'true' && self.pushFeedPending) {
+                return self._publishPushFeed(self.pushFeedPending.rows, self.pushFeedPending.bootstrap, done);
+            }
+            done();
+        },
         self._specialStep.bind(self, result),
         self._resyncStep.bind(self, result),
         self._bulletinStep.bind(self, 'getWthrPwn', TYPE_PRELIMINARY_SPECIAL, function (item) {
@@ -413,6 +424,22 @@ KmaWarningCollector.prototype.gather = function (callback) {
         }
         callback(result.stored > 0 ? undefined : 'skip');
     });
+};
+
+// Opt-in private S3 event export. A failure leaves pending rows for the next gather cycle.
+KmaWarningCollector.prototype._publishPushFeed = function (rows, bootstrap, callback) {
+    var self = this;
+    try {
+        if (!self.pushFeed) {
+            var storage = require('./pushCoordinator/storage').create({bucket: process.env.PUSH_S3_BUCKET,
+                prefix: process.env.PUSH_S3_PREFIX, region: process.env.AWS_REGION});
+            self.pushFeed = new (require('./pushCoordinator/warningFeed').Feed)({storage: storage});
+        }
+        self.pushFeedPending = {rows: rows, bootstrap: bootstrap};
+        self.pushFeed.publish(rows, {bootstrap: bootstrap}).then(function () {
+            self.pushFeedPending = null; callback();
+        }, function () { callback(new Error('Push warning feed publication failed')); });
+    } catch (err) { callback(new Error('Push warning feed configuration failed')); }
 };
 
 KmaWarningCollector.announcementOf = announcementOf;

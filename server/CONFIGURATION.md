@@ -90,3 +90,19 @@ npm --prefix server run test:offline
 The environment regression runs real dotenv in temporary server layouts and
 stops at the first Express import, before providers, databases, timers or HTTP
 listeners initialize. Do not use a real gather startup as a configuration probe.
+
+### S3 push registrations and delivery (#2626)
+
+`PUSH_STORE=s3` forwards existing push routes to `PUSH_SOCKET_PATH` (an absolute,
+mode-0600 Unix socket). One `node bin/push-coordinator` owns registration writes,
+in-memory time/region indexes and delivery. `PUSH_S3_BUCKET` is required;
+`PUSH_S3_PREFIX` defaults to `push/v2`; `AWS_REGION` and the AWS default credential
+chain select the storage account. API workers do not need S3 credentials.
+
+`PUSH_SEND_CONCURRENCY=128` bounds concurrent preparations/submissions and
+`PUSH_SEND_RATE=500` limits each Firebase project's attempted submissions per second
+with a 100ms token bucket. Urgent work has reserved capacity. `WARNING_PUSH_ENABLED`
+and the gather-side `PUSH_WARNING_FEED_ENABLED` default to false. The latter also
+requires the existing KMA warning collector to be enabled. `SERVER_MODE=push` is
+rejected in S3 mode; do not run the legacy/SQLite sender alongside the coordinator.
+See [S3 operations](../docs/operations/push-s3.md) before activation.

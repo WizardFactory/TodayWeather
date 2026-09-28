@@ -1,0 +1,216 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Push Delivery \u2014 S3 Coordinator",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "registration",
+        "label": "Registration",
+        "focus": [
+          "mobile",
+          "api",
+          "coordinator",
+          "s3"
+        ]
+      },
+      {
+        "id": "urgent",
+        "label": "Regional warnings",
+        "focus": [
+          "warnings",
+          "coordinator",
+          "dispatch",
+          "fcm"
+        ]
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "mobile",
+      "type": "frontend",
+      "label": "Mobile app",
+      "sublabel": "Settings + location",
+      "pos": [
+        40,
+        280
+      ],
+      "size": [
+        155,
+        74
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Push API",
+      "sublabel": "Existing routes",
+      "pos": [
+        260,
+        280
+      ],
+      "size": [
+        155,
+        74
+      ]
+    },
+    {
+      "id": "coordinator",
+      "type": "backend",
+      "label": "Coordinator",
+      "sublabel": "Latest state + indexes",
+      "tag": "One active process",
+      "pos": [
+        490,
+        280
+      ],
+      "size": [
+        180,
+        74
+      ]
+    },
+    {
+      "id": "dispatch",
+      "type": "messagebus",
+      "label": "Dispatch lanes",
+      "sublabel": "Warnings first",
+      "pos": [
+        750,
+        280
+      ],
+      "size": [
+        170,
+        74
+      ]
+    },
+    {
+      "id": "fcm",
+      "type": "external",
+      "label": "FCM",
+      "sublabel": "Parallel token sends",
+      "pos": [
+        1000,
+        280
+      ],
+      "size": [
+        165,
+        74
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "database",
+      "label": "Private S3",
+      "sublabel": "Records + checkpoints",
+      "pos": [
+        490,
+        80
+      ],
+      "size": [
+        180,
+        74
+      ]
+    },
+    {
+      "id": "warnings",
+      "type": "backend",
+      "label": "KMA adapter",
+      "sublabel": "Zone events",
+      "pos": [
+        490,
+        490
+      ],
+      "size": [
+        180,
+        74
+      ]
+    },
+    {
+      "id": "weather",
+      "type": "backend",
+      "label": "Weather cache",
+      "sublabel": "Shared templates",
+      "pos": [
+        750,
+        80
+      ],
+      "size": [
+        170,
+        74
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "mobile",
+      "to": "api",
+      "label": "Register"
+    },
+    {
+      "from": "api",
+      "to": "coordinator",
+      "label": "Local IPC"
+    },
+    {
+      "from": "coordinator",
+      "to": "s3",
+      "label": "Persist / restore",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "from": "warnings",
+      "to": "coordinator",
+      "label": "New revision",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "from": "coordinator",
+      "to": "dispatch",
+      "label": "Select"
+    },
+    {
+      "from": "weather",
+      "to": "dispatch",
+      "label": "Reuse",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "from": "dispatch",
+      "to": "fcm",
+      "label": "Rate limited",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "S3 is persistence",
+      "items": [
+        "One device record per object",
+        "No S3 reads for each recipient"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Latest received location",
+      "items": [
+        "No expiry by location age",
+        "Recheck before provider submission"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Burst delivery first",
+      "items": [
+        "Reserve capacity for warnings",
+        "Measure acceptance and receipt separately"
+      ]
+    }
+  ]
+}

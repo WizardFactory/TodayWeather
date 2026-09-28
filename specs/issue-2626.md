@@ -38,3 +38,30 @@ The file holds device tokens: mode 0600 on create; path outside the web root; ne
 - One writer process with IPC from the workers: rejected; more moving parts for ~100 writes/day.
 - Native `sqlite3`/`better-sqlite3` with WAL: rejected on Node 10.15.3/glibc 2.17 (#2623).
 - Reuse the notice lock: rejected (blocks event loop, racy takeover).
+
+## Revision 2 — S3 and burst delivery (2026-09-28)
+
+This section supersedes R1–R8 for future push work; r1 remains the record of PR #2629. Scope is design only. The detailed normative proposal is [S3 push delivery design](../docs/architecture/push-s3-design.md), sections 1–12. Its assumptions and activation blockers are part of the contract, not silently chosen product defaults.
+
+| Requirement | Contract | Design AC |
+| --- | --- | --- |
+| S1 | One coordinator owns S3 registration mutations through a bounded global FIFO and memory indexes; existing APIs forward via private local IPC. POST merges subsets; token rotation updates the whole device. | D-AC1 |
+| S2 | UUID-backed identity with explicit token-only fallback; per-device objects; separate batched delivery state and campaign checkpoints. No global-file rewrite or per-recipient S3 access. | D-AC1, D-AC5 |
+| S3 | Latest accepted reported current location, no age expiry; publish before success response, remove old memberships, fence asynchronous region resolution by device/location/mapping version; revalidate at provider admission and on retries. Fixed positions remain fixed. | D-AC2 |
+| S4 | Minute/region inverted indexes, shared content cache, bounded asynchronous sends and per-project limits; warnings have reserved priority capacity. | D-AC3 |
+| S5 | Export normalized #2609 events through a private S3 feed with a retained manifest; no bootstrap flood, respect revisions/releases, no conditional-alert cooldown on warnings. | D-AC4 |
+| S6 | AK-selected subscribers: existing enabled regional alerts within their existing time windows; alarm-only excluded, no severe-warning 6-hour gate. Feature disabled until rollout verification. Preserve tap cityIndex. | D-AC4, D-AC6 |
+| S7 | Restart reconstructs indexes before ready; deadlines, retry limits, batched checkpoints and possible duplicate/missed-send intervals are explicit. | D-AC5 |
+| S8 | AK-selected 10k/30s provisional acceptance profile; larger profiles exploratory. Separate source detection, FCM acceptance and device receipt; no production SLA claimed. | D-AC7 |
+| S9 | Privacy/IAM, runtime/transport checks, phased migration and rollback; notices (#2623) unchanged. | D-AC6, D-AC8 |
+
+The current source already calls Firebase messaging().send; SDK age alone is not evidence that legacy sendToDevice migration is needed. Runtime modernization is a potential measured dependency, not an implicit part of this design-only request.
+
+### Revision 2 implementation authorization and refinements
+
+AK subsequently requested **pre-merge**. Implement S1–S9 behind opt-in flags; no merge
+or deployment authority. The implementation amendment in the design and the
+[S3 operations contract](../docs/operations/push-s3.md) bind the concrete module names,
+FCM-only activation prerequisite, shared on-demand weather cache, warning language
+fallback, bounded resolver and freshness/recovery behavior. Existing r1 SQLite code
+remains optional, not the selected new storage. No live-capacity guarantee is added.
