@@ -10,10 +10,12 @@ async function main() {
     var storage = fixture.memory(),
         count = 10000,
         reads = 0,
+        readKeys = [],
         put = storage.put,
         get = storage.get;
     storage.get = async function (k) {
         reads++;
+        readKeys.push(k);
         return get.call(storage, k);
     };
     for (var i = 0; i < count; i++) {
@@ -52,7 +54,14 @@ async function main() {
         lags.push(Math.max(0, now - last - 10));
         last = now;
     }, 10);
+    // Force a minute rollover while keeping wall-clock throughput measurements real.
+    var clockOrigin = Date.now(),
+        clockEpoch = Date.UTC(2026, 8, 28, 15, 18, 54);
+    function logicalNow() {
+        return clockEpoch + Date.now() - clockOrigin;
+    }
     var dispatcher = new Dispatcher({
+        now: logicalNow,
         concurrency: 128,
         rate: 500,
         send: async function (payload, job) {
@@ -68,7 +77,7 @@ async function main() {
         normals.push(dispatcher.enqueue({ priority: 'normal', project: 'todayWeather' }));
         if (i % 256 === 255) await new Promise(setImmediate);
     }
-    var feed = new Feed({ storage: storage });
+    var feed = new Feed({ storage: storage, now: logicalNow });
     await feed.publish([], { bootstrap: true });
     var engine = new Engine({
         registry: registry,
@@ -76,6 +85,7 @@ async function main() {
         dispatcher: dispatcher,
         feed: feed,
         warnings: true,
+        now: logicalNow,
         runtime: {
             warning: function () {
                 return { title: 'Synthetic' };
@@ -83,7 +93,7 @@ async function main() {
         }
     });
     await engine.init();
-    var kst = new Date(Date.now() + 9 * 3600000).toISOString().replace(/[-:T]/g, '').slice(0, 12);
+    var kst = new Date(logicalNow() + 9 * 3600000).toISOString().replace(/[-:T]/g, '').slice(0, 12);
     await feed.publish(
         [{ areaCode: '37', warnVar: 2, warnStress: 1, command: '1', tmFc: Number(kst), tmSeq: 1 }],
         {}
@@ -131,13 +141,18 @@ async function main() {
         eventLoopP99LagMs: lags[Math.floor(lags.length * 0.99)],
         rssBytes: process.memoryUsage().rss,
         campaignStartupReads: initialReads,
-        readsDuringDispatch: reads - readsBefore - initialReads
+        readsDuringDispatch: reads - readsBefore - initialReads,
+        recipientReadsDuringDispatch: readKeys.slice(readsBefore + initialReads).filter(function (key) {
+            return !/^campaigns\/[^/]+\/[^/]+\/manifest\.json$/.test(key);
+        }).length
     };
     console.log(JSON.stringify(result));
     assert.equal(completed.length, count);
     assert(elapsed <= 30000);
     assert(first - started <= 1000);
-    assert.equal(result.readsDuringDispatch, 0);
+    assert.equal(result.recipientReadsDuringDispatch, 0);
+    // A single new minute causes one scheduler-manifest lookup; it is not a recipient read.
+    assert.equal(result.readsDuringDispatch, 1);
 }
 main().catch(function (e) {
     console.error(e.stack);
