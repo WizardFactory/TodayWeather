@@ -40,7 +40,7 @@ The server's invalid-pair branch sends `invalid body` as an HTTP response withou
 
 Alarm records use the [push model](../../server/models/modelPush.js); conditional alerts use the [AlertPush model](../../server/models/alert.push.model.js). Settings include device tokens, city/id, units, package (`todayWeather`/`todayAir`), enable flags and times. Mongo coordinates are `[longitude, latitude]`; the app supplies `{lat, long}`. Alarm writes use upsert; alert writes find an existing record then save or update.
 
-Only [the `SERVER_MODE=push` startup branch](../../server/app.js) starts both workers. Mode selects background execution, not HTTP route availability. The [2026-09-20 service-host inspection](ec2-internals.md) observed `service` mode. A 2026-09-24 read-only follow-up found separate `tw-push` (alarms) and `tw-alert-push` (alerts) checkouts on the gather host, both at `6ee558da` with local changes splitting the startup roles. The current ec2-user PM2/process inventory contained only the gather application, with neither push checkout running. No message broker is required by this code path: workers poll persisted settings.
+With MongoDB, only [the `SERVER_MODE=push` startup branch](../../server/app.js) starts both workers; with the SQLite store, [`bin/push-worker`](../../server/bin/push-worker) does (see below). Mode selects background execution, not HTTP route availability. The [2026-09-20 service-host inspection](ec2-internals.md) observed `service` mode. A 2026-09-24 read-only follow-up found separate `tw-push` (alarms) and `tw-alert-push` (alerts) checkouts on the gather host, both at `6ee558da` with local changes splitting the startup roles. The current ec2-user PM2/process inventory contained only the gather application, with neither push checkout running. No message broker is required by this code path: workers poll persisted settings.
 
 | Worker | Trigger | Selection and send decision |
 | --- | --- | --- |
@@ -54,6 +54,18 @@ Workers fetch weather from configured `SERVICE_SERVER`: `/v000902/kma/coord/...`
 Text assembly, alert parse/send rules and worked examples: [server push text and purchase validation](../rewrite/server-push-and-purchase.md).
 
 Sources: [alarm controller](../../server/controllers/controllerPush.js), especially `getPushByTime`, `requestDailySummary`, `_filterByDayOfWeek`, `sendPush` and `start`; [alert controller](../../server/controllers/alert.push.controller.js), especially `_makeRequestUrl`, `_getAlertPushByTime`, `_compareWithLastInfo`, `_sendAlertPush` and `start`.
+
+## SQLite store on tw-svc
+
+Issue [#2626](https://github.com/WizardFactory/TodayWeather/issues/2626). With `PUSH_STORE=sqlite` and `PUSH_DB_PATH`, the push routes and workers use a SQLite file on tw-svc instead of MongoDB. The default (unset) stays MongoDB and is the rollback path. [Store selection](../../server/lib/pushStore/index.js) is resolved on first use.
+
+- [SQLite store](../../server/lib/pushStore/sqlite.js): tables `alarms` and `alerts` (`user_version` 1). Each record is JSON in `doc` with the former model fields; `rec_key` is the former upsert key (token, type, cityIndex, id).
+- [Shared file store](../../server/lib/sqliteFileStore.js): `sql.js` 1.8.0 (WebAssembly; tw-svc runs Node 10.15.3). A write takes `<file>.lock` without blocking the event loop, re-reads the file, applies the change and replaces the file (temp file, fsync, rename). A lock whose owner is gone, or older than 30 s, is removed by one waiter under `<file>.lock.takeover`. Readers reload when the file changes.
+- [Push worker](../../server/bin/push-worker): one PM2 fork process on tw-svc runs both schedulers without an HTTP listener or MongoDB connection. It creates `global.manager` as `app.js` does, because date formatting in `kmaTimeLib` uses it.
+- Both stores: a token change (`PUT`) updates every record of the old token; FCM disabling applies to every record of the token; `DELETE` with `cityIndex: 0` removes only city 0; an unknown `category` returns 403. The alert 60-day cleanup still removes nothing (the Mongo query uses `updateAt`).
+- Existing MongoDB records are not imported. Apps with a token re-post their full list 3 s after launch.
+
+Operations: [push store runbook](../operations/push-sqlite.md). Checks: [offline README](../../server/test/offline/README.md#push-store-2626).
 
 ## Provider submission and app handling
 
@@ -87,3 +99,22 @@ The batch settings handler logs individual alarm/alert persistence errors and pa
 ## Artifact verification
 
 [Delivery receipt](../../reports/sdlc/push-diagram/diagram-delivery.json) records **9/9 showcase checks, zero errors and warnings**, with 14 revision-pinned repository references. Browser evidence (local-only `reports/sdlc/push-diagram/diagram-browser.json`) records containment at 1440×900, 1600×1000, 1920×1080 and 2048×1320. [Visual review](../../reports/sdlc/push-diagram/visual-review.md) separately records actual light/dark screenshot inspection. Independent source verification is recorded in the task's verification report.
+
+The #2626 update of the diagram (SQLite store and push worker) is pinned to `125e821b`. Archify `validate --quality showcase --repo-root` passed 9/9 checks with zero errors and warnings. `deliver` passed (specification sha256 `4788b69d…c542`, artifact sha256 `ccb5e613…9aa6`). `visual-check` passed containment and readability at 1440×900 and 2048×1320, light and dark. The light 1440×900 and dark 1440×900 and 2048×1320 screenshots were also inspected by eye. The receipts are local-only under `reports/sdlc/issue-2626/design/final/`.
+
+## S3 coordinator option (#2626, 2026-09-28)
+
+The opt-in `PUSH_STORE=s3` path now forwards registration requests to one private
+Unix-socket coordinator on tw-svc. S3 persists per-device objects and batched delivery
+checkpoints; memory minute/zone indexes serve burst selection. Current city uses the
+last accepted location with no age cutoff and a final pre-send version check.
+`bin/push-coordinator` replaces the old sender loops in this mode and requires no Mongo
+connection. `SERVER_MODE=push` is rejected with S3. Default Mongo and optional SQLite
+behavior remain available; they must not send concurrently with the S3 coordinator.
+
+The existing KMA collector can export a private S3 feed. Enabled regional alerts inside
+their configured windows receive region-matching warnings with reserved priority,
+without the conditional precipitation/air cooldown. Warning flags default off.
+See the [S3 design/implementation](push-s3-design.md), [interactive diagram](diagrams/push-s3-proposal.html)
+and [rollout/failure contract](../operations/push-s3.md). This is repository behavior,
+not evidence of deployment or actual provider delivery.

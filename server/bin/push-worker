@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+
+/**
+ * Push delivery worker for tw-svc (#2626): runs the alarm and alert schedulers on the SQLite push store.
+ * No HTTP listener and no MongoDB connection. Run exactly one instance (PM2 fork mode), because every
+ * instance sends the same notifications. The MongoDB store keeps using `SERVER_MODE=push` with app.js.
+ */
+
+'use strict';
+
+require('../config/env');
+
+var Logger = require('../lib/log');
+global.log = new Logger();
+
+if (process.env.PUSH_STORE !== 'sqlite') {
+    log.error('push-worker: set PUSH_STORE=sqlite and PUSH_DB_PATH (MongoDB delivery uses SERVER_MODE=push)');
+    process.exit(1);
+}
+
+var store = require('../lib/pushStore').get();
+
+// Same global as app.js: kmaTimeLib formats dates through manager.leadingZeros. The constructor starts nothing.
+var ControllerManager = require('../controllers/controllerManager');
+global.manager = new ControllerManager();
+
+var ControllerPush = require('../controllers/controllerPush');
+var AlertPush = require('../controllers/alert.push.controller');
+
+new ControllerPush().start();
+new AlertPush().start();
+
+log.info('push-worker started store=' + store.kind + ' file=' + store.file);

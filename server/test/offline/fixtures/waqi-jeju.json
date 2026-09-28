@@ -1,0 +1,55 @@
+{
+ "_comment": "Captured read-only from the WAQI geo feed on 2026-09-27 (token removed; forecast and debug fields dropped) for #2622.",
+ "status": "ok",
+ "data": {
+  "aqi": 30,
+  "idx": 4042,
+  "attributions": [
+   {
+    "name": "South Air Korea Environment Corporation (대기오염실시간공개시스템)",
+    "url": "https://www.airkorea.or.kr/"
+   },
+   {
+    "name": "World Air Quality Index Project",
+    "url": "https://waqi.info/"
+   }
+  ],
+  "city": {
+   "geo": [
+    33.500116,
+    126.532371
+   ],
+   "name": "Ido-dong, Jeju-si, Jeju, South Korea (이도동 제주)"
+  },
+  "dominentpol": "o3",
+  "iaqi": {
+   "co": {
+    "v": 3.9
+   },
+   "dew": {
+    "v": 21.2
+   },
+   "no2": {
+    "v": 6.9
+   },
+   "o3": {
+    "v": 29.6
+   },
+   "pm10": {
+    "v": 15
+   },
+   "pm25": {
+    "v": 25
+   },
+   "so2": {
+    "v": 2.9
+   }
+  },
+  "time": {
+   "s": "2026-09-27 23:00:00",
+   "tz": "+09:00",
+   "v": 1790550000,
+   "iso": "2026-09-27T23:00:00+09:00"
+  }
+ }
+}

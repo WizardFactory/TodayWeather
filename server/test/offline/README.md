@@ -149,6 +149,51 @@ and actual v000903 route/shared client parsing in 16 DB-version/unit/data-availa
 scenarios. No application startup, production secrets, KMA requests or mobile build.
 See the [operator contract](../../../reports/sdlc/issue-2564/operator-contract.md).
 
+## Air provider chain and domestic air fallback (#2622, #2628)
+
+`air-chain.test.js` (in `test:offline` and the RSS workflow) loads the real policy config, the four adapters, the
+shared budgets and the chain in VMs (`air-harness.js`: relative requires resolved from disk, axios and Mongo models
+injected). It covers: config defaults/validation; each adapter's request and unit mapping from
+`fixtures/air/*.json` (Google ppb → ppm, OpenWeather/Visual Crossing µg/m³ → ppm, WAQI sub-index → concentration);
+failure classification (timeout, transport, 401/403 → auth, 429 → quota, malformed bodies) with the key never in
+logs or reasons; `evaluate` (8 h, 30 km for stations only, PM required); budgets (monthly cap with 5 % reserve,
+OpenWeather minute cap, down markers, paid phase off by default, per-provider paid cap, Visual Crossing on the
+overseas day budget, free store errors not blocking, paid reads/reservations failing closed); and the ordering rules (free phase, exhausted phase, paid phase,
+skipping unconfigured/down/capped providers, one attempt per provider per request), and the review-round regressions: a
+non-string or non-coercible provider status is a classified failure, zero caps block on an empty store, the OpenWeather
+rolling minute across the bucket boundary, at most four attempts across phases; paid pre-call reservation, storage failure, no double counting and reservation-month rollover (D20).
+
+`air-fallback.test.js` keeps the #2622 fallback checks against the chain with only WAQI configured: AirKorea-shaped
+mapping, limits, no key, failures and their cache periods, cache reuse across module instances, answer after the
+cache write, in-flight sharing, malformed bodies, the middleware, `airInfo.source`, the skipped station forecast, the
+`getKeco` error path, the route order and the overseas station name.
+
+`air-chain-smoke.js` runs the complete v000903 coordinate and address routes through the response smoke harness with
+real `axios` HTTP to one loopback server that plays Google, OpenWeather, Visual Crossing and WAQI: Google answers in
+the free phase (DB 1.0/2.0 × `airkorea`/`airnow`), an unchanged fresh AirKorea response, capped Google → OpenWeather,
+both capped → WAQI, exhausted budgets with the paid flag off/on, an auth rejection marking Google down for a later
+request, a hanging provider bounded by the timeout, every provider failing (cached 2 min), a stale observation moving
+on, address = coordinate, and the Jeju WAQI name. `air-budget-mongo-smoke.js` runs worker processes against
+one mongod (mongodb-memory-server, mongoose 5.13 as in `vc-lock-mongo-smoke.js`): the OpenWeather minute cap and the
+Google month cap are shared across processes, a down marker is seen by another process and expires, a cached
+observation serves the next process, both collections have TTL indexes, and concurrent workers compete for a limited paid allowance (D20). `air-chain-node10-check.js` repeats the
+adapter, chain, fallback and middleware checks on the host's Node 10.15.3.
+
+```sh
+npm install --prefix /tmp/tw-air --ignore-scripts --no-audit --no-fund async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3 axios@0.18.1
+TZ=UTC NODE_PATH=/tmp/tw-air/node_modules node server/test/offline/air-chain.test.js
+TZ=UTC NODE_PATH=/tmp/tw-air/node_modules node server/test/offline/air-fallback.test.js
+TZ=UTC NODE_PATH=/tmp/tw-air/node_modules node server/test/offline/air-chain-smoke.js
+TZ=UTC NODE_PATH=/tmp/tw-air/node_modules node server/test/offline/air-chain-node10-check.js
+npm install --prefix /tmp/tw-air-mongo --ignore-scripts --no-audit --no-fund mongoose@5.13.22 async@2.5.0 mongodb-memory-server-core@10.1.4 axios@0.18.1
+TZ=UTC NODE_PATH=/tmp/tw-air-mongo/node_modules node server/test/offline/air-budget-mongo-smoke.js
+```
+
+No check calls a real provider or a production database. `fixtures/waqi-*.json` and `fixtures/air/visualcrossing-seoul.json`
+are read-only captures from 2026-09-27 without keys; `fixtures/air/google-seoul.json` and `openweather-seoul.json` are
+reconstructed from the vendors' documentation (the Google API was not enabled and the OpenWeather key was rejected when
+they were written).
+
 ## Node 16 runtime and push compatibility (#2565)
 
 The service target is Node 16.20.2 / npm 8.19.4 (`server/.nvmrc`), an interim
@@ -291,3 +336,62 @@ TZ=UTC TW_MONGO_URL=mongodb://127.0.0.1:27099/tw2609 TW_CLIENT_LIB=/tmp/tw-clien
 
 jQuery (`lib/jquery/dist`) is not in `bower.json`; copy it from the `jquery@3.3.1` npm package. Screenshots and results go to `TW_SMOKE_OUTPUT_DIR`.
 
+## Push store (#2626)
+
+`push-store.test.js` (in `test:offline`) runs the real push routers and controllers with `PUSH_STORE=sqlite` on a temporary file. It covers push-list upserts, token changes on every record (including collisions), `DELETE` of city 0, 403 for an unknown category, alarm and alert selection, the 6-hour alert guard, a corrupt file, another `user_version`, and the Mongo store's query shapes with fake models. `push-store-concurrency.js` starts 10 writer processes (200 records), checks that a waiting writer keeps its event loop free, recovers a dead owner's lock and two waiters on it, and opens the file with Python `sqlite3` when available. Both need `sql.js@1.8.0 body-parser@1.13.3` besides the RSS smoke dependencies and run on Node 10.15.3, 16.20.2 and 22.
+
+`push-worker-smoke.js` needs the locked service dependencies (`npm ci` of `server/package-lock.json`). It sends alarms and alerts through the real controllers from the SQLite store, with weather from a loopback stub serving `fixtures/push-kma-weather.json` (the RSS response smoke's v000903 KMA response with rain in `current`) and FCM replaced. It then starts `bin/push-worker` and fails on any listener, MongoDB connection or non-loopback socket.
+
+```sh
+NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/push-store.test.js
+NODE_PATH=/tmp/tw-rss-smoke/node_modules node server/test/offline/push-store-concurrency.js
+NODE_PATH=/tmp/tw-runtime-candidate/node_modules node server/test/offline/push-worker-smoke.js
+```
+
+These are local checks; FCM delivery to devices and the tw-svc deployment are operator checks in #2626.
+
+## S3 push coordinator (#2626 revision 2)
+
+- `node server/test/offline/push-s3.test.js`: dependency-free contract/race tests;
+  also in `test:offline` and RSS CI.
+- `NODE_PATH=<locked-deps> node server/test/offline/push-s3-smoke.js`: real routes,
+  Unix IPC, AWS SDK with loopback S3 peer and direct HTTP v1 sender with a loopback
+  FCM peer, including Retry-After. No actual AWS/FCM calls.
+- `NODE_PATH=<locked-deps> node server/test/offline/push-s3-runtime-smoke.js`: actual
+  geocode/weather HTTP and legacy formatters, synthetic OAuth, nonlocal sockets refused.
+- `node server/test/offline/push-s3-capacity.js`: 10k warning targets behind 100k normal
+  queued jobs, 200ms synthetic transport and 3ms synthetic S3 PUT; 30s provisional goal.
+- `node server/test/offline/push-burst-benchmark.js`: isolated dispatcher profile at
+  256 slots/1k attempts/s; not production or device-receipt evidence.
+
+The new integrated smokes/capacity check run in the Node 16.20.2 `push-worker` CI job;
+existing SQLite checks remain. S3 activation/rollback prerequisites are in
+[the runbook](../../../docs/operations/push-s3.md).
+
+### Existing TodayWeather client registration (#2626)
+
+`TZ=UTC node server/test/offline/push-s3-smoke.js --client` (also run with
+`TZ=Asia/Seoul`) executes the unchanged `client/www/js/service.push.js` factory.
+The Angular factory registration, native services and startup timer are adapted;
+HTTP requests use the real routers, Unix IPC, coordinator and AWS SDK with local
+S3/FCM protocol peers. It covers registration, reopening, location change, token
+rotation, persistence failure, restore, deletion, alarm settings and disable.
+This is client-code integration coverage, not a native-app/UI or device receipt test.
+
+
+## Overseas request-time air (#2628 PR 2)
+
+`world-air.test.js` (registered in `run.js`) exercises the real shared-service callback and world query/merge/unit/summary code with injected dependencies: concentration-based grading, provider source, regional observation time, no copied yesterday air and nonfatal air failure. It preserves a legacy WAQI merge regression. Run it under UTC, Asia/Seoul and America/St_Johns to catch host-timezone assumptions.
+
+`world-air-smoke.js` drives the real DSF v000901/v000902/v000903 and widget middleware through the Visual Crossing weather fixture harness, with actual axios HTTP to a loopback server for all four air providers. It checks requested airUnit/source/time/concentrations and client-visible summaries, shared cache reuse, free-cap fallback, the paid Visual Crossing path (reservation and shared weather record usage), weather-cache hits with an expired air failure cache, no-key/all-failure/timeout behavior and current-only air. Synthetic keys only; no live provider calls. Servers are closed after the run; `TW_SMOKE_OUTPUT_DIR` selects evidence output. This smoke also runs on Node 10.15.3.
+
+```sh
+NODE_PATH=/tmp/tw-2622/node_modules node server/test/offline/world-air.test.js
+TZ=UTC NODE_PATH=/tmp/tw-2622/node_modules node server/test/offline/world-air-smoke.js
+```
+
+Existing `vc-weather-smoke.js` remains weather-focused and stubs the optional shared air service by default. Its opt-in harness injection supports the air smoke without changing weather fixture behavior. Domestic air tests, budget/Mongo smoke and D20 reservation tests remain separate regression coverage. No new cache collection, provider quota or deployment is introduced.
+
+PR2631 D22 regressions cover the whole overseas optional-air deadline, late success/cache reuse without duplicate callbacks or paid accounting, and additive source/attribution in DSF and raw widget responses. Tests use synthetic provider metadata and local HTTP; client attribution rendering and licensing approval are not tested.
+
+D23 also verifies the request-local pending/3-second advisory hint on deadline responses, no hint on completed success/failure, and disappearance after late cache fill; no automatic client retry is exercised or implemented.

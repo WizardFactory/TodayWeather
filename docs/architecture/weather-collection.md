@@ -2,7 +2,7 @@
 
 ## Two collection strategies
 
-Domestic KMA and air products are gathered on a schedule and combined when requested. World-weather requests use database lookup and on-demand Visual Crossing/WAQI fetching. A legacy world collector also exists, but its recurring `doCollect()` loop is not invoked by the inspected application startup.
+Domestic KMA and air products are gathered on a schedule and combined when requested. World-weather requests use database lookup, on-demand Visual Crossing weather and the shared air-provider chain. A legacy world collector also exists, but its recurring `doCollect()` loop is not invoked by the inspected application startup.
 
 [Interactive domestic pipeline](diagrams/weather-collection.html) · [World-weather request](diagrams/mobile-weather-request.html)
 
@@ -91,7 +91,7 @@ In `gather` mode, two opt-in collectors (#2573) run outside that task array. `KM
 | Warnings (#2609) | `kmaWarningCollector` → `kmaspecials` (bulletin types 1–4), `kmaspecialweatherzones` (active zone state) | `/v000903/kma/special`; town `current.specialInfo` via the zone table [`kma_warning_zones.csv`](../../server/utils/data/kma_warning_zones.csv) |
 | Short RSS | `kma.town.short.rss.controller` | Supplement short API forecasts |
 | Legacy mid RSS (retired, #2560) | `midRssKmaRequester` | Collection/storage disabled; cached medium data is not applied |
-| AirKorea observations and forecast | `kecoController`, `kecoRequester` | Station/regional pollutants, forecast and air indices |
+| AirKorea observations and forecast | `kecoController`, `kecoRequester` | Station/regional pollutants, forecast and air indices. When no nearby station has an observation within 8 hours, v000903 KMA requests ask the air provider chain (Google, OpenWeather, WAQI; paid Visual Crossing/Google only when enabled) at request time instead ([fallback](mobile-api.md#domestic-air-fallback-and-the-air-provider-chain-issues-2622-2628), #2622/#2628); nothing is collected |
 | KAQ / AirKorea hourly image forecasts | `kaq.hourly.forecast.controller`, `airkorea.hourly.forecast.controller`, image parsers | Hourly pollutant projections; selected by `airForecastSource` |
 | Life and health indices | `lifeIndexKmaRequester` (UV from `LivingWthrIdxServiceV5/getUVIdxV5`, #2587), `controllerHealthDay` | Weather/life advisories |
 | Sunrise/sunset | `kasi.riseset.controller`; days without a stored row are computed by `lib/sunRiseSet.js` at request time | Day/night and astronomical context |
@@ -117,9 +117,11 @@ Deployment and rollback: the inspected service host runs Node 10.15.3 with Mongo
 
 Sources: [DSF route](../../server/routes/v000902/route.dsf.coord.v000902.js), [world controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [DSF cache controller](../../server/controllers/worldWeather/dsf.controller.js#L800-L1141) with [record selection](../../server/controllers/worldWeather/dsf.controller.js#L339-L468) and [budgets](../../server/controllers/worldWeather/dsf.controller.js#L43-L59), [Visual Crossing requester](../../server/lib/VC/vcRequester.js), [converter](../../server/lib/VC/vcConverter.js), [lock model](../../server/models/worldWeather/vc.fetch.lock.model.js), [usage model](../../server/models/worldWeather/vc.usage.model.js), [record model](../../server/models/worldWeather/dsf.model.js), [world cache sequence](../rewrite/diagrams/server-world-cache-sequence.html).
 
-## WAQI and the older world collector
+## Request-time air and the older world collector
 
-`_getWaqiFromAll()` prunes old AQI records, reads stored data and checks a 60-minute freshness window. It first attempts a known station/feed when available, then falls back to a geographic query. AQI failure handling differs from the overseas weather path and includes tolerated missing data; not every missing AQI reading fails the weather request. [World controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [AQI collector](../../server/controllers/worldWeather/controllerAqi.js).
+The active overseas new-form weather query now uses the same shared air provider service as domestic fallback (#2628 PR 2), even when weather is cached. Its observation cache and provider budgets are shared across routes/workers; no background air collector is introduced. Normalized current concentrations and UTC time pass to response conversion, and unavailable air does not fail weather. [Request sequence](diagrams/world-air-request.html).
+
+The legacy `_getWaqiFromAll()` remains for older query methods outside that active path. It prunes old AQI records, reads stored data and checks a 60-minute freshness window. It first attempts a known station/feed when available, then falls back to a geographic query. AQI failure handling differs from the overseas weather path and includes tolerated missing data; not every missing AQI reading fails the weather request. [World controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [AQI collector](../../server/controllers/worldWeather/controllerAqi.js).
 
 The older `controllerCollector` supports WU and DSF collection (its DSF requests now fail immediately); its `runTask()` schedules WU current and DSF at minute 30 and WU forecast at minute 1. `doCollect()` would install its timer, but no invocation is present in inspected non-test startup code. Requester command handlers and legacy API methods still reference this class. Provider modules under `MET`, `OWM`, `FC` and `AW` also exist; their presence alone does not establish their use by the current mobile path. [Legacy collector](../../server/controllers/worldWeather/controllerCollector.js), [requester commands](../../server/controllers/worldWeather/controllerRequester.js).
 
@@ -174,3 +176,5 @@ The additive history path uses official ASOS hourly/daily observations and a sep
 This describes local implementation, not production activation or verified live ASOS availability. The pre-existing `/past` endpoint and legacy scraper remain independent.
 
 Follow-up live validation on 2026-09-25 KST confirmed September 17–23 coverage for Seoul, Busan and Jeju (168 hourly and seven daily rows each). The official [ASOS portal](https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36&tabNo=2) describes winter rain at three-hour intervals and previous-day data availability after 10:00 KST. The normalizer therefore omits November–March `rn` from the one-hour `rn1` field until its accumulation period is verified; daily rain remains usable. Scheduled retries preserve gaps during publication delay. This enforces the existing field-validity boundary without changing the recovery/data-flow diagram.
+
+Overseas optional air is detached from its response after `AIR_RESPONSE_DEADLINE_MS` (default 4 seconds), including cache/store delays. The same in-flight chain can still populate shared cache for later calls. Late completion does not update the completed request; source ids and optional attribution remain normalized cache data for client display (#2628 D22).

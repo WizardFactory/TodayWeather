@@ -5,6 +5,9 @@
 'use strict';
 
 require('./config/env');
+if (process.env.PUSH_STORE === 's3' && process.env.SERVER_MODE === 'push') {
+    throw new Error('S3 delivery requires one bin/push-coordinator; SERVER_MODE=push is disabled');
+}
 
 var express = require('express');
 var cors = require('cors');
