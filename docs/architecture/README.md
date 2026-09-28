@@ -2,6 +2,8 @@
 
 This is a source-based analysis of TodayWeather and TodayAir at commit `b9795125a1b7dc8a4f7602d4612a6be7d79413ad`, prepared on 2026-09-20. It combines checked-out implementation analysis with authorized read-only AWS inspection on the same date. Control-plane settings and deployed Lambda source were inspected. The service EC2 was subsequently inspected over authorized read-only SSH; separate gather/Mongo host internals, provider availability and end-to-end responses remain unverified.
 
+Product status update: AK confirmed on **2026-09-28** that TodayAir is retired. See [product lifecycle](service-overview.md#product-lifecycle); historical source descriptions do not imply continued operation.
+
 ## Reading order
 
 1. [Service overview](service-overview.md): components, server modes, persistence, platform variants and deployment evidence.

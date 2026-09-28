@@ -1,5 +1,9 @@
 # Overall service structure
 
+## Product lifecycle
+
+**2026-09-28 — TodayAir retirement confirmed by AK.** TodayAir is no longer operated. This is the confirmation date; the actual shutdown date was not provided. Retained TodayAir source, build variants and provider configuration are historical artifacts, not evidence of an active service. TodayAir is excluded from push-service restoration and credential renewal.
+
 ## System shape
 
 This repository contains a Node.js/Express weather backend, an Ionic 1/AngularJS/Cordova application shared by TodayWeather and TodayAir, and checked-in native iOS/widget/watch projects. The backend contains API serving, scheduled data gathering, scraping, and push workers in one codebase. `SERVER_MODE` selects background work; it does not select which HTTP routes exist.

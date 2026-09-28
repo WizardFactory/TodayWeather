@@ -367,3 +367,13 @@ These are local checks; FCM delivery to devices and the tw-svc deployment are op
 The new integrated smokes/capacity check run in the Node 16.20.2 `push-worker` CI job;
 existing SQLite checks remain. S3 activation/rollback prerequisites are in
 [the runbook](../../../docs/operations/push-s3.md).
+
+### Existing TodayWeather client registration (#2626)
+
+`TZ=UTC node server/test/offline/push-s3-smoke.js --client` (also run with
+`TZ=Asia/Seoul`) executes the unchanged `client/www/js/service.push.js` factory.
+The Angular factory registration, native services and startup timer are adapted;
+HTTP requests use the real routers, Unix IPC, coordinator and AWS SDK with local
+S3/FCM protocol peers. It covers registration, reopening, location change, token
+rotation, persistence failure, restore, deletion, alarm settings and disable.
+This is client-code integration coverage, not a native-app/UI or device receipt test.

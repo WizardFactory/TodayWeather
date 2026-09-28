@@ -174,6 +174,7 @@ async function main() {
             return now;
         }
     });
+    var client = process.argv.indexOf('--client') >= 0 ? require('./push-client-harness')(port) : null;
     try {
         var row = {
             uuid: 'smoke',
@@ -190,25 +191,44 @@ async function main() {
             source: 'KMA',
             lang: 'ko'
         };
-        assert.equal(
-            (
-                await h.send(port, 'POST', '/v000902/push-list', [
-                    row,
-                    Object.assign({}, row, { cityIndex: 1, id: 2, location: { lat: 38, long: 128 } })
-                ])
-            ).status,
-            200
-        );
+        if (client) {
+            client.push.pushData.type = 'ios';
+            client.push.pushData.fcmToken = 'synthetic-token';
+            client.push.updatePushListByCityIndex([client.push.newPushAlert(1, 0, 0, 23)], 0);
+            await client.flush();
+            client.push.updatePushListByCityIndex([client.push.newPushAlert(2, 1, 0, 23)], 1);
+            await client.flush();
+            client.reopen();
+            await client.flush();
+            assert.equal(client.requests[2].data.length, 2, 'app reopening resubmits both cities');
+            assert.equal(client.requests[2].headers['Device-Id'], 'smoke');
+        } else {
+            assert.equal(
+                (
+                    await h.send(port, 'POST', '/v000902/push-list', [
+                        row,
+                        Object.assign({}, row, { cityIndex: 1, id: 2, location: { lat: 38, long: 128 } })
+                    ])
+                ).status,
+                200
+            );
+        }
         await registry.settled();
         assert.equal(registry.records.size, 2);
-        assert.equal(
-            (
-                await h.send(port, 'POST', '/v000902/push-list', [
-                    Object.assign({}, row, { location: { lat: 39, long: 129 } })
-                ])
-            ).status,
-            200
-        );
+        if (client) {
+            client.cities[0].location = { lat: 39, long: 129 };
+            client.push.updateCityInfo(0);
+            await client.flush();
+        } else {
+            assert.equal(
+                (
+                    await h.send(port, 'POST', '/v000902/push-list', [
+                        Object.assign({}, row, { location: { lat: 39, long: 129 } })
+                    ])
+                ).status,
+                200
+            );
+        }
         await registry.settled();
         assert.equal(registry.warningRefs(['37']).length, 0);
         assert.equal(registry.warningRefs(['39']).length, 1);
@@ -229,15 +249,20 @@ async function main() {
         await engine.tick();
         await dispatcher.idle();
         assert.equal(sends.length, 1);
-        assert.equal(
-            (
-                await h.send(port, 'PUT', '/v000902/push', {
-                    oldToken: 'synthetic-token',
-                    newToken: 'rotated-token'
-                })
-            ).status,
-            200
-        );
+        if (client) {
+            client.push._updateFcmToken('rotated-token');
+            await client.flush();
+        } else {
+            assert.equal(
+                (
+                    await h.send(port, 'PUT', '/v000902/push', {
+                        oldToken: 'synthetic-token',
+                        newToken: 'rotated-token'
+                    })
+                ).status,
+                200
+            );
+        }
         await registry.settled();
         assert(
             Array.from(registry.records.values()).every(function (r) {
@@ -245,24 +270,48 @@ async function main() {
             })
         );
         fail = true;
-        assert.equal(
-            (
-                await h.send(port, 'POST', '/v000902/push-list', [
-                    Object.assign({}, row, { fcmToken: 'rotated-token', name: 'not-stored' })
-                ])
-            ).status,
-            503
-        );
+        if (client) {
+            client.push.updatePushListByCityIndex(client.push.getPushListByCityIndex(0), 0);
+            await client.flush(503);
+        } else {
+            assert.equal(
+                (
+                    await h.send(port, 'POST', '/v000902/push-list', [
+                        Object.assign({}, row, { fcmToken: 'rotated-token', name: 'not-stored' })
+                    ])
+                ).status,
+                503
+            );
+        }
         fail = false;
         var restored = new Registry({ storage: storage, resolve: resolve });
         await restored.init();
         assert.equal(restored.records.size, 2);
-        assert.equal(
-            (await h.send(port, 'DELETE', '/v000902/push', { fcmToken: 'rotated-token', cityIndex: 0 }))
-                .status,
-            200
-        );
+        if (client) {
+            client.push.removePushListByCityIndex(0);
+            await client.flush();
+        } else {
+            assert.equal(
+                (await h.send(port, 'DELETE', '/v000902/push', { fcmToken: 'rotated-token', cityIndex: 0 }))
+                    .status,
+                200
+            );
+        }
         assert.equal(registry.records.size, 1);
+        if (client) {
+            var alarm = client.push.newPushAlarm(3, 1, 8 * 3600, [true, true, true, true, true, true, true]);
+            client.push.updatePushListByCityIndex(client.push.getPushListByCityIndex(1).concat([alarm]), 1);
+            await client.flush();
+            await registry.settled();
+            var alarmRecord = Array.from(registry.records.values()).filter(function (r) { return r.category === 'alarm'; })[0];
+            assert(alarmRecord && alarmRecord.enable);
+            assert.equal(alarmRecord.pushTime, client.push.date2utcSecs(alarm.time));
+            assert.equal(alarmRecord.fcmToken, 'rotated-token');
+            alarm.enable = false;
+            client.push.updatePushListByCityIndex(client.push.getPushListByCityIndex(1), 1);
+            await client.flush();
+            assert.equal(Array.from(registry.records.values()).filter(function (r) { return r.category === 'alarm'; })[0].enable, false);
+        }
         providerStatus = 429;
         var error;
         try {
@@ -281,6 +330,7 @@ async function main() {
         console.log(
             JSON.stringify({
                 result: 'PASS',
+                clientFactory: client ? 'actual service.push.js: register, reopen, location, rotate, delete, alarm, disable' : 'not exercised',
                 checks: [
                     'real HTTP routers',
                     'Unix socket',

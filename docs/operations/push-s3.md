@@ -17,7 +17,10 @@ cross-host lease. Never point a second coordinator host at the same prefix.
 
 The coordinator needs `PUSH_S3_BUCKET`, optional `PUSH_S3_PREFIX=push/v2`, `AWS_REGION`,
 `API_SERVER` for off-path geocoding and `SERVICE_SERVER` for weather. Use the existing
-Firebase service account configuration for each product. Tokens are acquired through
+TodayWeather Firebase service account configuration. TodayAir was confirmed retired by AK
+on **2026-09-28** (confirmation date, not a known shutdown date); exclude it from
+restoration and credential renewal. See [product lifecycle](../architecture/service-overview.md#product-lifecycle).
+Tokens are acquired through
 its credential interface; messages use direct HTTPS FCM HTTP v1 without messaging-SDK
 retries. HTTP requests have a 15s abort deadline. A watchdog/ambiguous timeout does not
 release an unfinished transport slot or trigger immediate retry. Authentication failure
@@ -59,7 +62,9 @@ versions indefinitely. Operational lifecycle/IAM setup is not performed by this 
    return 503 while the coordinator is unavailable. Later accepted location changes
    remove old memberships immediately; unresolved new positions cannot receive warnings
    until the 30s retry succeeds. `unresolvedDevices` exposes that condition.
-3. Switch API workers to S3. No existing MongoDB/SQLite records are imported automatically.
+3. Switch API workers to S3. **AK decision, 2026-09-28: do not migrate existing MongoDB
+   push registrations.** Begin with client registrations/re-registrations; do not add an
+   import step to activation. Existing SQLite records are also not imported automatically.
    Apps re-register when opened. Inventory legacy registrationId-only clients before the
    switch: the S3 path requires an FCM token (not legacy APNs/GCM delivery). Missing UUID
    plus a new token without old-token linkage can create a new identity. Re-registration
@@ -118,3 +123,19 @@ real geocode/weather formatting with synthetic OAuth. `push-s3-capacity.js` meas
 10k recipients against a 100k normal backlog at 200ms synthetic transport, with S3
 PUTs modeled as 3ms. Production S3 latency, project quotas, device receipt, cold recovery
 at 100k/1m devices and failure-domain availability remain rollout measurements.
+
+## Client acceptance — decision confirmed 2026-09-28
+
+Use the existing TodayWeather client notification registration feature for final
+acceptance. Local coverage executes its unchanged `client/www/js/service.push.js`
+factory against real HTTP routes and Unix IPC, with local S3/FCM protocol peers.
+Check new regional-alert and scheduled-alarm registration, reopening/re-registration,
+current-position update, token rotation, disabling, city-zero deletion, persistence
+errors and restart recovery. This does not exercise the native permission dialog,
+FCM token acquisition, mobile UI or actual device receipt.
+
+After an authorized deployment, use a controlled TodayWeather device to register
+an alert/alarm and confirm receipt; move its current location and verify the updated
+region, then disable/delete the setting. Do not infer end-to-end operation from a
+valid service account or local protocol tests alone. Mongo registration import is
+not a prerequisite and must not be performed.

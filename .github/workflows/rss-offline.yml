@@ -207,6 +207,8 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/runtime/node_modules
         run: |
           node server/test/offline/push-s3-smoke.js
+          TZ=UTC node server/test/offline/push-s3-smoke.js --client
+          TZ=Asia/Seoul node server/test/offline/push-s3-smoke.js --client
           node server/test/offline/push-s3-runtime-smoke.js
       - name: S3 warning capacity with a normal backlog (synthetic, no FCM)
         run: timeout 120 node server/test/offline/push-s3-capacity.js
