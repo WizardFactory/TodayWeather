@@ -2,7 +2,7 @@
 
 ## Two collection strategies
 
-Domestic KMA and air products are gathered on a schedule and combined when requested. World-weather requests use database lookup and on-demand Visual Crossing/WAQI fetching. A legacy world collector also exists, but its recurring `doCollect()` loop is not invoked by the inspected application startup.
+Domestic KMA and air products are gathered on a schedule and combined when requested. World-weather requests use database lookup, on-demand Visual Crossing weather and the shared air-provider chain. A legacy world collector also exists, but its recurring `doCollect()` loop is not invoked by the inspected application startup.
 
 [Interactive domestic pipeline](diagrams/weather-collection.html) · [World-weather request](diagrams/mobile-weather-request.html)
 
@@ -117,9 +117,11 @@ Deployment and rollback: the inspected service host runs Node 10.15.3 with Mongo
 
 Sources: [DSF route](../../server/routes/v000902/route.dsf.coord.v000902.js), [world controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [DSF cache controller](../../server/controllers/worldWeather/dsf.controller.js#L800-L1141) with [record selection](../../server/controllers/worldWeather/dsf.controller.js#L339-L468) and [budgets](../../server/controllers/worldWeather/dsf.controller.js#L43-L59), [Visual Crossing requester](../../server/lib/VC/vcRequester.js), [converter](../../server/lib/VC/vcConverter.js), [lock model](../../server/models/worldWeather/vc.fetch.lock.model.js), [usage model](../../server/models/worldWeather/vc.usage.model.js), [record model](../../server/models/worldWeather/dsf.model.js), [world cache sequence](../rewrite/diagrams/server-world-cache-sequence.html).
 
-## WAQI and the older world collector
+## Request-time air and the older world collector
 
-`_getWaqiFromAll()` prunes old AQI records, reads stored data and checks a 60-minute freshness window. It first attempts a known station/feed when available, then falls back to a geographic query. AQI failure handling differs from the overseas weather path and includes tolerated missing data; not every missing AQI reading fails the weather request. [World controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [AQI collector](../../server/controllers/worldWeather/controllerAqi.js).
+The active overseas new-form weather query now uses the same shared air provider service as domestic fallback (#2628 PR 2), even when weather is cached. Its observation cache and provider budgets are shared across routes/workers; no background air collector is introduced. Normalized current concentrations and UTC time pass to response conversion, and unavailable air does not fail weather. [Request sequence](diagrams/world-air-request.html).
+
+The legacy `_getWaqiFromAll()` remains for older query methods outside that active path. It prunes old AQI records, reads stored data and checks a 60-minute freshness window. It first attempts a known station/feed when available, then falls back to a geographic query. AQI failure handling differs from the overseas weather path and includes tolerated missing data; not every missing AQI reading fails the weather request. [World controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [AQI collector](../../server/controllers/worldWeather/controllerAqi.js).
 
 The older `controllerCollector` supports WU and DSF collection (its DSF requests now fail immediately); its `runTask()` schedules WU current and DSF at minute 30 and WU forecast at minute 1. `doCollect()` would install its timer, but no invocation is present in inspected non-test startup code. Requester command handlers and legacy API methods still reference this class. Provider modules under `MET`, `OWM`, `FC` and `AW` also exist; their presence alone does not establish their use by the current mobile path. [Legacy collector](../../server/controllers/worldWeather/controllerCollector.js), [requester commands](../../server/controllers/worldWeather/controllerRequester.js).
 

@@ -22,6 +22,7 @@ var weatherCategory = ['forecast', 'current'];
 
 var conCollector = require('./controllerCollector');
 var controllerAqi = require('./controllerAqi');
+var airFallback = require('../../lib/AQI/airFallback');
 
 var itemWuCurrent = ['date', 'desc', 'code', 'tmmp', 'ftemp', 'humid', 'windspd', 'winddir', 'cloud', 'vis', 'slp', 'dewpoint'];
 var itemWuForecastSummary =[
@@ -642,6 +643,43 @@ function controllerWorldWeather() {
             });
     };
 
+    /**
+     * Current air for the requested coordinates through the shared air service (#2628): provider
+     * chain, shared cache and budgets, as for domestic towns. Sets req.airObservation (normalized,
+     * UTC) when a usable observation exists. Never fails the weather request.
+     */
+    self._getAirFromChain = function(req, cDate, callback) {
+        var meta = {method: '_getAirFromChain', sID: req.sessionID};
+        var answered = false;
+        function done() {
+            answered = true;
+            callback();
+        }
+        var gCoord = req.geocode ? {lat: Number(req.geocode.lat), lon: Number(req.geocode.lon)} : undefined;
+        try {
+            airFallback.getArpltn(gCoord, cDate, function (err, arpltn, reason, observation) {
+                if (err) {
+                    log.warn('TWW> air service failed ' + err.message, meta);
+                }
+                else if (arpltn && observation) {
+                    req.airObservation = observation;
+                }
+                else {
+                    log.info('TWW> no usable air reason=' + reason, meta);
+                }
+                done();
+            });
+        }
+        catch (err) {
+            if (answered) {
+                // thrown by the caller's callback, not by the air service
+                throw err;
+            }
+            log.warn('TWW> air service failed ' + err.message, meta);
+            done();
+        }
+    };
+
     self.queryTwoDaysWeather2 = function(req, res, next) {
         var cDate = new Date();
         var meta = {};
@@ -725,7 +763,7 @@ function controllerWorldWeather() {
                     dsfController.getDsfData(req, cDate, callback);
                 },
                 function(callback) {
-                    self._getWaqiFromAll(req, cDate, callback);
+                    self._getAirFromChain(req, cDate, callback);
                 }
             ],
             function(err) {
@@ -1963,6 +2001,10 @@ function controllerWorldWeather() {
                     var isNight = self._isNight(curDate, item.daily.data);
                     current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
                     req.result.thisTime.push(current);
+                    // mergeAqi puts the current air on this row, shown in the offset used for its date
+                    req.currentThisTime = current;
+                    req.currentTimeOffsetMs = (item.current.timeOffset !== undefined && item.current.timeOffset !== null) ?
+                        item.current.timeOffset * 60 * 1000 : req.result.timezone.ms;
                     break;
                 }
             }
@@ -1992,6 +2034,23 @@ function controllerWorldWeather() {
         var meta = {};
         var errPrint = [];
         meta.sID = req.sessionID;
+
+        if (req.airObservation) {
+            var thisTimeList = req.result.thisTime || [];
+            // the current row only: yesterday and forecasts get no air
+            if (req.currentThisTime && thisTimeList.indexOf(req.currentThisTime) !== -1) {
+                try {
+                    self._applyAirObservation(req.currentThisTime, req.airObservation, req.currentTimeOffsetMs || 0, req.query.airUnit, res);
+                }
+                catch (err) {
+                    log.error(err);
+                }
+            }
+            else {
+                log.warn('TWW> no current row for the air observation', meta);
+            }
+            return next();
+        }
 
         if (req.AQI && req.AQI.data) {
             if (req.result.thisTime === undefined || req.AQI.data.length == 0) {
@@ -2120,12 +2179,88 @@ function controllerWorldWeather() {
     };
 
 
+    /**
+     * Normalized observation (PM µg/m³, gases ppm) → current row fields, graded directly from the
+     * concentrations in the requested airUnit, as mergeAqi grades WAQI data. Missing pollutants stay missing.
+     * @param offsetMs region offset of the current row; mTime is the observation time in that offset
+     */
+    self._applyAirObservation = function (current, observation, offsetMs, airUnit, res) {
+        var pollutants = observation.pollutants || {};
+        var indexList = [];
+        var gradeList = [];
+        ['pm10', 'pm25', 'co', 'so2', 'no2', 'o3'].forEach(function (code) {
+            var value = pollutants[code];
+            if (typeof value !== 'number' || !isFinite(value) || value < 0) {
+                return;
+            }
+            var grade;
+            var index;
+            current[code + 'Value'] = value;
+            if (airUnit === 'airnow') {
+                index = aqiConverter.value2index('airnow', code, value);
+                grade = aqiConverter.value2grade('airnow', code, value);
+                current[code + 'Str'] = UnitConverter.airnowGrade2str(grade, code, res);
+            }
+            else if (airUnit === 'airkorea' || airUnit === 'airkorea_who') {
+                index = aqiConverter.value2index(airUnit, code, value);
+                grade = aqiConverter.value2grade(airUnit, code, value);
+                current[code + 'Str'] = UnitConverter.airkoreaGrade2str(grade, code, res);
+            }
+            else {
+                index = aqiConverter.value2index('aqicn', code, value);
+                grade = aqiConverter.index2Grade('aqicn', index);
+                current[code + 'Str'] = UnitConverter.airnowGrade2str(grade, code, res);
+            }
+            current[code + 'Grade'] = grade;
+            indexList.push(index);
+            gradeList.push(grade);
+        });
+
+        if (indexList.length) {
+            current.aqiValue = Math.max.apply(null, indexList);
+            if (airUnit === 'airnow') {
+                current.aqiGrade = Math.max.apply(null, gradeList);
+                current.aqiStr = UnitConverter.airnowGrade2str(current.aqiGrade, 'aqi', res);
+            }
+            else if (airUnit === 'airkorea_who') {
+                current.aqiGrade = Math.max.apply(null, gradeList);
+                current.aqiStr = UnitConverter.airkoreaGrade2str(current.aqiGrade, 'aqi', res);
+            }
+            else if (airUnit === 'airkorea') {
+                // khai: extra points for two or more pollutants over index 100
+                var additionalPoint = indexList.filter(function (v) { return v > 100; }).length;
+                if (additionalPoint >= 3) {
+                    current.aqiValue += 75;
+                }
+                else if (additionalPoint >= 2) {
+                    current.aqiValue += 50;
+                }
+                current.aqiGrade = aqiConverter.index2Grade('airkorea', current.aqiValue);
+                current.aqiStr = UnitConverter.airkoreaGrade2str(current.aqiGrade, 'aqi', res);
+            }
+            else {
+                current.aqiGrade = aqiConverter.index2Grade('aqicn', current.aqiValue);
+                current.aqiStr = UnitConverter.airGrade2Str('aqicn', current.aqiGrade, res);
+            }
+        }
+
+        var observed = new Date(observation.observedAt);
+        if (!isNaN(observed.getTime())) {
+            // "YYYY-MM-DD HH:mm" in the region's offset, as AirKorea dataTime
+            current.mTime = self._convertTimeString(new Date(observed.getTime() + offsetMs)).replace(/\./g, '-');
+        }
+        current.airSource = observation.provider;
+        if (observation.stationName) {
+            current.mCity = observation.stationName;
+        }
+    };
+
     self.makeAirInfo = function (req, res, next) {
         try {
             var result = req.result;
             var current = result.thisTime[result.thisTime.length-1];
             if ( current.hasOwnProperty('arpltn') ) {
-                result.airInfo = {source: "aqicn"};
+                result.airInfo = {source: current.arpltn.source || "aqicn"};
                 result.airInfo.last = current.arpltn;
 
                 var last = result.airInfo.last;

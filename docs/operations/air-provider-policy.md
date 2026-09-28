@@ -53,3 +53,9 @@ If AirKorea stops entirely, the fallback fetches once per 0.01° town cell per 3
 ## Rollback
 
 Revert the change or set `AIR_PAID_PROVIDERS_ENABLED=false` (restart) to stop paid calls. Unsetting `WAQI_SECRET_KEY` or `VC_SECRET_KEY` also disables overseas air or weather, so they are not domestic-only switches.
+
+## Overseas requests (#2628 PR 2)
+
+Active overseas DSF v000901–v000903 and widget new-form weather requests use this same policy and Mongo observation cache, in parallel with weather retrieval. Weather cache hits still check the air cache; they do not force a new provider request. Free allowances and paid caps are shared with domestic fallback, not separate regional allocations. Existing environment variables and D20 paid reservation apply unchanged.
+
+Current air is rendered using the request's airUnit and response timezone, with the actual provider source. A missing or failed air result does not fail weather. No current observation is presented as yesterday's air or a forecast. Legacy aqi documents are not migrated or deleted by this request path. Reverting PR2 restores the previous overseas WAQI path while retaining PR1 domestic behavior. A server deployment is required for production to use the new path.
