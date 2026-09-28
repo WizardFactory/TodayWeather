@@ -130,6 +130,12 @@ ControllerWWUnits.prototype._makeArpltn = function (current, units) {
         }
     });
 
+    if (current.hasOwnProperty('airSource')) {
+        arpltn.source = current.airSource;
+    }
+    if (current.hasOwnProperty('airAttribution')) {
+        arpltn.attribution = current.airAttribution;
+    }
     if (current.hasOwnProperty('mTime')) {
         arpltn.dataTime = current.mTime;
     }

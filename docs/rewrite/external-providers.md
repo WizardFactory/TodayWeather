@@ -188,3 +188,7 @@ The app and widgets do not call the weather providers above directly. Their thir
 - **Reachability.** "Legacy module" means no caller was found with `grep` over `server/` (excluding `node_modules` and `server/test`) and a reading of comment blocks. Dynamic dispatch through string names (`Manager._requestApi`) was followed by hand for `/gather/<name>` only. Standalone scripts under `server/utils/` were not catalogued row by row.
 - **Timeouts and retries** are the values written in repository code. Library defaults (`request`, `axios`, `get-pixels`, AWS SDK) were not measured.
 - **Quota detection** lists only the strings and codes the code checks. Provider-side quota semantics (daily or monthly, per key or per account) are not documented here and must come from current provider documentation.
+
+### Air provider request-path update (#2628 PR 2)
+
+The Google/OpenWeather/Visual Crossing/WAQI air adapters above also serve active overseas DSF v000901–v000903 and widget new-form weather requests. They share the domestic observation cache, budgets and D20 paid admission rules. The older WAQI collector remains for legacy callers but is not used by these requests. Response grades derive from normalized concentrations using the requested airUnit; current observations are not historical air data. See [air policy](../operations/air-provider-policy.md) and [request sequence](../architecture/diagrams/world-air-request.html). Provider availability statements above are timestamped historical observations; this routing change makes no new live-provider claim.

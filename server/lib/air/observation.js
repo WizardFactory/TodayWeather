@@ -103,6 +103,15 @@ function kstDataTime(date) {
         pad(kst.getUTCHours()) + ':' + pad(kst.getUTCMinutes());
 }
 
+/** Attribution text for display by the client: a non-empty string, trimmed; anything else is dropped. */
+function attributionText(value) {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+    var text = value.trim();
+    return text ? text : undefined;
+}
+
 /**
  * Accept an observation for a request, or say why not.
  * @returns {{reason: string}} or {{arpltn: object, age: number, distance: number|undefined}}
@@ -134,6 +143,10 @@ function evaluate(observation, gCoord, requestTime) {
         arpltn.stationName = observation.stationName;
     }
     arpltn.dataTime = kstDataTime(observed);
+    var attribution = attributionText(observation.attribution);
+    if (attribution) {
+        arpltn.attribution = attribution;
+    }
     POLLUTANTS.forEach(function (code) {
         var v = observation.pollutants ? observation.pollutants[code] : undefined;
         if (finite(v)) {
@@ -154,5 +167,6 @@ module.exports = {
     fromUgm3: fromUgm3,
     fromPpb: fromPpb,
     finite: finite,
-    distanceKm: distanceKm
+    distanceKm: distanceKm,
+    attributionText: attributionText
 };

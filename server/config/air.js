@@ -47,6 +47,9 @@ function load(env) {
         paidProvidersEnabled: flag(env, 'AIR_PAID_PROVIDERS_ENABLED', false),
         paidMonthlyCallCap: integer(env, 'AIR_PAID_MONTHLY_CALL_CAP', 100000, 0),
         providerTimeoutMs: integer(env, 'AIR_PROVIDER_TIMEOUT_MS', 3000, 500, 10000),
+        // Overseas weather waits at most this long for its air branch (cache read and provider chain
+        // together); the chain may finish later and fill the shared cache for the next request.
+        responseDeadlineMs: integer(env, 'AIR_RESPONSE_DEADLINE_MS', 4000, 500, 8000),
 
         RESERVE: 0.05,
         // Issue #2628 decision log D2/D3: free tiers first (quality order), then WAQI (no cost),

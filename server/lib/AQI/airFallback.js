@@ -1,7 +1,7 @@
 /**
- * Domestic air fallback (#2622, providers generalized in #2628).
+ * Request-time air service (#2622, providers generalized in #2628).
  * Used by the v000903 KMA routes when no nearby AirKorea station has an observation within
- * eight hours. The provider chain (lib/air) picks the provider; results are shared by all API
+ * eight hours, and by the overseas new-form weather query for every request. The provider chain (lib/air) picks the provider; results are shared by all API
  * workers through a Mongo cache; a request finishes only after its result is written, and one
  * worker makes at most one chain call per cell at a time. Provider failures never reach the
  * caller as errors.
@@ -139,7 +139,9 @@ function _fetchShared(cell, gCoord, requestTime, callback) {
 /**
  * @param gCoord {lat, lon} of the requested town
  * @param requestTime Date
- * @param callback (err, arpltn|undefined, reason) — err is only set for programming errors
+ * @param callback (err, arpltn|undefined, reason, observation|undefined) — err is only set for
+ *   programming errors; observation is the accepted normalized observation (UTC observedAt,
+ *   concentrations) for callers that render it themselves (overseas weather), else undefined
  */
 function getArpltn(gCoord, requestTime, callback) {
     if (!gCoord || !isFinite(Number(gCoord.lat)) || !isFinite(Number(gCoord.lon))) {
@@ -168,7 +170,7 @@ function getArpltn(gCoord, requestTime, callback) {
                 (result.distance !== undefined ? ' distanceKm=' + result.distance.toFixed(1) : '') +
                 (chainResult ? ' fetched' : ' cached'));
         }
-        callback(null, result.arpltn, result.reason);
+        callback(null, result.arpltn, result.reason, result.arpltn ? row.observation : undefined);
     }
 
     _readCache(cell, Date.now(), function (row) {

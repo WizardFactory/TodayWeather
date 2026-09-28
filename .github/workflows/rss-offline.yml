@@ -75,6 +75,15 @@ jobs:
           node server/test/offline/air-chain.test.js
           node server/test/offline/air-fallback.test.js
           node server/test/offline/air-chain-smoke.js
+      - name: Overseas weather air through the shared provider chain (#2628)
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+          TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
+        run: |
+          node server/test/offline/world-air.test.js
+          node server/test/offline/world-air-smoke.js
+          TZ=Asia/Seoul node server/test/offline/world-air.test.js
+          TZ=Asia/Seoul node server/test/offline/world-air-smoke.js
       - name: Current weather text and summary smoke
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
@@ -149,6 +158,11 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
         run: node server/test/offline/air-chain-node10-check.js
+      - name: Overseas weather air route smoke on Node 10.15.3 (#2628)
+        env:
+          NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
+          TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/vc-node10/output
+        run: node server/test/offline/world-air-smoke.js
 
   vc-lock-mongo:
     # Real mongod through mongodb-memory-server. mongoose 5.13 (5.x API): the service's 5.1.2
