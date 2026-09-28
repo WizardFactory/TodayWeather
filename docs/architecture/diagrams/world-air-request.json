@@ -74,7 +74,7 @@
       "from": "world-route",
       "to": "air-service",
       "y": 196,
-      "label": "start air for requested coordinates",
+      "label": "start air + 4 s response deadline",
       "variant": "emphasis"
     },
     {
@@ -130,7 +130,7 @@
       "from": "air-service",
       "to": "world-route",
       "y": 420,
-      "label": "accepted observation or no air",
+      "label": "air before deadline, else continue without air",
       "variant": "return"
     },
     {
@@ -138,7 +138,7 @@
       "from": "weather",
       "to": "world-route",
       "y": 472,
-      "label": "weather result; join air and render current",
+      "label": "weather joins bounded air branch",
       "variant": "return"
     }
   ],
@@ -153,10 +153,10 @@
     },
     {
       "dot": "amber",
-      "title": "Current air only",
+      "title": "Bounded wait; client owns display",
       "items": [
-        "Weather and air run in parallel. Missing air does not fail the weather response.",
-        "Preserve concentrations and provider source; grade by airUnit, format local time. Never copy current air into yesterday."
+        "Air deadline: 4 s default, including Mongo. Return pending + retryAfterSeconds: 3; client decides whether to retry. Late work warms cache.",
+        "Current row only: source + attribution for client display. Preserve concentrations, requested grades and local time; no late response changes."
       ]
     }
   ]

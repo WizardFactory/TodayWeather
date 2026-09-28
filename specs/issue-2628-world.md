@@ -1,5 +1,5 @@
 # Spec: overseas air chain (#2628 PR2)
-Revision 1, 2026-09-28. Consumes intent issue-2628-world r1 and #2628 D1-D20.
+Revision 3, 2026-09-28. Consumes intent issue-2628-world r4 and #2628 D1-D23.
 
 Replace the WAQI-only request branch in active new-form overseas weather with the shared air service (lib/AQI/airFallback). Retain geographic argument order {lat,lon}. Shared Mongo air.observation.caches, budget counters, timeouts, once-per-provider attempts and D20 paid admission are unchanged. Weather and air may load concurrently but missing/failed air is nonfatal.
 
@@ -10,3 +10,11 @@ Integrate normalized concentrations directly into the current overseas air respo
 If all providers fail, weather completes without usable air or summaryAir. Catch optional air failures without hiding weather errors. Do not add polling or background collection. Existing policy and cache failure behavior are reused, including conservative paid reservations, failure cache and per-process in-flight sharing.
 
 Verification: test-first request/merge regressions, actual overseas middleware/units/summary through synthetic loopback HTTP providers, positive and negative/fractional timezones, missing pollutants, budget fallback/order, repeated cache hit, timeout/no-key/all-fail; domestic and overseas existing offline regression plus Node10. No live credentials required.
+
+## D22: optional-air deadline and source metadata
+Start a single whole-air timer before cache/service lookup: AIR_RESPONSE_DEADLINE_MS default 4000, integer range 500–8000 ms. Early completion clears the timer; expiry completes only the optional-air branch once without assigning air. Preserve downstream exception behavior and weather errors. Late service completion can write its shared cache, but cannot assign request observation or invoke the weather continuation again. Do not cancel or retry the underlying chain or alter paid accounting. This is not an end-to-end HTTP deadline; geocoding/weather remain separate.
+
+Keep `source` a stable provider string. Carry nonempty string normalized `attribution` additively through accepted shared arpltn, raw overseas `airAttribution`, converted current.arpltn.attribution and airInfo.attribution/last.attribution. `/ww` keeps raw airSource/airAttribution; DSF supplies arpltn/airInfo. Metadata is plain text, not HTML or server-rendered branding. Client selects source labels/links and safely renders supplied upstream attribution; no claim of licensing or UI completion. Missing/invalid metadata remains absent; no-air responses must not invent new attribution. Cache retains normalized metadata and per-request conversion must not mutate it.
+
+## D23: advisory collection hint
+When the whole-air deadline wins, attach top-level `airStatus: {state: "pending", retryAfterSeconds: 3}` to DSF v000901/902/903 and `/ww` results. This snapshots outstanding work at cutoff, not eventual success or a completion guarantee. It is not cached. Early success or terminal no-air/error/unusable result has no pending hint. A later request decides status afresh and may use completed cache. No automatic server/client retry, HTTP Retry-After, or late request mutation is introduced. Client may ignore the hint.

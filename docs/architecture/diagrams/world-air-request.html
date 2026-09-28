@@ -5181,11 +5181,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="world-route" data-edge-to="air-service" data-edge-label="start air for requested coordinates" data-edge-key="1" data-edge-id="air-start">
+        <g data-edge-from="world-route" data-edge-to="air-service" data-edge-label="start air + 4 s response deadline" data-edge-key="1" data-edge-id="air-start">
           <path data-composition-edge-from="world-route" data-composition-edge-to="air-service" data-composition-edge-id="air-start" data-composition-points="152.5,196;544,196" d="M 152.5 196 L 544 196" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="251.25" y="176" width="194" height="16" rx="3" class="c-mask"/>
-          <text x="348.25" y="186" class="t-backend" font-size="9" text-anchor="middle">start air for requested coordinates</text>
+          <rect x="256.45" y="176" width="183.6" height="16" rx="3" class="c-mask"/>
+          <text x="348.25" y="186" class="t-backend" font-size="9" text-anchor="middle">start air + 4 s response deadline</text>
         </g>
         </g>
 
@@ -5237,19 +5237,19 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="air-service" data-edge-to="world-route" data-edge-label="accepted observation or no air" data-edge-key="8" data-edge-id="air-ready">
+        <g data-edge-from="air-service" data-edge-to="world-route" data-edge-label="air before deadline, else continue without air" data-edge-key="8" data-edge-id="air-ready">
           <path data-composition-edge-from="air-service" data-composition-edge-to="world-route" data-composition-edge-id="air-ready" data-composition-points="544,420;152.5,420" d="M 544 420 L 152.5 420" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="264.25" y="400" width="168" height="16" rx="3" class="c-mask"/>
-          <text x="348.25" y="410" class="t-muted" font-size="9" text-anchor="middle">accepted observation or no air</text>
+          <rect x="222.64999999999998" y="400" width="251.20000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="348.25" y="410" class="t-muted" font-size="9" text-anchor="middle">air before deadline, else continue without air</text>
         </g>
         </g>
 
-        <g data-edge-from="weather" data-edge-to="world-route" data-edge-label="weather result; join air and render current" data-edge-key="9" data-edge-id="weather-ready">
+        <g data-edge-from="weather" data-edge-to="world-route" data-edge-label="weather joins bounded air branch" data-edge-key="9" data-edge-id="weather-ready">
           <path data-composition-edge-from="weather" data-composition-edge-to="world-route" data-composition-edge-id="weather-ready" data-composition-points="341.25,472;152.5,472" d="M 341.25 472 L 152.5 472" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="129.075" y="452" width="235.6" height="16" rx="3" class="c-mask"/>
-          <text x="246.875" y="462" class="t-muted" font-size="9" text-anchor="middle">weather result; join air and render current</text>
+          <rect x="157.675" y="452" width="178.4" height="16" rx="3" class="c-mask"/>
+          <text x="246.875" y="462" class="t-muted" font-size="9" text-anchor="middle">weather joins bounded air branch</text>
         </g>
         </g>
 
@@ -5263,8 +5263,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text x="62" y="211" class="t-dim" font-size="9" font-weight="600">Air cache miss</text>
         </g>
         <g data-graph-role="segment-label" data-segment-id="2">
-          <rect x="56" y="411" width="92" height="18" rx="3" class="c-mask"/>
-          <text x="62" y="424" class="t-dim" font-size="9" font-weight="600">Join and render</text>
+          <rect x="56" y="433" width="92" height="18" rx="3" class="c-mask"/>
+          <text x="62" y="446" class="t-dim" font-size="9" font-weight="600">Join and render</text>
         </g>
 
         <!-- Participants -->
@@ -5541,11 +5541,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="card">
         <div class="card-header">
           <div class="card-dot amber"></div>
-          <h3>Current air only</h3>
+          <h3>Bounded wait; client owns display</h3>
         </div>
         <ul>
-          <li>&bull; Weather and air run in parallel. Missing air does not fail the weather response.</li>
-          <li>&bull; Preserve concentrations and provider source; grade by airUnit, format local time. Never copy current air into yesterday.</li>
+          <li>&bull; Air deadline: 4 s default, including Mongo. Return pending + retryAfterSeconds: 3; client decides whether to retry. Late work warms cache.</li>
+          <li>&bull; Current row only: source + attribution for client display. Preserve concentrations, requested grades and local time; no late response changes.</li>
         </ul>
       </div>
     </div>

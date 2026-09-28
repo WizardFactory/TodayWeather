@@ -62,7 +62,7 @@ const fixture = name => /-combined$/.test(name) ? require('./vc-synthetic').with
  */
 function createHarness(bodyFor, options) {
     options = options || {};
-    const logs = [], providerCalls = [], dsfRows = new Map(), locks = new Map(), cache = new Map(), stubbedPackages = new Set();
+    const logs = [], providerCalls = [], dsfRows = new Map(), locks = new Map(), cache = new Map(), stubbedPackages = new Set(), responses = [];
     const logger = {};
     for (const level of ['info', 'silly', 'debug', 'verbose', 'warn', 'error']) {
         logger[level] = (...args) => { if (level === 'error' || level === 'warn' || /^VC>/.test(String(args[0]))) logs.push({level, args: args.map(a => a && a.stack || a)}); };
@@ -218,11 +218,12 @@ function createHarness(bodyFor, options) {
             const q = Object.assign({}, query, kind === 'ww' ? {gcode: loc} : {});
             const req = {method: 'GET', url, originalUrl: (kind === 'ww' ? '/ww' : '/' + kind + '/dsf') + url, headers: {}, query: q, sessionID: 'vc-smoke'};
             const res = {__: s => s, status(code) { this.statusCode = code; return this; }, send(body) { reject(new Error('Unexpected response ' + this.statusCode + ': ' + body)); },
-                json(body) { resolve(JSON.parse(JSON.stringify(body))); }, setHeader() {}};
+                json(body) { responses.push(url); resolve(JSON.parse(JSON.stringify(body))); }, setHeader() {}};
             routers[kind].handle(req, res, err => reject(err || new Error('No JSON response')));
         });
     }
-    return {request, logs, providerCalls, dsfRows, locks, usage, stubbedPackages, load, models};
+    // responses: one entry per res.json call, so a second answer to one request is visible
+    return {request, logs, providerCalls, dsfRows, locks, usage, stubbedPackages, load, models, responses};
 }
 
 function localHourString(epochMs, offsetMin) {

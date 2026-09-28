@@ -23,6 +23,12 @@ var weatherCategory = ['forecast', 'current'];
 var conCollector = require('./controllerCollector');
 var controllerAqi = require('./controllerAqi');
 var airFallback = require('../../lib/AQI/airFallback');
+var airPolicy = require('../../config/air');
+var airObservation = require('../../lib/air/observation');
+
+// Top-level response hint when the air deadline released the weather: the chain may still fill the
+// shared cache, so a client may ask again after a few seconds (its own decision; the server never retries).
+var AIR_PENDING_RETRY_AFTER_SECONDS = 3;
 
 var itemWuCurrent = ['date', 'desc', 'code', 'tmmp', 'ftemp', 'humid', 'windspd', 'winddir', 'cloud', 'vis', 'slp', 'dewpoint'];
 var itemWuForecastSummary =[
@@ -647,36 +653,56 @@ function controllerWorldWeather() {
      * Current air for the requested coordinates through the shared air service (#2628): provider
      * chain, shared cache and budgets, as for domestic towns. Sets req.airObservation (normalized,
      * UTC) when a usable observation exists. Never fails the weather request.
+     * One deadline (AIR_RESPONSE_DEADLINE_MS) covers the whole branch, cache read included. When it
+     * passes, the request goes on without air; the service keeps running, and its result, written to
+     * the shared cache, serves the next request. A late answer changes nothing on this request.
+     * Only the expiry sets req.airStatus (pending, retryAfterSeconds); terminal answers (no provider, all
+     * failed, nothing usable) and successes set nothing. mergeAqi copies it to the response.
      */
     self._getAirFromChain = function(req, cDate, callback) {
         var meta = {method: '_getAirFromChain', sID: req.sessionID};
-        var answered = false;
-        function done() {
-            answered = true;
+        var deadlineMs = airPolicy.responseDeadlineMs;
+        var settled = false;
+        var timer;
+        function settle(observation) {
+            settled = true;
+            clearTimeout(timer);
+            if (observation) {
+                req.airObservation = observation;
+            }
             callback();
         }
+        timer = setTimeout(function () {
+            if (!settled) {
+                log.warn('TWW> air deadline of ' + deadlineMs + ' ms passed; answering without air', meta);
+                req.airStatus = {state: 'pending', retryAfterSeconds: AIR_PENDING_RETRY_AFTER_SECONDS};
+                settle();
+            }
+        }, deadlineMs);
         var gCoord = req.geocode ? {lat: Number(req.geocode.lat), lon: Number(req.geocode.lon)} : undefined;
         try {
             airFallback.getArpltn(gCoord, cDate, function (err, arpltn, reason, observation) {
+                if (settled) {
+                    log.info('TWW> air answered after the deadline; left for the shared cache', meta);
+                    return;
+                }
                 if (err) {
                     log.warn('TWW> air service failed ' + err.message, meta);
+                    return settle();
                 }
-                else if (arpltn && observation) {
-                    req.airObservation = observation;
-                }
-                else {
+                if (!(arpltn && observation)) {
                     log.info('TWW> no usable air reason=' + reason, meta);
                 }
-                done();
+                settle(arpltn ? observation : undefined);
             });
         }
         catch (err) {
-            if (answered) {
+            if (settled) {
                 // thrown by the caller's callback, not by the air service
                 throw err;
             }
             log.warn('TWW> air service failed ' + err.message, meta);
-            done();
+            settle();
         }
     };
 
@@ -2035,6 +2061,10 @@ function controllerWorldWeather() {
         var errPrint = [];
         meta.sID = req.sessionID;
 
+        if (req.airStatus && req.result) {
+            req.result.airStatus = req.airStatus;
+        }
+
         if (req.airObservation) {
             var thisTimeList = req.result.thisTime || [];
             // the current row only: yesterday and forecasts get no air
@@ -2250,6 +2280,10 @@ function controllerWorldWeather() {
             current.mTime = self._convertTimeString(new Date(observed.getTime() + offsetMs)).replace(/\./g, '-');
         }
         current.airSource = observation.provider;
+        var attribution = airObservation.attributionText(observation.attribution);
+        if (attribution) {
+            current.airAttribution = attribution;
+        }
         if (observation.stationName) {
             current.mCity = observation.stationName;
         }
@@ -2261,6 +2295,9 @@ function controllerWorldWeather() {
             var current = result.thisTime[result.thisTime.length-1];
             if ( current.hasOwnProperty('arpltn') ) {
                 result.airInfo = {source: current.arpltn.source || "aqicn"};
+                if (current.arpltn.attribution) {
+                    result.airInfo.attribution = current.arpltn.attribution;
+                }
                 result.airInfo.last = current.arpltn;
 
                 var last = result.airInfo.last;

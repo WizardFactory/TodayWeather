@@ -349,3 +349,7 @@ TZ=UTC NODE_PATH=/tmp/tw-2622/node_modules node server/test/offline/world-air-sm
 ```
 
 Existing `vc-weather-smoke.js` remains weather-focused and stubs the optional shared air service by default. Its opt-in harness injection supports the air smoke without changing weather fixture behavior. Domestic air tests, budget/Mongo smoke and D20 reservation tests remain separate regression coverage. No new cache collection, provider quota or deployment is introduced.
+
+PR2631 D22 regressions cover the whole overseas optional-air deadline, late success/cache reuse without duplicate callbacks or paid accounting, and additive source/attribution in DSF and raw widget responses. Tests use synthetic provider metadata and local HTTP; client attribution rendering and licensing approval are not tested.
+
+D23 also verifies the request-local pending/3-second advisory hint on deadline responses, no hint on completed success/failure, and disappearance after late cache fill; no automatic client retry is exercised or implemented.

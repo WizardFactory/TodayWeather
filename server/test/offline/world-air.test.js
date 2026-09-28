@@ -40,14 +40,25 @@ const WWUnits = load('controllers/worldWeather/controller.ww.units.js', {'../../
     '../../lib/kmaTimeLib': kmaTimeLib, '../../lib/aqi.converter': AqiConverter, '../../lib/AQI/waqiStationName': StationName});
 
 function LegacyAqi() { throw new Error('legacy WAQI collector used on the converted path'); }
-function world({air, dsf} = {}) {
+const airPolicy = load('config/air.js');
+const observationModule = createLoader({log, overrides: {'config/config.js': {}}}).load('lib/air/observation.js');
+function world({air, dsf, policy = airPolicy, timers} = {}) {
     const Dsf = function () {};
     Dsf.prototype.getDsfData = dsf || ((req, cDate, cb) => setImmediate(cb));
     const Controller = load('controllers/worldWeather/controllerWorldWeather.js', {
-        async: require('async'), '../../lib/unitConverter': UnitConverter, '../../lib/aqi.converter': AqiConverter,
+        async: require('async'), '../../lib/unitConverter': UnitConverter, '../../lib/aqi.converter': AqiConverter, '../../config/air': policy, '../../lib/air/observation': observationModule,
         './controllerAqi': LegacyAqi, './dsf.controller': Dsf, '../../lib/AQI/airFallback': air || {getArpltn: () => { throw new Error('no air service'); }},
-        request: () => { throw new Error('Unexpected legacy HTTP request'); }});
+        request: () => { throw new Error('Unexpected legacy HTTP request'); }}, timers ? {setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout} : {});
     return new Controller();
+}
+/** Manual timers: fire() runs a pending timer as if it expired. */
+function fakeTimers() {
+    const t = {list: [], cleared: [], nextId: 1};
+    t.setTimeout = (fn, ms) => { const timer = {id: t.nextId++, fn, ms, done: false}; t.list.push(timer); return timer.id; };
+    t.clearTimeout = id => { t.cleared.push(id); const timer = t.list.find(x => x.id === id); if (timer) timer.done = true; };
+    t.pending = () => t.list.filter(x => !x.done);
+    t.fire = timer => { timer.done = true; timer.fn(); };
+    return t;
 }
 function fakeAir(answer) {
     const calls = [];
@@ -64,6 +75,87 @@ const OBS = {provider: 'google', stationBased: false, observedAt: '2026-09-27T14
     pollutants: {pm25: 29, pm10: 41, o3: 0.054, no2: 0.0104, so2: 0.0043, co: 0.334}, indexes: {uaqi: 63}, attribution: 'Google Air Quality'};
 const WAQI_OBS = {provider: 'aqicn', stationBased: true, observedAt: '2026-09-27T14:00:00.000Z', stationName: 'Ido-dong', stationGeo: [33.5, 126.53],
     pollutants: {pm25: 12.5, pm10: 20}, indexes: {us: 52}, attribution: 'World Air Quality Index Project'};
+
+// ---- review 5344219425 (1): one deadline for the whole air branch --------------------------------
+test('air policy: AIR_RESPONSE_DEADLINE_MS defaults to 4000 ms within 500..8000', () => {
+    assert.equal(airPolicy.responseDeadlineMs, 4000);
+    assert.equal(airPolicy.load({AIR_RESPONSE_DEADLINE_MS: '500'}).responseDeadlineMs, 500);
+    assert.equal(airPolicy.load({AIR_RESPONSE_DEADLINE_MS: '8000'}).responseDeadlineMs, 8000);
+    assert.throws(() => airPolicy.load({AIR_RESPONSE_DEADLINE_MS: '499'}), /AIR_RESPONSE_DEADLINE_MS/);
+    assert.throws(() => airPolicy.load({AIR_RESPONSE_DEADLINE_MS: '8001'}), /AIR_RESPONSE_DEADLINE_MS/);
+    assert.throws(() => airPolicy.load({AIR_RESPONSE_DEADLINE_MS: 'soon'}), /AIR_RESPONSE_DEADLINE_MS/);
+});
+
+function heldAir(timers) {
+    const air = {calls: [], timersAtCall: []};
+    air.getArpltn = (gCoord, requestTime, cb) => { air.timersAtCall.push(timers.pending().length); air.calls.push(cb); };
+    return air;
+}
+function nextCounter() {
+    const n = {calls: [], fn: err => n.calls.push(err)};
+    return n;
+}
+
+test('deadline: the timer starts before the air service (and its cache read); expiry answers once without air, a late result mutates nothing', async () => {
+    const timers = fakeTimers();
+    const air = heldAir(timers);
+    const ctrl = world({air, timers, policy: Object.assign({}, airPolicy, {responseDeadlineMs: 1234})});
+    const req = worldReq(), next = nextCounter();
+    ctrl.queryTwoDaysWeatherNewForm(req, {}, next.fn);
+    await new Promise(r => setImmediate(r));
+    assert.deepEqual(air.timersAtCall, [1], 'deadline armed before the service call');
+    assert.equal(timers.pending()[0].ms, 1234, 'configured deadline');
+    assert.equal(next.calls.length, 0, 'weather done, air pending');
+    timers.fire(timers.pending()[0]);
+    assert.deepEqual(next.calls, [undefined], 'answered at the deadline without an error');
+    assert.equal(req.airObservation, undefined);
+    eq(req.airStatus, {state: 'pending', retryAfterSeconds: 3}, 'pending hint snapshot at the deadline');
+    air.calls[0](null, {source: 'google'}, undefined, OBS);   // late success
+    assert.equal(req.airObservation, undefined, 'late result not attached');
+    eq(req.airStatus, {state: 'pending', retryAfterSeconds: 3}, 'late result leaves the snapshot');
+    assert.equal(next.calls.length, 1, 'no second next');
+    assert.ok(lines.some(l => /deadline/.test(l.text)), 'deadline logged');
+});
+
+test('deadline: early completion, callback error and a thrown service clear the timer; a timer firing afterwards is ignored', async () => {
+    for (const answer of [cb => cb(null, {source: 'google'}, undefined, OBS), cb => cb(new Error('programming')), 'throw']) {
+        const timers = fakeTimers();
+        const air = answer === 'throw' ? {getArpltn() { throw new Error('boom'); }} : {getArpltn: (g, t, cb) => setImmediate(() => answer(cb))};
+        const req = worldReq(), next = nextCounter();
+        world({air, timers}).queryTwoDaysWeatherNewForm(req, {}, next.fn);
+        for (let i = 0; i < 3; i++) await new Promise(r => setImmediate(r));
+        assert.deepEqual(next.calls, [undefined], String(answer));
+        assert.equal(timers.pending().length, 0, 'timer cleared: ' + String(answer));
+        assert.equal(timers.cleared.length, 1);
+        timers.fire(timers.list[0]);   // an expiry already queued when the answer came
+        assert.equal(next.calls.length, 1, 'still one next');
+        assert.equal(req.airObservation, answer === 'throw' || /Error/.test(String(answer)) ? undefined : OBS);
+        assert.equal(req.airStatus, undefined, 'settled before the deadline: no pending hint');
+    }
+});
+
+test('deadline: a weather error is still forwarded once while air is pending or late', async () => {
+    const timers = fakeTimers();
+    const air = heldAir(timers);
+    const req = worldReq(), next = nextCounter();
+    world({air, timers, dsf: (r, c, cb) => setImmediate(() => cb(new Error('VC failed')))}).queryTwoDaysWeatherNewForm(req, {}, next.fn);
+    for (let i = 0; i < 3; i++) await new Promise(r => setImmediate(r));
+    assert.equal(next.calls.length, 1); assert.match(next.calls[0].message, /VC failed/);
+    timers.fire(timers.pending()[0]);
+    air.calls[0](null, {source: 'google'}, undefined, OBS);
+    assert.equal(next.calls.length, 1);
+    assert.equal(req.airObservation, undefined);
+});
+
+test('deadline: an exception thrown downstream of a synchronous answer propagates and is not taken as an air failure', () => {
+    const timers = fakeTimers();
+    const boom = new Error('downstream');
+    const air = {getArpltn: (g, t, cb) => cb(null, {source: 'google'}, undefined, OBS)};
+    let nexts = 0;
+    assert.throws(() => world({air, timers, dsf: (r, c, cb) => cb()}).queryTwoDaysWeatherNewForm(worldReq(), {}, () => { nexts++; throw boom; }), e => e === boom);
+    assert.equal(nexts, 1);
+    assert.equal(timers.pending().length, 0, 'timer cleared');
+});
 
 /** The world pipeline after the query: current row, merge, units, air info, summary. */
 function respond(ctrl, obs, {airUnit, offsetMin = 345, withYesterday = true} = {}) {
@@ -261,9 +353,85 @@ test('airFallback.getArpltn passes the accepted normalized observation as a four
     assert.equal(fetched[3].provider, 'aqicn');
     assert.equal(fetched[3].observedAt, '2026-09-27T14:00:00.000Z', 'UTC ISO, not the KST dataTime');
     assert.equal(fetched[1].dataTime, '2026-09-27 23:00', 'domestic arpltn unchanged');
+    assert.match(fetched[1].attribution, /^World Air Quality Index Project; /, 'WAQI and originating agencies');
+    assert.equal(fetched[3].attribution, fetched[1].attribution);
     const cached = await call();
     assert.equal(http.calls.length, 1, 'second call from the cache');
     eq(cached[3], fetched[3]);
+    assert.equal(cached[1].attribution, fetched[1].attribution, 'attribution survives the cache');
     const far = await new Promise(r => fallback.getArpltn({lat: 35.1, lon: 129.0}, new clock(), (...args) => r(args)));
     assert.equal(far[1], undefined); assert.equal(far[3], undefined, 'no observation for an unusable result');
+});
+
+// ---- review 5344219425 (2): attribution travels with the source ----------------------------------
+test('attribution: the accepted observation attribution reaches the current row, arpltn, airInfo and airInfo.last; source stays the id', () => {
+    const ctrl = world();
+    const units = new WWUnits();
+    const r = respond(ctrl, WAQI_OBS, {airUnit: 'airkorea'});
+    assert.equal(r.current.airAttribution, 'World Air Quality Index Project');
+    assert.equal(r.current.airSource, 'aqicn');
+    r.req.result.thisTime.forEach(t => units._makeArpltn(t, r.req.query));
+    assert.equal(r.current.arpltn.attribution, 'World Air Quality Index Project');
+    assert.equal(r.yesterday.arpltn.attribution, undefined, 'no attribution on yesterday');
+    ctrl.makeAirInfo(r.req, res, () => {});
+    assert.equal(r.req.result.airInfo.source, 'aqicn');
+    assert.equal(r.req.result.airInfo.attribution, 'World Air Quality Index Project');
+    assert.equal(r.req.result.airInfo.last.attribution, 'World Air Quality Index Project');
+});
+
+test('attribution: invalid or missing metadata is dropped, never manufactured', () => {
+    const ctrl = world();
+    const units = new WWUnits();
+    for (const attribution of [undefined, 123, {text: 'x'}, ['a'], '', '   ', null]) {
+        const obs = Object.assign({}, OBS, {attribution});
+        const r = respond(ctrl, obs, {airUnit: 'airkorea'});
+        assert.equal(r.current.airSource, 'google');
+        assert.equal(Object.prototype.hasOwnProperty.call(r.current, 'airAttribution'), false, String(attribution));
+        r.req.result.thisTime.forEach(t => units._makeArpltn(t, r.req.query));
+        assert.equal(Object.prototype.hasOwnProperty.call(r.current.arpltn, 'attribution'), false);
+        ctrl.makeAirInfo(r.req, res, () => {});
+        assert.equal(Object.prototype.hasOwnProperty.call(r.req.result.airInfo, 'attribution'), false);
+    }
+    const trimmed = respond(ctrl, Object.assign({}, OBS, {attribution: '  Google Air Quality \n'}), {airUnit: 'airkorea'});
+    assert.equal(trimmed.current.airAttribution, 'Google Air Quality');
+    const none = respond(ctrl, undefined, {airUnit: 'airkorea'});
+    assert.equal(none.current.airAttribution, undefined); assert.equal(none.current.airSource, undefined);
+});
+
+test('attribution: the shared evaluate() adds a valid attribution to the domestic arpltn too (additive)', () => {
+    const observation = createLoader({log, overrides: {'config/config.js': {}}}).load('lib/air/observation.js');
+    const base = {provider: 'aqicn', stationBased: false, observedAt: '2026-09-27T14:00:00.000Z', pollutants: {pm25: 10}};
+    const t = new Date('2026-09-27T14:30:00Z');
+    assert.equal(observation.evaluate(Object.assign({}, base, {attribution: ' World Air Quality Index Project; Agency '}), {lat: 1, lon: 1}, t).arpltn.attribution,
+        'World Air Quality Index Project; Agency');
+    for (const attribution of [undefined, 7, {}, '  ']) {
+        const a = observation.evaluate(Object.assign({}, base, {attribution}), {lat: 1, lon: 1}, t).arpltn;
+        assert.equal(Object.prototype.hasOwnProperty.call(a, 'attribution'), false);
+        assert.equal(a.source, 'aqicn');
+    }
+});
+
+// ---- D22 steering: pending hint when the deadline releases the weather -----------------------------
+test('pending hint: only an expired deadline sets it; terminal and successful answers do not', async () => {
+    const terminal = [cb => cb(null, undefined, 'no-provider'), cb => cb(null, undefined, 'openweather:http-500'), cb => cb(null, undefined, 'stale'),
+        cb => cb(null, {source: 'google'}, undefined, OBS), cb => cb(new Error('programming'))];
+    for (const answer of terminal) {
+        const timers = fakeTimers();
+        const req = worldReq(), next = nextCounter();
+        world({air: {getArpltn: (g, t, cb) => setImmediate(() => answer(cb))}, timers}).queryTwoDaysWeatherNewForm(req, {}, next.fn);
+        for (let i = 0; i < 3; i++) await new Promise(r => setImmediate(r));
+        assert.equal(next.calls.length, 1);
+        assert.equal(Object.prototype.hasOwnProperty.call(req, 'airStatus'), false, String(answer));
+    }
+});
+
+test('pending hint: mergeAqi puts the snapshot at the top of the response; absent otherwise', () => {
+    const ctrl = world();
+    const pending = {sessionID: 't', query: {}, airStatus: {state: 'pending', retryAfterSeconds: 3}, result: {thisTime: [{date: '2026.09.27 20:00'}], timezone: {min: 0, ms: 0}}};
+    ctrl.mergeAqi(pending, res, () => {});
+    eq(pending.result.airStatus, {state: 'pending', retryAfterSeconds: 3});
+    const withAir = respond(ctrl, OBS, {airUnit: 'airkorea'});
+    assert.equal(Object.prototype.hasOwnProperty.call(withAir.req.result, 'airStatus'), false);
+    const none = respond(ctrl, undefined, {airUnit: 'airkorea'});
+    assert.equal(Object.prototype.hasOwnProperty.call(none.req.result, 'airStatus'), false);
 });

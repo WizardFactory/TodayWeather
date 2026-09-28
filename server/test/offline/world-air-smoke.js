@@ -7,6 +7,12 @@
  * routes, air after a weather-cache hit, every airUnit, regional observation times (+5:45, -2:30, -11),
  * station names, no air on yesterday, nonfatal no-key / all-fail / timeout paths, and the paid phase: Visual
  * Crossing air after exhausted free tiers and a capped paid OpenWeather, with its D20 reservation and vc.usage records.
+ * Review 5344219425: one deadline for the air branch (default 4 s with default 3 s provider timeouts, a hanging
+ * cache read, a late success that fills the shared cache for the next request, no second answer), and provider
+ * attribution next to the source (fresh and cached, DSF versions and the widget; invalid cached metadata dropped).
+ * D22 steering: airStatus {state: 'pending', retryAfterSeconds: 3} at the top of the response only when the deadline
+ * released the weather (W8 v000903, W9 v000902, W10 v000901 and /ww); never on success, terminal failure, no key,
+ * or the next request.
  * Run: TZ=UTC NODE_PATH=/tmp/tw-2622/node_modules node server/test/offline/world-air-smoke.js
  * Optional TW_SMOKE_OUTPUT_DIR selects the evidence directory (default: a temp directory).
  */
@@ -62,6 +68,7 @@ const server = http.createServer((req, res) => {
         const send = (status, payload) => { res.writeHead(status, {'content-type': 'application/json'}); res.end(JSON.stringify(payload)); };
         if (mode === 'http500') return send(500, {status: 'error'});
         if (mode === 'hang') return;   // the client times out; the socket is destroyed at the end
+        if (mode === 'slow') return setTimeout(() => send(200, body(id, provider.place)), 1800);
         send(200, body(id, provider.place));
     });
 });
@@ -89,6 +96,13 @@ function harness(place, {keyString = KEYS, airPolicy, cache = memoryModel(), air
     h.cache = cache; h.airUsage = airUsage; h.weather = weather;
     return h;
 }
+async function waitFor(check, ms, label) {
+    const end = RealDate.now() + ms;
+    while (!check()) {
+        assert(RealDate.now() < end, label + ': not within ' + ms + ' ms');
+        await new Promise(r => setTimeout(r, 20));
+    }
+}
 function placeAt(p) { return Object.assign({}, p, {offset: zoneOffset(p.zone, T)}); }
 
 async function request(h, kind, place, airUnit, label) {
@@ -104,13 +118,18 @@ async function request(h, kind, place, airUnit, label) {
 const cellRow = (h, place) => h.cache.rows[place.lat.toFixed(2) + ',' + place.lon.toFixed(2)];
 const CODES = ['pm10', 'pm25', 'o3', 'no2', 'so2', 'co'];
 
-function assertAir(r, label, {source, dataTime, observation, stationName, airUnit}) {
+function assertAir(r, label, {source, dataTime, observation, stationName, airUnit, attribution}) {
     const a = r.current.arpltn;
     assert(a, label + ': current.arpltn');
     assert.equal(a.source, source, label + ': arpltn.source');
     assert.equal(r.body.airInfo.source, source, label + ': airInfo.source');
     assert.equal(a.dataTime, dataTime, label + ': dataTime in the region offset');
     assert.equal(a.stationName, stationName, label + ': stationName');
+    // attribution: the provider's text next to the unchanged source id, in arpltn, airInfo and airInfo.last
+    const expected = attribution !== undefined ? attribution : observation.attribution.trim();
+    assert.equal(a.attribution, expected, label + ': arpltn.attribution');
+    assert.equal(r.body.airInfo.attribution, expected, label + ': airInfo.attribution');
+    assert.equal(r.body.airInfo.last.attribution, expected, label + ': airInfo.last.attribution');
     for (const c of CODES) {
         assert.equal(a[c + 'Value'], observation.pollutants[c], label + ': ' + c + ' is the normalized concentration');
         if (observation.pollutants[c] === undefined) assert.equal(a[c + 'Grade'], undefined, label + ': missing ' + c + ' stays missing');
@@ -121,6 +140,7 @@ function assertAir(r, label, {source, dataTime, observation, stationName, airUni
     assert.equal(typeof r.current.summaryAir, 'string', label + ': summaryAir');
     assert.equal(r.body.units.airUnit, airUnit, label + ': airUnit');
     assertNoYesterdayAir(r, label);
+    assertAirStatus(r, label, false);
 }
 function assertNoYesterdayAir(r, label) {
     const y = r.yesterday.arpltn || {};
@@ -131,7 +151,14 @@ function assertNoYesterdayAir(r, label) {
         assert(CODES.every(c => row[c + 'Value'] === undefined) && !row.arpltn, label + ': no air on forecast/history rows ' + row.date);
     }
 }
-function assertNoAir(r, label) {
+const PENDING = {state: 'pending', retryAfterSeconds: 3};
+/** The top-level pending hint: present only when the air deadline released the weather. */
+function assertAirStatus(r, label, pending) {
+    if (pending) assert.deepEqual(r.body.airStatus, PENDING, label + ': airStatus pending');
+    else assert.equal(Object.prototype.hasOwnProperty.call(r.body, 'airStatus'), false, label + ': no airStatus');
+}
+function assertNoAir(r, label, pending) {
+    assertAirStatus(r, label, pending);
     const a = r.current.arpltn || {};
     assert.equal(a.source, undefined, label + ': no air source');
     assert(CODES.every(c => a[c + 'Value'] === undefined), label + ': no air values');
@@ -169,6 +196,8 @@ async function main() {
     const widget = await request(h1, 'ww', kt, undefined, 'W1 Kathmandu ww');
     assert.deepEqual(widget.requests, [], 'W1 ww: served from the shared air cache');
     assert.equal(widget.current.airSource, 'google'); assert.equal(widget.current.mTime, '2026-09-27 19:45');
+    assert.equal(widget.current.airAttribution, 'Google Air Quality', 'W1 ww: raw airAttribution next to airSource');
+    assertAirStatus(widget, 'W1 ww', false);
     assert.equal(widget.current.pm25Value, googleObs.pollutants.pm25);
     assert(Number.isInteger(widget.current.aqiGrade), 'W1 ww: default (aqicn) grading');
     assert.equal(widget.yesterday.pm25Value, undefined, 'W1 ww: no yesterday air');
@@ -194,7 +223,19 @@ async function main() {
     const waqiObs = cellRow(h3, pg).observation;
     assert.deepEqual(Object.keys(waqiObs.pollutants).sort(), ['pm10', 'pm25'], 'W3: PM-only station');
     assertAir(c, 'W3', {source: 'aqicn', dataTime: '2026-09-27 03:00', observation: waqiObs, stationName: 'Pago Pago', airUnit: 'airkorea'});
+    // assert.match is not available on Node 10
+    assert(/^World Air Quality Index Project; South Air Korea Environment Corporation/.test(c.current.arpltn.attribution), 'W3: WAQI and the originating agency');
     record('W3 waqi station', c);
+    for (const [kind, unit] of [['v000903', 'airnow'], ['v000901', 'aqicn']]) {
+        const r = await request(h3, kind, pg, unit, 'W3 Pago Pago ' + kind + ' ' + unit + ' (cached)');
+        assert.deepEqual(r.requests, [], 'W3 ' + kind + ': cached');
+        assertAir(r, 'W3 cached ' + kind, {source: 'aqicn', dataTime: '2026-09-27 03:00', observation: waqiObs, stationName: 'Pago Pago', airUnit: unit});
+    }
+    const pgWidget = await request(h3, 'ww', pg, undefined, 'W3 Pago Pago ww (cached)');
+    assert.deepEqual(pgWidget.requests, []);
+    assert.equal(pgWidget.current.airSource, 'aqicn');
+    assert.equal(pgWidget.current.airAttribution, c.current.arpltn.attribution, 'W3 ww: raw airAttribution');
+    assert.equal(pgWidget.yesterday.airAttribution, undefined);
 
     // W4 (AC1/AC4): all providers fail → weather without air; 3 min later (failure cache expired,
     // weather still cached: no Visual Crossing call) air is fetched again and appears.
@@ -264,7 +305,85 @@ async function main() {
     assert.equal(JSON.stringify([...h7.usage.values()].find(d => d._id === '2026-09-27')), usageBefore, 'W7: vc.usage unchanged by the cached request');
     record('W7 paid visualcrossing cached', g2);
 
-    const allText = JSON.stringify(evidence) + [h1, h2, h3, h4, h5, h6, h7].map(h => JSON.stringify(h.logs)).join('');
+    // W8 (review 1): default policy — deadline 4000 ms, provider timeout 3000 ms — with every provider hanging:
+    // the chain alone would take 9 s; the weather answers at the deadline, once, without air.
+    const h8 = harness(kt);
+    const defaults = h8.load(path.join(__dirname, '../../config/air.js'));
+    assert.equal(defaults.responseDeadlineMs, 4000); assert.equal(defaults.providerTimeoutMs, 3000);
+    provider.modes = {google: 'hang', openweather: 'hang', aqicn: 'hang'};
+    let t0 = RealDate.now();
+    const w8 = await request(h8, 'v000903', kt, 'airkorea', 'W8 deadline default policy');
+    const w8ms = RealDate.now() - t0;
+    assert(w8ms >= 4000 && w8ms < 5500, 'W8: answered at the 4 s deadline, took ' + w8ms);
+    assertNoAir(w8, 'W8', true);
+    assert(h8.logs.some(x => /air deadline of 4000 ms passed/.test(String(x.args[0]))), 'W8: deadline logged');
+    // the chain goes on (google, openweather, aqicn time out in turn) and caches its failure for the other workers
+    await waitFor(() => cellRow(h8, kt), 7000, 'W8 failure cached');
+    assert.deepEqual(provider.requests.slice(-3).map(r => r.provider), ['google', 'openweather', 'aqicn']);
+    assert.equal(cellRow(h8, kt).outcome, 'failed');
+    assert.deepEqual(h8.responses.length, 1, 'W8: one answer, no late second response');
+    provider.modes = {};
+    t0 = RealDate.now();
+    const w8b = await request(h8, 'v000903', kt, 'airkorea', 'W8 next request within the failure TTL');
+    assert.deepEqual(w8b.requests, [], 'W8: the cached failure spares the providers');
+    assert(RealDate.now() - t0 < 1000, 'W8: prompt');
+    assertNoAir(w8b, 'W8 next');
+    record('W8 deadline 4000 ms, providers hanging', w8, {ms: w8ms});
+
+    // W9 (review 1): deadline 1000 ms, Google answers after 1.8 s: no air now, no late mutation; the late result
+    // fills the shared cache and the next request (another route) gets it without HTTP.
+    const h9 = harness(kt, {airPolicy: {responseDeadlineMs: 1000}});
+    provider.modes = {google: 'slow'};
+    t0 = RealDate.now();
+    const w9 = await request(h9, 'v000902', kt, 'airkorea', 'W9 late success');
+    const w9ms = RealDate.now() - t0;
+    assert(w9ms >= 1000 && w9ms < 1700, 'W9: answered at the deadline, took ' + w9ms);
+    assertNoAir(w9, 'W9', true);
+    await waitFor(() => cellRow(h9, kt) && cellRow(h9, kt).outcome === 'ok', 3000, 'W9 late success cached');
+    assert.equal(h9.responses.length, 1, 'W9: no second answer');
+    assertNoAir(w9, 'W9 after the late result', true);   // the delivered body is unchanged
+    provider.modes = {};
+    const w9b = await request(h9, 'v000903', kt, 'airnow', 'W9 next request from the warmed cache');
+    assert.deepEqual(w9b.requests, [], 'W9: no extra HTTP');
+    assertAir(w9b, 'W9 next', {source: 'google', dataTime: '2026-09-27 19:45', observation: cellRow(h9, kt).observation, stationName: undefined, airUnit: 'airnow'});
+    const w9w = await request(h9, 'ww', kt, undefined, 'W9 widget from the warmed cache');
+    assert.deepEqual(w9w.requests, []); assert.equal(w9w.current.airSource, 'google');
+    assertAirStatus(w9w, 'W9 ww next', false);
+    record('W9 late success warms the cache', w9b, {firstMs: w9ms});
+
+    // W10 (review 1): the cache read itself hangs: the deadline still bounds the branch; no provider is asked.
+    const hanging = memoryModel();
+    hanging.find = () => { const q = {limit: () => q, lean: () => q, exec: () => {}}; return q; };
+    const h10 = harness(kt, {cache: hanging, airPolicy: {responseDeadlineMs: 1000}});
+    t0 = RealDate.now();
+    const w10 = await request(h10, 'v000901', kt, 'airkorea_who', 'W10 hanging cache read');
+    const w10ms = RealDate.now() - t0;
+    assert(w10ms >= 1000 && w10ms < 1700, 'W10: took ' + w10ms);
+    assert.deepEqual(w10.requests, []);
+    assertNoAir(w10, 'W10', true);
+    // the widget route releases its raw response with the same hint
+    const w10w = await request(h10, 'ww', kt, undefined, 'W10 hanging cache read ww');
+    assert.deepEqual(w10w.body.airStatus, PENDING, 'W10 ww: airStatus pending');
+    assert.equal(w10w.current.airSource, undefined);
+    record('W10 hanging cache read', w10, {ms: w10ms});
+
+    // W11 (review 2): cached observation with invalid attribution metadata: source kept, attribution dropped.
+    const h11 = harness(kt);
+    const bad = Object.assign({}, googleObs, {attribution: 123});
+    h11.cache.rows[kt.lat.toFixed(2) + ',' + kt.lon.toFixed(2)] = {_id: kt.lat.toFixed(2) + ',' + kt.lon.toFixed(2), outcome: 'ok', provider: 'google',
+        observation: bad, fetchedAt: new RealDate(T).toISOString(), expireAt: new RealDate(T + 30 * 60000).toISOString()};
+    const w11 = await request(h11, 'v000903', kt, 'airkorea', 'W11 invalid cached attribution');
+    assert.deepEqual(w11.requests, []);
+    assert.equal(w11.current.arpltn.source, 'google');
+    for (const target of [w11.current.arpltn, w11.body.airInfo, w11.body.airInfo.last]) {
+        assert.equal(Object.prototype.hasOwnProperty.call(target, 'attribution'), false, 'W11: no attribution manufactured');
+    }
+    const w11w = await request(h11, 'ww', kt, undefined, 'W11 ww');
+    assert.equal(w11w.current.airSource, 'google'); assert.equal(w11w.current.airAttribution, undefined);
+    assertAirStatus(w11w, 'W11 ww', false);
+    record('W11 invalid attribution dropped', w11);
+
+    const allText = JSON.stringify(evidence) + [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11].map(h => JSON.stringify(h.logs)).join('');
     for (const k of [KEYS.google_key, KEYS.owm_keys[0].key, KEYS.aqi_keys[0].key]) assert(!allText.includes(k), 'key not logged');
     const report = {createdAt: new RealDate().toISOString(), node: process.version, hostTimezone: process.env.TZ || 'system', clock: new RealDate(T).toISOString(),
         outcome: 'passed', providerRequests: provider.requests, scenarios: evidence};
