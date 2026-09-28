@@ -1,0 +1,23 @@
+{
+ "_comment": "Captured read-only from the Visual Crossing Timeline API (include=current, air quality elements) for Seoul on 2026-09-27, key removed (#2628).",
+ "queryCost": 1,
+ "latitude": 37.5665,
+ "longitude": 126.978,
+ "resolvedAddress": "37.5665,126.978",
+ "address": "37.5665,126.978",
+ "timezone": "Asia/Seoul",
+ "tzoffset": 9.0,
+ "currentConditions": {
+  "datetime": "01:00:00",
+  "datetimeEpoch": 1790524800,
+  "pm1": 16.0,
+  "pm2p5": 19.0,
+  "pm10": 22.0,
+  "so2": 8.3,
+  "no2": 15.3,
+  "o3": 64.3,
+  "co": 231.3,
+  "aqius": 95.0,
+  "aqieur": 4.0
+ }
+}

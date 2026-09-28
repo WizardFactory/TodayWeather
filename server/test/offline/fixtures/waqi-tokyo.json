@@ -1,0 +1,71 @@
+{
+ "_comment": "Captured read-only from the WAQI geo feed on 2026-09-27 (token removed; forecast and debug fields dropped) for #2622.",
+ "status": "ok",
+ "data": {
+  "aqi": 42,
+  "idx": 2303,
+  "attributions": [
+   {
+    "name": "Japan Atmospheric Environmental Regional Observation System (環境省大気汚染物質広域監視システム)",
+    "url": "https://soramame.env.go.jp/"
+   },
+   {
+    "name": "Tokyo, Japan Environment Agency (東京都環境局)",
+    "url": "https://www.kankyo.metro.tokyo.lg.jp/"
+   },
+   {
+    "name": "World Air Quality Index Project",
+    "url": "https://waqi.info/"
+   }
+  ],
+  "city": {
+   "geo": [
+    35.669444,
+    139.663889
+   ],
+   "name": "Sasazuka, Shibuya, Tokyo, Japan (甲州街道大原渋谷区)"
+  },
+  "dominentpol": "pm25",
+  "iaqi": {
+   "co": {
+    "v": 6.7
+   },
+   "h": {
+    "v": 84
+   },
+   "no2": {
+    "v": 23.2
+   },
+   "o3": {
+    "v": 19.2
+   },
+   "p": {
+    "v": 1013.4
+   },
+   "pm10": {
+    "v": 16
+   },
+   "pm25": {
+    "v": 42
+   },
+   "so2": {
+    "v": 1.5
+   },
+   "t": {
+    "v": 23
+   },
+   "w": {
+    "v": 1
+   },
+   "wg": {
+    "v": 1.5
+   }
+  },
+  "time": {
+   "s": "2026-09-27 22:00:00",
+   "tz": "+09:00",
+   "v": 1790546400,
+   "iso": "2026-09-27T22:00:00+09:00"
+  }
+ }
+}

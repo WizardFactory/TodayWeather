@@ -149,6 +149,51 @@ and actual v000903 route/shared client parsing in 16 DB-version/unit/data-availa
 scenarios. No application startup, production secrets, KMA requests or mobile build.
 See the [operator contract](../../../reports/sdlc/issue-2564/operator-contract.md).
 
+## Air provider chain and domestic air fallback (#2622, #2628)
+
+`air-chain.test.js` (in `test:offline` and the RSS workflow) loads the real policy config, the four adapters, the
+shared budgets and the chain in VMs (`air-harness.js`: relative requires resolved from disk, axios and Mongo models
+injected). It covers: config defaults/validation; each adapter's request and unit mapping from
+`fixtures/air/*.json` (Google ppb → ppm, OpenWeather/Visual Crossing µg/m³ → ppm, WAQI sub-index → concentration);
+failure classification (timeout, transport, 401/403 → auth, 429 → quota, malformed bodies) with the key never in
+logs or reasons; `evaluate` (8 h, 30 km for stations only, PM required); budgets (monthly cap with 5 % reserve,
+OpenWeather minute cap, down markers, paid phase off by default, per-provider paid cap, Visual Crossing on the
+overseas day budget, free store errors not blocking, paid reads/reservations failing closed); and the ordering rules (free phase, exhausted phase, paid phase,
+skipping unconfigured/down/capped providers, one attempt per provider per request), and the review-round regressions: a
+non-string or non-coercible provider status is a classified failure, zero caps block on an empty store, the OpenWeather
+rolling minute across the bucket boundary, at most four attempts across phases; paid pre-call reservation, storage failure, no double counting and reservation-month rollover (D20).
+
+`air-fallback.test.js` keeps the #2622 fallback checks against the chain with only WAQI configured: AirKorea-shaped
+mapping, limits, no key, failures and their cache periods, cache reuse across module instances, answer after the
+cache write, in-flight sharing, malformed bodies, the middleware, `airInfo.source`, the skipped station forecast, the
+`getKeco` error path, the route order and the overseas station name.
+
+`air-chain-smoke.js` runs the complete v000903 coordinate and address routes through the response smoke harness with
+real `axios` HTTP to one loopback server that plays Google, OpenWeather, Visual Crossing and WAQI: Google answers in
+the free phase (DB 1.0/2.0 × `airkorea`/`airnow`), an unchanged fresh AirKorea response, capped Google → OpenWeather,
+both capped → WAQI, exhausted budgets with the paid flag off/on, an auth rejection marking Google down for a later
+request, a hanging provider bounded by the timeout, every provider failing (cached 2 min), a stale observation moving
+on, address = coordinate, and the Jeju WAQI name. `air-budget-mongo-smoke.js` runs worker processes against
+one mongod (mongodb-memory-server, mongoose 5.13 as in `vc-lock-mongo-smoke.js`): the OpenWeather minute cap and the
+Google month cap are shared across processes, a down marker is seen by another process and expires, a cached
+observation serves the next process, both collections have TTL indexes, and concurrent workers compete for a limited paid allowance (D20). `air-chain-node10-check.js` repeats the
+adapter, chain, fallback and middleware checks on the host's Node 10.15.3.
+
+```sh
+npm install --prefix /tmp/tw-air --ignore-scripts --no-audit --no-fund async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3 axios@0.18.1
+TZ=UTC NODE_PATH=/tmp/tw-air/node_modules node server/test/offline/air-chain.test.js
+TZ=UTC NODE_PATH=/tmp/tw-air/node_modules node server/test/offline/air-fallback.test.js
+TZ=UTC NODE_PATH=/tmp/tw-air/node_modules node server/test/offline/air-chain-smoke.js
+TZ=UTC NODE_PATH=/tmp/tw-air/node_modules node server/test/offline/air-chain-node10-check.js
+npm install --prefix /tmp/tw-air-mongo --ignore-scripts --no-audit --no-fund mongoose@5.13.22 async@2.5.0 mongodb-memory-server-core@10.1.4 axios@0.18.1
+TZ=UTC NODE_PATH=/tmp/tw-air-mongo/node_modules node server/test/offline/air-budget-mongo-smoke.js
+```
+
+No check calls a real provider or a production database. `fixtures/waqi-*.json` and `fixtures/air/visualcrossing-seoul.json`
+are read-only captures from 2026-09-27 without keys; `fixtures/air/google-seoul.json` and `openweather-seoul.json` are
+reconstructed from the vendors' documentation (the Google API was not enabled and the OpenWeather key was rejected when
+they were written).
+
 ## Node 16 runtime and push compatibility (#2565)
 
 The service target is Node 16.20.2 / npm 8.19.4 (`server/.nvmrc`), an interim

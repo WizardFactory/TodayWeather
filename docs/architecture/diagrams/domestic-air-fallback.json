@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Domestic air: AirKorea first, then the provider chain with shared budgets and cache",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      596
+    ]
+  },
+  "participants": [
+    {
+      "id": "route",
+      "type": "backend",
+      "label": "KMA route",
+      "sublabel": "v000903 addr / coord"
+    },
+    {
+      "id": "airkorea",
+      "type": "database",
+      "label": "AirKorea store",
+      "sublabel": "Mongo arpltns"
+    },
+    {
+      "id": "fallback",
+      "type": "backend",
+      "label": "Air fallback + chain",
+      "sublabel": "per worker, in-flight shared"
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "Shared Mongo",
+      "sublabel": "cache + usage counters"
+    },
+    {
+      "id": "providers",
+      "type": "external",
+      "label": "Providers",
+      "sublabel": "Google · OpenWeather · VC · WAQI"
+    }
+  ],
+  "segments": [
+    {
+      "from": 146,
+      "to": 206,
+      "label": "AirKorea"
+    },
+    {
+      "from": 218,
+      "to": 458,
+      "label": "Provider chain"
+    },
+    {
+      "from": 470,
+      "to": 518,
+      "label": "Response"
+    }
+  ],
+  "messages": [
+    {
+      "id": "keco-read",
+      "from": "route",
+      "to": "airkorea",
+      "y": 160,
+      "label": "getKeco: nearest stations, last 24 h",
+      "variant": "default"
+    },
+    {
+      "id": "keco-none",
+      "from": "airkorea",
+      "to": "route",
+      "y": 190,
+      "label": "no observation within 8 h",
+      "variant": "return"
+    },
+    {
+      "id": "fallback-call",
+      "from": "route",
+      "to": "fallback",
+      "y": 232,
+      "label": "getAirFallback(town gCoord)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cache-read",
+      "from": "fallback",
+      "to": "store",
+      "y": 262,
+      "label": "find cell (0.01°), expireAt > now",
+      "variant": "default"
+    },
+    {
+      "id": "cache-miss",
+      "from": "store",
+      "to": "fallback",
+      "y": 292,
+      "label": "miss (hit skips providers)",
+      "variant": "return"
+    },
+    {
+      "id": "budget-check",
+      "from": "fallback",
+      "to": "store",
+      "y": 322,
+      "label": "check policy; reserve paid slot (deny on error)",
+      "variant": "default"
+    },
+    {
+      "id": "provider-get",
+      "from": "fallback",
+      "to": "providers",
+      "y": 352,
+      "label": "next allowed provider, 3 s timeout, no retry",
+      "variant": "default"
+    },
+    {
+      "id": "provider-feed",
+      "from": "providers",
+      "to": "fallback",
+      "y": 382,
+      "label": "observation → concentrations, evaluate (8 h, 30 km, PM)",
+      "variant": "return"
+    },
+    {
+      "id": "budget-record",
+      "from": "fallback",
+      "to": "store",
+      "y": 412,
+      "label": "record outcome; 401/403/429 → down 10 min",
+      "variant": "default"
+    },
+    {
+      "id": "cache-write",
+      "from": "fallback",
+      "to": "store",
+      "y": 442,
+      "label": "upsert cell: ok 30 min / failed 2 min",
+      "variant": "default"
+    },
+    {
+      "id": "arpltn",
+      "from": "fallback",
+      "to": "route",
+      "y": 484,
+      "label": "arpltn with source = provider id (after the write)",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Order",
+      "items": [
+        "Free phase: Google → OpenWeather → WAQI; capped, down or unconfigured providers are skipped.",
+        "Free budgets exhausted: WAQI first; paid OpenWeather → Visual Crossing → Google only with AIR_PAID_PROVIDERS_ENABLED."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Limits",
+      "items": [
+        "Free counters are approximate (5 % reserve). Paid calls require an acknowledged atomic monthly reservation; read/write errors deny paid admission.",
+        "Reservations are not refunded or counted twice; result accounting retains the admission month. Cache policy is unchanged."
+      ]
+    }
+  ]
+}

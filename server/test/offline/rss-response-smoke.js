@@ -49,7 +49,7 @@ function makeFixture(place, policy) {
 function createHarness(version, fixture, historyOptions = {}) {
   const traces=[],queries=[],logs=[],cache=new Map(),models=new Map();
   let activeMethod;
-  const config={history:historyOptions.config,db:{version},apiServer:{url:'https://synthetic.invalid'},ipAddress:'127.0.0.1',port:1};
+  const config={history:historyOptions.config,db:{version},apiServer:{url:'https://synthetic.invalid'},ipAddress:'127.0.0.1',port:1,keyString:historyOptions.keyString};
   const manager={MAX_CURRENT_COUNT:200,leadingZeros:(n,l)=>String(n).padStart(l,'0'),getRegIdByTown:(r,c,cb)=>cb(null,{pointNumber:'109',cityCode:'11B10101'})};
   const logger={};
   for(const level of ['info','silly','debug','verbose','warn','error']) logger[level]=(...args)=>{if(level==='error'||level==='warn')logs.push({method:activeMethod,level,args:args.map(a=>a&&a.stack||a)});};
@@ -88,6 +88,8 @@ function createHarness(version, fixture, historyOptions = {}) {
     return [];
   }
   function getModel(name) {
+    // Optional shared air provider stores (#2622/#2628: observation cache, usage counters, VC usage/lock); several harnesses may share them like API workers.
+    if(historyOptions.airModels && Object.hasOwn(historyOptions.airModels,name)) return historyOptions.airModels[name];
     if(models.has(name))return models.get(name);
     const obj={find:(query,projection,cb)=>{
       queries.push({model:name,query:clone(query)});
@@ -102,7 +104,7 @@ function createHarness(version, fixture, historyOptions = {}) {
     models.set(name,obj);return obj;
   }
   const optional={
-    'kecoController':{getArpLtnInfo:(town,date,cb)=>cb(null,fixture.arpltnInfo?clone(fixture.arpltnInfo):{arpltn:{},list:[],stnList:[]}),getDustFrcst:(town,date,cb)=>cb(null,[])},
+    'kecoController':{getArpLtnInfo:(town,date,cb)=>fixture.arpltnError?cb(new Error(fixture.arpltnError)):cb(null,fixture.arpltnInfo?clone(fixture.arpltnInfo):{arpltn:{},list:[],stnList:[]}),getDustFrcst:(town,date,cb)=>cb(null,[])},
     'controllerKmaStnWeather':{getCityHourlyList:(town,cb)=>cb(null,[]),getStnHourlyAndMinRns:(town,date,current,cb)=>{
       const stn={t1h:20,vec:315,wsd:3,stnDateTime:'2026-09-24 08:50',rs1h:0};
       // Optional city weather text, typed as getStnHourlyAndMinRns does before returning (#2576).
@@ -123,13 +125,18 @@ function createHarness(version, fixture, historyOptions = {}) {
     function localRequire(id) {
       if(id==='mongoose' && historyOptions.db) return {connection:{db:historyOptions.db}};
       if(id==='dnscache')return ()=>({});
+      // Optional package overrides, e.g. an axios instance redirected to a loopback provider (#2622).
+      if(historyOptions.modules && Object.hasOwn(historyOptions.modules,id)) return historyOptions.modules[id];
       if(id==='request')return (url,opts,cb)=>{
         assert(url.startsWith('https://synthetic.invalid/geocode/v000903/coord/'));
         cb(null,{statusCode:200},{kmaAddress:{name1:fixture.place.town.first,name2:fixture.place.town.second,name3:fixture.place.town.third}});
       };
       if(!id.startsWith('.'))return require(id);
-      const resolved=path.resolve(path.dirname(filename),id)+(path.extname(id)==='.js'?'':'.js');
+      let resolved=path.resolve(path.dirname(filename),id);
+      resolved=fs.existsSync(resolved)&&fs.statSync(resolved).isDirectory()?path.join(resolved,'index.js'):resolved+(path.extname(id)==='.js'?'':'.js');
       if(resolved.endsWith('/config/config.js'))return config;
+      // Air provider policy (#2628): defaults plus per-scenario overrides; the sandbox has no process.env.
+      if(resolved.endsWith('/config/air.js'))return Object.assign({},require(resolved).load({}),historyOptions.airConfig||{});
       const name=path.basename(resolved,'.js');
       if(resolved.includes('/models/'))return getModel(name);
       if(name==='kasi.riseset.controller' && fixture.kasiRows) return load(resolved);
@@ -167,8 +174,12 @@ function createHarness(version, fixture, historyOptions = {}) {
   const methods=['coord2addr',...fs.readFileSync(routeFile,'utf8').match(/var routerList = \[([\s\S]*?)\];/)[1].match(/cTown\.(\w+)/g).map(s=>s.slice(6))];
   const route=router.stack.find(l=>l.route&&l.route.path==='/coord/:loc').route;
   route.stack.forEach((layer,i)=>{const fn=layer.handle;layer.handle=(req,res,next)=>{activeMethod=methods[i];traces.push(activeMethod);fn(req,res,next);};});
-  function request(query) { return new Promise((resolve,reject)=>{
-    const url='/coord/'+fixture.place.gCoord.lat+','+fixture.place.gCoord.lon;
+  // Optional address route (#2622): same middleware list without coord2addr.
+  const addrRoute=router.stack.find(l=>l.route&&l.route.path==='/addr/:region/:city/:town').route;
+  addrRoute.stack.forEach((layer,i)=>{const fn=layer.handle;layer.handle=(req,res,next)=>{activeMethod=methods[i+1];traces.push(activeMethod);fn(req,res,next);};});
+  function request(query, options = {}) { return new Promise((resolve,reject)=>{
+    const t=fixture.place.town;
+    const url=options.addr?'/addr/'+[t.first,t.second,t.third].map(encodeURIComponent).join('/'):'/coord/'+fixture.place.gCoord.lat+','+fixture.place.gCoord.lon;
     const req={method:'GET',url,originalUrl:'/v000903/kma'+url,baseUrl:'/v000903/kma',headers:{},query,sessionID:'synthetic-smoke'};
     const res={__:translate,status(code){this.statusCode=code;return this;},send(body){reject(new Error('Unexpected response '+this.statusCode+': '+body));},json(body){resolve({body:JSON.parse(JSON.stringify(body)),traces,queries,logs});},redirect(url){reject(new Error('Unexpected redirect '+url));},setHeader(){}};
     router.handle(req,res,err=>reject(err||new Error('No JSON response')));
