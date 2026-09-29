@@ -1,0 +1,10 @@
+# Collection investigation and handoff
+Observed 2026-09-29 05:09–05:13 UTC (14:09–14:13 KST), read-only. No collection endpoint, DB mutation, process restart or deployment was invoked.
+
+The gather schedule currently includes station observations at minutes 3/13/23/33/43/53 and sido observations at 4/14/24/34/44/54. Thus the historical note about disabled sido scheduling does not explain the current gap. The current requester still uses the legacy AirKorea API contract. Repeated transport timeouts and terminal station/sido retry-exhaustion messages establish a present collection failure. The bounded legacy provider request timed out, while the supported-endpoint authentication probe was rejected. No claim is made that changing only the URL would recover service.
+
+The six nearest Seoul station names returned by the actual `$near: [126.978, 37.5665]`, limit 6 query were 중구, 한강대로, 종로, 청계천로, 종로구 and 동대문(폐쇄). No latest accepted `date`/`dataTime` was available for any of these stations. The model's actual collection name was cross-checked before interpreting this result. Absence is distinct from a stale timestamp. Operational inventories, connection details and raw logs are retained privately, outside the public artifact set.
+
+Last-run limitation: the inspected production console error log lacks per-event timestamps and suppresses info-level schedule/completion messages. Its last modification at 05:12:27 UTC confirms recent logging, not an exact last successful AirKorea run. No last successful run can be reconstructed from these records; recovery must add timestamped outcomes. This establishes the present failure but does not date the original outage.
+
+Collection migration, key entitlement and both station/nationwide recovery are tracked in [#2636](https://github.com/WizardFactory/TodayWeather/issues/2636). The [decision comment](https://github.com/WizardFactory/TodayWeather/issues/2581#issuecomment-5884135163) records the cause, time window and scope split. Coordinate provider fallback remains separate and does not establish AirKorea recovery. Production rollout and validation are human-owned; this PR has no deployment authority.

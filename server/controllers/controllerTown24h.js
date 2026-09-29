@@ -996,6 +996,16 @@ function ControllerTown24h() {
         return req.airInfo;
     };
 
+    function _freshAirDetailRows(rows, now) {
+        if (!Array.isArray(rows)) {
+            return [];
+        }
+        return rows.filter(function (row) {
+            // The fallback chain validates its own timestamps before producing these rows.
+            return row && ((row.source && row.source !== 'airkorea') || KecoController._checkDateTime(row, now));
+        });
+    }
+
     this.makeAirInfo = function (req, res, next) {
         var meta = {};
         meta.sID = req.sessionID;
@@ -1008,13 +1018,14 @@ function ControllerTown24h() {
         try {
             var airInfo;
             var airUnit = req.query.airUnit || 'airkorea';
-            if(req.arpltnList) {
+            var arpltnList = _freshAirDetailRows(req.arpltnList, new Date());
+            if(arpltnList.length > 0) {
                 if (airInfo == undefined) {
                     airInfo = self._getAirInfo(req);
                 }
-                airInfo.last = req.arpltnList[0];
+                airInfo.last = arpltnList[0];
                 airInfo.pollutants = {};
-                self._insertHourlyPollutants(airInfo.pollutants, req.arpltnList, airUnit, airInfo.last.dataTime);
+                self._insertHourlyPollutants(airInfo.pollutants, arpltnList, airUnit, airInfo.last.dataTime);
             }
             if ( req.midData && Array.isArray(req.midData.dailyData) ) {
                 var dailyList = req.midData.dailyData.filter(function (value) {
@@ -1128,8 +1139,12 @@ function ControllerTown24h() {
             var airUnit = req.query.airUnit || 'airkorea';
             if(req.arpltnStnList) {
                 var airInfoList = [];
+                var now = new Date();
                 for (var i=0; i<req.arpltnStnList.length; i++) {
-                    var arpltnList = req.arpltnStnList[i];
+                    var arpltnList = _freshAirDetailRows(req.arpltnStnList[i], now);
+                    if (arpltnList.length === 0) {
+                        continue;
+                    }
                     var airInfo = {source: arpltnList[0] && arpltnList[0].source ? arpltnList[0].source : 'airkorea'};
                     airInfo.last = arpltnList[0];
                     airInfo.pollutants = {};

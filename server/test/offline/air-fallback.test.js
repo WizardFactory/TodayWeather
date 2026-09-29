@@ -254,7 +254,7 @@ function town24h(fallback) {
         '../lib/AQI/airFallback': fallback,
         '../controllers/airkorea.hourly.forecast.controller': function () { this.getForecast = () => { throw new Error('unexpected forecast lookup'); }; },
         '../controllers/kaq.hourly.forecast.controller': function () { this.getForecast = () => { throw new Error('unexpected forecast lookup'); }; }
-    });
+    }, {Date: fixedDate('2026-09-27T14:52:00Z')});
     return new T24();
 }
 function runMiddleware(fn, req) {
