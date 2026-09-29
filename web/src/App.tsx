@@ -69,21 +69,35 @@ import {
   ErrorState,
   Stamp,
   ExternalWeather,
+  Lines,
   isOld,
   kstTime,
 } from "./components";
 import WeatherPage from "./Weather";
 import {
-  AIR_DISCLAIMER,
-  AIR_SOURCE,
+  airDisclaimer,
+  airSource,
   forecastDescription,
   gradeClass,
   gradeLabel,
   pollutantUnit,
   standardName,
 } from "./air";
-import { amount, matchPlace } from "./format";
+import { amount, matchPlace, windText } from "./format";
 import Notifications from "./Notifications";
+import {
+  detectLanguage,
+  isLanguage,
+  language,
+  LANGUAGE_NAMES,
+  LANGUAGES,
+  setLanguage,
+  coreText,
+  t,
+  useLanguage,
+  type MessageKey,
+} from "./i18n";
+import { placeArea, placeName } from "./places";
 type InstallEvent = Event & { prompt: () => Promise<void> };
 const UPDATE_REQUESTED = "tw.web.v1.update-requested";
 // Matches web/public/theme.js and the --bg of each theme in style.css.
@@ -183,6 +197,16 @@ export default function App() {
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute("content", THEME_COLORS[state.settings.theme]);
   }, [state]);
+  // The chosen language (or the browser's) drives every text and request.
+  useLanguage();
+  const wantedLanguage =
+    state.settings.language ?? detectLanguage(navigator.languages ?? []);
+  useEffect(() => {
+    // Always call: choosing the current language again cancels a pending
+    // load. A chunk that cannot load (offline before it was cached) keeps
+    // the current language.
+    setLanguage(wantedLanguage).catch(() => setToast(t("error.connect")));
+  }, [wantedLanguage]);
   useEffect(() => {
     // Another tab changed favorites or settings: adopt the stored state.
     const changed = (e: StorageEvent) => {
@@ -281,11 +305,7 @@ export default function App() {
           }),
         );
       })
-      .catch(() =>
-        setToast(
-          "오프라인 기능을 준비하지 못했습니다. 온라인 조회는 계속 이용할 수 있습니다.",
-        ),
-      );
+      .catch(() => setToast(t("toast.offlineSetupFailed")));
     let controlled = navigator.serviceWorker.controller !== null;
     const changed = () => {
       // Only the tab that pressed "업데이트" reloads; others are told. The
@@ -343,7 +363,7 @@ export default function App() {
     } catch {
       // Full list: show the place without saving it.
       navigate(weatherRoute(before, place.id));
-      setToast("관심지역이 가득 차 저장하지 않고 표시합니다.");
+      setToast(t("toast.listFull"));
     }
   };
   const selected = state.places.find((p) => p.id === state.selectedId);
@@ -368,26 +388,27 @@ export default function App() {
       }}
     >
       <a className="skip-link" href="#main-content">
-        본문으로 건너뛰기
+        {t("shell.skipToContent")}
       </a>
       <div className="app-shell">
         <aside
           ref={sidebarRef}
           className={`sidebar ${menuOpen ? "open" : ""}`}
           inert={compact && !menuOpen ? true : undefined}
-          aria-label="주 메뉴"
+          aria-label={t("shell.mainMenu")}
         >
           <Link to="/" className="brand">
             <span className="brand-mark">
               <Sun size={27} />
             </span>
             <div>
-              오늘날씨<small>TODAY WEATHER</small>
+              {t("app.name")}
+              <small>TODAY WEATHER</small>
             </div>
           </Link>
           <button
             className="mobile-close icon-button"
-            aria-label="메뉴 닫기"
+            aria-label={t("shell.closeMenu")}
             onClick={() => {
               returnFocus.current = true;
               setMenuOpen(false);
@@ -395,7 +416,7 @@ export default function App() {
           >
             <X />
           </button>
-          <div className="sidebar-label">나의 날씨</div>
+          <div className="sidebar-label">{t("shell.myWeather")}</div>
           <nav>
             <NavLink
               to={navWeather}
@@ -403,30 +424,30 @@ export default function App() {
                 isActive ? "nav-item active" : "nav-item"
               }
             >
-              <CloudSun size={19} /> 날씨
+              <CloudSun size={19} /> {t("nav.weather")}
             </NavLink>
             <NavLink
               to={selected ? "/air/" + selected.id : "/start"}
               className="nav-item"
             >
-              <Wind size={19} /> 미세먼지
+              <Wind size={19} /> {t("nav.air")}
             </NavLink>
             <NavLink to="/locations" className="nav-item">
-              <MapPin size={19} /> 관심지역
+              <MapPin size={19} /> {t("nav.locations")}
             </NavLink>
             <NavLink to="/nation/weather" className="nav-item">
-              <Map size={19} /> 전국 날씨
+              <Map size={19} /> {t("nav.nationWeather")}
             </NavLink>
             <NavLink to="/nation/air" className="nav-item">
-              <Wind size={19} /> 전국 미세먼지
+              <Wind size={19} /> {t("nav.nationAir")}
             </NavLink>
             <NavLink to="/warnings" className="nav-item">
-              <Bell size={19} /> 기상 특보
+              <Bell size={19} /> {t("nav.warnings")}
             </NavLink>
           </nav>
           <div className="sidebar-section-title">
-            <span className="sidebar-label">저장한 지역</span>
-            <Link to="/locations" aria-label="지역 추가">
+            <span className="sidebar-label">{t("sidebar.saved")}</span>
+            <Link to="/locations" aria-label={t("sidebar.addPlace")}>
               <Plus size={16} />
             </Link>
           </div>
@@ -439,32 +460,28 @@ export default function App() {
                   onClick={() => select(p)}
                 >
                   <span className="city-dot" />
-                  {p.name}
+                  {placeName(p)}
                   <ChevronRight size={14} />
                 </button>
               ))
             ) : (
               <p>
-                자주 찾는 지역을
-                <br />
-                추가해 보세요.
+                <Lines text={t("sidebar.empty")} />
               </p>
             )}
           </div>
           <div className="sidebar-bottom">
             <NavLink className="nav-item" to="/settings">
-              <SettingsIcon size={19} /> 설정
+              <SettingsIcon size={19} /> {t("nav.settings")}
             </NavLink>
             <NavLink className="nav-item" to="/help">
-              <HelpCircle size={19} /> 이용 안내
+              <HelpCircle size={19} /> {t("nav.help")}
             </NavLink>
             <div className="install-card">
               <Download size={20} />
-              <strong>앱처럼, 더 편하게</strong>
+              <strong>{t("install.title")}</strong>
               <p>
-                홈 화면에 오늘날씨를
-                <br />
-                추가해 보세요.
+                <Lines text={t("install.body")} />
               </p>
               <button
                 onClick={() =>
@@ -473,7 +490,7 @@ export default function App() {
                     : navigate("/help#install")
                 }
               >
-                설치 안내 <ArrowUpRight size={13} />
+                {t("install.button")} <ArrowUpRight size={13} />
               </button>
             </div>
             <span className="version">TodayWeather Web · 0.1</span>
@@ -482,7 +499,7 @@ export default function App() {
         {menuOpen && (
           <button
             className="sidebar-backdrop"
-            aria-label="메뉴 닫기"
+            aria-label={t("shell.closeMenu")}
             onClick={() => {
               returnFocus.current = true;
               setMenuOpen(false);
@@ -498,22 +515,22 @@ export default function App() {
               <button
                 ref={menuButton}
                 className="icon-button mobile-menu"
-                aria-label="메뉴 열기"
+                aria-label={t("shell.openMenu")}
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen(true)}
               >
                 <Menu size={21} />
               </button>
-              <span className="topbar-label">하루를 준비하는 작은 습관</span>
+              <span className="topbar-label">{t("topbar.tagline")}</span>
             </div>
             <Link to="/locations" className="search-link">
               <Search size={17} />
-              <span>다른 지역 검색</span>
-              <kbd>지역 찾기</kbd>
+              <span>{t("topbar.search")}</span>
+              <kbd>{t("topbar.searchKey")}</kbd>
             </Link>
             <Link
               className="icon-button topbar-settings"
-              aria-label="설정"
+              aria-label={t("nav.settings")}
               to="/settings"
             >
               <SettingsIcon size={18} />
@@ -522,32 +539,25 @@ export default function App() {
           <main id="main-content" tabIndex={-1} ref={mainRef}>
             {offline && (
               <div className="notice warning" role="status">
-                오프라인입니다. 저장된 자료는 최신 정보가 아닐 수 있습니다.
+                {t("status.offline")}
               </div>
             )}
             {!storageOk && (
               <div className="notice warning">
-                브라우저 저장소를 사용할 수 없어 이번 접속 동안만 설정이
-                유지됩니다.
+                {t("status.storageUnavailable")}
               </div>
             )}
             {updateReady && (
               <div className="notice update">
-                <span>
-                  새 버전이 준비됐습니다. 입력 중인 내용을 확인한 뒤
-                  업데이트하세요.
-                </span>
-                <button onClick={applyUpdate}>업데이트</button>
+                <span>{t("update.ready")}</span>
+                <button onClick={applyUpdate}>{t("update.apply")}</button>
               </div>
             )}
             {updateApplied && (
               <div className="notice update">
-                <span>
-                  새 버전이 적용됐습니다. 새로고침하면 최신 화면을 볼 수
-                  있습니다.
-                </span>
+                <span>{t("update.applied")}</span>
                 <button onClick={() => window.location.reload()}>
-                  새로고침
+                  {t("update.reload")}
                 </button>
               </div>
             )}
@@ -585,15 +595,15 @@ export default function App() {
               <Route
                 path="*"
                 element={
-                  <Empty title="페이지를 찾을 수 없습니다">
-                    <Link to="/">처음으로 돌아가기</Link>
+                  <Empty title={t("notFound.title")}>
+                    <Link to="/">{t("notFound.home")}</Link>
                   </Empty>
                 }
               />
             </Routes>
           </main>
           <footer className="site-footer">
-            <span>오늘을 이해하고, 내일을 준비하세요.</span>
+            <span>{t("footer.tagline")}</span>
             <span>
               TodayWeather <span aria-hidden="true">↗</span>
             </span>
@@ -619,19 +629,19 @@ function PublicPlace() {
   return p ? (
     <>
       <PageTitle
-        eyebrow="공유한 지역"
-        title={`${p.name}의 날씨`}
-        description={p.address}
+        eyebrow={t("public.eyebrow")}
+        title={t("public.title", { name: placeName(p) })}
+        description={placeArea(p)}
       />
       <section className="panel">
-        <p>관심지역으로 저장하고 시간별 날씨와 미세먼지를 확인하세요.</p>
+        <p>{t("public.body")}</p>
         <button className="button primary" onClick={() => select(p)}>
-          이 지역 날씨 보기 <ArrowRight size={16} />
+          {t("public.open")} <ArrowRight size={16} />
         </button>
       </section>
     </>
   ) : (
-    <Empty title="공유한 지역을 찾을 수 없습니다" />
+    <Empty title={t("public.notFound")} />
   );
 }
 function Welcome() {
@@ -639,35 +649,34 @@ function Welcome() {
     <>
       <div className="welcome-hero">
         <div className="welcome-kicker">
-          <Sun size={16} /> 오늘을 위한 날씨
+          <Sun size={16} /> {t("welcome.kicker")}
         </div>
         <h1>
-          어제보다 따뜻할까요?
+          {t("welcome.headline")}
           <br />
-          <span>오늘날씨에서 확인하세요.</span>
+          <span>{t("welcome.headlineAccent")}</span>
         </h1>
         <p>
-          날씨부터 미세먼지까지, 하루에 필요한 정보를 한곳에서.
+          {t("welcome.intro")}
           <br />
-          자주 찾는 지역을 선택하고 나만의 날씨를 시작하세요.
+          {t("welcome.introStart")}
         </p>
       </div>
       <Locations embedded />
       <div className="welcome-features">
-        {[
-          [CloudSun, "어제와 비교하는 날씨", "어제보다 얼마나 따뜻한지 한눈에"],
-          [Wind, "세심하게 보는 대기질", "미세먼지와 관측소별 정보"],
-          [Monitor, "어디서나 편리하게", "모바일과 데스크톱, 같은 경험"],
-        ].map(([I, title, body]) => {
-          const Icon = I as typeof Sun;
-          return (
-            <div key={String(title)}>
-              <Icon size={26} />
-              <h3>{String(title)}</h3>
-              <p>{String(body)}</p>
-            </div>
-          );
-        })}
+        {(
+          [
+            [CloudSun, "compare"],
+            [Wind, "air"],
+            [Monitor, "anywhere"],
+          ] as const
+        ).map(([Icon, id]) => (
+          <div key={id}>
+            <Icon size={26} />
+            <h3>{t(`welcome.feature.${id}.title`)}</h3>
+            <p>{t(`welcome.feature.${id}.body`)}</p>
+          </div>
+        ))}
       </div>
     </>
   );
@@ -695,7 +704,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
     return () => clearTimeout(timer);
   }, [search]);
   const results = useQuery({
-    queryKey: ["places", query],
+    queryKey: ["places", query, language()],
     queryFn: ({ signal }) =>
       api<{ items: Place[]; canResolve: boolean }>(
         "/locations/search?q=" + encodeURIComponent(query),
@@ -705,9 +714,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
   });
   async function locate() {
     if (!navigator.geolocation) {
-      notify(
-        "이 브라우저에서는 위치를 확인할 수 없습니다. 지역을 검색해 주세요.",
-      );
+      notify(t("locations.locateUnsupported"));
       return;
     }
     const controller = begin();
@@ -731,7 +738,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
         if (!current(controller)) return;
         setLocating(false);
         if (e.code === 1) setPermissionDenied(true);
-        else notify("위치를 찾지 못했습니다. 지역을 직접 검색해 주세요.");
+        else notify(t("locations.locateFailed"));
       },
       { timeout: 15000, maximumAge: 0, enableHighAccuracy: false },
     );
@@ -739,7 +746,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
   function deletePlace(p: Place) {
     setState((s) => removePlace(s, p.id));
     void deleteSnapshotsFor(p.id);
-    notify(`${p.name}을 관심지역에서 삭제했습니다.`);
+    notify(t("locations.deleted", { name: placeName(p) }));
   }
   async function resolve() {
     const controller = begin();
@@ -766,13 +773,13 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
     <>
       {!embedded && (
         <PageTitle
-          eyebrow="나의 날씨"
-          title="관심지역"
-          description="자주 찾는 지역을 저장하고 빠르게 확인하세요."
+          eyebrow={t("shell.myWeather")}
+          title={t("nav.locations")}
+          description={t("locations.description")}
         />
       )}
       <section className="panel location-search">
-        <SectionHead title="어느 지역의 날씨가 궁금하세요?" />
+        <SectionHead title={t("locations.search.title")} />
         <form
           className="search-form"
           onSubmit={(e) => {
@@ -783,17 +790,14 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
             if (match) choose(match);
             else if (capabilities?.search.geocode && term.length >= 2)
               void resolve();
-            else
-              notify(
-                "일치하는 추천 지역이 없습니다. 다른 지역명을 입력해 주세요.",
-              );
+            else notify(t("locations.search.noMatch"));
           }}
         >
           <div className="search-field">
             <Search size={20} />
             <input
-              aria-label="지역 검색"
-              placeholder="도시나 지역 이름을 입력하세요"
+              aria-label={t("locations.search.label")}
+              placeholder={t("locations.search.placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoComplete="off"
@@ -802,7 +806,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
               <button
                 type="button"
                 className="icon-button"
-                aria-label="검색 지우기"
+                aria-label={t("locations.search.clear")}
                 onClick={() => setSearch("")}
               >
                 <X size={16} />
@@ -816,7 +820,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
             onClick={() => void locate()}
           >
             <LocateFixed size={17} />
-            {locating ? "위치 확인 중" : "현재 위치"}
+            {locating ? t("locations.locating") : t("locations.locate")}
           </button>
         </form>
         <div className="city-chips">
@@ -825,51 +829,49 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
             .map((p) => (
               <button key={p.id} onClick={() => choose(p)}>
                 <MapPin size={14} />
-                {p.name}
+                {placeName(p)}
                 <Plus size={14} />
               </button>
             ))}
         </div>
         {results.isError && (
           <p role="alert" className="warning-text">
-            추천 지역 목록에 연결하지 못했습니다. 아래 기본 지역은 선택할 수
-            있습니다.
+            {t("locations.search.failed")}
           </p>
         )}
         {query && results.data?.items.length === 0 && (
           <div className="resolve-search">
-            <p>추천 목록에 없는 지역입니다.</p>
+            <p>{t("locations.search.notListed")}</p>
             {results.data.canResolve ? (
               <button
                 className="button"
                 disabled={resolving}
                 onClick={() => void resolve()}
               >
-                {resolving ? "지역 확인 중…" : `“${search}” 주소 검색`}
+                {resolving
+                  ? t("locations.search.resolving")
+                  : t("locations.search.resolve", { query: search })}
               </button>
             ) : (
-              <p>예제 모드에서는 추천 지역을 이용해 주세요.</p>
+              <p>{t("locations.search.demo")}</p>
             )}
           </div>
         )}
-        <p className="hint">
-          위치 정보는 현재 위치 버튼을 누를 때만 요청합니다.
-        </p>
+        <p className="hint">{t("locations.locateHint")}</p>
         {permissionDenied && (
           <div className="permission-help" role="alert">
-            <p>
-              위치 권한이 거부됐습니다. 브라우저 주소창의 사이트 설정에서 위치
-              권한을 허용한 뒤 다시 시도하거나, 지역을 직접 검색해 주세요.
-            </p>
+            <p>{t("locations.permissionDenied")}</p>
             <button className="button" onClick={() => void locate()}>
-              <LocateFixed size={16} /> 다시 시도
+              <LocateFixed size={16} /> {t("common.retry")}
             </button>
           </div>
         )}
       </section>
       {!embedded && (
         <>
-          <SectionHead title={`저장한 지역 ${state.places.length}`} />
+          <SectionHead
+            title={t("locations.savedCount", { count: state.places.length })}
+          />
           <div className="location-grid">
             {state.places.map((p) => (
               <article className="panel location-card" key={p.id}>
@@ -878,27 +880,27 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
                   onClick={() => choose(p)}
                 >
                   <MapPin size={23} />
-                  <h3>{p.name}</h3>
+                  <h3>{placeName(p)}</h3>
                   <p>
-                    {p.current
-                      ? "현재 위치로 저장한 지역 · 자동 추적 안 함"
-                      : p.address}
+                    {p.current ? t("locations.currentPlace") : placeArea(p)}
                   </p>
                   <PlacePreview place={p} />
                   <span>
-                    날씨 보기 <ArrowRight size={15} />
+                    {t("common.viewWeather")} <ArrowRight size={15} />
                   </span>
                 </button>
                 <div className="location-card-actions">
                   <Link
-                    aria-label={`${p.name} 알림 안내`}
+                    aria-label={t("locations.notificationsFor", {
+                      name: placeName(p),
+                    })}
                     to={"/notifications/" + p.id}
                   >
                     <Bell size={17} />
                   </Link>
                   <button
                     className="icon-button"
-                    aria-label={`${p.name} 삭제`}
+                    aria-label={t("locations.delete", { name: placeName(p) })}
                     onClick={() => void deletePlace(p)}
                   >
                     <Trash2 size={17} />
@@ -908,8 +910,8 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
             ))}
           </div>
           {!state.places.length && (
-            <Empty title="저장한 지역이 없습니다">
-              위에서 도시를 선택하면 이곳에 저장됩니다.
+            <Empty title={t("locations.empty.title")}>
+              {t("locations.empty.body")}
             </Empty>
           )}
         </>
@@ -940,13 +942,44 @@ function PlacePreview({ place }: { place: Place }) {
           {aqi.label || gradeLabel(w.units.airUnit, aqi.grade)}
         </b>
       )}
-      <small>저장 {kstTime(w.fetchedAt)}</small>
+      <small>
+        {t("locations.previewSaved", { time: kstTime(w.fetchedAt) })}
+      </small>
     </span>
   );
 }
 // Marker centres in the 500x670 map. Markers are 68x44 (weather adds an icon
 // above-right); the cities of one view and the provinces of the other must
 // not overlap.
+// Region label keys for the map markers (server names are Korean).
+const regionKeys: Record<string, MessageKey> = {
+  서울: "city.seoul",
+  인천: "city.incheon",
+  수원: "city.suwon",
+  춘천: "city.chuncheon",
+  강릉: "city.gangneung",
+  대전: "city.daejeon",
+  청주: "city.cheongju",
+  전주: "city.jeonju",
+  광주: "city.gwangju",
+  대구: "city.daegu",
+  포항: "city.pohang",
+  울산: "city.ulsan",
+  부산: "city.busan",
+  목포: "city.mokpo",
+  여수: "city.yeosu",
+  안동: "city.andong",
+  제주: "city.jeju",
+  강원: "region.gangwon",
+  경기: "region.gyeonggi",
+  충북: "region.chungbuk",
+  충남: "region.chungnam",
+  경북: "region.gyeongbuk",
+  경남: "region.gyeongnam",
+  전북: "region.jeonbuk",
+  전남: "region.jeonnam",
+  세종: "region.sejong",
+};
 const mapPositions: Record<string, [number, number]> = {
   서울: [150, 138],
   인천: [70, 182],
@@ -982,7 +1015,7 @@ function NationPage() {
   const [mode, setMode] = useState("temperature"),
     [pollutant, setPollutant] = useState("pm25");
   const q = useQuery({
-    queryKey: ["nation", unitQuery(state.settings.units)],
+    queryKey: ["nation", unitQuery(state.settings.units), language()],
     queryFn: ({ signal }) =>
       api<Nation>("/nation/KR?" + unitQuery(state.settings.units), signal),
     staleTime: 600000,
@@ -1028,7 +1061,7 @@ function NationPage() {
                 : p.current.wind === null
                   ? "—"
                   : [
-                      p.current.windDirection,
+                      windText(p.current.windDirection),
                       `${formatValue(p.current.wind, 1)} ${data.units.windSpeedUnit}`,
                     ]
                       .filter(Boolean)
@@ -1042,24 +1075,24 @@ function NationPage() {
   return (
     <>
       <PageTitle
-        eyebrow="대한민국"
-        title={air ? "전국 미세먼지" : "전국 날씨"}
-        description="지역별 관측 정보를 비교해 보세요."
+        eyebrow={t("country.KR")}
+        title={t(air ? "nav.nationAir" : "nav.nationWeather")}
+        description={t("nation.description")}
       />
       <div className="view-tabs">
         {(air
           ? [
-              ["pm25", "초미세먼지"],
-              ["pm10", "미세먼지"],
-              ["o3", "오존"],
+              ["pm25", t("pollutant.pm25")],
+              ["pm10", t("pollutant.pm10")],
+              ["o3", t("pollutant.o3")],
               ["no2", "NO₂"],
               ["so2", "SO₂"],
               ["co", "CO"],
             ]
           : [
-              ["temperature", "기온"],
-              ["rain", "강수"],
-              ["wind", "바람"],
+              ["temperature", t("nation.tab.temperature")],
+              ["rain", t("nation.tab.rain")],
+              ["wind", t("nation.tab.wind")],
             ]
         ).map(([id, label]) => (
           <button
@@ -1079,20 +1112,15 @@ function NationPage() {
       ) : (
         <>
           {data?.mode === "demo" && (
-            <div className="notice demo">
-              예제 데이터 · 실제 관측 정보가 아닙니다.
-            </div>
+            <div className="notice demo">{t("nation.demo")}</div>
           )}
           {rows.some((r) => isOld(r.at)) && (
-            <div className="notice warning">
-              오래된 관측 자료가 포함되어 있습니다. 각 지역의 관측 시각을
-              확인하세요.
-            </div>
+            <div className="notice warning">{t("nation.stale")}</div>
           )}
           <div className="nation-grid">
             <section className="panel map-panel">
               <div className="map-canvas">
-                <svg viewBox="0 0 500 670" aria-label="대한민국 지역별 배치도">
+                <svg viewBox="0 0 500 670" aria-label={t("nation.mapLabel")}>
                   <path
                     d="M250 40L281 80 297 123 342 156 365 205 397 243 399 293 420 350 400 417 362 457 309 488 272 504 228 482 188 505 169 477 125 515 91 489 112 447 88 408 118 375 99 338 135 304 132 266 107 225 135 188 124 154 163 128 190 88Z"
                     fill="var(--map-fill)"
@@ -1139,7 +1167,7 @@ function NationPage() {
                           </g>
                         )}
                         <text textAnchor="middle" y="-4" className="map-name">
-                          {key}
+                          {key && t(regionKeys[key])}
                         </text>
                         <text textAnchor="middle" y="13" className="map-value">
                           {r.value}
@@ -1149,16 +1177,14 @@ function NationPage() {
                   })}
                 </svg>
               </div>
-              <p className="hint">
-                지역 배치도 · 실제 축척이 아닙니다. 전체 수치는 목록에서
-                확인하세요.
-              </p>
+              <p className="hint">{t("nation.mapHint")}</p>
             </section>
             <section className="panel region-list">
-              <SectionHead title="지역별 관측" />
+              <SectionHead title={t("nation.listTitle")} />
               {!air && mode === "rain" && (
-                <p className="hint">강수량은 최근 1시간 관측값입니다.</p>
+                <p className="hint">{t("nation.rainHint")}</p>
               )}
+              {!rows.length && <Empty title={t("nation.empty")} />}
               {rows.map((r, i) => (
                 <div className="region-row" key={r.name + i}>
                   <div>
@@ -1179,7 +1205,7 @@ function NationPage() {
                   )}
                   <b>{r.value}</b>
                   <button
-                    aria-label={`${r.name} 날씨 보기`}
+                    aria-label={t("nation.viewWeather", { name: r.name })}
                     className="icon-button"
                     onClick={() => {
                       const p = PLACES.find(
@@ -1206,7 +1232,7 @@ function NationPage() {
 }
 function Warnings() {
   const q = useQuery({
-    queryKey: ["warnings"],
+    queryKey: ["warnings", language()],
     queryFn: ({ signal }) =>
       api<{ mode: string; items: WarningBulletin[] }>("/warnings/KR", signal),
     staleTime: 180000,
@@ -1214,9 +1240,9 @@ function Warnings() {
   return (
     <>
       <PageTitle
-        eyebrow="안전한 하루"
-        title="기상 특보"
-        description="기상청 발표 내용과 발표 시각을 확인하세요."
+        eyebrow={t("warnings.eyebrow")}
+        title={t("nav.warnings")}
+        description={t("warnings.description")}
         action={<ExternalWeather />}
       />
       {q.isPending ? (
@@ -1226,20 +1252,19 @@ function Warnings() {
       ) : (
         <>
           {q.data.mode === "demo" && (
-            <div className="notice demo">
-              예시 특보 · 실제 재난·안전 정보가 아닙니다.
-            </div>
+            <div className="notice demo">{t("warnings.demo")}</div>
           )}
           {q.data.items.length ? (
             q.data.items.map((b) => (
               <article className="panel bulletin" key={b.id}>
-                <h2>{b.name}</h2>
-                <Stamp at={b.announcement} label="발표" timeZone="Asia/Seoul" />
+                <h2>{coreText(b.name)}</h2>
+                <Stamp
+                  at={b.announcement}
+                  label={t("warnings.announced")}
+                  timeZone="Asia/Seoul"
+                />
                 {isOld(b.announcement, 24) && (
-                  <p className="warning-text">
-                    발표일이 지난 자료입니다. 현재 특보 여부는 기상청에서
-                    확인하세요.
-                  </p>
+                  <p className="warning-text">{t("warnings.stale")}</p>
                 )}
                 {b.sections.map((s, i) => (
                   <section key={i}>
@@ -1249,7 +1274,9 @@ function Warnings() {
                     ))}
                   </section>
                 ))}
-                {b.note && <p className="bulletin-note">&lt;참고사항&gt;</p>}
+                {b.note && (
+                  <p className="bulletin-note">{t("warnings.note")}</p>
+                )}
                 <p className="bulletin-text">{b.comment}</p>
                 {b.imageUrl && (
                   <a
@@ -1258,15 +1285,14 @@ function Warnings() {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    발표 자료 이미지 열기 <ArrowUpRight size={15} />
+                    {t("warnings.image")} <ArrowUpRight size={15} />
                   </a>
                 )}
               </article>
             ))
           ) : (
-            <Empty title="제공된 특보가 없습니다">
-              이 화면만으로 현재의 안전을 판단하지 마세요. 최신 발표를 확인해
-              주세요.
+            <Empty title={t("warnings.empty.title")}>
+              {t("warnings.empty.body")}
             </Empty>
           )}
         </>
@@ -1274,37 +1300,24 @@ function Warnings() {
     </>
   );
 }
-const unitLabels: Record<keyof Units, string> = {
-  temperatureUnit: "기온",
-  windSpeedUnit: "풍속",
-  pressureUnit: "기압",
-  distanceUnit: "거리",
-  precipitationUnit: "강수량",
-  airUnit: "대기질 기준",
+const unitLabel = (key: keyof Units) => t(`settings.unit.${key}`);
+// Option values without a translated name (e.g. "hPa") are shown as is.
+const unitNames: Record<string, MessageKey> = {
+  bft: "settings.unitName.bft",
+  kt: "settings.unitName.kt",
 };
-const unitNames: Record<string, string> = {
-  airkorea: standardName("airkorea"),
-  airnow: standardName("airnow"),
-  aqicn: standardName("aqicn"),
-  airkorea_who: standardName("airkorea_who"),
-  bft: "보퍼트",
-  kt: "노트",
-};
+const unitName = (value: string) =>
+  value in unitNames ? t(unitNames[value]) : standardName(value);
 function SettingsPage() {
   const { state, setState, notify, capabilities } = useApp();
   const upload = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   async function clearData() {
-    if (
-      !window.confirm(
-        "이 브라우저에 저장된 관심지역, 설정, 저장된 날씨 자료를 모두 삭제합니다. 계속할까요?",
-      )
-    )
-      return;
+    if (!window.confirm(t("settings.data.confirm"))) return;
     await clearLocalData(localStorage);
     queryClient.removeQueries({ queryKey: ["stored-weather"] });
     setState(defaultState());
-    notify("이 브라우저의 오늘날씨 데이터를 삭제했습니다.");
+    notify(t("settings.data.cleared"));
   }
   const settings = state.settings;
   function exportData() {
@@ -1326,25 +1339,28 @@ function SettingsPage() {
   async function importData(file?: File) {
     if (!file) return;
     try {
-      if (file.size > 100000) throw Error("파일이 너무 큽니다.");
+      if (file.size > 100000) throw Error(t("settings.import.tooLarge"));
       const raw = await file.text(),
         parsed = JSON.parse(raw);
       if (parsed.version !== 1 || !Array.isArray(parsed.places))
-        throw Error("오늘날씨 웹 내보내기 파일을 선택해 주세요.");
+        throw Error(t("settings.import.invalid"));
       const imported = restoreState({ getItem: () => raw });
       if (
         !window.confirm(
-          `현재 관심지역 ${state.places.length}곳과 설정을 가져온 파일(관심지역 ${imported.places.length}곳)로 바꿉니다. 계속할까요?`,
+          t("settings.import.confirm", {
+            current: state.places.length,
+            imported: imported.places.length,
+          }),
         )
       ) {
-        notify("가져오기를 취소했습니다.");
+        notify(t("settings.import.cancelled"));
       } else {
         // Places dropped by the import must not leave stored weather behind.
         for (const old of state.places)
           if (!imported.places.some((p) => p.id === old.id))
             void deleteSnapshotsFor(old.id);
         setState(imported);
-        notify("관심지역과 설정을 가져왔습니다.");
+        notify(t("settings.import.done"));
       }
     } catch (e) {
       notify((e as Error).message);
@@ -1354,18 +1370,18 @@ function SettingsPage() {
   return (
     <>
       <PageTitle
-        eyebrow="나에게 맞게"
-        title="설정"
-        description="변경한 설정은 이 브라우저에 바로 저장됩니다."
+        eyebrow={t("settings.eyebrow")}
+        title={t("settings.title")}
+        description={t("settings.description")}
       />
       <div className="settings-grid">
         <section className="panel">
-          <SectionHead title="단위와 대기질 기준" />
+          <SectionHead title={t("settings.units.title")} />
           {Object.keys(UNIT_OPTIONS).map((k) => {
             const key = k as keyof Units;
             return (
               <label className="setting-row" key={key}>
-                <span>{unitLabels[key]}</span>
+                <span>{unitLabel(key)}</span>
                 <select
                   value={settings.units[key]}
                   onChange={(e) =>
@@ -1374,6 +1390,11 @@ function SettingsPage() {
                       settings: {
                         ...s.settings,
                         units: { ...s.settings.units, [key]: e.target.value },
+                        // An explicit choice is never replaced by a default.
+                        userUnits: [
+                          ...s.settings.userUnits.filter((k) => k !== key),
+                          key,
+                        ],
                       },
                     }))
                   }
@@ -1388,7 +1409,7 @@ function SettingsPage() {
                         v !== "airkorea"
                       }
                     >
-                      {unitNames[v] ?? v}
+                      {unitName(v)}
                     </option>
                   ))}
                 </select>
@@ -1396,16 +1417,42 @@ function SettingsPage() {
             );
           })}
           {capabilities?.mode === "demo" && (
-            <p className="hint">
-              예제 자료의 대기질 기준은 한국 기준으로 고정됩니다.
-            </p>
+            <p className="hint">{t("settings.units.demo")}</p>
           )}
         </section>
         <div>
           <section className="panel">
-            <SectionHead title="화면과 업데이트" />
+            <SectionHead title={t("settings.display.title")} />
             <label className="setting-row">
-              <span>화면 테마</span>
+              <span>{t("settings.language")}</span>
+              <select
+                value={settings.language ?? ""}
+                onChange={(e) => {
+                  const language = isLanguage(e.target.value)
+                    ? e.target.value
+                    : null;
+                  setState((s) => ({
+                    ...s,
+                    settings: { ...s.settings, language },
+                  }));
+                }}
+              >
+                <option value="">
+                  {t("settings.languageAuto", {
+                    language:
+                      LANGUAGE_NAMES[detectLanguage(navigator.languages ?? [])],
+                  })}
+                </option>
+                {LANGUAGES.map((code) => (
+                  <option key={code} value={code} lang={code}>
+                    {LANGUAGE_NAMES[code]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="hint">{t("settings.languageHint")}</p>
+            <label className="setting-row">
+              <span>{t("settings.theme.label")}</span>
               <select
                 value={settings.theme}
                 onChange={(e) =>
@@ -1418,14 +1465,15 @@ function SettingsPage() {
                   }))
                 }
               >
-                <option value="light">라이트</option>
-                <option value="dark">다크</option>
-                <option value="photo">하늘</option>
-                <option value="classic">클래식</option>
+                {(["light", "dark", "photo", "classic"] as const).map((v) => (
+                  <option key={v} value={v}>
+                    {t(`settings.theme.${v}`)}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="setting-row">
-              <span>시작 화면</span>
+              <span>{t("settings.startup.label")}</span>
               <select
                 value={settings.startup}
                 onChange={(e) =>
@@ -1438,15 +1486,17 @@ function SettingsPage() {
                   }))
                 }
               >
-                <option value="hourly">시간별 날씨</option>
-                <option value="daily">일별 날씨</option>
-                <option value="air">미세먼지</option>
-                <option value="overview">날씨 한눈에</option>
-                <option value="locations">관심지역</option>
+                {(
+                  ["hourly", "daily", "air", "overview", "locations"] as const
+                ).map((v) => (
+                  <option key={v} value={v}>
+                    {t(`settings.startup.${v}`)}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="setting-row">
-              <span>자동 새로고침</span>
+              <span>{t("settings.refresh.label")}</span>
               <select
                 value={settings.refreshMinutes}
                 onChange={(e) =>
@@ -1461,30 +1511,29 @@ function SettingsPage() {
               >
                 {[0, 30, 60, 180, 360, 720].map((m) => (
                   <option key={m} value={m}>
-                    {m === 0 ? "수동" : m < 60 ? `${m}분` : `${m / 60}시간`}
+                    {m === 0
+                      ? t("settings.refresh.manual")
+                      : m < 60
+                        ? t("settings.refresh.minutes", { minutes: m })
+                        : t("settings.refresh.hours", { hours: m / 60 })}
                   </option>
                 ))}
               </select>
             </label>
-            <p className="hint">
-              열려 있는 화면에서만 자동 갱신합니다. 돌아왔을 때도 자료의 최신
-              여부를 확인합니다.
-            </p>
+            <p className="hint">{t("settings.refresh.hint")}</p>
           </section>
           <section className="panel">
-            <SectionHead title="관심지역 백업" />
-            <p className="muted-text">
-              현재 위치는 내보내기에 포함되지 않습니다.
-            </p>
+            <SectionHead title={t("settings.backup.title")} />
+            <p className="muted-text">{t("settings.backup.hint")}</p>
             <div className="button-row">
               <button className="button" onClick={exportData}>
-                <Download size={16} /> 내보내기
+                <Download size={16} /> {t("settings.backup.export")}
               </button>
               <button
                 className="button"
                 onClick={() => upload.current?.click()}
               >
-                <Upload size={16} /> 가져오기
+                <Upload size={16} /> {t("settings.backup.import")}
               </button>
               <input
                 ref={upload}
@@ -1496,26 +1545,22 @@ function SettingsPage() {
             </div>
           </section>
           <section className="panel">
-            <SectionHead title="브라우저 데이터" />
-            <p className="muted-text">
-              관심지역·설정은 이 브라우저에, 날씨 화면 자료는 최대 24시간
-              저장됩니다. 관심지역을 삭제하면 해당 지역의 저장 자료도
-              삭제됩니다.
-            </p>
+            <SectionHead title={t("settings.data.title")} />
+            <p className="muted-text">{t("settings.data.hint")}</p>
             <button className="button" onClick={() => void clearData()}>
-              <Trash2 size={16} /> 이 브라우저의 오늘날씨 데이터 삭제
+              <Trash2 size={16} /> {t("settings.data.clear")}
             </button>
           </section>
         </div>
       </div>
       <section className="panel">
-        <SectionHead title="서비스 안내" />
+        <SectionHead title={t("settings.service.title")} />
         <div className="button-row">
           <Link className="text-link" to="/help">
-            개인정보·데이터 안내 <ChevronRight size={15} />
+            {t("settings.service.privacy")} <ChevronRight size={15} />
           </Link>
           <Link className="text-link" to="/membership">
-            이용 요금·기존 앱 구매 안내 <ChevronRight size={15} />
+            {t("settings.service.pricing")} <ChevronRight size={15} />
           </Link>
           <a
             className="text-link"
@@ -1523,7 +1568,7 @@ function SettingsPage() {
             target="_blank"
             rel="noreferrer"
           >
-            문제 제보 <ArrowUpRight size={15} />
+            {t("settings.service.report")} <ArrowUpRight size={15} />
           </a>
         </div>
       </section>
@@ -1534,80 +1579,44 @@ function Help() {
   return (
     <>
       <PageTitle
-        eyebrow="도움이 필요하신가요?"
-        title="오늘날씨 이용 안내"
-        description="설치 없이 둘러보고, 홈 화면에 추가해 더 편하게 이용하세요."
+        eyebrow={t("help.eyebrow")}
+        title={t("help.title")}
+        description={t("help.description")}
       />
       <section className="panel prose" id="install">
-        <h2>홈 화면에 추가하기</h2>
+        <h2>{t("help.install.title")}</h2>
+        <p>{t("help.install.body")}</p>
+        <h2>{t("help.privacy.title")}</h2>
+        <p>{t("help.privacy.body")}</p>
+        <h2>{t("help.offline.title")}</h2>
+        <p>{t("help.offline.body")}</p>
+        <h2>{t("help.notifications.title")}</h2>
+        <p>{t("help.notifications.body")}</p>
+        <p>{t("help.notifications.app")}</p>
+        <h2>{t("help.skyTheme.title")}</h2>
+        <p>{t("help.skyTheme.body")}</p>
+        <h2 id="units">{t("help.units.title")}</h2>
+        <p>{t("help.units.body")}</p>
+        <h2>{t("help.sources.title")}</h2>
         <p>
-          iPhone과 iPad에서는 브라우저의 공유 메뉴에서 ‘홈 화면에 추가’를
-          선택하세요. Android와 데스크톱에서는 브라우저 메뉴의 설치 기능을
-          이용할 수 있습니다. 설치 기능이 없는 브라우저에서도 날씨 조회는
-          가능합니다.
+          {t("help.sources.body", {
+            source: airSource(),
+            disclaimer: airDisclaimer(),
+          })}
         </p>
-        <h2>현재 위치와 개인정보</h2>
-        <p>
-          현재 위치 버튼을 눌렀을 때만 위치 권한을 요청합니다. 날씨 조회를 위해
-          좌표가 서버에 전달됩니다. 위치 권한을 허용하지 않아도 지역 검색을
-          이용할 수 있습니다. 관심지역과 설정은 이 브라우저에 저장되며, 날씨
-          화면 자료는 최대 24시간 보관합니다. 설정의 ‘이 브라우저의 오늘날씨
-          데이터 삭제’로 언제든 지울 수 있습니다.
-        </p>
-        <h2>관측 시각과 오프라인</h2>
-        <p>
-          화면을 새로고침한 시각과 기상 관측 시각은 다릅니다. 각 항목에 표시한
-          관측 시각을 확인하세요. 연결이 끊기면 최대 24시간 이내에 저장한 화면
-          자료를 표시할 수 있지만, 현재 날씨나 특보를 보장하지 않습니다.
-        </p>
-        <h2>알림과 기존 모바일 앱</h2>
-        <p>
-          웹 알림은 아직 제공하지 않습니다. 날씨 알림은 기존 모바일 앱에서
-          이용해 주세요.
-        </p>
-        <p>
-          네이티브 위젯·Apple Watch·앱 구매 복원은 기존 모바일 앱에서 이용해
-          주세요. 웹 브라우저에서 모바일 앱의 관심지역이나 구매 내역을 자동으로
-          읽을 수는 없습니다.
-        </p>
-        <h2>하늘 테마</h2>
-        <p>
-          웹의 하늘 테마는 네트워크 사진 서비스에 의존하지 않는 색상 테마입니다.
-          기존 앱의 사진 배경과는 다릅니다.
-        </p>
-        <h2 id="units">단위와 기준</h2>
-        <p>
-          설정에서 기온(°C/°F), 풍속(m/s, km/h, mph, 노트, 보퍼트), 기압(hPa,
-          mb, mmHg, inHg), 거리(km, mi), 강수량(mm, in)과 대기질 기준(한국, WHO
-          권고, 미국 EPA, 중국)을 고를 수 있습니다. 서버에는 항상 기본 단위로
-          요청하고 화면에서 한 번만 변환합니다. 미세먼지는 ㎍/㎥, 가스는 ppm,
-          통합대기지수는 단위 없는 지수입니다.
-        </p>
-        <h2>정보 출처</h2>
-        <p>
-          기상정보: 기상청. {AIR_SOURCE}. {AIR_DISCLAIMER} 해외 날씨는 기존
-          TodayWeather 제공 경로(Visual Crossing)를 사용합니다. 예제 모드는 항상 별도로
-          표시합니다. 제공되지 않는 값은 0 대신 ‘—’로 표시합니다.
-        </p>
+        <p>{t("help.sources.air")}</p>
         <p>{forecastDescription("kaq")}</p>
-        <p>
-          지난 시간과 지난 날은 관측 강수량, 앞으로는 기상청 예보를 바탕으로
-          서버가 계산한 강수량과 강수확률을 표시합니다. 초단기 예보의 1시간
-          강수량은 범주 하한값이므로 ‘약’으로 표시합니다.
-        </p>
+        <p>{t("help.sources.precipitation")}</p>
         <ExternalWeather />
-        <h2>접근성과 외부 지도</h2>
-        <p>
-          시간별 그래프 아래 상세 표와 전국 화면의 지역별 목록으로 동일한 수치를
-          확인할 수 있습니다. 외부 바람 지도는 별도 서비스입니다.
-        </p>
+        <h2>{t("help.accessibility.title")}</h2>
+        <p>{t("help.accessibility.body")}</p>
         <a
           href="https://earth.nullschool.net/"
           target="_blank"
           rel="noreferrer"
           className="text-link"
         >
-          외부 바람 지도 열기 <ArrowUpRight size={15} />
+          {t("help.windMap")} <ArrowUpRight size={15} />
         </a>
       </section>
     </>
@@ -1617,20 +1626,14 @@ function Membership() {
   return (
     <>
       <PageTitle
-        title="이용 요금과 구매 안내"
-        description="현재 웹 버전은 결제 없이 이용할 수 있습니다."
+        title={t("membership.title")}
+        description={t("membership.description")}
       />
       <section className="panel prose">
         <ShieldCheck size={36} />
-        <h2>웹 결제는 아직 제공하지 않습니다</h2>
-        <p>
-          기존 iOS·Android 앱의 구매 내역은 이 브라우저에 자동으로 이전되지
-          않습니다. 구매 복원과 유료 기능은 구매한 모바일 앱에서 확인해 주세요.
-        </p>
-        <p>
-          웹 유료 상품이나 계정 연동이 도입되면 요금과 제공 범위를 먼저
-          안내하겠습니다.
-        </p>
+        <h2>{t("membership.heading")}</h2>
+        <p>{t("membership.body")}</p>
+        <p>{t("membership.future")}</p>
       </section>
     </>
   );

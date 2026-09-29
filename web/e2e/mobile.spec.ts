@@ -141,3 +141,26 @@ test("settings show each chosen value in full and labels on one line", async ({
   expect(rows.length).toBeGreaterThan(8);
   expect(rows.filter((r) => !r.fits || !r.oneLine)).toEqual([]);
 });
+
+test("long server place names and wind values stay inside a 320 px screen (overseas replay)", async ({
+  page,
+}) => {
+  const raw: any = structuredClone(fixture.response);
+  raw.name = "Taepyeongno 1(il)-ga Jongno District";
+  raw.current = { ...raw.current, wsd: 42.5, wdd: "NNE" };
+  await page.route("https://todayweather.wizardfactory.net/weather/**", (r) =>
+    r.fulfill({ json: raw }),
+  );
+  await page.goto("/weather/p_37.571_126.977/hourly");
+  await expect(page.locator(".temperature")).toBeVisible();
+  const title = page.locator(".place-title");
+  await expect(title).toHaveAttribute("title", /Jongno District/);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+  // The actions keep their row; the name is shortened instead.
+  const tops = await page
+    .locator(".weather-page-head .icon-button")
+    .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+  expect(new Set(tops).size).toBe(1);
+});

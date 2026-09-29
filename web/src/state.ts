@@ -8,11 +8,20 @@ import {
   type Units,
   type Weather,
 } from "@todayweather/core";
+import { isLanguage, language, t, type Language } from "./i18n";
+import { autoUnits } from "./locale";
 export type Settings = {
   units: Units;
   theme: "light" | "dark" | "photo" | "classic";
   startup: "hourly" | "daily" | "air" | "overview" | "locations";
   refreshMinutes: number;
+  /** Chosen UI language; null follows the browser. */
+  language: Language | null;
+  /**
+   * Units the user chose explicitly. The others follow the browser country's
+   * defaults and may be recalculated; a user's choice is never replaced.
+   */
+  userUnits: (keyof Units)[];
 };
 export type SavedState = {
   version: 1;
@@ -25,10 +34,12 @@ export const defaultState = (): SavedState => ({
   places: [],
   selectedId: null,
   settings: {
-    units: { ...DEFAULT_UNITS },
+    units: autoUnits(),
     theme: "light",
     startup: "hourly",
     refreshMinutes: 30,
+    language: null,
+    userUnits: [],
   },
 });
 export const STATE_KEY = "tw.web.v1.preferences";
@@ -65,12 +76,22 @@ export function restoreState(storage: Pick<Storage, "getItem">): SavedState {
     }
     const defaults = defaultState().settings,
       s = parsed.settings ?? {};
-    let units = DEFAULT_UNITS;
+    let stored: Units | null = null;
     try {
-      units = parseUnits(s.units);
+      stored = parseUnits(s.units);
     } catch {
-      /* Reset invalid units. */
+      /* Reset invalid units to the automatic defaults. */
     }
+    const unitKeys = Object.keys(DEFAULT_UNITS) as (keyof Units)[];
+    // Saved before automatic defaults existed: keep every stored unit.
+    const userUnits = !stored
+      ? []
+      : Array.isArray(s.userUnits)
+        ? unitKeys.filter((k) => s.userUnits.includes(k))
+        : unitKeys;
+    const units = { ...autoUnits() };
+    for (const k of userUnits)
+      (units as Record<string, string>)[k] = stored![k];
     return {
       version: 1,
       places,
@@ -90,6 +111,8 @@ export function restoreState(storage: Pick<Storage, "getItem">): SavedState {
         refreshMinutes: [0, 30, 60, 180, 360, 720].includes(s.refreshMinutes)
           ? s.refreshMinutes
           : defaults.refreshMinutes,
+        language: isLanguage(s.language) ? s.language : null,
+        userUnits,
       },
     };
   } catch {
@@ -128,13 +151,17 @@ export function saveState(
     return false;
   }
 }
-export function weatherKey(place: Place, units: Units): string {
+export function weatherKey(
+  place: Place,
+  units: Units,
+  lang: string = language(),
+): string {
   return JSON.stringify([
     place.id,
     place.lat,
     place.lon,
     ...Object.keys(DEFAULT_UNITS).map((k) => units[k as keyof Units]),
-    "ko",
+    lang, // Server text (names, summaries) follows the request language.
     "v3", // Normalization revision: D45 precipitation basis and air forecast fields.
   ]);
 }
@@ -171,7 +198,7 @@ export function addPlace(state: SavedState, place: Place): SavedState {
     return { ...state, places, selectedId: place.id };
   }
   if (state.places.length >= MAX_PLACES)
-    throw new Error("관심지역은 최대 30개까지 저장할 수 있습니다.");
+    throw new Error(t("error.maxPlaces", { max: MAX_PLACES }));
   return { ...state, places: [...state.places, place], selectedId: place.id };
 }
 export function removePlace(state: SavedState, id: string): SavedState {
@@ -417,6 +444,14 @@ function validAir(station: unknown): boolean {
     );
   });
 }
+const keyLanguage = (key: string) => {
+  try {
+    const parts = JSON.parse(key);
+    return Array.isArray(parts) ? String(parts[parts.length - 2]) : "";
+  } catch {
+    return "";
+  }
+};
 /** Cache is untrusted browser persistence: require complete normalized shape and a bounded receipt time. */
 export function validateSnapshot(
   value: unknown,
@@ -462,7 +497,9 @@ export function validateSnapshot(
       !Object.keys(DEFAULT_UNITS).every(
         (k) => w.units[k] === units[k as keyof Units],
       ) ||
-      weatherKey(w.location as Place, units) !== key
+      // A snapshot is valid under the language it was saved in, whatever
+      // the current UI language is.
+      weatherKey(w.location as Place, units, keyLanguage(key)) !== key
     )
       return;
     if (

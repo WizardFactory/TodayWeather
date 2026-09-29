@@ -87,6 +87,10 @@ export type AirMeasure = {
 export type AirStation = {
   name: string;
   observedAt: string | null;
+  /** Provider id, e.g. airkorea, google, openweather, visualcrossing, aqicn; "" when absent. */
+  source: string;
+  /** Provider credit as plain text from the API; "" when absent. */
+  attribution: string;
   forecastSource: string;
   forecastPublishedAt: string | null;
   pollutants: Record<Pollutant, AirMeasure>;
@@ -345,7 +349,12 @@ function point(
     high: temp(r.tmx ?? r.taMax),
     humidity: numberValue(r.reh),
     wind: unit(r.wsd, "wind", "windSpeedUnit"),
-    windDirection: str(r.wdd),
+    // KMA sends a direction word; overseas (VC) rows send degrees.
+    windDirection:
+      str(r.wdd) ||
+      (numberValue(r.windDir) === null
+        ? ""
+        : compassPoint(numberValue(r.windDir)!)),
     pressure: unit(r.hPa ?? r.pressure, "pressure", "pressureUnit"),
     visibility: unit(r.visibility, "distance", "distanceUnit"),
     precipitation: convertValue(
@@ -473,6 +482,13 @@ export function normalizeAir(value: unknown): AirStation {
   return {
     name: str(last.stationName) || str(last.sidoName) || "관측소 정보 없음",
     observedAt: observed,
+    source: (str(last.source) || str(s.source))
+      .trim()
+      .toLowerCase()
+      .slice(0, 40),
+    attribution: (str(last.attribution) || str(s.attribution))
+      .trim()
+      .slice(0, 300),
     forecastSource: str(s.forecastSource).toLowerCase(),
     forecastPublishedAt: sourceTime(s.forecastPubDate),
     pollutants,
@@ -736,10 +752,39 @@ export function shortenAddress(address: string): string {
             : [];
   return parts.filter(Boolean).join(" ");
 }
+/** The 16 compass points, clockwise from north. */
+export const COMPASS_POINTS = [
+  "N",
+  "NNE",
+  "NE",
+  "ENE",
+  "E",
+  "ESE",
+  "SE",
+  "SSE",
+  "S",
+  "SSW",
+  "SW",
+  "WSW",
+  "W",
+  "WNW",
+  "NW",
+  "NNW",
+] as const;
+/** Nearest compass point of a bearing in degrees. */
+export function compassPoint(degrees: number): string {
+  const d = ((degrees % 360) + 360) % 360;
+  return COMPASS_POINTS[Math.round(d / 22.5) % 16];
+}
+let numberLocale = "ko-KR";
+/** Device numeric locale used by formatValue; "en" is the international fallback. */
+export function setNumberLocale(locale: string) {
+  numberLocale = locale;
+}
 export function formatValue(v: number | null | undefined, digits = 0): string {
   return v === null || v === undefined || !Number.isFinite(v)
     ? "—"
-    : new Intl.NumberFormat("ko-KR", { maximumFractionDigits: digits }).format(
-        v,
-      );
+    : new Intl.NumberFormat(numberLocale, {
+        maximumFractionDigits: digits,
+      }).format(v);
 }

@@ -18,7 +18,8 @@
     "start": "node scripts/web-static-preview.mjs",
     "build:web": "npm run build -w @todayweather/web",
     "preview:static": "node scripts/web-static-preview.mjs",
-    "deploy:static": "node scripts/deploy-web-static.mjs"
+    "deploy:static": "node scripts/deploy-web-static.mjs",
+    "test:layout": "node scripts/web-layout-check.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

@@ -8,7 +8,7 @@ Users should be able to open a link on mobile or desktop and understand today's 
 
 Primary journeys: checking before leaving home, comparing saved cities, inspecting a pollutant/station, reviewing national conditions/warnings, and, in future separately scoped work, receiving scheduled/condition-based city notifications. Preserve weather meaning and actions while adapting density and interaction to the browser.
 
-Default product proposal: one TodayWeather web product with weather-first and air-first startup options. TodayAir's combined weather screen remains available. International weather is included where supported by data; national maps/warnings are explicitly Korean. The original proposal also included existing translations; AK has since decided on a Korean-only UI, so translations are deferred (Locale row below). Source definitions are in the [screen inventory](../rewrite/screen-specifications.md), not inferred from screenshots alone.
+Default product proposal: one TodayWeather web product with weather-first and air-first startup options. TodayAir's combined weather screen remains available. International weather is included where supported by data; national maps/warnings are explicitly Korean. The UI supports seven languages (AK, 2026-09-27; see the Locale row below and [supported languages](#supported-languages-and-screen-sizes)). Source definitions are in the [screen inventory](../rewrite/screen-specifications.md), not inferred from screenshots alone.
 
 ## Feature parity ledger
 
@@ -45,7 +45,7 @@ All rows derive from [S01–S16 definitions](../rewrite/screen-specifications.md
 | Daily/condition push | Current static client offers native-app guidance only | Future design must establish scheduling, ownership and device delivery; PWA installation alone does not enable alerts |
 | Ads/IAP/restore | Independent web policy and optional hosted billing; explicit signed entitlement service | Native store purchases and AdMob are not directly reusable web integrations |
 | Photo/light/dark/old themes | Maintain information/accessibility and recognizable palettes; curated licensed photo assets if enabled | Photo provider and asset rights are a launch dependency; do not silently substitute a broken background |
-| Locale, feedback, reviews | Decision: Korean-only UI (AK). Originally proposed and now deferred: reuse the translation catalog after audit with a browser-locale override. Feedback link and optional store links | No native review prompt; server prose is requested in Korean (`Accept-Language: ko`). If translations return, server summary language must match the selected locale |
+| Locale, feedback, reviews | Decision (AK, 2026-09-27): seven UI languages — Korean, English, Spanish, Japanese, German, Portuguese, French — from the browser language with a settings override ([supported languages](#supported-languages-and-screen-sizes)). Feedback link and optional store links | No native review prompt; the selected language is sent as `Accept-Language`, so server prose follows it where the backend supports that language (backend language support is a separate issue) |
 | External maps/links | Open a clearly labeled external destination with safe navigation | External service availability is distinct from core weather availability |
 
 The recommended beta is ad-free, without account sign-in. This is a proposal for AK, not approval to omit S13 from a paid parity launch. At release, the ledger must contain no unexplained omission: each Decision needs a resolved policy, owner and user-visible behavior.
@@ -60,13 +60,32 @@ Do not stretch a phone screenshot to desktop. Keep horizontal scrolling inside f
 
 ## Supported languages and screen sizes
 
-**Languages.** The UI is Korean-only (AK). Browser language must not change the web app: the same Korean text, number/date formats and layout for any browser language, with `<html lang="ko">` and every API request sent with `Accept-Language: ko`. The web review covers only the web app's own layout and built-in text; backend language support (localized server prose and place names) is reviewed in a separate issue. A future translation catalog would add locales here and must keep server prose in the selected locale.
+**Languages.** The UI supports seven languages (AK, 2026-09-27; this replaces the earlier Korean-only decision). The first supported browser language is used (region ignored, e.g. `pt-BR` → Portuguese); any other browser language, including Chinese, falls back to English (the same rule as the mobile apps, [#2613](https://github.com/WizardFactory/TodayWeather/issues/2613)). Settings can override the choice, which is stored with the preferences. The choice sets `<html lang>`, the document title, all built-in text, date/number/relative-day formatting and catalog city names, and is sent as `Accept-Language` on every API request; weather snapshots and cached queries are kept per language. Server-provided text (current-location names, summaries, wind directions, station names, warning bodies) is shown as the server returns it: it follows the selected language once the backend supports that language, which is handled in a separate issue. The web review covers the web app's own layout and built-in text. Translations use natural everyday wording; abbreviations are limited to the language's standard short forms (weekday abbreviations, unit symbols, established acronyms), and a slot that cannot fit the natural wording changes its layout instead (ellipsis only for place names).
 
-| Browser setting | Status |
-| --- | --- |
-| Korean (`ko-KR`, Asia/Seoul) | Supported |
-| English (`en-US`, America/New_York) | Korean UI, verified identical to Korean |
-| Japanese (`ja-JP`, Asia/Tokyo) | Korean UI, verified identical to Korean |
+**Display defaults by country** ([#2613](https://github.com/WizardFactory/TodayWeather/issues/2613), owner 2026-09-27). The country is the region of the device language: the first browser language's region, or that of a later tag in the same language (e.g. `["ko", "ko-KR"]`); a region from another language (the `en-US` in `["de", "en-US"]`) is ignored, and without a region the international standard applies. Managed countries are KR, JP, US, DE, GB, CA, AU, FR, BR, ES, MX (Tier 1) and CH, AT, BE, IE, NZ, PT, AR, CL, CO, UY (Tier 2).
+
+| Countries | Temp | Wind | Pressure | Distance | Precip | AQI standard |
+| --- | --- | --- | --- | --- | --- | --- |
+| KR | C | m/s | hPa | km | mm | `airkorea` |
+| JP | C | m/s | hPa | km | mm | `airnow` |
+| US | F | mph | inHg | mi | in | `airnow` |
+| GB | C | mph | hPa | mi | mm | `airnow` |
+| CA, AU, NZ, IE, DE, AT, CH, FR, BE, BR, PT, ES, MX, AR, CL, CO, UY | C | km/h | hPa | km | mm | `airnow` |
+| International standard (any other or unknown country) | C | m/s | hPa | km | mm | `airnow` |
+
+Units saved before this change stay as they are. Each unit the user picks in Settings is recorded as the user's choice and never replaced; the others follow the country's defaults. Hours, dates and decimals follow the locale data of a managed country whose browser language is a supported UI language (for example 12-hour clock and month/day for `en-US`, decimal comma for `pt-BR`/`es-ES`, decimal point for `es-MX`), keeping them when the UI language changes (an `en-US` device in French shows `9/23 · 12:00 PM` and `5.4 mph`), with only weekday and AM/PM words in the UI language; anything else uses the international standard: 24-hour clock, month-day (`MM-DD`) and a decimal point.
+
+| Language | Code | Register | Status |
+| --- | --- | --- | --- |
+| Korean | `ko` | polite (해요체) | Source catalog |
+| English | `en` | plain US English | Translated; native review pending |
+| Spanish | `es` | neutral international, `tú` | Translated; native review pending |
+| Japanese | `ja` | polite (です/ます) | Translated; native review pending |
+| German | `de` | formal `Sie` | Translated; native review pending |
+| Portuguese | `pt` | Brazilian, `você` | Translated; native review pending |
+| French | `fr` | formal `vous` | Translated; native review pending |
+
+Server language support observed on 2026-09-27 (read-only, backend unchanged): the server's prose catalogs cover `ko`, `en`, `ja`, `de` (plus `zh-CN`, `zh-TW`); other languages fall back to English there.
 
 **Screen sizes.** Supported CSS widths are 320 px and up: phones 320–440 px, tablets about 750–1340 px, desktops up to 3440 px (content keeps its maximum width). Touch screens need 16 px form text (iOS zooms into smaller fields) and 44 px icon targets. The reference set for layout reviews is the top 10 South Korean CSS sizes per class (StatCounter, June–August 2026; phones from [#2605 (comment)](https://github.com/WizardFactory/TodayWeather/issues/2605#issuecomment-5850835358)); refresh it when device shares change:
 
@@ -77,7 +96,7 @@ Do not stretch a phone screenshot to desktop. Keep horizontal scrolling inside f
 | Tablet | 820×1180, 1205×753, 1280×800, 1334×800, 1180×688, 1180×629, 800×1280, 753×1205, 768×1024, 810×1080 |
 | Desktop screen | 1920×1080, 2560×1440, 1536×864, 1024×768, 3440×1440, 1440×900, 1280×720, 2048×1152, 800×600, 1707×1067 (viewport about 135 px shorter for browser and taskbar) |
 
-iPhone and iPad sizes are reviewed on WebKit, Android and desktop on Chromium, and Mac-typical desktop sizes on both. Results are in the [coverage traceability](implementation.md#coverage-traceability).
+Phone and tablet sizes are checked in Chrome and Safari, desktop sizes in Chrome, Safari and Edge, each in every UI language ([test guide](testing.md#3-layout-check), `npm run test:layout`). Results are in the [coverage traceability](implementation.md#coverage-traceability).
 
 ## Primary flows
 
@@ -115,4 +134,4 @@ True zero, unavailable/sentinel, empty collection and unsupported product are di
 
 ## Scope decisions
 
-AK has confirmed the parity priority, static-only operation, a Korean-only UI and the `app.tdywx.xyz` domain. React/Vite and direct API reads are implemented. Deployment method, monetization and schedule remain decisions. Recommended defaults and tradeoffs are in the [technical design](technical-design.md). Paid entitlement, login/sync and separate TodayAir branding remain decisions, not hidden requirements. The [implementation plan](implementation-plan.md) sequences them without blocking independent browser/domain work.
+AK has confirmed the parity priority, static-only operation, a seven-language UI and the `app.tdywx.xyz` domain. React/Vite and direct API reads are implemented. Deployment method, monetization and schedule remain decisions. Recommended defaults and tradeoffs are in the [technical design](technical-design.md). Paid entitlement, login/sync and separate TodayAir branding remain decisions, not hidden requirements. The [implementation plan](implementation-plan.md) sequences them without blocking independent browser/domain work.

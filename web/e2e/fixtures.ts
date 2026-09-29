@@ -46,9 +46,14 @@ export const test = base.extend({
             (p) =>
               Math.abs(p.lat - lat) < 0.015 && Math.abs(p.lon - lon) < 0.015,
           );
+          // The API answers in the requested air standard; the browser's
+          // country picks it (e.g. airnow outside Korea).
+          const airUnit =
+            u.searchParams.get("airUnit") ?? weather.units.airUnit;
           return route.fulfill({
             json: {
               ...structuredClone(weather),
+              units: { ...weather.units, airUnit },
               name: p?.name ?? "선택한 지역",
               country: p?.country ?? "KR",
               address: p?.address ?? "",

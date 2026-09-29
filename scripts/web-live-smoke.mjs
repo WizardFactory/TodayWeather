@@ -71,21 +71,9 @@ const SW_TIMEOUT = 15_000;
  * entry once its cause is fixed so a regression shows up as new again.
  */
 export const KNOWN_WARNINGS = {
-  "AirKorea credit on KMA weather":
-    "the API returns no Seoul air observation (backend follow-up)",
-  "Seoul air page renders":
-    "the API returns no Seoul air stations (backend follow-up)",
-  "non-KR weather (Tokyo) renders or reports an upstream error": {
-    reason:
-      "overseas weather returns 501 until the Visual Crossing backend (#2585) is deployed",
-    // Any other status or failure is a new problem.
-    match: (evidence) =>
-      evidence?.status === 501 || evidence?.directProbe?.status === 501,
-  },
-  [`nation air observation times are within ${FRESH_HOURS} h`]:
-    "nationwide air observations stopped in 2021 (backend follow-up)",
-  [`newest warning announcement is within ${FRESH_HOURS} h`]:
-    "warning announcements stopped updating about 2021 (backend follow-up)",
+  // None since 2026-09-29: overseas weather (#2585) and warnings (#2609) were
+  // fixed on 2026-09-27, and Seoul and nationwide air come from the air
+  // provider chain (#2622, #2628) when AirKorea has no fresh observation.
 };
 const NATION_WARN_BYTES = 1_000_000;
 const NATION_MAX_BYTES = 1_500_000; // The client rejects bodies above 2 MB.
@@ -1107,7 +1095,7 @@ export async function runSmoke({ base, target, expectCommit, screenshots }) {
       "/weather/",
     );
     await check(
-      "AirKorea credit on KMA weather",
+      "air credit on KMA weather",
       "app",
       async () => {
         await rendered(".temperature");
@@ -1115,6 +1103,9 @@ export async function runSmoke({ base, target, expectCommit, screenshots }) {
         const text = await air.innerText();
         if (text.includes("환경부/한국환경공단"))
           return "대기오염정보: 환경부/한국환경공단";
+        // Another provider when AirKorea has no fresh observation (#2628).
+        const provider = /대기질 정보: [^\n]+/.exec(text);
+        if (provider) return provider[0];
         if (
           text.includes("관측 자료 없음") &&
           !(await air.locator(".provider-air-summary").count())
@@ -1171,11 +1162,20 @@ export async function runSmoke({ base, target, expectCommit, screenshots }) {
       "/weather/",
     );
     for (const kind of ["weather", "air"]) {
-      await visit(`/nation/${kind}`, ".region-row, .empty-state.error");
+      await visit(
+        `/nation/${kind}`,
+        ".region-row, .region-list .empty-state, .empty-state.error",
+      );
       await check(
         `nation ${kind} renders rows`,
         "app",
         async () => {
+          if (await page.locator(".region-list .empty-state").count())
+            return {
+              status: "warn",
+              category: "upstream",
+              evidence: "the API returned no rows; empty state shown",
+            };
           await rendered(".region-row");
           return `${await page.locator(".region-row").count()} rows`;
         },

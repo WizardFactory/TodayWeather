@@ -74,6 +74,8 @@ describe("Retry-After as an HTTP date (round 3, T7)", () => {
 describe("saved times are shown in KST whatever the device zone (round 3, T7)", () => {
   it("formats an ISO instant in Asia/Seoul", async () => {
     const { kstTime } = await import("../src/components");
+    const { configureFormats } = await import("../src/locale");
+    configureFormats(["ko-KR"]);
     // Pretend the device is in Los Angeles; 15:30Z is 00:30 next day in Seoul.
     const zone = process.env.TZ;
     process.env.TZ = "America/Los_Angeles";
@@ -85,7 +87,16 @@ describe("saved times are shown in KST whatever the device zone (round 3, T7)", 
       else process.env.TZ = zone;
     }
     expect(text).toContain("9. 26.");
-    expect(text).toContain("00:30");
+    // Korean locale data (a 12-hour clock) for 00:30 Seoul time.
+    expect(text).toContain(
+      new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(new Date("2026-09-25T15:30:00Z")),
+    );
     expect(kstTime("nope")).toBe("정보 없음");
   });
 });

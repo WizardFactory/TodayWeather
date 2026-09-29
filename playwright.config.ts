@@ -19,6 +19,9 @@ export default defineConfig({
   ],
   use: {
     baseURL: "http://127.0.0.1:4174",
+    // The UI follows the browser language; specs assert Korean unless they
+    // choose another locale.
+    locale: "ko-KR",
     headless: true,
     launchOptions: process.env.PLAYWRIGHT_EXECUTABLE_PATH
       ? {

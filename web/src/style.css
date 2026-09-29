@@ -7,6 +7,8 @@
     "Segoe UI",
     "Apple SD Gothic Neo",
     "Noto Sans KR",
+    "Hiragino Sans",
+    "Noto Sans JP",
     sans-serif;
   color: #28354b;
   background: #f5f7fb;
@@ -31,6 +33,10 @@
 }
 body {
   margin: 0;
+  /* Long words in translations (German compounds) break at hyphenation
+     points of the UI language (html lang) instead of overflowing. */
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 button,
 input,
@@ -127,6 +133,9 @@ small {
 .brand {
   display: flex;
   align-items: center;
+  /* The product name never hyphenates or wraps. */
+  hyphens: manual;
+  white-space: nowrap;
   gap: 11px;
   font-size: 20px;
   font-weight: 800;
@@ -360,6 +369,13 @@ main:focus {
   align-items: center;
   gap: 12px;
   margin: 0;
+  min-width: 0;
+}
+.place-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .live-dot {
   background: #67b99e;
@@ -376,10 +392,11 @@ main:focus {
 }
 .view-tabs {
   display: flex;
-  gap: 25px;
+  /* Longer translated tab names wrap to a second row instead of hiding. */
+  flex-wrap: wrap;
+  column-gap: 25px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 26px;
-  overflow-x: auto;
 }
 .view-tabs button {
   white-space: nowrap;
@@ -411,10 +428,21 @@ main:focus {
 }
 .section-head {
   display: flex;
+  /* The aside (station picker, legend) moves under a long title. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 24px;
+}
+/* Last resort for long compounds where the engine has no hyphenation
+   dictionary (e.g. German in some WebKit builds). */
+.section-head > h2,
+.section-head > h3,
+.section-head > div,
+.pollutant-grid button > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .section-head > a {
   color: #8d9bb0;
@@ -447,6 +475,8 @@ main:focus {
 }
 .hero-top {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 6px;
   align-items: center;
   justify-content: space-between;
   font-size: 11px;
@@ -498,6 +528,7 @@ main:focus {
 .hero-bottom {
   border-top: 1px solid #ffffff2b;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   padding-top: 15px;
   font-size: 11px;
@@ -560,7 +591,8 @@ main:focus {
 }
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* minmax(0, …): long values ("NNO 42,5 km/h") wrap instead of widening. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 20px;
 }
@@ -580,11 +612,15 @@ main:focus {
   display: block;
   margin-bottom: 2px;
 }
+.metric > div {
+  min-width: 0;
+}
 .metric strong {
   display: block;
   font-size: 17px;
   font-weight: 600;
-  white-space: nowrap;
+  /* Long values ("NNO 42,5 km/h") wrap at spaces rather than widen the card. */
+  overflow-wrap: anywhere;
 }
 .chart-panel {
   padding-bottom: 12px;
@@ -1047,15 +1083,23 @@ th {
 .station-select {
   font-size: 11px;
   color: var(--muted);
+  /* A grid column with a zero minimum makes the picker shrink in every
+     engine (Safari keeps a select at its longest option otherwise). */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 300px;
 }
 .station-select select {
   font-size: 11px;
-  margin-left: 6px;
-  max-width: 230px;
+  width: 100%;
+  min-width: 0;
 }
 .pollutant-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
 }
 .pollutant-grid button {
@@ -1075,6 +1119,7 @@ th {
 .pollutant-grid button > span {
   font-size: 10px;
   color: var(--muted);
+  text-align: center;
 }
 .pollutant-grid strong {
   font-size: 19px;
@@ -1086,7 +1131,10 @@ th {
   padding: 2px 7px;
   background: var(--soft);
   color: var(--muted);
-  white-space: nowrap;
+  /* Translated grade names are long ("Unhealthy for Sensitive Groups"):
+     wrap instead of clipping. */
+  text-align: center;
+  max-width: 100%;
 }
 .bar-chart {
   display: flex;
@@ -1195,7 +1243,8 @@ th {
 }
 .settings-grid {
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
+  /* minmax(0, …): long translated options must not widen the columns. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   gap: 20px;
 }
 .settings-grid > .panel {
@@ -1430,7 +1479,7 @@ th {
     gap: 22px;
   }
   .pollutant-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .daily-row {
     grid-template-columns: 110px 70px 35px 30px minmax(40px, 1fr) 30px;
@@ -1473,11 +1522,11 @@ th {
     font-size: 10px;
   }
   .metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .nation-grid,
   .settings-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .nation-grid .map-panel {
     max-height: 560px;
@@ -1581,7 +1630,7 @@ th {
     height: 34px;
   }
   .view-tabs {
-    gap: 28px;
+    column-gap: 22px;
     margin-bottom: 19px;
   }
   .view-tabs button {
@@ -1793,7 +1842,7 @@ th {
     height: 19px;
   }
   .daily-row {
-    grid-template-columns: 82px 54px 32px 27px minmax(35px, 1fr) 27px;
+    grid-template-columns: 82px 54px 32px 27px minmax(0, 1fr) 27px;
     gap: 5px;
     font-size: 10px;
     padding: 15px 0;
@@ -1825,7 +1874,7 @@ th {
     margin-bottom: 12px;
   }
   .pollutant-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
   .pollutant-grid button {
@@ -1937,6 +1986,11 @@ th {
 select {
   -webkit-appearance: none;
   appearance: none;
+  /* Safari does not clip the text of a page-drawn select: keep long values
+     (station names) inside the box. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237b889e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;

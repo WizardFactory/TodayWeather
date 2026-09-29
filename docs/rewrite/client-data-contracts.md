@@ -28,7 +28,7 @@ All application paths except the weather photo feed append to `clientConfig.serv
 
 The builders concatenate path strings rather than explicitly encoding each address segment. Latitude `0` fails the truthiness check and can fall into the address/error path. The address fallback is designed around Korean legacy locations, not arbitrary global addresses. Sources: [WeatherUtil builders and getWeatherByGeoInfo](../../client/www/js/service.weatherutil.js), [warnings](../../client/www/js/controller.kma.special.js), [push](../../client/www/js/service.push.js), [purchase variants](../../client/www/js/controller.purchase.alexdisler.js).
 
-The static web PWA in `web/`, added upstream at `bd6640f2`, is a separate consumer. It calls only the coordinate weather, both geocode, national overview and warning paths above. It sends canonical units and a fixed `Accept-Language: ko`, and it normalizes bodies with its own adapter. Its requests and field reads are in [native consumers §5](native-consumers-and-plugins.md#5-non-native-consumer-web-pwa-web). Nothing in this document describes the PWA unless it says so.
+The static web PWA in `web/`, added upstream at `bd6640f2`, is a separate consumer. It calls only the coordinate weather, both geocode, national overview and warning paths above. It sends canonical units and the selected UI language as `Accept-Language`, and it normalizes bodies with its own adapter. Its requests and field reads are in [native consumers §5](native-consumers-and-plugins.md#5-non-native-consumer-web-pwa-web). Nothing in this document describes the PWA unless it says so.
 
 ### Units, query strings, and headers
 

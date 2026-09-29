@@ -2,6 +2,7 @@ import { type Place, type Units, type Weather } from "@todayweather/core";
 import { readSnapshot, weatherKey, writeSnapshot } from "./state";
 import { directApi } from "./direct-api";
 import { readTransportSettings } from "./transport-config";
+import { LANGUAGES, t } from "./i18n";
 const settings = readTransportSettings(import.meta.env);
 export async function api<T>(
   path: string,
@@ -14,9 +15,7 @@ export async function api<T>(
   signal?.addEventListener("abort", abort, { once: true });
   const timer = setTimeout(
     () =>
-      controller.abort(
-        new DOMException("요청 시간이 초과되었습니다.", "TimeoutError"),
-      ),
+      controller.abort(new DOMException(t("error.timeout"), "TimeoutError")),
     15000,
   );
   try {
@@ -43,7 +42,7 @@ export async function fetchWeather(
   const key = weatherKey(place, units);
   try {
     if (typeof navigator !== "undefined" && navigator.onLine === false)
-      throw new Error("오프라인 상태입니다.");
+      throw new Error(t("error.offline"));
     const weather = await api<Weather>(
       `/weather?lat=${place.lat}&lon=${place.lon}&${unitQuery(units)}`,
       signal,
@@ -59,7 +58,7 @@ export async function fetchWeather(
     return { weather, snapshot: false };
   } catch (error) {
     if (signal.aborted) throw error;
-    const cached = await readSnapshot(key);
+    const cached = await readAnySnapshot(key);
     if (cached) {
       const wait = (error as { retryAfterMs?: number }).retryAfterMs;
       return wait
@@ -82,5 +81,39 @@ export type Capabilities = {
 };
 /** Stored snapshot for immediate rendering; null when absent, expired or invalid. */
 export async function readStoredWeather(key: string): Promise<Weather | null> {
-  return (await readSnapshot(key)) ?? null;
+  return (await readAnySnapshot(key)) ?? null;
+}
+/**
+ * The snapshot for this language, else the newest of the same place and units
+ * saved in another UI language (only server text differs), so switching
+ * language offline keeps the stored weather.
+ */
+export async function readAnySnapshot(
+  key: string,
+  read: (key: string) => Promise<Weather | undefined> = readSnapshot,
+): Promise<Weather | undefined> {
+  const own = await read(key);
+  if (own) return own;
+  let parts: unknown[];
+  try {
+    parts = JSON.parse(key);
+  } catch {
+    return;
+  }
+  const at = parts.length - 2; // [..., language, normalization revision]
+  // The newest snapshot of the same place and units in another language.
+  let newest: Weather | undefined,
+    newestAt = -Infinity;
+  for (const other of LANGUAGES) {
+    if (other === parts[at]) continue;
+    const found = await read(
+      JSON.stringify([...parts.slice(0, at), other, ...parts.slice(at + 1)]),
+    );
+    const time = found ? Date.parse(found.fetchedAt) : NaN;
+    if (found && (!newest || time > newestAt)) {
+      newest = found;
+      newestAt = Number.isNaN(time) ? -Infinity : time;
+    }
+  }
+  return newest;
 }

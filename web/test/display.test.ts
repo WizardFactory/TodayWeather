@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { configureFormats } from "../src/locale";
 import {
+  airCredit,
   airWindow,
   gradeClass,
   gradeLabel,
@@ -68,6 +70,31 @@ describe("air standards", () => {
   });
 });
 
+describe("air credit", () => {
+  it("credits AirKorea only for Korean data without another provider", () => {
+    const official = [
+      "대기오염정보: 환경부/한국환경공단",
+      "인증되지 않은 실시간 자료이므로 자료 오류가 있을 수 있습니다.",
+    ];
+    expect(airCredit("KMA", { source: "", attribution: "" })).toEqual(official);
+    expect(airCredit("KMA", { source: "airkorea", attribution: "" })).toEqual(
+      official,
+    );
+    expect(airCredit("KMA")).toEqual(official);
+    expect(
+      airCredit("KMA", { source: "google", attribution: "Google Air Quality" }),
+    ).toEqual(["대기질 정보: Google Air Quality"]);
+    expect(
+      airCredit("VC", { source: "google", attribution: "Google Air Quality" }),
+    ).toEqual(["대기질 정보: Google Air Quality"]);
+    expect(airCredit("VC", { source: "aqicn", attribution: "" })).toEqual([
+      "대기질 정보: aqicn",
+    ]);
+    expect(airCredit("VC", { source: "", attribution: "" })).toEqual([]);
+    expect(airCredit("VC")).toEqual([]);
+  });
+});
+
 describe("display formatting", () => {
   it("never rounds a positive amount to zero", () => {
     expect(amount(0.2 / 25.4, "in")).toBe("<0.01");
@@ -86,6 +113,7 @@ describe("display formatting", () => {
     expect(approxAmount(50 / 25.4, "in")).toBe("1.97 in 이상");
   });
   it("uses mobile relative day words around the source date", () => {
+    configureFormats(["ko-KR"]);
     const ref = "2026-09-23T09:00";
     expect(
       [

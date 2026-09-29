@@ -11,6 +11,8 @@ import {
   type Place,
 } from "@todayweather/core";
 import type { TransportSettings } from "./transport-config";
+import { language, t } from "./i18n";
+import { placeSearchText } from "./places";
 
 /** The API asked us to wait; `retryAfterMs` is the requested pause. */
 export class RateLimitError extends Error {
@@ -32,23 +34,19 @@ export async function readJson(response: Response): Promise<any> {
     await response.body?.cancel().catch(() => undefined);
     throw new RateLimitError(
       known
-        ? `요청이 많아 잠시 제한되었습니다. ${Math.ceil(parsed / 1000)}초 후 다시 시도해 주세요.`
-        : "요청이 많아 잠시 제한되었습니다. 잠시 후 다시 시도해 주세요.",
+        ? t("error.rateLimitSeconds", { seconds: Math.ceil(parsed / 1000) })
+        : t("error.rateLimit"),
       known ? parsed : 60000,
     );
   }
   if (response.status === 503) {
     await response.body?.cancel().catch(() => undefined);
-    throw new Error(
-      "날씨 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
-    );
+    throw new Error(t("error.unavailable"));
   }
   if (!response.headers.get("Content-Type")?.includes("json"))
-    throw new Error(
-      "서버 응답을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.",
-    );
+    throw new Error(t("error.badResponse"));
   const reader = response.body?.getReader();
-  if (!reader) throw new Error("자료가 비어 있습니다.");
+  if (!reader) throw new Error(t("error.empty"));
   const chunks: Uint8Array[] = [];
   let length = 0;
   try {
@@ -58,7 +56,7 @@ export async function readJson(response: Response): Promise<any> {
       length += chunk.value.length;
       if (length > 2_000_000) {
         await reader.cancel();
-        throw new Error("자료 크기가 허용 범위를 초과했습니다.");
+        throw new Error(t("error.tooLarge"));
       }
       chunks.push(chunk.value);
     }
@@ -75,13 +73,13 @@ export async function readJson(response: Response): Promise<any> {
   try {
     data = JSON.parse(new TextDecoder().decode(bytes));
   } catch {
-    throw new Error("날씨 서비스 자료를 읽을 수 없습니다.");
+    throw new Error(t("error.unreadable"));
   }
   if (!response.ok)
     throw new Error(
       typeof data?.error?.message === "string"
         ? data.error.message
-        : "날씨 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        : t("error.connect"),
     );
   return data;
 }
@@ -90,8 +88,7 @@ function geo(value: any): Place {
     value?.location?.lat,
     value?.location?.long ?? value?.location?.lon,
   );
-  if (!value || typeof value !== "object")
-    throw new Error("지역 정보를 확인하지 못했습니다.");
+  if (!value || typeof value !== "object") throw new Error(t("error.geocode"));
   const address = String(value.address || "");
   return {
     id: placeId(c.lat, c.lon),
@@ -128,12 +125,12 @@ export async function directApi(
   init?: RequestInit,
 ): Promise<unknown> {
   if ((init?.method ?? "GET") !== "GET")
-    throw new Error("정적 웹앱에서는 웹 알림을 아직 사용할 수 없습니다.");
+    throw new Error(t("error.notificationsUnavailable"));
   if (!path.startsWith("/") || path.startsWith("//"))
-    throw new Error("지원하지 않는 요청입니다.");
+    throw new Error(t("error.unsupported"));
   const url = new URL(path, "https://web.invalid");
   if (url.origin !== "https://web.invalid")
-    throw new Error("지원하지 않는 요청입니다.");
+    throw new Error(t("error.unsupported"));
   const route = url.pathname,
     mode = settings.mode;
   const units = parseUnits(Object.fromEntries(url.searchParams));
@@ -147,7 +144,12 @@ export async function directApi(
           signal,
           credentials: "omit",
           redirect: "error",
-          headers: { Accept: "application/json", "Accept-Language": "ko" },
+          // The selected UI language: server text follows it where the
+          // backend supports that language.
+          headers: {
+            Accept: "application/json",
+            "Accept-Language": language(),
+          },
           // Geocode results can contain the user's position; keep them out of the HTTP cache.
           ...(options.noStore ? { cache: "no-store" as const } : {}),
         });
@@ -161,9 +163,7 @@ export async function directApi(
       }
       if (!response)
         // CORS prevents inspecting a failed response. Never echo provider/network details.
-        throw new Error(
-          "날씨 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-        );
+        throw new Error(t("error.connect"));
       return readJson(response);
     }
   };
@@ -177,8 +177,7 @@ export async function directApi(
       mode,
       notifications: {
         enabled: false,
-        reason:
-          "정적 웹앱의 웹 알림은 아직 제공하지 않습니다. 기존 모바일 앱 알림을 이용해 주세요.",
+        reason: t("error.notificationsUseApp"),
       },
       billing: { enabled: false },
       search: { catalog: true, geocode: mode === "live" },
@@ -186,7 +185,7 @@ export async function directApi(
   if (route === "/places") return { items: PLACES };
   if (route.startsWith("/places/")) {
     const p = PLACES.find((p) => p.id === route.slice(8));
-    if (!p) throw new Error("공유한 지역을 찾을 수 없습니다.");
+    if (!p) throw new Error(t("error.sharedPlace"));
     return p;
   }
   if (route === "/locations/search") {
@@ -195,11 +194,10 @@ export async function directApi(
       .slice(0, 120)
       .toLocaleLowerCase();
     return {
-      items: PLACES.filter(
-        (p) =>
-          !q ||
-          `${p.name} ${p.address} ${p.id}`.toLocaleLowerCase().includes(q),
-      ).slice(0, 20),
+      items: PLACES.filter((p) => !q || placeSearchText(p).includes(q)).slice(
+        0,
+        20,
+      ),
       canResolve: mode === "live" && q.length >= 2,
       mode,
     };
@@ -207,9 +205,8 @@ export async function directApi(
   if (route === "/locations/resolve") {
     const q = (url.searchParams.get("q") ?? "").trim();
     if (q.length < 2 || q.length > 120)
-      throw new Error("두 글자 이상 지역명을 입력해 주세요.");
-    if (mode === "demo")
-      throw new Error("예제 모드에서는 추천 지역을 선택해 주세요.");
+      throw new Error(t("error.searchTooShort"));
+    if (mode === "demo") throw new Error(t("error.demoSearch"));
     return geo(
       await upstream("/geocode/v000903/addr/" + encodeURIComponent(q), {
         noStore: true,
@@ -239,7 +236,7 @@ export async function directApi(
             }),
           );
     if (mode === "demo" && units.airUnit !== "airkorea")
-      throw new Error("예제 자료는 한국 대기환경 기준만 제공합니다.");
+      throw new Error(t("error.demoAirUnit"));
     const raw =
       mode === "demo" && DEMO_BUILD
         ? {
@@ -254,7 +251,7 @@ export async function directApi(
   }
   if (route === "/nation/KR") {
     if (mode === "demo" && units.airUnit !== "airkorea")
-      throw new Error("예제 자료는 한국 대기환경 기준만 제공합니다.");
+      throw new Error(t("error.demoAirUnit"));
     const raw =
       mode === "demo" && DEMO_BUILD
         ? (await import("./demo/nation.json")).default
@@ -272,5 +269,5 @@ export async function directApi(
       items: normalizeWarnings(raw),
     };
   }
-  throw new Error("요청한 기능을 사용할 수 없습니다.");
+  throw new Error(t("error.featureUnavailable"));
 }

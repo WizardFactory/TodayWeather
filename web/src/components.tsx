@@ -15,7 +15,9 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { formatValue, type Point, type Weather } from "@todayweather/core";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
+import { t, useLanguage } from "./i18n";
+import { hourText, instantText } from "./locale";
 import {
   dayLabel,
   iconKind,
@@ -56,7 +58,7 @@ export function Loading() {
   return (
     <div className="empty-state" role="status">
       <LoaderCircle className="spin" size={26} />
-      <p>날씨를 불러오는 중이에요</p>
+      <p>{t("loading.weather")}</p>
     </div>
   );
 }
@@ -70,13 +72,11 @@ export function ErrorState({
   return (
     <div className="empty-state error" role="alert">
       <TriangleAlert size={28} />
-      <h3>자료를 불러오지 못했어요</h3>
-      <p>
-        {error instanceof Error ? error.message : "잠시 후 다시 시도해 주세요."}
-      </p>
+      <h3>{t("error.title")}</h3>
+      <p>{error instanceof Error ? error.message : t("error.retryLater")}</p>
       {retry && (
         <button className="button" onClick={retry}>
-          <RefreshCw size={16} /> 다시 시도
+          <RefreshCw size={16} /> {t("common.retry")}
         </button>
       )}
     </div>
@@ -99,7 +99,7 @@ export function Empty({
 }
 export function Stamp({
   at,
-  label = "관측 시각",
+  label,
   timeZone,
   zone,
 }: {
@@ -109,16 +109,15 @@ export function Stamp({
   /** Zone of a naive wall time: KMA/AirKorea are KST, overseas are local. */
   zone?: "KST" | "local";
 }) {
+  useLanguage();
   const text = stampTime(at, timeZone);
   const suffix =
-    !zone || timeZone || text === "정보 없음"
+    !zone || timeZone || text === t("common.noInfo")
       ? ""
-      : zone === "KST"
-        ? " KST"
-        : " (현지 시각)";
+      : " " + t(zone === "KST" ? "time.kst" : "time.local");
   return (
     <span className="stamp">
-      {label} {text}
+      {label ?? t("stamp.observed")} {text}
       {suffix}
     </span>
   );
@@ -126,30 +125,21 @@ export function Stamp({
 /** Device-clock instants (fetch/save times) shown in Korea time. */
 export function kstTime(iso: string) {
   const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return "정보 없음";
-  return (
-    new Intl.DateTimeFormat("ko-KR", {
-      timeZone: "Asia/Seoul",
-      month: "numeric",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }).format(date) + " KST"
-  );
+  if (!Number.isFinite(date.getTime())) return t("common.noInfo");
+  return instantText(date) + " " + t("time.kst");
 }
 function stampTime(
   at: string | null | undefined,
   timeZone?: "Asia/Seoul",
 ): string {
-  if (!at) return "정보 없음";
+  if (!at) return t("common.noInfo");
   if (!timeZone) return at.replace("T", " ").slice(0, 19);
   // Only explicit offsets identify an instant. Naive KMA wall times must not move.
-  if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(at)) return "정보 없음";
+  if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(at)) return t("common.noInfo");
   if (!/(?:Z|[+-]\d{2}:?\d{2})$/i.test(at))
     return at.replace("T", " ").slice(0, 19);
   const date = new Date(at);
-  if (!Number.isFinite(date.getTime())) return "정보 없음";
+  if (!Number.isFinite(date.getTime())) return t("common.noInfo");
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
@@ -182,16 +172,15 @@ export function DataNotice({
       {weather.mode === "demo" && (
         <div className="notice demo">
           <span className="dot" />
-          <strong>예제 데이터</strong>
-          <span>화면 체험용 가상 날씨입니다. 실제 날씨가 아닙니다.</span>
+          <strong>{t("notice.demo.title")}</strong>
+          <span>{t("notice.demo.body")}</span>
         </div>
       )}
       {refreshing && (
         <div className="notice" role="status">
           <LoaderCircle className="spin" size={16} />
           <span>
-            저장된 자료를 먼저 표시하고 있습니다. 마지막 수신{" "}
-            {kstTime(weather.fetchedAt)} · 최신 자료를 불러오는 중입니다.
+            {t("notice.refreshing", { time: kstTime(weather.fetchedAt) })}
           </span>
         </div>
       )}
@@ -199,8 +188,7 @@ export function DataNotice({
         <div className="notice warning" role="status">
           <TriangleAlert size={16} />
           <span>
-            최신 자료로 갱신하지 못했습니다. 마지막 수신{" "}
-            {kstTime(weather.fetchedAt)}
+            {t("notice.refreshFailed", { time: kstTime(weather.fetchedAt) })}
           </span>
         </div>
       )}
@@ -209,9 +197,11 @@ export function DataNotice({
           <TriangleAlert size={16} />
           <span>
             {notice
-              ? `${notice} 저장된 자료를 표시합니다. 마지막 수신 `
-              : "연결하지 못해 저장된 자료를 표시합니다. 마지막 수신 "}
-            {kstTime(weather.fetchedAt)}
+              ? t("notice.snapshotReason", {
+                  reason: notice,
+                  time: kstTime(weather.fetchedAt),
+                })
+              : t("notice.snapshot", { time: kstTime(weather.fetchedAt) })}
           </span>
         </div>
       )}
@@ -220,18 +210,16 @@ export function DataNotice({
         3,
         Date.now(),
         weather.source === "KMA" ? "KST" : "local",
-      ) && (
-        <div className="notice warning">
-          관측 시각이 오래된 자료입니다. 외출 전 최신 기상 정보를 확인해 주세요.
-        </div>
-      )}
+      ) && <div className="notice warning">{t("notice.staleObservation")}</div>}
     </>
   );
 }
 /** Smallest horizontal distance between chart points, in SVG units. */
 const CHART_MIN_GAP = 52;
-export const hourLabel = (at: string) =>
-  at.slice(11, 13) + ":" + at.slice(14, 16);
+/** Rough width of an 11px chart label: CJK/Hangul glyphs are about square. */
+const labelWidth = (text: string) =>
+  [...text].reduce((w, c) => w + (/[\u1100-\uffff]/.test(c) ? 11 : 6.6), 0);
+export const hourLabel = hourText;
 export function TemperatureChart({
   points,
   yesterday,
@@ -247,8 +235,7 @@ export function TemperatureChart({
     temps = [...data, ...yesterday]
       .map((p) => p.temperature)
       .filter((v): v is number => v !== null);
-  if (!data.length || !temps.length)
-    return <Empty title="시간별 예보가 없습니다" />;
+  if (!data.length || !temps.length) return <Empty title={t("chart.empty")} />;
   // Rows mix 1-hour and 3-hour steps; position by time, not by index, but
   // keep the closest points far enough apart that hour labels never touch.
   const minutes = (p: Point) => Date.parse(p.at + ":00Z") / 60000,
@@ -258,10 +245,15 @@ export function TemperatureChart({
       ...data.slice(1).map((p, i) => minutes(p) - minutes(data[i])),
       span,
     );
+  // Regional hour labels ("3:00 PM", "오후 3:00") need more room than "15:00".
+  const gap = Math.max(
+    CHART_MIN_GAP,
+    ...data.map((p) => labelWidth(hourLabel(p.at)) + 12),
+  );
   const low = Math.min(...temps) - 3,
     range = Math.max(...temps) - low + 4,
     width = Math.ceil(
-      Math.max(720, data.length * 68, 76 + (span * CHART_MIN_GAP) / step),
+      Math.max(720, data.length * 68, 76 + (span * gap) / step),
     ),
     height = 220;
   const x = (i: number) =>
@@ -295,7 +287,7 @@ export function TemperatureChart({
           viewBox={`0 0 ${width} ${height}`}
           style={{ minWidth: width }}
           role="img"
-          aria-label="시간별 기온 변화, 아래 표에서 수치 확인 가능"
+          aria-label={t("chart.label")}
         >
           <defs>
             <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
@@ -389,15 +381,15 @@ export function TemperatureChart({
         </div>
       </div>
       <details className="data-table">
-        <summary>시간별 상세 수치 보기</summary>
+        <summary>{t("chart.table")}</summary>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>시각</th>
-                <th>기온 (°{unit})</th>
-                <th>강수확률</th>
-                <th>습도</th>
+                <th>{t("chart.col.time")}</th>
+                <th>{t("chart.col.temperature", { unit })}</th>
+                <th>{t("chart.col.rainProbability")}</th>
+                <th>{t("chart.col.humidity")}</th>
               </tr>
             </thead>
             <tbody>
@@ -442,6 +434,19 @@ export function PageTitle({
     </div>
   );
 }
+/** Catalog text whose "\n" marks become line breaks. */
+export function Lines({ text }: { text: string }) {
+  return (
+    <>
+      {text.split("\n").map((line, i) => (
+        <Fragment key={i}>
+          {i > 0 && <br />}
+          {line}
+        </Fragment>
+      ))}
+    </>
+  );
+}
 export function SectionHead({
   title,
   aside,
@@ -464,7 +469,7 @@ export function ExternalWeather() {
       target="_blank"
       rel="noreferrer"
     >
-      기상청 날씨누리 <ArrowUpRight size={14} />
+      {t("external.kma")} <ArrowUpRight size={14} />
     </a>
   );
 }
