@@ -185,29 +185,35 @@ arpltnController._checkArpltnDataValid = function (arpltn, itemList) {
 };
 
 /**
- * 8시간 이내의 경우 사용
- * @param dateTime
- * @param arpltn
- * @returns {boolean}
+ * Parse an AirKorea KST wall time, including the following midnight as 24:00.
+ * @param dataTime
+ * @returns {number} Epoch milliseconds, or NaN for invalid input.
  * @private
  */
+arpltnController._parseDateTime = function(dataTime) {
+    if (typeof dataTime !== 'string') {
+        return NaN;
+    }
+    var parts = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(dataTime);
+    if (!parts) {
+        return NaN;
+    }
+    var hour = Number(parts[4]);
+    var minute = Number(parts[5]);
+    var midnight = new Date(parts[1] + '-' + parts[2] + '-' + parts[3] + 'T00:00:00Z');
+    // Reject calendar rollover (e.g. February 30) and anything except 24:00 at hour 24.
+    if (!isFinite(midnight.getTime()) || midnight.toISOString().slice(0, 10) !== dataTime.slice(0, 10) ||
+        hour > 24 || minute > 59 || (hour === 24 && minute !== 0)) {
+        return NaN;
+    }
+    // AirKorea wall time is KST (+09:00), regardless of host timezone or DST.
+    // Adding 24 hours naturally rolls 24:00 into the following day's midnight.
+    return midnight.getTime() + (hour - 9) * 3600000 + minute * 60000;
+};
+
 arpltnController._checkDateTime = function(arpltn, dateTime) {
-    var arpltnTime;
-    if (arpltn.dataTime.indexOf('24:00') >= 0) {
-        //set 00:00 of next date
-        arpltnTime = new Date(arpltn.dataTime.substr(0,10));
-        arpltnTime.setDate(arpltnTime.getDate()+1);
-        arpltnTime.setHours(0);
-    }
-    else {
-        arpltnTime = new Date(arpltn.dataTime);
-    }
-
-    //호출자의 dateTime을 변경하면 관측소마다 기준 시간이 8시간씩 누적되어 앞당겨짐
-    var limitTime = new Date(dateTime);
-    limitTime.setHours(limitTime.getHours()-8);
-
-    return limitTime.getTime() < arpltnTime.getTime();
+    return new Date(dateTime).getTime() - 8 * 3600000 <
+        this._parseDateTime(arpltn && arpltn.dataTime);
 };
 
 /**
@@ -627,4 +633,3 @@ arpltnController.getSidoArpltn = function (callback) {
 };
 
 module.exports = arpltnController;
-
