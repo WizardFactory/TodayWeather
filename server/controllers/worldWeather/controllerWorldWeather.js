@@ -794,6 +794,13 @@ function controllerWorldWeather() {
             ],
             function(err) {
                 if(err){
+                    var unavailable = require('../../lib/weatherUnavailable');
+                    if(unavailable.isUnavailable(err)){
+                        res.set('Retry-After', String(unavailable.retryAfter(err)));
+                        res.set('Cache-Control', 'no-store');
+                        return res.status(503).json({code: err.code, retryAt: err.retryAt});
+                    }
+
                     err.message += ' ' +JSON.stringify(meta);
                     //TW-398 next에서 error message가 짤림.
                     log.warn(err.message);
