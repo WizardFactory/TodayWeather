@@ -112,7 +112,7 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Verified dispatch",
+      "title": "Historical routing (2026-09-20)",
       "items": [
         "AWS configuration and deployed Lambda code establish the public-to-EC2 path.",
         "Explicit version wins; unversioned weather defaults to v000901. Address weather returns 501."
@@ -120,10 +120,18 @@
     },
     {
       "dot": "amber",
-      "title": "Limits and retries",
+      "title": "Repository gateway: temporary outage (#2635)",
       "items": [
-        "Service host routing and workers observed; provider results and DB queries untested.",
-        "Client attempts may overlap at 0 / 2 / 4 s; Lambda backend retries up to 3 times."
+        "tw-svc replaces Lambda: typed provider-down / budget errors return 503 + Retry-After (1\u20133600 s), CORS and no-store.",
+        "Stored weather still succeeds; other failures remain 501. Known outages skip gateway retries."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Overseas UV contract (#2634)",
+      "items": [
+        "Repository change: VC uvindex travels through the converter, DSF parser and optional cache fields.",
+        "Current UV and daily maximum: uvIndex plus mobile ultrv / ultrvGrade / ultrvStr. Valid zero survives; missing stays absent. Production rollout is separate."
       ]
     }
   ]

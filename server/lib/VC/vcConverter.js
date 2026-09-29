@@ -89,7 +89,7 @@ function iconOf(row, rate) {
  */
 function toDarkSkyHour(row, time) {
     const rate = num(row.precip) || 0;
-    return {
+    const point = {
         time: time === undefined ? row.datetimeEpoch : time,
         summary: summaryOf(row, rate),
         icon: iconOf(row, rate),
@@ -106,6 +106,11 @@ function toDarkSkyHour(row, time) {
         cloudCover: fraction(row.cloudcover),
         pressure: num(row.pressure)
     };
+    // Optional provider value: zero is valid; never coerce missing values to zero.
+    if (num(row.uvindex) !== undefined && row.uvindex >= 0) {
+        point.uvIndex = row.uvindex;
+    }
+    return point;
 }
 
 function extreme(hours, field, pickMax) {
@@ -205,6 +210,8 @@ function toDarkSkyDocs(vc, now) {
     const dayRecord = (day, start) => {
         const hours = day.hours || [];
         const first = hours.length > 0 ? toDarkSkyHour(hours[0], start) : toDarkSkyHour(day, start);
+        // A daily maximum is not an observation at midnight.
+        if (!hours.length) { delete first.uvIndex; }
         return make(first, hours, [toDarkSkyDay(day, start)]);
     };
 
@@ -237,7 +244,9 @@ function toDarkSkyDocs(vc, now) {
     // Without currentConditions, the current local hour's row stands in.
     const current = vc.currentConditions || (ahead[0] && ahead[0].datetimeEpoch === hourStart ? ahead[0] : days[todayIndex]);
     // Records are keyed by time: a fetch at exactly local midnight must not replace today's record.
-    docs.current = make(toDarkSkyHour(current, nowSec === todayStart ? nowSec + 1 : nowSec), ahead, dailyAhead);
+    const currentPoint = toDarkSkyHour(current, nowSec === todayStart ? nowSec + 1 : nowSec);
+    if (current === days[todayIndex]) { delete currentPoint.uvIndex; }
+    docs.current = make(currentPoint, ahead, dailyAhead);
     return docs;
 }
 

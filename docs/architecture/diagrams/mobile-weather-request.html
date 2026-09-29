@@ -5502,7 +5502,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>Verified dispatch</h3>
+          <h3>Historical routing (2026-09-20)</h3>
         </div>
         <ul>
           <li>&bull; AWS configuration and deployed Lambda code establish the public-to-EC2 path.</li>
@@ -5513,11 +5513,22 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="card">
         <div class="card-header">
           <div class="card-dot amber"></div>
-          <h3>Limits and retries</h3>
+          <h3>Repository gateway: temporary outage (#2635)</h3>
         </div>
         <ul>
-          <li>&bull; Service host routing and workers observed; provider results and DB queries untested.</li>
-          <li>&bull; Client attempts may overlap at 0 / 2 / 4 s; Lambda backend retries up to 3 times.</li>
+          <li>&bull; tw-svc replaces Lambda: typed provider-down / budget errors return 503 + Retry-After (1–3600 s), CORS and no-store.</li>
+          <li>&bull; Stored weather still succeeds; other failures remain 501. Known outages skip gateway retries.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>Overseas UV contract (#2634)</h3>
+        </div>
+        <ul>
+          <li>&bull; Repository change: VC uvindex travels through the converter, DSF parser and optional cache fields.</li>
+          <li>&bull; Current UV and daily maximum: uvIndex plus mobile ultrv / ultrvGrade / ultrvStr. Valid zero survives; missing stays absent. Production rollout is separate.</li>
         </ul>
       </div>
     </div>

@@ -46,6 +46,7 @@ function world({air, dsf, policy = airPolicy, timers} = {}) {
     const Dsf = function () {};
     Dsf.prototype.getDsfData = dsf || ((req, cDate, cb) => setImmediate(cb));
     const Controller = load('controllers/worldWeather/controllerWorldWeather.js', {
+        '../../lib/weatherUnavailable': require('../../lib/weatherUnavailable'),
         async: require('async'), '../../lib/unitConverter': UnitConverter, '../../lib/aqi.converter': AqiConverter, '../../config/air': policy, '../../lib/air/observation': observationModule,
         './controllerAqi': LegacyAqi, './dsf.controller': Dsf, '../../lib/AQI/airFallback': air || {getArpltn: () => { throw new Error('no air service'); }},
         request: () => { throw new Error('Unexpected legacy HTTP request'); }}, timers ? {setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout} : {});

@@ -1,0 +1,19 @@
+{
+  "candidate": "sha256:4727d660921f6f4f3ae351cf01444ee784dd92ecfadb6acd6e5da779fa090269",
+  "base": "d4858b5926c1b27a82da96f3a7329dbeffe408e4",
+  "files": {
+    ".github/workflows/rss-offline.yml": "4907542cc04920c0486853fb38fd6184c47fc970a94462dd3632e9635fdf3276",
+    "docs/architecture/diagrams/domestic-air-fallback.html": "4332acc378297bd695cfc57b8d132487d86d7d0404ed035a0dfd6359ec62c3ac",
+    "docs/architecture/diagrams/domestic-air-fallback.json": "d948eaa5d28f965a519c0d5aae478787f5222cc1f40114454880e198e5681bec",
+    "docs/architecture/mobile-api.md": "7d97f3642ed8eb98bf7c0d18c9a55765cfad3cbbf433523872c18c4b5a44d35f",
+    "server/controllers/controllerTown24h.js": "7fd34e5ee182b2fa15230d4bfcff35fe5f8683546bc89df3b4a2031fe9e79a56",
+    "server/controllers/kecoController.js": "a5dcab4329bac8ddf5113e4e3528d80a72d835bfce3e8c6df68a8d8922580c09",
+    "server/test/offline/air-fallback.test.js": "21b6bae5fbed11b15f24b15458890603d34262ca455330cf90ef62512fa08f43",
+    "server/test/offline/air-freshness-harness.js": "c2611767fb3222a2c566b0476d9e58e777f142f60294a8e77133697854d60ce0",
+    "server/test/offline/air-freshness-route.test.js": "3512b17f318b9013a95da13da8bae388766786e7b0e0d739eaf8625455fec6ce",
+    "server/test/offline/air-freshness-smoke.js": "ca7d3383d15730a7d10c7b893d1641852481c65b1413d5b6e27cfb23015bd59e",
+    "server/test/offline/air-freshness.test.js": "66ba916e695b986b0c28875c51512fe66403176f048c19cc99f883957c4b1056",
+    "server/test/offline/air-summary.test.js": "1949386186a3a960bb7ed6b087333e658be95904973d987929ebeff7114d0541",
+    "server/test/offline/run.js": "07b61f9ec2e358a1621980e30b2f1e77b5949803626d818ceb94c3c2962470a0"
+  }
+}

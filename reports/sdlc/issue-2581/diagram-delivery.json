@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "/root/.paseo/worktrees/08mqediz/special-beaver/docs/architecture/diagrams/domestic-air-fallback.json",
+  "output": "/root/.paseo/worktrees/08mqediz/special-beaver/docs/architecture/diagrams/domestic-air-fallback.html",
+  "specification": {
+    "sha256": "ff023ccbff9049d507800fcb9f905c2b7f4baa294e0212c5ac72195944d32f67",
+    "bytes": 3988
+  },
+  "artifact": {
+    "sha256": "5a8f75730780d999757adb1b978ba4046fceffd4b86d03ef6991c995a81c6e65",
+    "bytes": 807517
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

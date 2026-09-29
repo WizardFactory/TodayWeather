@@ -21,7 +21,7 @@ const RANGES = {
 };
 const ELEMENTS = ['datetime', 'datetimeEpoch', 'temp', 'tempmax', 'tempmin', 'feelslike', 'feelslikemax', 'feelslikemin',
     'humidity', 'precip', 'precipprob', 'preciptype', 'snow', 'windspeed', 'winddir', 'pressure', 'visibility',
-    'cloudcover', 'conditions', 'icon', 'source', 'sunriseEpoch', 'sunsetEpoch', 'moonphase'];
+    'uvindex', 'cloudcover', 'conditions', 'icon', 'source', 'sunriseEpoch', 'sunsetEpoch', 'moonphase'];
 const MAX_BODY_BYTES = 4 * 1024 * 1024;    // a combined body is about 70 KB
 const RESET_CODES = ['ECONNRESET', 'EPIPE'];
 // 429 bodies. Concurrency, observed live on the Free plan: "Maximum concurrency exceeded".

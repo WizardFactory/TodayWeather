@@ -178,3 +178,13 @@ This describes local implementation, not production activation or verified live 
 Follow-up live validation on 2026-09-25 KST confirmed September 17–23 coverage for Seoul, Busan and Jeju (168 hourly and seven daily rows each). The official [ASOS portal](https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36&tabNo=2) describes winter rain at three-hour intervals and previous-day data availability after 10:00 KST. The normalizer therefore omits November–March `rn` from the one-hour `rn1` field until its accumulation period is verified; daily rain remains usable. Scheduled retries preserve gaps during publication delay. This enforces the existing field-validity boundary without changing the recovery/data-flow diagram.
 
 Overseas optional air is detached from its response after `AIR_RESPONSE_DEADLINE_MS` (default 4 seconds), including cache/store delays. The same in-flight chain can still populate shared cache for later calls. Late completion does not update the completed request; source ids and optional attribution remain normalized cache data for client display (#2628 D22).
+
+### Optional overseas UV storage (#2634)
+
+The VC Timeline elements list includes `uvindex`. Conversion and DSF parsing
+preserve optional finite nonnegative `uvIndex` values in current/hourly/daily
+DsfForecast documents, with no schema default. Hourly storage preserves the
+matching observation used for yesterday's current comparison. Daily values are
+provider maxima and are not substituted for missing current UV. Existing cache
+records remain valid and gain UV only on normal fetches; there is no cache purge,
+additional request or range/include change. See the [response contract](mobile-api.md#overseas-uv-2634).
