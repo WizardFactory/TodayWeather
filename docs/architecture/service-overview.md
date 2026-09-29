@@ -23,7 +23,7 @@ This repository contains a Node.js/Express weather backend, an Ionic 1/AngularJS
 | `server/models/` | Mongoose weather, geographic, push and purchase-related models |
 | `client/www/js/` | App startup and screens; `WeatherUtil` HTTP/conversion, `WeatherInfo` city state, `TwStorage` persistence |
 | `client/package.json`, `client/config.xml`, `client/scripts/` | TodayWeather build since #2605: Cordova 13 from npm scripts (`www`, `build:*`, `build:*:release`), release files fetched from S3, prepare hooks for AdMob IDs and iOS tracking settings ([client README](../../client/README.md#mobile-application)) |
-| `client/gulpfile.js`, `tw.*`, `ta.*` | Legacy product/platform build variants (TodayAir, widgets, purchase plugins); copy configuration, select purchase plugin, resources and native projects |
+| `client/gulpfile.js`, `tw.*`, `ta.*` | Legacy product/platform build variants (TodayAir, widgets); copy configuration, resources and native projects. App billing installers and native purchase declarations removed in #2641 |
 | `tw.ios/`, `ta.ios/` | TodayWeather/TodayAir native shells, Objective-C widgets, platform web assets |
 | `applewatch/` | Older WatchKit application/extension and its own bundled web assets |
 
@@ -79,7 +79,7 @@ App coordinates use `{lat,long}`; server geography often uses `{lat,lon}`; Mongo
 ## Other service paths
 
 - Push registration uses versioned REST endpoints; delivery runs in `push` mode and requests weather from `SERVICE_SERVER`. Delivery uses Firebase for FCM tokens, including iOS, with legacy GCM retained for Android. Direct APNs has been removed; see the [push contract and deployment observations](push-notifications.md). [Push client](../../client/www/js/service.push.js), [scheduled push](../../server/controllers/controllerPush.js), [alerts](../../server/controllers/alert.push.controller.js).
-- Purchase validation remains on a reused `/check-purchase` router. Gulp selects different purchase controller/plugin combinations for iOS and Android. [Receipt route](../../server/routes/v000705/receiptValidation.js), [build selection](../../client/gulpfile.js).
+- Purchase validation remains server-side on a reused `/check-purchase` router pending #2642. The maintained Cordova app and shared Gulp tasks no longer include billing controllers/plugins (#2641). [Receipt route](../../server/routes/v000705/receiptValidation.js), [build selection](../../client/gulpfile.js).
 - Air forecast image processing and S3 helpers exist alongside the weather pipeline. A CloudFront invalidation helper exists, but its periodic manager dispatch is commented out; current CloudFront existence/routing is established separately by AWS evidence. [Manager](../../server/controllers/controllerManager.js), [S3 helpers](../../server/s3).
 - Localization uses server `i18n` and client Angular Translate; analytics and advertising are app concerns, separate from the weather HTTP wrapper. [Client utility](../../client/www/js/service.util.js), [app](../../client/www/js/app.js).
 

@@ -24,8 +24,8 @@ angular.module('service.storage', [])
         // localStorage가 clear 된 경우 appPreference의 data를 localStorage로 update
         function _appPref2localStorage() {
             var deferred = $q.defer();
-            var keys = ['cities', 'cityIndex', 'storeReceipt', 'pushData', 'pushData2', 'twAdsInfo', 'startVersion', 'settingsInfo',
-                'purchaseInfo', 'units', 'cityList', 'daumServiceKeys', 'disableUpdateInfo', 'appVersion', 'expandShortChart'];
+            var keys = ['cities', 'cityIndex', 'pushData', 'pushData2', 'startVersion', 'settingsInfo',
+                'units', 'cityList', 'daumServiceKeys', 'disableUpdateInfo', 'appVersion', 'expandShortChart'];
             var count = keys.length;
 
             keys.forEach(function (key) {
@@ -57,9 +57,6 @@ angular.module('service.storage', [])
         function _appPref2appPref() {
             var deferred = $q.defer();
             var keys = ['units', 'cityList', 'daumServiceKeys'];
-            if (ionic.Platform.isAndroid()) {
-                keys.push('purchaseInfo');
-            }
 
             var count = keys.length;
             keys.forEach(function (key) {
@@ -102,10 +99,7 @@ angular.module('service.storage', [])
 
         // localStorage에 저장된 data를 appPreference로 update
         function _localStorage2appPref() {
-            var keys = ['cities', 'cityIndex', 'storeReceipt', 'pushData', 'twAdsInfo', 'startVersion', 'settingsInfo'];
-            if (ionic.Platform.isIOS()) {
-                keys.push('purchaseInfo');
-            }
+            var keys = ['cities', 'cityIndex', 'pushData', 'startVersion', 'settingsInfo'];
 
             keys.forEach(function (key){
                 var value = localStorage.getItem(key);

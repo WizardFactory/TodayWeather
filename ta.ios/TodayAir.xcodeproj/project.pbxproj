@@ -15,7 +15,6 @@
 		301BF552109A68D80062928A /* libCordova.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 301BF535109A57CC0062928A /* libCordova.a */; };
 		302D95F114D2391D003F00A1 /* MainViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 302D95EF14D2391D003F00A1 /* MainViewController.m */; };
 		302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 302D95F014D2391D003F00A1 /* MainViewController.xib */; };
-		43517FDA206BA1CE00F00295 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43517FD9206BA1CE00F00295 /* StoreKit.framework */; };
 		43517FE7206BA32B00F00295 /* ko.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 43517FE0206BA32A00F00295 /* ko.lproj */; };
 		43517FE8206BA32B00F00295 /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 43517FE1206BA32A00F00295 /* en.lproj */; };
 		43517FE9206BA32B00F00295 /* zh-Hant.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 43517FE2206BA32A00F00295 /* zh-Hant.lproj */; };
@@ -106,7 +105,6 @@
 		32CA4F630368D1EE00C91783 /* TodayAir-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "TodayAir-Prefix.pch"; sourceTree = "<group>"; };
 		33E4A3028995415C8D9564FF /* ko.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = ko.lproj; sourceTree = "<group>"; };
 		43517FD8206BA1C100F00295 /* TodayAir.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = TodayAir.entitlements; path = TodayAir/TodayAir.entitlements; sourceTree = "<group>"; };
-		43517FD9206BA1CE00F00295 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		43517FE0206BA32A00F00295 /* ko.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ko.lproj; path = TodayAir/ko.lproj; sourceTree = "<group>"; };
 		43517FE1206BA32A00F00295 /* en.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = en.lproj; path = TodayAir/en.lproj; sourceTree = "<group>"; };
 		43517FE2206BA32A00F00295 /* zh-Hant.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "zh-Hant.lproj"; path = "TodayAir/zh-Hant.lproj"; sourceTree = "<group>"; };
@@ -142,7 +140,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				301BF552109A68D80062928A /* libCordova.a in Frameworks */,
-				43517FDA206BA1CE00F00295 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -232,7 +229,6 @@
 		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				43517FD9206BA1CE00F00295 /* StoreKit.framework */,
 				BF97CD894FB54170B2EEF756 /* NotificationCenter.framework */,
 				A5F04D31228A41D5A8305742 /* libCordova.a */,
 			);
@@ -358,9 +354,6 @@
 								enabled = 1;
 							};
 							com.apple.BackgroundModes = {
-								enabled = 1;
-							};
-							com.apple.InAppPurchase = {
 								enabled = 1;
 							};
 							com.apple.Keychain = {

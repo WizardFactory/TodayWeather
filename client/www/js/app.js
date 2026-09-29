@@ -27,7 +27,6 @@ angular.module('starter', [
     'controller.searchctrl',
     'controller.settingctrl',
     'controller.guidectrl',
-    'controller.purchase',
     'controller.units',
     'controller.start',
     'controller.nation',
@@ -57,7 +56,7 @@ angular.module('starter', [
         }
     })
     .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push,
-        Branch, Purchase, WeatherUtil) {
+        Branch, WeatherUtil) {
         if (clientConfig.debug) {
             Util.ga.debugMode();
         }
@@ -324,7 +323,7 @@ angular.module('starter', [
                 $rootScope.state = 'setting';
             } else if (toState.name === 'setting-push') {
                 $rootScope.state = 'push';
-            } else { // 'nation', 'guide', 'purchase'
+            } else { // 'nation', 'guide'
                 $rootScope.state = '';
             }
 
@@ -348,7 +347,6 @@ angular.module('starter', [
                     $rootScope.$broadcast('showAlertInfoEvent');
                 }, 500);
             }
-            Purchase.init();
             Units.loadUnits();
 
             window.addEventListener('online',  function () {
@@ -1861,11 +1859,6 @@ angular.module('starter', [
                 cache: false,
                 templateUrl: 'templates/guide.html',
                 controller: 'GuideCtrl'
-            })
-            .state('purchase', {
-                url: '/purchase',
-                templateUrl: 'templates/purchase.html',
-                controller: "PurchaseCtrl"
             })
             .state('units', {
                 url: '/units',

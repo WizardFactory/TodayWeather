@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {"title": "Cordova advertising after payment removal", "locale": "en", "quality_profile": "showcase", "column_fit": "spread", "viewBox": [1080, 540]},
+  "participants": [
+    {"id": "screen", "type": "frontend", "label": "App screens", "sublabel": "Tab / start / guide"},
+    {"id": "ads", "type": "backend", "label": "TwAds", "sublabel": "Visibility state"},
+    {"id": "adapter", "type": "backend", "label": "AdMob adapter", "sublabel": "Consent and plugin"},
+    {"id": "native", "type": "external", "label": "Native AdMob", "sublabel": "When available"}
+  ],
+  "messages": [
+    {"id": "init", "from": "screen", "to": "ads", "y": 165, "label": "Tab initializes ads", "variant": "emphasis"},
+    {"id": "adapter-init", "from": "ads", "to": "adapter", "y": 215, "label": "Initialize adapter", "variant": "default"},
+    {"id": "consent", "from": "adapter", "to": "native", "y": 265, "label": "Existing consent flow", "variant": "security"},
+    {"id": "ready", "from": "adapter", "to": "ads", "y": 315, "label": "Ready: enable ordinary ads", "variant": "return"},
+    {"id": "visibility", "from": "screen", "to": "ads", "y": 365, "label": "Show / hide for screen", "variant": "default"},
+    {"id": "banner", "from": "ads", "to": "adapter", "y": 415, "label": "Apply banner visibility", "variant": "default"},
+    {"id": "native-banner", "from": "adapter", "to": "native", "y": 450, "label": "Native banner operation", "variant": "default"}
+  ],
+  "cards": [
+    {"dot": "cyan", "title": "App scope · issue #2641", "items": ["No purchase route, billing SDK or receipt calls", "Legacy entitlement data is no longer read"]},
+    {"dot": "amber", "title": "Separate server scope · issue #2642", "items": ["Existing receipt endpoints remain server-side", "No deployment or store-console change in this PR"]}
+  ]
+}
