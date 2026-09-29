@@ -98,3 +98,5 @@ The 2026-09-29 iOS run required an isolated artifact because the normal build ab
 For a supplemental stationary air capture, use mode `capture-air`: it opens Seoul air and holds each capture state for eight seconds. This was used when busy simulators saved a later screen under an earlier screenshot label; retain the original run and label supplemental captures separately. Automated DOM checks alone do not detect a native ANR dialog or a late screenshot.
 
 `capture-charts` similarly holds the Seoul hourly/daily chart capture positions for eight seconds. The dated [post-deployment report](layout-2026-09-29.md) includes the size matrix, original runtime failures, repeats, and capture provenance.
+
+The [2026-09-29 pre-merge check after master integration](pre-merge-2026-09-29.md) records the offline/HTTP/client compatibility checks and the unresolved normal-runtime gate. A green server CI result does not clear the iOS startup finding.

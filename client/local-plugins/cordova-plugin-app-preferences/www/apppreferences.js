@@ -437,4 +437,3 @@ function getFormFields (formEl, formData) {
 if (typeof module !== "undefined") {
 	module.exports = new AppPreferences();
 }
-
