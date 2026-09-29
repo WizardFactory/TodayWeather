@@ -2,6 +2,8 @@
 
 This is a source-based analysis of TodayWeather and TodayAir at commit `b9795125a1b7dc8a4f7602d4612a6be7d79413ad`, prepared on 2026-09-20. It combines checked-out implementation analysis with authorized read-only AWS inspection on the same date. Control-plane settings and deployed Lambda source were inspected. The service EC2 was subsequently inspected over authorized read-only SSH; separate gather/Mongo host internals, provider availability and end-to-end responses remain unverified.
 
+Product status update: AK confirmed on **2026-09-28** that TodayAir is retired. See [product lifecycle](service-overview.md#product-lifecycle); historical source descriptions do not imply continued operation.
+
 ## Reading order
 
 1. [Service overview](service-overview.md): components, server modes, persistence, platform variants and deployment evidence.
@@ -27,8 +29,11 @@ Files ending in `.visual-check.html` are local screenshot contact sheets, not th
 | AWS infrastructure | [AWS resource topology](diagrams/aws-infrastructure.html) | [JSON](diagrams/aws-infrastructure.json) |
 | Overall service (architecture) | [Service structure](diagrams/service-overview.html) | [JSON](diagrams/service-overview.json) |
 | Domestic ingestion (architecture) | [Collection and persistence](diagrams/weather-collection.html) | [JSON](diagrams/weather-collection.json) |
+| KMA warnings (architecture) | [Warning collection and town warnings](diagrams/kma-warnings.html) | [JSON](diagrams/kma-warnings.json) |
 | Mobile request (sequence) | [Request lifecycle](diagrams/mobile-weather-request.html) | [JSON](diagrams/mobile-weather-request.json) |
 | KAQ image producer and consumer | [KAQ pipeline](diagrams/kaq-image-pipeline.html) | [JSON](diagrams/kaq-image-pipeline.json) |
+| Overseas air request (sequence) | [Shared provider chain](diagrams/world-air-request.html) | [JSON](diagrams/world-air-request.json) |
+| Domestic air fallback (sequence) | [AirKorea first, provider chain](diagrams/domestic-air-fallback.html) | [JSON](diagrams/domestic-air-fallback.json) |
 
 The overview combines AWS-confirmed routing with repository logical roles. Dashed deployment connections remain unverified at the EC2 process/configuration level. The collection view focuses on domestic scheduled ingestion; world-weather cache fills are explained in the collection document. Auxiliary provider calls are omitted from the overview to keep it readable.
 
@@ -50,3 +55,5 @@ Use `architecture` for collection and `sequence` for mobile requests. Architectu
 - [Visual Crossing deployment checklist](../operations/visual-crossing-deploy.md): overseas weather (#2585) host configuration, `VC_SECRET_KEY`/`VC_DAILY_RECORD_LIMIT`, post-deploy smoke, usage and log monitoring, retention, kill switch and rollback.
 - [Gather runtime policy](../operations/gather-runtime-policy.md): `GATHER_*` environment variables for retry counts, retry delay, task flags and the KAQ minimum (#2588), production values, operator procedure and remaining host-only drift.
 - [Static web client](web-client.md): responsive PWA, direct existing-API reads, local persistence and S3/CloudFront deployment boundaries.
+
+The opt-in [S3 push coordinator](push-s3-design.md) has a separate [interactive diagram](diagrams/push-s3-proposal.html) and [Archify source](diagrams/push-s3-proposal.json); it is repository implementation, not a deployed-topology claim.

@@ -149,6 +149,51 @@ describe('gather drift: synthetic offline compatibility', function () {
             assert.strictEqual(r.data[0].pty, 0);
         });
     });
+    it('stores shortest POP per hour without unknown-category logs (#2620)', function () {
+        var items = [];
+        ['2200', '2300', '0000', '0100', '0200', '0300'].forEach(function (time, i) {
+            items = items.concat(h.shortestItems({POP: String(i * 10)}, time));
+        });
+        var logs = []; var c = h.prepare(h.collector(undefined, logs));
+        c.organizeShortestData(0, h.response(items));
+        var r = c.resultList[0]; assert(r.isCompleted); assert.strictEqual(r.data.length, 6);
+        assert.deepStrictEqual(Array.from(r.data, function (row) { return row.pop; }).sort(function (a, b) { return a - b; }),
+            [0, 10, 20, 30, 40, 50]);
+        assert.deepStrictEqual(logs.filter(function (line) { return /unknown/i.test(line); }), []);
+    });
+    ['', 'bad', '-1', '101', 'Infinity', undefined].forEach(function (value) {
+        it('stores invalid shortest POP ' + JSON.stringify(value) + ' as -1', function () {
+            var items = h.shortestItems({POP: value});
+            if (value === undefined) { delete items[items.length - 1].fcstValue; }
+            var r = h.organize('organizeShortestData', items); assert(r.isCompleted);
+            assert.strictEqual(r.data[0].pop, -1);
+        });
+    });
+    it('rounds a decimal shortest POP to a whole percent', function () {
+        assert.strictEqual(h.organize('organizeShortestData', h.shortestItems({POP: '30.4'})).data[0].pop, 30);
+        assert.strictEqual(h.organize('organizeShortestData', h.shortestItems({POP: '99.5'})).data[0].pop, 100);
+    });
+    it('shortest without POP keeps the -1 sentinel', function () {
+        var items = h.shortestItems().filter(function (i) { return i.category[0] !== 'POP'; });
+        var r = h.organize('organizeShortestData', items); assert(r.isCompleted);
+        assert.strictEqual(r.data[0].pop, -1);
+    });
+    [['organizeShortestData', 'shortestItems'], ['organizeShortData', 'shortItems']].forEach(function (pair) {
+        it(pair[0] + ' warns once per grid with unknown category names (#2620)', function () {
+            var items = [];
+            ['0900', '1000', '1100'].forEach(function (time) {
+                items = items.concat(h[pair[1]]({}, time), [h.item('XYZ', '1', time)]);
+            });
+            items.push(h.item('ABC', '2', '1000'));
+            var logs = []; var c = h.prepare(h.collector(undefined, logs));
+            c[pair[0]](0, h.response(items));
+            assert(c.resultList[0].isCompleted);
+            var unknown = logs.filter(function (line) { return /unknown|Known property/i.test(line); });
+            assert.strictEqual(unknown.length, 1, unknown.join('\n'));
+            assert(/KMA unknown forecast categories/.test(unknown[0]));
+            assert(unknown[0].indexOf('XYZ') !== -1 && unknown[0].indexOf('ABC') !== -1, unknown[0]);
+        });
+    });
     it('does not leak keys for empty request lists or callback exceptions', function () {
         var logs = []; var c = h.collector(undefined, logs);
         c.requestData([], c.DATA_TYPE.TOWN_SHORT, KEY, '20260924', '0800');
@@ -171,7 +216,7 @@ describe('gather drift: synthetic offline compatibility', function () {
         }, {process: {env: {NODE_ENV: 'production'}}, console: {log: function (e) { messages.push(e.message); }}});
         assert.strictEqual(logger().transports.length, 1); assert.strictEqual(messages.length, 1);
     });
-    it('preserves upstream operational defaults and inclusive request cutoffs', function () {
+    it('preserves upstream operational defaults, the request walk and the base-time cutoff', function () {
         var manager = source('controllers/controllerManager.js');
         // Retry budgets moved to config/gather.js (#2588); unset env keeps these values.
         var policy = require('../../config/gather').load({});
@@ -180,11 +225,15 @@ describe('gather drift: synthetic offline compatibility', function () {
         assert(manager.includes('self.checkTimeAndRequestTask(true);'));
         assert(source('lib/PastConditionGather.js').includes('self.updateList, retryCount,'));
         assert.strictEqual(policy.pastConditionRetryCount(45), 10);
+        // #2604: requestData walks the whole list with 101 requests in flight instead of failing indices > 100.
         var c = h.collector(); var sent = [];
         c.getData = function (i) { sent.push(i); };
         c.requestData(Array.from({length: 103}, function () { return {mx: 60, my: 127}; }), c.DATA_TYPE.TOWN_SHORT, KEY, '20260924', '0800');
         assert.strictEqual(sent.length, 101); assert.strictEqual(sent[100], 100);
-        sent = [];
+        c.emit('recvData', 0, []);
+        assert.strictEqual(sent.length, 102); assert.strictEqual(sent[101], 101);
+        c = h.collector(); sent = [];
+        c.getData = function (i) { sent.push(i); };
         c.requestDataByBaseTimeList({mx: 60, my: 127}, c.DATA_TYPE.TOWN_CURRENT, KEY, Array.from({length: 202}, function () { return {date: '20260924', time: '0800'}; }));
         assert.strictEqual(sent.length, 200); assert.strictEqual(sent[199], 199);
     });
@@ -225,7 +274,7 @@ describe('upstream storage and period-contract characterization', function () {
             '../lib/kmaPrecipitation': h.optional('../../lib/kmaPrecipitation')};
         ['../lib/unitConverter', '../lib/aqi.converter', '../controllers/kecoController',
             '../controllers/airkorea.hourly.forecast.controller', '../controllers/kaq.hourly.forecast.controller',
-            '../controllers/kma.specialweather.controller'].forEach(function (name) { deps[name] = function () {}; });
+            '../controllers/kma.specialweather.controller', '../lib/AQI/airFallback'].forEach(function (name) { deps[name] = function () {}; });
         var Town = h.load('controllers/controllerTown24h.js', deps, {log: h.logger([])});
         var rows = ['0600', '0900', '1200'].map(function (t, i) {
             return {date: '20260924', time: t, pty: 2, reh: 60, t3h: 10 + i, tmn: -50, tmx: -50, r06: 1.5, s06: 0.5};
@@ -471,7 +520,7 @@ describe('pagination before the completeness check (#2590)', function () {
         'extra final item': function (r) { r.response.body[0].items[0].item.push(h.item('TMP', '1', '1800')); },
         'echoed pageNo mismatch': function (r) { r.response.body[0].pageNo = ['1']; },
         'echoed numOfRows mismatch': function (r) { r.response.body[0].numOfRows = ['17']; },
-        'provider error': function (r) { r.response.header[0].resultCode = ['22']; },
+        'provider error': function (r) { r.response.header[0].resultCode = ['99']; },  // 22 is quota (#2604, gather-quota.test.js)
         'empty items': function (r) { r.response.body[0].items = [{}]; },
         'rows repeating the end of page 1': function (r) {
             r.response.body[0].items[0].item = product.slice(999 - 17, 999);

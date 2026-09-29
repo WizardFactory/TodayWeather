@@ -1,0 +1,113 @@
+{
+ "v000901": {
+  "kma": {
+   "regionName": "backend-v000901",
+   "name": "backend-name",
+   "version": "v000901",
+   "currentPubDate": "202609270900",
+   "current": {
+    "t1h": 21.5,
+    "reh": 60
+   },
+   "shortest": [
+    {
+     "date": "20260927",
+     "t1h": 21
+    }
+   ],
+   "units": {
+    "temperatureUnit": "C"
+   }
+  },
+  "dsf": {
+   "version": "v000901",
+   "source": "DSF",
+   "location": {
+    "lat": 0,
+    "long": 0
+   },
+   "current": {
+    "temperature": 18
+   },
+   "daily": [
+    {
+     "date": "20260927"
+    }
+   ]
+  }
+ },
+ "v000902": {
+  "kma": {
+   "regionName": "backend-v000902",
+   "name": "backend-name",
+   "version": "v000902",
+   "currentPubDate": "202609270900",
+   "current": {
+    "t1h": 21.5,
+    "reh": 60
+   },
+   "shortest": [
+    {
+     "date": "20260927",
+     "t1h": 21
+    }
+   ],
+   "units": {
+    "temperatureUnit": "C"
+   }
+  },
+  "dsf": {
+   "version": "v000902",
+   "source": "DSF",
+   "location": {
+    "lat": 0,
+    "long": 0
+   },
+   "current": {
+    "temperature": 18
+   },
+   "daily": [
+    {
+     "date": "20260927"
+    }
+   ]
+  }
+ },
+ "v000903": {
+  "kma": {
+   "regionName": "backend-v000903",
+   "name": "backend-name",
+   "version": "v000903",
+   "currentPubDate": "202609270900",
+   "current": {
+    "t1h": 21.5,
+    "reh": 60
+   },
+   "shortest": [
+    {
+     "date": "20260927",
+     "t1h": 21
+    }
+   ],
+   "units": {
+    "temperatureUnit": "C"
+   }
+  },
+  "dsf": {
+   "version": "v000903",
+   "source": "DSF",
+   "location": {
+    "lat": 0,
+    "long": 0
+   },
+   "current": {
+    "temperature": 18
+   },
+   "daily": [
+    {
+     "date": "20260927"
+    }
+   ]
+  }
+ }
+}

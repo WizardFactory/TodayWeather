@@ -23,8 +23,8 @@ const util = require('util');
 const v8 = require('v8');
 const root = path.resolve(__dirname, '../..');
 const live = process.env.TW_VC_LIVE === '1';
-const outputDir = process.env.TW_SMOKE_OUTPUT_DIR || fs.mkdtempSync(path.join(require('os').tmpdir(), 'vc-weather-smoke-'));
-fs.mkdirSync(outputDir, {recursive: true});
+// Created in main(): world-air-smoke.js reuses the harness without this output directory.
+let outputDir;
 const {syntheticTimeline, localParts} = require('./vc-synthetic');
 const clone = value => v8.deserialize(v8.serialize(value));
 const RealDate = Date;
@@ -54,8 +54,15 @@ const rawFixture = name => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixt
 // '<place>-combined' serves range 'combined' (last1days/next7days); 'recent' gets the recorded body.
 const fixture = name => /-combined$/.test(name) ? require('./vc-synthetic').withDayBefore(rawFixture(name)) : rawFixture(name);
 
-function createHarness(bodyFor) {
-    const logs = [], providerCalls = [], dsfRows = new Map(), locks = new Map(), cache = new Map(), stubbedPackages = new Set();
+/**
+ * @param bodyFor optional (params) => Visual Crossing body or Error
+ * @param options {keyString?: extra config.keyString entries, models?: {model file name: model}, packages?: {id: module},
+ *   airPolicy?: fields replacing config/air.js values, stubs?: {module file name: stub} replacing the defaults below} — world-air-smoke.js wires the real air service through these.
+ *   By default the air cache and budget models are in memory and axios fails on use, so no air provider is reachable.
+ */
+function createHarness(bodyFor, options) {
+    options = options || {};
+    const logs = [], providerCalls = [], dsfRows = new Map(), locks = new Map(), cache = new Map(), stubbedPackages = new Set(), responses = [];
     const logger = {};
     for (const level of ['info', 'silly', 'debug', 'verbose', 'warn', 'error']) {
         logger[level] = (...args) => { if (level === 'error' || level === 'warn' || /^VC>/.test(String(args[0]))) logs.push({level, args: args.map(a => a && a.stack || a)}); };
@@ -66,8 +73,12 @@ function createHarness(bodyFor) {
     sandbox.global = sandbox;
     const context = vm.createContext(sandbox);
     // Key lists parsed at module load by domestic helpers; empty so any use fails visibly.
-    const config = {vc: {dailyRecordLimit: 0}, keyString: {vc_key: KEY, daum_keys: '[]', kakao_keys: '[]', dongnae_forecast_keys: '[]', airkorea_keys: '[]', google_key: ''}, db: {version: '2.0'}, serviceServer: {url: 'http://service.invalid'}, apiServer: {url: 'https://synthetic.invalid'},
+    const config = {vc: {dailyRecordLimit: 0}, keyString: Object.assign({vc_key: KEY, daum_keys: '[]', kakao_keys: '[]', dongnae_forecast_keys: '[]', airkorea_keys: '[]', google_key: ''}, options.keyString), db: {version: '2.0'}, serviceServer: {url: 'http://service.invalid'}, apiServer: {url: 'https://synthetic.invalid'},
         url: {requester: 'http://127.0.0.1:1/'}, push: {}, mode: 'service'};
+    const {memoryModel} = require('./air-harness');
+    // The overseas query asks the shared air service (#2628): in-memory cache and budgets.
+    const models = Object.assign({'air.observation.cache.model': memoryModel(), 'air.provider.usage.model': memoryModel()}, options.models);
+    const packages = Object.assign({axios: new Proxy({}, {get() { throw new Error('Unexpected air provider HTTP'); }})}, options.packages);
     const dsfModel = {
         find(query) {
             const since = query.dateObj && query.dateObj.$gte;
@@ -151,6 +162,7 @@ function createHarness(bodyFor) {
                 return {Agent: function () {}, get() { throw new Error('Unexpected HTTPS request'); }};
             }
             if (id === 'dnscache') return () => ({});
+            if (Object.prototype.hasOwnProperty.call(packages, id)) return packages[id];
             // controllerPush constructs a GCM sender at load; sending is never reached here.
             if (id === 'node-gcm') return {Sender: function () { this.send = () => { throw new Error('Unexpected push send'); }; }, Message: function () {}};
             if (!id.startsWith('.')) {
@@ -162,9 +174,13 @@ function createHarness(bodyFor) {
                         apply() { throw new Error('Unexpected use of ' + id); }, construct() { throw new Error('Unexpected use of ' + id); }});
                 }
             }
-            const resolved = path.resolve(path.dirname(filename), id) + (path.extname(id) === '.js' ? '' : '.js');
+            let resolved = path.resolve(path.dirname(filename), id) + (path.extname(id) === '.js' ? '' : '.js');
+            const index = path.resolve(path.dirname(filename), id, 'index.js');
+            if (!fs.existsSync(resolved) && fs.existsSync(index)) resolved = index;
             if (resolved.endsWith('/config/config.js')) return config;
+            if (resolved.endsWith('/config/air.js') && options.airPolicy) return Object.assign({}, load(resolved), options.airPolicy);
             const name = path.basename(resolved, '.js');
+            if (Object.prototype.hasOwnProperty.call(models, name)) return models[name];
             if (name === 'dsf.model') return dsfModel;
             if (name === 'vc.fetch.lock.model') return lockModel;
             if (name === 'vc.usage.model') return usageModel;
@@ -179,6 +195,7 @@ function createHarness(bodyFor) {
                 };
                 return Real;
             }
+            if (options.stubs && Object.prototype.hasOwnProperty.call(options.stubs, name)) return options.stubs[name];
             if (Object.prototype.hasOwnProperty.call(stubs, name)) return stubs[name];
             return load(resolved);
         }
@@ -203,11 +220,12 @@ function createHarness(bodyFor) {
             const q = Object.assign({}, query, kind === 'ww' ? {gcode: loc} : {});
             const req = {method: 'GET', url, originalUrl: (kind === 'ww' ? '/ww' : '/' + kind + '/dsf') + url, headers: {}, query: q, sessionID: 'vc-smoke'};
             const res = {__: s => s, status(code) { this.statusCode = code; return this; }, send(body) { reject(new Error('Unexpected response ' + this.statusCode + ': ' + body)); },
-                json(body) { resolve(JSON.parse(JSON.stringify(body))); }, setHeader() {}};
+                json(body) { responses.push(url); resolve(JSON.parse(JSON.stringify(body))); }, setHeader() {}};
             routers[kind].handle(req, res, err => reject(err || new Error('No JSON response')));
         });
     }
-    return {request, logs, providerCalls, dsfRows, locks, usage, stubbedPackages, load};
+    // responses: one entry per res.json call, so a second answer to one request is visible
+    return {request, logs, providerCalls, dsfRows, locks, usage, stubbedPackages, load, models, responses};
 }
 
 function localHourString(epochMs, offsetMin) {
@@ -473,6 +491,8 @@ function checkConsumers(h, bodies) {
 }
 
 async function main() {
+    outputDir = process.env.TW_SMOKE_OUTPUT_DIR || fs.mkdtempSync(path.join(require('os').tmpdir(), 'vc-weather-smoke-'));
+    fs.mkdirSync(outputDir, {recursive: true});
     const output = [];
     const h = createHarness();
     const bodies = {};
@@ -517,7 +537,11 @@ async function main() {
     fs.writeFileSync(path.join(outputDir, 'vc-weather-evidence' + (live ? '-live' : '') + '.json'), JSON.stringify(report, null, 2));
     console.log(JSON.stringify({outcome: report.outcome, mode: report.mode, scenarios: output.length, providerCalls: report.providerCalls, vcLog: vcLines, evidence: outputDir}, null, 2));
 }
-let completed = false;
-// An unsettled promise lets Node exit with code 0 before the checks ran: fail instead.
-process.on('exit', () => { if (!completed && !process.exitCode) { console.error('vc-weather-smoke did not complete'); process.exitCode = 1; } });
-main().then(() => { completed = true; }, err => { console.error(err.stack); process.exitCode = 1; });
+module.exports = {createHarness, checkBody, syntheticProvider, zoneOffset, localHourString,
+    setNow: ms => { now = ms; }, getNow: () => now, RealDate};
+if (require.main === module) {
+    let completed = false;
+    // An unsettled promise lets Node exit with code 0 before the checks ran: fail instead.
+    process.on('exit', () => { if (!completed && !process.exitCode) { console.error('vc-weather-smoke did not complete'); process.exitCode = 1; } });
+    main().then(() => { completed = true; }, err => { console.error(err.stack); process.exitCode = 1; });
+}

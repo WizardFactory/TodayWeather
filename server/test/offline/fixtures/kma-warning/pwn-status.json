@@ -1,0 +1,26 @@
+{
+ "response": {
+  "header": {
+   "resultCode": "00",
+   "resultMsg": "NORMAL_SERVICE"
+  },
+  "body": {
+   "dataType": "JSON",
+   "items": {
+    "item": [
+     {
+      "other": "o 없음\r\n\r\n",
+      "t6": "o 없 음",
+      "t7": "o 없음",
+      "tmEf": "202609261200",
+      "tmFc": 202609261200,
+      "tmSeq": 130
+     }
+    ]
+   },
+   "pageNo": 1,
+   "numOfRows": 10,
+   "totalCount": 1
+  }
+ }
+}

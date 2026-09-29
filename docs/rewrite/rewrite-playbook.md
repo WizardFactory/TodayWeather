@@ -8,7 +8,7 @@ The system is more than a weather endpoint and two forecast screens. It includes
 
 | Boundary | Existing constraint to characterize | Source |
 | --- | --- | --- |
-| Public API and backend | Public `/weather/...` and `/geocode/...` paths depend on external Lambda/gateway behavior; Express mounts alone do not implement them | [Mobile API](../architecture/mobile-api.md), [gateway correlation](../architecture/aws-code-correlation.md) |
+| Public API and backend | Public `/weather/...` and `/geocode/...` paths depend on external Lambda/gateway behavior until the #2606 cutover; tw-svc implements the shapes with traffic in `server/routes/gateway.js`, with Lambda-identical responses per version | [Mobile API](../architecture/mobile-api.md), [gateway correlation](../architecture/aws-code-correlation.md) |
 | Domestic composition | Current depends on short/shortest; icons precede unit conversion; descriptions and final summary follow conversion | [KMA router](../../server/routes/v000903/route.kma.v000903.js), `routerList` |
 | Data identity | App coordinates are `{lat,long}`; Mongo geospatial arrays are `[longitude,latitude]`; products use different grid/station/region keys | [WeatherUtil](../../client/www/js/service.weatherutil.js), [Town controller](../../server/controllers/controllerTown.js), [DSF model](../../server/models/worldWeather/dsf.model.js) |
 | Time and validity | Publication time, retrieval time, local day, yesterday and `0000`/`2400` are distinct; missing values use field-specific sentinels | [Town controller](../../server/controllers/controllerTown.js), [Town24h](../../server/controllers/controllerTown24h.js), [KMA time library](../../server/lib/kmaTimeLib.js) |

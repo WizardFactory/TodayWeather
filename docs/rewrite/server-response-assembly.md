@@ -28,7 +28,7 @@ Source observation; no geocoder, database or gateway was called. Every KMA versi
 
 | Step | Trigger | Behavior and failure |
 | --- | --- | --- |
-| 0. Coordinate adapter | `/kma/coord/:loc` only (v000902, v000903) | [`coord2addr`](../../server/controllers/controllerTown24h.js#L1868-L1898) requests `${API_SERVER}/geocode/coord/<loc>` (unversioned; `Accept-Language` forwarded), 3 attempts, 3 s each. A request error, HTTP ≥400 or a body without `kmaAddress` → `next(err)` → [error sink](#error-sink-for-propagated-failures). Otherwise `kmaAddress.name1/2/3` become `region/city/town`. |
+| 0. Coordinate adapter | `/kma/coord/:loc` only (v000902, v000903) | [`coord2addr`](../../server/controllers/controllerTown24h.js#L1868-L1898) requests `${API_SERVER}/geocode/v000903/coord/<loc>` (unversioned before #2606; `Accept-Language` forwarded), 3 attempts, 3 s each. A request error, HTTP ≥400 or a body without `kmaAddress` → `next(err)` → [error sink](#error-sink-for-propagated-failures). Otherwise `kmaAddress.name1/2/3` become `region/city/town`. |
 | 1. Rejected names | `region` is `중국`, `일본`, `미국` or `하늘시`; or `town === 'JP'` (tested after step 2's `KR` case) | HTTP 400 with body `We didn't support this region`, sent by `res.send`, so Express labels it `text/html`. [checkParamValidation](../../server/controllers/controllerTown.js#L95-L125) |
 | 2. `KR` repair | `city === 'KR'` or `town === 'KR'` | Swap `region` and `city`, clear `town`, then [`GeoController.name2address`](../../server/controllers/geo.controller.js#L680-L743): Google geocoding of the concatenated `region + city` with `language=ko`, `async.retry(3)`. The formatted address is split on spaces: `region` = word 2, then by word count 3 → `city` = word 3; 4 → `city` = words 3+4 when word 4 ends in 시/군/구, otherwise `city` = word 3 and `town` = word 4; 5 → `city` = words 3+4, `town` = word 5. Geocoder or parse error → `next(err)` → [error sink](#error-sink-for-propagated-failures). |
 | 3. Cached exact match | `getAllDataFromDb` → [`_getCoord`](../../server/controllers/controllerTown.js#L4405-L4466) → [`_findTown`](../../server/controllers/controllerTown.js#L4245-L4341) | String equality on `town.first/second/third` against `this.dbTownList`: the whole `towns` collection (`_id` excluded), loaded lazily on the first request **per controller instance** and never refreshed. Each KMA router file constructs its own `ControllerTown24h`, so v000901, v000902 and v000903 hold separate copies in every process. |
@@ -267,60 +267,41 @@ Traffic context from the [2026-08-23..09-22 CloudFront window](../../reports/aws
 
 ## 8. Weather warnings
 
-Both warning consumers read the latest scraped `KmaSpecial` documents ([model](../../server/models/modelKmaSpecialWeatherSituation.js)). The scraper stores `announcement` via `kmaTimeLib.convertKoreaStr2Date`, which calls `new Date(y, m, d, h, min)` on the Korean announcement text in the **scraper process's local time zone** ([scraper](../../server/lib/kmaScraper.js#L1519-L1532), [time helper](../../server/lib/kmaTimeLib.js#L352-L361)). Synthetic execution in the [time-zone probe record](../../reports/rewrite-verification/probes/server-kmatimelib-timezones.json) confirms this: `2026년 03월 08일 15시 00분` becomes 06:00Z under `Asia/Seoul`, 15:00Z under `UTC` and 19:00Z under `America/New_York`. Otherwise this section is source observation; no database was read. Client consumption: [national overview and warnings](client-data-contracts.md#national-overview-and-warnings) and [screen S12](screen-specifications.md#s12--weather-warningsbulletins).
+Since #2609 both warning consumers read documents written by the [`WthrWrnInfoService` collector](../../server/lib/kmaWarningCollector.js) ([collection flow](../architecture/weather-collection.md#scraping-and-auxiliary-products), [diagram](../architecture/diagrams/kma-warnings.html)): bulletins in `KmaSpecial` ([model](../../server/models/modelKmaSpecialWeatherSituation.js)) and active zone state in `KmaSpecialWeatherZone` ([model](../../server/models/modelKmaSpecialWeatherZone.js)). The collector stores `announcement` as `Date.UTC` of the KST `tmFc`, the value the former scraper produced on a UTC host; documents written by the scraper before #2609 used `kmaTimeLib.convertKoreaStr2Date` in the scraper process's time zone ([time-zone probe record](../../reports/rewrite-verification/probes/server-kmatimelib-timezones.json)). Client consumption: [national overview and warnings](client-data-contracts.md#national-overview-and-warnings) and [screen S12](screen-specifications.md#s12--weather-warningsbulletins).
 
 ### `GET /v000903/kma/special`
 
-Handler: [route](../../server/routes/v000903/route.kma.v000903.js#L72-L83) → [`getCurrent`](../../server/controllers/kma.specialweather.controller.js#L97-L133).
+Handler: [route](../../server/routes/v000903/route.kma.v000903.js) → [`getCurrent`](../../server/controllers/kma.specialweather.controller.js).
 
 1. `async.map` over types `[4, 1, 2, 3]` (flash, special warning, preliminary warning, information); the result order is preserved.
 2. Each type reads its latest document: `find({type}, {_id:0, __v:0}).sort({announcement:-1}).limit(1)`. A type with no document fails with `data is empty`.
-3. `name` is set with `res.__`: `LOC_TYPE_WEATHER_FLASH`, `LOC_TYPE_SPECIAL_WEATHER`, `LOC_TYPE_PRELIMINARY_SPECIAL`, `LOC_TYPE_WEATHER_INFORMATION`. The locale comes from `i18n.init` ([configuration](../../server/app.js#L62-L73), [mount](../../server/app.js#L96); cookie `twcookie`, then `Accept-Language`; library semantics).
-4. Flash only: the document is dropped when the stored, **unshifted** `announcement` + 10 h is earlier than the service clock ([parser](../../server/controllers/kma.specialweather.controller.js#L49-L95)).
-5. `announcement` is shifted by −9 h and serializes as an ISO UTC string. The shift is correct only if the scraper ran in UTC, so that Korean wall-clock time was stored as UTC. Under that assumption a flash stays visible until about 19 h after its real KST announcement. If the scraper ran in KST, the output is 9 h early and the flash window is 10 h. The scraper host's time zone is not recorded in [EC2 internals](../architecture/ec2-internals.md).
+3. `name` is set with `res.__`: `LOC_TYPE_WEATHER_FLASH`, `LOC_TYPE_SPECIAL_WEATHER`, `LOC_TYPE_PRELIMINARY_SPECIAL`, `LOC_TYPE_WEATHER_INFORMATION` (locale from `i18n.init`: cookie `twcookie`, then `Accept-Language`).
+4. Flash only: the document is dropped when the stored, **unshifted** `announcement` + 10 h is earlier than the service clock, so a flash stays visible until about 19 h after its KST announcement.
+5. `announcement` is shifted by −9 h arithmetically (host-independent) and serializes as an ISO UTC string: `tmFc` `202609261130` → `2026-09-26T02:30:00.000Z`.
 6. Nested `situationList[]._id` and `info[]._id` are deleted.
-7. `comment` receives line breaks from a character scan ([`_insertLineChange`](../../server/controllers/kma.specialweather.controller.js#L21-L47)). `\n\n` is inserted before every `<`, `*`, ASCII `o`, `-` and `※` not at index 0; `\n` before every `[`; and `\n` before each occurrence of `weatherStr + levelStr` for situations whose `weatherStr !== '없음'`. Markers match anywhere in the text, not only at line starts.
-8. Success sets `Cache-Control: max-age=300` and returns a JSON array of 3–4 objects. **Any** error returns HTTP 501 with `err.message` sent as a string, which Express labels `text/html`: a Mongo error, a missing type, or an exception in steps 3–7 such as a missing `comment`. There is no partial list.
+7. `comment` (empty when missing) receives line breaks from a character scan ([`_insertLineChange`](../../server/controllers/kma.specialweather.controller.js)): `\n\n` before every `<`, `*`, ASCII `o`, `-` and `※` not at index 0; `\n` before every `[`; and `\n` before each `weatherStr + levelStr` of situations whose `weatherStr !== '없음'`.
+8. Success sets `Cache-Control: max-age=300` and returns a JSON array of 3–4 objects. **Any** error returns HTTP 501 with `err.message` as text (a Mongo error, a missing type, or an exception in steps 3–7). There is no partial list.
 
-Wire object: `{type, name, announcement, imageUrl?, situationList: [{weather, weatherStr, level, levelStr, info: [{timeStr?, location}]}], comment}`. Codes come from the model's `parseSituationType` and `strArray2SituationList`:
+Wire object: `{type, name, announcement, imageUrl?, situationList: [{weather, weatherStr, level, levelStr, info: [{timeStr?, location}]}], comment, bulletin?}`. Sources: type 1 `getPwnStatus` `t6` → `situationList`, `other` → `comment`, and the matching `getWthrWrnMsg` item → `bulletin: {title, areas, effectiveTimes, releaseOutlook}` (`t1`–`t4`, additive); type 2 `getWthrPwn` `pwn` → `situationList` (`info[].timeStr` such as `06월 07일 아침`), `rem` → `comment`; type 3 `getWthrInfo` `t1`; type 4 `getWthrBrkNews` `ann`. `imageUrl` exists only on scraper-era documents. Locations keep the provider's spacing, for example `제주도(추자도, 서귀포시남부 제외)`.
 
 | Field | Values |
 | --- | --- |
 | `type` | 1 special warning · 2 preliminary · 3 information · 4 flash |
-| `weather` | 1 강풍 · 2 풍랑 · 3 호우 · 4 대설 · 5 건조 · 6 해일 · 7 폭풍해일 · 8 지진해일 · 9 한파 · 10 태풍 · 11 황사 · 12 폭염; 0 unknown hazard or `없음`; −1 unparsed |
-| `level` | 1 주의보 · 2 경보 · 3 예비특보; 0 with `weatherStr:'없음'`; −1 unparsed (`weatherStr` holds the raw text) |
-
-Source anomaly: `parseSituationType` tests `해일` before `폭풍해일`/`지진해일`, so codes 7 and 8 are unreachable and both become 6.
+| `weather` | 1 강풍 · 2 풍랑 · 3 호우 · 4 대설 · 5 건조 · 6 해일 · 7 폭풍해일 · 8 지진해일 · 9 한파 · 10 태풍 · 11 황사 · 12 폭염 · 13 열대야; 0 unknown hazard or `없음`; −1 unparsed |
+| `level` | 1 주의보 · 2 경보 · 3 예비특보 · 4 중대경보; 0 with `weatherStr:'없음'`; −1 unparsed (`weatherStr` holds the raw text) |
 
 ### Domestic `current.specialInfo`
 
-[`getSpecialInfo`](../../server/controllers/controllerTown24h.js#L1900-L1924) (v000903 KMA item 32) → [controller](../../server/controllers/kma.specialweather.controller.js#L333-L408):
+[`getSpecialInfo`](../../server/controllers/controllerTown24h.js) (v000903 KMA item 32) → [controller](../../server/controllers/kma.specialweather.controller.js) → [`kmaWarningZones`](../../server/lib/kmaWarningZones.js):
 
-- It reads only the latest **type 1** document; preliminary warnings, information and flashes never affect weather responses.
-- Inputs: `town = {first: region, second: city, third: town}`, where region- and city-level requests carry `''`, and `stnName = req.current.nearStnName`. Any error (no type-1 document, Mongo error, missing `situationList`, missing `req.current`) is logged and the stage calls `next()` without the field. `current.specialInfo` is set only for a nonempty list.
-- For each `situationList[].info[].location`, [`_findLocationByTown`](../../server/controllers/kma.specialweather.controller.js#L205-L331) returns a name or nothing. Each match yields `{weather, weatherStr, level, levelStr, locationName}`, and one town can collect several.
-- Match rules, in order:
-  1. If `first` contains `특별시`, `광역시` or `특별자치시` and is not 인천, the bare name (for example `서울`) must occur anywhere in the location string; otherwise there is no match.
-  2. If `second` contains `울릉` and the location contains `울릉도` → `울릉도.독도`.
-  3. If `third` contains `흑산` and the location contains `흑산도` → `흑산도.홍도`; `추자` + `추자도` → `추자도`; `삼산` + `거문도` → `거문도.초도`; `백령`/`대청`/`연평` + `서해5도` → `서해5도`.
-  4. Otherwise the target is `제주도` for 제주 regions, bare `인천` for 인천광역시, else the full province name. No occurrence → no match. A province immediately followed by `,` (whole province listed) → the province name.
-  5. Remove `(흑산면제외)`. Choose a sub-zone from the nearest station ([`_getAreaName`](../../server/controllers/kma.specialweather.controller.js#L163-L194), for example `대관령` → `강원중부산지`, `성산` → `제주도동부`), else from `second` (`수원시장안구` → `수원`, `연천군` → `연천`). If neither exists (region-level request), match the province text up to `(`.
-  6. Inside the province's parentheses: when the text contains `제외`, the town matches (as the province name) only if its target is **not** listed. Otherwise it matches when listed, returning the entry up to the next `,`. A result containing `신안` becomes `신안(흑산면제외)`.
-- Examples, derived from source and not executed:
-
-| Town (`first/second/third`), station | Location string | Result |
-| --- | --- | --- |
-| 서울특별시/강남구/역삼동 | `서울` | `서울` |
-| 경기도/수원시장안구/…, station not zoned | `경기도(고양, 수원, 용인)` | `수원` |
-| 경기도/수원시장안구/… | `경기도(여주, 안성, 평택 제외)` | `경기도` (평택시 towns: no match) |
-| 전라남도/신안군/압해읍, station not zoned | `전라남도(무안, 진도, 신안(흑산면제외))` | `신안(흑산면제외)` |
-| 전라남도/여수시/삼산면 | `거문도.초도` | `거문도.초도` |
-| 강원도/평창군/대관령면, station `대관령` | `강원도(강원중부산지)` | `강원중부산지` |
-
-- Derived anomaly (source reading, not executed): a bare province or `인천` **not** followed by `,` or `(` matches only when rule 5 finds neither a station zone nor a city target, that is, region-level requests with an unzoned nearest station. Examples are the last entry of a list, or the whole string `인천`. For city- or town-level requests, rule 5 picks a target such as `연수` (from `연수구`) that the bare text does not contain.
-- Sorting: `b.weather − a.weather`, that is, descending hazard code (12 폭염 before 3 호우 before 1 강풍). Level is ignored, so a 주의보 of a higher-coded hazard precedes a 경보 of a lower-coded one.
-- Summary precedence: `makeSummaryWeather` (`current.summaryWeather`) and `makeSummary` (`current.summary`) each add one item from `specialInfo[0]` only: `{str: weatherStr + levelStr, grade: weather + 5}` (grade 6–17 for known hazards) ([weather summary](../../server/controllers/controllerTown24h.js#L1469-L1473), [combined summary](../../server/controllers/controllerTown.js#L2168-L2172)). In both, items are sorted by `grade` descending, and the top two, joined by `, `, form the text ([selection](../../server/controllers/controllerTown24h.js#L1534-L1555), [combined selection](../../server/controllers/controllerTown.js#L2268-L2288)). The warning text is the stored Korean string (for example `폭염주의보`), not a localized key.
-- `client/www/js` never reads `current.specialInfo`; app users see domestic warnings only through summary text, and bulletins through S12. Traffic to `/v000903/kma/special` was 36 requests in the 30-day window, but `getSpecialInfo` runs on every v000903 KMA assembly.
+- It reads active `KmaSpecialWeatherZone` documents (`active: true`, `warnVar > 0`) of the town's warning zones. Preliminary warnings, information and flashes never affect weather responses.
+- Zones come from the KMA 특보구역 table (Sheet 2 land rows, 2026-06-01, [`kma_warning_zones.csv`](../../server/utils/data/kma_warning_zones.csv)): the province from `town.first` (`강원특별자치도` → `강원도`, `전북특별자치도`/`전라북도` → `전북자치도`, `제주특별자치도` → `제주도`), then the zone whose `REG_NAME` without a parenthetical equals `town.second` or prefixes it (`수원시장안구` → `수원시`), with all sub-zones and ancestors. A split parent (for example `서귀포시(산지 제외)` with 서부/남부/동부/중산간) therefore receives every sub-zone warning; there is no 읍면동 mapping (decision 8 of #2609). `제주도산지`, which spans both Jeju cities without being a sub-zone of either, is added to every 제주시 and 서귀포시 town (AK decision, 2026-09-27). Merged city names still in the town data map to their current zone (`청원군` → `청주시`), and a province town whose city is not in its province is looked up nationwide (`경상북도/군위군` → 대구 `군위군`); an unknown city gets only province-level zones.
+- Island rules match city and town names: 울릉 → 울릉도.독도; 신안+흑산 → 흑산도.홍도; 제주시+추자 → 추자도; 여수+삼산 → 거문도.초도; 옹진+백령/대청 → 백령도.대청도; 옹진+연평 → 연평도.우도.
+- Metropolitan districts without their own zone use the zone named like the city (`인천광역시`, `대전광역시`, `광주광역시`, `세종특별자치시`), else every sub-zone that is not a separate county or city (서울 4 권역, 부산 3 zones, `대구중부`). Region-level requests (`second` empty) use the whole province. The every-sub-zone fallback applies only to metropolitan cities, never to provinces.
+- Each active zone yields `{weather, weatherStr, level, levelStr, locationName: areaName}` via `warnVar` → `weather` (1→1, 2→3, 3→9, 4→5, 5→7, 6→2, 7→10, 8→4, 9→11, 12→12, 13→13) and `warnStress` → level (0 주의보, 1 경보, 2 중대경보 → 4), unique per weather, level and zone name.
+- Sorting: descending `weather`, then descending `level`, then zone name, in both `specialInfoFor` and the controller's `_sort` (a full comparator, because Node 10's sort is not stable). A 주의보 of a higher-coded hazard still precedes a 경보 of a lower-coded one.
+- Summary precedence: `makeSummaryWeather` (`current.summaryWeather`) and `makeSummary` (`current.summary`) each add one item from `specialInfo[0]` only: `{str: weatherStr + levelStr, grade: weather + 5}` (grade 6–18) ([weather summary](../../server/controllers/controllerTown24h.js), [combined summary](../../server/controllers/controllerTown.js)); items are sorted by `grade` descending and the top two, joined by `, `, form the text. The warning text is the Korean string (for example `호우주의보`).
+- Errors (Mongo, invalid town) are logged and the stage calls `next()` without the field; an empty list also omits it. `client/www/js` never reads `current.specialInfo`; app users see domestic warnings through summary text, and bulletins through S12.
 
 ## Ordered middleware appendix
 

@@ -5,6 +5,9 @@
 'use strict';
 
 require('./config/env');
+if (process.env.PUSH_STORE === 's3' && process.env.SERVER_MODE === 'push') {
+    throw new Error('S3 delivery requires one bin/push-coordinator; SERVER_MODE=push is disabled');
+}
 
 var express = require('express');
 var cors = require('cors');
@@ -77,6 +80,10 @@ i18n.configure({
 
 app.use(cors());
 
+// Public /weather and /geocode routes (#2606); before the session middleware so
+// they never set cookies.
+app.use(require('./routes/gateway'));
+
 // Use the session middleware
 app.use(session({ secret: 'wizard factory',
                 resave: false,
@@ -112,7 +119,7 @@ app.get('/health', function (req, res) {
 
 global.curString = ['t1h', 'rn1', 'sky', 'uuu', 'vvv', 'reh', 'pty', 'lgt', 'vec', 'wsd'];
 global.shortString = ['pop', 'pty', 'r06', 'reh', 's06', 'sky', 't3h', 'tmn', 'tmx', 'uuu', 'vvv', 'wav', 'vec', 'wsd'];
-global.shortestString = ['pty', 'rn1', 'sky', 'lgt', 't1h', 'uuu', 'vvv', 'reh', 'vec', 'wsd'];
+global.shortestString = ['pty', 'rn1', 'sky', 'lgt', 't1h', 'uuu', 'vvv', 'reh', 'vec', 'wsd', 'pop'];
 global.commonString = ['date', 'time'];
 global.rssString = ['ftm', 'date', 'temp', 'tmx', 'tmn', 'sky', 'pty', 'wfKor', 'wfEn', 'pop', 'r12', 's12', 'ws', 'wd', 'wdKor', 'wdEn', 'reh', 'r06', 's06'];
 global.forecastString = ['cnt', 'wfsv'];
@@ -151,6 +158,10 @@ if (process.env.KMA_STN_MINUTE_ENABLED === 'true' && config.mode === 'gather') {
 }
 if (process.env.KMA_STN_HOURLY_ENABLED === 'true' && config.mode === 'gather') {
     manager.startHourlyScrape();
+}
+// KMA warnings (#2609) on the gather worker; scrape/local modes run them inside startScrape.
+if (process.env.KMA_WARNING_ENABLED === 'true' && config.mode === 'gather') {
+    manager.startWarningScrape();
 }
 
 // catch 404 and forward to error handler
