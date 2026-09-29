@@ -36,64 +36,36 @@ $ npm install
 ```
 
 ### mobile application
-Make sure you have [ionic](http://ionicframework.com/)
+TodayWeather builds with Cordova 13 from npm scripts (cordova-android 15, targetSdk 36; cordova-ios 8, iOS 15+). gulp and `ionic state` are no longer used.
 
-move to mobile folder
 ```bash
 $ cd TodayWeather/client/
+$ npm ci
+$ cp .env.example .env          # fill in names and paths; no secret values
+$ npm run release:fetch         # release files (Firebase config, keystore, build.json, client config) from S3
+$ npm run build:android         # debug build with Google's test ad units
+$ npm run emulate:ios           # debug build on the iOS Simulator
 ```
 
-ionic clear and reinstall plugins and platforms
-```bash
-$ ionic state reset
-```
-
-add crosswalk browser for android
-```bash
-ionic browser add crosswalk
-```
-
-install gulp and bower
-
-```bash
-$ npm install
-```
-
-install www/lib
-
-```bash
-$ bower install
-```
-
-hook up with IONIC.IO
-```bash
-$ ionic io init
-```
-
-sass preprocessing - it makes www/css/ionic.app.css
-
-```bash
-$ gulp sass
-```
-
-build and run application for iOS
-
-```bash
-$ ionic run ios
-```
+`npm run www` prepares `www/` (bower libs, SCSS, `www/client.config.js`, Firebase config files). Debug and emulator builds always use Google's test ad units.
 
 ### release mobile application
 
-check version config.xml, package.json
+Check the version in `config.xml` (`version`, `android-versionCode`, `ios-CFBundleVersion`); it must exceed the store versions.
 
-build
 ```bash
-$ cordova plugin rm cordova-plugin-console
-$ ionic build --release android
-$ ionic build --release ios
+$ npm run build:android:release   # signed AAB: platforms/android/app/build/outputs/bundle/release/app-release.aab
+$ npm run build:ios:release       # prepares platforms/ios; archive and sign in Xcode (App.xcworkspace, Product > Archive)
 ```
 
+iOS builds need full Xcode as the active developer directory (`sudo xcode-select -s /Applications/Xcode.app`, or `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`).
+
+Both use the real AdMob app IDs and ad units and refuse to continue if `www/client.config.js` still holds test ad units. Release builds show no ads while the AdMob consent (UMP) message is not published.
+
 ### import android widget
+
+Legacy procedure: the Cordova 1.1.0 build ships without widgets (they return with the native app, #2605).
+
 
 copy widget files and overwrite strings.xml
 ```bash
@@ -144,35 +116,7 @@ $ cp -rf ../../../applewatch/TodayWeather\ WatchKit\ 1\ Extension ./
 
 ### Publishing
 
-patch
-
-1. add daum key to DAUM_SERVICE_KEY on service.js
-2. add google analytics key to GOOGLE_ANALYTICS_KEY on index.html
-3. set isTesting of AdMob.setOptions to false
-4. update version info of config.xml, package.json, controller.js
-
-ionic deploy
-```bash
-$ ionic upload
-```
-
-android
-
-```bash
-$ ionic build --release android
-$ cp platforms/android/build/outputs/apk/android-armv7-release-unsigned.apk ./
-$ jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore my-release-key.keystore android-armv7-release-unsigned.apk alias_name
-$ ~/Library/Android/sdk/build-tools/VERSION/zipalign android-armv7-release-unsigned.apk TodayWeather_V0.00.00.apk
-```
-
-ios
-
-1. run xcode
-2. general -> device : iPhone, status bar style light
-3. Capabilities Push Notifications on, Background Modes off
-3. connect iPhone by USB
-4. Menu -> Product -> Archive
-
+Mobile (Android and iOS): see "release mobile application" above.
 
 chrome extension
 

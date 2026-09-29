@@ -22,11 +22,12 @@ This repository contains a Node.js/Express weather backend, an Ionic 1/AngularJS
 | `server/lib/` | Provider HTTP/XML/JSON access (Visual Crossing in `lib/VC`), KMA scraping, units and image parsing |
 | `server/models/` | Mongoose weather, geographic, push and purchase-related models |
 | `client/www/js/` | App startup and screens; `WeatherUtil` HTTP/conversion, `WeatherInfo` city state, `TwStorage` persistence |
-| `client/gulpfile.js`, `tw.*`, `ta.*` | Product/platform build variants; copy configuration, select purchase plugin, resources and native projects |
+| `client/package.json`, `client/config.xml`, `client/scripts/` | TodayWeather build since #2605: Cordova 13 from npm scripts (`www`, `build:*`, `build:*:release`), release files fetched from S3, prepare hooks for AdMob IDs and iOS tracking settings ([client README](../../client/README.md#mobile-application)) |
+| `client/gulpfile.js`, `tw.*`, `ta.*` | Legacy product/platform build variants (TodayAir, widgets, purchase plugins); copy configuration, select purchase plugin, resources and native projects |
 | `tw.ios/`, `ta.ios/` | TodayWeather/TodayAir native shells, Objective-C widgets, platform web assets |
 | `applewatch/` | Older WatchKit application/extension and its own bundled web assets |
 
-Sources: [server entry](../../server/app.js), [server package](../../server/package.json), [Ionic dependency](../../client/bower.json), [build variants](../../client/gulpfile.js).
+Sources: [server entry](../../server/app.js), [server package](../../server/package.json), [Ionic dependency](../../client/bower.json), [build variants](../../client/gulpfile.js), [Cordova build](../../client/package.json).
 
 ## Runtime modes
 
@@ -58,7 +59,7 @@ The [configuration](../../server/config/config.js) defaults to `SERVER_MODE=loca
 The current mobile source requests `/weather/v000903/coord/...` and `/geocode/v000903/coord/...`. Since #2606 the server also implements the shapes with traffic in [`server/routes/gateway.js`](../../server/routes/gateway.js), but CloudFront keeps routing them to API Gateway until the cutover ([spec](../../specs/issue-2606.md)). Authorized AWS inspection establishes CloudFront -> API Gateway production -> Lambda. Deployed weather Lambda geocodes coordinates using DynamoDB/provider adapters, then forwards KR to `/{version}/kma/addr/...` and other countries to `/{version}/dsf/coord/...` at `http://tw-svc-spot.wizardfactory.net`. That hostname resolves to the current service EC2 instance. Lambda source is outside this repository; service-host SSH now identifies nginx, ten PM2 cluster workers and checkout `5bca407` with config/logger edits; see [EC2 internals](ec2-internals.md). See [AWS/code correlation](aws-code-correlation.md) for evidence, address-route 501, cache policies and exact version handling.
 
 The backend also calls `API_SERVER/geocode/v000903/coord/...` (unversioned before #2606) in its direct coordinate-to-KMA-address route. Its deployed configuration resolves `API_SERVER` to `http://todayweather.wizardfactory.net`; this separate call must not be confused with weather Lambda's internal geocoder.
-Sources: [URL builder](../../client/www/js/service.weatherutil.js), [placeholder client config](../../client/www/client.config.js), [latest router](../../server/routes/v000903/index.js), [backend geocode dependency](../../server/controllers/controllerTown24h.js).
+Sources: [URL builder](../../client/www/js/service.weatherutil.js), [placeholder client config](../../client/www/client.config.example.js), [latest router](../../server/routes/v000903/index.js), [backend geocode dependency](../../server/controllers/controllerTown24h.js).
 
 ## Persistence and identity
 

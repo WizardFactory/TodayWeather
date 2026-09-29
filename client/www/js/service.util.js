@@ -294,5 +294,31 @@ angular.module('service.util', [])
             }
         };
 
+        /**
+         * iOS keeps the status bar outside the web view (StatusBarOverlaysWebView=false), so its
+         * background follows the theme's header colour (ionic.app.scss); otherwise the light text
+         * of the photo/dark/old themes is drawn on white.
+         * @param {string} theme settingsInfo.theme
+         * @param {string} state $rootScope.state (forecast, dailyforecast, ...)
+         */
+        obj.applyIOSStatusBar = function (theme, state) {
+            if (!window.StatusBar || !ionic.Platform.isIOS()) {
+                return;
+            }
+            var color = {light: '#ffffff', dark: '#1b1b1b', old: '#444444', photo: '#444444'}[theme] || '#ffffff';
+            if (theme === 'old' && state === 'forecast') {
+                color = '#03a9f4';
+            }
+            else if (theme === 'old' && state === 'dailyforecast') {
+                color = '#00bcd4';
+            }
+            StatusBar.backgroundColorByHexString(color);
+            if (theme === 'light') {
+                StatusBar.styleDefault();
+            } else { //photo, dark, old
+                StatusBar.styleLightContent();
+            }
+        };
+
         return obj;
     });
