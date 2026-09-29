@@ -8,6 +8,7 @@
 
 var async = require('async');
 var req = require('request');
+var observationApi = require('./airkoreaObservation');
 
 var Arpltn = require('../models/arpltnKeco.js');
 var MsrStn = require('../models/modelMsrStnInfo.js');
@@ -43,13 +44,34 @@ var dnscache = require('dnscache')({
  * @constructor
  */
 function Keco() {
-    this._svcKeys ='';
+    this._svcKeys = [];
+    this._observationApi = observationApi.create();
+    this._collectionRunning = {};
     this._sidoList = [];
     this._currentRltmIndex = 0;
     this._currentSidoIndex = 0;
     this._daumApiKeys = '';  //for convert x,y
     this._kakaoApiKeys = '';
 }
+
+Keco.prototype._safeCode = function (err) {
+    return err && /^([A-Z_]+|PROVIDER_[0-9]{2}|HTTP_[0-9]{3})$/.test(err.code || '') ? err.code : 'STORAGE_ERROR';
+};
+
+// Keep successful UTC outcomes visible even when the production Winston console is error-only.
+Keco.prototype._emitOutcome = function (record) {
+    var line = 'AIRKOREA ' + JSON.stringify(record);
+    if (record.outcome === 'failed') { log.error(line); }
+    else { console.info(line); }
+};
+
+Keco.prototype._collectionOutcome = function (operation, sido, err, rows, aggregate) {
+    this._emitOutcome({operation: operation, sido: sido,
+        finishedAt: new Date().toISOString(), outcome: err ? 'failed' : 'success',
+        code: err ? this._safeCode(err) : 'OK', saved: rows ? rows.length : 0,
+        unavailable: rows ? rows.unavailable || [] : [],
+        observationTime: aggregate ? aggregate.dataTime : rows && rows[0] && rows[0].dataTime});
+};
 
 Keco.prototype.setKakaoApiKeys = function (keys) {
     this._kakaoApiKeys = keys;
@@ -85,8 +107,7 @@ Keco.prototype.getDaumApiKey = function () {
  * @returns {Keco}
  */
 Keco.prototype.setServiceKeys = function(keys) {
-    this._svcKeys = keys;
-    log.info({svcKeys: this._svcKeys});
+    this._svcKeys = Array.isArray(keys) ? keys.slice() : [];
     return this;
 };
 
@@ -155,31 +176,7 @@ Keco.prototype.convertRegionToSido = function(regionName) {
  * @returns {string}
  */
 Keco.prototype.getUrlCtprvn = function(sido, key, apiPoint) {
-    if (!key)  {
-        key = this._svcKeys[0];
-    }
-
-    if (!key) {
-        log.error("You have to set key");
-        return;
-    }
-    sido = encodeURIComponent(sido);
-    var url = DOMAIN_ARPLTN_KECO + '/' + PATH_ARPLTN_INFOR_INQIRE_SVC + '/' + apiPoint +
-        '?ServiceKey='+key +
-        '&sidoName='+sido +
-        '&pageNo='+ 1 +
-        '&numOfRows='+999+
-        '&_returnType=json';
-    if(apiPoint === CTPRVN_RLTM_MESURE_DNSTY) {
-        url += '&ver=1.3';
-    }
-    else if (apiPoint === CTPRVN_MESURE_SIDO_LIST) {
-        url += '&searchCondition=HOUR';
-    }
-    else {
-        log.error('get url ctprn unknown apiPoint='+apiPoint);
-    }
-    return url;
+    return observationApi.buildUrl(sido, key || this._svcKeys[0], apiPoint);
 };
 
 /**
@@ -190,7 +187,7 @@ Keco.prototype.getUrlCtprvn = function(sido, key, apiPoint) {
  * @private
  */
 Keco.prototype._jsonRequest = function (url, callback) {
-    log.debug({kecoJsonRequestUrl:url});
+    // Request URLs contain credentials and must never enter logs.
     req(url, {json:true}, function(err, response, body) {
         if (err) {
             return callback(err);
@@ -216,18 +213,8 @@ Keco.prototype._jsonRequest = function (url, callback) {
  * @private
  */
 Keco.prototype._retryGetCtprvn = function (index, sidoName, apiPoint, callback) {
-    var self = this;
-    if (index < 0) {
-        return callback(new Error("EXCEEDS_LIMIT"));
-    }
-    var url = this.getUrlCtprvn(sidoName, self._svcKeys[index], apiPoint);
-    self._jsonRequest(url, function (err, result) {
-        if (self._checkLimit(result)) {
-            return self._retryGetCtprvn(--index, sidoName, apiPoint, callback);
-        }
-        callback(err, result);
-    });
-
+    // A single configured key; the supported client owns bounded transport retries.
+    this._observationApi.fetch(sidoName, this._svcKeys[index], apiPoint, callback);
     return this;
 };
 
@@ -256,92 +243,15 @@ Keco.prototype.getCtprvn = function(sidoName, apiPoint, callback)  {
  * @param callback
  */
 Keco.prototype.parseRLTMCtprvn = function (data, callback) {
-    log.debug('parse real time Ctpvrn');
-    var self = this;
-
-    if (typeof data === 'string') {
-        if (data.indexOf('xml') !== -1) {
-            callback(new Error(data));
-            return;
-        }
+    var rows;
+    try { rows = observationApi.parseRows(data, observationApi.STATION, Arpltn.getKeyList()); }
+    catch (err) { return callback(err); }
+    // Archival is best effort, as before; only validated batches enter S3.
+    if (data.parm && data.parm.sidoName) {
+        this._uploadS3({prefix: 'airkorea/ctprvn/' + rows[0].dataTime + '-' + data.parm.sidoName + '-rltmCtprvn.json',
+            data: data.list}, function (err) { if (err) { log.error('AIRKOREA ARCHIVE_FAILED'); } });
     }
-    var arpltnList = [];
-    try {
-        var list = data.list;
-        list.forEach(function (item) {
-            log.debug(JSON.stringify(item));
-            var arpltn = {};
-            Arpltn.getKeyList().forEach(function (name) {
-                if(item.hasOwnProperty(name))   {
-                    if (name === 'stationName' || name === 'mangName' || name === 'dataTime') {
-                       arpltn[name]  = item[name];
-                       if (name === 'dataTime') {
-                           arpltn.date = new Date(item[name]);
-                       }
-                    }
-                    else {
-                        if (name.indexOf('Value') !== -1){
-                            arpltn[name] = parseFloat(item[name]);
-                        }
-                        else if (name.indexOf('Grade') !== -1){
-                            arpltn[name] = parseInt(item[name]);
-                        }
-                        else {
-                           log.error("Unknown name ="+name);
-                        }
-                        if (isNaN(arpltn[name])) {
-                            log.verbose('name='+item.stationName+' data time='+item.dataTime+' '+name + ' is NaN');
-                            delete arpltn[name];
-                        }
-                    }
-                }
-            });
-
-            //pm10Grade -> pm10Grade24, pm10Grade1h -> pm10Grade,
-            //pm25Grade -> pm25Grade24, pm25Grade1h -> pm25Grade,
-            if (arpltn.hasOwnProperty('pm10Grade')) {
-                arpltn.pm10Grade24 = arpltn.pm10Grade;
-                delete arpltn.pm10Grade;
-            }
-            if(arpltn.hasOwnProperty('pm10Grade1h')) {
-                arpltn.pm10Grade = arpltn.pm10Grade1h;
-                delete arpltn.pm10Grade1h;
-            }
-            if (arpltn.hasOwnProperty('pm25Grade')) {
-                arpltn.pm25Grade24 = arpltn.pm25Grade;
-                delete arpltn.pm25Grade;
-            }
-            if(arpltn.hasOwnProperty('pm25Grade1h')) {
-                arpltn.pm25Grade = arpltn.pm25Grade1h;
-                delete arpltn.pm25Grade1h;
-            }
-            arpltnList.push(arpltn);
-        });
-    }
-    catch (err) {
-        return callback(err);
-    }
-
-    var prefix;
-    try {
-        prefix = 'airkorea/ctprvn/'+data.list[0].dataTime+'-'+data.parm.sidoName+'-rltmCtprvn.json';
-    }
-    catch(err) {
-        log.error(err);
-    }
-
-    if (prefix) {
-        this._uploadS3({prefix:prefix, data:data.list}, function (err, result) {
-            if (err) {
-                log.error(err);
-            }
-            else {
-                log.debug(result);
-            }
-        });
-    }
-
-    callback(undefined, arpltnList);
+    callback(null, rows);
 };
 
 /**
@@ -356,8 +266,8 @@ Keco.prototype.saveRLTMCtprvn = function (arpltnList, callback) {
         function(arpltn, callback) {
             Arpltn.update({stationName: arpltn.stationName, date: arpltn.date}, arpltn, {upsert:true}, function (err, raw) {
                 if (err) {
-                    log.error(err);
-                    return callback(err);
+                    log.error("AIRKOREA OBSERVATION_WRITE_FAILED");
+                    return callback(observationApi.failure('OBSERVATION_WRITE_FAILED'));
                 }
                 log.silly('The raw response from Mongo was ', JSON.stringify(raw));
                 callback(err, raw);
@@ -365,7 +275,7 @@ Keco.prototype.saveRLTMCtprvn = function (arpltnList, callback) {
         },
         function (err, results) {
             if (err) {
-                return callback(err);
+                return callback(observationApi.failure('OBSERVATION_WRITE_FAILED'));
             }
             callback(null, results);
         });
@@ -894,10 +804,11 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
     return this;
 };
 
-Keco.prototype.saveAvgSidoArpltn = function (sido, rltmArpltnList) {
+Keco.prototype.saveAvgSidoArpltn = function (sido, rltmArpltnList, callback) {
+    callback = callback || function () {};
 
     if (rltmArpltnList.length === 0) {
-        log.error('rltm arpltn length is zero');
+        return callback(observationApi.failure('NO_URBAN_OBSERVATIONS'));
     }
     else {
         var latestDataTime = "";
@@ -913,8 +824,7 @@ Keco.prototype.saveAvgSidoArpltn = function (sido, rltmArpltnList) {
         });
 
         if (sidoArpltnList.length === 0) {
-            log.info('sido arpltn list length is 0 so stop save avg sigo arpltn');
-            return;
+            return callback(observationApi.failure('NO_URBAN_OBSERVATIONS'));
         }
         var avgSidoArpltn = {};
         var avgSidoArpltnCount={};
@@ -928,7 +838,7 @@ Keco.prototype.saveAvgSidoArpltn = function (sido, rltmArpltnList) {
 
         sidoArpltnList.forEach(function (item) {
             for (var key in item) {
-                if (key.indexOf("Value") >= 0) {
+                if (key.indexOf("Value") >= 0 && typeof item[key] === "number" && isFinite(item[key]) && item[key] >= 0) {
                     if (avgSidoArpltn[key] === undefined) {
                         avgSidoArpltn[key] = 0;
                         avgSidoArpltnCount[key]  = 0;
@@ -962,10 +872,7 @@ Keco.prototype.saveAvgSidoArpltn = function (sido, rltmArpltnList) {
             avgSidoArpltn,
             {upsert:true},
             function (err, raw) {
-                if (err) {
-                    log.error(err);
-                }
-                log.silly('The raw response from Mongo was ', JSON.stringify(raw));
+                callback(err ? observationApi.failure('AGGREGATE_WRITE_FAILED') : null, avgSidoArpltn);
             });
     }
 };
@@ -976,78 +883,48 @@ Keco.prototype.saveAvgSidoArpltn = function (sido, rltmArpltnList) {
  * @param index
  * @param callback
  */
-Keco.prototype.getAllCtprvn = function(list, index, callback) {
-    if (!list) {
-        list = this._sidoList;
-    }
-    if (typeof list === 'function') {
-        callback = list;
-        list = this._sidoList;
-    }
-
-    if (!index) {
-        index = this._currentRltmIndex;
-    }
-    if (typeof index === 'function') {
-        callback = index;
-        index = this._currentRltmIndex;
-    }
-
+Keco.prototype._collectProvinces = function (operation, list, index, callback) {
     var self = this;
-    list = list.slice(index);
-
-    log.info('get all Ctprvn start from '+list[0]);
-
-    async.mapSeries(list,
-        function(sido, callback) {
-            async.waterfall([
-                function(cb) {
-                    self.getCtprvn(sido, CTPRVN_RLTM_MESURE_DNSTY, function (err, body) {
-                        if (err) {
-                            return cb(err);
-                        }
-                        cb(err, body);
-                    });
-                },
-                function(rcv, cb) {
-                    self.parseRLTMCtprvn(rcv, function (err, parsedDataList) {
-                        if (err) {
-                            return cb(err);
-                        }
-                        cb(err, parsedDataList);
-                    });
-                },
-                function(parsedDataList, cb) {
-                    self.saveRLTMCtprvn(parsedDataList, function(err){
-                        log.debug(err);
-                        return cb(err);
-                    });
-                    //save avgSido
-                    self.saveAvgSidoArpltn(sido, parsedDataList);
-                }
-            ], function(err) {
-                callback(err, {sido: sido});
-            });
-        },
-        function(err, results) {
-            if(err) {
-                if (err.statusCode == 503 || err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
-                    log.warn(err);
-                }
-                else {
-                    log.error(err);
-                }
-                self._currentRltmIndex = self._sidoList.indexOf(results[results.length-1].sido);
-                log.info('KECO: next index='+self._currentRltmIndex);
-                return callback(err);
+    list = (list || self._sidoList).slice(index || 0);
+    if (!list.length) { return callback(observationApi.failure('NO_PROVINCES')); }
+    var station = operation === observationApi.STATION;
+    async.mapLimit(list, 4, function (sido, next) {
+        var startedAt = new Date().toISOString();
+        var rows, aggregate;
+        async.waterfall([
+            function (cb) { self.getCtprvn(sido, operation, cb); },
+            function (body, cb) {
+                self[station ? 'parseRLTMCtprvn' : 'parseSidoCtprvn'](body, cb);
+            },
+            function (parsed, cb) {
+                rows = parsed;
+                self[station ? 'saveRLTMCtprvn' : 'saveSidoCtprvn'](rows, function (err) {
+                    if (err) { return cb(observationApi.failure('OBSERVATION_WRITE_FAILED')); }
+                    if (!station) { return cb(); }
+                    self.saveAvgSidoArpltn(sido, rows, function (error, row) { aggregate = row; cb(error); });
+                });
             }
-
-            self._currentRltmIndex = 0;
-
-            if(callback) {
-                callback(err);
-            }
+        ], function (err) {
+            self._collectionOutcome(station ? 'station' : 'sido', sido, err, rows, aggregate);
+            next(null, {sido: sido, startedAt: startedAt, finishedAt: new Date().toISOString(),
+                outcome: err ? 'failed' : 'success', code: err ? self._safeCode(err) : 'OK',
+                saved: rows && !err ? rows.length : 0, unavailable: rows ? rows.unavailable || [] : []});
         });
+    }, function (err, results) {
+        self._currentRltmIndex = 0;
+        self._currentSidoIndex = 0;
+        var failed = results.filter(function (r) { return r.outcome !== 'success'; });
+        var error = failed.length ? observationApi.failure('PARTIAL_COLLECTION') : null;
+        if (error) { error.provinces = failed.map(function (r) { return {sido: r.sido, code: r.code}; }); }
+        callback(error, results);
+    });
+    return this;
+};
+
+Keco.prototype.getAllCtprvn = function (list, index, callback) {
+    if (typeof list === 'function') { callback = list; list = null; index = 0; }
+    if (typeof index === 'function') { callback = index; index = 0; }
+    return this._collectProvinces(observationApi.STATION, list, index, callback || function () {});
 };
 
 /**
@@ -1185,19 +1062,7 @@ Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
 */
 
 Keco.prototype.retryGetAllCtprvn = function (self, count, callback) {
-    if (count <= 0)  {
-        return callback(new Error("KECO: Fail to get all ctpvrn it's stoped index="+self._currentRltmIndex));
-    }
-    count--;
-
-    self.getAllCtprvn(function (err) {
-        if (err) {
-            log.warn('KECO: Stopped index='+self._currentRltmIndex);
-            return self.retryGetAllCtprvn(self, count, callback);
-        }
-        callback(err);
-    });
-
+    self.getAllCtprvn(callback);
     return this;
 };
 
@@ -1219,17 +1084,17 @@ Keco.prototype.removeOldAllCtprvn = function (callback) {
  * @returns {Keco}
  */
 Keco.prototype.cbKecoProcess = function (self, callback) {
-
-    callback = callback || function(){};
-
-    self.retryGetAllCtprvn(self, 10, function (err) {
-        if (err) {
-            log.warn('KECO: Stopped all index='+self._currentRltmIndex);
-            return callback(err);
-        }
+    callback = callback || function () {};
+    if (self._collectionRunning.station) { callback(observationApi.failure('ALREADY_RUNNING')); return this; }
+    self._collectionRunning.station = true;
+    var startedAt = new Date().toISOString();
+    self.getAllCtprvn(function (err) {
+        self._collectionRunning.station = false;
+        self._emitOutcome({operation: 'station', startedAt: startedAt,
+            finishedAt: new Date().toISOString(), outcome: err ? 'failed' : 'success',
+            code: err ? self._safeCode(err) : 'OK'});
         callback(err);
     });
-
     self.removeOldAllCtprvn();
     return this;
 };
@@ -1240,54 +1105,10 @@ Keco.prototype.cbKecoProcess = function (self, callback) {
  * @param callback
  */
 Keco.prototype.parseSidoCtprvn = function (data, callback) {
-    log.debug('parse Sido Ctpvrn');
-
-    if (typeof data === 'string') {
-        if (data.indexOf('xml') !== -1) {
-            callback(new Error(data));
-            return;
-        }
-    }
-
-    var sidoArpltnList = [];
-    try {
-        var list = data.list;
-        list.forEach(function (item) {
-            log.debug(JSON.stringify(item));
-            var sidoArpltn = {};
-            SidoArpltn.getKeyList().forEach(function (name) {
-                if(item.hasOwnProperty(name))   {
-                    if (name === 'sidoName' || name === 'cityName' || name === 'cityNameEng' || name === 'dataTime') {
-                       sidoArpltn[name]  = item[name];
-                       if (name === 'dataTime') {
-                           sidoArpltn.date = new Date(item[name]);
-                       }
-                       if (name === 'cityName') {
-                           sidoArpltn.sidocityName = item.sidoName+'/'+item.cityName;
-                       }
-                    }
-                    else {
-                        if (name.indexOf('Value') !== -1){
-                            sidoArpltn[name] = parseFloat(item[name]);
-                        }
-                        else {
-                           log.error("Unknown name ="+name);
-                        }
-                        if (isNaN(sidoArpltn[name])) {
-                            log.debug('name='+item.sidoName+'/'+item.cityName+' data time='+item.dataTime+' '+name + ' is NaN');
-                            delete sidoArpltn[name];
-                        }
-                    }
-                }
-            });
-            sidoArpltnList.push(sidoArpltn);
-        });
-    }
-    catch (err) {
-        return callback(err);
-    }
-
-    callback(undefined, sidoArpltnList);
+    var rows;
+    try { rows = observationApi.parseRows(data, observationApi.SIDO, SidoArpltn.getKeyList()); }
+    catch (err) { return callback(err); }
+    callback(null, rows);
 };
 
 /**
@@ -1302,8 +1123,8 @@ Keco.prototype.saveSidoCtprvn = function (arpltnList, callback) {
         function(sidoArpltn, callback) {
             SidoArpltn.update({sidocityName: sidoArpltn.sidocityName, date: sidoArpltn.date}, sidoArpltn, {upsert:true}, function (err, raw) {
                 if (err) {
-                    log.error(err);
-                    return callback(err);
+                    log.error("AIRKOREA OBSERVATION_WRITE_FAILED");
+                    return callback(observationApi.failure('OBSERVATION_WRITE_FAILED'));
                 }
                 log.silly('The raw response from Mongo was ', JSON.stringify(raw));
                 callback(err, raw);
@@ -1311,7 +1132,7 @@ Keco.prototype.saveSidoCtprvn = function (arpltnList, callback) {
         },
         function (err, results) {
             if (err) {
-                return callback(err);
+                return callback(observationApi.failure('OBSERVATION_WRITE_FAILED'));
             }
             callback(null, results);
         });
@@ -1322,92 +1143,14 @@ Keco.prototype.saveSidoCtprvn = function (arpltnList, callback) {
  * @param index
  * @param callback
  */
-Keco.prototype.getSidoCtprvn = function(list, index, callback) {
-    if (!list) {
-        list = this._sidoList;
-    }
-    if (typeof list === 'function') {
-        callback = list;
-        list = this._sidoList;
-    }
-
-    if (!index) {
-        index = this._currentSidoIndex;
-    }
-    if (typeof index === 'function') {
-        callback = index;
-        index = this._currentSidoIndex;
-    }
-
-    var self = this;
-    list = list.slice(index);
-
-    log.info('get Sido Ctprvn start from '+list[0]);
-
-    async.mapSeries(list,
-        function(sido, callback) {
-            async.waterfall([
-                function(cb) {
-                    self.getCtprvn(sido, CTPRVN_MESURE_SIDO_LIST, function (err, body) {
-                        if (err) {
-                            return cb(err);
-                        }
-                        cb(err, body);
-                    });
-                },
-                function(rcv, cb) {
-                    self.parseSidoCtprvn(rcv, function (err, parsedDataList) {
-                        if (err) {
-                            return cb(err);
-                        }
-                        cb(err, parsedDataList);
-                    });
-                },
-                function(parsedDataList, cb) {
-                    self.saveSidoCtprvn(parsedDataList, function(err){
-                        log.debug(err);
-                        return cb(err);
-                    });
-                }
-            ], function(err) {
-                callback(err, {sido: sido});
-            });
-        },
-        function(err, results) {
-            if(err) {
-                if (err.statusCode == 503) {
-                    log.warn(err);
-                }
-                else {
-                    log.error(err);
-                }
-                self._currentSidoIndex = self._sidoList.indexOf(results[results.length-1].sido);
-                log.info('KECO: next index='+self._currentSidoIndex);
-                return callback(err);
-            }
-
-            self._currentSidoIndex = 0;
-
-            if(callback) {
-                callback(err);
-            }
-        });
+Keco.prototype.getSidoCtprvn = function (list, index, callback) {
+    if (typeof list === 'function') { callback = list; list = null; index = 0; }
+    if (typeof index === 'function') { callback = index; index = 0; }
+    return this._collectProvinces(observationApi.SIDO, list, index, callback || function () {});
 };
 
 Keco.prototype.retryGetSidoCtprvn = function (self, count, callback) {
-    if (count <= 0)  {
-        return callback(new Error("KECO: Fail to get Sido ctpvrn it's stoped index="+self._currentSidoIndex));
-    }
-    count--;
-
-    self.getSidoCtprvn(function (err) {
-        if (err) {
-            log.warn('KECO: Stopped sido index='+self._currentSidoIndex);
-            return self.retryGetSidoCtprvn(self, count, callback);
-        }
-        callback(err);
-    });
-
+    self.getSidoCtprvn(callback);
     return this;
 };
 
@@ -1422,17 +1165,17 @@ Keco.prototype.removeOldSidoCtprvn = function (callback) {
 };
 
 Keco.prototype.cbKecoSidoProcess = function (self, callback) {
-
-    callback = callback || function(){};
-
-    self.retryGetSidoCtprvn(self, 10, function (err) {
-        if (err) {
-            log.warn('KECO: Stopped sido index='+self._currentSidoIndex);
-            return callback(err);
-        }
+    callback = callback || function () {};
+    if (self._collectionRunning.sido) { callback(observationApi.failure('ALREADY_RUNNING')); return this; }
+    self._collectionRunning.sido = true;
+    var startedAt = new Date().toISOString();
+    self.getSidoCtprvn(function (err) {
+        self._collectionRunning.sido = false;
+        self._emitOutcome({operation: 'sido', startedAt: startedAt,
+            finishedAt: new Date().toISOString(), outcome: err ? 'failed' : 'success',
+            code: err ? self._safeCode(err) : 'OK'});
         callback(err);
     });
-
     self.removeOldSidoCtprvn();
     return this;
 };
