@@ -262,22 +262,23 @@ Keco.prototype.parseRLTMCtprvn = function (data, callback) {
 Keco.prototype.saveRLTMCtprvn = function (arpltnList, callback) {
     log.debug('save Ctpvrn');
 
+    // Record row errors as results: map must drain every write before releasing the run lock.
     async.map(arpltnList,
         function(arpltn, callback) {
             Arpltn.update({stationName: arpltn.stationName, date: arpltn.date}, arpltn, {upsert:true}, function (err, raw) {
                 if (err) {
                     log.error("AIRKOREA OBSERVATION_WRITE_FAILED");
-                    return callback(observationApi.failure('OBSERVATION_WRITE_FAILED'));
+                    return callback(null, {failed: true});
                 }
                 log.silly('The raw response from Mongo was ', JSON.stringify(raw));
-                callback(err, raw);
+                callback(null, {failed: false, raw: raw});
             });
         },
         function (err, results) {
-            if (err) {
+            if (err || results.some(function (result) { return result.failed; })) {
                 return callback(observationApi.failure('OBSERVATION_WRITE_FAILED'));
             }
-            callback(null, results);
+            callback(null, results.map(function (result) { return result.raw; }));
         });
 };
 
@@ -1119,22 +1120,23 @@ Keco.prototype.parseSidoCtprvn = function (data, callback) {
 Keco.prototype.saveSidoCtprvn = function (arpltnList, callback) {
     log.debug('save Sido Ctpvrn');
 
+    // Record row errors as results: map must drain every write before releasing the run lock.
     async.map(arpltnList,
         function(sidoArpltn, callback) {
             SidoArpltn.update({sidocityName: sidoArpltn.sidocityName, date: sidoArpltn.date}, sidoArpltn, {upsert:true}, function (err, raw) {
                 if (err) {
                     log.error("AIRKOREA OBSERVATION_WRITE_FAILED");
-                    return callback(observationApi.failure('OBSERVATION_WRITE_FAILED'));
+                    return callback(null, {failed: true});
                 }
                 log.silly('The raw response from Mongo was ', JSON.stringify(raw));
-                callback(err, raw);
+                callback(null, {failed: false, raw: raw});
             });
         },
         function (err, results) {
-            if (err) {
+            if (err || results.some(function (result) { return result.failed; })) {
                 return callback(observationApi.failure('OBSERVATION_WRITE_FAILED'));
             }
-            callback(null, results);
+            callback(null, results.map(function (result) { return result.raw; }));
         });
 };
 

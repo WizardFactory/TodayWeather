@@ -346,7 +346,7 @@ Rows keep `sidoName`, `cityName`, `dataTime`, pollutant values and the requested
 also carry `attribution`, `representativeCity` and `{lat, lon}` representative
 coordinates. They are point estimates, not nationwide/provincial aggregates.
 Additive `airStatus.provinces` lists all 17 names with availability, source and
-reason; `airkorea: database-error` differs from missing/unusable stored data.
+reason; `airkorea: database-error` differs from `missing`, `stale`, `future`, or `invalid` stored data.
 The existing native maps continue to use `air`; physical device confirmation
 remains a post-rollout check.
 

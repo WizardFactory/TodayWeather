@@ -198,3 +198,55 @@ test('empty province list and all-unavailable rows never report collection succe
     await assert.rejects(invoke(h.keco,'parseRLTMCtprvn',{list:[fixture('stations').response.body.items[3]]}),/NO_USABLE_OBSERVATIONS/);
     assert.equal(h.stationWrites.length+h.sidoWrites.length,0);
 });
+for (const kind of ['station','sido']) {
+    for (const failed of [-1,0,1,2]) {
+        test(kind+' collection retains its lock until all writes settle (failed index '+failed+')',async()=>{
+            const h=harness(), pending=[], rows=[0,1,2].map(i=>({stationName:'station'+i,sidocityName:'서울city'+i,date:new Date(),pm10Value:10}));
+            const model=kind==='station'?h.station:h.sido;
+            model.update=(q,row,options,cb)=>pending.push(cb);
+            h.keco._sidoList=['서울'];let fetches=0,aggregates=0,completed=0;
+            h.keco.getCtprvn=(sido,op,cb)=>{fetches++;cb(null,{});};
+            h.keco[kind==='station'?'parseRLTMCtprvn':'parseSidoCtprvn']=(body,cb)=>cb(null,rows);
+            h.keco.saveAvgSidoArpltn=(sido,data,cb)=>{aggregates++;cb(null,{});};
+            const method=kind==='station'?'cbKecoProcess':'cbKecoSidoProcess';
+            let error;
+            h.keco[method](h.keco,err=>{completed++;error=err;});
+            assert.equal(pending.length,3);
+            const order=failed<0?[1,0,2]:[failed,...[0,1,2].filter(i=>i!==failed)];
+            for (const i of order.slice(0,2)) {
+                pending[i](i===failed?new Error('private database details'):null,{ok:1});
+                await new Promise(resolve=>setImmediate(resolve));
+                assert.equal(completed,0,'must not complete with a write outstanding');
+                assert.equal(h.keco._collectionRunning[kind],true);
+                await assert.rejects(invoke(h.keco,method,h.keco),/ALREADY_RUNNING/);
+                assert.equal(fetches,1);
+            }
+            const last=order[2];pending[last](last===failed?new Error('private database details'):null,{ok:1});
+            assert.equal(completed,1);assert.equal(h.keco._collectionRunning[kind],false);
+            assert.equal(!!error,failed>=0);
+            assert.equal(aggregates,kind==='station'&&failed<0?1:0);
+            assert(!JSON.stringify(h.logs).includes('private database details'));
+            h.keco[method](h.keco,()=>{completed++;});assert.equal(fetches,2);
+            pending.slice(3).forEach(cb=>cb(null,{ok:1}));assert.equal(completed,2);
+        });
+    }
+}
+for (const kind of ['station','sido']) {
+    test(kind+' row writes drain synchronous and multiple failures and preserve successful raw results',async()=>{
+        for (const errors of [[],[0],[0,2]]) {
+            const h=harness(),pending=[],raw=[{n:0},{n:1},{n:2}];let finished=0,outcome;
+            const model=kind==='station'?h.station:h.sido;
+            model.update=(q,row,options,cb)=>{
+                const i=pending.length;pending.push(cb);
+                if(i===0)cb(errors.includes(i)?new Error('private detail'):null,raw[i]);
+            };
+            h.keco[kind==='station'?'saveRLTMCtprvn':'saveSidoCtprvn']([{}, {}, {}],(err,value)=>{finished++;outcome={err,value};});
+            assert.equal(pending.length,3);assert.equal(finished,0);
+            pending[2](errors.includes(2)?new Error('private detail'):null,raw[2]);assert.equal(finished,0);
+            pending[1](null,raw[1]);assert.equal(finished,1);
+            assert.equal(!!outcome.err,errors.length>0);
+            if(!errors.length)assert.deepEqual(Array.from(outcome.value),raw);
+            else assert.equal(outcome.err.code,'OBSERVATION_WRITE_FAILED');
+        }
+    });
+}

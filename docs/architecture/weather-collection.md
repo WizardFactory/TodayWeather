@@ -210,7 +210,10 @@ are reported as unavailable. Station and aggregate schema/grade mapping remain.
 The latest urban-monitoring batch still produces `cityName: ""` province rows;
 collection success now waits for both station and aggregate writes. Mongo writes
 are not transactional: an error can leave valid station rows without an aggregate;
-that province is reported failed. Outcome records contain UTC start/finish times,
+that province is reported failed. Row write errors are collected only after every
+started write has acknowledged, so a failure cannot release the scheduled lock
+while another row is still writing. Run completion records and returned province
+results contain UTC start/finish times; province log records contain finish time,
 province, stable error code, saved count, unavailable station names and observation
 time, never URLs, keys or provider bodies. Successful outcomes use stdout so the
 production error-only Winston console does not suppress them; failures use error
