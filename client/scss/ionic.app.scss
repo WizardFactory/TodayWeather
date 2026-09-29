@@ -1301,11 +1301,6 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   }
 }
 
-/* purchase */
-.purchase-content {
-  background-color: #f5f5f5;
-}
-
 /* nation */
 .nation {
   position: relative;
@@ -1580,11 +1575,6 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 /* iPhone X */
 @media only screen and (device-width : 375px) and (device-height : 812px) and (-webkit-device-pixel-ratio : 3)
 {
-  .purchase-content {
-    margin-top: 32px;
-    margin-bottom: 32px;
-  }
-
   .start-content {
     margin-top: 32px;
   }

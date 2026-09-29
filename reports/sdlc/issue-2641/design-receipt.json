@@ -1,0 +1,67 @@
+{
+  "iteration": 1,
+  "decision": "PROCEED",
+  "reason": "Diagram artifact, browser and visual checks passed",
+  "authority_source": "AK: #2641 \uc9c4\ud589 pre-merge\uae4c\uc9c0 \uc9c4\ud589",
+  "candidate": "base:39a3336fb2730dfbe9920c62165a2b632874af1e",
+  "next_action": "Continue authorized pre-merge workflow",
+  "inputs": [
+    {
+      "kind": "triage",
+      "path": "reports/sdlc/issue-2641/triage.md",
+      "sha256": "3b3852e328ba7260325a7dcc425f1b53467d0d8bf8e28d9d527ca5c76c132694"
+    },
+    {
+      "kind": "intent",
+      "path": "intent/issue-2641.md",
+      "sha256": "1a7569056f7941da0c727aaac935b193c0bf68a9e73ba4ba6cb301efaf244153"
+    },
+    {
+      "kind": "investigation",
+      "path": "reports/sdlc/issue-2641/investigation.md",
+      "sha256": "a0711a80825208ec8366cfaf55f58cf69d6b2181d1e7f338bfaebaa64e24a1c7"
+    },
+    {
+      "kind": "spec",
+      "path": "specs/issue-2641.md",
+      "sha256": "1ca3e69bb35d1bd66acb50a58ee58571298783ddfeab6a5a9ad187a4a25a914c"
+    }
+  ],
+  "outputs": [
+    {
+      "kind": "design-source",
+      "path": "docs/architecture/diagrams/cordova-advertising.sequence.json",
+      "sha256": "801d94cc2eef38121603c7795b7d79ea239af65a68ea10329843df4a14135ee5"
+    },
+    {
+      "kind": "design-html",
+      "path": "docs/architecture/diagrams/cordova-advertising.html",
+      "sha256": "9dbb33a40c9104926c55df6548ebb9e550eeeb9c97b52215f886ebbe001265ca"
+    },
+    {
+      "kind": "design-validation",
+      "path": "reports/sdlc/issue-2641/design-validation.json",
+      "sha256": "b51fdfeb9002f6d8b7aff91ee18e0e107fd9a9683a4a3381111d079ea31271fa"
+    },
+    {
+      "kind": "browser-evidence",
+      "path": "reports/sdlc/issue-2641/design-browser.json",
+      "sha256": "03ff9ed5c6bf7f2b99f70e4bade22715aa68819e1d992740f121fb830ec695e3"
+    },
+    {
+      "kind": "visual-review",
+      "path": "reports/sdlc/issue-2641/design.md",
+      "sha256": "c9c0bbe5f43a861ddeddfcab73b0856695a225b90d7b3eb459d5b17421e66d11"
+    }
+  ],
+  "assessment": {
+    "assessor": "OpenAI Codex /root",
+    "summary": "Diagram artifact, browser and visual checks passed",
+    "criteria": [
+      "AC1",
+      "AC2",
+      "AC3",
+      "AC4"
+    ]
+  }
+}

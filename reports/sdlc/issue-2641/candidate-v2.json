@@ -1,0 +1,134 @@
+{
+  "candidate": "sha256:76e5b26c3aefbfaac52387c3163c5155b92df0a33c3c28fcbc4d83de7f066694",
+  "base": "39a3336fb2730dfbe9920c62165a2b632874af1e",
+  "files": [
+    {
+      "path": ".github/workflows/client-offline.yml",
+      "sha256": "4867e7c0b96125630c77fd84715705f6777af7d1cd8543c67e821a0091ee04b6"
+    },
+    {
+      "path": "client/gulpfile.js",
+      "sha256": "9c00d77e1ae3bb6e67806ec140fbaa26d2e469ea4247f549552cd84e5fa7e87d"
+    },
+    {
+      "path": "client/scripts/make-client-config.mjs",
+      "sha256": "4c2bf0ca822ff67ffe2c31825ce780f09659643bd7f09141b43bee435a5e6787"
+    },
+    {
+      "path": "client/scss/ionic.app.scss",
+      "sha256": "afb0834843c9db4120ffcbca7a869e2b82c0b26caaaf599833674fae3f0852e3"
+    },
+    {
+      "path": "client/test/payment-removal-smoke.cjs",
+      "sha256": "a27037d6b0cdceaa1e81c7eb14df80bbe902b6a776e91c08c99116a42679bd9c"
+    },
+    {
+      "path": "client/test/payment-removal.test.cjs",
+      "sha256": "eab229920fb3955c4b42f7aa8c60c623d1aced0945fb7c732f86fbde7bfecccd"
+    },
+    {
+      "path": "client/www/client.config.example.js",
+      "sha256": "3daf6c304d20a936675544adab6f23212dd28c947bcda9cf18c7c2409267e527"
+    },
+    {
+      "path": "client/www/index.html",
+      "sha256": "bd4359e411195f6a68dcfd3ee9d8a9d3fd0614dfaf34ae9bf0bc8e0033f9b3e8"
+    },
+    {
+      "path": "client/www/js/app.js",
+      "sha256": "7fe7f9eb741d22c4b3ee2dab2c9c20c988c02a844e61fbe23b1b3bde65531ba4"
+    },
+    {
+      "path": "client/www/js/controller.forecastctrl.js",
+      "sha256": "15116a38393d91835d506a1de7a823be8bbdffea7b2dcb258c112d17575536d8"
+    },
+    {
+      "path": "client/www/js/controller.guidectrl.js",
+      "sha256": "43f4d9debe8dbc11094a8c16894e04c488f76acb0c9b846eb53f06f6daafbc3a"
+    },
+    {
+      "path": "client/www/js/controller.purchase.alexdisler.js",
+      "sha256": null
+    },
+    {
+      "path": "client/www/js/controller.purchase.j3k0.js",
+      "sha256": null
+    },
+    {
+      "path": "client/www/js/controller.purchase.js",
+      "sha256": null
+    },
+    {
+      "path": "client/www/js/controller.settingctrl.js",
+      "sha256": "8a9749be31185b78a1cc2852821af4e40952d73c20563513c9a14df283e7b8c7"
+    },
+    {
+      "path": "client/www/js/controller.start.js",
+      "sha256": "f155d0c07fada2b7c1826d3e38f8013a6296bd227eacf1ec5ea4269f346d6cf3"
+    },
+    {
+      "path": "client/www/js/service.storage.js",
+      "sha256": "1660c3877a9c07776da69103b5fddd02205a2af53b958cad79af8e96241dc260"
+    },
+    {
+      "path": "client/www/js/service.twads.js",
+      "sha256": "b6f33099daaeb30f0f892213066f36463afe12f419dd2fb87d4be1543b0b2b0d"
+    },
+    {
+      "path": "client/www/locales/de.json",
+      "sha256": "0848ed0073d8dd0c0ef270b70928ee59c1d77cbe79d45367de6a0a5cd1f4f81e"
+    },
+    {
+      "path": "client/www/locales/en.json",
+      "sha256": "096a2e7d1a2c2c747aa63b1328c167240d24a15e7ddca2262ef3164b3520c34a"
+    },
+    {
+      "path": "client/www/locales/ja.json",
+      "sha256": "ec6fbb5c203f672db0da4c100751a5e3d4178b55b6d079c803ef4271588afeaf"
+    },
+    {
+      "path": "client/www/locales/ko.json",
+      "sha256": "0d2f22100b985efe96ffe0e494cfd37bf81c382e5472f62f79ca5fcf07775199"
+    },
+    {
+      "path": "client/www/locales/zh-CN.json",
+      "sha256": "ef85139a9ccd60412d199f94ff584588a6111a83e4fa933dda61b288a4969a85"
+    },
+    {
+      "path": "client/www/locales/zh-TW.json",
+      "sha256": "f6a8edf9e82ff2239c70828e9eb071539b465629a6042ee48cb2edc1abfdd7df"
+    },
+    {
+      "path": "client/www/templates/purchase.html",
+      "sha256": null
+    },
+    {
+      "path": "docs/architecture/README.md",
+      "sha256": "b1eb698e873d82fe9456c2cc0c31b3a07627353678f49520613649806194095d"
+    },
+    {
+      "path": "docs/architecture/diagrams/cordova-advertising.html",
+      "sha256": "9dbb33a40c9104926c55df6548ebb9e550eeeb9c97b52215f886ebbe001265ca"
+    },
+    {
+      "path": "docs/architecture/diagrams/cordova-advertising.sequence.json",
+      "sha256": "801d94cc2eef38121603c7795b7d79ea239af65a68ea10329843df4a14135ee5"
+    },
+    {
+      "path": "docs/architecture/mobile-api.md",
+      "sha256": "834947f06350d9b3dc617b99e22ec7411f4c5a312f01dc98facdc4057c953a9b"
+    },
+    {
+      "path": "docs/architecture/service-overview.md",
+      "sha256": "cbe09709d24e9ba9e4e5e15105b776d1f286e358abcfe8e884faab72956900b5"
+    },
+    {
+      "path": "ta.ios/TodayAir.xcodeproj/project.pbxproj",
+      "sha256": "5381159e7d5e9f8202da20deaea3545ba8cb365ae109f78ecda00b149e2c4df1"
+    },
+    {
+      "path": "tw.ios/TodayWeather.xcodeproj/project.pbxproj",
+      "sha256": "f4c789477ae91249b8685f21535612a35658eadcae1248d6942c89001180bcbd"
+    }
+  ]
+}

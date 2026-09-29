@@ -1,0 +1,50 @@
+{
+  "task_id": "issue-2641",
+  "repository": "WizardFactory/TodayWeather",
+  "endpoint": "pre-merge",
+  "source": "AK: #2641 \uc9c4\ud589 pre-merge\uae4c\uc9c0 \uc9c4\ud589; no existing paid users; app only including app billing libraries, server issue separately",
+  "allowed_actions": [
+    "implement",
+    "test",
+    "smoke",
+    "commit",
+    "push",
+    "pr-create",
+    "pr-update",
+    "ci-read",
+    "correct",
+    "transfer-evidence",
+    "spawn-reviewer"
+  ],
+  "accounts": [
+    {
+      "id": "current-openai-session",
+      "provider": "openai",
+      "role": "author"
+    },
+    {
+      "id": "paseo-claude-configured",
+      "provider": "anthropic",
+      "role": "reviewer"
+    },
+    {
+      "id": "ak-ongyeol",
+      "provider": "github",
+      "role": "repository"
+    }
+  ],
+  "materials": [
+    "code",
+    "tests",
+    "sdlc-evidence"
+  ],
+  "merge_authorized": false,
+  "prohibited_actions": [
+    "merge",
+    "auto-merge",
+    "merge-queue",
+    "production-deploy",
+    "permission-escalation",
+    "credential-transfer"
+  ]
+}

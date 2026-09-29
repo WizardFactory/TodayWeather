@@ -9,7 +9,7 @@ import { clientDir, isSet, loadEnv, releaseFile } from './env.mjs';
 
 // Keys of retired integrations (UA, AdMob Pro, Airbridge, paid app).
 const DROP_KEYS = ['admobProLicense', 'gaIOSKey', 'gaAndroidKey', 'airBridgeToken', 'airBridgeAppId',
-    'iOSPaidAppUrl', 'androidPaidAppUrl'];
+    'iOSPaidAppUrl', 'androidPaidAppUrl', 'isPaidApp'];
 
 function readConfig(file) {
     const sandbox = { window: {} };
@@ -56,7 +56,6 @@ if (!release) {
 }
 // Release builds follow Google's consent guidance strictly (no ads while UMP fails); see service.admobemi.js.
 config.releaseAds = release;
-config.isPaidApp = false;
 config.debug = process.argv.includes('--debug');
 config.package = 'todayWeather';
 

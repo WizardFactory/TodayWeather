@@ -29,17 +29,17 @@ All paths below are appended to `clientConfig.serverUrl`. The checked-in value i
 | Nation view | `GET /v000903/nation/:nationCode` | Separate country overview call |
 | KMA warnings | `GET /v000903/kma/special` | Separate warning screen |
 | Push registrations | `/v000902/push`, `/v000902/push-list` | Separate service with registration/update/delete operations |
-| Purchase validation | `/v000705/check-purchase` | Platform-selected purchase controller/plugin |
+| Purchase validation (retired client flow) | No call from the maintained Cordova app | Server endpoint retirement tracked separately in #2642 |
 
 The exact coordinate condition uses truthiness, so latitude `0` does not take the normal coordinate branch. Address fallback prefixes `대한민국` when missing before extracting region/city/town. This is legacy behavior, not general worldwide address parsing. URL builders concatenate strings; they do not explicitly encode each path segment.
 
-Sources: [builders and selection](../../client/www/js/service.weatherutil.js), [warnings](../../client/www/js/controller.kma.special.js), [push](../../client/www/js/service.push.js), [purchase](../../client/www/js/controller.purchase.js), [build configuration selection](../../client/gulpfile.js).
+Sources: [builders and selection](../../client/www/js/service.weatherutil.js), [warnings](../../client/www/js/controller.kma.special.js), [push](../../client/www/js/service.push.js), [build configuration selection](../../client/gulpfile.js).
 
 ### Query parameters and headers
 
 Weather builders append all settings from `Units.getAllUnits()` and then `airForecastSource=kaq`. The settings include `temperatureUnit`, `windSpeedUnit`, `pressureUnit`, `distanceUnit`, `precipitationUnit`, and `airUnit`. Defaults vary by locale/settings; do not assume every device requests Celsius or the same AQI standard. Server KMA query handling fills missing or literal `(null)` unit values, and defaults an absent `airForecastSource` to `airkorea`.
 
-The weather `_retryGetHttp` wrapper specifies only `{method:'GET', url, timeout}`; it does not explicitly attach `Device-Id` or language headers. Push and some purchase requests set their own headers. Server logging of `device-id` is not proof that every weather request sends it.
+The weather `_retryGetHttp` wrapper specifies only `{method:'GET', url, timeout}`; it does not explicitly attach `Device-Id` or language headers. Push requests set their own headers. Server logging of `device-id` is not proof that every weather request sends it.
 
 Sources: [Units](../../client/www/js/controller.units.js), [HTTP wrapper](../../client/www/js/service.weatherutil.js), [server defaults](../../server/controllers/controllerTown24h.js).
 
@@ -319,3 +319,11 @@ checked-in iOS widget does not branch on HTTP status, so plain-text 501 and 503
 follow the same response-body parsing path. Neither client is claimed to honor
 `Retry-After`. This compatibility assessment is source-based, not a mobile build
 or device test. See the [pre-change issue record](https://github.com/WizardFactory/TodayWeather/issues/2635#issuecomment-5884077414).
+
+## Cordova payment removal (#2641)
+
+The maintained `client/www` app no longer registers a purchase state, loads a billing controller, or offers purchase, restore, renewal or paid-app links. Both legacy app billing plugin installers were removed from the shared Gulp tasks; `cordova-plugin-inappbrowser` remains unrelated and supported. The config generator discards imported paid-app flags/URLs. AK confirmed there are no existing paid users, so there is no entitlement compatibility service.
+
+`TwAds` enables ordinary ads when its adapter becomes ready and retains in-memory screen visibility requests. Start/guide screens directly request show/hide; native adapter consent and failure behavior are unchanged. `TwStorage` no longer migrates `purchaseInfo`, `storeReceipt` or `twAdsInfo`; existing stale keys are ignored rather than deleted. See the [advertising sequence](diagrams/cordova-advertising.html) and [source](diagrams/cordova-advertising.sequence.json).
+
+The server's receipt-validation endpoints and dependency remain unchanged in this app-only PR; removal is tracked in [#2642](https://github.com/WizardFactory/TodayWeather/issues/2642). Historical native bundled web trees are not the modern Cordova build source and are outside this change. The legacy iOS project files still copied by Gulp have their unused StoreKit links and In-App Purchase capability removed. These are repository changes, not a deployment observation.

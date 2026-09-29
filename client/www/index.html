@@ -39,7 +39,6 @@
     <script src="js/controller.searchctrl.js"></script>
     <script src="js/controller.settingctrl.js"></script>
     <script src="js/controller.tabctrl.js"></script>
-    <script src="js/controller.purchase.js"></script>
     <script src="js/controller.units.js"></script>
     <script src="js/controller.nation.js"></script>
     <script src="js/controller.nation.air.js"></script>
@@ -125,10 +124,6 @@
                 <label class="item" ng-click="settingRadio('theme')">
                     {{'LOC_THEME_SETTING'|translate}}
                     <span style="float: right">{{getThemeValueStr(settingsInfo.theme)|translate}}</span>
-                </label>
-                <label class="item" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
-                    {{'LOC_REMOVE_ADS'|translate}}
-                    <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
                 </label>
                 <label class="item" ng-click="clickMenu('sendMail')">
                     {{'LOC_SEND_FEEDBACK'|translate}}

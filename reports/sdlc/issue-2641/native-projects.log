@@ -1,0 +1,2 @@
+PASS parsed tw.ios/TodayWeather.xcodeproj/project.pbxproj; no StoreKit/InAppPurchase declarations
+PASS parsed ta.ios/TodayAir.xcodeproj/project.pbxproj; no StoreKit/InAppPurchase declarations

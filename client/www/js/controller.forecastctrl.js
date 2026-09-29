@@ -1,5 +1,5 @@
 angular.module('controller.forecastctrl', [])
-    .controller('ForecastCtrl', function ($scope, WeatherInfo, WeatherUtil, Util, Purchase, $stateParams,
+    .controller('ForecastCtrl', function ($scope, WeatherInfo, WeatherUtil, Util, $stateParams,
                                           $rootScope, $location, $ionicHistory, $translate, Units, Push, TwStorage) {
         var colWidth;
 

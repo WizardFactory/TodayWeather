@@ -1,5 +1,5 @@
 angular.module('controller.settingctrl', [])
-    .controller('SettingCtrl', function($scope, $rootScope, Util, Purchase, $ionicHistory, $translate,
+    .controller('SettingCtrl', function($scope, $rootScope, Util, $ionicHistory, $translate,
                                         $ionicSideMenuDelegate, $ionicPopup, $location, TwStorage, radioList) {
 
         var menuContent = null;
@@ -80,10 +80,6 @@ angular.module('controller.settingctrl', [])
             }).finally(function () {
                 $rootScope.showAlert(strTitle, strMsg);
             });
-        };
-
-        $scope.hasInAppPurchase = function () {
-            return Purchase.hasInAppPurchase || Purchase.paidAppUrl.length > 0;
         };
 
         $scope.showAbout = function () {

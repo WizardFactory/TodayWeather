@@ -1,0 +1,8 @@
+# Implementation plan
+Owner /root. Canonical inputs: intent and specs/issue-2641.md; reports/sdlc/issue-2641/investigation.md; advertising diagram.
+1. Add Node regression tests covering absence of purchase UI/modules/build inputs and actual TwAds readiness/visibility without stored entitlements. Capture intended Red.
+2. Delete purchase controllers/template; remove injections/state/menu, purchase translations/styles. Remove Gulp billing installers and keys. Drop legacy config flags/URLs. Remove purchase storage migration and TwAds persisted account logic. Preserve inappbrowser, native ad consent and server files.
+3. Update mobile architecture and add post-removal advertising diagram; validate/deliver/browser/visual check. Run Green and post-refactor tests, then separate local HTTP + Chromium smoke loading real Ionic/Angular and app source (no external API calls).
+4. Independent Claude verification in a separate context with read-only author files; own scratch tests in /tmp. Commit tested content, push branch, create PR, inspect CI and exact-head eligible cross-provider review. Correct any Must Fix and stop merge-ready.
+Risk: Angular injection failures, stale twAdsInfo disabling banners, guide/start visibility. Prove these with runtime checks. Rejected entitlement shim follows AK's no-paid-users correction. Rollback: revert the single task commit; no persistent destructive migration or server deployment.
+Tests: node --test client/test/payment-removal.test.cjs; node client/test/payment-removal-smoke.cjs (PLAYWRIGHT_MODULE and Chromium path supported). Native device/store SDK behavior is unchanged and not exercised by browser smoke.
