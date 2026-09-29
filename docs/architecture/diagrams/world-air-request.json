@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Overseas weather: shared air providers on every request",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      580
+    ]
+  },
+  "participants": [
+    {
+      "id": "world-route",
+      "type": "backend",
+      "label": "World route",
+      "sublabel": "DSF v901\u2013903 + widgets"
+    },
+    {
+      "id": "weather",
+      "type": "backend",
+      "label": "Weather service",
+      "sublabel": "existing DSF cache + VC"
+    },
+    {
+      "id": "air-service",
+      "type": "backend",
+      "label": "Shared air service",
+      "sublabel": "same chain as domestic"
+    },
+    {
+      "id": "air-store",
+      "type": "database",
+      "label": "Shared Mongo",
+      "sublabel": "observations + usage"
+    },
+    {
+      "id": "air-providers",
+      "type": "external",
+      "label": "Air providers",
+      "sublabel": "Google \u00b7 OWM \u00b7 VC \u00b7 WAQI"
+    }
+  ],
+  "segments": [
+    {
+      "from": 146,
+      "to": 214,
+      "label": "Parallel branches"
+    },
+    {
+      "from": 220,
+      "to": 448,
+      "label": "Air cache miss"
+    },
+    {
+      "from": 455,
+      "to": 496,
+      "label": "Join and render"
+    }
+  ],
+  "messages": [
+    {
+      "id": "weather-start",
+      "from": "world-route",
+      "to": "weather",
+      "y": 160,
+      "label": "start weather cache / fetch",
+      "variant": "default"
+    },
+    {
+      "id": "air-start",
+      "from": "world-route",
+      "to": "air-service",
+      "y": 196,
+      "label": "start air + 4 s response deadline",
+      "variant": "emphasis"
+    },
+    {
+      "id": "air-cache-read",
+      "from": "air-service",
+      "to": "air-store",
+      "y": 234,
+      "label": "read 0.01\u00b0 cell (30 min / failure 2 min)",
+      "variant": "default"
+    },
+    {
+      "id": "air-cache-miss",
+      "from": "air-store",
+      "to": "air-service",
+      "y": 264,
+      "label": "miss; hit returns accepted observation",
+      "variant": "return"
+    },
+    {
+      "id": "air-policy",
+      "from": "air-service",
+      "to": "air-store",
+      "y": 294,
+      "label": "check budgets; reserve paid slot",
+      "variant": "default"
+    },
+    {
+      "id": "air-fetch",
+      "from": "air-service",
+      "to": "air-providers",
+      "y": 324,
+      "label": "next allowed provider; bounded timeout",
+      "variant": "default"
+    },
+    {
+      "id": "air-observation",
+      "from": "air-providers",
+      "to": "air-service",
+      "y": 354,
+      "label": "normalize + validate observation",
+      "variant": "return"
+    },
+    {
+      "id": "air-account",
+      "from": "air-service",
+      "to": "air-store",
+      "y": 384,
+      "label": "account result; await cache write",
+      "variant": "default"
+    },
+    {
+      "id": "air-ready",
+      "from": "air-service",
+      "to": "world-route",
+      "y": 420,
+      "label": "air before deadline, else continue without air",
+      "variant": "return"
+    },
+    {
+      "id": "weather-ready",
+      "from": "weather",
+      "to": "world-route",
+      "y": 472,
+      "label": "weather joins bounded air branch",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Same policy and cache",
+      "items": [
+        "Cache hit skips providers; cache miss uses free Google \u2192 OpenWeather \u2192 WAQI, then enabled paid order.",
+        "Shared monthly budgets; paid HTTP requires a confirmed atomic reservation. No second legacy WAQI call."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Bounded wait; client owns display",
+      "items": [
+        "Air deadline: 4 s default, including Mongo. Return pending + retryAfterSeconds: 3; client decides whether to retry. Late work warms cache.",
+        "Current row only: source + attribution for client display. Preserve concentrations, requested grades and local time; no late response changes."
+      ]
+    }
+  ]
+}

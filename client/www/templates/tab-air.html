@@ -42,7 +42,7 @@
                     <div class="main-box-air-title">
                         {{mainName|translate}}
                     </div>
-                    <div class="main-box-air-content" ng-style="{'color': grade2Color(airCodeGrade), 'font-size': bigFontSize+'px'}">
+                    <div class="main-box-air-content" ng-class="{'air-grade-label': aqiCode === 'aqi'}" ng-style="{'color': grade2Color(airCodeGrade), 'font-size': (aqiCode === 'aqi' ? bigFontSize * 0.55 : bigFontSize)+'px'}">
                         {{mainInfo}}<span>{{getAirCodeUnit(aqiCode)}}</span>
                     </div>
                     <div class="main-box-air-summary">

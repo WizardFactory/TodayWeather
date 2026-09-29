@@ -319,6 +319,11 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
         .main-box-air-content {
           margin: auto;
           font-size: 64px;
+          // AQI grades are phrases, unlike pollutant numbers: wrap only between words.
+          &.air-grade-label {
+            word-break: normal;
+            overflow-wrap: normal;
+          }
           i, span {
             font-size: 32px;
           }
@@ -1195,6 +1200,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
       }
       .day-button {
         margin: 4px;
+        min-width: 0;
         line-height: 32px;
         font-size: 15px;
         font-weight: 500;
@@ -1205,6 +1211,17 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
         &.activated {
           border-color: #a2a2a2;
           background-color: #e5e5e5;
+        }
+      }
+      // Seven weekday buttons overflow a 320 px row with 16 px item padding and 4 px margins.
+      @media (max-width: 359px) {
+        .item.row {
+          padding-left: 8px;
+          padding-right: 8px;
+        }
+        .day-button {
+          margin: 4px 2px;
+          font-size: 14px;
         }
       }
     }
@@ -1282,11 +1299,6 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
       right: 25px;
     }
   }
-}
-
-/* purchase */
-.purchase-content {
-  background-color: #f5f5f5;
 }
 
 /* nation */
@@ -1563,11 +1575,6 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 /* iPhone X */
 @media only screen and (device-width : 375px) and (device-height : 812px) and (-webkit-device-pixel-ratio : 3)
 {
-  .purchase-content {
-    margin-top: 32px;
-    margin-bottom: 32px;
-  }
-
   .start-content {
     margin-top: 32px;
   }

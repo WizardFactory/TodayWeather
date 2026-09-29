@@ -5,6 +5,11 @@
 var async = require('async');
 var express = require('express');
 var router = express.Router();
+// S3 mode forwards the complete mutation to its single state owner before legacy controllers run.
+router.use(function (req, res, next) {
+    if (process.env.PUSH_STORE !== 's3') { return next(); }
+    return require('../../lib/pushCoordinator/ipc').middleware(true)(req, res, next);
+});
 var ControllerPush = require('../../controllers/controllerPush');
 var AlertPushController = require('../../controllers/alert.push.controller');
 var UnitConverter = require('../../lib/unitConverter');
@@ -117,6 +122,10 @@ router.post('/', function(req, res) {
 
            if (!obj.hasOwnProperty('location') && !obj.hasOwnProperty('town')) {
                throw new Error('invalid push info location or town is empty');
+           }
+
+           if (obj.category !== undefined && obj.category !== 'alarm' && obj.category !== 'alert') {
+               throw new Error('invalid push info category');
            }
         });
     }

@@ -84,11 +84,11 @@ Untracked `config/config-backup.js`, `config/config.js.latest`, `config/config.j
 | Invalid current T1H retry count | 50 | 40 |
 | Failed-list recursion delay | 0 ms | 50 ms |
 | Invalid-list recursion delay | 0 ms | 50 ms |
-| `requestData` cutoff | `i > 100`: indices 0–100 eligible | `i > 20`: indices 0–20 eligible, not exactly 20 requests |
+| `requestData` cutoff | `i > 100`: indices 0–100 eligible; since #2604 a walk of the whole list with 101 in flight (`GATHER_REQUEST_CONCURRENCY`) | `i > 20`: indices 0–20 eligible, not exactly 20 requests |
 | `requestDataByBaseTimeList` cutoff | `i >= 200`: indices 0–199 eligible | `i >= 50`: indices 0–49 eligible |
 | `PastConditionGather.start` update-list argument | 10 | `updateList.length/20`, possibly fractional; consumer termination not approved |
 
-Indices describe eligibility, not a guarantee of simultaneous requests; request callbacks, failures and retries affect concurrency. No configurable profile was introduced here. Since #2588, the retry budgets, the invalid-T1H retry, both recursion delays and the `PastConditionGather` argument (divisor mode rounds up) can be set by environment; defaults stay upstream. See [gather runtime policy](../operations/gather-runtime-policy.md). The request cutoffs remain literals.
+Indices describe eligibility, not a guarantee of simultaneous requests; request callbacks, failures and retries affect concurrency. No configurable profile was introduced here. Since #2588, the retry budgets, the invalid-T1H retry, both recursion delays and the `PastConditionGather` argument (divisor mode rounds up) can be set by environment; defaults stay upstream. See [gather runtime policy](../operations/gather-runtime-policy.md). The `requestDataByBaseTimeList` cutoff remains a literal; the `requestData` cutoff became the `GATHER_REQUEST_CONCURRENCY` walk (#2604).
 
 All minutes below are UTC; the air-forecast hour gate also uses UTC. Upstream's active schedule is documented in [weather collection](weather-collection.md#schedule-as-implemented).
 

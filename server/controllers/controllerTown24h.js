@@ -17,6 +17,7 @@ var KecoController = require('../controllers/kecoController');
 var AirkoreaHourlyForecastCtrl = require('../controllers/airkorea.hourly.forecast.controller');
 var KaqHourlyForecastCtrl = require('../controllers/kaq.hourly.forecast.controller');
 var KmaSpecialWeatherController = require('../controllers/kma.specialweather.controller');
+var AirFallback = require('../lib/AQI/airFallback');
 
 var config = require('../config/config');
 
@@ -832,15 +833,22 @@ function ControllerTown24h() {
         }
     };
 
+    function _formatAirKstTime(epoch) {
+        return new Date(epoch + 9 * 3600000).toISOString().slice(0, 16).replace('T', ' ');
+    }
+
     this._insertEmptyPollutantHourlyObj = function (lastDataTime) {
         var list = [];
         try {
-            var date = new Date(lastDataTime);
-            date.setHours(date.getHours()-24);
+            var epoch = KecoController._parseDateTime(lastDataTime);
+            if (!isFinite(epoch)) {
+                return list;
+            }
+            epoch -= 24 * 3600000;
             for (var i=0; i<=24; i++) {
-                var hourlyObj = {date: kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(date)};
+                var hourlyObj = {date: _formatAirKstTime(epoch)};
                 list.push(hourlyObj);
-                date.setHours(date.getHours()+1);
+                epoch += 3600000;
             }
         }
         catch (err) {
@@ -862,7 +870,7 @@ function ControllerTown24h() {
 
             arpltn = KecoController.recalculateValue(arpltn, airUnit);
             if (arpltn.dataTime.indexOf("24:00") > 0) {
-                arpltn.dataTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(new Date(arpltn.dataTime));
+                arpltn.dataTime = _formatAirKstTime(KecoController._parseDateTime(arpltn.dataTime));
             }
 
             ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
@@ -995,6 +1003,16 @@ function ControllerTown24h() {
         return req.airInfo;
     };
 
+    function _freshAirDetailRows(rows, now) {
+        if (!Array.isArray(rows)) {
+            return [];
+        }
+        return rows.filter(function (row) {
+            // The fallback chain validates its own timestamps before producing these rows.
+            return row && ((row.source && row.source !== 'airkorea') || KecoController._checkDateTime(row, now));
+        });
+    }
+
     this.makeAirInfo = function (req, res, next) {
         var meta = {};
         meta.sID = req.sessionID;
@@ -1007,13 +1025,14 @@ function ControllerTown24h() {
         try {
             var airInfo;
             var airUnit = req.query.airUnit || 'airkorea';
-            if(req.arpltnList) {
+            var arpltnList = _freshAirDetailRows(req.arpltnList, new Date());
+            if(arpltnList.length > 0) {
                 if (airInfo == undefined) {
                     airInfo = self._getAirInfo(req);
                 }
-                airInfo.last = req.arpltnList[0];
+                airInfo.last = arpltnList[0];
                 airInfo.pollutants = {};
-                self._insertHourlyPollutants(airInfo.pollutants, req.arpltnList, airUnit, airInfo.last.dataTime);
+                self._insertHourlyPollutants(airInfo.pollutants, arpltnList, airUnit, airInfo.last.dataTime);
             }
             if ( req.midData && Array.isArray(req.midData.dailyData) ) {
                 var dailyList = req.midData.dailyData.filter(function (value) {
@@ -1037,6 +1056,76 @@ function ControllerTown24h() {
         return this;
     };
 
+    function _hasAirValue(arpltn) {
+        if (!arpltn) {
+            return false;
+        }
+        return ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2', 'khai'].some(function (name) {
+            var value = arpltn[name+'Value'];
+            return typeof value === 'number' && isFinite(value) && value !== -1;
+        });
+    }
+
+    /**
+     * When no nearby AirKorea station has a current observation, ask the air provider chain
+     * (#2622 WAQI, #2628 Google/OpenWeather/Visual Crossing/WAQI). The observation replaces the
+     * (stale) AirKorea station lists for makeAirInfoList.
+     */
+    this.getAirFallback = function (req, res, next) {
+        var meta = {};
+        meta.sID = req.sessionID;
+        meta.method = 'getAirFallback';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+
+        var called = false;
+        function done() {
+            if (!called) {
+                called = true;
+                next();
+            }
+        }
+
+        try {
+            if (!req.current || _hasAirValue(req.current.arpltn)) {
+                return done();
+            }
+            var gCoord = req.gCoord || req.airGCoord;
+            if (!gCoord) {
+                log.info('skip air fallback: no coordinate', meta);
+                return done();
+            }
+            AirFallback.getArpltn(gCoord, new Date(), function (err, arpltn, reason) {
+                try {
+                    if (err) {
+                        err.message += ' ' + JSON.stringify(meta);
+                        log.error(err);
+                    }
+                    else if (arpltn) {
+                        req.current.arpltn = arpltn;
+                        req.arpltnList = [arpltn];
+                        req.arpltnStnList = [[arpltn]];
+                    }
+                    else {
+                        log.info('no air fallback reason=' + reason, meta);
+                    }
+                }
+                catch (e) {
+                    e.message += ' ' + JSON.stringify(meta);
+                    log.error(e);
+                }
+                done();
+            });
+        }
+        catch (err) {
+            err.message += ' ' + JSON.stringify(meta);
+            log.error(err);
+            done();
+        }
+        return this;
+    };
+
     /**
      * make 3 objects
      * @param req
@@ -1057,9 +1146,13 @@ function ControllerTown24h() {
             var airUnit = req.query.airUnit || 'airkorea';
             if(req.arpltnStnList) {
                 var airInfoList = [];
+                var now = new Date();
                 for (var i=0; i<req.arpltnStnList.length; i++) {
-                    var arpltnList = req.arpltnStnList[i];
-                    var airInfo = {source: "airkorea"};
+                    var arpltnList = _freshAirDetailRows(req.arpltnStnList[i], now);
+                    if (arpltnList.length === 0) {
+                        continue;
+                    }
+                    var airInfo = {source: arpltnList[0] && arpltnList[0].source ? arpltnList[0].source : 'airkorea'};
                     airInfo.last = arpltnList[0];
                     airInfo.pollutants = {};
                     self._insertHourlyPollutants(airInfo.pollutants, arpltnList, airUnit, airInfo.last.dataTime);
@@ -1102,6 +1195,10 @@ function ControllerTown24h() {
     this._getAirForecast = function(airInfo, forecastSource, airUnit, callback) {
         var ctrl;
         var stnName;
+        // station forecasts are keyed by AirKorea station name; other providers have none (#2622, #2628)
+        if (airInfo && airInfo.source && airInfo.source !== 'airkorea') {
+            return callback(null, airInfo);
+        }
         try {
             stnName = airInfo.last.stationName;
             if (forecastSource === 'kaq') {
@@ -1810,7 +1907,7 @@ function ControllerTown24h() {
             lang = req.headers['accept-language'];
         }
 
-        var url = config.apiServer.url + '/geocode/coord/'+loc;
+        var url = config.apiServer.url + '/geocode/v000903/coord/'+loc;
         _retryRequest(url, lang, (err, geoInfo)=> {
             if (err) {
                 return next(err);

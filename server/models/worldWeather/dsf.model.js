@@ -30,6 +30,7 @@ var dsfForecastSchema = new mongoose.Schema({
             vis:        {type: Number, default:0},  // in miles
             cloud:      {type: Number, default:0},  // percentage (0 ~ 1)
             pres:       {type: Number, default:0},  // millibar
+            uvIndex:    {type: Number}, // Optional UV; no default for pre-UV cache records.
             oz:         {type: Number, default:0},   // dobson unit
             icon:       {type: String, default: ''} //icon이 강수 1순위(과거는 pre_pro가 낮아도 icon이 rain인 경우 있음), pre_pro 2순위
         },
@@ -50,6 +51,7 @@ var dsfForecastSchema = new mongoose.Schema({
                 vis:        {type: Number, default:0},  // in miles
                 cloud:      {type: Number, default:0},  // percentage (0 ~ 1)
                 pres:       {type: Number, default:0},  // millibar
+                uvIndex:    {type: Number}, // Optional UV; no default for pre-UV cache records.
                 oz:         {type: Number, default:0},   // dobson unit
                 icon:       {type: String, default: ''} //icon이 강수 1순위, pre_pro 2순위
             }]
@@ -83,6 +85,7 @@ var dsfForecastSchema = new mongoose.Schema({
                 vis:            {type: Number, default:0},  // in miles
                 cloud:          {type: Number, default:0},  // percentage (0 ~ 1)
                 pres:           {type: Number, default:0},  // millibar
+                uvIndex:    {type: Number}, // Optional UV; no default for pre-UV cache records.
                 oz:             {type: Number, default:0},   // dobson unit
                 icon:           {type: String, default: ''} //icon이 강수 1순위, pre_pro 2순위
             }]

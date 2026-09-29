@@ -16,12 +16,20 @@ var controllerRequester = require('./controllerRequester');
 var ControllerWeatherDesc = require('../controller.weather.desc');
 var UnitConverter = require('../../lib/unitConverter');
 var aqiConverter = require('../../lib/aqi.converter');
+var LifeIndexKmaController = require('../lifeIndexKmaController');
 
 var commandList = ['restart', 'renewGeocodeList'];
 var weatherCategory = ['forecast', 'current'];
 
 var conCollector = require('./controllerCollector');
 var controllerAqi = require('./controllerAqi');
+var airFallback = require('../../lib/AQI/airFallback');
+var airPolicy = require('../../config/air');
+var airObservation = require('../../lib/air/observation');
+
+// Top-level response hint when the air deadline released the weather: the chain may still fill the
+// shared cache, so a client may ask again after a few seconds (its own decision; the server never retries).
+var AIR_PENDING_RETRY_AFTER_SECONDS = 3;
 
 var itemWuCurrent = ['date', 'desc', 'code', 'tmmp', 'ftemp', 'humid', 'windspd', 'winddir', 'cloud', 'vis', 'slp', 'dewpoint'];
 var itemWuForecastSummary =[
@@ -642,6 +650,63 @@ function controllerWorldWeather() {
             });
     };
 
+    /**
+     * Current air for the requested coordinates through the shared air service (#2628): provider
+     * chain, shared cache and budgets, as for domestic towns. Sets req.airObservation (normalized,
+     * UTC) when a usable observation exists. Never fails the weather request.
+     * One deadline (AIR_RESPONSE_DEADLINE_MS) covers the whole branch, cache read included. When it
+     * passes, the request goes on without air; the service keeps running, and its result, written to
+     * the shared cache, serves the next request. A late answer changes nothing on this request.
+     * Only the expiry sets req.airStatus (pending, retryAfterSeconds); terminal answers (no provider, all
+     * failed, nothing usable) and successes set nothing. mergeAqi copies it to the response.
+     */
+    self._getAirFromChain = function(req, cDate, callback) {
+        var meta = {method: '_getAirFromChain', sID: req.sessionID};
+        var deadlineMs = airPolicy.responseDeadlineMs;
+        var settled = false;
+        var timer;
+        function settle(observation) {
+            settled = true;
+            clearTimeout(timer);
+            if (observation) {
+                req.airObservation = observation;
+            }
+            callback();
+        }
+        timer = setTimeout(function () {
+            if (!settled) {
+                log.warn('TWW> air deadline of ' + deadlineMs + ' ms passed; answering without air', meta);
+                req.airStatus = {state: 'pending', retryAfterSeconds: AIR_PENDING_RETRY_AFTER_SECONDS};
+                settle();
+            }
+        }, deadlineMs);
+        var gCoord = req.geocode ? {lat: Number(req.geocode.lat), lon: Number(req.geocode.lon)} : undefined;
+        try {
+            airFallback.getArpltn(gCoord, cDate, function (err, arpltn, reason, observation) {
+                if (settled) {
+                    log.info('TWW> air answered after the deadline; left for the shared cache', meta);
+                    return;
+                }
+                if (err) {
+                    log.warn('TWW> air service failed ' + err.message, meta);
+                    return settle();
+                }
+                if (!(arpltn && observation)) {
+                    log.info('TWW> no usable air reason=' + reason, meta);
+                }
+                settle(arpltn ? observation : undefined);
+            });
+        }
+        catch (err) {
+            if (settled) {
+                // thrown by the caller's callback, not by the air service
+                throw err;
+            }
+            log.warn('TWW> air service failed ' + err.message, meta);
+            settle();
+        }
+    };
+
     self.queryTwoDaysWeather2 = function(req, res, next) {
         var cDate = new Date();
         var meta = {};
@@ -725,11 +790,18 @@ function controllerWorldWeather() {
                     dsfController.getDsfData(req, cDate, callback);
                 },
                 function(callback) {
-                    self._getWaqiFromAll(req, cDate, callback);
+                    self._getAirFromChain(req, cDate, callback);
                 }
             ],
             function(err) {
                 if(err){
+                    var unavailable = require('../../lib/weatherUnavailable');
+                    if(unavailable.isUnavailable(err)){
+                        res.set('Retry-After', String(unavailable.retryAfter(err)));
+                        res.set('Cache-Control', 'no-store');
+                        return res.status(503).json({code: err.code, retryAt: err.retryAt});
+                    }
+
                     err.message += ' ' +JSON.stringify(meta);
                     //TW-398 next에서 error message가 짤림.
                     log.warn(err.message);
@@ -1684,13 +1756,13 @@ function controllerWorldWeather() {
                         req.result.daily.forEach(function(dailyItem, index){
                             //log.info('dailyItem : ', dailyItem.date);
                             if(self._compareDateString(dailyItem.date, dbItem.dateObj)){
-                                req.result.daily[index] = self._makeDailyDataFromDSF(dbItem);
+                                req.result.daily[index] = self._makeDailyDataFromDSF(dbItem, res);
                                 isExist = true;
                             }
                         });
                         if(!isExist){
                             //log.info('NEW! DSF -> Daily : ', dbItem.dateObj.toString());
-                            req.result.daily.push(self._makeDailyDataFromDSF(dbItem));
+                            req.result.daily.push(self._makeDailyDataFromDSF(dbItem, res));
                         }
                     }
                 });
@@ -1963,6 +2035,10 @@ function controllerWorldWeather() {
                     var isNight = self._isNight(curDate, item.daily.data);
                     current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
                     req.result.thisTime.push(current);
+                    // mergeAqi puts the current air on this row, shown in the offset used for its date
+                    req.currentThisTime = current;
+                    req.currentTimeOffsetMs = (item.current.timeOffset !== undefined && item.current.timeOffset !== null) ?
+                        item.current.timeOffset * 60 * 1000 : req.result.timezone.ms;
                     break;
                 }
             }
@@ -1992,6 +2068,27 @@ function controllerWorldWeather() {
         var meta = {};
         var errPrint = [];
         meta.sID = req.sessionID;
+
+        if (req.airStatus && req.result) {
+            req.result.airStatus = req.airStatus;
+        }
+
+        if (req.airObservation) {
+            var thisTimeList = req.result.thisTime || [];
+            // the current row only: yesterday and forecasts get no air
+            if (req.currentThisTime && thisTimeList.indexOf(req.currentThisTime) !== -1) {
+                try {
+                    self._applyAirObservation(req.currentThisTime, req.airObservation, req.currentTimeOffsetMs || 0, req.query.airUnit, res);
+                }
+                catch (err) {
+                    log.error(err);
+                }
+            }
+            else {
+                log.warn('TWW> no current row for the air observation', meta);
+            }
+            return next();
+        }
 
         if (req.AQI && req.AQI.data) {
             if (req.result.thisTime === undefined || req.AQI.data.length == 0) {
@@ -2120,12 +2217,95 @@ function controllerWorldWeather() {
     };
 
 
+    /**
+     * Normalized observation (PM µg/m³, gases ppm) → current row fields, graded directly from the
+     * concentrations in the requested airUnit, as mergeAqi grades WAQI data. Missing pollutants stay missing.
+     * @param offsetMs region offset of the current row; mTime is the observation time in that offset
+     */
+    self._applyAirObservation = function (current, observation, offsetMs, airUnit, res) {
+        var pollutants = observation.pollutants || {};
+        var indexList = [];
+        var gradeList = [];
+        ['pm10', 'pm25', 'co', 'so2', 'no2', 'o3'].forEach(function (code) {
+            var value = pollutants[code];
+            if (typeof value !== 'number' || !isFinite(value) || value < 0) {
+                return;
+            }
+            var grade;
+            var index;
+            current[code + 'Value'] = value;
+            if (airUnit === 'airnow') {
+                index = aqiConverter.value2index('airnow', code, value);
+                grade = aqiConverter.value2grade('airnow', code, value);
+                current[code + 'Str'] = UnitConverter.airnowGrade2str(grade, code, res);
+            }
+            else if (airUnit === 'airkorea' || airUnit === 'airkorea_who') {
+                index = aqiConverter.value2index(airUnit, code, value);
+                grade = aqiConverter.value2grade(airUnit, code, value);
+                current[code + 'Str'] = UnitConverter.airkoreaGrade2str(grade, code, res);
+            }
+            else {
+                index = aqiConverter.value2index('aqicn', code, value);
+                grade = aqiConverter.index2Grade('aqicn', index);
+                current[code + 'Str'] = UnitConverter.airnowGrade2str(grade, code, res);
+            }
+            current[code + 'Grade'] = grade;
+            indexList.push(index);
+            gradeList.push(grade);
+        });
+
+        if (indexList.length) {
+            current.aqiValue = Math.max.apply(null, indexList);
+            if (airUnit === 'airnow') {
+                current.aqiGrade = Math.max.apply(null, gradeList);
+                current.aqiStr = UnitConverter.airnowGrade2str(current.aqiGrade, 'aqi', res);
+            }
+            else if (airUnit === 'airkorea_who') {
+                current.aqiGrade = Math.max.apply(null, gradeList);
+                current.aqiStr = UnitConverter.airkoreaGrade2str(current.aqiGrade, 'aqi', res);
+            }
+            else if (airUnit === 'airkorea') {
+                // khai: extra points for two or more pollutants over index 100
+                var additionalPoint = indexList.filter(function (v) { return v > 100; }).length;
+                if (additionalPoint >= 3) {
+                    current.aqiValue += 75;
+                }
+                else if (additionalPoint >= 2) {
+                    current.aqiValue += 50;
+                }
+                current.aqiGrade = aqiConverter.index2Grade('airkorea', current.aqiValue);
+                current.aqiStr = UnitConverter.airkoreaGrade2str(current.aqiGrade, 'aqi', res);
+            }
+            else {
+                current.aqiGrade = aqiConverter.index2Grade('aqicn', current.aqiValue);
+                current.aqiStr = UnitConverter.airGrade2Str('aqicn', current.aqiGrade, res);
+            }
+        }
+
+        var observed = new Date(observation.observedAt);
+        if (!isNaN(observed.getTime())) {
+            // "YYYY-MM-DD HH:mm" in the region's offset, as AirKorea dataTime
+            current.mTime = self._convertTimeString(new Date(observed.getTime() + offsetMs)).replace(/\./g, '-');
+        }
+        current.airSource = observation.provider;
+        var attribution = airObservation.attributionText(observation.attribution);
+        if (attribution) {
+            current.airAttribution = attribution;
+        }
+        if (observation.stationName) {
+            current.mCity = observation.stationName;
+        }
+    };
+
     self.makeAirInfo = function (req, res, next) {
         try {
             var result = req.result;
             var current = result.thisTime[result.thisTime.length-1];
             if ( current.hasOwnProperty('arpltn') ) {
-                result.airInfo = {source: "aqicn"};
+                result.airInfo = {source: current.arpltn.source || "aqicn"};
+                if (current.arpltn.attribution) {
+                    result.airInfo.attribution = current.arpltn.attribution;
+                }
                 result.airInfo.last = current.arpltn;
 
                 var last = result.airInfo.last;
@@ -2537,8 +2717,21 @@ function controllerWorldWeather() {
         return value !== undefined && value !== null && value !== -100;
     };
 
-    self._makeDailyDataFromDSF = function(summary){
+    // Additive web/mobile contract; translations belong to this response, not the cache.
+    self._addDsfUv = function(target, summary, ts) {
+        var value = summary.uvIndex;
+        if (typeof value !== 'number' || !isFinite(value) || value < 0) {
+            return;
+        }
+        target.uvIndex = value;
+        target.ultrv = value;
+        target.ultrvGrade = LifeIndexKmaController._ultrvGrade(value);
+        target.ultrvStr = LifeIndexKmaController.ultrvStr(target.ultrvGrade, ts);
+    };
+
+    self._makeDailyDataFromDSF = function(summary, ts){
         var day = {};
+        self._addDsfUv(day, summary, ts);
 
         if(summary.dateObj){
             day.date = summary.dateObj;
@@ -2853,6 +3046,7 @@ function controllerWorldWeather() {
      */
     self._makeCurrentDataFromDSFCurrent = function(summary, ts) {
         var current = {};
+        self._addDsfUv(current, summary, ts);
 
         if(summary.dateObj){
             current.date = summary.dateObj;

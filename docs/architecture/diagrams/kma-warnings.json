@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [1250, 600],
+    "title": "KMA warning collection and town warnings (#2609)",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "82ad45192aac1aa190c27a39a255cbcecf287757",
+      "provider": "github",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "timer",
+      "type": "backend",
+      "label": "Scrape timer",
+      "sublabel": "3 min · scrape/local; gather flag",
+      "pos": [35, 90],
+      "size": [185, 70],
+      "sources": [{"path": "server/controllers/controllerManager.js"}, {"path": "server/app.js"}]
+    },
+    {
+      "id": "collector",
+      "type": "backend",
+      "label": "Warning collector",
+      "sublabel": "Change-driven, retry while lagging",
+      "pos": [355, 90],
+      "size": [185, 70],
+      "sources": [{"path": "server/lib/kmaWarningCollector.js"}, {"path": "server/lib/kmaScraper.js"}]
+    },
+    {
+      "id": "requester",
+      "type": "backend",
+      "label": "API requester",
+      "sublabel": "Keys, paging, error classes",
+      "pos": [685, 90],
+      "size": [185, 70],
+      "sources": [{"path": "server/lib/kmaWarningRequester.js"}]
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "WthrWrnInfoService",
+      "sublabel": "data.go.kr · JSON",
+      "pos": [1020, 90],
+      "size": [185, 70]
+    },
+    {
+      "id": "replay",
+      "type": "backend",
+      "label": "Store and replay",
+      "sublabel": "Bulletins · getPwnCd → state",
+      "pos": [355, 270],
+      "size": [185, 70],
+      "sources": [{"path": "server/lib/kmaWarningZones.js"}]
+    },
+    {
+      "id": "mongo",
+      "type": "database",
+      "label": "MongoDB",
+      "sublabel": "Bulletins types 1–4 · zone state",
+      "pos": [685, 270],
+      "size": [185, 70],
+      "sources": [{"path": "server/models/modelKmaSpecialWeatherSituation.js"}, {"path": "server/models/modelKmaSpecialWeatherZone.js"}]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Warning readers",
+      "sublabel": "/kma/special · getSpecialInfo",
+      "pos": [1020, 270],
+      "size": [185, 70],
+      "sources": [{"path": "server/controllers/kma.specialweather.controller.js"}, {"path": "server/routes/v000903/route.kma.v000903.js"}]
+    },
+    {
+      "id": "zones",
+      "type": "backend",
+      "label": "Zone table",
+      "sublabel": "KMA 특보구역 2026-06-01",
+      "pos": [1020, 450],
+      "size": [185, 70],
+      "sources": [{"path": "server/utils/data/kma_warning_zones.csv"}]
+    },
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "client/www",
+      "sublabel": "S12 screen · summary text",
+      "pos": [685, 450],
+      "size": [185, 70],
+      "sources": [{"path": "client/www/js/controller.kma.special.js"}, {"path": "client/www/js/controller.forecastctrl.js"}]
+    }
+  ],
+  "connections": [
+    {"id": "timer-collector", "from": "timer", "to": "collector", "label": "gather()"},
+    {"id": "collector-requester", "from": "collector", "to": "requester", "label": "Poll, then on change"},
+    {"id": "requester-provider", "from": "requester", "to": "provider", "label": "HTTP GET"},
+    {"id": "collector-replay", "from": "collector", "to": "replay", "label": "Bulletins, zone events", "labelDy": 45},
+    {"id": "replay-mongo", "from": "replay", "to": "mongo", "label": "Upsert"},
+    {"id": "mongo-api", "from": "mongo", "to": "api", "label": "Latest docs, active zones"},
+    {"id": "zones-api", "from": "zones", "to": "api", "label": "Town → zones"},
+    {"id": "api-client", "from": "api", "to": "client", "label": "JSON"}
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Change detection (decision 6)",
+      "items": [
+        "getPwnStatus, getWthrPwn, getWthrInfo and getWthrBrkNews every cycle.",
+        "A new tmFc/tmSeq calls getWthrWrnMsg and getPwnCd; stays pending while either lags.",
+        "getPwnCd windows overlap and resync hourly; quota errors stop the cycle."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Replay rules (decision 7)",
+      "items": [
+        "Commands 1/3/6/7 set active, 2/8 clear that zone and type.",
+        "Newest event per zone and warnVar wins; cancelled rows are ignored.",
+        "getPwnCd one KST day per call; 60-day bootstrap; t6 drift logged."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Town mapping (decisions 8, 9)",
+      "items": [
+        "City/county zone, sub-zones and 제주도산지; split parents over-warn.",
+        "warnVar → weather code, warnStress → 주의보/경보/중대경보."
+      ]
+    }
+  ]
+}

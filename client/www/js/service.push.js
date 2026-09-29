@@ -812,7 +812,14 @@ angular.module('service.push', [])
                 }
                 console.log(JSON.stringify({ "tokenFresh": token }));
                 if (self.pushData.fcmToken != token) {
+                    var firstToken = !self.pushData.fcmToken;
                     self._updateFcmToken(token);
+                    // On iOS the first token arrives after the permission grant; alarms saved before it
+                    // were not posted, so post them now.
+                    if (firstToken && self.pushData.pushList.length > 0) {
+                        self._postPushList(self.pushData.pushList);
+                        self.savePushInfo();
+                    }
                 }
             }
 

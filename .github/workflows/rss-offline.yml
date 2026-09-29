@@ -29,13 +29,24 @@ jobs:
         run: |
           node server/test/offline/rss-wind.test.js
           node server/test/offline/weather-desc.test.js
-      - name: Air summary regression tests
-        run: node server/test/offline/air-summary.test.js
+      - name: Air summary and freshness regressions
+        run: |
+          node server/test/offline/air-summary.test.js
+          node server/test/offline/air-freshness.test.js
       - name: Install isolated smoke dependencies
         run: >-
           npm install --prefix "$RUNNER_TEMP/rss-smoke"
           --ignore-scripts --no-audit --no-fund
-          async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3
+          async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3 axios@0.18.1
+          sql.js@1.8.0 body-parser@1.13.3
+      - name: S3 registration and priority dispatch regressions (#2626)
+        run: node server/test/offline/push-s3.test.js
+      - name: Push store (SQLite) checks (#2626)
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+        run: |
+          node server/test/offline/push-store.test.js
+          node server/test/offline/push-store-concurrency.js
       - name: History and runtime compatibility checks
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
@@ -58,6 +69,25 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
           TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
         run: node server/test/offline/air-summary-smoke.js
+      - name: Air provider chain and domestic air fallback checks (#2622, #2628)
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+          TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
+        run: |
+          node server/test/offline/air-chain.test.js
+          node server/test/offline/air-fallback.test.js
+          node server/test/offline/air-freshness-route.test.js
+          node server/test/offline/air-freshness-smoke.js
+          node server/test/offline/air-chain-smoke.js
+      - name: Overseas weather air through the shared provider chain (#2628)
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+          TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
+        run: |
+          node server/test/offline/world-air.test.js
+          node server/test/offline/world-air-smoke.js
+          TZ=Asia/Seoul node server/test/offline/world-air.test.js
+          TZ=Asia/Seoul node server/test/offline/world-air-smoke.js
       - name: Current weather text and summary smoke
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
@@ -84,6 +114,10 @@ jobs:
           TZ=Asia/Seoul node server/test/offline/vc-weather.test.js
           TZ=Asia/Seoul node server/test/offline/vc-weather-smoke.js
           node server/test/offline/vc-node10-check.js
+      - name: KMA warning collection checks
+        env:
+          NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
+        run: node server/test/offline/kma-warning.test.js
 
   vc-node10:
     # The service host runs Node 10.15.3 (docs/architecture/ec2-internals.md).
@@ -103,7 +137,14 @@ jobs:
         run: >-
           npm install --prefix "$RUNNER_TEMP/vc-node10"
           --ignore-scripts --no-audit --no-fund --no-package-lock
-          async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3
+          async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3 axios@0.18.1
+          sql.js@1.8.0 body-parser@1.13.3
+      - name: Push store (SQLite) on Node 10.15.3 (#2626)
+        env:
+          NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
+        run: |
+          node server/test/offline/push-store.test.js
+          node server/test/offline/push-store-concurrency.js
       - name: Visual Crossing path on Node 10.15.3
         env:
           NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
@@ -113,6 +154,19 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
           TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/vc-node10/output
         run: node server/test/offline/vc-weather-smoke.js
+      - name: KMA warning path on Node 10.15.3 (#2609)
+        env:
+          NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
+        run: node server/test/offline/kma-warning-node10-check.js
+      - name: Air provider chain on Node 10.15.3 (#2622, #2628)
+        env:
+          NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
+        run: node server/test/offline/air-chain-node10-check.js
+      - name: Overseas weather air route smoke on Node 10.15.3 (#2628)
+        env:
+          NODE_PATH: ${{ runner.temp }}/vc-node10/node_modules
+          TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/vc-node10/output
+        run: node server/test/offline/world-air-smoke.js
 
   vc-lock-mongo:
     # Real mongod through mongodb-memory-server. mongoose 5.13 (5.x API): the service's 5.1.2
@@ -133,8 +187,52 @@ jobs:
         run: >-
           npm install --prefix "$RUNNER_TEMP/vc-mongo"
           --ignore-scripts --no-audit --no-fund --package-lock=false
-          mongoose@5.13.22 async@2.5.0 mongodb-memory-server-core@10.1.4
+          mongoose@5.13.22 async@2.5.0 mongodb-memory-server-core@10.1.4 axios@0.18.1
       - name: Fetch lock and records on a real mongod
         env:
           NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules
         run: node server/test/offline/vc-lock-mongo-smoke.js
+      - name: Shared air budgets and cache across worker processes on a real mongod (#2622, #2628)
+        env:
+          NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules
+        run: node server/test/offline/air-budget-mongo-smoke.js
+
+  push-worker:
+    # Alarm/alert delivery from the SQLite push store with the locked service dependencies (#2626).
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '16.20.2'
+          package-manager-cache: false
+      - name: Install the locked service dependencies outside the checkout (Node 16.20.2)
+        run: |
+          mkdir -p "$RUNNER_TEMP/runtime"
+          cp server/package.json server/package-lock.json "$RUNNER_TEMP/runtime/"
+          npm ci --prefix "$RUNNER_TEMP/runtime" --no-audit --no-fund
+      - name: Push worker smoke on Node 16.20.2
+        env:
+          NODE_PATH: ${{ runner.temp }}/runtime/node_modules
+        run: node server/test/offline/push-worker-smoke.js
+      - name: S3 coordinator protocol and runtime smokes (Node 16.20.2)
+        env:
+          NODE_PATH: ${{ runner.temp }}/runtime/node_modules
+        run: |
+          node server/test/offline/push-s3-smoke.js
+          TZ=UTC node server/test/offline/push-s3-smoke.js --client
+          TZ=Asia/Seoul node server/test/offline/push-s3-smoke.js --client
+          node server/test/offline/push-s3-runtime-smoke.js
+      - name: S3 warning capacity with a normal backlog (synthetic, no FCM)
+        run: timeout 120 node server/test/offline/push-s3-capacity.js
+      - name: Push worker smoke on historical Node 10.15.3 (image provides python 2 for native builds)
+        run: >-
+          docker run --rm -e TZ=UTC -v "$PWD:/w:ro" -w /w node:10.15.3-stretch sh -c
+          'mkdir -p /deps && cp server/package.json server/package-lock.json /deps/
+          && npm ci --prefix /deps --no-audit --no-fund
+          && NODE_PATH=/deps/node_modules node server/test/offline/push-worker-smoke.js'

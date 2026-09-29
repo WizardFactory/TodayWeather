@@ -17,7 +17,6 @@ var KmaStnHourly2 = require('../models/modelKmaStnHourly2');
 var KmaStnMinute = require('../models/modelKmaStnMinute');
 var KmaStnMinute2 = require('../models/modelKmaStnMinute2');
 var KmaStnInfo = require('../models/modelKmaStnInfo');
-var KmaSpecialWeatherSituation = require('../models/modelKmaSpecialWeatherSituation');
 
 var Current = require('../models/modelCurrent');
 var Town = require('../models/town');
@@ -573,7 +572,7 @@ KmaScraper.prototype._recursiveConvertGeoCode = function(addr, retryCount, callb
 };
 
 /**
- * Geocode an address through the product geocode API (the app's `/geocode/addr` endpoint).
+ * Geocode an address through the product geocode API (the app's `/geocode/v000903/addr` endpoint).
  * Fallback for new AWS stations when no Kakao key is configured on the gather host.
  * Accepts only a Korean location inside the national bounds.
  * @param {string} addr
@@ -581,7 +580,7 @@ KmaScraper.prototype._recursiveConvertGeoCode = function(addr, retryCount, callb
  * @private
  */
 KmaScraper.prototype._convertGeoCodeByApiServer = function (addr, callback) {
-    var url = config.apiServer.url + '/geocode/addr/' + encodeURIComponent(addr);
+    var url = config.apiServer.url + '/geocode/v000903/addr/' + encodeURIComponent(addr);
     req(url, {timeout: 10000, json: true}, function (err, response, body) {
         if (err) {
             return callback(err);
@@ -643,7 +642,7 @@ KmaScraper.prototype._saveStnInfo = function (stnWeatherInfo, callback) {
             var addr = stnWeatherInfo.addr.replace(/\(산간\)/g, '');
 
             // Geocoding tries Kakao first (needs KAKAO_SECRET_KEYS), then the product geocode
-            // API (API_SERVER/geocode/addr), which needs no provider key on the gather host.
+            // API (API_SERVER/geocode/v000903/addr), which needs no provider key on the gather host.
             // When both fail, skip the stnInfo row rather than aborting the whole hourly save:
             // the observation row is still useful, and the station is retried at the next hourly run.
             // convertGeocode may throw synchronously (JSON.parse of a missing key), so guard it.
@@ -1652,290 +1651,17 @@ KmaScraper.prototype._getKmaDomain = function () {
 };
 
 /**
- * 기상특보 현황 : 2017년 06월 21일 11시 00분 이후 (2017년 06월 21일 10시 00분 발표)
- * 예비 기상특보 현황 : 2017년 06월 21일 10시 00분 발표
- * 기상정보 : 2017년 06월 22일 04시 00분 발표
- * @param html
- * @private
- */
-KmaScraper.prototype._getAnnouncement = function (html) {
-    //기상특보 현황 : 2017년 06월 19일 18시 00분
-    var pubDateStr = html.children('dt').text();
-    pubDateStr = pubDateStr.replace(/\t/g, '');
-    pubDateStr = pubDateStr.replace(/\r\n/g, '');
-    if (pubDateStr.indexOf('(') != -1) {
-        pubDateStr = pubDateStr.slice(pubDateStr.indexOf('(')+1, pubDateStr.indexOf('발표')-1);
-    }
-    else {
-        pubDateStr = pubDateStr.slice(pubDateStr.indexOf(':')+2, pubDateStr.indexOf('발표')-1);
-    }
-
-    return kmaTimeLib.convertKoreaStr2Date(pubDateStr);
-};
-
-/**
- *
- * @returns {string}
- */
-KmaScraper.prototype.getSpecialWeatherSituationUrl = function () {
-   return this._getKmaDomain()+"/weather/warning/status.jsp";
-};
-
-/**
- *
- * @param specialHtml
- * @param type
- * @returns {{}}
- * @private
- */
-KmaScraper.prototype._parseSpecialHtml = function (specialHtml, type) {
-
-    var announcement = this._getAnnouncement(specialHtml);
-    var imageUrl = this._getKmaDomain() + specialHtml.find('img').attr('src');
-
-    var body = specialHtml.children('dd').text();
-    body = body.replace(/\t/g, '');
-    body = body.replace(/\r\n/g, '');
-    var bodyArray = body.split('<참고사항>');
-    var situationStr = bodyArray[0];
-    situationStr = situationStr.replace(/\s+/g, '');
-
-    var comment = bodyArray[1];
-
-    var situationList;
-    var situationArray;
-    if (type == KmaSpecialWeatherSituation.TYPE_SPECIAL) {
-        situationArray = situationStr.split('o');
-        situationList = KmaSpecialWeatherSituation.strArray2SituationList(situationArray);
-    }
-    else if (type == KmaSpecialWeatherSituation.TYPE_PRELIMINARY_SPECIAL) {
-        //(1)호우예비특보o06월29일저녁:제주도(제주도산지)o06월29일밤:제주도(제주도남부)
-        var re = new RegExp(/\([0-9]\)/);
-        situationArray = situationStr.split(re);
-        for (var i=0; i<situationArray.length; i++) {
-            // o없음
-            //(1)풍량예비특보o0620일아침:제주도남쪽먼바다
-            if (situationArray[i].indexOf("없음") >= 0) {
-                situationArray[i] = situationArray[i].slice(1);
-            }
-            else {
-                situationArray[i] = situationArray[i].slice(2);
-                situationArray[i] = situationArray[i].replace(/:/g, '-');
-                situationArray[i] = situationArray[i].replace(/o/g, ':');
-            }
-        }
-        //호우예비특보:06월29일저녁-제주도(제주도산지):06월29일밤-제주도(제주도남부)
-        situationList = KmaSpecialWeatherSituation.strArray2SituationList(situationArray);
-    }
-
-    var special = {};
-    special.announcement = announcement;
-    special.type = type;
-    special.imageUrl = imageUrl;
-    special.situationList = situationList;
-    special.comment = comment;
-    return special;
-};
-
-/**
- *
- * @param html
- * @param type
- * @returns {{}}
- * @private
- */
-KmaScraper.prototype._parseWeatherInformationHtml = function (html, type) {
-    var weatherInformation = {};
-    weatherInformation.announcement = this._getAnnouncement(html);
-
-    var body = html.children('dd').children('ul').children('li').text();
-    body = body.replace(/\t/g, '');
-    body = body.replace(/\r\n/g, '');
-    weatherInformation.comment = body;
-    weatherInformation.type = type;
-
-    return weatherInformation;
-};
-
-/**
- *
- * @param $
- * @param callback
- */
-KmaScraper.prototype.parseSpecialWeatherSituationList = function ($, callback) {
-    var self = this;
-    var specialWeatherSituationList = [];
-
-    log.info("parse kma special weather");
-
-    try {
-        var specialHtml = $('.special_report_list2').eq(0);
-        var preliminarySpecialHtml = $('.special_report_list2').eq(1);
-        var weatherNewsHtml = $('.special_report_list3').eq(0);
-        var weatherNewsHtml2 = $('.special_report_list3').eq(1);
-
-        /**
-         *기상특보 현황 : 2017년 06월 18일 15시 00분 이후 (2017년 06월 18일 15시 00분 발표)
-         */
-        var specialWeatherSituation;
-        specialWeatherSituation = self._parseSpecialHtml(specialHtml, KmaSpecialWeatherSituation.TYPE_SPECIAL);
-        specialWeatherSituationList.push(specialWeatherSituation);
-
-        specialWeatherSituation = {};
-        specialWeatherSituation = self._parseSpecialHtml(preliminarySpecialHtml, KmaSpecialWeatherSituation.TYPE_PRELIMINARY_SPECIAL);
-        specialWeatherSituationList.push(specialWeatherSituation);
-
-        var weatherFlashHtml;
-        var weatherInformationHtml;
-        if (weatherNewsHtml2.length > 0) {
-            weatherFlashHtml = weatherNewsHtml;
-            weatherInformationHtml = weatherNewsHtml2;
-        }
-        else {
-            weatherInformationHtml = weatherNewsHtml;
-        }
-
-        if (weatherFlashHtml && weatherFlashHtml.length > 0) {
-            specialWeatherSituation = {};
-            specialWeatherSituation = self._parseWeatherInformationHtml(weatherFlashHtml, KmaSpecialWeatherSituation.TYPE_WEATHER_FLASH);
-            specialWeatherSituationList.push(specialWeatherSituation);
-        }
-
-        if (weatherInformationHtml && weatherInformationHtml.length > 0) {
-            specialWeatherSituation = {};
-            specialWeatherSituation = self._parseWeatherInformationHtml(weatherInformationHtml, KmaSpecialWeatherSituation.TYPE_WEATHER_INFORMATION);
-            specialWeatherSituationList.push(specialWeatherSituation);
-        }
-    }
-    catch(err) {
-        return callback(err);
-    }
-
-    callback(null, specialWeatherSituationList);
-};
-
-KmaScraper.prototype.requestSpecialWeatherSituation = function (callback) {
-    var self = this;
-    var url = self.getSpecialWeatherSituationUrl();
-
-    log.info("kma special weather url="+url);
-
-    req(url, {timeout: 30000, encoding: 'binary'}, function (err, response, body) {
-        if (err) {
-            log.error(err);
-            return callback(err);
-        }
-        try {
-            var strContents = new Buffer(body, 'binary');
-            var iconv = new Iconv('euc-kr', 'UTF8');
-            strContents = iconv.convert(strContents).toString();
-
-            var $ = cheerio.load(strContents);
-        }
-        catch(err) {
-            return callback(err);
-        }
-
-        callback(null, $);
-    });
-};
-
-/**
- *
- * @param sws
- * @param callback
- */
-KmaScraper.prototype.findSpecialWeatherSituation = function (sws, callback) {
-   KmaSpecialWeatherSituation.find({announcement: sws.announcement, type: sws.type}).limit(1).lean().exec(function (err, result) {
-       if (err) {
-           log.error(err.message + "in find DB(KmaSpecialWeatherSituation)");
-           return callback(err);
-       }
-       return callback(null, result);
-   });
-};
-
-/**
- *
- * @param sws
- * @param callback
- */
-KmaScraper.prototype.updateSpecialWeatherSituation = function (sws, callback) {
-   KmaSpecialWeatherSituation.update({announcement: sws.announcement, type: sws.type}, sws, {upsert:true}, function (err) {
-       if (err) {
-           log.error(err.message + "in insert DB(KmaSpecialWeatherSituation)");
-           log.warn(JSON.stringify(sws));
-       }
-       return callback(err);
-   });
-};
-
-/**
- *
- * @param callback
+ * KMA warnings (기상특보, 예비특보, 기상정보, 기상속보). The warning status page this scraper used
+ * was retired in the KMA site redesign (2026-09-27: redirect to the new site); warnings come
+ * from the data.go.kr WthrWrnInfoService since #2609. The collector keeps state between cycles.
+ * @param callback (err) 'skip' when nothing new was stored
  */
 KmaScraper.prototype.gatherSpecialWeatherSituation = function (callback) {
-    var self = this;
-    async.waterfall([
-            function(cb) {
-                self.requestSpecialWeatherSituation(function (err, result) {
-                    if (err) {
-                        return cb(err);
-                    }
-                    return cb(null, result)
-                });
-            },
-            function ($, cb) {
-                self.parseSpecialWeatherSituationList($, function (err, swsList) {
-                    if (err) {
-                        return cb(err);
-                    }
-                    cb(err, swsList);
-                });
-            },
-            function (swsList, cb) {
-                async.map(swsList, function (sws, mCallback) {
-                    self.findSpecialWeatherSituation(sws, function (err, result) {
-                        if (err) {
-                            return mCallback(err);
-                        }
-                        if (result && result.length > 0) {
-                            return mCallback(err);
-                        }
-                        mCallback(err, sws);
-                    });
-                }, function (err, newSwsList) {
-                    if (err) {
-                        return cb(err);
-                    }
-                    if (newSwsList == undefined) {
-                        return cb('skip');
-                    }
-                    newSwsList = newSwsList.filter(function (sws) {
-                        return sws != undefined;
-
-                    });
-                    if (newSwsList.length <= 0) {
-                        return cb('skip');
-                    }
-                    cb(err, newSwsList);
-                });
-            },
-            function (swsList, cb) {
-                async.map(swsList,
-                    function (sws, mCallback) {
-                        self.updateSpecialWeatherSituation(sws, function (err) {
-                            mCallback(err);
-                        });
-                    },
-                    function (err) {
-                       cb(err);
-                    });
-            }
-        ],
-        function (err) {
-            return callback(err);
-        });
+    if (!this._warningCollector) {
+        var KmaWarningCollector = require('./kmaWarningCollector');
+        this._warningCollector = new KmaWarningCollector();
+    }
+    this._warningCollector.gather(callback);
 };
 
 module.exports = KmaScraper;

@@ -11,6 +11,7 @@ var config = require('../../config/config');
 
 var ControllerTown24h = require('../../controllers/controllerTown24h');
 var KecoCtrl = require('../../controllers/kecoController');
+var NationAir = require('../../lib/air/nationAir');
 
 var cTown = new ControllerTown24h();
 
@@ -83,7 +84,7 @@ function getSidoArpltn(req, res, next) {
 
     var airUnit = req.query.airUnit;
 
-    KecoCtrl.getSidoArpltn(function (err, arpltnList) {
+    NationAir.getAir(function (err, arpltnList, airStatus) {
         if (err) {
             err.message += ' ' + JSON.stringify(meta);
             log.error(err);
@@ -95,6 +96,7 @@ function getSidoArpltn(req, res, next) {
                 KecoCtrl.recalculateValue(arpltn, airUnit);
             });
             req.air = arpltnList;
+            req.airStatus = airStatus;
         }
         catch (err) {
            return next(err);
@@ -156,6 +158,7 @@ router.get('/:nation', [cTown.checkQueryValidation, getSidoArpltn, getWeather], 
     }
     if (req.air) {
         result.air = req.air;
+        result.airStatus = req.airStatus;
     }
 
     if (result.weather || result.air) {

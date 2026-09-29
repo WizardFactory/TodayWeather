@@ -16,13 +16,19 @@ def order(item):
 
 items = sorted(manifest, key=order)
 
+def os_name(item):
+    # Native Cordova captures from an Android emulator record `android` instead of `ios`.
+    return f"Android {item['android']}" if 'android' in item else f"iOS {item['ios']}"
+
 def device(item):
-    return f"{item['device']} · iOS {item['ios']}"
+    return f"{item['device']} · {os_name(item)}"
 
 def variant(item):
     parts = [item['product'], item['locale'], item['theme']]
-    if 'android' in item['host']:
+    if 'Ionic android platform mode' in item['host']:
         parts.append('Ionic android mode')
+    if item['host'].startswith('Cordova native'):
+        parts.append('native build')
     return ' · '.join(parts)
 
 figures = []
@@ -35,6 +41,10 @@ for item in items:
             d=html.escape(device(item)), v=html.escape(variant(item)), n=html.escape(note)))
 
 dates = sorted({item['captured_date'] for item in items})
+harness = [item for item in items if item['host'].startswith('WKWebView')]
+native = [item for item in items if item['host'].startswith('Cordova native')]
+harness_dates = sorted({item['captured_date'] for item in harness})
+native_dates = sorted({item['captured_date'] for item in native})
 page = (
     '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
     '<title>TodayWeather / TodayAir — screen evidence</title><style>'
@@ -43,9 +53,13 @@ page = (
     'gap:24px;padding:0 32px 40px;max-width:1500px;margin:auto}figure{margin:0;padding:18px;background:white;border:1px solid #dce3eb;border-radius:12px}'
     'img{width:100%;height:auto;display:block;border:1px solid #edf0f3}figcaption{padding-top:14px}small{color:#4c5d73;overflow-wrap:anywhere}</style>'
     '<header><h1>TodayWeather / TodayAir screen evidence</h1>'
-    f'<p>Current web source in an iOS WKWebView test shell · {" and ".join(dates)} · {len(items)} captures. '
+    f'<p>Current web source in an iOS WKWebView test shell · {" and ".join(harness_dates)} · {len(harness)} captures. '
     'S = screen, O = overlay/dialog/loading state.</p>'
     '<p><strong>Synthetic weather, warning and photo data. These are not production observations or complete Cordova integration tests.</strong></p>'
+    + (f'<p>Plus {len(native)} captures from native Cordova PoC debug builds (Android emulator and iOS Simulator) · {" and ".join(native_dates)}. '
+       '<strong>These show live production API responses at capture time, not synthetic fixtures, and are not release builds.</strong></p>'
+       if native else '')
+    +
     '<p><a href="../screen-specifications.md">Screen definitions</a> · <a href="../screen-overlays.md">Overlay definitions</a> · '
     '<a href="README.md">Provenance and limits</a> · <a href="manifest.json">Manifest</a></p></header><main>'
     + ''.join(figures) + '</main></html>\n')
@@ -54,7 +68,7 @@ page = (
 rows = ['| ID | View | Device | Variant | Data |', '| --- | --- | --- | --- | --- |']
 for item in items:
     rows.append('| {s} | [{t}]({f}) | {d} | {v} | {x} |'.format(
-        s=item['screen_id'], t=item['title'], f=item['file'], d=f"{item['device']} / iOS {item['ios']}",
+        s=item['screen_id'], t=item['title'], f=item['file'], d=f"{item['device']} / {os_name(item)}",
         v=variant(item), x=item['fixture']))
 readme = shots/'README.md'
 text = readme.read_text()

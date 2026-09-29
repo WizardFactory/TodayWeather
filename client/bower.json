@@ -11,6 +11,10 @@
     "angular-translate-loader-static-files": "^2.13.0",
     "sprintf": "^1.0.3",
     "oclazyload": "^1.1.0",
-    "ion.rangeSlider": "ionrangeslider#^2.2.0"
+    "ion.rangeSlider": "ionrangeslider#2.2.0",
+    "jquery": "3.7.1"
+  },
+  "resolutions": {
+    "jquery": "3.7.1"
   }
 }

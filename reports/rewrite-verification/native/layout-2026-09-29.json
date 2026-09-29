@@ -1,0 +1,561 @@
+{
+  "date": "2026-09-29",
+  "scope": "Live Seoul/Tokyo layout; iOS temporary Analytics-disabled artifact",
+  "initialRuns": [
+    {
+      "run": "a-320x694",
+      "complete": true,
+      "screen": [
+        "320x694"
+      ],
+      "checks": 75,
+      "failures": [
+        "fail chart-short touch-swipe scrollLeft 457->457 city 2->2"
+      ],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 3,
+        "total": 4
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "a-360x780",
+      "complete": true,
+      "screen": [
+        "360x780"
+      ],
+      "checks": 76,
+      "failures": [
+        "fail click guide-close covered-by DIV.row.row-no-padding.disable-user-behavior state=guide"
+      ],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 4,
+        "total": 4
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "a-360x800",
+      "complete": true,
+      "screen": [
+        "360x800"
+      ],
+      "checks": 75,
+      "failures": [
+        "fail chart-mid touch-swipe scrollLeft 257->257 city 1->1"
+      ],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 3,
+        "total": 4
+      },
+      "unclassifiedErrors": 2,
+      "nativeErrors": 0
+    },
+    {
+      "run": "a-360x880",
+      "complete": true,
+      "screen": [
+        "360x880"
+      ],
+      "checks": 75,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 4,
+        "total": 4
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "a-384x832",
+      "complete": true,
+      "screen": [
+        "384x832"
+      ],
+      "checks": 75,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 4,
+        "total": 4
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "a-384x854",
+      "complete": true,
+      "screen": [
+        "384x854"
+      ],
+      "checks": 75,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 4,
+        "total": 4
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "a-412x869",
+      "complete": true,
+      "screen": [
+        "412x869"
+      ],
+      "checks": 75,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 4,
+        "total": 4
+      },
+      "unclassifiedErrors": 2,
+      "nativeErrors": 2
+    },
+    {
+      "run": "a-412x883",
+      "complete": true,
+      "screen": [
+        "412x883"
+      ],
+      "checks": 75,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 4,
+        "total": 4
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "a-412x892",
+      "complete": true,
+      "screen": [
+        "412x892"
+      ],
+      "checks": 75,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 4,
+        "total": 4
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "a-412x915",
+      "complete": true,
+      "screen": [
+        "412x915"
+      ],
+      "checks": 75,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 4,
+        "total": 4
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "i-375x667",
+      "complete": true,
+      "screen": [
+        "375x667"
+      ],
+      "checks": 72,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 0,
+        "total": 0
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "i-375x812",
+      "complete": true,
+      "screen": [
+        "375x812"
+      ],
+      "checks": 72,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 0,
+        "total": 0
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "i-390x844",
+      "complete": true,
+      "screen": [
+        "390x844"
+      ],
+      "checks": 72,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 0,
+        "total": 0
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "i-393x852",
+      "complete": true,
+      "screen": [
+        "393x852"
+      ],
+      "checks": 72,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 0,
+        "total": 0
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "i-402x874",
+      "complete": true,
+      "screen": [
+        "402x874"
+      ],
+      "checks": 75,
+      "failures": [
+        "fail click menu-toggle covered-by ?. state=tab.forecast",
+        "fail click menu-units covered-by ?. state=tab.forecast",
+        "fail click unit[0] not-found state=tab.forecast"
+      ],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 0,
+        "total": 0
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "i-414x896",
+      "complete": true,
+      "screen": [
+        "414x896"
+      ],
+      "checks": 72,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 0,
+        "total": 0
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "i-420x912",
+      "complete": true,
+      "screen": [
+        "420x912"
+      ],
+      "checks": 72,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 0,
+        "total": 0
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "i-428x926",
+      "complete": true,
+      "screen": [
+        "428x926"
+      ],
+      "checks": 72,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 0,
+        "total": 0
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "i-430x932",
+      "complete": true,
+      "screen": [
+        "430x932"
+      ],
+      "checks": 72,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 0,
+        "total": 0
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    },
+    {
+      "run": "i-440x956",
+      "complete": true,
+      "screen": [
+        "440x956"
+      ],
+      "checks": 72,
+      "failures": [],
+      "liveAir": {
+        "passed": 6,
+        "total": 6
+      },
+      "layout": {
+        "passed": 22,
+        "total": 22
+      },
+      "scroll": {
+        "passed": 19,
+        "total": 19
+      },
+      "touch": {
+        "passed": 0,
+        "total": 0
+      },
+      "unclassifiedErrors": 0,
+      "nativeErrors": 0
+    }
+  ],
+  "touchRecheck": {
+    "gestures": 32,
+    "passed": 32,
+    "cityChanged": false
+  }
+}

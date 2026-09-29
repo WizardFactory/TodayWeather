@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="net.wizardfactory.todayweather" version="0.9.90" android-versionCode="9909" xmlns="http://www.w3.org/ns/widgets">
+<widget id="net.wizardfactory.todayweather" version="1.1.0" android-versionCode="100090" ios-CFBundleVersion="1" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>TodayWeather</name>
     <description>
         Inform how warm or cold it is today than yesterday.
@@ -9,7 +9,6 @@
     </author>
     <content src="index.html" />
     <access origin="*" />
-    <allow-navigation href="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
     <allow-intent href="tel:*" />
@@ -17,76 +16,111 @@
     <allow-intent href="mailto:*" />
     <allow-intent href="geo:*" />
     <preference name="ScrollEnabled" value="false" />
-    <preference name="android-minSdkVersion" value="16" />
     <preference name="BackupWebStorage" value="none" />
-    <preference name="SplashMaintainAspectRatio" value="true" />
-    <preference name="FadeSplashScreenDuration" value="0" />
-    <preference name="SplashShowOnlyFirstTime" value="false" />
-    <preference name="SplashScreen" value="screen" />
-    <preference name="SplashScreenDelay" value="1500" />
-    <preference name="AutoHideSplashScreen" value="false" />
-    <preference name="ShowSplashScreenSpinner" value="false" />
     <preference name="DisallowOverscroll" value="true" />
     <preference name="target-device" value="universal" />
-    <feature name="StatusBar">
-        <param name="ios-package" onload="true" value="CDVStatusBar" />
-    </feature>
+    <preference name="AutoHideSplashScreen" value="false" />
+    <preference name="SplashScreenDelay" value="1500" />
+    <preference name="FadeSplashScreenDuration" value="0" />
+    <preference name="ShowSplashScreenSpinner" value="false" />
+    <preference name="StatusBarOverlaysWebView" value="false" />
+    <preference name="KeyboardResize" value="false" />
+    <preference name="cordova.plugins.diagnostic.modules" value="LOCATION" />
+    <!-- Real AdMob app IDs come from client/.env at prepare time; package.json keeps Google's sample IDs. -->
+    <hook type="after_prepare" src="scripts/admob-app-id.js" />
+    <hook type="after_prepare" src="scripts/ios-no-tracking.js" />
     <platform name="android">
         <allow-intent href="market:*" />
-        <icon density="ldpi" src="resources/android/icon/drawable-ldpi-icon.png" />
-        <icon density="mdpi" src="resources/android/icon/drawable-mdpi-icon.png" />
-        <icon density="hdpi" src="resources/android/icon/drawable-hdpi-icon.png" />
-        <icon density="xhdpi" src="resources/android/icon/drawable-xhdpi-icon.png" />
-        <icon density="xxhdpi" src="resources/android/icon/drawable-xxhdpi-icon.png" />
-        <icon density="xxxhdpi" src="resources/android/icon/drawable-xxxhdpi-icon.png" />
-        <splash density="land-ldpi" src="resources/android/splash/drawable-land-ldpi-screen.png" />
-        <splash density="land-mdpi" src="resources/android/splash/drawable-land-mdpi-screen.png" />
-        <splash density="land-hdpi" src="resources/android/splash/drawable-land-hdpi-screen.png" />
-        <splash density="land-xhdpi" src="resources/android/splash/drawable-land-xhdpi-screen.png" />
-        <splash density="land-xxhdpi" src="resources/android/splash/drawable-land-xxhdpi-screen.png" />
-        <splash density="land-xxxhdpi" src="resources/android/splash/drawable-land-xxxhdpi-screen.png" />
-        <splash density="port-ldpi" src="resources/android/splash/drawable-port-ldpi-screen.png" />
-        <splash density="port-mdpi" src="resources/android/splash/drawable-port-mdpi-screen.png" />
-        <splash density="port-hdpi" src="resources/android/splash/drawable-port-hdpi-screen.png" />
-        <splash density="port-xhdpi" src="resources/android/splash/drawable-port-xhdpi-screen.png" />
-        <splash density="port-xxhdpi" src="resources/android/splash/drawable-port-xxhdpi-screen.png" />
-        <splash density="port-xxxhdpi" src="resources/android/splash/drawable-port-xxxhdpi-screen.png" />
+        <preference name="android-minSdkVersion" value="24" />
+        <preference name="android-targetSdkVersion" value="36" />
+        <!-- emi-indo-cordova-plugin-admob ships Kotlin sources; without this they are not compiled and startup crashes. -->
+        <preference name="GradlePluginKotlinEnabled" value="true" />
+        <!-- play-services-ads 25.3 carries Kotlin 2.3 metadata; cordova-android 15 defaults to 2.1.21. -->
+        <preference name="GradlePluginKotlinVersion" value="2.3.0" />
+        <preference name="AndroidWindowSplashScreenAnimatedIcon" value="tw.resources/android-launcher-icon.png" />
+        <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
+        <!-- cordova-android 15 paints the status bar area itself; StatusBar.backgroundColorByHexString('#111') in app.js no longer shows. -->
+        <preference name="StatusBarBackgroundColor" value="#111111" />
+        <icon density="ldpi" src="tw.resources/android/icon/drawable-ldpi-icon.png" />
+        <icon density="mdpi" src="tw.resources/android/icon/drawable-mdpi-icon.png" />
+        <icon density="hdpi" src="tw.resources/android/icon/drawable-hdpi-icon.png" />
+        <icon density="xhdpi" src="tw.resources/android/icon/drawable-xhdpi-icon.png" />
+        <icon density="xxhdpi" src="tw.resources/android/icon/drawable-xxhdpi-icon.png" />
+        <icon density="xxxhdpi" src="tw.resources/android/icon/drawable-xxxhdpi-icon.png" />
     </platform>
     <platform name="ios">
         <allow-intent href="itms:*" />
         <allow-intent href="itms-apps:*" />
-        <icon height="57" src="resources/ios/icon/icon.png" width="57" />
-        <icon height="114" src="resources/ios/icon/icon@2x.png" width="114" />
-        <icon height="40" src="resources/ios/icon/icon-40.png" width="40" />
-        <icon height="80" src="resources/ios/icon/icon-40@2x.png" width="80" />
-        <icon height="120" src="resources/ios/icon/icon-40@3x.png" width="120" />
-        <icon height="50" src="resources/ios/icon/icon-50.png" width="50" />
-        <icon height="100" src="resources/ios/icon/icon-50@2x.png" width="100" />
-        <icon height="60" src="resources/ios/icon/icon-60.png" width="60" />
-        <icon height="120" src="resources/ios/icon/icon-60@2x.png" width="120" />
-        <icon height="180" src="resources/ios/icon/icon-60@3x.png" width="180" />
-        <icon height="72" src="resources/ios/icon/icon-72.png" width="72" />
-        <icon height="144" src="resources/ios/icon/icon-72@2x.png" width="144" />
-        <icon height="76" src="resources/ios/icon/icon-76.png" width="76" />
-        <icon height="152" src="resources/ios/icon/icon-76@2x.png" width="152" />
-        <icon height="167" src="resources/ios/icon/icon-83.5@2x.png" width="167" />
-        <icon height="29" src="resources/ios/icon/icon-small.png" width="29" />
-        <icon height="58" src="resources/ios/icon/icon-small@2x.png" width="58" />
-        <icon height="87" src="resources/ios/icon/icon-small@3x.png" width="87" />
-        <icon height="1024" src="resources/ios/icon/icon-1024.png" width="1024" />
-        <splash height="1136" src="resources/ios/splash/Default-568h@2x~iphone.png" width="640" />
-        <splash height="1334" src="resources/ios/splash/Default-667h.png" width="750" />
-        <splash height="2208" src="resources/ios/splash/Default-736h.png" width="1242" />
-        <splash height="1242" src="resources/ios/splash/Default-Landscape-736h.png" width="2208" />
-        <splash height="1536" src="resources/ios/splash/Default-Landscape@2x~ipad.png" width="2048" />
-        <splash height="2048" src="resources/ios/splash/Default-Landscape@~ipadpro.png" width="2732" />
-        <splash height="768" src="resources/ios/splash/Default-Landscape~ipad.png" width="1024" />
-        <splash height="2048" src="resources/ios/splash/Default-Portrait@2x~ipad.png" width="1536" />
-        <splash height="2732" src="resources/ios/splash/Default-Portrait@~ipadpro.png" width="2048" />
-        <splash height="1024" src="resources/ios/splash/Default-Portrait~ipad.png" width="768" />
-        <splash height="960" src="resources/ios/splash/Default@2x~iphone.png" width="640" />
-        <splash height="480" src="resources/ios/splash/Default~iphone.png" width="320" />
-        <splash height="2732" src="resources/ios/splash/Default@2x~universal~anyany.png" width="2732" />
+        <preference name="scheme" value="app" />
+        <preference name="hostname" value="localhost" />
+        <preference name="deployment-target" value="15.0" />
+        <!-- App Store icons must not have an alpha channel; icon-1024.png has one. -->
+        <icon src="tw.resources/icon.png" width="1024" height="1024" />
+        <splash src="tw.resources/ios/splash/Default@2x~universal~anyany.png" />
+        <!-- The legacy app kept a native copy of TwStorage in this App Group (widget sharing); upgrades restore from it. -->
+        <config-file target="*/Entitlements-Debug.plist" parent="com.apple.security.application-groups">
+            <array>
+                <string>group.net.wizardfactory.todayweather</string>
+            </array>
+        </config-file>
+        <config-file target="*/Entitlements-Release.plist" parent="com.apple.security.application-groups">
+            <array>
+                <string>group.net.wizardfactory.todayweather</string>
+            </array>
+        </config-file>
+        <!--
+          App-level privacy manifest. Firebase and Google Mobile Ads ship their own manifests for what they collect.
+          The app sends the device position (rounded to 3 decimals) for weather and a device/push identifier for
+          push settings; neither is linked to an account or used for tracking. The plugins compiled into the app
+          (firebasex, emi admob, app-preferences) use NSUserDefaults, including the App Group suite.
+        -->
+        <privacy-manifest>
+            <key>NSPrivacyTracking</key>
+            <false/>
+            <key>NSPrivacyTrackingDomains</key>
+            <array/>
+            <key>NSPrivacyAccessedAPITypes</key>
+            <array>
+                <dict>
+                    <key>NSPrivacyAccessedAPIType</key>
+                    <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+                    <key>NSPrivacyAccessedAPITypeReasons</key>
+                    <array>
+                        <string>CA92.1</string>
+                        <string>1C8F.1</string>
+                    </array>
+                </dict>
+            </array>
+            <key>NSPrivacyCollectedDataTypes</key>
+            <array>
+                <dict>
+                    <key>NSPrivacyCollectedDataType</key>
+                    <string>NSPrivacyCollectedDataTypePreciseLocation</string>
+                    <key>NSPrivacyCollectedDataTypeLinked</key>
+                    <false/>
+                    <key>NSPrivacyCollectedDataTypeTracking</key>
+                    <false/>
+                    <key>NSPrivacyCollectedDataTypePurposes</key>
+                    <array>
+                        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+                    </array>
+                </dict>
+                <dict>
+                    <key>NSPrivacyCollectedDataType</key>
+                    <string>NSPrivacyCollectedDataTypeDeviceID</string>
+                    <key>NSPrivacyCollectedDataTypeLinked</key>
+                    <false/>
+                    <key>NSPrivacyCollectedDataTypeTracking</key>
+                    <false/>
+                    <key>NSPrivacyCollectedDataTypePurposes</key>
+                    <array>
+                        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+                    </array>
+                </dict>
+            </array>
+        </privacy-manifest>
+        <edit-config file="*-Info.plist" mode="merge" target="NSLocationWhenInUseUsageDescription">
+            <string>TodayWeather uses your location to show the weather where you are.</string>
+        </edit-config>
     </platform>
-  <!-- Branch -->
 </widget>

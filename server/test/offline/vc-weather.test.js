@@ -97,7 +97,7 @@ test('requester builds the Timeline request and logs cost and latency without th
     assert.equal(url.searchParams.get('include'), 'days,hours,current');
     assert.equal(url.searchParams.get('key'), KEY);
     for (const e of ['datetimeEpoch', 'temp', 'feelslike', 'humidity', 'precip', 'precipprob', 'preciptype', 'windspeed', 'winddir',
-        'pressure', 'visibility', 'cloudcover', 'conditions', 'icon', 'source', 'sunriseEpoch', 'sunsetEpoch', 'moonphase', 'tempmax', 'tempmin']) {
+        'pressure', 'visibility', 'cloudcover', 'conditions', 'icon', 'source', 'sunriseEpoch', 'sunsetEpoch', 'moonphase', 'tempmax', 'tempmin', 'uvindex']) {
         assert(url.searchParams.get('elements').split(',').includes(e), 'element ' + e);
     }
     assert.equal(https.calls[0].options.agent.options.keepAlive, true, 'keep-alive agent');
@@ -1103,7 +1103,7 @@ test('R2-1/F9: 429s are classified by body; requester edge cases', async () => {
 test('R2-8: alerts skip overseas weather older than 30 minutes', () => {
     const AlertPush = load('controllers/alert.push.controller.js', {
         'async': async, 'request': () => { throw new Error('network'); }, 'i18n': {}, 'sprintf': {},
-        '../config/config': {serviceServer: {url: 'http://service.invalid'}}, '../models/alert.push.model': {},
+        '../config/config': {serviceServer: {url: 'http://service.invalid'}}, '../lib/pushStore': {},
         '../lib/kmaTimeLib': kmaTimeLib, './controllerPush': function () {}, '../lib/aqi.converter': {},
         '../lib/unitConverter': {initUnits: units => units || {}}
     });
@@ -1337,7 +1337,7 @@ test('#2585 grid: overseas coordinates share a 0.02° cell; the response keeps t
 test('push paths accept VC and legacy DSF registrations', async () => {
     const AlertPush = load('controllers/alert.push.controller.js', {
         'async': async, 'request': () => { throw new Error('network'); }, 'i18n': {}, 'sprintf': {},
-        '../config/config': {serviceServer: {url: 'http://service.invalid'}}, '../models/alert.push.model': {},
+        '../config/config': {serviceServer: {url: 'http://service.invalid'}}, '../lib/pushStore': {},
         '../lib/kmaTimeLib': kmaTimeLib, './controllerPush': function () {}, '../lib/aqi.converter': {},
         '../lib/unitConverter': {initUnits: units => units || {temperatureUnit: 'C'}}
     });
@@ -1357,7 +1357,7 @@ test('push paths accept VC and legacy DSF registrations', async () => {
     const routed = [];
     const Push = load('controllers/controllerPush.js', {
         '../lib/pushProviders': {}, 'node-gcm': {Sender: function () {}}, '../config/config': {serviceServer: {url: 'http://service.invalid'}, push: {}},
-        '../models/modelPush': {}, 'async': async, 'request': () => { throw new Error('network'); },
+        '../lib/pushStore': {}, 'async': async, 'request': () => { throw new Error('network'); },
         './controllerTown24h': function () {}, '../lib/unitConverter': {initUnits: u => u || {}}, '../lib/aqi.converter': {},
         '../lib/kmaTimeLib': kmaTimeLib, 'dnscache': () => ({}), 'i18n': {}
     });
@@ -1412,4 +1412,39 @@ test('the world response reports Visual Crossing as its source', () => {
     assert.match(source, /req\.result\.source = "VC";/);
     assert.doesNotMatch(source, /pubDate\.DSF\s*=/);
     assert.match(fs.readFileSync(path.join(repo, 'client/www/js/service.weatherutil.js'), 'utf8'), /pubDate\.hasOwnProperty\('VC'\)/);
+});
+
+// #2635: preserve typed temporary failures through the existing fallback policy.
+test('temporary provider errors carry marker/UTC budget deadlines without changing stored fallback', async () => {
+    const clock = {now: Date.parse('2026-09-29T23:59:10Z')};
+    const locks = memoryLockModel();
+    const usage = memoryUsageModel();
+    const C = loadDsfController({model: memoryDsfModel(), lockModel: locks, requester: fakeVcRequester({}), clock, usageModel: usage, dailyRecordLimit: 49});
+    const c = new C();
+    locks.locks.set('~provider', {expireAt: new Date(clock.now + 123456)});
+    let err = await new Promise(resolve => c._checkProvider('combined', resolve));
+    assert.equal(err.code, 'EWEATHERUNAVAILABLE');
+    assert.equal(err.retryAt, clock.now + 123456);
+    const stored = {current: {dateObj: new Date(clock.now - 1000)}};
+    assert.equal((await new Promise(resolve => c._fallback(stored, err, (e, data) => resolve({e, data})))).data, stored);
+    locks.locks.clear();
+    usage.days.set('2026-09-29', {records: 49});
+    err = await new Promise(resolve => c._checkProvider('forecast', resolve));
+    assert.equal(err.code, 'EWEATHERUNAVAILABLE');
+    assert.equal(err.retryAt, Date.parse('2026-09-30T00:00:00Z'));
+    clock.now = err.retryAt;
+    assert.equal(await new Promise(resolve => c._checkProvider('forecast', resolve)), undefined);
+});
+
+test('budget lookup crossing UTC midnight rechecks the new day', async () => {
+    const clock = {now: Date.parse('2026-09-29T23:59:59.999Z')};
+    const seen = [];
+    const usage = {findById(day, cb) {
+        seen.push(day);
+        clock.now = Date.parse('2026-09-30T00:00:00Z');
+        cb(null, {records: day === '2026-09-29' ? 100 : 0});
+    }};
+    const C = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock, usageModel: usage, dailyRecordLimit: 100});
+    assert.equal(await new Promise(resolve => new C()._checkProvider('forecast', resolve)), undefined);
+    assert.deepEqual(seen, ['2026-09-29', '2026-09-30']);
 });

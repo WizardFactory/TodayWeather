@@ -82,11 +82,11 @@ test('world-weather summary omits an empty air summary and keeps a real one', ()
     assert.equal(run({aqiGrade: 1, khaiGrade: 1}).summaryAir, 'LOC_AIR_QUALITY_IS_GOOD');
 });
 
-// dataTime uses the same timezone-less local form that _checkDateTime parses.
+// AirKorea dataTime is a KST wall clock, independent of the test host timezone.
 function dataTime(now, hoursAgo) {
-    const d = new Date(now.getTime() - hoursAgo * 3600 * 1000);
+    const d = new Date(now.getTime() + (9 - hoursAgo) * 3600 * 1000);
     const p = n => String(n).padStart(2, '0');
-    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':00';
+    return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate()) + ' ' + p(d.getUTCHours()) + ':00';
 }
 function station(name, now, hoursAgo) {
     return [{stationName: name, dataTime: dataTime(now, hoursAgo), pm10Value: 20, pm10Grade: 1, pm25Value: 10,

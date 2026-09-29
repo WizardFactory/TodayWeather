@@ -23,7 +23,7 @@ The global projection lists in [app.js](../../server/app.js#L111-L123) decide wh
 | `LGT` → `lgt` | current, shortest | Current comment: `0` none, `1` present. Shortest comment: `0` none, `1` low, `2` moderate, `3` high probability | `-1` | Icon composition adds lightning only for `lgt === 1` ([§3](#3-icon-name-grammar-and-daynight-rules)) |
 | `VEC` → `vec` | current, shortest, short | Wind direction, degrees | `-1` | Client arrow rotation; see [row vocabulary](client-data-contracts.md#weather-row-vocabulary-consumed-by-screens) |
 | `WSD` → `wsd` | current, shortest, short | Wind speed, m/s | `-1` | Wind grade in [§4](#4-other-code-to-text-mappings) |
-| `POP` → `pop` | short | Probability of precipitation, % | `-1` | |
+| `POP` → `pop` | short, shortest | Probability of precipitation, % | `-1` | Shortest `POP` appeared in `getUltraSrtFcst` in 2026-09 and is stored since #2620 (0–100, else `-1`; rows stored before it have no `pop`). It is in `shortestString`, but `_mergeCurrentByShortest` skips it, so `current` never carries `pop`. `_mergeShortByShortest` replaces a short slot's `pop` with the shortest value of the slot hour ([mobile API](../architecture/mobile-api.md#forecast-precipitation-amounts-issue-2583)) |
 | `R06` → `r06` | short | Retired 6-hour precipitation bucket code. Since 5e653285 the new service's hourly `PCP` is stored here: a number in mm, or for a category a representative amount plus `r06Text` (#2583) | `-1` | Since #2583, `getShort` sums the hourly values of each 3-hour slot (hours T-2..T) and daily values are day totals, with `r06Hours`/`r06Approx` ([mobile API](../architecture/mobile-api.md#forecast-precipitation-amounts-issue-2583)). Before, `adjustShort` split each even-slot value across two slots ([controllerTown24h.js at caaa21fe](https://github.com/WizardFactory/TodayWeather/blob/caaa21fed6c713af744b8ac753ea336b99e49590/server/controllers/controllerTown24h.js#L146-L215)) |
 | `S06` → `s06` | short | Retired 6-hour new snow bucket code. Since 5e653285 hourly `SNO` is stored here: a number in cm, or for a category a representative amount plus `s06Text` (#2583) | `-1` | Summed like `r06`. Stored in cm; `convertUnits` multiplies by 10 (cm → mm) unconditionally, so a surviving `-1` would become `-10`; `adjustShort` writes short `s06` values ≥ 0 first ([controllerTown24h.js](../../server/controllers/controllerTown24h.js)). Since #2583 it never holds rain |
 | `T3H` → `t3h` | short | °C. Since 5e653285 the new service's `TMP` is also stored here (strict decimal, else `-50`) | `-50` | |
@@ -160,7 +160,7 @@ Invalid `sky` (for example `-1`) or `pty` logs an error and contributes no part.
 - KMA yields 56 distinct names; world yields 28, all of them among the KMA names.
 - The bundled `client/www/img/weather_default` and `weather_old` folders each contain 63 PNG files. They cover all 56 names plus seven `*_fog` names (`sun_fog`, `moon_fog`, `sun_smallcloud_fog`, `moon_smallcloud_fog`, `sun_bigcloud_fog`, `moon_bigcloud_fog`, `cloud_fog`). No server code emits a fog name, and grep finds no `_fog` reference in `client/www/js` or templates.
 
-The client path is `{{weatherImgPath}}/{{skyIcon}}.png`, where `weatherImgPath` comes from the selected theme ([app.js](../../client/www/js/app.js#L330)).
+The client path is `{{weatherImgPath}}/{{skyIcon}}.png`, where `weatherImgPath` comes from the selected theme ([app.js](../../client/www/js/app.js#L341)).
 
 ### CamelCase and lower-case variants
 

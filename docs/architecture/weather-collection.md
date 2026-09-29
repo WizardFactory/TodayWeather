@@ -2,7 +2,7 @@
 
 ## Two collection strategies
 
-Domestic KMA and air products are gathered on a schedule and combined when requested. World-weather requests use database lookup and on-demand Visual Crossing/WAQI fetching. A legacy world collector also exists, but its recurring `doCollect()` loop is not invoked by the inspected application startup.
+Domestic KMA and air products are gathered on a schedule and combined when requested. World-weather requests use database lookup, on-demand Visual Crossing weather and the shared air-provider chain. A legacy world collector also exists, but its recurring `doCollect()` loop is not invoked by the inspected application startup.
 
 [Interactive domestic pipeline](diagrams/weather-collection.html) · [World-weather request](diagrams/mobile-weather-request.html)
 
@@ -39,9 +39,9 @@ The health-day expression can reach 18 at UTC 09, but cannot reach 6 because add
 ## KMA fetch → normalize → persist
 
 1. `/gather/current`, `/short`, and `/shortest` select a key and call the corresponding manager method with base offset `9`. Query-time helpers select product-specific base date/time; `town.getCoord()` supplies domestic grid coordinates.
-2. `_recursiveRequestData(..., retry, ...)` dispatches through `collectTownForecast.requestData()`, choosing a random key from the configured town forecast key list for each recursive pass. The retry budget defaults to 70 passes (town and mid products) and 50 for the invalid-T1H current update. [Gather runtime policy](../operations/gather-runtime-policy.md) lists the environment overrides.
-3. The requester builds `http://apis.data.go.kr` URLs for current, shortest, short and medium-range products, performs HTTP with a 10-second per-request timeout, accepts success code `00`, parses XML through `xml2js`, and maps category values into forecast records. Invalid/empty responses fail collection without logging service-key-bearing URLs. The requester's own retry count defaults to zero when constructed without options; manager recursion is a separate retry layer.
-4. `async.mapSeries` saves completed items via `getSaveFunc()`. Failed coordinates are retried using a decremented recursion count. Invalid temperature coordinates can be retried with an adjusted shortest publication time. Recursion uses a fixed timer delay (`GATHER_RETRY_DELAY_MS`, default 0), not exponential backoff.
+2. `_recursiveRequestData(..., retry, ...)` dispatches through `collectTownForecast.requestData()`, which requests the whole list with at most 101 requests in flight (`GATHER_REQUEST_CONCURRENCY`); a retry pass requests at most that many failed items and leaves the rest for the next pass. The key comes from the configured forecast key list and is kept per data.go.kr service (town `VilageFcstInfoService`, mid `MidFcstInfoService`) until data.go.kr rejects it. The retry budget defaults to 70 passes (town and mid products) and 50 for the invalid-T1H current update. [Gather runtime policy](../operations/gather-runtime-policy.md) lists the environment overrides.
+3. The requester builds `http://apis.data.go.kr` URLs for current, shortest, short and medium-range products, performs HTTP with a 10-second per-request timeout, accepts success code `00`, parses XML through `xml2js`, and maps category values into forecast records. Since #2620 the shortest product maps `POP` (added by `getUltraSrtFcst` in 2026-09) to `pop` (0–100, else `-1`); a category the collector does not know is skipped and logged as one `KMA unknown forecast categories` warning per grid and product, never per row. Invalid/empty responses fail collection without logging service-key-bearing URLs. A quota rejection (HTTP 429 or code `22`) or key rejection (HTTP 401/403, codes `20`/`30`/`31`/`32`), with any HTTP status, stops the pass: nothing new is sent and the requests in flight settle (#2604). Other 4xx responses mark the item as not retryable. The requester's own retry count defaults to zero when constructed without options; manager recursion is a separate retry layer.
+4. `async.mapSeries` saves completed items via `getSaveFunc()`. After a quota/key stop the Manager logs one warning, moves to the next key and requests only the items not yet collected, without using a retry pass; when every key was rejected in the cycle it ends with an error ([quota and key rotation](../operations/gather-runtime-policy.md#quota-and-key-rotation-2604)). Otherwise failed coordinates, except not-retryable 4xx ones, are retried using a decremented recursion count. Invalid temperature coordinates can be retried with an adjusted shortest publication time. Recursion uses a fixed timer delay (`GATHER_RETRY_DELAY_MS`, default 0), not exponential backoff.
 5. `getSaveFunc()` routes current/shortest/short to v2 KMA controllers when `DB_DATA_VERSION === '2.0'`; with `DB_DATA_VERSION === '1.0'`, legacy `saveCurrent`, `saveShortest`, `saveShort` merge/update per-grid documents. Other values have no save branch or callback in these three wrappers; there is no generic fallback. Medium-range products use their own save functions. There is no transaction covering all weather products.
 6. Product-specific cleanup removes old KMA records. `_checkPubDate()` also supports skipping already-current products in callers that use it; the three whole-grid methods shown above directly invoke collection, so do not assume publication deduplication applies uniformly.
 
@@ -81,14 +81,17 @@ This section and the RSS card in the collection diagram describe the local repai
 
 `startScrape()` runs in `scrape` or `local`, pushes initial minute, hourly and special-weather jobs into the same task array, installs a 60-second timer and calls `task()` itself. Thereafter minute observations enqueue on even minutes, special-weather situations on minutes divisible by 3, and hourly station observations at minutes 4, 6, 9 and 15. Scraper callbacks recognize `'skip'` for already-updated observations. In `local`, both startup methods call `task()`, so two drain loops share one array.
 
-In `gather` mode, two opt-in collectors (#2573) run outside that task array. `KMA_STN_MINUTE_ENABLED=true` starts `startMinuteScrape()`, which polls AWS minute observations every `KMA_STN_MINUTE_INTERVAL` minutes (default 2). `KMA_STN_HOURLY_ENABLED=true` starts `startHourlyScrape()`, which runs the AWS hourly table plus city observation page at UTC minutes `KMA_STN_HOURLY_MINUTES` (default `4,9,15,30`). Each keeps one run in flight and logs failures without stopping. Both flags default off; `scrape`/`local` scheduling is unchanged. The city page is decoded by its declared charset (UTF-8 since 2021) and parsed in either layout. If it fails, the AWS hourly rows are still saved. New stations get a `KmaStnInfo` row through Kakao geocoding or, without a Kakao key, the product geocode API at `API_SERVER/geocode/addr`. New AWS-only stations then feed the nearby-station rain check and `nearStnName`; current `t1h/reh/vec/wsd` still come from city stations. Stations that neither can geocode are saved as observations only and retried at the next hourly run. Storage keeps the legacy KST-as-UTC timestamps and existing retention. See the [operator runbook](../operations/kma-station-observations.md).
+The special-weather job no longer scrapes: the KMA warning status page was retired in the site redesign, so `KmaScraper.gatherSpecialWeatherSituation` delegates to [`kmaWarningCollector`](../../server/lib/kmaWarningCollector.js) (#2609), which reads the data.go.kr `WthrWrnInfoService` with the `DONGNAE_SECRET_KEYS` forecast keys ([flow diagram](diagrams/kma-warnings.html)). It runs inside `startScrape` in `scrape`/`local` mode, and on the gather worker (`SERVER_MODE=gather`) only when `KMA_WARNING_ENABLED=true` starts `startWarningScrape()`, a 3-minute timer outside the task array with one run in flight. Every cycle polls `getPwnStatus` (특보 현황), `getWthrPwn` (예비특보), `getWthrInfo` (기상정보) and `getWthrBrkNews` (기상속보); nothing depends on a publication schedule. A new `getPwnStatus` (`tmFc`, `tmSeq`) triggers `getWthrWrnMsg` (bulletin title, areas, times, release outlook) and a `getPwnCd` zone-event sync; the announcement is stored only after both reflect it, is retried on later cycles while either lags, and is stored without a bulletin after 20 cycles. `getPwnCd` rows are replayed into `kmaspecialweatherzones` (one document per zone and warning type): commands 1/3/6/7 activate and 2/8 release that zone's warning type only (`allEndTime` does not end the zone's other types), cancelled rows are ignored and only newer events apply. `getPwnCd` is requested one KST day at a time, because multi-page windows repeat and drop rows at page boundaries. An empty state bootstraps 60 days (the operation's limit): at most 10 days per sync, newest first, continuing every cycle until covered (8 syncs, 60 requests once); later syncs cover yesterday and today and resync hourly. Replay applies only newer events per zone and type, so the fetch order does not change the state. Quota errors (`22`/HTTP 429) end the cycle without retry (#2604); other errors leave documents and state unchanged.
+
+In `gather` mode, two opt-in collectors (#2573) run outside that task array. `KMA_STN_MINUTE_ENABLED=true` starts `startMinuteScrape()`, which polls AWS minute observations every `KMA_STN_MINUTE_INTERVAL` minutes (default 2). `KMA_STN_HOURLY_ENABLED=true` starts `startHourlyScrape()`, which runs the AWS hourly table plus city observation page at UTC minutes `KMA_STN_HOURLY_MINUTES` (default `4,9,15,30`). Each keeps one run in flight and logs failures without stopping. Both flags default off; `scrape`/`local` scheduling is unchanged. The city page is decoded by its declared charset (UTF-8 since 2021) and parsed in either layout. If it fails, the AWS hourly rows are still saved. New stations get a `KmaStnInfo` row through Kakao geocoding or, without a Kakao key, the product geocode API at `API_SERVER/geocode/v000903/addr` (unversioned before #2606). New AWS-only stations then feed the nearby-station rain check and `nearStnName`; current `t1h/reh/vec/wsd` still come from city stations. Stations that neither can geocode are saved as observations only and retried at the next hourly run. Storage keeps the legacy KST-as-UTC timestamps and existing retention. See the [operator runbook](../operations/kma-station-observations.md).
 
 | Product | Main path | Use at read time |
 | --- | --- | --- |
-| Station minute/hourly and warnings | `kmaScraper` → station/special-weather models | Correct/augment gridded current weather, precipitation and alerts |
+| Station minute/hourly | `kmaScraper` → station models | Correct/augment gridded current weather and precipitation |
+| Warnings (#2609) | `kmaWarningCollector` → `kmaspecials` (bulletin types 1–4), `kmaspecialweatherzones` (active zone state) | `/v000903/kma/special`; town `current.specialInfo` via the zone table [`kma_warning_zones.csv`](../../server/utils/data/kma_warning_zones.csv) |
 | Short RSS | `kma.town.short.rss.controller` | Supplement short API forecasts |
 | Legacy mid RSS (retired, #2560) | `midRssKmaRequester` | Collection/storage disabled; cached medium data is not applied |
-| AirKorea observations and forecast | `kecoController`, `kecoRequester` | Station/regional pollutants, forecast and air indices |
+| AirKorea observations and forecast | `kecoController`, `kecoRequester` | Station/regional pollutants, forecast and air indices. When no nearby station has an observation within 8 hours, v000903 KMA requests ask the air provider chain (Google, OpenWeather, WAQI; paid Visual Crossing/Google only when enabled) at request time instead ([fallback](mobile-api.md#domestic-air-fallback-and-the-air-provider-chain-issues-2622-2628), #2622/#2628); nothing is collected |
 | KAQ / AirKorea hourly image forecasts | `kaq.hourly.forecast.controller`, `airkorea.hourly.forecast.controller`, image parsers | Hourly pollutant projections; selected by `airForecastSource` |
 | Life and health indices | `lifeIndexKmaRequester` (UV from `LivingWthrIdxServiceV5/getUVIdxV5`, #2587), `controllerHealthDay` | Weather/life advisories |
 | Sunrise/sunset | `kasi.riseset.controller`; days without a stored row are computed by `lib/sunRiseSet.js` at request time | Day/night and astronomical context |
@@ -114,9 +117,11 @@ Deployment and rollback: the inspected service host runs Node 10.15.3 with Mongo
 
 Sources: [DSF route](../../server/routes/v000902/route.dsf.coord.v000902.js), [world controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [DSF cache controller](../../server/controllers/worldWeather/dsf.controller.js#L800-L1141) with [record selection](../../server/controllers/worldWeather/dsf.controller.js#L339-L468) and [budgets](../../server/controllers/worldWeather/dsf.controller.js#L43-L59), [Visual Crossing requester](../../server/lib/VC/vcRequester.js), [converter](../../server/lib/VC/vcConverter.js), [lock model](../../server/models/worldWeather/vc.fetch.lock.model.js), [usage model](../../server/models/worldWeather/vc.usage.model.js), [record model](../../server/models/worldWeather/dsf.model.js), [world cache sequence](../rewrite/diagrams/server-world-cache-sequence.html).
 
-## WAQI and the older world collector
+## Request-time air and the older world collector
 
-`_getWaqiFromAll()` prunes old AQI records, reads stored data and checks a 60-minute freshness window. It first attempts a known station/feed when available, then falls back to a geographic query. AQI failure handling differs from the overseas weather path and includes tolerated missing data; not every missing AQI reading fails the weather request. [World controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [AQI collector](../../server/controllers/worldWeather/controllerAqi.js).
+The active overseas new-form weather query now uses the same shared air provider service as domestic fallback (#2628 PR 2), even when weather is cached. Its observation cache and provider budgets are shared across routes/workers; no background air collector is introduced. Normalized current concentrations and UTC time pass to response conversion, and unavailable air does not fail weather. [Request sequence](diagrams/world-air-request.html).
+
+The legacy `_getWaqiFromAll()` remains for older query methods outside that active path. It prunes old AQI records, reads stored data and checks a 60-minute freshness window. It first attempts a known station/feed when available, then falls back to a geographic query. AQI failure handling differs from the overseas weather path and includes tolerated missing data; not every missing AQI reading fails the weather request. [World controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [AQI collector](../../server/controllers/worldWeather/controllerAqi.js).
 
 The older `controllerCollector` supports WU and DSF collection (its DSF requests now fail immediately); its `runTask()` schedules WU current and DSF at minute 30 and WU forecast at minute 1. `doCollect()` would install its timer, but no invocation is present in inspected non-test startup code. Requester command handlers and legacy API methods still reference this class. Provider modules under `MET`, `OWM`, `FC` and `AW` also exist; their presence alone does not establish their use by the current mobile path. [Legacy collector](../../server/controllers/worldWeather/controllerCollector.js), [requester commands](../../server/controllers/worldWeather/controllerRequester.js).
 
@@ -171,3 +176,53 @@ The additive history path uses official ASOS hourly/daily observations and a sep
 This describes local implementation, not production activation or verified live ASOS availability. The pre-existing `/past` endpoint and legacy scraper remain independent.
 
 Follow-up live validation on 2026-09-25 KST confirmed September 17–23 coverage for Seoul, Busan and Jeju (168 hourly and seven daily rows each). The official [ASOS portal](https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36&tabNo=2) describes winter rain at three-hour intervals and previous-day data availability after 10:00 KST. The normalizer therefore omits November–March `rn` from the one-hour `rn1` field until its accumulation period is verified; daily rain remains usable. Scheduled retries preserve gaps during publication delay. This enforces the existing field-validity boundary without changing the recovery/data-flow diagram.
+
+Overseas optional air is detached from its response after `AIR_RESPONSE_DEADLINE_MS` (default 4 seconds), including cache/store delays. The same in-flight chain can still populate shared cache for later calls. Late completion does not update the completed request; source ids and optional attribution remain normalized cache data for client display (#2628 D22).
+
+### Optional overseas UV storage (#2634)
+
+The VC Timeline elements list includes `uvindex`. Conversion and DSF parsing
+preserve optional finite nonnegative `uvIndex` values in current/hourly/daily
+DsfForecast documents, with no schema default. Hourly storage preserves the
+matching observation used for yesterday's current comparison. Daily values are
+provider maxima and are not substituted for missing current UV. Existing cache
+records remain valid and gain UV only on normal fetches; there is no cache purge,
+additional request or range/include change. See the [response contract](mobile-api.md#overseas-uv-2634).
+
+## Supported AirKorea observations and nation recovery (#2636)
+
+Station and city-statistics collection now uses the supported HTTPS
+`B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty` and
+`B552584/ArpltnStatsSvc/getCtprvnMesureSidoLIst` operations. The requester encodes
+raw or encoded `serviceKey` once, requests JSON, validates the response header
+and every page, and then normalizes observation fields. Each attempt has a
+5-second deadline and 2 MiB body limit; transient transport/5xx failures retry
+once. A province has a 30-second fetch budget and at most 20 pages / 2,000 rows.
+Authentication, quota and invalid payloads terminate without key rotation or
+outer retry multiplication. Four provinces run concurrently; one failure does
+not stop the other provinces. Scheduled station/sido runs cannot overlap another
+run of the same type in the same process (there is no new distributed lock).
+
+Validated KST wall times, including 24:00, produce UTC BSON `date` values while
+preserving `dataTime`. Invalid identities/timestamps reject a batch; invalid
+concentrations and grades are omitted, and stations with no valid concentration
+are reported as unavailable. Station and aggregate schema/grade mapping remain.
+The latest urban-monitoring batch still produces `cityName: ""` province rows;
+collection success now waits for both station and aggregate writes. Mongo writes
+are not transactional: an error can leave valid station rows without an aggregate;
+that province is reported failed. Row write errors are collected only after every
+started write has acknowledged, so a failure cannot release the scheduled lock
+while another row is still writing. Run completion records and returned province
+results contain UTC start/finish times; province log records contain finish time,
+province, stable error code, saved count, unavailable station names and observation
+time, never URLs, keys or provider bodies. Successful outcomes use stdout so the
+production error-only Winston console does not suppress them; failures use error
+logging. Best-effort S3 observation archival remains outside DB success semantics.
+Forecast and station-metadata legacy APIs are not migrated by this change.
+
+The user confirmed on 2026-09-29 that the AirKorea operating key is expired and
+will be renewed separately. No current provider entitlement, live collection
+success or production recovery is claimed. See the [rollout and rollback
+procedure](../../reports/sdlc/issue-2636/operations.md) for renewal and scheduled
+readback gates. Client-requested nation recovery uses Mongo plus the existing
+global-air chain and never calls AirKorea; see [nation response](mobile-api.md#nation-air-recovery-2636).

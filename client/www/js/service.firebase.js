@@ -6,6 +6,15 @@ angular.module('service.firebase', [])
     .factory('Firebase', function() {
         var obj = {};
 
+        // cordova-plugin-firebasex modular plugins: messaging and analytics each expose their own
+        // global instead of the old cordova-plugin-firebase FirebasePlugin.
+        function messaging() {
+            return window.FirebasexMessaging;
+        }
+        function analytics() {
+            return window.FirebasexAnalytics;
+        }
+
         /**
          * PUSH API
          */
@@ -18,8 +27,7 @@ angular.module('service.firebase', [])
             if (this.inited === false) {
                 return;
             }
-
-            window.FirebasePlugin.getToken(function (token) {
+            messaging().getToken(function (token) {
                 // save this server-side and use it to push notifications to this device
                 console.log(token);
                 callback(null, token);
@@ -29,11 +37,14 @@ angular.module('service.firebase', [])
             });
         };
 
+        /**
+         * Calls back with {isEnabled}, the shape of the old plugin (firebasex passes a boolean).
+         */
         obj.hasPermission = function(callback) {
-            window.FirebasePlugin.hasPermission(
-                function (data) {
-                    console.log(data.isEnabled);
-                    callback(data);
+            messaging().hasPermission(
+                function (enabled) {
+                    console.log(enabled);
+                    callback({isEnabled: enabled});
                 },
                 function (err) {
                     console.log(err) ;
@@ -41,7 +52,7 @@ angular.module('service.firebase', [])
         };
 
         obj.grantPermission = function(callback) {
-            window.FirebasePlugin.grantPermission(
+            messaging().grantPermission(
                 function (data) {
                     callback(null, data);
                 },
@@ -51,22 +62,22 @@ angular.module('service.firebase', [])
         };
 
         obj.unregister = function() {
-            window.FirebasePlugin.unregister();
+            messaging().unregister();
         };
 
         /**
          * analytics api
          */
         obj.logEvent = function(name, params) {
-            window.FirebasePlugin.logEvent(name, params);
+            analytics().logEvent(name, params);
         };
 
         obj.setScreenName = function(name) {
-            window.FirebasePlugin.setScreenName(name);
+            analytics().setScreenName(name);
         };
 
         obj.setUserId = function(id) {
-            window.FirebasePlugin.setUserId(id);
+            analytics().setUserId(id);
         };
 
         /**
@@ -75,14 +86,12 @@ angular.module('service.firebase', [])
          * @param {*} notificationCallback 
          */
         obj.init = function (tokenFreshCallback, notificationCallback) {
-            if (window.FirebasePlugin == undefined) {
+            if (messaging() == undefined) {
                 console.error('There is not firebase plugin');
                 return;
             }
-
             this.inited = true;
-
-            window.FirebasePlugin.onTokenRefresh(function(token) {
+            messaging().onTokenRefresh(function(token) {
                 // save this server-side and use it to push notifications to this device
                 console.log(token);
                 tokenFreshCallback(null, token);
@@ -90,9 +99,11 @@ angular.module('service.firebase', [])
                 console.error(err);
                 tokenFreshCallback(err);
             });
-
-            window.FirebasePlugin.onNotificationOpen(function(notification) {
+            // onMessageReceived replaces onNotificationOpen: firebasex sets tap to "background" or
+            // "foreground" only when the user tapped the notification; the old plugin used a boolean.
+            messaging().onMessageReceived(function(notification) {
                 console.log(notification);
+                notification.tap = !!notification.tap;
                 notificationCallback(null, notification);
             }, function(err) {
                 console.error(err);
@@ -102,4 +113,3 @@ angular.module('service.firebase', [])
 
         return obj;
     });
- 

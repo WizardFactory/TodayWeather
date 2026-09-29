@@ -50,7 +50,7 @@ function coord2addr(req, res, next) {
         throw new Error("Invalid loc");
     }
 
-    var url = config.apiServer.url + '/geocode/coord/'+loc;
+    var url = config.apiServer.url + '/geocode/v000903/coord/'+loc;
     _retryRequest(url, (err, geoInfo)=> {
         if (err) {
             return next(err);

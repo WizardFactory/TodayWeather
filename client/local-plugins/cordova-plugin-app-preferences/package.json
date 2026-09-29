@@ -1,0 +1,11 @@
+{
+  "name": "cordova-plugin-app-preferences",
+  "version": "0.99.3-tw.1",
+  "description": "Trimmed copy of cordova-plugin-app-preferences 0.99.3 for TodayWeather: Android/iOS storage only",
+  "license": "Apache-2.0",
+  "private": true,
+  "cordova": {
+    "id": "cordova-plugin-app-preferences",
+    "platforms": ["android", "ios"]
+  }
+}

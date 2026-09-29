@@ -8,9 +8,10 @@ With no variable set, behaviour equals master before #2588.
 
 | Variable | Controls | Default (master) | Production (host) | Accepted |
 | --- | --- | --- | --- | --- |
-| `GATHER_TOWN_RETRY` | `_recursiveRequestData` passes for `TOWN_SHORT`, `TOWN_SHORTEST`, `TOWN_CURRENT` | `70` | `10` (temporary; `180` before 2026-09-26) | integer ≥ 1 |
+| `GATHER_TOWN_RETRY` | `_recursiveRequestData` passes for `TOWN_SHORT`, `TOWN_SHORTEST`, `TOWN_CURRENT`; since #2604 the first pass requests the whole list and each later pass retries at most `GATHER_REQUEST_CONCURRENCY` failed grids | `70` | `180` (`10` on 2026-09-26, restored 2026-09-27; see [#2604](#quota-and-key-rotation-2604)) | integer ≥ 1 |
 | `GATHER_INVALID_CURRENT_RETRY` | passes for the invalid-T1H current update (`updateInvalidT1hData`) | `50` | `40` | integer ≥ 1 |
 | `GATHER_MID_RETRY` | passes for `MID_FORECAST`, `MID_LAND`, `MID_TEMP` (both call sites), `MID_SEA` | `70` | `2` | integer ≥ 1 |
+| `GATHER_REQUEST_CONCURRENCY` | requests in flight while one `_recursiveRequestData` pass walks its list (town and mid products, #2604) | `101` (the former per-pass cutoff) | not set; recheck the host collector first | integer 1–1000 |
 | `GATHER_RETRY_DELAY_MS` | `setTimeout` delay before each failed-list and invalid-list retry pass | `0` | `50` | integer 0–2147483647 (`setTimeout` limit) |
 | `GATHER_PAST_ENABLED` | queue the `Past` task at UTC minute 2 / startup | `true` | `false` | `true` / `false` |
 | `GATHER_AIR_FORECAST_ENABLED` | queue the KAQ hourly forecast block (UTC minute 7, existing hour gate) / startup | `true` | `false` | `true` / `false` |
@@ -33,12 +34,20 @@ The consumers require `config/gather.js` directly rather than a `config.gather` 
 - **KAQ upper check.** More than four model images is still rejected ("Maybe found new modelimg"). Only the minimum changes, as on the host.
 - **Delay count.** Every failed pass schedules one timer, including the last one that then stops on the zero count. This matches master.
 
+## Quota and key rotation (#2604)
+
+Before #2604, `collectTownForecast.requestData` failed every index above 100 without a request (TW-461), so the uncollected grids rode the retry path: the retry count also set the coverage (2,032 grids need at least 21 passes; retry 10 collected about 1,010 grids on 2026-09-26). Now the first pass walks the whole list with at most `GATHER_REQUEST_CONCURRENCY` requests in flight, and each retry pass requests at most `GATHER_REQUEST_CONCURRENCY` of the failed grids (the rest wait for the next pass). One cycle therefore sends at most `grids + (retry − 1) × concurrency` requests per key, plus at most one walk of the still pending grids for each key change: with every grid failing (for example `resultCode 03` before publication) that is 9,001 requests at retry 70 and 20,111 at retry 180, against 7,070 and 18,180 before. Master's load per moment is unchanged (101 in flight). The host collector was recorded with a smaller cutoff (`i > 20`, see [Remaining drift](#remaining-drift-not-covered-by-2588)); if that is still the case, set `GATHER_REQUEST_CONCURRENCY=21` to keep its request rate.
+
+A data.go.kr quota rejection (HTTP 429 or code `22`, with any HTTP status) or key rejection (HTTP 401/403 or codes `20`/`30`/`31`/`32`) stops the pass: no new request is sent, the requests in flight settle, and the Manager moves to the next `DONGNAE_SECRET_KEYS` entry for the grids not yet collected. When every key has been rejected in the cycle, the cycle ends with an error and no retry pass. The key in use is kept per service (`VilageFcstInfoService` for town products, `MidFcstInfoService` for mid products) until it is rejected; it replaces the random draw per pass (TW-396). Whether data.go.kr counts quota per key or per operation has not been measured. Other 4xx responses are not retried; 5xx, transport errors, `resultCode 03` and invalid bodies are retried as before. Each stop logs one warning (`stopped: reason=... pending=... keyIndex=... keysTried=...`); quota/key failures of single requests are logged at `debug`. The key index lives in process memory: after a restart each service starts again with the first key, so a key that is still exhausted costs one in-flight window (`GATHER_REQUEST_CONCURRENCY` requests) for each cycle already running on it, before the rotation (the startup pass starts several town cycles at once).
+
+Before deploying #2604, read the `requestData` cutoff in the host's `lib/collectTownForecast.js` (for example `grep -n 'parseInt(i) >' lib/collectTownForecast.js`), record it in the deployment notes, and set `GATHER_REQUEST_CONCURRENCY` to the cutoff + 1 (21 for `i > 20`; leave it unset for `i > 100`).
+
 ## Production settings
 
-These values come from the issue's host-versus-master inventory. The town retry reflects the 2026-09-26 quota hotfix in [#2604](https://github.com/WizardFactory/TodayWeather/issues/2604), which lowered the host literal from 180 to 10 as a temporary measure. This change did not re-inspect the gather host. Recheck the values against the host source before relying on them.
+These values come from the issue's host-versus-master inventory. The town retry is the host literal 180: the 2026-09-26 quota hotfix in [#2604](https://github.com/WizardFactory/TodayWeather/issues/2604) lowered it to 10, which dropped grids under the old per-pass cutoff, and it was restored on 2026-09-27 (issue comment). With the #2604 walk a smaller value no longer drops grids that succeed on the first pass; it still limits how many failed grids are retried (at most 101 per pass). This change did not re-inspect the gather host. Recheck the values against the host source before relying on them.
 
 ```sh
-GATHER_TOWN_RETRY=10
+GATHER_TOWN_RETRY=180
 GATHER_INVALID_CURRENT_RETRY=40
 GATHER_MID_RETRY=2
 GATHER_RETRY_DELAY_MS=50
@@ -52,7 +61,7 @@ The host source comment says the air-forecast block runs "from another instance 
 
 ### Operator procedure (not executed by this change)
 
-1. Back up the three host files and the PM2 dump. Read the actual literals from the backed-up files and compare them with the Production column above. The column comes from the issue inventory and the #2604 note, not from a host inspection, so correct any mismatch before continuing.
+1. Record the host `requestData` cutoff for `GATHER_REQUEST_CONCURRENCY` ([#2604](#quota-and-key-rotation-2604)). Back up the three host files and the PM2 dump. Read the actual literals from the backed-up files and compare them with the Production column above. The column comes from the issue inventory and the #2604 note, not from a host inspection, so correct any mismatch before continuing.
 2. Add the variables to the gather process environment (the PM2 `www` app on the gather host), for example via the ecosystem file or by exporting them before `pm2 restart www --update-env`. Then run `pm2 save` and confirm the dump contains them. `server/.env` is an alternative only when the host runs master `app.js` and `config/env.js` (#2566) with `dotenv` installed. The inspected host revision `c9220de3` has neither, so use the PM2 environment there. When both are set, the process environment takes precedence over the file.
 3. Replace `server/config/gather.js`, `controllers/controllerManager.js`, `lib/PastConditionGather.js` and `controllers/kaq.hourly.forecast.controller.js` with the master copies. First read "Remaining drift" below: the master `controllerManager.js` also changes the schedule.
 
@@ -71,4 +80,4 @@ The [gather source reconciliation](../architecture/gather-source-reconciliation.
 
 The host `lib/collectTownForecast.js` also has smaller request-index cutoffs (`i > 20`, `i >= 50`), and other files carry log-level edits. These need a separate decision before the host can run master source unchanged.
 
-The 2026-09-26 quota hotfix ([#2604](https://github.com/WizardFactory/TodayWeather/issues/2604)) is also host-only. It adds quota detection in `collectTownForecast.js` `_requestPage` and an early return in `_recursiveRequestData`. Replacing the host `controllerManager.js` or `collectTownForecast.js` with master before #2604 lands in master removes that protection and restores the per-grid retry storm on a quota day.
+The 2026-09-26 quota hotfix ([#2604](https://github.com/WizardFactory/TodayWeather/issues/2604)) is host-only. Master now contains the repair described in [Quota and key rotation](#quota-and-key-rotation-2604). Deploy `collectTownForecast.js`, `dataGoKrRejection.js`, `kmaWarningRequester.js`, `controllerManager.js` and `config/gather.js` together; replacing only one of the host files with master either loses the quota stop or fails on the missing module.
