@@ -167,7 +167,14 @@ test("a rate-limited refresh keeps the snapshot, explains the wait and does not 
   const revisit = async (online: boolean) => {
     await page.locator(".sidebar").getByRole("link", { name: "설정" }).click();
     await expect(page).toHaveURL(/\/settings$/);
+    // History changes before React necessarily commits the new route. Wait
+    // for the weather observer to unmount before testing a remount refetch.
+    await expect(page.locator(".temperature")).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "설정", exact: true }),
+    ).toBeVisible();
     await page.goBack();
+    await expect(page).toHaveURL(/\/weather\/seoul\/hourly$/);
     await expect(page.locator(".temperature")).toBeVisible();
     if (online)
       await page.evaluate(() => window.dispatchEvent(new Event("online")));
