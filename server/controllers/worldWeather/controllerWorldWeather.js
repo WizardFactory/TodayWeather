@@ -16,6 +16,7 @@ var controllerRequester = require('./controllerRequester');
 var ControllerWeatherDesc = require('../controller.weather.desc');
 var UnitConverter = require('../../lib/unitConverter');
 var aqiConverter = require('../../lib/aqi.converter');
+var LifeIndexKmaController = require('../lifeIndexKmaController');
 
 var commandList = ['restart', 'renewGeocodeList'];
 var weatherCategory = ['forecast', 'current'];
@@ -1755,13 +1756,13 @@ function controllerWorldWeather() {
                         req.result.daily.forEach(function(dailyItem, index){
                             //log.info('dailyItem : ', dailyItem.date);
                             if(self._compareDateString(dailyItem.date, dbItem.dateObj)){
-                                req.result.daily[index] = self._makeDailyDataFromDSF(dbItem);
+                                req.result.daily[index] = self._makeDailyDataFromDSF(dbItem, res);
                                 isExist = true;
                             }
                         });
                         if(!isExist){
                             //log.info('NEW! DSF -> Daily : ', dbItem.dateObj.toString());
-                            req.result.daily.push(self._makeDailyDataFromDSF(dbItem));
+                            req.result.daily.push(self._makeDailyDataFromDSF(dbItem, res));
                         }
                     }
                 });
@@ -2716,8 +2717,21 @@ function controllerWorldWeather() {
         return value !== undefined && value !== null && value !== -100;
     };
 
-    self._makeDailyDataFromDSF = function(summary){
+    // Additive web/mobile contract; translations belong to this response, not the cache.
+    self._addDsfUv = function(target, summary, ts) {
+        var value = summary.uvIndex;
+        if (typeof value !== 'number' || !isFinite(value) || value < 0) {
+            return;
+        }
+        target.uvIndex = value;
+        target.ultrv = value;
+        target.ultrvGrade = LifeIndexKmaController._ultrvGrade(value);
+        target.ultrvStr = LifeIndexKmaController.ultrvStr(target.ultrvGrade, ts);
+    };
+
+    self._makeDailyDataFromDSF = function(summary, ts){
         var day = {};
+        self._addDsfUv(day, summary, ts);
 
         if(summary.dateObj){
             day.date = summary.dateObj;
@@ -3032,6 +3046,7 @@ function controllerWorldWeather() {
      */
     self._makeCurrentDataFromDSFCurrent = function(summary, ts) {
         var current = {};
+        self._addDsfUv(current, summary, ts);
 
         if(summary.dateObj){
             current.date = summary.dateObj;

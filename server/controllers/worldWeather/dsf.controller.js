@@ -625,6 +625,10 @@ class DsfController {
             result.current.pres = this._getFloatItem(src.currently.pressure);
             result.current.oz = this._getFloatItem(src.currently.ozone);
             result.current.icon = src.currently.icon;
+            // Do not use _getFloatItem: it converts valid zero to the missing sentinel.
+            if (typeof src.currently.uvIndex === 'number' && isFinite(src.currently.uvIndex) && src.currently.uvIndex >= 0) {
+                result.current.uvIndex = src.currently.uvIndex;
+            }
         }
 
         // hourly data
@@ -653,6 +657,10 @@ class DsfController {
                 hourlyData.pres = this._getFloatItem(item.pressure);
                 hourlyData.oz = this._getFloatItem(item.ozone);
                 hourlyData.icon = item.icon;
+                // Do not use _getFloatItem: it converts valid zero to the missing sentinel.
+                if (typeof item.uvIndex === 'number' && isFinite(item.uvIndex) && item.uvIndex >= 0) {
+                    hourlyData.uvIndex = item.uvIndex;
+                }
 
                 result.hourly.data.push(hourlyData);
             });
@@ -692,6 +700,10 @@ class DsfController {
                 dailyData.pres = this._getFloatItem(item.pressure);
                 dailyData.oz = this._getFloatItem(item.ozone);
                 dailyData.icon = item.icon;
+                // Do not use _getFloatItem: it converts valid zero to the missing sentinel.
+                if (typeof item.uvIndex === 'number' && isFinite(item.uvIndex) && item.uvIndex >= 0) {
+                    dailyData.uvIndex = item.uvIndex;
+                }
 
                 result.daily.data.push(dailyData);
             });
