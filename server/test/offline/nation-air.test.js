@@ -32,7 +32,7 @@ test('missing/stale/DB-failed provinces use shared flow, retain fresh rows, sour
     assert.equal(busan.attribution,'Synthetic attribution');assert.equal(busan.coverage,'representative-point');
     assert.equal(busan.representativeCity,'Busan');assert.equal(busan.cityName,'');
     assert.equal(r.status.provinces.find(a=>a.sidoName==='대구').airkorea,'database-error');
-    assert.equal(r.status.provinces.find(a=>a.sidoName==='부산').airkorea,'unusable');
+    assert.equal(r.status.provinces.find(a=>a.sidoName==='부산').airkorea,'stale');
     assert.equal(r.status.provinces.find(a=>a.sidoName==='제주').airkorea,'missing');
     h.keco.recalculateValue(busan,'airkorea');assert.equal(busan.pm25Grade,1);
 });
@@ -90,4 +90,30 @@ test('completed provider response is copied before unit conversion; cached objec
     const h=setup(cb=>cb(null,[]),(coord,time,cb)=>cb(null,air));const r=await run(h.service);
     r.air.forEach(row=>h.keco.recalculateValue(row,'aqicn'));
     assert.equal(JSON.stringify(air),before);assert.equal(r.air.length,17);
+});
+test('global observations at exactly eight hours retain the shared domestic-flow acceptance policy',async()=>{
+    const h=setup(cb=>cb(null,[]),(coord,time,cb)=>cb(null,{...fresh(),source:'google',dataTime:'2026-09-29 15:30'}));
+    const r=await run(h.service);assert.equal(r.air.length,17);
+    assert(r.air.every(a=>a.source==='google'));
+});
+
+test('stored AirKorea failure reasons distinguish stale, future and invalid data',async()=>{
+    const h=setup(cb=>cb(null,[{...fresh(),dataTime:'2026-09-29 15:30'},
+        {...fresh('부산'),dataTime:'2026-10-01 23:00'},
+        {...fresh('대구'),pm10Value:-1,pm25Value:NaN},
+        {...fresh('인천'),dataTime:'invalid'}]),(coord,time,cb)=>cb(null,undefined,'no-provider'));
+    const r=await run(h.service);
+    const reasons=r.status.provinces.slice(0,4).map(s=>s.airkorea);
+    assert.deepEqual(Array.from(reasons),['stale','future','invalid','invalid']);
+});
+test('nation preserves actual shared evaluation at eight hours and minute-truncation boundary',async()=>{
+    const observation=createLoader({log:logger([])}).load('lib/air/observation.js');
+    for (const observedAt of ['2026-09-29T06:30:00Z','2026-09-29T06:30:30Z']) {
+        const obs={provider:'google',observedAt,stationBased:false,pollutants:{pm10:42,pm25:19}};
+        const h=setup(cb=>cb(null,[]),(coord,time,cb)=>{
+            const evaluated=observation.evaluate(obs,coord,time);
+            assert(evaluated.arpltn);cb(null,evaluated.arpltn,evaluated.reason);
+        });
+        const r=await run(h.service);assert.equal(r.air.length,17);
+    }
 });

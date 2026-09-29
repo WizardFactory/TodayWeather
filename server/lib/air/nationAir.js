@@ -15,11 +15,14 @@ var regions = [
     ['경남','Changwon',35.2280,128.6811], ['제주','Jeju',33.4996,126.5312],
     ['세종','Sejong',36.4800,127.2890]
 ];
-function usable(row, now) {
+function storedFailure(row, now) {
     var ms = Keco._parseDateTime(row && row.dataTime);
+    if (!isFinite(ms) || !['pm10Value','pm25Value'].some(function (k) {
+        return typeof row[k] === 'number' && isFinite(row[k]) && row[k] >= 0;
+    })) { return 'invalid'; }
     var age = now.getTime() - ms;
-    return isFinite(ms) && age >= -policy.FUTURE_SLACK_MS && age < policy.FRESHNESS_HOURS * 3600000 &&
-        ['pm10Value','pm25Value'].some(function (k) { return typeof row[k] === 'number' && isFinite(row[k]) && row[k] >= 0; });
+    if (age < -policy.FUTURE_SLACK_MS) { return 'future'; }
+    return age >= policy.FRESHNESS_HOURS * 3600000 ? 'stale' : null;
 }
 function getAir(callback, options) {
     options = options || {};
@@ -57,7 +60,9 @@ function getAir(callback, options) {
         function done(err, air, reason) {
             if (called || finished) { return; }
             called = true; active--;
-            if (!err && air && usable(air, now)) {
+            // The shared service already applies its provider freshness/distance/PM policy.
+            // Do not reapply AirKorea's stricter boundary to an accepted global observation.
+            if (!err && air) {
                 rows[name] = Object.assign({}, air, {sidoName: name, cityName: '', sidocityName: name,
                     date: new Date(Keco._parseDateTime(air.dataTime)), coverage: 'representative-point',
                     representativeCity: region[1], representativeCoord: coord});
@@ -80,11 +85,12 @@ function getAir(callback, options) {
             regions.forEach(function (r) {
                 var name = r[0], row = list.find(function (a) { return a.sidoName === name; });
                 var dbState = (readStatus || []).find(function (a) { return a.sidoName === name; });
-                if (row && usable(row, now)) {
+                var failure = row && storedFailure(row, now);
+                if (row && !failure) {
                     rows[name] = Object.assign({}, row, {source: 'airkorea', coverage: 'province-average'});
                     status[name] = {sidoName: name, available: true, source: 'airkorea', reason: 'stored'};
                 } else {
-                    status[name].airkorea = err || (dbState && dbState.reason === 'database-error') ? 'database-error' : row ? 'unusable' : 'missing';
+                    status[name].airkorea = err || (dbState && dbState.reason === 'database-error') ? 'database-error' : row ? failure : 'missing';
                     status[name].reason = 'queued'; pending.push(r);
                 }
             });

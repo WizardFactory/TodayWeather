@@ -6,3 +6,5 @@
 - [Collection diagram](../../../docs/architecture/diagrams/weather-collection.html), [nation recovery design](../../../docs/architecture/diagrams/nation-air-recovery.html), [visual assessment](diagram-visual.md).
 
 The task endpoint is pre-merge. Local state accounting and full browser sidecars are retained in the task workspace; exact-head CI/review/readiness receipts belong to the PR record. No merge, auto-merge, merge queue or production action is authorized.
+
+Revision 2: [corrective build](build-v2.md), [self verification](self-verification-v2.md), [test results](test-results-v2.json), [exact source hashes](candidate-v2.json), and [initial independent findings](independent-verification-v1.md). The final independent/PR review is recorded on PR #2643; the initial CHANGES_REQUIRED verdict is historical, not final readiness.
