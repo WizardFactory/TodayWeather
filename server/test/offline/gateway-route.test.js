@@ -440,3 +440,30 @@ test('RT-16 one log line per request with the spec fields and no raw location or
     }
     finally { await app.close(); }
 });
+
+test('#2635 typed backend outages preserve deadline, CORS and no-store without retry', async () => {
+    const app = await startApp();
+    try {
+        for (const seconds of [37, 8000]) {
+            for (const version of ['v000901', 'v000902', 'v000903']) {
+                reset(null);
+                // Bypass only geocoding; use the production HTTP loopback and gateway.
+                state.geocoder = {coord: () => Promise.resolve({country: 'JP', location: {lat: 35.68, long: 139.76}})};
+                const retryAt = Date.now() + seconds * 1000;
+                state.backendScript = [(q, r) => r.status(503).json({code: 'EWEATHERUNAVAILABLE', retryAt})];
+                const res = await request(app.port, 'GET', '/weather/' + version + '/coord/35.68,139.76');
+                assertErrorResponse(res, 503);
+                assert.equal(res.text, 'Service Unavailable');
+                assert.match(res.headers['retry-after'], /^[1-9]\d*$/);
+                assert(Number(res.headers['retry-after']) <= Math.min(3600, seconds));
+                assert.equal(state.backendHits.length, 1);
+            }
+        }
+        for (const body of [{code: 'OTHER', retryAt: Date.now() + 5000}, {code: 'EWEATHERUNAVAILABLE', retryAt: 'bad'}]) {
+            reset({coord: () => Promise.resolve({country: 'JP', location: {lat: 35.68, long: 139.76}})});
+            state.backendScript = Array.from({length: 3}, () => (q, r) => r.status(503).json(body));
+            assertErrorResponse(await request(app.port, 'GET', '/weather/v000903/coord/35.68,139.76'), 501);
+            assert.equal(state.backendHits.length, 3);
+        }
+    } finally { await app.close(); }
+});

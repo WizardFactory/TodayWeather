@@ -895,16 +895,25 @@ class DsfController {
     _checkProvider(range, callback){
         vcFetchLock.findById(PROVIDER_KEY, (err, marker)=>{
             if(!err && marker && new Date(marker.expireAt).getTime() > Date.now()){
-                return callback(new Error('cDsf > Visual Crossing marked unavailable until ' + new Date(marker.expireAt).toISOString()));
+                return callback(Object.assign(new Error('cDsf > Visual Crossing marked unavailable until ' + new Date(marker.expireAt).toISOString()), {
+                    code: 'EWEATHERUNAVAILABLE', retryAt: new Date(marker.expireAt).getTime()
+                }));
             }
             let limit = config.vc && config.vc.dailyRecordLimit;
             if(!limit){
                 return callback();
             }
-            vcUsage.findById(this._usageDay(), (err, usage)=>{
+            let day = this._usageDay();
+            vcUsage.findById(day, (err, usage)=>{
+                // Do not reject today's request using yesterday's exhausted counter.
+                if(day !== this._usageDay()){
+                    return this._checkProvider(range, callback);
+                }
                 let cost = range === 'combined' ? 49 : range === 'recent' ? 25 : 1;
                 if(!err && usage && usage.records + cost > limit){
-                    return callback(new Error('cDsf > daily Visual Crossing record budget reached (' + usage.records + '/' + limit + ')'));
+                    return callback(Object.assign(new Error('cDsf > daily Visual Crossing record budget reached (' + usage.records + '/' + limit + ')'), {
+                        code: 'EWEATHERUNAVAILABLE', retryAt: Date.parse(day + 'T00:00:00Z') + 86400000
+                    }));
                 }
                 return callback();
             });

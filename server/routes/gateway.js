@@ -16,6 +16,7 @@ var http = require('http');
 var express = require('express');
 var format = require('../lib/geocoder/format');
 var transport = require('../lib/geocoder/transport');
+var weatherUnavailable = require('../lib/weatherUnavailable');
 
 var DEFAULT_WEATHER_VERSION = 'v000901';
 var OWN_PATH = /^\/(?:weather|geocode)(?:\/|$)/;
@@ -27,6 +28,7 @@ var LOOPBACK_MAX_BYTES = 6 * 1024 * 1024;
 var ERROR_TEXT = {400: 'Bad Request', 404: 'Not Found', 501: 'Not Implemented', 503: 'Service Unavailable'};
 
 function statusForError(err) {
+    if (weatherUnavailable.isUnavailable(err)) { return 503; }
     if (err && err.code === 'EINPUT') { return 400; }
     if (err && err.code === 'ENOTFOUND') { return 404; }
     return 501;
@@ -182,13 +184,13 @@ function createGatewayRouter(deps) {
         return deps.log || console;
     }
 
-    function sendError(res, status) {
+    function sendError(res, status, err) {
         if (res.headersSent) { return; }
         res.status(status);
         res.set('Content-Type', 'text/plain; charset=utf-8');
         res.set('Cache-Control', 'no-store');
         if (status === 503) {
-            res.set('Retry-After', '5');
+            res.set('Retry-After', weatherUnavailable.isUnavailable(err) ? String(weatherUnavailable.retryAfter(err)) : '5');
         }
         res.send(ERROR_TEXT[status] || ERROR_TEXT[501]);
     }
@@ -258,7 +260,7 @@ function createGatewayRouter(deps) {
                 if (status === 501) {
                     logger().warn('gateway ' + route + ' 501: ' + (err && err.message));
                 }
-                sendError(res, status);
+                sendError(res, status, err);
                 finishLog(status);
             }).then(release, release);
         };
@@ -283,6 +285,11 @@ function createGatewayRouter(deps) {
             tried++;
             return call(path, headers, Math.min(attemptMs, remaining), ctx.signal).then(function (res) {
                 ctx.info.backend = res.status;
+                if (res.status === 503 && res.json && weatherUnavailable.isUnavailable(res.body)) {
+                    var unavailable = inputError('weather temporarily unavailable', res.body.code);
+                    unavailable.retryAt = res.body.retryAt;
+                    throw unavailable;
+                }
                 if (res.status >= 500 && tried < attempts) {
                     return attempt();
                 }

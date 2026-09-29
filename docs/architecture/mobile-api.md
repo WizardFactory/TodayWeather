@@ -292,3 +292,30 @@ Actual-data browser validation found that legacy charts print negative rain sent
 `getKmaStnMinuteWeather` no longer depends on recent hourly station rows. When `findHourlies2` finds none, `getStnHourlyAndMinRns` marks `hourlyMissing` and still reads minute observations. If the station observation is newer than `currentPubDate`, `t1h`, `reh`, `vec` and `wsd` are replaced by values that pass `_isValidObservation` range checks. Older observations only fill missing or sentinel values, as before. `rn1`, cloud and weather handling are unchanged. The API values before the merge remain in `current.dongnae`, and `liveTime` carries the observation time. This path has no feature flag. Cached responses add delay: the CloudFront default behavior (300–600 s) for direct `/v000903/kma/...` requests, and the weather Lambda's `max-age=300` for the app's `/weather/*` path. See the [operator runbook](../operations/kma-station-observations.md).
 
 D23 response hint: when the overseas air deadline expires with work outstanding, both DSF and `/ww` add top-level `airStatus: {"state":"pending","retryAfterSeconds":3}`. It describes the cutoff state and suggests a delay; the client decides whether to request again. It guarantees neither success nor completion within three seconds. Early success and terminal no-air failures omit it. The hint is request-local, never cached, and late callbacks cannot alter it. No automatic retry or HTTP Retry-After is added.
+
+## Temporary overseas weather unavailability (#2635)
+
+The repository's `tw-svc` gateway (`server/routes/gateway.js`, introduced in #2606)
+returns **503 Service Unavailable** when Visual Crossing has an active provider-down
+marker or the configured daily record budget prevents a fetch **and no usable
+stored current weather is available**. Stored-weather fallback still succeeds.
+This describes repository behavior, not a new production deployment observation;
+the AWS/Lambda table above retains its 2026-09-20 historical scope.
+
+`Retry-After` is a positive integer number of seconds, capped at **3600**. Its
+absolute deadline is the provider marker's `expireAt`, or the next UTC midnight
+for the usage day checked. Remaining seconds are rounded down, with a minimum of
+one second for the final fractional second or a deadline crossed in transit.
+The shared DSF handler passes only `EWEATHERUNAVAILABLE` and `retryAt` in its
+internal 503 JSON; the gateway recomputes the delay and sends a generic text body.
+It does not immediately retry this typed outage. Public 503 responses retain
+`Access-Control-Allow-Origin: *` and `Cache-Control: no-store`. Unclassified
+weather failures still map to 501, invalid input to 400 and `(0,0)` to 404.
+Existing gateway overload 503 remains `Retry-After: 5`.
+
+Cordova's `WeatherUtil` handles 503 through the same `$http.error` callback as
+other HTTP errors; its existing overlapping attempt timers are unchanged. The
+checked-in iOS widget does not branch on HTTP status, so plain-text 501 and 503
+follow the same response-body parsing path. Neither client is claimed to honor
+`Retry-After`. This compatibility assessment is source-based, not a mobile build
+or device test. See the [pre-change issue record](https://github.com/WizardFactory/TodayWeather/issues/2635#issuecomment-5884077414).
