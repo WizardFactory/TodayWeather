@@ -115,7 +115,7 @@ Local checks run with `node server/test/offline/rss-wind.test.js` (Node 18+; no 
 
 ### Current air summary (issue #2578)
 
-`getSummaryAfterUnitConverter` fills `current.summaryWeather`, `current.summaryAir` and the combined `current.summary`; the app shows the first two as the lines under the temperature. `summaryAir` is built only from pollutant and integrated-index grades in `current.arpltn`. `getKeco` leaves `arpltn` absent when no nearby AirKorea station has an observation within eight hours of the request, and every station is compared with that same threshold. The [air fallback](#domestic-air-fallback-and-the-air-provider-chain-issues-2622-2628) may then fill it; when it does not, `makeSummaryAir` returns an empty string, and `getSummaryAfterUnitConverter` (and the world-weather `ControllerWWUnits.makeSummary`) omit `summaryAir` from the response. Installed app share text checks `hasOwnProperty('summaryAir')`, so an empty string would add a blank line; the app view hides the line either way (`ng-if="summaryAir"`). Weather or life-index grades on `current` (for example `wsdGrade`) are never treated as air grades, and the combined `summary` does not write air fields onto `current`. AirKorea `dataTime` is still parsed in the host timezone, so the window is wider on a UTC host. Sources: [summary builders](../../server/controllers/controllerTown24h.js), [combined summary](../../server/controllers/controllerTown.js), [AirKorea merge](../../server/controllers/kecoController.js); checks: `air-summary.test.js` and `air-summary-smoke.js` under `server/test/offline`.
+`getSummaryAfterUnitConverter` fills `current.summaryWeather`, `current.summaryAir` and the combined `current.summary`; the app shows the first two as the lines under the temperature. `summaryAir` is built only from pollutant and integrated-index grades in `current.arpltn`. `getKeco` leaves `arpltn` absent when no nearby AirKorea station has an observation within eight hours of the request, and every station is compared with that same threshold. The [air fallback](#domestic-air-fallback-and-the-air-provider-chain-issues-2622-2628) may then fill it; when it does not, `makeSummaryAir` returns an empty string, and `getSummaryAfterUnitConverter` (and the world-weather `ControllerWWUnits.makeSummary`) omit `summaryAir` from the response. Installed app share text checks `hasOwnProperty('summaryAir')`, so an empty string would add a blank line; the app view hides the line either way (`ng-if="summaryAir"`). Weather or life-index grades on `current` (for example `wsdGrade`) are never treated as air grades, and the combined `summary` does not write air fields onto `current`. AirKorea `dataTime` is parsed as KST (`+09:00`), including `24:00` as the following midnight; the strict elapsed window is less than eight hours on every host timezone, independent of DST. Invalid timestamps are rejected. Hourly detail charts also use the shared KST parser and fixed one-hour steps: 25 consecutive slots ending at the latest observation, with `24:00` normalized to the following midnight. Host DST gaps or repeated hours cannot drop or duplicate a KST slot. `makeAirInfo` and `makeAirInfoList` apply the same predicate to every AirKorea observation row; empty or entirely stale stations are omitted and older hourly slots carry no observed values. Regional daily forecasts remain forecasts. Explicit non-AirKorea rows keep the provider chain's own timestamp validation and source attribution. Sources: [summary builders](../../server/controllers/controllerTown24h.js), [combined summary](../../server/controllers/controllerTown.js), [AirKorea merge](../../server/controllers/kecoController.js); checks: `air-summary.test.js`, `air-summary-smoke.js`, `air-freshness.test.js`, `air-freshness-route.test.js` and `air-freshness-smoke.js` under `server/test/offline`.
 
 ### Domestic air fallback and the air provider chain (issues #2622, #2628)
 
@@ -188,6 +188,34 @@ The [v000902 DSF router reused by v000903](../../server/routes/v000902/route.dsf
 The response shape differs from KMA: world weather uses `daily`, `hourly`, `thisTime`, `pubDate`, location/time-zone context and units, with air enrichment when available. `dataSort` sets `source: "VC"` and the merges write `pubDate.VC` (formerly `DSF`/`pubDate.DSF`). Current apps show a "Weather Data Provided by Visual Crossing" text link when `source == 'VC'`. Released app versions do not recognise `VC`, so a city keeps its stored `source`: released TodayWeather iOS builds set `DSF` for every non-KR current position, and overseas cities stored before the switch keep `DSF`. Those cities show "Powered by Dark Sky" over Visual Crossing data until the app is updated; other overseas cities in released apps show no attribution. Native widgets and push messages show no attribution. Weather retrieval errors propagate to Express unless a stored current record (fresh, or up to 6 hours old) can be served; air misses/failures are tolerated without suppressing weather errors. The frontend chooses the world parser whenever `source !== 'KMA'`, so malformed non-KMA bodies are not automatically rejected at the source discriminator.
 
 Sources: [world controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [world unit conversion](../../server/controllers/worldWeather/controller.ww.units.js), [client parser selection](../../client/www/js/service.weatherutil.js).
+
+### Overseas UV (#2634)
+
+Visual Crossing `uvindex` is requested and carried through the converter, DSF parser
+and optional `DsfForecast` current/hourly/daily `uvIndex` fields. The final overseas
+`thisTime[]` and `daily[]` rows expose numeric `uvIndex` and mobile-compatible
+`ultrv`, `ultrvGrade`, `ultrvStr`. Current UV is the current observation (or the
+current-hour fallback); daily UV is the provider's daily maximum. A daily weather
+fallback never supplies UV for a missing current/hourly observation.
+
+Only finite nonnegative numbers are accepted, including zero. Missing, null,
+non-numeric, nonfinite and negative values stay absent; old cache documents have
+no UV default and remain usable until normal refresh. UV does not depend on the
+requested temperature/wind units. Request-local translations and the existing
+KMA UV grade boundaries/labels are reused; translated strings are not cached.
+
+Existing mobile templates read the daily `ultrv`/grade/text fields (including the
+today summary), while the web normalizer accepts both these fields and `uvIndex`.
+No native widget UV display is added. The former Dark Sky path did not expose UV,
+so this is an additive capability, not a restored pre-migration field. Request
+range, `include`, cache policy and number of provider calls are unchanged; actual
+billed cost and deployed responses still require separate live verification.
+
+Regression: `server/test/offline/overseas-uv.test.js`; real isolated Mongo/HTTP
+smoke: `server/test/offline/overseas-uv-smoke.js`. The Tokyo UV fixture was recorded on 2026-09-29; additional edge cases use
+explicitly synthetic UV. A paired live Tokyo request returned queryCost 49 both
+before and after adding UV (same last1days/next7days range). Local evidence does
+not establish production rollout. [Updated request diagram](diagrams/mobile-weather-request.html).
 
 ### Overseas request-time air provider chain (#2628 PR 2)
 
@@ -264,3 +292,30 @@ Actual-data browser validation found that legacy charts print negative rain sent
 `getKmaStnMinuteWeather` no longer depends on recent hourly station rows. When `findHourlies2` finds none, `getStnHourlyAndMinRns` marks `hourlyMissing` and still reads minute observations. If the station observation is newer than `currentPubDate`, `t1h`, `reh`, `vec` and `wsd` are replaced by values that pass `_isValidObservation` range checks. Older observations only fill missing or sentinel values, as before. `rn1`, cloud and weather handling are unchanged. The API values before the merge remain in `current.dongnae`, and `liveTime` carries the observation time. This path has no feature flag. Cached responses add delay: the CloudFront default behavior (300–600 s) for direct `/v000903/kma/...` requests, and the weather Lambda's `max-age=300` for the app's `/weather/*` path. See the [operator runbook](../operations/kma-station-observations.md).
 
 D23 response hint: when the overseas air deadline expires with work outstanding, both DSF and `/ww` add top-level `airStatus: {"state":"pending","retryAfterSeconds":3}`. It describes the cutoff state and suggests a delay; the client decides whether to request again. It guarantees neither success nor completion within three seconds. Early success and terminal no-air failures omit it. The hint is request-local, never cached, and late callbacks cannot alter it. No automatic retry or HTTP Retry-After is added.
+
+## Temporary overseas weather unavailability (#2635)
+
+The repository's `tw-svc` gateway (`server/routes/gateway.js`, introduced in #2606)
+returns **503 Service Unavailable** when Visual Crossing has an active provider-down
+marker or the configured daily record budget prevents a fetch **and no usable
+stored current weather is available**. Stored-weather fallback still succeeds.
+This describes repository behavior, not a new production deployment observation;
+the AWS/Lambda table above retains its 2026-09-20 historical scope.
+
+`Retry-After` is a positive integer number of seconds, capped at **3600**. Its
+absolute deadline is the provider marker's `expireAt`, or the next UTC midnight
+for the usage day checked. Remaining seconds are rounded down, with a minimum of
+one second for the final fractional second or a deadline crossed in transit.
+The shared DSF handler passes only `EWEATHERUNAVAILABLE` and `retryAt` in its
+internal 503 JSON; the gateway recomputes the delay and sends a generic text body.
+It does not immediately retry this typed outage. Public 503 responses retain
+`Access-Control-Allow-Origin: *` and `Cache-Control: no-store`. Unclassified
+weather failures still map to 501, invalid input to 400 and `(0,0)` to 404.
+Existing gateway overload 503 remains `Retry-After: 5`.
+
+Cordova's `WeatherUtil` handles 503 through the same `$http.error` callback as
+other HTTP errors; its existing overlapping attempt timers are unchanged. The
+checked-in iOS widget does not branch on HTTP status, so plain-text 501 and 503
+follow the same response-body parsing path. Neither client is claimed to honor
+`Retry-After`. This compatibility assessment is source-based, not a mobile build
+or device test. See the [pre-change issue record](https://github.com/WizardFactory/TodayWeather/issues/2635#issuecomment-5884077414).

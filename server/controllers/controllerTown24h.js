@@ -833,15 +833,22 @@ function ControllerTown24h() {
         }
     };
 
+    function _formatAirKstTime(epoch) {
+        return new Date(epoch + 9 * 3600000).toISOString().slice(0, 16).replace('T', ' ');
+    }
+
     this._insertEmptyPollutantHourlyObj = function (lastDataTime) {
         var list = [];
         try {
-            var date = new Date(lastDataTime);
-            date.setHours(date.getHours()-24);
+            var epoch = KecoController._parseDateTime(lastDataTime);
+            if (!isFinite(epoch)) {
+                return list;
+            }
+            epoch -= 24 * 3600000;
             for (var i=0; i<=24; i++) {
-                var hourlyObj = {date: kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(date)};
+                var hourlyObj = {date: _formatAirKstTime(epoch)};
                 list.push(hourlyObj);
-                date.setHours(date.getHours()+1);
+                epoch += 3600000;
             }
         }
         catch (err) {
@@ -863,7 +870,7 @@ function ControllerTown24h() {
 
             arpltn = KecoController.recalculateValue(arpltn, airUnit);
             if (arpltn.dataTime.indexOf("24:00") > 0) {
-                arpltn.dataTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(new Date(arpltn.dataTime));
+                arpltn.dataTime = _formatAirKstTime(KecoController._parseDateTime(arpltn.dataTime));
             }
 
             ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
@@ -996,6 +1003,16 @@ function ControllerTown24h() {
         return req.airInfo;
     };
 
+    function _freshAirDetailRows(rows, now) {
+        if (!Array.isArray(rows)) {
+            return [];
+        }
+        return rows.filter(function (row) {
+            // The fallback chain validates its own timestamps before producing these rows.
+            return row && ((row.source && row.source !== 'airkorea') || KecoController._checkDateTime(row, now));
+        });
+    }
+
     this.makeAirInfo = function (req, res, next) {
         var meta = {};
         meta.sID = req.sessionID;
@@ -1008,13 +1025,14 @@ function ControllerTown24h() {
         try {
             var airInfo;
             var airUnit = req.query.airUnit || 'airkorea';
-            if(req.arpltnList) {
+            var arpltnList = _freshAirDetailRows(req.arpltnList, new Date());
+            if(arpltnList.length > 0) {
                 if (airInfo == undefined) {
                     airInfo = self._getAirInfo(req);
                 }
-                airInfo.last = req.arpltnList[0];
+                airInfo.last = arpltnList[0];
                 airInfo.pollutants = {};
-                self._insertHourlyPollutants(airInfo.pollutants, req.arpltnList, airUnit, airInfo.last.dataTime);
+                self._insertHourlyPollutants(airInfo.pollutants, arpltnList, airUnit, airInfo.last.dataTime);
             }
             if ( req.midData && Array.isArray(req.midData.dailyData) ) {
                 var dailyList = req.midData.dailyData.filter(function (value) {
@@ -1128,8 +1146,12 @@ function ControllerTown24h() {
             var airUnit = req.query.airUnit || 'airkorea';
             if(req.arpltnStnList) {
                 var airInfoList = [];
+                var now = new Date();
                 for (var i=0; i<req.arpltnStnList.length; i++) {
-                    var arpltnList = req.arpltnStnList[i];
+                    var arpltnList = _freshAirDetailRows(req.arpltnStnList[i], now);
+                    if (arpltnList.length === 0) {
+                        continue;
+                    }
                     var airInfo = {source: arpltnList[0] && arpltnList[0].source ? arpltnList[0].source : 'airkorea'};
                     airInfo.last = arpltnList[0];
                     airInfo.pollutants = {};

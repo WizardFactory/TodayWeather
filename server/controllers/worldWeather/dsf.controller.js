@@ -625,6 +625,10 @@ class DsfController {
             result.current.pres = this._getFloatItem(src.currently.pressure);
             result.current.oz = this._getFloatItem(src.currently.ozone);
             result.current.icon = src.currently.icon;
+            // Do not use _getFloatItem: it converts valid zero to the missing sentinel.
+            if (typeof src.currently.uvIndex === 'number' && isFinite(src.currently.uvIndex) && src.currently.uvIndex >= 0) {
+                result.current.uvIndex = src.currently.uvIndex;
+            }
         }
 
         // hourly data
@@ -653,6 +657,10 @@ class DsfController {
                 hourlyData.pres = this._getFloatItem(item.pressure);
                 hourlyData.oz = this._getFloatItem(item.ozone);
                 hourlyData.icon = item.icon;
+                // Do not use _getFloatItem: it converts valid zero to the missing sentinel.
+                if (typeof item.uvIndex === 'number' && isFinite(item.uvIndex) && item.uvIndex >= 0) {
+                    hourlyData.uvIndex = item.uvIndex;
+                }
 
                 result.hourly.data.push(hourlyData);
             });
@@ -692,6 +700,10 @@ class DsfController {
                 dailyData.pres = this._getFloatItem(item.pressure);
                 dailyData.oz = this._getFloatItem(item.ozone);
                 dailyData.icon = item.icon;
+                // Do not use _getFloatItem: it converts valid zero to the missing sentinel.
+                if (typeof item.uvIndex === 'number' && isFinite(item.uvIndex) && item.uvIndex >= 0) {
+                    dailyData.uvIndex = item.uvIndex;
+                }
 
                 result.daily.data.push(dailyData);
             });
@@ -883,16 +895,25 @@ class DsfController {
     _checkProvider(range, callback){
         vcFetchLock.findById(PROVIDER_KEY, (err, marker)=>{
             if(!err && marker && new Date(marker.expireAt).getTime() > Date.now()){
-                return callback(new Error('cDsf > Visual Crossing marked unavailable until ' + new Date(marker.expireAt).toISOString()));
+                return callback(Object.assign(new Error('cDsf > Visual Crossing marked unavailable until ' + new Date(marker.expireAt).toISOString()), {
+                    code: 'EWEATHERUNAVAILABLE', retryAt: new Date(marker.expireAt).getTime()
+                }));
             }
             let limit = config.vc && config.vc.dailyRecordLimit;
             if(!limit){
                 return callback();
             }
-            vcUsage.findById(this._usageDay(), (err, usage)=>{
+            let day = this._usageDay();
+            vcUsage.findById(day, (err, usage)=>{
+                // Do not reject today's request using yesterday's exhausted counter.
+                if(day !== this._usageDay()){
+                    return this._checkProvider(range, callback);
+                }
                 let cost = range === 'combined' ? 49 : range === 'recent' ? 25 : 1;
                 if(!err && usage && usage.records + cost > limit){
-                    return callback(new Error('cDsf > daily Visual Crossing record budget reached (' + usage.records + '/' + limit + ')'));
+                    return callback(Object.assign(new Error('cDsf > daily Visual Crossing record budget reached (' + usage.records + '/' + limit + ')'), {
+                        code: 'EWEATHERUNAVAILABLE', retryAt: Date.parse(day + 'T00:00:00Z') + 86400000
+                    }));
                 }
                 return callback();
             });

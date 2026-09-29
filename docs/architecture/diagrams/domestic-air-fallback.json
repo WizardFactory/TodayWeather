@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "Domestic air: AirKorea first, then the provider chain with shared budgets and cache",
+    "title": "Domestic air: AirKorea and provider fallback",
     "locale": "en",
     "quality_profile": "showcase",
     "column_fit": "spread",
@@ -163,8 +163,8 @@
       "dot": "amber",
       "title": "Limits",
       "items": [
-        "Free counters are approximate (5 % reserve). Paid calls require an acknowledged atomic monthly reservation; read/write errors deny paid admission.",
-        "Reservations are not refunded or counted twice; result accounting retains the admission month. Cache policy is unchanged."
+        "Free counters reserve 5%; paid admission needs an atomic monthly reservation (deny on store errors). No refunds or double counting.",
+        "AirKorea current/detail: age <8 h. Parsing, hourly slots and 24:00 use KST; stale detail values are omitted."
       ]
     }
   ]
