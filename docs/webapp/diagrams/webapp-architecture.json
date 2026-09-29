@@ -5,6 +5,7 @@
     "title": "TodayWeather — adopted static architecture",
     "locale": "en",
     "quality_profile": "showcase",
+    "output": "docs/webapp/diagrams/webapp-architecture.html",
     "viewBox": [
       1220,
       650
@@ -15,7 +16,7 @@
       "id": "web-browser",
       "type": "frontend",
       "label": "Responsive PWA",
-      "sublabel": "app.tdywx.xyz",
+      "sublabel": "app.todayweather.ai",
       "pos": [
         40,
         100
@@ -148,7 +149,8 @@
       "title": "Release boundary",
       "items": [
         "S3 + CloudFront is the adopted hosting target",
-        "Deployment method awaits AK's decision"
+        "Reuse existing hosting; release requires approval",
+        "Emergency worker clears only app shell caches"
       ]
     },
     {

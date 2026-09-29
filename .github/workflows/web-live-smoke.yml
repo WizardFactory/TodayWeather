@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Deployed origin to check (for example https://app.tdywx.xyz). Empty builds web/dist and uses the local static preview."
+        description: "Deployed origin to check (for example https://app.todayweather.ai). Empty builds web/dist and uses the local static preview."
         required: false
         default: ""
         type: string

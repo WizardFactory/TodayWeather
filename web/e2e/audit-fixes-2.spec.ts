@@ -88,6 +88,13 @@ test.describe("focus management (round 2 N1/N2/N5/N7/N8)", () => {
     await expect(page).toHaveURL(/\/daily$/);
     await page.locator(".sidebar").getByRole("link", { name: "설정" }).click();
     await expect(page).toHaveURL(/\/settings$/);
+    // History changes before React commits the new route. Wait for that
+    // commit before forcing focus and issuing another navigation.
+    await expect(
+      page.getByRole("heading", { name: "설정", level: 1 }),
+    ).toBeVisible();
+    // Focus is applied in an effect after the route commits.
+    await expect.poll(() => active(page)).toBe("main-content");
     const link = page.locator(".sidebar").getByRole("link", { name: "설정" });
     await link.focus();
     await expect(link).toBeFocused();

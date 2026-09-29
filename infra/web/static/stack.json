@@ -1,10 +1,10 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "TodayWeather app.tdywx.xyz private static hosting. No compute server or API deployment.",
+  "Description": "TodayWeather app.todayweather.ai private static hosting. No compute server or API deployment.",
   "Parameters": {
     "AppDomainName": {
       "Type": "String",
-      "Default": "app.tdywx.xyz",
+      "Default": "app.todayweather.ai",
       "AllowedPattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$",
       "Description": "Web app hostname served by the distribution. The default is already an alias of the existing distribution; see README before reusing it."
     },

@@ -1,6 +1,6 @@
 # Deploying the webapp without an additional Node service
 
-Reviewed 2026-09-24 at repository revision `525a4a27`. Scope: feasibility and operating evidence, not implementation or deployment. AK requested reuse of current infrastructure without an additional Node server. The existing mobile feature-parity objective remains in force. **Historical review:** references to the adapter below describe revision `525a4a27`, not the current runtime. The direct browser migration is now implemented, the Node workspace is removed, and deployment method selection is deferred. See [current implementation](implementation.md).
+Reviewed 2026-09-24 at repository revision `525a4a27`. Scope: feasibility and operating evidence, not implementation or deployment. AK requested reuse of current infrastructure without an additional Node server. The existing mobile feature-parity objective remains in force. **Historical review:** references to the adapter below describe revision `525a4a27`, not the current runtime. The direct browser migration is now implemented, the Node workspace is removed, and issue #2646 now prepares reuse of existing hosting for app.todayweather.ai, with production execution separately authorized. See [current implementation](implementation.md).
 
 Raw inspection and probe receipts are retained locally under ignored `reports/sdlc/`; the dated findings and limits below are the maintained summary.
 
@@ -79,4 +79,4 @@ The recommended read-side migration has been implemented in `web/src/api.ts`, `w
 
 Verification serves only static files and covers mapped external operations, network/CORS errors, canonical/display units and air standards, search/location races, local favorites, snapshot corruption/offline recovery, deep links/404s and worker lifecycle. Notification UI must report unavailable without attempting subscription or rule operations. Future alert support requires separate persistence and actual device-delivery evidence.
 
-The original 2026-09-24 review itself changed no application source, AWS resource, GitHub record or deployment. Subsequent implementation does not refresh the AWS/provider observations above. Final-domain and installed-device checks remain release work; deployment method selection is deferred.
+The original 2026-09-24 review itself changed no application source, AWS resource, GitHub record or deployment. Subsequent implementation does not refresh the AWS/provider observations above. Final-domain and installed-device checks remain release work; issue #2646 prepares existing hosting reuse; production execution remains separately authorized.

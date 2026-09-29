@@ -1,7 +1,7 @@
 /**
  * Unmocked, read-only smoke of the static web app and the public TodayWeather
  * API it calls. Usable before deployment (local preview of web/dist) and after
- * deployment (--base https://app.tdywx.xyz). Sends only GET requests, needs no
+ * deployment (--base https://app.todayweather.ai). Sends only GET requests, needs no
  * credentials and never writes to a server.
  *
  *   node scripts/web-live-smoke.mjs [--base <url>] [--json <out>]
@@ -484,7 +484,7 @@ export function parseArgs(argv) {
     const url = new URL(options.base);
     if (!/^https?:$/.test(url.protocol) || url.pathname !== "/" || url.search)
       throw Error(
-        "--base must be an http(s) origin such as https://app.tdywx.xyz",
+        "--base must be an http(s) origin such as https://app.todayweather.ai",
       );
     options.base = url.origin;
   }

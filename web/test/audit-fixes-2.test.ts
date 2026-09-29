@@ -235,7 +235,7 @@ describe("release identity marks uncommitted builds (round 2, N7)", () => {
           mode: "live",
           transport: "direct",
           apiOrigin: "https://todayweather.wizardfactory.net",
-          siteOrigin: "https://app.tdywx.xyz",
+          siteOrigin: "https://app.todayweather.ai",
           commit: "abc1234-dirty",
           builtAt: "2026-09-26T00:00:00.000Z",
         }),

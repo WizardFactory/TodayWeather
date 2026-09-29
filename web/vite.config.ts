@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
             source: JSON.stringify(
               {
                 schemaVersion: 1,
-                siteOrigin: "https://app.tdywx.xyz",
+                siteOrigin: "https://app.todayweather.ai",
                 ...settings,
                 commit: releaseCommit(process.env),
                 builtAt: releaseBuiltAt(process.env),
