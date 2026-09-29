@@ -1,0 +1,6 @@
+# Self verification revision3
+Candidate-v3.json identifies exact source/tests. Required delayed-peer failures reproduced against68028b1a before the fix. Final26 collection tests pass, including10 new drain/lock tests, then post-refactor26 pass, then separate real local Mongo/HTTP smoke passes. Existing13 nation tests also passed with unchanged nation source/test. Full offline regression before the final two test-only additions passed; final full run is retained separately. No other product changes occurred afterward.
+
+Success callback preserves raw results in input order; row errors never reach async.map until every row settled; failed station batch does not generate an aggregate; both scheduled locks remain held during delayed acknowledgements and release exactly once. A permanently missing acknowledgement still holds the lock (documented safe operational stop). Documentation content checked against code and release-gate recommendations. No diagram changes needed because documented await-writes flow is preserved.
+
+Operating key/live entitlement, production driver and device checks remain unexecuted. Real local smoke uses synthetic providers and isolated mongoose5.13.23/Mongo7.0.14. Review recommendations about old-client representation and attribution are deployment gates, not claims of completed client validation.
