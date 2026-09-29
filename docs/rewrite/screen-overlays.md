@@ -56,7 +56,7 @@ Evidence labels follow the [package README](README.md). Every statement below is
   - `doTabShare` when the selected city is missing or has no `location` ([L223-L228](../../client/www/js/controller.tabctrl.js#L223-L228)).
   - `AirCtrl` (S05/S16) returns without a prompt when zero cities are enabled ([air.js L362-L365](../../client/www/js/controller.air.js#L362-L365)).
 - **Text:**
-  - The title is the translated product name (`$rootScope.title`), but it is never visible because `.ionic_popup .popup-head {display: none}` hides it ([ionic.app.scss L1344-L1346](../../client/scss/ionic.app.scss#L1344-L1346)).
+  - The title is the translated product name (`$rootScope.title`), but it is never visible because `.ionic_popup .popup-head {display: none}` hides it ([ionic.app.scss L1349-L1351](../../client/scss/ionic.app.scss#L1349-L1351)).
   - The body contains two `ion-radio` controls on `data.autoSearch`, in this order ([L333-L336](../../client/www/js/controller.tabctrl.js#L333-L336)):
     1. `LOC_USE_YOUR_CURRENT_LOCATION`, `ng-value="false"`
     2. `LOC_FIND_LOCATION_BY_NAME`, `ng-value="true"`

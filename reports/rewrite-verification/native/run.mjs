@@ -92,7 +92,9 @@ async function cdpSwipe(x, y, dx) {
     const sock = [...unix.matchAll(/@(webview_devtools_remote_\d+)/g)].map((m) => m[1]).pop();
     sh(ADB, ['forward', 'tcp:9334', `localabstract:${sock}`]);
     try {
-        const page = (await (await fetch('http://127.0.0.1:9334/json')).json()).find((p) => p.type === 'page');
+        // AdMob creates other page targets in this process; gestures must reach the Cordova page.
+        const page = (await (await fetch('http://127.0.0.1:9334/json')).json()).find((p) => p.type === 'page' && /^https:\/\/localhost\//.test(p.url));
+        if (!page) throw new Error('Cordova WebView target not found');
         const ws = new WebSocket(page.webSocketDebuggerUrl);
         await new Promise((r) => { ws.onopen = r; });
         await new Promise((resolve) => {
@@ -108,8 +110,8 @@ const ios = {
     udid: extra,
     async prepare() {
         try { sh('xcrun', ['simctl', 'bootstatus', this.udid, '-b']); } catch { /* booted */ }
-        try { sh('xcrun', ['simctl', 'terminate', this.udid, PKG]); } catch { /* not running */ }
-        try { sh('xcrun', ['simctl', 'uninstall', this.udid, PKG]); } catch { /* not installed */ }
+        try { sh('xcrun', ['simctl', 'terminate', this.udid, PKG], { timeout: 10000 }); } catch { /* not running */ }
+        try { sh('xcrun', ['simctl', 'uninstall', this.udid, PKG], { timeout: 15000 }); } catch { /* not installed or simulator service stalled */ }
         sh('xcrun', ['simctl', 'install', this.udid, artifact]);
         sh('xcrun', ['simctl', 'privacy', this.udid, 'grant', 'location', PKG]);
         sh('xcrun', ['simctl', 'location', this.udid, 'set', `${SEOUL.lat},${SEOUL.lon}`]);
@@ -148,11 +150,19 @@ let wipeOnStop = false;
 let shotSeq = 0;
 
 function onLine(raw) {
+    // Native/WebView logs can include release API keys and device tokens; keep evidence shareable.
+    raw = raw.replace(/AIza[\w-]+/g, '<redacted-key>')
+        .replace(/([?&](?:key|token|appid)=)[^&\s"']+/gi, '$1<redacted>')
+        .replace(/("(?:newToken|fcmToken|token)"\s*:\s*")[^"]*/gi, '$1<redacted>')
+        .replace(/(fcmToken:)\S+/g, '$1<redacted>');
     logFile.write(raw + '\n');
     if (platform === 'android' && /FATAL EXCEPTION|AndroidRuntime.*(E|FATAL)|Process .*has died|ANR in/.test(raw) && raw.includes(PKG.split('.').pop())) {
         summary.native.push(raw.trim());
     }
     if (platform === 'android' && /E\/chromium.*Uncaught|INFO:CONSOLE.*Uncaught/.test(raw)) summary.native.push(raw.trim());
+    if (platform === 'ios' && /Terminating app due to uncaught exception|libc\+\+abi: terminating/.test(raw)) {
+        summary.native.push(raw.trim());
+    }
     // "[early]" marks lines re-emitted on iOS after cordova's console existed (see tw-harness.js).
     const m = raw.match(/(TW[A-Z]+) (?:\[early\] )?([\d.]+) ?(.*)$/);
     if (!m) return;

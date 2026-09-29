@@ -83,6 +83,18 @@ After deployment:
 
 - Verify Seoul/Busan/Incheon/Jeju air observations and Tokyo/London current air through the public v000903 endpoint, including requested air units, source, observation time, and available pollutants.
 - Run native `full`, `world`, and `layout` scenarios on Android and iOS. Inspect S05 with actual air values and chart scrolling; current-only air does not imply a historical or forecast series.
-- Explicitly inspect air failures: `triage.mjs` still classifies missing-air exceptions and `air-codes count=0` as the historical S1 issue. **Zero unclassified failures alone does not prove air recovery.** Remove or narrow those exceptions only after deployment evidence supports doing so.
+- Explicitly inspect air failures. The historical S1 exceptions in `triage.mjs` were removed during the 2026-09-29 post-deployment layout audit after live Seoul/Tokyo air was observed; missing-air exceptions and `air-codes count=0` now fail. **Zero unclassified failures alone does not prove air recovery:** require live-air/value checks and inspect the captures.
 - Record the pending-air path separately. The app currently ignores `airStatus` and does not schedule the suggested retry; supplier attribution is not rendered either. Track presentation work before treating provider display as release-ready.
 - Follow [the S3 push runbook](../../../docs/operations/push-s3.md) and #2626 for activation, actual registrations, token rotation, alarm/alert delivery, disabled/deleted registrations and monitoring. The native harness intercepts push writes, so it cannot prove production registration or receipt.
+
+## Live air layout mode
+
+`build-harness.sh <android|ios> layout-live` extends `layout` with mandatory Seoul and Tokyo air-data/value checks, lower-card captures, pollutant/station horizontal-strip endpoints, available air-chart endpoints, and Tokyo hourly/daily chart checks. Current-only data is recorded as no air time series rather than a chart failure. Run `npm run www:config` and `npm run www:css` in `client/` first to use Google test ads and current styles.
+
+The iOS notification permission request is skipped only in this layout mode so a native alert cannot cover captures. This is layout evidence, not permission or delivery evidence. Push writes remain intercepted. Use full/device verification for notifications.
+
+The 2026-09-29 iOS run required an isolated artifact because the normal build aborted in `GULMutableDictionary` with a nil key. To reproduce that **layout-only** setup after building, copy the simulator app to a new directory, set the copied `Info.plist` key `FIREBASE_ANALYTICS_COLLECTION_DEACTIVATED` to boolean `true`, and ad-hoc sign the copy (`codesign --force --sign - --timestamp=none <copy.app>`). Pass the copied app to `run.mjs`. Do not apply this switch to the release configuration or treat the resulting pass as Analytics/runtime verification.
+
+For a supplemental stationary air capture, use mode `capture-air`: it opens Seoul air and holds each capture state for eight seconds. This was used when busy simulators saved a later screen under an earlier screenshot label; retain the original run and label supplemental captures separately. Automated DOM checks alone do not detect a native ANR dialog or a late screenshot.
+
+`capture-charts` similarly holds the Seoul hourly/daily chart capture positions for eight seconds. The dated [post-deployment report](layout-2026-09-29.md) includes the size matrix, original runtime failures, repeats, and capture provenance.

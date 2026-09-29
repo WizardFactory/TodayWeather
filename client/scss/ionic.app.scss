@@ -319,6 +319,11 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
         .main-box-air-content {
           margin: auto;
           font-size: 64px;
+          // AQI grades are phrases, unlike pollutant numbers: wrap only between words.
+          &.air-grade-label {
+            word-break: normal;
+            overflow-wrap: normal;
+          }
           i, span {
             font-size: 32px;
           }

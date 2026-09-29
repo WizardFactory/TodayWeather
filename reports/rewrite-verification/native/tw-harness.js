@@ -107,6 +107,11 @@
             fm.grantPermission = function () {
                 window.__twGrantRequests = (window.__twGrantRequests || 0) + 1;
                 emit('STEP', 'push grantPermission');
+                // Layout-only: avoid a native alert covering screenshots. Permission/delivery belongs to full/device tests.
+                if (!IS_ANDROID && window.TW_HARNESS_MODE === 'layout-live') {
+                    emit('STEP', 'iOS notification permission skipped for layout-only audit');
+                    return;
+                }
                 return grant.apply(this, arguments);
             };
         }
@@ -195,7 +200,7 @@
             return svc('$http').pendingRequests.length === 0 && !find('.loading-container.visible');
         }, ms || 20000, 'http-idle').then(function () { return sleep(700); });
     }
-    function shot(name) { emit('SHOT', name); return sleep(1800); }
+    function shot(name) { emit('SHOT', name); return sleep(/^capture-/.test(window.TW_HARNESS_MODE) ? 8000 : 1800); }
     function host(action, ms) { emit('HOST', action); return sleep(ms || 6000); }
     function popupOk() {
         var b = find('.popup-container.active .popup-buttons button') || find('.popup-buttons button');
@@ -815,6 +820,65 @@
             });
         });
     }
+    // Live-air audit: data presence is mandatory; current-only responses need no hourly chart.
+    function airLayout(tag) {
+        var city = svc('WeatherInfo').getCityOfIndex(svc('WeatherInfo').getCityIndex()) || {};
+        var info = city.airInfo || (city.airInfoList || [])[0] || {};
+        var last = info.last || (city.currentWeather || {}).arpltn || {};
+        var codes = all('[ng-click="setMainAqiCode(obj.code)"]').filter(visible);
+        check('live-air-data ' + tag, codes.length > 0 && !!last.dataTime,
+            'codes=' + codes.length + ' source=' + (last.source || info.source) + ' time=' + last.dataTime);
+        var view = find('.main-box-air-content');
+        check('live-air-value ' + tag, !!view && !!view.textContent.trim() && view.textContent.trim() !== '-', view ? view.textContent.trim() : 'absent');
+        // A grade phrase may wrap at spaces, but a single word must never split (e.g. Moderat/e).
+        if (view) {
+            var textNode = Array.prototype.filter.call(view.childNodes, function (n) { return n.nodeType === 3; })[0];
+            var splitWords = [];
+            if (textNode) {
+                var re = /[A-Za-z]+/g, match;
+                while ((match = re.exec(textNode.textContent))) {
+                    var range = document.createRange();
+                    range.setStart(textNode, match.index); range.setEnd(textNode, match.index + match[0].length);
+                    if (range.getClientRects().length > 1) { splitWords.push(match[0]); }
+                }
+            }
+            check('air-heading-words ' + tag, splitWords.length === 0, splitWords.join(','));
+        }
+        var scroll = svc('$ionicScrollDelegate').$getByHandle('body');
+        return shot('air-' + tag + '-top').then(function () {
+            scroll.scrollBottom(false); return sleep(800);
+        }).then(function () {
+            audit('air-' + tag + '-bottom');
+            return shot('air-' + tag + '-bottom');
+        }).then(function () {
+            var strips = all('.card-scroll').filter(visible);
+            return strips.reduce(function (chain, el, index) {
+                return chain.then(function () {
+                    var max = el.scrollWidth - el.clientWidth;
+                    check('air-strip ' + tag + '-' + index + ' bounds', max >= 0, 'client=' + el.clientWidth + ' scroll=' + el.scrollWidth);
+                    el.scrollLeft = max; return sleep(400);
+                }).then(function () {
+                    var max = el.scrollWidth - el.clientWidth;
+                    check('air-strip ' + tag + '-' + index + ' end', el.scrollLeft >= max - 1, 'left=' + el.scrollLeft + ' max=' + max);
+                    return shot('air-' + tag + '-strip-' + index + '-end');
+                }).then(function () {
+                    el.scrollLeft = 0;
+                    check('air-strip ' + tag + '-' + index + ' start', el.scrollLeft <= 1);
+                });
+            }, Promise.resolve());
+        }).then(function () {
+            var chart = find('#chartScroll');
+            if (!chart) { emit('STEP', 'air-chart ' + tag + ' absent (current-only/no series)'); }
+            else {
+                var max = chart.scrollWidth - chart.clientWidth;
+                chart.scrollLeft = max;
+                check('air-chart ' + tag + ' end', chart.scrollLeft >= max - 1, 'max=' + max);
+                chart.scrollLeft = 0;
+                check('air-chart ' + tag + ' start', chart.scrollLeft <= 1);
+            }
+            scroll.scrollTop(false); return sleep(600);
+        });
+    }
     function screenStep(name, fn) {
         return Promise.resolve().then(fn).then(function () { return idle(20000); }).then(function () { return sleep(900); })
             .then(function () { audit(name); return shot('L-' + name); });
@@ -840,6 +904,7 @@
                 .then(function () { return screenStep('S04-daily', function () { return tab(2).then(function () { return sleep(1200); }); }); })
                 .then(function () { return chartCheck('mid'); })
                 .then(function () { return screenStep('S05-air', function () { return tab(3); }); })
+                .then(function () { if (window.TW_HARNESS_MODE === 'layout-live') { return airLayout('seoul'); } })
                 .then(function () { return screenStep('S02-favorites', function () { return tab(0); }); })
                 .then(function () { return screenStep('S02-search', function () {
                     typeInto(find('#searchInput'), '부산');
@@ -868,7 +933,7 @@
                 .then(function () { return screenStep('S03-warm', function () { return sleep(800); }); });
         } },
     ];
-    if (window.TW_HARNESS_MODE === 'layout') { S = LAYOUT; }
+    if (window.TW_HARNESS_MODE === 'layout' || window.TW_HARNESS_MODE === 'layout-live') { S = LAYOUT; }
 
     // ---------- world mode (window.TW_HARNESS_MODE === 'world'): add Tokyo through search ----------
     function worldCity(query, tag) {
@@ -916,6 +981,18 @@
                     .then(function () { check('city-added ' + tag, cityRows().length === before + 1, before + '->' + cityRows().length); return shot(tag + '-favorites'); });
             });
     }
+    if (window.TW_HARNESS_MODE === 'layout-live') {
+        S = LAYOUT.concat([{ name: 'L3_world_air_layout', run: function () {
+            return worldCity(IS_ANDROID ? 'Tokyo' : '도쿄', 'tokyo')
+                .then(function () { return tab(1); })
+                .then(function () { audit('tokyo-hourly'); return chartCheck('short'); })
+                .then(function () { return tab(2); })
+                .then(function () { audit('tokyo-daily'); return chartCheck('mid'); })
+                .then(function () { return tab(3); })
+                .then(function () { audit('tokyo-air'); return airLayout('tokyo'); });
+        } }]);
+    }
+
     // ---------- upgrade mode (window.TW_HARNESS_MODE === 'upgrade') ----------
     // Launch 1 seeds data (S1 plus a push record), leaves a marker in the native App Group preferences and asks the
     // host to wipe only the web storage, as an upgrade to a new web origin does. Launch 2 starts with an empty
@@ -997,6 +1074,20 @@
         };
     }
 
+    // Slow, dedicated air captures avoid host screenshot lag during simulator provisioning.
+    if (window.TW_HARNESS_MODE === 'capture-air' || window.TW_HARNESS_MODE === 'capture-charts') {
+        S = [{ name: window.TW_HARNESS_MODE, run: function () {
+            return waitFor(function () { return stateName() === 'start'; }, 20000, 'start')
+                .then(function () { return sleep(1500); }).then(popupOk)
+                .then(function () { click(byText('button.button-outline', '서울'), 'seoul'); return idle(30000); })
+                .then(function () {
+                    if (window.TW_HARNESS_MODE === 'capture-charts') {
+                        return chartCheck('short').then(function () { return tab(2); }).then(function () { return chartCheck('mid'); });
+                    }
+                    return tab(3).then(function () { return airLayout('seoul'); });
+                });
+        } }];
+    }
     // ---------- runner ----------
     var KEY = 'twHarnessRun';
     function run() {

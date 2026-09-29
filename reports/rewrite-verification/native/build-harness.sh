@@ -1,7 +1,7 @@
 #!/bin/sh
 # Builds harness-injected test artifacts from the current client/www without touching client/www.
-#   build-harness.sh android [full|layout]  -> /tmp/tw-harness/app-debug.apk
-#   build-harness.sh ios [full|layout]      -> /tmp/tw-harness/TodayWeather.app (copy of the simulator build)
+#   build-harness.sh android [mode]  -> /tmp/tw-harness/app-debug.apk
+#   build-harness.sh ios [mode]      -> /tmp/tw-harness/TodayWeather.app (copy of the simulator build)
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 CLIENT=$(cd "$HERE/../../../client" && pwd)
@@ -9,7 +9,7 @@ OUT=/tmp/tw-harness
 mkdir -p "$OUT"
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 
-MODE=${2:-full}   # full | layout (see tw-harness.js)
+MODE=${2:-full}   # full | layout | layout-live | world | upgrade | capture-air | capture-charts
 inject() { # $1 = www dir
     cp "$HERE/tw-harness.js" "$1/tw-harness.js"
     perl -0pi -e "s#<head>#<head>\n    <script>window.TW_HARNESS_MODE = '$MODE';</script>\n    <script src=\"tw-harness.js\"></script>#" "$1/index.html"
