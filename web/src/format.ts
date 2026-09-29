@@ -84,3 +84,64 @@ export function iconKind(icon = ""): IconKind {
                     ? "wind"
                     : "cloud";
 }
+
+export type TimeZoneHint = "KST" | "local";
+/**
+ * True when a source time is older than `limitHours`. Naive KMA/AirKorea wall
+ * times are Korean local time (+09:00) and are compared exactly; explicit
+ * offsets are respected. Overseas ("local") wall times carry no offset, so
+ * they use a conservative date-only rule that never flags a fresh reading.
+ */
+export function isOld(
+  at: string | null,
+  limitHours = 3,
+  now = Date.now(),
+  zone: TimeZoneHint = "KST",
+) {
+  if (!at) return false;
+  const s = at.trim().replace(" ", "T");
+  const m = s.match(
+    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(:\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/i,
+  );
+  if (!m) return false;
+  if (!m[3] && zone === "local")
+    // The latest zone (UTC-12) ends the local date last, so a fresh reading
+    // anywhere on Earth is never flagged early.
+    return (
+      now - Date.parse(m[1].slice(0, 10) + "T23:59:59-12:00") >
+      limitHours * 3600000
+    );
+  const time = Date.parse(m[1] + (m[2] ?? ":00") + (m[3] ?? "+09:00"));
+  return Number.isFinite(time) && now - time > limitHours * 3600000;
+}
+/**
+ * Place chosen when the search form is submitted (Enter): an exact name or id,
+ * otherwise a unique name prefix. Address substrings are never used, so
+ * "중구" does not silently pick an unrelated city.
+ */
+export function matchPlace<
+  T extends { id: string; name: string; address: string },
+>(term: string, places: T[]): T | undefined {
+  const q = term.trim().toLocaleLowerCase();
+  if (!q) return;
+  const exact = places.find(
+    (p) => p.name.toLocaleLowerCase() === q || p.id.toLocaleLowerCase() === q,
+  );
+  if (exact) return exact;
+  const prefix = places.filter((p) => p.name.toLocaleLowerCase().startsWith(q));
+  return prefix.length === 1 ? prefix[0] : undefined;
+}
+/**
+ * React Query staleness for a weather result. React Query adds it to
+ * `updatedAt` (the query's dataUpdatedAt), so a rate-limit wait is measured
+ * from then.
+ */
+export function weatherStaleTime(
+  data?: { snapshot: boolean; retryAt?: number },
+  updatedAt = Date.now(),
+) {
+  // A stored snapshot shown after a failure must refresh on reconnect/focus,
+  // except while a rate limit asks us to wait (Retry-After).
+  if (!data?.snapshot) return 600000;
+  return data.retryAt ? Math.max(0, data.retryAt - updatedAt) : 0;
+}

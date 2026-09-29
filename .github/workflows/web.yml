@@ -9,7 +9,9 @@ on:
       - "tsconfig.json"
       - "*config.ts"
       - "infra/web/**"
+      - "docs/rewrite/examples/**"
       - ".github/workflows/web.yml"
+      - ".github/workflows/web-live-smoke.yml"
   push:
     branches: [master, main]
     paths:
@@ -20,7 +22,9 @@ on:
       - "tsconfig.json"
       - "*config.ts"
       - "infra/web/**"
+      - "docs/rewrite/examples/**"
       - ".github/workflows/web.yml"
+      - ".github/workflows/web-live-smoke.yml"
   workflow_dispatch:
 permissions:
   contents: read
@@ -51,3 +55,5 @@ jobs:
         with:
           name: web-static-dist
           path: web/dist
+          # Rollback source: keep the artifact of each deployed commit (see infra/web/static/README.md).
+          retention-days: 90

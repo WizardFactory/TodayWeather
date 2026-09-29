@@ -8,6 +8,7 @@ import {
   useNavigate,
   useParams,
   useLocation,
+  useNavigationType,
 } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -69,6 +70,7 @@ import {
   Stamp,
   ExternalWeather,
   isOld,
+  kstTime,
 } from "./components";
 import WeatherPage from "./Weather";
 import {
@@ -77,11 +79,20 @@ import {
   forecastDescription,
   gradeClass,
   gradeLabel,
+  pollutantUnit,
   standardName,
 } from "./air";
-import { amount } from "./format";
+import { amount, matchPlace } from "./format";
 import Notifications from "./Notifications";
 type InstallEvent = Event & { prompt: () => Promise<void> };
+const UPDATE_REQUESTED = "tw.web.v1.update-requested";
+// Matches web/public/theme.js and the --bg of each theme in style.css.
+const THEME_COLORS: Record<SavedState["settings"]["theme"], string> = {
+  light: "#f5f7fb",
+  dark: "#111c2b",
+  photo: "#edf4fb",
+  classic: "#f3f7f5",
+};
 /** Start-screen route for `/`; `locations` applies only there. */
 function routeFor(state: SavedState, id: string) {
   return state.settings.startup === "locations"
@@ -108,12 +119,54 @@ export default function App() {
     [menuOpen, setMenuOpen] = useState(false),
     [installPrompt, setInstallPrompt] = useState<InstallEvent>(),
     [updateReady, setUpdateReady] = useState(false),
+    [updateApplied, setUpdateApplied] = useState(false),
     [offline, setOffline] = useState(!navigator.onLine);
   const latestState = useRef(state);
   latestState.current = state;
   const registration = useRef<ServiceWorkerRegistration | undefined>(undefined);
+  // Narrow layouts show the sidebar as an off-canvas menu.
+  const [compact, setCompact] = useState(
+    () => window.matchMedia?.("(max-width: 680px)").matches ?? false,
+  );
+  const sidebarRef = useRef<HTMLElement>(null),
+    menuButton = useRef<HTMLButtonElement>(null),
+    mainRef = useRef<HTMLElement>(null),
+    firstRoute = useRef(true),
+    returnFocus = useRef(false),
+    focusMain = useRef(false);
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const query = window.matchMedia?.("(max-width: 680px)");
+    if (!query) return;
+    const update = () => {
+      setCompact(query.matches);
+      // Leaving the narrow layout closes the off-canvas menu.
+      if (!query.matches) setMenuOpen(false);
+    };
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (!menuOpen) return;
+    sidebarRef.current?.querySelector<HTMLElement>("a, button")?.focus();
+    const close = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      returnFocus.current = true;
+      setMenuOpen(false);
+    };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [menuOpen]);
+  useEffect(() => {
+    // Return focus only after the render that removed `inert` from the page.
+    if (!menuOpen && returnFocus.current) {
+      returnFocus.current = false;
+      menuButton.current?.focus();
+    }
+  }, [menuOpen]);
   const navigate = useNavigate(),
-    location = useLocation();
+    location = useLocation(),
+    navigationType = useNavigationType();
   const caps = useQuery({
     queryKey: ["capabilities"],
     queryFn: ({ signal }) => api<Capabilities>("/capabilities", signal),
@@ -126,6 +179,9 @@ export default function App() {
       setStorageOk(false);
     }
     document.documentElement.dataset.theme = state.settings.theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", THEME_COLORS[state.settings.theme]);
   }, [state]);
   useEffect(() => {
     // Another tab changed favorites or settings: adopt the stored state.
@@ -144,7 +200,22 @@ export default function App() {
   useEffect(() => {
     setMenuOpen(false);
     window.scrollTo(0, 0);
+    // Move focus to the new page so screen readers announce it, except for
+    // in-page tab switches that keep focus on the pressed tab. History
+    // restores that state on Back/Forward, where the page must be announced.
+    const keep =
+      navigationType !== "POP" &&
+      (location.state as { keepFocus?: boolean } | null)?.keepFocus;
+    if (firstRoute.current) firstRoute.current = false;
+    else if (!keep) focusMain.current = true;
   }, [location.pathname]);
+  useEffect(() => {
+    // Wait for the render that removed `inert` after closing the menu.
+    if (focusMain.current && !menuOpen) {
+      focusMain.current = false;
+      mainRef.current?.focus({ preventScroll: true });
+    }
+  }, [location.pathname, menuOpen]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 4500);
@@ -155,7 +226,21 @@ export default function App() {
         e.preventDefault();
         setInstallPrompt(e as InstallEvent);
       },
-      online = () => setOffline(!navigator.onLine);
+      online = () => {
+        setOffline(!navigator.onLine);
+        // A page loaded offline thinks it is online already, so reconnecting
+        // does not refetch by itself: refresh anything shown from a snapshot,
+        // except responses still waiting out a rate limit.
+        if (navigator.onLine)
+          void queryClient.refetchQueries({
+            type: "active",
+            predicate: (q) => {
+              const data = q.state.data as
+                { snapshot?: boolean; retryAt?: number } | undefined;
+              return data?.snapshot === true && !(data.retryAt! > Date.now());
+            },
+          });
+      };
     window.addEventListener("beforeinstallprompt", handler);
     window.addEventListener("online", online);
     window.addEventListener("offline", online);
@@ -167,13 +252,28 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
-    let disposed = false;
+    try {
+      // A request from before this page load must not reload it later.
+      sessionStorage.removeItem(UPDATE_REQUESTED);
+    } catch {
+      /* Unavailable storage never holds a request. */
+    }
+    let disposed = false,
+      updateTimer: ReturnType<typeof setInterval> | undefined,
+      onVisible: (() => void) | undefined;
     navigator.serviceWorker
       .register("/sw.js", { updateViaCache: "none" })
       .then((reg) => {
         if (disposed) return;
         registration.current = reg;
         if (reg.waiting) setUpdateReady(true);
+        // Long-open tabs look for new releases hourly and when shown again.
+        const check = () => void reg.update().catch(() => undefined);
+        updateTimer = setInterval(check, 3600000);
+        onVisible = () => {
+          if (document.visibilityState === "visible") check();
+        };
+        document.addEventListener("visibilitychange", onVisible);
         reg.addEventListener("updatefound", () =>
           reg.installing?.addEventListener("statechange", () => {
             if (reg.waiting && navigator.serviceWorker.controller)
@@ -188,15 +288,47 @@ export default function App() {
       );
     let controlled = navigator.serviceWorker.controller !== null;
     const changed = () => {
-      if (controlled) window.location.reload();
+      // Only the tab that pressed "업데이트" reloads; others are told. The
+      // request is consumed even by a page that had no controller yet.
+      let requested = false;
+      try {
+        requested = !!sessionStorage.getItem(UPDATE_REQUESTED);
+        sessionStorage.removeItem(UPDATE_REQUESTED);
+      } catch {
+        /* Unavailable storage: treat as another tab. */
+      }
+      if (requested) {
+        window.location.reload();
+        return;
+      }
+      // The offered worker is now active; only a newer one is still waiting.
+      setUpdateReady(!!registration.current?.waiting);
+      if (controlled) setUpdateApplied(true);
       controlled = true;
     };
     navigator.serviceWorker.addEventListener("controllerchange", changed);
     return () => {
       disposed = true;
+      clearInterval(updateTimer);
+      if (onVisible)
+        document.removeEventListener("visibilitychange", onVisible);
       navigator.serviceWorker.removeEventListener("controllerchange", changed);
     };
   }, []);
+  const applyUpdate = () => {
+    const waiting = registration.current?.waiting;
+    if (!waiting) {
+      // Another tab already applied it; nothing is left to activate here.
+      setUpdateReady(false);
+      return;
+    }
+    try {
+      sessionStorage.setItem(UPDATE_REQUESTED, "1");
+    } catch {
+      /* Without sessionStorage this tab simply shows the applied notice. */
+    }
+    waiting.postMessage({ type: "SKIP_WAITING" });
+  };
   const select = (place: Place) => {
     const before = latestState.current;
     try {
@@ -232,8 +364,7 @@ export default function App() {
         storageOk,
         installPrompt,
         updateReady,
-        applyUpdate: () =>
-          registration.current?.waiting?.postMessage({ type: "SKIP_WAITING" }),
+        applyUpdate,
       }}
     >
       <a className="skip-link" href="#main-content">
@@ -241,7 +372,9 @@ export default function App() {
       </a>
       <div className="app-shell">
         <aside
+          ref={sidebarRef}
           className={`sidebar ${menuOpen ? "open" : ""}`}
+          inert={compact && !menuOpen ? true : undefined}
           aria-label="주 메뉴"
         >
           <Link to="/" className="brand">
@@ -255,7 +388,10 @@ export default function App() {
           <button
             className="mobile-close icon-button"
             aria-label="메뉴 닫기"
-            onClick={() => setMenuOpen(false)}
+            onClick={() => {
+              returnFocus.current = true;
+              setMenuOpen(false);
+            }}
           >
             <X />
           </button>
@@ -347,15 +483,23 @@ export default function App() {
           <button
             className="sidebar-backdrop"
             aria-label="메뉴 닫기"
-            onClick={() => setMenuOpen(false)}
+            onClick={() => {
+              returnFocus.current = true;
+              setMenuOpen(false);
+            }}
           />
         )}
-        <div className="workspace">
+        <div
+          className="workspace"
+          inert={compact && menuOpen ? true : undefined}
+        >
           <header className="topbar">
             <div>
               <button
+                ref={menuButton}
                 className="icon-button mobile-menu"
                 aria-label="메뉴 열기"
+                aria-expanded={menuOpen}
                 onClick={() => setMenuOpen(true)}
               >
                 <Menu size={21} />
@@ -375,7 +519,7 @@ export default function App() {
               <SettingsIcon size={18} />
             </Link>
           </header>
-          <main id="main-content" tabIndex={-1}>
+          <main id="main-content" tabIndex={-1} ref={mainRef}>
             {offline && (
               <div className="notice warning" role="status">
                 오프라인입니다. 저장된 자료는 최신 정보가 아닐 수 있습니다.
@@ -393,14 +537,17 @@ export default function App() {
                   새 버전이 준비됐습니다. 입력 중인 내용을 확인한 뒤
                   업데이트하세요.
                 </span>
-                <button
-                  onClick={() =>
-                    registration.current?.waiting?.postMessage({
-                      type: "SKIP_WAITING",
-                    })
-                  }
-                >
-                  업데이트
+                <button onClick={applyUpdate}>업데이트</button>
+              </div>
+            )}
+            {updateApplied && (
+              <div className="notice update">
+                <span>
+                  새 버전이 적용됐습니다. 새로고침하면 최신 화면을 볼 수
+                  있습니다.
+                </span>
+                <button onClick={() => window.location.reload()}>
+                  새로고침
                 </button>
               </div>
             )}
@@ -453,12 +600,15 @@ export default function App() {
           </footer>
         </div>
       </div>
-      {toast && (
-        <div className="toast" role="status">
-          <Check size={16} />
-          {toast}
-        </div>
-      )}
+      {/* A persistent live region is announced reliably; its content changes. */}
+      <div id="toast-region" role="status" aria-live="polite">
+        {toast && (
+          <div className="toast">
+            <Check size={16} />
+            {toast}
+          </div>
+        )}
+      </div>
     </AppContext.Provider>
   );
 }
@@ -629,11 +779,7 @@ function Locations({ embedded = false }: { embedded?: boolean }) {
             e.preventDefault();
             const term = search.trim().toLocaleLowerCase();
             if (!term) return;
-            const match = PLACES.find((p) =>
-              `${p.name} ${p.address} ${p.id}`
-                .toLocaleLowerCase()
-                .includes(term),
-            );
+            const match = matchPlace(term, PLACES);
             if (match) choose(match);
             else if (capabilities?.search.geocode && term.length >= 2)
               void resolve();
@@ -794,43 +940,40 @@ function PlacePreview({ place }: { place: Place }) {
           {aqi.label || gradeLabel(w.units.airUnit, aqi.grade)}
         </b>
       )}
-      <small>
-        저장{" "}
-        {new Date(w.fetchedAt).toLocaleTimeString("ko-KR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </small>
+      <small>저장 {kstTime(w.fetchedAt)}</small>
     </span>
   );
 }
+// Marker centres in the 500x670 map. Markers are 68x44 (weather adds an icon
+// above-right); the cities of one view and the provinces of the other must
+// not overlap.
 const mapPositions: Record<string, [number, number]> = {
-  서울: [155, 145],
-  인천: [104, 164],
+  서울: [150, 138],
+  인천: [70, 182],
   수원: [178, 194],
   춘천: [242, 116],
   강릉: [336, 174],
-  대전: [203, 285],
+  대전: [210, 318],
   청주: [245, 236],
-  전주: [172, 371],
-  광주: [141, 455],
+  전주: [160, 384],
+  광주: [150, 446],
   대구: [321, 341],
   포항: [400, 296],
-  울산: [395, 397],
-  부산: [343, 451],
-  목포: [80, 502],
-  여수: [220, 485],
-  안동: [315, 255],
+  울산: [398, 400],
+  부산: [350, 470],
+  목포: [72, 506],
+  여수: [222, 494],
+  안동: [322, 262],
   제주: [88, 604],
   강원: [278, 146],
-  경기: [174, 189],
-  충북: [254, 242],
-  충남: [135, 285],
+  경기: [176, 196],
+  충북: [262, 236],
+  충남: [100, 290],
   경북: [344, 287],
-  경남: [285, 448],
+  경남: [270, 452],
   전북: [143, 371],
-  전남: [124, 478],
-  세종: [180, 248],
+  전남: [112, 506],
+  세종: [178, 262],
 };
 function NationPage() {
   const { kind } = useParams(),
@@ -854,10 +997,17 @@ function NationPage() {
             ];
           return {
             name: p.name,
-            value: formatValue(
-              m?.value,
-              ["pm25", "pm10"].includes(pollutant) ? 0 : 3,
-            ),
+            value: [
+              formatValue(
+                m?.value,
+                ["pm25", "pm10"].includes(pollutant) ? 0 : 3,
+              ),
+              m?.value === null || m?.value === undefined
+                ? ""
+                : pollutantUnit(pollutant),
+            ]
+              .filter(Boolean)
+              .join(" "),
             label: m?.label || gradeLabel(data.units.airUnit, m?.grade ?? null),
             grade: m?.grade,
             at: p.station.observedAt,
@@ -868,15 +1018,21 @@ function NationPage() {
           name: p.name,
           value:
             mode === "temperature"
-              ? `${formatValue(p.current.temperature)}°`
+              ? p.current.temperature === null
+                ? "—"
+                : `${formatValue(p.current.temperature)}°`
               : mode === "rain"
-                ? `${amount(p.current.precipitation, data.units.precipitationUnit)} ${data.units.precipitationUnit}`
-                : [
-                    p.current.windDirection,
-                    `${formatValue(p.current.wind, 1)} ${data.units.windSpeedUnit}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" "),
+                ? p.current.precipitation === null
+                  ? "—"
+                  : `${amount(p.current.precipitation, data.units.precipitationUnit)} ${data.units.precipitationUnit}`
+                : p.current.wind === null
+                  ? "—"
+                  : [
+                      p.current.windDirection,
+                      `${formatValue(p.current.wind, 1)} ${data.units.windSpeedUnit}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" "),
           label: p.current.description,
           at: p.current.at,
           grade: null,
@@ -909,6 +1065,7 @@ function NationPage() {
           <button
             key={id}
             className={(air ? pollutant : mode) === id ? "active" : ""}
+            aria-pressed={(air ? pollutant : mode) === id}
             onClick={() => (air ? setPollutant(id) : setMode(id))}
           >
             {label}
@@ -948,11 +1105,14 @@ function NationPage() {
                     stroke="var(--line)"
                   />
                   {rows.map((r, i) => {
-                    const pos =
-                      mapPositions[r.name] ??
-                      Object.entries(mapPositions).find(([key]) =>
-                        r.name.startsWith(key),
-                      )?.[1];
+                    // Short names ("서울특별시" -> "서울") fit the marker.
+                    const key =
+                      r.name in mapPositions
+                        ? r.name
+                        : Object.keys(mapPositions).find((k) =>
+                            r.name.startsWith(k),
+                          );
+                    const pos = key ? mapPositions[key] : undefined;
                     return pos ? (
                       <g
                         key={r.name + i}
@@ -979,7 +1139,7 @@ function NationPage() {
                           </g>
                         )}
                         <text textAnchor="middle" y="-4" className="map-name">
-                          {r.name.slice(0, 3)}
+                          {key}
                         </text>
                         <text textAnchor="middle" y="13" className="map-value">
                           {r.value}
@@ -1003,7 +1163,7 @@ function NationPage() {
                 <div className="region-row" key={r.name + i}>
                   <div>
                     <strong>{r.name}</strong>
-                    <Stamp at={r.at} />
+                    <Stamp at={r.at} zone="KST" />
                   </div>
                   {air ? (
                     <span
@@ -1179,6 +1339,10 @@ function SettingsPage() {
       ) {
         notify("가져오기를 취소했습니다.");
       } else {
+        // Places dropped by the import must not leave stored weather behind.
+        for (const old of state.places)
+          if (!imported.places.some((p) => p.id === old.id))
+            void deleteSnapshotsFor(old.id);
         setState(imported);
         notify("관심지역과 설정을 가져왔습니다.");
       }
@@ -1410,6 +1574,14 @@ function Help() {
         <p>
           웹의 하늘 테마는 네트워크 사진 서비스에 의존하지 않는 색상 테마입니다.
           기존 앱의 사진 배경과는 다릅니다.
+        </p>
+        <h2 id="units">단위와 기준</h2>
+        <p>
+          설정에서 기온(°C/°F), 풍속(m/s, km/h, mph, 노트, 보퍼트), 기압(hPa,
+          mb, mmHg, inHg), 거리(km, mi), 강수량(mm, in)과 대기질 기준(한국, WHO
+          권고, 미국 EPA, 중국)을 고를 수 있습니다. 서버에는 항상 기본 단위로
+          요청하고 화면에서 한 번만 변환합니다. 미세먼지는 ㎍/㎥, 가스는 ppm,
+          통합대기지수는 단위 없는 지수입니다.
         </p>
         <h2>정보 출처</h2>
         <p>

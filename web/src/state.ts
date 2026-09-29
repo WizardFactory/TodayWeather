@@ -249,11 +249,41 @@ export function expiredSnapshotKeys(
     })
     .map((e) => e.key);
 }
-async function snapshotEntries() {
-  const keys = await snapshots("readonly", (s) => s.getAllKeys()),
-    values = await snapshots("readonly", (s) => s.getAll());
-  if (!keys || !values || keys.length !== values.length) return [];
-  return keys.map((k, i) => ({ key: String(k), value: values[i] as unknown }));
+/** Keys and values read in one transaction, so they always align. */
+async function snapshotEntries(): Promise<{ key: string; value: unknown }[]> {
+  return new Promise<{ key: string; value: unknown }[]>((resolve) => {
+    if (!globalThis.indexedDB) return resolve([]);
+    const open = indexedDB.open("tw.web.v1.snapshots", 1);
+    open.onupgradeneeded = () => open.result.createObjectStore("weather");
+    open.onerror = open.onblocked = () => resolve([]);
+    open.onsuccess = () => {
+      const db = open.result;
+      try {
+        const tx = db.transaction("weather", "readonly"),
+          store = tx.objectStore("weather"),
+          keys = store.getAllKeys(),
+          values = store.getAll();
+        tx.oncomplete = () => {
+          db.close();
+          resolve(
+            keys.result.length === values.result.length
+              ? keys.result.map((k, i) => ({
+                  key: String(k),
+                  value: values.result[i] as unknown,
+                }))
+              : [],
+          );
+        };
+        tx.onerror = tx.onabort = () => {
+          db.close();
+          resolve([]);
+        };
+      } catch {
+        db.close();
+        resolve([]);
+      }
+    };
+  }).catch(() => []);
 }
 async function deleteSnapshotKeys(keys: string[]) {
   for (const key of keys) await snapshots("readwrite", (s) => s.delete(key));
@@ -293,17 +323,15 @@ export async function writeSnapshot(
     s.put({ weather, savedAt: Date.now() }, key),
   );
   await pruneSnapshots();
-  const keys = await snapshots("readonly", (s) => s.getAllKeys());
-  // Small fixed bound; prune by recorded save time, not lexical coordinate order.
-  if (keys && keys.length > 30) {
-    const entries = await snapshots("readonly", (s) => s.getAll());
-    if (entries) {
-      const sorted = keys
-        .map((k, i) => ({ key: k, time: entries[i]?.savedAt ?? 0 }))
-        .sort((a, b) => a.time - b.time);
-      for (const old of sorted.slice(0, keys.length - 30))
-        await snapshots("readwrite", (s) => s.delete(old.key));
-    }
+  // Small fixed bound; prune by recorded save time from one consistent read.
+  const entries = await snapshotEntries();
+  if (entries.length > 30) {
+    const time = (v: unknown) =>
+      record(v) && typeof v.savedAt === "number" ? v.savedAt : 0;
+    const sorted = [...entries].sort((a, b) => time(a.value) - time(b.value));
+    await deleteSnapshotKeys(
+      sorted.slice(0, entries.length - 30).map((e) => e.key),
+    );
   }
 }
 function record(value: unknown): value is Record<string, any> {

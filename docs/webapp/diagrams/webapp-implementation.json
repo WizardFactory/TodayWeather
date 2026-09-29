@@ -43,7 +43,7 @@
       "id": "existing-api",
       "type": "external",
       "label": "Existing public API",
-      "sublabel": "Weather / geocode / warnings",
+      "sublabel": "Weather / geocode / nation / warnings",
       "pos": [
         930,
         100
@@ -126,7 +126,7 @@
       "dot": "emerald",
       "title": "Offline behavior",
       "items": [
-        "Cache-key revision v3; stored weather shown while refreshing",
+        "Stored weather shown first, then refetched on reconnect",
         "Deleting a place or 24 hours removes its snapshots"
       ]
     },
@@ -134,7 +134,7 @@
       "dot": "amber",
       "title": "Runtime scope",
       "items": [
-        "One delayed retry on 502 or network failure",
+        "One retry on 502/network; 429 honors Retry-After",
         "AirKorea, KAQ and Visual Crossing credited like the app"
       ]
     }

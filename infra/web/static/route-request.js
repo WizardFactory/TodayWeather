@@ -21,7 +21,7 @@ function handler(event) {
     );
   if (navigation) request.uri = "/index.html";
   else if (
-    !/^\/(?:assets\/[^/]+|icons\/[^/]+|index\.html|sw\.js|manifest\.webmanifest|icon\.svg|release\.json)$/.test(
+    !/^\/(?:assets\/[^/]+|icons\/[^/]+|index\.html|sw\.js|theme\.js|manifest\.webmanifest|icon\.svg|release\.json)$/.test(
       uri,
     )
   )

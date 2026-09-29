@@ -12,7 +12,37 @@ import {
 } from "@todayweather/core";
 import type { TransportSettings } from "./transport-config";
 
+/** The API asked us to wait; `retryAfterMs` is the requested pause. */
+export class RateLimitError extends Error {
+  constructor(
+    message: string,
+    readonly retryAfterMs: number,
+  ) {
+    super(message);
+  }
+}
 export async function readJson(response: Response): Promise<any> {
+  if (response.status === 429) {
+    // Honor Retry-After when the API exposes it; otherwise assume a minute.
+    const header = response.headers.get("Retry-After") ?? "",
+      parsed = /^\d+$/.test(header.trim())
+        ? Number(header) * 1000
+        : Date.parse(header) - Date.now(),
+      known = Number.isFinite(parsed) && parsed > 0;
+    await response.body?.cancel().catch(() => undefined);
+    throw new RateLimitError(
+      known
+        ? `요청이 많아 잠시 제한되었습니다. ${Math.ceil(parsed / 1000)}초 후 다시 시도해 주세요.`
+        : "요청이 많아 잠시 제한되었습니다. 잠시 후 다시 시도해 주세요.",
+      known ? parsed : 60000,
+    );
+  }
+  if (response.status === 503) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error(
+      "날씨 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+    );
+  }
   if (!response.headers.get("Content-Type")?.includes("json"))
     throw new Error(
       "서버 응답을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.",
@@ -75,6 +105,8 @@ function geo(value: any): Place {
   };
 }
 const RETRY_DELAY_MS = 1000;
+// Build-time constant: live builds drop the demo fixtures entirely.
+const DEMO_BUILD = import.meta.env.VITE_WEB_MODE === "demo";
 function wait(ms: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) return reject(signal.reason);
@@ -209,7 +241,7 @@ export async function directApi(
     if (mode === "demo" && units.airUnit !== "airkorea")
       throw new Error("예제 자료는 한국 대기환경 기준만 제공합니다.");
     const raw =
-      mode === "demo"
+      mode === "demo" && DEMO_BUILD
         ? {
             ...structuredClone((await import("./demo/weather.json")).default),
             name: p.name,
@@ -224,14 +256,14 @@ export async function directApi(
     if (mode === "demo" && units.airUnit !== "airkorea")
       throw new Error("예제 자료는 한국 대기환경 기준만 제공합니다.");
     const raw =
-      mode === "demo"
+      mode === "demo" && DEMO_BUILD
         ? (await import("./demo/nation.json")).default
         : await upstream("/v000903/nation/KR?" + query);
     return normalizeNation(raw, { units, mode });
   }
   if (route === "/warnings/KR") {
     const raw =
-      mode === "demo"
+      mode === "demo" && DEMO_BUILD
         ? (await import("./demo/warnings.json")).default
         : await upstream("/v000903/kma/special");
     return {

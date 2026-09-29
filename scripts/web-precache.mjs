@@ -1,4 +1,5 @@
 import { readFile, writeFile, readdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 const root = new URL("../web/dist/", import.meta.url);
 const assets = (await readdir(new URL("assets/", root)))
@@ -9,6 +10,8 @@ const shell = [
   "/index.html",
   "/icon.svg",
   "/manifest.webmanifest",
+  // Early theme script; optional so older or minimal artifacts still build.
+  ...(existsSync(new URL("theme.js", root)) ? ["/theme.js"] : []),
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   ...assets,

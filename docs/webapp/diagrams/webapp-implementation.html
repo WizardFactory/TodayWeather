@@ -5193,8 +5193,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="context" x="595" y="154" class="t-muted" font-size="9" text-anchor="middle">Source-aware browser normalization</text>
         </g>
 
-        <g id="node-existing-api" data-node-id="existing-api" data-node-label="Existing public API" tabindex="0" role="button" aria-label="Focus Existing public API, Weather / geocode / warnings, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="Weather / geocode / warnings" data-node-context="Architecture component">
-          <title>Existing public API · Weather / geocode / warnings · Architecture component</title>
+        <g id="node-existing-api" data-node-id="existing-api" data-node-label="Existing public API" tabindex="0" role="button" aria-label="Focus Existing public API, Weather / geocode / nation / warnings, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="Weather / geocode / nation / warnings" data-node-context="Architecture component">
+          <title>Existing public API · Weather / geocode / nation / warnings · Architecture component</title>
           <rect x="930" y="100" width="250" height="80" rx="6" class="c-mask"/>
           <rect x="930" y="100" width="250" height="80" rx="6" class="c-external" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(936 106) scale(0.6875)">
@@ -5202,7 +5202,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="1055" y="138" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Existing public API</text>
-        <text data-detail="context" x="1055" y="154" class="t-muted" font-size="9" text-anchor="middle">Weather / geocode / warnings</text>
+        <text data-detail="context" x="1055" y="154" class="t-muted" font-size="9" text-anchor="middle">Weather / geocode / nation / warnings</text>
         </g>
 
         <g id="node-local-storage" data-node-id="local-storage" data-node-label="Local browser state" tabindex="0" role="button" aria-label="Focus Local browser state, Favorites + 24h snapshots, Architecture component" aria-pressed="false" data-node-kind="database" data-node-sublabel="Favorites + 24h snapshots" data-node-context="Architecture component">
@@ -5471,7 +5471,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Offline behavior</h3>
         </div>
         <ul>
-          <li>&bull; Cache-key revision v3; stored weather shown while refreshing</li>
+          <li>&bull; Stored weather shown first, then refetched on reconnect</li>
           <li>&bull; Deleting a place or 24 hours removes its snapshots</li>
         </ul>
       </div>
@@ -5482,7 +5482,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Runtime scope</h3>
         </div>
         <ul>
-          <li>&bull; One delayed retry on 502 or network failure</li>
+          <li>&bull; One retry on 502/network; 429 honors Retry-After</li>
           <li>&bull; AirKorea, KAQ and Visual Crossing credited like the app</li>
         </ul>
       </div>

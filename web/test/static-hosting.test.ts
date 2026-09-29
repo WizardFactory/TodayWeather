@@ -1,12 +1,14 @@
-import { it, expect } from "vitest";
+import { it, expect, vi, afterEach } from "vitest";
 import {
   readFileSync,
+  readdirSync,
+  existsSync,
   mkdtempSync,
   mkdirSync,
   writeFileSync,
   rmSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, dirname, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { runInNewContext } from "node:vm";
@@ -80,8 +82,11 @@ it("rejects ambiguous or unsafe transport build settings", () => {
   ])
     expect(() => readTransportSettings(env)).toThrow();
 });
+const COMMIT = "0123456789abcdef0123456789abcdef01234567";
 const release = {
   schemaVersion: 1,
+  commit: COMMIT,
+  builtAt: "2026-09-26T00:00:00.000Z",
   siteOrigin: "https://app.tdywx.xyz",
   apiOrigin: "https://todayweather.wizardfactory.net",
   mode: "live",
@@ -202,6 +207,12 @@ else if (cmd === "cloudfront get-function") {
 else if (cmd === "s3 cp" || cmd === "cloudfront create-invalidation") out({});
 else fail("unexpected command " + cmd);
 `;
+const errorResponse = (code: number) => ({
+  ErrorCode: code,
+  ResponsePagePath: "",
+  ResponseCode: "",
+  ErrorCachingMinTTL: 10,
+});
 const functionArn =
   "arn:aws:cloudfront::141248341265:function/tdywx-app-navigation";
 const matching = () => ({
@@ -214,10 +225,15 @@ const matching = () => ({
           Id: "static-assets",
           DomainName: "test-static-bucket.s3.ap-northeast-2.amazonaws.com",
           OriginPath: "",
-          OriginAccessControlId: "E2OAC",
+          OriginAccessControlId: "E2OAC" as string | undefined,
           S3OriginConfig: { OriginAccessIdentity: "" },
         },
       ],
+    },
+    // The CLI reports unset page paths and codes as empty strings.
+    CustomErrorResponses: { Quantity: 1, Items: [errorResponse(404)] } as {
+      Quantity: number;
+      Items: Record<string, unknown>[];
     },
     DefaultCacheBehavior: {
       TargetOriginId: "static-assets",
@@ -350,6 +366,56 @@ it.each([
     },
     /OriginPath/,
   ],
+  [
+    "a distribution without the app.tdywx.xyz alias",
+    (f: ReturnType<typeof matching>) => {
+      f.distributionConfig.Aliases = {
+        Quantity: 1,
+        Items: ["other.tdywx.xyz"],
+      };
+    },
+    /does not have the app\.tdywx\.xyz alias/,
+  ],
+  [
+    "a default behavior that targets another bucket",
+    (f: ReturnType<typeof matching>) => {
+      f.distributionConfig.Origins.Items[0].DomainName =
+        "other-bucket.s3.ap-northeast-2.amazonaws.com";
+    },
+    /does not target the S3 bucket test-static-bucket/,
+  ],
+  [
+    "an S3 origin without Origin Access Control",
+    (f: ReturnType<typeof matching>) => {
+      f.distributionConfig.Origins.Items[0].OriginAccessControlId = "";
+    },
+    /has no Origin Access Control/,
+  ],
+  [
+    "a viewer protocol policy that allows HTTP",
+    (f: ReturnType<typeof matching>) => {
+      f.distributionConfig.DefaultCacheBehavior.ViewerProtocolPolicy =
+        "allow-all";
+    },
+    /ViewerProtocolPolicy allow-all; redirect-to-https is required/,
+  ],
+  [
+    "a custom error response that serves a page",
+    (f: ReturnType<typeof matching>) => {
+      f.distributionConfig.CustomErrorResponses = {
+        Quantity: 2,
+        Items: [
+          errorResponse(404),
+          {
+            ...errorResponse(403),
+            ResponsePagePath: "/index.html",
+            ResponseCode: "200",
+          },
+        ],
+      };
+    },
+    /CustomErrorResponses maps 403 to ResponsePagePath \/index\.html/,
+  ],
 ])("stops before any upload for %s", (_name, mutate, message) => {
   const fixture = matching();
   mutate(fixture);
@@ -357,4 +423,312 @@ it.each([
   expect(run.status).toBe(1);
   expect(run.stderr).toMatch(message);
   expect(uploads(run.calls)).toEqual([]);
+});
+
+it("reports the release commit in dry-run and execute output", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tw-static-release-id-"));
+  try {
+    makeDist(dir);
+    const dry = spawnSync(
+      process.execPath,
+      [
+        "scripts/deploy-web-static.mjs",
+        "--dir",
+        dir,
+        "--bucket",
+        "test-static-bucket",
+        "--distribution",
+        "D123",
+      ],
+      { encoding: "utf8", env: { ...process.env, AWS_CLI: "/does-not-exist" } },
+    );
+    expect(dry.status, dry.stderr).toBe(0);
+    expect(JSON.parse(dry.stdout).release).toEqual({
+      commit: COMMIT,
+      builtAt: release.builtAt,
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  const run = runExecute(matching());
+  expect(run.status, run.stderr).toBe(0);
+  expect(run.stdout).toContain(COMMIT);
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+async function emittedRelease() {
+  const { default: config } = await import("../vite.config");
+  const resolved = (config as Function)({
+    mode: "production",
+    command: "build",
+  });
+  const plugin = resolved.plugins.find(
+    (p: { name?: string }) => p?.name === "static-release",
+  );
+  let source = "";
+  plugin.generateBundle.call({
+    emitFile: (file: { fileName: string; source: string }) => {
+      if (file.fileName === "release.json") source = file.source;
+    },
+  });
+  return JSON.parse(source);
+}
+it("identifies each built release by commit and build time", async () => {
+  vi.stubEnv("GITHUB_SHA", COMMIT);
+  vi.stubEnv("SOURCE_DATE_EPOCH", "1790000000");
+  const pinned = await emittedRelease();
+  expect(pinned).toMatchObject({
+    schemaVersion: 1,
+    siteOrigin: "https://app.tdywx.xyz",
+    transport: "direct",
+    mode: "live",
+    apiOrigin: "https://todayweather.wizardfactory.net",
+    commit: COMMIT,
+    builtAt: new Date(1790000000 * 1000).toISOString(),
+  });
+  vi.stubEnv("GITHUB_SHA", "");
+  vi.stubEnv("SOURCE_DATE_EPOCH", "");
+  const local = await emittedRelease();
+  expect(local.commit).toMatch(/^([0-9a-f]{40}(-dirty)?|unknown)$/);
+  expect(new Date(local.builtAt).toISOString()).toBe(local.builtAt);
+});
+/** Minimal reader for `on.<event>.paths` in flow or block list form. */
+function workflowPaths(file: string) {
+  const paths: Record<string, string[]> = {};
+  let event = "";
+  let inPaths = false;
+  const unquote = (v: string) => v.trim().replace(/^["']|["']$/g, "");
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    const trigger = line.match(/^ {2}([a-z_]+):/);
+    if (trigger) [event, inPaths] = [trigger[1], false];
+    const list = line.match(/^ {4}paths:\s*(.*)$/);
+    if (list) {
+      inPaths = !list[1];
+      paths[event] = list[1]
+        ? list[1]
+            .replace(/^\[|\]$/g, "")
+            .split(",")
+            .map(unquote)
+        : [];
+    } else if (inPaths && /^ {6}- /.test(line))
+      paths[event].push(unquote(line.slice(8)));
+    else if (!/^ {6}/.test(line)) inPaths = false;
+  }
+  return paths;
+}
+const globMatch = (glob: string, path: string) =>
+  new RegExp(
+    "^" +
+      glob
+        .split("**")
+        .map((part) =>
+          part
+            .split("*")
+            .map((s) => s.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+            .join("[^/]*"),
+        )
+        .join(".*") +
+      "$",
+  ).test(path);
+it("runs CI when a file read or imported by the web tests changes", () => {
+  const used = new Set<string>();
+  for (const dir of ["web/test", "web/e2e"])
+    for (const name of readdirSync(dir).filter((f) => f.endsWith(".ts"))) {
+      const text = readFileSync(join(dir, name), "utf8");
+      for (const [, rel] of text.matchAll(/["']((?:\.\.\/)+[^"']+)["']/g))
+        used.add(relative(".", resolve(dir, rel)));
+      for (const [, path] of text.matchAll(
+        /["']((?:docs|infra|packages|scripts|\.github\/workflows)\/[^"'*]+\.[a-z]+)["']/g,
+      ))
+        used.add(path);
+    }
+  expect([...used]).toContain("docs/rewrite/examples/client-kma-response.json");
+  // Workflow files read by the tests must trigger the workflow that runs them.
+  expect([...used]).toContain(".github/workflows/web-live-smoke.yml");
+  expect([...used]).toContain(".github/workflows/web.yml");
+  const paths = workflowPaths(".github/workflows/web.yml");
+  for (const event of ["pull_request", "push"]) {
+    const uncovered = [...used].filter(
+      (file) => !paths[event].some((glob) => globMatch(glob, file)),
+    );
+    expect(uncovered, event).toEqual([]);
+  }
+});
+it("retains the static artifact and keeps the live smoke off pull requests", () => {
+  const web = readFileSync(".github/workflows/web.yml", "utf8");
+  const upload = web
+    .split(/\n(?= {6}- )/)
+    .find((step) => /name: web-static-dist/.test(step));
+  expect(upload).toMatch(/retention-days: 90/);
+  const file = ".github/workflows/web-live-smoke.yml";
+  expect(existsSync(file)).toBe(true);
+  const smoke = readFileSync(file, "utf8");
+  const on = smoke.slice(
+    smoke.indexOf("\non:"),
+    smoke.indexOf("\npermissions:"),
+  );
+  expect(on).toMatch(/\n {2}schedule:/);
+  expect(on).toMatch(/\n {2}workflow_dispatch:/);
+  expect(on).not.toMatch(/pull_request|\n {2}push:/);
+  expect(smoke).toMatch(/permissions:\n {2}contents: read/);
+  expect(smoke).toContain("scripts/web-live-smoke.mjs");
+  expect(smoke).toContain("--json");
+  // Manual post-deploy runs can pin the expected commit; inputs reach the
+  // shell through env, never through inline expression interpolation.
+  expect(on).toMatch(/\n {6}expect_commit:/);
+  expect(smoke).toMatch(/EXPECT_COMMIT: \$\{\{ inputs\.expect_commit \}\}/);
+  expect(smoke).toContain('--expect-commit "$EXPECT_COMMIT"');
+  const steps = smoke.split(/\n(?= {6}- )/);
+  for (const step of steps.filter((s) => /\n {8}run: /.test(s)))
+    expect(step.slice(step.indexOf("run: ")), step).not.toContain("${{");
+  // The JSON result and failure screenshots are uploaded even when it fails.
+  const smokeUpload = steps.find((s) => /name: web-live-smoke\n/.test(s)) ?? "";
+  expect(smokeUpload).toMatch(/if: always\(\)/);
+  expect(smokeUpload).toContain("test-results/web-live-smoke.json");
+  expect(smokeUpload).toContain("test-results/web-live-smoke.json.fail-*.png");
+});
+it("checks the forecast shape of weather responses in the live smoke", async () => {
+  // @ts-expect-error standalone JavaScript smoke command
+  const smoke = await import("../../scripts/web-live-smoke.mjs");
+  const read = (f: string) =>
+    JSON.parse(readFileSync("docs/rewrite/examples/" + f, "utf8")).response;
+  const kma = read("client-kma-response.json");
+  const dsf = read("client-world-response.json");
+  expect(smoke.weatherBodyProblems(kma)).toEqual([]);
+  expect(smoke.weatherBodyProblems(dsf)).toEqual([]);
+  expect(smoke.weatherBodyProblems({})).not.toEqual([]);
+  expect(smoke.weatherBodyProblems(null)).not.toEqual([]);
+  const drift = (patch: object) =>
+    smoke.weatherBodyProblems({ ...kma, ...patch });
+  expect(drift({ short: [], shortest: [] }).join()).toMatch(/short/);
+  expect(drift({ short: undefined, shortest: [{}] })).toEqual([]);
+  expect(
+    drift({ midData: { dailyData: kma.midData.dailyData.slice(0, 2) } }).join(),
+  ).toMatch(/dailyData/);
+  expect(drift({ midData: undefined }).join()).toMatch(/dailyData/);
+  for (const t1h of [null, "", "abc", -999])
+    expect(drift({ current: { ...kma.current, t1h } }).join()).toMatch(/t1h/);
+  expect(drift({ current: { ...kma.current, t1h: -3.5 } })).toEqual([]);
+  expect(smoke.weatherBodyProblems({ ...dsf, hourly: [] }).join()).toMatch(
+    /hourly/,
+  );
+  expect(
+    smoke.weatherBodyProblems({ ...dsf, daily: dsf.daily.slice(0, 2) }).join(),
+  ).toMatch(/daily/);
+  expect(
+    smoke.weatherBodyProblems({ ...dsf, thisTime: [dsf.thisTime[0]] }).join(),
+  ).toMatch(/thisTime/);
+});
+it("compares the deployed release commit when the smoke expects one", async () => {
+  // @ts-expect-error standalone JavaScript smoke command
+  const smoke = await import("../../scripts/web-live-smoke.mjs");
+  const sha = "0123456789abcdef0123456789abcdef01234567";
+  const other = "f".repeat(40);
+  const status = (commit: unknown, expect?: string) =>
+    smoke.releaseCommitStatus(commit, expect).status;
+  expect(status(sha)).toBe("pass");
+  expect(status("unknown")).toBe("pass");
+  expect(status(sha, sha)).toBe("pass");
+  expect(status(sha, sha.slice(0, 7))).toBe("pass");
+  expect(status(sha, other)).toBe("fail");
+  expect(status(sha, other.slice(0, 7))).toBe("fail");
+  expect(status("unknown", sha)).toBe("fail");
+  expect(status(undefined, sha)).toBe("fail");
+  expect(status(sha + "-dirty")).toBe("warn");
+  expect(status(sha + "-dirty", sha)).toBe("fail");
+  expect(status(sha + "-dirty", sha.slice(0, 7))).toBe("fail");
+  for (const bad of ["abc", sha.toUpperCase(), sha + "-wip", 42])
+    expect(status(bad)).toBe("fail");
+  expect(smoke.releaseCommitStatus(sha, other).evidence).toContain(other);
+  expect(smoke.parseArgs(["--expect-commit", "ABCDEF1"]).expectCommit).toBe(
+    "abcdef1",
+  );
+  for (const bad of ["abcdef", "xyz1234", sha + "0"])
+    expect(() => smoke.parseArgs(["--expect-commit", bad])).toThrow(
+      /expect-commit/,
+    );
+  expect(() => smoke.parseArgs(["--expect-commit"])).toThrow(/Missing value/);
+});
+it("warns on stale observation and announcement times in the live smoke", async () => {
+  // @ts-expect-error standalone JavaScript smoke command
+  const smoke = await import("../../scripts/web-live-smoke.mjs");
+  const now = Date.parse("2026-09-26T13:00:00+09:00");
+  const age = (v: unknown) => smoke.observationAgeHours(v, now);
+  expect(age("2026-09-26 12:00")).toBe(1);
+  expect(age("2026-09-26T12:00")).toBe(1);
+  expect(age("2026.09.26.12:00")).toBe(1);
+  expect(age("202609261200")).toBe(1);
+  expect(age("2026-09-26T03:00:00.000Z")).toBe(1);
+  expect(age("2026-09-25 12:30")).toBe(24.5);
+  for (const bad of [null, "", "yesterday", "2026-13-40 99:99", 5])
+    expect(age(bad)).toBeNull();
+  const fresh = ["2026-09-26 12:00", "2026-09-26 11:00"];
+  const any = smoke.freshness(fresh, { now, basis: "any" });
+  expect(any.status).toBe("pass");
+  expect(any.evidence).toMatchObject({
+    parsed: 2,
+    newestAgeHours: 1,
+    oldestAgeHours: 2,
+    olderThanLimit: 0,
+  });
+  const stale = [...fresh, "2026-09-24 12:00", null];
+  expect(smoke.freshness(stale, { now, basis: "any" })).toMatchObject({
+    status: "warn",
+    evidence: { count: 4, parsed: 3, olderThanLimit: 1, oldestAgeHours: 49 },
+  });
+  expect(smoke.freshness(stale, { now, basis: "newest" }).status).toBe("pass");
+  expect(
+    smoke.freshness(["2021-06-16T21:00:00.000Z"], { now, basis: "newest" })
+      .status,
+  ).toBe("warn");
+  expect(smoke.freshness([null, "x"], { now, basis: "any" }).status).toBe(
+    "warn",
+  );
+  expect(smoke.freshness([], { now, basis: "newest" }).status).toBe("pass");
+  expect(
+    smoke.failureScreenshotPath(
+      "out/smoke.json",
+      "Seoul daily view renders ≥3 daily rows",
+    ),
+  ).toBe("out/smoke.json.fail-seoul-daily-view-renders-3-daily-rows.png");
+  expect(
+    smoke.failureScreenshotPath("s.json", "deep link /weather/seoul/hourly"),
+  ).toBe("s.json.fail-deep-link-weather-seoul-hourly.png");
+});
+it("accepts only the known precipitation labels in the live smoke", async () => {
+  expect(existsSync("scripts/web-live-smoke.mjs")).toBe(true);
+  // @ts-expect-error standalone JavaScript smoke command
+  const smoke = await import("../../scripts/web-live-smoke.mjs");
+  expect(
+    smoke.unknownRainLabels([
+      "강수 —",
+      "강수확률 30%",
+      "강수확률 —",
+      "강수 0.5 mm · 1시간 관측",
+      "강수 1 mm · 3시간 관측",
+      "강수 0 mm · 지금까지 관측",
+      "강수 2 mm · 관측 누적",
+      "강수 약 1 mm · 1시간 예보(근사)",
+      "강수 4 mm · 3시간 예보",
+      "강수 3 mm · 예보",
+      "강수량",
+      "강수량 · 1시간 관측",
+    ]),
+  ).toEqual([]);
+  expect(
+    smoke.unknownRainLabels([
+      "강수 1 mm",
+      "강수 1 mm · 6시간",
+      "강수량 · 3시간",
+      "강수 1 mm · 관측",
+    ]),
+  ).toEqual([
+    "강수 1 mm",
+    "강수 1 mm · 6시간",
+    "강수량 · 3시간",
+    "강수 1 mm · 관측",
+  ]);
+  expect(smoke.dottedKmaTime("관측 시각 2026.09.26.14:00")).toBe(true);
+  expect(smoke.dottedKmaTime("관측 시각 2026-09-26 14:00")).toBe(false);
 });

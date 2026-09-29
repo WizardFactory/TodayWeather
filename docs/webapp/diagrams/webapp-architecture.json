@@ -57,7 +57,7 @@
       "id": "public-weather",
       "type": "external",
       "label": "Existing public API",
-      "sublabel": "Weather / geocode / nation",
+      "sublabel": "Weather / geocode / nation / warnings",
       "pos": [
         40,
         400
@@ -148,7 +148,7 @@
       "title": "Release boundary",
       "items": [
         "S3 + CloudFront is the adopted hosting target",
-        "Deployment method and rollout remain operator decisions"
+        "Deployment method awaits AK's decision"
       ]
     },
     {

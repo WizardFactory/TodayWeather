@@ -16,8 +16,14 @@ import {
 } from "lucide-react";
 import { formatValue, type Point, type Weather } from "@todayweather/core";
 import type { ReactNode } from "react";
-import { dayLabel, iconKind, relativeDay, type IconKind } from "./format";
-export { dayLabel };
+import {
+  dayLabel,
+  iconKind,
+  isOld,
+  relativeDay,
+  type IconKind,
+} from "./format";
+export { dayLabel, isOld };
 const ICONS: Record<IconKind, typeof Cloud> = {
   lightning: CloudLightning,
   rainsnow: CloudHail,
@@ -95,15 +101,41 @@ export function Stamp({
   at,
   label = "관측 시각",
   timeZone,
+  zone,
 }: {
   at: string | null | undefined;
   label?: string;
   timeZone?: "Asia/Seoul";
+  /** Zone of a naive wall time: KMA/AirKorea are KST, overseas are local. */
+  zone?: "KST" | "local";
 }) {
+  const text = stampTime(at, timeZone);
+  const suffix =
+    !zone || timeZone || text === "정보 없음"
+      ? ""
+      : zone === "KST"
+        ? " KST"
+        : " (현지 시각)";
   return (
     <span className="stamp">
-      {label} {stampTime(at, timeZone)}
+      {label} {text}
+      {suffix}
     </span>
+  );
+}
+/** Device-clock instants (fetch/save times) shown in Korea time. */
+export function kstTime(iso: string) {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return "정보 없음";
+  return (
+    new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(date) + " KST"
   );
 }
 function stampTime(
@@ -131,26 +163,19 @@ function stampTime(
   const values = Object.fromEntries(parts.map((p) => [p.type, p.value]));
   return `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}:${values.second} KST`;
 }
-export function isOld(at: string | null, limitHours = 3) {
-  if (!at) return false;
-  const s = at.replace(" ", "T");
-  const match = s.match(/^\d{4}-\d{2}-\d{2}/);
-  if (!match) return false; // A conservative date-only check avoids guessing unknown source timezones.
-  return (
-    Date.now() - Date.parse(match[0] + "T23:59:59+14:00") >
-    limitHours * 3600000 + 86400000
-  );
-}
 export function DataNotice({
   weather,
   snapshot,
   refreshing = false,
   refreshFailed = false,
+  notice,
 }: {
   weather: Weather;
   snapshot: boolean;
   refreshing?: boolean;
   refreshFailed?: boolean;
+  /** Why the stored snapshot is shown, e.g. a rate limit with its wait. */
+  notice?: string;
 }) {
   return (
     <>
@@ -166,8 +191,7 @@ export function DataNotice({
           <LoaderCircle className="spin" size={16} />
           <span>
             저장된 자료를 먼저 표시하고 있습니다. 마지막 수신{" "}
-            {new Date(weather.fetchedAt).toLocaleString("ko-KR")} · 최신 자료를
-            불러오는 중입니다.
+            {kstTime(weather.fetchedAt)} · 최신 자료를 불러오는 중입니다.
           </span>
         </div>
       )}
@@ -176,7 +200,7 @@ export function DataNotice({
           <TriangleAlert size={16} />
           <span>
             최신 자료로 갱신하지 못했습니다. 마지막 수신{" "}
-            {new Date(weather.fetchedAt).toLocaleString("ko-KR")}
+            {kstTime(weather.fetchedAt)}
           </span>
         </div>
       )}
@@ -184,12 +208,19 @@ export function DataNotice({
         <div className="notice warning" role="status">
           <TriangleAlert size={16} />
           <span>
-            연결하지 못해 저장된 자료를 표시합니다. 마지막 수신{" "}
-            {new Date(weather.fetchedAt).toLocaleString("ko-KR")}
+            {notice
+              ? `${notice} 저장된 자료를 표시합니다. 마지막 수신 `
+              : "연결하지 못해 저장된 자료를 표시합니다. 마지막 수신 "}
+            {kstTime(weather.fetchedAt)}
           </span>
         </div>
       )}
-      {isOld(weather.observedAt) && (
+      {isOld(
+        weather.observedAt,
+        3,
+        Date.now(),
+        weather.source === "KMA" ? "KST" : "local",
+      ) && (
         <div className="notice warning">
           관측 시각이 오래된 자료입니다. 외출 전 최신 기상 정보를 확인해 주세요.
         </div>
@@ -197,6 +228,8 @@ export function DataNotice({
     </>
   );
 }
+/** Smallest horizontal distance between chart points, in SVG units. */
+const CHART_MIN_GAP = 52;
 export const hourLabel = (at: string) =>
   at.slice(11, 13) + ":" + at.slice(14, 16);
 export function TemperatureChart({
@@ -216,14 +249,21 @@ export function TemperatureChart({
       .filter((v): v is number => v !== null);
   if (!data.length || !temps.length)
     return <Empty title="시간별 예보가 없습니다" />;
-  const low = Math.min(...temps) - 3,
-    range = Math.max(...temps) - low + 4,
-    width = Math.max(720, data.length * 68),
-    height = 220;
-  // Rows mix 1-hour and 3-hour steps; position by time, not by index.
+  // Rows mix 1-hour and 3-hour steps; position by time, not by index, but
+  // keep the closest points far enough apart that hour labels never touch.
   const minutes = (p: Point) => Date.parse(p.at + ":00Z") / 60000,
     start = minutes(data[0]),
-    span = Math.max(minutes(data[data.length - 1]) - start, 1);
+    span = Math.max(minutes(data[data.length - 1]) - start, 1),
+    step = Math.min(
+      ...data.slice(1).map((p, i) => minutes(p) - minutes(data[i])),
+      span,
+    );
+  const low = Math.min(...temps) - 3,
+    range = Math.max(...temps) - low + 4,
+    width = Math.ceil(
+      Math.max(720, data.length * 68, 76 + (span * CHART_MIN_GAP) / step),
+    ),
+    height = 220;
   const x = (i: number) =>
       data.length > 1
         ? 38 + ((minutes(data[i]) - start) * (width - 76)) / span

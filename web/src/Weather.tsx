@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import {
+  useParams,
+  useNavigate,
+  useSearchParams,
+  Link,
+} from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
@@ -51,7 +56,7 @@ import {
   pollutantUnit,
   standardName,
 } from "./air";
-import { amount, approxAmount } from "./format";
+import { amount, approxAmount, weatherStaleTime } from "./format";
 const pollutantLabels: Record<Pollutant, string> = {
   aqi: "통합대기지수",
   pm25: "초미세먼지",
@@ -105,6 +110,8 @@ function airValue(value: number | null, code: string) {
   return value === null || !unit ? text : `${text} ${unit}`;
 }
 export default function WeatherPage({ view: fixedView }: { view?: string }) {
+  const [search] = useSearchParams();
+  const linkedPollutant = POLLUTANTS.find((c) => c === search.get("pollutant"));
   const { locationId, view: paramView } = useParams(),
     view = fixedView ?? paramView ?? "hourly";
   const { state, setState, notify } = useApp();
@@ -131,7 +138,7 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
     queryKey: ["weather", key],
     queryFn: ({ signal }) => fetchWeather(place!, units, signal),
     enabled: !!place,
-    staleTime: 600000,
+    staleTime: (q) => weatherStaleTime(q.state.data, q.state.dataUpdatedAt),
     refetchOnWindowFocus: true,
     refetchInterval: state.settings.refreshMinutes
       ? state.settings.refreshMinutes * 60000
@@ -220,11 +227,13 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
           <button
             key={id}
             className={view === id ? "active" : ""}
+            aria-pressed={view === id}
             onClick={() =>
               navigate(
                 id === "air"
                   ? `/air/${place.id}`
                   : `/weather/${place.id}/${id}`,
+                { state: { keepFocus: true } },
               )
             }
           >
@@ -241,11 +250,16 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
           <DataNotice
             weather={data}
             snapshot={live?.snapshot ?? false}
+            notice={live?.notice}
             refreshing={showStored}
             refreshFailed={query.isError && !!live}
           />
           {view === "air" ? (
-            <AirDetails key={data.location.id} weather={data} />
+            <AirDetails
+              key={data.location.id}
+              weather={data}
+              initialCode={linkedPollutant}
+            />
           ) : (
             <WeatherDetails weather={data} view={view} />
           )}
@@ -265,7 +279,10 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
                 Weather Data Provided by Visual Crossing
               </a>
             )}
-            <Stamp at={data.observedAt} />
+            <Stamp
+              at={data.observedAt}
+              zone={data.source === "KMA" ? "KST" : "local"}
+            />
           </footer>
         </>
       ) : null}
@@ -279,6 +296,7 @@ function WeatherDetails({
   weather: Weather;
   view: string;
 }) {
+  const zone = w.source === "KMA" ? ("KST" as const) : ("local" as const);
   const t = w.current,
     unit = w.units.precipitationUnit,
     standard = w.units.airUnit,
@@ -412,8 +430,8 @@ function WeatherDetails({
                   ))}
                 </div>
               )}
-              <Stamp at={air.observedAt} />
-              {isOld(air.observedAt) && (
+              <Stamp at={air.observedAt} zone={zone} />
+              {isOld(air.observedAt, 3, Date.now(), zone) && (
                 <p className="warning-text">오래된 관측 자료</p>
               )}
             </>
@@ -497,7 +515,7 @@ function WeatherDetails({
           />
           {w.forecastPublishedAt && (
             <p className="muted-text">
-              <Stamp at={w.forecastPublishedAt} label="예보 발표" />
+              <Stamp at={w.forecastPublishedAt} label="예보 발표" zone="KST" />
               {isOld(w.forecastPublishedAt, 24) && (
                 <span className="warning-text">
                   {" "}
@@ -628,7 +646,11 @@ function AirAttribution({
           {forecastDescription(source) &&
             ` · ${forecastDescription(source)}`}{" "}
           {station?.forecastPublishedAt && (
-            <Stamp at={station.forecastPublishedAt} label="예보 발표" />
+            <Stamp
+              at={station.forecastPublishedAt}
+              label="예보 발표"
+              zone="KST"
+            />
           )}
         </p>
       )}
@@ -637,10 +659,17 @@ function AirAttribution({
 }
 const monthDay = (at: string) =>
   `${Number(at.slice(5, 7))}/${Number(at.slice(8, 10))}`;
-function AirDetails({ weather: w }: { weather: Weather }) {
+function AirDetails({
+  weather: w,
+  initialCode,
+}: {
+  weather: Weather;
+  initialCode?: Pollutant;
+}) {
   const [stationIndex, setStationIndex] = useState(0),
-    [code, setCode] = useState<Pollutant>("aqi");
+    [code, setCode] = useState<Pollutant>(initialCode ?? "aqi");
   const standard = w.units.airUnit;
+  const zone = w.source === "KMA" ? ("KST" as const) : ("local" as const);
   const station = w.air[stationIndex] ?? w.air[0];
   if (!station)
     return (
@@ -696,8 +725,8 @@ function AirDetails({ weather: w }: { weather: Weather }) {
             {otherStation(code) && (
               <p className="muted-text">측정소: {otherStation(code)}</p>
             )}
-            <Stamp at={station.observedAt} />
-            {isOld(station.observedAt) && (
+            <Stamp at={station.observedAt} zone={zone} />
+            {isOld(station.observedAt, 3, Date.now(), zone) && (
               <p className="warning-text">최신 관측 자료가 아닙니다.</p>
             )}
           </div>
@@ -707,6 +736,7 @@ function AirDetails({ weather: w }: { weather: Weather }) {
             <button
               key={c}
               className={code === c ? "selected" : ""}
+              aria-pressed={code === c}
               onClick={() => setCode(c)}
             >
               <span>{pollutantLabels[c]}</span>

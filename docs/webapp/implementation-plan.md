@@ -11,7 +11,7 @@ Updated for the static-only decision. The browser client and static hosting prep
 | Air and national data | Pollutant/station views, provider text fallback, nationwide maps/lists, warnings | Actual station availability, stale national feed and warning freshness; API owner |
 | PWA | Static shell, install help, controlled updates and offline recovery | iOS/Android installed sessions, old/new releases, storage denial/eviction; QA |
 | Notifications | Unavailable/mobile-app guidance only | Separate product/design decision before any browser subscription or sender implementation |
-| Hosting | S3/OAC/CloudFront template, navigation function and guarded uploader | Reuse existing resources after current configuration check; deployment method deferred; operations |
+| Hosting | S3/OAC/CloudFront template, navigation function, guarded uploader and read-only live smoke | Reuse existing resources after the runbook's Option A checks; deployment method awaits AK; staging, monitoring and archive are [release gaps](implementation.md#release-gaps); operations |
 | Commercial/native parity | Explicit unsupported purchase/widget/watch behavior | Resolve branding, monetization, transfer and account-sync choices; AK/product |
 
 The original 2026-09-24 estimate of 8–12 weeks assumed a larger parity implementation including a new notification backend. It is historical planning context, not a remaining-duration estimate for this static client. Re-estimate any future alerts, commercial work or provider repair as separate scope after requirements and owners are known.
@@ -23,9 +23,10 @@ The original 2026-09-24 estimate of 8–12 weeks assumed a larger parity impleme
 | `web/`, root package/lockfile and tooling | Independent browser workspace, build and local static preview |
 | `packages/weather-core/` | Typed provider/units/time/catalog normalization |
 | `web/src/direct-api.ts`, `web/src/demo/` | Fixed external API operations and explicit browser-local demo data |
-| `web/public/` | Manifest/icons/service worker |
+| `web/public/` | Manifest/icons/service worker and the early theme script (`theme.js`) |
 | `infra/web/static/`, `scripts/deploy-web-static.mjs` | Static hosting preparation and ordered uploader |
-| `.github/workflows/web.yml` | Build/test and artifact publication; not a production deployment workflow |
+| `.github/workflows/web.yml` | Build/test and artifact publication (`web-static-dist` kept 90 days); not a production deployment workflow |
+| `scripts/web-live-smoke.mjs`, `.github/workflows/web-live-smoke.yml` | Unmocked read-only smoke, scheduled and manual; not run on pull requests |
 | `docs/webapp/`, `docs/architecture/web-client.md`, web diagrams | Product boundaries, current architecture and operating guidance |
 | `client/`, native bundles and `server/` | Separate existing products/services; no migration required for static hosting |
 
@@ -33,7 +34,7 @@ Do not copy native configuration secrets into the browser bundle or reintroduce 
 
 ## Verification plan
 
-From the repository root, run `npm run typecheck`, `npm test`, `npm run build` and `npm run test:e2e`. These are reproducible commands, not a claim that every future revision passed. CI publishes `web-static-dist` and browser evidence. Actual results must be bound to the reviewed revision.
+From the repository root, run `npm run typecheck`, `npm test`, `npm run build` and `npm run test:e2e`. These are reproducible commands, not a claim that every future revision passed. CI publishes `web-static-dist` and browser evidence. Actual results must be bound to the reviewed revision. Which test covers each layer below, and which items remain manual or uncovered, is in the [coverage traceability](implementation.md#coverage-traceability).
 
 | Layer | Required coverage |
 | --- | --- |
@@ -43,7 +44,7 @@ From the repository root, run `npm run typecheck`, `npm test`, `npm run build` a
 | State/concurrency | Search submission freshness, late location results, city/unit changes, favorite deletion and preference restoration |
 | Static browser journeys | Weather/air/nation/warnings/settings/help; notification-unavailable guidance; zero local `/api/` requests |
 | Storage and worker lifecycle | Offline/corrupt/expired records, first worker claim, explicit update, previous assets and rollback-compatible reads |
-| Hosting and release | Correct deep links and error routes, private S3/OAC, CSP/cache/TLS, guarded dry-run, destination mismatch and interrupted upload |
+| Hosting and release | Correct deep links and error routes, private S3/OAC, CSP/cache/TLS, guarded dry-run, destination mismatch and interrupted upload (TLS, a real destination and an interrupted upload are manual release checks) |
 | Final-domain checks | Real API CORS/CSP and freshness, exact supported browser/device versions, installed iOS/Android PWA behavior |
 
 Use isolated fixtures and static file servers for local tests. Do not start the legacy service or run its integration suite merely to verify a browser change; startup may connect databases and launch collection. Never use `/gather/*` as a read-only probe. Actual API success does not prove accurate or fresh observations.
@@ -58,4 +59,4 @@ Deployment method selection is postponed. The manual uploader is prepared and de
 
 Before release, resolve operating ownership/budget, asset/data/search permissions, provider gaps and explicit commercial/native exceptions. Run the final-domain and installed-device checks from the [runbook](../../infra/web/static/README.md). Announce only features verified in the static client; the release is not complete mobile parity.
 
-Archive each verified artifact with its source revision. Keep old hashed files and roll back by restoring a complete prior release, invalidating CloudFront and checking new and already-installed sessions. Upload interruption may leave mixed files; retry the same artifact or restore the archived release before declaring recovery. Define wrong-city/unit/date, source-age, error-rate and upstream-load rollback triggers with operations before public exposure.
+Archive each verified artifact with its source revision: `release.json` records `commit` (a local build of uncommitted changes is marked `-dirty` and refused by the uploader) and `builtAt`, and CI keeps `web-static-dist` for 90 days, which is not a permanent archive ([release identity and rollback](../../infra/web/static/README.md#release-identity-and-rollback)). Keep old hashed files and roll back by restoring a complete prior release, invalidating CloudFront and checking new and already-installed sessions. Upload interruption may leave mixed files; retry the same artifact or restore the archived release before declaring recovery. Define wrong-city/unit/date, source-age, error-rate and upstream-load rollback triggers with operations before public exposure; they and their data sources are not defined yet ([release gaps](implementation.md#release-gaps)).
