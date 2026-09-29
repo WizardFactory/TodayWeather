@@ -1,6 +1,6 @@
 # Webapp design intent
 
-Original planning date: 2026-09-24. Current status: static client implemented; deployment method deferred. This document preserves the original planning acceptance and records the subsequent static-only decision.
+Original planning date: 2026-09-24. Current status: static client implemented; existing hosting reuse prepared under #2646; production execution pending. This document preserves the original planning acceptance and records the subsequent static-only decision.
 Source baseline: `87b8855f308611a07897cd3a39c45fefb3088d77`.
 
 AK requested planning/design for a deployable web client alongside iOS and Android, and explicitly prioritized matching existing mobile features as closely as possible.
@@ -11,7 +11,7 @@ Feature parity means equivalent user outcomes and meteorological meaning. It doe
 
 ## Current decisions
 
-The web client calls the existing public API directly and is prepared for private S3 + CloudFront at `app.tdywx.xyz`. The requested bucket is `tdywx-app-141248341265-apne2`. The unused Node API workspace, proxy mode, Docker recipe and web reminder service are removed. Browser notifications display unavailable/mobile-app guidance; full mobile parity remains open. No additional API server is required for the current client. Deployment method selection is deferred. On 2026-09-27 AK replaced the earlier Korean-only decision (2026-09-26) with a seven-language UI: Korean, English, Spanish, Japanese, German, Portuguese and French, chosen from the browser language with a settings override. Unsupported browser languages fall back to English, and units and date/number formats default by country as in the mobile apps ([#2613](https://github.com/WizardFactory/TodayWeather/issues/2613)). The web app sends the selected language to the API so server text follows it once the backend supports it; backend language support is a separate issue. Supported languages and the reference screen sizes are in the [specification](specification.md#supported-languages-and-screen-sizes). Monitoring, staging and other release gaps are listed in [implementation status](implementation.md#release-gaps).
+The web client calls the existing public API directly and is prepared for private S3 + CloudFront at `app.todayweather.ai`. The operator supplies the verified existing bucket and distribution identifiers. The unused Node API workspace, proxy mode, Docker recipe and web reminder service are removed. Browser notifications display unavailable/mobile-app guidance; full mobile parity remains open. No additional API server is required for the current client. Issue #2646 prepares existing hosting reuse; production execution remains separately authorized. On 2026-09-27 AK replaced the earlier Korean-only decision (2026-09-26) with a seven-language UI: Korean, English, Spanish, Japanese, German, Portuguese and French, chosen from the browser language with a settings override. Unsupported browser languages fall back to English, and units and date/number formats default by country as in the mobile apps ([#2613](https://github.com/WizardFactory/TodayWeather/issues/2613)). The web app sends the selected language to the API so server text follows it once the backend supports it; backend language support is a separate issue. Supported languages and the reference screen sizes are in the [specification](specification.md#supported-languages-and-screen-sizes). Monitoring, staging and other release gaps are listed in [implementation status](implementation.md#release-gaps).
 
 ## Acceptance of the original planning task
 
@@ -33,7 +33,7 @@ The eventual web rollout must preserve mobile API versions, native builds, colle
 
 - Confirm one combined TodayWeather web product versus separate TodayWeather/TodayAir brands.
 - Choose free/ad-supported launch versus paid web entitlements and native-purchase linking; do not silently remove commercial features from a parity promise.
-- Select the deployment method, budget/operations owner and target date for `app.tdywx.xyz`.
+- Confirm production execution, budget/operations owner and target date for `app.todayweather.ai`.
 - Decide whether native widget/watch alternatives are acceptable and whether login/device synchronization is desired beyond the existing local-storage experience.
 
 Recommended defaults are developed in the [specification](specification.md); the [implementation plan](implementation-plan.md) identifies when each decision is needed. An internal read-only milestone is not the final feature-parity release.

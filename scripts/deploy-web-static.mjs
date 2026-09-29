@@ -6,7 +6,7 @@ import { resolve, join, extname, dirname } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 /** Must match web/vite.config.ts release.json and web/src/transport-config.ts defaults. */
-export const SITE_DOMAIN = "app.tdywx.xyz";
+export const SITE_DOMAIN = "app.todayweather.ai";
 export const API_ORIGIN = "https://todayweather.wizardfactory.net";
 const ROUTE_FUNCTION = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -38,7 +38,7 @@ export async function planUpload({ dir = "web/dist", bucket, distribution }) {
     release.siteOrigin !== "https://" + SITE_DOMAIN
   )
     throw new Error(
-      "Deployment requires a live/direct app.tdywx.xyz build using the existing API",
+      "Deployment requires a live/direct app.todayweather.ai build using the existing API",
     );
   const files = [];
   async function walk(path = "") {

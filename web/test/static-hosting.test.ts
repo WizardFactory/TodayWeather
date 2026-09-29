@@ -53,13 +53,15 @@ it("provisions an isolated private static origin and deployable function with no
   expect(
     r.OriginAccess.Properties.OriginAccessControlConfig.SigningBehavior,
   ).toBe("always");
-  expect(t.Parameters?.AppDomainName?.Default).toBe("app.tdywx.xyz");
+  expect(t.Parameters?.AppDomainName?.Default).toBe("app.todayweather.ai");
   expect(r.Distribution.Properties.DistributionConfig.Aliases).toEqual([
     { Ref: "AppDomainName" },
   ]);
   expect(r.DnsA.Properties.Name).toEqual({ Ref: "AppDomainName" });
   expect(r.DnsAAAA.Properties.Name).toEqual({ Ref: "AppDomainName" });
-  expect(JSON.stringify({ r, o: t.Outputs })).not.toContain("app.tdywx.xyz");
+  expect(JSON.stringify({ r, o: t.Outputs })).not.toContain(
+    "app.todayweather.ai",
+  );
   expect(r.Cache.Properties.CachePolicyConfig.MinTTL).toBe(0);
   expect(
     r.Distribution.Properties.DistributionConfig.CustomErrorResponses.every(
@@ -87,7 +89,7 @@ const release = {
   schemaVersion: 1,
   commit: COMMIT,
   builtAt: "2026-09-26T00:00:00.000Z",
-  siteOrigin: "https://app.tdywx.xyz",
+  siteOrigin: "https://app.todayweather.ai",
   apiOrigin: "https://todayweather.wizardfactory.net",
   mode: "live",
   transport: "direct",
@@ -144,6 +146,25 @@ it("previews uploads without AWS execution, orders assets first, retains old fil
     await expect(
       planUpload({ dir, bucket: "test-static-bucket", distribution: "D123" }),
     ).rejects.toThrow("live/direct");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+it("rejects an artifact built for the previous production origin", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "tw-legacy-origin-"));
+  try {
+    makeDist(dir);
+    writeFileSync(
+      join(dir, "release.json"),
+      JSON.stringify({
+        ...release,
+        siteOrigin: "https://app.tdywx.xyz",
+      }),
+    );
+    await expect(
+      planUpload({ dir, bucket: "test-static-bucket", distribution: "D123" }),
+    ).rejects.toThrow("live/direct app.todayweather.ai");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -217,7 +238,7 @@ const functionArn =
   "arn:aws:cloudfront::141248341265:function/tdywx-app-navigation";
 const matching = () => ({
   distributionConfig: {
-    Aliases: { Quantity: 1, Items: ["app.tdywx.xyz"] },
+    Aliases: { Quantity: 1, Items: ["app.todayweather.ai"] },
     Origins: {
       Quantity: 1,
       Items: [
@@ -367,14 +388,14 @@ it.each([
     /OriginPath/,
   ],
   [
-    "a distribution without the app.tdywx.xyz alias",
+    "a distribution without the app.todayweather.ai alias",
     (f: ReturnType<typeof matching>) => {
       f.distributionConfig.Aliases = {
         Quantity: 1,
-        Items: ["other.tdywx.xyz"],
+        Items: ["app.tdywx.xyz"],
       };
     },
-    /does not have the app\.tdywx\.xyz alias/,
+    /does not have the app\.todayweather\.ai alias/,
   ],
   [
     "a default behavior that targets another bucket",
@@ -480,7 +501,7 @@ it("identifies each built release by commit and build time", async () => {
   const pinned = await emittedRelease();
   expect(pinned).toMatchObject({
     schemaVersion: 1,
-    siteOrigin: "https://app.tdywx.xyz",
+    siteOrigin: "https://app.todayweather.ai",
     transport: "direct",
     mode: "live",
     apiOrigin: "https://todayweather.wizardfactory.net",

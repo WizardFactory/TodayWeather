@@ -1,0 +1,13 @@
+# Static deployment destination contract
+Input: intent/issue-2646.md, issue #2646, repository at a5fdde1f.
+
+The canonical production hostname becomes app.todayweather.ai in release.json, uploader SITE_DOMAIN, template default, test fixtures and current operating instructions. The API origin remains unchanged. Reject artifacts targeting another origin and distributions missing the canonical alias before upload. Dry-run remains offline; execution remains explicit.
+
+Reuse existing S3 and CloudFront supplied through WEB_BUCKET and WEB_DISTRIBUTION. Prepare app-specific policies from the checked-in template; do not update shared policies in place. Retain existing certificate, DNS, API, alias and bucket ownership. Back up current inner CloudFront configuration, ETag and current objects/metadata. Apply the existing known-route function, not a distribution-wide error-to-HTML fallback. Cache and CSP follow the existing template.
+
+First-release rollback restores original placeholder bytes and metadata outside the release uploader because the placeholder has no release descriptor; invalidate changed paths and remove this app's service worker/cache from already enrolled browsers with a temporary recovery worker before returning to the placeholder. Subsequent release rollback uses a complete retained artifact. All mutations are operator actions after separate deployment authorization.
+
+No new architecture, API, data, storage or route behavior is introduced. Existing diagram topology remains valid; regenerate the hosting diagram through Archify to update its hostname and release-decision labels, with artifact/browser/capture checks. Verify with existing hosting tests plus old-origin rejection, full unit/typecheck/build, actual local HTTP navigation/asset/cache/release checks and independent verification. Browser PWA/live-provider acceptance remains a deployment gate, not a claim from HTTP-only smoke.
+
+## Recovery implementation extension
+An operator-only infra/web/static/recovery-worker.js is served as /sw.js during an approved rollback, never included by default in web/dist. Install skips waiting; activation removes tw-shell-* caches only, claims app clients, unregisters this registration, and navigates same-origin windows to the scope root. Other caches, localStorage and IndexedDB remain intact. No fetch handler or API requests. Keep the worker reachable and no-cache for returning online clients; offline clients cannot be forced to recover. Browser test installs the real app worker, exercises offline fallback, switches a local origin to placeholder/recovery bytes and checks existing tabs, preserved unrelated cache/preferences and a fresh browser.
