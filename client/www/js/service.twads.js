@@ -3,7 +3,7 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function(TwStorage, Util, admobClean, admobPro) {
+    .factory('TwAds', function(Util, admobClean, admobPro, admobEmi) {
         var obj = {};
         obj.enableAds = null;
         obj.showAds = null;
@@ -13,30 +13,9 @@ angular.module('service.twads', [])
         obj.bannerAdUnit = '';
         obj.interstitialAdUnit = '';
 
-        obj.loadTwAdsInfo = function () {
-            var self = this;
-            var twAdsInfo = TwStorage.get("twAdsInfo");
-            console.log('load TwAdsInfo='+JSON.stringify(twAdsInfo)+
-                        ' request enable='+self.requestEnable+' show='+self.requestShow);
-
-            self.ready = true;
-
-            if (self.requestEnable != undefined) {
-                self.setEnableAds(self.requestEnable);
-            }
-            else {
-                if (twAdsInfo == undefined || twAdsInfo.enable == undefined) {
-                    self.setEnableAds(true);
-                }
-                else {
-                    self.setEnableAds(twAdsInfo.enable);
-                }
-            }
-        };
-
-        obj.saveTwAdsInfo = function (enable) {
-            var twAdsInfo = {enable: enable};
-            TwStorage.set("twAdsInfo", twAdsInfo);
+        obj.onAdapterReady = function () {
+            this.ready = true;
+            this.setEnableAds(this.requestEnable != undefined ? this.requestEnable : true);
         };
 
         obj._admobCreateBanner = function() {
@@ -90,12 +69,10 @@ angular.module('service.twads', [])
                 });
 
                 self.enableAds = enable;
-                Util.ga.trackEvent('app', 'account', 'premium');
             }
             else {
                 self.enableAds = enable;
                 self._admobCreateBanner();
-                Util.ga.trackEvent('app', 'account', 'free');
             }
         };
 
@@ -154,7 +131,7 @@ angular.module('service.twads', [])
                 function () {
                     self.admob = admobPro;
                     console.log('Set options of Ad mob clean');
-                    self.loadTwAdsInfo();
+                    self.onAdapterReady();
                 },
                 function (e) {
                     Util.ga.trackException(e, false);
@@ -166,12 +143,23 @@ angular.module('service.twads', [])
                 function () {
                     self.admob = admobClean;
                     console.log('Set options of Ad mob clean');
-                    self.loadTwAdsInfo();
+                    self.onAdapterReady();
                 },
                 function (e) {
                     // Util.ga.trackException(e, false);
                 });
 
+            admobEmi.init({
+                bannerAdUnit: self.bannerAdUnit,
+                interstitialAdUnit: self.interstitialAdUnit },
+                function () {
+                    self.admob = admobEmi;
+                    console.log('Set options of emi AdMob');
+                    self.onAdapterReady();
+                },
+                function (e) {
+                    Util.ga.trackException(e, false);
+                });
             window.addEventListener("orientationchange", function(){
                 console.log('orientationType', screen.orientation.type); // e.g. portrait
                 if (self.enableAds === true) {

@@ -600,35 +600,18 @@ arpltnController.appendData = function(town, current, callback) {
  */
 arpltnController.getSidoArpltn = function (callback) {
     var sidoList = Arpltn.getCtprvnSidoList();
-
-    async.map(sidoList,
-        function (sido, callback) {
-            SidoArpltn.find({sidoName:sido, cityName: ""}, {_id:0, __v:0})
-                .sort({date:-1})
-                .limit(1).lean()
-                .exec(
-                    function (err, list) {
-                        if (err) {
-                            log.error(err);
-                            return callback(undefined, undefined);
-                        }
-                        if (list.length === 0) {
-                            log.error(new Error("Fail to find sido arpltn sido:"+sido));
-                            return callback(undefined, undefined);
-                        }
-                        callback(null, list[0]);
-                    });
-        },
-        function (err, list) {
-            if (err) {
-                return callback(err);
-            }
-            list = list.filter(function (obj) {
-               return obj != undefined
+    async.mapLimit(sidoList, 4, function (sido, next) {
+        SidoArpltn.find({sidoName: sido, cityName: ""}, {_id:0, __v:0})
+            .sort({date:-1}).limit(1).lean().exec(function (err, list) {
+                var row = !err && Array.isArray(list) ? list[0] : undefined;
+                next(null, {row: row, status: {sidoName: sido,
+                    reason: err ? 'database-error' : row ? 'stored' : 'missing'}});
             });
-            callback(null, list);
-        });
-
+    }, function (err, results) {
+        if (err) { return callback(err); }
+        callback(null, results.map(function (r) { return r.row; }).filter(Boolean),
+            results.map(function (r) { return r.status; }));
+    });
     return this;
 };
 

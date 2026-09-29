@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Trimmed copy of cordova-plugin-app-preferences 0.99.3 (Apache-2.0, https://github.com/apla/me.apla.cordova.app-preferences).
+  Only the Android and iOS storage code is kept, unchanged, so values written by the legacy app are read back in the
+  same format. Removed: the preference-pane generator hooks (they use context.requireCordovaModule, which Cordova 13
+  rejects), the settings activity, and the other platforms.
+-->
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	id="cordova-plugin-app-preferences"
+	version="0.99.3-tw.1">
+
+	<name>AppPreferences</name>
+	<description>Native key-value storage (TodayWeather trimmed copy of cordova-plugin-app-preferences 0.99.3)</description>
+	<license>Apache-2.0</license>
+
+	<js-module src="www/apppreferences.js" name="apppreferences">
+		<clobbers target="plugins.appPreferences" />
+	</js-module>
+
+	<platform name="android">
+		<config-file target="res/xml/config.xml" parent="/*">
+			<feature name="AppPreferences">
+				<param name="android-package" value="me.apla.cordova.AppPreferences"/>
+			</feature>
+		</config-file>
+		<source-file src="src/android/AppPreferences.java" target-dir="src/me/apla/cordova" />
+	</platform>
+
+	<platform name="ios">
+		<config-file target="config.xml" parent="/*">
+			<feature name="AppPreferences">
+				<param name="ios-package" value="AppPreferences"/>
+			</feature>
+		</config-file>
+		<header-file src="src/ios/AppPreferences.h" />
+		<source-file src="src/ios/AppPreferences.m" />
+	</platform>
+</plugin>

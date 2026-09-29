@@ -1,0 +1,23 @@
+✔ station and sido use supported services and correctly encoded credentials (1.530667ms)
+✔ supported station/sido fixtures preserve KST, grade mapping, unavailable stations and aggregate values (5.008542ms)
+✔ invalid identity/time rejects entire batch; invalid concentration/grade omitted, no NaN or numeric prefix (1.137375ms)
+✔ KST and 24:00 parser is calendar strict (0.076375ms)
+✔ pagination assembled completely, no changed total or incomplete page accepted (8.9405ms)
+✔ authentication, XML/plain gateway errors, invalid envelopes and empty items terminate without retry or writes (9.79275ms)
+✔ whole attempt timeout aborts and calls back once, bounded transient retry, no late writes (319.478542ms)
+AIRKOREA {"operation":"station","sido":"서울","finishedAt":"2026-09-29T14:33:11.874Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
+AIRKOREA {"operation":"station","sido":"대구","finishedAt":"2026-09-29T14:33:11.874Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
+AIRKOREA {"operation":"station","sido":"인천","finishedAt":"2026-09-29T14:33:11.874Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
+AIRKOREA {"operation":"station","sido":"광주","finishedAt":"2026-09-29T14:33:11.893Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
+AIRKOREA {"operation":"station","sido":"대전","finishedAt":"2026-09-29T14:33:11.893Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
+✔ parallel province collection <=4 preserves other regions and awaits aggregate acknowledgement/error (38.577667ms)
+AIRKOREA {"operation":"station","startedAt":"2026-09-29T14:33:11.894Z","finishedAt":"2026-09-29T14:33:11.894Z","outcome":"success","code":"OK"}
+✔ scheduled collection overlap rejected without starting another provider batch (0.686875ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 387.520708

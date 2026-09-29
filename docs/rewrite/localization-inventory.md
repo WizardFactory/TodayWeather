@@ -43,7 +43,7 @@ The widget `Info.plist` files set `CFBundleAllowMixedLocalizations` to true and 
 
 | Step | Behavior | Source |
 | --- | --- | --- |
-| Registration | Client `POST /v000902/push-list` sends `Accept-Language: Util.language` (`navigator.userLanguage \|\| navigator.language`) | [service.push.js#L244](../../client/www/js/service.push.js#L244), [app.js#L129](../../client/www/js/app.js#L129) |
+| Registration | Client `POST /v000902/push-list` sends `Accept-Language: Util.language` (`navigator.userLanguage \|\| navigator.language`) | [service.push.js#L244](../../client/www/js/service.push.js#L244), [app.js#L130](../../client/www/js/app.js#L130) |
 | Normalization | Keeps the text before the first `,`. If that text contains `ko`, `en`, `ja` or `de` anywhere (substring test), the first two characters are kept; otherwise the text is stored as is. A missing or empty header becomes `en`. The older `/v000705` push POST has the same block | [route.push.update.list.js#L79-L100](../../server/routes/v000902/route.push.update.list.js#L79-L100), [routePushNotification.js#L30-L50](../../server/routes/v000705/routePushNotification.js#L30-L50) |
 | Storage | `pushInfo.lang = language` for every item in the batch | [route.push.update.list.js#L12-L22](../../server/routes/v000902/route.push.update.list.js#L12-L22), [model comment](../../server/models/modelPush.js#L20) |
 | Worker default | Records without `lang` are sent as `ko`, not `en` | [controllerPush.js#L1037-L1038](../../server/controllers/controllerPush.js#L1037-L1038), [alert.push.controller.js#L57-L58](../../server/controllers/alert.push.controller.js#L57-L58) |

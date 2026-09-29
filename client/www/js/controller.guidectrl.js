@@ -1,6 +1,6 @@
 angular.module('controller.guidectrl', [])
     .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate, $ionicHistory,
-                                      $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate, Purchase) {
+                                      $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate) {
 
         $scope.data = { 'autoSearch': true };
 
@@ -13,7 +13,7 @@ angular.module('controller.guidectrl', [])
         var strTodayWeather = "TodayWeather";
 
         function _setShowAds(show) {
-            if (show == true && Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_FREE) {
+            if (show == true) {
                 TwAds.setShowAds(true);
             }
             else if (show == false) {

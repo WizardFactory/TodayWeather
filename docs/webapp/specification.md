@@ -73,7 +73,7 @@ Do not stretch a phone screenshot to desktop. Keep horizontal scrolling inside f
 | CA, AU, NZ, IE, DE, AT, CH, FR, BE, BR, PT, ES, MX, AR, CL, CO, UY | C | km/h | hPa | km | mm | `airnow` |
 | International standard (any other or unknown country) | C | m/s | hPa | km | mm | `airnow` |
 
-Units saved before this change stay as they are. Each unit the user picks in Settings is recorded as the user's choice and never replaced; the others follow the country's defaults. Hours, dates and decimals follow the locale data of a managed country whose browser language is a supported UI language (for example 12-hour clock and month/day for `en-US`, decimal comma for `pt-BR`/`es-ES`, decimal point for `es-MX`), keeping them when the UI language changes (an `en-US` device in French shows `9/23 · 12:00 PM` and `5.4 mph`), with only weekday and AM/PM words in the UI language; anything else uses the international standard: 24-hour clock, month-day (ISO order) and a decimal point.
+Units saved before this change stay as they are. Each unit the user picks in Settings is recorded as the user's choice and never replaced; the others follow the country's defaults. Hours, dates and decimals follow the locale data of a managed country whose browser language is a supported UI language (for example 12-hour clock and month/day for `en-US`, decimal comma for `pt-BR`/`es-ES`, decimal point for `es-MX`), keeping them when the UI language changes (an `en-US` device in French shows `9/23 · 12:00 PM` and `5.4 mph`), with only weekday and AM/PM words in the UI language; anything else uses the international standard: 24-hour clock, month-day (`MM-DD`) and a decimal point.
 
 | Language | Code | Register | Status |
 | --- | --- | --- | --- |

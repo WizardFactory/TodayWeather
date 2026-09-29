@@ -96,7 +96,7 @@ export function defaultUnits(region: string | null): Units {
  * language is a supported UI language keeps its device locale (CLDR via
  * Intl): date order, clock and decimal mark do not change with the UI
  * language; only words (weekday, AM/PM) follow it. Anything else uses the
- * international standard: 24-hour clock, year-month-day order and a
+ * international standard: 24-hour clock, month-day (MM-DD) and a
  * decimal point.
  */
 let formatTag: string | null = null,

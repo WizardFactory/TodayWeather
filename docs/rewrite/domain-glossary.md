@@ -160,7 +160,7 @@ Invalid `sky` (for example `-1`) or `pty` logs an error and contributes no part.
 - KMA yields 56 distinct names; world yields 28, all of them among the KMA names.
 - The bundled `client/www/img/weather_default` and `weather_old` folders each contain 63 PNG files. They cover all 56 names plus seven `*_fog` names (`sun_fog`, `moon_fog`, `sun_smallcloud_fog`, `moon_smallcloud_fog`, `sun_bigcloud_fog`, `moon_bigcloud_fog`, `cloud_fog`). No server code emits a fog name, and grep finds no `_fog` reference in `client/www/js` or templates.
 
-The client path is `{{weatherImgPath}}/{{skyIcon}}.png`, where `weatherImgPath` comes from the selected theme ([app.js](../../client/www/js/app.js#L330)).
+The client path is `{{weatherImgPath}}/{{skyIcon}}.png`, where `weatherImgPath` comes from the selected theme ([app.js](../../client/www/js/app.js#L341)).
 
 ### CamelCase and lower-case variants
 

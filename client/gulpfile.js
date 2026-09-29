@@ -14,8 +14,6 @@ var deleteLines = require('gulp-delete-lines');
 var twJson = JSON.parse(fs.readFileSync('./tw.package.json'));
 var taJson = JSON.parse(fs.readFileSync('./ta.package.json'));
 
-var TW_BILLING_KEY = process.env.TW_BILLING_KEY || '111';
-var TA_BILLING_KEY = process.env.TA_BILLING_KEY || '111';
 var SENDER_ID = process.env.SENDER_ID || '111';
 var FABRIC_API_KEY = process.env.FABRIC_API_KEY || '111';
 var FABRIC_API_SECRET = process.env.FABRIC_API_SECRET || '111';
@@ -76,8 +74,6 @@ gulp.task('build_tw_ios', shell.task([
   'cp -a ../tw.ios/* platforms/ios/',
   'mv import_today_ext/package.json.backup package.json',
   'ionic state restore --plugins',
-  'cordova plugin add cordova-plugin-inapppurchase',
-  'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'yarn install',
   'bower install',
   'gulp sass',
@@ -90,8 +86,6 @@ gulp.task('build_tw_android', shell.task([
   'cp ../tw.ads.client.config.js www/client.config.js',
   'rm -rf resources;cp -a tw.resources resources',
   'ionic state reset',
-  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+TW_BILLING_KEY+'"',
-  'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
   'yarn install',
   'bower install',
   'gulp sass',
@@ -108,12 +102,10 @@ gulp.task('release-tw-android-min20-nonpaid', shell.task([
   'cordova platform rm ios',
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
-  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+TW_BILLING_KEY+'"',
   'cordova plugin add https://github.com/WizardFactory/cordova-plugin-facebook4 --variable APP_ID="'+FACEBOOK_TW_APP_ID+'" --variable APP_NAME="'+FACEBOOK_TW_APP_NAME+'"',
   'yarn install',
   'bower install',
   'gulp sass',
-  'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
   'ionic build android --release',
   'cp platforms/android/build/outputs/apk/android-release.apk ./TodayWeather_ads_playstore_v'+twJson.version+'_min20.apk'
 ]));
@@ -127,11 +119,9 @@ gulp.task('release-tw-android-min16-nonpaid', shell.task([
   'cordova platform rm ios',
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
-  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+TW_BILLING_KEY+'"',
   'yarn install',
   'bower install',
   'gulp sass',
-  'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
   'cordova plugin add cordova-plugin-crosswalk-webview',
   'ionic build android --release',
   'cp -a platforms/android/build/outputs/apk/android-armv7-release.apk ./TodayWeather_ads_playstore_v'+twJson.version+'_min16.apk'
@@ -152,8 +142,6 @@ gulp.task('release-tw-ios-nonpaid', shell.task([
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
   'cordova plugin add https://github.com/WizardFactory/cordova-plugin-facebook4 --variable APP_ID="'+FACEBOOK_TW_APP_ID+'" --variable APP_NAME="'+FACEBOOK_TW_APP_NAME+'"',
-  'cordova plugin add cordova-plugin-inapppurchase',
-  'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'yarn install',
   'bower install',
   'gulp sass',
@@ -175,8 +163,6 @@ gulp.task('build_ta_ios', shell.task([
   'cp -a ../ta.ios/* platforms/ios/',
   'mv import_today_ext/package.json.backup package.json',
   'ionic state restore --plugins',
-  'cordova plugin add cordova-plugin-inapppurchase',
-  'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'yarn install',
   'bower install',
   'gulp sass',
@@ -189,8 +175,6 @@ gulp.task('build_ta_android', shell.task([
   'cp ../ta.ads.client.config.js www/client.config.js',
   'rm -rf resources;cp -a ta.resources resources',
   'ionic state reset',
-  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+TA_BILLING_KEY+'"',
-  'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
   'yarn install',
   'bower install',
   'gulp sass',
@@ -207,12 +191,10 @@ gulp.task('release-ta-android-nonpaid', shell.task([
   'cordova platform rm ios',
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
-  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+TA_BILLING_KEY+'"',
   'cordova plugin add https://github.com/WizardFactory/cordova-plugin-facebook4 --variable APP_ID="'+FACEBOOK_TA_APP_ID+'" --variable APP_NAME="'+FACEBOOK_TA_APP_NAME+'"',
   'yarn install',
   'bower install',
   'gulp sass',
-  'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
   'ionic build android --release',
   'cp platforms/android/build/outputs/apk/android-release.apk ./TodayAir_ads_playstore_v'+taJson.version+'_min20.apk'
 ]));
@@ -232,8 +214,6 @@ gulp.task('release-ta-ios-nonpaid', shell.task([
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
   'cordova plugin add https://github.com/WizardFactory/cordova-plugin-facebook4 --variable APP_ID="'+FACEBOOK_TA_APP_ID+'" --variable APP_NAME="'+FACEBOOK_TA_APP_NAME+'"',
-  'cordova plugin add cordova-plugin-inapppurchase',
-  'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'yarn install',
   'bower install',
   'gulp sass',

@@ -4,7 +4,7 @@
 
 var start = angular.module('controller.start', []);
 
-start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Purchase, $ocLazyLoad, Util, $ionicLoading,
+start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, $ocLazyLoad, Util, $ionicLoading,
                                        $q, WeatherUtil, WeatherInfo, $translate, $ionicPopup, TwStorage) {
     var strError = "Error";
     var strAddLocation = "Add locations";
@@ -63,7 +63,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     $scope.searchResults2 = [];
 
     function _setShowAds(show) {
-        if (show == true && Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_FREE) {
+        if (show == true) {
             TwAds.setShowAds(true);
         }
         else if (show == false) {
@@ -410,7 +410,9 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 if (Util.isLocationEnabled()) {
                     cordova.plugins.diagnostic.getLocationAuthorizationStatus(function (status) {
                         $scope.setLocationAuthorizationStatus(status);
-                        if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
+                        // diagnostic 7+ reports GRANTED_WHEN_IN_USE while background location is not granted
+                        if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED
+                            || status === cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE) {
                             _getCurrentPosition(deferred, true, true);
                         } else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
                             _getCurrentPosition(deferred, true, false);

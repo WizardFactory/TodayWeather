@@ -1,0 +1,923 @@
+
+> TodayWeather@0.7.5 test:offline
+> node test/offline/run.js
+
+PASS repository cwd, before first Express import
+PASS server cwd
+PASS unrelated cwd
+PASS bin/www entrypoint
+PASS npm start entrypoint
+PASS process environment wins
+PASS empty process value is preserved
+PASS missing file keeps defaults
+PASS missing file keeps supplied environment
+PASS dotenv 10 ignores non-assignment lines; keeps hash in values
+PASS directory at .env stops startup
+PASS permission error is sanitized
+12 environment startup checks passed
+
+
+  gather drift: synthetic offline compatibility
+    ✓ builds migrated TOWN_CURRENT URL without HTTP
+    ✓ dispatches 00 to organizeCurrentData
+    ✓ builds migrated TOWN_SHORTEST URL without HTTP
+    ✓ dispatches 00 to organizeShortestData
+    ✓ builds migrated TOWN_SHORT URL without HTTP
+    ✓ dispatches 00 to organizeShortData
+    ✓ builds migrated MID_FORECAST URL without HTTP
+    ✓ dispatches 00 to organizeForecastData
+    ✓ builds migrated MID_LAND URL without HTTP
+    ✓ dispatches 00 to organizeLandData
+    ✓ builds migrated MID_TEMP URL without HTTP
+    ✓ dispatches 00 to organizeTempData
+    ✓ builds migrated MID_SEA URL without HTTP
+    ✓ dispatches 00 to organizeSeaData
+    ✓ fails safely on non-success
+    ✓ fails safely on legacy success
+    ✓ fails safely on zero count
+    ✓ fails safely on bad count
+    ✓ fails safely on missing count
+    ✓ fails safely on empty items
+    ✓ fails safely on missing header
+    ✓ fails safely on missing envelope
+    ✓ fails safely on malformed XML without reflecting raw text
+    ✓ rejects HTTP status/response 403
+    ✓ rejects HTTP status/response 404
+    ✓ rejects HTTP status/response 500
+    ✓ rejects HTTP status/response 302
+    ✓ rejects HTTP status/response null
+    ✓ does not log transport errors containing the request URL
+    ✓ maps the specified short fixture and publication/grid fields
+    ✓ parses complete quantities 1.5/0.5
+    ✓ parses complete quantities  1.5 mm /0.5cm
+    ✓ keeps unsupported precipitation missing: ""
+    ✓ keeps unsupported precipitation missing: " "
+    ✓ keeps unsupported precipitation missing: "unknown"
+    ✓ keeps unsupported precipitation missing: "Infinity"
+    ✓ keeps unsupported precipitation missing: "NaN"
+    ✓ keeps unsupported precipitation missing: "-1"
+    ✓ keeps unsupported precipitation missing: "-999"
+    ✓ keeps unsupported precipitation missing: "1e999"
+    ✓ keeps unsupported precipitation missing: "1.2junk"
+    ✓ stores precipitation category "1~4" as an approximate amount
+    ✓ stores precipitation category "1.0mm 미만" as an approximate amount
+    ✓ stores precipitation category "50mm 이상" as an approximate amount
+    ✓ retains legacy categories and forecast grouping
+    ✓ rejects invalid TMP ""
+    ✓ rejects invalid TMP "NaN"
+    ✓ rejects invalid TMP "Infinity"
+    ✓ rejects invalid TMP "12bad"
+    ✓ normalizes shortest RN1 0
+    ✓ normalizes shortest RN1 1.5
+    ✓ normalizes shortest RN1 undefined
+    ✓ normalizes shortest RN1 ""
+    ✓ normalizes shortest RN1 "bad"
+    ✓ normalizes shortest RN1 "Infinity"
+    ✓ normalizes shortest RN1 "NaN"
+    ✓ normalizes shortest RN1 -1
+    ✓ normalizes shortest RN1 -999
+    ✓ stores shortest POP per hour without unknown-category logs (#2620)
+    ✓ stores invalid shortest POP "" as -1
+    ✓ stores invalid shortest POP "bad" as -1
+    ✓ stores invalid shortest POP "-1" as -1
+    ✓ stores invalid shortest POP "101" as -1
+    ✓ stores invalid shortest POP "Infinity" as -1
+    ✓ stores invalid shortest POP undefined as -1
+    ✓ rounds a decimal shortest POP to a whole percent
+    ✓ shortest without POP keeps the -1 sentinel
+    ✓ organizeShortestData warns once per grid with unknown category names (#2620)
+    ✓ organizeShortData warns once per grid with unknown category names (#2620)
+    ✓ does not leak keys for empty request lists or callback exceptions
+    ✓ preserves upstream current validation and Kakao initialization/API
+    ✓ preserves protective logger catch with a throwing transport
+    ✓ preserves upstream operational defaults, the request walk and the base-time cutoff
+
+  upstream storage and period-contract characterization
+    ✓ merges existing current fields without overwriting a new valid zero
+    ✓ retains current reh/lgt sentinel template contract
+    ✓ keeps each slot amount in 24h adjustShort instead of splitting it (#2583)
+
+  independent-review regressions: malformed organized output
+    ✓ rejects malformed MID_FORECAST without reflecting provider text
+    ✓ rejects malformed MID_TEMP without reflecting provider text
+    ✓ rejects malformed MID_LAND without reflecting provider text
+    ✓ rejects malformed MID_SEA without reflecting provider text
+    ✓ reports organizer rejection to the callback
+    ✓ rejects invalid TMP in later forecast groups
+    ✓ rejects invalid SKY in later forecast groups
+    ✓ rejects invalid REH in later forecast groups
+    ✓ rejects invalid PTY in later forecast groups
+
+  real mid organizers with synthetic fixtures
+    ✓ collects nonempty valid MID_FORECAST
+    ✓ collects nonempty valid MID_TEMP
+    ✓ collects nonempty valid MID_LAND
+    ✓ collects nonempty valid MID_SEA
+    ✓ rejects a nonfinite day-specific sea height 4AAm
+    ✓ rejects a nonfinite day-specific sea height 5APm
+    ✓ rejects a nonfinite day-specific sea height 6BAm
+    ✓ rejects a nonfinite day-specific sea height 7BPm
+    ✓ does not reuse missing temperature fields from a previous region
+    ✓ rejects non-finite sea values before JSON serialization can hide them
+
+  mid forecast text completeness
+    ✓ rejects empty/malformed land forecast text ""
+    ✓ rejects empty/malformed land forecast text "   "
+    ✓ rejects empty/malformed land forecast text {"unexpected":["text"]}
+
+  review corrections: complete responses and key representation
+    ✓ rejects count/item mismatch 1 before organization
+    ✓ rejects count/item mismatch 10 before organization
+    ✓ rejects count/item mismatch 12 before organization
+    ✓ rejects count/item mismatch 999 before organization
+    ✓ rejects count/item mismatch 1000 before organization
+    ✓ normalizes raw or once-encoded dummy key DUMMY+a/b=
+    ✓ normalizes raw or once-encoded dummy key DUMMY%2Ba%2Fb%3D
+    ✓ normalizes raw or once-encoded dummy key DUMMY%2ba%2fb%3d
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: undefined
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: 
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%badEscape
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%2
+    ✓ rejects missing/malformed encoded key without diagnostics leaking it: DUMMY%GG
+    ✓ does not reflect raw/encoded dummy keys on transport failure
+
+  pagination before the completeness check (#2590)
+    ✓ collects the 1,016-row short product from pages 1 and 2
+    ✓ collects the 1,016-row short product from pages 1 and 2 with echoed paging
+    ✓ keeps a single complete page to one request with identical organized data
+    ✓ paginates shortest data with the same contract
+    ✓ fails a short first page with totalCount 12 without continuation
+    ✓ fails a short first page with totalCount 999 without continuation
+    ✓ fails a short first page with totalCount 1000 without continuation
+    ✓ fails a first page shorter than numOfRows
+    ✓ accepts exactly five pages
+    ✓ fails when the page limit would be exceeded, without continuation
+    ✓ does not paginate a URL without paging parameters
+    ✓ fails the whole grid on page-2 changed totalCount
+    ✓ fails the whole grid on page-2 short final page
+    ✓ fails the whole grid on page-2 extra final item
+    ✓ fails the whole grid on page-2 echoed pageNo mismatch
+    ✓ fails the whole grid on page-2 echoed numOfRows mismatch
+    ✓ fails the whole grid on page-2 provider error
+    ✓ fails the whole grid on page-2 empty items
+    ✓ fails the whole grid on page-2 rows repeating the end of page 1
+    ✓ fails on a repeated page
+    ✓ fails on echoed pageNo mismatch on page 1 when paginating
+    ✓ fails on page-2 transport error without logging its URL
+    ✓ fails on page-2 HTTP 500
+    ✓ fails on page-2 malformed XML
+
+
+  136 passing (377ms)
+
+PASS synthetic XML -> requester -> events -> saveShort -> getShortFromDB (1 write, exact quantities/categories/timestamps/grid)
+PASS provider-error XML -> failed collection, no additional persistence; no key-bearing logs
+PASS truncated XML page -> failed requestData -> no additional persistence; encoded/raw dummy keys safe
+PASS 1,016-row short XML over pages 1-2 -> requestData -> saveShort -> getShortFromDB (84 hours, last 2026-09-27 17:00 KST)
+PASS sea XML -> requester -> events -> saveMid (26 distinct heights); later-day NaN prevents another write
+ok - unset environment reproduces master literals
+ok - production environment yields the host policy
+ok - divisor retry equals the host updateList.length/20 when integral, else rounds up
+ok - invalid values fail at load instead of silently reverting to defaults
+ok - town collectors pass the configured retry counts
+ok - invalid-current and mid collectors read their policy field
+ok - persistent failure retries exactly the configured count with the configured delay
+ok - past and air-forecast task flags gate only their own jobs
+ok - PastConditionGather passes the configured retry count
+ok - KAQ minimum model-image count follows policy; more than four still fails
+10 gather policy tests passed
+ok - AC1 walks 2,032 grids in one pass with at most 101 requests in flight
+ok - AC1 honours a configured concurrency
+ok - AC1 synchronous responses complete 2,032 grids without deep recursion
+ok - AC2 HTTP 429 quota body stops new requests and settles in-flight ones (quota)
+ok - AC2 HTTP 200 code 22 body stops new requests and settles in-flight ones (quota)
+ok - AC2 HTTP 200 API resultCode 22 stops new requests and settles in-flight ones (quota)
+ok - AC2 HTTP 401 stops new requests and settles in-flight ones (auth)
+ok - AC2 HTTP 403 code 30 body stops new requests and settles in-flight ones (auth)
+ok - AC2 HTTP 200 code 30 body stops new requests and settles in-flight ones (auth)
+ok - AC2 a rejection on a continuation page also stops the walk
+ok - AC2 a collector retry scheduled before a stop fails at once instead of requesting (PR review 5329215929)
+ok - AC4 HTTP 500 does not stop the walk and stays retryable
+ok - AC4 resultCode 03 does not stop the walk and stays retryable
+ok - AC4 transport error does not stop the walk and stays retryable
+ok - AC4 invalid XML does not stop the walk and stays retryable
+ok - AC4 HTTP 400 does not stop the walk and is not retryable
+ok - AC4 HTTP 404 does not stop the walk and is not retryable
+ok - R1 shared classifier keeps the warning requester precedence
+ok - AC3 a quota stop on the first key re-requests only uncollected grids with the second key
+ok - AC3 every key rejected ends the cycle with an error and no retry pass
+ok - AC2 one key: a quota stop ends the cycle after one request pass
+ok - AC4 rejected grids are not retried; other failures are
+ok - AC5 retry passes log one line per pass instead of one line per grid
+ok - F1 persistent resultCode 03 on 2,032 grids sends at most N + (retry - 1) x 101 requests (retry 70)
+ok - F1 persistent resultCode 03 on 2,032 grids sends at most N + (retry - 1) x 101 requests (retry 180)
+ok - F1 transient failures are still retried to full coverage in bounded passes
+ok - R6 GATHER_REQUEST_CONCURRENCY reaches the collector
+27/27 gather quota tests passed
+✔ captured day 4–10 succeeds with original values and no invented day 3 (6.436958ms)
+✔ synthetic legacy day 3 remains supported (0.432375ms)
+✔ missing optional fields never become sentinel temperatures or defaults (0.359125ms)
+✔ organizeLandData malformed envelopes and empty/invalid items fail once (2.4515ms)
+✔ organizeTempData malformed envelopes and empty/invalid items fail once (1.881584ms)
+✔ 1.0 real schemas + Manager handoff + storage projection + service round trip (74.01875ms)
+✔ 1.0 partial valid horizons persist without requiring day 10 (5.12675ms)
+✔ 2.0 real schemas + Manager handoff + storage projection + service round trip (5.867667ms)
+✔ 2.0 partial valid horizons persist without requiring day 10 (6.211334ms)
+✔ KST publication, 06/18 cycles, mixed timestamp representations and year/month boundaries (20.998125ms)
+✔ legacy day 3, honest captured gap, no NaN/sentinel/unknown sky output (6.6995ms)
+✔ stale or future publication, identity mismatch, latest partial never uses older forecast (4.633625ms)
+✔ short merge sorts/deduplicates, keeps seven-day recent history and declares boundary gap (4.863125ms)
+✔ dedicated daily health fails captured polluted list while short is current (3.954791ms)
+✔ RSS retirement ignores older/equal/newer mixed publications and empty targets (62.514708ms)
+✔ 401/error envelopes emit only controlled failure without key-bearing diagnostics (0.845625ms)
+✔ RSS HTML/malformed XML never publishes or persists; retired schedules never fetch (8.806042ms)
+✔ unknown land text alone is invalid rather than a successful empty forecast (0.455125ms)
+✔ invalid short weather never erases a valid mid row or invents zero precipitation (4.493416ms)
+✔ short-only missing average temperature stays absent, valid negative temperature remains real (24.59125ms)
+✔ stale/missing/future short publication cannot extend forecast; recent history survives (15.496792ms)
+✔ failed primary DB write reports failure without pruning older records (9.361917ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 273.809709
+✔ 1.0 shower parse/storage/conversion 구름많고 소나기 (66.123083ms)
+✔ 1.0 shower parse/storage/conversion 흐리고 소나기 (4.975959ms)
+✔ 2.0 shower parse/storage/conversion 구름많고 소나기 (6.357625ms)
+✔ 2.0 shower parse/storage/conversion 흐리고 소나기 (4.756417ms)
+✔ weather acceptance and conversion share every recognized label (4.302333ms)
+✔ health flags an internal gap without requiring an unsupported trailing horizon (6.399541ms)
+✔ retired mid RSS never enters startup or minute-2 scheduling (8.42475ms)
+✔ raw daily slots use their own publication and newest slot, never outer publication (4.187208ms)
+✔ DB1 current raw snapshot replaces partial batch without inheriting prior fields (6.213167ms)
+✔ extended daily source keeps KST month/year and midnight target identity (4.39825ms)
+✔ actual shared client daily parser ignores additive status and preserves shower/date fields (0.385167ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 122.3035
+✔ 1.0 202609161400 fresh RSS full (4.747ms)
+✔ 1.0 202609161400 fresh RSS empty-base (0.879125ms)
+✔ 1.0 202609161400 fresh RSS mutated (0.797333ms)
+✔ 1.0 202609161400 RSS partial cannot revive base (0.712584ms)
+✔ 1.0 202609161400 RSS no-match cannot revive base (0.601167ms)
+✔ 1.0 missing fresh RSS full (0.666459ms)
+✔ 1.0 missing fresh RSS empty-base (0.657375ms)
+✔ 1.0 missing fresh RSS mutated (0.816666ms)
+✔ 1.0 missing RSS partial cannot revive base (0.604459ms)
+✔ 1.0 missing RSS no-match cannot revive base (0.619042ms)
+✔ 1.0 202609241800 fresh RSS full (0.671417ms)
+✔ 1.0 202609241800 fresh RSS empty-base (0.6135ms)
+✔ 1.0 202609241800 fresh RSS mutated (0.6335ms)
+✔ 1.0 202609241800 RSS partial cannot revive base (0.878375ms)
+✔ 1.0 202609241800 RSS no-match cannot revive base (0.654167ms)
+✔ 1.0 invalid RSS publication 202609231626 (0.669ms)
+✔ 1.0 invalid RSS publication 202609241628 (0.59025ms)
+✔ 1.0 invalid RSS publication bad (0.591917ms)
+✔ 1.0 RSS age and target bound use its own publication (1.272167ms)
+✔ 1.0 fresh primary precedence 202609241300 (0.639333ms)
+✔ 1.0 fresh primary precedence 202609241400 (0.871417ms)
+✔ 1.0 fresh primary precedence 202609241500 (0.650042ms)
+✔ 2.0 202609161400 fresh RSS full (0.698667ms)
+✔ 2.0 202609161400 fresh RSS empty-base (0.636584ms)
+✔ 2.0 202609161400 fresh RSS mutated (0.624417ms)
+✔ 2.0 202609161400 RSS partial cannot revive base (0.568083ms)
+✔ 2.0 202609161400 RSS no-match cannot revive base (0.568ms)
+✔ 2.0 missing fresh RSS full (0.6155ms)
+✔ 2.0 missing fresh RSS empty-base (0.636375ms)
+✔ 2.0 missing fresh RSS mutated (0.62775ms)
+✔ 2.0 missing RSS partial cannot revive base (0.569125ms)
+✔ 2.0 missing RSS no-match cannot revive base (0.519084ms)
+✔ 2.0 202609241800 fresh RSS full (0.638833ms)
+✔ 2.0 202609241800 fresh RSS empty-base (0.647542ms)
+✔ 2.0 202609241800 fresh RSS mutated (0.993125ms)
+✔ 2.0 202609241800 RSS partial cannot revive base (0.782041ms)
+✔ 2.0 202609241800 RSS no-match cannot revive base (0.574ms)
+✔ 2.0 invalid RSS publication 202609231626 (0.541042ms)
+✔ 2.0 invalid RSS publication 202609241628 (0.533458ms)
+✔ 2.0 invalid RSS publication bad (0.544416ms)
+✔ 2.0 RSS age and target bound use its own publication (1.182292ms)
+✔ 2.0 fresh primary precedence 202609241300 (0.617625ms)
+✔ 2.0 fresh primary precedence 202609241400 (0.58575ms)
+✔ 2.0 fresh primary precedence 202609241500 (0.60775ms)
+ℹ tests 44
+ℹ suites 0
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 42.019459
+✔ collector direction E (4.352125ms)
+✔ collector direction N (1.4785ms)
+✔ collector direction NE (1.299292ms)
+✔ collector direction NW (1.55325ms)
+✔ collector direction S (1.333709ms)
+✔ collector direction SE (1.271416ms)
+✔ collector direction SW (1.635833ms)
+✔ collector direction W (1.229917ms)
+✔ collector direction UNKNOWN (1.281916ms)
+✔ collector absent direction remains sentinel (1.2635ms)
+✔ 1.0 expired/future RSS publication is rejected: 202609230800 (1.770542ms)
+✔ 1.0 expired/future RSS publication is rejected: 202609241300 (1.491458ms)
+✔ 1.0 newer RSS uses real DB projection and normalizes wind (1.284916ms)
+✔ 1.0 direction 0 to degrees (1.243ms)
+✔ 1.0 direction 1 to degrees (1.225083ms)
+✔ 1.0 direction 2 to degrees (1.2555ms)
+✔ 1.0 direction 3 to degrees (1.623166ms)
+✔ 1.0 direction 4 to degrees (1.242167ms)
+✔ 1.0 direction 5 to degrees (1.254542ms)
+✔ 1.0 direction 6 to degrees (1.216334ms)
+✔ 1.0 direction 7 to degrees (1.232208ms)
+✔ 1.0 equal preserves valid values and fills missing/sentinel fields (6.0145ms)
+✔ 1.0 older is ignored (2.944583ms)
+✔ 1.0 invalid RSS wind never erases base (15.735417ms)
+✔ 1.0 absent/missing sources preserve every base field (7.919875ms)
+✔ 1.0 first future and single future slot are included (2.317208ms)
+✔ 1.0 exact now and past stay unchanged; midnight matches (1.203125ms)
+✔ 1.0 tmx source gate and 06:00 tmn (1.179542ms)
+✔ 2.0 expired/future RSS publication is rejected: 202609230800 (1.302958ms)
+✔ 2.0 expired/future RSS publication is rejected: 202609241300 (1.263708ms)
+✔ 2.0 newer RSS uses real DB projection and normalizes wind (1.262083ms)
+✔ 2.0 direction 0 to degrees (1.255208ms)
+✔ 2.0 direction 1 to degrees (1.200458ms)
+✔ 2.0 direction 2 to degrees (1.22325ms)
+✔ 2.0 direction 3 to degrees (2.331166ms)
+✔ 2.0 direction 4 to degrees (5.077583ms)
+✔ 2.0 direction 5 to degrees (1.315541ms)
+✔ 2.0 direction 6 to degrees (1.252ms)
+✔ 2.0 direction 7 to degrees (1.180042ms)
+✔ 2.0 equal preserves valid values and fills missing/sentinel fields (5.744167ms)
+✔ 2.0 older is ignored (1.2035ms)
+✔ 2.0 invalid RSS wind never erases base (16.662291ms)
+✔ 2.0 absent/missing sources preserve every base field (8.222ms)
+✔ 2.0 first future and single future slot are included (2.392667ms)
+✔ 2.0 exact now and past stay unchanged; midnight matches (1.25025ms)
+✔ 2.0 tmx source gate and 06:00 tmn (1.256791ms)
+✔ v2 UTC/KST publication boundary remains on the intended local date (0.166916ms)
+ℹ tests 47
+ℹ suites 0
+ℹ pass 47
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 128.302125
+PASS historical temperatures survive missing humidity
+PASS sparse first observation is not discarded
+PASS daily aggregation does not mutate hourly timestamp
+PASS seven complete KST dates and 168 hourly slots include yesterday
+PASS KST month/year/leap-date boundaries are host independent
+PASS normalization keeps zero and rejects empty rain, QC failure and nonfinite fields
+PASS wrong station/date/minute/calendar are rejected
+PASS daily timestamp stays its own KST date; inverted extrema rejected
+PASS stored explicit source keys fill humidity and preserve valid temperature
+PASS daily-only data survives absent hourly history without manufacturing hours
+PASS daily repair preserves valid existing daily and forecast extrema
+PASS partial hourly aggregate yields to valid official daily measurement
+PASS station mapping is deterministic, distance bounded and ASOS city-only
+PASS missing ranges do not include already complete slots
+PASS operator command rejects unbounded range, current day and extra flags
+PASS ASOS missing rain cannot become zero in three-hour aggregation
+PASS configured startup and hourly scheduling queue recovery; disabled mode does not
+PASS winter ASOS rain is not relabeled as a one-hour accumulation
+PASS recovered response omits rain sentinels for existing client charts
+{"passed":19,"failures":0}
+PASS multi-day missing-only recovery and sequential idempotency
+PASS overlapping recovery is excluded by station lease
+PASS wrong-date rows and duplicates rejected, unavailable data stays missing
+PASS write failures cannot be reported as recovered
+PASS partial cached temperature is preserved while humidity recovers
+PASS pagination validates every page and rejects truncated batches before persistence
+PASS deadline stops a slow write batch before admitting another row
+{"passed":7}
+ok - default interval is 2 minutes, override via env
+ok - only one poll in flight; overlapping tick is skipped
+ok - scrape error is logged and does not throw or stall
+ok - synchronous throw inside scrape resets in-flight flag
+ok - stop clears the interval
+ok - app.js gate: only KMA_STN_MINUTE_ENABLED=true and gather mode start it
+# 6 tests passed
+ok - default run minutes 4,9,15,30; env override; invalid env falls back
+ok - tick runs only at configured minutes and once per minute
+ok - no immediate run by default; runImmediately=true runs once
+ok - one run in flight; overlapping run skipped; resumes after completion
+ok - 'skip' result is informational; Error is logged; sync throw resets flag
+ok - passes undefined day to getStnHourlyWeather (current KST hour)
+ok - app.js gate: only KMA_STN_HOURLY_ENABLED=true and gather mode start it
+# 7 tests passed
+ok - _decodeKmaHtml: utf-8 by content-type; utf-8 by meta; euc-kr otherwise
+ok - modern city-obs.do fixture parses 97 stations with expected fields
+ok - page older than requested pubDate → Error (caller retries)
+ok - legacy table_develop3 layout still parses
+ok - missing header / bad pubDate → Error, never throws
+ok - hourly waterfall: city unavailable → AWS-only list, no throw
+ok - hourly waterfall: city available → merged
+ok - _saveStnInfo: geocode throws synchronously (missing kakao key) → callback() without error
+ok - _saveStnInfo: geocode async error → callback() without error
+ok - _saveStnInfo: Kakao unavailable → product geocode API coordinates create the stnInfo
+ok - _saveStnInfo: synchronous throw while saving → exactly one callback, no error
+ok - _saveStnInfo: Kakao ok → product geocode API not called
+ok - _saveStnInfo: geocode ok → new stnInfo saved, id returned
+ok - _saveStnInfo: already known station → id returned, no geocode
+ok - _saveStnInfo: city page unavailable keeps stored isCityWeather (#2573 review M1)
+ok - _saveKmaStnHourly2List: cityUnavailable marks only the stnInfo input, not the stored hourly row
+ok - _convertGeoCodeByApiServer: KR location → {lat, lon}; bounded request
+ok - _convertGeoCodeByApiServer: HTTP error, non-KR, out-of-range, network error → Error
+# 18 tests passed
+(node:15962) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ok - _isValidObservation rejects sentinels and non-numbers
+ok - newer observation (stnFirst) replaces valid t1h/reh/vec/wsd, originals kept in dongnae by caller
+ok - older observation (not stnFirst) keeps valid API values, fills only missing/sentinel
+ok - newer observation with invalid values never overwrites a valid API value
+ok - sentinel API value is replaced regardless of freshness
+ok - rn1 is only filled when missing/negative, never replaced by freshness
+ok - missing hourly rows → continue with hourlyMissing flag, no error
+ok - present hourly rows → merged as before, rs15m promotes rns
+# 8 tests passed
+✔ modern KMA currentweather.jsp wording maps to legacy weather types (0.605209ms)
+✔ getWeatherStr never returns undefined (0.052041ms)
+✔ updateWeather falls back to sky/pty when the KMA text is unmapped (0.300041ms)
+✔ updateWeather maps KMA PTY 4-7 (short-term showers, nowcast drops/flurries) (0.107541ms)
+✔ summaries skip missing weather text instead of printing undefined (0.348667ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3.744625
+✔ missing air observation yields no air summary instead of weather grades (0.383417ms)
+✔ air observation without grades yields no air summary (0.057708ms)
+✔ air summary uses pollutant grades only, not current weather grades (0.082583ms)
+✔ combined summary neither reads nor writes air fields on current (0.143834ms)
+✔ world-weather summary omits an empty air summary and keeps a real one (0.185042ms)
+✔ every station uses the same eight-hour freshness window (0.733042ms)
+✔ fresh station after a stale one is still merged (0.08025ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4.18575
+✔ AirKorea freshness under UTC (39.942334ms)
+✔ AirKorea freshness under Asia/Seoul (40.179041ms)
+✔ AirKorea freshness under America/Los_Angeles (43.887583ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 126.208208
+✔ station and sido use supported services and correctly encoded credentials (1.593333ms)
+✔ supported station/sido fixtures preserve KST, grade mapping, unavailable stations and aggregate values (5.363416ms)
+✔ invalid identity/time rejects entire batch; invalid concentration/grade omitted, no NaN or numeric prefix (1.330667ms)
+✔ KST and 24:00 parser is calendar strict (0.089833ms)
+✔ pagination assembled completely, no changed total or incomplete page accepted (8.592709ms)
+✔ authentication, XML/plain gateway errors, invalid envelopes and empty items terminate without retry or writes (8.342792ms)
+✔ whole attempt timeout aborts and calls back once, bounded transient retry, no late writes (318.592125ms)
+AIRKOREA {"operation":"station","sido":"서울","finishedAt":"2026-09-29T14:36:28.391Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
+AIRKOREA {"operation":"station","sido":"대구","finishedAt":"2026-09-29T14:36:28.394Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
+AIRKOREA {"operation":"station","sido":"인천","finishedAt":"2026-09-29T14:36:28.399Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
+AIRKOREA {"operation":"station","sido":"광주","finishedAt":"2026-09-29T14:36:28.416Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
+AIRKOREA {"operation":"station","sido":"대전","finishedAt":"2026-09-29T14:36:28.418Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
+✔ parallel province collection <=4 preserves other regions and awaits aggregate acknowledgement/error (47.189708ms)
+AIRKOREA {"operation":"station","startedAt":"2026-09-29T14:36:28.423Z","finishedAt":"2026-09-29T14:36:28.423Z","outcome":"success","code":"OK"}
+✔ scheduled collection overlap rejected without starting another provider batch (3.513833ms)
+✔ no key, malformed key and unknown operation cause zero HTTP calls (0.411292ms)
+✔ redirects, authentication HTTP and quota responses never retry; huge bodies abort (1.818167ms)
+✔ JSON/XML expired key and quota codes are sanitized and terminal (13.647333ms)
+✔ whole province budget terminates retries even when per-attempt timeout is longer (17.197041ms)
+✔ duplicate station/timestamp and mismatched province reject before any write (1.094958ms)
+✔ station save error prevents aggregate write; missing urban rows is a failed province (1.688ms)
+✔ empty province list and all-unavailable rows never report collection success (0.744084ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 443.777625
+✔ fresh AirKorea for 17 provinces wins without provider calls; requested grades preserved (6.400542ms)
+✔ missing/stale/DB-failed provinces use shared flow, retain fresh rows, source and point provenance (2.463125ms)
+✔ parallel fanout is bounded at four and completes all regions when time allows (32.197958ms)
+✔ one overall deadline stops new calls; late callbacks cannot mutate completed air/status (18.266458ms)
+✔ DB timeout terminates; DB error and provider failures preserve response with explicit per-province status (16.583375ms)
+✔ future and invalid/empty PM rows trigger fallback, never fabricated zero (2.108334ms)
+✔ eight-hour boundary, excessive future and partial pollutant values do not become fabricated data (2.755875ms)
+✔ provider throw or duplicate callback cannot lose other provinces or complete twice (2.579458ms)
+✔ storage read throws: shared provider flow still supplies partial safe results (2.570583ms)
+✔ completed provider response is copied before unit conversion; cached object is unchanged (3.068166ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 108.736167
+✔ v000903 DB 1.0 omits stale detail; fresh=true (46.367958ms)
+✔ v000903 DB 1.0 omits stale detail; fresh=false (11.772958ms)
+✔ v000903 DB 2.0 omits stale detail; fresh=true (9.626125ms)
+✔ v000903 DB 2.0 omits stale detail; fresh=false (8.218833ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 83.338625
+✔ air policy config: defaults, parsing and validation (1.055708ms)
+✔ air policy config loads with defaults in a sandbox without a process global (0.369542ms)
+✔ Google adapter: request shape and units (µg/m³ as-is, ppb → ppm) (2.880708ms)
+✔ OpenWeather adapter: µg/m³ components → concentrations (0.843625ms)
+✔ Visual Crossing adapter: Timeline current air elements, metric units, query cost (0.776458ms)
+✔ WAQI adapter: station, sub-indices → concentrations, shortened name (0.851917ms)
+✔ every adapter classifies failures and never exposes the key (6.762334ms)
+✔ adapters without a configured key are not configured (0.529583ms)
+✔ evaluate: freshness for all providers, distance for station-based only, PM required (0.637667ms)
+✔ budget: monthly free cap with reserve, shared counters, failures counted (3.47075ms)
+✔ budget: OpenWeather minute cap (1.24925ms)
+✔ budget: down marker for ten minutes (0.532125ms)
+✔ budget: paid phase disabled by default, per-provider paid cap reserved at admission (0.617542ms)
+✔ budget: Visual Crossing uses the overseas weather day budget and provider marker (0.328667ms)
+✔ budget: store errors do not block a request (0.274125ms)
+✔ chain: free phase calls Google only; capped Google → OpenWeather; both capped → WAQI (2.067125ms)
+✔ chain: a failing or unusable provider moves on; auth/quota marks the provider down (1.9095ms)
+✔ chain: with every free budget exhausted, WAQI only unless paid providers are enabled (1.601791ms)
+✔ chain: unconfigured providers are skipped; nothing configured → no-provider without calls (0.851792ms)
+✔ chain: WAQI is not called twice when it already failed in the free phase (0.87375ms)
+✔ budget: a caller exception is not swallowed by a store answering synchronously, and callbacks run once (0.488458ms)
+✔ F1: a status field that cannot be coerced or is not a string is a classified failure, never a throw (3.827ms)
+✔ F2: a zero cap blocks the first call on an empty store, in every window (0.723167ms)
+✔ F3: the OpenWeather minute cap is a rolling minute across the bucket boundary (1.689041ms)
+✔ F4: each provider is attempted at most once per request, across phases (at most four attempts) (1.128666ms)
+✔ D20: every applicable paid policy read fails closed; free reads stay fail-open (1.260792ms)
+✔ D20: a failed reservation denies the paid candidate; the chain moves on without HTTP (1.304625ms)
+✔ D20: paid HTTP starts only after the reservation is acknowledged (0.531917ms)
+✔ D20: a post-call accounting failure keeps the reservation; failures add no calls (0.79325ms)
+✔ D20: concurrent admissions for the last slot admit exactly one; existing rows stay compatible (0.908042ms)
+✔ D20: zero paid cap reserves nothing; a slot reserved before month end stays charged to that month (0.627125ms)
+✔ D20: only an acknowledged single-row reservation admits a paid call (7.718084ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 52.41825
+✔ long WAQI station names are reduced to their smallest unit; short names are unchanged (0.463417ms)
+✔ fresh WAQI observation near the town maps to the AirKorea arpltn shape (4.324208ms)
+✔ observation age and station distance limits (1.308167ms)
+✔ missing or placeholder key disables the fallback without a request (2.2995ms)
+✔ provider failures yield no observation and are cached briefly (4.043167ms)
+✔ a second request reuses the shared cache, also from another worker (1.46375ms)
+✔ expired cache rows are refetched; failures are retried after two minutes (3.777084ms)
+✔ concurrent requests in one worker share one call; cache errors fall back to a fetch (1.576042ms)
+✔ an exception in the caller on a cache hit is not taken as a cache failure (1.673416ms)
+✔ a request answers only after the shared cache write, so the next request on any worker reuses it (1.709625ms)
+✔ malformed WAQI bodies become one failed outcome and every waiter is answered once (2.680834ms)
+✔ middleware keeps a fresh AirKorea observation and does not call the chain (4.179042ms)
+✔ middleware fills current and station lists from the chain when AirKorea is missing (1.262459ms)
+✔ middleware leaves the response without air when the chain yields nothing or throws (5.804667ms)
+✔ a non-AirKorea station list becomes an airInfo with that source and skips the station forecast lookup (1.988417ms)
+✔ getKeco calls next once when the AirKorea lookup fails and keeps the town coordinate (0.734584ms)
+✔ v000903 KMA routes run the air fallback right after getKeco (0.0885ms)
+✔ overseas air detail delivers a short WAQI station name (0.388083ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 527.638583
+✔ air policy: AIR_RESPONSE_DEADLINE_MS defaults to 4000 ms within 500..8000 (0.623459ms)
+✔ deadline: the timer starts before the air service (and its cache read); expiry answers once without air, a late result mutates nothing (4.639875ms)
+✔ deadline: early completion, callback error and a thrown service clear the timer; a timer firing afterwards is ignored (1.909333ms)
+✔ deadline: a weather error is still forwarded once while air is pending or late (0.587083ms)
+✔ deadline: an exception thrown downstream of a synchronous answer propagates and is not taken as an air failure (0.448584ms)
+✔ new-form world query asks the shared air service once, never the legacy WAQI collector (0.51475ms)
+✔ a weather-cache hit still retrieves air (both branches always run) (0.47275ms)
+✔ no usable air, a callback error or a thrown air service keeps the weather response going (2.404791ms)
+✔ a weather error still reaches next(err) with or without air (0.570125ms)
+✔ concentrations go straight into current: values, source, regional time; yesterday untouched (0.966625ms)
+✔ observation time renders once in the region offset (negative, fractional, date line), host TZ independent (0.518041ms)
+✔ grades, indexes, strings and the integrated index follow the requested airUnit (0.68525ms)
+✔ no WAQI-index round trip: values are the provider concentrations, not extractValue(index) (0.400917ms)
+✔ partial pollutants stay partial; the station name is shown only for station data (0.634292ms)
+✔ summary uses the graded air; without an observation there is no air and no summaryAir (0.491792ms)
+✔ without a current row the observation is dropped rather than attached to yesterday (0.375084ms)
+✔ legacy WAQI AQI data (other routes) still merges by WAQI sub-index (0.544417ms)
+✔ airFallback.getArpltn passes the accepted normalized observation as a fourth value (cached and fetched) (2.638667ms)
+✔ attribution: the accepted observation attribution reaches the current row, arpltn, airInfo and airInfo.last; source stays the id (0.438042ms)
+✔ attribution: invalid or missing metadata is dropped, never manufactured (0.599875ms)
+✔ attribution: the shared evaluate() adds a valid attribution to the domestic arpltn too (additive) (0.389958ms)
+✔ pending hint: only an expired deadline sets it; terminal and successful answers do not (2.426083ms)
+✔ pending hint: mergeAqi puts the snapshot at the top of the response; absent otherwise (0.383083ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 26.339208
+✔ computed sunrise/sunset match KASI reference values in every host time zone (60.911958ms)
+✔ getRiseSetInfo keeps KASI rows and computes the missing days (2.289917ms)
+✔ getRiseSetInfo store failure: next called once, computed values, other fields unchanged (1.684584ms)
+✔ getRiseSetInfo town lookup failure falls back to the request coordinate (0.662625ms)
+✔ KASI gather rotates an expired key and keeps keys out of errors (1.852042ms)
+✔ KASI gather continues after one failing area and fails only when all fail (0.617541ms)
+✔ V5 fixture becomes daily ultrv for the requested area and appendData2 adds ultrvGrade (1.528292ms)
+✔ V5 request uses all areas, the latest issued slot and pages through totalCount (57.184958ms)
+✔ V5 rotates keys on authorization errors and saves nothing on a failed page (1.247666ms)
+✔ V5 parser handles single items, empty items and gateway errors (0.46175ms)
+✔ XML gateway errors with HTTP 200 still rotate keys (V5 and KASI) (0.948958ms)
+✔ a transient failure on the newest slot never saves an older issuance (1.495166ms)
+✔ the approved forecast key is reached for KASI and V5 as deployed on 2026-09-26 (0.951916ms)
+✔ review: UV waits for the next three-hour slot after saving, retries after failure, runs year-round (1.33025ms)
+✔ review: unset default keys are skipped (0.656125ms)
+✔ review: when every key is rejected the chosen key is kept and KASI does not retry (0.647667ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 137.025042
+✔ AC2 parser: rain categories become amount, bounds and approximation (0.925583ms)
+✔ AC2 parser: snow categories in cm parse the same way (0.231208ms)
+✔ AC2 collector stores the representative amount and the category text (7.366417ms)
+✔ AC1 hourly PCP 2, 4 and 1 in one slot give r06 7 over 3 hours; neighbours receive nothing (1.98975ms)
+✔ review: a slot with rain before its last hour reports that precipitation type (0.842792ms)
+✔ review: unparsed precipitation values are logged once per batch without the full text (0.9085ms)
+✔ AC1 next-day midnight slot holds 22h, 23h and 00h (0.605625ms)
+✔ AC1 category totals keep bounds and approximation (0.78775ms)
+✔ AC3 shortest pty 3 slot keeps rain in r06 and s06 is not a x10 rain value (1.009542ms)
+✔ AC3 shortest slot with a missing hourly rn1 falls back to the PCP total (0.605541ms)
+✔ AC6 strings come from the amount or category, not the retired table (0.186208ms)
+✔ AC8 DB 2.0 reads keep the category; shortest rows expose period and approximation (0.851917ms)
+✔ AC8 DB 1.0 per-field merge replaces the category with its amount and keeps hourly rows (1.732375ms)
+✔ #2620 shortest POP at hour T replaces the short slot T probability (0.582541ms)
+✔ #2620 slot pop comes from hour T regardless of row order and observation rows (0.506334ms)
+✔ #2620 shortest rows without POP keep the short probability (0.639208ms)
+✔ #2620 current merge ignores shortest POP and logs no invalid pop (0.091542ms)
+✔ #2620 shortest storage keeps POP in DB 2.0 reads and DB 1.0 merges (0.688375ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 23.559958
+✔ requester builds the Timeline request and logs cost and latency without the key (8.125584ms)
+✔ requester rejects a missing or placeholder key and bad input before any network call (0.310417ms)
+✔ requester retries a 429 once, then fails; errors never carry the key (21.018459ms)
+✔ requester fails on HTTP errors, bad bodies and the 2.5 s timeout (351.41125ms)
+✔ converter splits a combined response into day-before-yesterday, yesterday, today and current Dark Sky documents (21.370417ms)
+✔ converter reproduces Dark Sky units, fractions and derived daily fields (4.848792ms)
+✔ converter handles a forecast-only response without yesterday (3.139542ms)
+✔ summaries use the existing weather vocabulary (9.620667ms)
+✔ F1: day assignment and offset use the offset at now, not the range-start tzoffset (DST) (18.743875ms)
+✔ F2: an exact 0 °F temperature stays a temperature (0.551625ms)
+✔ D13: the current hour starts at the local hour in half-hour and 45-minute zones (4.934708ms)
+✔ T9/T3: missing currentConditions uses the current hour row; polar days keep sunrise/sunset null (3.183583ms)
+✔ T5: every combination of precipitation type, source and rate maps to a known weather type (8.4275ms)
+✔ requester: gzip, daily-limit and auth failures, reset retry, body cap, key scrub, formatting (35.1155ms)
+✔ requester logs failures at error level with rounded coordinates, successes at info (3.991625ms)
+✔ first request fetches one combined range; a fresh cache makes no call; a stale current fetches forecast only (12.517625ms)
+✔ concurrent requests for one location from separate workers make a single provider call (80.272125ms)
+✔ an expired lock is taken over; a held lock times out waiters without a provider call (82.9815ms)
+✔ a provider failure keeps stored current/today data and backs off with the lock (19.274917ms)
+✔ a failing lock store still serves the request and never deletes another lock (8.516667ms)
+✔ F1: after a DST change the first local hour does not loop combined calls (11.918916ms)
+✔ F5: yesterday must have been fetched after its local day ended (29.276ms)
+✔ #2585 range: a combined response without the day before yesterday is not bought again (9.817083ms)
+✔ F3: a late release never deletes a lock another worker has taken over (0.816625ms)
+✔ F6/N1: after a provider failure the location backs off for 2 s, within the gateway retry (10.220333ms)
+✔ T1: stored records are classified with the offset at request time after a DST change (14.903833ms)
+✔ I-F2/T7: waiters and the post-lock re-read see records stored after their own request time (114.239792ms)
+✔ D2: provider failures serve the newest stored current up to 6 h old; a provider-down marker stops calls (25.028208ms)
+✔ D7/D1: daily record budget and usage counter (7.501958ms)
+✔ D3/T4: the response returns within its budget while the fetch continues and stores the records (1036.7125ms)
+✔ D11: waiters stop as soon as the holder marks the fetch failed (26.001ms)
+✔ I-F7/D10/D14: bounded reads, a failing read still fetches, startup warns about a missing key (38.566833ms)
+✔ R2-I1/F2: stale or unknown runtime zone data does not misclassify records or bypass the cache (48.839958ms)
+✔ R2-2/F4/R2-I3: usage counts every 429, failures and slow calls; a missing key records nothing; upsert retried (15.500542ms)
+✔ R2-4: the response and waiter deadlines count from the request time (208.708292ms)
+✔ R2-I5/R2-I6/R2-I7/F6/F7/F10: midnight current, takeover race, newest current, cleared failed flag, day guards, read errors (134.88725ms)
+✔ F5: the daily summary uses the average hourly rate (1.469417ms)
+✔ R2-1/F9: 429s are classified by body; requester edge cases (29.297625ms)
+✔ R2-8: alerts skip overseas weather older than 30 minutes (2.301708ms)
+✔ R3-D1: billed responses that cannot fill the cache do not repeat the call (44.229209ms)
+✔ R3-T1: stored stale data is served when the holder answers before its fetch ends and when a waiter times out (119.307167ms)
+✔ R3-T2/R3-T7: the failure backoff lasts 2 s and only the owner can set it (14.768834ms)
+✔ R3-T3/R3-I1: on a fall-back day the newest today record wins (1.353333ms)
+✔ R3-T5/R3-T6/R3-T11: budget boundary, 15-minute and 3-hour limits, save order, day-end boundary (21.719ms)
+✔ R3-T8/R3-I2/R3-I3: requester edges (89.849875ms)
+✔ R4-T1: an unusable HTTP 200 body from the real requester backs the location off for 15 minutes (44.923834ms)
+✔ #2585 range: a recorded last1days/next7days response starts at the day before yesterday (3.960125ms)
+✔ #2585 grid: overseas coordinates share a 0.02° cell; the response keeps the requested coordinates (15.558875ms)
+✔ push paths accept VC and legacy DSF registrations (1.917792ms)
+✔ no runtime server source calls Dark Sky; the legacy requester fails without network (14.017ms)
+✔ T11/T15: apps, templates and the legacy geo route recognise VC (1.256208ms)
+✔ the world response reports Visual Crossing as its source (0.385375ms)
+✔ temporary provider errors carry marker/UTC budget deadlines without changing stored fallback (0.888875ms)
+✔ budget lookup crossing UTC midnight rechecks the new day (0.65475ms)
+ℹ tests 54
+ℹ suites 0
+ℹ pass 54
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3532.543584
+✔ UV passes through complete overseas routes, cache hit and existing mobile parsers (63.97275ms)
+✔ valid UV zero and existing grade boundaries survive current/daily responses (60.24075ms)
+✔ missing, invalid and legacy UV never becomes zero or a grade (48.265875ms)
+✔ optional UV survives real mongoose schema round trip without adding old-cache defaults (71.024209ms)
+✔ daily and current UV labels use the request translator (2.185208ms)
+✔ daily weather fallback never supplies current UV when current/hourly observations are missing (0.523084ms)
+✔ missing currentConditions can use current-hour UV without using daily maximum (0.5675ms)
+✔ recorded Visual Crossing Tokyo UV reaches current and every daily response row (5.879583ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 255.190166
+✔ U-1/2/5/6/16 coord seoul-ko equals the Lambda golden (1.004083ms)
+✔ U-1/2/5/6/16 coord seoul-en equals the Lambda golden (0.219584ms)
+✔ U-1/2/5/6/16 coord seoul-chrome equals the Lambda golden (0.119917ms)
+✔ U-1/2/5/6/16 coord seoul-upper equals the Lambda golden (0.106875ms)
+✔ U-1/2/5/6/16 coord seoul-none equals the Lambda golden (0.1235ms)
+✔ U-1/2/5/6/16 coord seoul-3parts equals the Lambda golden (0.070959ms)
+✔ U-1/2/5/6/16 coord jeju-ko equals the Lambda golden (0.06125ms)
+✔ U-1/2/5/6/16 coord island-ko equals the Lambda golden (0.061666ms)
+✔ U-1/2/5/6/16 coord space-ko equals the Lambda golden (0.074792ms)
+✔ U-1/2/5/6/16 coord tsushima-ko equals the Lambda golden (0.121375ms)
+✔ U-1/2/5/6/16 coord newyork-en equals the Lambda golden (0.072666ms)
+✔ U-1/2/5/6/16 coord london-en equals the Lambda golden (0.063959ms)
+✔ U-1/2/5/6/16 coord fallback-en equals the Lambda golden (0.088458ms)
+✔ U-1/2/5/6/16 coord noformatted-en equals the Lambda golden (0.166334ms)
+✔ U-1/2/5/6/16 coord kr-google-zero-en equals the Lambda golden (0.092334ms)
+✔ U-1/2/5/6/16 coord outside-zero equals the Lambda golden (0.046ms)
+✔ U-1/2/5/6/16 coord kakao-500 equals the Lambda golden (0.060084ms)
+✔ U-3 addr jamsil-google (0.130666ms)
+✔ U-3 addr nocountry-google (0.032709ms)
+✔ U-3 addr jamsil-kakao-fallback (0.073791ms)
+✔ U-4 Korea box is checked on normalized coordinates (0.188041ms)
+✔ U-6 a KR result without kmaAddress is returned but not cached (0.072667ms)
+✔ U-7 provider requests have a total timer (silent and slow-drip servers) (1007.68625ms)
+✔ U-8 key rotation per outcome (0.505208ms)
+✔ U-9 key lists: unset or invalid values are empty; shared names are not read (51.349917ms)
+✔ U-10 logs never contain a key (0.091583ms)
+✔ U-11 cache keys (0.140417ms)
+✔ U-12 a cache hit equals the miss (0.108666ms)
+✔ U-12 an address cache hit equals the miss, also without a country (0.088917ms)
+✔ U-17 response size caps: 1 MB by default, larger when requested (6 MB loopback) (6.634458ms)
+✔ U-13 stale or invalid cache records are not used (0.164334ms)
+✔ U-14 bounded cache reads and writes (315.761208ms)
+✔ U-15 TTL index is created once after the connection opens; errors are logged (0.818833ms)
+✔ U-18 a single Google key, used only with fingerprint ecd5fdb1 (0.36525ms)
+✔ U-19 loopback host for wildcard and IPv6 listen addresses (0.165833ms)
+✔ U-16 language values follow the Lambda rule (0.172667ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2075.353209
+✔ RT-1/RT-2 weather responses equal the Lambda goldens for every version, query and language (73.928583ms)
+✔ RT-3 backend failures give 501 for every version (8.275208ms)
+✔ RT-4 query forwarding (0.914375ms)
+✔ RT-5 language forms reach the geocoder and the backend unchanged (2.545084ms)
+✔ RT-6 coordinate geoinfo (0.473958ms)
+✔ RT-7 address geoinfo is the same for v000901 and v000903; the address is the rest of the path (0.825291ms)
+✔ RT-8 excluded shapes return 404 without any call (2.562583ms)
+✔ RT-9 input rules (3.146458ms)
+✔ RT-10 error bodies leak nothing (0.582042ms)
+✔ RT-11 backend retries and redirects (1137.934416ms)
+✔ RT-12 the request deadline ends a stuck request with 501 (304.51675ms)
+✔ RT-13 in-flight limit, and aborted clients release their slots (2418.908958ms)
+✔ RT-14 OPTIONS, HEAD, no cookies, and the mount order in app.js (6.10125ms)
+✔ RT-15 handler exceptions become text/plain 501 (2.432667ms)
+✔ RT-16 one log line per request with the spec fields and no raw location or key (3.212209ms)
+✔ #2635 typed backend outages preserve deadline, CORS and no-store without retry (13.57375ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3983.612625
+marker: 503 Retry-After=75, CORS, no-store, one backend call
+marker: 503 Retry-After=3600, CORS, no-store, one backend call
+marker: 503 Retry-After=1, CORS, no-store, one backend call
+budget: 503 Retry-After=40, CORS, no-store, one backend call
+unknown: 501 with existing three attempts; zero coordinate: 404
+✔ IC-1 no server source calls an unversioned gateway geocode path (10.560667ms)
+✔ IC-2 controllerTown24h.coord2addr requests the versioned path and sets the KMA params (0.747041ms)
+✔ IC-2 route.geo.v000903 requests the versioned path and redirects as before (0.552583ms)
+✔ IC-2 controllerPush._requestGeoInfo requests the versioned path with lat,lon from [lon,lat] (0.834708ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14.986542
+✔ situation codes: 폭풍해일/지진해일 reachable, 열대야 and 중대경보 added (A31, decision 9) (1.233792ms)
+✔ t6 and preliminary texts keep readable locations (0.221167ms)
+✔ requester: stored key sent once-encoded, auth rotation, error classes (AC9) (1.744042ms)
+✔ requester: pages until a short page, ignoring totalCount (0.8795ms)
+✔ replay: per-type releases over day-by-day rows (AC5, re-review 1) (1.4735ms)
+✔ replay: order, dedupe, cancel, change-issue, idempotence and late rows (AC5) (0.164375ms)
+✔ town mapping: zone table, islands, metropolitan cities and split parents (decision 8) (1.902541ms)
+✔ specialInfo from active zones (AC6, AC7) (0.216875ms)
+✔ collector: stores types 1-4, applies zone state, skips repeats (AC1, AC2, AC4) (30.056459ms)
+✔ collector: a lagging announcement stays pending and is retried (AC4, decision 6) (29.491334ms)
+✔ collector: bulletin permanently missing is stored without it after the retry budget (39.75775ms)
+✔ collector: errors leave documents and state unchanged (AC9) (9.460916ms)
+✔ collector: drift between zone state and t6 is logged (30.466875ms)
+✔ controller getCurrent: announcement instant, bulletin, missing comment (AC3) (5.799334ms)
+✔ controller keeps hazard, level and zone order for long lists (independent verification F3) (0.310416ms)
+✔ controller getSpecialInfo reads active zones for the town (AC6, AC8) (10.138417ms)
+✔ gather-mode warning timer: 3 minutes, one run in flight, app.js gate (review 5328551599) (1.370041ms)
+✔ scraper delegates to the collector and no longer scrapes status.jsp (AC10) (0.104292ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 167.266459
+ok 1 - push-list stores alarms and alerts in the SQLite file
+ok 2 - posting the list again updates the same records
+ok 3 - PUT {newToken, oldToken} moves every alarm and alert of the old token
+ok 4 - a token change that collides keeps the more recently updated record
+ok 5 - DELETE with cityIndex 0 removes only city 0
+ok 6 - unknown category returns 403 and leaves the file unchanged
+ok 7 - alarm selection: exact UTC slot, enable !== false, Date fields
+ok 8 - FCM disabling applies to every alarm and alert of the token
+ok 9 - alert selection: window, reversed window and the 6-hour repeat guard
+ok 10 - a corrupt file keeps the last good copy for reads and is never overwritten
+ok 11 - a file with another user_version is refused
+ok 12 - Mongo store: token change and FCM disabling use multi; cityIndex 0 narrows removal
+# pass 12
+# fail 0
+ok 1 - partial city POST preserves other settings and zero identifiers delete narrowly
+ok 2 - latest location has no age expiry and reverse-order geocoding cannot overwrite it
+ok 3 - durable put failure does not publish new position and restart rebuilds indexes
+ok 4 - token collision merge retains other cities and highest accepted settings
+ok 5 - registration validation rejects unknown category and impossible coordinates
+ok 6 - scheduled slots retain UTC and local weekday semantics
+ok 7 - warning audience respects enabled regional alerts and their time windows
+ok 8 - priority sender admits warnings before normal queue drains, with bounded concurrency
+ok 9 - final guard is checked after async preparation and stale jobs never reach transport
+ok 10 - 429 retry respects delay and expired work is not submitted
+ok 11 - warning feed deduplicates replay and applies release over earlier issue
+ok 12 - merged UUID remains a usable alias when it re-registers with a new token
+ok 13 - physical transport concurrency remains bounded after watchdog timeout
+ok 14 - rate is charged after a simultaneous preparation gate opens
+ok 15 - close settles delayed retries and warning queue capacity is reserved
+ok 16 - late historical warning is state-only and feed bodies are cached between polls
+ok 17 - warning campaign uses latest matching city, persists completion, and honors release on recovery
+ok 18 - POST collision merges UUID settings even if the token PUT was missed
+ok 19 - cold restore bounds geocoding and fails readiness when resolution fails
+ok 20 - late region row expands an existing warning without resending old recipients
+ok 21 - review R2: continuing backfill does not reset the durable feed baseline
+ok 22 - review R3: project cooldown also holds fresh queued work and other projects proceed
+ok 23 - review R5: sustained warnings cannot consume normal project token reserve
+ok 24 - review R1: uncertain registration remains fenced even when immediate GET reads old data
+ok 25 - review R5: warning backlog leaves normal admission even with one physical slot
+ok 26 - review R4: no-send conditional result cannot write state after position changes
+ok 27 - review R4: accepted old-generation send cannot checkpoint onto rotated token
+# pass 27
+# fail 0

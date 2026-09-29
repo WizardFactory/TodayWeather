@@ -15,6 +15,7 @@ angular.module('starter', [
     'service.util',
     'service.admobclean',
     'service.admobpro',
+    'service.admobemi',
     'service.twads',
     'service.push',
     'service.storage',
@@ -26,7 +27,6 @@ angular.module('starter', [
     'controller.searchctrl',
     'controller.settingctrl',
     'controller.guidectrl',
-    'controller.purchase',
     'controller.units',
     'controller.start',
     'controller.nation',
@@ -56,7 +56,7 @@ angular.module('starter', [
         }
     })
     .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push,
-        Branch, Purchase, WeatherUtil) {
+        Branch, WeatherUtil) {
         if (clientConfig.debug) {
             Util.ga.debugMode();
         }
@@ -261,6 +261,22 @@ angular.module('starter', [
             }
         }
 
+        // cordova-plugin-ionic-keyboard only defines window.Keyboard; map the ionic-plugin-keyboard
+        // API (cordova.plugins.Keyboard) that the controllers use. Accessory bar and scroll are iOS only.
+        if (window.cordova && window.Keyboard && !(cordova.plugins && cordova.plugins.Keyboard)) {
+            cordova.plugins = cordova.plugins || {};
+            cordova.plugins.Keyboard = {
+                hideKeyboardAccessoryBar: function (hide) {
+                    if (ionic.Platform.isIOS()) { window.Keyboard.hideFormAccessoryBar(hide); }
+                },
+                disableScroll: function (disable) {
+                    if (ionic.Platform.isIOS()) { window.Keyboard.disableScroll(disable); }
+                },
+                close: function () { window.Keyboard.hide(); },
+                get isVisible() { return window.Keyboard.isVisible; }
+            };
+        }
+
         // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
         // for form inputs)
         if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
@@ -283,13 +299,7 @@ angular.module('starter', [
                 navbars[i].style.visibility = "visible";
             }
 
-            if (window.StatusBar && ionic.Platform.isIOS()) {
-                if ($rootScope.settingsInfo.theme === 'light') {
-                    StatusBar.styleDefault();
-                } else { //photo, dark, old
-                    StatusBar.styleLightContent();
-                }
-            }
+            Util.applyIOSStatusBar($rootScope.settingsInfo.theme, $rootScope.state);
         });
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
@@ -313,7 +323,7 @@ angular.module('starter', [
                 $rootScope.state = 'setting';
             } else if (toState.name === 'setting-push') {
                 $rootScope.state = 'push';
-            } else { // 'nation', 'guide', 'purchase'
+            } else { // 'nation', 'guide'
                 $rootScope.state = '';
             }
 
@@ -337,7 +347,6 @@ angular.module('starter', [
                     $rootScope.$broadcast('showAlertInfoEvent');
                 }, 500);
             }
-            Purchase.init();
             Units.loadUnits();
 
             window.addEventListener('online',  function () {
@@ -379,29 +388,18 @@ angular.module('starter', [
                 }
             }
 
-            function showUpdateInfo(triggerTime) {
+            // The update-information popup was removed in 1.1.0; only the version change is recorded.
+            function recordAppVersion() {
                 var lastAppVersion = TwStorage.get("appVersion");
                 if (lastAppVersion != Util.version) {
                     var logMsg = 'from '+lastAppVersion+' to '+Util.version;
                     Util.ga.trackEvent('app', 'update', logMsg);
                     TwStorage.set('appVersion', Util.version);
-                    if (window[clientConfig.package] && window[clientConfig.package].enablePopup === true) {
-                        console.log('disable update info ');
-                        TwStorage.set('disableUpdateInfo', false);
-                    }
-                }
-
-                if (TwStorage.get('disableUpdateInfo') !== true) {
-                    //바로 보내면, tabCtrl에서 못 받음.
-                    setTimeout(function () {
-                        Util.ga.trackEvent('app', 'update', 'triggerShowUpdateInfo');
-                        $rootScope.$broadcast('showUpdateInfoEvent');
-                    }, triggerTime);
                 }
             }
 
             if (Util.version) {
-               showUpdateInfo(500);
+               recordAppVersion();
             }
             else {
                 Util.ga.trackEvent('app', 'update', 'waitGetAppVersion');
@@ -411,7 +409,7 @@ angular.module('starter', [
                         return;
                     }
 
-                    showUpdateInfo(100);
+                    recordAppVersion();
                 });
             }
         });
@@ -441,8 +439,9 @@ angular.module('starter', [
         //$compileProvider.debugInfoEnabled(clientConfig.debug);
         $compileProvider.debugInfoEnabled(false);
 
-        $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto):/);
-        $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|ftp|mailto):/);
+        // cordova-ios serves www from the app:// scheme (config.xml "scheme" preference)
+        $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|app):/);
+        $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|app):/);
 
         $compileProvider.directive('ngShortChart', function() {
             return {
@@ -1860,11 +1859,6 @@ angular.module('starter', [
                 cache: false,
                 templateUrl: 'templates/guide.html',
                 controller: 'GuideCtrl'
-            })
-            .state('purchase', {
-                url: '/purchase',
-                templateUrl: 'templates/purchase.html',
-                controller: "PurchaseCtrl"
             })
             .state('units', {
                 url: '/units',

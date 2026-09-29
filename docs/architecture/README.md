@@ -23,6 +23,7 @@ Files ending in `.visual-check.html` are local screenshot contact sheets, not th
 
 | View | Standalone HTML | Source |
 | --- | --- | --- |
+| Nation air recovery | [DB and global providers](diagrams/nation-air-recovery.html) | [JSON](diagrams/nation-air-recovery.json) |
 | Historical observations | [Recovery and response](diagrams/historical-observations.html) | [JSON](diagrams/historical-observations.json) |
 | Push notifications | [Settings to device notification](diagrams/push-notifications.html) | [JSON](diagrams/push-notifications.json) |
 | Service EC2 internals | [nginx / PM2 / Mongo endpoint](diagrams/ec2-internals.html) | [JSON](diagrams/ec2-internals.json) |
@@ -30,6 +31,7 @@ Files ending in `.visual-check.html` are local screenshot contact sheets, not th
 | Overall service (architecture) | [Service structure](diagrams/service-overview.html) | [JSON](diagrams/service-overview.json) |
 | Domestic ingestion (architecture) | [Collection and persistence](diagrams/weather-collection.html) | [JSON](diagrams/weather-collection.json) |
 | KMA warnings (architecture) | [Warning collection and town warnings](diagrams/kma-warnings.html) | [JSON](diagrams/kma-warnings.json) |
+| Cordova advertising (sequence) | [After payment removal](diagrams/cordova-advertising.html) | [JSON](diagrams/cordova-advertising.sequence.json) |
 | Mobile request (sequence) | [Request lifecycle](diagrams/mobile-weather-request.html) | [JSON](diagrams/mobile-weather-request.json) |
 | KAQ image producer and consumer | [KAQ pipeline](diagrams/kaq-image-pipeline.html) | [JSON](diagrams/kaq-image-pipeline.json) |
 | Overseas air request (sequence) | [Shared provider chain](diagrams/world-air-request.html) | [JSON](diagrams/world-air-request.json) |

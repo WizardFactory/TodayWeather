@@ -92,19 +92,11 @@ angular.module('controller.push', [])
             }
             else {
                 console.log('fcmToken:'+Push.pushData.fcmToken);
-                if (ionic.Platform.isIOS()) {
-                    Push.grantPermission(
-                        function () {
-                            Push.hasPermission(function(data) {
-                                Push.isEnabled = data.isEnabled;
-                                console.log('push is enabled:'+Push.isEnabled);
-                                if (data.isEnabled === false) {
-                                    _showPermissionPopUp();
-                                }
-                            });
-                        });
-                }
-                else {
+            }
+            // Ask even without a token: firebasex gets the iOS token only after the grant, and Android 13+
+            // (targetSdk 33+) needs the POST_NOTIFICATIONS runtime permission.
+            Push.grantPermission(
+                function () {
                     Push.hasPermission(function(data) {
                         Push.isEnabled = data.isEnabled;
                         console.log('push is enabled:'+Push.isEnabled);
@@ -112,8 +104,7 @@ angular.module('controller.push', [])
                             _showPermissionPopUp();
                         }
                     });
-                }
-            }
+                });
         }
 
         $scope.toggleEnableDay = function (day) {

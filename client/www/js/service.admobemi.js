@@ -1,0 +1,123 @@
+/**
+ * AdMob adapter for emi-indo-cordova-plugin-admob (cordova.plugins.emiAdmobPlugin), with the same
+ * interface as admobClean/admobPro so TwAds can drive it unchanged.
+ */
+angular.module('service.admobemi', [])
+    .factory('admobEmi', function(Util) {
+        var obj = {};
+        var bannerAdUnit = '';
+
+        function plugin() {
+            return window.cordova && cordova.plugins && cordova.plugins.emiAdmobPlugin;
+        }
+
+        /**
+         * Loads the banner without showing it; success runs once it has loaded.
+         * isOverlapping false shrinks the web view by the banner height (legacy overlap:false).
+         */
+        obj.createBannerView = function(success, error) {
+            document.addEventListener('on.banner.load', function onLoad() {
+                document.removeEventListener('on.banner.load', onLoad);
+                if (success) { success(); }
+            });
+            plugin().loadBannerAd({
+                adUnitId: bannerAdUnit,
+                position: 'bottom-center',
+                size: 'adaptive',
+                collapsible: false,
+                autoShow: false,
+                isOverlapping: false,
+                // cordova-android 15 layout: resize the web view by the banner height (also on Android 16+).
+                isCordova15: true
+            }, function () {}, error);
+        };
+
+        obj.destroyBannerView = function (success, error) {
+            plugin().removeBannerAd(success, error);
+        };
+
+        obj.showBannerAd = function(show, success, error) {
+            if (show) {
+                plugin().showBannerAd(success, error);
+            }
+            else {
+                plugin().hideBannerAd(success, error);
+            }
+        };
+
+        obj.init = function (options, success, error) {
+            if (!plugin()) {
+                console.log('there is not emi admob plugin');
+                return -1;
+            }
+            bannerAdUnit = options.bannerAdUnit;
+
+            var started = false;
+            document.addEventListener('on.sdkInitialization', function onInit(data) {
+                document.removeEventListener('on.sdkInitialization', onInit);
+                started = true;
+                console.log('admob sdk initialized ' + (data && data.version));
+                success();
+            });
+            document.addEventListener('on.banner.failed.load', function (data) {
+                console.log('on banner failed load');
+                Util.ga.trackEvent('plugin', 'error', 'admobReceiveAd ' + JSON.stringify(data && data.message || data));
+            });
+
+            var options = {
+                isUsingAdManagerRequest: false,
+                isResponseInfo: clientConfig.debug,
+                isConsentDebug: false
+            };
+
+            /**
+             * The plugin starts the Ads SDK only when UMP already allows ads at the moment initialize runs. On a
+             * first launch the consent result arrives later (Android success events, the iOS callback after the
+             * form), so the SDK stays off until the next launch. Once the consent flow has finished, initialize
+             * again: consent is cached by then, and the plugin starts the SDK only if UMP allows ads.
+             */
+            var retried = false;
+            function startAfterConsent() {
+                setTimeout(function () {
+                    if (started || retried) {
+                        return;
+                    }
+                    retried = true;
+                    console.log('admob consent finished, initialize again');
+                    plugin().initialize(options, function () {}, onConsentError);
+                }, 1000);
+            }
+            ['on.consent.status.not_required', 'on.consent.status.obtained', 'on.personalization.state'].forEach(function (name) {
+                document.addEventListener(name, startAfterConsent);
+            });
+
+            var fallenBack = false;
+            /**
+             * UMP fails ("no form(s) configured") while no consent message is published in the AdMob console.
+             * Release builds then show no ads, as Google's consent guidance requires. Builds with Google's test ad
+             * units start the SDK without UMP so the ad path stays testable.
+             */
+            function onConsentError(reason) {
+                console.log('admob consent failed: ' + JSON.stringify(reason));
+                Util.ga.trackEvent('plugin', 'error', 'admobConsent ' + JSON.stringify(reason && reason.message || reason));
+                // A consent decision (not a UMP failure) must never be bypassed.
+                if (clientConfig.releaseAds || fallenBack || /consent is required|status unknown/i.test(String(reason))) {
+                    if (error) { error(reason); }
+                    return;
+                }
+                fallenBack = true;
+                plugin().metaData({useCustomConsentManager: true});
+                plugin().initialize(options, function () {}, error);
+            }
+            // Android reports the failure as an event; iOS through the initialize error callback.
+            document.addEventListener('on.consent.info.update.failed', function onFailed(data) {
+                document.removeEventListener('on.consent.info.update.failed', onFailed);
+                onConsentError(data);
+            });
+
+            // iOS calls back when UMP finished (SDK started, or the consent form was answered).
+            plugin().initialize(options, startAfterConsent, onConsentError);
+        };
+
+        return obj;
+    });

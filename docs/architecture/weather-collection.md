@@ -188,3 +188,41 @@ matching observation used for yesterday's current comparison. Daily values are
 provider maxima and are not substituted for missing current UV. Existing cache
 records remain valid and gain UV only on normal fetches; there is no cache purge,
 additional request or range/include change. See the [response contract](mobile-api.md#overseas-uv-2634).
+
+## Supported AirKorea observations and nation recovery (#2636)
+
+Station and city-statistics collection now uses the supported HTTPS
+`B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty` and
+`B552584/ArpltnStatsSvc/getCtprvnMesureSidoLIst` operations. The requester encodes
+raw or encoded `serviceKey` once, requests JSON, validates the response header
+and every page, and then normalizes observation fields. Each attempt has a
+5-second deadline and 2 MiB body limit; transient transport/5xx failures retry
+once. A province has a 30-second fetch budget and at most 20 pages / 2,000 rows.
+Authentication, quota and invalid payloads terminate without key rotation or
+outer retry multiplication. Four provinces run concurrently; one failure does
+not stop the other provinces. Scheduled station/sido runs cannot overlap another
+run of the same type in the same process (there is no new distributed lock).
+
+Validated KST wall times, including 24:00, produce UTC BSON `date` values while
+preserving `dataTime`. Invalid identities/timestamps reject a batch; invalid
+concentrations and grades are omitted, and stations with no valid concentration
+are reported as unavailable. Station and aggregate schema/grade mapping remain.
+The latest urban-monitoring batch still produces `cityName: ""` province rows;
+collection success now waits for both station and aggregate writes. Mongo writes
+are not transactional: an error can leave valid station rows without an aggregate;
+that province is reported failed. Row write errors are collected only after every
+started write has acknowledged, so a failure cannot release the scheduled lock
+while another row is still writing. Run completion records and returned province
+results contain UTC start/finish times; province log records contain finish time,
+province, stable error code, saved count, unavailable station names and observation
+time, never URLs, keys or provider bodies. Successful outcomes use stdout so the
+production error-only Winston console does not suppress them; failures use error
+logging. Best-effort S3 observation archival remains outside DB success semantics.
+Forecast and station-metadata legacy APIs are not migrated by this change.
+
+The user confirmed on 2026-09-29 that the AirKorea operating key is expired and
+will be renewed separately. No current provider entitlement, live collection
+success or production recovery is claimed. See the [rollout and rollback
+procedure](../../reports/sdlc/issue-2636/operations.md) for renewal and scheduled
+readback gates. Client-requested nation recovery uses Mongo plus the existing
+global-air chain and never calls AirKorea; see [nation response](mobile-api.md#nation-air-recovery-2636).

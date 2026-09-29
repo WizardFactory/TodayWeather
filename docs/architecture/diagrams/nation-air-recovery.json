@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Nation air recovery design",
+    "output": "docs/architecture/diagrams/nation-air-recovery.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1000,
+      630
+    ],
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "39a3336fb2730dfbe9920c62165a2b632874af1e",
+      "provider": "github",
+      "link_mode": "local-only"
+    },
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Nation map",
+      "sources": [
+        {
+          "path": "client/www/js/controller.nation.air.js"
+        }
+      ]
+    },
+    {
+      "id": "nation",
+      "type": "backend",
+      "label": "Nation route",
+      "sources": [
+        {
+          "path": "server/routes/v000803/route.nation.js"
+        }
+      ]
+    },
+    {
+      "id": "mongo",
+      "type": "database",
+      "label": "AirKorea DB",
+      "sources": [
+        {
+          "path": "server/controllers/kecoController.js"
+        }
+      ]
+    },
+    {
+      "id": "chain",
+      "type": "backend",
+      "label": "Global air",
+      "sources": [
+        {
+          "path": "server/lib/AQI/airFallback.js"
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "type": "external",
+      "label": "Providers",
+      "sources": [
+        {
+          "path": "server/lib/air/providerChain.js"
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "from": "client",
+      "to": "nation",
+      "y": 170,
+      "label": "GET nation / requested airUnit",
+      "variant": "default"
+    },
+    {
+      "id": "m2",
+      "from": "nation",
+      "to": "mongo",
+      "y": 215,
+      "label": "Read latest province rows",
+      "variant": "default"
+    },
+    {
+      "id": "m3",
+      "from": "mongo",
+      "to": "nation",
+      "y": 260,
+      "label": "Rows / missing / DB error",
+      "variant": "return"
+    },
+    {
+      "id": "m4",
+      "from": "nation",
+      "to": "chain",
+      "y": 305,
+      "label": "Missing or unusable: up to 4 points",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m5",
+      "from": "chain",
+      "to": "providers",
+      "y": 350,
+      "label": "Cache miss: budgeted provider chain",
+      "variant": "default"
+    },
+    {
+      "id": "m6",
+      "from": "providers",
+      "to": "chain",
+      "y": 395,
+      "label": "Validated current observation",
+      "variant": "return"
+    },
+    {
+      "id": "m7",
+      "from": "chain",
+      "to": "nation",
+      "y": 440,
+      "label": "Cached or fetched point / unavailable",
+      "variant": "return"
+    },
+    {
+      "id": "m8",
+      "from": "nation",
+      "to": "client",
+      "y": 485,
+      "label": "Air + province status",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Client recovery boundary",
+      "items": [
+        "Only Mongo is read for AirKorea data; no client-triggered AirKorea API request.",
+        "Fresh province averages remain authoritative. Missing or unusable provinces use representative points.",
+        "Same domestic global-air service, cache, provider order and budgets."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Bounded parallel work",
+      "items": [
+        "At most four points concurrently; one response deadline includes DB lookup.",
+        "Completed results stay immutable; in-flight chains may still fill shared cache.",
+        "Partial air and explicit status retain weather; point data never enters AirKorea collections."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Design and implementation",
+      "items": [
+        "Base citations identify the existing integration points; issue 2636 adds the nation fallback.",
+        "Implementation: lib/air/nationAir.js, tested with local Mongo and loopback providers.",
+        "Operating key is expired; scheduled AirKorea recovery awaits separate renewal and rollout."
+      ]
+    }
+  ]
+}

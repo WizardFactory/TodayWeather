@@ -1,0 +1,1 @@
+{"response":{"header":{"resultCode":"00","resultMsg":"NORMAL_CODE"},"body":{"pageNo":1,"numOfRows":100,"totalCount":1,"items":[{"sidoName":"서울","cityName":"중구","cityNameEng":"Jung-gu","dataTime":"2026-09-29 24:00","pm10Value":"30","pm25Value":"15","o3Value":"0.012"}]}}}

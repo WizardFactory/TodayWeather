@@ -777,7 +777,7 @@ export function compassPoint(degrees: number): string {
   return COMPASS_POINTS[Math.round(d / 22.5) % 16];
 }
 let numberLocale = "ko-KR";
-/** Language used by formatValue (the web app's selected UI language). */
+/** Device numeric locale used by formatValue; "en" is the international fallback. */
 export function setNumberLocale(locale: string) {
   numberLocale = locale;
 }
