@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import type { Page } from "@playwright/test";
 
 // Browser language and the language setting (seven UI languages).
 const API = "https://todayweather.wizardfactory.net";
@@ -218,4 +219,74 @@ test("switching language offline keeps the stored weather (independent verificat
   await page.goto("/weather/seoul/hourly");
   await expect(page.locator(".temperature")).toBeVisible();
   await context.setOffline(false);
+});
+
+test.describe("language choices while a language loads (PR #2616 review)", () => {
+  // Routes must see the chunk requests, not the service worker cache.
+  test.use({ serviceWorkers: "block" });
+  const delayed = (page: Page, name: string, ms: number) =>
+    page.route(new RegExp(`/assets/${name}-[\\w-]+\\.js$`), async (r) => {
+      await new Promise((resolve) => setTimeout(resolve, ms));
+      await r.continue();
+    });
+  const select = (page: Page) =>
+    page.locator("select", { has: page.locator('option[value="ja"]') });
+
+  test("returning to the current language cancels the pending load", async ({
+    page,
+  }) => {
+    await delayed(page, "en", 1500);
+    await page.goto("/settings");
+    await expect(
+      page.getByRole("heading", { name: "설정", level: 1 }),
+    ).toBeVisible();
+    await select(page).selectOption("en");
+    await select(page).selectOption("ko");
+    await page.waitForTimeout(2500);
+    await expect(
+      page.getByRole("heading", { name: "설정", level: 1 }),
+    ).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "ko");
+    await expect(select(page)).toHaveValue("ko");
+  });
+
+  test("an earlier choice that finishes later does not win", async ({
+    page,
+  }) => {
+    await delayed(page, "de", 1500);
+    await page.goto("/settings");
+    await expect(
+      page.getByRole("heading", { name: "설정", level: 1 }),
+    ).toBeVisible();
+    await select(page).selectOption("de");
+    await select(page).selectOption("ja");
+    await expect(
+      page.getByRole("heading", { name: "設定", level: 1 }),
+    ).toBeVisible();
+    await page.waitForTimeout(2500);
+    await expect(
+      page.getByRole("heading", { name: "設定", level: 1 }),
+    ).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "ja");
+  });
+});
+
+test.describe("device formats with another UI language (#2613)", () => {
+  test.use({ locale: "en-US" });
+  test("an en-US device keeps US dates and the 12-hour clock in French", async ({
+    page,
+  }) => {
+    await page.goto("/settings");
+    await page
+      .getByRole("combobox", { name: "Language", exact: true })
+      .selectOption("fr");
+    await expect(
+      page.getByRole("heading", { name: "Réglages", level: 1 }),
+    ).toBeVisible();
+    await page.goto("/weather/seoul/hourly");
+    await expect(page.locator(".temperature")).toBeVisible();
+    // French words, US conventions: "12:00 PM", not "12:00".
+    const labels = await page.locator(".chart-label").allTextContents();
+    expect(labels.join(" ")).toMatch(/\d{1,2}:\d{2}\s?[AP]M/);
+  });
 });

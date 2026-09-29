@@ -84,12 +84,15 @@ export async function readStoredWeather(key: string): Promise<Weather | null> {
   return (await readAnySnapshot(key)) ?? null;
 }
 /**
- * The snapshot for this language, else the same place and units saved in
- * another UI language (only server text differs), so switching language
- * offline keeps the stored weather.
+ * The snapshot for this language, else the newest of the same place and units
+ * saved in another UI language (only server text differs), so switching
+ * language offline keeps the stored weather.
  */
-async function readAnySnapshot(key: string): Promise<Weather | undefined> {
-  const own = await readSnapshot(key);
+export async function readAnySnapshot(
+  key: string,
+  read: (key: string) => Promise<Weather | undefined> = readSnapshot,
+): Promise<Weather | undefined> {
+  const own = await read(key);
   if (own) return own;
   let parts: unknown[];
   try {
@@ -98,11 +101,19 @@ async function readAnySnapshot(key: string): Promise<Weather | undefined> {
     return;
   }
   const at = parts.length - 2; // [..., language, normalization revision]
+  // The newest snapshot of the same place and units in another language.
+  let newest: Weather | undefined,
+    newestAt = -Infinity;
   for (const other of LANGUAGES) {
     if (other === parts[at]) continue;
-    const found = await readSnapshot(
+    const found = await read(
       JSON.stringify([...parts.slice(0, at), other, ...parts.slice(at + 1)]),
     );
-    if (found) return found;
+    const time = found ? Date.parse(found.fetchedAt) : NaN;
+    if (found && (!newest || time > newestAt)) {
+      newest = found;
+      newestAt = Number.isNaN(time) ? -Infinity : time;
+    }
   }
+  return newest;
 }

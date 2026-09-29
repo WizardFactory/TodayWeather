@@ -49,8 +49,22 @@ export function detectLanguage(list: readonly string[]): Language {
 
 export const language = () => current;
 
+let requests = 0;
+/**
+ * Loads and applies a language. Only the latest call applies: an earlier
+ * choice that finishes later, or fails, is ignored (PR #2616 review).
+ */
 export async function setLanguage(next: Language): Promise<void> {
-  const loaded = next === "ko" ? ko : (await loaders[next]()).default;
+  const request = ++requests;
+  if (next === current) return;
+  let loaded: Catalog;
+  try {
+    loaded = next === "ko" ? ko : (await loaders[next]()).default;
+  } catch (error) {
+    if (request === requests) throw error;
+    return;
+  }
+  if (request !== requests) return;
   current = next;
   catalog = loaded;
   if (typeof document !== "undefined") {
