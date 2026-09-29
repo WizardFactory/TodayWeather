@@ -1,0 +1,68 @@
+{
+  "candidate": "source-sha256:02c28fb3e4df23f8d3cfcbf551bd302f5467533bd9dbf7f78573f9ffe167951c",
+  "scenarios": [
+    {
+      "id": "local-mongo-nation",
+      "requirement": "AC3",
+      "required": true,
+      "environment": "macOS Node 24.19.0, MongoDB 7.0.14, isolated mongoose 5.13.23",
+      "prerequisites": "Loopback sockets; temporary dependencies; no provider credentials",
+      "actions": "Fetch synthetic supported AirKorea HTTP, write real Mongo schemas, read real nation route concurrently with shared Google chain/cache",
+      "expected": "3 station rows, 1 province average, 17 nation rows, 15 weather rows, 16 global calls then cache reuse, concurrency <=4, zero request-time AirKorea calls",
+      "failure": "Invalid DB write, incorrect KST/grades, duplicate fetches, late response mutation, missing expected rows or leaked key",
+      "cleanup": "Close HTTP sockets and Mongo connection, stop temporary Mongo process"
+    }
+  ],
+  "runs": [
+    {
+      "id": "drain-red",
+      "phase": "red",
+      "candidate": "commit:68028b1a with new failing regression",
+      "command": "node server/test/offline/airkorea-collection.test.js",
+      "exit_code": 1,
+      "status": "passed",
+      "environment": "macOS Node24.19.0, isolated NODE_PATH and local Mongo7.0.14/mongoose5.13.23",
+      "observed": "Six failed delayed-peer cases reproduce early completion before fix",
+      "evidence": "reports/sdlc/issue-2636/write-drain-red.log",
+      "execution_kind": "isolated",
+      "intended_failure": true
+    },
+    {
+      "id": "drain-green",
+      "phase": "green",
+      "candidate": "source-sha256:02c28fb3e4df23f8d3cfcbf551bd302f5467533bd9dbf7f78573f9ffe167951c",
+      "command": "node server/test/offline/airkorea-collection.test.js",
+      "exit_code": 0,
+      "status": "passed",
+      "environment": "macOS Node24.19.0, isolated NODE_PATH and local Mongo7.0.14/mongoose5.13.23",
+      "observed": "26 collector tests pass",
+      "evidence": "reports/sdlc/issue-2636/write-drain-green-final.log",
+      "execution_kind": "isolated"
+    },
+    {
+      "id": "drain-post",
+      "phase": "post-refactor",
+      "candidate": "source-sha256:02c28fb3e4df23f8d3cfcbf551bd302f5467533bd9dbf7f78573f9ffe167951c",
+      "command": "node server/test/offline/airkorea-collection.test.js",
+      "exit_code": 0,
+      "status": "passed",
+      "environment": "macOS Node24.19.0, isolated NODE_PATH and local Mongo7.0.14/mongoose5.13.23",
+      "observed": "26 collector tests pass after final freeze",
+      "evidence": "reports/sdlc/issue-2636/write-drain-post-final.log",
+      "execution_kind": "isolated"
+    },
+    {
+      "id": "drain-smoke",
+      "phase": "smoke",
+      "candidate": "source-sha256:02c28fb3e4df23f8d3cfcbf551bd302f5467533bd9dbf7f78573f9ffe167951c",
+      "command": "TZ=UTC node server/test/offline/airkorea-nation-smoke.js",
+      "exit_code": 0,
+      "status": "passed",
+      "environment": "macOS Node24.19.0, isolated NODE_PATH and local Mongo7.0.14/mongoose5.13.23",
+      "observed": "Real Mongo/HTTP17air+15weather; max4; zero request-time AirKorea",
+      "evidence": "reports/sdlc/issue-2636/write-drain-smoke-final.log",
+      "execution_kind": "real",
+      "scenario_id": "local-mongo-nation"
+    }
+  ]
+}

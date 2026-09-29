@@ -88,3 +88,23 @@ jobs:
           TZ: America/Los_Angeles
           NODE_PATH: ${{ runner.temp }}/history-offline/node_modules
         run: node server/test/offline/history-observations.test.js
+
+  airkorea-nation-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '16.20.2'
+          package-manager-cache: false
+      - name: Install isolated air integration dependencies
+        run: npm install --prefix "$RUNNER_TEMP/airkorea-offline" --ignore-scripts --no-audit --no-fund --package-lock=false mongoose-smoke@npm:mongoose@5.13.23 mongodb-memory-server-core@10.1.4 axios@0.18.1 async@2.6.4 express@4.13.4
+      - name: Verify collection, nation response and shared global cache on local Mongo
+        env:
+          TZ: UTC
+          NODE_PATH: ${{ runner.temp }}/airkorea-offline/node_modules
+          MONGOMS_DOWNLOAD_DIR: ${{ runner.temp }}/airkorea-mongodb
+        run: node server/test/offline/airkorea-nation-smoke.js

@@ -327,3 +327,41 @@ The maintained `client/www` app no longer registers a purchase state, loads a bi
 `TwAds` enables ordinary ads when its adapter becomes ready and retains in-memory screen visibility requests. Start/guide screens directly request show/hide; native adapter consent and failure behavior are unchanged. `TwStorage` no longer migrates `purchaseInfo`, `storeReceipt` or `twAdsInfo`; existing stale keys are ignored rather than deleted. See the [advertising sequence](diagrams/cordova-advertising.html) and [source](diagrams/cordova-advertising.sequence.json).
 
 The server's receipt-validation endpoints and dependency remain unchanged in this app-only PR; removal is tracked in [#2642](https://github.com/WizardFactory/TodayWeather/issues/2642). Historical native bundled web trees are not the modern Cordova build source and are outside this change. The legacy iOS project files still copied by Gulp have their unused StoreKit links and In-App Purchase capability removed. These are repository changes, not a deployment observation.
+
+## Nation air recovery (#2636)
+
+The shared `v000803/route.nation.js` router (also mounted by v000903) retains the
+`air` and `weather` arrays. `lib/air/nationAir.js` first reads the latest Mongo
+province aggregate for each of the 17 map labels. It uses an AirKorea row only
+with valid PM, a KST observation younger than eight hours and no timestamp more
+than one hour ahead. Missing/unusable rows or DB read errors invoke exactly the
+same `airFallback.getArpltn()` service used by domestic weather, at each province's
+fixed representative city point. **Client-requested recovery never calls the
+AirKorea API.** It reuses provider order, budgets, down markers, distance/age
+validation and shared observation cache without a new AirKorea write.
+
+Up to four points run concurrently under one `AIR_RESPONSE_DEADLINE_MS` budget
+(default four seconds), including Mongo reads. At expiry, no new calls start;
+late in-flight work may populate the shared cache but cannot change the completed
+response. Partial air remains usable and does not fail weather. Fast successful
+providers can fill all missing provinces in one response; slow providers may
+leave explicit gaps until later requests read the cache. No complete coverage
+is inferred from HTTP 200.
+
+Rows keep `sidoName`, `cityName`, `dataTime`, pollutant values and the requested
+`airUnit` grades. Additive `source` and `coverage` distinguish `airkorea` /
+`province-average` from a global-provider `representative-point`. Fallback rows
+also carry `attribution`, `representativeCity` and `{lat, lon}` representative
+coordinates. They are point estimates, not nationwide/provincial aggregates.
+Additive `airStatus.provinces` lists all 17 names with availability, source and
+reason; `airkorea: database-error` differs from `missing`, `stale`, `future`, or `invalid` stored data.
+The existing native maps continue to use `air`; physical device confirmation
+remains a post-rollout check.
+
+Representative points, in map-label order: Seoul, Busan, Daegu, Incheon, Gwangju,
+Daejeon, Ulsan, Suwon (Gyeonggi), Chuncheon (Gangwon), Cheongju (Chungbuk),
+Hongseong (Chungnam), Jeonju (Jeonbuk), Mokpo (Jeonnam), Andong (Gyeongbuk),
+Changwon (Gyeongnam), Jeju City and Sejong. Exact fixed city-centre coordinates
+are in [nationAir.js](../../server/lib/air/nationAir.js). Existing map labels
+are preserved. The [recovery diagram](diagrams/nation-air-recovery.html) separates
+DB lookup and global-provider recovery from scheduled AirKorea collection.
