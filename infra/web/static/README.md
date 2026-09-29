@@ -43,12 +43,25 @@ Before changing anything, preserve the current site, including a first-release c
 : "${WEB_DISTRIBUTION:?Set the verified app distribution}"
 : "${WEB_BACKUP_DIR:?Set a new private backup directory outside Git}"
 mkdir -p "$WEB_BACKUP_DIR/objects"
+aws s3api get-bucket-versioning --bucket "$WEB_BUCKET" > "$WEB_BACKUP_DIR/versioning.json"
 aws s3api list-object-versions --bucket "$WEB_BUCKET" > "$WEB_BACKUP_DIR/object-versions.json"
+aws s3api list-objects-v2 --bucket "$WEB_BUCKET" > "$WEB_BACKUP_DIR/live-objects.json"
 aws s3 cp "s3://$WEB_BUCKET/" "$WEB_BACKUP_DIR/objects/" --recursive
-aws s3api head-object --bucket "$WEB_BUCKET" --key index.html > "$WEB_BACKUP_DIR/index-metadata.json"
+WEB_BUCKET="$WEB_BUCKET" WEB_BACKUP_DIR="$WEB_BACKUP_DIR" python3 - <<'PYBACKUP'
+import json, os, pathlib, subprocess
+backup = pathlib.Path(os.environ["WEB_BACKUP_DIR"])
+objects = json.loads((backup / "live-objects.json").read_text()).get("Contents", [])
+metadata = {}
+for obj in objects:
+    metadata[obj["Key"]] = json.loads(subprocess.check_output([
+        "aws", "s3api", "head-object", "--bucket", os.environ["WEB_BUCKET"],
+        "--key", obj["Key"], "--output", "json",
+    ], text=True))
+(backup / "object-metadata.json").write_text(json.dumps(metadata, indent=2))
+PYBACKUP
 ```
 
-Keep the complete previous release artifact if the site already hosts the app. The raw object copy is a content backup; it does not retain HTTP metadata, so also retain metadata/version IDs for each shell file you would restore. Do not use an existing backup directory or overwrite the rollback artifact.
+Keep the complete previous release artifact if the site already hosts the app. The raw object copy is a content backup; `object-metadata.json` preserves the original headers, user metadata and available version ID for every live key. Require its keys to match `live-objects.json` and verify every listed object has a byte backup before proceeding. Stop if any backup command fails. Coordinate a write-free backup window or compare inventories/versions again to detect concurrent changes. Do not use an existing backup directory or overwrite the rollback artifact.
 
 1. Read the current configuration and keep its `ETag` and a saved copy for rollback. The CLI output wraps the configuration as `{"ETag": ..., "DistributionConfig": {...}}`, but `update-distribution --distribution-config` accepts only the inner object, so extract it into a separate file:
 
@@ -190,7 +203,7 @@ A saved coming-soon page without `release.json` cannot pass the app uploader. Us
 
 After rollback authorization:
 
-1. Restore **every live key in the pre-release backup**, not only `index.html`. Use the captured `object-versions.json` entries whose `IsLatest` is true (excluding delete markers), copying each retained version back onto its original key with metadata directive `COPY`. This restores original bytes and metadata, including placeholder-owned icons or scripts overwritten by the app. If a saved version is unavailable, restore the backed-up bytes and per-key metadata; stop if either is missing. Do not infer metadata from filenames.
+1. Restore **every live key in the pre-release backup**, not only `index.html`. Use the captured `object-versions.json` entries whose `IsLatest` is true (excluding delete markers), copying each retained **non-null** version back onto its original key with metadata directive `COPY`. Confirm bucket versioning was `Enabled` in `versioning.json`; a missing or suspended status, or `VersionId` equal to `"null"`, requires the bytes-plus-metadata restore path instead. A null version can be overwritten and must never be treated as a retained snapshot. This restores original bytes and metadata, including placeholder-owned icons or scripts overwritten by the app. If a saved version is unavailable, restore the backed-up bytes and per-key metadata from `object-metadata.json` (original content headers and user `Metadata`, excluding read-only head response fields); stop if either is missing. Do not infer metadata from filenames.
 2. Compare the failed release's complete artifact inventory with the pre-release key inventory. Remove only release-added **unversioned shell keys** (`release.json`, `theme.js`, `manifest.webmanifest`, `icon.svg` and files under `icons/`) that were absent before the release. In particular, a first-release placeholder with no `release.json` must return 403/404 for that path after rollback, rather than advertise the failed app release. Preserve hashed `assets/` for returning old tabs, preserve unrelated keys, and reserve `/sw.js` for the recovery worker below. Review the exact key list before object deletion; never use bucket-wide `sync --delete`.
 3. Publish the checked-in recovery worker at the same `/sw.js` URL used by the app, then invalidate and wait:
 
