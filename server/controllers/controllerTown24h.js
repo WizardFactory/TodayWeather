@@ -833,15 +833,22 @@ function ControllerTown24h() {
         }
     };
 
+    function _formatAirKstTime(epoch) {
+        return new Date(epoch + 9 * 3600000).toISOString().slice(0, 16).replace('T', ' ');
+    }
+
     this._insertEmptyPollutantHourlyObj = function (lastDataTime) {
         var list = [];
         try {
-            var date = new Date(lastDataTime);
-            date.setHours(date.getHours()-24);
+            var epoch = KecoController._parseDateTime(lastDataTime);
+            if (!isFinite(epoch)) {
+                return list;
+            }
+            epoch -= 24 * 3600000;
             for (var i=0; i<=24; i++) {
-                var hourlyObj = {date: kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(date)};
+                var hourlyObj = {date: _formatAirKstTime(epoch)};
                 list.push(hourlyObj);
-                date.setHours(date.getHours()+1);
+                epoch += 3600000;
             }
         }
         catch (err) {
@@ -863,7 +870,7 @@ function ControllerTown24h() {
 
             arpltn = KecoController.recalculateValue(arpltn, airUnit);
             if (arpltn.dataTime.indexOf("24:00") > 0) {
-                arpltn.dataTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(new Date(arpltn.dataTime));
+                arpltn.dataTime = _formatAirKstTime(KecoController._parseDateTime(arpltn.dataTime));
             }
 
             ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {

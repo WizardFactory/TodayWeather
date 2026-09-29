@@ -185,32 +185,35 @@ arpltnController._checkArpltnDataValid = function (arpltn, itemList) {
 };
 
 /**
- * 8시간 이내의 경우 사용
- * @param dateTime
- * @param arpltn
- * @returns {boolean}
+ * Parse an AirKorea KST wall time, including the following midnight as 24:00.
+ * @param dataTime
+ * @returns {number} Epoch milliseconds, or NaN for invalid input.
  * @private
  */
-arpltnController._checkDateTime = function(arpltn, dateTime) {
-    if (!arpltn || typeof arpltn.dataTime !== 'string') {
-        return false;
+arpltnController._parseDateTime = function(dataTime) {
+    if (typeof dataTime !== 'string') {
+        return NaN;
     }
-    var parts = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(arpltn.dataTime);
+    var parts = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(dataTime);
     if (!parts) {
-        return false;
+        return NaN;
     }
     var hour = Number(parts[4]);
     var minute = Number(parts[5]);
     var midnight = new Date(parts[1] + '-' + parts[2] + '-' + parts[3] + 'T00:00:00Z');
     // Reject calendar rollover (e.g. February 30) and anything except 24:00 at hour 24.
-    if (!isFinite(midnight.getTime()) || midnight.toISOString().slice(0, 10) !== arpltn.dataTime.slice(0, 10) ||
+    if (!isFinite(midnight.getTime()) || midnight.toISOString().slice(0, 10) !== dataTime.slice(0, 10) ||
         hour > 24 || minute > 59 || (hour === 24 && minute !== 0)) {
-        return false;
+        return NaN;
     }
     // AirKorea wall time is KST (+09:00), regardless of host timezone or DST.
     // Adding 24 hours naturally rolls 24:00 into the following day's midnight.
-    var arpltnTime = midnight.getTime() + (hour - 9) * 3600000 + minute * 60000;
-    return new Date(dateTime).getTime() - 8 * 3600000 < arpltnTime;
+    return midnight.getTime() + (hour - 9) * 3600000 + minute * 60000;
+};
+
+arpltnController._checkDateTime = function(arpltn, dateTime) {
+    return new Date(dateTime).getTime() - 8 * 3600000 <
+        this._parseDateTime(arpltn && arpltn.dataTime);
 };
 
 /**

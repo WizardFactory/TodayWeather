@@ -164,7 +164,7 @@
       "title": "Limits",
       "items": [
         "Free counters reserve 5%; paid admission needs an atomic monthly reservation (deny on store errors). No refunds or double counting.",
-        "AirKorea current/detail: elapsed age <8 h; KST includes 24:00. Stale detail values are omitted."
+        "AirKorea current/detail: age <8 h. Parsing, hourly slots and 24:00 use KST; stale detail values are omitted."
       ]
     }
   ]

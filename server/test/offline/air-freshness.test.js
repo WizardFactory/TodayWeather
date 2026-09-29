@@ -62,6 +62,33 @@ if (!process.env.TW_FRESHNESS_TZ_CHILD) {
         assert.equal(empty.airInfoList, undefined);
     });
 
+    test('KST charts retain every hourly slot across host DST and normalize 24:00', () => {
+        for (const [latest, earlier, instant, normalized] of [
+            ['2026-03-08 05:00', '2026-03-08 02:00', '2026-03-07T21:00:00Z', '2026-03-08 05:00'],
+            ['2026-11-01 05:00', '2026-11-01 01:00', '2026-10-31T21:00:00Z', '2026-11-01 05:00'],
+            ['2024-02-29 24:00', '2024-02-29 23:00', '2024-02-29T16:00:00Z', '2024-03-01 00:00'],
+            ['2026-12-31 24:00', '2026-12-31 23:00', '2026-12-31T16:00:00Z', '2027-01-01 00:00']
+        ]) {
+            const {detail} = harness(instant);
+            for (const method of ['makeAirInfo', 'makeAirInfoList']) {
+                const rows = [observation(latest), observation(earlier)];
+                const req = {params: {}, query: {}, arpltnList: rows, arpltnStnList: [rows]};
+                detail[method](req, {}, () => {});
+                const air = method === 'makeAirInfo' ? req.airInfo : req.airInfoList[0];
+                const hourly = Array.from(air.pollutants.pm10.hourly);
+                assert.equal(hourly.length, 25);
+                assert.equal(new Set(hourly.map(x => x.date)).size, 25);
+                assert.equal(hourly[24].date, normalized);
+                for (let i = 1; i < hourly.length; i++) {
+                    const epoch = s => Date.parse(s.replace(' ', 'T') + ':00+09:00');
+                    assert.equal(epoch(hourly[i].date) - epoch(hourly[i - 1].date), 3600000);
+                }
+                assert.deepEqual(hourly.filter(x => x.val !== undefined).map(x => [x.date, x.val]),
+                    [[earlier, 20], [normalized, 20]], method + ': ' + latest);
+            }
+        }
+    });
+
     test('getKeco asynchronous error without arpltnObj calls next once', async () => {
         const {keco, town} = harness('2026-09-29T05:00:00Z');
         town._getTownInfo = (r, c, t, cb) => setImmediate(() => cb(null, {gCoord: {lat: 37.5665, lon: 126.978}}));
