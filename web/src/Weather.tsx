@@ -48,8 +48,7 @@ import {
   percent,
 } from "./components";
 import {
-  airDisclaimer,
-  airSource,
+  airCredit,
   airWindow,
   forecastDescription,
   gradeClass,
@@ -491,10 +490,11 @@ function WeatherDetails({
               <ProviderAirSummary weather={w} />
             </>
           )}
-          {w.source === "KMA" && (air || w.airSummary) && (
+          {(air || w.airSummary) && airCredit(w.source, air).length > 0 && (
             <div className="source-credit">
-              <p>{airSource()}</p>
-              <p>{airDisclaimer()}</p>
+              {airCredit(w.source, air).map((line) => (
+                <p key={line}>{line}</p>
+              ))}
             </div>
           )}
         </section>
@@ -689,12 +689,14 @@ function AirAttribution({
   weather: Weather;
   station?: AirStation;
 }) {
-  if (w.source !== "KMA") return null;
+  const credit = airCredit(w.source, station);
   const source = station?.forecastSource ?? "";
+  if (!credit.length && !source) return null;
   return (
     <div className="air-attribution">
-      <p>{airSource()}</p>
-      <p>{airDisclaimer()}</p>
+      {credit.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
       {source && (
         <p>
           {t("air.forecastSource", { source: source.toUpperCase() })}
@@ -745,19 +747,22 @@ function AirDetails({
       <section className="panel air-detail">
         <div className="section-head">
           <h2>{t("air.title")}</h2>
-          <label className="station-select">
-            {t("air.stationLabel")}{" "}
-            <select
-              value={stationIndex}
-              onChange={(e) => setStationIndex(Number(e.target.value))}
-            >
-              {w.air.map((s, i) => (
-                <option key={i} value={i}>
-                  {coreText(s.name)}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/* Modeled providers (#2628) have no station: no picker then. */}
+          {(w.air.length > 1 || station.name !== "관측소 정보 없음") && (
+            <label className="station-select">
+              {t("air.stationLabel")}{" "}
+              <select
+                value={stationIndex}
+                onChange={(e) => setStationIndex(Number(e.target.value))}
+              >
+                {w.air.map((s, i) => (
+                  <option key={i} value={i}>
+                    {coreText(s.name)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
         <div className="air-detail-main">
           <div className={`air-orb large ${gradeClass(standard, p.grade)}`}>

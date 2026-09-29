@@ -54,6 +54,7 @@ const pt: Catalog = {
     "Dados de qualidade do ar: Ministério do Meio Ambiente / Korea Environment Corporation (AirKorea)",
   "air.disclaimer":
     "São dados em tempo real não verificados e podem conter erros.",
+  "air.providerCredit": "Dados de qualidade do ar: {name}",
   "air.forecast.kaq":
     "As previsões de qualidade do ar são fornecidas pelo Instituto de Pesquisa Convergente em Clima, Energia e Meio Ambiente da Universidade de Anyang (abreviado: Instituto de Convergência Climática da Universidade de Anyang; diretor: Prof. Youn-Seo Koo, Departamento de Engenharia Ambiental e Energética).",
   "air.forecast.airkorea":
@@ -219,6 +220,7 @@ const pt: Catalog = {
   "nation.mapHint":
     "Esquema das regiões · fora de escala. Veja todos os valores na lista.",
   "nation.listTitle": "Observações por região",
+  "nation.empty": "Não há observações por região",
   "nation.rainHint": "A precipitação é o valor observado na última hora.",
   "nation.viewWeather": "Ver o tempo em {name}",
   // Weather warnings page.
@@ -319,6 +321,8 @@ const pt: Catalog = {
   "help.sources.title": "Fontes dos dados",
   "help.sources.body":
     "Dados meteorológicos: Administração Meteorológica da Coreia (KMA). {source}. {disclaimer} O tempo no exterior usa o provedor atual do TodayWeather (Visual Crossing). O modo de demonstração é sempre indicado. Valores não fornecidos aparecem como ‘—’ em vez de 0.",
+  "help.sources.air":
+    "Em outros países, e quando a AirKorea não tem dados, a qualidade do ar vem de outro fornecedor (como o Google), indicado abaixo do cartão de qualidade do ar.",
   "help.sources.precipitation":
     "Para horas e dias passados, é mostrada a precipitação observada; para os próximos, a quantidade e a probabilidade de precipitação calculadas pelo servidor com base nas previsões da KMA. A quantidade de 1 hora da previsão de curtíssimo prazo é o limite inferior de uma faixa, por isso aparece como ‘aprox.’.",
   "help.accessibility.title": "Acessibilidade e mapa externo",

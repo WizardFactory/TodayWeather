@@ -56,6 +56,7 @@ const es: Catalog = {
     "Datos de calidad del aire: Ministerio de Medio Ambiente / Korea Environment Corporation (AirKorea)",
   "air.disclaimer":
     "Son datos en tiempo real no verificados y pueden contener errores.",
+  "air.providerCredit": "Datos de calidad del aire: {name}",
   "air.forecast.kaq":
     "Los pronósticos de calidad del aire los proporciona el Instituto de Investigación Convergente de Clima, Energía y Medio Ambiente de la Universidad de Anyang (abreviado: Instituto de Convergencia Climática de la Universidad de Anyang; director: Prof. Youn-Seo Koo, Departamento de Ingeniería Ambiental y Energética).",
   "air.forecast.airkorea":
@@ -222,6 +223,7 @@ const es: Catalog = {
   "nation.mapHint":
     "Esquema de regiones · no está a escala. Consulta todos los valores en la lista.",
   "nation.listTitle": "Observaciones por región",
+  "nation.empty": "No hay observaciones por región",
   "nation.rainHint":
     "La precipitación es el valor observado en la última hora.",
   "nation.viewWeather": "Ver el tiempo en {name}",
@@ -324,6 +326,8 @@ const es: Catalog = {
   "help.sources.title": "Fuentes de datos",
   "help.sources.body":
     "Datos meteorológicos: Administración Meteorológica de Corea (KMA). {source}. {disclaimer} El tiempo en el extranjero usa el proveedor habitual de TodayWeather (Visual Crossing). El modo de demostración siempre se indica. Los valores no disponibles se muestran como ‘—’ en lugar de 0.",
+  "help.sources.air":
+    "En otros países, y cuando AirKorea no tiene datos, la calidad del aire procede de otro proveedor (como Google), indicado bajo la tarjeta de calidad del aire.",
   "help.sources.precipitation":
     "Para las horas y los días pasados se muestra la precipitación observada; para los próximos, la cantidad y la probabilidad de precipitación que calcula el servidor a partir de los pronósticos de la KMA. La cantidad de 1 hora del pronóstico a muy corto plazo es el límite inferior de un rango, por lo que se muestra como ‘aprox.’.",
   "help.accessibility.title": "Accesibilidad y mapa externo",

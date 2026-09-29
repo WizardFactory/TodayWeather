@@ -55,6 +55,7 @@ const fr: Catalog = {
     "Données de pollution de l'air : ministère de l'Environnement / Korea Environment Corporation (AirKorea)",
   "air.disclaimer":
     "Ces données en temps réel ne sont pas validées et peuvent contenir des erreurs.",
+  "air.providerCredit": "Données sur la qualité de l'air : {name}",
   "air.forecast.kaq":
     "Les prévisions de qualité de l'air sont fournies par l'Institut de recherche convergente climat-énergie-environnement de l'Université d'Anyang (abrégé : Institut de convergence climatique de l'Université d'Anyang ; directeur : Pr Koo Youn-Seo, département de génie de l'environnement et de l'énergie).",
   "air.forecast.airkorea":
@@ -224,6 +225,7 @@ const fr: Catalog = {
   "nation.mapHint":
     "Carte schématique · pas à l'échelle. Toutes les valeurs figurent dans la liste.",
   "nation.listTitle": "Observations par région",
+  "nation.empty": "Aucune observation régionale",
   "nation.rainHint": "Précipitations mesurées au cours de la dernière heure.",
   "nation.viewWeather": "Voir la météo à {name}",
   // Weather warnings page.
@@ -325,6 +327,8 @@ const fr: Catalog = {
   "help.sources.title": "Sources des données",
   "help.sources.body":
     "Données météo : Administration météorologique coréenne (KMA). {source}. {disclaimer} La météo à l'étranger provient de la source habituelle de TodayWeather (Visual Crossing). Le mode démo est toujours signalé à part. Les valeurs non disponibles s'affichent « — » et non 0.",
+  "help.sources.air":
+    "Pour les autres pays, et lorsque AirKorea n'a pas de données, la qualité de l'air provient d'un autre fournisseur (comme Google), indiqué sous la carte de qualité de l'air.",
   "help.sources.precipitation":
     "Pour les heures et jours passés, les précipitations mesurées sont affichées ; pour la suite, les quantités et probabilités de précipitations calculées par le serveur à partir des prévisions de la KMA. La quantité sur 1 heure de la prévision immédiate est la borne inférieure d'une catégorie ; elle est donc précédée de « env. ».",
   "help.accessibility.title": "Accessibilité et carte externe",

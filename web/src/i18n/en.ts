@@ -52,6 +52,7 @@ const en: Catalog = {
   "air.source":
     "Air quality data: Ministry of Environment / Korea Environment Corporation (AirKorea)",
   "air.disclaimer": "This is unverified real-time data and may contain errors.",
+  "air.providerCredit": "Air quality data: {name}",
   "air.forecast.kaq":
     "Air quality forecasts are provided by the Climate, Energy and Environment Convergence Research Institute of Anyang University (Anyang University Climate Convergence Institute; director: Prof. Youn-Seo Koo, Department of Environmental and Energy Engineering).",
   "air.forecast.airkorea":
@@ -214,6 +215,7 @@ const en: Catalog = {
   "nation.mapHint":
     "Regional layout · not to scale. See the list for all values.",
   "nation.listTitle": "Observations by region",
+  "nation.empty": "No regional observations",
   "nation.rainHint": "Precipitation is the observed amount for the last hour.",
   "nation.viewWeather": "View weather in {name}",
   // Weather warnings page.
@@ -311,6 +313,8 @@ const en: Catalog = {
   "help.sources.title": "Data sources",
   "help.sources.body":
     "Weather data: Korea Meteorological Administration (KMA). {source}. {disclaimer} Overseas weather uses TodayWeather's existing provider (Visual Crossing). Demo mode is always labeled. Values that are not provided are shown as ‘—’ instead of 0.",
+  "help.sources.air":
+    "For other countries, and when AirKorea has no data, air quality comes from another provider (such as Google), named below the air quality card.",
   "help.sources.precipitation":
     "Past hours and days show observed precipitation. Upcoming periods show precipitation amounts and chances calculated by the server from KMA forecasts. The 1-hour amount in the very short-range forecast is the lower bound of a range, so it is shown as ‘about’.",
   "help.accessibility.title": "Accessibility and external map",

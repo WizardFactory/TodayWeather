@@ -1184,6 +1184,7 @@ function NationPage() {
               {!air && mode === "rain" && (
                 <p className="hint">{t("nation.rainHint")}</p>
               )}
+              {!rows.length && <Empty title={t("nation.empty")} />}
               {rows.map((r, i) => (
                 <div className="region-row" key={r.name + i}>
                   <div>
@@ -1603,6 +1604,7 @@ function Help() {
             disclaimer: airDisclaimer(),
           })}
         </p>
+        <p>{t("help.sources.air")}</p>
         <p>{forecastDescription("kaq")}</p>
         <p>{t("help.sources.precipitation")}</p>
         <ExternalWeather />

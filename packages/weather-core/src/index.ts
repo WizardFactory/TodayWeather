@@ -87,6 +87,10 @@ export type AirMeasure = {
 export type AirStation = {
   name: string;
   observedAt: string | null;
+  /** Provider id, e.g. airkorea, google, openweather, visualcrossing, aqicn; "" when absent. */
+  source: string;
+  /** Provider credit as plain text from the API; "" when absent. */
+  attribution: string;
   forecastSource: string;
   forecastPublishedAt: string | null;
   pollutants: Record<Pollutant, AirMeasure>;
@@ -478,6 +482,13 @@ export function normalizeAir(value: unknown): AirStation {
   return {
     name: str(last.stationName) || str(last.sidoName) || "관측소 정보 없음",
     observedAt: observed,
+    source: (str(last.source) || str(s.source))
+      .trim()
+      .toLowerCase()
+      .slice(0, 40),
+    attribution: (str(last.attribution) || str(s.attribution))
+      .trim()
+      .slice(0, 300),
     forecastSource: str(s.forecastSource).toLowerCase(),
     forecastPublishedAt: sourceTime(s.forecastPubDate),
     pollutants,

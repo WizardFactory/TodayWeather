@@ -51,6 +51,7 @@ const ko = {
   "air.source": "대기오염정보: 환경부/한국환경공단",
   "air.disclaimer":
     "인증되지 않은 실시간 자료이므로 자료 오류가 있을 수 있습니다.",
+  "air.providerCredit": "대기질 정보: {name}",
   "air.forecast.kaq":
     "대기질 예보자료는 '안양대학교 기후에너지환경융합연구소(약칭: 안양대학교 기후융합연구소, 소장: 환경에너지공학과 구윤서 교수)'에서 제공하는 자료입니다.",
   "air.forecast.airkorea":
@@ -209,6 +210,7 @@ const ko = {
   "nation.mapHint":
     "지역 배치도 · 실제 축척이 아닙니다. 전체 수치는 목록에서 확인하세요.",
   "nation.listTitle": "지역별 관측",
+  "nation.empty": "지역별 관측 자료가 없습니다",
   "nation.rainHint": "강수량은 최근 1시간 관측값입니다.",
   "nation.viewWeather": "{name} 날씨 보기",
   // Weather warnings page.
@@ -304,6 +306,8 @@ const ko = {
   "help.sources.title": "정보 출처",
   "help.sources.body":
     "기상정보: 기상청. {source}. {disclaimer} 해외 날씨는 기존 TodayWeather 제공 경로(Visual Crossing)를 사용합니다. 예제 모드는 항상 별도로 표시합니다. 제공되지 않는 값은 0 대신 ‘—’로 표시합니다.",
+  "help.sources.air":
+    "해외 지역과 에어코리아 자료가 없을 때는 다른 대기질 제공사(Google 등)의 자료를 표시하며, 대기질 카드 아래에 제공사를 밝힙니다.",
   "help.sources.precipitation":
     "지난 시간과 지난 날은 관측 강수량, 앞으로는 기상청 예보를 바탕으로 서버가 계산한 강수량과 강수확률을 표시합니다. 초단기 예보의 1시간 강수량은 범주 하한값이므로 ‘약’으로 표시합니다.",
   "help.accessibility.title": "접근성과 외부 지도",

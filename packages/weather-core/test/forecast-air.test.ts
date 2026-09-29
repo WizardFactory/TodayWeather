@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_UNITS, normalizeWeather } from "../src/index";
+import { DEFAULT_UNITS, normalizeAir, normalizeWeather } from "../src/index";
 import fixture from "../../../docs/rewrite/examples/client-kma-response.json";
 const sample = () => structuredClone(fixture.response) as any;
 describe("KMA mixed-interval forecast and provider air summary", () => {
@@ -94,5 +94,34 @@ describe("KMA mixed-interval forecast and provider air summary", () => {
       raw.current.summaryAir = value;
       expect(normalizeWeather(raw).airSummary).toBeUndefined();
     }
+  });
+});
+
+describe("air provider metadata (#2628)", () => {
+  it("keeps the provider id and plain-text attribution of a station", () => {
+    const google = normalizeAir({
+      source: "google",
+      attribution: "Google Air Quality",
+      last: {
+        source: "Google",
+        attribution: " Google Air Quality ",
+        dataTime: "2026-09-29 10:00",
+        pm25Value: 3.45,
+      },
+    });
+    expect(google).toMatchObject({
+      source: "google",
+      attribution: "Google Air Quality",
+    });
+    expect(normalizeAir({ source: "aqicn", last: {} })).toMatchObject({
+      source: "aqicn",
+      attribution: "",
+    });
+    expect(
+      normalizeAir({ last: { attribution: { html: "<b>x</b>" } } }),
+    ).toMatchObject({
+      source: "",
+      attribution: "",
+    });
   });
 });

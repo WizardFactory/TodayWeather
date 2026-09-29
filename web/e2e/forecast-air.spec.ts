@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures";
 import fixture from "../../docs/rewrite/examples/client-kma-response.json" with { type: "json" };
 import dsf from "../src/demo/weather.json" with { type: "json" };
+import nationFixture from "../src/demo/nation.json" with { type: "json" };
 test("KMA mixed intervals and unverified air summary survive static offline reload", async ({
   page,
   context,
@@ -85,4 +86,43 @@ test("measured air remains primary and does not show the summary fallback", asyn
     page.getByRole("heading", { name: "대기질 관측", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("note")).toHaveCount(0);
+});
+
+test("air from another provider credits that provider and hides the station picker (#2628)", async ({
+  page,
+}) => {
+  const raw: any = structuredClone(fixture.response);
+  const last = { ...raw.airInfoList[0].last };
+  delete last.stationName;
+  delete last.sidoName;
+  Object.assign(last, { source: "google", attribution: "Google Air Quality" });
+  raw.airInfoList = [{ source: "google", last, pollutants: {} }];
+  await page.route("https://todayweather.wizardfactory.net/weather/**", (r) =>
+    r.fulfill({ json: raw }),
+  );
+  await page.goto("/weather/seoul/hourly");
+  const credit = page.locator(".air-summary .source-credit");
+  await expect(credit).toHaveText("대기질 정보: Google Air Quality");
+  await page.getByRole("button", { name: "미세먼지", exact: true }).click();
+  await expect(page.locator(".air-attribution")).toContainText(
+    "대기질 정보: Google Air Quality",
+  );
+  await expect(page.locator(".air-attribution")).not.toContainText("환경공단");
+  await expect(page.locator(".station-select")).toHaveCount(0);
+});
+
+test("an empty nationwide air list shows an empty state", async ({ page }) => {
+  const nation: any = structuredClone(nationFixture);
+  nation.air = [];
+  await page.route(
+    "https://todayweather.wizardfactory.net/v000903/nation/**",
+    (r) => r.fulfill({ json: nation }),
+  );
+  await page.goto("/nation/air");
+  await expect(
+    page.locator(".region-list .empty-state", {
+      hasText: "지역별 관측 자료가 없습니다",
+    }),
+  ).toBeVisible();
+  await expect(page.locator(".region-row")).toHaveCount(0);
 });

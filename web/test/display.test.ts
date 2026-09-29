@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { configureFormats } from "../src/locale";
 import {
+  airCredit,
   airWindow,
   gradeClass,
   gradeLabel,
@@ -66,6 +67,31 @@ describe("air standards", () => {
     expect(airWindow(hourly.slice(0, 2), "2030-01-01 00:00")[12]?.at).toBe(
       "2026-09-22 10:00",
     );
+  });
+});
+
+describe("air credit", () => {
+  it("credits AirKorea only for Korean data without another provider", () => {
+    const official = [
+      "대기오염정보: 환경부/한국환경공단",
+      "인증되지 않은 실시간 자료이므로 자료 오류가 있을 수 있습니다.",
+    ];
+    expect(airCredit("KMA", { source: "", attribution: "" })).toEqual(official);
+    expect(airCredit("KMA", { source: "airkorea", attribution: "" })).toEqual(
+      official,
+    );
+    expect(airCredit("KMA")).toEqual(official);
+    expect(
+      airCredit("KMA", { source: "google", attribution: "Google Air Quality" }),
+    ).toEqual(["대기질 정보: Google Air Quality"]);
+    expect(
+      airCredit("VC", { source: "google", attribution: "Google Air Quality" }),
+    ).toEqual(["대기질 정보: Google Air Quality"]);
+    expect(airCredit("VC", { source: "aqicn", attribution: "" })).toEqual([
+      "대기질 정보: aqicn",
+    ]);
+    expect(airCredit("VC", { source: "", attribution: "" })).toEqual([]);
+    expect(airCredit("VC")).toEqual([]);
   });
 });
 

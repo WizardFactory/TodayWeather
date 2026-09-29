@@ -163,10 +163,9 @@ it("flags precache and shell entries that would break cache.addAll", () => {
 });
 
 it("labels known warnings and lists every WARN and FAIL in the job summary", () => {
-  const known = Object.keys(smoke.KNOWN_WARNINGS);
   // Every known name is a check the smoke actually records.
   const source = readFileSync("scripts/web-live-smoke.mjs", "utf8");
-  for (const name of known)
+  for (const name of Object.keys(smoke.KNOWN_WARNINGS))
     expect(
       source.includes(`"${name}"`) ||
         source.includes(name.replace(/24 h$/, "${FRESH_HOURS} h")),
@@ -175,7 +174,7 @@ it("labels known warnings and lists every WARN and FAIL in the job summary", () 
   const checks = [
     { name: "deep link /", status: "pass", category: "hosting" },
     {
-      name: known[0],
+      name: "Seoul air page renders",
       status: "warn",
       category: "upstream",
       evidence: "no air | <b>",
@@ -203,7 +202,8 @@ it("labels known warnings and lists every WARN and FAIL in the job summary", () 
     failures: { app: 0, hosting: 1, upstream: 0 },
     checks,
   };
-  const md = smoke.summaryMarkdown(result);
+  const known = { "Seoul air page renders": "no stations (backend follow-up)" };
+  const md = smoke.summaryMarkdown(result, known);
   expect(md).toMatch(/^## Web live smoke FAILED/);
   expect(md).toContain(`| 1 | 2 (1 / 1) | 1 | 1 (0 / 1 / 0) |`);
   expect(md).toContain(
@@ -212,9 +212,7 @@ it("labels known warnings and lists every WARN and FAIL in the job summary", () 
   expect(md).toContain(
     "- **NEW** WARN `upstream` API nation/KR contract and size — 200, 1200000 bytes",
   );
-  expect(md).toContain(
-    `WARN (known: ${String(smoke.KNOWN_WARNINGS[known[0]]).replace(/[()]/g, (c) => "\\" + c)})`,
-  );
+  expect(md).toContain("WARN (known: no stations \\(backend follow-up\\))");
   // Evidence cannot break the Markdown or inject HTML.
   expect(md).toContain("no air \\| \\<b\\>");
   // New warnings are listed before known ones; passes and skips are not listed.
@@ -223,7 +221,7 @@ it("labels known warnings and lists every WARN and FAIL in the job summary", () 
   expect(checks[1]).toMatchObject({ known: true });
   expect(checks[2]).toMatchObject({ known: false });
   expect(
-    smoke.summaryMarkdown({ ...result, checks: [], passed: true }),
+    smoke.summaryMarkdown({ ...result, checks: [], passed: true }, known),
   ).toContain("No warnings or failures.");
   expect(
     smoke.summaryMarkdown({ base: null, passed: false, setupError: "boom" }),
@@ -280,8 +278,15 @@ it("counts a warning as known only when its evidence condition matches (round 4,
   ];
   expect(smoke.labelWarnings(checks, known)).toEqual({ known: 2, new: 2 });
   expect(checks.map((c: any) => c.known)).toEqual([true, true, false, false]);
-  // Fixed on 2026-09-27: an overseas failure is no longer a known warning.
-  expect(Object.keys(smoke.KNOWN_WARNINGS)).not.toContain(name);
+  // Fixed on 2026-09-27 (overseas weather) and 2026-09-29 (air providers,
+  // #2628): these failures are no longer known warnings.
+  for (const fixed of [
+    name,
+    "air credit on KMA weather",
+    "Seoul air page renders",
+    "nation air observation times are within 24 h",
+  ])
+    expect(Object.keys(smoke.KNOWN_WARNINGS)).not.toContain(fixed);
 });
 
 it("redacts URLs from upstream body snippets", () => {

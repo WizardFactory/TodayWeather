@@ -1,4 +1,4 @@
-import type { Pollutant } from "@todayweather/core";
+import type { AirStation, Pollutant } from "@todayweather/core";
 import { t, type MessageKey } from "./i18n";
 // Mobile WeatherUtil.aqiStandard grade scales (client-data-contracts AQI standard tables).
 const FOUR: MessageKey[] = [
@@ -48,6 +48,20 @@ export function standardName(standard: string) {
 }
 export const airSource = () => t("air.source");
 export const airDisclaimer = () => t("air.disclaimer");
+/**
+ * Credit lines for a station. Korean data keeps the AirKorea credit unless the
+ * API names another provider (#2628); other providers show their attribution.
+ */
+export function airCredit(
+  weatherSource: string,
+  station?: Pick<AirStation, "source" | "attribution">,
+): string[] {
+  const source = station?.source ?? "";
+  if (weatherSource === "KMA" && (!source || source === "airkorea"))
+    return [airSource(), airDisclaimer()];
+  const name = station?.attribution || source;
+  return name ? [t("air.providerCredit", { name })] : [];
+}
 const forecastDescriptions: Record<string, MessageKey> = {
   kaq: "air.forecast.kaq",
   airkorea: "air.forecast.airkorea",

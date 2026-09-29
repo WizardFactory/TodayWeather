@@ -51,6 +51,7 @@ const ja: Catalog = {
   "air.source": "大気汚染情報：韓国環境部／韓国環境公団（AirKorea）",
   "air.disclaimer":
     "認証前のリアルタイムデータのため、データに誤りが含まれる場合があります。",
+  "air.providerCredit": "大気質データ：{name}",
   "air.forecast.kaq":
     "大気質予報データは「安養大学校 気候エネルギー環境融合研究所（略称：安養大学校 気候融合研究所、所長：環境エネルギー工学科 ク・ユンソ教授）」が提供するデータです。",
   "air.forecast.airkorea":
@@ -212,6 +213,7 @@ const ja: Catalog = {
   "nation.mapHint":
     "地域配置図 · 実際の縮尺ではありません。すべての数値はリストでご確認ください。",
   "nation.listTitle": "地域別の観測",
+  "nation.empty": "地域別の観測データがありません",
   "nation.rainHint": "降水量は直近1時間の観測値です。",
   "nation.viewWeather": "{name}の天気を見る",
   // Weather warnings page.
@@ -309,6 +311,8 @@ const ja: Catalog = {
   "help.sources.title": "情報の出典",
   "help.sources.body":
     "気象情報：韓国気象庁。{source}。{disclaimer} 海外の天気は、既存のTodayWeatherの提供経路（Visual Crossing）を使用しています。サンプルモードは常に区別して表示します。提供されていない値は0ではなく「—」で表示します。",
+  "help.sources.air":
+    "海外の地域やAirKoreaのデータがない場合は、別の大気質提供元（Googleなど）のデータを表示し、大気質カードの下に提供元を記載します。",
   "help.sources.precipitation":
     "過去の時間・日は観測降水量を、これから先は韓国気象庁の予報をもとにサーバーが算出した降水量と降水確率を表示します。超短時間予報の1時間降水量は区分の下限値のため「約」を付けて表示します。",
   "help.accessibility.title": "アクセシビリティと外部マップ",

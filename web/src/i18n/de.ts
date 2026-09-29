@@ -55,6 +55,7 @@ const de: Catalog = {
     "Luftschadstoffdaten: Umweltministerium / Korea Environment Corporation (AirKorea)",
   "air.disclaimer":
     "Es handelt sich um ungeprüfte Echtzeitdaten, die Fehler enthalten können.",
+  "air.providerCredit": "Luftqualitätsdaten: {name}",
   "air.forecast.kaq":
     "Die Luftqualitätsvorhersagen stammen vom „Anyang University Climate, Energy and Environment Convergence Research Institute“ (kurz: Anyang University Climate Convergence Research Institute; Leitung: Prof. Koo Youn-Seo, Fachbereich Umwelt- und Energietechnik).",
   "air.forecast.airkorea":
@@ -223,6 +224,7 @@ const de: Catalog = {
   "nation.mapHint":
     "Schematische Karte · nicht maßstabsgetreu. Alle Werte finden Sie in der Liste.",
   "nation.listTitle": "Messwerte nach Region",
+  "nation.empty": "Keine regionalen Messwerte",
   "nation.rainHint": "Niederschlag: Messwert der letzten Stunde.",
   "nation.viewWeather": "Wetter für {name} ansehen",
   // Weather warnings page.
@@ -324,6 +326,8 @@ const de: Catalog = {
   "help.sources.title": "Datenquellen",
   "help.sources.body":
     "Wetterdaten: Koreanischer Wetterdienst (KMA). {source}. {disclaimer} Wetter im Ausland stammt aus der bisherigen TodayWeather-Quelle (Visual Crossing). Der Beispielmodus ist immer gesondert gekennzeichnet. Fehlende Werte werden als „—“ statt 0 angezeigt.",
+  "help.sources.air":
+    "Für andere Länder und wenn AirKorea keine Daten hat, stammt die Luftqualität von einem anderen Anbieter (etwa Google), der unter der Luftqualitätskarte genannt wird.",
   "help.sources.precipitation":
     "Für vergangene Stunden und Tage wird gemessener Niederschlag angezeigt, für die Zukunft vom Server aus der KMA-Vorhersage berechnete Niederschlagsmengen und -wahrscheinlichkeiten. Die 1-Stunden-Menge der Kürzestfristvorhersage ist die Untergrenze einer Kategorie und wird daher mit „ca.“ angezeigt.",
   "help.accessibility.title": "Barrierefreiheit und externe Karte",
