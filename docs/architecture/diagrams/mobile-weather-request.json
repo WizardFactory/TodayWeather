@@ -125,6 +125,14 @@
         "Service host routing and workers observed; provider results and DB queries untested.",
         "Client attempts may overlap at 0 / 2 / 4 s; Lambda backend retries up to 3 times."
       ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Overseas UV contract (#2634)",
+      "items": [
+        "Repository change: VC uvindex travels through the converter, DSF parser and optional cache fields.",
+        "Current UV and daily maximum: uvIndex plus mobile ultrv / ultrvGrade / ultrvStr. Valid zero survives; missing stays absent. Production rollout is separate."
+      ]
     }
   ]
 }

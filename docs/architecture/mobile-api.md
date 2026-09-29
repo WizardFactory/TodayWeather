@@ -189,6 +189,34 @@ The response shape differs from KMA: world weather uses `daily`, `hourly`, `this
 
 Sources: [world controller](../../server/controllers/worldWeather/controllerWorldWeather.js), [world unit conversion](../../server/controllers/worldWeather/controller.ww.units.js), [client parser selection](../../client/www/js/service.weatherutil.js).
 
+### Overseas UV (#2634)
+
+Visual Crossing `uvindex` is requested and carried through the converter, DSF parser
+and optional `DsfForecast` current/hourly/daily `uvIndex` fields. The final overseas
+`thisTime[]` and `daily[]` rows expose numeric `uvIndex` and mobile-compatible
+`ultrv`, `ultrvGrade`, `ultrvStr`. Current UV is the current observation (or the
+current-hour fallback); daily UV is the provider's daily maximum. A daily weather
+fallback never supplies UV for a missing current/hourly observation.
+
+Only finite nonnegative numbers are accepted, including zero. Missing, null,
+non-numeric, nonfinite and negative values stay absent; old cache documents have
+no UV default and remain usable until normal refresh. UV does not depend on the
+requested temperature/wind units. Request-local translations and the existing
+KMA UV grade boundaries/labels are reused; translated strings are not cached.
+
+Existing mobile templates read the daily `ultrv`/grade/text fields (including the
+today summary), while the web normalizer accepts both these fields and `uvIndex`.
+No native widget UV display is added. The former Dark Sky path did not expose UV,
+so this is an additive capability, not a restored pre-migration field. Request
+range, `include`, cache policy and number of provider calls are unchanged; actual
+billed cost and deployed responses still require separate live verification.
+
+Regression: `server/test/offline/overseas-uv.test.js`; real isolated Mongo/HTTP
+smoke: `server/test/offline/overseas-uv-smoke.js`. The Tokyo UV fixture was recorded on 2026-09-29; additional edge cases use
+explicitly synthetic UV. A paired live Tokyo request returned queryCost 49 both
+before and after adding UV (same last1days/next7days range). Local evidence does
+not establish production rollout. [Updated request diagram](diagrams/mobile-weather-request.html).
+
 ### Overseas request-time air provider chain (#2628 PR 2)
 
 The active `queryTwoDaysWeatherNewForm` starts the shared [air service](../../server/lib/AQI/airFallback.js) in parallel with weather retrieval. This covers the v000901/v000902 DSF coordinate routes, v000903 (which reuses v000902), and the widget route using that query. A weather cache hit still runs the air branch. These requests no longer read/prune the old `aqi` collection or issue a second legacy WAQI request. Older collector/query methods remain for their existing callers.

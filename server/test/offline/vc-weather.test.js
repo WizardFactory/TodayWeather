@@ -97,7 +97,7 @@ test('requester builds the Timeline request and logs cost and latency without th
     assert.equal(url.searchParams.get('include'), 'days,hours,current');
     assert.equal(url.searchParams.get('key'), KEY);
     for (const e of ['datetimeEpoch', 'temp', 'feelslike', 'humidity', 'precip', 'precipprob', 'preciptype', 'windspeed', 'winddir',
-        'pressure', 'visibility', 'cloudcover', 'conditions', 'icon', 'source', 'sunriseEpoch', 'sunsetEpoch', 'moonphase', 'tempmax', 'tempmin']) {
+        'pressure', 'visibility', 'cloudcover', 'conditions', 'icon', 'source', 'sunriseEpoch', 'sunsetEpoch', 'moonphase', 'tempmax', 'tempmin', 'uvindex']) {
         assert(url.searchParams.get('elements').split(',').includes(e), 'element ' + e);
     }
     assert.equal(https.calls[0].options.agent.options.keepAlive, true, 'keep-alive agent');
