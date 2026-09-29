@@ -93,6 +93,8 @@ test.describe("focus management (round 2 N1/N2/N5/N7/N8)", () => {
     await expect(
       page.getByRole("heading", { name: "설정", level: 1 }),
     ).toBeVisible();
+    // Focus is applied in an effect after the route commits.
+    await expect.poll(() => active(page)).toBe("main-content");
     const link = page.locator(".sidebar").getByRole("link", { name: "설정" });
     await link.focus();
     await expect(link).toBeFocused();

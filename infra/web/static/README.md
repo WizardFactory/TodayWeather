@@ -190,8 +190,9 @@ A saved coming-soon page without `release.json` cannot pass the app uploader. Us
 
 After rollback authorization:
 
-1. Restore the saved `index.html` with its original content type and cache-control metadata. Prefer an S3 version copy when the prior version is retained (the version inventory backup records the ID); otherwise upload the backed-up bytes with the metadata from `index-metadata.json`. Do not infer metadata from the local filename.
-2. Publish the checked-in recovery worker at the same `/sw.js` URL used by the app, then invalidate and wait:
+1. Restore **every live key in the pre-release backup**, not only `index.html`. Use the captured `object-versions.json` entries whose `IsLatest` is true (excluding delete markers), copying each retained version back onto its original key with metadata directive `COPY`. This restores original bytes and metadata, including placeholder-owned icons or scripts overwritten by the app. If a saved version is unavailable, restore the backed-up bytes and per-key metadata; stop if either is missing. Do not infer metadata from filenames.
+2. Compare the failed release's complete artifact inventory with the pre-release key inventory. Remove only release-added **unversioned shell keys** (`release.json`, `theme.js`, `manifest.webmanifest`, `icon.svg` and files under `icons/`) that were absent before the release. In particular, a first-release placeholder with no `release.json` must return 403/404 for that path after rollback, rather than advertise the failed app release. Preserve hashed `assets/` for returning old tabs, preserve unrelated keys, and reserve `/sw.js` for the recovery worker below. Review the exact key list before object deletion; never use bucket-wide `sync --delete`.
+3. Publish the checked-in recovery worker at the same `/sw.js` URL used by the app, then invalidate and wait:
 
    ```sh
    aws s3 cp infra/web/static/recovery-worker.js "s3://$WEB_BUCKET/sw.js" \
@@ -200,8 +201,19 @@ After rollback authorization:
    aws cloudfront wait invalidation-completed --distribution-id "$WEB_DISTRIBUTION" --id <returned-id>
    ```
 
-3. Restore the saved inner distribution configuration using a fresh ETag as described in Option A; wait for deployment. Keep `/sw.js` reachable through the original S3 origin, with `no-cache`. Do not delete it when restoring the placeholder or apply a distribution-wide error-to-HTML fallback. The saved placeholder may use inline CSS, which needs its original headers policy restored.
-4. Verify a browser with the released worker and a fresh browser: existing app windows return to `/`, the placeholder appears, no app registration or `tw-shell-*` cache remains, and preferences/other caches survive. On an already-open app, revisiting/focusing triggers its normal update check; incident checks may explicitly call `registration.update()` in DevTools. Retain the recovery worker for returning clients. Offline clients cannot be forced to update; they recover only after reconnecting and checking the worker.
+4. Restore the saved inner distribution configuration using a fresh ETag as described in Option A; wait for deployment. Keep `/sw.js` reachable through the original S3 origin, with `no-cache`. Do not delete it when restoring the placeholder or apply a distribution-wide error-to-HTML fallback. The saved placeholder may use inline CSS, which needs its original headers policy restored.
+5. After the restored distribution configuration is deployed, create another `/*` invalidation and wait for completion using the commands in step 3. Verify the final public worker bytes and cache header:
+
+   ```sh
+   curl -fsS -D "$WEB_BACKUP_DIR/recovery-headers.txt" https://app.todayweather.ai/sw.js \
+     -o "$WEB_BACKUP_DIR/served-recovery-worker.js"
+   cmp infra/web/static/recovery-worker.js "$WEB_BACKUP_DIR/served-recovery-worker.js"
+   rg -i '^cache-control:.*no-cache' "$WEB_BACKUP_DIR/recovery-headers.txt"
+   ```
+
+   Also confirm `/release.json` is absent (403/404) when absent in the pre-release inventory; otherwise verify its restored version. Root HTML and every restored placeholder-owned resource must match the backup. Do not declare rollback complete based only on the homepage returning 200.
+
+6. Verify a browser with the released worker and a fresh browser: existing app windows return to `/`, the placeholder appears, no app registration or `tw-shell-*` cache remains, and preferences/other caches survive. On an already-open app, revisiting/focusing triggers its normal update check; incident checks may explicitly call `registration.update()` in DevTools. Retain the recovery worker for returning clients. Offline clients cannot be forced to update; they recover only after reconnecting and checking the worker.
 
 `web/e2e/recovery-worker.spec.ts` verifies this lifecycle in real Chromium against the built app, including offline shell use, two enrolled tabs, preserved settings/unrelated cache and a fresh browser. API data is isolated with fixtures; this is not a live AWS rollback. Run it with `npx playwright test web/e2e/recovery-worker.spec.ts` after a complete build. A subsequent approved app release uploads its normal `sw.js` again. Prefer a complete known-good app artifact for ordinary release-to-release rollback.
 

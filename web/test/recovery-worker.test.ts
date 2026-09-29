@@ -59,6 +59,11 @@ it("removes only app shell caches, unregisters and returns app windows to the pl
   expect(remove.mock.calls).toEqual([["tw-shell-old"], ["tw-shell-new"]]);
   expect(unregister).toHaveBeenCalledOnce();
   expect(navigate).toHaveBeenCalledWith("https://app.todayweather.ai/");
-  expect(order.indexOf("unregister")).toBeLessThan(order.indexOf("navigate"));
-  expect(order.indexOf("claim")).toBeLessThan(order.indexOf("unregister"));
+  expect(order).toEqual([
+    "tw-shell-old",
+    "tw-shell-new",
+    "claim",
+    "unregister",
+    "navigate",
+  ]);
 });

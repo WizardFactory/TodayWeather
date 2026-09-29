@@ -72,6 +72,11 @@ test("placeholder rollback recovers enrolled tabs without deleting user data", a
     const preferences = await page.evaluate(() =>
       localStorage.getItem("tw.web.v1.preferences"),
     );
+    expect(
+      preferences,
+      "the app must persist real preferences before recovery",
+    ).not.toBeNull();
+    expect(JSON.parse(preferences!).settings).toBeDefined();
     // Abort origin reads as well as offline emulation to prove the old cached shell serves navigation.
     await context.setOffline(true);
     await page.route(origin + "/**", (r) => r.abort("internetdisconnected"));
