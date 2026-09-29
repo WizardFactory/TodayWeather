@@ -1413,3 +1413,38 @@ test('the world response reports Visual Crossing as its source', () => {
     assert.doesNotMatch(source, /pubDate\.DSF\s*=/);
     assert.match(fs.readFileSync(path.join(repo, 'client/www/js/service.weatherutil.js'), 'utf8'), /pubDate\.hasOwnProperty\('VC'\)/);
 });
+
+// #2635: preserve typed temporary failures through the existing fallback policy.
+test('temporary provider errors carry marker/UTC budget deadlines without changing stored fallback', async () => {
+    const clock = {now: Date.parse('2026-09-29T23:59:10Z')};
+    const locks = memoryLockModel();
+    const usage = memoryUsageModel();
+    const C = loadDsfController({model: memoryDsfModel(), lockModel: locks, requester: fakeVcRequester({}), clock, usageModel: usage, dailyRecordLimit: 49});
+    const c = new C();
+    locks.locks.set('~provider', {expireAt: new Date(clock.now + 123456)});
+    let err = await new Promise(resolve => c._checkProvider('combined', resolve));
+    assert.equal(err.code, 'EWEATHERUNAVAILABLE');
+    assert.equal(err.retryAt, clock.now + 123456);
+    const stored = {current: {dateObj: new Date(clock.now - 1000)}};
+    assert.equal((await new Promise(resolve => c._fallback(stored, err, (e, data) => resolve({e, data})))).data, stored);
+    locks.locks.clear();
+    usage.days.set('2026-09-29', {records: 49});
+    err = await new Promise(resolve => c._checkProvider('forecast', resolve));
+    assert.equal(err.code, 'EWEATHERUNAVAILABLE');
+    assert.equal(err.retryAt, Date.parse('2026-09-30T00:00:00Z'));
+    clock.now = err.retryAt;
+    assert.equal(await new Promise(resolve => c._checkProvider('forecast', resolve)), undefined);
+});
+
+test('budget lookup crossing UTC midnight rechecks the new day', async () => {
+    const clock = {now: Date.parse('2026-09-29T23:59:59.999Z')};
+    const seen = [];
+    const usage = {findById(day, cb) {
+        seen.push(day);
+        clock.now = Date.parse('2026-09-30T00:00:00Z');
+        cb(null, {records: day === '2026-09-29' ? 100 : 0});
+    }};
+    const C = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: fakeVcRequester({}), clock, usageModel: usage, dailyRecordLimit: 100});
+    assert.equal(await new Promise(resolve => new C()._checkProvider('forecast', resolve)), undefined);
+    assert.deepEqual(seen, ['2026-09-29', '2026-09-30']);
+});
