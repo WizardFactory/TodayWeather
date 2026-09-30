@@ -122,7 +122,7 @@ For example, after the CLI setup above:
   --query 'logGroups[].{name:logGroupName,retentionDays:retentionInDays}'
 ```
 
-CloudFront viewer logs include cache responses and direct EC2 routes. API Gateway logs cover requests that reached that API; do not add the two counts. For a month of viewer requests, use the S3 logs rather than treating seven days of Gateway retention as a month. Fix the exact UTC window, paginate object listings, filter each record by timestamp, and group coordinate/address segments before reporting. The [30-day report](../../reports/aws/api-traffic-2026-09-22.md) records the aggregation and delivery-delay limitations.
+CloudFront viewer logs include cache responses and direct EC2 routes. API Gateway logs cover requests that reached that API; do not add the two counts. For a month of viewer requests, use the S3 logs rather than treating seven days of Gateway retention as a month. Fix the exact UTC window, paginate object listings, filter each record by timestamp, and group coordinate/address segments before reporting. The [30-day report](../evidence/aws/api-traffic-2026-09-22.md) records the aggregation and delivery-delay limitations.
 
 ## New Paseo workspaces
 

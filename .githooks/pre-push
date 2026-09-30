@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+root=$(git rev-parse --show-toplevel)
+exec python3 "$root/scripts/check-artifact-policy.py" --root "$root" --pre-push "$1"

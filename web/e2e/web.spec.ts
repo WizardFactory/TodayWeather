@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures";
 const screenshots =
   process.env.WEB_SCREENSHOTS ??
-  "reports/sdlc/webapp-implementation/screenshots";
+  "reports/verification/web/screenshots";
 function snapshotCount(page: import("@playwright/test").Page) {
   return page.evaluate(
     () =>

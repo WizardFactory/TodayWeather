@@ -1,0 +1,724 @@
+{
+  "baseline": "a5fdde1fb5bf0d84a4af7aac8815b3690a57a8c2",
+  "original_report_count": 652,
+  "retained_count": 143,
+  "historical_source": "https://github.com/WizardFactory/TodayWeather/blob/a5fdde1fb5bf0d84a4af7aac8815b3690a57a8c2/reports/",
+  "policy": "Selected sources below were copied before original paths were untracked. Other report files remain locally and in baseline Git history. Dated results are not fresh verification.",
+  "retained": [
+    {
+      "source": "reports/architecture/aws-infrastructure/README.md",
+      "destination": "docs/evidence/architecture/aws-infrastructure/README.md",
+      "source_sha256": "9251bd5878ef73302f3196d83290d2f22260b45585c50d5609fa43f878975728"
+    },
+    {
+      "source": "reports/architecture/aws-infrastructure/delivery.json",
+      "destination": "docs/evidence/architecture/aws-infrastructure/delivery.json",
+      "source_sha256": "757be8fbf6bc4a921df69dc5aaef3590da1e4bfabe5a8fff4f7c5d2db3acbde0"
+    },
+    {
+      "source": "reports/architecture/aws-infrastructure/handoff.json",
+      "destination": "docs/evidence/architecture/aws-infrastructure/handoff.json",
+      "source_sha256": "57070d0b31e80b00309c77cd98fcde1bff2b7c70cfccf9b84edf8465e7a4a017"
+    },
+    {
+      "source": "reports/architecture/aws-infrastructure/validation.json",
+      "destination": "docs/evidence/architecture/aws-infrastructure/validation.json",
+      "source_sha256": "52752391738c1ea2effdde478512e69d4477bb84e0fae5c8258ba4b119c5a1dd"
+    },
+    {
+      "source": "reports/aws/api-traffic-2026-09-22-daily.csv",
+      "destination": "docs/evidence/aws/api-traffic-2026-09-22-daily.csv",
+      "source_sha256": "00ed357e49bf7af4d3e2f4e041ab15b637fb5743acc36fa5a126e0c5a814b915"
+    },
+    {
+      "source": "reports/aws/api-traffic-2026-09-22-evidence.json",
+      "destination": "docs/evidence/aws/api-traffic-2026-09-22-evidence.json",
+      "source_sha256": "0f15f96a401cc1b8a139d5a03a46e572b9982ae3875bfc57ae523560a2206140"
+    },
+    {
+      "source": "reports/aws/api-traffic-2026-09-22-routes.csv",
+      "destination": "docs/evidence/aws/api-traffic-2026-09-22-routes.csv",
+      "source_sha256": "769f88fdf3a32961954de4dc8fe8b72727956160471f5011c6ebae5f20fe7c7e"
+    },
+    {
+      "source": "reports/aws/api-traffic-2026-09-22.md",
+      "destination": "docs/evidence/aws/api-traffic-2026-09-22.md",
+      "source_sha256": "83194a6431b8c35483eaa0e31cfbf470988e7bb02528d16836391e100a5e2725"
+    },
+    {
+      "source": "reports/rewrite-verification/README.md",
+      "destination": "docs/evidence/rewrite/README.md",
+      "source_sha256": "3093b077fd67242cca4d1c95455e9046c1e6b656673f7cdbf7393dca9c1b8524"
+    },
+    {
+      "source": "reports/rewrite-verification/capture-source-parity.json",
+      "destination": "docs/evidence/rewrite/capture-source-parity.json",
+      "source_sha256": "99ddf9f79181b28161c6e081fae15dbefcd679bc5080486f47e30eae94ce02b3"
+    },
+    {
+      "source": "reports/rewrite-verification/capture/README.md",
+      "destination": "scripts/verification/rewrite/capture/README.md",
+      "source_sha256": "5e50d5adf0a7cf16b04bbc49143a4aaaf1ebb915b12e38cc3b95429db610b192"
+    },
+    {
+      "source": "reports/rewrite-verification/capture/RenderCheck.swift",
+      "destination": "scripts/verification/rewrite/capture/RenderCheck.swift",
+      "source_sha256": "68954bf668b3408ead885c65c5d97e54b8b62984bc867d9e686d288115433ca7"
+    },
+    {
+      "source": "reports/rewrite-verification/capture/build-gallery.py",
+      "destination": "scripts/verification/rewrite/capture/build-gallery.py",
+      "source_sha256": "31ce9054bc10c5556d08b226dc9226c9e09f1ad6aa260eb685ea7000381d8443"
+    },
+    {
+      "source": "reports/rewrite-verification/capture/capture-screen.py",
+      "destination": "scripts/verification/rewrite/capture/capture-screen.py",
+      "source_sha256": "21002b7e4c677d8a21d489ed5f529e11ef948a439d4a551149f3a58912689fbf"
+    },
+    {
+      "source": "reports/rewrite-verification/capture/evaluate.py",
+      "destination": "scripts/verification/rewrite/capture/evaluate.py",
+      "source_sha256": "d2a9b402555570d764be34931582d4edf4258c8f6ddba18cbea0c8820ff62f92"
+    },
+    {
+      "source": "reports/rewrite-verification/capture/inspect.js",
+      "destination": "scripts/verification/rewrite/capture/inspect.js",
+      "source_sha256": "e8c833894d9aa3172dfea4bc0947de34a6bbdccac9e460d4bb1d9be1d75eab0b"
+    },
+    {
+      "source": "reports/rewrite-verification/capture/prepare.py",
+      "destination": "scripts/verification/rewrite/capture/prepare.py",
+      "source_sha256": "47e275d4d735b92b6da819cd6ef433e3341bcd45e3b1488ca3ee5532689af76f"
+    },
+    {
+      "source": "reports/rewrite-verification/capture/render-harness.js",
+      "destination": "scripts/verification/rewrite/capture/render-harness.js",
+      "source_sha256": "5ef0300b8e490d39f9f0b334e5c6fbb67bbde69431ebacb979d38a0299c0523c"
+    },
+    {
+      "source": "reports/rewrite-verification/capture/server.py",
+      "destination": "scripts/verification/rewrite/capture/server.py",
+      "source_sha256": "2c0606d306cdac3593da31b1c027eaa3d3f4d83b37dd52efc90426180e60771d"
+    },
+    {
+      "source": "reports/rewrite-verification/gap-review-2026-09-24.md",
+      "destination": "docs/evidence/rewrite/gap-review-2026-09-24.md",
+      "source_sha256": "a62e1cb2ead89253ac959db69c62c3e0e15d27c65b1b611e6d7ae5e89cea4e6d"
+    },
+    {
+      "source": "reports/rewrite-verification/independent-review.md",
+      "destination": "docs/evidence/rewrite/independent-review.md",
+      "source_sha256": "cabc44cb9f7f8454943277cd268196fba1449934ee39d975b94573d8f79108f4"
+    },
+    {
+      "source": "reports/rewrite-verification/native/README.md",
+      "destination": "scripts/verification/rewrite/native/README.md",
+      "source_sha256": "3766b7ba129ebbc5f96fac564ca4725724e5a33d30acc5bc4fe6494bae3bc774"
+    },
+    {
+      "source": "reports/rewrite-verification/native/add-native-captures.py",
+      "destination": "scripts/verification/rewrite/native/add-native-captures.py",
+      "source_sha256": "136365f28483eacce5fb3a9a0d8f4dcdc31ba0cfc893ed389a2af413b7c61cdc"
+    },
+    {
+      "source": "reports/rewrite-verification/native/build-harness.sh",
+      "destination": "scripts/verification/rewrite/native/build-harness.sh",
+      "source_sha256": "94eb42a6ff3cc352dad889b7e87e46b6722c17ca4587a9e7f5190125f7bee07f"
+    },
+    {
+      "source": "reports/rewrite-verification/native/cdp-probe.mjs",
+      "destination": "scripts/verification/rewrite/native/cdp-probe.mjs",
+      "source_sha256": "a1a71ee0e69a64c936cb581feced16f7eeaba4582ae78eedfdd44796c8626601"
+    },
+    {
+      "source": "reports/rewrite-verification/native/font-scale-check.sh",
+      "destination": "scripts/verification/rewrite/native/font-scale-check.sh",
+      "source_sha256": "9c649c30a1e003fd1062dcb00f67da734461e1b16d2e05cb21775a0addc694c2"
+    },
+    {
+      "source": "reports/rewrite-verification/native/layout-2026-09-29.json",
+      "destination": "docs/evidence/rewrite/native/layout-2026-09-29.json",
+      "source_sha256": "e7fc869e996760c2a9ddeff5eb2e4a62b82637f9a7c841cecd80b444500d8ef8"
+    },
+    {
+      "source": "reports/rewrite-verification/native/layout-2026-09-29.md",
+      "destination": "docs/evidence/rewrite/native/layout-2026-09-29.md",
+      "source_sha256": "588eda8c2683e8cfd8c04a77a095b673fd1289f9ce5bd344f328417cb0854aa9"
+    },
+    {
+      "source": "reports/rewrite-verification/native/layout-2026-09-29/android-320-before.png",
+      "destination": "docs/evidence/rewrite/native/layout-2026-09-29/android-320-before.png",
+      "source_sha256": "c06e3d340697477b4488c6442edd35b633c2a5c0bce0d081591ebe16418e6c5a"
+    },
+    {
+      "source": "reports/rewrite-verification/native/layout-2026-09-29/android-anr-initial.png",
+      "destination": "docs/evidence/rewrite/native/layout-2026-09-29/android-anr-initial.png",
+      "source_sha256": "50a0baf451d2b6124fae1eb8445a45b68595eedca5bcd3648f5703c7b13c5f5c"
+    },
+    {
+      "source": "reports/rewrite-verification/native/layout-2026-09-29/android-push.jpg",
+      "destination": "docs/evidence/rewrite/native/layout-2026-09-29/android-push.jpg",
+      "source_sha256": "4d8e47c3ae6ebfa3af62787064ddc4071ecd4abfba76e14d4de2c8eee9ad5af7"
+    },
+    {
+      "source": "reports/rewrite-verification/native/layout-2026-09-29/android-seoul.jpg",
+      "destination": "docs/evidence/rewrite/native/layout-2026-09-29/android-seoul.jpg",
+      "source_sha256": "10a6a9185630d5a8285760e07f36e193be56bf04711ac630d09aa61f3e144135"
+    },
+    {
+      "source": "reports/rewrite-verification/native/layout-2026-09-29/android-tokyo.jpg",
+      "destination": "docs/evidence/rewrite/native/layout-2026-09-29/android-tokyo.jpg",
+      "source_sha256": "11c92c9c36955778ddadc24ad9f87c93d762e9f9a9b1e054f18e230ba92153ab"
+    },
+    {
+      "source": "reports/rewrite-verification/native/layout-2026-09-29/ios-push.jpg",
+      "destination": "docs/evidence/rewrite/native/layout-2026-09-29/ios-push.jpg",
+      "source_sha256": "4adcfc03d00c5cfe1060d7f7c21623d1e6f13fd2018ee2e271f937e2306d8365"
+    },
+    {
+      "source": "reports/rewrite-verification/native/layout-2026-09-29/ios-seoul.jpg",
+      "destination": "docs/evidence/rewrite/native/layout-2026-09-29/ios-seoul.jpg",
+      "source_sha256": "f0b5e679f7f6eb67e459cb4f4fd99d321463760fa025338cb1f435c393a30984"
+    },
+    {
+      "source": "reports/rewrite-verification/native/layout-2026-09-29/ios-tokyo.jpg",
+      "destination": "docs/evidence/rewrite/native/layout-2026-09-29/ios-tokyo.jpg",
+      "source_sha256": "12766360b2a7126b3d49f775034b1a34a862a42bf2e2cfbbe19cd72853af093f"
+    },
+    {
+      "source": "reports/rewrite-verification/native/pre-merge-2026-09-29.md",
+      "destination": "docs/evidence/rewrite/native/pre-merge-2026-09-29.md",
+      "source_sha256": "706e38bf5d9790eb56265de2ddee2dc89ba8181857f66a1e8ee6105482ace8d9"
+    },
+    {
+      "source": "reports/rewrite-verification/native/run.mjs",
+      "destination": "scripts/verification/rewrite/native/run.mjs",
+      "source_sha256": "47656fca50696566ef756c29d8197afe37650b43b0094b043b86179483153801"
+    },
+    {
+      "source": "reports/rewrite-verification/native/triage.mjs",
+      "destination": "scripts/verification/rewrite/native/triage.mjs",
+      "source_sha256": "c2d61f949c40cfc492f49131a8fff0433c6e23b28e49a65d6160c7de8a2212d0"
+    },
+    {
+      "source": "reports/rewrite-verification/native/tw-harness.js",
+      "destination": "scripts/verification/rewrite/native/tw-harness.js",
+      "source_sha256": "4b15115d64753adddaf5379682115324743f30dd358d47867006297e503fb0c5"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/client-push-branch-entry.js",
+      "destination": "scripts/verification/rewrite/probes/client-push-branch-entry.js",
+      "source_sha256": "9cf5b5d4cf53e0c5e81cc3b40d1bb0888e9903864e338838255a1eb1d577a423"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/client-push-branch-entry.json",
+      "destination": "docs/evidence/rewrite/probes/client-push-branch-entry.json",
+      "source_sha256": "6dda7328e0db55e06e4b1b51c0434c20d99881adb66dadf6334221b57b3c9c6a"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/client-storage-migration.js",
+      "destination": "scripts/verification/rewrite/probes/client-storage-migration.js",
+      "source_sha256": "5caa4a0ee6ff8976748d0ab77ad5951225e9b257dcf7dbeb96563d8935362b54"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/client-storage-migration.json",
+      "destination": "docs/evidence/rewrite/probes/client-storage-migration.json",
+      "source_sha256": "2728dce16ae8cb01872169eb494647408d8e85cf300850569641c56c0c97d516"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/server-airkorea-station-merge.js",
+      "destination": "scripts/verification/rewrite/probes/server-airkorea-station-merge.js",
+      "source_sha256": "0b722cbbdf880922cb04b81ae65bf387623ef56775f6d26980e1d92d7452a856"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/server-airkorea-station-merge.json",
+      "destination": "docs/evidence/rewrite/probes/server-airkorea-station-merge.json",
+      "source_sha256": "fe9ac8b8e83b638aa7f2eea8a3022e9fb8caf5199de6d0695cf32d5d4eafbd7c"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/server-kmatimelib-timezones.js",
+      "destination": "scripts/verification/rewrite/probes/server-kmatimelib-timezones.js",
+      "source_sha256": "4e1ff29ead3af0fa534060741ededa41005a89e3a22f169ba200ddd18a3bd380"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/server-kmatimelib-timezones.json",
+      "destination": "docs/evidence/rewrite/probes/server-kmatimelib-timezones.json",
+      "source_sha256": "f4bc42fab3cccf8b9d7c4b7aa9cf14f3e0e3431e204f479d029ed18008a46d38"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/server-push-text-purchase-expiry.js",
+      "destination": "scripts/verification/rewrite/probes/server-push-text-purchase-expiry.js",
+      "source_sha256": "ca22c42af6e053e5c001668dea8770c52d67b9940be744c30a291fe4f79a3d79"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/server-push-text-purchase-expiry.json",
+      "destination": "docs/evidence/rewrite/probes/server-push-text-purchase-expiry.json",
+      "source_sha256": "12d006e525c7abb9a6f85a8ce886702825507c55773bcb1b49f750e2e5fc7c9a"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/server-unit-conversion.js",
+      "destination": "scripts/verification/rewrite/probes/server-unit-conversion.js",
+      "source_sha256": "74a697f6f5a43b707f6b1c76366f10aaee69b316f9ffbccdb3648cb6aa1a5461"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/server-unit-conversion.json",
+      "destination": "docs/evidence/rewrite/probes/server-unit-conversion.json",
+      "source_sha256": "667f82e886061de3d02855cb17d4391d917e8afbcc820fea2ab1b6a64521a237"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/start-popup-choice.js",
+      "destination": "scripts/verification/rewrite/probes/start-popup-choice.js",
+      "source_sha256": "0615c1164d974bedace1996430605d13630e5a628c1ef95b6b89c8cf19b0d3c3"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/start-popup-choice.json",
+      "destination": "docs/evidence/rewrite/probes/start-popup-choice.json",
+      "source_sha256": "767b44c04d02542c7f61f14248754c0f078f6b423b667fb34ae2f32b7f4c8eae"
+    },
+    {
+      "source": "reports/rewrite-verification/probes/weather-photo-selection.json",
+      "destination": "docs/evidence/rewrite/probes/weather-photo-selection.json",
+      "source_sha256": "85bf1380486645c2f16820e83c75456357b0f7e2e1ea59c28fc699611be37c6d"
+    },
+    {
+      "source": "reports/rewrite-verification/rebaseline-anchors.py",
+      "destination": "scripts/verification/rewrite/rebaseline-anchors.py",
+      "source_sha256": "2a9c8f127fe6d8e3b46b2526e01fa2b80d7b607138a5a23933826462f35c5c04"
+    },
+    {
+      "source": "reports/rewrite-verification/server-diagram-capture-manifest.json",
+      "destination": "docs/evidence/rewrite/server-diagram-capture-manifest.json",
+      "source_sha256": "3660dcffc97e09987ffcf6d7d18c296f51d5884fbb7cca4c216a7401d9b92c2c"
+    },
+    {
+      "source": "reports/rewrite-verification/server-diagram-captures.md",
+      "destination": "docs/evidence/rewrite/server-diagram-captures.md",
+      "source_sha256": "7ec1cf73ad8e072bfe91041bff80d3afcd7e745ad4695be993189dc11c74f89a"
+    },
+    {
+      "source": "reports/rewrite-verification/server-diagram-verification.md",
+      "destination": "docs/evidence/rewrite/server-diagram-verification.md",
+      "source_sha256": "1e2a6329b74a4c1bcc50d17484938575972d51dbc44088e3f4dc3aaa609713fe"
+    },
+    {
+      "source": "reports/rewrite-verification/server-domestic-delivery.json",
+      "destination": "docs/evidence/rewrite/server-domestic-delivery.json",
+      "source_sha256": "27ffcdc38916e66bb53c30bd15623e38ca3cf457fadb9fba3cbbe3d4b96f641f"
+    },
+    {
+      "source": "reports/rewrite-verification/server-domestic-validation.json",
+      "destination": "docs/evidence/rewrite/server-domestic-validation.json",
+      "source_sha256": "d6338ac80b64675a89ec6db3bd940eb4d2cba6cb263f783485e52cc255f7a6e1"
+    },
+    {
+      "source": "reports/rewrite-verification/server-nation-delivery.json",
+      "destination": "docs/evidence/rewrite/server-nation-delivery.json",
+      "source_sha256": "56fc1cd18942e05eafbf241ff35759c16fc610e8d5742ded351206dabe21fbc8"
+    },
+    {
+      "source": "reports/rewrite-verification/server-nation-validation.json",
+      "destination": "docs/evidence/rewrite/server-nation-validation.json",
+      "source_sha256": "2522a556b6af638f421678be5bae0b1729c26f51368afaa893fba15a32c805aa"
+    },
+    {
+      "source": "reports/rewrite-verification/server-version-delivery.json",
+      "destination": "docs/evidence/rewrite/server-version-delivery.json",
+      "source_sha256": "a49adc611743a4065ff58638ff314d2882c4b582d23cf0ba3150fe799091ab46"
+    },
+    {
+      "source": "reports/rewrite-verification/server-version-validation.json",
+      "destination": "docs/evidence/rewrite/server-version-validation.json",
+      "source_sha256": "9553d5f91708c3ae5595009dad43228c3671159f336d2c8af910139fff59def7"
+    },
+    {
+      "source": "reports/rewrite-verification/server-world-delivery.json",
+      "destination": "docs/evidence/rewrite/server-world-delivery.json",
+      "source_sha256": "b77d348456542530dc5f68ae824326e11a3e07c2284d56ac85b3fb0e04d7cdff"
+    },
+    {
+      "source": "reports/rewrite-verification/server-world-validation.json",
+      "destination": "docs/evidence/rewrite/server-world-validation.json",
+      "source_sha256": "4a6e03745b63d3d7606c032446b7a6b0724664551a0a27279e8e135425e1f8bc"
+    },
+    {
+      "source": "reports/rewrite-verification/ta-air.json",
+      "destination": "docs/evidence/rewrite/ta-air.json",
+      "source_sha256": "6b6c673e69c6e218a46196247fe4453ead246be9470845de2d4652d8b8c989bb"
+    },
+    {
+      "source": "reports/rewrite-verification/ta-favorites.json",
+      "destination": "docs/evidence/rewrite/ta-favorites.json",
+      "source_sha256": "76aeedabfc0998fa4d7bb73fc6c419588e76263d7158c7ab394c3eb9eb582ab3"
+    },
+    {
+      "source": "reports/rewrite-verification/ta-theme-dark-air.json",
+      "destination": "docs/evidence/rewrite/ta-theme-dark-air.json",
+      "source_sha256": "5bfbc6b87fec1cc4d6fc9414b298259478bb96d90c6532d590b5fbc618f240c3"
+    },
+    {
+      "source": "reports/rewrite-verification/ta-weather.json",
+      "destination": "docs/evidence/rewrite/ta-weather.json",
+      "source_sha256": "c2c47238c764d50a17aae6e528facf90e52958e4de5458ab6bdef604643611a9"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-air.json",
+      "destination": "docs/evidence/rewrite/tw-air.json",
+      "source_sha256": "e27a34a868d18b3a952e51623675f819b52f9c4d50f1c5c8e7d8e4c925d03236"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-android-mode-hourly.json",
+      "destination": "docs/evidence/rewrite/tw-android-mode-hourly.json",
+      "source_sha256": "ce24955dc574569c1fd83a43f8437758bf5afe06f07ab42e17ba0b235d07953c"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-android-mode-menu.json",
+      "destination": "docs/evidence/rewrite/tw-android-mode-menu.json",
+      "source_sha256": "ad574f5006ddf8bb248e4edac10aaf527241b698978bf987ad82a1b8583c28e1"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-daily.json",
+      "destination": "docs/evidence/rewrite/tw-daily.json",
+      "source_sha256": "91f8cfed7f9d88cd769dd70b37cc575e35da691e7146de204f253e7c0c30b5cf"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-favorites-editing.json",
+      "destination": "docs/evidence/rewrite/tw-favorites-editing.json",
+      "source_sha256": "72c52d6395a52663763ef5402607a38e1c83338314ba402f8482b1793af9feda"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-favorites-search.json",
+      "destination": "docs/evidence/rewrite/tw-favorites-search.json",
+      "source_sha256": "0113a08d043325d2b6ac64dd09a5d5586d1184c5d9af8ad489b693cae8a8cb45"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-favorites.json",
+      "destination": "docs/evidence/rewrite/tw-favorites.json",
+      "source_sha256": "fa02823925b40306ea501d7f117de58c93b1a2f9ef5f73f3be803e8472347a25"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-guide.json",
+      "destination": "docs/evidence/rewrite/tw-guide.json",
+      "source_sha256": "789d49ba033ebf4a8459ff17acd4eb4af2f80dcc9bfa73bbfd08c8065ed4cdaa"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-hourly.json",
+      "destination": "docs/evidence/rewrite/tw-hourly.json",
+      "source_sha256": "ce24955dc574569c1fd83a43f8437758bf5afe06f07ab42e17ba0b235d07953c"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-ipad-daily.json",
+      "destination": "docs/evidence/rewrite/tw-ipad-daily.json",
+      "source_sha256": "672d58b13e66bf516de4d3c55183a2f3c6d6401d383392230dc1fc013ef8527d"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-ipad-hourly.json",
+      "destination": "docs/evidence/rewrite/tw-ipad-hourly.json",
+      "source_sha256": "26e563b653c145a9ddeb9d621bd44641931987df7b0b76686fb4edea5cde05ea"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-loading-header-spinner-dark.json",
+      "destination": "docs/evidence/rewrite/tw-loading-header-spinner-dark.json",
+      "source_sha256": "d1235f101b728c9b5a996ba9e08fef805e2501840f2ffbd004dc64f6e0e4cbbf"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-loading-header-spinner-light.json",
+      "destination": "docs/evidence/rewrite/tw-loading-header-spinner-light.json",
+      "source_sha256": "3dcddb3f5aaa25c1904dae6071ecda35c045f44f03d09eb37df29ad4bef6d28f"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-loading-overlay-search.json",
+      "destination": "docs/evidence/rewrite/tw-loading-overlay-search.json",
+      "source_sha256": "1c8b1a8661fe8d4ceb9571e52be65c5c5cb9875ad400722abe9a6f1c6f56f9ff"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-menu-en-us.json",
+      "destination": "docs/evidence/rewrite/tw-menu-en-us.json",
+      "source_sha256": "63850e7b4c1595dde617f03fee22c9e0d0147ec3fc77c772ce0bad282eecf871"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-nation-air.json",
+      "destination": "docs/evidence/rewrite/tw-nation-air.json",
+      "source_sha256": "b2fa260da08dc63dc6919c23d0930137b02786e916188caf042c491d33a4dc14"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-nation-rain.json",
+      "destination": "docs/evidence/rewrite/tw-nation-rain.json",
+      "source_sha256": "11c2c1a10333348d7f509bfca7468c5a2093a0abf5e88714c3b2a1de1a3290c3"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-nation-wind.json",
+      "destination": "docs/evidence/rewrite/tw-nation-wind.json",
+      "source_sha256": "11c2c1a10333348d7f509bfca7468c5a2093a0abf5e88714c3b2a1de1a3290c3"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-nation.json",
+      "destination": "docs/evidence/rewrite/tw-nation.json",
+      "source_sha256": "0b78b9eeb2e16a190f36e4e242aed80cba709f8f49e71a00f8c805cdd4445765"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-overlay-about.json",
+      "destination": "docs/evidence/rewrite/tw-overlay-about.json",
+      "source_sha256": "df3a3b97d90b58785dec5e77b104a027ba79c03ed38e9b02e0caeca36c01b974"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-overlay-access-explanation.json",
+      "destination": "docs/evidence/rewrite/tw-overlay-access-explanation.json",
+      "source_sha256": "df3a3b97d90b58785dec5e77b104a027ba79c03ed38e9b02e0caeca36c01b974"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-overlay-air-source-info.json",
+      "destination": "docs/evidence/rewrite/tw-overlay-air-source-info.json",
+      "source_sha256": "e27a34a868d18b3a952e51623675f819b52f9c4d50f1c5c8e7d8e4c925d03236"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-overlay-alert-intro.json",
+      "destination": "docs/evidence/rewrite/tw-overlay-alert-intro.json",
+      "source_sha256": "ce24955dc574569c1fd83a43f8437758bf5afe06f07ab42e17ba0b235d07953c"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-overlay-foreground-notification.json",
+      "destination": "docs/evidence/rewrite/tw-overlay-foreground-notification.json",
+      "source_sha256": "ce24955dc574569c1fd83a43f8437758bf5afe06f07ab42e17ba0b235d07953c"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-overlay-push-save-confirm.json",
+      "destination": "docs/evidence/rewrite/tw-overlay-push-save-confirm.json",
+      "source_sha256": "48e84f8912afa35139e50063230ed85a20d8d77f63283b3763b92212f038d5a2"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-overlay-retry-weather.json",
+      "destination": "docs/evidence/rewrite/tw-overlay-retry-weather.json",
+      "source_sha256": "ce24955dc574569c1fd83a43f8437758bf5afe06f07ab42e17ba0b235d07953c"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-overlay-start-error-alert.json",
+      "destination": "docs/evidence/rewrite/tw-overlay-start-error-alert.json",
+      "source_sha256": "df3a3b97d90b58785dec5e77b104a027ba79c03ed38e9b02e0caeca36c01b974"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-overlay-start-popup.json",
+      "destination": "docs/evidence/rewrite/tw-overlay-start-popup.json",
+      "source_sha256": "ce24955dc574569c1fd83a43f8437758bf5afe06f07ab42e17ba0b235d07953c"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-overlay-update-info.json",
+      "destination": "docs/evidence/rewrite/tw-overlay-update-info.json",
+      "source_sha256": "ce24955dc574569c1fd83a43f8437758bf5afe06f07ab42e17ba0b235d07953c"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-purchase-unavailable.json",
+      "destination": "docs/evidence/rewrite/tw-purchase-unavailable.json",
+      "source_sha256": "f18940ad135f89d41fe81f2d43cb3c424b8e725abaa5444ba9df90612148dc57"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-push-settings.json",
+      "destination": "docs/evidence/rewrite/tw-push-settings.json",
+      "source_sha256": "3353eca1f586bfceb85501852780158659348134cd3403057d1e7647c4a8c849"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-start-en-us.json",
+      "destination": "docs/evidence/rewrite/tw-start-en-us.json",
+      "source_sha256": "df3a3b97d90b58785dec5e77b104a027ba79c03ed38e9b02e0caeca36c01b974"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-start.json",
+      "destination": "docs/evidence/rewrite/tw-start.json",
+      "source_sha256": "df3a3b97d90b58785dec5e77b104a027ba79c03ed38e9b02e0caeca36c01b974"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-temperature-unit.json",
+      "destination": "docs/evidence/rewrite/tw-temperature-unit.json",
+      "source_sha256": "62a199b2e14217bda559b31bb90dc279c52ded3671dc991e408261f4a6ff5ea9"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-theme-dark-hourly.json",
+      "destination": "docs/evidence/rewrite/tw-theme-dark-hourly.json",
+      "source_sha256": "08ca95eee01f1ade23342c421c3fea712942ccc9867e64572f7cb3dbf298ba01"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-theme-old-hourly.json",
+      "destination": "docs/evidence/rewrite/tw-theme-old-hourly.json",
+      "source_sha256": "375acd105b51310fac8bbce97561bac722365f5bcaf2cb7e19ce792d4a68cd41"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-theme-photo-hourly.json",
+      "destination": "docs/evidence/rewrite/tw-theme-photo-hourly.json",
+      "source_sha256": "e8e6666e6d1e3eeba21354173f231c0bd7e2820bb55d124c7e69391d71cdb58e"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-theme.json",
+      "destination": "docs/evidence/rewrite/tw-theme.json",
+      "source_sha256": "43df2e65850fae9378434bcd19f3e1da564cf7c382cf2c033b5895d8f4ff6974"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-units-en-us.json",
+      "destination": "docs/evidence/rewrite/tw-units-en-us.json",
+      "source_sha256": "386c90da455bc96b01663d93bc74cb9f57a89db1b1fbb459502b1295a90aa529"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-units.json",
+      "destination": "docs/evidence/rewrite/tw-units.json",
+      "source_sha256": "06a2af48acfe24ba6a16cccd96d02639f906e705b8ac51838a81aa310484f6dd"
+    },
+    {
+      "source": "reports/rewrite-verification/tw-warning.json",
+      "destination": "docs/evidence/rewrite/tw-warning.json",
+      "source_sha256": "23db7594a8d4cc11565f9464ce098b0df623b228ee997b5f551749c437a32aef"
+    },
+    {
+      "source": "reports/rewrite-verification/validate-package.py",
+      "destination": "scripts/verification/rewrite/validate-package.py",
+      "source_sha256": "92d0825eadd3964b84d92fae4e02e0f00be07da11cdc8a0212ac6ded9d0f8234"
+    },
+    {
+      "source": "reports/rewrite-verification/visual-check-retention.md",
+      "destination": "docs/evidence/rewrite/visual-check-retention.md",
+      "source_sha256": "4b9f698fe57992aaa00c9db28791806c9b5af2a59ee508f9661eef98a90e57cc"
+    },
+    {
+      "source": "reports/sdlc/issue-2554-ci/independent-verification.md",
+      "destination": "docs/evidence/tasks/issue-2554-ci/independent-verification.md",
+      "source_sha256": "1ca9421683ab962d9dab80073a66fbacefb717dd4f2e69f4d0d341c7c2f4e7f2"
+    },
+    {
+      "source": "reports/sdlc/issue-2554-ci/self-verification.md",
+      "destination": "docs/evidence/tasks/issue-2554-ci/self-verification.md",
+      "source_sha256": "bd9c2c9d09a6cea05feabd529c620d7f48a126d8deeedcffab9eb5376d9d1368"
+    },
+    {
+      "source": "reports/sdlc/issue-2554/independent-verification.md",
+      "destination": "docs/evidence/tasks/issue-2554/independent-verification.md",
+      "source_sha256": "dc9666d4553962bac7da6d23ee6b44cd732e7f79adf15bb8e62990ea00e25cdb"
+    },
+    {
+      "source": "reports/sdlc/issue-2554/self-verification.md",
+      "destination": "docs/evidence/tasks/issue-2554/self-verification.md",
+      "source_sha256": "c33c750c4ff3405453bb9bce793890d2034d5f7adf6dd361e8247e3123977d48"
+    },
+    {
+      "source": "reports/sdlc/issue-2555/independent-verification.md",
+      "destination": "docs/evidence/tasks/issue-2555/independent-verification.md",
+      "source_sha256": "faa78b4b5fafde41d2b714c580aef2d57c1f5e6e9ea11bcd9a6fc7ca7e5e6d71"
+    },
+    {
+      "source": "reports/sdlc/issue-2555/self-verification.md",
+      "destination": "docs/evidence/tasks/issue-2555/self-verification.md",
+      "source_sha256": "09343b97b60513e3b5d4633f52eece84ba5ef8fa705c4a89c97f14c336cfe06e"
+    },
+    {
+      "source": "reports/sdlc/issue-2560/daily-forecast-contract.md",
+      "destination": "docs/operations/daily-forecast.md",
+      "source_sha256": "41e754b589c922ba1daab47cc4e371c11967857d393560340403a14effca3d6d"
+    },
+    {
+      "source": "reports/sdlc/issue-2560/independent-verification.md",
+      "destination": "docs/evidence/tasks/issue-2560/independent-verification.md",
+      "source_sha256": "fcd144953b4529e7fd754999c597c8cc38e0efe7e4fbf27a408f07d1b41c7d0f"
+    },
+    {
+      "source": "reports/sdlc/issue-2560/self-verification.md",
+      "destination": "docs/evidence/tasks/issue-2560/self-verification.md",
+      "source_sha256": "668bf946ed7728623a238e001626fadee3af59b4f45f7af940e30f9370cd082b"
+    },
+    {
+      "source": "reports/sdlc/issue-2581/operations.md",
+      "destination": "docs/evidence/tasks/issue-2581/operations.md",
+      "source_sha256": "35310822d2553563bbcc8fec10d974c00474fefb02e52fdb408bd1a210a6470c"
+    },
+    {
+      "source": "reports/sdlc/issue-2581/self-verification.md",
+      "destination": "docs/evidence/tasks/issue-2581/self-verification.md",
+      "source_sha256": "a7ca95c611b8f5b4cc467faee6ff1a8dcd6230d63e7a4f805d1fe3c15f498fea"
+    },
+    {
+      "source": "reports/sdlc/issue-2636/independent-verification-v1.md",
+      "destination": "docs/evidence/tasks/issue-2636/independent-verification-v1.md",
+      "source_sha256": "af2b8aed05ad43ca236b8d2e2e1c444fd8cde49f4b16bac63e2a4c1af03025a6"
+    },
+    {
+      "source": "reports/sdlc/issue-2636/operations.md",
+      "destination": "docs/operations/airkorea-recovery.md",
+      "source_sha256": "22a4e5f43fa1e65635c9da87438265c722b1bc2d28d2277b1679b92c4760a600"
+    },
+    {
+      "source": "reports/sdlc/issue-2636/self-verification-v3.md",
+      "destination": "docs/evidence/tasks/issue-2636/self-verification-v3.md",
+      "source_sha256": "2d4cb194ec3d255116d3b613d93e9f9d3d3e6840a37841cae007659b512fbde3"
+    },
+    {
+      "source": "reports/sdlc/issue-2636/self-verification.md",
+      "destination": "docs/evidence/tasks/issue-2636/self-verification.md",
+      "source_sha256": "a59556fdfb79edd833ca55bf98da6ae69aa0670cc97e398f05b1a9e55a0c5063"
+    },
+    {
+      "source": "reports/sdlc/issue-2641/README.md",
+      "destination": "docs/evidence/tasks/issue-2641/README.md",
+      "source_sha256": "c8dbf83a8ac20feaf5bed4bd9d6715f04dc162981181a99468ae1c28b331685e"
+    },
+    {
+      "source": "reports/sdlc/paseo-workspace-secrets/independent-verification.md",
+      "destination": "docs/evidence/tasks/paseo-workspace-secrets/independent-verification.md",
+      "source_sha256": "d091d8cdd5f8217b4937452639cb99f14f749ce4aa38886b2803a923d569980b"
+    },
+    {
+      "source": "reports/sdlc/paseo-workspace-secrets/self-verification.md",
+      "destination": "docs/evidence/tasks/paseo-workspace-secrets/self-verification.md",
+      "source_sha256": "44e629cb8ff5210ca25686065ad2bb5f01dba5bcf9388f6bcd38360a6045891a"
+    },
+    {
+      "source": "reports/sdlc/pr2552-review-assessment/investigation.md",
+      "destination": "docs/evidence/tasks/pr2552-review-assessment/investigation.md",
+      "source_sha256": "5b15afd024c08b320d0a2f0e9fe3598e0b38a0e9820bf595efbc45d4d9fabbd1"
+    },
+    {
+      "source": "reports/sdlc/pr2552-review-assessment/s3-public-access.json",
+      "destination": "docs/evidence/tasks/pr2552-review-assessment/s3-public-access.json",
+      "source_sha256": "f20ddefa829fb11970c6890c902e7b026579465e5d6cf1508e10fc4376d62bf5"
+    },
+    {
+      "source": "reports/sdlc/pr2552-review-assessment/token-reproduction.json",
+      "destination": "docs/evidence/tasks/pr2552-review-assessment/token-reproduction.json",
+      "source_sha256": "f5a9aed2ce8380cb8662862e04d49475477c617ed70d08060526801741a10b7d"
+    },
+    {
+      "source": "reports/sdlc/push-diagram/aws-routing.json",
+      "destination": "docs/evidence/tasks/push-diagram/aws-routing.json",
+      "source_sha256": "4690ef86ecffea1dfd8ecbdc7493953f85426476fd0f93ce97cdd0458ed741e8"
+    },
+    {
+      "source": "reports/sdlc/push-diagram/diagram-delivery.json",
+      "destination": "docs/evidence/tasks/push-diagram/diagram-delivery.json",
+      "source_sha256": "cf92fcbd05dfdcdb226bcb18652c1f74e06df8dc8a8998f4c5ad67ab54314ff0"
+    },
+    {
+      "source": "reports/sdlc/push-diagram/independent-verification.md",
+      "destination": "docs/evidence/tasks/push-diagram/independent-verification.md",
+      "source_sha256": "cd9cf273f159628ae9f0e2a046436221a4c5586bd532adc00553433d3cfb3e16"
+    },
+    {
+      "source": "reports/sdlc/push-diagram/self-verification.md",
+      "destination": "docs/evidence/tasks/push-diagram/self-verification.md",
+      "source_sha256": "eba3404ddc6e26f12f4cf6b9cb37911b24365d199b6bb79aa27052f493aa87a5"
+    },
+    {
+      "source": "reports/sdlc/push-diagram/visual-review.md",
+      "destination": "docs/evidence/tasks/push-diagram/visual-review.md",
+      "source_sha256": "c4bed9bc50dcf0aca7968872d0e656cc916709a6bef1bc780bceefb012284fcf"
+    },
+    {
+      "source": "reports/sdlc/service-architecture/independent-verification.md",
+      "destination": "docs/evidence/tasks/service-architecture/independent-verification.md",
+      "source_sha256": "de5c52c9917d927c0559f7151a3abfa75172336c372b8cbbae883c7fc890fe2e"
+    },
+    {
+      "source": "reports/sdlc/service-architecture/self-verification.md",
+      "destination": "docs/evidence/tasks/service-architecture/self-verification.md",
+      "source_sha256": "a9f73b54b1e2f894cf56c252a54bfb414dcc1c2d8a166bde730544a92f265289"
+    },
+    {
+      "source": "reports/verification/issue-2635.md",
+      "destination": "docs/evidence/tasks/issue-2635/verification.md",
+      "source_sha256": "973a1de3d3815e617cc6e094a6b05a25d18a6c125b65111baf8405424f58deef"
+    }
+  ]
+}

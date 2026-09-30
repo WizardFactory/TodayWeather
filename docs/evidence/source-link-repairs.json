@@ -1,0 +1,536 @@
+[
+  {
+    "document": "docs/rewrite/decisions-and-open-questions.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L95-L99",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L95-L99",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/decisions-and-open-questions.md",
+    "old_reference": "../../client/www/js/controller.purchase.js#L19-L39",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js#L19-L39",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/decisions-and-open-questions.md",
+    "old_reference": "../../server/controllers/alert.push.controller.js#L826-L933",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/controllers/alert.push.controller.js#L826-L933",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/decisions-and-open-questions.md",
+    "old_reference": "../../client/www/js/service.twads.js#L186-L195",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/e6421044f53c19e851a6a4af4dd5c5ac79890bfa/client/www/js/service.twads.js#L186-L195",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/verification-matrix.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L329-L371",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L329-L371",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/verification-matrix.md",
+    "old_reference": "../../client/www/js/controller.purchase.js#L19-L39",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js#L19-L39",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/verification-matrix.md",
+    "old_reference": "../../server/controllers/kecoController.js#L593-L624",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/controllers/kecoController.js#L593-L624",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/verification-matrix.md",
+    "old_reference": "../../server/controllers/kma.specialweather.controller.js#L21-L408",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/controllers/kma.specialweather.controller.js#L21-L408",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/verification-matrix.md",
+    "old_reference": "../../web/src/direct-api.ts#L124-L276",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/361e54bec162bd3030b6920835679c15cbfc346b/web/src/direct-api.ts#L124-L276",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/client.config.example.js#L4-L27",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/31867aa17886861b57463bb0084db017790cb241/client/www/client.config.example.js#L4-L27",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L229-L230",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L229-L230",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L232-L233",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L232-L233",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L46",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L46",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L113",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L113",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.js#L113",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js#L113",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L22",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L22",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L19",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L19",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.js#L19",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js#L19",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/client.config.example.js#L25",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/31867aa17886861b57463bb0084db017790cb241/client/www/client.config.example.js#L25",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/client.config.example.js#L26",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/31867aa17886861b57463bb0084db017790cb241/client/www/client.config.example.js#L26",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L249",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L249",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L101",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L101",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/configuration-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.js#L101",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js#L101",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-data-contracts.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-data-contracts.md",
+    "old_reference": "../../client/www/client.config.example.js#L25",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/31867aa17886861b57463bb0084db017790cb241/client/www/client.config.example.js#L25",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-data-contracts.md",
+    "old_reference": "../../client/www/js/controller.purchase.js#L140-L148",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js#L140-L148",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-data-contracts.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L199-L202",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L199-L202",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-data-contracts.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L343-L348",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L343-L348",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-data-contracts.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L387-L392",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L387-L392",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-data-contracts.md",
+    "old_reference": "../../client/www/js/controller.purchase.js#L19-L22",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js#L19-L22",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-data-contracts.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-data-contracts.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-specifications.md",
+    "old_reference": "../../client/www/js/controller.purchase.js#L19-L39",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js#L19-L39",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-specifications.md",
+    "old_reference": "../../client/www/js/controller.purchase.js#L183-L211",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js#L183-L211",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-specifications.md",
+    "old_reference": "../../client/www/client.config.example.js#L25",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/31867aa17886861b57463bb0084db017790cb241/client/www/client.config.example.js#L25",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-specifications.md",
+    "old_reference": "../../client/www/templates/purchase.html#L17-L49",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/templates/purchase.html#L17-L49",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-specifications.md",
+    "old_reference": "../../client/www/js/service.twads.js#L186-L195",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/e6421044f53c19e851a6a4af4dd5c5ac79890bfa/client/www/js/service.twads.js#L186-L195",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-specifications.md",
+    "old_reference": "../../client/www/js/controller.purchase.js",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-specifications.md",
+    "old_reference": "../../client/www/templates/purchase.html",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/templates/purchase.html",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../server/controllers/alert.push.controller.js#L923-L933",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/controllers/alert.push.controller.js#L923-L933",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../server/controllers/controllerPush.js#L1262-L1326",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/controllers/controllerPush.js#L1262-L1326",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../server/controllers/alert.push.controller.js#L935-L947",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/controllers/alert.push.controller.js#L935-L947",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../server/controllers/alert.push.controller.js#L935-L947",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/controllers/alert.push.controller.js#L935-L947",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../server/controllers/alert.push.controller.js#L1059-L1063",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/81531621761440c81f0763efc6c1234e25bd4ac7/server/controllers/alert.push.controller.js#L1059-L1063",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L45-L67",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L45-L67",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L113",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L113",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L116-L137",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L116-L137",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L317-L322",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L317-L322",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L344-L348",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L344-L348",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L138-L143",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L138-L143",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/server-push-and-purchase.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L329-L341",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L329-L341",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/localization-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L293-L297",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L293-L297",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-state-and-behavior.md",
+    "old_reference": "../../client/www/js/controller.purchase.js#L19-L85",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.js#L19-L85",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-state-and-behavior.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L222-L241",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L222-L241",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-state-and-behavior.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L95-L99",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L95-L99",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-state-and-behavior.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L135-L148",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L135-L148",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-state-and-behavior.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L194-L202",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L194-L202",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-state-and-behavior.md",
+    "old_reference": "../../client/www/js/service.storage.js#L197-L248",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/service.storage.js#L197-L248",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-state-and-behavior.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/client-state-and-behavior.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L45-L52",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L45-L52",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/security-and-privacy-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L45-L52",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L45-L52",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/security-and-privacy-inventory.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L70",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L70",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/data-model-reference.md",
+    "old_reference": "../../server/lib/kecoRequester.js#L1296-L1310",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/lib/kecoRequester.js#L1296-L1310",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/data-model-reference.md",
+    "old_reference": "../../server/lib/kecoRequester.js#L1204-L1212",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/lib/kecoRequester.js#L1204-L1212",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/data-model-reference.md",
+    "old_reference": "../../server/lib/kecoRequester.js#L1233",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/lib/kecoRequester.js#L1233",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/data-model-reference.md",
+    "old_reference": "../../server/lib/kecoRequester.js#L1414-L1421",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/lib/kecoRequester.js#L1414-L1421",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/data-model-reference.md",
+    "old_reference": "../../server/lib/kecoRequester.js#L1436",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/lib/kecoRequester.js#L1436",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/data-model-reference.md",
+    "old_reference": "../../server/lib/kecoRequester.js#L1263",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/server/lib/kecoRequester.js#L1263",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/api-endpoint-catalog.md",
+    "old_reference": "../../web/src/direct-api.ts#L124-L276",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/361e54bec162bd3030b6920835679c15cbfc346b/web/src/direct-api.ts#L124-L276",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/api-endpoint-catalog.md",
+    "old_reference": "../../web/src/direct-api.ts#L264-L274",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/361e54bec162bd3030b6920835679c15cbfc346b/web/src/direct-api.ts#L264-L274",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/api-endpoint-catalog.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L46",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L46",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/api-endpoint-catalog.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L113",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L113",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/native-consumers-and-plugins.md",
+    "old_reference": "../../client/www/js/service.twads.js#L186-L195",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/e6421044f53c19e851a6a4af4dd5c5ac79890bfa/client/www/js/service.twads.js#L186-L195",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/native-consumers-and-plugins.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L116-L124",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L116-L124",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/native-consumers-and-plugins.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L236-L239",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L236-L239",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/native-consumers-and-plugins.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L103-L106",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L103-L106",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/native-consumers-and-plugins.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L225-L228",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L225-L228",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/native-consumers-and-plugins.md",
+    "old_reference": "../../web/src/direct-api.ts#L264-L274",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/361e54bec162bd3030b6920835679c15cbfc346b/web/src/direct-api.ts#L264-L274",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/app.js#L1977-L1981",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/app.js#L1977-L1981",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/app.js#L1983-L1985",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/e6421044f53c19e851a6a4af4dd5c5ac79890bfa/client/www/js/app.js#L1983-L1985",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L306",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L306",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L375",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L375",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L283-L437",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L283-L437",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L351-L371",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L351-L371",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L374-L405",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L374-L405",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/controller.purchase.alexdisler.js#L329-L341",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L329-L341",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  },
+  {
+    "document": "docs/rewrite/screen-overlays.md",
+    "old_reference": "../../client/www/js/controller.purchase.j3k0.js#L87-L158",
+    "historical_reference": "https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L87-L158",
+    "basis": "Declared rewrite baseline when available; otherwise latest source revision containing the recorded range. Link availability checked, not a fresh behavior verification."
+  }
+]
