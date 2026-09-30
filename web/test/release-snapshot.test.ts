@@ -182,3 +182,31 @@ it("does not complete a snapshot on read/write failure or concurrent live drift"
     expect(f.calls).toEqual([]);
   }
 });
+it("captures all inventory and version pages and refuses incomplete pagination", async () => {
+  for (const missingToken of [false, true]) {
+    const f = fake();
+    const second = { ...object, Key: "assets/page-two.js" };
+    const run = (a: string[]) => {
+      if (a[0] === "s3api" && ["list-objects-v2", "list-object-versions"].includes(a[1]) && a[a.indexOf("--bucket") + 1] === config.bucket) {
+        expect(a).toContain("--no-paginate");
+        const versions = a[1] === "list-object-versions";
+        const next = a.includes(versions ? "--key-marker" : "--continuation-token");
+        return JSON.stringify({
+          IsTruncated: !next,
+          ...(versions ? { Versions: [{ Key: next ? second.Key : object.Key, VersionId: "v1" }] } : { Contents: [next ? second : object] }),
+          ...(!next && !missingToken ? (versions ? { NextKeyMarker: "page2", NextVersionIdMarker: "v1" } : { NextContinuationToken: "page2" }) : {}),
+        });
+      }
+      return f.run(a);
+    };
+    if (missingToken) {
+      await expect(snapshot(run, config)).rejects.toThrow(/pagination/i);
+      expect(f.saved["webapp-rollbacks/123-1/snapshot.json"]).toBeUndefined();
+    } else {
+      const receipt = await snapshot(run, config);
+      expect(receipt.inventory.Contents.map((o: {Key: string}) => o.Key)).toEqual([object.Key, second.Key]);
+      expect(receipt.versions.Versions).toHaveLength(2);
+      expect(receipt.checksums[second.Key].object).toBe("objects/1");
+    }
+  }
+});

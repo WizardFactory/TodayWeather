@@ -119,6 +119,31 @@ export async function snapshot(run, config) {
     ].every((k) => block[k] === true),
     "Backup bucket must block all public access",
   );
+  // Explicit service-page handling avoids relying on CLI aggregation or wrappers.
+  const listAll = (operation, extra = []) => {
+    const versions = operation === "list-object-versions";
+    const fields = versions ? ["Versions", "DeleteMarkers"] : ["Contents"];
+    const result = Object.fromEntries(fields.map((field) => [field, []]));
+    let markers = [];
+    const seen = new Set();
+    for (;;) {
+      const page = json(["s3api", operation, "--bucket", bucket, ...extra,
+        "--no-paginate", ...markers]);
+      for (const field of fields) result[field].push(...(page[field] ?? []));
+      check(fields.reduce((n, field) => n + result[field].length, 0) <= 10000,
+        "Oversized paginated inventory; use operator runbook");
+      if (!page.IsTruncated) return result;
+      const token = versions ? page.NextKeyMarker : page.NextContinuationToken;
+      const versionToken = versions ? page.NextVersionIdMarker : undefined;
+      const identity = JSON.stringify([token, versionToken]);
+      check(typeof token === "string" && token.length > 0 && !seen.has(identity),
+        "Incomplete or repeated pagination marker; stop before upload");
+      seen.add(identity);
+      markers = versions ? ["--key-marker", token,
+        ...(versionToken ? ["--version-id-marker", versionToken] : [])]
+        : ["--continuation-token", token];
+    }
+  };
   const prefix = `webapp-rollbacks/${snapshotId}/`;
   check(
     !(
@@ -133,7 +158,7 @@ export async function snapshot(run, config) {
     ).length,
     "Snapshot prefix already exists; never overwrite rollback",
   );
-  const list = () => json(["s3api", "list-objects-v2", "--bucket", bucket]);
+  const list = () => listAll("list-objects-v2");
   const inventory = list();
   const objects = inventory.Contents ?? [];
   check(
@@ -148,7 +173,7 @@ export async function snapshot(run, config) {
     "--id",
     distribution,
   ]);
-  const versions = json(["s3api", "list-object-versions", "--bucket", bucket]);
+  const versions = listAll("list-object-versions");
   const versioning = json([
     "s3api",
     "get-bucket-versioning",
