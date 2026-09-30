@@ -81,6 +81,18 @@ with tempfile.TemporaryDirectory(prefix='artifact-hook-smoke-') as tmp:
     assert 'generated/local output' in bad.stderr
     print('PASS: pre-push rejected add-then-delete history despite clean tip')
 
+    # Simulate history already accepted by the remote before policy adoption.
+    # Bypass only this fixture push; the new topic push must use the real hook.
+    git('-c', 'core.hooksPath=/dev/null', 'push', '-q', 'origin', 'main')
+    git('checkout', '-qb', 'topic')
+    write('docs/topic.md', '# New branch content\n')
+    git('add', '.')
+    git('commit', '-qm', 'new topic')
+    pushed = git('push', '-q', 'origin', 'topic')
+    assert '1 snapshot(s)' in pushed.stdout
+    assert run('git', '--git-dir', str(remote), 'rev-parse', 'refs/heads/topic').stdout == git('rev-parse', 'HEAD').stdout
+    print('PASS: new-branch hook checked only unpublished work, excluding remote main history')
+
     git('config', '--local', 'core.hooksPath', 'custom-hooks')
     run(sys.executable, 'scripts/install-artifact-hooks.py', ok=False)
     assert git('config', '--get', 'core.hooksPath').stdout.strip() == 'custom-hooks'

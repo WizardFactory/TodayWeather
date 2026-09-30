@@ -31,8 +31,10 @@ def git(root, *args, data=None):
 
 
 class Snapshot:
-    def __init__(self, root, revision=None):
-        self.root, self.revision, self.entries, self.cache = root, revision, {}, {}
+    def __init__(self, root, revision=None, blobs=None):
+        self.root, self.revision, self.entries = root, revision, {}
+        # One invocation shares immutable blob bytes across paths and revisions.
+        self.cache = blobs if blobs is not None else {}
         args = ('ls-files', '--stage', '-z') if revision is None else ('ls-tree', '-r', '-z', revision)
         for row in git(root, *args).split(b'\0'):
             if not row:
@@ -50,9 +52,10 @@ class Snapshot:
     def read(self, name):
         if name not in self.entries:
             raise Invalid('Missing tracked file: ' + name)
-        if name not in self.cache:
-            self.cache[name] = git(self.root, 'cat-file', 'blob', self.entries[name][1])
-        return self.cache[name]
+        oid = self.entries[name][1]
+        if oid not in self.cache:
+            self.cache[oid] = git(self.root, 'cat-file', 'blob', oid)
+        return self.cache[oid]
 
     def target_exists(self, name):
         # Resolve tracked symlinks using the snapshot, never the host filesystem.
@@ -158,9 +161,9 @@ def commit_id(root, value):
     return git(root, 'rev-parse', '--verify', '--end-of-options', value + '^{commit}').decode().strip()
 
 
-def history(root, base, tip):
+def history(root, base, tip, remote=None, blobs=None):
     tip = commit_id(root, tip)
-    snap = Snapshot(root, tip)
+    snap = Snapshot(root, tip, blobs)
     exclusions = []
     if base and set(base) != {'0'}:
         exclusions.append(commit_id(root, base))
@@ -171,7 +174,12 @@ def history(root, base, tip):
             exclusions.append(commit_id(root, boundary))
     if not exclusions:
         raise Invalid('Cannot establish outgoing history: provide a base or a committed history_base policy')
-    commits = git(root, 'rev-list', '--reverse', tip, *['^' + x for x in exclusions]).decode().splitlines()
+    args = ['rev-list', '--reverse', tip, *['^' + x for x in exclusions]]
+    if base and set(base) == {'0'} and remote in git(root, 'remote').decode().splitlines():
+        # Only new pre-push refs use local knowledge of this destination remote.
+        # Explicit CI ranges must not exclude refs fetched after the push itself.
+        args.extend(['--not', '--remotes=' + remote])
+    commits = git(root, *args).decode().splitlines()
     # Always check the selected tip even when it was already present remotely.
     return list(dict.fromkeys(commits + [tip]))
 
@@ -187,14 +195,15 @@ def main():
     args = parser.parse_args()
     root = Path(args.root).resolve()
     try:
+        blobs = {}
         if args.staged:
-            snapshots = [(None, Snapshot(root))]
+            snapshots = [(None, Snapshot(root, blobs=blobs))]
         else:
             commits = []
             if args.commit:
                 commits = [commit_id(root, args.commit)]
             elif args.range:
-                commits = history(root, *args.range)
+                commits = history(root, *args.range, blobs=blobs)
             else:
                 for line in sys.stdin:
                     fields = line.split()
@@ -205,8 +214,8 @@ def main():
                         raise Invalid('Invalid pre-push object ID')
                     if set(local) == {'0'}:
                         continue
-                    commits.extend(history(root, remote, local))
-            snapshots = [(c, Snapshot(root, c)) for c in dict.fromkeys(commits)]
+                    commits.extend(history(root, remote, local, remote=args.pre_push, blobs=blobs))
+            snapshots = [(c, Snapshot(root, c, blobs)) for c in dict.fromkeys(commits)]
         failures = []
         for revision, snap in snapshots:
             failures.extend(f'{revision[:12] if revision else "index"}: {e}' for e in check_snapshot(snap))

@@ -1,5 +1,7 @@
 """Behavioral checks using isolated Git repositories; no providers or app startup."""
 import hashlib
+import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -7,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 CHECKER = Path(__file__).resolve().parents[1] / 'check-artifact-policy.py'
 
@@ -155,6 +158,65 @@ class ArtifactPolicyTests(unittest.TestCase):
     def test_delete_push_ref_is_valid(self):
         line = f'(delete) {"0" * 40} refs/heads/old {self.base}\n'
         self.assertEqual(self.check('--pre-push', 'origin', stdin=line).returncode, 0)
+
+    def test_new_branch_excludes_only_destination_remote_history(self):
+        self.git('remote', 'add', 'origin', str(self.root / 'unused.git'))
+        self.write('reports/published.json', '{}')
+        self.git('add', '-f', 'reports/published.json')
+        self.commit()
+        self.git('rm', 'reports/published.json')
+        published = self.commit()
+        self.git('update-ref', 'refs/remotes/origin/main', published)
+        self.write('README.md', '# New branch\n')
+        self.git('add', '.')
+        tip = self.commit()
+        line = f'refs/heads/new {tip} refs/heads/new {"0" * 40}\n'
+        result = self.check('--pre-push', 'origin', stdin=line)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('1 snapshot(s)', result.stdout)
+        # An unrelated remote must not exempt this destination's outgoing history.
+        self.git('remote', 'add', 'other', str(self.root / 'other.git'))
+        self.assertNotEqual(self.check('--pre-push', 'other', stdin=line).returncode, 0)
+
+    def test_new_branch_keeps_unpublished_intermediate_and_tip_checks(self):
+        self.git('remote', 'add', 'origin', str(self.root / 'unused.git'))
+        published = self.commit()
+        self.git('update-ref', 'refs/remotes/origin/main', published)
+        self.write('reports/unpublished.json', '{}')
+        self.git('add', '-f', 'reports/unpublished.json')
+        bad = self.commit()
+        self.git('rm', 'reports/unpublished.json')
+        tip = self.commit()
+        self.git('update-ref', 'refs/remotes/other/topic', tip)
+        line = f'refs/heads/new {tip} refs/heads/new {"0" * 40}\n'
+        result = self.check('--pre-push', 'origin', stdin=line)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(bad[:12], result.stderr)
+        self.git('update-ref', 'refs/remotes/origin/published-bad', bad)
+        line = f'refs/heads/new {bad} refs/heads/new {"0" * 40}\n'
+        self.assertNotEqual(self.check('--pre-push', 'origin', stdin=line).returncode, 0)
+
+    def test_history_reads_each_blob_oid_once_without_hiding_changed_links(self):
+        self.write('docs/old.md', '# Same bytes\n')
+        self.git('add', '.')
+        self.commit()
+        self.git('mv', 'docs/old.md', 'docs/new.md')
+        self.commit()
+        self.write('docs/new.md', '[broken](missing.json)\n')
+        self.git('add', '.')
+        tip = self.commit()
+        spec = importlib.util.spec_from_file_location('artifact_policy', CHECKER)
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        before = self.fingerprint()
+        with mock.patch.object(checker, 'git', wraps=checker.git) as calls, \
+                mock.patch.object(sys, 'argv', [str(CHECKER), '--root', str(self.root), '--range', self.base, tip]), \
+                mock.patch('sys.stderr', new_callable=io.StringIO) as stderr:
+            self.assertEqual(checker.main(), 1)
+            self.assertIn('missing.json', stderr.getvalue())
+        reads = [c.args[-1] for c in calls.call_args_list if c.args[1:3] == ('cat-file', 'blob')]
+        self.assertEqual(len(reads), len(set(reads)), 'same blob read repeatedly across snapshots')
+        self.assertEqual(before, self.fingerprint())
 
     def test_manifest_requires_committed_image(self):
         self.write('docs/rewrite/screenshots/manifest.json', json.dumps([{
