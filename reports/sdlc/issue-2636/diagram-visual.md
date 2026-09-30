@@ -1,5 +1,0 @@
-# Diagram verification
-Weather collection: Archify finalize validate/deliver/check/browser-check passed. Initial 1250px legacy width failed projected readability; reducing declared width to 1240px passed. Sandbox Chrome startup failed; approved local Chrome execution passed. Separate visual-check produced light/dark 1440x900 and 2048x1320 screenshots. Primary inspected the light 1440x900 capture: nodes/edges readable, no overlap/cropping in the collection scene. Generated HTML whitespace is renderer-owned and not manually modified.
-Nation design: separate receipt and screenshots retained locally; final visual inspection recorded after generation. Base-revision citations identify existing integration points; the new sequence is explicitly labelled a design rather than a claim that new code existed in the base commit.
-
-Nation final: showcase/browser gates and capture generation passed after label and canvas-height repairs plus recommended spread layout. Primary inspected final light 1440x900 capture: all participants, messages and conditions visible without overlap/cropping.

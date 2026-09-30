@@ -1,6 +1,0 @@
-(node:17610) DeprecationWarning: collection.ensureIndex is deprecated. Use createIndexes instead.
-(Use `node --trace-deprecation ...` to show where the warning was created)
-(node:17610) DeprecationWarning: collection.update is deprecated. Use updateOne, updateMany, or bulkWrite instead.
-AIRKOREA {"operation":"station","sido":"서울","finishedAt":"2026-09-29T14:37:34.030Z","outcome":"success","code":"OK","saved":3,"unavailable":["점검중"],"observationTime":"2026-09-29 23:00"}
-AIRKOREA {"operation":"sido","sido":"서울","finishedAt":"2026-09-29T14:37:34.034Z","outcome":"success","code":"OK","saved":1,"unavailable":[],"observationTime":"2026-09-29 23:00"}
-{"result":"passed","stationRows":3,"provinceRows":1,"nationRows":17,"weatherRows":15,"globalRequests":16,"maxGlobalConcurrency":4,"clientAirKoreaRequests":0,"cacheRows":16,"realMongo":true,"mongoose":"5.13.23","observedAt":"2026-09-29T14:00:00.000Z"}

@@ -51,7 +51,7 @@ node "$ARCHIFY_DIR/bin/archify.mjs" deliver architecture docs/architecture/diagr
 node "$ARCHIFY_DIR/bin/archify.mjs" visual-check docs/architecture/diagrams/service-overview.html --json
 ```
 
-Use `architecture` for collection and `sequence` for mobile requests. Architecture sources pin repository evidence to the analyzed revision; update that revision deliberately after relevant source changes. Validation, browser execution and perceptual review are separate claims. See the [verification record](../../reports/sdlc/service-architecture/self-verification.md) for results and limitations.
+Use `architecture` for collection and `sequence` for mobile requests. Architecture sources pin repository evidence to the analyzed revision; update that revision deliberately after relevant source changes. Validation, browser execution and perceptual review are separate claims. See the [verification record](../evidence/tasks/service-architecture/self-verification.md) for results and limitations.
 
 - [KMA station observations](../operations/kma-station-observations.md): opt-in gather minute/hourly collectors, current-weather merge, verification, rollback and known station gaps.
 - [Visual Crossing deployment checklist](../operations/visual-crossing-deploy.md): overseas weather (#2585) host configuration, `VC_SECRET_KEY`/`VC_DAILY_RECORD_LIMIT`, post-deploy smoke, usage and log monitoring, retention, kill switch and rollback.

@@ -1,8 +1,8 @@
 # Overlays, dialogs and native hand-offs
 
-Baseline: `bd6640f2` (re-baselined 2026-09-25; client source identical to `ff7acf3996ccb66c912d2ed4710cf300197d6966`, on which this was inspected 2026-09-24; captures keep their original dates and commit). This catalog complements the routed screens S01–S16 in [screen specifications](screen-specifications.md). It covers the modal popups, loading indicators and native surfaces that sit on top of those screens. They decide navigation, persistence and permissions. The IDs O01–O19 are documentation identifiers; the [screenshot manifest](screenshots/manifest.json) and [capture recipes](../../reports/rewrite-verification/capture/README.md) use the same IDs.
+Baseline: `bd6640f2` (re-baselined 2026-09-25; client source identical to `ff7acf3996ccb66c912d2ed4710cf300197d6966`, on which this was inspected 2026-09-24; captures keep their original dates and commit). This catalog complements the routed screens S01–S16 in [screen specifications](screen-specifications.md). It covers the modal popups, loading indicators and native surfaces that sit on top of those screens. They decide navigation, persistence and permissions. The IDs O01–O19 are documentation identifiers; the [screenshot manifest](screenshots/manifest.json) and [capture recipes](../../scripts/verification/rewrite/capture/README.md) use the same IDs.
 
-Evidence labels follow the [package README](README.md). Every statement below is **observed source** unless it is marked otherwise. **Synthetic execution** means a 2026-09-24 capture or probe in the isolated WKWebView harness: iPhone 17 Pro / iOS 26.5, TodayWeather, ko-KR, no Cordova plugins, synthetic data. Where a statement links a Node probe under [reports/rewrite-verification/probes](../../reports/rewrite-verification/probes/), it instead means that probe's VM run of checked-in client code with stubbed dependencies. Items marked "source-level, not reproduced" are anomalies read from code only. They are candidates for characterization tests, not confirmed production bugs.
+Evidence labels follow the [package README](README.md). Every statement below is **observed source** unless it is marked otherwise. **Synthetic execution** means a 2026-09-24 capture or probe in the isolated WKWebView harness: iPhone 17 Pro / iOS 26.5, TodayWeather, ko-KR, no Cordova plugins, synthetic data. Where a statement links a Node probe under [reports/rewrite-verification/probes](../../scripts/verification/rewrite/probes), it instead means that probe's VM run of checked-in client code with stubbed dependencies. Items marked "source-level, not reproduced" are anomalies read from code only. They are candidates for characterization tests, not confirmed production bugs.
 
 ## Shared popup mechanics
 
@@ -74,7 +74,7 @@ Evidence labels follow the [package README](README.md). Every statement below is
 - With the default `false`, "Use your current location" is checked, but OK opens search.
 - With location services on (`true`), "Search for a new location" is checked, but OK enables current position.
 
-The harness reproduced this (synthetic execution, [start-popup-choice.json](../../reports/rewrite-verification/probes/start-popup-choice.json)):
+The harness reproduced this (synthetic execution, [start-popup-choice.json](../evidence/rewrite/probes/start-popup-choice.json)):
 - Value `true` stayed on `tab.forecast` and enabled the current-position slot.
 - Value `false` moved to `tab.search`.
 - Both runs showed the labels "현재위치 날씨보기" and "지역 검색으로 시작" in that order.
@@ -215,7 +215,7 @@ The (unreachable, see Shared popup mechanics) translation-failure event is spell
 **Trigger:**
 - `Push.init()` returns `true` when `pushData2` is absent or unparsable but legacy `pushData` exists ([service.push.js L797-L806](../../client/www/js/service.push.js#L797-L806)).
 - The migration builds one alert per legacy alarm (`alarmList.map`, so a city with two legacy alarms gets two alerts), with `enable: false` and a 07–22 window. It converts old alarms to every-day alarms (`id = cityIndex + 1`) and schedules a server repost after 3 s ([L50-L83](../../client/www/js/service.push.js#L50-L83)). The result is kept in memory; `pushData2` is written by the next `savePushInfo`: a popup button, `updateCityInfo` when a record changed, a push-settings save, or a push-record removal (see [legacy migrations](client-state-and-behavior.md#legacy-migrations), step 6).
-- Every migrated alert is created with `id: 1` (`newPushAlert(1, …)`), and the alarm for `cityIndex` 0 also gets `id: 1`. A source comment on the post object describes the identifier as unique within a registration ([L167-L173](../../client/www/js/service.push.js#L167-L173)), yet migrated entries can share one. Synthetic execution ([storage probe](../../reports/rewrite-verification/probes/client-storage-migration.json), variant `several legacy alarms`): two legacy alarms for city 1 and one for city 0 gave six records in which `(1,1)`, `(1,2)` and `(0,1)` each occur twice. The server-side effect was not checked.
+- Every migrated alert is created with `id: 1` (`newPushAlert(1, …)`), and the alarm for `cityIndex` 0 also gets `id: 1`. A source comment on the post object describes the identifier as unique within a registration ([L167-L173](../../client/www/js/service.push.js#L167-L173)), yet migrated entries can share one. Synthetic execution ([storage probe](../evidence/rewrite/probes/client-storage-migration.json), variant `several legacy alarms`): two legacy alarms for city 1 and one for city 0 gave six records in which `(1,1)`, `(1,2)` and `(0,1)` each occur twice. The server-side effect was not checked.
 - `showAlertInfoEvent` is broadcast 500 ms later ([app.js L344-L350](../../client/www/js/app.js#L344-L350)).
 - The listener exists only in `TabCtrl` ([L1159-L1205](../../client/www/js/controller.tabctrl.js#L1159-L1205)). On a launch that routes to S01, nothing handles it (source-level).
 
@@ -242,7 +242,7 @@ The (unreachable, see Shared popup mechanics) translation-failure event is spell
 - A tapped notification (`tap === true`) with a numeric `cityIndex` selects that city and broadcasts `reloadEvent` `'push'`, with no popup.
 - The legacy `gcmRegister` path also broadcasts on `foreground === true`, but it has no caller at this revision.
 - Only `TabCtrl` listens, so nothing is shown on S01 before `TabCtrl` exists. Delivery while a non-tab route (S07–S14) is active was not checked.
-- The `aps`/non-`aps` and tap rules above were reproduced by the [push probe](../../reports/rewrite-verification/probes/client-push-branch-entry.json) (synthetic execution of the captured callback in a Node VM; no plugin or FCM delivery). The full field table is in [inbound notification payload](client-data-contracts.md#inbound-notification-payload).
+- The `aps`/non-`aps` and tap rules above were reproduced by the [push probe](../evidence/rewrite/probes/client-push-branch-entry.json) (synthetic execution of the captured callback in a Node VM; no plugin or FCM delivery). The full field table is in [inbound notification payload](client-data-contracts.md#inbound-notification-payload).
 
 **Content** ([controller.tabctrl.js L1137-L1157](../../client/www/js/controller.tabctrl.js#L1137-L1157)):
 - Title: `LOC_WEATHER`. TabCtrl's `strWeather` starts as the literal `"Weather"`, so the `'Notification'` fallback in `strWeather||'Notification'` is unreachable.
@@ -376,7 +376,7 @@ Saving calls `Push.updatePushListByCityIndex`, which POSTs the list (skipped wit
 
 **Trigger:** tapping an enabled alarm row, or the `HH:MM` add row. The add row is shown while fewer than 5 alarms are enabled ([L362-L367](../../client/www/js/controller.push.js#L362-L367)). Either calls `onOpenTimePicker(index)` ([L374-L442](../../client/www/js/controller.push.js#L374-L442)).
 
-**Library:** `ionicTimePicker`, from the fork `WizardFactory/ionic-timepicker#e2d5cd3` ([client/bower.json](../../client/bower.json)). It is not vendored in `client/www`; the same commit is bundled at [tw.ios/www/lib/ionic-timepicker](../../tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js#L113-L163) (the app loads its `dist` bundle, [index.html L29](../../client/www/index.html#L29); the provider source was read). App configuration: 12-hour format, 5-minute step, 3 buttons ([app.js L1977-L1981](../../client/www/js/app.js#L1977-L1981)). The initial time is the alarm's time, or 08:00 for a new alarm.
+**Library:** `ionicTimePicker`, from the fork `WizardFactory/ionic-timepicker#e2d5cd3` ([client/bower.json](../../client/bower.json)). It is not vendored in `client/www`; the same commit is bundled at [tw.ios/www/lib/ionic-timepicker](../../tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js#L113-L163) (the app loads its `dist` bundle, [index.html L29](../../client/www/index.html#L29); the provider source was read). App configuration: 12-hour format, 5-minute step, 3 buttons ([app.js L1977-L1981](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/app.js#L1977-L1981)). The initial time is the alarm's time, or 08:00 for a new alarm.
 
 | Button (library order) | Callback value | PushCtrl result |
 | --- | --- | --- |
@@ -446,7 +446,7 @@ Branch share URLs ([L239-L258](../../client/www/js/controller.tabctrl.js#L239-L2
 
 ## O17 — Loading: `$ionicLoading` overlay and header spinner
 
-**Full-screen overlay.** The default template is `<ion-spinner icon="bubbles" class="spinner-stable">` ([app.js L1983-L1985](../../client/www/js/app.js#L1983-L1985)). It blocks input and disables Android back while shown. It is used only by:
+**Full-screen overlay.** The default template is `<ion-spinner icon="bubbles" class="spinner-stable">` ([app.js L1983-L1985](https://github.com/WizardFactory/TodayWeather/blob/e6421044f53c19e851a6a4af4dd5c5ac79890bfa/client/www/js/app.js#L1983-L1985)). It blocks input and disables Android back while shown. It is used only by:
 
 | Flow | Source |
 | --- | --- |
@@ -456,7 +456,7 @@ Branch share URLs ([L239-L258](../../client/www/js/controller.tabctrl.js#L239-L2
 | S02 find-by-location and current-position row refresh, through the same race guard | [L245](../../client/www/js/controller.searchctrl.js#L245), [L527](../../client/www/js/controller.searchctrl.js#L527), [L627-L641](../../client/www/js/controller.searchctrl.js#L627-L641) |
 | S10 initial load; a failure only records an exception, hides the overlay and leaves the map empty | [nation.js L160-L173](../../client/www/js/controller.nation.js#L160-L173) |
 | S11 initial load, same failure behavior | [nation.air.js L128-L141](../../client/www/js/controller.nation.air.js#L128-L141) |
-| iOS purchase, custom text (O18) | [purchase.alexdisler.js L306](../../client/www/js/controller.purchase.alexdisler.js#L306), [L375](../../client/www/js/controller.purchase.alexdisler.js#L375) |
+| iOS purchase, custom text (O18) | [purchase.alexdisler.js L306](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L306), [L375](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L375) |
 
 `TabCtrl` does not inject `$ionicLoading`.
 
@@ -482,15 +482,15 @@ An example trigger is Android with location mode off and permission granted. The
 
 ## O18 — Purchase progress and error alerts
 
-**Build selection:** Gulp copies [controller.purchase.alexdisler.js](../../client/www/js/controller.purchase.alexdisler.js) for the iOS tasks and [controller.purchase.j3k0.js](../../client/www/js/controller.purchase.j3k0.js) for the Android tasks ([gulpfile.js L80](../../client/gulpfile.js#L80), [L94](../../client/gulpfile.js#L94) and the matching release tasks). The checked-in `controller.purchase.js` is a j3k0 variant fixed to `tw1year`.
+**Build selection:** Gulp copies [controller.purchase.alexdisler.js](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js) for the iOS tasks and [controller.purchase.j3k0.js](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js) for the Android tasks ([gulpfile.js L80](../../client/gulpfile.js#L80), [L94](../../client/gulpfile.js#L94) and the matching release tasks). The checked-in `controller.purchase.js` is a j3k0 variant fixed to `tw1year`.
 
-**iOS (`cordova-plugin-inapppurchase`), PurchaseCtrl** ([L283-L437](../../client/www/js/controller.purchase.alexdisler.js#L283-L437)):
-- **Order:** `$ionicLoading` with a `dots` spinner and `LOC_PURCHASING`. On plugin failure, a `$ionicPopup.alert` appears with title `LOC_PURCHASE_ERROR`, body the raw `err.message` (not localized) and Ionic's default English `OK`. A user cancel (`err.code == -5`) is logged as `purchase/cancel/subscribe`, but the same error alert is still shown ([L351-L371](../../client/www/js/controller.purchase.alexdisler.js#L351-L371)).
-- **Restore:** `$ionicLoading` with `LOC_RESTORING_PURCHASES`. On failure, an alert with title `LOC_RESTORE_ERROR` and body `err.message` ([L374-L405](../../client/www/js/controller.purchase.alexdisler.js#L374-L405)).
+**iOS (`cordova-plugin-inapppurchase`), PurchaseCtrl** ([L283-L437](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L283-L437)):
+- **Order:** `$ionicLoading` with a `dots` spinner and `LOC_PURCHASING`. On plugin failure, a `$ionicPopup.alert` appears with title `LOC_PURCHASE_ERROR`, body the raw `err.message` (not localized) and Ionic's default English `OK`. A user cancel (`err.code == -5`) is logged as `purchase/cancel/subscribe`, but the same error alert is still shown ([L351-L371](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L351-L371)).
+- **Restore:** `$ionicLoading` with `LOC_RESTORING_PURCHASES`. On failure, an alert with title `LOC_RESTORE_ERROR` and body `err.message` ([L374-L405](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L374-L405)).
 - **Success:** No popup. The page switches to the premium state (`accountLevel`, `expirationDate`).
-- **Anomaly** (source-level, not reproduced): receipt-validation failures throw inside the `checkReceiptValidation` `$http` callback, outside the promise chain ([L329-L341](../../client/www/js/controller.purchase.alexdisler.js#L329-L341)). The `.catch` alert is never reached; only the loading overlay is hidden. That message would also use `LOC_PLEASE_RESTORE_AFTER_1_2_MINUTES`, which zh-CN/zh-TW spell `LOC_PLEASE_RESTORE_AFTER_1-2_MINUTES`.
+- **Anomaly** (source-level, not reproduced): receipt-validation failures throw inside the `checkReceiptValidation` `$http` callback, outside the promise chain ([L329-L341](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.alexdisler.js#L329-L341)). The `.catch` alert is never reached; only the loading overlay is hidden. That message would also use `LOC_PLEASE_RESTORE_AFTER_1_2_MINUTES`, which zh-CN/zh-TW spell `LOC_PLEASE_RESTORE_AFTER_1-2_MINUTES`.
 
-**Android (`cc.fovea.cordova.purchase`):** `order()` and `restore()` delegate to `store.order` and `store.refresh`, which use native store UI. There is no web progress or alert; `store.error` only logs `purchase/error/<message>` ([j3k0 L87-L158](../../client/www/js/controller.purchase.j3k0.js#L87-L158)).
+**Android (`cc.fovea.cordova.purchase`):** `order()` and `restore()` delegate to `store.order` and `store.refresh`, which use native store UI. There is no web progress or alert; `store.error` only logs `purchase/error/<message>` ([j3k0 L87-L158](https://github.com/WizardFactory/TodayWeather/blob/bd6640f22c1029c35e8937b108be4b50ea89361a/client/www/js/controller.purchase.j3k0.js#L87-L158)).
 
 **Capture:** not captured. Only the S13 plugin-unavailable state exists.
 

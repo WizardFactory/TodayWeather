@@ -1,6 +1,6 @@
 # Push notifications
 
-[Open the interactive push diagram](diagrams/push-notifications.html) · [Editable JSON](diagrams/push-notifications.json) · [Monthly request report](../../reports/aws/api-traffic-2026-09-22.md)
+[Open the interactive push diagram](diagrams/push-notifications.html) · [Editable JSON](diagrams/push-notifications.json) · [Monthly request report](../evidence/aws/api-traffic-2026-09-22.md)
 
 The app stores alarm/alert settings through a REST API. Independent background workers later select due settings, request weather, and submit a notification to a provider. The diagram's app-settings and notification-handling boxes represent two roles of the same mobile application.
 
@@ -19,7 +19,7 @@ Repository baseline: `c9220de35fe31838e10e692494731b90106b0f65` plus the issue #
 
 The [v000902 router](../../server/routes/v000902/index.js) mounts [the reused push handler](../../server/routes/v000705/routePushNotification.js) and [the batch handler](../../server/routes/v000902/route.push.update.list.js). The [v000903 router](../../server/routes/v000903/index.js) reuses the same handlers. `POST /push-list` is an upload operation despite its name; it is not a list-read endpoint.
 
-[Current CloudFront evidence](../../reports/sdlc/push-diagram/aws-routing.json) shows `/*/push` and `/*/push-list` targeting `tw-svc-spot.wizardfactory.net` directly, with HTTP port 80 to the origin. PUT, POST and DELETE are among the allowed methods; only GET and HEAD are configured as cached methods. This branch bypasses the API Gateway/Lambda path used for public weather and geocoding. The checked-in client base URL is a placeholder, so repository source alone does not establish every shipped app's host.
+[Current CloudFront evidence](../evidence/tasks/push-diagram/aws-routing.json) shows `/*/push` and `/*/push-list` targeting `tw-svc-spot.wizardfactory.net` directly, with HTTP port 80 to the origin. PUT, POST and DELETE are among the allowed methods; only GET and HEAD are configured as cached methods. This branch bypasses the API Gateway/Lambda path used for public weather and geocoding. The checked-in client base URL is a placeholder, so repository source alone does not establish every shipped app's host.
 
 The DELETE implementation uses truthiness rather than property presence. With `{fcmToken, cityIndex: 0, id: 1}`, both controllers build a token-only query, potentially removing settings for other cities. With a truthy city index and `id=0`, the id filter is ignored. This is an existing source behavior; no deletion was executed or code changed.
 
@@ -32,7 +32,7 @@ The DELETE implementation uses truthiness rather than property presence. With `{
 
 A first-token callback with an absent old token can therefore reach the 403 branch in this source. This is a code-supported failure scenario, **not proof of the cause of the logged 403 responses**. No client body or origin response body was correlated with those requests. The presence of PUT in CloudFront's allowed-method list is not evidence that every request passes every edge/origin check.
 
-An [isolated source check](../../reports/sdlc/pr2552-review-assessment/token-reproduction.json), with HTTP, storage and Firebase stubbed, confirmed that a repeated callback with the same token in one session sends no additional PUT. A new service instance without a persisted token can again send `oldToken=null`; after an explicit `savePushInfo()`, the same token does not trigger replacement on initialization. The relevant condition is a missing persisted token, not simply whether a user currently has alarms. This check did not reproduce production requests or device behavior.
+An [isolated source check](../evidence/tasks/pr2552-review-assessment/token-reproduction.json), with HTTP, storage and Firebase stubbed, confirmed that a repeated callback with the same token in one session sends no additional PUT. A new service instance without a persisted token can again send `oldToken=null`; after an explicit `savePushInfo()`, the same token does not trigger replacement on initialization. The relevant condition is a missing persisted token, not simply whether a user currently has alarms. This check did not reproduce production requests or device behavior.
 
 The server's invalid-pair branch sends `invalid body` as an HTTP response without explicitly logging that message. A count of that string in server logs alone therefore cannot establish this cause. An origin investigation must first confirm deployed code/logging and correlate token-presence indicators with request/status timestamps; raw token-bearing bodies should not be copied into reports. A separate fix should distinguish initial token acquisition from replacement and preserve persistence and failed-replacement retry semantics. No token behavior was changed here.
 
@@ -83,7 +83,7 @@ On a notification tap, [the app](../../client/www/js/service.push.js) parses `ci
 
 ## Observed request errors and boundaries
 
-In the [30-day CloudFront report](../../reports/aws/api-traffic-2026-09-22.md), covering **2026-08-23 19:53:45 UTC through 2026-09-22 19:53:45 UTC**:
+In the [30-day CloudFront report](../evidence/aws/api-traffic-2026-09-22.md), covering **2026-08-23 19:53:45 UTC through 2026-09-22 19:53:45 UTC**:
 
 | Operation | Requests | Observed responses |
 | --- | ---: | --- |
@@ -98,7 +98,7 @@ The batch settings handler logs individual alarm/alert persistence errors and pa
 
 ## Artifact verification
 
-[Delivery receipt](../../reports/sdlc/push-diagram/diagram-delivery.json) records **9/9 showcase checks, zero errors and warnings**, with 14 revision-pinned repository references. Browser evidence (local-only `reports/sdlc/push-diagram/diagram-browser.json`) records containment at 1440×900, 1600×1000, 1920×1080 and 2048×1320. [Visual review](../../reports/sdlc/push-diagram/visual-review.md) separately records actual light/dark screenshot inspection. Independent source verification is recorded in the task's verification report.
+[Delivery receipt](../evidence/tasks/push-diagram/diagram-delivery.json) records **9/9 showcase checks, zero errors and warnings**, with 14 revision-pinned repository references. Browser evidence (local-only `reports/sdlc/push-diagram/diagram-browser.json`) records containment at 1440×900, 1600×1000, 1920×1080 and 2048×1320. [Visual review](../evidence/tasks/push-diagram/visual-review.md) separately records actual light/dark screenshot inspection. Independent source verification is recorded in the task's verification report.
 
 The #2626 update of the diagram (SQLite store and push worker) is pinned to `125e821b`. Archify `validate --quality showcase --repo-root` passed 9/9 checks with zero errors and warnings. `deliver` passed (specification sha256 `4788b69d…c542`, artifact sha256 `ccb5e613…9aa6`). `visual-check` passed containment and readability at 1440×900 and 2048×1320, light and dark. The light 1440×900 and dark 1440×900 and 2048×1320 screenshots were also inspected by eye. The receipts are local-only under `reports/sdlc/issue-2626/design/final/`.
 

@@ -159,13 +159,13 @@ independent. No replacement feed or production recovery is claimed.
 
 See the [daily validity diagram](diagrams/daily-forecast-validity.html),
 [editable source](diagrams/daily-forecast-validity.json), and
-[contract, source policy and operator checklist](../../reports/sdlc/issue-2560/daily-forecast-contract.md).
+[contract, source policy and operator checklist](../operations/daily-forecast.md).
 
 Review5303256769 correction removes the retired `midrss` task from `checkTimeAndRequestTask` startup/hourly queues; short RSS remains scheduled. Legacy DB1 short saves additionally replace an optional current-batch `dailySource` snapshot for independently validated daily targets beyond the hourly template. Older documents are not backfilled; service can use this only after a successful normal collection. DB2 reuses each stored short document's publication. See the daily forecast contract for snapshot/rollback semantics.
 
 ## Historical ASOS recovery (#2564)
 
-[Recovery diagram](diagrams/historical-observations.html) · [JSON](diagrams/historical-observations.json) · [Operator contract](../../reports/sdlc/issue-2564/operator-contract.md).
+[Recovery diagram](diagrams/historical-observations.html) · [JSON](diagrams/historical-observations.json) · [Operator contract](../operations/historical-observations.md).
 
 The additive history path uses official ASOS hourly/daily observations and a separate `asos_history` Mongo collection shared by DB_DATA_VERSION 1.0 and 2.0. `_id` is `product:station:KST-slot`; Mongo's existing unique `_id` index and field-level conditional writes prevent duplicate records and replacement of accepted fields. Explicit KST keys and UTC BSON dates avoid importing the legacy scraper's host-local Date assumptions. Source, product, station, fetch time and time basis are retained. There is no history TTL/migration or write to grid collections.
 
@@ -223,6 +223,6 @@ Forecast and station-metadata legacy APIs are not migrated by this change.
 The user confirmed on 2026-09-29 that the AirKorea operating key is expired and
 will be renewed separately. No current provider entitlement, live collection
 success or production recovery is claimed. See the [rollout and rollback
-procedure](../../reports/sdlc/issue-2636/operations.md) for renewal and scheduled
+procedure](../operations/airkorea-recovery.md) for renewal and scheduled
 readback gates. Client-requested nation recovery uses Mongo plus the existing
 global-air chain and never calls AirKorea; see [nation response](mobile-api.md#nation-air-recovery-2636).

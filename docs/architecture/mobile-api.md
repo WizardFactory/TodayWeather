@@ -111,7 +111,7 @@ Both DB versions project `ws` and `wd`. [Wind normalization](weather-collection.
 
 Later observation and shortest-forecast merges can still supersede RSS values. `shortRssPubDate` records the accepted RSS publication, including equal publication or a result with no matching future slot; it does not prove every response field came from RSS. `currentPubDate` and `shortestPubDate` retain separate freshness meanings. This repair changes neither route ordering nor requested-unit conversion.
 
-Local checks run with `node server/test/offline/rss-wind.test.js` (Node 18+; no DB/provider access). See the [verification record](../../reports/sdlc/issue-2554/self-verification.md) for actual response-path smoke coverage and limitations. No production restart/deployment is part of this change; origin/CDN comparisons must follow a separately approved deployment. Unrelated Jeju HTTP 500 and legacy historical placeholders are not explained by this patch.
+Local checks run with `node server/test/offline/rss-wind.test.js` (Node 18+; no DB/provider access). See the [verification record](../evidence/tasks/issue-2554/self-verification.md) for actual response-path smoke coverage and limitations. No production restart/deployment is part of this change; origin/CDN comparisons must follow a separately approved deployment. Unrelated Jeju HTTP 500 and legacy historical placeholders are not explained by this patch.
 
 ### Current air summary (issue #2578)
 
@@ -269,7 +269,7 @@ independent. No replacement feed or production recovery is claimed.
 
 See the [daily validity diagram](diagrams/daily-forecast-validity.html),
 [editable source](diagrams/daily-forecast-validity.json), and
-[contract, source policy and operator checklist](../../reports/sdlc/issue-2560/daily-forecast-contract.md).
+[contract, source policy and operator checklist](../operations/daily-forecast.md).
 
 RSS-only daily fallback omits `r06`/`s06` aggregates: accepted RSS values are overlapping six-hour amounts, not 3-hour slot totals of hourly forecasts ([amount contract](#forecast-precipitation-amounts-issue-2583)). Summing them would overstate the daily amount. Hourly precipitation remains unchanged; missing daily aggregates mean unavailable, not zero.
 
@@ -283,7 +283,7 @@ The daily merge runs after existing short/observation composition and before uni
 
 `historyStatus` adds D-7..D-1 bounds, missing hourly slots, missing daily dates, optional hourly-field gaps and station/read status. Partial hourly-derived daily rows remain flagged as daily gaps until a complete aggregate or official daily record exists. Existing `midData.dailyStatus` continues to describe forecast coverage; historical observation rows do not require forecast AM/PM text. Stored provenance and contributed field names remain available on recovered observations. The public 41-slot three-hour series and the client's eight-slot comparison offset remain unchanged, as AK confirmed; the visible hourly view does not expand to seven days.
 
-[Recovery diagram](diagrams/historical-observations.html) · [Operator/test contract](../../reports/sdlc/issue-2564/operator-contract.md). Isolated local tests cover real Mongo/loopback HTTP plus actual route and shared client parsers; native mobile runtime and production recovery are separate operator checks.
+[Recovery diagram](diagrams/historical-observations.html) · [Operator/test contract](../operations/historical-observations.md). Isolated local tests cover real Mongo/loopback HTTP plus actual route and shared client parsers; native mobile runtime and production recovery are separate operator checks.
 
 Actual-data browser validation found that legacy charts print negative rain sentinels as `-1mm`. Final hourly response projection now omits invalid rain fields on rows carrying historical recovery provenance, after internal aggregation/unit conversion; valid zero/measured rain and unrelated rows are preserved. No client update is required for this correction. Internal sentinels remain unchanged, and `historyStatus` still reports missing fields.
 

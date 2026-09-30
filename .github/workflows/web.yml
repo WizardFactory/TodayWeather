@@ -48,8 +48,9 @@ jobs:
         if: always()
         with:
           name: web-browser-evidence
+          retention-days: 30
           path: |
-            reports/sdlc/webapp-implementation/screenshots
+            reports/verification/web/screenshots
             test-results
       - uses: actions/upload-artifact@v4
         with:

@@ -49,7 +49,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "7d629226573d13b5992576926e9366f8471ec592c8bf735cc8780496949156ea",
-    "diagnostic": "../../../reports/rewrite-verification/ta-air.json"
+    "diagnostic": "../../evidence/rewrite/ta-air.json"
   },
   {
     "file": "ta-weather.png",
@@ -75,7 +75,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "305afdd493046f1727cbfc9c6a6950c697a6e036eefce11dc33c20c6a5f5869d",
-    "diagnostic": "../../../reports/rewrite-verification/ta-weather.json"
+    "diagnostic": "../../evidence/rewrite/ta-weather.json"
   },
   {
     "file": "tw-air.png",
@@ -101,7 +101,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "e928d1538540b9cfac74f8da4f662782e8a8c8b55d6c7b77f007f524c9d4aa11",
-    "diagnostic": "../../../reports/rewrite-verification/tw-air.json"
+    "diagnostic": "../../evidence/rewrite/tw-air.json"
   },
   {
     "file": "tw-daily-compact.png",
@@ -152,7 +152,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "7358ca987c0d8d94279f95f8409c4a35d71ea500f58eb6e36f742eefcc19a3f2",
-    "diagnostic": "../../../reports/rewrite-verification/tw-daily.json"
+    "diagnostic": "../../evidence/rewrite/tw-daily.json"
   },
   {
     "file": "tw-favorites.png",
@@ -178,7 +178,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "0c2ee9fc30c5c636836e0c0fa4e41325cb3bfa51b0d0c5c85c1c22151d4ae898",
-    "diagnostic": "../../../reports/rewrite-verification/tw-favorites.json"
+    "diagnostic": "../../evidence/rewrite/tw-favorites.json"
   },
   {
     "file": "tw-guide.png",
@@ -204,7 +204,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "7313908dfe104c05c06d67dce5def715c9c3a2eb20822a9c4db8ad7b66338edd",
-    "diagnostic": "../../../reports/rewrite-verification/tw-guide.json"
+    "diagnostic": "../../evidence/rewrite/tw-guide.json"
   },
   {
     "file": "tw-hourly-compact.png",
@@ -255,7 +255,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "5771f88595a8aaedcd95d46b07531ebf59a8c7169253a25fcd8302a6d70e6f34",
-    "diagnostic": "../../../reports/rewrite-verification/tw-hourly.json"
+    "diagnostic": "../../evidence/rewrite/tw-hourly.json"
   },
   {
     "file": "tw-menu.png",
@@ -306,7 +306,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "54ca36ced1b0744470e1088414a1c5041f99e78a9c02e4c43d919aefdd514aa7",
-    "diagnostic": "../../../reports/rewrite-verification/tw-nation-air.json"
+    "diagnostic": "../../evidence/rewrite/tw-nation-air.json"
   },
   {
     "file": "tw-nation.png",
@@ -332,7 +332,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "d0fb51bb7c01685ba46418bbff58aeb6ef5dc4bfccb12895ab1bf9a73ecf8a0d",
-    "diagnostic": "../../../reports/rewrite-verification/tw-nation.json"
+    "diagnostic": "../../evidence/rewrite/tw-nation.json"
   },
   {
     "file": "tw-purchase-unavailable.png",
@@ -358,7 +358,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "6396bc6c66e3c23da069664a05883f5bc2fe5bacce35989a9ff25e7c4ebaf7f4",
-    "diagnostic": "../../../reports/rewrite-verification/tw-purchase-unavailable.json"
+    "diagnostic": "../../evidence/rewrite/tw-purchase-unavailable.json"
   },
   {
     "file": "tw-push-settings.png",
@@ -384,7 +384,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "54530416d36055b5ec25a3cd0320278d6e8c4d68f605c73d88380ab0ce4be0a5",
-    "diagnostic": "../../../reports/rewrite-verification/tw-push-settings.json"
+    "diagnostic": "../../evidence/rewrite/tw-push-settings.json"
   },
   {
     "file": "tw-start-compact.png",
@@ -435,7 +435,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "31b1d874af9f37aa1561260c05e19fbee91148f1f47a11ba34eee5c88406534c",
-    "diagnostic": "../../../reports/rewrite-verification/tw-start.json"
+    "diagnostic": "../../evidence/rewrite/tw-start.json"
   },
   {
     "file": "tw-temperature-unit.png",
@@ -461,7 +461,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "077000b4d3d5dfdd5083410fb3b555f0f389f457b9b1dad0f11b4efe39b33088",
-    "diagnostic": "../../../reports/rewrite-verification/tw-temperature-unit.json"
+    "diagnostic": "../../evidence/rewrite/tw-temperature-unit.json"
   },
   {
     "file": "tw-theme.png",
@@ -487,7 +487,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "57a8c9cbc3d11b60e8acb5d6d3af11be1b28eb15d4fc5fbd9af205c4c0b5f3bd",
-    "diagnostic": "../../../reports/rewrite-verification/tw-theme.json"
+    "diagnostic": "../../evidence/rewrite/tw-theme.json"
   },
   {
     "file": "tw-units.png",
@@ -513,7 +513,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "67a639055c52d033a25745020e667d00ca83551d4b2d09f0e973557d0b926510",
-    "diagnostic": "../../../reports/rewrite-verification/tw-units.json"
+    "diagnostic": "../../evidence/rewrite/tw-units.json"
   },
   {
     "file": "tw-warning.png",
@@ -539,7 +539,7 @@
     "evidence_kind": "simulator screenshot; synthetic/bundled data; no live integration",
     "visual_review": "inspected",
     "sha256": "6d94c4ff69b1087ccb8ed2ee3b3b4f1e6a127c698ad94a9a7ddfb2bbf135daeb",
-    "diagnostic": "../../../reports/rewrite-verification/tw-warning.json"
+    "diagnostic": "../../evidence/rewrite/tw-warning.json"
   },
   {
     "file": "tw-overlay-access-explanation.png",
@@ -567,7 +567,7 @@
     "trigger": "Shown by StartCtrl.init on every entry; captured before dismissal",
     "notes": "Also shown on iOS; buttons: OK only",
     "sha256": "d7a87b82e7cdd5019e1e12e1234e17c8ccbc3bc1f5be50d3d86cb4e136134586",
-    "diagnostic": "../../../reports/rewrite-verification/tw-overlay-access-explanation.json"
+    "diagnostic": "../../evidence/rewrite/tw-overlay-access-explanation.json"
   },
   {
     "file": "tw-overlay-start-popup.png",
@@ -595,7 +595,7 @@
     "trigger": "TabCtrl.startPopup() called in the harness",
     "notes": "Title is hidden by .ionic_popup .popup-head{display:none}. Preselected radio is data.autoSearch=false (no diagnostic plugin). Label/action inversion reproduced: see reports/rewrite-verification/probes/start-popup-choice.json",
     "sha256": "b4cf32219b56b919b87081626e22d628c031b12dc1985fd448e85a244e063a04",
-    "diagnostic": "../../../reports/rewrite-verification/tw-overlay-start-popup.json"
+    "diagnostic": "../../evidence/rewrite/tw-overlay-start-popup.json"
   },
   {
     "file": "tw-overlay-retry-weather.png",
@@ -623,7 +623,7 @@
     "trigger": "TabCtrl.showRetryConfirm(LOC_ERROR, LOC_FAIL_TO_GET_WEATHER_INFO, \"weather\")",
     "notes": "Only the weather variant renders without cordova.plugins.diagnostic; the retry button label is LOC_OK",
     "sha256": "eaa410801a776cbe131de6d3824aadf0b4d1b88d0b4558e2e13dfffcccb4f7ba",
-    "diagnostic": "../../../reports/rewrite-verification/tw-overlay-retry-weather.json"
+    "diagnostic": "../../evidence/rewrite/tw-overlay-retry-weather.json"
   },
   {
     "file": "tw-overlay-update-info.png",
@@ -651,7 +651,7 @@
     "trigger": "$rootScope.$broadcast(\"showUpdateInfoEvent\")",
     "notes": "Natural recurrence also observed after each reload until the checkbox is ticked and a button is tapped; iOS lines precede the shared lines",
     "sha256": "186a18981bd5e7712727d06ded0cf3b11f4ba398b84d902b800ee72d92d1ebe8",
-    "diagnostic": "../../../reports/rewrite-verification/tw-overlay-update-info.json"
+    "diagnostic": "../../evidence/rewrite/tw-overlay-update-info.json"
   },
   {
     "file": "tw-overlay-alert-intro.png",
@@ -679,7 +679,7 @@
     "trigger": "$rootScope.$broadcast(\"showAlertInfoEvent\")",
     "notes": "Normally emitted 500 ms after startup when Push.init() migrates a legacy alarm list",
     "sha256": "593772ba5be9e34aac8484da583f11f1fe079f7f20678e359be3525ae2933d8e",
-    "diagnostic": "../../../reports/rewrite-verification/tw-overlay-alert-intro.json"
+    "diagnostic": "../../evidence/rewrite/tw-overlay-alert-intro.json"
   },
   {
     "file": "tw-overlay-foreground-notification.png",
@@ -707,7 +707,7 @@
     "trigger": "$rootScope.$broadcast(\"notificationEvent\",{title,message}) with synthetic text",
     "notes": "Real payloads come from FirebasePlugin.onNotificationOpen with tap=false; not received here",
     "sha256": "4a58e09d3c15e40c154a8e18530a99290672d4b67bd9badb16eaf4a1cdfe44bc",
-    "diagnostic": "../../../reports/rewrite-verification/tw-overlay-foreground-notification.json"
+    "diagnostic": "../../evidence/rewrite/tw-overlay-foreground-notification.json"
   },
   {
     "file": "tw-overlay-air-source-info.png",
@@ -735,7 +735,7 @@
     "trigger": "TabCtrl.popUpAirForecastInfo(\"airkorea\")",
     "notes": "Normally opened from the forecast-source row; kaq shows LOC_KAQ_DESCRIPTION instead",
     "sha256": "aac3529f402f859d3959fa493629336c4bcede9fc10a2cb57d717e80ffb8edd0",
-    "diagnostic": "../../../reports/rewrite-verification/tw-overlay-air-source-info.json"
+    "diagnostic": "../../evidence/rewrite/tw-overlay-air-source-info.json"
   },
   {
     "file": "tw-overlay-start-error-alert.png",
@@ -763,7 +763,7 @@
     "trigger": "$rootScope.showAlert(LOC_ERROR, LOC_FAIL_TO_GET_WEATHER_INFO)",
     "notes": "Representative Start/Search failure alert; the add flow was not executed",
     "sha256": "bd2ebd5b1087a95618681f30f51648a500a5abb0e473ac43ff87e55b14c82833",
-    "diagnostic": "../../../reports/rewrite-verification/tw-overlay-start-error-alert.json"
+    "diagnostic": "../../evidence/rewrite/tw-overlay-start-error-alert.json"
   },
   {
     "file": "tw-overlay-about.png",
@@ -791,7 +791,7 @@
     "trigger": "SettingCtrl.clickMenu(\"openInfo\")",
     "notes": "Menu item is shown only when the language contains ko",
     "sha256": "f9ed04572a9f03a9d33d69164ea26b103545af8dbadc9dbe64084c3926981e26",
-    "diagnostic": "../../../reports/rewrite-verification/tw-overlay-about.json"
+    "diagnostic": "../../evidence/rewrite/tw-overlay-about.json"
   },
   {
     "file": "tw-overlay-push-save-confirm.png",
@@ -819,7 +819,7 @@
     "trigger": "PushCtrl.onClose() on a city with no stored push settings",
     "notes": "Defaults set updated=true, so Back prompts on first open; the title \"Save\" is hard-coded English",
     "sha256": "5513c9a0a4f79bae93be3c9eaff00a5f804b7c581459a3344b52ed929dd69ddf",
-    "diagnostic": "../../../reports/rewrite-verification/tw-overlay-push-save-confirm.json"
+    "diagnostic": "../../evidence/rewrite/tw-overlay-push-save-confirm.json"
   },
   {
     "file": "tw-loading-overlay-search.png",
@@ -847,7 +847,7 @@
     "trigger": "$ionicLoading.show() with the app default bubbles template",
     "notes": "Used by Start/Search/Nation flows, not by tab refresh",
     "sha256": "e3c88755d4a4e2aec8df2e5bd60882effcaaffa7761369738c4b537048185bfa",
-    "diagnostic": "../../../reports/rewrite-verification/tw-loading-overlay-search.json"
+    "diagnostic": "../../evidence/rewrite/tw-loading-overlay-search.json"
   },
   {
     "file": "tw-loading-header-spinner-light.png",
@@ -875,7 +875,7 @@
     "trigger": "showLoadingIndicator=true on the active TabCtrl scope",
     "notes": "Spinner is present in the DOM but invisible: .body-content .bar p svg forces white fill/stroke on the white light-theme header",
     "sha256": "efe6e4655b52b1636c3ca07a1eb619af0753e8d5d9e4f7fb9831e63052121a09",
-    "diagnostic": "../../../reports/rewrite-verification/tw-loading-header-spinner-light.json"
+    "diagnostic": "../../evidence/rewrite/tw-loading-header-spinner-light.json"
   },
   {
     "file": "tw-loading-header-spinner-dark.png",
@@ -903,7 +903,7 @@
     "trigger": "showLoadingIndicator=true on the active TabCtrl scope after reload with theme=dark",
     "notes": "Spinner visible next to the title",
     "sha256": "ed740caf661db85dc94445dd6faea9c411d0b15a4c755e39f18935e0c9a5ce99",
-    "diagnostic": "../../../reports/rewrite-verification/tw-loading-header-spinner-dark.json"
+    "diagnostic": "../../evidence/rewrite/tw-loading-header-spinner-dark.json"
   },
   {
     "file": "tw-favorites-search.png",
@@ -931,7 +931,7 @@
     "trigger": "OnFocusInput(); search.word=\"종로\"; OnChangeSearchWord()",
     "notes": "Bundled town.js results (first 10) with the TodayWeather divider; Google Places predictions are stubbed empty",
     "sha256": "16a847204ef517890456474dfd48d6c1b073da664f8e5b713f451004b5d26a3a",
-    "diagnostic": "../../../reports/rewrite-verification/tw-favorites-search.json"
+    "diagnostic": "../../evidence/rewrite/tw-favorites-search.json"
   },
   {
     "file": "tw-favorites-editing.png",
@@ -959,7 +959,7 @@
     "trigger": "OnEdit() after cancelling search",
     "notes": "Current-position row was enabled by the start-popup probe; it has no weather, so icon/temperature cells are hidden (t1h \"-\")",
     "sha256": "2ec9e4a034f25e46e99ae513ed41fdeca28ab08298d8147b03d7f22530352bef",
-    "diagnostic": "../../../reports/rewrite-verification/tw-favorites-editing.json"
+    "diagnostic": "../../evidence/rewrite/tw-favorites-editing.json"
   },
   {
     "file": "ta-favorites.png",
@@ -987,7 +987,7 @@
     "trigger": "TodayAir staging, Seoul selected from Start",
     "notes": "Row shows sentiment icon, grade and AQI value; tapping the icon opens push settings",
     "sha256": "c526d8d4d4ce869b9832485f80a9a367bc13e3b6379775b2248cb9758d02c243",
-    "diagnostic": "../../../reports/rewrite-verification/ta-favorites.json"
+    "diagnostic": "../../evidence/rewrite/ta-favorites.json"
   },
   {
     "file": "tw-nation-rain.png",
@@ -1015,7 +1015,7 @@
     "trigger": "changeWeatherType(1)",
     "notes": "Synthetic uniform values",
     "sha256": "2ec50cc9065e25b402cf58447f61c96badde28d54ccb7b470f23c3dca504d3be",
-    "diagnostic": "../../../reports/rewrite-verification/tw-nation-rain.json"
+    "diagnostic": "../../evidence/rewrite/tw-nation-rain.json"
   },
   {
     "file": "tw-nation-wind.png",
@@ -1043,7 +1043,7 @@
     "trigger": "changeWeatherType(2)",
     "notes": "Synthetic uniform values",
     "sha256": "27b99602009244baf1c428b4c349167ded03c20ecfd6b21d2bc7958867b8137d",
-    "diagnostic": "../../../reports/rewrite-verification/tw-nation-wind.json"
+    "diagnostic": "../../evidence/rewrite/tw-nation-wind.json"
   },
   {
     "file": "tw-theme-dark-hourly.png",
@@ -1071,7 +1071,7 @@
     "trigger": "settingsInfo.theme persisted, document reloaded",
     "notes": "icons_dark with weather_default",
     "sha256": "18fe9a6e931d32e04801ed04a5875278c11999c6b7a5b45a6c00fdbf04e8b93f",
-    "diagnostic": "../../../reports/rewrite-verification/tw-theme-dark-hourly.json"
+    "diagnostic": "../../evidence/rewrite/tw-theme-dark-hourly.json"
   },
   {
     "file": "tw-theme-old-hourly.png",
@@ -1099,7 +1099,7 @@
     "trigger": "settingsInfo.theme persisted, document reloaded",
     "notes": "icons_old with weather_old",
     "sha256": "937633c673553c940766a97d47408ff463d5495067350278cc02e651933b94c7",
-    "diagnostic": "../../../reports/rewrite-verification/tw-theme-old-hourly.json"
+    "diagnostic": "../../evidence/rewrite/tw-theme-old-hourly.json"
   },
   {
     "file": "tw-theme-photo-hourly.png",
@@ -1127,7 +1127,7 @@
     "trigger": "settingsInfo.theme persisted; staged weatherPhotosUrl points to a loopback synthetic feed",
     "notes": "Background is a generated gradient PNG from examples/weather-photos-feed.json, not a real photo",
     "sha256": "630df8081c9f95c7407d451bcbc56e72502b3904381714a082b568f580d71264",
-    "diagnostic": "../../../reports/rewrite-verification/tw-theme-photo-hourly.json"
+    "diagnostic": "../../evidence/rewrite/tw-theme-photo-hourly.json"
   },
   {
     "file": "ta-theme-dark-air.png",
@@ -1155,7 +1155,7 @@
     "trigger": "TodayAir staging, theme persisted, document reloaded",
     "notes": "TodayAir offers light and dark only",
     "sha256": "0f674a82780c1fb99c47abbc6bb4959ee9cbdd3994c843f219e7659c74e46b02",
-    "diagnostic": "../../../reports/rewrite-verification/ta-theme-dark-air.json"
+    "diagnostic": "../../evidence/rewrite/ta-theme-dark-air.json"
   },
   {
     "file": "tw-start-en-us.png",
@@ -1183,7 +1183,7 @@
     "trigger": "navigator.language/languages set to en-US in the staged harness, storage cleared",
     "notes": "Region US from navigator.languages",
     "sha256": "c5344b02c1cfbef6a4e151fad6659fe718df8ceb243fe946245247810071f098",
-    "diagnostic": "../../../reports/rewrite-verification/tw-start-en-us.json"
+    "diagnostic": "../../evidence/rewrite/tw-start-en-us.json"
   },
   {
     "file": "tw-menu-en-us.png",
@@ -1211,7 +1211,7 @@
     "trigger": "$ionicSideMenuDelegate.toggleLeft(true)",
     "notes": "No KR-only items (warnings, national weather/air, wind map) and no About",
     "sha256": "123d07104c03c3a7ce01b8751a47aad111a36be074b91d342cb96d06bdaf4d3a",
-    "diagnostic": "../../../reports/rewrite-verification/tw-menu-en-us.json"
+    "diagnostic": "../../evidence/rewrite/tw-menu-en-us.json"
   },
   {
     "file": "tw-units-en-us.png",
@@ -1239,7 +1239,7 @@
     "trigger": "Region US defaults after cleared storage",
     "notes": "F, mph, inHg, miles, inches, USA (airnow)",
     "sha256": "8bd404966c70f295a2be1f8d141edf0aafdfe2f73f7451d5d23d693d0acce8a5",
-    "diagnostic": "../../../reports/rewrite-verification/tw-units-en-us.json"
+    "diagnostic": "../../evidence/rewrite/tw-units-en-us.json"
   },
   {
     "file": "tw-android-mode-hourly.png",
@@ -1267,7 +1267,7 @@
     "trigger": "index.html?ionicplatform=android",
     "notes": "Ionic Android mode inside the iOS WKWebView, no Android plugins: tabs-android.html icons and Android share glyph",
     "sha256": "37246c117c476951cf1231fc0fac55c05622615900e133a773db25b42b6b1fc3",
-    "diagnostic": "../../../reports/rewrite-verification/tw-android-mode-hourly.json"
+    "diagnostic": "../../evidence/rewrite/tw-android-mode-hourly.json"
   },
   {
     "file": "tw-android-mode-menu.png",
@@ -1295,7 +1295,7 @@
     "trigger": "index.html?ionicplatform=android; toggleLeft(true)",
     "notes": "Chevrons hidden on non-KR items; Android back arrow; not an Android device",
     "sha256": "5bf8666a416ae1795c8365f59bd090363e2c471e163bc05f915d86df12438e19",
-    "diagnostic": "../../../reports/rewrite-verification/tw-android-mode-menu.json"
+    "diagnostic": "../../evidence/rewrite/tw-android-mode-menu.json"
   },
   {
     "file": "tw-ipad-hourly.png",
@@ -1323,7 +1323,7 @@
     "trigger": "Dedicated iPad simulator, storage cleared, Seoul selected from Start, then $state.go",
     "notes": "Portrait only: the harness Info.plist allows portrait, so landscape is not captured. TabCtrl.initSize computes sizes once from window.screen. The daily chart takes the bodyWidth >= 640 branch and starts at its first day; the hourly guard compares NaN < 640 and never triggers, so the hourly chart is scrolled like a phone (decision register A49).",
     "sha256": "4f3461b9d2228ca5a8cb04e5d4b221e24d7f5b967a844f74e65a8b55f01620a7",
-    "diagnostic": "../../../reports/rewrite-verification/tw-ipad-hourly.json"
+    "diagnostic": "../../evidence/rewrite/tw-ipad-hourly.json"
   },
   {
     "file": "tw-ipad-daily.png",
@@ -1351,7 +1351,7 @@
     "trigger": "Dedicated iPad simulator, storage cleared, Seoul selected from Start, then $state.go",
     "notes": "Portrait only: the harness Info.plist allows portrait, so landscape is not captured. TabCtrl.initSize computes sizes once from window.screen. The daily chart takes the bodyWidth >= 640 branch and starts at its first day; the hourly guard compares NaN < 640 and never triggers, so the hourly chart is scrolled like a phone (decision register A49).",
     "sha256": "9597031dc0338d1b1fcf61ceaf2a22f6e406c816fc5ddb11ec169ff4c046138e",
-    "diagnostic": "../../../reports/rewrite-verification/tw-ipad-daily.json"
+    "diagnostic": "../../evidence/rewrite/tw-ipad-daily.json"
   },
   {
     "file": "native-ios-start.png",

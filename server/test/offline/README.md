@@ -90,7 +90,7 @@ read as text only. These tests also pass on Node 16.20.2 after replacing the res
 `structuredClone` helper with a Date-preserving V8 clone. Real provider and
 deployment behavior remain operator checks.
 
-See [daily contract and deployment checklist](../../../reports/sdlc/issue-2560/daily-forecast-contract.md).
+See [daily contract and deployment checklist](../../../docs/operations/daily-forecast.md).
 
 `daily-review.test.js` adds shower mapping/storage, forecast-gap health, retired scheduler, raw short source publication bounds, DB1 complete snapshot replacement, KST year/midnight and shared JS consumer compatibility checks. Full-route smoke covers D+3 available, absent, partial, stale and DB1 legacy-without-snapshot, showers and optional RSS humidity. Raw additional daily fields do not expand the hourly template or invent daily precipitation totals. Native runtime tests remain operator-owned.
 
@@ -147,7 +147,7 @@ the deployed Mongoose 5/old Mongo server combination is not validated by this ch
 It verifies real storage/readback/uniqueness/leases, actual HTTP pagination/retries,
 and actual v000903 route/shared client parsing in 16 DB-version/unit/data-availability
 scenarios. No application startup, production secrets, KMA requests or mobile build.
-See the [operator contract](../../../reports/sdlc/issue-2564/operator-contract.md).
+See the [operator contract](../../../docs/operations/historical-observations.md).
 
 ## Air provider chain and domestic air fallback (#2622, #2628)
 

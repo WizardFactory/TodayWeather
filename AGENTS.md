@@ -7,7 +7,7 @@ This file is the canonical repository guidance for Codex and Claude Code. CLI-sp
 - Communicate with AK in Korean. Use English as the primary language for repository content.
 - Preserve existing user changes, instructions, skills and configuration. Inspect the working tree before editing and keep changes within the requested scope.
 - When installing or updating a skill, maintain one canonical copy at `.agents/skills/<name>/` for repository scope or `~/.agents/skills/<name>/` for user scope. Link it into both Codex and Claude Code skill directories, configure required hooks for both, and verify discovery and execution in the intended scope before reporting completion.
-- When available, read the shared user policy at `~/.agents/policies/sdlc.md` at task intake and follow its SDLC selection. Simple questions do not require a development workflow. Do not copy user-level policy into this file.
+- When available, read the shared user policy at `~/.agents/policies/sdlc.md` at task intake and follow its SDLC selection. If that path is absent, follow the installed SDLC skill’s normative policy. Simple questions do not require a development workflow. Do not copy user-level policy into this file.
 
 ## Read the architecture first
 
@@ -40,7 +40,7 @@ Prefer shared app edits in `client/www/` when that is the intended build source.
 ## Architecture constraints to preserve
 
 - The app builds `/weather/v000903/...` and `/geocode/v000903/...`. The 2026-09-20 AWS/deployed-source evidence verifies CloudFront -> API Gateway -> Lambda; weather coordinates dispatch to EC2 KMA address or DSF coordinates. Gateway code is outside this checkout. Recheck current evidence before relying on that deployment mapping; the inspected service host uses a 5bca407 checkout with config/logger edits, service mode and DB version 2.0. Separate gather/Mongo internals remain unverified. Weather address Lambda is unsupported (501); unversioned weather defaults to v000901.
-- The [2026-08-23 to 2026-09-22 UTC traffic window](reports/aws/api-traffic-2026-09-22.md) recorded 70.72% of product API requests on unversioned `/weather/coord/...`. The Lambda default `v000901` is a separate 2026-09-20 deployment observation, not per-request historical correlation. Android-like callers of this path remain unidentified; see [open questions](docs/architecture/evidence.md#traffic-and-log-access-follow-up).
+- The [2026-08-23 to 2026-09-22 UTC traffic window](docs/evidence/aws/api-traffic-2026-09-22.md) recorded 70.72% of product API requests on unversioned `/weather/coord/...`. The Lambda default `v000901` is a separate 2026-09-20 deployment observation, not per-request historical correlation. Android-like callers of this path remain unidentified; see [open questions](docs/architecture/evidence.md#traffic-and-log-access-follow-up).
 - Domestic weather is largely gathered before requests; the latest DSF/AQI path can call providers during a request. A legacy collector's presence does not establish startup wiring.
 - `SERVER_MODE` selects background work, not route visibility. Its default `local` starts both gather and scrape. Inspect startup side effects before running the server; use an isolated configured environment for runtime verification.
 - `/gather/*` GET handlers can call providers and write data. Do not use them as health probes; `/health` is the explicit basic health route.
@@ -57,3 +57,10 @@ Prefer shared app edits in `client/www/` when that is the intended build source.
 - Keep credentials and private release configuration out of docs, logs and commits. Record environment variable names and prerequisites rather than secret values.
 - When changing a route, collector, response, mode or storage contract, update the affected architecture document and Archify JSON. Regenerate HTML through the installed Archify skill and verify artifact, browser and visual results separately. Do not manually patch generated HTML.
 - Report what changed, the checks actually executed, and material limitations. Do not claim a live provider call, mobile build, deployment, Claude execution or cross-provider review based only on source inspection or adapter presence.
+
+## Artifact retention and commit preparation
+
+- Follow [artifact retention](docs/development/artifact-retention.md). Keep maintained knowledge in docs, reusable verification tools in scripts/tests, and selected dated evidence in docs/evidence. Generated state and runs belong under ignored reports/, .planning/ or .archify/.
+- Reconcile findings, preserve required evidence, and fix references before final verification and commit. Keep original local files when untracking; do not force-add generated reports. Preserve active verification inputs and diagram recovery metadata.
+- Run `python3 scripts/check-artifact-policy.py --staged` on intended staged content. Before push, check the actual outgoing commits using the same checker; maintained links must work without local-only files. Checks and hooks do not delete, rewrite or stage content. Preserve all existing test/review gates.
+- Shared-skill changes are separate from repository configuration; use the [upgrade guide](docs/development/skill-retention-upgrade.md), keep one canonical skill and verify both hosts before claiming execution.

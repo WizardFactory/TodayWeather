@@ -6,7 +6,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(__dirname, '../www');
-const output = path.resolve(process.env.SMOKE_OUTPUT || 'reports/sdlc/issue-2641');
+const output = path.resolve(process.env.SMOKE_OUTPUT || 'reports/verification/client/payment-removal');
 const errors = [], forbidden = [], external = [];
 const server = http.createServer((req, res) => {
     const name = decodeURIComponent(new URL(req.url, 'http://local').pathname);

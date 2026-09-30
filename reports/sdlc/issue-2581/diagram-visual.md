@@ -1,2 +1,0 @@
-# Diagram verification
-Archify 2.17: nine artifact checks passed, zero composition warnings/errors. Browser checks passed light/dark containment at 1440x900, 1600x1000, 1920x1080 and 2048x1320. Main agent inspected the actual 2048x1320 light screenshot: readable participants/edges and freshness note, no overlap or clipping. Initial long title/extra card text caused vertical overflow; shortening the title and redundant limits text repaired it without reducing fonts or hiding content. JSON and generated HTML are retained.

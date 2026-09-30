@@ -1,8 +1,0 @@
-# Review 5357566512 correction
-The required finding is valid: async.map previously short-circuited after one failed Mongo row write, allowing scheduled collection to release its lock while sibling writes were still outstanding. Both station and sido writers now collect row errors as result values, wait for every acknowledgement, then return one sanitized OBSERVATION_WRITE_FAILED. Successful callers still receive the original raw results in input order. Station failure continues to suppress aggregate writes. No timeout forcibly releases a lock around buffered writes.
-
-Ten new tests cover station/sido scheduled runs, all-success and first/middle/last-row failure with delayed peers, lock retention and overlap rejection, restart only after drain, synchronous error, multiple failures and raw-result compatibility. Intended Red reproduced premature completion before application edits. Final focus count:26 collection+13 nation. The test-only error assertion was corrected to inspect code instead of a message that includes the existing AirKorea prefix.
-
-Both deployment recommendations are valid: old nation clients omit representative-point labels and on-screen provider attribution. operations.md now explicitly gates rollout on old-client exposure policy or a capable client release and provider/display/device checks; no compliance or device claim is made. Prior small status/log documentation discrepancies are corrected. Existing diagrams already describe awaited writes; this correction restores that contract and does not change flow, components or storage, so diagram regeneration is not applicable.
-
-Exact source manifest:candidate-v3.json; diff:source-v3.diff. No merge, deployment, provider calls or key changes.

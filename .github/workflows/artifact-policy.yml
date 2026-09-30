@@ -1,0 +1,31 @@
+name: Repository artifacts
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  artifact-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 scripts/verification/test_artifact_policy.py
+      - run: python3 scripts/verification/smoke_artifact_hooks.py
+      - name: Check committed snapshots and history
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -n "$BASE" ]; then
+            python3 scripts/check-artifact-policy.py --range "$BASE" "$HEAD"
+          else
+            python3 scripts/check-artifact-policy.py --commit "$HEAD"
+          fi
