@@ -68,3 +68,6 @@ visual-check.*
 /web/dist/
 /test-results/
 /playwright-report/
+
+# Reproducible shared token outputs
+/packages/design-tokens/generated/

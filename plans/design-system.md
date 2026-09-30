@@ -232,3 +232,15 @@ Recorded in spec §14.
 - D6: Galaxy S26.
 - D7: no MetricSwitcher.
 - D8: PWA temperature gradient on the Cordova daily bars.
+
+## Authorized creation steps 3–5 and pre-merge (2026-10-01)
+
+Owner: TodayWeather design/frontend owner. This supersedes the earlier local token/gallery exclusions for the standalone references. Production adoption phases remain distinct.
+
+1. Test token failure cases and chart model alignment/missing/current/domain rules before implementation (node:test).
+2. Create packages/design-tokens JSON/resolver/generator, deterministic CSS/TS/JS, role/contrast report; ignore output. Add root generation/test/gallery commands and pinned axe tooling; refresh lockfile only for authorized workspace/dependency.
+3. Build chart-model.js and shared reference chart renderer with keyboard/table parity, fixture documentation. Build gallery HTML/CSS/JS with buttons/input/tabs/card/dialog/settings and state samples. No production web/src replacement.
+4. Run token/derivation Green and post-refactor checks, then separate loopback browser functional smoke in Chromium/WebKit and axe; inspect captures. Retain selected dated evidence, validate intended Git index and all outgoing commits.
+5. Commit/push todayweather-design-system, create one PR against master referencing2651/2649/2650 without closing parent issue, wait for CI. Configured Anthropic latest-release medium/auto reviewer performs separate independent verification and actual PR review; root integrates corrections. Stop unmerged after fresh readiness/protection/auto-merge/queue checks.
+
+Risks: arbitrary aliases/malformed color modes rejected before output; ambiguous comparison dates use documented Korea fixture contract; negative values/close labels/null rows tested; enlarged charts internally scroll; modal native focus behavior checked. Revert scoped commits to rollback creation, regenerate output on clean checkout. Token JSON now owns executable numeric values; changes to prose tables must remain consistent. D3 physical/native and production runtime remain deferred.

@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "packages/weather-core",
-    "web"
+    "web",
+    "packages/design-tokens"
   ],
   "engines": {
     "node": ">=22.12.0"
@@ -19,9 +20,13 @@
     "build:web": "npm run build -w @todayweather/web",
     "preview:static": "node scripts/web-static-preview.mjs",
     "deploy:static": "node scripts/deploy-web-static.mjs",
-    "test:layout": "node scripts/web-layout-check.mjs"
+    "test:layout": "node scripts/web-layout-check.mjs",
+    "generate:tokens": "node packages/design-tokens/generate.mjs",
+    "test:design": "node --test packages/design-tokens/test/*.test.mjs scripts/verification/design-chart-model.test.mjs",
+    "gallery": "node scripts/design-gallery.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.2",
     "@types/react": "19.3.0",

@@ -1,0 +1,8 @@
+{
+  "name": "@todayweather/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { "./css": "./generated/tokens.css", "./values": "./generated/tokens.js", "./types": "./generated/tokens.ts" },
+  "scripts": { "generate": "node generate.mjs", "test": "node --test test/*.test.mjs" }
+}

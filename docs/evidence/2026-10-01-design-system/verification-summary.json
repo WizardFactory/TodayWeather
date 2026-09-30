@@ -1,0 +1,144 @@
+{
+  "date": "2026-10-01",
+  "base": "6ec6c68ceb518e22382ba2c24428964d4d2e0e67",
+  "versions": {
+    "chromium": "153.0.8010.12",
+    "webkit": "26.6"
+  },
+  "renders": 128,
+  "control_groups": 8,
+  "controls": [
+    "chromium/mobile: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "chromium/tablet: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "chromium/desktop: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "chromium/compact: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "webkit/mobile: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "webkit/tablet: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "webkit/desktop: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "webkit/compact: chart/expander/tabs/input/dialog/states/reduced/forced"
+  ],
+  "seriousCritical": 0,
+  "sourceDigests": {
+    "packages/design-tokens/tokens.json": "6f7c8a21cde6fae49a66b4ddc3dbfc9394f518e757442a98e95496b80d095ac5",
+    "packages/design-tokens/resolver.mjs": "a4f3aa4bcbf234c6244085026529d30d4bc2117e8a95154b53aba324223c4d2d",
+    "packages/design-tokens/generate.mjs": "aa06306e00b5cc1ce0cd479b30a60796d601e379e6f1c85c190d56ac2268fea5",
+    "docs/design-system/references/gallery.html": "caa85cdd3b11d6e8e5d92d330bc846d68ad46c980d26d46e477e1a5279483f97",
+    "docs/design-system/references/gallery.css": "285208cc63507e89f81c61f6e813562bbbe0100059b04b1a9c846bfc2fd99d71",
+    "docs/design-system/references/gallery.js": "fe971a7bd2d0602cbfb6ea0ea6df0243a9b7be834064e919b8c7028bd805c1ae",
+    "docs/design-system/references/chart-model.js": "ebd0ad7433f9507f007d05a1048195139ef947d130f59e45071bdd130d768f5c",
+    "docs/design-system/references/charts.js": "2d5fdd79de36f556b6db275cd850f8a361e6c3ac38290a44b3041eafdaca7c78",
+    "docs/design-system/references/fixtures.js": "b415403afc8cb4dd5e22b691c7a2147902b12d42dfe6d4681684048c8bc1e931",
+    "scripts/design-gallery.mjs": "78f960b5f721a708814725c5f1848318376a07f2fcee2b0515432406a59d0344",
+    "scripts/verification/design-gallery-check.mjs": "186f8c826faaa8f9624fb7b501c67801965dde80509d6367957010785db9930a"
+  },
+  "captures": {
+    "mobile-light.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "tier": "mobile",
+      "lang": "ko",
+      "appearance": "light",
+      "scale": 1,
+      "root": 16,
+      "sha256": "2e86d8ae9d9a9d5d2a814c8275ec0cd20db0b564b89606a6d18fed5329802333",
+      "pixels": [
+        402,
+        4143
+      ]
+    },
+    "mobile-dark.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "tier": "mobile",
+      "lang": "ko",
+      "appearance": "dark",
+      "scale": 1,
+      "root": 16,
+      "sha256": "98cf6b8d7cf8c4feea9744cf3d945dbc0e030cff7d972c9eae2ba75959e011e1",
+      "pixels": [
+        402,
+        4143
+      ]
+    },
+    "tablet-light.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "tier": "tablet",
+      "lang": "ko",
+      "appearance": "light",
+      "scale": 1,
+      "root": 16,
+      "sha256": "230e3d9f2907623a719bfc10db66328700373fb4e148a86276a0e0efba03edd4",
+      "pixels": [
+        820,
+        3231
+      ]
+    },
+    "tablet-dark.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "tier": "tablet",
+      "lang": "ko",
+      "appearance": "dark",
+      "scale": 1,
+      "root": 16,
+      "sha256": "fb0b7076bd9826f3c085b7876d509ac6883e24ba7d890accd50db94bd995754d",
+      "pixels": [
+        820,
+        3231
+      ]
+    },
+    "desktop-light.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "tier": "desktop",
+      "lang": "ko",
+      "appearance": "light",
+      "scale": 1,
+      "root": 16,
+      "sha256": "6b0f6fec881964a03d1429cfe39235cc158388975ef3252ec1cb80695293b3f9",
+      "pixels": [
+        1440,
+        2914
+      ]
+    },
+    "desktop-dark.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "tier": "desktop",
+      "lang": "ko",
+      "appearance": "dark",
+      "scale": 1,
+      "root": 16,
+      "sha256": "c3dbc282b5e6e754d66e5bc48284360fc753e27de77c2ff1ca9c9021c7388a57",
+      "pixels": [
+        1440,
+        2914
+      ]
+    }
+  },
+  "token_count": 435,
+  "contrast_pairs": 606,
+  "model_tests": 12,
+  "existing_tests": 151,
+  "typecheck": "passed",
+  "determinism": "byte-identical"
+}

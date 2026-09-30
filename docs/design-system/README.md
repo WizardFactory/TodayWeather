@@ -1,6 +1,6 @@
 # TodayWeather design system
 
-Status: approved rules with isolated typography references (2026-10-01, current base `6ec6c68c`; original investigation/diagram base `481aa49d`). Shared creation is tracked in [#2651](https://github.com/WizardFactory/TodayWeather/issues/2651), production PWA adoption in [#2649](https://github.com/WizardFactory/TodayWeather/issues/2649), and missing life-index data in [#2650](https://github.com/WizardFactory/TodayWeather/issues/2650). The production PWA still uses its original stylesheet. Maintainer role: TodayWeather design/frontend owner.
+Status: shared tokens and isolated typography/chart/component references (2026-10-01, current base `6ec6c68c`; original investigation/diagram base `481aa49d`). Shared creation is tracked in [#2651](https://github.com/WizardFactory/TodayWeather/issues/2651), production PWA adoption in [#2649](https://github.com/WizardFactory/TodayWeather/issues/2649), and missing life-index data in [#2650](https://github.com/WizardFactory/TodayWeather/issues/2650). The production PWA still uses its original stylesheet. Maintainer role: TodayWeather design/frontend owner.
 
 | Read | Purpose |
 | --- | --- |
@@ -8,6 +8,8 @@ Status: approved rules with isolated typography references (2026-10-01, current 
 | [Adoption plan](../../plans/design-system.md) | Phases: tokens → typography → Cordova charts → color → space → components → sky → optional native |
 | [Intent](../../intent/design-system.md) | Request, acceptance criteria and the typography-first and core-charts amendments |
 | [Documentation and planning guide](documentation-guide.md) | Required deliverables, templates, authoritative sources, lifecycle/status and evidence rules |
+| [Token usage guide](tokens.md) | JSON architecture, generation, typed outputs, contrast policy and migration |
+| [Chart and component gallery](gallery.md) | Standalone gallery, chart fixture contract, keyboard controls and verification |
 | [Typography verification guide](typography.md) | Selected role sizes, scaling/tier rules, local reproduction, browser matrix and device limitations |
 | [Interactive typography reference](references/typography.html) | Locally hosted Pretendard; ko/de; light/dark; 90/100/115/130%; 200% root text; core chart text |
 | [Dated typography evidence](../evidence/2026-10-01-design-typography/README.md) | Measured outcomes, retained screenshots, source identities, reproduction and verification limitations |
@@ -17,7 +19,7 @@ Status: approved rules with isolated typography references (2026-10-01, current 
 
 **Typography.** [Spec §3](../../specs/design-system.md#3-typography-ac2-first-priority) is the normative role table. Tier selection uses viewport and primary pointer with explicit precedence, independently of layout. The [reference and guide](typography.md) demonstrate the values and their scale floors. Browser checks validate geometry and font metrics; physical-device reading comfort and D3 system scaling still require device comparison.
 
-**Current adoption boundary.** Documentation and an isolated reference are available. The token package/generator, production component gallery, full chart-data behavior and PWA migration remain later work. Cordova/native output and widget alignment are deferred; TodayAir is retired and its source is historical only. The token pipeline diagram remains an unchanged proposal.
+**Current adoption boundary.** Documentation and an isolated reference are available. The shared token package/generator and standalone chart/component gallery are implemented. Production PWA migration remains later work. Cordova/native output and widget alignment are deferred; TodayAir is retired and its source is historical only. The historical token pipeline diagram is unchanged; its optional native outputs remain deferred.
 
 **References.**
 - The Cordova app (`client/`).

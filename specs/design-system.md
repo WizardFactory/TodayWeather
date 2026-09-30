@@ -7,7 +7,7 @@ Inputs:
 - independent-verification-1 findings
 - base 481aa49d
 
-Status (2026-10-01): approved design input, with isolated documentation/typography references authorized by AK's steps 1–2 request. The production PWA still uses its original styles. Token-package creation and production adoption are later work. See [documentation guide](../docs/design-system/documentation-guide.md) for authoritative-source and status rules.
+Status (2026-10-01): approved design input, with isolated documentation/typography references authorized by AK's steps 1–2 request. The production PWA still uses its original styles. Shared-token and chart/component reference creation are now authorized by AK steps 3–5; production adoption remains later work. See [documentation guide](../docs/design-system/documentation-guide.md) for authoritative-source and status rules.
 
 Current working base after AK-authorized master pull: `6ec6c68c`. The source investigation and original diagram remain pinned to `481aa49d`; their historical claims were not re-certified by the pull. Artifact storage and submission now follow [repository retention](../docs/development/artifact-retention.md).
 
@@ -364,7 +364,7 @@ Both charts keep the Cordova information model and reading order. The design sys
      - bottom (min) `chart.range.cool` `#9bcdf0`
      - top (max) `chart.range.warm` `#f0c77f`
      - The same gradient is used in dark mode, where it reaches 7.62–9.68 on surface and raised.
-     - In light mode the stops are 1.70 and 1.59 on white. The printed min/max values carry the information, and a 1 px inset outline `chart.range.edge` (`rgb(30 42 61 / 22%)`) keeps the bar shape visible.
+     - In light mode the stops are 1.70 and 1.59 on white. The printed min/max values carry the information, and a 1 px solid outline `chart.range.edge` (`#637088` light / `#94a3b8` dark) keeps the bar shape visible.
    - **Values.** The maximum sits above the bar and the minimum below it, each as `N°` in `chart-value`.
    - **Current temperature.** A `chart.now` dot on today's bar.
    - **Past days** (new addition; Cordova does not distinguish them). Bars keep the D8 gradient at 55% opacity, and labels use `text.secondary`, which is the non-color cue.
@@ -647,3 +647,17 @@ The reference apps are described only from public reporting. No device was inspe
 | D6 | Samsung reference: Galaxy S26 (One UI 8.5) |
 | D7 | No MetricSwitcher; keep the Cordova chart and expander |
 | D8 | The daily chart bars use the PWA daily list gradient `#9bcdf0` → `#f0c77f` (min → max) |
+
+## 15. Executable creation contract (AK steps 3–5, 2026-10-01)
+
+Owner: TodayWeather design/frontend owner. Endpoint: pre-merge on todayweather-design-system, no merge/deployment. These implementation details supersede proposed output locations/tooling above for the reference creation stage only.
+
+- packages/design-tokens/tokens.json uses explicit DTCG2025.10 types and local org.todayweather extensions for appearance/tier variants, scaling floors and allowed contrast surfaces. This implements a documented subset, not a full general DTCG/Resolver schema validator. Primitive is raw, semantic aliases primitive and component aliases semantic; cycles, missing references, type mismatches, invalid modes, duplicate CSS names and missing required roles fail. Every type role has three tiers, weight/leading/numeral intent.
+- A zero-dependency generator emits ignored packages/design-tokens/generated/tokens.css, tokens.ts, tokens.js, token-reference.json and contrast-report.json. Public CSS names omit semantic/component tier prefixes; primitives are not exported for component styling. npm generate:tokens is the clean-checkout entry point, used by gallery serving/checks; production web imports and pre-script migration remain #2649. Numeric/type/unit/alias/contrast and deterministic checks use node:test.
+- Essential non-text boundaries (inputs/focus/temperature bars) have ≥3:1 contrast. D8 fill and original AQI hues retain labels plus ≥3:1 semantic edges. Decorative borders are marked decorative, not certified as meaningful controls.
+- docs/design-system/references/gallery.html and modules consume generated tokens. The locally hosted reference retains supplied font/license; font deployment/subsetting remains adoption work. Gallery controls cover appearance including system, language ko/de, size settings, viewport tiers. Production html font-size is not overridden; separate typography specimen remains the root-preference stress harness.
+- Reference charts accept explicitly normalized timestamped rows, not raw provider responses. Korea fixed-offset fixtures align yesterday by24h, retain null gaps, include current observation in the domain and today's series, and avoid showing out-of-range markers. Hourly dates/time/icons, zero probability/amount, wind/direction/humidity; daily past/today/future, AM/PM merged when same, probability only truthy today/future, amount, max/min/current point. Tables use the same model. Keyboard Home/End/Left/Right cursor announces all row information; initial daily scroll places today third when overflow. Visible stale/loading/empty/error cases.
+- Gallery uses native controls and modal dialog, tab keyboard roving, validation describedby/invalid, focus restore, status announcements, explicit unavailable-data states, reduced motion and forced-colors. No metric switch per D7. Theme/text choices are session-only reference state, not product storage migration. Native seven-language/system preferences remain later verification.
+- Test-first token and chart derivation checks must show intended Red then Green and post-refactor checks; browser gallery test exercises real reference wiring, controls, keyboard/table parity, dialog focus and a11y. Core402×874/820×1180/1440×900, both appearances/ko-de/text scales and doubled root/reflow, selected captures retained. axe has no serious/critical violations.
+
+Normative technical format references: [DTCG Format2025.10](https://www.designtokens.org/tr/2025.10/format/), [Color2025.10](https://www.designtokens.org/tr/2025.10/color/).

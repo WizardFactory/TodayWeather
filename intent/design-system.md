@@ -63,3 +63,14 @@ Step acceptance:
 ## 2026-10-01 amendment: incoming documentation policy
 
 AK requested `git pull origin master` and applying the new document-management guidance while continuing. Pull fast-forwarded from `481aa49d` to `6ec6c68ceb518e22382ba2c24428964d4d2e0e67`, preserving scoped local work via a pre-pull backup. Follow [repository artifact retention](../docs/development/artifact-retention.md): maintained docs/tools and selected evidence are separate from ignored raw runs; validate intended staged content with the repository checker. Product implementation and remote publication remain excluded.
+
+## 2026-10-01 amendment: creation steps 3–5 and pre-merge
+
+AK requested “pre-merge까지 진행”, followed by shared token JSON/CSS/TypeScript generation and validation, Cordova hourly/daily reference implementation, component gallery and push. This supersedes the preceding local endpoint and token/gallery exclusions. Preserve the initial typography evidence as dated historical evidence.
+
+Authorized: shared token package, generator and tests; standalone PWA-first hourly/daily references and interactive component gallery; scoped commit/push, PR creation, CI and corrections; task code/tests/evidence transfer to the existing OpenAI author and configured Anthropic/Paseo reviewer, using existing GitHub hwanjjang authentication. Reviewer uses the catalogue's latest released Claude model, medium effort and auto mode. No new accounts, secret transfer or permission-setting changes. Stop at pre-merge: no merge, auto-merge, merge queue or production deployment. Actual product-wide adoption remains #2649; native runtime/widget work and physical D3 stay deferred.
+
+Additional acceptance:
+- AC5: DTCG-style primitive → semantic → component JSON has every required role/category; aliases/types and allowed-surface contrast are validated; CSS/TypeScript output is deterministic and reproducible from a clean checkout.
+- AC6: Hourly/daily references preserve Cordova field order, shared temperature axes, today/yesterday alignment, current observation marker, null/stale states, AM/PM and precipitation, wind/humidity expander, keyboard cursor and equal-valued table alternatives; D8 gradient and past dates remain.
+- AC7: Gallery demonstrates buttons, inputs, tabs, cards, settings, dialogs, loading/empty/error/stale states in light/dark and three tiers, with accessible names/focus/keyboard interactions, selected captures and zero serious/critical automatic accessibility findings. Push/PR/CI and different-provider independent verification/review must satisfy pre-merge readiness, with merge explicitly unarmed.

@@ -1,0 +1,31 @@
+name: Design system references
+on:
+  pull_request:
+    paths: ['packages/design-tokens/**', 'docs/design-system/**', 'scripts/design-gallery.mjs', 'scripts/verification/design-*', 'package*.json', '.github/workflows/design-system.yml']
+  push:
+    branches: [master, main]
+    paths: ['packages/design-tokens/**', 'docs/design-system/**', 'scripts/design-gallery.mjs', 'scripts/verification/design-*', 'package*.json', '.github/workflows/design-system.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:design
+      - run: npm run generate:tokens
+      - run: npx tsc --ignoreConfig packages/design-tokens/generated/tokens.ts --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node scripts/verification/design-gallery-check.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: design-system-browser-evidence
+          retention-days: 30
+          path: reports/sdlc/issue-2651-docs-type/gallery
