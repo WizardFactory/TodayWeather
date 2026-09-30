@@ -1,0 +1,328 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "TodayWeather design tokens: source to surfaces (proposed)",
+    "output": "docs/design-system/diagrams/token-pipeline.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "provider": "github",
+      "revision": "481aa49dbd9649d705a51a79c1ed366f1fb1af6b"
+    },
+    "viewBox": [
+      1080,
+      680
+    ],
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "emphasis": {
+          "label": "build output"
+        },
+        "security": {
+          "label": "test gate"
+        },
+        "dashed": {
+          "label": "optional"
+        },
+        "default": {
+          "label": "input / result"
+        },
+        "database": {
+          "label": "token source"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "label": "Inputs"
+    },
+    {
+      "label": "Token source"
+    },
+    {
+      "label": "Generate + test"
+    },
+    {
+      "label": "Consumers"
+    },
+    {
+      "label": "Verify"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "cordova",
+      "type": "external",
+      "label": "Cordova app",
+      "sublabel": "17px body, hero",
+      "stage": 0,
+      "row": 0,
+      "tag": "continuity",
+      "sources": [
+        {
+          "path": "client/www/js/controller.tabctrl.js",
+          "line": 1278,
+          "end_line": 1280,
+          "label": "hero size rule"
+        },
+        {
+          "path": "client/scss/ionic.app.scss",
+          "line": 21,
+          "label": "font stack"
+        }
+      ]
+    },
+    {
+      "id": "refs",
+      "type": "external",
+      "label": "iOS 27 + Samsung",
+      "sublabel": "public patterns",
+      "stage": 0,
+      "row": 2,
+      "tag": "reference"
+    },
+    {
+      "id": "tokens",
+      "type": "database",
+      "label": "DTCG tokens",
+      "sublabel": "3 tiers, modes",
+      "stage": 1,
+      "row": 1,
+      "tag": "proposed"
+    },
+    {
+      "id": "gen",
+      "type": "backend",
+      "label": "Token generator",
+      "sublabel": "zero-dep Node",
+      "stage": 2,
+      "row": 1,
+      "tag": "proposed"
+    },
+    {
+      "id": "css",
+      "type": "frontend",
+      "label": "PWA stylesheet",
+      "sublabel": "CSS variables",
+      "stage": 3,
+      "row": 0,
+      "tag": "web",
+      "sources": [
+        {
+          "path": "web/src/style.css",
+          "line": 16,
+          "end_line": 28,
+          "label": "current custom properties"
+        }
+      ]
+    },
+    {
+      "id": "charts",
+      "type": "frontend",
+      "label": "Hourly/daily charts",
+      "sublabel": "TS constants",
+      "stage": 3,
+      "row": 1,
+      "tag": "web",
+      "sources": [
+        {
+          "path": "web/src/components.tsx",
+          "line": 337,
+          "label": "hard-coded today stroke"
+        }
+      ]
+    },
+    {
+      "id": "widgets",
+      "type": "frontend",
+      "label": "iOS widgets",
+      "sublabel": "ObjC constants",
+      "stage": 3,
+      "row": 2,
+      "tag": "optional",
+      "sources": [
+        {
+          "path": "tw.ios/widget/TodayWeatherShowMore.m",
+          "line": 412,
+          "label": "diverging air color"
+        }
+      ]
+    },
+    {
+      "id": "unit",
+      "type": "security",
+      "label": "Token tests",
+      "sublabel": "contrast, floors",
+      "stage": 2,
+      "row": 3,
+      "tag": "Vitest"
+    },
+    {
+      "id": "layout",
+      "type": "security",
+      "label": "Layout matrix",
+      "sublabel": "sizes x langs",
+      "stage": 4,
+      "row": 0,
+      "tag": "Playwright",
+      "sources": [
+        {
+          "path": "scripts/web-layout-check.mjs",
+          "line": 34,
+          "label": "reference sizes"
+        }
+      ]
+    },
+    {
+      "id": "visual",
+      "type": "security",
+      "label": "Screenshots + axe",
+      "sublabel": "light / dark",
+      "stage": 4,
+      "row": 1,
+      "tag": "baseline"
+    }
+  ],
+  "flows": [
+    {
+      "id": "f-cordova",
+      "from": "cordova",
+      "to": "tokens",
+      "label": "type + grade hues",
+      "classification": "continuity",
+      "variant": "default"
+    },
+    {
+      "id": "f-refs",
+      "from": "refs",
+      "to": "tokens",
+      "label": "component patterns",
+      "classification": "no assets",
+      "variant": "dashed"
+    },
+    {
+      "id": "f-gen",
+      "from": "tokens",
+      "to": "gen",
+      "label": "JSON by mode",
+      "classification": "light/dark, 3 tiers",
+      "variant": "emphasis",
+      "labelAt": [
+        422,
+        240
+      ]
+    },
+    {
+      "id": "f-css",
+      "from": "gen",
+      "to": "css",
+      "label": "tokens.css",
+      "classification": "build step",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "left",
+      "via": [
+        [
+          530,
+          157
+        ]
+      ]
+    },
+    {
+      "id": "f-ts",
+      "from": "gen",
+      "to": "charts",
+      "label": "tokens.ts",
+      "classification": "build step",
+      "variant": "emphasis",
+      "route": "straight",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "f-native",
+      "from": "gen",
+      "to": "widgets",
+      "label": "native constants",
+      "classification": "later, if authorized",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [
+        [
+          530,
+          385
+        ]
+      ]
+    },
+    {
+      "id": "f-unit",
+      "from": "gen",
+      "to": "unit",
+      "label": "contrast report",
+      "classification": "fails build",
+      "variant": "security",
+      "fromSide": "left",
+      "toSide": "left",
+      "via": [
+        [
+          440,
+          271
+        ],
+        [
+          440,
+          499
+        ]
+      ]
+    },
+    {
+      "id": "f-layout",
+      "from": "css",
+      "to": "layout",
+      "label": "rendered views",
+      "classification": "text scale 1-2x",
+      "variant": "default"
+    },
+    {
+      "id": "f-visual",
+      "from": "charts",
+      "to": "visual",
+      "label": "rendered charts",
+      "classification": "baselines",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Typography first",
+      "items": [
+        "Type tier follows input: phone 17, touch tablet 18, fine pointer 16 px body",
+        "Landscape phones stay on mobile values; wide desktops scale only hero and headings",
+        "Floor 12 px; information text 13 px or larger; all rem"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Cordova charts are core",
+      "items": [
+        "Hourly: today vs yesterday lines, value dots, now marker, icons, precipitation",
+        "Daily: past and future days, min-max bars on one shared scale, PWA cool-warm gradient (D8)",
+        "Charts consume type, color and column tokens; the table alternative stays"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Proposed, not built",
+      "items": [
+        "Token package and generator do not exist at 481aa49d",
+        "Native output waits for widget authorization",
+        "AK decisions D1-D8 recorded 2026-10-01 (spec section 14)"
+      ]
+    }
+  ]
+}

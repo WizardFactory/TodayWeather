@@ -1,0 +1,22 @@
+{
+  "base": "6ec6c68ceb518e22382ba2c24428964d4d2e0e67",
+  "original_investigation_base": "481aa49d",
+  "candidate": "6d32d7f2260da9b188b0549690368f0ad61c153fefafc3e867d92897c3116a19",
+  "files": {
+    "intent/design-system.md": "b4ffcac549053401fcb600f40dcff5ce6d1a26910bc9dd5fc07a013374b789e2",
+    "specs/design-system.md": "b285a3d216d7409e9094c41eb448f3ba39f0339f132c85743ac8c557a768f92c",
+    "plans/design-system.md": "c80bb35641d82e6f75a5279125358501c8c7ba4dd665d7277acc8e77c3aaf7c1",
+    "docs/design-system/README.md": "985c55ba850639b4e256d80f2a305e3a6b55adf6902b929e744e2337b7c7fbfc",
+    "docs/design-system/documentation-guide.md": "0eb3cdcf129dad04c24c31b3b1e707e23927c60a28d3b7993738559882163b9f",
+    "docs/design-system/typography.md": "3f1c372496debb7bcf02199a02ff00e46d3e4da4f9913dbe44b9dc47f0280943",
+    "docs/design-system/references/typography.html": "582d1059d598cdffb394567bb4621b2ea85f7a747ebcbf1de865ea34068dd49b",
+    "docs/design-system/references/typography.css": "aa5da3441c04ab8ebd1fafa8e904f9e6d5bced5934ea9d2067e83ea4361692d0",
+    "docs/design-system/references/typography.js": "d2da017afddb819c71b14f577f3893ccf961855211f91d305941076d34526eb8",
+    "docs/design-system/references/fonts/README.md": "897a4e9dc4b73c641c37719c3ffd072d0b02eefc6d18b38d8a79c248cfb5a340",
+    "docs/design-system/references/fonts/OFL.txt": "d31ddd9f2bed32fd7e302a205cf2380ba0de6529152d239ef99cfb6f261bfc04",
+    "docs/design-system/references/fonts/PretendardVariable.woff2": "9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4",
+    "scripts/verification/design-typography-check.mjs": "f9949d302970c26ba098c1ec3e3febcaffeb2850c462ca3423b4e6e1cc799e66",
+    "docs/design-system/diagrams/token-pipeline.json": "2c383070d1118b19c59cdba697f56436234291706c2cc23e44fa50e1700c66c6",
+    "docs/design-system/diagrams/token-pipeline.html": "172c50a2399698d85d9edfd59d5ed94fb089cb9020dce6383a70dfe78671ab2b"
+  }
+}

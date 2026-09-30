@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TodayWeather · Typography reference</title>
+  <link rel="stylesheet" href="typography.css">
+  <script src="typography.js" defer></script>
+</head>
+<body>
+  <header class="study-header">
+    <div><p class="eyebrow" data-role="caption">TODAYWEATHER · DESIGN REFERENCE</p><h1 data-role="title-1">Typography study</h1></div>
+    <p data-role="body-sm">Fixed sample data · PWA reference only</p>
+  </header>
+  <section class="controls" aria-label="Reference controls">
+    <label data-role="label">Language <select id="language"><option value="ko">한국어</option><option value="de">Deutsch</option></select></label>
+    <label data-role="label">Text size <select id="scale"><option value="0.9">90%</option><option value="1">100%</option><option value="1.15">115%</option><option value="1.3">130%</option></select></label>
+    <label data-role="label">Appearance <select id="appearance"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    <label data-role="label">Browser root <select id="root"><option value="16">100% (16 px)</option><option value="32">200% (32 px)</option></select></label>
+    <output id="measurement" data-role="caption" aria-live="polite"></output>
+  </section>
+  <main>
+    <div class="weather-column">
+      <section class="hero" aria-labelledby="place">
+        <p class="eyebrow" id="sample-note" data-role="caption"></p>
+        <h2 id="place" data-role="display"></h2>
+        <div class="temperature"><span data-role="hero-temp" id="hero-value">24<span class="degree">°</span></span><svg class="hero-icon" viewBox="0 0 64 64" aria-hidden="true"><circle cx="28" cy="25" r="13" fill="#f0c77f"/><path d="M18 46a11 11 0 0 1 0-22 15 15 0 0 1 28 0 11 11 0 0 1 0 22Z" fill="#9bcdf0"/></svg></div>
+        <p id="condition" data-role="body"></p>
+        <p id="summary" data-role="body"></p>
+        <p id="highlow" data-role="data"></p>
+      </section>
+      <section class="card" aria-labelledby="hourly-title">
+        <header class="card-header"><h2 id="hourly-title" data-role="title-1"></h2><div class="legend"><span data-role="caption" id="today-label" class="today-key"></span><span data-role="caption" id="yesterday-label" class="yesterday-key"></span></div></header>
+        <p id="hourly-note" data-role="caption" class="annotation"></p>
+        <div class="chart-scroll" tabindex="0" role="group" aria-labelledby="hourly-title"><svg id="hourly-chart" role="img" aria-labelledby="hourly-svg-title"></svg></div>
+        <details id="wind-expander"><summary id="wind-summary" data-role="label"></summary><p id="wind-details" data-role="caption"></p></details>
+        <details><summary id="hourly-table-title" data-role="label"></summary><div class="table-scroll"><table id="hourly-table"></table></div></details>
+      </section>
+      <section class="card" aria-labelledby="daily-title">
+        <header class="card-header"><h2 id="daily-title" data-role="title-1"></h2><p id="daily-key" data-role="caption"></p></header>
+        <p id="daily-note" data-role="caption" class="annotation"></p>
+        <div class="chart-scroll" tabindex="0" role="group" aria-labelledby="daily-title"><svg id="daily-chart" role="img" aria-labelledby="daily-svg-title"></svg></div>
+        <details><summary id="daily-table-title" data-role="label"></summary><div class="table-scroll"><table id="daily-table"></table></div></details>
+      </section>
+    </div>
+    <aside class="card" aria-labelledby="roles-title">
+      <h2 id="roles-title" data-role="title-1">Type roles</h2>
+      <p data-role="body-sm">Spec §3 · baseline / setting / browser root</p>
+      <div id="role-samples"></div>
+      <p data-role="caption">The 90% setting retains the 13px information floor. The 12px role is limited to redundant legend/axis text.</p>
+      <a data-role="label" href="../typography.md">Verification guide</a>
+    </aside>
+  </main>
+  <footer data-role="caption">#2651 · D1–D8 · Reference typography, not a production forecast. Physical iOS/Android scaling comparison remains pending.</footer>
+</body>
+</html>
