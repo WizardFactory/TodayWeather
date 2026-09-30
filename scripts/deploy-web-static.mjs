@@ -1,5 +1,5 @@
 /** Explicit static artifact uploader. Defaults to dry-run; never provisions AWS resources. */
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join, extname, dirname } from "node:path";
@@ -227,7 +227,9 @@ export async function main(argv) {
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
     if (key === "--execute") options.execute = true;
-    else if (["--bucket", "--distribution", "--dir"].includes(key)) {
+    else if (
+      ["--bucket", "--distribution", "--dir", "--receipt"].includes(key)
+    ) {
       if (!argv[i + 1] || argv[i + 1].startsWith("--"))
         throw Error("Missing value: " + key);
       options[key.slice(2)] = argv[++i];
@@ -275,7 +277,22 @@ export async function main(argv) {
     return p.stdout;
   };
   preflight(run, options);
-  for (const command of commands) run(command);
+  let invalidationId;
+  for (const command of commands) {
+    const result = run(command);
+    if (command[0] === "cloudfront" && options.receipt) {
+      invalidationId = JSON.parse(result).Invalidation?.Id;
+      if (!/^[A-Z0-9]+$/.test(invalidationId ?? ""))
+        throw Error(
+          "Invalidation response lacks a valid ID; reconcile before retry",
+        );
+    }
+  }
+  if (options.receipt)
+    await writeFile(
+      options.receipt,
+      JSON.stringify({ commit, builtAt, invalidationId }, null, 2) + "\n",
+    );
   console.log(
     `Uploaded static release ${commit} (built ${builtAt}) and requested CloudFront invalidation. Verify https://${SITE_DOMAIN} after invalidation completes.`,
   );

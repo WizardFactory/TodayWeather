@@ -1,0 +1,175 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Guarded static webapp release",
+    "locale": "en",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "operator",
+      "label": "Operator approval"
+    },
+    {
+      "id": "guard",
+      "label": "Identity and credentials"
+    },
+    {
+      "id": "production",
+      "label": "Static production"
+    },
+    {
+      "id": "evidence",
+      "label": "Rollout evidence"
+    }
+  ],
+  "mainPath": [
+    "select",
+    "identity",
+    "approval",
+    "recheck",
+    "backup",
+    "upload",
+    "smoke",
+    "record"
+  ],
+  "nodes": [
+    {
+      "id": "select",
+      "lane": "operator",
+      "col": 0,
+      "type": "external",
+      "label": "Select webapp Release",
+      "sublabel": "Published \u2260 deployed",
+      "width": 180
+    },
+    {
+      "id": "identity",
+      "lane": "guard",
+      "col": 1,
+      "type": "security",
+      "label": "Verify build identity",
+      "sublabel": "Tag \u00b7 SHA \u00b7 push/master",
+      "width": 180
+    },
+    {
+      "id": "approval",
+      "lane": "operator",
+      "col": 2,
+      "type": "security",
+      "label": "Approve environment",
+      "sublabel": "No self-review or bypass",
+      "width": 180
+    },
+    {
+      "id": "recheck",
+      "lane": "guard",
+      "col": 3,
+      "type": "security",
+      "label": "Recheck identity",
+      "sublabel": "Artifact SHA \u00b7 scoped OIDC",
+      "width": 180
+    },
+    {
+      "id": "backup",
+      "lane": "production",
+      "col": 3,
+      "type": "database",
+      "label": "Preserve rollback",
+      "sublabel": "Private complete snapshot",
+      "width": 180
+    },
+    {
+      "id": "upload",
+      "lane": "production",
+      "col": 4,
+      "type": "cloud",
+      "label": "Upload static artifact",
+      "sublabel": "Wait exact invalidation",
+      "width": 180
+    },
+    {
+      "id": "smoke",
+      "lane": "production",
+      "col": 5,
+      "type": "backend",
+      "label": "Verify live release",
+      "sublabel": "Full SHA \u00b7 browser smoke",
+      "width": 180
+    },
+    {
+      "id": "record",
+      "lane": "evidence",
+      "col": 5,
+      "type": "external",
+      "label": "Record deployed",
+      "sublabel": "Only after smoke passes",
+      "width": 180
+    },
+    {
+      "id": "failure",
+      "lane": "evidence",
+      "col": 4,
+      "type": "security",
+      "label": "Record failed / pending",
+      "sublabel": "Operator recovery runbook",
+      "width": 180
+    }
+  ],
+  "edges": [
+    {
+      "from": "select",
+      "to": "identity"
+    },
+    {
+      "from": "identity",
+      "to": "approval"
+    },
+    {
+      "from": "approval",
+      "to": "recheck"
+    },
+    {
+      "from": "recheck",
+      "to": "backup"
+    },
+    {
+      "from": "backup",
+      "to": "upload"
+    },
+    {
+      "from": "upload",
+      "to": "smoke"
+    },
+    {
+      "from": "smoke",
+      "to": "record"
+    },
+    {
+      "from": "smoke",
+      "to": "failure",
+      "label": "Failed checks",
+      "role": "error",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Explicit target",
+      "items": [
+        "One webapp Release and full source SHA",
+        "Only successful master-push artifacts qualify"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Operator-owned production",
+      "items": [
+        "Activation and IAM changes need separate approval",
+        "Rollback never runs automatically"
+      ]
+    }
+  ]
+}
