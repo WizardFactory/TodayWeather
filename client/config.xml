@@ -30,6 +30,10 @@
     <hook type="after_prepare" src="scripts/admob-app-id.js" />
     <hook type="after_prepare" src="scripts/ios-no-tracking.js" />
     <platform name="android">
+        <!-- Ionic routes own screen_view; suppress automatic Activity-level duplicates. -->
+        <config-file target="AndroidManifest.xml" parent="application">
+            <meta-data android:name="google_analytics_automatic_screen_reporting_enabled" android:value="false" />
+        </config-file>
         <allow-intent href="market:*" />
         <preference name="android-minSdkVersion" value="24" />
         <preference name="android-targetSdkVersion" value="36" />
@@ -49,6 +53,9 @@
         <icon density="xxxhdpi" src="tw.resources/android/icon/drawable-xxxhdpi-icon.png" />
     </platform>
     <platform name="ios">
+        <edit-config file="*-Info.plist" mode="merge" target="FirebaseAutomaticScreenReportingEnabled">
+            <false />
+        </edit-config>
         <allow-intent href="itms:*" />
         <allow-intent href="itms-apps:*" />
         <preference name="scheme" value="app" />

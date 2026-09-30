@@ -3,7 +3,7 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function(Util, admobClean, admobPro, admobEmi) {
+    .factory('TwAds', function(Util, admobClean, admobPro, admobEmi, Monetization) {
         var obj = {};
         obj.enableAds = null;
         obj.showAds = null;
@@ -12,6 +12,27 @@ angular.module('service.twads', [])
         obj.ready = false;
         obj.bannerAdUnit = '';
         obj.interstitialAdUnit = '';
+        var sessionStart = Date.now(), delayTimer, exposed = false, initialized = false, bannerLoaded = false;
+
+        function applyVisibility() {
+            if (delayTimer) { window.clearTimeout(delayTimer); delayTimer = null; }
+            if (!obj.ready) { return; }
+            var policy = Monetization.bannerPolicy();
+            var requested = obj.requestShow != undefined ? obj.requestShow : obj.enableAds;
+            var remaining = policy.delaySeconds * 1000 - (Date.now() - sessionStart);
+            var eligible = requested === true && obj.enableAds === true && policy.enabled && bannerLoaded;
+            var show = eligible && remaining <= 0;
+            if (requested && obj.enableAds && policy.enabled && remaining > 0) {
+                delayTimer = window.setTimeout(applyVisibility, remaining);
+            }
+            if (eligible && !exposed) {
+                exposed = true;
+                Monetization.track('ad_policy_exposure', {delay_seconds: policy.delaySeconds});
+            }
+            if (obj.showAds === show) { return; }
+            obj.showAds = show;
+            obj._setAdMobShowAd(show);
+        }
 
         obj.onAdapterReady = function () {
             this.ready = true;
@@ -26,6 +47,7 @@ angular.module('service.twads', [])
             }
             self.admob.createBannerView(
                 function () {
+                    bannerLoaded = true;
                     console.log('create banner view');
                     if (self.requestShow != undefined) {
                         self.setShowAds(self.requestShow);
@@ -80,10 +102,7 @@ angular.module('service.twads', [])
             var self = this;
             console.log('set show ads show='+show);
 
-            if(self.showAds === show) {
-                console.log('already TwAds is show='+show);
-                return;
-            }
+            self.requestShow = show;
             if (self.ready != true) {
                 console.log('set show ads called before ready');
                 self.requestShow = show;
@@ -95,8 +114,7 @@ angular.module('service.twads', [])
                 return;
             }
 
-            self.showAds = show;
-            self._setAdMobShowAd(show);
+            applyVisibility();
         };
 
         obj._setAdMobShowAd = function(show) {
@@ -116,6 +134,10 @@ angular.module('service.twads', [])
 
         obj.init = function () {
             var self = this;
+
+            if (initialized) { return; }
+            initialized = true;
+            Monetization.loadConfig(applyVisibility);
 
             if (ionic.Platform.isIOS()) {
                 self.bannerAdUnit = clientConfig.admobIOSBannerAdUnit;
@@ -163,9 +185,13 @@ angular.module('service.twads', [])
             window.addEventListener("orientationchange", function(){
                 console.log('orientationType', screen.orientation.type); // e.g. portrait
                 if (self.enableAds === true) {
+                    bannerLoaded = false;
                     self.admob.destroyBannerView(function () {
                         self.admob.createBannerView(function () {
-                            self.admob.showBannerAd(self.showAds);
+                            bannerLoaded = true;
+                            // Force a reapply after recreation, using the current config and screen intent.
+                            self.showAds = null;
+                            applyVisibility();
                         });
                     });
                 }

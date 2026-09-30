@@ -1,5 +1,5 @@
 angular.module('service.weatherutil', [])
-    .factory('WeatherUtil', function ($q, $http, Util, Units) {
+    .factory('WeatherUtil', function ($q, $http, Util, Units, Monetization) {
         var obj = {};
 
         /**
@@ -203,11 +203,11 @@ angular.module('service.weatherutil', [])
          * @returns {Promise}
          */
         obj.getWeatherByGeoInfo = function (geoInfo) {
+            var measurementStart = Date.now();
             var promises = [];
             var deferred = $q.defer();
             var url;
             try{
-                Util.ga.trackEvent('weather', 'param', JSON.stringify(geoInfo));
 
                 if (geoInfo.location && geoInfo.location.lat) {
                     url = _makeQueryUrlWithLocation(geoInfo.location, 'weather');
@@ -235,12 +235,19 @@ angular.module('service.weatherutil', [])
                 }
             }
             catch(err) {
+                Monetization.track('weather_fetch', {outcome: 'invalid_input', duration_ms: Date.now() - measurementStart});
                 deferred.reject(err);
                 return deferred.promise;
             }
 
             promises.push(_getHttp(url));
-            return $q.all(promises);
+            return $q.all(promises).then(function(result) {
+                Monetization.track('weather_fetch', {outcome: 'success', duration_ms: Date.now() - measurementStart});
+                return result;
+            }, function(error) {
+                Monetization.track('weather_fetch', {outcome: 'network_error', duration_ms: Date.now() - measurementStart});
+                return $q.reject(error);
+            });
         };
 
         /**

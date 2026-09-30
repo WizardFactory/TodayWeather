@@ -1,6 +1,6 @@
 angular.module('controller.tabctrl', [])
     .controller('TabCtrl', function($scope, $ionicPlatform, $ionicHistory, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                    $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce, Push, Units, $q) {
+                                    $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce, Push, Units, $q, Monetization) {
         var currentTime;
         var lastClickTime = 0;
         var refreshTimer = null;
@@ -1062,35 +1062,22 @@ angular.module('controller.tabctrl', [])
         function updateWeatherData(geoInfo) {
             var deferred = $q.defer();
             var startTime = new Date().getTime();
-            var logLabel = geoInfo.address || geoInfo.name;
-
-            if (!logLabel) {
-               logLabel = JSON.stringify(geoInfo.location);
-            }
 
             WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
                 var endTime = new Date().getTime();
-                Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
-                Util.ga.trackEvent('weather', 'get', logLabel +
-                    '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                 var city = WeatherUtil.convertWeatherData(weatherData);
                 if (city == undefined) {
+                    Monetization.track('weather_load', {outcome: 'invalid_response', duration_ms: endTime - startTime});
                     deferred.reject(strFailToGetWeatherInfo);
                     return;
                 }
                 WeatherInfo.updateCity(WeatherInfo.getCityIndex(), city);
+                Monetization.track('weather_load', {outcome: 'success', duration_ms: endTime - startTime});
                 deferred.resolve();
             }, function (error) {
                 var endTime = new Date().getTime();
-                Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
-                if (error instanceof Error) {
-                    Util.ga.trackEvent('weather', 'error', logLabel +
-                        '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
-                } else {
-                    Util.ga.trackEvent('weather', 'error', logLabel +
-                        '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
-                }
+                Monetization.track('weather_load', {outcome: 'network_error', duration_ms: endTime - startTime});
 
                 deferred.reject(strFailToGetWeatherInfo);
             });

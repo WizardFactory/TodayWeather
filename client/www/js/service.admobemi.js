@@ -3,9 +3,13 @@
  * interface as admobClean/admobPro so TwAds can drive it unchanged.
  */
 angular.module('service.admobemi', [])
-    .factory('admobEmi', function(Util) {
+    .factory('admobEmi', function(Util, Monetization) {
         var obj = {};
         var bannerAdUnit = '';
+        var initialized = false;
+        function lifecycle(action) {
+            Monetization.track('ad_lifecycle', {action: action, ad_format: 'banner'});
+        }
 
         function plugin() {
             return window.cordova && cordova.plugins && cordova.plugins.emiAdmobPlugin;
@@ -16,6 +20,7 @@ angular.module('service.admobemi', [])
          * isOverlapping false shrinks the web view by the banner height (legacy overlap:false).
          */
         obj.createBannerView = function(success, error) {
+            lifecycle('request');
             document.addEventListener('on.banner.load', function onLoad() {
                 document.removeEventListener('on.banner.load', onLoad);
                 if (success) { success(); }
@@ -38,7 +43,10 @@ angular.module('service.admobemi', [])
 
         obj.showBannerAd = function(show, success, error) {
             if (show) {
-                plugin().showBannerAd(success, error);
+                plugin().showBannerAd(function() {
+                    lifecycle('show');
+                    if (success) { success(); }
+                }, error);
             }
             else {
                 plugin().hideBannerAd(success, error);
@@ -51,17 +59,25 @@ angular.module('service.admobemi', [])
                 return -1;
             }
             bannerAdUnit = options.bannerAdUnit;
+            if (initialized) { return; }
+            initialized = true;
+            // Diagnostic events are separate from automatic Firebase ad_impression/revenue.
+            ['load', 'impression', 'hide'].forEach(function(name) {
+                document.addEventListener('on.banner.' + name, function() {
+                    lifecycle(name === 'load' ? 'loaded' : name);
+                });
+            });
 
             var started = false;
             document.addEventListener('on.sdkInitialization', function onInit(data) {
                 document.removeEventListener('on.sdkInitialization', onInit);
                 started = true;
-                console.log('admob sdk initialized ' + (data && data.version));
+                console.info({component: 'admob', operation: 'initialize', result: 'ready'});
                 success();
             });
             document.addEventListener('on.banner.failed.load', function (data) {
                 console.log('on banner failed load');
-                Util.ga.trackEvent('plugin', 'error', 'admobReceiveAd ' + JSON.stringify(data && data.message || data));
+                lifecycle('failed');
             });
 
             var options = {
@@ -98,8 +114,8 @@ angular.module('service.admobemi', [])
              * units start the SDK without UMP so the ad path stays testable.
              */
             function onConsentError(reason) {
-                console.log('admob consent failed: ' + JSON.stringify(reason));
-                Util.ga.trackEvent('plugin', 'error', 'admobConsent ' + JSON.stringify(reason && reason.message || reason));
+                console.warn({component: 'admob', operation: 'consent', cause: 'ump_error', action: 'retain_gate', result: 'not_ready'});
+                lifecycle('consent_failed');
                 // A consent decision (not a UMP failure) must never be bypassed.
                 if (clientConfig.releaseAds || fallenBack || /consent is required|status unknown/i.test(String(reason))) {
                     if (error) { error(reason); }

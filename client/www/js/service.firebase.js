@@ -3,16 +3,13 @@
  */
 
 angular.module('service.firebase', [])
-    .factory('Firebase', function() {
+    .factory('Firebase', function(Monetization) {
         var obj = {};
 
         // cordova-plugin-firebasex modular plugins: messaging and analytics each expose their own
         // global instead of the old cordova-plugin-firebase FirebasePlugin.
         function messaging() {
             return window.FirebasexMessaging;
-        }
-        function analytics() {
-            return window.FirebasexAnalytics;
         }
 
         /**
@@ -69,15 +66,15 @@ angular.module('service.firebase', [])
          * analytics api
          */
         obj.logEvent = function(name, params) {
-            analytics().logEvent(name, params);
+            return Monetization.track(name, params);
         };
 
         obj.setScreenName = function(name) {
-            analytics().setScreenName(name);
+            Monetization.screen(name);
         };
 
         obj.setUserId = function(id) {
-            analytics().setUserId(id);
+            // Firebase installation identity is sufficient; do not link legacy device UUIDs.
         };
 
         /**

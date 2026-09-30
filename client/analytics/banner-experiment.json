@@ -1,0 +1,29 @@
+{
+  "status": "draft-not-activated",
+  "console_draft": {
+    "name": "DRAFT TW Android first-banner delay 0 vs 30",
+    "platform": "ANDROID",
+    "target": "TodayWeather app version >= 1.1.0",
+    "exposure_percent": 10,
+    "activation_event": "ad_policy_exposure",
+    "primary_metric": "estimated_ad_revenue",
+    "secondary_metrics": ["retention_4_7_days", "crash_free_users"],
+    "template_status": "unpublished",
+    "ios": "follow-up after Android pilot"
+  },
+  "name": "TW first-banner delay 0 vs 30 seconds",
+  "platforms": ["ANDROID", "IOS"],
+  "minimum_app_version": "1.1.0",
+  "parameter": "tw_banner_delay_seconds",
+  "variants": [{"name": "baseline", "value": "0", "weight": 50}, {"name": "delay30", "value": "30", "weight": 50}],
+  "eligible_traffic_percent": 10,
+  "activation_event": "ad_policy_exposure",
+  "primary_metric": "estimated_ad_revenue_per_assigned_active_user_usd",
+  "firebase_console_objective": "estimated_ad_revenue",
+  "minimum_duration_days": 14,
+  "minimum_assigned_active_users_per_variant": 1000,
+  "guardrails": {"d1_retention_relative_drop_max": 0.05, "crash_free_users_percentage_point_drop_max": 0.5},
+  "stop_conditions": ["consent or privacy regression", "crash guardrail breached", "inconsistent assignment or duplicate ad revenue"],
+  "rollback": {"tw_banner_enabled": "true", "tw_banner_delay_seconds": "0"},
+  "notes": "Experiment specification, not a Firebase REST payload. Confirm native A/B assignment and auto revenue on devices before creating/starting a console experiment. Exposure records first loaded-banner opportunity before delay and is not proof of an impression. Analyze all assigned users as well as exposed users. Firebase console revenue objective is not the custom ARPDAU ratio."
+}
