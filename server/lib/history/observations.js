@@ -56,7 +56,9 @@ exports.canCompare = function (current, yesterday) {
 };
 exports.yesterday = function (current, rows) {
     var slot = policy.slot(current), target = policy.key(policy.instant(slot) - DAY);
-    var result = (rows || []).find(function (row) { return policy.slot(row) === target; });
+    var result = (rows || []).find(function (row) {
+        return policy.slot(row) === target && policy.valid('t1h', row.t1h);
+    });
     if (!target) return {missing: true, comparisonAvailable: false};
     if (!result || !policy.valid('t1h', result.t1h)) {
         return {date: target.slice(0, 8), time: target.slice(8), missing: true, comparisonAvailable: false};
@@ -65,5 +67,8 @@ exports.yesterday = function (current, rows) {
     // Ignore an earlier request's eligibility marker; validate the source pair now.
     delete result.comparisonAvailable;
     result.comparisonAvailable = exports.canCompare(current, result);
+    // Older clients calculate their own difference whenever both temperatures
+    // exist; the additive eligibility flag alone cannot suppress that display.
+    if (!result.comparisonAvailable) delete result.t1h;
     return result;
 };

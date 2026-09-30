@@ -138,7 +138,7 @@
       "title": "Response contract",
       "items": [
         "Fill invalid fields; preserve temperature provenance",
-        "Only compare matching hours and temperature sources"
+        "Omit incomparable temperature for legacy clients"
       ]
     },
     {

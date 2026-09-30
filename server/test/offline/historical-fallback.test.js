@@ -6,6 +6,7 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../../controllers/controllerTown.js'), 'utf8');
 const source24 = fs.readFileSync(path.join(__dirname, '../../controllers/controllerTown24h.js'), 'utf8');
 const policy = require('../../lib/history/policy');
+const legacyComparison = require('./legacy-comparison-harness');
 const helperPath = path.join(__dirname, '../../lib/history/observations.js');
 const observations = fs.existsSync(helperPath) ? require(helperPath) : undefined;
 function method(text, name, context, prototype = false) {
@@ -108,6 +109,31 @@ async function check(name, run) {await run(); passed++; console.log('PASS ' + na
         late(null,[{date:new Date('2026-09-30T19:00Z'),stnId:108,t1h:23}]);
         assert.equal(row.t1h,-50);assert.equal(count,1);
         console.log(JSON.stringify({fallbackWaitMs:elapsed}));
+    });
+    await check('legacy app cannot compare incompatible sources or invalid current temperature', ()=>{
+        const current={date:'20260930',time:'1900',t1h:22.6};
+        const yesterday={date:'20260929',time:'1900',t1h:22.7};
+        observations.record(yesterday,{source:'KMA_ASOS',stationId:'108',key:'202609291900'},['t1h']);
+        for (const value of [current,{...current,t1h:-50},{...current,t1h:null}]) {
+            const selected=observations.yesterday(value,[yesterday]);
+            assert.equal(selected.comparisonAvailable,false);
+            assert.equal(selected.t1h,undefined);
+            assert.equal(legacyComparison(value,selected,'C'),'');
+            assert.equal(legacyComparison(value,selected,'F'),'');
+        }
+        const pair=observations.yesterday({...current,t1h:0},[{date:'20260929',time:'1900',t1h:-5}]);
+        assert(legacyComparison({t1h:0},pair,'C').includes('+5'));
+        assert.equal(yesterday.t1h,22.7,'the underlying history observation is preserved');
+    });
+    await check('valid zero wins over an invalid duplicate midnight slot in either row order', ()=>{
+        const current={date:'20260930',time:'0000',t1h:2};
+        const rows=[{date:'20260928',time:'2400',t1h:-50},{date:'20260929',time:'0000',t1h:0}];
+        for (const list of [rows,rows.slice().reverse()]) {
+            const selected=observations.yesterday(current,list);
+            assert.equal(selected.t1h,0);
+            assert.equal(selected.comparisonAvailable,true);
+            assert(legacyComparison(current,selected,'C').includes('+2'));
+        }
     });
     console.log(JSON.stringify({passed}));
 })().catch(err=>{console.error(err.stack);process.exitCode=1;});

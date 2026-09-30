@@ -11,6 +11,7 @@ const Store = require('../../lib/history/store'),
     Recovery = require('../../lib/history/recovery'),
     p = require('../../lib/history/policy');
 const route = require('./rss-response-smoke');
+const legacyComparison = require('./legacy-comparison-harness');
 const now = Date.parse(process.env.TW_SMOKE_NOW);
 let mongo,
     client,
@@ -152,7 +153,9 @@ function clientParser(name) {
                 const day23 = body.midData.dailyData.find((r) => r.date === '20260923');
                 if (scenario === 'both' || scenario === 'hourly-only') {
                     assert.equal(body.historyStatus.missingHourlySlots.length, 0);
-                    assert.equal(body.current.yesterday.t1h, units === 'C' ? 21 : 69);
+                    assert.equal(body.current.yesterday.comparisonAvailable, false);
+                    assert.equal(body.current.yesterday.t1h, undefined, 'incompatible source temperature excluded for legacy apps');
+                    assert.equal(legacyComparison(body.current, body.current.yesterday, units), '');
                     const display = parseHour(body.short);
                     assert(
                         display.timeTable.some(
