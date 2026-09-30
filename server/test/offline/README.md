@@ -395,3 +395,9 @@ Existing `vc-weather-smoke.js` remains weather-focused and stubs the optional sh
 PR2631 D22 regressions cover the whole overseas optional-air deadline, late success/cache reuse without duplicate callbacks or paid accounting, and additive source/attribution in DSF and raw widget responses. Tests use synthetic provider metadata and local HTTP; client attribution rendering and licensing approval are not tested.
 
 D23 also verifies the request-local pending/3-second advisory hint on deadline responses, no hint on completed success/failure, and disappearance after late cache fill; no automatic client retry is exercised or implemented.
+
+## Exact-hour station fallback (#2648)
+
+`historical-fallback.test.js` covers invalid temperatures, exact yesterday selection, legacy BSON KST keys, field preservation, temperature provenance, live station replacement, Fahrenheit eligibility and late callbacks after the 250 ms fallback budget. `history-read-cache.test.js` covers coalesced reads, late cache warming, failure caching, timeout and capacity. Both are included in `run.js`.
+
+`TZ=UTC node server/test/offline/history-integration-smoke.js` uses temporary MongoDB and loopback HTTP to exercise recovery/readback plus real v000903 middleware and client parsers for both DB formats and temperature units. Its dependencies and MongoDB binary must already be provisioned in an isolated environment; it never calls the live provider. Current verification and limitations are recorded in [selected evidence](../../../docs/evidence/tasks/issue-2648/verification.md).

@@ -55,7 +55,7 @@ function createHarness(version, fixture, historyOptions = {}) {
   for(const level of ['info','silly','debug','verbose','warn','error']) logger[level]=(...args)=>{if(level==='error'||level==='warn')logs.push({method:activeMethod,level,args:args.map(a=>a&&a.stack||a)});};
   // Optional translation (#2609 client E2E shows server-built texts); the default keeps message keys.
   const translate=historyOptions.translate || (s=>s);
-  const sandbox={console,Buffer,Date:FixedDate,setTimeout(){throw new Error('Unexpected timer');},setInterval(){throw new Error('Unexpected interval');},clearTimeout,setImmediate,log:logger,manager,__:translate};
+  const sandbox={console,Buffer,Date:FixedDate,setTimeout,setInterval(){throw new Error('Unexpected interval');},clearTimeout,setImmediate,log:logger,manager,__:translate};
   if (historyOptions.db) { sandbox.setTimeout=setTimeout; sandbox.clearTimeout=clearTimeout; }
   sandbox.global=sandbox;
   const context=vm.createContext(sandbox);
@@ -95,7 +95,7 @@ function createHarness(version, fixture, historyOptions = {}) {
       queries.push({model:name,query:clone(query)});
       const data=()=>clone(modelData(name));
       const failure=fixture.modelErrors&&fixture.modelErrors[name];
-      const q={sort(){return q;},batchSize(){return q;},limit(){return q;},lean(){return q;},exec(callback){if(failure)return callback(new Error(failure));callback(null,data());}};
+      const q={maxTimeMS(){return q;},sort(){return q;},batchSize(){return q;},limit(){return q;},lean(){return q;},exec(callback){if(failure)return callback(new Error(failure));callback(null,data());}};
       if(typeof projection==='function')projection(null,data());
       if(typeof cb==='function')cb(null,data());
       return q;

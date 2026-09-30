@@ -620,7 +620,7 @@ controllerKmaStnWeather.findHourlies2 = function (stnId, fromDate, callback) {
 
     log.debug("find hourlies2 hourlies stnId="+stnId+" fromDate="+fromDate);
 
-    KmaStnHourly2.find({stnId: stnId, date: {$gt:fromDate}}, {_id: 0}).sort({date: 1}).lean().exec(function (err, weatherList) {
+    KmaStnHourly2.find({stnId: stnId, date: {$gt:fromDate}}, {_id: 0}).maxTimeMS(2000).sort({date: 1}).lean().exec(function (err, weatherList) {
         if (err)  {
             return callback(err);
         }
@@ -797,7 +797,7 @@ controllerKmaStnWeather.getStnList = function (coords, maxDistance, isCityWeathe
 
     log.debug("get stn list query="+JSON.stringify(query));
 
-    KmaStnInfo.find(query, {_id: 0, __v: 0}).limit(limit).lean().exec(function (err, stnList) {
+    KmaStnInfo.find(query, {_id: 0, __v: 0}).maxTimeMS(2000).limit(limit).lean().exec(function (err, stnList) {
         if (err) {
             return callback(err);
         }

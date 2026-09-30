@@ -6,6 +6,7 @@
 
 var midPolicy = require('../lib/midForecastPolicy');
 var precipitation = require('../lib/kmaPrecipitation');
+var observations = require('../lib/history/observations');
 var landString = midPolicy.landFields;
 var tempString = midPolicy.tempFields;
 var async = require('async');
@@ -1284,99 +1285,39 @@ function ControllerTown() {
         next();
     };
 
-    /**
-     * t1h가 -50이면 kma aws hourly data로 overwrite
-     * @param req
-     * @param res
-     * @param next
-     * @returns {ControllerTown}
-     */
+    // Read snapshots concurrently under one response budget. Late callbacks
+    // never mutate this request or invoke next twice.
     this.mergeCurrentByStnHourly = function (req, res, next) {
-        var meta = {};
-
-        var regionName = req.params.region;
-        var cityName = req.params.city;
-        var townName = req.params.town;
-
-        meta.sID = req.sessionID;
-        meta.method = 'mergeCurrentByStnHourly';
-        meta.region = regionName;
-        meta.city = cityName;
-        meta.town = townName;
-        log.info(meta);
-
         self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
-            if (err || !townInfo) { return next(); }
+            if (err || !townInfo) return next();
+            var history = require('../lib/history/service');
+            var readAsos = config.history && config.history.readEnabled;
+            var pending = readAsos ? 2 : 1;
+            var legacy, data = readAsos ? {reason: 'cache-read-timeout', hourly: [], daily: []} : undefined;
+            var finished = false;
+            var timer = setTimeout(done, 250);
             function done() {
-                if (!config.history || !config.history.readEnabled) { return next(); }
-                var history = require('../lib/history/service');
-                history.loadForTown(townInfo, function(error, data) {
-                    history.mergeHourly(req, data);
-                    next();
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                observations.mergeLegacy(req, legacy);
+                history.mergeHourly(req, data);
+                next();
+            }
+            function settled() { if (--pending === 0) done(); }
+            history.loadLegacyForTown(townInfo, function (error, rows) {
+                if (finished) return;
+                if (!error) legacy = rows;
+                settled();
+            });
+            if (readAsos) {
+                history.loadForTown(townInfo, function (error, records) {
+                    if (finished) return;
+                    if (!error) data = records;
+                    settled();
                 });
             }
-            controllerKmaStnWeather.getCityHourlyList(townInfo,  function (err, stnWeatherInfo) {
-                if (err) {
-                    err.message += ' ' + JSON.stringify(meta);
-                    log.error(err);
-                    return done();
-                }
-
-                if (stnWeatherInfo == undefined) {
-                    log.error("Fail to find stnWeatherInfo", meta);
-                    return done();
-                }
-
-                var hourlyList = stnWeatherInfo;
-                //update currentList for past
-                req.currentList.forEach(function (current) {
-                    if (current.t1h != -50) {
-                       return;
-                    }
-
-                    var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(current.date+current.time);
-                    for (var i=0; i<hourlyList.length; i++) {
-                        var hourlyData = hourlyList[i];
-                        if (hourlyData.date == stnDateTime)  {
-                            current.t1h = hourlyData.t1h;
-                            current.rn1 = hourlyData.rs1h;
-                            current.sky = _convertCloud2SKy(current.sky, hourlyData.cloud);
-                            current.reh = hourlyData.reh;
-                            current.pty = _convertStnWeather2Pty(current.pty, hourlyData);
-                            current.lgt = _convertStnWeather2Lgt(current.lgt, hourlyData.weather);
-                            current.vec = hourlyData.vec;
-                            current.wsd = hourlyData.wsd;
-                            return;
-                        }
-                    }
-                });
-
-                //update current for past
-                var reqC = req.current;
-                if (reqC == undefined || reqC.t1h == undefined || reqC.t1h == -50) {
-                    if (!(reqC == undefined)) {
-                        var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(reqC.date+reqC.time);
-
-                        for (var i=hourlyList.length-1; i>=0; i--) {
-                            var hourlyData = hourlyList[i];
-                            if (hourlyData.date == stnDateTime)  {
-                                reqC.t1h = hourlyData.t1h;
-                                reqC.rn1 = hourlyData.rs1h;
-                                reqC.sky = _convertCloud2SKy(reqC.sky, hourlyData.cloud);
-                                reqC.reh = hourlyData.reh;
-                                reqC.pty = _convertStnWeather2Pty(reqC.pty, hourlyData);
-                                reqC.lgt = _convertStnWeather2Lgt(reqC.lgt, hourlyData.weather);
-                                reqC.vec = hourlyData.vec;
-                                reqC.wsd = hourlyData.wsd;
-                                break;
-                            }
-                        }
-                    }
-                }
-                done();
-            });
         });
-
         return this;
     };
 
@@ -1801,6 +1742,10 @@ function ControllerTown() {
             }
         }
 
+        if (currentInList && reqCurrent.fieldObservations) {
+            currentInList.fieldObservations = JSON.parse(JSON.stringify(reqCurrent.fieldObservations));
+            currentInList.historyObservation = reqCurrent.historyObservation;
+        }
         return this;
     };
 
@@ -1911,6 +1856,8 @@ function ControllerTown() {
                     // Fields the minute/hourly observation may replace when it is newer than the
                     // current-weather publication (issue #2573 §3). Anything else keeps the old
                     // behavior: fill only when the API value is missing or a sentinel.
+                    var stationTemperature = self._isValidObservation('t1h', stnWeatherInfo.t1h) &&
+                        (reqCurrent.t1h === undefined || reqCurrent.t1h <= -50 || stnFirst);
                     var observedFields = {t1h: true, reh: true, vec: true, wsd: true};
 
                     for (var key in stnWeatherInfo) {
@@ -1938,6 +1885,11 @@ function ControllerTown() {
                         reqCurrent.date = kmaTimeLib.convertDateToYYYYMMDD(stnWeatherInfoTime);
                         reqCurrent.time = kmaTimeLib.convertDateToHHZZ(stnWeatherInfoTime);
                         reqCurrent.liveTime = stnWeatherInfo.stnDateTime.substr(11, 5).replace(":","");
+                    }
+
+                    if (stationTemperature) {
+                        observations.record(reqCurrent, {source: 'KMA_STATION_LIVE', stationId: stnWeatherInfo.stnId,
+                            key: kmaTimeLib.convertYYYYoMMoDDoHHoMMtoYYYYMMDDHHMM(stnWeatherInfo.stnDateTime)}, ['t1h']);
                     }
 
                     if (reqCurrent.rn1 == undefined || stnFirst) {
@@ -2212,7 +2164,7 @@ function ControllerTown() {
         /**
          * diff temp와 weather가 2.5로 특별한 날씨가 정보가 없으면 온도차와 날씨를 표시
          */
-        if (current.hasOwnProperty('t1h') && yesterday && yesterday.hasOwnProperty('t1h')) {
+        if (observations.canCompare(current, yesterday)) {
             var obj = self._diffTodayYesterday(current, yesterday, ts);
             if (obj.grade <= 2) {
                 obj.grade = 2.5;
@@ -2378,34 +2330,8 @@ function ControllerTown() {
                 return this;
             }
 
-            var yesterdayDate = self._getCurrentTimeValue(+9-24);
-            var yesterdayItem;
-            if (yesterdayDate.time == '0000') {
-                kmaTimeLib.convert0Hto24H(yesterdayDate);
-            }
-
-            /**
-             * short 만들때, 당시간에 데이터가 없는 경우에 그 이전 데이터를 사용하지만,
-             * 새로 데이터를 수집하면 23시간전부터 있음.
-             * 그래서 해당 시간 데이터가 없는 경우 그 이후 데이터를 사용.
-             */
-            for (var i=0; i<req.currentList.length-1; i++) {
-                if (req.currentList[i].date == yesterdayDate.date &&
-                    parseInt(req.currentList[i].time) >= parseInt(req.current.time))
-                {
-                    yesterdayItem =  req.currentList[i];
-                    break;
-                }
-            }
-
-            if (yesterdayItem) {
-                req.current.yesterday = yesterdayItem;
-                req.current.summary = self.makeSummary(req.current, yesterdayItem, req.query, res);
-            }
-            else {
-                log.error('Fail to gt yesterday weather info', meta);
-                req.current.summary = '';
-            }
+            req.current.yesterday = observations.yesterday(req.current, req.currentList);
+            req.current.summary = self.makeSummary(req.current, req.current.yesterday, req.query, res);
         }
         catch (err) {
             err.message += ' ' + JSON.stringify(meta);
@@ -3650,7 +3576,7 @@ ControllerTown.prototype._diffTodayYesterday = function(current, yesterday, ts) 
     var str = "";
     var diffTemp = 0;
     var grade = 0;
-    if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
+    if (observations.canCompare(current, yesterday)) {
         diffTemp = current.t1h - yesterday.t1h;
         grade = Math.round(Math.abs(diffTemp));
         diffTemp = Math.round(diffTemp);

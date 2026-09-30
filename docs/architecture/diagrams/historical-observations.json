@@ -67,7 +67,7 @@
       "id": "read",
       "type": "backend",
       "label": "KMA API composition",
-      "sublabel": "Fill gaps; omit unknown rain",
+      "sublabel": "Exact-hour fill; bounded cached reads",
       "pos": [
         850,
         215
@@ -137,15 +137,15 @@
       "dot": "emerald",
       "title": "Response contract",
       "items": [
-        "Hourly observations never synthesized from daily data",
-        "Official daily records survive missing hourly humidity"
+        "Fill invalid fields; preserve temperature provenance",
+        "Only compare matching hours and temperature sources"
       ]
     },
     {
       "dot": "amber",
       "title": "Operational boundary",
       "items": [
-        "Local implementation; production activation is separate",
+        "250 ms fallback wait; coalesced process-local reads",
         "No provider requests in the weather response path"
       ]
     }

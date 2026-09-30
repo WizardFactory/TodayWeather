@@ -178,6 +178,15 @@ exports.hourlyResponse = function (rows) {
         return result;
     });
 };
+exports.record = function (row, source, fields) {
+    var provenance = { source: source.source, stationId: String(source.stationId), key: source.key, fields: fields };
+    row.historyObservation = provenance;
+    row.fieldObservations = row.fieldObservations || {};
+    fields.forEach(function (field) {
+        row.fieldObservations[field] = {source: provenance.source, stationId: provenance.stationId, key: provenance.key};
+    });
+};
+
 exports.mergeHourly = function (req, records) {
     var byKey = {};
     records.forEach(function (r) {
@@ -193,13 +202,7 @@ exports.mergeHourly = function (req, records) {
                 fields.push(field);
             }
         });
-        if (fields.length)
-            row.historyObservation = {
-                source: source.source,
-                stationId: source.stationId,
-                key: source.key,
-                fields: fields
-            };
+        if (fields.length) exports.record(row, source, fields);
     });
 };
 exports.mergeDaily = function (req, records, now) {
