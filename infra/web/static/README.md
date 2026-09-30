@@ -28,7 +28,7 @@ Vite reads these at **build time**. The uploader accepts only live/direct artifa
 
 ## Deployment decision
 
-For [#2646](https://github.com/WizardFactory/TodayWeather/issues/2646), prepare **Option A: reuse existing hosting** for `app.todayweather.ai`. This is a local preparation decision, not production execution authorization. There is no automatic production deployment workflow. Recheck the destination read-only before executing; preserve the existing public API and native routes. Option B is reference-only and requires a separately approved migration.
+For [#2646](https://github.com/WizardFactory/TodayWeather/issues/2646), prepare **Option A: reuse existing hosting** for `app.todayweather.ai`. This is a local preparation decision, not production execution authorization. There is no automatic production deployment. The opt-in [guarded manual release workflow](../../../docs/operations/github-releases.md) requires separately approved environment/IAM activation and production approval. Recheck the destination read-only before executing; preserve the existing public API and native routes. Option B is reference-only and requires a separately approved migration.
 
 Set `AWS_PROFILE`, `WEB_BUCKET` and `WEB_DISTRIBUTION` from the operator's verified environment inventory. Do not publish credentials or environment-specific resource identifiers in the repository. Confirm the selected account with `aws sts get-caller-identity`, and verify the distribution alias and default S3 origin against these inputs. Use an operator-controlled backup directory outside Git (`WEB_BACKUP_DIR`) for the following configuration and content backups. All create/update/publish/upload/invalidation commands below require explicit production deployment authorization.
 
@@ -139,6 +139,10 @@ aws cloudformation describe-stacks --region ap-northeast-2 \
 
 The template's private S3 bucket blocks public access. CloudFront OAC and the bucket policy allow reads only from its distribution. Leave bucket website hosting disabled. The template enables HTTPS redirects, modern TLS, compression, security headers and a cache policy that honors object cache headers.
 
+## Guarded GitHub release
+
+Use the [target naming, release-note template and activation guide](../../../docs/operations/github-releases.md) for Actions deployment. It accepts only the exact successful master-push `web-static-dist` artifact, snapshots the previous site privately before writes, waits for its exact invalidation and runs commit-pinned live smoke. It never deploys from a PR artifact or from Release publication alone. Manual operator procedures below remain available under their own production authorization.
+
 ## Upload a release
 
 For Option A, use the verified `WEB_BUCKET` and `WEB_DISTRIBUTION`. For Option B, use the stack outputs only after a separately authorized cutover. The following prints the proposed commands and does not call AWS:
@@ -169,7 +173,7 @@ The upload sends hashed assets first with `public,max-age=31536000,immutable`, t
 
 The preflight does not check the cache policy, the viewer certificate or DNS; those remain the Option A read-only checks above. The upload is ordered, not transactional. Keep the uploaded artifact as described in [Release identity and rollback](#release-identity-and-rollback); if upload is interrupted, retry the same complete artifact before announcing the release. Do not use `s3 sync --delete`: older service workers/tabs may still request previous hashed chunks.
 
-Wait for invalidation completion before release checks. The uploader runs `create-invalidation` but does not print its output, so find the invalidation ID afterwards (the newest entry, `InProgress` until it completes) and wait for it:
+Wait for invalidation completion before release checks. With `--receipt <file>`, the uploader writes `commit`, `builtAt` and the exact returned `invalidationId` for deterministic waiting; the guarded workflow uses this option. Without it, the uploader does not print the response, so find the invalidation ID afterwards (the newest entry, `InProgress` until it completes) and wait for it:
 
 ```sh
 aws cloudfront list-invalidations --distribution-id "$WEB_DISTRIBUTION" \

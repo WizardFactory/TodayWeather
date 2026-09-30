@@ -225,7 +225,8 @@ else if (cmd === "cloudfront get-function") {
       ResponseHeadersPolicyConfig: fx.headersConfig,
     },
   });
-else if (cmd === "s3 cp" || cmd === "cloudfront create-invalidation") out({});
+else if (cmd === "s3 cp") out({});
+else if (cmd === "cloudfront create-invalidation") out({Invalidation: {Id: "INV123"}});
 else fail("unexpected command " + cmd);
 `;
 const errorResponse = (code: number) => ({
@@ -278,7 +279,7 @@ const matching = () => ({
     },
   },
 });
-function runExecute(fixture: ReturnType<typeof matching>) {
+function runExecute(fixture: ReturnType<typeof matching>, receipt = false) {
   const dir = mkdtempSync(join(tmpdir(), "tw-static-preflight-"));
   try {
     const dist = join(dir, "dist");
@@ -299,6 +300,7 @@ function runExecute(fixture: ReturnType<typeof matching>) {
         "--distribution",
         "D123",
         "--execute",
+        ...(receipt ? ["--receipt", join(dir, "receipt.json")] : []),
       ],
       {
         encoding: "utf8",
@@ -314,7 +316,16 @@ function runExecute(fixture: ReturnType<typeof matching>) {
       .split("\n")
       .filter(Boolean)
       .map((line) => JSON.parse(line));
-    return { status: p.status, stderr: p.stderr, stdout: p.stdout, calls };
+    return {
+      status: p.status,
+      stderr: p.stderr,
+      stdout: p.stdout,
+      calls,
+      receipt:
+        receipt && existsSync(join(dir, "receipt.json"))
+          ? JSON.parse(readFileSync(join(dir, "receipt.json"), "utf8"))
+          : null,
+    };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -752,4 +763,13 @@ it("accepts only the known precipitation labels in the live smoke", async () => 
   ]);
   expect(smoke.dottedKmaTime("관측 시각 2026.09.26.14:00")).toBe(true);
   expect(smoke.dottedKmaTime("관측 시각 2026-09-26 14:00")).toBe(false);
+});
+
+it("records the exact returned invalidation ID and artifact commit for workflow waiting", () => {
+  const result = runExecute(matching(), true);
+  expect(result.status, result.stderr).toBe(0);
+  expect(result.receipt).toMatchObject({
+    commit: COMMIT,
+    invalidationId: "INV123",
+  });
 });
