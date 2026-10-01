@@ -16,6 +16,7 @@ angular.module('starter', [
     'service.admobclean',
     'service.admobpro',
     'service.admobemi',
+    'service.monetization',
     'service.twads',
     'service.push',
     'service.storage',

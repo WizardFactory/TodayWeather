@@ -1,0 +1,14 @@
+{
+  "parameters": {
+    "tw_banner_enabled": {
+      "defaultValue": {"value": "true"},
+      "description": "TodayWeather banner kill switch; does not override UMP or screen hiding.",
+      "valueType": "BOOLEAN"
+    },
+    "tw_banner_delay_seconds": {
+      "defaultValue": {"value": "0"},
+      "description": "Seconds since WebView service creation before first eligible banner, integer 0..120.",
+      "valueType": "NUMBER"
+    }
+  }
+}

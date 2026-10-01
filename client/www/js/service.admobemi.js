@@ -3,9 +3,13 @@
  * interface as admobClean/admobPro so TwAds can drive it unchanged.
  */
 angular.module('service.admobemi', [])
-    .factory('admobEmi', function(Util) {
+    .factory('admobEmi', function(Util, Monetization) {
         var obj = {};
         var bannerAdUnit = '';
+        var initialized = false, lastBannerLoadAt, pendingLoadTimer, cancelPendingLoad;
+        function lifecycle(action) {
+            Monetization.track('ad_lifecycle', {action: action, ad_format: 'banner'});
+        }
 
         function plugin() {
             return window.cordova && cordova.plugins && cordova.plugins.emiAdmobPlugin;
@@ -16,29 +20,60 @@ angular.module('service.admobemi', [])
          * isOverlapping false shrinks the web view by the banner height (legacy overlap:false).
          */
         obj.createBannerView = function(success, error) {
-            document.addEventListener('on.banner.load', function onLoad() {
+            var settled = false;
+            function settle(failed) {
+                if (settled) { return; }
+                settled = true;
                 document.removeEventListener('on.banner.load', onLoad);
-                if (success) { success(); }
-            });
-            plugin().loadBannerAd({
-                adUnitId: bannerAdUnit,
-                position: 'bottom-center',
-                size: 'adaptive',
-                collapsible: false,
-                autoShow: false,
-                isOverlapping: false,
-                // cordova-android 15 layout: resize the web view by the banner height (also on Android 16+).
-                isCordova15: true
-            }, function () {}, error);
+                document.removeEventListener('on.banner.failed.load', onFailure);
+                if (failed) { if (error) { error(); } }
+                else if (success) { success(); }
+            }
+            function onLoad() { settle(false); }
+            function onFailure() { settle(true); }
+            function load() {
+                pendingLoadTimer = undefined; cancelPendingLoad = undefined;
+                lastBannerLoadAt = Date.now();
+                // Native load failures are events, distinct from Cordova command failures.
+                document.addEventListener('on.banner.load', onLoad);
+                document.addEventListener('on.banner.failed.load', onFailure);
+                lifecycle('request');
+                plugin().loadBannerAd({
+                    adUnitId: bannerAdUnit,
+                    position: 'bottom-center',
+                    size: 'adaptive',
+                    collapsible: false,
+                    autoShow: false,
+                    isOverlapping: false,
+                    // cordova-android 15 layout: resize the web view by the banner height (also on Android 16+).
+                    isCordova15: true,
+                    loadInterval: 0 // JS owns five-second spacing; avoid native silent returns.
+                }, function () {}, onFailure);
+            }
+            // Preserve the plugin's five-second request spacing in JS. Native interval
+            // returns silently (no event/callback), so it must not own this completion gate.
+            var remaining = lastBannerLoadAt === undefined ? 0 : 5000 - (Date.now() - lastBannerLoadAt);
+            if (remaining > 0) {
+                cancelPendingLoad = onFailure;
+                pendingLoadTimer = window.setTimeout(load, remaining);
+            } else { load(); }
         };
 
         obj.destroyBannerView = function (success, error) {
+            if (pendingLoadTimer !== undefined) {
+                window.clearTimeout(pendingLoadTimer); pendingLoadTimer = undefined;
+                var cancel = cancelPendingLoad; cancelPendingLoad = undefined;
+                cancel();
+            }
             plugin().removeBannerAd(success, error);
         };
 
         obj.showBannerAd = function(show, success, error) {
             if (show) {
-                plugin().showBannerAd(success, error);
+                plugin().showBannerAd(function() {
+                    lifecycle('show');
+                    if (success) { success(); }
+                }, error);
             }
             else {
                 plugin().hideBannerAd(success, error);
@@ -51,17 +86,25 @@ angular.module('service.admobemi', [])
                 return -1;
             }
             bannerAdUnit = options.bannerAdUnit;
+            if (initialized) { return; }
+            initialized = true;
+            // Diagnostic events are separate from automatic Firebase ad_impression/revenue.
+            ['load', 'impression', 'hide'].forEach(function(name) {
+                document.addEventListener('on.banner.' + name, function() {
+                    lifecycle(name === 'load' ? 'loaded' : name);
+                });
+            });
 
             var started = false;
             document.addEventListener('on.sdkInitialization', function onInit(data) {
                 document.removeEventListener('on.sdkInitialization', onInit);
                 started = true;
-                console.log('admob sdk initialized ' + (data && data.version));
+                console.info({component: 'admob', operation: 'initialize', result: 'ready'});
                 success();
             });
             document.addEventListener('on.banner.failed.load', function (data) {
                 console.log('on banner failed load');
-                Util.ga.trackEvent('plugin', 'error', 'admobReceiveAd ' + JSON.stringify(data && data.message || data));
+                lifecycle('failed');
             });
 
             var options = {
@@ -98,8 +141,8 @@ angular.module('service.admobemi', [])
              * units start the SDK without UMP so the ad path stays testable.
              */
             function onConsentError(reason) {
-                console.log('admob consent failed: ' + JSON.stringify(reason));
-                Util.ga.trackEvent('plugin', 'error', 'admobConsent ' + JSON.stringify(reason && reason.message || reason));
+                console.warn({component: 'admob', operation: 'consent', cause: 'ump_error', action: 'retain_gate', result: 'not_ready'});
+                lifecycle('consent_failed');
                 // A consent decision (not a UMP failure) must never be bypassed.
                 if (clientConfig.releaseAds || fallenBack || /consent is required|status unknown/i.test(String(reason))) {
                     if (error) { error(reason); }

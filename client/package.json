@@ -30,7 +30,8 @@
     "www:config:release": "node scripts/make-client-config.mjs --release",
     "www:release": "npm run www:libs && npm run www:css && npm run www:config:release && npm run www:firebase",
     "build:android:release": "node scripts/build-release.mjs android",
-    "build:ios:release": "node scripts/build-release.mjs ios"
+    "build:ios:release": "node scripts/build-release.mjs ios",
+    "test:monetization": "node --test test/monetization.test.cjs"
   },
   "devDependencies": {
     "bower": "1.8.14",
@@ -55,7 +56,8 @@
     "cordova.plugins.diagnostic": "7.4.0",
     "emi-indo-cordova-plugin-admob": "3.0.4",
     "phonegap-plugin-mobile-accessibility": "1.0.5",
-    "sass": "1.105.0"
+    "sass": "1.105.0",
+    "cordova-plugin-firebasex-config": "2.0.2"
   },
   "cordova": {
     "platforms": [
@@ -124,7 +126,11 @@
         "USAGE": "This identifier will be used to deliver personalized ads to you.",
         "APP_ID_IOS": "ca-app-pub-3940256099942544~1458002511"
       },
-      "cordova-plugin-app-preferences": {}
+      "cordova-plugin-app-preferences": {},
+      "cordova-plugin-firebasex-config": {
+        "ANDROID_FIREBASE_CONFIG_VERSION": "23.1.0",
+        "IOS_FIREBASE_SDK_VERSION": "12.14.0"
+      }
     }
   }
 }
