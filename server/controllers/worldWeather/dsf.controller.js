@@ -910,13 +910,30 @@ class DsfController {
                     return this._checkProvider(range, callback);
                 }
                 let cost = range === 'combined' ? 49 : range === 'recent' ? 25 : 1;
-                if(!err && usage && usage.records + cost > limit){
-                    return callback(Object.assign(new Error('cDsf > daily Visual Crossing record budget reached (' + usage.records + '/' + limit + ')'), {
-                        code: 'EWEATHERUNAVAILABLE', retryAt: Date.parse(day + 'T00:00:00Z') + 86400000
-                    }));
+                let used = usage ? usage.records : 0;
+                if(!err && used + cost > limit){
+                    let budgetError = new Error('cDsf > daily Visual Crossing record budget reached (' + used + '/' + limit + ')');
+                    budgetError.code = 'EWEATHERUNAVAILABLE';
+                    budgetError.reason = 'EVCBUDGET';
+                    budgetError.retryAt = Date.parse(day + 'T00:00:00Z') + 86400000;
+                    return callback(budgetError);
                 }
                 return callback();
             });
+        });
+    }
+
+    /**
+     * History must not crowd out current weather when only the forecast cost fits (#2633).
+     * Fresh current is already usable via _fallback; do not bill another forecast for it.
+     * A budget denial is not missing provider history, so no no-yesterday marker is written.
+     */
+    _selectRange(range, output, callback){
+        this._checkProvider(range, (err)=>{
+            if(!err || err.reason !== 'EVCBUDGET' || range === 'forecast' || output.current){
+                return callback(err, range);
+            }
+            this._checkProvider('forecast', (forecastError)=>callback(forecastError, 'forecast'));
         });
     }
 
@@ -1087,10 +1104,12 @@ class DsfController {
         // The day before yesterday is normally yesterday's stored `yesterday` record, so a city requested
         // every day costs 25 records a day; a new city (or after a gap) costs 49.
         let range = noYesterday ? 'forecast' : !output.twoDaysAgo ? 'combined' : !output.yesterday ? 'recent' : 'forecast';
-        this._checkProvider(range, (unavailable)=>{
+        this._selectRange(range, output, (unavailable, selectedRange)=>{
             if(unavailable){
                 return this._fallback(output, unavailable, callback);
             }
+            let forecastOnly = selectedRange !== range;
+            range = selectedRange;
             this._acquireLock(key, (err, token)=>{
                 if(err){
                     // Lock store unavailable: fetch without the lock rather than fail the request.
@@ -1106,7 +1125,7 @@ class DsfController {
                     if(!findErr){
                         this._merge(output, found);
                     }
-                    if(this._hasAll(output, noYesterday)){
+                    if(this._hasAll(output, noYesterday || forecastOnly)){
                         if(token){
                             this._releaseLock(key, token);
                         }

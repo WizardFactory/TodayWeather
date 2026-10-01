@@ -108,7 +108,7 @@
       "from": "dsf",
       "to": "store",
       "y": 300,
-      "label": "provider marker / daily budget \u2192 skip call, serve stored",
+      "label": "provider down / no forecast budget \u2192 serve stored or fail",
       "note": "marker set for 10 min after a daily-limit 429 or 401/403"
     },
     {
@@ -124,7 +124,8 @@
       "from": "dsf",
       "to": "provider",
       "y": 356,
-      "label": "no day before \u2192 combined (49) \u00b7 no yesterday \u2192 recent (25) \u00b7 else forecast (1), \u22648 s"
+      "label": "history 49 / 25 \u00b7 forecast 1 \u00b7 low history budget \u2192 forecast only",
+      "note": "Without fresh current, use forecast if its cost fits; no history marker. Retry history when budget recovers."
     },
     {
       "id": "write-dsf",

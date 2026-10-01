@@ -860,16 +860,73 @@ test('D7/D1: daily record budget and usage counter', async () => {
     const clock = {now: CAPTURED};
     const usageModel = memoryUsageModel();
     const Requester = fakeVcRequester({combined: fixture('tokyo-combined'), forecast: fixture('tokyo-forecast')});
-    let Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock, usageModel, dailyRecordLimit: 30});
+    let Controller = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester, clock, usageModel, dailyRecordLimit: 49});
     await getDsf(Controller);
     await settle();
     const day = '2026-09-26';
     assert.deepEqual(plain(usageModel.days.get(day)), {_id: day, calls: 1, records: 49, failures: 0, http429: 0, slow: 0});
-    // 25 + 25 would exceed 30: London is not fetched, and the budget error is returned.
+    // The first combined call consumed all 49 records: even forecast cannot fit for London.
     const r = await getDsf(Controller, {lat: 51.51, lon: -0.13});
     assert(r.err);
     assert.match(String(r.err.message), /budget/);
     assert.equal(Requester.calls.length, 1);
+});
+
+test('2633: cold locations use forecast within remaining budget and recover history later', async () => {
+    for (const [geo, zone] of [[{lat: -15.794, lon: -47.882}, 'America/Sao_Paulo'],
+        [{lat: -15.78, lon: -47.93}, 'America/Sao_Paulo'], [TOKYO, 'Asia/Tokyo']]) {
+        const clock = {now: CAPTURED}, usageModel = memoryUsageModel(), lockModel = memoryLockModel();
+        usageModel.days.set('2026-09-26', {_id: '2026-09-26', records: 976});
+        const Requester = fakeVcRequester(params => {
+            const body = vcBody(zone, params.range, clock.now);
+            body.queryCost = params.range === 'forecast' ? 1 : 49;
+            return body;
+        });
+        const C = loadDsfController({model: memoryDsfModel(), lockModel, requester: Requester, clock, usageModel, dailyRecordLimit: 1000});
+        let r = await getDsf(C, geo);
+        assert.ifError(r.err);
+        assert.equal(r.res.data.length, 2, 'today/current returned without invented history');
+        assert.equal(r.req.cWeatherDate.getTime(), Math.floor(CAPTURED / 1000) * 1000);
+        await settle();
+        assert.deepEqual(Requester.calls.map(c => c.range), ['forecast']);
+        assert.equal(usageModel.days.get('2026-09-26').records, 977);
+        assert(![...lockModel.locks.keys()].some(k => k.startsWith('~noyesterday:')), 'budget is not missing provider history');
+        r = await getDsf(C, geo);
+        assert.ifError(r.err);
+        assert.equal(Requester.calls.length, 1, 'fresh current avoids a repeated billed call');
+        clock.now += 86400000; // next UTC day has no usage document; history is retried normally
+        r = await getDsf(C, geo);
+        assert.ifError(r.err);
+        assert.equal(Requester.calls[1].range, 'combined');
+    }
+});
+
+test('2633: a new usage day with a small cap still chooses an affordable range', async () => {
+    const clock = {now: CAPTURED}, usageModel = memoryUsageModel();
+    const Requester = fakeVcRequester(params => {
+        const body = vcBody('America/Sao_Paulo', params.range, clock.now);
+        body.queryCost = params.range === 'forecast' ? 1 : 49;
+        return body;
+    });
+    const C = loadDsfController({model: memoryDsfModel(), lockModel: memoryLockModel(), requester: Requester,
+        clock, usageModel, dailyRecordLimit: 1});
+    assert.ifError((await getDsf(C, {lat: -15.794, lon: -47.882})).err);
+    assert.deepEqual(Requester.calls.map(c => c.range), ['forecast']);
+    await settle();
+    assert.equal(usageModel.days.get('2026-09-26').records, 1);
+});
+
+test('2633: exhausted budget and provider-down do not permit forecast degradation', async () => {
+    for (const down of [false, true]) {
+        const clock = {now: CAPTURED}, usageModel = memoryUsageModel(), lockModel = memoryLockModel();
+        usageModel.days.set('2026-09-26', {_id: '2026-09-26', records: down ? 976 : 1000});
+        if (down) lockModel.locks.set('~provider', {_id: '~provider', expireAt: new Date(CAPTURED + 60000)});
+        const Requester = fakeVcRequester({});
+        const C = loadDsfController({model: memoryDsfModel(), lockModel, requester: Requester, clock, usageModel, dailyRecordLimit: 1000});
+        const r = await getDsf(C, {lat: -15.794, lon: -47.882});
+        assert.match(r.err.message, down ? /marked unavailable/ : /budget/);
+        assert.equal(Requester.calls.length, 0);
+    }
 });
 
 test('D3/T4: the response returns within its budget while the fetch continues and stores the records', async () => {
