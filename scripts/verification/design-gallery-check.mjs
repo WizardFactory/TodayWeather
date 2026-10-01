@@ -5,6 +5,7 @@ import {resolve,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {startGallery} from '../design-gallery.mjs';
+import {checkTokenCSS} from './design-token-css-check.mjs';
 const args=process.argv.slice(2),arg=(k,f)=>args.includes(k)?args[args.indexOf(k)+1]:f;
 const out=resolve(arg('--out','reports/sdlc/issue-2651-docs-type/gallery'));
 if(!out.startsWith(resolve('reports')+sep))throw Error('Output must stay under reports/');
@@ -12,19 +13,24 @@ mkdirSync(out,{recursive:true});
 const service=await startGallery();
 const sizes=[{width:402,height:874,touch:true,tier:'mobile',name:'mobile'},{width:820,height:1180,touch:true,tier:'tablet',name:'tablet'},{width:1440,height:900,touch:false,tier:'desktop',name:'desktop'},{width:320,height:694,touch:true,tier:'mobile',name:'compact'}];
 const engines=arg('--engines','chromium,webkit').split(',');
-const result={versions:{},cases:[],controls:[],captures:{},errors:[]};
-const sourcePaths=['packages/design-tokens/tokens.json','packages/design-tokens/resolver.mjs','packages/design-tokens/generate.mjs','docs/design-system/references/gallery.html','docs/design-system/references/gallery.css','docs/design-system/references/gallery.js','docs/design-system/references/chart-model.js','docs/design-system/references/charts.js','docs/design-system/references/fixtures.js','scripts/design-gallery.mjs','scripts/verification/design-gallery-check.mjs'];
+const result={versions:{},cases:[],controls:[],tokenCSS:[],systemAppearance:[],captures:{},errors:[]};
+const sourcePaths=['packages/design-tokens/tokens.json','packages/design-tokens/resolver.mjs','packages/design-tokens/generate.mjs','docs/design-system/references/gallery.html','docs/design-system/references/gallery.css','docs/design-system/references/gallery.js','docs/design-system/references/chart-model.js','docs/design-system/references/charts.js','docs/design-system/references/fixtures.js','scripts/design-gallery.mjs','scripts/verification/design-gallery-check.mjs','scripts/verification/design-token-css-check.mjs'];
 result.sourceDigests=Object.fromEntries(sourcePaths.map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
 try {
  assert.equal((await fetch(service.url+'/package.json')).status,404);
  assert.equal((await fetch(service.url+'/docs/design-system/references/..%2f..%2f..%2fpackage.json')).status,404);
  for(const engineName of engines) {
   const browser=await ({chromium,webkit}[engineName]).launch();result.versions[engineName]=browser.version();
-  try {for(const size of sizes) {
-   const context=await browser.newContext({viewport:size,isMobile:size.touch,hasTouch:size.touch});
+  try {
+   const css=await checkTokenCSS(browser,engineName);result.tokenCSS.push(...css.cases);assert.deepEqual(css.errors,[],engineName+' generated CSS cascade');
+   for(const size of sizes) {
+   const context=await browser.newContext({viewport:size,isMobile:size.touch,hasTouch:size.touch,colorScheme:'dark'});
    await context.route('**/*',route=>new URL(route.request().url()).origin===service.url?route.continue():route.abort());
    const page=await context.newPage(),pageErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));
    await page.goto(service.url);await page.waitForFunction(()=>window.galleryReady);await page.evaluate(()=>document.fonts.ready);
+   await page.selectOption('#appearance','system');
+   const system=await page.evaluate(()=>({osDark:matchMedia('(prefers-color-scheme: dark)').matches,appearance:document.documentElement.dataset.appearance,body:parseFloat(getComputedStyle(document.body).fontSize),bodyToken:getComputedStyle(document.documentElement).getPropertyValue('--tw-type-body-size').trim()}));
+   assert.equal(system.osDark,true);assert.equal(system.appearance,'system');assert.equal(system.body,{mobile:17,tablet:18,desktop:16}[size.tier]);if(size.tier==='desktop')assert.equal(system.bodyToken,'1rem');result.systemAppearance.push({engineName,tier:size.tier,...system});
    for(const lang of ['ko','de'])for(const appearance of ['light','dark'])for(const scale of ['1','1.3'])for(const root of [16,32]) {
     const id=`${engineName}/${size.name}/${lang}/${appearance}/${scale}/${root}`;
     await page.selectOption('#language',lang);await page.selectOption('#appearance',appearance);await page.selectOption('#text-scale',scale);

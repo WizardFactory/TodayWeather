@@ -92,16 +92,19 @@ export function compile(doc) {
   }
  }
  const light=contexts['light.mobile'];let stylesheet='/* Generated from tokens.json; do not edit. */\n'+block(light,':root');
- stylesheet+=block(contexts['dark.mobile'],'[data-appearance="dark"]');
- stylesheet+=`@media (prefers-color-scheme: dark) {\n${block(contexts['dark.mobile'],':root:not([data-appearance="light"]):not([data-appearance="dark"]), [data-appearance="system"]')}\n}\n`;
+ // Appearance rules must not re-declare mobile dimensions at higher specificity.
+ const darkOnly=Object.fromEntries(Object.entries(contexts['dark.mobile']).filter(([p,t])=>t.cssValue!==light[p].cssValue));
+ stylesheet+=block(darkOnly,'[data-appearance="dark"]');
+ stylesheet+=`@media (prefers-color-scheme: dark) {\n${block(darkOnly,':root:not([data-appearance="light"]):not([data-appearance="dark"]), [data-appearance="system"]')}\n}\n`;
  // Tier blocks contain only tier-dependent tokens so they cannot overwrite appearance.
  const typeOnly=(v)=>Object.fromEntries(Object.entries(v).filter(([p])=>['mobile','tablet','desktop'].some(t=>contexts[`light.${t}`][p].cssValue!==light[p].cssValue)));
  stylesheet+=`@media ${tierQueries.desktop} {\n${block(typeOnly(contexts['light.desktop']),':root')}\n}\n`;
  stylesheet+=`@media ${tierQueries.tablet} {\n${block(typeOnly(contexts['light.tablet']),':root')}\n}\n`;
- stylesheet+=`@media ${tierQueries.compact} {\n${block(typeOnly(light),':root')}\n}\n`;
- stylesheet+=`@media (max-width: 767px) {\n${block(typeOnly(light),':root')}\n}\n`;
  const wideValues=resolveTokens(doc,{tier:'desktop',wide:true});const wideOnly=Object.fromEntries(Object.entries(wideValues).filter(([p])=>extension(flat[p]).modes?.wide!==undefined));
  stylesheet+=`@media (min-width: 1600px) and (pointer: fine), (min-width: 1600px) and (hover: hover) {\n${block(wideOnly,':root')}\n}\n`;
+ // Compact coarse-pointer screens retain mobile values even when hover is available.
+ stylesheet+=`@media ${tierQueries.compact} {\n${block(typeOnly(light),':root')}\n}\n`;
+ stylesheet+=`@media (max-width: 767px) {\n${block(typeOnly(light),':root')}\n}\n`;
  const publicValues=Object.fromEntries(Object.entries(contexts).map(([k,v])=>[k,Object.fromEntries(Object.entries(v).filter(([p])=>!p.startsWith('primitive.')).map(([p,t])=>[p.replace(/^(semantic|component)\./,''),t.cssValue]))]));
  const json=JSON.stringify({values:publicValues,tierQueries},null,2);
  const reference=Object.fromEntries(Object.entries(light).map(([p,t])=>[p,{type:t.type,value:t.value,cssName:cssName(p),description:flat[p].$description??'',extension:t.extension}]));

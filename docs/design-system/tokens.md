@@ -15,6 +15,8 @@ npm run gallery
 
 Five reproducible outputs live under ignored `packages/design-tokens/generated/`: CSS custom properties, TypeScript literal values and TokenName union, equivalent JavaScript values for the standalone gallery, a machine-readable token reference and full contrast pairs. Do not edit or commit output. `npm run gallery` validates/regenerates before serving, so a clean checkout works. No network font or production backend is needed. No root `html` font-size rule is generated.
 
+Set `data-appearance="light"`, `"dark"` or `"system"` on the root; an unset attribute follows the OS color scheme. Appearance blocks emit only values that differ from the light base, so system dark cannot reset the responsive type/layout tier. Compact coarse-pointer rules follow wide overrides and retain mobile sizes on screens below 540px tall, including coarse pointers with hover. Gallery CI also checks OS light/dark × explicit/system/unset appearance and real computed CSS across six profiles. The coarse+hover profile synthesizes input-capability media features in CSSOM; it is a cascade regression, not physical-device certification.
+
 ```css
 .card { background: var(--tw-bg-surface); border-radius: var(--tw-card-radius); }
 .body { font-size: max(.8125rem, calc(var(--tw-type-body-size) * var(--tw-text-scale))); }
