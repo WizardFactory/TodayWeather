@@ -225,6 +225,11 @@ export function measure({ touch, placeName }) {
 }
 
 async function main() {
+  // D1/D2 production adoption matrix: same static bundle, strict application CSP.
+  if (process.argv.includes("--text-scale")) {
+    await import("./verification/pwa-design-check.mjs");
+    return;
+  }
   const o = options(process.argv.slice(2));
   const preview = o.base ? null : await startPreview();
   const base = o.base ?? preview.base;

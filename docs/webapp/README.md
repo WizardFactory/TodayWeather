@@ -11,6 +11,7 @@ Current decision: maintain a **responsive PWA in a separate `web/` client** and 
 | [Implementation plan](implementation-plan.md) | Current scope, remaining release gates, tests and rollback |
 | [Interactive architecture](diagrams/webapp-architecture.html) | Static hosting components and existing API boundary; [editable JSON](diagrams/webapp-architecture.json) |
 | [Intent](intent.md) | Original request, current decisions and planning acceptance |
+| [User manual](user-manual.md) | Display preferences, charts, air, enlarged text and data controls; editable source and PDF |
 | [Test guide](testing.md) | How to run the unit, browser, layout (sizes × browsers × languages) and live smoke checks |
 | [Implementation and verification](implementation.md) | Reproducible checks, unimplemented specification items, release gaps and test coverage traceability |
 | [Existing-infrastructure deployment review](existing-infrastructure-review.md) | September 24 feasibility review: static hosting and existing public APIs without an additional persistent Node service; Web Push migration boundary |

@@ -91,7 +91,7 @@ describe("source adapters preserve meteorological meaning", () => {
       3,
     );
   });
-  it("rejects legacy missing-temperature sentinels and past daily forecasts", () => {
+  it("rejects legacy missing-temperature sentinels while retaining API history", () => {
     const raw = structuredClone(kma.response);
     raw.current.t1h = -50;
     raw.current.yesterday.t1h = -50;
@@ -102,9 +102,8 @@ describe("source adapters preserve meteorological meaning", () => {
     const data = normalizeWeather(raw);
     expect(data.current.temperature).toBeNull();
     expect(data.yesterday?.temperature).toBeNull();
-    // R6: yesterday (D-1) stays for comparison; older history is excluded.
-    expect(data.daily.every((p) => p.at >= "2026-09-22")).toBe(true);
-    expect(data.daily.some((p) => p.at.startsWith("2025"))).toBe(false);
+    // #2649: all supplied dates stay available in the daily chart.
+    expect(data.daily.some((p) => p.at.startsWith("2025"))).toBe(true);
   });
   it("does not relabel source air standards", () => {
     expect(() =>

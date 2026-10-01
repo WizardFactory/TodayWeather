@@ -1,7 +1,6 @@
 import { test, expect } from "./fixtures";
 const screenshots =
-  process.env.WEB_SCREENSHOTS ??
-  "reports/verification/web/screenshots";
+  process.env.WEB_SCREENSHOTS ?? "reports/verification/web/screenshots";
 function snapshotCount(page: import("@playwright/test").Page) {
   return page.evaluate(
     () =>
@@ -42,12 +41,14 @@ test("weather, air, national views, warnings and settings persist at desktop siz
     fullPage: true,
   });
   await page.getByRole("button", { name: "일별", exact: true }).click();
-  await expect(page.locator(".daily-row").first()).toBeVisible();
+  await expect(
+    page.locator(".daily-columns .chart-column").first(),
+  ).toBeVisible();
   await page.getByRole("button", { name: "미세먼지", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "대기질 관측" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /초미세먼지/ }).click();
+  await page.getByRole("radio", { name: /초미세먼지/ }).click();
   await expect(
     page.getByRole("heading", { name: "초미세먼지 시간별 변화" }),
   ).toBeVisible();
@@ -57,21 +58,22 @@ test("weather, air, national views, warnings and settings persist at desktop siz
   await expect(page.locator(".region-row b").first()).toContainText("mm");
   await page.goto("/nation/air");
   await expect(page.locator(".region-row").first()).toBeVisible();
-  await page.getByRole("button", { name: "오존", exact: true }).click();
+  await page.getByRole("button", { name: /오존/ }).click();
   await page.goto("/warnings");
   await expect(page.locator(".bulletin").first()).toBeVisible();
   await page.goto("/settings");
   await page
     .getByRole("combobox", { name: "기온", exact: true })
     .selectOption("F");
-  await page
-    .getByRole("combobox", { name: "화면 테마", exact: true })
-    .selectOption("dark");
+  await page.getByRole("radio", { name: "다크", exact: true }).check();
   await page.reload();
   await expect(
     page.getByRole("combobox", { name: "기온", exact: true }),
   ).toHaveValue("F");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-resolved-appearance",
+    "dark",
+  );
   await page.goto("/");
   await expect(page.locator(".temperature")).toContainText("F");
   await page.screenshot({

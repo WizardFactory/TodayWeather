@@ -71,9 +71,13 @@ export type IconKind =
   | "moon"
   | "sun"
   | "wind"
-  | "cloud";
+  | "cloud"
+  | "fog"
+  | "dust";
 /** Icon grammar `<base>[_<cloud>][_<precip>][_lightning]` (domain glossary §3). */
 export function iconKind(icon = ""): IconKind {
+  if (/fog|mist|haze/.test(icon)) return "fog";
+  if (/dust|sand|smoke/.test(icon)) return "dust";
   return /lightning|thunder/.test(icon)
     ? "lightning"
     : /rainsnow|sleet/.test(icon)

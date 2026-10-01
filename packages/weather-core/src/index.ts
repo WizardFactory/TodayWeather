@@ -50,6 +50,8 @@ export type Point = {
   humidity: number | null;
   wind: number | null;
   windDirection: string;
+  /** Clockwise meteorological degrees, when supplied by the provider. */
+  windDegrees?: number | null;
   pressure: number | null;
   visibility: number | null;
   precipitation: number | null;
@@ -349,12 +351,16 @@ function point(
     high: temp(r.tmx ?? r.taMax),
     humidity: numberValue(r.reh),
     wind: unit(r.wsd, "wind", "windSpeedUnit"),
-    // KMA sends a direction word; overseas (VC) rows send degrees.
+    windDegrees: (() => {
+      const n = numberValue(r.vec ?? r.windDir);
+      return n !== null && n >= 0 && n <= 360 ? n : null;
+    })(),
+    // KMA sends vec as degrees and wdd as a word; VC sends windDir.
     windDirection:
       str(r.wdd) ||
-      (numberValue(r.windDir) === null
+      (numberValue(r.vec ?? r.windDir) === null
         ? ""
-        : compassPoint(numberValue(r.windDir)!)),
+        : compassPoint(numberValue(r.vec ?? r.windDir)!)),
     pressure: unit(r.hPa ?? r.pressure, "pressure", "pressureUnit"),
     visibility: unit(r.visibility, "distance", "distanceUnit"),
     precipitation: convertValue(
@@ -587,12 +593,6 @@ export function normalizeWeather(
     notices.push("어제 같은 시각의 기온을 제공하지 않습니다.");
   if (!air.length)
     notices.push("이 지역의 대기질 관측 자료를 제공하지 않습니다.");
-  const today = current.at.slice(0, 10),
-    before = new Date(today + "T00:00:00Z");
-  before.setUTCDate(before.getUTCDate() - 1);
-  const yesterdayDate = before.toISOString().slice(0, 10);
-  // Keep yesterday for comparison; older rows are history outside this view.
-  const recentDaily = daily.filter((p) => p.at.slice(0, 10) >= yesterdayDate);
   return {
     schemaVersion: 1,
     source: kma ? "KMA" : "VC",
@@ -606,7 +606,7 @@ export function normalizeWeather(
     current,
     yesterday,
     hourly,
-    daily: recentDaily,
+    daily,
     air,
     ...(typeof currentRaw.summaryAir === "string" &&
     currentRaw.summaryAir.trim()
@@ -788,3 +788,11 @@ export function formatValue(v: number | null | undefined, digits = 0): string {
         maximumFractionDigits: digits,
       }).format(v);
 }
+
+export {
+  hourlyChart,
+  dailyChart,
+  wallTime,
+  linePath,
+  temperatureDomain,
+} from "./charts";

@@ -1,0 +1,157 @@
+{
+  "observedDate": "2026-10-01",
+  "android": [
+    {
+      "run": "android",
+      "records": [
+        {
+          "scale": 1,
+          "surface": "Cordova",
+          "body": "14px",
+          "root": "16px",
+          "pageOverflow": false
+        },
+        {
+          "scale": 1,
+          "surface": "PWA browser + D2 setting",
+          "body": "17px",
+          "root": "16px",
+          "pageOverflow": false
+        },
+        {
+          "scale": 1.3,
+          "surface": "Cordova",
+          "body": "14px",
+          "root": "16px",
+          "pageOverflow": false
+        },
+        {
+          "scale": 1.3,
+          "surface": "PWA browser + D2 setting",
+          "body": "22.1px",
+          "root": "20.8px",
+          "pageOverflow": false
+        }
+      ],
+      "systemScaleRestored": "1.0",
+      "finalCandidate130Proof": false
+    },
+    {
+      "run": "android-candidate",
+      "records": [
+        {
+          "scale": 1,
+          "surface": "Cordova",
+          "body": "14px",
+          "root": "16px",
+          "pageOverflow": false
+        },
+        {
+          "scale": 1,
+          "surface": "PWA browser + D2 setting",
+          "body": "17px",
+          "root": "16px",
+          "pageOverflow": false
+        },
+        {
+          "scale": 1.3,
+          "surface": "Cordova",
+          "body": "14px",
+          "root": "16px",
+          "pageOverflow": false
+        },
+        {
+          "scale": 1.3,
+          "surface": "PWA browser + D2 setting",
+          "body": "17px",
+          "root": "16px",
+          "pageOverflow": false
+        }
+      ],
+      "systemScaleRestored": "1.0",
+      "finalCandidate130Proof": false
+    }
+  ],
+  "androidFinal": {
+    "status": "passed-authorized-emulator-fallback",
+    "physicalStatus": "unauthorized after AK-approved retry; no final physical measurement",
+    "runtime": "Android15 API35 arm64 Google APIs AVD, Pixel7 profile",
+    "chrome": "124.0.6367.219",
+    "webview": "124.0.6367.219",
+    "nativeBuild": "Existing debug Cordova1.1.0(100090); historical baseline, not rebuilt for this task",
+    "nativeApkSha256": "0b874d7e5ea261c628d88ae29d5be4c540c4dbca6fc49f108c90cb30a44150c5",
+    "fixture": "docs/rewrite/examples/client-kma-response.json; synthetic Seoul; no live provider",
+    "records": [
+      {
+        "scale": 1,
+        "surface": "Cordova",
+        "body": "14px",
+        "root": "16px",
+        "pageOverflow": false
+      },
+      {
+        "scale": 1,
+        "surface": "PWA browser + D2 setting",
+        "body": "17px",
+        "root": "16px",
+        "pageOverflow": false
+      },
+      {
+        "scale": 1.3,
+        "surface": "Cordova",
+        "body": "14px",
+        "root": "16px",
+        "pageOverflow": false
+      },
+      {
+        "scale": 1.3,
+        "surface": "PWA browser + D2 setting",
+        "body": "22.1px",
+        "root": "20.8px",
+        "pageOverflow": false
+      }
+    ],
+    "systemScaleRestored": "1.0",
+    "visualAssessment": "Actual runtime chart captures inspected at100/130%; PWA labels/readout wrap, scrolling stays in chart; native fixed sizing and separate older legend",
+    "limitations": [
+      "Android emulator is not GalaxyS21+ physical coverage",
+      "PWA130% includes explicit D2 control with OS font_scale1.3; OS-only scaling is not inferred",
+      "Network disabled, PWA revision4 snapshot seeded through real IndexedDB path",
+      "Earlier wrong-tab/settings captures rejected as chart evidence"
+    ],
+    "selectedScreenshots": {
+      "android-emulator-cordova-100.png": "a42abf18cf9abdef0e193c612283143f161f45a99f5747ea4868a5027beb5531",
+      "android-emulator-cordova-130.png": "e9b66e20b0674a157ff7ae7da7fe2d08315f424fe9be5af568677c61b54e86f5",
+      "android-emulator-pwa-100.png": "6c4f5c2fdcf182c024988b58816603ea304abd382d7b07563c695585dea9f24e",
+      "android-emulator-pwa-130.png": "795e0bf6f62d8327ab5370a7e8fd5934380ea54912577783775a1eba289cedfb"
+    },
+    "captureProvenance": {
+      "cordova100": "run8; run9 had an offline-error popup fading over the chart and was rejected",
+      "cordova130": "run9",
+      "pwa100": "run9",
+      "pwa130": "run9"
+    }
+  },
+  "ios": {
+    "deviceClass": "iPhone12ProMax",
+    "nativeBuild": "1.1.0(1)",
+    "systemBodyPoints": [
+      17,
+      23
+    ],
+    "ratio": 1.3529411764705883,
+    "acceptedComparison": "approximately135%; AK authorization",
+    "pwaAppControl": [
+      1,
+      1.3
+    ],
+    "finalSystemRestoration": {
+      "slider": "50%",
+      "category": "UICTContentSizeCategoryL",
+      "bodyPoints": 17
+    },
+    "nativeNumericCss": "not measured; visually similar across system stages",
+    "privateImages": "local only; not transferred",
+    "chartComparison": "PWA separate legend/readout; installed native legend overlaps a lower hourly value"
+  }
+}

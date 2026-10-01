@@ -1,0 +1,235 @@
+import { test, expect } from "./fixtures";
+import fixture from "../../docs/rewrite/examples/client-kma-response.json" with { type: "json" };
+const API = "https://todayweather.wizardfactory.net";
+test("system appearance, independent 130% setting and legacy rollback survive reload", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/settings");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-appearance",
+    "system",
+  );
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-resolved-appearance",
+    "dark",
+  );
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+    "content",
+    "#0f1724",
+  );
+  await page
+    .getByRole("combobox", { name: "글자 크기", exact: true })
+    .selectOption("1.3");
+  await page
+    .getByRole("combobox", { name: "현재 날씨 배경", exact: true })
+    .selectOption("plain");
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        parseFloat(getComputedStyle(document.documentElement).fontSize),
+      ),
+    )
+    .toBe(20.8);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem("tw.web.v1.preferences")!).settings
+            .theme,
+      ),
+    )
+    .toBe("dark");
+  await page.evaluate(() => {
+    const old = JSON.parse(localStorage.getItem("tw.web.v1.preferences")!);
+    old.settings.theme = "photo";
+    localStorage.setItem("tw.web.v1.preferences", JSON.stringify(old));
+  });
+  await page.reload();
+  await expect(
+    page.getByRole("combobox", { name: "글자 크기", exact: true }),
+  ).toHaveValue("1.3");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-hero-style",
+    "plain",
+  );
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-resolved-appearance",
+    "light",
+  );
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+    "content",
+    "#f4f6fa",
+  );
+});
+test("a native confirmation cancels with Escape and returns focus without losing saved data", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+  await page
+    .getByRole("combobox", { name: "글자 크기", exact: true })
+    .selectOption("1.3");
+  const trigger = page.getByRole("button", {
+    name: "이 브라우저의 오늘날씨 데이터 삭제",
+  });
+  await trigger.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "취소", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await expect(
+    page.getByRole("combobox", { name: "글자 크기", exact: true }),
+  ).toHaveValue("1.3");
+  await trigger.click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "확인", exact: true })
+    .click();
+  await expect(
+    page.getByRole("combobox", { name: "글자 크기", exact: true }),
+  ).toHaveValue("1");
+});
+test("full mixed-day timeline, current observation, keyboard cursor and model tables agree", async ({
+  page,
+}) => {
+  const raw = structuredClone(fixture.response) as any;
+  raw.short = [];
+  raw.shortest = [];
+  const p = raw.current;
+  // Real API field structure with deliberately complete synthetic history.
+  raw.short = Array.from({ length: 42 }, (_, i) => ({
+    ...p,
+    date: `202609${i < 24 ? "22" : "23"}`,
+    time: String((i % 24) * 100).padStart(4, "0"),
+    t3h: i === 29 ? -50 : 10 + i / 4,
+    t1h: undefined,
+    vec: 225,
+    wsd: 3,
+    r06: 1,
+  }));
+  raw.current = { ...p, date: "20260923", time: "0900", t1h: -12, vec: 225 };
+  raw.midData.dailyData = Array.from({ length: 11 }, (_, i) => ({
+    ...raw.midData.dailyData[0],
+    date: `202609${String(20 + i).padStart(2, "0")}`,
+    time: "0000",
+    tmn: i - 5,
+    tmx: i === 10 ? undefined : i + 6,
+    pop: 60,
+  }));
+  await page.route(API + "/weather/**", (route) =>
+    route.fulfill({ json: raw }),
+  );
+  await page.goto("/weather/seoul/hourly");
+  await expect(page.locator(".temperature")).toContainText("-12");
+  expect(await page.locator(".hourly-columns .chart-column").count()).toBe(42);
+  expect(await page.locator(".daily-columns .chart-column").count()).toBe(11);
+  const hourly = page.locator(".hourly-chart");
+  await hourly.focus();
+  await hourly.press("End");
+  await expect(hourly).toHaveAttribute("data-cursor", "41");
+  await expect(page.locator(".chart-panel .cursor-readout")).toContainText(
+    "어제",
+  );
+  await page
+    .getByRole("button", { name: "바람·습도 보기", exact: true })
+    .click();
+  await expect(page.locator(".chart-extras")).toBeVisible();
+  expect(await page.locator(".chart-extras .chart-wind svg").count()).toBe(42);
+  await page.locator(".chart-panel summary").click();
+  expect(await page.locator(".chart-panel tbody tr").count()).toBe(42);
+  expect(await page.locator(".hourly-chart .now").count()).toBe(1);
+  expect(await page.locator(".daily-chart .now").count()).toBe(1);
+  const stops = await page
+    .locator(".daily-chart stop")
+    .evaluateAll((es) => es.map((e) => e.getAttribute("stop-color")));
+  expect(stops).toEqual([
+    "var(--tw-chart-range-cool)",
+    "var(--tw-chart-range-warm)",
+  ]);
+  await page.locator(".daily-chart-panel summary").click();
+  expect(await page.locator(".daily-chart-panel tbody tr").count()).toBe(11);
+  expect(
+    await page
+      .locator(".daily-chart-panel tbody tr")
+      .nth(0)
+      .locator("td")
+      .nth(2)
+      .textContent(),
+  ).toBe("—");
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "간단히 보기", exact: true }),
+  ).toHaveAttribute("aria-expanded", "true");
+});
+
+for (const width of [320, 402])
+  test(`chart value labels and legend do not overlap at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 874 });
+    await page.route(API + "/weather/**", (route) =>
+      route.fulfill({ json: fixture.response }),
+    );
+    await page.goto("/weather/seoul/hourly");
+    await expect(page.locator(".hourly-chart")).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const collisions = await page.locator(".hourly-chart").evaluate((el) => {
+      const rects = [...el.querySelectorAll("text.chart-value")].map((e) =>
+        e.getBoundingClientRect(),
+      );
+      const intersect = (a: DOMRect, b: DOMRect) =>
+        Math.min(a.right, b.right) > Math.max(a.left, b.left) + 0.5 &&
+        Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top) + 0.5;
+      const pairs = [];
+      for (let i = 0; i < rects.length; i++)
+        for (let j = i + 1; j < rects.length; j++)
+          if (intersect(rects[i], rects[j])) pairs.push([i, j]);
+      const legend = document
+        .querySelector(".chart-legend")!
+        .getBoundingClientRect();
+      for (const r of rects) if (intersect(r, legend)) pairs.push(["legend"]);
+      return pairs;
+    });
+    expect(collisions).toEqual([]);
+    const scroll = await page.locator(".hourly-chart").evaluate((el) => ({
+      left: el.scrollLeft,
+      client: el.clientWidth,
+      whole: el.scrollWidth,
+    }));
+    expect(scroll.whole).toBeGreaterThan(scroll.client);
+    expect(scroll.left).toBeGreaterThan(0);
+    const values = await page
+      .locator(".hourly-columns .chart-probability")
+      .allTextContents();
+    expect(values.slice(1)).toContain("0%");
+    await page
+      .getByRole("button", { name: "바람·습도 보기", exact: true })
+      .click();
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty("--tw-text-scale", "1.3");
+      window.dispatchEvent(new Event("resize"));
+    });
+    const windCollisions = await page
+      .locator(".chart-extras")
+      .evaluate((el) => {
+        const rects = [
+          ...el.querySelectorAll(
+            ".chart-wind > span, .chart-column > span:not(.chart-wind)",
+          ),
+        ].map((e) => e.getBoundingClientRect());
+        return rects.flatMap((a, i) =>
+          rects
+            .slice(i + 1)
+            .filter(
+              (b) =>
+                Math.min(a.right, b.right) > Math.max(a.left, b.left) + 0.5 &&
+                Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top) + 0.5,
+            ),
+        );
+      });
+    expect(windCollisions).toEqual([]);
+  });

@@ -314,7 +314,7 @@ test.describe("units and refresh (U2, G17, G18)", () => {
     await expect(page.locator(".details-panel")).toContainText("mmHg");
     await expect(page.locator(".details-panel")).toContainText("mi");
     await page.getByRole("button", { name: "미세먼지", exact: true }).click();
-    await expect(page.locator(".air-detail")).toContainText("중국 기준");
+      await expect(page.locator(".air-detail")).toContainText("중국 기준");
   });
   test("changing a unit in settings converts the shown weather", async ({
     page,
@@ -428,12 +428,9 @@ test("the browser theme colour follows the chosen theme (round 3, T7)", async ({
 }) => {
   await page.goto("/settings");
   const meta = page.locator('meta[name="theme-color"]');
-  await expect(meta).toHaveAttribute("content", "#f5f7fb");
-  await page
-    .locator("label.setting-row", { hasText: "화면 테마" })
-    .locator("select")
-    .selectOption("dark");
-  await expect(meta).toHaveAttribute("content", "#111c2b");
+  await expect(meta).toHaveAttribute("content", "#f4f6fa");
+  await page.getByRole("radio", { name: "다크", exact: true }).check();
+  await expect(meta).toHaveAttribute("content", "#0f1724");
 });
 
 test("weather snapshots stay within 30 entries, dropping the oldest (F7)", async ({
