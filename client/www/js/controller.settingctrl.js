@@ -1,6 +1,6 @@
 angular.module('controller.settingctrl', [])
     .controller('SettingCtrl', function($scope, $rootScope, Util, $ionicHistory, $translate,
-                                        $ionicSideMenuDelegate, $ionicPopup, $location, TwStorage, radioList) {
+                                        $ionicSideMenuDelegate, $ionicPopup, $location, TwStorage, radioList, Monetization) {
 
         var menuContent = null;
         var strOkay = "OK";
@@ -57,6 +57,47 @@ angular.module('controller.settingctrl', [])
             }
         };
 
+        $scope.analyticsChoice = function() { return Monetization.getCollectionChoice(); };
+        $scope.chooseAnalytics = function() {
+            var keys = ['LOC_ANALYTICS_CHOICE', 'LOC_ANALYTICS_DETAIL', 'LOC_ANALYTICS_ALLOW', 'LOC_ANALYTICS_DENY'];
+            $translate(keys).then(function(t) {
+                return $ionicPopup.show({title: t.LOC_ANALYTICS_CHOICE, template: t.LOC_ANALYTICS_DETAIL,
+                    buttons: [
+                        {text: t.LOC_ANALYTICS_DENY, onTap: function() { return false; }},
+                        {text: t.LOC_ANALYTICS_ALLOW, onTap: function() { return true; }}
+                    ]});
+            }).then(function(value) {
+                if (typeof value !== 'boolean') { return; } // Back/dismiss is not consent.
+                Monetization.setCollectionEnabled(value, function(ok) {
+                    $scope.$evalAsync(function() {
+                        if (!ok) {
+                            $translate('LOC_PRIVACY_SAVE_FAILED').then(function(message) {
+                                $rootScope.showAlert('TodayWeather', message);
+                            });
+                        }
+                    });
+                });
+            });
+        };
+        $scope.openPolicy = function(kind) {
+            var lang = Util.language === 'ko' || Util.language === 'ja' ? Util.language : 'en';
+            var suffix = lang === 'ko' ? '' : '.' + lang;
+            var url = 'https://todayweather.ai/mobile/' + kind + suffix + '.html';
+            if (window.cordova && cordova.InAppBrowser) { cordova.InAppBrowser.open(url, '_system'); }
+            else { window.open(url, '_blank'); }
+        };
+        $scope.openAdPrivacy = function() {
+            var plugin = window.cordova && cordova.plugins && cordova.plugins.emiAdmobPlugin;
+            if (!plugin || !plugin.showPrivacyOptionsForm) { return; }
+            plugin.showPrivacyOptionsForm(function() {}, function() {
+                console.warn({component: 'privacy', operation: 'ad_choices', cause: 'ump_error',
+                    action: 'retain_choice', result: 'form_unavailable'});
+                $translate('LOC_AD_PRIVACY_UNAVAILABLE').then(function(message) {
+                    $rootScope.showAlert('TodayWeather', message);
+                });
+            });
+        };
+
         /**
          * 설정에 정보 팝업으로, 늦게 로딩되어도 상관없고 호출될 가능성이 적으므로 그냥 현상태 유지.
          */
@@ -83,7 +124,8 @@ angular.module('controller.settingctrl', [])
         };
 
         $scope.showAbout = function () {
-            return Util.language.indexOf("ko") != -1;
+            // Data-source and provisional-data notices must remain accessible in every locale.
+            return true;
         };
 
         $scope.getRegion = function () {

@@ -31,6 +31,12 @@
     "www:release": "npm run www:libs && npm run www:css && npm run www:config:release && npm run www:firebase",
     "build:android:release": "node scripts/build-release.mjs android",
     "build:ios:release": "node scripts/build-release.mjs ios",
+    "store:lanes": "bundle exec fastlane lanes",
+    "store:export:android": "bundle exec fastlane android export_play",
+    "store:export:ios": "bundle exec fastlane ios export_ios",
+    "store:upload:android": "bundle exec fastlane android internal",
+    "store:upload:ios": "bundle exec fastlane ios upload_beta",
+    "test:store-release": "ruby test/store-release.test.rb",
     "test:monetization": "node --test test/monetization.test.cjs"
   },
   "devDependencies": {
@@ -98,13 +104,13 @@
         "IOS_FIREBASE_SDK_VERSION": "12.14.0"
       },
       "cordova-plugin-firebasex-analytics": {
-        "FIREBASE_ANALYTICS_COLLECTION_ENABLED": "true",
-        "FIREBASE_ANALYTICS_WITHOUT_ADS": "false",
-        "GOOGLE_ANALYTICS_ADID_COLLECTION_ENABLED": "true",
-        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_ANALYTICS_STORAGE": "true",
-        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_STORAGE": "true",
-        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_USER_DATA": "true",
-        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS": "true",
+        "FIREBASE_ANALYTICS_COLLECTION_ENABLED": "false",
+        "FIREBASE_ANALYTICS_WITHOUT_ADS": "true",
+        "GOOGLE_ANALYTICS_ADID_COLLECTION_ENABLED": "false",
+        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_ANALYTICS_STORAGE": "false",
+        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_STORAGE": "false",
+        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_USER_DATA": "false",
+        "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS": "false",
         "IOS_ON_DEVICE_CONVERSION_ANALYTICS": "false",
         "ANDROID_FIREBASE_ANALYTICS_VERSION": "23.2.0",
         "ANDROID_PLAY_SERVICES_TAGMANAGER_VERSION": "18.3.0",

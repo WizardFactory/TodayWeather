@@ -1,6 +1,6 @@
 angular.module('service.monetization', [])
     .factory('Monetization', function($window) {
-        var obj = {}, enabled = false, initialized = false, lastScreen, pendingScreen, collectionRevision = 0, requestedCollection;
+        var obj = {}, enabled = false, initialized = false, lastScreen, pendingScreen, collectionRevision = 0;
         var policy = {enabled: true, delaySeconds: 0}, configStarted = false, configReady = false, configRun;
         var listeners = [];
         var screens = ['start', 'guide', 'units', 'setting-radio', 'setting-push', 'kma-special',
@@ -17,7 +17,7 @@ angular.module('service.monetization', [])
         // No raw error strings, URLs, identifiers or provider payloads in telemetry/logs.
         function log(operation, result) {
             $window.console.info({component: 'monetization', operation: operation,
-                run_id: operation === 'remote_config' ? configRun : undefined,
+                run_id: operation === 'remote_config' ? configRun : operation === 'collection' ? 'consent-' + collectionRevision : undefined,
                 action: result === 'applied' ? 'use_validated_policy' : 'retain_current_state', result: result});
         }
         function emit(name, params) {
@@ -30,37 +30,65 @@ angular.module('service.monetization', [])
                 return true;
             } catch (e) { log('analytics', 'bridge_error'); return false; }
         }
-        obj.init = function() {
-            if (initialized) { return; }
-            var sdk = $window.FirebasexAnalytics;
-            if (!sdk) { return; } // Can be called again at deviceready.
-            initialized = true;
-            // Firebase SDK enforces persisted collection/consent itself. FirebaseX 2.0.2's
-            // query reads an unset wrapper preference as false even when SDK defaults are on.
-            // Never force collection on to work around it: an existing opt-out must survive.
-            enabled = requestedCollection === undefined;
-            if (requestedCollection !== undefined) { writeCollection(requestedCollection, collectionRevision); }
-            else if (pendingScreen) { obj.screen(pendingScreen); }
-        };
-        function writeCollection(value, revision) {
-            var sdk = $window.FirebasexAnalytics;
-            if (!sdk) { return; }
-            try {
-                sdk.setAnalyticsCollectionEnabled(value, function() {
-                    if (revision !== collectionRevision) { return; }
-                    enabled = value;
-                    if (enabled && pendingScreen) { obj.screen(pendingScreen); }
-                }, function() { log('collection', 'write_failed'); });
-            } catch (e) { log('collection', 'write_failed'); }
-        }
-        obj.setCollectionEnabled = function(value) {
-            if (typeof value !== 'boolean') { return; }
-            requestedCollection = value;
-            enabled = false; // Close immediately while a native write is pending or unavailable.
+        var consentKey = 'twAnalyticsConsentV1', choice = false;
+        try { choice = $window.localStorage.getItem(consentKey) === 'true'; }
+        catch (e) { log('collection', 'storage_unavailable'); }
+        obj.getCollectionChoice = function() { return choice; };
+        function applyCollection(value, callback) {
+            // Close the JS gate synchronously, including while native callbacks are pending.
+            enabled = false;
             var revision = ++collectionRevision;
             lastScreen = undefined;
-            pendingScreen = undefined;
-            writeCollection(value, revision);
+            var sdk = $window.FirebasexAnalytics;
+            function failed() {
+                if (revision !== collectionRevision) { return; }
+                choice = false;
+                try { $window.localStorage.setItem(consentKey, 'false'); } catch (e) {}
+                log('collection', 'write_failed');
+                // A partially successful grant must not leave automatic native collection on.
+                try { sdk.setAnalyticsCollectionEnabled(false, function() {}, function() {}); } catch (e) {}
+                if (callback) { callback(false); }
+            }
+            if (!sdk || !sdk.setAnalyticsConsentMode) { failed(); return; }
+            try {
+                sdk.setAnalyticsCollectionEnabled(false, function() {
+                    if (revision !== collectionRevision) { return; }
+                    sdk.setAnalyticsConsentMode({
+                        ANALYTICS_STORAGE: value ? 'GRANTED' : 'DENIED',
+                        AD_STORAGE: 'DENIED', AD_USER_DATA: 'DENIED', AD_PERSONALIZATION: 'DENIED'
+                    }, function() {
+                        if (revision !== collectionRevision) { return; }
+                        if (!value) { log('collection', 'disabled'); if (callback) { callback(true); } return; }
+                        sdk.setAnalyticsCollectionEnabled(true, function() {
+                            if (revision !== collectionRevision) {
+                                // A delayed grant acknowledgement must not undo a later withdrawal.
+                                if (!choice) { sdk.setAnalyticsCollectionEnabled(false, function() {}, function() {}); }
+                                return;
+                            }
+                            enabled = true; log('collection', 'enabled');
+                            if (pendingScreen) { obj.screen(pendingScreen); }
+                            if (callback) { callback(true); }
+                        }, failed);
+                    }, failed);
+                }, failed);
+            } catch (e) { failed(); }
+        }
+        obj.init = function() {
+            if (initialized || !$window.FirebasexAnalytics) { return; }
+            initialized = true;
+            if (!choice) { pendingScreen = undefined; }
+            applyCollection(choice);
+        };
+        obj.setCollectionEnabled = function(value, callback) {
+            if (typeof value !== 'boolean') { return; }
+            enabled = false; pendingScreen = undefined;
+            choice = value;
+            try { $window.localStorage.setItem(consentKey, String(value)); }
+            catch (e) {
+                choice = false; applyCollection(false);
+                log('collection', 'storage_write_failed'); if (callback) { callback(false); } return;
+            }
+            applyCollection(value, callback);
         };
         obj.track = function(name, params) {
             if (!Object.prototype.hasOwnProperty.call(schema, name)) { return false; }
@@ -78,6 +106,8 @@ angular.module('service.monetization', [])
             return valid && emit(name, safe);
         };
         obj.screen = function(name) {
+            // Keep only the latest fixed route after an explicit choice; never backfill pre-consent use.
+            if (!choice) { pendingScreen = undefined; return; }
             if (screens.indexOf(name) === -1 || name === lastScreen) { return; }
             pendingScreen = name; // Only a fixed route name, never event payloads, survives deviceready.
             if (emit('screen_view', {screen_name: name, screen_class: 'Cordova'})) { lastScreen = name; pendingScreen = undefined; }

@@ -1,0 +1,1 @@
+Updated the app runtime. Android home-screen and iOS widgets are not included in this version. Please open the app to check the weather.

@@ -398,3 +398,7 @@ Changwon (Gyeongnam), Jeju City and Sejong. Exact fixed city-centre coordinates
 are in [nationAir.js](../../server/lib/air/nationAir.js). Existing map labels
 are preserved. The [recovery diagram](diagrams/nation-air-recovery.html) separates
 DB lookup and global-provider recovery from scheduled AirKorea collection.
+
+### Optional measurement consent (2026-10-01 candidate)
+
+`Monetization.init` reads only a versioned explicit local choice, defaults collection off and applies native consent before enabling analytics. Settings offer grant/refusal/withdrawal, with synchronous event-gate closure and stale callback protection. Advertising storage/user-data/personalization remain denied. Native install defaults and explicit iOS plist entries close fresh-install collection before JS startup; upgrade preference overrides still need device evidence. UMP ad choices remain separate from Analytics consent and provider/location/push flows. `ios-no-tracking.js` enforces nonpersonalized Ads requests/publisher first-party-ID off and removes unused generated GTM linking to avoid indirect IdentitySupport. Privacy manifests mark device-linked coordinates/IDs accurately; these source constraints do not certify whole-app runtime tracking. [Operating review](../operations/store-privacy-review.md) records remaining archive/network/retention/deletion gates.

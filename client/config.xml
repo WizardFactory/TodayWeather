@@ -53,6 +53,28 @@
         <icon density="xxxhdpi" src="tw.resources/android/icon/drawable-xxxhdpi-icon.png" />
     </platform>
     <platform name="ios">
+        <!-- FirebaseX2.0.2 does not write iOS consent defaults from its install variables. -->
+        <edit-config file="*-Info.plist" mode="merge" target="FIREBASE_ANALYTICS_COLLECTION_ENABLED">
+            <false />
+        </edit-config>
+        <edit-config file="*-Info.plist" mode="merge" target="GOOGLE_ANALYTICS_DEFAULT_ALLOW_ANALYTICS_STORAGE">
+            <false />
+        </edit-config>
+        <edit-config file="*-Info.plist" mode="merge" target="GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_STORAGE">
+            <false />
+        </edit-config>
+        <edit-config file="*-Info.plist" mode="merge" target="GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_USER_DATA">
+            <false />
+        </edit-config>
+        <edit-config file="*-Info.plist" mode="merge" target="GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS">
+            <false />
+        </edit-config>
+        <edit-config file="*-Info.plist" mode="merge" target="GOOGLE_ANALYTICS_IDFV_COLLECTION_ENABLED">
+            <false />
+        </edit-config>
+        <edit-config file="*-Info.plist" mode="merge" target="GOOGLE_ANALYTICS_REGISTRATION_WITH_AD_NETWORK_ENABLED">
+            <false />
+        </edit-config>
         <edit-config file="*-Info.plist" mode="merge" target="FirebaseAutomaticScreenReportingEnabled">
             <false />
         </edit-config>
@@ -78,7 +100,7 @@
         <!--
           App-level privacy manifest. Firebase and Google Mobile Ads ship their own manifests for what they collect.
           The app sends the device position (rounded to 3 decimals) for weather and a device/push identifier for
-          push settings; neither is linked to an account or used for tracking. The plugins compiled into the app
+          push settings; location is linked to the device record, without an app login or tracking use. The plugins compiled into the app
           (firebasex, emi admob, app-preferences) use NSUserDefaults, including the App Group suite.
         -->
         <privacy-manifest>
@@ -104,7 +126,7 @@
                     <key>NSPrivacyCollectedDataType</key>
                     <string>NSPrivacyCollectedDataTypePreciseLocation</string>
                     <key>NSPrivacyCollectedDataTypeLinked</key>
-                    <false/>
+                    <true/>
                     <key>NSPrivacyCollectedDataTypeTracking</key>
                     <false/>
                     <key>NSPrivacyCollectedDataTypePurposes</key>
@@ -116,7 +138,7 @@
                     <key>NSPrivacyCollectedDataType</key>
                     <string>NSPrivacyCollectedDataTypeDeviceID</string>
                     <key>NSPrivacyCollectedDataTypeLinked</key>
-                    <false/>
+                    <true/>
                     <key>NSPrivacyCollectedDataTypeTracking</key>
                     <false/>
                     <key>NSPrivacyCollectedDataTypePurposes</key>

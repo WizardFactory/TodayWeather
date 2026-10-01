@@ -1,28 +1,154 @@
 {
   "schema_version": 1,
   "diagram_type": "sequence",
-  "meta": {"title": "Cordova advertising and measurement policy", "locale": "en", "quality_profile": "showcase", "column_fit": "spread", "viewBox": [1080, 660]},
+  "meta": {
+    "title": "Cordova advertising and measurement policy",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      705
+    ]
+  },
   "participants": [
-    {"id": "screen", "type": "frontend", "label": "App screens", "sublabel": "Tab / start / guide"},
-    {"id": "ads", "type": "backend", "label": "TwAds", "sublabel": "Visibility state"},
-    {"id": "policy", "type": "backend", "label": "Monetization", "sublabel": "Remote Config / GA4"},
-    {"id": "adapter", "type": "backend", "label": "AdMob adapter", "sublabel": "Consent / reload gate"},
-    {"id": "native", "type": "external", "label": "Native AdMob", "sublabel": "When available"}
+    {
+      "id": "screen",
+      "type": "frontend",
+      "label": "App screens",
+      "sublabel": "Tab / start / guide"
+    },
+    {
+      "id": "ads",
+      "type": "backend",
+      "label": "TwAds",
+      "sublabel": "Visibility state"
+    },
+    {
+      "id": "policy",
+      "type": "backend",
+      "label": "Monetization",
+      "sublabel": "Remote Config / GA4"
+    },
+    {
+      "id": "adapter",
+      "type": "backend",
+      "label": "AdMob adapter",
+      "sublabel": "Consent / reload gate"
+    },
+    {
+      "id": "native",
+      "type": "external",
+      "label": "Native AdMob",
+      "sublabel": "When available"
+    }
   ],
   "messages": [
-    {"id": "init", "from": "screen", "to": "ads", "y": 165, "label": "Tab initializes ads", "variant": "emphasis"},
-    {"id": "config", "from": "ads", "to": "policy", "y": 210, "label": "Load banner policy", "variant": "default"},
-    {"id": "adapter-init", "from": "ads", "to": "adapter", "y": 255, "label": "Initialize adapter", "variant": "default"},
-    {"id": "consent", "from": "adapter", "to": "native", "y": 300, "label": "Existing UMP consent", "variant": "security"},
-    {"id": "ready", "from": "adapter", "to": "ads", "y": 345, "label": "Ready: load banner", "variant": "return"},
-    {"id": "visibility", "from": "screen", "to": "ads", "y": 390, "label": "Show / hide intent", "variant": "default"},
-    {"id": "configured", "from": "policy", "to": "ads", "y": 435, "label": "Final policy / fallback", "variant": "return"},
-    {"id": "banner", "from": "ads", "to": "adapter", "y": 480, "label": "Apply eligible visibility", "variant": "default"},
-    {"id": "native-banner", "from": "adapter", "to": "native", "y": 525, "label": "Native banner operation", "variant": "default"},
-    {"id": "telemetry", "from": "adapter", "to": "policy", "y": 570, "label": "Diagnostic lifecycle only", "variant": "default"}
+    {
+      "id": "analytics-choice",
+      "from": "screen",
+      "to": "policy",
+      "y": 165,
+      "label": "Apply explicit Analytics choice",
+      "variant": "security"
+    },
+    {
+      "id": "init",
+      "from": "screen",
+      "to": "ads",
+      "y": 210,
+      "label": "Tab initializes ads",
+      "variant": "emphasis"
+    },
+    {
+      "id": "config",
+      "from": "ads",
+      "to": "policy",
+      "y": 255,
+      "label": "Load banner policy",
+      "variant": "default"
+    },
+    {
+      "id": "adapter-init",
+      "from": "ads",
+      "to": "adapter",
+      "y": 300,
+      "label": "Initialize adapter",
+      "variant": "default"
+    },
+    {
+      "id": "consent",
+      "from": "adapter",
+      "to": "native",
+      "y": 345,
+      "label": "Existing UMP consent",
+      "variant": "security"
+    },
+    {
+      "id": "ready",
+      "from": "adapter",
+      "to": "ads",
+      "y": 390,
+      "label": "Ready: load banner",
+      "variant": "return"
+    },
+    {
+      "id": "visibility",
+      "from": "screen",
+      "to": "ads",
+      "y": 435,
+      "label": "Show / hide intent",
+      "variant": "default"
+    },
+    {
+      "id": "configured",
+      "from": "policy",
+      "to": "ads",
+      "y": 480,
+      "label": "Final policy / fallback",
+      "variant": "return"
+    },
+    {
+      "id": "banner",
+      "from": "ads",
+      "to": "adapter",
+      "y": 525,
+      "label": "Apply eligible visibility",
+      "variant": "default"
+    },
+    {
+      "id": "native-banner",
+      "from": "adapter",
+      "to": "native",
+      "y": 570,
+      "label": "Native banner operation",
+      "variant": "default"
+    },
+    {
+      "id": "telemetry",
+      "from": "adapter",
+      "to": "policy",
+      "y": 615,
+      "label": "Diagnostics after opt-in",
+      "variant": "default"
+    }
   ],
   "cards": [
-    {"dot": "cyan", "title": "Policy · issue #2654", "items": ["First show waits for config finish (max 12 seconds)", "Cache survives offline; screen hiding / consent win"]},
-    {"dot": "amber", "title": "Measurement and remaining evidence", "items": ["Firebase/AdMob owns automatic revenue after linkage", "No manual ad_impression; device receipt unverified"]}
+    {
+      "dot": "cyan",
+      "title": "Policy \u00b7 issue #2654",
+      "items": [
+        "First show waits for config finish (max 12 seconds)",
+        "Cache survives offline; screen hiding / consent win"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Separate consent gates \u00b7 #2660",
+      "items": [
+        "Analytics off until opt-in; advertising uses denied",
+        "UMP controls ads; withdrawal stops future analytics"
+      ]
+    }
   ]
 }

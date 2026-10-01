@@ -13,7 +13,9 @@ function harness({enabled = true, absent = false, config, debug = false} = {}) {
     const window = {
         console: {info: x => logs.push(x), warn: x => logs.push(x)},
         setTimeout(fn) { timers.push(fn); return timers.length; }, clearTimeout() {},
+        localStorage: {getItem: () => enabled === false ? 'false' : 'true', setItem() {}},
         FirebasexAnalytics: absent ? undefined : {
+            setAnalyticsConsentMode(consent, done) { done(); },
             isAnalyticsCollectionEnabled(done) { done(enabled); },
             setAnalyticsCollectionEnabled(value, done) { nativeEnabled = value; done(); },
             logEvent(name, params, done) {
@@ -271,15 +273,18 @@ test('cached disabled policy remains hidden through fetch failure and missing SD
     assert.equal(defaults.calls.at(-1), 'show');
 });
 
-test('async opt-in replays latest screen only and stale consent completions cannot reopen gate', () => {
+test('async opt-in replays latest post-consent screen only and stale completions cannot reopen gate', () => {
     const h = harness(); const writes = [];
     h.window.FirebasexAnalytics.setAnalyticsCollectionEnabled = (value, done) => writes.push({value, done});
-    h.m.init(); h.m.setCollectionEnabled(true); h.m.screen('start'); h.m.screen('tab.air');
+    h.m.init(); writes.shift().done(); writes.shift().done(); // Restore an existing explicit choice.
+    h.m.setCollectionEnabled(true); h.m.screen('start'); h.m.screen('tab.air');
     assert.equal(h.events.length, 0);
-    writes[0].done(); assert.equal(h.events.length, 1); assert.equal(h.events[0].params.screen_name, 'tab.air');
+    const disable = writes.shift(); assert.equal(disable.value, false); disable.done();
+    const enable = writes.shift(); assert.equal(enable.value, true); enable.done();
+    assert.equal(h.events.length, 1); assert.equal(h.events[0].params.screen_name, 'tab.air');
     h.m.setCollectionEnabled(true); h.m.setCollectionEnabled(false); h.m.screen('tab.weather');
-    writes[1].done(); writes[2].done();
-    assert.equal(h.events.length, 1);
+    writes.shift().done(); writes.shift().done();
+    assert.equal(writes.length, 0); assert.equal(h.events.length, 1);
 });
 
 test('opt-out requested before SDK readiness survives init and is persisted without implicit opt-in', () => {

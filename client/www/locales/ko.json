@@ -307,5 +307,16 @@
   "LOC_NEEDS_ACCESS_TO": "선택 접근 권한",
   "LOC_STORAGE_SPACE": "저장공간 - 즐겨찾는 지역을 백업/복원할 때 사용합니다.",
   "LOC_LOCATION_ACCESS": "위치 - 현재 위치 검색을 수행하기 위해서 사용합니다.",
-  "LOC_CALL_INFORMATION": "전화 - 부적절한 광고를 노출하지 않기 위해 이용합니다."
+  "LOC_CALL_INFORMATION": "전화 - 부적절한 광고를 노출하지 않기 위해 이용합니다.",
+    "LOC_ANALYTICS_CHOICE": "선택적 이용 통계",
+    "LOC_ANALYTICS_DETAIL": "앱 개선을 위해 Google Firebase Analytics로 화면 이용, 날씨 조회 결과, 앱·기기·설치 정보를 수집하는 데 동의하시겠습니까? 실제 위치·주소·푸시 토큰·기기 UUID는 사용자 정의 통계에 보내지 않습니다. 동의하지 않아도 날씨 조회를 사용할 수 있으며, 이 메뉴에서 언제든 철회할 수 있습니다. 통계의 광고 활용은 허용하지 않습니다. 광고·오류 진단·알림은 별도로 처리됩니다.",
+    "LOC_ANALYTICS_ALLOW": "동의",
+    "LOC_ANALYTICS_DENY": "거부 / 철회",
+    "LOC_ANALYTICS_ALLOWED": "동의함",
+    "LOC_ANALYTICS_DISABLED": "꺼짐",
+    "LOC_PRIVACY_SAVE_FAILED": "설정을 적용하지 못했습니다. 통계 수집을 켜지 않았습니다. 다시 시도해 주세요.",
+    "LOC_AD_PRIVACY_CHOICES": "광고 개인정보 선택",
+    "LOC_AD_PRIVACY_UNAVAILABLE": "광고 개인정보 선택 화면을 열 수 없습니다. 잠시 후 다시 시도해 주세요. 지역에 따라 선택 화면이 필요하지 않을 수 있습니다.",
+    "LOC_PRIVACY_POLICY": "개인정보처리방침",
+    "LOC_TERMS": "이용약관"
 }

@@ -126,6 +126,18 @@
                     {{'LOC_THEME_SETTING'|translate}}
                     <span style="float: right">{{getThemeValueStr(settingsInfo.theme)|translate}}</span>
                 </label>
+                <button class="item button button-clear button-block" ng-click="chooseAnalytics()">
+                    {{'LOC_ANALYTICS_CHOICE'|translate}} · {{(analyticsChoice() ? 'LOC_ANALYTICS_ALLOWED' : 'LOC_ANALYTICS_DISABLED')|translate}}
+                </button>
+                <button class="item button button-clear button-block" ng-click="openAdPrivacy()">
+                    {{'LOC_AD_PRIVACY_CHOICES'|translate}}
+                </button>
+                <button class="item button button-clear button-block" ng-click="openPolicy('privacy')">
+                    {{'LOC_PRIVACY_POLICY'|translate}}
+                </button>
+                <button class="item button button-clear button-block" ng-click="openPolicy('terms')">
+                    {{'LOC_TERMS'|translate}}
+                </button>
                 <label class="item" ng-click="clickMenu('sendMail')">
                     {{'LOC_SEND_FEEDBACK'|translate}}
                     <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>

@@ -126,7 +126,7 @@ guardrails and rollback take precedence over a revenue improvement.
 
 ```sh
 npm --prefix client run test:monetization
-node --test client/test/payment-removal.test.cjs
+node --test client/test/payment-removal.test.cjs client/test/provider-notice.test.cjs
 ```
 
 Unit/VM checks do not establish native build compatibility, console account
@@ -188,3 +188,7 @@ Local-only records: `.planning/.active_plan` and `task_plan.md`, `findings.md`,
 Ignored verification artifacts remain in `reports/verification/client/monetization/`
 and Archify sidecars; isolated native build inputs/output are under the task's
 temporary directory. They are not prerequisites for maintained document links.
+
+## Optional Analytics choice (2026-10-01, #2660)
+
+Usage analytics now starts off in native defaults and the JavaScript gate. The app settings menu persists an explicit consent choice and offers withdrawal; earlier unconsented screen/events are not replayed on a new grant. Analytics storage can be granted while ad storage, ad-user-data and ad-personalization remain denied. UMP continues to gate ads separately; turning Analytics off does not turn Ads/Crashlytics/FCM/Remote Config off. Event metrics and automatic ad revenue are available only where consent/SDK configuration actually permits measurement. Preserve this boundary in any experiment; Remote Config cannot enable analytics consent. See [privacy review](store-privacy-review.md) and [retention/deletion](store-data-retention.md).
