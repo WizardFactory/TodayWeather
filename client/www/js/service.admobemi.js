@@ -21,10 +21,20 @@ angular.module('service.admobemi', [])
          */
         obj.createBannerView = function(success, error) {
             lifecycle('request');
-            document.addEventListener('on.banner.load', function onLoad() {
+            var settled = false;
+            function settle(failed) {
+                if (settled) { return; }
+                settled = true;
                 document.removeEventListener('on.banner.load', onLoad);
-                if (success) { success(); }
-            });
+                document.removeEventListener('on.banner.failed.load', onFailure);
+                if (failed) { if (error) { error(); } }
+                else if (success) { success(); }
+            }
+            function onLoad() { settle(false); }
+            function onFailure() { settle(true); }
+            // Native load failures are events, distinct from Cordova command failures.
+            document.addEventListener('on.banner.load', onLoad);
+            document.addEventListener('on.banner.failed.load', onFailure);
             plugin().loadBannerAd({
                 adUnitId: bannerAdUnit,
                 position: 'bottom-center',
@@ -34,7 +44,7 @@ angular.module('service.admobemi', [])
                 isOverlapping: false,
                 // cordova-android 15 layout: resize the web view by the banner height (also on Android 16+).
                 isCordova15: true
-            }, function () {}, error);
+            }, function () {}, onFailure);
         };
 
         obj.destroyBannerView = function (success, error) {

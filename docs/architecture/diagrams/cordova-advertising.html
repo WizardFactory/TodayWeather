@@ -5091,11 +5091,11 @@
         </g>
         </g>
 
-        <g data-edge-from="policy" data-edge-to="ads" data-edge-label="Validated enable / delay" data-edge-key="6" data-edge-id="configured">
+        <g data-edge-from="policy" data-edge-to="ads" data-edge-label="Final policy / fallback" data-edge-key="6" data-edge-id="configured">
           <path data-composition-edge-from="policy" data-composition-edge-to="ads" data-composition-edge-id="configured" data-composition-points="544,435;355.25,435" d="M 544 435 L 355.25 435" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="381.225" y="415" width="136.8" height="16" rx="3" class="c-mask"/>
-          <text x="449.625" y="425" class="t-muted" font-size="9" text-anchor="middle">Validated enable / delay</text>
+          <rect x="383.825" y="415" width="131.60000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="449.625" y="425" class="t-muted" font-size="9" text-anchor="middle">Final policy / fallback</text>
         </g>
         </g>
 
@@ -5398,8 +5398,8 @@
           <h3>Policy · issue #2654</h3>
         </div>
         <ul>
-          <li>&bull; Defaults true / 0; cached policy survives offline</li>
-          <li>&bull; Config never overrides screen hiding or consent</li>
+          <li>&bull; First show waits for config finish (max 12 seconds)</li>
+          <li>&bull; Cache survives offline; screen hiding / consent win</li>
         </ul>
       </div>
 

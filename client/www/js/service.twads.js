@@ -12,7 +12,7 @@ angular.module('service.twads', [])
         obj.ready = false;
         obj.bannerAdUnit = '';
         obj.interstitialAdUnit = '';
-        var sessionStart = Date.now(), delayTimer, exposed = false, initialized = false, bannerLoaded = false;
+        var sessionStart = Date.now(), delayTimer, exposed = false, initialized = false, bannerLoaded = false, bannerRevision = 0, rotating = false, rotateAgain = false, creatingBanner = false;
 
         function applyVisibility() {
             if (delayTimer) { window.clearTimeout(delayTimer); delayTimer = null; }
@@ -20,9 +20,9 @@ angular.module('service.twads', [])
             var policy = Monetization.bannerPolicy();
             var requested = obj.requestShow != undefined ? obj.requestShow : obj.enableAds;
             var remaining = policy.delaySeconds * 1000 - (Date.now() - sessionStart);
-            var eligible = requested === true && obj.enableAds === true && policy.enabled && bannerLoaded;
+            var eligible = requested === true && obj.enableAds === true && policy.enabled && bannerLoaded && Monetization.isBannerPolicyReady();
             var show = eligible && remaining <= 0;
-            if (requested && obj.enableAds && policy.enabled && remaining > 0) {
+            if (Monetization.isBannerPolicyReady() && requested && obj.enableAds && policy.enabled && remaining > 0) {
                 delayTimer = window.setTimeout(applyVisibility, remaining);
             }
             if (eligible && !exposed) {
@@ -45,9 +45,12 @@ angular.module('service.twads', [])
                 console.log('admob is undefined');
                 return;
             }
+            var revision = ++bannerRevision;
+            bannerLoaded = false; creatingBanner = true;
             self.admob.createBannerView(
                 function () {
-                    bannerLoaded = true;
+                    if (revision !== bannerRevision || self.enableAds !== true) { return; }
+                    creatingBanner = false; bannerLoaded = true;
                     console.log('create banner view');
                     if (self.requestShow != undefined) {
                         self.setShowAds(self.requestShow);
@@ -55,11 +58,15 @@ angular.module('service.twads', [])
                     else {
                         self.setShowAds(self.enableAds);
                     }
+                    if (rotateAgain) { rotateAgain = false; refreshBanner(); }
 
                 },
                 function (e) {
+                    if (revision !== bannerRevision) { return; }
+                    creatingBanner = false;
                     console.log('Fail to create banner view');
                     Util.ga.trackException(e, false);
+                    if (rotateAgain) { rotateAgain = false; refreshBanner(); }
                 });
         };
 
@@ -78,6 +85,7 @@ angular.module('service.twads', [])
             }
 
             if (enable === false) {
+                ++bannerRevision; bannerLoaded = false; creatingBanner = false; rotateAgain = false;
                 self.setShowAds(false);
 
                 if (self.admob == undefined) {
@@ -132,6 +140,33 @@ angular.module('service.twads', [])
             });
         };
 
+        function refreshBanner() {
+            if (obj.enableAds !== true || !obj.admob) { return; }
+            if (rotating || creatingBanner) { rotateAgain = true; return; }
+            rotating = true;
+            var revision = ++bannerRevision, wasLoaded = bannerLoaded;
+            bannerLoaded = false;
+            applyVisibility();
+            function finish(stage, failed) {
+                rotating = false;
+                if (revision === bannerRevision && obj.enableAds === true) {
+                    // A failed destroy retains the old banner; a failed create leaves it unavailable.
+                    bannerLoaded = !failed || (stage === 'destroy' && wasLoaded);
+                    obj.showAds = null;
+                    applyVisibility();
+                }
+                if (failed) {
+                    console.info({component: 'twads', operation: 'orientation_recreate', run_id: revision,
+                        cause: stage + '_failed', action: 'retain_screen_policy', result: 'failed'});
+                }
+                if (rotateAgain) { rotateAgain = false; refreshBanner(); }
+            }
+            obj.admob.destroyBannerView(function() {
+                if (revision !== bannerRevision || obj.enableAds !== true) { finish('destroy', false); return; }
+                obj.admob.createBannerView(function() { finish('create', false); }, function() { finish('create', true); });
+            }, function() { finish('destroy', true); });
+        }
+
         obj.init = function () {
             var self = this;
 
@@ -182,20 +217,8 @@ angular.module('service.twads', [])
                 function (e) {
                     Util.ga.trackException(e, false);
                 });
-            window.addEventListener("orientationchange", function(){
-                console.log('orientationType', screen.orientation.type); // e.g. portrait
-                if (self.enableAds === true) {
-                    bannerLoaded = false;
-                    self.admob.destroyBannerView(function () {
-                        self.admob.createBannerView(function () {
-                            bannerLoaded = true;
-                            // Force a reapply after recreation, using the current config and screen intent.
-                            self.showAds = null;
-                            applyVisibility();
-                        });
-                    });
-                }
-            });
+            window.addEventListener("orientationchange", refreshBanner);
+
         };
         return obj;
     });

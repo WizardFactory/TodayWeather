@@ -15,7 +15,10 @@ No new interstitial, purchase or widget flow is introduced.
 The pinned `cordova-plugin-firebasex-config@2.0.2` shares Firebase SDK versions
 with existing modules. Config is fetched once per WebView service lifetime with
 a 10-second SDK timeout, one-hour minimum interval and 12-second application
-deadline. Activated cache is read before fetch. Failure retains the valid cache
+deadline. Activated cache is read before fetch. First show and the once-per-WebView
+exposure wait for fetch completion, failure or that deadline; a disabled cache
+can hide immediately. Delay is still measured from service creation, so both
+experiment arms share the same bounded config wait. Failure retains the valid cache
 or local defaults; callbacks after the deadline cannot change policy. Missing
 SDK leaves defaults. Invalid pairs are rejected atomically.
 
@@ -84,6 +87,9 @@ Record app version, platform, stream ID, timestamp and sanitized evidence:
 - Confirm one automatic `ad_impression` per native impression and monetary values
   after AdMob/Firebase linkage. Test ads may yield zero/no eligible revenue;
   production revenue evidence requires real eligible traffic, not fabricated data.
+- Rotate twice while a destroy/create callback is pending; recreation stays serialized.
+  Native load failure must release the pending callback, and a stale callback must
+  not show after disabling ads.
 - A/B test devices report native experiment assignment and the applied parameter.
   Exposure is an opportunity diagnostic, not proof of physical impression.
 
@@ -95,7 +101,9 @@ differs. Report revenue in USD through `event_value_in_usd`. Missing revenue
 values remain NULL; check value coverage before interpreting eCPM/ARPDAU.
 DAU is distinct non-null installation pseudonyms with `is_active_user=true` in
 completed daily exports; it is not a person count. Restrict to the intended
-app version/streams and exclude known developer installations. Consent loss,
+app version/streams and exclude known developer installations (both templates
+exclude installation pseudonyms carrying `traffic_type=development` or integer
+`debug_mode=1`, including their native automatic events). Consent loss,
 identity reset/reinstall and filtered samples limit comparison with AdMob.
 
 eCPM = estimated revenue / impressions * 1000. ARPDAU = estimated revenue / DAU.

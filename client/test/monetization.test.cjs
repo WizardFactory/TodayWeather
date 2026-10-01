@@ -120,24 +120,24 @@ test('legacy bridge sends permission/status only and never raw city/error labels
     assert.doesNotMatch(JSON.stringify(h.events), /Secret|secret|uuid/);
 });
 
-function adsHarness(policy) {
-    let factory, ready, configChanged, bannerLoaded;
+function adsHarness(policy, {monetization, adapterOverrides = {}} = {}) {
+    let factory, ready, configChanged, bannerLoaded, orientation;
     const calls = [], timers = new Map(); let now = 0, nextId = 0;
     const context = {
         angular: {module() { return {factory(n, fn) { factory = fn; }}; }},
         ionic: {Platform: {isIOS: () => false, isAndroid: () => true}}, clientConfig: {},
-        console: {log() {}}, screen: {orientation: {type: 'portrait'}},
+        console: {log() {}, info() {}}, screen: {orientation: {type: 'portrait'}},
         Date: {now: () => now},
-        window: {addEventListener() {}, setTimeout(fn, ms) { const id = ++nextId; timers.set(id, {fn, at: now + ms}); return id; }, clearTimeout(id) { timers.delete(id); }}
+        window: {addEventListener(n, fn) { orientation = fn; }, setTimeout(fn, ms) { const id = ++nextId; timers.set(id, {fn, at: now + ms}); return id; }, clearTimeout(id) { timers.delete(id); }}
     };
-    const mon = {bannerPolicy: () => policy, track(n, p) { calls.push([n, p]); }, loadConfig(fn) { configChanged = fn; fn(policy); }};
+    const mon = monetization || {isBannerPolicyReady: () => true, bannerPolicy: () => policy, track(n, p) { calls.push([n, p]); }, loadConfig(fn) { configChanged = fn; fn(policy); }};
     const adapter = {init(o, done) { ready = done; }, createBannerView(done) { bannerLoaded = done; },
-        showBannerAd(show, done) { calls.push(show ? 'show' : 'hide'); done(); }, destroyBannerView(done) { done(); }};
+        showBannerAd(show, done) { calls.push(show ? 'show' : 'hide'); done(); }, destroyBannerView(done) { done(); }, ...adapterOverrides};
     const deps = {Util: {ga: {trackException() {}}}, Monetization: mon, admobClean: {init() {}}, admobPro: {init() {}}, admobEmi: adapter};
     vm.runInNewContext(read('www/js/service.twads.js'), context);
     const args = factory.toString().match(/function\s*\(([^)]*)\)/)[1].split(',').map(s => deps[s.trim()]);
     const ads = factory(...args); ads.init(); ready();
-    return {ads, calls, loaded: () => bannerLoaded(), change(p) { policy = p; configChanged(p); },
+    return {ads, calls, rotate: () => orientation(), loaded: () => bannerLoaded(), change(p) { policy = p; configChanged(p); },
         advance(ms) { now += ms; for (const [id, t] of [...timers]) if (t.at <= now) { timers.delete(id); t.fn(); } }};
 }
 
@@ -220,4 +220,144 @@ test('favorite counters exclude duplicates, current position and invalid removal
     info.removeCity(0); info.removeCity(0);
     assert.deepEqual(events.map(e => e.p.action), ['add', 'remove']);
     assert.doesNotMatch(JSON.stringify(events), /secret/);
+});
+
+
+test('first banner and exposure wait for finalized fresh policy, with delay measured from startup', () => {
+    let fetched, fresh = false;
+    const config = remote({tw_banner_enabled: 'true', tw_banner_delay_seconds: '0'});
+    config.fetchAndActivate = done => { fetched = () => { fresh = true; done(); }; };
+    config.getAll = done => done({tw_banner_enabled: 'true', tw_banner_delay_seconds: fresh ? '30' : '0'});
+    const mon = harness({config}); mon.m.init();
+    const ads = adsHarness(null, {monetization: mon.m}); ads.loaded();
+    assert.equal(ads.calls.includes('show'), false);
+    assert.equal(mon.events.length, 0);
+    ads.advance(5000); fetched();
+    assert.equal(ads.calls.includes('show'), false);
+    assert.equal(mon.events[0].params.delay_seconds, 30);
+    ads.advance(24999); assert.equal(ads.calls.includes('show'), false);
+    ads.advance(1); assert.equal(ads.calls.at(-1), 'show');
+    assert.equal(mon.events.length, 1);
+});
+
+test('config timeout releases retained policy once and ignores stricter late fetch', () => {
+    let fetched, late = false;
+    const config = remote({});
+    config.fetchAndActivate = done => { fetched = () => { late = true; done(); }; };
+    config.getAll = done => done({tw_banner_enabled: late ? 'false' : 'true', tw_banner_delay_seconds: '0'});
+    const mon = harness({config}); mon.m.init();
+    const ads = adsHarness(null, {monetization: mon.m}); ads.loaded();
+    assert.equal(ads.calls.includes('show'), false);
+    mon.timers[0]();
+    assert.equal(ads.calls.at(-1), 'show');
+    fetched(); assert.equal(mon.m.bannerPolicy().enabled, true);
+    assert.equal(mon.events.length, 1);
+});
+
+test('cached disabled policy remains hidden through fetch failure and missing SDK uses defaults', () => {
+    const mon = harness({config: remote({tw_banner_enabled: 'false', tw_banner_delay_seconds: '0'}, {offline: true})}); mon.m.init();
+    const ads = adsHarness(null, {monetization: mon.m}); ads.loaded();
+    assert.equal(ads.calls.includes('show'), false); assert.equal(mon.events.length, 0);
+    const absent = harness(); absent.m.init();
+    const defaults = adsHarness(null, {monetization: absent.m}); defaults.loaded();
+    assert.equal(defaults.calls.at(-1), 'show');
+});
+
+test('async opt-in replays latest screen only and stale consent completions cannot reopen gate', () => {
+    const h = harness(); const writes = [];
+    h.window.FirebasexAnalytics.setAnalyticsCollectionEnabled = (value, done) => writes.push({value, done});
+    h.m.init(); h.m.setCollectionEnabled(true); h.m.screen('start'); h.m.screen('tab.air');
+    assert.equal(h.events.length, 0);
+    writes[0].done(); assert.equal(h.events.length, 1); assert.equal(h.events[0].params.screen_name, 'tab.air');
+    h.m.setCollectionEnabled(true); h.m.setCollectionEnabled(false); h.m.screen('tab.weather');
+    writes[1].done(); writes[2].done();
+    assert.equal(h.events.length, 1);
+});
+
+test('opt-out requested before SDK readiness survives init and is persisted without implicit opt-in', () => {
+    const h = harness({absent: true}); h.m.setCollectionEnabled(false); h.m.screen('start');
+    const writes = [];
+    h.window.FirebasexAnalytics = {setAnalyticsCollectionEnabled(value, done) { writes.push(value); done(); }, logEvent(n, p, done) { h.events.push(n); done(); }};
+    h.m.init(); h.m.screen('tab.air');
+    assert.deepEqual(writes, [false]); assert.equal(h.events.length, 0);
+});
+
+test('orientation recreations serialize, honor current intent and recover from adapter failures', () => {
+    const destroys = [], creates = [];
+    const h = adsHarness({enabled: true, delaySeconds: 0}, {adapterOverrides: {
+        destroyBannerView(done, fail) { destroys.push({done, fail}); },
+        createBannerView(done, fail) { creates.push({done, fail}); }
+    }});
+    creates.shift().done(); h.ads.setShowAds(true);
+    h.rotate(); h.rotate(); assert.equal(destroys.length, 1);
+    destroys.shift().done(); assert.equal(creates.length, 1);
+    h.ads.setShowAds(false); creates.shift().done();
+    // If another rotation was queued, it can only begin after the first create finishes.
+    if (destroys.length) { destroys.shift().done(); creates.shift().done(); }
+    assert.equal(h.calls.at(-1), 'hide');
+    h.ads.setShowAds(true); h.rotate();
+    assert.equal(typeof destroys[0].fail, 'function'); destroys.shift().fail(Error('fixture'));
+    h.rotate(); destroys.shift().done();
+    assert.equal(typeof creates[0].fail, 'function'); creates.shift().fail(Error('fixture'));
+    h.rotate(); destroys.shift().done(); creates.shift().done();
+    assert.equal(h.calls.at(-1), 'show');
+});
+
+test('disable invalidates a pending initial banner callback', () => {
+    const pending = [];
+    const h = adsHarness({enabled: true, delaySeconds: 0}, {adapterOverrides: {createBannerView(done) {pending.push(done);}}});
+    h.ads.setEnableAds(false); pending[0]();
+    assert.equal(h.calls.includes('show'), false);
+    h.ads.setEnableAds(true); h.ads.setShowAds(true); assert.equal(h.calls.includes('show'), false);
+    pending[1](); assert.equal(h.calls.at(-1), 'show');
+});
+
+test('Tab load classifies local invalid input without changing the UI rejection', async () => {
+    const source = read('www/js/controller.tabctrl.js');
+    const body = source.slice(source.indexOf('        function updateWeatherData('), source.indexOf('        function setAirUnit('));
+    for (const [error, expected] of [[new Error('Need location'), 'invalid_response'], [{code: 503}, 'network_error']]) {
+        const events = [];
+        const q = {defer() {let resolve, reject; const promise = new Promise((a,b) => {resolve=a; reject=b;}); return {resolve,reject,promise};}};
+        const context = {Error, Date, $q:q, WeatherUtil:{getWeatherByGeoInfo:() => Promise.reject(error)}, Monetization:{track(n,p) {events.push(p);}}, strFailToGetWeatherInfo:'fixture failure'};
+        vm.runInNewContext(body + '\nthis.load = updateWeatherData;', context);
+        await assert.rejects(context.load({}), e => e === 'fixture failure');
+        assert.equal(events.length,1); assert.equal(events[0].outcome,expected);
+    }
+});
+
+test('native banner load failure releases one-shot callbacks and removes stale load listeners', () => {
+    let factory, nativeError;
+    const listeners = new Map();
+    const document = {
+        addEventListener(n, fn) { if (!listeners.has(n)) listeners.set(n, new Set()); listeners.get(n).add(fn); },
+        removeEventListener(n, fn) { listeners.get(n)?.delete(fn); }
+    };
+    const cordova = {plugins: {emiAdmobPlugin: {loadBannerAd(options, done, fail) {nativeError = fail;}}}};
+    const window = {cordova};
+    vm.runInNewContext(read('www/js/service.admobemi.js'), {
+        angular: {module() {return {factory(n,fn) {factory=fn;}};}}, document, window, cordova, console:{log(){}}, clientConfig:{}
+    });
+    const adapter = factory({ga:{trackException(){}}}, {track(){}});
+    let loaded=0, failed=0;
+    adapter.createBannerView(() => loaded++, () => failed++);
+    for (const fn of [...(listeners.get('on.banner.failed.load') || [])]) fn({secret:'fixture'});
+    nativeError('fixture');
+    for (const fn of [...(listeners.get('on.banner.load') || [])]) fn();
+    assert.equal(failed,1); assert.equal(loaded,0);
+    assert.equal(listeners.get('on.banner.load').size,0);
+    assert.equal(listeners.get('on.banner.failed.load').size,0);
+    adapter.createBannerView(() => loaded++, () => failed++);
+    for (const fn of [...listeners.get('on.banner.load')]) fn();
+    assert.equal(loaded,1); assert.equal(failed,1);
+});
+
+test('rotation during initial banner load waits for that load before destroying it', () => {
+    const creates = [], destroys = [];
+    const h = adsHarness({enabled:true, delaySeconds:0}, {adapterOverrides:{
+        createBannerView(done,fail) {creates.push({done,fail});},
+        destroyBannerView(done,fail) {destroys.push({done,fail});}
+    }});
+    h.rotate(); h.rotate(); assert.equal(destroys.length,0);
+    creates.shift().done(); assert.equal(destroys.length,1);
+    destroys.shift().done(); creates.shift().done(); assert.equal(h.calls.at(-1),'show');
 });

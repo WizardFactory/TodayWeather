@@ -333,9 +333,13 @@ chain; the Tab parser records a separate `weather_load` result without address
 or coordinate labels. Neither changes API URLs or retry semantics.
 
 TwAds additionally applies validated Remote Config banner enable/delay parameters
-over existing consent, enable and screen visibility. Defaults preserve behavior;
-offline fetch retains activated cache and delayed callbacks cannot overwrite
-policy after the application deadline. See [monetization operations](../operations/monetization.md)
+over existing consent, enable and screen visibility. First display and opportunity
+exposure wait for config completion/failure or the 12-second deadline; a cached
+disabled policy hides immediately. Delay is measured from service creation.
+Defaults preserve enable/delay policy; offline fetch retains activated cache and delayed callbacks cannot overwrite
+policy after the application deadline. Orientation recreation is serialized and
+stale callbacks after disabling cannot show. Native load failure releases the
+one-shot adapter listeners. See [monetization operations](../operations/monetization.md)
 and the advertising diagram below. Console linkage and physical-device evidence
 remain separate from these repository implementation facts.
 

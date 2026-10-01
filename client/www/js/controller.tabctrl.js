@@ -1077,7 +1077,8 @@ angular.module('controller.tabctrl', [])
                 deferred.resolve();
             }, function (error) {
                 var endTime = new Date().getTime();
-                Monetization.track('weather_load', {outcome: 'network_error', duration_ms: endTime - startTime});
+                // URL/input construction rejects with Error; HTTP failures retain their status object.
+                Monetization.track('weather_load', {outcome: error instanceof Error ? 'invalid_response' : 'network_error', duration_ms: endTime - startTime});
 
                 deferred.reject(strFailToGetWeatherInfo);
             });

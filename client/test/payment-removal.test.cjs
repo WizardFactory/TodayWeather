@@ -49,7 +49,7 @@ function loadAds(stale) {
     const dependencies = {
         TwStorage: {get() { return stale; }, set() { throw Error('Payment storage write'); }},
         Util: {ga: {trackEvent() {}, trackException() {}}},
-        Monetization: {bannerPolicy: () => ({enabled: true, delaySeconds: 0}), loadConfig() {}, track() {}},
+        Monetization: {isBannerPolicyReady: () => true, bannerPolicy: () => ({enabled: true, delaySeconds: 0}), loadConfig() {}, track() {}},
         admobPro: {init() {}}, admobClean: {init() {}}, admobEmi: adapter
     };
     const args = factory.toString().match(/function\s*\(([^)]*)\)/)[1].split(',').map(s => dependencies[s.trim()]);

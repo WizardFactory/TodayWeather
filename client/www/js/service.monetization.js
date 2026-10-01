@@ -1,7 +1,7 @@
 angular.module('service.monetization', [])
     .factory('Monetization', function($window) {
-        var obj = {}, enabled = false, initialized = false, lastScreen, pendingScreen, collectionRevision = 0;
-        var policy = {enabled: true, delaySeconds: 0}, configStarted = false, configRun;
+        var obj = {}, enabled = false, initialized = false, lastScreen, pendingScreen, collectionRevision = 0, requestedCollection;
+        var policy = {enabled: true, delaySeconds: 0}, configStarted = false, configReady = false, configRun;
         var listeners = [];
         var screens = ['start', 'guide', 'units', 'setting-radio', 'setting-push', 'kma-special',
             'nation', 'nation-air', 'tab', 'tab.search', 'tab.air', 'tab.forecast', 'tab.dailyforecast', 'tab.weather'];
@@ -38,23 +38,29 @@ angular.module('service.monetization', [])
             // Firebase SDK enforces persisted collection/consent itself. FirebaseX 2.0.2's
             // query reads an unset wrapper preference as false even when SDK defaults are on.
             // Never force collection on to work around it: an existing opt-out must survive.
-            enabled = true;
-            if (pendingScreen) { obj.screen(pendingScreen); }
-            pendingScreen = undefined;
+            enabled = requestedCollection === undefined;
+            if (requestedCollection !== undefined) { writeCollection(requestedCollection, collectionRevision); }
+            else if (pendingScreen) { obj.screen(pendingScreen); }
         };
+        function writeCollection(value, revision) {
+            var sdk = $window.FirebasexAnalytics;
+            if (!sdk) { return; }
+            try {
+                sdk.setAnalyticsCollectionEnabled(value, function() {
+                    if (revision !== collectionRevision) { return; }
+                    enabled = value;
+                    if (enabled && pendingScreen) { obj.screen(pendingScreen); }
+                }, function() { log('collection', 'write_failed'); });
+            } catch (e) { log('collection', 'write_failed'); }
+        }
         obj.setCollectionEnabled = function(value) {
-            enabled = false;
+            if (typeof value !== 'boolean') { return; }
+            requestedCollection = value;
+            enabled = false; // Close immediately while a native write is pending or unavailable.
             var revision = ++collectionRevision;
             lastScreen = undefined;
             pendingScreen = undefined;
-            var sdk = $window.FirebasexAnalytics;
-            if (!sdk || typeof value !== 'boolean') { return; }
-            try {
-                sdk.setAnalyticsCollectionEnabled(value, function() {
-                    if (revision === collectionRevision) { enabled = value; }
-                },
-                    function() { log('collection', 'write_failed'); });
-            } catch (e) { log('collection', 'write_failed'); }
+            writeCollection(value, revision);
         };
         obj.track = function(name, params) {
             if (!Object.prototype.hasOwnProperty.call(schema, name)) { return false; }
@@ -74,20 +80,26 @@ angular.module('service.monetization', [])
         obj.screen = function(name) {
             if (screens.indexOf(name) === -1 || name === lastScreen) { return; }
             pendingScreen = name; // Only a fixed route name, never event payloads, survives deviceready.
-            if (emit('screen_view', {screen_name: name, screen_class: 'Cordova'})) { lastScreen = name; }
+            if (emit('screen_view', {screen_name: name, screen_class: 'Cordova'})) { lastScreen = name; pendingScreen = undefined; }
         };
         obj.bannerPolicy = function() { return {enabled: policy.enabled, delaySeconds: policy.delaySeconds}; };
+        obj.isBannerPolicyReady = function() { return configReady; };
+        function notifyPolicy() { listeners.forEach(function(fn) { fn(obj.bannerPolicy()); }); }
         obj.loadConfig = function(onChange) {
             listeners.push(onChange);
+            if (configStarted) { onChange(obj.bannerPolicy()); return; }
+            configReady = !$window.FirebasexConfig;
             onChange(obj.bannerPolicy());
-            if (configStarted || !$window.FirebasexConfig) { return; }
+            if (configReady) { return; }
             configStarted = true;
             configRun = 'rc-' + Date.now(); // Operation correlation, never an installation/user identifier.
             var sdk = $window.FirebasexConfig, closed = false;
             var timeout = $window.setTimeout(function() { finish('timeout'); }, 12000);
             function finish(result) {
                 if (closed) { return; }
-                closed = true; $window.clearTimeout(timeout); log('remote_config', result);
+                closed = true; configReady = true;
+                $window.clearTimeout(timeout); log('remote_config', result);
+                notifyPolicy(); // Release first-show/exposure gate even on bounded fallback.
             }
             function apply(values) {
                 if (closed) { return; }
@@ -98,7 +110,7 @@ angular.module('service.monetization', [])
                     log('remote_config', 'invalid_values'); return;
                 }
                 policy = {enabled: flag === 'true', delaySeconds: Number(delay)};
-                listeners.forEach(function(fn) { fn(obj.bannerPolicy()); });
+                notifyPolicy();
             }
             function fail() { finish('bridge_or_fetch_failed'); }
             try {

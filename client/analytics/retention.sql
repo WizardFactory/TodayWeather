@@ -2,13 +2,14 @@
 -- Installation cohort, not a person/account cohort. Only complete D1/D7 windows are reported.
 WITH raw AS (
   SELECT PARSE_DATE('%Y%m%d', event_date) AS date, event_name, user_pseudo_id, is_active_user, platform,
-    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'traffic_type') AS traffic_type
+    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'traffic_type') AS traffic_type,
+    (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'debug_mode') AS debug_mode
   FROM `PROJECT.DATASET.events_*`
   WHERE _TABLE_SUFFIX BETWEEN FORMAT_DATE('%Y%m%d', @start_date) AND FORMAT_DATE('%Y%m%d', DATE_ADD(@end_date, INTERVAL 7 DAY))
     AND app_info.id = 'net.wizardfactory.todayweather' AND app_info.version = @app_version
 ), clean AS (
   SELECT * FROM raw WHERE user_pseudo_id IS NOT NULL AND user_pseudo_id NOT IN (
-    SELECT user_pseudo_id FROM raw WHERE traffic_type = 'development' AND user_pseudo_id IS NOT NULL
+    SELECT user_pseudo_id FROM raw WHERE (traffic_type = 'development' OR debug_mode = 1) AND user_pseudo_id IS NOT NULL
   )
 ), cohorts AS (
   SELECT user_pseudo_id, platform, MIN(date) AS cohort_date FROM clean
