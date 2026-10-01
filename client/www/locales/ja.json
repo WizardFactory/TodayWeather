@@ -307,5 +307,16 @@
   "LOC_NEEDS_ACCESS_TO": "Needs access to",
   "LOC_STORAGE_SPACE": "Storage space – Allows the app to back up and restore your location favorites.",
   "LOC_LOCATION_ACCESS": "Location – Uses the device’s location.",
-  "LOC_CALL_INFORMATION": "Call information – Allows the app to avoid exposure to inappropriate advertising."
+  "LOC_CALL_INFORMATION": "Call information – Allows the app to avoid exposure to inappropriate advertising.",
+    "LOC_ANALYTICS_CHOICE": "任意の利用状況分析",
+    "LOC_ANALYTICS_DETAIL": "アプリの改善のため、Google Firebase Analyticsで画面の利用、天気取得の結果、アプリ・端末・インストール情報を収集することに同意しますか？独自イベントには実際の位置、住所、プッシュトークン、端末UUIDを含めません。同意しなくても天気を利用でき、このメニューでいつでも撤回できます。分析データの広告利用は許可しません。広告・障害診断・通知は別に処理されます。",
+    "LOC_ANALYTICS_ALLOW": "同意する",
+    "LOC_ANALYTICS_DENY": "拒否 / 撤回",
+    "LOC_ANALYTICS_ALLOWED": "同意済み",
+    "LOC_ANALYTICS_DISABLED": "オフ",
+    "LOC_PRIVACY_SAVE_FAILED": "プライバシー設定を完全に適用できませんでした。もう一度お試しください。",
+    "LOC_AD_PRIVACY_CHOICES": "広告のプライバシー設定",
+    "LOC_AD_PRIVACY_UNAVAILABLE": "広告のプライバシー画面を開けません。後ほどお試しください。地域によっては選択画面が不要な場合があります。",
+    "LOC_PRIVACY_POLICY": "プライバシーポリシー",
+    "LOC_TERMS": "利用規約"
 }

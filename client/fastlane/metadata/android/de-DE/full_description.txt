@@ -1,0 +1,14 @@
+Vergleiche mit Heute Wetter die heutige Temperatur mit gestern und prüfe stündliche Vorhersagen, Tageswetter und Luftqualität für deinen Standort oder gespeicherte Orte. Verfügbare Informationen hängen von Region und Datenanbieter ab.
+
+Datenquellen
+Wetter in Korea: Korea Meteorological Administration (KMA).
+Luftmesswerte in Korea: Korea Environment Corporation, AirKorea. Echtzeitmessungen sind vorläufig; Stationsbedingungen, Wartung oder Übertragungsprobleme können Fehler, Lücken und Verzögerungen verursachen.
+Luftvorhersagen, sofern verfügbar: Korea Environment Corporation oder das Institute of Climate, Energy and Environmental Convergence Research der Anyang University.
+Sonnenaufgang und Sonnenuntergang: Korea Astronomy and Space Science Institute (KASI).
+Wetter außerhalb Koreas: Visual Crossing — https://www.visualcrossing.com/
+
+Wetter- und Luftdaten können fehlerhaft, unvollständig oder verzögert sein; Vorhersagen können von den tatsächlichen Bedingungen abweichen. Diese App ist keine offizielle Behörden-App und ersetzt keine amtlichen Wetterwarnungen, Notfall- oder Evakuierungshinweise und keine fachliche Beratung. Beachte bei sicherheitsrelevanten Entscheidungen die aktuellen Hinweise der zuständigen Behörden.
+
+Diese Version enthält keine Android-Startbildschirm- oder iOS-Widgets. Öffne die App, um das Wetter zu prüfen.
+Die Standortberechtigung wird verwendet, wenn du Wetter für deinen aktuellen Standort abrufen möchtest.
+Kontakt: todayweather@wizardfactory.net

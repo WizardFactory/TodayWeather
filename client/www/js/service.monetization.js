@@ -1,6 +1,6 @@
 angular.module('service.monetization', [])
     .factory('Monetization', function($window) {
-        var obj = {}, enabled = false, initialized = false, lastScreen, pendingScreen, collectionRevision = 0, requestedCollection;
+        var obj = {}, enabled = false, initialized = false, lastScreen, pendingScreen, collectionRevision = 0;
         var policy = {enabled: true, delaySeconds: 0}, configStarted = false, configReady = false, configRun;
         var listeners = [];
         var screens = ['start', 'guide', 'units', 'setting-radio', 'setting-push', 'kma-special',
@@ -17,7 +17,7 @@ angular.module('service.monetization', [])
         // No raw error strings, URLs, identifiers or provider payloads in telemetry/logs.
         function log(operation, result) {
             $window.console.info({component: 'monetization', operation: operation,
-                run_id: operation === 'remote_config' ? configRun : undefined,
+                run_id: operation === 'remote_config' ? configRun : operation === 'collection' ? 'consent-' + collectionRevision : undefined,
                 action: result === 'applied' ? 'use_validated_policy' : 'retain_current_state', result: result});
         }
         function emit(name, params) {
@@ -30,37 +30,98 @@ angular.module('service.monetization', [])
                 return true;
             } catch (e) { log('analytics', 'bridge_error'); return false; }
         }
-        obj.init = function() {
-            if (initialized) { return; }
-            var sdk = $window.FirebasexAnalytics;
-            if (!sdk) { return; } // Can be called again at deviceready.
-            initialized = true;
-            // Firebase SDK enforces persisted collection/consent itself. FirebaseX 2.0.2's
-            // query reads an unset wrapper preference as false even when SDK defaults are on.
-            // Never force collection on to work around it: an existing opt-out must survive.
-            enabled = requestedCollection === undefined;
-            if (requestedCollection !== undefined) { writeCollection(requestedCollection, collectionRevision); }
-            else if (pendingScreen) { obj.screen(pendingScreen); }
-        };
-        function writeCollection(value, revision) {
-            var sdk = $window.FirebasexAnalytics;
-            if (!sdk) { return; }
+        var consentKey = 'twAnalyticsConsentV1', choice = false;
+        try { choice = $window.localStorage.getItem(consentKey) === 'true'; }
+        catch (e) { log('collection', 'storage_unavailable'); }
+        obj.getCollectionChoice = function() { return choice; };
+        var collectionBusy = false, nextCollection;
+        function persistChoice(value) {
             try {
-                sdk.setAnalyticsCollectionEnabled(value, function() {
-                    if (revision !== collectionRevision) { return; }
-                    enabled = value;
-                    if (enabled && pendingScreen) { obj.screen(pendingScreen); }
-                }, function() { log('collection', 'write_failed'); });
-            } catch (e) { log('collection', 'write_failed'); }
+                $window.localStorage.setItem(consentKey, String(value));
+                if ($window.localStorage.getItem(consentKey) === String(value)) { return true; }
+            } catch (e) {}
+            // Invalidating an old grant is essential when writing a withdrawal fails.
+            try { $window.localStorage.removeItem(consentKey); } catch (e) {}
+            log('collection', 'storage_write_failed');
+            return false;
         }
-        obj.setCollectionEnabled = function(value) {
+        function consentMode(value) {
+            return {ANALYTICS_STORAGE: value ? 'GRANTED' : 'DENIED',
+                AD_STORAGE: 'DENIED', AD_USER_DATA: 'DENIED', AD_PERSONALIZATION: 'DENIED'};
+        }
+        function drainCollection() {
+            if (collectionBusy || !nextCollection) { return; }
+            var job = nextCollection, sdk = $window.FirebasexAnalytics;
+            nextCollection = undefined; collectionBusy = true;
+            function current() { return job.revision === collectionRevision; }
+            function finish(ok) {
+                collectionBusy = false;
+                if (current() && job.callback) { job.callback(ok); }
+                drainCollection();
+            }
+            function call(method, value, done, fail) {
+                var settled = false;
+                function success() { if (!settled) { settled = true; done(); } }
+                function error() { if (!settled) { settled = true; fail(); } }
+                try { sdk[method](value, success, error); } catch (e) { error(); }
+            }
+            function failed() {
+                if (current()) { choice = false; pendingScreen = undefined; persistChoice(false); }
+                log('collection', 'write_failed');
+                // Serialize compensation too: stale denial must not race a newer explicit grant.
+                call('setAnalyticsCollectionEnabled', false, deny, deny);
+                function deny() {
+                    call('setAnalyticsConsentMode', consentMode(false), function() { finish(false); },
+                        function() { log('collection', 'rollback_failed'); finish(false); });
+                }
+            }
+            if (!sdk || !sdk.setAnalyticsConsentMode || !sdk.setAnalyticsCollectionEnabled) {
+                if (current()) { choice = false; persistChoice(false); }
+                log('collection', 'bridge_unavailable');
+                if (sdk && sdk.setAnalyticsCollectionEnabled) { failed(); } else { finish(false); }
+                return;
+            }
+            call('setAnalyticsCollectionEnabled', false, function() {
+                if (!current()) { finish(false); return; }
+                call('setAnalyticsConsentMode', consentMode(job.value), function() {
+                    if (!current()) { finish(false); return; }
+                    if (!job.value) { log('collection', 'disabled'); finish(true); return; }
+                    call('setAnalyticsCollectionEnabled', true, function() {
+                        if (!current()) { finish(false); return; }
+                        enabled = true; log('collection', 'enabled');
+                        if (pendingScreen) { obj.screen(pendingScreen); }
+                        finish(true);
+                    }, failed);
+                }, failed);
+            }, failed);
+        }
+        function applyCollection(value, callback) {
+            enabled = false; lastScreen = undefined;
+            nextCollection = {value: value, callback: callback, revision: ++collectionRevision};
+            drainCollection();
+        }
+        obj.init = function() {
+            if (initialized || !$window.FirebasexAnalytics) { return; }
+            initialized = true;
+            if (!choice) { pendingScreen = undefined; applyCollection(false); return; }
+            // Native preference corroborates WebView storage after a failed durable withdrawal.
+            // The installed plugin persists this flag on both platforms (Android returns 1/0).
+            var revision = collectionRevision, sdk = $window.FirebasexAnalytics;
+            function restore(value) {
+                if (revision !== collectionRevision) { return; }
+                choice = value === true || value === 1;
+                if (!choice) { pendingScreen = undefined; persistChoice(false); }
+                applyCollection(choice);
+            }
+            try { sdk.isAnalyticsCollectionEnabled(restore, function() { restore(false); }); }
+            catch (e) { restore(false); }
+        };
+        obj.setCollectionEnabled = function(value, callback) {
             if (typeof value !== 'boolean') { return; }
-            requestedCollection = value;
-            enabled = false; // Close immediately while a native write is pending or unavailable.
-            var revision = ++collectionRevision;
-            lastScreen = undefined;
-            pendingScreen = undefined;
-            writeCollection(value, revision);
+            enabled = false; pendingScreen = undefined;
+            var saved = persistChoice(value);
+            choice = saved ? value : false;
+            applyCollection(choice, function(ok) { if (callback) { callback(saved && ok); } });
         };
         obj.track = function(name, params) {
             if (!Object.prototype.hasOwnProperty.call(schema, name)) { return false; }
@@ -78,6 +139,8 @@ angular.module('service.monetization', [])
             return valid && emit(name, safe);
         };
         obj.screen = function(name) {
+            // Keep only the latest fixed route after an explicit choice; never backfill pre-consent use.
+            if (!choice) { pendingScreen = undefined; return; }
             if (screens.indexOf(name) === -1 || name === lastScreen) { return; }
             pendingScreen = name; // Only a fixed route name, never event payloads, survives deviceready.
             if (emit('screen_view', {screen_name: name, screen_class: 'Cordova'})) { lastScreen = name; pendingScreen = undefined; }

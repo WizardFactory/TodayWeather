@@ -1,0 +1,14 @@
+TodayWeather helps you compare today's temperature with yesterday and check hourly forecasts, daily weather and air quality for your current location or saved cities. Information availability varies by region and provider.
+
+Data sources
+Korean weather: Korea Meteorological Administration (KMA).
+Korean air observations: Korea Environment Corporation, AirKorea. Real-time observations are provisional and may contain errors, gaps or delays due to station conditions, maintenance or communications.
+Air forecasts, when available: Korea Environment Corporation or Anyang University's Institute of Climate, Energy and Environmental Convergence Research.
+Sunrise and sunset: Korea Astronomy and Space Science Institute (KASI).
+Overseas weather: Visual Crossing — https://www.visualcrossing.com/
+
+Weather and air information can be inaccurate, incomplete or delayed; forecasts can differ from actual conditions. TodayWeather is not an official government app and does not replace official weather warnings, emergency alerts, evacuation instructions or professional advice. Check the relevant authorities' latest guidance for safety-critical decisions.
+
+This version does not include Android home-screen or iOS widgets. Open the app to check the weather.
+Location permission is used when you choose to find weather for your current location.
+Support: todayweather@wizardfactory.net

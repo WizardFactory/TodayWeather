@@ -20,4 +20,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test client/test/payment-removal.test.cjs client/test/monetization.test.cjs
+      - run: node --test client/test/payment-removal.test.cjs client/test/provider-notice.test.cjs client/test/monetization.test.cjs client/test/privacy-consent.test.cjs
+
+  store-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4.1'
+          bundler-cache: true
+          working-directory: client
+      - run: bundle exec ruby test/store-release.test.rb
+        working-directory: client
+      - run: bundle exec fastlane lanes
+        working-directory: client
+        env:
+          FASTLANE_SKIP_UPDATE_CHECK: '1'
+          FASTLANE_OPT_OUT_USAGE: '1'

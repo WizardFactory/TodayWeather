@@ -1,0 +1,1 @@
+Die App-Laufzeit wurde aktualisiert. Android-Startbildschirm- und iOS-Widgets sind in dieser Version nicht enthalten. Bitte prüfe das Wetter in der App.

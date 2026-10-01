@@ -1,0 +1,15 @@
+:root { color-scheme: light dark; font: 17px/1.75 system-ui, sans-serif; --ink: #172b40; --paper: #f4f7fa; --panel: #fff; --line: #d9e2ec; --accent: #145d9d; }
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); background: var(--paper); }
+main { max-width: 820px; margin: 0 auto; padding: 42px 24px 70px; }
+nav { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 32px; }
+a { color: var(--accent); text-underline-offset: .2em; overflow-wrap: anywhere; }
+h1 { font-size: 2rem; line-height: 1.25; margin: 12px 0; }
+h2 { font-size: 1.28rem; margin-top: 32px; }
+p, li { overflow-wrap: anywhere; }
+small { color: #526b82; }
+.review { background: #fff4da; color: #573b0a; border: 1px solid #e3c782; border-radius: 12px; padding: 16px 20px; margin: 24px 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px 24px; margin: 20px 0; }
+footer { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 20px; }
+@media (max-width: 500px) { main { padding: 24px 18px 48px; } h1 { font-size: 1.65rem; } .card { padding: 16px 18px; } }
+@media (prefers-color-scheme: dark) { :root { --ink: #dce6ef; --paper: #102030; --panel: #172b3d; --line: #354d63; --accent: #88c6ff; } small { color: #afc2d4; } }

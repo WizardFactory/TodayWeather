@@ -1,0 +1,120 @@
+# API credentials only: no interactive Apple ID session or browser login fallback.
+require 'json'
+require 'tempfile'
+require 'fileutils'
+require 'time'
+require 'securerandom'
+
+STORE_APP_ID = 'net.wizardfactory.todayweather'.freeze
+STORE_CLIENT_DIR = File.expand_path('..', __dir__).freeze
+STORE_EXPORT_DIR = File.expand_path('../../reports/store-export', __dir__).freeze
+
+def store_env(name)
+  value = ENV[name].to_s
+  raise ArgumentError, "#{name} is required" if value.empty? || value.include?('<')
+  value
+end
+
+def store_file(value, label)
+  raise ArgumentError, "#{label} is required" if value.to_s.empty?
+  file = File.expand_path(value, STORE_CLIENT_DIR)
+  raise ArgumentError, "#{label} file is missing" unless File.file?(file)
+  file
+end
+
+def store_apple_auth
+  {
+    key_id: store_env('TW_ASC_KEY_ID'),
+    issuer_id: store_env('TW_ASC_ISSUER_ID'),
+    key_filepath: store_file(store_env('TW_ASC_KEY_FILE'), 'TW_ASC_KEY_FILE'),
+    in_house: false
+  }
+end
+
+def store_operation(action)
+  run_id = SecureRandom.uuid
+  puts JSON.generate(run_id: run_id, event: 'store_release', action: action, result: 'started')
+  result = yield
+  puts JSON.generate(run_id: run_id, event: 'store_release', action: action, result: 'completed')
+  result
+rescue StandardError => error
+  # Error messages from API clients can contain private request details. Log the class only.
+  puts JSON.generate(run_id: run_id, event: 'store_release', action: action, result: 'failed', cause: error.class.name)
+  raise
+end
+
+platform :android do
+  desc 'Download the current Play listing to ignored reports for review'
+  lane :export_play do
+    key = store_file(store_env('TW_PLAY_JSON_KEY'), 'TW_PLAY_JSON_KEY')
+    output = File.join(STORE_EXPORT_DIR, 'android', Time.now.utc.strftime('%Y%m%dT%H%M%S%6NZ'))
+    # Supply treats an existing output directory as a completed export and skips all API reads.
+    FileUtils.mkdir_p(File.dirname(output))
+    store_operation('export_play') do
+      sh('bundle', 'exec', 'fastlane', 'supply', 'init', '--json_key', key,
+         '--package_name', STORE_APP_ID, '--metadata_path', output)
+      raise IOError, 'No Play listing files were exported' if Dir.glob(File.join(output, '**', '*.txt')).empty?
+    end
+  end
+
+  desc 'Validate proposed text through a temporary Play edit without committing it'
+  lane :validate_listing do
+    key = store_file(store_env('TW_PLAY_JSON_KEY'), 'TW_PLAY_JSON_KEY')
+    store_operation('validate_play_listing') do
+      upload_to_play_store(package_name: STORE_APP_ID, json_key: key,
+                           metadata_path: File.join(STORE_CLIENT_DIR, 'fastlane', 'metadata', 'android'),
+                           # Supply requires a release even for text validation. Read the existing
+                           # production release; no binary, promotion, rollout or commit is requested.
+                           track: 'production', validate_only: true,
+                           skip_upload_apk: true, skip_upload_aab: true,
+                           skip_upload_metadata: false, skip_upload_images: true,
+                           skip_upload_screenshots: true, skip_upload_changelogs: true)
+    end
+  end
+
+  desc 'Upload a signed AAB as an internal draft; preserve all existing store metadata'
+  lane :internal do |options|
+    key = store_file(store_env('TW_PLAY_JSON_KEY'), 'TW_PLAY_JSON_KEY')
+    aab = store_file(options[:aab], 'aab')
+    store_operation('upload_internal_draft') do
+      upload_to_play_store(package_name: STORE_APP_ID, json_key: key, aab: aab,
+                           track: 'internal', release_status: 'draft', changes_not_sent_for_review: true,
+                           skip_upload_metadata: true, skip_upload_images: true,
+                           skip_upload_screenshots: true, skip_upload_changelogs: true)
+    end
+  end
+end
+
+platform :ios do
+  desc 'Download App Store metadata using an API key, into ignored reports'
+  lane :export_ios do
+    auth = store_apple_auth
+    output = File.join(STORE_EXPORT_DIR, 'ios', Time.now.utc.strftime('%Y%m%dT%H%M%S%6NZ'))
+    FileUtils.mkdir_p(output)
+    # deliver's download command needs API-key JSON. A mode-0600 tempfile keeps key bytes
+    # out of arguments, logs, repository files and the exported metadata directory.
+    Tempfile.create(['tw-asc-', '.json']) do |file|
+      File.chmod(0600, file.path)
+      file.write(JSON.generate(key_id: auth[:key_id], issuer_id: auth[:issuer_id],
+                               key: File.read(auth[:key_filepath]), in_house: false))
+      file.flush
+      store_operation('export_ios') do
+        sh('bundle', 'exec', 'fastlane', 'deliver', 'download_metadata',
+           '--api_key_path', file.path, '--app_identifier', STORE_APP_ID,
+           '--metadata_path', output, '--force')
+      end
+    end
+  end
+
+  desc 'Upload an already signed IPA to TestFlight without external distribution or submission'
+  lane :upload_beta do |options|
+    auth = store_apple_auth
+    ipa = store_file(options[:ipa], 'ipa')
+    store_operation('upload_testflight') do
+      api_key = app_store_connect_api_key(**auth)
+      upload_to_testflight(api_key: api_key, app_identifier: STORE_APP_ID, ipa: ipa,
+                           distribute_external: false, skip_submission: true,
+                           skip_waiting_for_build_processing: true)
+    end
+  end
+end

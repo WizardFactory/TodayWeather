@@ -69,6 +69,13 @@ visual-check.*
 /test-results/
 /playwright-report/
 
+# Local Fastlane/Bundler runtime and generated reports.
+/client/.bundle/
+/client/vendor/bundle/
+/client/fastlane/report.xml
+/client/fastlane/README.md
+/client/fastlane/Preview.html
+
 # Reproducible shared token outputs
 /packages/design-tokens/generated/
 

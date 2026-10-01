@@ -307,5 +307,16 @@
   "LOC_NEEDS_ACCESS_TO": "Needs access to",
   "LOC_STORAGE_SPACE": "Storage space – Allows the app to back up and restore your location favorites.",
   "LOC_LOCATION_ACCESS": "Location – Uses the device’s location.",
-  "LOC_CALL_INFORMATION": "Call information – Allows the app to avoid exposure to inappropriate advertising."
+  "LOC_CALL_INFORMATION": "Call information – Allows the app to avoid exposure to inappropriate advertising.",
+    "LOC_ANALYTICS_CHOICE": "Optional usage analytics",
+    "LOC_ANALYTICS_DETAIL": "Allow Google Firebase Analytics to collect screen usage, weather request results, and app, device and installation information to improve the app? Custom events exclude actual location, address, push tokens and device UUIDs. Weather remains available if you decline. Withdraw anytime in this menu. Analytics data is not permitted for advertising use. Advertising, crash diagnostics and notifications are handled separately.",
+    "LOC_ANALYTICS_ALLOW": "Allow",
+    "LOC_ANALYTICS_DENY": "Decline / withdraw",
+    "LOC_ANALYTICS_ALLOWED": "Allowed",
+    "LOC_ANALYTICS_DISABLED": "Off",
+    "LOC_PRIVACY_SAVE_FAILED": "Could not fully apply your privacy setting. Please try again.",
+    "LOC_AD_PRIVACY_CHOICES": "Ad privacy choices",
+    "LOC_AD_PRIVACY_UNAVAILABLE": "Ad privacy choices could not open. Try again later. A choices form may not be required in your region.",
+    "LOC_PRIVACY_POLICY": "Privacy policy",
+    "LOC_TERMS": "Terms of use"
 }

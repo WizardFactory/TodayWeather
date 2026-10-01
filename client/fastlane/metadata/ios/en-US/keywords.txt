@@ -1,0 +1,1 @@
+weather,forecast,temperature,air quality,AQI,rain,wind,humidity
