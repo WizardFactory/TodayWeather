@@ -26,9 +26,10 @@ function load(relative, dependencies) {
 }
 const Desc = load('controllers/controller.weather.desc.js', {});
 const StnWeather = load('controllers/controllerKmaStnWeather.js', {'./controller.weather.desc': Desc});
-const Town = load('controllers/controllerTown.js', {sprintf, './controller.weather.desc': Desc,
+const observations = require('../../lib/history/observations');
+const Town = load('controllers/controllerTown.js', {'../lib/history/observations': observations, sprintf, './controller.weather.desc': Desc,
     '../controllers/controllerKmaStnWeather': StnWeather, '../config/config': {}});
-const Town24h = load('controllers/controllerTown24h.js', {'../controllers/controllerTown': Town, '../config/config': {}});
+const Town24h = load('controllers/controllerTown24h.js', {'../lib/history/observations': observations, '../controllers/controllerTown': Town, '../config/config': {}});
 
 test('modern KMA currentweather.jsp wording maps to legacy weather types', () => {
     const cases = [

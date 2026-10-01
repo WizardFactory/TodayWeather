@@ -33,7 +33,7 @@ exports.environment = function(version='2.0', now=instant) {
     function load(relative, extra={}) {
         const deps={};
         const code=fs.readFileSync(path.join(root,relative),'utf8');
-        for(const m of code.matchAll(/require\('([^']+)'\)/g)) deps[m[1]]=function Unexpected(){throw new Error('Unexpected collaborator '+m[1]);};
+        for(const m of code.matchAll(/require\('([^']+)'\)/g)) deps[m[1]]=m[1].endsWith('/history/observations') ? require('../../lib/history/observations') : function Unexpected(){throw new Error('Unexpected collaborator '+m[1]);};
         for(const key of Object.keys(deps)) {
             if(key.includes('/models/modelMid') || /\/models\/kma\/kma.town.mid.(forecast|land|sea|temp).model/.test(key)) deps[key]=model(path.basename(key,'.js'));
             if(key.endsWith('/config/config'))deps[key]=config;

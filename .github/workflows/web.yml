@@ -12,6 +12,7 @@ on:
       - "docs/rewrite/examples/**"
       - ".github/workflows/web.yml"
       - ".github/workflows/web-live-smoke.yml"
+      - ".github/workflows/web-release.yml"
   push:
     branches: [master, main]
     paths:
@@ -25,6 +26,7 @@ on:
       - "docs/rewrite/examples/**"
       - ".github/workflows/web.yml"
       - ".github/workflows/web-live-smoke.yml"
+      - ".github/workflows/web-release.yml"
   workflow_dispatch:
 permissions:
   contents: read

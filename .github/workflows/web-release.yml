@@ -1,0 +1,127 @@
+name: Webapp guarded release
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Published webapp/vMAJOR.MINOR.PATCH tag (manifest pins master-push artifact)"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: webapp-production
+  cancel-in-progress: false
+jobs:
+  candidate:
+    if: github.repository == 'WizardFactory/TodayWeather' && github.ref == 'refs/heads/master' && vars.WEB_RELEASE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      source_commit: ${{ steps.guard.outputs.source_commit }}
+      build_run_id: ${{ steps.guard.outputs.build_run_id }}
+      artifact_id: ${{ steps.guard.outputs.artifact_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify Release, master-push artifact and environment protection
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: node scripts/web-release-guard.mjs fetch "$RELEASE_TAG" candidate.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: webapp-release-candidate
+          path: candidate.json
+          retention-days: 90
+  deploy:
+    needs: candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: webapp-production
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      SOURCE_COMMIT: ${{ needs.candidate.outputs.source_commit }}
+      WEB_BUCKET: ${{ vars.WEB_BUCKET }}
+      WEB_DISTRIBUTION: ${{ vars.WEB_DISTRIBUTION }}
+      WEB_BACKUP_BUCKET: ${{ vars.WEB_BACKUP_BUCKET }}
+      WEB_PREFLIGHT_REFERENCE: ${{ vars.WEB_PREFLIGHT_REFERENCE }}
+      WEB_AWS_ACCOUNT: ${{ vars.WEB_AWS_ACCOUNT }}
+      WEB_SNAPSHOT_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/download-artifact@v4
+        with:
+          name: webapp-release-candidate
+          path: approved
+      - name: Revalidate after approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/web-release-guard.mjs fetch "$RELEASE_TAG" current.json
+          cmp approved/candidate.json current.json
+          node scripts/web-release-guard.mjs download current.json candidate-dist
+          node scripts/web-release-guard.mjs fetch "$RELEASE_TAG" verified.json candidate-dist
+          cmp current.json verified.json
+          node scripts/deploy-web-static.mjs --dir candidate-dist --bucket "$WEB_BUCKET" --distribution "$WEB_DISTRIBUTION" > upload-plan.json
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Obtain scoped temporary AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.WEB_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.WEB_AWS_REGION }}
+          mask-aws-account-id: true
+          unset-current-credentials: true
+          role-session-name: webapp-release-${{ github.run_id }}
+          role-duration-seconds: 3600
+      - name: Private rollback snapshot
+        id: snapshot
+        run: node scripts/web-release-snapshot.mjs
+      - name: Upload approved artifact
+        id: upload
+        run: |
+          mkdir -p test-results
+          node scripts/deploy-web-static.mjs --dir candidate-dist --bucket "$WEB_BUCKET" --distribution "$WEB_DISTRIBUTION" --execute --receipt test-results/upload.json
+          INVALIDATION_ID=$(node -p 'JSON.parse(require("fs").readFileSync("test-results/upload.json")).invalidationId')
+          aws cloudfront wait invalidation-completed --distribution-id "$WEB_DISTRIBUTION" --id "$INVALIDATION_ID"
+      - name: Verify deployed release and live smoke
+        id: smoke
+        run: node scripts/web-live-smoke.mjs --base https://app.todayweather.ai --expect-commit "$SOURCE_COMMIT" --json test-results/web-live-smoke.json
+      - name: Record rollout separately from publication
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          SNAPSHOT_STATUS: ${{ steps.snapshot.outcome }}
+          SMOKE_STATUS: ${{ steps.smoke.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p test-results
+          node scripts/web-release-receipt.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webapp-rollout-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 90
+          path: |
+            test-results/rollout.json
+            test-results/upload.json
+            test-results/web-live-smoke.json
+            test-results/web-live-smoke.json.fail-*.png
