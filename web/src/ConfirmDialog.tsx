@@ -8,11 +8,14 @@ export function useConfirm() {
   const trigger = useRef<HTMLElement | null>(null),
     id = useId();
   const finish = (value: boolean) => {
+    const resolve = answer.current;
+    const invoker = trigger.current;
+    answer.current = undefined;
+    trigger.current = null;
     element.current?.close();
     setMessage("");
-    answer.current?.(value);
-    answer.current = undefined;
-    trigger.current?.focus();
+    if (invoker?.isConnected) invoker.focus();
+    resolve?.(value);
   };
   useEffect(() => {
     if (message && !element.current?.open) element.current?.showModal();
@@ -23,14 +26,12 @@ export function useConfirm() {
     },
     [],
   );
-  const confirm = (text: string) =>
+  const confirm = (text: string, invoker: HTMLElement | null) =>
     new Promise<boolean>((resolve) => {
       answer.current?.(false);
       answer.current = resolve;
-      trigger.current =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null;
+      // WebKit pointer activation need not focus the invoking control.
+      trigger.current = invoker;
       setMessage(text);
     });
   return {

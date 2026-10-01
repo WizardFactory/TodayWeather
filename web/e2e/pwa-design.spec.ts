@@ -265,7 +265,7 @@ test("system appearance, independent 130% setting and legacy rollback survive re
         parseFloat(getComputedStyle(document.documentElement).fontSize),
       ),
     )
-    .toBe(20.8);
+    .toBeCloseTo(20.8, 4);
   await expect
     .poll(() =>
       page.evaluate(
@@ -298,36 +298,80 @@ test("system appearance, independent 130% setting and legacy rollback survive re
     "#f4f6fa",
   );
 });
-test("a native confirmation cancels with Escape and returns focus without losing saved data", async ({
-  page,
-}) => {
-  await page.goto("/settings");
-  await page
-    .getByRole("combobox", { name: "글자 크기", exact: true })
-    .selectOption("1.3");
-  const trigger = page.getByRole("button", {
-    name: "이 브라우저의 오늘날씨 데이터 삭제",
+for (const entry of ["pointer", "keyboard"] as const) {
+  test(`confirmation restores its ${entry} invoker after Escape, cancel and confirm`, async ({
+    page,
+  }) => {
+    await page.goto("/settings");
+    const scale = page.getByRole("combobox", {
+      name: "글자 크기",
+      exact: true,
+    });
+    await scale.selectOption("1.3");
+    const trigger = page.getByRole("button", {
+      name: "이 브라우저의 오늘날씨 데이터 삭제",
+    });
+    const dialog = page.getByRole("dialog");
+    for (const action of ["Escape", "취소", "확인"]) {
+      // Pointer entry must not inherit focus from a preceding interaction.
+      await page.locator("#main-content").focus();
+      if (entry === "keyboard") {
+        await trigger.focus();
+        await page.keyboard.press("Enter");
+      } else {
+        await trigger.click();
+      }
+      await expect(dialog).toBeVisible();
+      await expect(
+        dialog.getByRole("button", { name: "취소", exact: true }),
+      ).toBeFocused();
+      if (action === "Escape") await page.keyboard.press("Escape");
+      else
+        await dialog.getByRole("button", { name: action, exact: true }).click();
+      await expect(dialog).not.toBeVisible();
+      await expect(trigger).toBeFocused();
+      await expect(scale).toHaveValue(action === "확인" ? "1" : "1.3");
+    }
   });
-  await trigger.click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(
-    page.getByRole("dialog").getByRole("button", { name: "취소", exact: true }),
-  ).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).not.toBeVisible();
-  await expect(trigger).toBeFocused();
-  await expect(
-    page.getByRole("combobox", { name: "글자 크기", exact: true }),
-  ).toHaveValue("1.3");
-  await trigger.click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "확인", exact: true })
-    .click();
-  await expect(
-    page.getByRole("combobox", { name: "글자 크기", exact: true }),
-  ).toHaveValue("1");
-});
+}
+for (const action of ["Escape", "취소", "확인"] as const) {
+  test(`backup confirmation returns to its visible import button after ${action}`, async ({
+    page,
+  }) => {
+    await page.goto("/settings");
+    const scale = page.getByRole("combobox", {
+      name: "글자 크기",
+      exact: true,
+    });
+    await scale.selectOption("1.3");
+    const trigger = page.getByRole("button", { name: "가져오기", exact: true });
+    await page.locator("#main-content").focus();
+    const chooser = page.waitForEvent("filechooser");
+    await trigger.click();
+    await (
+      await chooser
+    ).setFiles({
+      name: "fixture-backup.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(
+        JSON.stringify({
+          version: 1,
+          places: [],
+          settings: { language: "ko" },
+          display: { textScale: 1 },
+        }),
+      ),
+    });
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    if (action === "Escape") await page.keyboard.press("Escape");
+    else
+      await dialog.getByRole("button", { name: action, exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await expect(scale).toHaveValue(action === "확인" ? "1" : "1.3");
+  });
+}
 test("full mixed-day timeline, current observation, keyboard cursor and model tables agree", async ({
   page,
 }) => {

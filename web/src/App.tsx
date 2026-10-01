@@ -1346,9 +1346,10 @@ function SettingsPage() {
     useApp();
   const { confirm, dialog } = useConfirm();
   const upload = useRef<HTMLInputElement>(null);
+  const importTrigger = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
-  async function clearData() {
-    if (!(await confirm(t("settings.data.confirm")))) return;
+  async function clearData(invoker: HTMLButtonElement) {
+    if (!(await confirm(t("settings.data.confirm"), invoker))) return;
     await clearLocalData(localStorage);
     queryClient.removeQueries({ queryKey: ["stored-weather"] });
     setState(defaultState());
@@ -1375,6 +1376,7 @@ function SettingsPage() {
   }
   async function importData(file?: File) {
     if (!file) return;
+    const invoker = importTrigger.current;
     try {
       if (file.size > 100000) throw Error(t("settings.import.tooLarge"));
       const raw = await file.text(),
@@ -1388,6 +1390,7 @@ function SettingsPage() {
             current: state.places.length,
             imported: imported.places.length,
           }),
+          invoker,
         ))
       ) {
         notify(t("settings.import.cancelled"));
@@ -1618,6 +1621,7 @@ function SettingsPage() {
               </button>
               <button
                 className="button"
+                ref={importTrigger}
                 onClick={() => upload.current?.click()}
               >
                 <Upload size={16} /> {t("settings.backup.import")}
@@ -1634,7 +1638,10 @@ function SettingsPage() {
           <section className="panel">
             <SectionHead title={t("settings.data.title")} />
             <p className="muted-text">{t("settings.data.hint")}</p>
-            <button className="button" onClick={() => void clearData()}>
+            <button
+              className="button"
+              onClick={(event) => void clearData(event.currentTarget)}
+            >
               <Trash2 size={16} /> {t("settings.data.clear")}
             </button>
           </section>
