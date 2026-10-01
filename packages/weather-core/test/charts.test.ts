@@ -64,3 +64,34 @@ it("shares a daily axis with the actual current observation, retains past days a
   expect(model.domain[1]).toBeGreaterThan(20);
   expect(model.rows.every((r) => r.mergedIcons)).toBe(true);
 });
+
+it.each([
+  { low: null, high: 35 },
+  { low: -20, high: null },
+])(
+  "includes the surviving partial extremum $low/$high in the daily domain",
+  (partial) => {
+    const daily = [
+      { ...point("2026-09-23T00:00", null), low: 10, high: 25 },
+      { ...point("2026-09-24T00:00", null), ...partial },
+    ];
+    const model = dailyChart({ daily, current: point("2026-09-23T12:00", 20) });
+    expect(model.rows[1].validRange).toBe(false);
+    const value = partial.low ?? partial.high!;
+    expect(model.domain[0]).toBeLessThan(value);
+    expect(model.domain[1]).toBeGreaterThan(value);
+  },
+);
+
+it("keeps every finite label in an entirely partial daily series inside its domain", () => {
+  const model = dailyChart({
+    daily: [
+      { ...point("2026-09-23T00:00", null), low: null, high: 35 },
+      { ...point("2026-09-24T00:00", null), low: -20, high: null },
+    ],
+    current: point("2026-09-25T12:00", null),
+  });
+  expect(model.rows.every((r) => !r.validRange)).toBe(true);
+  expect(model.domain[0]).toBeLessThan(-20);
+  expect(model.domain[1]).toBeGreaterThan(35);
+});

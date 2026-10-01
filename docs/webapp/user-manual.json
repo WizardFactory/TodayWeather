@@ -34,12 +34,12 @@
       "image": "daily.png",
       "intro": "Daily bars use one temperature scale and one cool-to-warm gradient. Past days remain available.",
       "steps": [
-        "Scroll to Daily forecast. When it overflows, today starts in the third visible column.",
-        "Compare minimum and maximum temperatures and the current observation marker.",
-        "Use the chart cursor or open the daily table to read exact values."
+        "Choose Daily; the daily chart scrolls into view and receives keyboard focus. Today starts in the third column when the chart overflows.",
+        "Compare minimum, maximum and current temperature. Different morning/afternoon conditions have AM/PM labels; matching conditions share one icon.",
+        "Use Left/Right/Home/End or the table for temperatures, conditions, precipitation probability and amount."
       ],
       "expected": "Past probability is hidden. Equal morning and afternoon conditions use one icon.",
-      "failure": "A missing minimum or maximum omits the range bar and appears as a dash in the table."
+      "failure": "An incomplete range has no bar. The missing value is a dash; any supplied extremum remains on the shared scale."
     },
     {
       "scenario": "S4",

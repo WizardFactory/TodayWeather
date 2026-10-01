@@ -1,6 +1,138 @@
 import { test, expect } from "./fixtures";
 import fixture from "../../docs/rewrite/examples/client-kma-response.json" with { type: "json" };
 const API = "https://todayweather.wizardfactory.net";
+function dailyFixture(partial = false) {
+  const raw = structuredClone(fixture.response) as any;
+  raw.current = { ...raw.current, date: "20260923", time: "0900", t1h: 20 };
+  raw.midData.dailyData = Array.from({ length: 6 }, (_, i) => ({
+    ...raw.midData.dailyData[0],
+    date: `202609${23 + i}`,
+    time: "0000",
+    tmn: partial && i === 5 ? undefined : 10,
+    tmx: partial && i === 5 ? 35 : 25,
+    skyAm: "sun",
+    skyPm: i === 1 ? "sun" : "rain",
+    pop: 60,
+    r06: 2,
+  }));
+  return raw;
+}
+test("daily AM/PM conditions include column zero, merged icons and reading alternatives", async ({
+  page,
+}) => {
+  await page.route(API + "/weather/**", (r) =>
+    r.fulfill({ json: dailyFixture() }),
+  );
+  await page.goto("/weather/seoul/daily");
+  const columns = page.locator(".daily-columns .chart-column");
+  await expect(columns).toHaveCount(6);
+  await expect(columns.nth(0).locator("svg")).toHaveCount(2);
+  await expect(columns.nth(0)).toContainText("오전");
+  await expect(columns.nth(0)).toContainText("오후");
+  await expect(columns.nth(1).locator("svg")).toHaveCount(1);
+  const daily = page.locator(".daily-chart");
+  await daily.focus();
+  await daily.press("End");
+  const readout = page.locator(".daily-chart-panel .cursor-readout");
+  await expect(readout).toContainText("오전");
+  await expect(readout).toContainText("맑음");
+  await expect(readout).toContainText("오후");
+  await expect(readout).toContainText("비");
+  await expect(readout).toContainText("60%");
+  await page.locator(".daily-chart-panel summary").click();
+  const row = page.locator(".daily-chart-panel tbody tr").last();
+  await expect(row).toContainText("오전 맑음");
+  await expect(row).toContainText("오후 비");
+});
+test("chart route navigation scrolls and focuses on click, direct load and history", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 402, height: 874 });
+  await page.goto("/weather/seoul/hourly");
+  const hourly = page.locator(".hourly-chart"),
+    daily = page.locator(".daily-chart");
+  await expect(hourly).toBeFocused();
+  await page.getByRole("button", { name: "일별", exact: true }).click();
+  await expect(daily).toBeFocused();
+  await expect(daily).toBeInViewport();
+  await page.goBack();
+  await expect(hourly).toBeFocused();
+  await page.goForward();
+  await expect(daily).toBeFocused();
+  await page.reload();
+  await expect(daily).toBeFocused();
+  await expect(daily).toBeInViewport();
+});
+test("empty live data replaces a focused stored chart with its readable section", async ({
+  page,
+}) => {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let refreshing = false;
+  await page.route(API + "/weather/**", async (r) => {
+    const raw = dailyFixture();
+    if (refreshing) {
+      await gate;
+      raw.short = [];
+      raw.shortest = [];
+      raw.daily = [];
+      raw.midData.dailyData = [];
+    }
+    await r.fulfill({ json: raw });
+  });
+  await page.goto("/weather/seoul/daily");
+  await expect(page.locator(".daily-chart")).toBeFocused();
+  // The cached snapshot is rendered while the new live request is held.
+  refreshing = true;
+  await page.reload();
+  await expect(page.locator(".daily-chart")).toBeFocused();
+  release();
+  await expect(page.locator(".daily-chart")).toHaveCount(0);
+  await expect(page.locator('[data-weather-section="daily"]')).toBeFocused();
+});
+for (const partial of ["missing-low", "missing-high", "all-partial"] as const)
+  test(`surviving extrema stay within the daily plot: ${partial}`, async ({
+    page,
+  }) => {
+    const raw = dailyFixture(true);
+    if (partial === "missing-high") {
+      raw.midData.dailyData[5].tmn = -20;
+      raw.midData.dailyData[5].tmx = undefined;
+    } else if (partial === "all-partial") {
+      for (const row of raw.midData.dailyData) row.tmn = undefined;
+      raw.midData.dailyData[0].tmx = 35;
+      raw.midData.dailyData[5].tmn = -20;
+      raw.midData.dailyData[5].tmx = undefined;
+    }
+    await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
+    await page.goto("/weather/seoul/daily");
+    await expect(page.locator(".daily-chart .range")).toHaveCount(
+      partial === "all-partial" ? 0 : 5,
+    );
+    const daily = page.locator(".daily-chart");
+    await daily.focus();
+    await daily.press("End");
+    const geometry = await daily.locator('svg[role="img"]').evaluate(
+      (svg, text) => {
+        const label = [...svg.querySelectorAll("text")].find(
+          (e) => e.textContent === text,
+        )!;
+        const bounds = svg.getBoundingClientRect(),
+          value = label.getBoundingClientRect();
+        return {
+          plotTop: bounds.top,
+          plotBottom: bounds.bottom,
+          top: value.top,
+          bottom: value.bottom,
+        };
+      },
+      partial === "missing-low" ? "35°" : "-20°",
+    );
+    expect(geometry.top).toBeGreaterThanOrEqual(geometry.plotTop);
+    expect(geometry.bottom).toBeLessThanOrEqual(geometry.plotBottom);
+  });
 test("system appearance, independent 130% setting and legacy rollback survive reload", async ({
   page,
 }) => {

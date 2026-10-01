@@ -18,7 +18,7 @@ import {
   type Weather,
 } from "@todayweather/core";
 import { WeatherIcon, Empty, SectionHead, percent } from "./components";
-import { amount, approxAmount, dayLabel, windText } from "./format";
+import { amount, approxAmount, dayLabel, windText, iconKind } from "./format";
 import { hourText } from "./locale";
 import { t, useLanguage } from "./i18n";
 import { useApp } from "./context";
@@ -452,7 +452,11 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
     column = measuredWidth(
       model.rows.map((r) => dayLabel(r.point.at, w.current.at)),
       `${rem * 0.8125}px Pretendard`,
-      rem * 5,
+      measuredWidth(
+        [`${t("display.am")} ${t("display.pm")}`],
+        `${rem * 0.8125}px Pretendard`,
+        rem * 5,
+      ),
     );
   const width = Math.max(viewport, n * column),
     cell = n ? width / n : column,
@@ -472,14 +476,30 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
   }, [width, viewport, model.startIndex, lang]);
   if (!n)
     return (
-      <section className="panel daily-chart-panel">
+      <section
+        className="panel daily-chart-panel"
+        data-weather-section="daily"
+        tabIndex={-1}
+      >
         <SectionHead title={t("daily.title")} />
         <Empty title={t("daily.empty")} />
       </section>
     );
   const row = model.rows[cursor] ?? model.rows[0];
+  const condition = (icon: string) =>
+    icon ? t(`condition.${iconKind(icon)}`) : t("common.noInfo");
+  const conditions = (r: typeof row) =>
+    r.mergedIcons
+      ? condition(r.point.icon)
+      : `${t("display.am")} ${condition(r.point.icon)} · ${t("display.pm")} ${condition(r.point.iconPm)}`;
+  const probability = (r: typeof row) =>
+    !r.past && r.point.rainProbability ? percent(r.point.rainProbability) : "—";
   return (
-    <section className="panel daily-chart-panel" data-weather-section="daily">
+    <section
+      className="panel daily-chart-panel"
+      data-weather-section="daily"
+      tabIndex={-1}
+    >
       <SectionHead
         title={t("daily.title")}
         aside={<span className="muted-text">{t("daily.legend")}</span>}
@@ -505,16 +525,31 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
               >
                 <span>{dayLabel(r.point.at, w.current.at)}</span>
                 <div className="chart-icons">
-                  {i > 0 ? (
+                  <span
+                    className="chart-condition"
+                    role="img"
+                    aria-label={
+                      r.mergedIcons
+                        ? condition(r.point.icon)
+                        : `${t("display.am")} ${condition(r.point.icon)}`
+                    }
+                  >
+                    <span aria-hidden="true" className="chart-period">
+                      {r.mergedIcons ? "" : t("display.am")}
+                    </span>
                     <WeatherIcon icon={r.point.icon} size={rem * 1.5} />
-                  ) : (
-                    <span
-                      className="chart-icon-placeholder"
-                      aria-hidden="true"
-                    />
-                  )}
+                  </span>
                   {!r.mergedIcons && (
-                    <WeatherIcon icon={r.point.iconPm} size={rem * 1.5} />
+                    <span
+                      className="chart-condition"
+                      role="img"
+                      aria-label={`${t("display.pm")} ${condition(r.point.iconPm)}`}
+                    >
+                      <span aria-hidden="true" className="chart-period">
+                        {t("display.pm")}
+                      </span>
+                      <WeatherIcon icon={r.point.iconPm} size={rem * 1.5} />
+                    </span>
                   )}
                 </div>
                 <span>
@@ -632,6 +667,7 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
       >
         {dayLabel(row.point.at, w.current.at)} · {formatValue(row.point.low)}°–
         {formatValue(row.point.high)}°
+        {` · ${conditions(row)} · ${t("display.probability")} ${probability(row)} · ${t("display.precipitation")} ${rain(row.point, w.units.precipitationUnit)}`}
         {row.today && model.current !== null
           ? ` · ${t("display.current")} ${formatValue(model.current)}°`
           : ""}
@@ -651,6 +687,7 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
                   t("display.current"),
                   t("display.probability"),
                   t("display.precipitation"),
+                  t("display.conditions"),
                 ].map((s) => (
                   <th scope="col" key={s}>
                     {s}
@@ -672,6 +709,7 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
                       : "—"}
                   </td>
                   <td>{rain(r.point, w.units.precipitationUnit)}</td>
+                  <td>{conditions(r)}</td>
                 </tr>
               ))}
             </tbody>

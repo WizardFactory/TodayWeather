@@ -4,6 +4,7 @@ import {
   useParams,
   useNavigate,
   useSearchParams,
+  useLocation,
   Link,
 } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -153,15 +154,36 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
       : false,
     refetchIntervalInBackground: false,
   });
+  const live = query.data;
+  const showStored = !live && query.isPending && !!stored.data;
+  const data = live?.weather ?? (showStored ? stored.data! : undefined);
+  const route = useLocation();
+  // Stored and live data can differ between an empty section and a chart.
+  const hasChartRows = Boolean(
+    view === "daily" ? data?.daily.length : data?.hourly.length,
+  );
+  useEffect(() => {
+    if (!data || (view !== "hourly" && view !== "daily")) return;
+    // Run after the route shell closes its menu and chart metrics settle.
+    const frame = requestAnimationFrame(() => {
+      const section = document.querySelector<HTMLElement>(
+        `[data-weather-section="${view}"]`,
+      );
+      if (!section) return;
+      const target =
+        section.querySelector<HTMLElement>('.chart-scroll[role="group"]') ??
+        section;
+      target.focus({ preventScroll: true });
+      section.scrollIntoView({ block: "start", behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [route.key, view, !!data, data?.location.id, hasChartRows]);
   if (!place)
     return (
       <Empty title={t("weather.selectFirst")}>
         <Link to="/locations">{t("weather.manageLocations")}</Link>
       </Empty>
     );
-  const live = query.data;
-  const showStored = !live && query.isPending && !!stored.data;
-  const data = live?.weather ?? (showStored ? stored.data! : undefined);
   async function share() {
     const publicPlace = PLACES.find(
       (p) =>
@@ -426,7 +448,11 @@ function WeatherDetails({
           </div>
         </section>
       </div>
-      <section className="panel chart-panel" data-weather-section="hourly">
+      <section
+        className="panel chart-panel"
+        data-weather-section="hourly"
+        tabIndex={-1}
+      >
         <SectionHead
           title={t("weather.hourly.title")}
           aside={

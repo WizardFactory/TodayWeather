@@ -68,15 +68,13 @@ test.describe("focus management (round 2 N1/N2/N5/N7/N8)", () => {
       .click({ position: { x: 380, y: 400 } });
     await expect(opener).toBeFocused();
   });
-  test("view tabs keep focus on the pressed tab; sidebar links focus main", async ({
+  test("chart tabs focus their chart; sidebar links focus main", async ({
     page,
   }) => {
     await page.goto("/weather/seoul/hourly");
     await page.getByRole("button", { name: "일별", exact: true }).click();
     await expect(page).toHaveURL(/\/daily$/);
-    await expect(
-      page.getByRole("button", { name: "일별", exact: true }),
-    ).toBeFocused();
+    await expect(page.locator(".daily-chart")).toBeFocused();
     await page.locator(".sidebar").getByRole("link", { name: "설정" }).click();
     await expect.poll(() => active(page)).toBe("main-content");
   });
@@ -100,7 +98,7 @@ test.describe("focus management (round 2 N1/N2/N5/N7/N8)", () => {
     await expect(link).toBeFocused();
     await page.goBack();
     await expect(page).toHaveURL(/\/daily$/);
-    await expect.poll(() => active(page)).toBe("main-content");
+    await expect(page.locator(".daily-chart")).toBeFocused();
   });
   test("widening the window closes an open mobile menu", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -314,7 +312,7 @@ test.describe("units and refresh (U2, G17, G18)", () => {
     await expect(page.locator(".details-panel")).toContainText("mmHg");
     await expect(page.locator(".details-panel")).toContainText("mi");
     await page.getByRole("button", { name: "미세먼지", exact: true }).click();
-      await expect(page.locator(".air-detail")).toContainText("중국 기준");
+    await expect(page.locator(".air-detail")).toContainText("중국 기준");
   });
   test("changing a unit in settings converts the shown weather", async ({
     page,

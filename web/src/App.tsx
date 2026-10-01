@@ -247,6 +247,12 @@ export default function App() {
   }, []);
   useEffect(() => {
     setMenuOpen(false);
+    // Weather owns chart-route scroll/focus once its data has rendered.
+    if (/^\/weather\/[^/]+\/(hourly|daily)$/.test(location.pathname)) {
+      firstRoute.current = false;
+      focusMain.current = false;
+      return;
+    }
     window.scrollTo(0, 0);
     // Move focus to the new page so screen readers announce it, except for
     // in-page tab switches that keep focus on the pressed tab. History

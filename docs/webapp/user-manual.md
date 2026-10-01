@@ -2,7 +2,7 @@
 
 [Read the seven-page PDF](user-manual.pdf). The [editable JSON](user-manual.json) contains the same instructions; [scenario screenshots and provenance](manual-images/provenance.json) come from the actual static PWA using synthetic weather data.
 
-The manual covers display preferences, hourly comparison, daily ranges, air information, enlarged text, saved browser data and clean-checkout reproduction. Its S1–S7 scenarios match the [adoption plan](../../plans/pwa-design-adoption.md). Missing values remain dashes; timestamps and stale-data warnings remain visible. Browser text size is independent of system text size. The accepted iOS system comparison is 23pt / 17pt (about135%), while the PWA control offers exactly130%.
+The manual covers display preferences, hourly comparison, daily ranges, air information, enlarged text, saved browser data and clean-checkout reproduction. Its S1–S7 scenarios match the [adoption plan](../../plans/pwa-design-adoption.md). Choose Hourly or Daily to scroll to and focus its chart. Daily AM/PM conditions and precipitation are available in the cursor and table; partial extrema retain the shared scale. Missing values remain dashes; timestamps and stale-data warnings remain visible. Browser text size is independent of system text size. The accepted iOS system comparison is 23pt / 17pt (about135%), while the PWA control offers exactly130%.
 
 ## Reproduce
 

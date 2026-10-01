@@ -90,6 +90,22 @@ function geometry() {
     );
   };
   const failures = [];
+  // The daily column must fit its localized period labels above the plot.
+  const dailyPlot = document
+    .querySelector('.daily-chart svg[role="img"]')
+    ?.getBoundingClientRect();
+  for (const cell of document.querySelectorAll(
+    ".daily-columns .chart-column",
+  )) {
+    const bounds = cell.getBoundingClientRect();
+    for (const label of cell.querySelectorAll(".chart-period")) {
+      const r = label.getBoundingClientRect();
+      if (r.left < bounds.left - 1 || r.right > bounds.right + 1)
+        failures.push("daily period outside column");
+    }
+    if (dailyPlot && bounds.bottom > dailyPlot.top + 1)
+      failures.push("daily header overlaps temperature plot");
+  }
   const cells = [...document.querySelectorAll(".hourly-columns .chart-column")];
   const wind = cells.flatMap((cell) => [
     ...cell.querySelectorAll(".chart-wind-direction"),

@@ -96,7 +96,8 @@ export function dailyChart(weather: Pick<Weather, "daily" | "current">) {
     todayIndex,
     current,
     domain: temperatureDomain([
-      ...rows.flatMap((r) => (r.validRange ? [r.point.low, r.point.high] : [])),
+      // Partial days still render their supplied extremum, even without a bar.
+      ...rows.flatMap((r) => [r.point.low, r.point.high]),
       current,
     ]),
     startIndex: Math.max(0, todayIndex - 2),

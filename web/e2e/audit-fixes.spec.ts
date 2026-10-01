@@ -63,6 +63,9 @@ test("closed mobile menu is out of the tab order; open menu takes focus and Esca
     ).toBe(false);
   }
   const opener = page.getByRole("button", { name: "메뉴 열기" });
+  // Chart-route focus changes the starting position; dismiss a focused skip link
+  // before testing the pointer action on the header beneath it.
+  await opener.focus();
   await opener.click();
   await expect
     .poll(() =>

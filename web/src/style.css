@@ -2328,7 +2328,7 @@ textarea {
   height: 9rem;
 }
 .daily-columns {
-  height: 8rem;
+  height: 10rem;
 }
 .chart-column {
   position: absolute;
@@ -2354,6 +2354,19 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: var(--tw-space-2);
+}
+.chart-condition {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.chart-period {
+  min-height: 1.5em;
+  white-space: nowrap;
+}
+[data-weather-section="hourly"],
+[data-weather-section="daily"] {
+  scroll-margin-top: var(--tw-space-4);
 }
 .chart-amount {
   font-size: max(var(--tw-type-caption-size), var(--font-floor));
