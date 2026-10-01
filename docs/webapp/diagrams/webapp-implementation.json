@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather.git",
-      "revision": "8155c1ac78abc984f2b81366123952a8e16d669c",
+      "revision": "5c51dd89ab28fa62d9b9f2e5ca42aa8aff666e10",
       "link_mode": "web"
     }
   },
@@ -98,7 +98,7 @@
         {
           "path": "web/src/Weather.tsx",
           "line": 158,
-          "end_line": 186
+          "end_line": 203
         },
         {
           "path": "web/src/Charts.tsx",
