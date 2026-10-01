@@ -92,7 +92,6 @@ Sources: [base assembly](../../server/controllers/controllerTown.js), functions 
 | Product | Lookup and join | Destination |
 | --- | --- | --- |
 | KMA life indices | Exact address → `modelAreaNo` → `LifeIndexKmaController.appendData2`; if unavailable, near-area candidates using geographic position | Matching daily entries; area/geocode context reused by later stages |
-| Health-day indices | Existing `areaNo`, address lookup, then nearest geographic area fallback; stored `modelHealthDay` values | Matching daily health fields |
 | AirKorea observations | `KecoController.getArpLtnInfo(townInfo, now)` selects up to six nearby stations and merges their latest readings ([station selection](#station-selection-and-merge)) | `current.arpltn`, `arpltnList`, `arpltnStnList`. Source reading, not reproduced: when `getArpLtnInfo` reports an error, [`getKeco`](../../server/controllers/controllerTown.js#L2562-L2570) logs it and then reads `arpltnObj.arpltn` from an undefined result inside the database callback, the same callback-time class as [§5 step 3](#5-world-weather-request-time-cache-fill-then-merge) |
 | Regional air forecast | `getKecoDustForecast` runs only for `airForecastSource==='airkorea'`, joining dates | `midData.dailyData[].dustForecast` |
 | Sunrise/sunset | Geographic lookup through `kasiRiseSetController.getRiseSetList` for the composed daily dates | Sunrise/sunset and other returned astronomical fields copied into daily entries |
@@ -101,13 +100,13 @@ Sources: [base assembly](../../server/controllers/controllerTown.js), functions 
 | Hourly air forecast | `AirForecastList` uses `async.map`, therefore stations can load in parallel. `_getAirForecast` selects KAQ or AirKorea controller by query. It fails a station on an empty forecast (except `태하리`), an unknown `airForecastSource` or a controller error | Adds forecast pollutant series to each station item. `async` 2.x invokes the final callback on the **first** station error; it logs and `next()` proceeds while other stations' reads may still be pending. Those reads still mutate the shared `airInfoList` objects, so their forecast series appear only if they finish before `sendResult` serializes. Per-station forecast presence is timing-dependent when stations fail differently (source + library-semantics analysis; not reproduced). v000901/v000902 use singular `AirForecast`, which waits for its one station ([§7](#7-mounted-version-variants-and-callers)). |
 | Special warnings | Town + nearest station → special-weather controller; latest type-1 document only ([§8](#8-weather-warnings)) | `current.specialInfo` when a nonempty list exists (v000903 only) |
 
-Sources: [base enrichments](../../server/controllers/controllerTown.js) (`getLifeIndexKma`, `getHealthDay`, `getKeco`, `getKecoDustForecast`, `getRiseSetInfo`, `insertIndex`); [air and warning composition](../../server/controllers/controllerTown24h.js) (`makeAirInfoList`, `AirForecastList`, `getSpecialInfo`). These read stored products; normal domestic assembly does not start KMA weather collection on demand. The KASI reader contains an API fallback after an always-true array-length check, so normal array results (including empty arrays) return before that fallback.
+Sources: [base enrichments](../../server/controllers/controllerTown.js) (`getLifeIndexKma`, `getKeco`, `getKecoDustForecast`, `getRiseSetInfo`, `insertIndex`); [air and warning composition](../../server/controllers/controllerTown24h.js) (`getAirFallback`, `makeAirInfoList`, `AirForecastList`, `getSpecialInfo`). These read stored products; normal domestic assembly does not start KMA weather collection on demand. The KASI reader contains an API fallback after an always-true array-length check, so normal array results (including empty arrays) return before that fallback.
 
 ### Station selection and merge
 
 Source reading unless marked otherwise. Station distances use MongoDB `$near` with `$maxDistance` on the planar `2d` indexes of [`MsrStnInfo`](../../server/models/modelMsrStnInfo.js#L43-L46) and [`KmaStnInfo`](../../server/models/modelKmaStnInfo.js#L12-L15). They are therefore measured in coordinate degrees, not kilometres (library semantics).
 
-**AirKorea observations (`getKeco`, item 24).** [`getKeco`](../../server/controllers/controllerTown.js#L2562-L2570) passes `new Date()` to [`getArpLtnInfo`](../../server/controllers/kecoController.js#L389-L435).
+**AirKorea observations (`getKeco`, item 23).** [`getKeco`](../../server/controllers/controllerTown.js#L2562-L2570) passes `new Date()` to [`getArpLtnInfo`](../../server/controllers/kecoController.js#L389-L435).
 
 1. Candidates: up to 6 `MsrStnInfo` stations nearest to `gCoord`, within 1°.
 2. History: for each station, in distance order, the `Arpltn` records whose `date` is later than now − 24 h, newest first ([`_getArpLtnList`](../../server/controllers/kecoController.js#L129-L166)). A station with no such record is dropped, so the positions below count only stations with data.
@@ -246,8 +245,8 @@ Traffic context from the [2026-08-23..09-22 CloudFront window](../evidence/aws/a
 
 | Chain | Routes | Items | Difference from the v000903 KMA list or the 14-item DSF list |
 | --- | --- | --- | --- |
-| KMA v000901 ([router](../../server/routes/v000901/route.kma.addr.js#L53-L66)) | `/v000901/kma/addr/:region[/:city[/:town]]` only; v000901 mounts no `/kma/coord` or `/kma/special` ([index](../../server/routes/v000901/index.js#L31-L34)) | 36 | Items 28–30 are `makeAirInfo`, `AirForecast`, `insertSkyIcon`. `getSpecialInfo` (v000903 item 32) is absent, so later items move up by one. |
-| KMA v000902 ([router](../../server/routes/v000902/route.kma.v000902.js#L53-L70)) | `/v000902/kma/addr/...`; `/v000902/kma/coord/:loc` with `coord2addr` prepended | 36 / 37 | Items 28–29 are `makeAirInfo`, `AirForecast`; item 30 `insertSkyIconLowCase` is unchanged. `getSpecialInfo` is absent, so later items move up by one. |
+| KMA v000901 ([router](../../server/routes/v000901/route.kma.addr.js#L53-L66)) | `/v000901/kma/addr/:region[/:city[/:town]]` only; v000901 mounts no `/kma/coord` or `/kma/special` ([index](../../server/routes/v000901/index.js#L31-L34)) | 35 | Items 27–29 are `makeAirInfo`, `AirForecast`, `insertSkyIcon`. `getAirFallback` (v000903 item 24) and `getSpecialInfo` (item 32) are absent, so later items move up by two. |
+| KMA v000902 ([router](../../server/routes/v000902/route.kma.v000902.js#L53-L70)) | `/v000902/kma/addr/...`; `/v000902/kma/coord/:loc` with `coord2addr` prepended | 35 / 36 | Items 27–28 are `makeAirInfo`, `AirForecast`; item 29 is `insertSkyIconLowCase`. `getAirFallback` and `getSpecialInfo` are absent, so later items move up by two. |
 | KMA v000903 ([appendix](#kma-v000903)) | Address; coordinate with `coord2addr`; separate `/kma/special` | 37 / 38 | Reference list |
 | DSF v000901 ([router](../../server/routes/v000901/route.dsf.coord.js#L33-L37)) | `/v000901/dsf/coord/:loc` | 13 | No `skyIconLowCase` (item 10) |
 | DSF v000902 ([appendix](#dsf-v000902-handler-mounted-by-v000903)) | `/v000902/dsf/coord/:loc`, also mounted at `/v000903/dsf/coord/:loc` | 14 | Reference list |
@@ -309,7 +308,7 @@ These are direct route registration lists, not inferred scheduling. Grouped diag
 
 ### KMA v000903
 
-`coord2addr` is prepended **only** for `/coord/:loc`; address routes start at item 1. The v000901 list replaces items 28–30 (`makeAirInfo`, `AirForecast`, `insertSkyIcon`). The v000902 list replaces items 28–29 (`makeAirInfo`, `AirForecast`) and keeps item 30. Both omit item 32, so their later items shift up by one (36 items; [§7](#7-mounted-version-variants-and-callers)).
+`coord2addr` is prepended **only** for `/coord/:loc`; address routes start at item 1. The v000901 list replaces items 28–30 (`makeAirInfo`, `AirForecast`, `insertSkyIcon`). The v000902 list replaces items 28–29 (`makeAirInfo`, `AirForecast`) and keeps item 30. Both omit items 24 (`getAirFallback`) and 32 (`getSpecialInfo`), so their later items shift up by two (35 items; [§7](#7-mounted-version-variants-and-callers)).
 
 1. `checkQueryValidation`
 2. `checkParamValidation`
@@ -333,8 +332,8 @@ These are direct route registration lists, not inferred scheduling. Grouped diag
 20. `mergeMidWithShort` (freshness-gated short overlay, ASOS daily merge, window filter and `dailyStatus` since `95fe711e`/`49afbbea`/`2116c6bf`)
 21. `updateMidTempMaxMin`
 22. `getLifeIndexKma`
-23. `getHealthDay`
-24. `getKeco`
+23. `getKeco`
+24. `getAirFallback`
 25. `getKecoDustForecast`
 26. `getRiseSetInfo`
 27. `insertIndex`

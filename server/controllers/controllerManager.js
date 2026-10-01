@@ -2228,18 +2228,6 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 10 || putAll) {
-        log.info('push health day');
-
-        var hour = (new Date()).getUTCHours()+9;
-
-        if(hour === 6 || hour === 18 || putAll) {
-            self.asyncTasks.push(function HealthDAy(callback) {
-                self._requestApi('healthday', callback);
-            });
-        }
-    }
-
     if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
         //direct request keco
         log.info('push keco realtime');
@@ -2374,8 +2362,10 @@ Manager.prototype.startManager = function(){
     self.keco = keco;
 
     taskKmaIndexService.setServiceKey(config.keyString.cert_key, config.keyString);
-    taskKmaIndexService.setNextGetTime('fsn', new Date());
     taskKmaIndexService.setNextGetTime('ultrv', new Date());
+    ['flowerWoody', 'flowerPine', 'flowerWeeds'].forEach(function (name) {
+        taskKmaIndexService.setNextGetTime(name, new Date());
+    });
     self.taskKmaIndexService = taskKmaIndexService;
 
     var kmaForecastZoneCode = new KmaForecastZoneCode(config.keyString.test_normal);

@@ -54,6 +54,29 @@ test("missing rain hides the period while explicit snow remains visible", async 
     page.getByRole("heading", { name: "강수·눈 예보" }),
   ).toBeVisible();
 });
+test("available pollen risk is shown and absent species stay hidden", async ({
+  page,
+}) => {
+  await page.route(
+    "https://todayweather.wizardfactory.net/weather/**",
+    async (route) => {
+      const data: any = structuredClone(rawWeather);
+      const today = data.daily.find((day: any) => day.fromToday === 0);
+      today.flowerWeeds = 0;
+      await route.fulfill({ json: data });
+    },
+  );
+  await page.goto("/weather/seoul/hourly");
+  const details = page.locator(".details-panel");
+  await expect(details.getByText("잡초류 꽃가루")).toBeVisible();
+  await expect(
+    details.locator(".detail-grid > div").filter({ hasText: "잡초류 꽃가루" }),
+  ).toContainText("낮음");
+  await expect(details.getByText("참나무 꽃가루")).toHaveCount(0);
+  await expect(details.getByText("소나무 꽃가루")).toHaveCount(0);
+  if (process.env.LIFE_INDEX_CAPTURE === "1")
+    await details.screenshot({ path: "docs/user/images/life-index-pollen.png" });
+});
 test("static favorites delete offline without a server", async ({
   page,
   context,

@@ -295,12 +295,16 @@ LifeIndexKmaController._addIndexData2 = function (midList, lifeIndexList) {
 
         list.forEach(function (indexObj) {
             var indexType = indexObj.indexType;
-            dayObj[indexType] = indexObj.index;
-            if (indexType === 'fsn') {
-                dayObj['fsnGrade'] = self._fsnGrade(indexObj.index);
-            }
-            else if (indexType === 'ultrv') {
+            if (indexType === 'ultrv' && typeof indexObj.index === 'number' &&
+                    isFinite(indexObj.index) && indexObj.index >= 0) {
+                dayObj[indexType] = indexObj.index;
                 dayObj['ultrvGrade'] = self._ultrvGrade(indexObj.index);
+            }
+            else if (['flowerWoody', 'flowerPine', 'flowerWeeds'].indexOf(indexType) !== -1 &&
+                     typeof indexObj.index === 'number' && Number.isInteger(indexObj.index) &&
+                     indexObj.index >= 0 && indexObj.index <= 3) {
+                dayObj[indexType] = indexObj.index;
+                dayObj[indexType + 'Grade'] = indexObj.index;
             }
         });
     });

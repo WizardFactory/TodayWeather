@@ -11,7 +11,6 @@ var dongnae_keys = JSON.parse(require('../../config/config').keyString.dongnae_f
 
 var Scrape = require('../../lib/kmaScraper');
 var PastConditionGather = require('../../lib/PastConditionGather');
-var ctrlHealthDay = require('../../controllers/controllerHealthDay');
 var KasiRiseSet = require('../../controllers/kasi.riseset.controller');
 
 router.use(function timestamp(req, res, next){
@@ -197,23 +196,6 @@ router.get('/shortest', function(req, res) {
 router.get('/lifeindex', function (req, res) {
     manager.taskKmaIndexService.cbKmaIndexProcess(manager.taskKmaIndexService, function (err) {
         if (err) {
-            log.error(err);
-        }
-        res.send();
-    });
-});
-
-router.get('/healthday', function(req, res) {
-    var requestUrl;
-    var urlList = [];
-    
-    for(var i=1;i<=7;i++) {
-        requestUrl = ctrlHealthDay.makeRequestString(i, 0);
-        urlList.push(requestUrl);
-    }
-
-    ctrlHealthDay.getData(urlList, function(err) {
-        if(err) {
             log.error(err);
         }
         res.send();

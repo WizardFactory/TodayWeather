@@ -8,8 +8,9 @@
     "column_fit": "spread",
     "viewBox": [
       1080,
-      520
-    ]
+      560
+    ],
+    "output": "docs/architecture/diagrams/mobile-weather-request.html"
   },
   "participants": [
     {
@@ -40,7 +41,7 @@
       "id": "backend",
       "type": "backend",
       "label": "Service EC2",
-      "sublabel": "nginx / PM2 \u00d7 10"
+      "sublabel": "nginx / PM2 × 10"
     }
   ],
   "messages": [
@@ -122,7 +123,7 @@
       "dot": "amber",
       "title": "Repository gateway: temporary outage (#2635)",
       "items": [
-        "tw-svc replaces Lambda: typed provider-down / budget errors return 503 + Retry-After (1\u20133600 s), CORS and no-store.",
+        "tw-svc replaces Lambda: typed provider-down / budget errors return 503 + Retry-After (1–3600 s), CORS and no-store.",
         "Stored weather still succeeds; other failures remain 501. Known outages skip gateway retries."
       ]
     },
@@ -132,6 +133,14 @@
       "items": [
         "Repository change: VC uvindex travels through the converter, DSF parser and optional cache fields.",
         "Current UV and daily maximum: uvIndex plus mobile ultrv / ultrvGrade / ultrvStr. Valid zero survives; missing stays absent. Production rollout is separate."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "LifeIndex response (#2650)",
+      "items": [
+        "KMA getLifeIndexKma adds optional daily UV and oak/pine/weed pollen fields from valid stored values.",
+        "Health enrichment and stale food-poisoning are absent; weather-core exposes optional uvIndex and three pollen grades."
       ]
     }
   ]

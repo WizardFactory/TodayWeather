@@ -259,6 +259,8 @@ These are synthetic checks, not live AirKorea, Mongo or mobile tests. AirKorea
 
 `riseset-uv.test.js` (part of `test:offline`) loads the production modules in a VM with stubbed HTTP, models and configuration. It checks computed sunrise/sunset against KASI reference values under three host time zones, `getRiseSetInfo` fill-in and failure handling, KASI key rotation and per-area continuation, and the `getUVIdxV5` collector: slot fallback, pagination, key rotation, no partial save and conversion into daily `ultrv` read back through `appendData2`. `fixtures/uv-idx-v5.json` is a live `getUVIdxV5` response recorded on 2026-09-26 (`areaNo=` `numOfRows=3` `time=2026092612`; first three of 3,851 areas; the body contains no key).
 
+`life-index-2650.test.js` checks all three pollen species, seasonal dispatch and pagination with isolated dependencies. `fixtures/pollen-risk-v3-live-20261001.json` holds three sanitized rows from the live weeds V3 API on 2026-10-01, including an empty `today`, a valid zero `tomorrow` and no `theDayAfterTomorrow`. The test confirms that the zero lands on 2026-10-01 and missing days are omitted, including under `TZ=America/Los_Angeles`; the first KST day of the April and August seasons is also tested. No credential is stored in the fixture.
+
 `riseset-uv-smoke.js` runs the v000903 coordinate route through the RSS smoke harness with the real KASI and life index controllers on synthetic store rows (DB 1.0 and 2.0; stores present, empty and failing):
 
 ```sh

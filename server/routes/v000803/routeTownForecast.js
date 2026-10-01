@@ -48,7 +48,7 @@ var routerList = [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.getS
     cTown.getShortRss, cTown.getShortest, cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentSkyByShortest,
     cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather, cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
     cTown.mergeByShortest, cTown.adjustShort, cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo,
-    cTown.getPastMid, cTown.mergeMidWithShort, cTown.updateMidTempMaxMin, cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco,
+    cTown.getPastMid, cTown.mergeMidWithShort, cTown.updateMidTempMaxMin, cTown.getLifeIndexKma, cTown.getKeco,
     cTown.getKecoDustForecast, cTown.getRiseSetInfo, cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
     cTown.getSummary, cTown.makeResult, cTown.sendResult];
 
@@ -62,7 +62,7 @@ router.get('/:region/:city/:town', routerList);
  * mid, short, shortest 다 정상적으로 동작하기 위해서는 current, shorest, short의 데이타가 필요하다.
  */
 //router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid,
-//                                    cTown.mergeMidWithShort, cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco,
+//                                    cTown.mergeMidWithShort, cTown.getLifeIndexKma, cTown.getKeco,
 //                                    cTown.getKecoDustForecast, cTown.insertIndex, cTown.insertSkyIcon,
 //                                    cTown.insertStrForData, cTown.insertSkyIcon, cTown.sendResult]);
 //

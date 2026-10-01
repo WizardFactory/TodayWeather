@@ -20,13 +20,14 @@ var kmaTimeLib = require('../lib/kmaTimeLib');
 
 //var config = require('../config/config');
 
-var DOMAIN_KMA_INDEX_SERVICE = "http://203.247.66.146";
-var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
-// var DOMAIN_KMA_INDEX_SERVICE = "http://newsky2.kma.go.kr";
-// var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService3";
-
-// The legacy UV list answers 307 -> /503.html; UV moved to the data.go.kr life weather index 4.0 (#2587).
+// The legacy UV list answers 307 -> /503.html; UV moved to data.go.kr V5 (#2587).
 var UV_V5_URL = "http://apis.data.go.kr/1360000/LivingWthrIdxServiceV5/getUVIdxV5";
+var POLLEN_V3_BASE = 'https://apis.data.go.kr/1360000/HealthWthrIdxServiceV3/';
+var POLLEN_OPERATIONS = {
+    flowerWoody: 'getOakPollenRiskIdxV3',
+    flowerPine: 'getPinePollenRiskIdxV3',
+    flowerWeeds: 'getWeedsPollenRiskndxV3'
+};
 var UV_V5_ROWS = 1000;
 // Current three-hour KST slot and earlier ones, to reach the latest issuance.
 var UV_V5_SLOT_COUNT = 5;
@@ -45,13 +46,6 @@ function KmaIndexService() {
     this.serviceKeyIndex = -1;
     this._areaList = [];
     this.requestCount = {};
-
-    this.fsn = {
-        nextTime: null,
-        offerMonth: {start: 0, end: 11}, //1~12
-        updateTimeTable: [9, 21],   //kr 06, 18
-        urlPath: 'getFsnLifeList'
-    };
 
     //this.rot = {
     //    nextTime: null,
@@ -103,6 +97,16 @@ function KmaIndexService() {
         urlPath: 'getUltrvLifeList'
     };
 
+    // KMA pollen risk is seasonal. Poll the current KST day at four UTC slots;
+    // a missing publication is retried on the next hourly manager pass.
+    ['flowerWoody', 'flowerPine', 'flowerWeeds'].forEach(function (name) {
+        this[name] = {
+            nextTime: null,
+            offerMonth: name === 'flowerWeeds' ? {start: 7, end: 9} : {start: 3, end: 5},
+            updateTimeTable: [0, 6, 12, 18]
+        };
+    }, this);
+
     //this.airpollution = {
     //    nextTime: null,
     //    offerMonth: {start: 10, end: 4},
@@ -123,8 +127,8 @@ KmaIndexService.prototype.setServiceKey = function(key, keyBox) {
     if (keyBox && keyBox.test_cert && keyBox.test_cert !== key) {
         this.serviceKeyList.push(keyBox.test_cert);
     }
-    // Any data.go.kr account key may hold the life weather index 4.0 approval (#2587).
-    // On 2026-09-26 only one forecast key was approved for it.
+    // An existing data.go.kr key can cover both UV V5 and pollen V3; on 2026-10-01
+    // one configured forecast key returned live UV and weeds rows.
     if (keyBox) {
         var list = this.serviceKeyList;
         var candidates = [keyBox.normal, keyBox.test_normal];
@@ -242,6 +246,13 @@ KmaIndexService.prototype.getLastGetTime = function (indexName) {
 KmaIndexService.prototype.setNextGetTime = function(indexName, time) {
     var l = this[indexName];
 
+    // Pollen availability is determined from KST in taskPollenV3. The legacy UTC
+    // month adjustment below can roll March 31 into May and July 31 into August 31.
+    if (POLLEN_OPERATIONS[indexName]) {
+        l.nextTime = time ? new Date(time.getTime()) : new Date((l.nextTime || new Date()).getTime() + 3*3600*1000);
+        return this;
+    }
+
     if (time) {
         l.nextTime = time;
     }
@@ -300,20 +311,7 @@ KmaIndexService.prototype.setNextGetTime = function(indexName, time) {
  * @returns {string}
  */
 KmaIndexService.prototype.getUrl = function (indexName, areaNo, svcKey) {
-    var lifeIndex = this[indexName];
-    if (!svcKey) {
-        svcKey = this.serviceKey;
-    }
-
-    var url = DOMAIN_KMA_INDEX_SERVICE + "/" + PATH_RETRIEVE_LIFE_INDEX_SERVICE;
-    url += "/" + lifeIndex.urlPath;
-    url += "?serviceKey="+svcKey;
-    if (areaNo) {
-        url += "&AreaNo="+areaNo;
-    }
-    url += "&_type=json";
-
-    return url;
+    throw new Error('Legacy life index API is retired; only UV V5 collection is supported');
 };
 
 /**
@@ -766,7 +764,7 @@ KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
     }
 
     var self = this;
-    var list = ['ultrv', 'fsn'];
+    var list = ['ultrv'];
 
     //findAreaNo from town
     this.findAreaByTown(townInfo, function (err, town) {
@@ -860,7 +858,7 @@ KmaIndexService.prototype.cbKmaIndexProcess = function(self, callback) {
     //RotLife
     //HeatLife
     //AirpollutionLife
-    var list = ['ultrv', 'fsn'];
+    var list = ['ultrv', 'flowerWoody', 'flowerPine', 'flowerWeeds'];
     async.mapSeries(list,
         function(indexName, cb) {
             self.taskLifeIndex2(indexName, function (err) {
@@ -894,8 +892,10 @@ KmaIndexService.prototype.start = function() {
     //this.setNextGetTime('rot', new Date());
     //this.setNextGetTime('sensorytem', new Date());
     //this.setNextGetTime('dspls', new Date());
-    this.setNextGetTime('fsn', new Date());
     this.setNextGetTime('ultrv', new Date());
+    ['flowerWoody', 'flowerPine', 'flowerWeeds'].forEach(function (name) {
+        this.setNextGetTime(name, new Date());
+    }, this);
     setTimeout(this.cbKmaIndexProcess, 3*1000, this); //start after 3secs
 };
 
@@ -1056,14 +1056,14 @@ KmaIndexService.prototype.saveLifeIndex2 = function(indexName, results, callback
             var query = {date: result.date, areaNo: result.areaNo, indexType: result.indexType};
             LifeIndexKma2.update(query, result, {upsert:true}, function (err) {
                 if(err) {
-                    log.error(err.message + "in insert DB(healthData)");
+                    log.error(err.message + " in insert DB(lifeIndex)");
                     log.info(JSON.stringify(result));
                 }
-                callback();
+                callback(err);
             });
         },
         function (err, result) {
-            callback(err, result.length);
+            callback(err, result ? result.length : 0);
         });
     return this;
 };
@@ -1089,6 +1089,9 @@ KmaIndexService.prototype.taskLifeIndex2 = function (indexName, callback) {
     if (indexName === 'ultrv') {
         this._removeOldData();
         return this.taskUltrvV5(time, callback);
+    }
+    if (POLLEN_OPERATIONS[indexName]) {
+        return this.taskPollenV3(indexName, time, callback);
     }
 
     async.waterfall([
@@ -1157,8 +1160,9 @@ KmaIndexService.prototype.getUvTimeSlotsV5 = function (now) {
  * @param body response of getUVIdxV5 (dataType=JSON) or of the data.go.kr gateway
  * @returns {{error: Error}|{noData: boolean}|{items: Array, totalCount: number}}
  */
-KmaIndexService.prototype.parseUvIdxV5 = function (body) {
+KmaIndexService.prototype.parseUvIdxV5 = function (body, label) {
     var err;
+    label = label || 'uv index v5';
 
     if (typeof body === 'string') {
         try {
@@ -1167,10 +1171,10 @@ KmaIndexService.prototype.parseUvIdxV5 = function (body) {
         catch (e) {
             // The data.go.kr gateway can answer in XML even when JSON is requested.
             var match = /<(returnReasonCode|resultCode)>\s*(\d+)\s*</.exec(body);
-            if (match && match[2] === '03') {
+            if (match && (match[2] === '03' || match[2] === '99')) {
                 return {noData: true};
             }
-            err = new Error('Fail to parse uv index v5 body' + (match ? ' code='+match[2] : ''));
+            err = new Error('Fail to parse '+label+' body' + (match ? ' code='+match[2] : ''));
             if (match) {
                 err.returnCode = match[2];
                 err.isAuthError = DATA_GO_KR_AUTH_CODES.indexOf(match[2]) !== -1;
@@ -1181,22 +1185,22 @@ KmaIndexService.prototype.parseUvIdxV5 = function (body) {
 
     if (body && body.OpenAPI_ServiceResponse && body.OpenAPI_ServiceResponse.cmmMsgHeader) {
         var gateway = body.OpenAPI_ServiceResponse.cmmMsgHeader;
-        err = new Error('uv index v5 reasonCode='+gateway.returnReasonCode+' errMsg='+gateway.errMsg);
+        err = new Error(label+' reasonCode='+gateway.returnReasonCode+' errMsg='+gateway.errMsg);
         err.returnCode = ''+gateway.returnReasonCode;
         err.isAuthError = DATA_GO_KR_AUTH_CODES.indexOf(err.returnCode) !== -1;
         return {error: err};
     }
 
     if (!body || !body.response || !body.response.header) {
-        return {error: new Error('Fail to find header of uv index v5')};
+        return {error: new Error('Fail to find header of '+label)};
     }
 
     var resultCode = ''+body.response.header.resultCode;
-    if (resultCode === '03') {
+    if (resultCode === '03' || resultCode === '99') {
         return {noData: true};
     }
     if (resultCode !== '00' && resultCode !== '0') {
-        err = new Error('uv index v5 resultCode='+resultCode+' resultMsg='+body.response.header.resultMsg);
+        err = new Error(label+' resultCode='+resultCode+' resultMsg='+body.response.header.resultMsg);
         err.returnCode = resultCode;
         err.isAuthError = DATA_GO_KR_AUTH_CODES.indexOf(resultCode) !== -1;
         return {error: err};
@@ -1215,7 +1219,11 @@ KmaIndexService.prototype.parseUvIdxV5 = function (body) {
     }
 
     var totalCount = parseInt(resBody.totalCount, 10);
-    return {items: items, totalCount: isNaN(totalCount) ? items.length : totalCount};
+    return {items: items, totalCount: isNaN(totalCount) ? items.length : totalCount,
+            // Pollen collection needs these response fields to prove that all pages
+            // of one issuance were received before it marks the batch complete.
+            pageNo: Number(resBody.pageNo),
+            reportedTotalCount: Number(resBody.totalCount)};
 };
 
 /**
@@ -1451,5 +1459,184 @@ KmaIndexService.prototype.taskUltrvV5 = function (now, callback) {
     return this;
 };
 
-module.exports = KmaIndexService;
+KmaIndexService.prototype.getPollenUrlV3 = function (indexName, time, pageNo, svcKey) {
+    if (!POLLEN_OPERATIONS[indexName]) {
+        throw new Error('Unknown pollen index '+indexName);
+    }
+    return POLLEN_V3_BASE + POLLEN_OPERATIONS[indexName] + '?serviceKey=' +
+        this._encodeServiceKey(svcKey || this.serviceKey) + '&pageNo=' + pageNo +
+        '&numOfRows=' + UV_V5_ROWS + '&dataType=JSON&areaNo=&time=' + time;
+};
 
+KmaIndexService.prototype.convertPollenItemsV3 = function (indexName, items) {
+    if (!POLLEN_OPERATIONS[indexName]) {
+        throw new Error('Unknown pollen index '+indexName);
+    }
+    var rows = [];
+    items.forEach(function (item) {
+        var issued = String(item.date);
+        var areaNo = Number(item.areaNo);
+        if (!/^\d{10}$/.test(issued) || !Number.isSafeInteger(areaNo)) {
+            return;
+        }
+        // lifeIndexKma2 dates and its response reader use host-local calendar days.
+        var day = kmaTimeLib.convertStringToDate(issued.slice(0, 8));
+        if (!day) {
+            return;
+        }
+        ['today', 'tomorrow', 'theDayAfterTomorrow'].forEach(function (field, offset) {
+            var raw = item[field];
+            if ((typeof raw !== 'string' && typeof raw !== 'number') ||
+                    (typeof raw === 'string' && raw.trim() === '')) {
+                return;
+            }
+            var index = Number(raw);
+            if (!Number.isInteger(index) || index < 0 || index > 3) {
+                return;
+            }
+            var date = new Date(day.getTime());
+            date.setDate(date.getDate() + offset);
+            rows.push({areaNo: areaNo, date: date, indexType: indexName,
+                       index: index, lastUpdateDate: issued});
+        });
+    });
+    return rows;
+};
+
+KmaIndexService.prototype._requestPollenPageV3 = function (indexName, time, pageNo, callback) {
+    var self = this;
+    var keyCount = Math.max(this.serviceKeyList.length, 1);
+    var firstKey = Math.max(this.serviceKeyIndex, 0) % keyCount;
+    var offset = 0;
+    function attempt() {
+        if (self.serviceKeyList.length) {
+            self._useServiceKeyV5((firstKey + offset) % keyCount);
+        }
+        req(self.getPollenUrlV3(indexName, time, pageNo), {timeout: 30000, json: true},
+            function (err, response, body) {
+                if (err) {
+                    return callback(err);
+                }
+                var parsed = self.parseUvIdxV5(body, 'pollen v3');
+                if (!parsed.error && response.statusCode >= 400) {
+                    parsed = {error: new Error('pollen v3 HTTP '+response.statusCode)};
+                }
+                if (parsed.error) {
+                    if (response.statusCode === 401 || response.statusCode === 403) {
+                        parsed.error.isAuthError = true;
+                    }
+                    if (parsed.error.isAuthError && offset + 1 < keyCount) {
+                        offset++;
+                        return attempt();
+                    }
+                    if (parsed.error.isAuthError && self.serviceKeyList.length) {
+                        self._useServiceKeyV5(firstKey);
+                    }
+                    parsed.error.message += ' '+indexName+' time='+time+' page='+pageNo;
+                    return callback(parsed.error);
+                }
+                callback(null, parsed);
+            });
+    }
+    attempt();
+};
+
+KmaIndexService.prototype._validatePollenPageV3 = function (indexName, page, expectedPage,
+                                                            totalCount, issued, seenAreas) {
+    if (!Number.isSafeInteger(totalCount) || totalCount <= 0 ||
+            page.reportedTotalCount !== totalCount || page.pageNo !== expectedPage) {
+        return new Error('pollen v3 inconsistent page metadata '+indexName+' page='+expectedPage);
+    }
+    var expectedRows = Math.min(UV_V5_ROWS, totalCount - (expectedPage-1)*UV_V5_ROWS);
+    if (expectedRows <= 0 || page.items.length !== expectedRows) {
+        return new Error('pollen v3 incomplete page '+indexName+' page='+expectedPage);
+    }
+    for (var i=0; i<page.items.length; i++) {
+        var item = page.items[i];
+        var areaNo = Number(item.areaNo);
+        if (String(item.date) !== issued || !Number.isSafeInteger(areaNo) ||
+                areaNo <= 0 || seenAreas.has(areaNo)) {
+            return new Error('pollen v3 duplicate or inconsistent item '+indexName+
+                             ' page='+expectedPage);
+        }
+        seenAreas.add(areaNo);
+    }
+    return null;
+};
+
+KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
+    var self = this;
+    var kst = new Date(now.getTime() + 9*3600*1000);
+    var month = kst.getUTCMonth();
+    var season = this[indexName].offerMonth;
+    if (month < season.start || month > season.end) {
+        this[indexName].nextTime = new Date(now.getTime() + 24*3600*1000);
+        return callback(null, 0);
+    }
+    // Query as of the current KST hour so a later publication can replace the
+    // previous one during this season. Pagination keeps this exact request time.
+    var time = kst.getUTCFullYear() + ('0'+(month+1)).slice(-2) +
+        ('0'+kst.getUTCDate()).slice(-2) + ('0'+kst.getUTCHours()).slice(-2);
+    this._requestPollenPageV3(indexName, time, 1, function (err, first) {
+        if (err) {
+            return callback(err);
+        }
+        if (first.noData) {
+            self[indexName].nextTime = new Date(now.getTime() + 3*3600*1000);
+            return callback(null, 0);
+        }
+        var issued = String(first.items[0].date);
+        if (!/^\d{10}$/.test(issued)) {
+            return callback(new Error('pollen v3 invalid issuance '+indexName));
+        }
+        var seenAreas = new Set();
+        var firstErr = self._validatePollenPageV3(indexName, first, 1,
+                                                  first.totalCount, issued, seenAreas);
+        if (firstErr) {
+            return callback(firstErr);
+        }
+        if (self[indexName].lastIssued && issued <= self[indexName].lastIssued) {
+            self[indexName].nextTime = new Date(now.getTime() + 3*3600*1000);
+            return callback(null, 0);
+        }
+        var pages = [];
+        for (var pageNo=2; pageNo<=Math.ceil(first.totalCount / UV_V5_ROWS); pageNo++) {
+            pages.push(pageNo);
+        }
+        async.mapSeries(pages, function (page, cb) {
+            self._requestPollenPageV3(indexName, time, page, function (pageErr, parsed) {
+                if (pageErr || parsed.noData) {
+                    return cb(pageErr || new Error('pollen v3 missing page '+page));
+                }
+                var validationErr = self._validatePollenPageV3(indexName, parsed, page,
+                                                               first.totalCount, issued, seenAreas);
+                if (validationErr) {
+                    return cb(validationErr);
+                }
+                cb(null, parsed.items);
+            });
+        }, function (pageErr, pageItems) {
+            if (pageErr) {
+                return callback(pageErr);
+            }
+            var items = first.items;
+            pageItems.forEach(function (part) { items = items.concat(part); });
+            var rows = self.convertPollenItemsV3(indexName, items);
+            if (rows.length === 0) {
+                self[indexName].nextTime = new Date(now.getTime() + 3*3600*1000);
+                return callback(null, 0);
+            }
+            self.saveLifeIndex2(indexName, rows, function (saveErr, count) {
+                if (saveErr) {
+                    return callback(saveErr);
+                }
+                self[indexName].lastIssued = issued;
+                self[indexName].nextTime = new Date(now.getTime() + 3*3600*1000);
+                callback(null, count);
+            });
+        });
+    });
+    return this;
+};
+
+module.exports = KmaIndexService;
