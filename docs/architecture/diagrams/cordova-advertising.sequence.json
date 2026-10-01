@@ -6,7 +6,7 @@
     {"id": "screen", "type": "frontend", "label": "App screens", "sublabel": "Tab / start / guide"},
     {"id": "ads", "type": "backend", "label": "TwAds", "sublabel": "Visibility state"},
     {"id": "policy", "type": "backend", "label": "Monetization", "sublabel": "Remote Config / GA4"},
-    {"id": "adapter", "type": "backend", "label": "AdMob adapter", "sublabel": "Consent and plugin"},
+    {"id": "adapter", "type": "backend", "label": "AdMob adapter", "sublabel": "Consent / reload gate"},
     {"id": "native", "type": "external", "label": "Native AdMob", "sublabel": "When available"}
   ],
   "messages": [

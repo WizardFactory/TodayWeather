@@ -339,7 +339,9 @@ disabled policy hides immediately. Delay is measured from service creation.
 Defaults preserve enable/delay policy; offline fetch retains activated cache and delayed callbacks cannot overwrite
 policy after the application deadline. Orientation recreation is serialized and
 stale callbacks after disabling cannot show. Native load failure releases the
-one-shot adapter listeners. See [monetization operations](../operations/monetization.md)
+one-shot adapter listeners. The adapter preserves five-second explicit-load
+spacing in JS, disables the native interval that otherwise returns silently,
+and cancels a scheduled load when removing a banner. See [monetization operations](../operations/monetization.md)
 and the advertising diagram below. Console linkage and physical-device evidence
 remain separate from these repository implementation facts.
 

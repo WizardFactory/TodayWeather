@@ -189,6 +189,14 @@ test('common weather request reports once and preserves response/rejection witho
     fail = true;
     await assert.rejects(util.getWeatherByGeoInfo({location: {lat: 37, long: 127}}), e => e.code === 503);
     assert.equal(events.length, 3); assert.equal(events[2].p.outcome, 'network_error');
+    // Exercise the producer's real Error.code through the Tab rejection branch as well.
+    const tabSource = read('www/js/controller.tabctrl.js');
+    const tabBody = tabSource.slice(tabSource.indexOf('        function updateWeatherData('), tabSource.indexOf('        function setAirUnit('));
+    const outcomes = [];
+    const tabContext = {$q:q, WeatherUtil:util, Monetization:{track(n,p) {outcomes.push(p.outcome);}}, strFailToGetWeatherInfo:'fixture failure'};
+    vm.runInNewContext(tabBody + '\nthis.load=updateWeatherData;', tabContext);
+    await assert.rejects(tabContext.load({location:{lat:37,long:127}}), e => e === 'fixture failure');
+    assert.deepEqual(outcomes,['network_error']);
     assert.doesNotMatch(JSON.stringify(events), /secret|address|127/);
 });
 
@@ -315,7 +323,7 @@ test('disable invalidates a pending initial banner callback', () => {
 test('Tab load classifies local invalid input without changing the UI rejection', async () => {
     const source = read('www/js/controller.tabctrl.js');
     const body = source.slice(source.indexOf('        function updateWeatherData('), source.indexOf('        function setAirUnit('));
-    for (const [error, expected] of [[new Error('Need location'), 'invalid_response'], [{code: 503}, 'network_error']]) {
+    for (const [error, expected] of [[new Error('Need location'), 'invalid_response'], [Object.assign(new Error('HTTP failed'), {code: 503}), 'network_error'], [Object.assign(new Error('timeout'), {code: 0}), 'network_error']]) {
         const events = [];
         const q = {defer() {let resolve, reject; const promise = new Promise((a,b) => {resolve=a; reject=b;}); return {resolve,reject,promise};}};
         const context = {Error, Date, $q:q, WeatherUtil:{getWeatherByGeoInfo:() => Promise.reject(error)}, Monetization:{track(n,p) {events.push(p);}}, strFailToGetWeatherInfo:'fixture failure'};
@@ -326,7 +334,7 @@ test('Tab load classifies local invalid input without changing the UI rejection'
 });
 
 test('native banner load failure releases one-shot callbacks and removes stale load listeners', () => {
-    let factory, nativeError;
+    let factory, nativeError, now = 10000;
     const listeners = new Map();
     const document = {
         addEventListener(n, fn) { if (!listeners.has(n)) listeners.set(n, new Set()); listeners.get(n).add(fn); },
@@ -335,7 +343,7 @@ test('native banner load failure releases one-shot callbacks and removes stale l
     const cordova = {plugins: {emiAdmobPlugin: {loadBannerAd(options, done, fail) {nativeError = fail;}}}};
     const window = {cordova};
     vm.runInNewContext(read('www/js/service.admobemi.js'), {
-        angular: {module() {return {factory(n,fn) {factory=fn;}};}}, document, window, cordova, console:{log(){}}, clientConfig:{}
+        angular: {module() {return {factory(n,fn) {factory=fn;}};}}, document, window, cordova, Date:{now:()=>now}, console:{log(){}}, clientConfig:{}
     });
     const adapter = factory({ga:{trackException(){}}}, {track(){}});
     let loaded=0, failed=0;
@@ -346,7 +354,7 @@ test('native banner load failure releases one-shot callbacks and removes stale l
     assert.equal(failed,1); assert.equal(loaded,0);
     assert.equal(listeners.get('on.banner.load').size,0);
     assert.equal(listeners.get('on.banner.failed.load').size,0);
-    adapter.createBannerView(() => loaded++, () => failed++);
+    now += 5000; adapter.createBannerView(() => loaded++, () => failed++);
     for (const fn of [...listeners.get('on.banner.load')]) fn();
     assert.equal(loaded,1); assert.equal(failed,1);
 });
@@ -360,4 +368,37 @@ test('rotation during initial banner load waits for that load before destroying 
     h.rotate(); h.rotate(); assert.equal(destroys.length,0);
     creates.shift().done(); assert.equal(destroys.length,1);
     destroys.shift().done(); creates.shift().done(); assert.equal(h.calls.at(-1),'show');
+});
+
+
+test('adapter defers queued native loads past the silent minimum interval and cancels removed loads', () => {
+    let factory, now = 10000, lastNative = 0, nextId = 0, success = 0, failed = 0, drops = 0;
+    const pending = new Map(), listeners = new Map(), loads = [];
+    const document = {
+        addEventListener(n,fn) {if (!listeners.has(n)) listeners.set(n,new Set()); listeners.get(n).add(fn);},
+        removeEventListener(n,fn) {listeners.get(n)?.delete(fn);}
+    };
+    const dispatch = n => {for (const fn of [...(listeners.get(n)||[])]) fn();};
+    const cordova = {plugins:{emiAdmobPlugin:{
+        loadBannerAd(options,done) {
+            loads.push(now);
+            const interval = options.loadInterval === undefined ? 5000 : options.loadInterval * 1000;
+            if (now - lastNative < interval) {drops++; return;}
+            lastNative=now; done();
+        }, removeBannerAd(done) {done();}
+    }}};
+    const window = {cordova, setTimeout(fn,ms) {const id=++nextId; pending.set(id,{fn,at:now+ms}); return id;}, clearTimeout(id) {pending.delete(id);}};
+    const advance = ms => {now+=ms; for (const [id,t] of [...pending]) if(t.at<=now) {pending.delete(id);t.fn();}};
+    vm.runInNewContext(read('www/js/service.admobemi.js'), {angular:{module(){return{factory(n,fn){factory=fn;}};}}, document, window, cordova, Date:{now:()=>now}, console:{log(){}}, clientConfig:{}});
+    const adapter=factory({ga:{trackException(){}}},{track(){}});
+    const load=()=>adapter.createBannerView(()=>success++,()=>failed++);
+    load(); dispatch('on.banner.load');
+    adapter.destroyBannerView(()=>{}); load();
+    assert.deepEqual(loads,[10000]);
+    advance(4999); assert.deepEqual(loads,[10000]);
+    advance(1); dispatch('on.banner.load'); assert.deepEqual(loads,[10000,15000]);
+    adapter.destroyBannerView(()=>{}); load(); advance(5000); dispatch('on.banner.load');
+    assert.equal(success,3); assert.equal(drops,0);
+    load(); adapter.destroyBannerView(()=>{}); advance(5000);
+    assert.equal(loads.length,3); assert.equal(failed,1);
 });

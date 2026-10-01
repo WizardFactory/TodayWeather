@@ -89,7 +89,9 @@ Record app version, platform, stream ID, timestamp and sanitized evidence:
   production revenue evidence requires real eligible traffic, not fabricated data.
 - Rotate twice while a destroy/create callback is pending; recreation stays serialized.
   Native load failure must release the pending callback, and a stale callback must
-  not show after disabling ads.
+  not show after disabling ads. AdMob banner requests retain five-second spacing
+  in JS; the native silent-return interval is disabled so every issued load can
+  settle by event/error. Removing a banner cancels any scheduled load.
 - A/B test devices report native experiment assignment and the applied parameter.
   Exposure is an opportunity diagnostic, not proof of physical impression.
 

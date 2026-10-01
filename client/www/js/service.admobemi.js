@@ -6,7 +6,7 @@ angular.module('service.admobemi', [])
     .factory('admobEmi', function(Util, Monetization) {
         var obj = {};
         var bannerAdUnit = '';
-        var initialized = false;
+        var initialized = false, lastBannerLoadAt, pendingLoadTimer, cancelPendingLoad;
         function lifecycle(action) {
             Monetization.track('ad_lifecycle', {action: action, ad_format: 'banner'});
         }
@@ -20,7 +20,6 @@ angular.module('service.admobemi', [])
          * isOverlapping false shrinks the web view by the banner height (legacy overlap:false).
          */
         obj.createBannerView = function(success, error) {
-            lifecycle('request');
             var settled = false;
             function settle(failed) {
                 if (settled) { return; }
@@ -32,22 +31,40 @@ angular.module('service.admobemi', [])
             }
             function onLoad() { settle(false); }
             function onFailure() { settle(true); }
-            // Native load failures are events, distinct from Cordova command failures.
-            document.addEventListener('on.banner.load', onLoad);
-            document.addEventListener('on.banner.failed.load', onFailure);
-            plugin().loadBannerAd({
-                adUnitId: bannerAdUnit,
-                position: 'bottom-center',
-                size: 'adaptive',
-                collapsible: false,
-                autoShow: false,
-                isOverlapping: false,
-                // cordova-android 15 layout: resize the web view by the banner height (also on Android 16+).
-                isCordova15: true
-            }, function () {}, onFailure);
+            function load() {
+                pendingLoadTimer = undefined; cancelPendingLoad = undefined;
+                lastBannerLoadAt = Date.now();
+                // Native load failures are events, distinct from Cordova command failures.
+                document.addEventListener('on.banner.load', onLoad);
+                document.addEventListener('on.banner.failed.load', onFailure);
+                lifecycle('request');
+                plugin().loadBannerAd({
+                    adUnitId: bannerAdUnit,
+                    position: 'bottom-center',
+                    size: 'adaptive',
+                    collapsible: false,
+                    autoShow: false,
+                    isOverlapping: false,
+                    // cordova-android 15 layout: resize the web view by the banner height (also on Android 16+).
+                    isCordova15: true,
+                    loadInterval: 0 // JS owns five-second spacing; avoid native silent returns.
+                }, function () {}, onFailure);
+            }
+            // Preserve the plugin's five-second request spacing in JS. Native interval
+            // returns silently (no event/callback), so it must not own this completion gate.
+            var remaining = lastBannerLoadAt === undefined ? 0 : 5000 - (Date.now() - lastBannerLoadAt);
+            if (remaining > 0) {
+                cancelPendingLoad = onFailure;
+                pendingLoadTimer = window.setTimeout(load, remaining);
+            } else { load(); }
         };
 
         obj.destroyBannerView = function (success, error) {
+            if (pendingLoadTimer !== undefined) {
+                window.clearTimeout(pendingLoadTimer); pendingLoadTimer = undefined;
+                var cancel = cancelPendingLoad; cancelPendingLoad = undefined;
+                cancel();
+            }
             plugin().removeBannerAd(success, error);
         };
 
