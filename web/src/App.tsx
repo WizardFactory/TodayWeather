@@ -414,6 +414,7 @@ export default function App() {
         notify: setToast,
         capabilities: caps.data,
         storageOk,
+        contentInert: compact && menuOpen,
         installPrompt,
         updateReady,
         applyUpdate,

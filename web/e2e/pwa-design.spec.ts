@@ -2,29 +2,30 @@ import { test, expect } from "./fixtures";
 import fixture from "../../docs/rewrite/examples/client-kma-response.json" with { type: "json" };
 const API = "https://todayweather.wizardfactory.net";
 test.use({ serviceWorkers: "block" });
+function seedWeatherPlace() {
+  localStorage.setItem(
+    "tw.web.v1.preferences",
+    JSON.stringify({
+      version: 1,
+      places: [
+        {
+          id: "seoul",
+          name: "서울",
+          country: "KR",
+          address: "서울",
+          lat: 37.567,
+          lon: 126.978,
+        },
+      ],
+      selectedId: "seoul",
+      settings: { startup: "hourly", language: "ko" },
+    }),
+  );
+}
 test("unavailable chart routes keep content focus and recover to the selected chart", async ({
   page,
 }) => {
-  await page.addInitScript(() =>
-    localStorage.setItem(
-      "tw.web.v1.preferences",
-      JSON.stringify({
-        version: 1,
-        places: [
-          {
-            id: "seoul",
-            name: "서울",
-            country: "KR",
-            address: "서울",
-            lat: 37.567,
-            lon: 126.978,
-          },
-        ],
-        selectedId: "seoul",
-        settings: { startup: "hourly", language: "ko" },
-      }),
-    ),
-  );
+  await page.addInitScript(seedWeatherPlace);
   let available = false;
   await page.route(API + "/weather/**", (route) =>
     available
@@ -49,6 +50,59 @@ test("unavailable chart routes keep content focus and recover to the selected ch
   await page.getByRole("button", { name: "다시 시도", exact: true }).click();
   await expect(page.locator(".daily-chart")).toBeFocused();
   await expect(page.locator(".daily-chart")).toBeInViewport();
+});
+test("loading focus waits for the navigation menu to close even with an early frame", async ({
+  page,
+}) => {
+  await page.addInitScript(seedWeatherPlace);
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(API + "/weather/**", async (route) => {
+    await held;
+    await route.fulfill({ status: 501, body: "Fixture unavailable" });
+  });
+  await page.setViewportSize({ width: 402, height: 874 });
+  await page.goto("/settings");
+  await page.evaluate(() => {
+    const nativeFrame = window.requestAnimationFrame.bind(window);
+    const nativeFocus = HTMLElement.prototype.focus;
+    (window as any).inertFocusAttempts = [];
+    HTMLElement.prototype.focus = function (options) {
+      if (this.closest("[inert]"))
+        (window as any).inertFocusAttempts.push(this.id || this.className);
+      return nativeFocus.call(this, options);
+    };
+    window.requestAnimationFrame = (callback) => {
+      // Reproduce the observed frame before the shell commits menu closure.
+      if (document.getElementById("main-content")?.closest("[inert]")) {
+        callback(performance.now());
+        return 0;
+      }
+      return nativeFrame(callback);
+    };
+  });
+  try {
+    await page.getByRole("button", { name: "메뉴 열기", exact: true }).click();
+    await page
+      .locator(".sidebar")
+      .getByRole("link", { name: "날씨", exact: true })
+      .click();
+    await expect(page.locator(".workspace")).not.toHaveAttribute("inert", "");
+    await expect(
+      page.getByRole("status").filter({ hasText: "날씨를 불러오는 중이에요" }),
+    ).toBeVisible();
+    await expect(page.locator("#main-content")).toBeFocused();
+    expect(
+      await page.evaluate(() => (window as any).inertFocusAttempts),
+    ).toEqual([]);
+    release();
+    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page.locator("#main-content")).toBeFocused();
+  } finally {
+    release();
+  }
 });
 function dailyFixture(partial = false) {
   const raw = structuredClone(fixture.response) as any;

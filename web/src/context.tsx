@@ -17,6 +17,7 @@ export type AppContextValue = {
   notify: (text: string) => void;
   capabilities?: Capabilities;
   storageOk: boolean;
+  contentInert: boolean;
   installPrompt?: { prompt: () => Promise<void> };
   updateReady: boolean;
   applyUpdate: () => void;

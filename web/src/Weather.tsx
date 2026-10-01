@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { dateText, hourText } from "./locale";
 import {
   useParams,
@@ -123,7 +123,7 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
   const linkedPollutant = POLLUTANTS.find((c) => c === search.get("pollutant"));
   const { locationId, view: paramView } = useParams(),
     view = fixedView ?? paramView ?? "hourly";
-  const { state, setState, notify } = useApp();
+  const { state, setState, notify, contentInert } = useApp();
   const navigate = useNavigate();
   const place = resolvePlace(state, locationId);
   useEffect(() => {
@@ -162,10 +162,22 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
   const hasChartRows = Boolean(
     view === "daily" ? data?.daily.length : data?.hourly.length,
   );
+  const pendingContentFocus = useRef(false);
   useEffect(() => {
-    if (view !== "hourly" && view !== "daily") return;
-    // Run after the route shell closes its menu and chart metrics settle.
+    pendingContentFocus.current = view === "hourly" || view === "daily";
+  }, [
+    route.key,
+    view,
+    !!data,
+    data?.location.id,
+    hasChartRows,
+    query.isPending,
+  ]);
+  useEffect(() => {
+    if (contentInert || !pendingContentFocus.current) return;
+    // The shell's non-inert commit, not frame timing, owns menu-close readiness.
     const frame = requestAnimationFrame(() => {
+      pendingContentFocus.current = false;
       const section = document.querySelector<HTMLElement>(
         `[data-weather-section="${view}"]`,
       );
@@ -186,6 +198,7 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
     return () => cancelAnimationFrame(frame);
   }, [
     route.key,
+    contentInert,
     view,
     !!data,
     data?.location.id,
