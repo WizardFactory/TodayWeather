@@ -137,7 +137,7 @@
       "dot": "emerald",
       "title": "Response contract",
       "items": [
-        "Fill invalid fields; preserve temperature provenance",
+        "Preserve temperature sources and accepted live/grid pairs",
         "Omit incomparable temperature for legacy clients"
       ]
     },

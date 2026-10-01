@@ -135,5 +135,38 @@ async function check(name, run) {await run(); passed++; console.log('PASS ' + na
             assert(legacyComparison(current,selected,'C').includes('+2'));
         }
     });
+    await check('minute middleware followed by either selector retains accepted live comparisons', async()=>{
+        for (const text of [source, source24]) {
+            const current={date:'20260930',time:'1900',t1h:20};
+            const self={_getTownInfo:(a,b,c,cb)=>cb(null,{}),_isValidObservation:(key,value)=>policy.valid(key,value),_updateCurrentFromMinWeather(){},makeSummary:()=>'',_diffTodayYesterday:diff};
+            const stations={getStnHourlyAndMinRns:(town,time,row,cb)=>cb(null,{stnId:108,t1h:21,vec:180,wsd:2,stnDateTime:'2026.09.30.19:27'}),updateWeather(){}};
+            const ctx=Object.assign({},globals,{self,controllerKmaStnWeather:stations,kmaTimeLib:require('../../lib/kmaTimeLib'),log:{info(){},warn(){},debug(){},error(){}},_convertCloud2SKy:()=>1,_convertStnWeather2Pty:()=>0,_convertStnWeather2Lgt:()=>0,ControllerWeatherDesc:{getWeatherStr:()=>''}});
+            await new Promise(resolve=>method(source,'getKmaStnMinuteWeather',ctx)({current,currentList:[],params:{}},{},resolve));
+            assert.equal(current.t1h,21);
+            const select=method(text,text===source?'getSummary':'setYesterday',ctx);
+            const row={date:'20260929',time:'1900',t1h:19};
+            select({current,currentList:[row],params:{},query:{}},{},()=>{});
+            assert.equal(current.yesterday.t1h,19);
+            assert(legacyComparison(current,current.yesterday,'C').includes('+2'));
+            for (const meta of [{source:'KMA_STATION_LIVE',stationId:'108',key:'202609291905'}, {source:'KMA_STATION_LIVE',stationId:'109',key:'202609291927'}, {source:'KMA_ASOS',stationId:'108',key:'202609291900'}]) {
+                const previous={...row}; observations.record(previous,meta,['t1h']);
+                select({current,currentList:[previous],params:{},query:{}},{},()=>{});
+                assert.equal(current.yesterday.t1h,meta.source==='KMA_STATION_LIVE'&&meta.stationId==='108'?19:undefined);
+            }
+            current.t1h=-50;
+            select({current,currentList:[row],params:{},query:{}},{},()=>{});
+            assert.equal(current.yesterday.t1h,undefined);
+        }
+        const row={date:'20260929',time:'1900',t1h:19};
+        for (const key of ['202609301827','202609301960','invalid']) {
+            const current={date:'20260930',time:'1900',t1h:21};
+            observations.record(current,{source:'KMA_STATION_LIVE',stationId:'108',key},['t1h']);
+            assert.equal(observations.yesterday(current,[row]).t1h,undefined);
+        }
+    });
+    await check('legacy BSON wall-clock convention is explicitly pinned to UTC ingestion', ()=>{
+        const child=require('node:child_process').execFileSync(process.execPath,['-e',"const h=require('./server/lib/history/observations');process.stdout.write(h.legacyKey(new Date('2026/09/29 19:00')));"],{cwd:path.join(__dirname,'../../..'),env:{...process.env,TZ:'UTC'},encoding:'utf8'});
+        assert.equal(child,'202609291900');
+    });
     console.log(JSON.stringify({passed}));
 })().catch(err=>{console.error(err.stack);process.exitCode=1;});

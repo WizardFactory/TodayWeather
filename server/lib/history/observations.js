@@ -41,6 +41,11 @@ function temperatureSource(row) {
     var source = row.historyObservation;
     return source && source.fields && source.fields.indexOf('t1h') !== -1 ? source : undefined;
 }
+function measurementHour(source) {
+    if (source.source !== 'KMA_STATION_LIVE') return policy.instant(source.key);
+    if (typeof source.key !== 'string' || !/^\d{12}$/.test(source.key) || +source.key.slice(10) > 59) return NaN;
+    return policy.instant(source.key.slice(0, 10) + '00');
+}
 exports.canCompare = function (current, yesterday) {
     if (!current || !yesterday || yesterday.missing || yesterday.comparisonAvailable === false) return false;
     if (typeof current.t1h !== 'number' || !isFinite(current.t1h) ||
@@ -51,7 +56,19 @@ exports.canCompare = function (current, yesterday) {
     if (!policy.valid('t1h', current.t1h) || !policy.valid('t1h', yesterday.t1h)) return false;
     var a = temperatureSource(current), b = temperatureSource(yesterday);
     if (!a && !b) return true;
+    // Preserve the existing live-current vs same-town grid-yesterday display.
+    // The measurement must belong to the current hour and the selected grid
+    // observation must be exactly 24 hours earlier; ASOS pairs remain separate.
+    if (a && a.source === 'KMA_STATION_LIVE' && !b) {
+        var hour = measurementHour(a);
+        return !!policy.station(a.stationId) && hour === policy.instant(policy.slot(current)) &&
+            hour - policy.instant(policy.slot(yesterday)) === DAY;
+    }
     if (!a || !b || a.source !== b.source || String(a.stationId) !== String(b.stationId)) return false;
+    if (a.source === 'KMA_STATION_LIVE') {
+        return !!policy.station(a.stationId) && measurementHour(a) === policy.instant(policy.slot(current)) &&
+            measurementHour(b) === policy.instant(policy.slot(yesterday)) && measurementHour(a) - measurementHour(b) === DAY;
+    }
     return !a.key || !b.key || policy.instant(a.key) - policy.instant(b.key) === DAY;
 };
 exports.yesterday = function (current, rows) {

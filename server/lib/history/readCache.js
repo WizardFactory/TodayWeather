@@ -24,10 +24,26 @@ ReadCache.prototype.read = function (key, loader, callback) {
         entry = {pending: true, expires: 0};
         self.entries.set(key, entry);
         entry.promise = new Promise(function (resolve) {
-            var finished = false;
-            var timer = setTimeout(function () { done(new Error('HISTORY_READ_TIMEOUT')); }, self.readTimeout);
+            var finished = false, timedOut = false, lateFinished = false;
+            var timer = setTimeout(function () {
+                timedOut = true;
+                done(new Error('HISTORY_READ_TIMEOUT'));
+            }, self.readTimeout);
             function done(error, value) {
-                if (finished) return;
+                if (finished) {
+                    // A read deadline releases waiters/capacity, but the DB may
+                    // still finish. Warm only the original entry, once; never
+                    // overwrite a newer read or call detached waiters again.
+                    if (timedOut && !lateFinished) {
+                        lateFinished = true;
+                        if (!error && self.entries.get(key) === entry) {
+                            entry.error = null;
+                            entry.value = value;
+                            entry.expires = Date.now() + self.ttl;
+                        }
+                    }
+                    return;
+                }
                 finished = true;
                 clearTimeout(timer);
                 entry.pending = false;

@@ -195,6 +195,22 @@ function clientParser(name) {
                     hourlyGaps: body.historyStatus.missingHourlySlots.length
                 });
             }
+    for (const version of ['1.0', '2.0']) for (const units of ['C', 'F']) {
+        const fixture=route.makeFixture(route.locations[0], 'newer');
+        fixture.current.find(row=>row.date==='20260923'&&row.time==='0900').t1h=19;
+        fixture.stnWeather={stnId:108,t1h:21,stnDateTime:'2026.09.24.09:27'};
+        const before=requests;
+        const result=await route.createHarness(version,fixture,{config:{readEnabled:false}}).request({temperatureUnit:units,windSpeedUnit:'m/s'});
+        const current=result.body.current;
+        assert.equal(current.fieldObservations.t1h.source,'KMA_STATION_LIVE');
+        assert.equal(current.yesterday.comparisonAvailable,true);
+        assert.equal(typeof current.yesterday.t1h,'number');
+        const phrase=legacyComparison(current,current.yesterday,units);
+        assert(phrase.includes('+'));
+        if(units==='C'){assert.equal(current.t1h,21);assert.equal(current.yesterday.t1h,19);assert(phrase.includes('+2'));}
+        assert.equal(requests,before,'response makes no provider request');
+        summaries.push({check:'live-grid-comparison',version,units,phrase});
+    }
     mode = 'wrong-date';
     report = await recovery.run('108', '20260923', '20260923', now);
     assert.equal(report.complete, false);

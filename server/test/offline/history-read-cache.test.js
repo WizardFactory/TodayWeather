@@ -25,5 +25,16 @@ function read(cache,key,loader) {return new Promise(resolve=>cache.read(key,load
     const bounded=new ReadCache({wait:10,max:1,readTimeout:25});
     const pending=read(bounded,'one',()=>{});
     assert.equal((await read(bounded,'two',()=>{})).error.message,'HISTORY_CACHE_BUSY');await pending;
-    console.log(JSON.stringify({passed:5,checks:['coalesced wait','late warm','negative cache','read timeout','bounded capacity']}));
+    const lateCache=new ReadCache({wait:5,readTimeout:10,failureTTL:100,ttl:100});let lateDone,lateCalls=0;
+    const lateLoader=done=>{lateCalls++;lateDone=done;};
+    await read(lateCache,'late',lateLoader);await sleep(15);
+    assert.equal((await read(lateCache,'late',lateLoader)).error.message,'HISTORY_READ_TIMEOUT');
+    lateDone(null,[{t1h:21}]);
+    assert.equal((await read(lateCache,'late',lateLoader)).value[0].t1h,21);assert.equal(lateCalls,1);
+    const replacement=new ReadCache({wait:5,readTimeout:10,failureTTL:5,ttl:100});let old;
+    await read(replacement,'key',done=>{old=done;});await sleep(20);
+    assert.equal((await read(replacement,'key',done=>done(null,22))).value,22);
+    old(null,19);
+    assert.equal((await read(replacement,'key',()=>{throw Error('unexpected read');})).value,22);
+    console.log(JSON.stringify({passed:7,checks:['coalesced wait','late warm','negative cache','read timeout','bounded capacity','late success after read timeout','late result cannot overwrite replacement']}));
 })().catch(error=>{console.error(error);process.exitCode=1;});
