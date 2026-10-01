@@ -32,6 +32,11 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/gather-offline/node_modules
         run: npm --prefix server run test:offline
+      - name: Run overseas budget HTTP smoke
+        env:
+          TZ: UTC
+          NODE_PATH: ${{ runner.temp }}/gather-offline/node_modules
+        run: node server/test/offline/vc-budget-smoke.js
       - name: Run daily forecast response smoke
         env:
           TZ: UTC

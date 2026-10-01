@@ -73,7 +73,7 @@ function createHarness(bodyFor, options) {
     sandbox.global = sandbox;
     const context = vm.createContext(sandbox);
     // Key lists parsed at module load by domestic helpers; empty so any use fails visibly.
-    const config = {vc: {dailyRecordLimit: 0}, keyString: Object.assign({vc_key: KEY, daum_keys: '[]', kakao_keys: '[]', dongnae_forecast_keys: '[]', airkorea_keys: '[]', google_key: ''}, options.keyString), db: {version: '2.0'}, serviceServer: {url: 'http://service.invalid'}, apiServer: {url: 'https://synthetic.invalid'},
+    const config = {vc: {dailyRecordLimit: options.dailyRecordLimit || 0}, keyString: Object.assign({vc_key: KEY, daum_keys: '[]', kakao_keys: '[]', dongnae_forecast_keys: '[]', airkorea_keys: '[]', google_key: ''}, options.keyString), db: {version: '2.0'}, serviceServer: {url: 'http://service.invalid'}, apiServer: {url: 'https://synthetic.invalid'},
         url: {requester: 'http://127.0.0.1:1/'}, push: {}, mode: 'service'};
     const {memoryModel} = require('./air-harness');
     // The overseas query asks the shared air service (#2628): in-memory cache and budgets.

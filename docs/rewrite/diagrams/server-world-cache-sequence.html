@@ -5210,11 +5210,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="dsf" data-edge-to="store" data-edge-label="provider marker / daily budget → skip call, serve stored" data-edge-key="5" data-edge-id="check">
+        <g data-edge-from="dsf" data-edge-to="store" data-edge-label="provider down / no forecast budget → serve stored or fail" data-edge-key="5" data-edge-id="check">
           <path data-composition-edge-from="dsf" data-composition-edge-to="store" data-composition-edge-id="check" data-composition-points="473.7,300;796.9,300" d="M 473.7 300 L 796.9 300" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="483.69999999999993" y="280" width="303.2" height="16" rx="3" class="c-mask"/>
-          <text x="635.3" y="290" class="t-backend" font-size="9" text-anchor="middle">provider marker / daily budget → skip call, serve stored</text>
+          <rect x="481.0999999999999" y="280" width="308.40000000000003" height="16" rx="3" class="c-mask"/>
+          <text x="635.3" y="290" class="t-backend" font-size="9" text-anchor="middle">provider down / no forecast budget → serve stored or fail</text>
         </g>
         <text data-detail="fine" x="485.7" y="318" class="t-dim" font-size="7">marker set for 10 min after a daily-limit 429 or 401/403</text>
         </g>
@@ -5228,12 +5228,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="fine" x="485.7" y="346" class="t-dim" font-size="7">held elsewhere → re-read every 250 ms ≤2.5 s; stop at once if the holder flags failed</text>
         </g>
 
-        <g data-edge-from="dsf" data-edge-to="provider" data-edge-label="no day before → combined (49) · no yesterday → recent (25) · else forecast (1), ≤8 s" data-edge-key="7" data-edge-id="fill">
+        <g data-edge-from="dsf" data-edge-to="provider" data-edge-label="history 49 / 25 · forecast 1 · low history budget → forecast only" data-edge-key="7" data-edge-id="fill">
           <path data-composition-edge-from="dsf" data-composition-edge-to="provider" data-composition-edge-id="fill" data-composition-points="473.7,356;965.5,356" d="M 473.7 356 L 965.5 356" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="495.20000000000005" y="336" width="448.8" height="16" rx="3" class="c-mask"/>
-          <text x="719.6" y="346" class="t-backend" font-size="9" text-anchor="middle">no day before → combined (49) · no yesterday → recent (25) · else forecast (1), ≤8 s</text>
+          <rect x="544.6" y="336" width="350" height="16" rx="3" class="c-mask"/>
+          <text x="719.6" y="346" class="t-backend" font-size="9" text-anchor="middle">history 49 / 25 · forecast 1 · low history budget → forecast only</text>
         </g>
+        <text data-detail="fine" x="485.7" y="374" class="t-dim" font-size="7">Without fresh current, use forecast if its cost fits; no history marker. Retry history when budget recovers.</text>
         </g>
 
         <g data-edge-from="dsf" data-edge-to="store" data-edge-label="upsert day before · yesterday · today · current, release lock, count usage" data-edge-key="8" data-edge-id="write-dsf">
