@@ -38,3 +38,11 @@ The first restricted fallback-test attempt ran the behavioral scenarios successf
 The legacy timestamp prerequisite is explicitly **UTC ingestion**: the child test pins `TZ=UTC` when parsing the historical wall-clock format. This does not prove that legacy storage written under another host timezone is correct or repaired. The cache deadline does not cancel underlying driver/database work; entry identity prevents late stale replacement, while caller wait remains separately bounded.
 
 Live/grid compatibility preserves the requested historical display behavior; it is not a claim that station and grid measurements are spatially equivalent. No terrain correction, same-day ASOS provider, quota redesign, production latency measurement, native build or deployment was verified. Earlier [comparison correction evidence](review-correction-verification.md) remains historical; this report records the subsequently requested live/grid exception.
+
+## CI fixture-clock correction — 2026-10-01
+
+Independently reviewed the test-only change to `server/test/offline/air-chain-node10-check.js` on base `4adf990d5a57fee63f7989d9abdacdea44265a6c`. Verified file SHA-256: `2b75ec28f2515e8842c163f228a40d139c25f1945bedca5d5c9032bb8a1c9616`.
+
+The test seeds Google usage for its fixed September request timestamp. The chain loader previously used the actual October clock to derive the budget period, making that seeded cap ineffective after month rollover. The injected `FixtureDate` aligns zero-argument construction and `Date.now()` with the request timestamp while preserving explicit date arguments. Its scope is the test chain loader; the separate paid-budget loader still uses the actual clock and seeds its matching current month. No product code or assertion was relaxed.
+
+**PASS:** independently executed `NODE_PATH=/tmp/tw-2590-srv/node_modules:/tmp/issue-2560-offline/node_modules:/tmp/tw-2626-final-lock/node_modules node server/test/offline/air-chain-node10-check.js`, exit 0. Output reported `outcome: passed`, Node `v22.22.2` and one local loopback WAQI request; shared-cache reuse and existing budget/fallback checks completed. This local run does not claim Node 10 execution or remote CI success. No additional mandatory finding was identified.
