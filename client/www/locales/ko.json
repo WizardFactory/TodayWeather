@@ -314,7 +314,7 @@
     "LOC_ANALYTICS_DENY": "거부 / 철회",
     "LOC_ANALYTICS_ALLOWED": "동의함",
     "LOC_ANALYTICS_DISABLED": "꺼짐",
-    "LOC_PRIVACY_SAVE_FAILED": "설정을 적용하지 못했습니다. 통계 수집을 켜지 않았습니다. 다시 시도해 주세요.",
+    "LOC_PRIVACY_SAVE_FAILED": "개인정보 설정을 완전히 적용하지 못했습니다. 다시 시도해 주세요.",
     "LOC_AD_PRIVACY_CHOICES": "광고 개인정보 선택",
     "LOC_AD_PRIVACY_UNAVAILABLE": "광고 개인정보 선택 화면을 열 수 없습니다. 잠시 후 다시 시도해 주세요. 지역에 따라 선택 화면이 필요하지 않을 수 있습니다.",
     "LOC_PRIVACY_POLICY": "개인정보처리방침",

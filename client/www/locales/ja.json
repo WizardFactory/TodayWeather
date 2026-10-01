@@ -314,7 +314,7 @@
     "LOC_ANALYTICS_DENY": "拒否 / 撤回",
     "LOC_ANALYTICS_ALLOWED": "同意済み",
     "LOC_ANALYTICS_DISABLED": "オフ",
-    "LOC_PRIVACY_SAVE_FAILED": "設定を適用できませんでした。分析の収集は有効になっていません。もう一度お試しください。",
+    "LOC_PRIVACY_SAVE_FAILED": "プライバシー設定を完全に適用できませんでした。もう一度お試しください。",
     "LOC_AD_PRIVACY_CHOICES": "広告のプライバシー設定",
     "LOC_AD_PRIVACY_UNAVAILABLE": "広告のプライバシー画面を開けません。後ほどお試しください。地域によっては選択画面が不要な場合があります。",
     "LOC_PRIVACY_POLICY": "プライバシーポリシー",

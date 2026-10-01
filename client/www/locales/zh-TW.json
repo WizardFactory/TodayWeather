@@ -314,7 +314,7 @@
     "LOC_ANALYTICS_DENY": "Decline / withdraw",
     "LOC_ANALYTICS_ALLOWED": "Allowed",
     "LOC_ANALYTICS_DISABLED": "Off",
-    "LOC_PRIVACY_SAVE_FAILED": "Could not apply the setting. Analytics collection was not enabled. Please try again.",
+    "LOC_PRIVACY_SAVE_FAILED": "Could not fully apply your privacy setting. Please try again.",
     "LOC_AD_PRIVACY_CHOICES": "Ad privacy choices",
     "LOC_AD_PRIVACY_UNAVAILABLE": "Ad privacy choices could not open. Try again later. A choices form may not be required in your region.",
     "LOC_PRIVACY_POLICY": "Privacy policy",

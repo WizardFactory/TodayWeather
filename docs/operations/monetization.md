@@ -192,3 +192,25 @@ temporary directory. They are not prerequisites for maintained document links.
 ## Optional Analytics choice (2026-10-01, #2660)
 
 Usage analytics now starts off in native defaults and the JavaScript gate. The app settings menu persists an explicit consent choice and offers withdrawal; earlier unconsented screen/events are not replayed on a new grant. Analytics storage can be granted while ad storage, ad-user-data and ad-personalization remain denied. UMP continues to gate ads separately; turning Analytics off does not turn Ads/Crashlytics/FCM/Remote Config off. Event metrics and automatic ad revenue are available only where consent/SDK configuration actually permits measurement. Preserve this boundary in any experiment; Remote Config cannot enable analytics consent. See [privacy review](store-privacy-review.md) and [retention/deletion](store-data-retention.md).
+
+### Consent write failure and restart behavior (PR #2662)
+
+Analytics grants originate from the settings choice. The compatibility opt-out
+facade only withdraws. Native collection/consent writes are serialized, including
+failure compensation; the latest pending choice runs after the active callback.
+A delayed grant cannot race a newer denial. Grant failures attempt collection off
+and all consent modes denied, then report failure without raw SDK errors.
+
+WebView persistence is read back; write failures attempt removal of a stale grant.
+Startup restores a stored grant only if the native persisted collection flag is
+also true (Android returns 1). False, absent or failed native reads require fresh
+explicit consent. The installed FirebaseX 2.0.2 setters persist this flag before
+acknowledging, so a successful native withdrawal protects restart even if WebView
+writes and removal fail. If both persistence mechanisms fail, durable withdrawal
+is unverified and settings asks the user to retry. No historical data deletion is
+implied. Tests assert native state across restart, deferred consent/enable ordering,
+failed grants, latest-choice behavior and settings grant/refusal/dismissal.
+
+Android source defaults remain the pinned plugin variables; repeating plugin
+manifest entries is unnecessary. Final merged manifest and signed-device/upgrade
+network checks remain required release evidence, independently of these JS tests.

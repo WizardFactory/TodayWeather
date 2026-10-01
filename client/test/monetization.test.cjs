@@ -13,7 +13,7 @@ function harness({enabled = true, absent = false, config, debug = false} = {}) {
     const window = {
         console: {info: x => logs.push(x), warn: x => logs.push(x)},
         setTimeout(fn) { timers.push(fn); return timers.length; }, clearTimeout() {},
-        localStorage: {getItem: () => enabled === false ? 'false' : 'true', setItem() {}},
+        localStorage: {value: enabled === false ? 'false' : 'true', getItem() { return this.value; }, setItem(k,v) { this.value=v; }, removeItem() { this.value=null; }},
         FirebasexAnalytics: absent ? undefined : {
             setAnalyticsConsentMode(consent, done) { done(); },
             isAnalyticsCollectionEnabled(done) { done(enabled); },
@@ -209,11 +209,12 @@ test('only latest whitelisted pre-ready screen is emitted at platform readiness'
     assert.equal(h.events.length, 1); assert.equal(h.events[0].params.screen_name, 'tab.air');
 });
 
-test('SDK still receives events when wrapper query returns its incorrect default false', () => {
+test('native persisted opt-out requires a fresh explicit choice despite stale WebView grant', () => {
     const h = harness();
     h.window.FirebasexAnalytics.isAnalyticsCollectionEnabled = done => done(false);
     h.m.init(); h.m.screen('start');
-    assert.equal(h.events.length, 1);
+    assert.equal(h.events.length, 0);
+    h.m.setCollectionEnabled(true); h.m.screen('start'); assert.equal(h.events.length,1);
 });
 
 test('favorite counters exclude duplicates, current position and invalid removals', () => {

@@ -49,7 +49,7 @@
       "from": "screen",
       "to": "policy",
       "y": 165,
-      "label": "Apply explicit Analytics choice",
+      "label": "Serialize Analytics choice",
       "variant": "security"
     },
     {

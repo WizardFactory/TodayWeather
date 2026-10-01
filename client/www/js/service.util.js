@@ -17,7 +17,8 @@ angular.module('service.util', [])
                     Monetization.track("location_permission", {outcome: value === 1 ? "granted" : value === 0 ? "denied" : "unknown"});
                 }
             },
-            setOptOut: function(optout) { Monetization.setCollectionEnabled(!optout); },
+            // Compatibility callers may withdraw; only the settings choice may grant.
+            setOptOut: function(optout) { if (optout === true) { Monetization.setCollectionEnabled(false); } },
             // Old integrations remain inert for call-site compatibility. Never export UUIDs/raw errors.
             startTrackerWithId: angular.noop, setAllowIDFACollection: angular.noop,
             setUserId: angular.noop, setAnonymizeIp: angular.noop, setAppVersion: angular.noop,

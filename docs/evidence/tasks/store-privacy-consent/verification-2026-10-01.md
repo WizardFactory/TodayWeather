@@ -52,3 +52,33 @@ The [initial push artifact audit](https://github.com/WizardFactory/TodayWeather/
 No artifact checker/workflow exemption or historical Git rewrite was applied. Keep this historical audit finding distinct from the release snapshot result; future initial branch pushes from the same history can still encounter it. This follow-up records the observed CI boundary and preserves the existing checks. Final-head CI must be checked again after this documentation commit.
 
 Reported historical snapshot commits: `27f42364cf72`, `481aa49dbd96`, `daf504b32758`, `ddde368cd67c`.
+
+## Grok review round1 follow-up
+
+[Grok round1](https://github.com/WizardFactory/TodayWeather/pull/2662#issuecomment-5931018758)
+reported one required fix and four recommendations on e67090d6. Root reproduced
+four failing regressions before changes: failed withdrawal left a stored grant,
+restart could override native opt-out, consent callbacks overlapped, and failed
+enabling left native consent granted. The installed FirebaseX 2.0.2 code confirms
+collection setters persist the same preference read by the collection query;
+Android returns 1/0 and iOS boolean. Native consent/collection jobs run in background.
+
+Accepted fixes: invalidate stale stored grants; corroborate restoration with native
+preference; serialize/coalesce consent operations and failure compensation; restrict
+legacy opt-out to withdrawal; report absent/failed ad privacy bridges. Added stateful
+native/restart and actual settings controller grant/refusal/dismissal regressions.
+Android defaults continue to use pinned plugin variables; duplicate manifest tags
+were not added solely for a string assertion. Compiled/device evidence remains a
+release gate. Privacy failure copy asks to retry without asserting native success.
+
+Verification: 56/56 Node tests across four client suites, 8 Ruby tests/43 assertions,
+JSON locale parsing and diff checks passed. Diagram generation passed 9/9 showcase
+checks (0 errors/warnings). Automated browser rendering now runs but visual-check
+fails the existing vertical-overflow requirement at three smaller desktop sizes;
+2048x1320 fits in both themes. No geometry repair or strict visual pass is claimed.
+Source specification SHA256: `0097acd86cf57dc222c4efaf82a2bd39bbcf0ee7502b7c16d41d5a77575f4296`.
+Generated artifact SHA256: `83ddcd994d7cd0ce90477337cdd7c3d4687647069b7a9ee618970dcfcd888b70`.
+
+If both WebView persistence and native withdrawal fail, durable opt-out remains
+unverified and the UI reports failure. This code review does not certify native
+network behavior, final signed builds, historical data deletion or store forms.

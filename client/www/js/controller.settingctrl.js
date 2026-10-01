@@ -88,14 +88,15 @@ angular.module('controller.settingctrl', [])
         };
         $scope.openAdPrivacy = function() {
             var plugin = window.cordova && cordova.plugins && cordova.plugins.emiAdmobPlugin;
-            if (!plugin || !plugin.showPrivacyOptionsForm) { return; }
-            plugin.showPrivacyOptionsForm(function() {}, function() {
+            function unavailable() {
                 console.warn({component: 'privacy', operation: 'ad_choices', cause: 'ump_error',
                     action: 'retain_choice', result: 'form_unavailable'});
                 $translate('LOC_AD_PRIVACY_UNAVAILABLE').then(function(message) {
                     $rootScope.showAlert('TodayWeather', message);
                 });
-            });
+            }
+            if (!plugin || !plugin.showPrivacyOptionsForm) { unavailable(); return; }
+            try { plugin.showPrivacyOptionsForm(function() {}, unavailable); } catch (e) { unavailable(); }
         };
 
         /**
