@@ -26,7 +26,7 @@
         "Expand wind and humidity, or open the table for the same hourly values."
       ],
       "expected": "All supplied hours remain available. A missing temperature leaves a gap in the line.",
-      "failure": "A dash means no supplied value; a missing yesterday series does not produce an invented comparison."
+      "failure": "A dash means no supplied value; a missing yesterday series does not produce an invented comparison. If the request fails, focus stays in the content; choose Retry to load and focus the chart."
     },
     {
       "scenario": "S3",
@@ -39,7 +39,7 @@
         "Use Left/Right/Home/End or the table for temperatures, conditions, precipitation probability and amount."
       ],
       "expected": "Past probability is hidden. Equal morning and afternoon conditions use one icon.",
-      "failure": "An incomplete range has no bar. The missing value is a dash; any supplied extremum remains on the shared scale."
+      "failure": "An incomplete range has no bar. The missing value is a dash; any supplied extremum remains on the shared scale. A failed request keeps focus in the content; Retry returns focus to Daily after data arrives."
     },
     {
       "scenario": "S4",

@@ -1,6 +1,55 @@
 import { test, expect } from "./fixtures";
 import fixture from "../../docs/rewrite/examples/client-kma-response.json" with { type: "json" };
 const API = "https://todayweather.wizardfactory.net";
+test.use({ serviceWorkers: "block" });
+test("unavailable chart routes keep content focus and recover to the selected chart", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "tw.web.v1.preferences",
+      JSON.stringify({
+        version: 1,
+        places: [
+          {
+            id: "seoul",
+            name: "서울",
+            country: "KR",
+            address: "서울",
+            lat: 37.567,
+            lon: 126.978,
+          },
+        ],
+        selectedId: "seoul",
+        settings: { startup: "hourly", language: "ko" },
+      }),
+    ),
+  );
+  let available = false;
+  await page.route(API + "/weather/**", (route) =>
+    available
+      ? route.fulfill({ json: dailyFixture() })
+      : route.fulfill({ status: 501, body: "Fixture unavailable" }),
+  );
+  await page.setViewportSize({ width: 402, height: 874 });
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "메뉴 열기", exact: true }).click();
+  await page
+    .locator(".sidebar")
+    .getByRole("link", { name: "날씨", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.locator("#main-content")).toBeFocused();
+  await page.getByRole("button", { name: "일별", exact: true }).click();
+  await expect(page.locator("#main-content")).toBeFocused();
+  await page.reload();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.locator("#main-content")).toBeFocused();
+  available = true;
+  await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+  await expect(page.locator(".daily-chart")).toBeFocused();
+  await expect(page.locator(".daily-chart")).toBeInViewport();
+});
 function dailyFixture(partial = false) {
   const raw = structuredClone(fixture.response) as any;
   raw.current = { ...raw.current, date: "20260923", time: "0900", t1h: 20 };

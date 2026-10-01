@@ -25,3 +25,5 @@ python scripts/verification/pwa-manual-pdf.py
 ```
 
 The source and selected screenshots are maintained deliverables. After updates, rasterize and inspect every PDF page for clipping, readable text and correct screenshots. Preserve the image digests in the provenance file. See [testing](testing.md) and the [physical comparison](../design-system/physical-pwa-comparison.md) for the limits of automated and device evidence.
+
+When no saved weather is available, Hourly/Daily loading or error states focus the main content. Retry success focuses and scrolls the selected chart. Existing scenario screenshots show unchanged successful layouts.

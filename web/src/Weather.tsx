@@ -163,13 +163,20 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
     view === "daily" ? data?.daily.length : data?.hourly.length,
   );
   useEffect(() => {
-    if (!data || (view !== "hourly" && view !== "daily")) return;
+    if (view !== "hourly" && view !== "daily") return;
     // Run after the route shell closes its menu and chart metrics settle.
     const frame = requestAnimationFrame(() => {
       const section = document.querySelector<HTMLElement>(
         `[data-weather-section="${view}"]`,
       );
-      if (!section) return;
+      // Loading and terminal failures have no chart section. Keep the route's
+      // content focus there until data supplies the selected chart or empty state.
+      if (!section) {
+        const main = document.getElementById("main-content");
+        main?.focus({ preventScroll: true });
+        main?.scrollIntoView({ block: "start", behavior: "instant" });
+        return;
+      }
       const target =
         section.querySelector<HTMLElement>('.chart-scroll[role="group"]') ??
         section;
@@ -177,7 +184,14 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
       section.scrollIntoView({ block: "start", behavior: "instant" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [route.key, view, !!data, data?.location.id, hasChartRows]);
+  }, [
+    route.key,
+    view,
+    !!data,
+    data?.location.id,
+    hasChartRows,
+    query.isPending,
+  ]);
   if (!place)
     return (
       <Empty title={t("weather.selectFirst")}>
