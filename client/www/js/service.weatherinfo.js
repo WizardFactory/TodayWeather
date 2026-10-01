@@ -1,5 +1,5 @@
 angular.module('service.weatherinfo', [])
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, TwStorage, Util) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, TwStorage, Util, Monetization) {
         var cities = [];
         var cityIndex = -1;
         var loadingWeatherPhotos = false;
@@ -158,6 +158,7 @@ angular.module('service.weatherinfo', [])
                 city.photo = that._getPhoto(city.currentWeather);
                 cities.push(city);
                 that.saveCities();
+                if (!city.currentPosition) { Monetization.track('favorite_change', {action: 'add'}); }
                 return true;
             }
             return false;
@@ -167,8 +168,11 @@ angular.module('service.weatherinfo', [])
             var that = this;
 
             if (index !== -1) {
-                cities.splice(index, 1);
+                var removed = cities.splice(index, 1);
                 that.saveCities();
+                if (removed.length && !removed[0].currentPosition) {
+                    Monetization.track('favorite_change', {action: 'remove'});
+                }
 
                 if (cityIndex === that.getCityCount()) {
                     that.setFirstCityIndex();

@@ -1,24 +1,28 @@
 {
   "schema_version": 1,
   "diagram_type": "sequence",
-  "meta": {"title": "Cordova advertising after payment removal", "locale": "en", "quality_profile": "showcase", "column_fit": "spread", "viewBox": [1080, 540]},
+  "meta": {"title": "Cordova advertising and measurement policy", "locale": "en", "quality_profile": "showcase", "column_fit": "spread", "viewBox": [1080, 660]},
   "participants": [
     {"id": "screen", "type": "frontend", "label": "App screens", "sublabel": "Tab / start / guide"},
     {"id": "ads", "type": "backend", "label": "TwAds", "sublabel": "Visibility state"},
-    {"id": "adapter", "type": "backend", "label": "AdMob adapter", "sublabel": "Consent and plugin"},
+    {"id": "policy", "type": "backend", "label": "Monetization", "sublabel": "Remote Config / GA4"},
+    {"id": "adapter", "type": "backend", "label": "AdMob adapter", "sublabel": "Consent / reload gate"},
     {"id": "native", "type": "external", "label": "Native AdMob", "sublabel": "When available"}
   ],
   "messages": [
     {"id": "init", "from": "screen", "to": "ads", "y": 165, "label": "Tab initializes ads", "variant": "emphasis"},
-    {"id": "adapter-init", "from": "ads", "to": "adapter", "y": 215, "label": "Initialize adapter", "variant": "default"},
-    {"id": "consent", "from": "adapter", "to": "native", "y": 265, "label": "Existing consent flow", "variant": "security"},
-    {"id": "ready", "from": "adapter", "to": "ads", "y": 315, "label": "Ready: enable ordinary ads", "variant": "return"},
-    {"id": "visibility", "from": "screen", "to": "ads", "y": 365, "label": "Show / hide for screen", "variant": "default"},
-    {"id": "banner", "from": "ads", "to": "adapter", "y": 415, "label": "Apply banner visibility", "variant": "default"},
-    {"id": "native-banner", "from": "adapter", "to": "native", "y": 450, "label": "Native banner operation", "variant": "default"}
+    {"id": "config", "from": "ads", "to": "policy", "y": 210, "label": "Load banner policy", "variant": "default"},
+    {"id": "adapter-init", "from": "ads", "to": "adapter", "y": 255, "label": "Initialize adapter", "variant": "default"},
+    {"id": "consent", "from": "adapter", "to": "native", "y": 300, "label": "Existing UMP consent", "variant": "security"},
+    {"id": "ready", "from": "adapter", "to": "ads", "y": 345, "label": "Ready: load banner", "variant": "return"},
+    {"id": "visibility", "from": "screen", "to": "ads", "y": 390, "label": "Show / hide intent", "variant": "default"},
+    {"id": "configured", "from": "policy", "to": "ads", "y": 435, "label": "Final policy / fallback", "variant": "return"},
+    {"id": "banner", "from": "ads", "to": "adapter", "y": 480, "label": "Apply eligible visibility", "variant": "default"},
+    {"id": "native-banner", "from": "adapter", "to": "native", "y": 525, "label": "Native banner operation", "variant": "default"},
+    {"id": "telemetry", "from": "adapter", "to": "policy", "y": 570, "label": "Diagnostic lifecycle only", "variant": "default"}
   ],
   "cards": [
-    {"dot": "cyan", "title": "App scope · issue #2641", "items": ["No purchase route, billing SDK or receipt calls", "Legacy entitlement data is no longer read"]},
-    {"dot": "amber", "title": "Separate server scope · issue #2642", "items": ["Existing receipt endpoints remain server-side", "No deployment or store-console change in this PR"]}
+    {"dot": "cyan", "title": "Policy · issue #2654", "items": ["First show waits for config finish (max 12 seconds)", "Cache survives offline; screen hiding / consent win"]},
+    {"dot": "amber", "title": "Measurement and remaining evidence", "items": ["Firebase/AdMob owns automatic revenue after linkage", "No manual ad_impression; device receipt unverified"]}
   ]
 }

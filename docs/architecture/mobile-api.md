@@ -332,6 +332,29 @@ or device test. See the [pre-change issue record](https://github.com/WizardFacto
 
 ## Cordova payment removal (#2641)
 
+Google measurement/config follow-up (#2654): the maintained `Util.ga` facade now
+sends whitelisted Ionic route screens and authorization observations through
+Firebase Analytics rather than retired UA/Fabric. `Monetization` drops raw
+labels/identifiers and delegates delivery to native collection/consent. Native automatic
+screen reporting is disabled to avoid duplicate Ionic `screen_view`; AdMob
+automatic revenue remains the sole `ad_impression` source after account linkage.
+The common weather request emits `weather_fetch` once after its existing retry
+chain; the Tab parser records a separate `weather_load` result without address
+or coordinate labels. Neither changes API URLs or retry semantics.
+
+TwAds additionally applies validated Remote Config banner enable/delay parameters
+over existing consent, enable and screen visibility. First display and opportunity
+exposure wait for config completion/failure or the 12-second deadline; a cached
+disabled policy hides immediately. Delay is measured from service creation.
+Defaults preserve enable/delay policy; offline fetch retains activated cache and delayed callbacks cannot overwrite
+policy after the application deadline. Orientation recreation is serialized and
+stale callbacks after disabling cannot show. Native load failure releases the
+one-shot adapter listeners. The adapter preserves five-second explicit-load
+spacing in JS, disables the native interval that otherwise returns silently,
+and cancels a scheduled load when removing a banner. See [monetization operations](../operations/monetization.md)
+and the advertising diagram below. Console linkage and physical-device evidence
+remain separate from these repository implementation facts.
+
 The maintained `client/www` app no longer registers a purchase state, loads a billing controller, or offers purchase, restore, renewal or paid-app links. Both legacy app billing plugin installers were removed from the shared Gulp tasks; `cordova-plugin-inappbrowser` remains unrelated and supported. The config generator discards imported paid-app flags/URLs. AK confirmed there are no existing paid users, so there is no entitlement compatibility service.
 
 `TwAds` enables ordinary ads when its adapter becomes ready and retains in-memory screen visibility requests. Start/guide screens directly request show/hide; native adapter consent and failure behavior are unchanged. `TwStorage` no longer migrates `purchaseInfo`, `storeReceipt` or `twAdsInfo`; existing stale keys are ignored rather than deleted. See the [advertising sequence](diagrams/cordova-advertising.html) and [source](diagrams/cordova-advertising.sequence.json).
