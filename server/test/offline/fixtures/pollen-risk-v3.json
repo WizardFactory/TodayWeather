@@ -1,0 +1,17 @@
+{
+  "response": {
+    "header": {"resultCode": "00", "resultMsg": "NORMAL_SERVICE"},
+    "body": {
+      "dataType": "JSON",
+      "items": {
+        "item": [
+          {"areaNo": "1100000000", "date": "2026100106", "today": "2", "tomorrow": "3", "theDayAfterTomorrow": ""},
+          {"areaNo": "1111000000", "date": "2026100106", "today": "0", "tomorrow": "1", "theDayAfterTomorrow": "2"}
+        ]
+      },
+      "pageNo": 1,
+      "numOfRows": 1000,
+      "totalCount": 2
+    }
+  }
+}

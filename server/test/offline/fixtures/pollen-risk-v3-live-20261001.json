@@ -1,0 +1,39 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "NORMAL_SERVICE"
+    },
+    "body": {
+      "dataType": "JSON",
+      "items": {
+        "item": [
+          {
+            "code": "D08",
+            "areaNo": "1100000000",
+            "date": "2026093018",
+            "today": "",
+            "tomorrow": "0"
+          },
+          {
+            "code": "D08",
+            "areaNo": "1111000000",
+            "date": "2026093018",
+            "today": "",
+            "tomorrow": "0"
+          },
+          {
+            "code": "D08",
+            "areaNo": "1111051500",
+            "date": "2026093018",
+            "today": "",
+            "tomorrow": "0"
+          }
+        ]
+      },
+      "pageNo": 1,
+      "numOfRows": 3,
+      "totalCount": 3851
+    }
+  }
+}

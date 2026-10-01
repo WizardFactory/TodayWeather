@@ -66,8 +66,13 @@ export type Point = {
   sunrise: string;
   sunset: string;
   uv: string;
+  /** UV index; absent when the provider has no usable value. */
+  uvIndex?: number;
+  /** KMA pollen risk grades, 0 (low) through 3 (very high). Missing species are omitted. */
+  pollenOak?: number;
+  pollenPine?: number;
+  pollenWeeds?: number;
   discomfort: string;
-  foodPoisoning: string;
 };
 export type AirMeasure = {
   value: number | null;
@@ -341,7 +346,17 @@ function point(
     ? kmaSnow
     : (numberValue(r.sn1) ?? numberValue(r.s1d) ?? numberValue(r.s06));
   const dspls = numberValue(r.dspls),
-    ultrv = numberValue(r.ultrv);
+    rawUv = numberValue(r.ultrv ?? r.uvIndex),
+    ultrv = rawUv !== null && rawUv >= 0 ? rawUv : null;
+  const pollenGrade = (value: unknown) => {
+    const grade = numberValue(value);
+    return grade !== null && Number.isInteger(grade) && grade >= 0 && grade <= 3
+      ? grade
+      : null;
+  };
+  const pollenOak = pollenGrade(r.flowerWoody);
+  const pollenPine = pollenGrade(r.flowerPine);
+  const pollenWeeds = pollenGrade(r.flowerWeeds);
   return {
     at,
     temperature: temp(r.t1h ?? r.t3h),
@@ -392,18 +407,21 @@ function point(
     description: str(r.weather),
     sunrise: clock(r.sunrise),
     sunset: clock(r.sunset),
-    uv: str(r.ultrvStr)
-      ? ultrv === null
-        ? str(r.ultrvStr)
-        : `${str(r.ultrvStr)} (${ultrv})`
-      : str(r.uvIndex),
+    ...(ultrv !== null ? { uvIndex: ultrv } : {}),
+    ...(pollenOak !== null ? { pollenOak } : {}),
+    ...(pollenPine !== null ? { pollenPine } : {}),
+    ...(pollenWeeds !== null ? { pollenWeeds } : {}),
+    uv: ultrv === null
+      ? ""
+      : str(r.ultrvStr)
+        ? `${str(r.ultrvStr)} (${ultrv})`
+        : String(ultrv),
     discomfort:
       dspls !== null && dspls > 60
         ? str(r.dsplsStr)
           ? `${str(r.dsplsStr)} (${dspls})`
           : String(dspls)
         : "",
-    foodPoisoning: str(r.fsnStr),
   };
 }
 /** Keep each metric's original accumulation duration when filling hourly gaps. */

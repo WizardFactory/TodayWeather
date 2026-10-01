@@ -379,7 +379,6 @@ function validPoint(p: unknown): boolean {
       "sunset",
       "uv",
       "discomfort",
-      "foodPoisoning",
     ].every((k) => typeof p[k] === "string") &&
     [
       "temperature",
@@ -395,6 +394,10 @@ function validPoint(p: unknown): boolean {
     ].every((k) => finiteOrNull(p[k])) &&
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(p.at) &&
     finiteOrNull(p.snowfall) &&
+    ["pollenOak", "pollenPine", "pollenWeeds"].every(
+      (key) => p[key] === undefined ||
+        (Number.isInteger(p[key]) && p[key] >= 0 && p[key] <= 3),
+    ) &&
     [null, 1, 3, 24].includes(p.precipitationHours) &&
     [null, 1, 3, 24].includes(p.snowfallHours) &&
     [null, "observed", "partial", "approx", "forecast"].includes(

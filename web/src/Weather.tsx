@@ -384,10 +384,17 @@ function WeatherDetails({
   ];
   const uv = today?.uv || now.uv;
   if (uv) details.push([Sun, t("detail.uv"), uv]);
+  const pollen = today || now;
+  const pollenText = (grade: number) =>
+    [t("pollen.low"), t("pollen.moderate"), t("pollen.high"), t("pollen.veryHigh")][grade];
+  if (pollen.pollenOak !== undefined)
+    details.push([Sun, t("detail.pollenOak"), pollenText(pollen.pollenOak)]);
+  if (pollen.pollenPine !== undefined)
+    details.push([Sun, t("detail.pollenPine"), pollenText(pollen.pollenPine)]);
+  if (pollen.pollenWeeds !== undefined)
+    details.push([Sun, t("detail.pollenWeeds"), pollenText(pollen.pollenWeeds)]);
   if (now.discomfort)
     details.push([Thermometer, t("detail.discomfort"), now.discomfort]);
-  if (today?.foodPoisoning)
-    details.push([Droplets, t("detail.foodPoisoning"), today.foodPoisoning]);
   return (
     <>
       <div className="overview-grid">

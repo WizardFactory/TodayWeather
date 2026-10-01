@@ -77,7 +77,7 @@ describe("daily history and details", () => {
       normalizeWeather(raw).daily.some((p) => p.at.startsWith("2026-09-20")),
     ).toBe(false);
   });
-  it("exposes UV, discomfort and food-poisoning texts when supplied", () => {
+  it("exposes UV and discomfort while omitting unavailable life indices", () => {
     const raw = kma();
     raw.current.dspls = 72;
     raw.current.dsplsStr = "보통";
@@ -88,16 +88,32 @@ describe("daily history and details", () => {
       ultrv: 7,
       ultrvGrade: 2,
       ultrvStr: "높음",
-      fsnGrade: 1,
-      fsnStr: "주의",
     });
     const w = normalizeWeather(raw);
     expect(w.current.discomfort).toBe("보통 (72)");
     const t = w.daily.find((p) => p.at.startsWith("2026-09-23"))!;
     expect(t.uv).toBe("높음 (7)");
-    expect(t.foodPoisoning).toBe("주의");
+    expect(t.uvIndex).toBe(7);
+    expect("foodPoisoning" in t).toBe(false);
+    today.ultrv = 0;
+    expect(normalizeWeather(raw).daily.find((p) => p.at.startsWith("2026-09-23"))?.uvIndex).toBe(0);
+    today.ultrv = -1;
+    expect("uvIndex" in normalizeWeather(raw).daily.find((p) => p.at.startsWith("2026-09-23"))!).toBe(false);
     raw.current.dspls = 55;
     expect(normalizeWeather(raw).current.discomfort).toBe("");
+  });
+  it("maps seasonal pollen grades and preserves old fixtures", () => {
+    const raw = kma();
+    const today = raw.midData.dailyData.find((d: any) => d.date === raw.current.date);
+    Object.assign(today, { flowerWoody: 0, flowerPine: 2, flowerWeeds: 3 });
+    const row = normalizeWeather(raw).daily.find((p) => p.at.startsWith('2026-09-23'))!;
+    expect(row).toMatchObject({ pollenOak: 0, pollenPine: 2, pollenWeeds: 3 });
+    today.flowerPine = -1;
+    today.flowerWeeds = '';
+    const missing = normalizeWeather(raw).daily.find((p) => p.at.startsWith('2026-09-23'))!;
+    expect('pollenPine' in missing).toBe(false);
+    expect('pollenWeeds' in missing).toBe(false);
+    expect('pollenOak' in normalizeWeather(kma()).daily[0]).toBe(false);
   });
   it("records the short forecast publication time", () => {
     expect(normalizeWeather(kma()).forecastPublishedAt).toBe(

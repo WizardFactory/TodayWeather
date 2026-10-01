@@ -11,7 +11,7 @@
     "title": "Weather collection and persistence",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "39a3336fb2730dfbe9920c62165a2b632874af1e",
+      "revision": "4ba9c3bbdfbb81553c1de9bced620c9500ab8e4f",
       "provider": "github",
       "link_mode": "local-only"
     },
@@ -99,7 +99,7 @@
       "id": "scrape",
       "type": "backend",
       "label": "Scrape timer",
-      "sublabel": "scrape/local \u00b7 gather opt-in",
+      "sublabel": "scrape/local · gather opt-in",
       "pos": [
         35,
         440
@@ -243,9 +243,9 @@
     },
     {
       "dot": "amber",
-      "title": "RSS fallback \u2014 issue #2554 local change",
+      "title": "RSS fallback — issue #2554 local change",
       "items": [
-        "Collector stores wdEn; service maps ws to wsd and wd \u00d7 45 to vec.",
+        "Collector stores wdEn; service maps ws to wsd and wd × 45 to vec.",
         "Newer RSS replaces valid source fields; equal fills gaps; older is skipped."
       ]
     },
@@ -256,6 +256,14 @@
         "Migrate station/city observations to supported HTTPS services; validate full batches before writes.",
         "Await station and province aggregate storage; emit sanitized UTC outcomes.",
         "Nation: retain fresh province averages; absent data uses shared global air at representative points."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "LifeIndex collection (#2650)",
+      "items": [
+        "UV V5 and seasonal oak/pine/weed pollen V3 run at /gather/lifeindex; daily areaNo records.",
+        "Retired food-poisoning and health-index collectors and the /gather/healthday schedule were removed. Food poisoning is tracked in #2600."
       ]
     }
   ]
