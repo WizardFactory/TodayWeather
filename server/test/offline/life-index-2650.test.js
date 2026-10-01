@@ -136,12 +136,45 @@ test('seasonal pollen task fetches every page, stores rows, and skips off-season
     await new Promise((resolve, reject) => service.taskPollenV3('flowerWeeds',
         new Date('2026-10-01T03:00:00Z'), err => err ? reject(err) : resolve()));
     assert.equal(requested.length, 2);
+    assert.ok(requested.every(url => url.includes('time=2026100112')),
+        'pollen query must use the current KST hour to see later publications');
     assert.equal(saved.type, 'flowerWeeds');
     assert.equal(saved.rows.length, 1001);
     const count = requested.length;
     await new Promise((resolve, reject) => service.taskPollenV3('flowerWeeds',
         new Date('2026-07-01T03:00:00Z'), err => err ? reject(err) : resolve()));
     assert.equal(requested.length, count);
+});
+
+test('later pollen issuance on the same KST day replaces the earlier one', async () => {
+    const requested = [];
+    const saved = [];
+    const request = (url, options, callback) => {
+        const queryTime = new URL(url).searchParams.get('time');
+        requested.push(queryTime);
+        const issued = queryTime === '2026100112' ? '2026100106' : '2026100112';
+        const body = structuredClone(pollenFixture);
+        body.response.body.totalCount = 1;
+        body.response.body.items.item = [{areaNo: '1100000000', date: issued, today: '1'}];
+        callback(null, {statusCode: 200}, body);
+    };
+    const Service = load('lib/lifeIndexKmaRequester.js', {
+        request, async: {mapSeries: (items, worker, done) => done(null, [])},
+        '../lib/kmaTimeLib': time
+    });
+    const service = new Service();
+    service.serviceKey = 'fixture-key';
+    service.saveLifeIndex2 = (type, rows, callback) => {
+        saved.push(rows[0].lastUpdateDate);
+        callback(null, rows.length);
+    };
+    for (const instant of ['2026-10-01T03:00:00Z', '2026-10-01T06:00:00Z']) {
+        await new Promise((resolve, reject) => service.taskPollenV3('flowerWeeds',
+            new Date(instant), err => err ? reject(err) : resolve()));
+    }
+    assert.deepEqual(requested, ['2026100112', '2026100115']);
+    assert.deepEqual(saved, ['2026100106', '2026100112']);
+    assert.equal(service.flowerWeeds.lastIssued, '2026100112');
 });
 
 test('incomplete or duplicate pollen pages cannot mark an issuance complete', async () => {

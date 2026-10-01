@@ -262,7 +262,7 @@
       "dot": "emerald",
       "title": "LifeIndex collection (#2650)",
       "items": [
-        "UV V5 and seasonal oak/pine/weed pollen V3 run at /gather/lifeindex; daily areaNo records.",
+        "UV V5 and seasonal oak/pine/weed pollen V3 run at /gather/lifeindex; pollen queries the current KST hour and all pages share that time; daily areaNo records.",
         "Retired food-poisoning and health-index collectors and the /gather/healthday schedule were removed. Food poisoning is tracked in #2600."
       ]
     }

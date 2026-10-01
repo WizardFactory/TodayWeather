@@ -1573,8 +1573,10 @@ KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
         this[indexName].nextTime = new Date(now.getTime() + 24*3600*1000);
         return callback(null, 0);
     }
+    // Query as of the current KST hour so a later publication can replace the
+    // previous one during this season. Pagination keeps this exact request time.
     var time = kst.getUTCFullYear() + ('0'+(month+1)).slice(-2) +
-        ('0'+kst.getUTCDate()).slice(-2) + '00';
+        ('0'+kst.getUTCDate()).slice(-2) + ('0'+kst.getUTCHours()).slice(-2);
     this._requestPollenPageV3(indexName, time, 1, function (err, first) {
         if (err) {
             return callback(err);

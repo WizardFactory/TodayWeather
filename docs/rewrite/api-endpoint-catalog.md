@@ -148,9 +148,9 @@ Rows are numbered 1–89 and grouped by router file. Paths are relative to the m
 | 6 | `POST /v000902/` | [v000902/index.js#L39-L41](../../server/routes/v000902/index.js#L39-L41) | Same as row 5 | None | None found | 0 (in scope) |
 | 7 | `POST /v000903/` | [v000903/index.js#L39-L41](../../server/routes/v000903/index.js#L39-L41) | Same as row 5 | None | None found | 0 (in scope) |
 
-### Collection routes: `routeGather.js` (25 registrations, 175 mounted combinations)
+### Collection routes: `routeGather.js` (24 registrations, 168 mounted combinations)
 
-All 25 are `GET` handlers under `/gather`, `/v000001/gather`, `/v000705/gather`, `/v000803/gather`, `/v000901/gather`, `/v000902/gather` and `/v000903/gather`. They take no query parameters and do not check the caller. Service keys come from `config.keyString.dongnae_forecast_keys` (random pick per request) or `config.keyString.normal`; the AWS keys used by row 30 come from `config.keyString.aws_access_key`/`aws_secret_key` ([config names](configuration-inventory.md)).
+All 24 are `GET` handlers under `/gather`, `/v000001/gather`, `/v000705/gather`, `/v000803/gather`, `/v000901/gather`, `/v000902/gather` and `/v000903/gather`. They take no query parameters and do not check the caller. Service keys come from `config.keyString.dongnae_forecast_keys` (random pick per request) or `config.keyString.normal`; the AWS keys used by row 30 come from `config.keyString.aws_access_key`/`aws_secret_key` ([config names](configuration-inventory.md)). Row ID 25 is retained as a gap because `/healthday` was removed in #2650.
 
 Existing coverage, not repeated here:
 
@@ -184,15 +184,14 @@ Most rows answer HTTP 200 with an empty body after the task, and only log errors
 | 21 | `/short` | [#L160-L168](../../server/routes/v000001/routeGather.js#L160-L168) | `getTownShortData(9, key)` | Empty 200 | Manager ([#L2215](../../server/controllers/controllerManager.js#L2215)) |
 | 22 | `/shortest/:mx/:my` | [#L170-L185](../../server/routes/v000001/routeGather.js#L170-L185) | As row 8, product `shortest` | As row 8 | **Dead:** as row 8 |
 | 23 | `/shortest` | [#L187-L195](../../server/routes/v000001/routeGather.js#L187-L195) | `getTownShortestData(9, key)` | Empty 200 | Manager ([#L2236](../../server/controllers/controllerManager.js#L2236)) |
-| 24 | `/lifeindex` | [#L197-L204](../../server/routes/v000001/routeGather.js#L197-L204) | KMA life-index collection | Empty 200 | Manager ([#L2205](../../server/controllers/controllerManager.js#L2205)) |
-| 25 | `/healthday` | [#L206-L221](../../server/routes/v000001/routeGather.js#L206-L221) | Seven health-index request URLs through `ctrlHealthDay.getData` | Empty 200 | Manager ([#L2174](../../server/controllers/controllerManager.js#L2174)) |
-| 26 | `/kmaStnHourly` | [#L226-L242](../../server/routes/v000001/routeGather.js#L226-L242) | Scraper `getStnHourlyWeather`. The source comment above it reads "don't use" | Empty 200 | None found. The scrape loop calls the scraper in-process, not over HTTP |
-| 27 | `/kmaStnPastHourly` | [#L244-L260](../../server/routes/v000001/routeGather.js#L244-L260) | Scraper `getStnPastHourlyWeather(8)` | Empty 200 | **Dead:** the Manager call is commented out ([#L2348](../../server/controllers/controllerManager.js#L2348)) |
-| 28 | `/kmaStnMinute` | [#L262-L278](../../server/routes/v000001/routeGather.js#L262-L278) | Scraper `getStnMinuteWeather` | Empty 200 | None found (in-process scrape loop only) |
-| 29 | `/updateStnRnsHitRate` | [#L280-L291](../../server/routes/v000001/routeGather.js#L280-L291) | Scraper `updateRnsHitRates` | Empty 200 | Manager ([#L2245](../../server/controllers/controllerManager.js#L2245)) |
-| 30 | `/invalidateCloudFront/:items` | [#L293-L314](../../server/routes/v000001/routeGather.js#L293-L314) | **CloudFront invalidation** through `manager.deleteCacheOnCloudFront`, with `config.aws` region, API version and distribution id. Only `:items = ALL` adds a path (`/town/*`); any other value sends an empty list | Empty 200 | **Dead:** the Manager call is commented out ([#L2253](../../server/controllers/controllerManager.js#L2253)) |
-| 31 | `/gatherKasiRiseSet` | [#L316-L324](../../server/routes/v000001/routeGather.js#L316-L324) | KASI sunrise/sunset API through `gatherAreaRiseSetFromApi`, then DB update | JSON result, or 500 with the error | Manager ([#L2260](../../server/controllers/controllerManager.js#L2260)) |
-| 32 | `/updateInvalidt1h` | [#L326-L334](../../server/routes/v000001/routeGather.js#L326-L334) | `updateInvalidT1hData(9, key)` | Empty 200 | **Dead:** the Manager call is commented out ([#L2271](../../server/controllers/controllerManager.js#L2271)) |
+| 24 | `/lifeindex` | [#L196-L203](../../server/routes/v000001/routeGather.js#L196-L203) | KMA UV and seasonal pollen collection | Empty 200 | Manager ([#L2256](../../server/controllers/controllerManager.js#L2256)) |
+| 26 | `/kmaStnHourly` | [#L208-L224](../../server/routes/v000001/routeGather.js#L208-L224) | Scraper `getStnHourlyWeather`. The source comment above it reads "don't use" | Empty 200 | None found. The scrape loop calls the scraper in-process, not over HTTP |
+| 27 | `/kmaStnPastHourly` | [#L226-L242](../../server/routes/v000001/routeGather.js#L226-L242) | Scraper `getStnPastHourlyWeather(8)` | Empty 200 | **Dead:** the Manager call is commented out ([#L2348](../../server/controllers/controllerManager.js#L2348)) |
+| 28 | `/kmaStnMinute` | [#L244-L260](../../server/routes/v000001/routeGather.js#L244-L260) | Scraper `getStnMinuteWeather` | Empty 200 | None found (in-process scrape loop only) |
+| 29 | `/updateStnRnsHitRate` | [#L262-L273](../../server/routes/v000001/routeGather.js#L262-L273) | Scraper `updateRnsHitRates` | Empty 200 | Manager ([#L2245](../../server/controllers/controllerManager.js#L2245)) |
+| 30 | `/invalidateCloudFront/:items` | [#L275-L296](../../server/routes/v000001/routeGather.js#L275-L296) | **CloudFront invalidation** through `manager.deleteCacheOnCloudFront`, with `config.aws` region, API version and distribution id. Only `:items = ALL` adds a path (`/town/*`); any other value sends an empty list | Empty 200 | **Dead:** the Manager call is commented out ([#L2253](../../server/controllers/controllerManager.js#L2253)) |
+| 31 | `/gatherKasiRiseSet` | [#L298-L306](../../server/routes/v000001/routeGather.js#L298-L306) | KASI sunrise/sunset API through `gatherAreaRiseSetFromApi`, then DB update | JSON result, or 500 with the error | Manager ([#L2260](../../server/controllers/controllerManager.js#L2260)) |
+| 32 | `/updateInvalidt1h` | [#L308-L316](../../server/routes/v000001/routeGather.js#L308-L316) | `updateInvalidT1hData(9, key)` | Empty 200 | **Dead:** the Manager call is commented out ([#L2271](../../server/controllers/controllerManager.js#L2271)) |
 
 ### Legacy domestic town routers (20 registrations)
 
@@ -385,7 +384,7 @@ This table compares the full-town routes (rows 36, 44 and 52) with the v000903 a
 | Effect of that stage | Unit keys and `airForecastSource` are not defaulted, and `req.version` is not set | Same | Same | Defaults applied; `req.version` set |
 | `checkParamValidation` | No | Yes | Yes | Yes |
 | Station corrections (`updateCurrentListForValidation`, `mergeCurrentByStnHourly`, `getKmaStnMinuteWeather`) | No. The full-town route uses `getKmaStnHourlyWeather` instead | Yes | Yes | Yes |
-| `mergeCurrentSkyByShortest`, `updateMidTempMaxMin`, `getHealthDay`, `getRiseSetInfo` | No | No | Yes | Yes |
+| `mergeCurrentSkyByShortest`, `updateMidTempMaxMin`, `getRiseSetInfo` | No | No | Yes | Yes |
 | `convertMidKorStrToSkyInfo`, `getKecoDustForecast`, `insertIndex`, `insertStrForData` | No | Yes | Yes | Yes (`insertStrForData` runs after unit conversion) |
 | **Icon case** | No sky-icon stage | CamelCase (`insertSkyIcon`) | CamelCase (`insertSkyIcon`) | lower-case (`insertSkyIconLowCase`) |
 | **Unit conversion** | None | None | None | `convertUnits` to the requested units |
