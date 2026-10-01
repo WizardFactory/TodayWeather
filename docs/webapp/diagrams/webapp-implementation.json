@@ -8,8 +8,8 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather.git",
-      "revision": "c306f5485207051377481cea7d94d3a2a28a942c",
-      "link_mode": "local-only"
+      "revision": "db02edd9cb75c122f59f3ffc015852b7b456a2e8",
+      "link_mode": "web"
     }
   },
   "components": [
@@ -289,7 +289,7 @@
       "dot": "amber",
       "title": "Evidence scope",
       "items": [
-        "Local source snapshot; rebind to published implementation before final PR review.",
+        "Source links pin the published implementation commit; release remains human-owned.",
         "Server/provider behavior and installed Cordova app are unchanged."
       ]
     }
