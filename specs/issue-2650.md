@@ -5,7 +5,7 @@ Consumes [intent](../intent/issue-2650.md). Current source decisions and operati
 ## Service behavior
 
 - Continue UV collection from KMA `LivingWthrIdxServiceV5/getUVIdxV5`.
-- Collect oak, pine and weeds risk using KMA `HealthWthrIdxServiceV3` operations during their published seasons. Query all pages, retain valid integer grades 0–3 and align each day with the service's KST calendar date. A missing publication or malformed grade creates no field.
+- Collect oak, pine and weeds risk using KMA `HealthWthrIdxServiceV3` operations during their published seasons. Query all pages and require a consistent total, page number, row count, unique area and issuance time before marking a batch complete. Retain valid integer grades 0–3 and align each day with the service's KST calendar date. A missing publication or malformed grade creates no field; an incomplete batch retries without a completion marker.
 - Remove the retired food poisoning and legacy health collectors, routes and schedules. Do not synthesize health values from unrelated forecasts. Keep food poisoning source investigation in #2600.
 - Do not offer activity suitability until the product accepts a derivation rule. Existing forecast fields remain available for a later proposal.
 

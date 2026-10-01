@@ -84,14 +84,35 @@ test('a live weeds response maps an empty today and zero tomorrow to the correct
     assert.equal(service.parseUvIdxV5({response: {header: {resultCode: '99'}}}, 'pollen v3').noData, true);
 });
 
+test('pollen grades reject malformed values instead of coercing them to zero or one', () => {
+    const service = new Requester();
+    for (const raw of [' ', '\t', false, true, [], {}, '1.5']) {
+        const rows = service.convertPollenItemsV3('flowerWeeds', [{
+            areaNo: '1100000000', date: '2026100106', today: raw,
+            tomorrow: '', theDayAfterTomorrow: ''
+        }]);
+        assert.equal(rows.length, 0, 'must omit malformed grade ' + JSON.stringify(raw));
+    }
+    assert.equal(service.convertPollenItemsV3('flowerWeeds', [{
+        areaNo: '1100000000', date: '2026100106', today: ' 0 ', tomorrow: ''
+    }]).length, 1, 'trimmed numeric provider text remains usable');
+});
+
 test('seasonal pollen task fetches every page, stores rows, and skips off-season calls', async () => {
     const requested = [];
     const twoPage = structuredClone(pollenFixture);
+    twoPage.response.body.items.item = Array.from({length: 1000}, (_, i) => ({
+        areaNo: String(1100000000 + i), date: '2026100106', today: '0'
+    }));
     twoPage.response.body.totalCount = 1001;
+    const lastPage = structuredClone(pollenFixture);
+    lastPage.response.body.items.item = [{areaNo: '1100001000', date: '2026100106', today: '0'}];
+    lastPage.response.body.totalCount = 1001;
+    lastPage.response.body.pageNo = 2;
     const request = (url, options, callback) => {
         requested.push(url);
         callback(null, {statusCode: 200}, url.includes('pageNo=1')
-            ? twoPage : pollenFixture);
+            ? twoPage : lastPage);
     };
     const asyncStub = {mapSeries(list, worker, done) {
         const results = [];
@@ -116,11 +137,63 @@ test('seasonal pollen task fetches every page, stores rows, and skips off-season
         new Date('2026-10-01T03:00:00Z'), err => err ? reject(err) : resolve()));
     assert.equal(requested.length, 2);
     assert.equal(saved.type, 'flowerWeeds');
-    assert.equal(saved.rows.length, 10);
+    assert.equal(saved.rows.length, 1001);
     const count = requested.length;
     await new Promise((resolve, reject) => service.taskPollenV3('flowerWeeds',
         new Date('2026-07-01T03:00:00Z'), err => err ? reject(err) : resolve()));
     assert.equal(requested.length, count);
+});
+
+test('incomplete or duplicate pollen pages cannot mark an issuance complete', async () => {
+    const first = structuredClone(pollenFixture);
+    first.response.body.totalCount = 1001;
+    first.response.body.items.item = Array.from({length: 1000}, (_, i) => ({
+        areaNo: String(1100000000 + i), date: '2026100106', today: '0'
+    }));
+    const duplicate = structuredClone(pollenFixture);
+    duplicate.response.body.totalCount = 1001;
+    duplicate.response.body.pageNo = 2;
+    duplicate.response.body.items.item = [{areaNo: '1100000000', date: '2026100106', today: '0'}];
+    const wrongPage = structuredClone(duplicate);
+    wrongPage.response.body.pageNo = 1;
+    wrongPage.response.body.items.item[0].areaNo = '1100001000';
+    const wrongCount = structuredClone(wrongPage);
+    wrongCount.response.body.pageNo = 2;
+    wrongCount.response.body.totalCount = 1002;
+    const wrongIssue = structuredClone(wrongPage);
+    wrongIssue.response.body.pageNo = 2;
+    wrongIssue.response.body.items.item[0].date = '2026100112';
+    const emptyPage = structuredClone(wrongPage);
+    emptyPage.response.body.pageNo = 2;
+    emptyPage.response.body.items.item = [];
+    const asyncStub = {mapSeries(list, worker, done) {
+        const results = [];
+        function next(i) {
+            if (i === list.length) return done(null, results);
+            worker(list[i], (err, value) => {
+                if (err) return done(err, results);
+                results.push(value);
+                next(i + 1);
+            });
+        }
+        next(0);
+    }};
+    for (const second of [duplicate, wrongPage, wrongCount, wrongIssue, emptyPage]) {
+        const request = (url, options, callback) => callback(null, {statusCode: 200},
+            url.includes('pageNo=1') ? first : second);
+        const Service = load('lib/lifeIndexKmaRequester.js', {
+            request, async: asyncStub, '../lib/kmaTimeLib': time
+        });
+        const service = new Service();
+        service.serviceKey = 'fixture-key';
+        let saved = false;
+        service.saveLifeIndex2 = (type, rows, cb) => { saved = true; cb(null, rows.length); };
+        const err = await new Promise(resolve => service.taskPollenV3('flowerWeeds',
+            new Date('2026-10-01T03:00:00Z'), resolve));
+        assert.ok(err, 'partial publication must fail and retry');
+        assert.equal(saved, false);
+        assert.equal(service.flowerWeeds.lastIssued, undefined);
+    }
 });
 
 test('pollen collection is due at the first KST day of each season', () => {

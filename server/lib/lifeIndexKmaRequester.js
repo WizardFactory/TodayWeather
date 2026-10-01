@@ -1219,7 +1219,11 @@ KmaIndexService.prototype.parseUvIdxV5 = function (body, label) {
     }
 
     var totalCount = parseInt(resBody.totalCount, 10);
-    return {items: items, totalCount: isNaN(totalCount) ? items.length : totalCount};
+    return {items: items, totalCount: isNaN(totalCount) ? items.length : totalCount,
+            // Pollen collection needs these response fields to prove that all pages
+            // of one issuance were received before it marks the batch complete.
+            pageNo: Number(resBody.pageNo),
+            reportedTotalCount: Number(resBody.totalCount)};
 };
 
 /**
@@ -1482,7 +1486,8 @@ KmaIndexService.prototype.convertPollenItemsV3 = function (indexName, items) {
         }
         ['today', 'tomorrow', 'theDayAfterTomorrow'].forEach(function (field, offset) {
             var raw = item[field];
-            if (raw === '' || raw === null || raw === undefined) {
+            if ((typeof raw !== 'string' && typeof raw !== 'number') ||
+                    (typeof raw === 'string' && raw.trim() === '')) {
                 return;
             }
             var index = Number(raw);
@@ -1536,6 +1541,29 @@ KmaIndexService.prototype._requestPollenPageV3 = function (indexName, time, page
     attempt();
 };
 
+KmaIndexService.prototype._validatePollenPageV3 = function (indexName, page, expectedPage,
+                                                            totalCount, issued, seenAreas) {
+    if (!Number.isSafeInteger(totalCount) || totalCount <= 0 ||
+            page.reportedTotalCount !== totalCount || page.pageNo !== expectedPage) {
+        return new Error('pollen v3 inconsistent page metadata '+indexName+' page='+expectedPage);
+    }
+    var expectedRows = Math.min(UV_V5_ROWS, totalCount - (expectedPage-1)*UV_V5_ROWS);
+    if (expectedRows <= 0 || page.items.length !== expectedRows) {
+        return new Error('pollen v3 incomplete page '+indexName+' page='+expectedPage);
+    }
+    for (var i=0; i<page.items.length; i++) {
+        var item = page.items[i];
+        var areaNo = Number(item.areaNo);
+        if (String(item.date) !== issued || !Number.isSafeInteger(areaNo) ||
+                areaNo <= 0 || seenAreas.has(areaNo)) {
+            return new Error('pollen v3 duplicate or inconsistent item '+indexName+
+                             ' page='+expectedPage);
+        }
+        seenAreas.add(areaNo);
+    }
+    return null;
+};
+
 KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
     var self = this;
     var kst = new Date(now.getTime() + 9*3600*1000);
@@ -1559,6 +1587,12 @@ KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
         if (!/^\d{10}$/.test(issued)) {
             return callback(new Error('pollen v3 invalid issuance '+indexName));
         }
+        var seenAreas = new Set();
+        var firstErr = self._validatePollenPageV3(indexName, first, 1,
+                                                  first.totalCount, issued, seenAreas);
+        if (firstErr) {
+            return callback(firstErr);
+        }
         if (self[indexName].lastIssued && issued <= self[indexName].lastIssued) {
             self[indexName].nextTime = new Date(now.getTime() + 3*3600*1000);
             return callback(null, 0);
@@ -1572,6 +1606,11 @@ KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
                 if (pageErr || parsed.noData) {
                     return cb(pageErr || new Error('pollen v3 missing page '+page));
                 }
+                var validationErr = self._validatePollenPageV3(indexName, parsed, page,
+                                                               first.totalCount, issued, seenAreas);
+                if (validationErr) {
+                    return cb(validationErr);
+                }
                 cb(null, parsed.items);
             });
         }, function (pageErr, pageItems) {
@@ -1581,6 +1620,10 @@ KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
             var items = first.items;
             pageItems.forEach(function (part) { items = items.concat(part); });
             var rows = self.convertPollenItemsV3(indexName, items);
+            if (rows.length === 0) {
+                self[indexName].nextTime = new Date(now.getTime() + 3*3600*1000);
+                return callback(null, 0);
+            }
             self.saveLifeIndex2(indexName, rows, function (saveErr, count) {
                 if (saveErr) {
                     return callback(saveErr);
