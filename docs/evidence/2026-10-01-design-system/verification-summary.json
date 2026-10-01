@@ -1,0 +1,229 @@
+{
+  "date": "2026-10-01",
+  "base": "6ec6c68ceb518e22382ba2c24428964d4d2e0e67",
+  "versions": {
+    "chromium": "153.0.8010.12",
+    "webkit": "26.6"
+  },
+  "renders": 128,
+  "control_groups": 8,
+  "controls": [
+    "chromium/mobile: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "chromium/tablet: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "chromium/desktop: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "chromium/compact: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "webkit/mobile: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "webkit/tablet: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "webkit/desktop: chart/expander/tabs/input/dialog/states/reduced/forced",
+    "webkit/compact: chart/expander/tabs/input/dialog/states/reduced/forced"
+  ],
+  "seriousCritical": 0,
+  "sourceDigests": {
+    "packages/design-tokens/tokens.json": "6f7c8a21cde6fae49a66b4ddc3dbfc9394f518e757442a98e95496b80d095ac5",
+    "packages/design-tokens/resolver.mjs": "0bf240704aecdb38b65e1a6bf08b821bdd34e89561c8fce828ca8fba1c40d49b",
+    "packages/design-tokens/generate.mjs": "aa06306e00b5cc1ce0cd479b30a60796d601e379e6f1c85c190d56ac2268fea5",
+    "docs/design-system/references/gallery.html": "caa85cdd3b11d6e8e5d92d330bc846d68ad46c980d26d46e477e1a5279483f97",
+    "docs/design-system/references/gallery.css": "285208cc63507e89f81c61f6e813562bbbe0100059b04b1a9c846bfc2fd99d71",
+    "docs/design-system/references/gallery.js": "fe971a7bd2d0602cbfb6ea0ea6df0243a9b7be834064e919b8c7028bd805c1ae",
+    "docs/design-system/references/chart-model.js": "ebd0ad7433f9507f007d05a1048195139ef947d130f59e45071bdd130d768f5c",
+    "docs/design-system/references/charts.js": "2d5fdd79de36f556b6db275cd850f8a361e6c3ac38290a44b3041eafdaca7c78",
+    "docs/design-system/references/fixtures.js": "b415403afc8cb4dd5e22b691c7a2147902b12d42dfe6d4681684048c8bc1e931",
+    "scripts/design-gallery.mjs": "78f960b5f721a708814725c5f1848318376a07f2fcee2b0515432406a59d0344",
+    "scripts/verification/design-gallery-check.mjs": "6242a83b382bea8fd6c875cd7649056c6f3e6210290b94b442ad40af255ae057",
+    "scripts/verification/design-token-css-check.mjs": "1aec248e5d66a48c5a6be140b58b5ff01213a5a23b81965b00dfe387c28bc647"
+  },
+  "captures": {
+    "mobile-light.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "tier": "mobile",
+      "lang": "ko",
+      "appearance": "light",
+      "scale": 1,
+      "root": 16,
+      "sha256": "55c8f2e8230deeb4e74cd555501ed9e6b3b0bb436f0eef1b8193ca215c0eca0c"
+    },
+    "mobile-dark.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "tier": "mobile",
+      "lang": "ko",
+      "appearance": "dark",
+      "scale": 1,
+      "root": 16,
+      "sha256": "64266a73e2eb5c8e865d9f39ab1c5851ded4089860d79fe3a6653f2b044983aa"
+    },
+    "tablet-light.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "tier": "tablet",
+      "lang": "ko",
+      "appearance": "light",
+      "scale": 1,
+      "root": 16,
+      "sha256": "230e3d9f2907623a719bfc10db66328700373fb4e148a86276a0e0efba03edd4"
+    },
+    "tablet-dark.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "tier": "tablet",
+      "lang": "ko",
+      "appearance": "dark",
+      "scale": 1,
+      "root": 16,
+      "sha256": "0bed25831b200306c48286ae785aa9ff45592fedd4f3d199239c9dd1ececbf6e"
+    },
+    "desktop-light.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "tier": "desktop",
+      "lang": "ko",
+      "appearance": "light",
+      "scale": 1,
+      "root": 16,
+      "sha256": "ac24fd9ac6e2e5c04241939800aebe23001b851d488238706f7aac11f7e417b2"
+    },
+    "desktop-dark.png": {
+      "engine": "chromium",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "tier": "desktop",
+      "lang": "ko",
+      "appearance": "dark",
+      "scale": 1,
+      "root": 16,
+      "sha256": "da8704eeb95f74ba8233825c29cedebb995bbc1a3ac5ad27f18b57b1991ec07e"
+    }
+  },
+  "token_count": 435,
+  "contrast_pairs": 606,
+  "model_tests": 12,
+  "existing_tests": 151,
+  "typecheck": "passed",
+  "determinism": "byte-identical",
+  "review5373261372": {
+    "candidate": "d36983433803583727e80b3cc99f0cb9ab966bbe66bc07a91863d6f62925405a",
+    "renders": 128,
+    "controlGroups": 8,
+    "tokenCSSContexts": 96,
+    "systemAppearanceChecks": 8,
+    "errors": [],
+    "sourceDigests": {
+      "packages/design-tokens/tokens.json": "6f7c8a21cde6fae49a66b4ddc3dbfc9394f518e757442a98e95496b80d095ac5",
+      "packages/design-tokens/resolver.mjs": "0bf240704aecdb38b65e1a6bf08b821bdd34e89561c8fce828ca8fba1c40d49b",
+      "packages/design-tokens/generate.mjs": "aa06306e00b5cc1ce0cd479b30a60796d601e379e6f1c85c190d56ac2268fea5",
+      "docs/design-system/references/gallery.html": "caa85cdd3b11d6e8e5d92d330bc846d68ad46c980d26d46e477e1a5279483f97",
+      "docs/design-system/references/gallery.css": "285208cc63507e89f81c61f6e813562bbbe0100059b04b1a9c846bfc2fd99d71",
+      "docs/design-system/references/gallery.js": "fe971a7bd2d0602cbfb6ea0ea6df0243a9b7be834064e919b8c7028bd805c1ae",
+      "docs/design-system/references/chart-model.js": "ebd0ad7433f9507f007d05a1048195139ef947d130f59e45071bdd130d768f5c",
+      "docs/design-system/references/charts.js": "2d5fdd79de36f556b6db275cd850f8a361e6c3ac38290a44b3041eafdaca7c78",
+      "docs/design-system/references/fixtures.js": "b415403afc8cb4dd5e22b691c7a2147902b12d42dfe6d4681684048c8bc1e931",
+      "scripts/design-gallery.mjs": "78f960b5f721a708814725c5f1848318376a07f2fcee2b0515432406a59d0344",
+      "scripts/verification/design-gallery-check.mjs": "6242a83b382bea8fd6c875cd7649056c6f3e6210290b94b442ad40af255ae057",
+      "scripts/verification/design-token-css-check.mjs": "1aec248e5d66a48c5a6be140b58b5ff01213a5a23b81965b00dfe387c28bc647"
+    },
+    "captures": {
+      "mobile-light.png": {
+        "engine": "chromium",
+        "viewport": {
+          "width": 402,
+          "height": 874
+        },
+        "tier": "mobile",
+        "lang": "ko",
+        "appearance": "light",
+        "scale": 1,
+        "root": 16,
+        "sha256": "55c8f2e8230deeb4e74cd555501ed9e6b3b0bb436f0eef1b8193ca215c0eca0c"
+      },
+      "mobile-dark.png": {
+        "engine": "chromium",
+        "viewport": {
+          "width": 402,
+          "height": 874
+        },
+        "tier": "mobile",
+        "lang": "ko",
+        "appearance": "dark",
+        "scale": 1,
+        "root": 16,
+        "sha256": "64266a73e2eb5c8e865d9f39ab1c5851ded4089860d79fe3a6653f2b044983aa"
+      },
+      "tablet-light.png": {
+        "engine": "chromium",
+        "viewport": {
+          "width": 820,
+          "height": 1180
+        },
+        "tier": "tablet",
+        "lang": "ko",
+        "appearance": "light",
+        "scale": 1,
+        "root": 16,
+        "sha256": "230e3d9f2907623a719bfc10db66328700373fb4e148a86276a0e0efba03edd4"
+      },
+      "tablet-dark.png": {
+        "engine": "chromium",
+        "viewport": {
+          "width": 820,
+          "height": 1180
+        },
+        "tier": "tablet",
+        "lang": "ko",
+        "appearance": "dark",
+        "scale": 1,
+        "root": 16,
+        "sha256": "0bed25831b200306c48286ae785aa9ff45592fedd4f3d199239c9dd1ececbf6e"
+      },
+      "desktop-light.png": {
+        "engine": "chromium",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "tier": "desktop",
+        "lang": "ko",
+        "appearance": "light",
+        "scale": 1,
+        "root": 16,
+        "sha256": "ac24fd9ac6e2e5c04241939800aebe23001b851d488238706f7aac11f7e417b2"
+      },
+      "desktop-dark.png": {
+        "engine": "chromium",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "tier": "desktop",
+        "lang": "ko",
+        "appearance": "dark",
+        "scale": 1,
+        "root": 16,
+        "sha256": "da8704eeb95f74ba8233825c29cedebb995bbc1a3ac5ad27f18b57b1991ec07e"
+      }
+    },
+    "limitations": "Coarse+hover input-capability queries synthesized in CSSOM; actual viewport/cascade. Physical/native D3 pending. Author fixes await reviewer re-examination."
+  },
+  "historical_app_checks": {
+    "head": "be2ddb93",
+    "existing_tests": 151,
+    "typecheck": "passed before CSS-only correction; unchanged app/model sources"
+  }
+}

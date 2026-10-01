@@ -22,3 +22,15 @@ Overseas weather (`/v00090x/dsf/coord`, the widgets' `/ww/...`) comes from Visua
 
 - **Kill switch:** unset `VC_SECRET_KEY` and restart. Requests then serve stored data up to 6 hours old, or fail.
 - **Rollback:** redeploy the previous checkout. No data migration is involved; the old Dark Sky path fails again.
+
+## Offline Mongo verification
+
+The `vc-lock-mongo` CI job keeps real MongoDB coverage for single-flight fetching, usage counters, owner-token release, backoff and provider markers. The smoke harness observes the actual callbacks of controller background writes and drains them before database assertions, advancing the fixture clock, and disconnecting. It fails on logged write errors or a missing callback (10-second watchdog); it does not retry assertions or infer completion from a fixed sleep. Production request ordering is unchanged.
+
+Run the dependency-free observer regressions with `node --test server/test/offline/mongo-operation-tracker.test.js`. With isolated mongoose 5.13.22, async 2.5.0 and mongodb-memory-server-core 10.1.4 dependencies, run:
+
+```sh
+NODE_PATH=<isolated-dependencies>/node_modules TZ=UTC node server/test/offline/vc-lock-mongo-smoke.js --hold-writes
+```
+
+The `--hold-writes` regression deliberately withholds the first usage write and lock release until the concurrent responses have finished. It verifies that the usage row is still absent and the lock still exists, then releases the writes and checks the persisted result after callback completion. This exercises the ordering that made the former 50ms wait unreliable without depending on machine speed. Omitting the flag exercises ordinary scheduling. The isolated mongod disables its wall-clock TTL sweeper because expiry fixtures use a captured date; the TTL index configuration and controller takeover behavior remain checked. An existing `TW_MONGO_URL` must point to an isolated instance started with `--setParameter ttlMonitorEnabled=false`; the smoke verifies this prerequisite without changing an existing server setting. Failed-lock polling is checked by its scheduled poll count, not an elapsed-time threshold. No live weather provider is called. The Mongo instance and database must be isolated: the smoke clears its dedicated database.

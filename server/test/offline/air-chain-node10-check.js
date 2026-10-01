@@ -15,19 +15,17 @@ var log = harness.logger(lines);
 var KEYS = {google_key: 'google-node10-key-01', owm_keys: [{key: 'owm-node10-key-0001'}], vc_key: 'vc-node10-key-00001', aqi_keys: [{key: 'node10-token-000001'}]};
 var seoul = {lat: 37.5665, lon: 126.978};
 var requestTime = new Date('2026-09-27T15:20:00Z');
-// Budget periods and fixture counters must use the same clock after month rollover.
-class FixtureDate extends Date {
-    constructor() {
-        var args = Array.prototype.slice.call(arguments);
-        super(...(args.length ? args : [requestTime.getTime()]));
-    }
-    static now() { return requestTime.getTime(); }
-}
+// Provider fixtures, quota keys and breaker expiry must share one clock. A request's
+// historical observation time does not control the production budget's wall clock.
+var fixtureNow = requestTime.getTime();
+function Clock(...args) { return args.length ? new Date(...args) : new Date(fixtureNow); }
+Clock.now = function () { return fixtureNow; };
+Clock.parse = Date.parse; Clock.UTC = Date.UTC; Clock.prototype = Date.prototype;
 function canon(v) { return JSON.stringify(v, function (k, val) { if (val && typeof val === 'object' && !Array.isArray(val)) { var o = {}; Object.keys(val).sort().forEach(function (key) { o[key] = val[key]; }); return o; } return val; }); }
 function Stub() {}
 function loadSingle(relative, deps, globals) {
     var module = {exports: {}};
-    var sandbox = {module: module, exports: module.exports, console: console, log: log, Date: Date, setImmediate: setImmediate,
+    var sandbox = {module: module, exports: module.exports, console: console, log: log, Date: Clock, setImmediate: setImmediate,
         require: function (name) { return Object.prototype.hasOwnProperty.call(deps, name) ? deps[name] : Stub; }};
     Object.keys(globals || {}).forEach(function (k) { sandbox[k] = globals[k]; });
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), sandbox, {filename: relative});
@@ -54,7 +52,7 @@ function loader(axiosImpl, cacheModel) {
     var overrides = {'config/config.js': {keyString: KEYS}, axios: axiosImpl, 'models/air.provider.usage.model.js': usage,
         'models/worldWeather/vc.usage.model.js': harness.memoryModel(), 'models/worldWeather/vc.fetch.lock.model.js': harness.memoryModel()};
     if (cacheModel) { overrides['models/air.observation.cache.model.js'] = cacheModel; }
-    return harness.createLoader({log: log, overrides: overrides, globals: {Date: FixtureDate}});
+    return harness.createLoader({log: log, globals: {Date: Clock}, overrides: overrides});
 }
 var l = loader(fake.axios);
 var providers = l.load('lib/air/providers/index.js');
@@ -78,6 +76,7 @@ ids.forEach(function (id) {
 
 // 3. Chain ordering with in-memory budgets: Google first; capped → OpenWeather; auth → down → next.
 function chainChecks() {
+    rolloverChecks();
     var policy = l.load('config/air.js');
     var budget = l.load('lib/air/providerBudget.js').createBudget({config: policy});
     var chain = l.load('lib/air/providerChain.js').createChain({providers: providers.byId, budget: budget, config: policy, keyString: KEYS, axios: fake.axios});
@@ -104,14 +103,51 @@ function chainChecks() {
     });
 }
 
+// A cap blocks its own UTC month, then resets across both month and year boundaries.
+function rolloverChecks() {
+    var monthlyUsage = harness.memoryModel();
+    var lm = harness.createLoader({log: log, globals: {Date: Clock}, overrides: {
+        'config/config.js': {keyString: KEYS},
+        'models/air.provider.usage.model.js': monthlyUsage,
+        'models/worldWeather/vc.usage.model.js': harness.memoryModel(),
+        'models/worldWeather/vc.fetch.lock.model.js': harness.memoryModel()
+    }});
+    var budget = lm.load('lib/air/providerBudget.js').createBudget({config: lm.load('config/air.js')});
+    var savedNow = fixtureNow;
+    var cases = [
+        ['2026-09-30T23:59:59Z', '2026-09', false],
+        ['2026-10-01T00:00:00Z', '2026-09', true],
+        ['2026-10-01T00:00:00Z', '2026-10', false],
+        ['2026-12-31T23:59:59Z', '2026-12', false],
+        ['2027-01-01T00:00:00Z', '2026-12', true],
+        ['2027-01-01T00:00:00Z', '2027-01', false]
+    ];
+    try {
+        cases.forEach(function (item) {
+            fixtureNow = Date.parse(item[0]);
+            Object.keys(monthlyUsage.rows).forEach(function (key) { delete monthlyUsage.rows[key]; });
+            var id = 'google:m:' + item[1];
+            monthlyUsage.rows[id] = {_id: id, calls: 9500};
+            var answered = false;
+            budget.check('google', 'free', 1, function (state) {
+                answered = true;
+                assert.strictEqual(state.allowed, item[2], 'UTC quota rollover: ' + item[0]);
+                if (!item[2]) { assert.strictEqual(state.reason, 'free-cap'); }
+            });
+            assert(answered, 'in-memory budget callback is synchronous');
+        });
+    }
+    finally { fixtureNow = savedNow; }
+}
+
 // 3b. Paid admission (D20): strict reads, reservation before HTTP, last slot under concurrency, no double count.
 function paidChecks() {
     var paidUsage = harness.memoryModel();
-    var lp = harness.createLoader({log: log, overrides: {'config/config.js': {keyString: KEYS}, axios: fake.axios, 'models/air.provider.usage.model.js': paidUsage,
+    var lp = harness.createLoader({log: log, globals: {Date: Clock}, overrides: {'config/config.js': {keyString: KEYS}, axios: fake.axios, 'models/air.provider.usage.model.js': paidUsage,
         'models/worldWeather/vc.usage.model.js': harness.memoryModel(), 'models/worldWeather/vc.fetch.lock.model.js': harness.memoryModel()}});
     var policy = Object.assign({}, lp.load('config/air.js'), {paidProvidersEnabled: true, paidMonthlyCallCap: 2});
     var budget = lp.load('lib/air/providerBudget.js').createBudget({config: policy});
-    var id = 'openweather:paid:m:' + new Date().toISOString().slice(0, 7);
+    var id = 'openweather:paid:m:' + new Clock().toISOString().slice(0, 7);
     paidUsage.failRead = true;
     budget.check('openweather', 'paid', 1, function (denied) {
         assert.strictEqual(canon(denied), canon({allowed: false, reason: 'store-error'}));
@@ -181,7 +217,7 @@ function fallbackChecks() {
             var overrides = {'config/config.js': {keyString: waqiOnly}, axios: axios, 'models/air.provider.usage.model.js': harness.memoryModel(),
                 'models/worldWeather/vc.usage.model.js': harness.memoryModel(), 'models/worldWeather/vc.fetch.lock.model.js': harness.memoryModel(),
                 'models/air.observation.cache.model.js': cache};
-            return harness.createLoader({log: log, overrides: overrides}).load('lib/AQI/airFallback.js');
+            return harness.createLoader({log: log, globals: {Date: Clock}, overrides: overrides}).load('lib/AQI/airFallback.js');
         }
         var jeju = {lat: 33.4996, lon: 126.5312};
         var t = new Date('2026-09-27T15:00:00Z');
