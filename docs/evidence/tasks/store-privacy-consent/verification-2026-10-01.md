@@ -44,3 +44,11 @@ The merged diagram JSON/HTML was regenerated with9/9artifact checks,0errors and0
 Integrated diagram specification SHA256: `7ad40e88687adcd4926126e2e565ddb9aae36334cdc449daea69154e72d31df4`
 
 Integrated diagram artifact SHA256: `8934cc04d0bb915d65a2cefeda93e4d2e42d4eab1c206f2731e0f56ddbf48b5b`
+
+### Initial new-branch CI audit
+
+The [initial push artifact audit](https://github.com/WizardFactory/TodayWeather/actions/runs/36823088741) on29a0a786failed because a newly created branch supplies an all-zero previous SHA. The conservative checker then includes existing side-branch history after its policy boundary. Its reported legacy snapshots already belong to upstream/master4ba9c3bb; generated reports present in those historical commits are not part of this release diff. The actual staged snapshot and complete outgoing series from4ba9c3bbpassed locally, and the PR artifact job passed on the scoped base/head range.
+
+No artifact checker/workflow exemption or historical Git rewrite was applied. Keep this historical audit finding distinct from the release snapshot result; future initial branch pushes from the same history can still encounter it. This follow-up records the observed CI boundary and preserves the existing checks. Final-head CI must be checked again after this documentation commit.
+
+Reported historical snapshot commits: `27f42364cf72`, `481aa49dbd96`, `daf504b32758`, `ddde368cd67c`.
