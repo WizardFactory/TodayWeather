@@ -11,6 +11,7 @@ var request = require('request');
 var ControllerTown = require('../controllers/controllerTown');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 var precipitation = require('../lib/kmaPrecipitation');
+var observations = require('../lib/history/observations');
 var UnitConverter = require('../lib/unitConverter');
 var AqiConverter = require('../lib/aqi.converter');
 var KecoController = require('../controllers/kecoController');
@@ -1323,32 +1324,7 @@ function ControllerTown24h() {
                 return this;
             }
 
-            var yesterdayDate = self._getCurrentTimeValue(+9-24);
-            var yesterdayItem;
-            if (yesterdayDate.time == '0000') {
-                kmaTimeLib.convert0Hto24H(yesterdayDate);
-            }
-
-            /**
-             * short 만들때, 당시간에 데이터가 없는 경우에 그 이전 데이터를 사용하지만,
-             * 새로 데이터를 수집하면 23시간전부터 있음.
-             * 그래서 해당 시간 데이터가 없는 경우 그 이후 데이터를 사용.
-             */
-            for (var i=0; i<req.currentList.length-1; i++) {
-                if (req.currentList[i].date == yesterdayDate.date &&
-                    parseInt(req.currentList[i].time) >= parseInt(req.current.time))
-                {
-                    yesterdayItem =  req.currentList[i];
-                    break;
-                }
-            }
-
-            if (yesterdayItem) {
-                req.current.yesterday = yesterdayItem;
-            }
-            else {
-                log.error('Fail to gt yesterday weather info', meta);
-            }
+            req.current.yesterday = observations.yesterday(req.current, req.currentList);
         }
         catch (err) {
             err.message += ' ' + JSON.stringify(meta);
@@ -1475,7 +1451,7 @@ function ControllerTown24h() {
         /**
          * diff temp와 weather가 2.5로 특별한 날씨가 정보가 없으면 온도차와 날씨를 표시
          */
-        if (current.hasOwnProperty('t1h') && yesterday && yesterday.hasOwnProperty('t1h')) {
+        if (observations.canCompare(current, yesterday)) {
             var obj = self._diffTodayYesterday(current, yesterday, ts);
             if (obj.grade <= 2) {
                 obj.grade = 2.5;
@@ -1773,8 +1749,12 @@ function ControllerTown24h() {
             currentDate = current.dateObj;
             current.time = parseInt(current.time.slice(0, -2));
             self._convertWeatherData(current, req.query);
-            self._convertWeatherData(current.yesterday, req.query);
-            current.yesterday.time = parseInt(current.yesterday.time.slice(0, -2));
+            if (current.yesterday) {
+                self._convertWeatherData(current.yesterday, req.query);
+                if (typeof current.yesterday.time === 'string') {
+                    current.yesterday.time = parseInt(current.yesterday.time.slice(0, -2));
+                }
+            }
 
             req.shortest.forEach(function (value) {
                 value.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(value.date+value.time);

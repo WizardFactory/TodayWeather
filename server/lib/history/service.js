@@ -15,52 +15,53 @@ function stations() {
         })
         .slice(0, 200);
 }
+var ReadCache = require('./readCache');
+var metadata = new ReadCache({ttl: 60000});
+var snapshots = new ReadCache();
+var legacy = new ReadCache();
+exports.loadLegacyForTown = function (town, callback) {
+    var coord = town && town.gCoord;
+    if (!coord) return callback(null, []);
+    var key = coord.lat + ',' + coord.lon + ':' + policy.key(Date.now(), true);
+    legacy.read(key, function (done) {
+        require('../../controllers/controllerKmaStnWeather').getCityHourlyList(town, done);
+    }, callback);
+};
 exports.loadForTown = function (town, callback) {
     if (!settings().readEnabled) return callback(null, null);
-    var consumer = callback,
-        finished = false;
+    var ids = stations(), w = policy.window(), finished = false;
     var timer = setTimeout(function () {
-        callback(null, { reason: 'cache-read-timeout', hourly: [], daily: [] });
-    }, 3000);
-    callback = function (error, data) {
+        done({reason: 'cache-read-timeout', hourly: [], daily: []});
+    }, 250);
+    function done(data) {
         if (finished) return;
         finished = true;
         clearTimeout(timer);
-        consumer(error, data);
-    };
-    var ids = stations(),
-        w = policy.window();
-    if (!ids.length) return callback(null, { reason: 'stations-unconfigured', hourly: [], daily: [] });
-    require('../../models/modelKmaStnInfo')
-        .find({ stnId: { $in: ids }, isCityWeather: true })
-        .lean()
-        .exec(function (err, rows) {
-            if (err) return callback(null, { reason: 'station-read-failed', hourly: [], daily: [] });
-            var mapping = policy.nearest(town, rows, 100);
-            if (!mapping) return callback(null, { reason: 'station-unavailable', hourly: [], daily: [] });
+        callback(null, data);
+    }
+    if (!ids.length) return done({reason: 'stations-unconfigured', hourly: [], daily: []});
+    metadata.read(ids.join(','), function (resolve) {
+        require('../../models/modelKmaStnInfo')
+            .find({stnId: {$in: ids}, isCityWeather: true}).maxTimeMS(2000).lean().exec(resolve);
+    }, function (err, rows) {
+        if (finished) return;
+        if (err) return done({reason: 'station-read-failed', hourly: [], daily: []});
+        var mapping = policy.nearest(town, rows, 100);
+        if (!mapping) return done({reason: 'station-unavailable', hourly: [], daily: []});
+        var key = mapping.stationId + ':' + w.start + ':' + w.end;
+        snapshots.read(key, function (resolve) {
             var store;
-            try {
-                store = Store.create();
-            } catch (e) {
-                return callback(null, {
-                    mapping: mapping,
-                    reason: 'cache-read-failed',
-                    hourly: [],
-                    daily: []
-                });
-            }
+            try { store = Store.create(); } catch (error) { return resolve(error); }
             Promise.all([
                 store.read('hourly', mapping.stationId, w.start + '0000', w.end + '2300'),
                 store.read('daily', mapping.stationId, w.start, w.end)
-            ]).then(
-                function (data) {
-                    callback(null, { mapping: mapping, hourly: data[0], daily: data[1] });
-                },
-                function () {
-                    callback(null, { mapping: mapping, reason: 'cache-read-failed', hourly: [], daily: [] });
-                }
-            );
+            ]).then(function (data) { resolve(null, {hourly: data[0], daily: data[1]}); }, resolve);
+        }, function (error, data) {
+            if (finished) return;
+            if (error) return done({mapping: mapping, reason: 'cache-read-failed', hourly: [], daily: []});
+            done({mapping: mapping, hourly: data.hourly, daily: data.daily});
         });
+    });
 };
 exports.mergeHourly = function (req, data) {
     if (!data) return;

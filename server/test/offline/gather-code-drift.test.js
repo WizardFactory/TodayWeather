@@ -271,7 +271,8 @@ describe('upstream storage and period-contract characterization', function () {
         };
         var deps = {async: require('async'), request: {}, '../controllers/controllerTown': Base,
             '../lib/kmaTimeLib': h.load('lib/kmaTimeLib.js', {}), '../config/config': {},
-            '../lib/kmaPrecipitation': h.optional('../../lib/kmaPrecipitation')};
+            '../lib/kmaPrecipitation': h.optional('../../lib/kmaPrecipitation'),
+            '../lib/history/observations': h.optional('../../lib/history/observations')};
         ['../lib/unitConverter', '../lib/aqi.converter', '../controllers/kecoController',
             '../controllers/airkorea.hourly.forecast.controller', '../controllers/kaq.hourly.forecast.controller',
             '../controllers/kma.specialweather.controller', '../lib/AQI/airFallback'].forEach(function (name) { deps[name] = function () {}; });

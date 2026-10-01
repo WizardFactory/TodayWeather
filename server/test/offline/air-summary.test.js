@@ -24,10 +24,11 @@ function load(relative, dependencies = {}) {
 }
 
 const Keco = load('controllers/kecoController.js');
-const Town = load('controllers/controllerTown.js');
+const observations = require('../../lib/history/observations');
+const Town = load('controllers/controllerTown.js', {'../lib/history/observations': observations});
 const town = new Town();
 town._diffTodayYesterday = () => ({str: 'LOC_TEMP_DIFF', grade: 1});
-const Town24h = load('controllers/controllerTown24h.js', {'../controllers/controllerTown': Town});
+const Town24h = load('controllers/controllerTown24h.js', {'../lib/history/observations': observations, '../controllers/controllerTown': Town});
 const town24h = new Town24h();
 const WWUnits = load('controllers/worldWeather/controller.ww.units.js', {'../controllerTown24h': Town24h});
 

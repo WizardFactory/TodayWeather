@@ -15,6 +15,14 @@ var log = harness.logger(lines);
 var KEYS = {google_key: 'google-node10-key-01', owm_keys: [{key: 'owm-node10-key-0001'}], vc_key: 'vc-node10-key-00001', aqi_keys: [{key: 'node10-token-000001'}]};
 var seoul = {lat: 37.5665, lon: 126.978};
 var requestTime = new Date('2026-09-27T15:20:00Z');
+// Budget periods and fixture counters must use the same clock after month rollover.
+class FixtureDate extends Date {
+    constructor() {
+        var args = Array.prototype.slice.call(arguments);
+        super(...(args.length ? args : [requestTime.getTime()]));
+    }
+    static now() { return requestTime.getTime(); }
+}
 function canon(v) { return JSON.stringify(v, function (k, val) { if (val && typeof val === 'object' && !Array.isArray(val)) { var o = {}; Object.keys(val).sort().forEach(function (key) { o[key] = val[key]; }); return o; } return val; }); }
 function Stub() {}
 function loadSingle(relative, deps, globals) {
@@ -46,7 +54,7 @@ function loader(axiosImpl, cacheModel) {
     var overrides = {'config/config.js': {keyString: KEYS}, axios: axiosImpl, 'models/air.provider.usage.model.js': usage,
         'models/worldWeather/vc.usage.model.js': harness.memoryModel(), 'models/worldWeather/vc.fetch.lock.model.js': harness.memoryModel()};
     if (cacheModel) { overrides['models/air.observation.cache.model.js'] = cacheModel; }
-    return harness.createLoader({log: log, overrides: overrides});
+    return harness.createLoader({log: log, overrides: overrides, globals: {Date: FixtureDate}});
 }
 var l = loader(fake.axios);
 var providers = l.load('lib/air/providers/index.js');
