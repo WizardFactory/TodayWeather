@@ -87,7 +87,7 @@ Units saved before this change stay as they are. Each unit the user picks in Set
 
 Server language support observed on 2026-09-27 (read-only, backend unchanged): the server's prose catalogs cover `ko`, `en`, `ja`, `de` (plus `zh-CN`, `zh-TW`); other languages fall back to English there.
 
-**Screen sizes.** Supported CSS widths are 320 px and up: phones 320–440 px, tablets about 750–1340 px, desktops up to 3440 px (content keeps its maximum width). Touch screens need 16 px form text (iOS zooms into smaller fields) and 44 px icon targets. The reference set for layout reviews is the top 10 South Korean CSS sizes per class (StatCounter, June–August 2026; phones from [#2605 (comment)](https://github.com/WizardFactory/TodayWeather/issues/2605#issuecomment-5850835358)); refresh it when device shares change:
+**Screen sizes.** Supported CSS widths are 320 px and up: phones 320–440 px, tablets about 750–1340 px, desktops up to 3440 px (content keeps its maximum width). Touch screens need at least 16 px form text (iOS zooms into smaller fields) and 44 px icon targets. The reference set for layout reviews is the top 10 South Korean CSS sizes per class (StatCounter, June–August 2026; phones from [#2605 (comment)](https://github.com/WizardFactory/TodayWeather/issues/2605#issuecomment-5850835358)); refresh it when device shares change:
 
 | Class | Reference sizes (CSS px) |
 | --- | --- |
@@ -135,3 +135,10 @@ True zero, unavailable/sentinel, empty collection and unsupported product are di
 ## Scope decisions
 
 AK has confirmed the parity priority, static-only operation, a seven-language UI and the `app.todayweather.ai` domain. React/Vite and direct API reads are implemented. Issue #2646 prepares reuse of existing static hosting; production execution, monetization and schedule remain decisions. Recommended defaults and tradeoffs are in the [technical design](technical-design.md). Paid entitlement, login/sync and separate TodayAir branding remain decisions, not hidden requirements. The [implementation plan](implementation-plan.md) sequences them without blocking independent browser/domain work.
+
+
+## Design-system adoption (#2649)
+
+The normative [shared design system](../../specs/design-system.md) and [production adoption contract](../../specs/pwa-design-adoption.md) supersede the older daily-list and fixed-size theme presentation. Layout breakpoints are 768/1024/1440/1600px; input device tiers independently select mobile/tablet/desktop type roles. The weather reading order is hero, hourly chart, Cordova-style daily chart, air, details. The daily chart includes past dates, AM/PM weather, precipitation and min-max bars on a shared cool-to-warm vertical scale, with today's current marker. Its table preserves the same values. The hourly chart includes all supplied hours, today/yesterday value dots, an in-range current observation, precipitation and a persisted wind/humidity expander. Keyboard arrows/Home/End announce the selected data.
+
+Settings offers system/light/dark appearance, sky/plain/classic current-weather background, 90/100/115/130% text size and opt-in sky motion. Motion stops under reduced-motion preferences. Display choices survive reloads independently of units and favorites, and legacy themes remain valid on rollback. Data replacement/deletion requires a cancellable native confirmation with focus restoration. See the maintained [user manual](user-manual.md).

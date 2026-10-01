@@ -61,3 +61,16 @@ Checks the current build on a local preview against the real public API (read-on
 ## 5. Not covered by automation
 
 Real iPhones, Android phones and tablets, home-screen installs, notch safe areas, Firefox, native-speaker review of the translations ([open choices](implementation.md#translation-review)) and server-provided text in other languages (backend). Record them as not verified unless checked manually.
+
+## Production design-system checks (#2649)
+
+Token hooks run before development, type checking, tests and builds. `npm run test:design` verifies the canonical resolver and reference chart model. `web/test/display-preferences.test.ts` covers separate display storage, legacy migration and rollback; chart model tests preserve all supplied hours, null gaps, current observations, past days and numeric wind.
+
+```bash
+node scripts/web-layout-check.mjs --text-scale 1,1.5,2 --out reports/pwa-layout
+node scripts/verification/pwa-design-check.mjs --edges --expanded --text-scale 1,1.3 --out reports/pwa-edges
+```
+
+The first command delegates to the production-CSP matrix: Chromium/WebKit × seven languages × mobile/tablet/desktop × light/dark × three text factors × weather/air/settings (756 renders). The edge pass adds 320px, touch landscape, compact height and fine-pointer short desktop profiles, including expanded wind/humidity. These factors enlarge the root size; they are not physical OS font-scale measurements. Axe and selected screenshots run in separate identical contexts with CSP bypass for tool injection; application CSP checks run without bypass.
+
+`pwa-design.spec.ts` checks reload/rollback, native dialog cancellation/focus, full mixed-day timeline, keyboard/table parity and narrow labels. Follow the [manual](user-manual.md) scenarios and inspect screenshots after geometry checks. Physical iOS and AK-authorized Android emulator fallback evidence, including physical Android limitations and scale restoration, are recorded in the [comparison](../design-system/physical-pwa-comparison.md); home-screen installation and native adoption remain separate release checks.

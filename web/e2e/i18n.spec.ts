@@ -286,7 +286,9 @@ test.describe("device formats with another UI language (#2613)", () => {
     await page.goto("/weather/seoul/hourly");
     await expect(page.locator(".temperature")).toBeVisible();
     // French words, US conventions: "12:00 PM", not "12:00".
-    const labels = await page.locator(".chart-label").allTextContents();
+    const labels = await page
+      .locator(".hourly-columns .chart-hour")
+      .allTextContents();
     expect(labels.join(" ")).toMatch(/\d{1,2}:\d{2}\s?[AP]M/);
   });
 });

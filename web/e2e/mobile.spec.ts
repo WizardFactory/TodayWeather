@@ -39,9 +39,11 @@ test("hourly chart labels stay apart when 1-hour and 3-hour rows mix", async ({
     r.fulfill({ json: raw }),
   );
   await page.goto("/weather/seoul/hourly");
-  await expect(page.locator(".chart-label").first()).toBeVisible();
+  await expect(
+    page.locator(".hourly-columns .chart-hour").first(),
+  ).toBeVisible();
   const labels = await page
-    .locator(".chart-label")
+    .locator(".hourly-columns .chart-hour")
     .evaluateAll((els) =>
       els.map((e) => (e as SVGGraphicsElement).getBoundingClientRect()),
     );
@@ -54,25 +56,25 @@ test("form fields use 16px text on phones so iOS does not zoom on focus", async 
 }) => {
   await page.goto("/locations");
   const search = page.getByLabel("지역 검색");
-  await expect(search).toHaveCSS("font-size", "16px");
+  expect(
+    parseFloat(await search.evaluate((e) => getComputedStyle(e).fontSize)),
+  ).toBeGreaterThanOrEqual(16);
   await page.goto("/settings");
   const sizes = await page
     .locator("select, input")
     .evaluateAll((els) => els.map((e) => getComputedStyle(e).fontSize));
   expect(sizes.length).toBeGreaterThan(5);
-  expect(new Set(sizes)).toEqual(new Set(["16px"]));
+  expect(sizes.every((n) => parseFloat(n) >= 16)).toBe(true);
 });
 
 test("native controls follow the dark theme", async ({ page }) => {
   await page.goto("/settings");
-  await page
-    .getByRole("combobox", { name: "화면 테마", exact: true })
-    .selectOption("dark");
+  await page.getByRole("radio", { name: "다크", exact: true }).check();
   await expect(page.locator("html")).toHaveCSS("color-scheme", "dark");
   const select = page.getByRole("combobox", { name: "기온", exact: true });
   // Drawn by the page (not the platform) on the dark panel colour.
   await expect(select).toHaveCSS("appearance", "none");
-  await expect(select).toHaveCSS("background-color", "rgb(27, 41, 60)");
+  await expect(select).toHaveCSS("background-color", "rgb(26, 37, 54)");
 });
 
 for (const [path, count] of [

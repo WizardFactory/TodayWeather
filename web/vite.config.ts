@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { readTransportSettings } from "./src/transport-config";
 type Env = Record<string, string | undefined>;
 type Git = (command: string) => string;
@@ -39,6 +40,14 @@ export default defineConfig(({ mode }) => {
       {
         name: "static-release",
         generateBundle() {
+          this.emitFile({
+            type: "asset",
+            fileName: "assets/Pretendard-OFL.txt",
+            source: readFileSync(
+              new URL("./src/assets/Pretendard-OFL.txt", import.meta.url),
+              "utf8",
+            ),
+          });
           this.emitFile({
             type: "asset",
             fileName: "release.json",

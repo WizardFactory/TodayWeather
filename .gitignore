@@ -71,3 +71,6 @@ visual-check.*
 
 # Reproducible shared token outputs
 /packages/design-tokens/generated/
+
+# PWA token copies are generated from the canonical package.
+/web/src/generated/

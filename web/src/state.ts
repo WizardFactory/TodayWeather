@@ -162,7 +162,7 @@ export function weatherKey(
     place.lon,
     ...Object.keys(DEFAULT_UNITS).map((k) => units[k as keyof Units]),
     lang, // Server text (names, summaries) follows the request language.
-    "v3", // Normalization revision: D45 precipitation basis and air forecast fields.
+    "v4", // Complete API daily history and numeric wind direction for PWA charts.
   ]);
 }
 export const MAX_PLACES = 30;
@@ -333,6 +333,7 @@ export async function clearLocalData(
 ): Promise<void> {
   try {
     storage.removeItem(STATE_KEY);
+    storage.removeItem("tw.web.v1.display");
   } catch {
     /* Storage may be unavailable; the database is still cleared. */
   }

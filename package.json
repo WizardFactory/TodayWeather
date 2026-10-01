@@ -23,7 +23,12 @@
     "test:layout": "node scripts/web-layout-check.mjs",
     "generate:tokens": "node packages/design-tokens/generate.mjs",
     "test:design": "node --test packages/design-tokens/test/*.test.mjs scripts/verification/design-chart-model.test.mjs",
-    "gallery": "node scripts/design-gallery.mjs"
+    "gallery": "node scripts/design-gallery.mjs",
+    "predev": "node packages/design-tokens/generate.mjs",
+    "pretypecheck": "node packages/design-tokens/generate.mjs",
+    "pretest": "node packages/design-tokens/generate.mjs",
+    "prebuild": "node packages/design-tokens/generate.mjs",
+    "prebuild:web": "node packages/design-tokens/generate.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

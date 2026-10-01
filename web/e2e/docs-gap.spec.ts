@@ -87,7 +87,9 @@ test("KMA observation time, sources, details and the air window follow the rewri
   );
   // AQI rows after the 09:00 observation are forecasts even without pubDate.
   await expect(page.locator(".air-forecast > span")).toHaveCount(4);
-  await expect(page.getByText("Weather Data Provided by Visual Crossing")).toHaveCount(0);
+  await expect(
+    page.getByText("Weather Data Provided by Visual Crossing"),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "미세먼지", exact: true }).click();
   const attribution = page.locator(".air-attribution");
   await expect(attribution).toContainText("인증되지 않은 실시간 자료");
@@ -113,7 +115,9 @@ test("overseas weather credits Visual Crossing like the mobile app", async ({
 }) => {
   await page.goto("/weather/tokyo/hourly");
   await expect(
-    page.getByRole("link", { name: "Weather Data Provided by Visual Crossing" }),
+    page.getByRole("link", {
+      name: "Weather Data Provided by Visual Crossing",
+    }),
   ).toHaveAttribute("href", "https://www.visualcrossing.com/");
   await expect(page.locator(".air-attribution")).toHaveCount(0);
 });
@@ -248,9 +252,12 @@ test("deleting a place removes its stored weather and clearing data resets the b
     .click();
   await expect(page.locator(".temperature")).toBeVisible();
   await page.goto("/settings");
-  page.once("dialog", (d) => void d.accept());
   await page
     .getByRole("button", { name: "이 브라우저의 오늘날씨 데이터 삭제" })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "확인", exact: true })
     .click();
   await expect
     .poll(() =>
@@ -263,12 +270,15 @@ test("deleting a place removes its stored weather and clearing data resets the b
 test("backup import asks before replacing favorites", async ({ page }) => {
   await seed(page, { ...base, places: [PLACES[0]], selectedId: "seoul" });
   await page.goto("/settings");
-  page.once("dialog", (d) => void d.dismiss());
   await page.locator('input[type="file"]').setInputFiles({
     name: "backup.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify({ ...base, places: [PLACES[1]] })),
   });
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "취소", exact: true })
+    .click();
   await expect
     .poll(() =>
       page.evaluate(() => localStorage.getItem("tw.web.v1.preferences")),

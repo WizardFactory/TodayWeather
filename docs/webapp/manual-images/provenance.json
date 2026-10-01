@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-01",
+  "browser": "153.0.8010.12",
+  "viewport": [
+    820,
+    1180
+  ],
+  "fixture": "docs/rewrite/examples/client-kma-response.json",
+  "externalRequests": "blocked except fixture fulfilment",
+  "csp": "screenshot context bypasses CSP for Playwright capture injection; separate primary matrix enforces production CSP",
+  "images": [
+    {
+      "file": "display.png",
+      "sha256": "6b77848c1bac7352ccf0230e85d37d67d1d006896393df0dfc31f9fbaa53d6c4"
+    },
+    {
+      "file": "hourly.png",
+      "sha256": "04216762a9ce16e4eb4879590b2c72eb7a010777a94c31d89817bb7bbd75029c"
+    },
+    {
+      "file": "daily.png",
+      "sha256": "1b652e9a94ed54789f653d6922c819763f155acba608b75235d5b61cf1bedb41"
+    },
+    {
+      "file": "air.png",
+      "sha256": "ec9c454548e15edccddcf83d16d8e4f29be2bead3658a85790d44192345707ae"
+    },
+    {
+      "file": "enlarged.png",
+      "sha256": "75ffe82dadb75a64fd64fbdf2fa8f1b8e41f4fb1d6f375c969fea7ed08d85568"
+    },
+    {
+      "file": "confirmation.png",
+      "sha256": "daa2b5f2938b03e4bc6c657d549fd89f43bd7e0044a35e5951276ca866fe3e6f"
+    }
+  ]
+}

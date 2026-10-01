@@ -68,15 +68,13 @@ test.describe("focus management (round 2 N1/N2/N5/N7/N8)", () => {
       .click({ position: { x: 380, y: 400 } });
     await expect(opener).toBeFocused();
   });
-  test("view tabs keep focus on the pressed tab; sidebar links focus main", async ({
+  test("chart tabs focus their chart; sidebar links focus main", async ({
     page,
   }) => {
     await page.goto("/weather/seoul/hourly");
     await page.getByRole("button", { name: "일별", exact: true }).click();
     await expect(page).toHaveURL(/\/daily$/);
-    await expect(
-      page.getByRole("button", { name: "일별", exact: true }),
-    ).toBeFocused();
+    await expect(page.locator(".daily-chart")).toBeFocused();
     await page.locator(".sidebar").getByRole("link", { name: "설정" }).click();
     await expect.poll(() => active(page)).toBe("main-content");
   });
@@ -100,7 +98,7 @@ test.describe("focus management (round 2 N1/N2/N5/N7/N8)", () => {
     await expect(link).toBeFocused();
     await page.goBack();
     await expect(page).toHaveURL(/\/daily$/);
-    await expect.poll(() => active(page)).toBe("main-content");
+    await expect(page.locator(".daily-chart")).toBeFocused();
   });
   test("widening the window closes an open mobile menu", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -428,12 +426,9 @@ test("the browser theme colour follows the chosen theme (round 3, T7)", async ({
 }) => {
   await page.goto("/settings");
   const meta = page.locator('meta[name="theme-color"]');
-  await expect(meta).toHaveAttribute("content", "#f5f7fb");
-  await page
-    .locator("label.setting-row", { hasText: "화면 테마" })
-    .locator("select")
-    .selectOption("dark");
-  await expect(meta).toHaveAttribute("content", "#111c2b");
+  await expect(meta).toHaveAttribute("content", "#f4f6fa");
+  await page.getByRole("radio", { name: "다크", exact: true }).check();
+  await expect(meta).toHaveAttribute("content", "#0f1724");
 });
 
 test("weather snapshots stay within 30 entries, dropping the oldest (F7)", async ({

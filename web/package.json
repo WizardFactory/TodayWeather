@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build && node ../scripts/web-precache.mjs"
+    "build": "vite build && node ../scripts/web-precache.mjs",
+    "predev": "node ../packages/design-tokens/generate.mjs",
+    "prebuild": "node ../packages/design-tokens/generate.mjs"
   },
   "dependencies": {
     "@todayweather/core": "0.1.0",

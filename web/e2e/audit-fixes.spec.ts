@@ -63,6 +63,9 @@ test("closed mobile menu is out of the tab order; open menu takes focus and Esca
     ).toBe(false);
   }
   const opener = page.getByRole("button", { name: "메뉴 열기" });
+  // Chart-route focus changes the starting position; dismiss a focused skip link
+  // before testing the pointer action on the header beneath it.
+  await opener.focus();
   await opener.click();
   await expect
     .poll(() =>
@@ -175,12 +178,15 @@ test("importing a backup deletes stored weather of places it removes (F6)", asyn
     .poll(() => snapshotOwners(page))
     .toEqual(expect.arrayContaining(["seoul", "busan"]));
   await page.goto("/settings");
-  page.once("dialog", (d) => void d.accept());
   await page.locator('input[type="file"]').setInputFiles({
     name: "backup.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify({ ...base, places: [PLACES[1]] })),
   });
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "확인", exact: true })
+    .click();
   await expect(page.locator(".toast")).toContainText("가져왔습니다");
   await expect.poll(() => snapshotOwners(page)).not.toContain("seoul");
   expect(await snapshotOwners(page)).toContain("busan");
@@ -191,12 +197,15 @@ test("a cancelled import keeps favorites and says so (G6)", async ({
 }) => {
   await seed(page, { ...base, places: [PLACES[0]], selectedId: "seoul" });
   await page.goto("/settings");
-  page.once("dialog", (d) => void d.dismiss());
   await page.locator('input[type="file"]').setInputFiles({
     name: "backup.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify({ ...base, places: [PLACES[1]] })),
   });
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "취소", exact: true })
+    .click();
   await expect(page.locator(".toast")).toContainText("가져오기를 취소했습니다");
   const saved = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("tw.web.v1.preferences")!),
@@ -296,7 +305,7 @@ test("nation wind shows direction; warnings handle empty and failed loads (G10)"
   await expect(page.locator(".region-row b").first()).toContainText("m/s");
   await expect(page.locator(".region-row b").first()).not.toHaveText(/^\d/);
   await page.goto("/nation/air");
-  await page.getByRole("button", { name: "오존", exact: true }).click();
+  await page.getByRole("button", { name: /오존/ }).click();
   await expect(page.locator(".region-row").first()).toContainText("ppm");
   let fail = true;
   await page.route(API + "/v000903/kma/special", (r) =>

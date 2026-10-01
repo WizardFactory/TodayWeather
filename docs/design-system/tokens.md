@@ -31,3 +31,8 @@ const color = tokens.values['dark.tablet'][name];
 Public property names omit `semantic.`/`component.`. Primitive values are not exported for component CSS; component and semantic CSS-name collisions fail. The today-dot foreground is `chart.today-on` to avoid treating a token as a nested group. `control.edge` is the meaningful input/button boundary, rather than decorative `border.strong`. Daily-bar edge is solid `#637088`/`#94a3b8`, preserving the specified D8 stops while meeting shape contrast.
 
 For a rule change: edit JSON → run token tests/generator → update behavior documentation/examples and affected gallery checks → inspect captures → verify actual index. Renames require migration notes/aliases before consumers switch. Native/Cordova exporters, production pre-scripts, font subsetting/hosting, stored preferences and app-wide literal linting remain #2649 or separately authorized native work. Local full-font reference cost is documented in the typography guide.
+
+
+## Production consumer (#2649)
+
+The generator now also emits identical outputs to ignored `web/src/generated/` and generates the same-origin prepaint theme script. Root `predev/pretypecheck/pretest/prebuild/prebuild:web` and web `predev/prebuild` run it; unchanged output bytes retain their timestamps. The React PWA consumes these token outputs and self-hosts Vite-hashed Pretendard Variable plus its OFL license. `tw.web.v1.display` owns validated appearance, background, text scale, chart expansion and motion; legacy `settings.theme` remains a dual-written rollback value. See the [production adoption contract](../../specs/pwa-design-adoption.md). Native app/widget adoption is separate.

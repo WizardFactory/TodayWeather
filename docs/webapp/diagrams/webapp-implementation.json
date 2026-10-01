@@ -2,140 +2,300 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "TodayWeather — browser implementation",
+    "title": "Production PWA rendering and browser state",
     "locale": "en",
+    "output": "docs/webapp/diagrams/webapp-implementation.html",
     "quality_profile": "showcase",
-    "viewBox": [
-      1220,
-      650
-    ]
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather.git",
+      "revision": "992f7fc04c43538ae185133085ebf011fd7791ae",
+      "link_mode": "web"
+    }
   },
   "components": [
     {
-      "id": "responsive-screens",
-      "type": "frontend",
-      "label": "Responsive screens",
-      "sublabel": "Weather, air, places, settings",
-      "pos": [
-        40,
-        100
-      ],
-      "size": [
-        230,
-        80
-      ]
-    },
-    {
-      "id": "direct-adapter",
-      "type": "frontend",
-      "label": "Direct API adapter",
-      "sublabel": "Source-aware browser normalization",
-      "pos": [
-        480,
-        100
-      ],
-      "size": [
-        230,
-        80
-      ]
-    },
-    {
-      "id": "existing-api",
+      "id": "public-api",
       "type": "external",
-      "label": "Existing public API",
-      "sublabel": "Weather / geocode / nation / warnings",
-      "pos": [
-        930,
-        100
-      ],
-      "size": [
-        250,
-        80
-      ]
-    },
-    {
-      "id": "local-storage",
-      "type": "database",
-      "label": "Local browser state",
-      "sublabel": "Favorites + 24h snapshots",
+      "label": "Existing weather API",
+      "sublabel": "Versioned coordinates / units",
       "pos": [
         40,
-        400
+        60
       ],
       "size": [
         230,
         80
+      ],
+      "sources": [
+        {
+          "path": "web/src/direct-api.ts",
+          "line": 216,
+          "end_line": 250
+        }
       ]
     },
     {
-      "id": "shell-worker",
+      "id": "weather-loader",
       "type": "frontend",
-      "label": "Service worker",
-      "sublabel": "Versioned app-shell cache",
+      "label": "Weather loading",
+      "sublabel": "Normalize / snapshot fallback",
       "pos": [
-        480,
-        400
+        400,
+        60
       ],
       "size": [
         230,
         80
+      ],
+      "sources": [
+        {
+          "path": "web/src/api.ts",
+          "line": 31,
+          "end_line": 73
+        },
+        {
+          "path": "web/src/direct-api.ts",
+          "line": 216,
+          "end_line": 250
+        }
+      ]
+    },
+    {
+      "id": "chart-model",
+      "type": "frontend",
+      "label": "Chart models",
+      "sublabel": "Full timeline / shared domains",
+      "pos": [
+        760,
+        60
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "packages/weather-core/src/charts.ts",
+          "line": 25,
+          "end_line": 109
+        }
+      ]
+    },
+    {
+      "id": "weather-screens",
+      "type": "frontend",
+      "label": "Weather and air UI",
+      "sublabel": "Charts / readouts / tables",
+      "pos": [
+        760,
+        340
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "web/src/Weather.tsx",
+          "line": 158,
+          "end_line": 217
+        },
+        {
+          "path": "web/src/Charts.tsx",
+          "line": 430,
+          "end_line": 721
+        },
+        {
+          "path": "web/src/App.tsx",
+          "line": 407,
+          "end_line": 425
+        }
+      ]
+    },
+    {
+      "id": "snapshot-db",
+      "type": "database",
+      "label": "IndexedDB snapshots",
+      "sublabel": "Validated / bounded retention",
+      "pos": [
+        400,
+        340
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "web/src/state.ts",
+          "line": 282,
+          "end_line": 312
+        },
+        {
+          "path": "web/src/state.ts",
+          "line": 346,
+          "end_line": 375
+        }
+      ]
+    },
+    {
+      "id": "display-runtime",
+      "type": "frontend",
+      "label": "Display runtime",
+      "sublabel": "System mode / scale / warnings",
+      "pos": [
+        400,
+        620
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "web/src/App.tsx",
+          "line": 201,
+          "end_line": 283
+        },
+        {
+          "path": "web/src/display.ts",
+          "line": 117,
+          "end_line": 129
+        },
+        {
+          "path": "web/src/main.tsx",
+          "line": 12,
+          "end_line": 22
+        }
+      ]
+    },
+    {
+      "id": "display-store",
+      "type": "database",
+      "label": "Local preferences",
+      "sublabel": "Separate display v1 + legacy",
+      "pos": [
+        40,
+        620
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "web/src/display.ts",
+          "line": 54,
+          "end_line": 102
+        },
+        {
+          "path": "web/src/state.ts",
+          "line": 143,
+          "end_line": 151
+        }
+      ]
+    },
+    {
+      "id": "token-build",
+      "type": "backend",
+      "label": "Canonical token build",
+      "sublabel": "Generated semantic CSS",
+      "pos": [
+        1120,
+        340
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "packages/design-tokens/generate.mjs",
+          "line": 13,
+          "end_line": 27
+        },
+        {
+          "path": "web/src/main.tsx",
+          "line": 9,
+          "end_line": 10
+        },
+        {
+          "path": "web/src/style.css",
+          "line": 1,
+          "end_line": 27
+        }
       ]
     }
   ],
   "connections": [
     {
-      "id": "query-weather",
-      "from": "responsive-screens",
-      "to": "direct-adapter",
-      "label": "Typed queries",
-      "variant": "emphasis"
+      "id": "fetch-weather",
+      "from": "weather-loader",
+      "to": "public-api",
+      "label": "HTTPS query"
     },
     {
-      "id": "fetch-public",
-      "from": "direct-adapter",
-      "to": "existing-api",
-      "label": "HTTPS · 1 retry on 502",
-      "variant": "emphasis"
+      "id": "normalize-input",
+      "from": "weather-loader",
+      "to": "chart-model",
+      "label": "Normalized data"
     },
     {
-      "id": "persist-state",
-      "from": "responsive-screens",
-      "to": "local-storage",
-      "label": "Snapshot first · prune",
-      "labelDy": 60
+      "id": "read-store",
+      "from": "weather-loader",
+      "to": "snapshot-db",
+      "label": "Read / write cache"
     },
     {
-      "id": "register-worker",
-      "from": "responsive-screens",
-      "to": "shell-worker",
-      "label": "Register / update",
-      "fromSide": "bottom",
-      "toSide": "left"
+      "id": "render-model",
+      "from": "chart-model",
+      "to": "weather-screens",
+      "label": "Rows and domains"
+    },
+    {
+      "id": "apply-display",
+      "from": "display-runtime",
+      "to": "weather-screens",
+      "label": "Appearance / size"
+    },
+    {
+      "id": "persist-display",
+      "from": "display-runtime",
+      "to": "display-store",
+      "label": "Restore / persist"
+    },
+    {
+      "id": "token-consumer",
+      "from": "token-build",
+      "to": "weather-screens",
+      "label": "Generated CSS",
+      "variant": "dashed"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Weather data",
+      "title": "Browser behavior",
       "items": [
-        "Past rain is observed; forecasts show server-calculated amounts",
-        "KMA station times parsed; air follows its standard's grades"
+        "Theme bootstrap runs before the React render.",
+        "Separate display storage wins over legacy theme; unavailable storage warns."
       ]
     },
     {
       "dot": "emerald",
-      "title": "Offline behavior",
+      "title": "Chart contracts",
       "items": [
-        "Stored weather shown first, then refetched on reconnect",
-        "Deleting a place or 24 hours removes its snapshots"
+        "All supplied hours and finite daily extrema share their chart domains.",
+        "Localized AM/PM conditions, cursor and table retain the same data.",
+        "Chart routes wait for menu closure; empty/error content retains focus."
       ]
     },
     {
       "dot": "amber",
-      "title": "Runtime scope",
+      "title": "Evidence scope",
       "items": [
-        "One retry on 502/network; 429 honors Retry-After",
-        "AirKorea, KAQ and Visual Crossing credited like the app"
+        "Source links pin the published implementation commit; release remains human-owned.",
+        "Server/provider behavior and installed Cordova app are unchanged."
       ]
     }
   ]

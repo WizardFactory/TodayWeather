@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { dateText, hourText } from "./locale";
 import {
   useParams,
   useNavigate,
   useSearchParams,
+  useLocation,
   Link,
 } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -42,7 +43,6 @@ import {
   Empty,
   DataNotice,
   dayLabel,
-  TemperatureChart,
   SectionHead,
   isOld,
   percent,
@@ -59,6 +59,8 @@ import {
 import { amount, approxAmount, weatherStaleTime, windText } from "./format";
 import { coreText, t, useLanguage } from "./i18n";
 import { placeArea, placeName } from "./places";
+import { HourlyChart, DailyChart } from "./Charts";
+import { iconKind } from "./format";
 const pollutantLabel = (code: Pollutant) => t(`pollutant.${code}`);
 /** Rain text that labels observed, approximate and server-forecast amounts. */
 function rainText(p: Point, unit: string): string {
@@ -121,7 +123,7 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
   const linkedPollutant = POLLUTANTS.find((c) => c === search.get("pollutant"));
   const { locationId, view: paramView } = useParams(),
     view = fixedView ?? paramView ?? "hourly";
-  const { state, setState, notify } = useApp();
+  const { state, setState, notify, contentInert } = useApp();
   const navigate = useNavigate();
   const place = resolvePlace(state, locationId);
   useEffect(() => {
@@ -152,15 +154,63 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
       : false,
     refetchIntervalInBackground: false,
   });
+  const live = query.data;
+  const showStored = !live && query.isPending && !!stored.data;
+  const data = live?.weather ?? (showStored ? stored.data! : undefined);
+  const route = useLocation();
+  // Stored and live data can differ between an empty section and a chart.
+  const hasChartRows = Boolean(
+    view === "daily" ? data?.daily.length : data?.hourly.length,
+  );
+  const pendingContentFocus = useRef(false);
+  useEffect(() => {
+    pendingContentFocus.current = view === "hourly" || view === "daily";
+  }, [
+    route.key,
+    view,
+    !!data,
+    data?.location.id,
+    hasChartRows,
+    query.isPending,
+  ]);
+  useEffect(() => {
+    if (contentInert || !pendingContentFocus.current) return;
+    // The shell's non-inert commit, not frame timing, owns menu-close readiness.
+    const frame = requestAnimationFrame(() => {
+      pendingContentFocus.current = false;
+      const section = document.querySelector<HTMLElement>(
+        `[data-weather-section="${view}"]`,
+      );
+      // Loading and terminal failures have no chart section. Keep the route's
+      // content focus there until data supplies the selected chart or empty state.
+      if (!section) {
+        const main = document.getElementById("main-content");
+        main?.focus({ preventScroll: true });
+        main?.scrollIntoView({ block: "start", behavior: "instant" });
+        return;
+      }
+      const target =
+        section.querySelector<HTMLElement>('.chart-scroll[role="group"]') ??
+        section;
+      target.focus({ preventScroll: true });
+      section.scrollIntoView({ block: "start", behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [
+    route.key,
+    contentInert,
+    view,
+    !!data,
+    data?.location.id,
+    hasChartRows,
+    query.isPending,
+  ]);
   if (!place)
     return (
       <Empty title={t("weather.selectFirst")}>
         <Link to="/locations">{t("weather.manageLocations")}</Link>
       </Empty>
     );
-  const live = query.data;
-  const showStored = !live && query.isPending && !!stored.data;
-  const data = live?.weather ?? (showStored ? stored.data! : undefined);
   async function share() {
     const publicPlace = PLACES.find(
       (p) =>
@@ -330,19 +380,10 @@ function WeatherDetails({
   // Mobile rounds the yesterday difference in °F and keeps one decimal in °C.
   const deltaDigits = w.units.temperatureUnit === "F" ? 0 : 1;
   const today = w.daily.find((p) => p.at.slice(0, 10) === now.at.slice(0, 10));
-  const hourly = w.hourly.filter((p) => p.at >= now.at).slice(0, 16);
+  const hourly = w.hourly;
   const snowLabel = t(
     w.source === "KMA" ? "metric.snowDepth" : "metric.snowfall",
   );
-  const previous = hourly.map((p) => {
-    const date = new Date(p.at.slice(0, 10) + "T12:00:00Z");
-    date.setUTCDate(date.getUTCDate() - 1);
-    return (
-      w.hourly.find(
-        (y) => y.at === date.toISOString().slice(0, 10) + p.at.slice(10),
-      ) ?? { ...p, temperature: null }
-    );
-  });
   const air = w.air[0];
   const aqiForecast = air
     ? air.pollutants.aqi.hourly
@@ -391,7 +432,11 @@ function WeatherDetails({
   return (
     <>
       <div className="overview-grid">
-        <section className="hero-card">
+        <section
+          className="hero-card"
+          data-weather-section="hero"
+          data-sky={skyKind(now.icon, now.at)}
+        >
           <div className="hero-top">
             <span className="pill">{t("weather.now")}</span>
             <span>
@@ -429,76 +474,119 @@ function WeatherDetails({
             </span>
           </div>
         </section>
-        <section className="panel air-summary">
-          <SectionHead
-            title={t("weather.air.title")}
-            aside={
-              <Link
-                aria-label={t("weather.air.more")}
-                to={"/air/" + w.location.id}
-              >
-                <ArrowUpRight size={18} />
-              </Link>
-            }
-          />
-          {air ? (
-            <>
-              <div
-                className={`air-orb ${gradeClass(standard, air.pollutants.aqi.grade)}`}
-              >
-                <strong>{formatValue(air.pollutants.aqi.value)}</strong>
-                <span>
-                  {air.pollutants.aqi.label ||
-                    gradeLabel(standard, air.pollutants.aqi.grade)}
-                </span>
-              </div>
-              <div className="air-small-values">
-                <span>
-                  {pollutantLabel("pm10")}{" "}
-                  <b>{airValue(air.pollutants.pm10.value, "pm10")}</b>
-                </span>
-                <span>
-                  {pollutantLabel("pm25")}{" "}
-                  <b>{airValue(air.pollutants.pm25.value, "pm25")}</b>
-                </span>
-              </div>
-              {aqiForecast.length > 0 && (
-                <div
-                  className="air-forecast"
-                  aria-label={t("weather.air.aqiForecast")}
-                >
-                  {aqiForecast.map((h) => (
-                    <span key={h.at}>
-                      <small>{hourText(h.at)}</small>
-                      <b className={"grade " + gradeClass(standard, h.grade)}>
-                        {gradeLabel(standard, h.grade)}
-                      </b>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <Stamp at={air.observedAt} zone={zone} />
-              {isOld(air.observedAt, 3, Date.now(), zone) && (
-                <p className="warning-text">{t("weather.air.stale")}</p>
-              )}
-            </>
-          ) : (
-            <>
-              <Empty title={t("weather.air.none")}>
-                {t("weather.air.noneBody")}
-              </Empty>
-              <ProviderAirSummary weather={w} />
-            </>
-          )}
-          {(air || w.airSummary) && airCredit(w.source, air).length > 0 && (
-            <div className="source-credit">
-              {airCredit(w.source, air).map((line) => (
-                <p key={line}>{line}</p>
-              ))}
-            </div>
-          )}
-        </section>
       </div>
+      <section
+        className="panel chart-panel"
+        data-weather-section="hourly"
+        tabIndex={-1}
+      >
+        <SectionHead
+          title={t("weather.hourly.title")}
+          aside={
+            <div className="chart-legend">
+              <span>
+                <i />
+                {t("weather.legend.forecast")}
+              </span>
+              {(w.yesterday ||
+                w.hourly.some(
+                  (p) => p.at.slice(0, 10) < w.current.at.slice(0, 10),
+                )) && (
+                <span>
+                  <i className="muted" />
+                  {t("weather.legend.yesterday")}
+                </span>
+              )}
+            </div>
+          }
+        />
+        <HourlyChart weather={w} />
+        {w.forecastPublishedAt && (
+          <p className="muted-text">
+            <Stamp
+              at={w.forecastPublishedAt}
+              label={t("weather.forecastPublished")}
+              zone="KST"
+            />
+            {isOld(w.forecastPublishedAt, 24) && (
+              <span className="warning-text">
+                {" "}
+                · {t("weather.forecastStale")}
+              </span>
+            )}
+          </p>
+        )}
+      </section>
+      <DailyChart weather={w} />
+      <section className="panel air-summary" data-weather-section="air">
+        <SectionHead
+          title={t("weather.air.title")}
+          aside={
+            <Link
+              aria-label={t("weather.air.more")}
+              to={"/air/" + w.location.id}
+            >
+              <ArrowUpRight size={18} />
+            </Link>
+          }
+        />
+        {air ? (
+          <>
+            <div
+              className={`air-orb ${gradeClass(standard, air.pollutants.aqi.grade)}`}
+            >
+              <strong>{formatValue(air.pollutants.aqi.value)}</strong>
+              <span>
+                {air.pollutants.aqi.label ||
+                  gradeLabel(standard, air.pollutants.aqi.grade)}
+              </span>
+            </div>
+            <div className="air-small-values">
+              <span>
+                {pollutantLabel("pm10")}{" "}
+                <b>{airValue(air.pollutants.pm10.value, "pm10")}</b>
+              </span>
+              <span>
+                {pollutantLabel("pm25")}{" "}
+                <b>{airValue(air.pollutants.pm25.value, "pm25")}</b>
+              </span>
+            </div>
+            {aqiForecast.length > 0 && (
+              <div
+                className="air-forecast"
+                aria-label={t("weather.air.aqiForecast")}
+              >
+                {aqiForecast.map((h) => (
+                  <span key={h.at}>
+                    <small>{hourText(h.at)}</small>
+                    <b className={"grade " + gradeClass(standard, h.grade)}>
+                      {gradeLabel(standard, h.grade)}
+                    </b>
+                  </span>
+                ))}
+              </div>
+            )}
+            <Stamp at={air.observedAt} zone={zone} />
+            {isOld(air.observedAt, 3, Date.now(), zone) && (
+              <p className="warning-text">{t("weather.air.stale")}</p>
+            )}
+          </>
+        ) : (
+          <>
+            <Empty title={t("weather.air.none")}>
+              {t("weather.air.noneBody")}
+            </Empty>
+            <ProviderAirSummary weather={w} />
+          </>
+        )}
+        {(air || w.airSummary) && airCredit(w.source, air).length > 0 && (
+          <div className="source-credit">
+            {airCredit(w.source, air).map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+          </div>
+        )}
+      </section>
       <div className="metrics-grid">
         {[
           [Droplets, t("metric.humidity"), `${formatValue(now.humidity)}%`, ""],
@@ -543,49 +631,6 @@ function WeatherDetails({
           );
         })}
       </div>
-      {view !== "daily" && (
-        <section className="panel chart-panel">
-          <SectionHead
-            title={t("weather.hourly.title")}
-            aside={
-              <div className="chart-legend">
-                <span>
-                  <i />
-                  {t("weather.legend.forecast")}
-                </span>
-                <span>
-                  <i className="muted" />
-                  {t("weather.legend.yesterday")}
-                </span>
-              </div>
-            }
-          />
-          <TemperatureChart
-            points={hourly}
-            yesterday={previous}
-            unit={w.units.temperatureUnit}
-            reference={now.at}
-          />
-          {w.forecastPublishedAt && (
-            <p className="muted-text">
-              <Stamp
-                at={w.forecastPublishedAt}
-                label={t("weather.forecastPublished")}
-                zone="KST"
-              />
-              {isOld(w.forecastPublishedAt, 24) && (
-                <span className="warning-text">
-                  {" "}
-                  · {t("weather.forecastStale")}
-                </span>
-              )}
-            </p>
-          )}
-        </section>
-      )}
-      {(view === "daily" || view === "overview") && (
-        <DailyForecast weather={w} />
-      )}
       <section className="panel">
         <SectionHead title={t("weather.precipitation.title")} />
         <div className="detail-grid">
@@ -605,7 +650,7 @@ function WeatherDetails({
           ))}
         </div>
       </section>
-      <section className="panel details-panel">
+      <section className="panel details-panel" data-weather-section="details">
         <SectionHead title={t("weather.details.title")} />
         <div className="detail-grid">
           {details.map(([I, label, value]) => (
@@ -628,50 +673,6 @@ function WeatherDetails({
   );
 }
 import { CloudRain as CloudRainIcon, Moon as MoonIcon } from "lucide-react";
-function DailyForecast({ weather: w }: { weather: Weather }) {
-  const vals = w.daily
-      .flatMap((p) => [p.low, p.high])
-      .filter((n): n is number => n !== null),
-    min = Math.min(...vals),
-    max = Math.max(...vals),
-    range = max - min || 1;
-  return (
-    <section className="panel">
-      <SectionHead
-        title={t("daily.title")}
-        aside={<span className="muted-text">{t("daily.legend")}</span>}
-      />
-      {!w.daily.length ? (
-        <Empty title={t("daily.empty")} />
-      ) : (
-        <div className="daily-list">
-          {w.daily.slice(0, 14).map((p) => (
-            <div className="daily-row" key={p.at}>
-              <span>{dayLabel(p.at, w.current.at)}</span>
-              <div className="daily-icons">
-                <WeatherIcon icon={p.icon} size={27} />
-                <WeatherIcon icon={p.iconPm || p.icon} size={27} />
-              </div>
-              <span className="rain-label">{percent(p.rainProbability)}</span>
-              <b className="low-temp">{formatValue(p.low)}°</b>
-              <div className="temp-range">
-                {p.low !== null && p.high !== null && (
-                  <i
-                    style={{
-                      left: ((p.low - min) / range) * 75 + "%",
-                      width: Math.max(5, ((p.high - p.low) / range) * 75) + "%",
-                    }}
-                  />
-                )}
-              </div>
-              <b>{formatValue(p.high)}°</b>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
 function ProviderAirSummary({ weather: w }: { weather: Weather }) {
   if (!w.airSummary) return null;
   return (
@@ -785,12 +786,35 @@ function AirDetails({
             )}
           </div>
         </div>
-        <div className="pollutant-grid">
+        <div
+          className="pollutant-grid"
+          role="radiogroup"
+          aria-label={t("air.title")}
+          onKeyDown={(event) => {
+            const index = POLLUTANTS.indexOf(code),
+              step = ["ArrowRight", "ArrowDown"].includes(event.key)
+                ? 1
+                : ["ArrowLeft", "ArrowUp"].includes(event.key)
+                  ? -1
+                  : 0;
+            if (!step) return;
+            event.preventDefault();
+            const next = (index + step + POLLUTANTS.length) % POLLUTANTS.length;
+            setCode(POLLUTANTS[next]);
+            (
+              event.currentTarget.querySelectorAll("button")[
+                next
+              ] as HTMLButtonElement
+            ).focus();
+          }}
+        >
           {POLLUTANTS.map((c) => (
             <button
               key={c}
               className={code === c ? "selected" : ""}
-              aria-pressed={code === c}
+              role="radio"
+              aria-checked={code === c}
+              tabIndex={code === c ? 0 : -1}
               onClick={() => setCode(c)}
             >
               <span>{pollutantLabel(c)}</span>
@@ -827,7 +851,14 @@ function AirDetails({
           }
         />
         {slots.some(Boolean) ? (
-          <div className="bar-chart">
+          <div
+            className="bar-chart"
+            role="group"
+            tabIndex={0}
+            aria-label={t("air.hourlyTitle", {
+              pollutant: pollutantLabel(code),
+            })}
+          >
             {slots.map((v, i) => {
               const prev = slots[i - 1];
               const showDate =
@@ -863,6 +894,51 @@ function AirDetails({
         ) : (
           <Empty title={t("air.hourlyEmpty")} />
         )}
+        {slots.some(Boolean) && (
+          <details className="data-table">
+            <summary>{t("display.table")}</summary>
+            <div className="table-scroll">
+              <table>
+                <caption>
+                  {t("air.hourlyTitle", { pollutant: pollutantLabel(code) })}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{t("chart.col.time")}</th>
+                    <th scope="col">
+                      {pollutantLabel(code)} {pollutantUnit(code)}
+                    </th>
+                    <th scope="col">
+                      {t("air.legend.observed")} / {t("air.legend.forecast")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {slots
+                    .filter((v) => v !== null)
+                    .map(
+                      (v) =>
+                        v && (
+                          <tr key={v.at}>
+                            <th scope="row">
+                              {dayLabel(v.at, w.current.at)} {hourText(v.at)}
+                            </th>
+                            <td>{formatValue(v.value, 1)}</td>
+                            <td>
+                              {t(
+                                v.forecast
+                                  ? "air.legend.forecast"
+                                  : "air.legend.observed",
+                              )}
+                            </td>
+                          </tr>
+                        ),
+                    )}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        )}
         {p.daily.length > 0 && (
           <div className="daily-air">
             {p.daily.map((v, i) => (
@@ -877,4 +953,18 @@ function AirDetails({
       </section>
     </>
   );
+}
+
+function skyKind(icon: string, at: string) {
+  const kind = iconKind(icon);
+  if (kind === "lightning") return "thunder";
+  if (kind === "rainsnow" || kind === "rain") return "rain";
+  if (kind === "snow") return "snow";
+  if (kind === "fog" || kind === "dust") return "fog";
+  if (kind === "cloud" || kind === "cloud-moon" || kind === "cloud-sun")
+    return "cloudy";
+  const hour = Number(at.slice(11, 13));
+  return kind === "moon" || hour < 6 || hour >= 19
+    ? "clear-night"
+    : "clear-day";
 }

@@ -1,0 +1,97 @@
+{
+  "title": "TodayWeather PWA user manual",
+  "date": "2026-10-01",
+  "pages": [
+    {
+      "scenario": "S1",
+      "title": "Your display preferences",
+      "image": "display.png",
+      "intro": "Open Settings to choose appearance, weather background and text size. These settings belong to this browser.",
+      "steps": [
+        "Choose System, Light or Dark. System follows your device appearance.",
+        "Choose a weather background independently of appearance.",
+        "Choose 130% text and reload. Your display choices remain saved."
+      ],
+      "expected": "Display choices survive reload and an older build's legacy theme update.",
+      "failure": "A storage warning means the current choices work in memory but may not survive closing the browser."
+    },
+    {
+      "scenario": "S2",
+      "title": "Compare hourly weather",
+      "image": "hourly.png",
+      "intro": "The hourly chart compares today's forecast with yesterday. Only the chart scrolls horizontally.",
+      "steps": [
+        "Scroll the chart to later hours, or focus it and use Left, Right, Home and End.",
+        "Read the highlighted value and the shared temperature axis.",
+        "Expand wind and humidity, or open the table for the same hourly values."
+      ],
+      "expected": "All supplied hours remain available. A missing temperature leaves a gap in the line.",
+      "failure": "A dash means no supplied value; a missing yesterday series does not produce an invented comparison. If the request fails, focus stays in the content; choose Retry to load and focus the chart."
+    },
+    {
+      "scenario": "S3",
+      "title": "Read daily ranges",
+      "image": "daily.png",
+      "intro": "Daily bars use one temperature scale and one cool-to-warm gradient. Past days remain available.",
+      "steps": [
+        "Choose Daily; the daily chart scrolls into view and receives keyboard focus. Today starts in the third column when the chart overflows.",
+        "Compare minimum, maximum and current temperature. Different morning/afternoon conditions have AM/PM labels; matching conditions share one icon.",
+        "Use Left/Right/Home/End or the table for temperatures, conditions, precipitation probability and amount."
+      ],
+      "expected": "Past probability is hidden. Equal morning and afternoon conditions use one icon.",
+      "failure": "An incomplete range has no bar. The missing value is a dash; any supplied extremum remains on the shared scale. A failed request keeps focus in the content; Retry returns focus to Daily after data arrives."
+    },
+    {
+      "scenario": "S4",
+      "title": "Read air information",
+      "image": "air.png",
+      "intro": "Open Air quality to compare the available pollutant readings and grade wording.",
+      "steps": [
+        "Choose an available pollutant. Keyboard arrow keys move between radio choices.",
+        "Read its grade, value and source time.",
+        "Open the forecast table when forecast data is supplied."
+      ],
+      "expected": "The selected reading and table use the same supplied data and selected air unit.",
+      "failure": "Unavailable pollutants or life indices are omitted. Stale data remains visibly labelled."
+    },
+    {
+      "scenario": "S5",
+      "title": "Make text easier to read",
+      "image": "enlarged.png",
+      "intro": "Text size in Settings is independent of device text size. Language and light/dark appearance can be changed together.",
+      "steps": [
+        "Choose the language and 130% text size.",
+        "Check Weather, Air quality and Settings; scroll chart content as needed.",
+        "On iOS, the system comparison uses the nearest step: 23pt versus 17pt, approximately 135%."
+      ],
+      "expected": "App 130% scales PWA text by 1.3. The iOS system step is a separate comparison, not an exact 130% setting.",
+      "failure": "The installed Cordova app may keep fixed CSS text sizes. Device measurements are documented separately."
+    },
+    {
+      "scenario": "S6",
+      "title": "Manage saved browser data",
+      "image": "confirmation.png",
+      "intro": "Settings offers export, import and deletion of saved browser data. Export a copy before deliberately deleting it.",
+      "steps": [
+        "Request deletion. The confirmation opens with Cancel focused.",
+        "Use Cancel or Escape to keep your data and return focus to the trigger.",
+        "Confirm only when you intend to reset saved places, snapshots and display preferences."
+      ],
+      "expected": "Cancel preserves saved data. Confirm resets this browser's TodayWeather data.",
+      "failure": "Storage or import errors are reported. Import replaces saved places only after confirmation."
+    },
+    {
+      "scenario": "S7",
+      "title": "Reproduce this version",
+      "image": "display.png",
+      "intro": "Maintainers can reproduce the shared design-token consumer from a clean repository checkout. See the editable manual and dated evidence alongside this PDF.",
+      "steps": [
+        "Install locked dependencies with npm ci, then run npm run typecheck and npm test.",
+        "Run npm run build:web; the token generation hooks run automatically.",
+        "Run the documented browser checks. Rebuild this PDF with python scripts/verification/pwa-manual-pdf.py."
+      ],
+      "expected": "Generated tokens are deterministic. The build contains the hashed Pretendard font and its OFL license.",
+      "failure": "A missing browser, Python package or device is a prerequisite failure, not a passing verification."
+    }
+  ]
+}

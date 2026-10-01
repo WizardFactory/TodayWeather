@@ -6,12 +6,17 @@ import App from "./App";
 import { restoreState } from "./state";
 import { detectLanguage, setLanguage } from "./i18n";
 import { configureFormats } from "./locale";
+import "./generated/tokens.css";
 import "./style.css";
+import { restoreDisplay, applyDisplay } from "./display";
 // Apply the saved theme before the first render to avoid a light flash.
 let saved: ReturnType<typeof restoreState> | undefined;
 try {
   saved = restoreState(localStorage);
-  document.documentElement.dataset.theme = saved.settings.theme;
+  applyDisplay(
+    restoreDisplay(localStorage),
+    matchMedia("(prefers-color-scheme: dark)").matches,
+  );
 } catch {
   /* Storage unavailable: the default theme and browser language apply. */
 }

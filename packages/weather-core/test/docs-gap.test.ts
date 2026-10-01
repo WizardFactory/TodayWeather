@@ -62,7 +62,7 @@ describe("accumulation periods", () => {
 });
 
 describe("daily history and details", () => {
-  it("keeps yesterday's daily row and drops the old past-forecast notice", () => {
+  it("retains all supplied daily history without a past-forecast notice", () => {
     const w = normalizeWeather(kma());
     expect(w.daily[0].at.slice(0, 10)).toBe("2026-09-22");
     expect(w.notices.join(" ")).not.toContain("과거 예보");
@@ -75,7 +75,7 @@ describe("daily history and details", () => {
     });
     expect(
       normalizeWeather(raw).daily.some((p) => p.at.startsWith("2026-09-20")),
-    ).toBe(false);
+    ).toBe(true);
   });
   it("exposes UV, discomfort and food-poisoning texts when supplied", () => {
     const raw = kma();

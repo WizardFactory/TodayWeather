@@ -98,15 +98,18 @@ import {
   type MessageKey,
 } from "./i18n";
 import { placeArea, placeName } from "./places";
+import {
+  DISPLAY_KEY,
+  defaultDisplay,
+  restoreDisplay,
+  saveDisplay,
+  validateDisplay,
+  legacyTheme,
+  applyDisplay,
+} from "./display";
+import { useConfirm } from "./ConfirmDialog";
 type InstallEvent = Event & { prompt: () => Promise<void> };
 const UPDATE_REQUESTED = "tw.web.v1.update-requested";
-// Matches web/public/theme.js and the --bg of each theme in style.css.
-const THEME_COLORS: Record<SavedState["settings"]["theme"], string> = {
-  light: "#f5f7fb",
-  dark: "#111c2b",
-  photo: "#edf4fb",
-  classic: "#f3f7f5",
-};
 /** Start-screen route for `/`; `locations` applies only there. */
 function routeFor(state: SavedState, id: string) {
   return state.settings.startup === "locations"
@@ -128,6 +131,16 @@ export default function App() {
         return defaultState();
       }
     }),
+    [display, setDisplay] = useState(() => {
+      try {
+        return restoreDisplay(localStorage);
+      } catch {
+        return defaultDisplay();
+      }
+    }),
+    [osDark, setOsDark] = useState(
+      () => matchMedia("(prefers-color-scheme: dark)").matches,
+    ),
     [storageOk, setStorageOk] = useState(true),
     [toast, setToast] = useState(""),
     [menuOpen, setMenuOpen] = useState(false),
@@ -140,7 +153,7 @@ export default function App() {
   const registration = useRef<ServiceWorkerRegistration | undefined>(undefined);
   // Narrow layouts show the sidebar as an off-canvas menu.
   const [compact, setCompact] = useState(
-    () => window.matchMedia?.("(max-width: 680px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
   );
   const sidebarRef = useRef<HTMLElement>(null),
     menuButton = useRef<HTMLButtonElement>(null),
@@ -150,7 +163,7 @@ export default function App() {
     focusMain = useRef(false);
   const queryClient = useQueryClient();
   useEffect(() => {
-    const query = window.matchMedia?.("(max-width: 680px)");
+    const query = window.matchMedia?.("(max-width: 767px)");
     if (!query) return;
     const update = () => {
       setCompact(query.matches);
@@ -187,16 +200,25 @@ export default function App() {
     staleTime: 60000,
   });
   useEffect(() => {
+    const query = matchMedia("(prefers-color-scheme: dark)");
+    const changed = () => setOsDark(query.matches);
+    query.addEventListener("change", changed);
+    return () => query.removeEventListener("change", changed);
+  }, []);
+  useEffect(() => {
+    applyDisplay(display, osDark);
+    const compatible = {
+      ...state,
+      settings: { ...state.settings, theme: legacyTheme(display, osDark) },
+    };
     try {
-      setStorageOk(saveState(state, localStorage));
+      const a = saveState(compatible, localStorage),
+        b = saveDisplay(display, localStorage);
+      setStorageOk(a && b);
     } catch {
       setStorageOk(false);
     }
-    document.documentElement.dataset.theme = state.settings.theme;
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", THEME_COLORS[state.settings.theme]);
-  }, [state]);
+  }, [state, display, osDark]);
   // The chosen language (or the browser's) drives every text and request.
   useLanguage();
   const wantedLanguage =
@@ -210,9 +232,11 @@ export default function App() {
   useEffect(() => {
     // Another tab changed favorites or settings: adopt the stored state.
     const changed = (e: StorageEvent) => {
-      if (e.key !== STATE_KEY && e.key !== null) return;
+      if (e.key !== STATE_KEY && e.key !== DISPLAY_KEY && e.key !== null)
+        return;
       try {
         setState(restoreState(localStorage));
+        setDisplay(restoreDisplay(localStorage));
       } catch {
         /* Keep the in-memory state. */
       }
@@ -223,6 +247,12 @@ export default function App() {
   }, []);
   useEffect(() => {
     setMenuOpen(false);
+    // Weather owns chart-route scroll/focus once its data has rendered.
+    if (/^\/weather\/[^/]+\/(hourly|daily)$/.test(location.pathname)) {
+      firstRoute.current = false;
+      focusMain.current = false;
+      return;
+    }
     window.scrollTo(0, 0);
     // Move focus to the new page so screen readers announce it, except for
     // in-page tab switches that keep focus on the pressed tab. History
@@ -378,10 +408,13 @@ export default function App() {
       value={{
         state,
         setState,
+        display,
+        setDisplay,
         select,
         notify: setToast,
         capabilities: caps.data,
         storageOk,
+        contentInert: compact && menuOpen,
         installPrompt,
         updateReady,
         applyUpdate,
@@ -1309,14 +1342,18 @@ const unitNames: Record<string, MessageKey> = {
 const unitName = (value: string) =>
   value in unitNames ? t(unitNames[value]) : standardName(value);
 function SettingsPage() {
-  const { state, setState, notify, capabilities } = useApp();
+  const { state, setState, display, setDisplay, notify, capabilities } =
+    useApp();
+  const { confirm, dialog } = useConfirm();
   const upload = useRef<HTMLInputElement>(null);
+  const importTrigger = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
-  async function clearData() {
-    if (!window.confirm(t("settings.data.confirm"))) return;
+  async function clearData(invoker: HTMLButtonElement) {
+    if (!(await confirm(t("settings.data.confirm"), invoker))) return;
     await clearLocalData(localStorage);
     queryClient.removeQueries({ queryKey: ["stored-weather"] });
     setState(defaultState());
+    setDisplay(defaultDisplay());
     notify(t("settings.data.cleared"));
   }
   const settings = state.settings;
@@ -1325,6 +1362,7 @@ function SettingsPage() {
       ...state,
       places: state.places.filter((p) => !p.current),
       selectedId: null,
+      display,
     };
     const blob = new Blob([JSON.stringify(safe, null, 2)], {
         type: "application/json",
@@ -1338,6 +1376,7 @@ function SettingsPage() {
   }
   async function importData(file?: File) {
     if (!file) return;
+    const invoker = importTrigger.current;
     try {
       if (file.size > 100000) throw Error(t("settings.import.tooLarge"));
       const raw = await file.text(),
@@ -1346,12 +1385,13 @@ function SettingsPage() {
         throw Error(t("settings.import.invalid"));
       const imported = restoreState({ getItem: () => raw });
       if (
-        !window.confirm(
+        !(await confirm(
           t("settings.import.confirm", {
             current: state.places.length,
             imported: imported.places.length,
           }),
-        )
+          invoker,
+        ))
       ) {
         notify(t("settings.import.cancelled"));
       } else {
@@ -1360,6 +1400,13 @@ function SettingsPage() {
           if (!imported.places.some((p) => p.id === old.id))
             void deleteSnapshotsFor(old.id);
         setState(imported);
+        setDisplay(
+          parsed.display
+            ? validateDisplay(parsed.display)
+            : restoreDisplay({
+                getItem: (key) => (key === STATE_KEY ? raw : null),
+              }),
+        );
         notify(t("settings.import.done"));
       }
     } catch (e) {
@@ -1369,6 +1416,7 @@ function SettingsPage() {
   }
   return (
     <>
+      {dialog}
       <PageTitle
         eyebrow={t("settings.eyebrow")}
         title={t("settings.title")}
@@ -1451,26 +1499,68 @@ function SettingsPage() {
               </select>
             </label>
             <p className="hint">{t("settings.languageHint")}</p>
+            <fieldset className="display-options">
+              <legend>{t("display.appearance")}</legend>
+              {(["system", "light", "dark"] as const).map((value) => (
+                <label key={value}>
+                  <input
+                    type="radio"
+                    name="appearance"
+                    value={value}
+                    checked={display.appearance === value}
+                    onChange={() =>
+                      setDisplay((d) => ({ ...d, appearance: value }))
+                    }
+                  />
+                  {t(`display.${value}`)}
+                </label>
+              ))}
+            </fieldset>
             <label className="setting-row">
-              <span>{t("settings.theme.label")}</span>
+              <span>{t("display.hero")}</span>
               <select
-                value={settings.theme}
+                value={display.heroStyle}
                 onChange={(e) =>
-                  setState((s) => ({
-                    ...s,
-                    settings: {
-                      ...s.settings,
-                      theme: e.target.value as typeof settings.theme,
-                    },
+                  setDisplay((d) => ({
+                    ...d,
+                    heroStyle: e.target.value as typeof d.heroStyle,
                   }))
                 }
               >
-                {(["light", "dark", "photo", "classic"] as const).map((v) => (
+                {(["sky", "plain", "classic"] as const).map((v) => (
                   <option key={v} value={v}>
-                    {t(`settings.theme.${v}`)}
+                    {t(`display.${v}`)}
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="setting-row">
+              <span>{t("display.textScale")}</span>
+              <select
+                value={display.textScale}
+                onChange={(e) =>
+                  setDisplay((d) => ({
+                    ...d,
+                    textScale: Number(e.target.value) as typeof d.textScale,
+                  }))
+                }
+              >
+                {[0.9, 1, 1.15, 1.3].map((v) => (
+                  <option key={v} value={v}>
+                    {Math.round(v * 100)}%
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="setting-row">
+              <span>{t("display.motion")}</span>
+              <input
+                type="checkbox"
+                checked={display.motion}
+                onChange={(e) =>
+                  setDisplay((d) => ({ ...d, motion: e.target.checked }))
+                }
+              />
             </label>
             <label className="setting-row">
               <span>{t("settings.startup.label")}</span>
@@ -1531,6 +1621,7 @@ function SettingsPage() {
               </button>
               <button
                 className="button"
+                ref={importTrigger}
                 onClick={() => upload.current?.click()}
               >
                 <Upload size={16} /> {t("settings.backup.import")}
@@ -1547,7 +1638,10 @@ function SettingsPage() {
           <section className="panel">
             <SectionHead title={t("settings.data.title")} />
             <p className="muted-text">{t("settings.data.hint")}</p>
-            <button className="button" onClick={() => void clearData()}>
+            <button
+              className="button"
+              onClick={(event) => void clearData(event.currentTarget)}
+            >
               <Trash2 size={16} /> {t("settings.data.clear")}
             </button>
           </section>
