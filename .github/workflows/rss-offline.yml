@@ -191,7 +191,9 @@ jobs:
       - name: Fetch lock and records on a real mongod
         env:
           NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules
-        run: node server/test/offline/vc-lock-mongo-smoke.js
+        run: |
+          node --test server/test/offline/mongo-operation-tracker.test.js
+          node server/test/offline/vc-lock-mongo-smoke.js --hold-writes
       - name: Shared air budgets and cache across worker processes on a real mongod (#2622, #2628)
         env:
           NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules

@@ -7,10 +7,13 @@
  *      node server/test/offline/vc-lock-mongo-smoke.js
  * TW_MONGO_URL selects an existing mongod; otherwise mongodb-memory-server starts one
  * (MONGOMS_SYSTEM_BINARY can point it at a local binary).
+ * --hold-writes deterministically holds the first usage/release until after the response.
+ * All background writes are drained before assertions, fixture-clock changes and shutdown.
  */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const mongoose = require('mongoose');
+const {createOperationTracker} = require('./mongo-operation-tracker');
 const server = path.resolve(__dirname, '../..');
 const CAPTURED = Date.parse('2026-09-26T07:04:30Z');
 let now = CAPTURED;
@@ -37,18 +40,50 @@ SlowRequester.prototype.getTimeline = function (params, key, cb) {
 const dsfModel = require(path.join(server, 'models/worldWeather/dsf.model'));
 const lockModel = require(path.join(server, 'models/worldWeather/vc.fetch.lock.model'));
 const usageModel = require(path.join(server, 'models/worldWeather/vc.usage.model'));
-function loadController() {
+const operations = createOperationTracker();
+const holdWrites = process.argv.includes('--hold-writes');
+const heldWrites = [];
+function holdFirst(model, method) {
+    let held = false;
+    return new Proxy(model, {
+        get(target, key) {
+            const value = Reflect.get(target, key, target);
+            if (typeof value !== 'function') return value;
+            return (...args) => {
+                if (holdWrites && key === method && !held) {
+                    held = true;
+                    heldWrites.push(() => value.apply(target, args));
+                    return;
+                }
+                return value.apply(target, args);
+            };
+        }
+    });
+}
+const trackedLock = operations.wrap(holdFirst(lockModel, 'deleteOne'), 'lock', ['updateOne', 'deleteOne']);
+const trackedUsage = operations.wrap(holdFirst(usageModel, 'updateOne'), 'usage', ['updateOne']);
+function releaseHeldWrites() { while (heldWrites.length) heldWrites.shift()(); }
+async function settleWrites() {
+    await operations.drain();
+    // Mongo write errors must fail the smoke even when production only logs them.
+    assert(!logs.some(l => /Fail to (record Visual Crossing usage|release VC fetch lock|shorten VC fetch lock|mark Visual Crossing unavailable|store the no-yesterday marker)/.test(l)),
+        'controller background Mongo writes succeeded: ' + logs.filter(l => /Fail to /.test(l)).join('; '));
+}
+
+function loadController(onTimer = () => {}) {
     const module = {exports: {}};
     const deps = {
         'async': require('async'), '../../config/config': {keyString: {vc_key: 'SMOKESYNTHETICKEY0123456789'}, vc: {dailyRecordLimit: 0}},
-        '../../models/worldWeather/dsf.model': dsfModel, '../../models/worldWeather/vc.fetch.lock.model': lockModel,
-        '../../models/worldWeather/vc.usage.model': usageModel,
+        '../../models/worldWeather/dsf.model': dsfModel, '../../models/worldWeather/vc.fetch.lock.model': trackedLock,
+        '../../models/worldWeather/vc.usage.model': trackedUsage,
         '../../lib/VC/vcRequester': SlowRequester, '../../lib/VC/vcConverter': require(path.join(server, 'lib/VC/vcConverter')),
         '../../lib/kmaTimeLib': require(path.join(server, 'lib/kmaTimeLib'))
     };
     vm.runInNewContext(fs.readFileSync(path.join(server, 'controllers/worldWeather/dsf.controller.js'), 'utf8'),
         {module, exports: module.exports, require: n => { if (!(n in deps)) throw new Error('dep ' + n); return deps[n]; },
-            log: global.log, Date: Clock, Intl, setTimeout, clearTimeout, setImmediate, console}, {filename: 'dsf.controller.js'});
+            log: global.log, Date: Clock, Intl,
+            setTimeout: (fn, ms, ...args) => { onTimer(ms); return setTimeout(fn, ms, ...args); },
+            clearTimeout, setImmediate, console}, {filename: 'dsf.controller.js'});
     return module.exports;
 }
 const get = (Controller, gcode, options) => new Promise(resolve => {
@@ -57,18 +92,20 @@ const get = (Controller, gcode, options) => new Promise(resolve => {
     Object.assign(c, options || {});
     c.getDsfData({geocode: {lat, lon}, sessionID: 'mongo-smoke'}, new Clock(), (err, res) => resolve({err, res}));
 });
-const pause = ms => new Promise(res => setTimeout(res, ms));
 
 (async () => {
     let mms, url = process.env.TW_MONGO_URL;
     if (!url) {
         const {MongoMemoryServer} = require('mongodb-memory-server-core');
-        mms = await MongoMemoryServer.create();
+        // Fixture expiries use the captured date; the real-time TTL sweeper must not delete them.
+        mms = await MongoMemoryServer.create({instance: {args: ['--setParameter', 'ttlMonitorEnabled=false']}});
         url = mms.getUri();
     }
     const checks = [];
     try {
         await mongoose.connect(url.replace(/\/?$/, '/') + 'vc2585smoke', {useNewUrlParser: true, useUnifiedTopology: true});
+        const ttlMode = await mongoose.connection.db.admin().command({getParameter: 1, ttlMonitorEnabled: 1});
+        assert.equal(ttlMode.ttlMonitorEnabled, false, 'isolated mongod disables real-time TTL sweeping for the fixture clock');
         await mongoose.connection.db.dropDatabase();
         await dsfModel.createIndexes(); await lockModel.createIndexes(); await usageModel.createIndexes();
         const ttl = (await mongoose.connection.db.collection('vc.fetch.locks').indexes()).find(i => i.key.expireAt === 1);
@@ -85,13 +122,23 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         const r = await Promise.all([get(A, '35.68,139.76'), get(B, '35.68,139.76'), get(B, '35.68,139.76')]);
         r.forEach(x => { assert.ifError(x.err); assert.equal(x.res.data.length, 4); });
         assert.deepEqual(calls, ['combined:35.69']);
-        await pause(50);
+        if (holdWrites) {
+            assert.equal(heldWrites.length, 2, 'first usage and release operations are held past response completion');
+            assert.equal(operations.pending(), 2);
+            assert.equal(await usageModel.findById(new RealDate(now).toISOString().slice(0, 10)).lean(), null,
+                'regression reproduces the old null usage before writes complete');
+            assert.equal(await lockModel.countDocuments({_id: '139.77,35.69'}), 1, 'release still pending');
+            checks.push('held writes reproduce response-before-persistence');
+        }
+        releaseHeldWrites();
+        await settleWrites();
         assert.equal(await lockModel.countDocuments(), 0, 'lock released');
         const stored = await dsfModel.find({geo: ['139.77', '35.69'], dateObj: {$gte: new RealDate(now - 4 * 86400000)}}).lean();
         assert.equal(stored.length, 4, 'string coordinates and the bounded read match the stored numeric geo');
         assert.deepEqual(stored[0].geo, [139.77, 35.69]);
         assert(stored.every(d => d.timeOffset === 540 && d.address.country === 'Asia/Tokyo' && d.dateObj instanceof RealDate));
         const usage = await usageModel.findById(new RealDate(now).toISOString().slice(0, 10)).lean();
+        assert(usage, 'usage document exists after write completion');
         assert.equal(usage.calls, 1); assert.equal(usage.records, 49);
         checks.push('single flight', 'geo cast + bounded read', 'usage counter');
 
@@ -100,6 +147,7 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         assert.equal(calls.length, 1, 'fresh cache');
         now += 20 * 60000;
         assert.ifError((await get(A, '35.68,139.76')).err);
+        await settleWrites();
         assert.deepEqual(calls, ['combined:35.69', 'forecast:35.69']);
         checks.push('fresh / forecast refresh');
 
@@ -107,7 +155,7 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         await lockModel.create({_id: '-0.13,51.51', expireAt: new RealDate(now - 1000)});
         assert.ifError((await get(A, '51.51,-0.13')).err);
         assert.equal(calls[2], 'combined:51.51');
-        await pause(50);
+        await settleWrites();
         assert.equal(await lockModel.countDocuments({_id: '-0.13,51.51'}), 0);
         checks.push('takeover');
 
@@ -118,9 +166,10 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         assert.equal(calls.length, 3, 'no provider call while another worker holds the lock');
         // The holder flags failure: the waiter stops at once.
         await lockModel.updateOne({_id: '-74.01,40.71'}, {$set: {failed: true}});
-        const t0 = RealDate.now();
-        const early = await get(loadController(), '40.71,-74.01', {waitMs: 3000, pollMs: 50});
-        assert(early.err && /failed/.test(early.err.message) && RealDate.now() - t0 < 1000, 'failed flag ends the wait');
+        const earlyTimers = [];
+        const early = await get(loadController(ms => earlyTimers.push(ms)), '40.71,-74.01', {waitMs: 3000, pollMs: 50});
+        assert(early.err && /failed/.test(early.err.message), 'failed flag ends the wait');
+        assert.deepEqual(earlyTimers, [50], 'failed flag ends polling after the first check');
         await lockModel.deleteOne({_id: '-74.01,40.71'});
         checks.push('held lock', 'failed flag');
 
@@ -131,10 +180,10 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         const tokenY = await new Promise(res => Y._acquireLock('f3', (e, t) => res(t)));
         assert(tokenX && tokenY, 'both acquisitions (second by takeover)');
         X._releaseLock('f3', tokenX);
-        await pause(100);
+        await settleWrites();
         assert.equal(await lockModel.countDocuments({_id: 'f3'}), 1, 'late release keeps the new holder lock');
         Y._releaseLock('f3', tokenY);
-        await pause(100);
+        await settleWrites();
         assert.equal(await lockModel.countDocuments({_id: 'f3'}), 0, 'owner release deletes');
         checks.push('owner-token release');
 
@@ -143,7 +192,7 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         now += 60 * 60000;
         const down = await get(A, '40.71,-74.01');
         assert(down.err, 'nothing stored for New York');
-        await pause(100);
+        await settleWrites();
         const lock = await lockModel.findById('-74.01,40.71').lean();
         assert(lock && lock.failed === true && lock.expireAt.getTime() - now <= 2000 && lock.expireAt.getTime() - now >= 1900, 'backoff: failed flag, 2 s');
         const marker = await lockModel.findById('~provider').lean();
@@ -160,13 +209,20 @@ const pause = ms => new Promise(res => setTimeout(res, ms));
         await lockModel.deleteOne({_id: '139.77,35.69'});
         checks.push('backoff', 'provider marker', 'stale fallback', 'stale waiter');
 
+        await settleWrites();
+        checks.push('all background writes completed');
         const evidence = {createdAt: new RealDate().toISOString(), mongoose: require('mongoose/package.json').version,
             server: (await mongoose.connection.db.admin().serverInfo()).version, outcome: 'passed', checks, providerCalls: calls,
             warnings: logs.filter(l => /^(warn|error)/.test(l)).map(l => l.slice(0, 160))};
         console.log(JSON.stringify(evidence, null, 2));
     }
     finally {
-        await mongoose.disconnect();
-        if (mms) await mms.stop();
+        // Also drain on an assertion failure before disconnecting the database.
+        releaseHeldWrites();
+        try { await operations.drain(); }
+        finally {
+            await mongoose.disconnect();
+            if (mms) await mms.stop();
+        }
     }
 })().catch(e => { console.error(logs.filter(l => /^(warn|error)/.test(l)).slice(-8).join('\n')); console.error(e.stack); process.exitCode = 1; });
