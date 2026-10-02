@@ -31,29 +31,9 @@ Follow this order from a clean checkout of the reviewed release commit. Keep the
 
 To reduce future browser work, the next automation increment should add tested APK/internal-or-beta upload, read-only track/build status, existing-group TestFlight activation/readback, and a private release manifest. Keep production promotion separate. Require fixed app identity, explicit track allowlists, artifact hashes, abort-on-error, fresh readback and safe retry handling. Do not label the current workflow fully automated before these commands exist in the repository.
 
-### Failure and recovery boundaries
+### Troubleshooting
 
-On an API error, preserve a sanitized cause and the edit/build identifier, abort an uncommitted Play edit, and read current store state before retrying. An unknown outcome is not proof of failure: check whether the artifact, track change or group association already exists. Reuse the accepted artifact when appropriate instead of consuming or re-uploading its version number blindly.
-
-Keep exported listing/assets and previous website object versions for scoped restoration. A new binary fix needs a new store version code/build number. Do not use a production rollout to test a fix. Play's completed-release halt can fall back to an older release, so it is not a safe way to remove all affected legacy APKs; inspect the fallback before acting. Credential revocation, signing-key transfer and production release are separate operations from upload recovery. See [Google's release-halt behavior](https://support.google.com/googleplay/android-developer/answer/16285429).
-
-### Recovery notes from 1.1.0 (2026-10-01–02)
-
-| Problem observed | Resolution and verification | Prevention / remaining limitation |
-| --- | --- | --- |
-| Play API disabled, then existing service account lacked app access | Enabled the API and granted the existing identity scoped app-information/testing access; real metadata export succeeded | Check identity/API/app permissions first; do not recreate accounts or grant production/admin access by default |
-| Release AdMob app IDs and signing inputs were missing locally | Restored private S3 inputs, resolved real app IDs, and verified generated release configuration | Distinguish AdMob app IDs from ad-unit IDs; do not ship test IDs or commit private settings |
-| Play rejected the signed AAB because App Signing was not enrolled | Built a signed APK using the existing key and verified its certificate; Play accepted APK 100090 | Recheck enrollment; key transfer/enrollment is a separate decision. The AAB-only lane cannot perform this fallback |
-| Manual-review restriction rejected validation, followed by missing declaration errors | Used edit commit with `changes_not_sent_for_review: true`, disabled automatic review fallback, and completed the required declarations before retrying | Supply's validate endpoint does not accept the commit flag. Changing the flag does not bypass missing forms |
-| New binary had no background location, but the legacy location form remained | Prepared replacements in production/beta/alpha containing only 100090, excluding 9612/9972/100089; API readback matched and Console reported no permissions to declare | Inspect all active tracks. New manifest contents cannot answer a question about retained old APKs |
-| No usable iOS distribution identity/profile; automatic export denied cloud-signing access | An authorized account holder issued a distribution certificate/profile; matching private key was imported and manual App Store export passed strict signing checks | API authentication is not signing authorization. Reuse valid private signing backups and check expiry before archiving |
-| macOS could not import the AES P12 directly | Imported a temporary compatibility P12 and removed that transport copy; retained the encrypted backup | Test restore compatibility without exposing passwords or weakening the stored backup |
-| TestFlight upload finished before processing/distribution | Waited for `VALID`, resolved the operator-confirmed compliance answer, and verified `IN_BETA_TESTING` plus existing-group membership | An immediate group write returned 422; readback showed propagation, so it was not blindly retried. Do not infer current tester counts from an earlier response |
-| Policy URL still referenced the old company page; hosted drafts said 30 days | Saved the new mobile policy URL and changed request/error logs to 90 days in KO/EN/JA; public HTTPS bodies matched source hashes | Website publication and store submission are separate. Draft finalization and provider-specific retention verification remain open |
-
-The build source was merge commit `dc2cc9fc6068772d983645a3721e4ec261e79e2e`; Android was 1.1.0/100090 (minimum API 24, target 36), iOS was 1.1.0/build 1. At the last 2026-10-02 Console observation, the three Android releases and privacy URL/Data safety/health changes were under review, managed publishing was enabled, and no open-beta or production publication was verified. Internal TestFlight was available. Physical-device acceptance, policy finalization and final listing reconciliation remained unfinished. These are dated observations, not live status or a blanket compliance conclusion.
-
-Evidence: [replacement and review request](https://github.com/WizardFactory/TodayWeather/issues/2605#issuecomment-5942179691), [latest observed review list](https://github.com/WizardFactory/TodayWeather/issues/2605#issuecomment-5946376982), [policy wording verification](https://github.com/WizardFactory/TodayWeather/issues/2660#issuecomment-5944363100). Platform guidance: [Android signing and legacy eligibility](https://developer.android.com/studio/publish/app-signing), [Google review and managed publishing](https://support.google.com/googleplay/android-developer/answer/9859654), [internal TestFlight groups](https://developer.apple.com/help/app-store-connect/test-a-beta-version/add-internal-testers).
+For upload, signing, permission, review or tester-access failures, use the [symptom-based troubleshooting guide](cordova-store-troubleshooting.md). It records checks, bounded recovery actions and completion criteria, with dated 1.1.0 evidence. Follow its [retry boundaries](cordova-store-troubleshooting.md#before-retrying) before repeating a failed operation.
 
 ## API authentication and local setup
 
