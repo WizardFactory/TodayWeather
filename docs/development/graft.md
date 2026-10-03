@@ -1,0 +1,105 @@
+# Graft project setup
+
+The repository adapters are tested with Graft 0.21.1 and Node 20+. The graph is a local,
+regenerable cache in ignored `graft/`; configuration and host shims are shared.
+Install `@nanonets/graft` with the account tool registry or your package manager
+and ensure `graft` and `node` are on PATH. For a reproducible npm installation,
+use `npm install --global @nanonets/graft@0.21.1`. Installation is explicit;
+the repository does not install or upgrade the tool automatically.
+
+## Build and scope
+
+From the repository root, generate the focused graph without an LLM key:
+
+```sh
+./scripts/build-graft.sh
+graft check
+```
+
+These paths persist in the local graph fingerprint. Subsequent `graft build`
+and query refreshes reuse the scope. Run the wrapper again after deleting the
+cache or opening a new worktree. It always reapplies the maintained scope. Checked-in native bundles, retired TodayAir,
+Cordova plugins, documentation and configuration are outside this focused
+scope. The extensionless `server/bin/www` and Objective-C sources are not
+covered by the default parsers. Use `rg` and inspect source for those areas.
+
+The build parses source; it does not start the weather server or collectors.
+`--deep` is optional and requires a configured LLM provider; this setup does
+not run it. Deterministic cards and call edges help navigation but cannot
+establish runtime behavior or every dependency in dynamic JavaScript.
+
+## Agent integration
+
+- The upstream-generated skill lives in `.agents/skills/graft/SKILL.md`.
+  `.codex/skills/graft` and `.claude/skills/graft` link to that single copy.
+- Codex uses `.codex/config.toml` for MCP and `.codex/hooks.json` for
+  SessionStart, UserPromptSubmit, PostToolUse and Stop. Codex resolves hook
+  configuration for linked Git worktrees from the original repository root,
+  so that root also needs the Graft hook configuration. Commands resolve the
+  active worktree through Git and skip worktrees without the Graft shim.
+  New or changed hooks require trust through `/hooks`; project configuration
+  also requires a trusted project. In Codex, enter `/hooks`, select each event,
+  review the project Graft command and press `t` to trust that hook. Approve only
+  the intended Graft hooks; do not use Trust all to approve unrelated hooks.
+  Trust belongs to the account and exact hook definition, and is not committed.
+  For a linked worktree before integration, ensure the original checkout has
+  this branch's `.codex/config.toml` and `.codex/hooks.json`; after integration,
+  check that the original checkout is updated before starting a new worktree.
+  See the official [MCP configuration](https://developers.openai.com/codex/mcp)
+  and [hook configuration](https://developers.openai.com/codex/hooks).
+- Claude uses `.mcp.json`, `.claude/settings.json` and `.claude/helpers/`
+  for MCP, retrieval, refresh and statusline. `CLAUDE.md` still imports
+  `AGENTS.md`. Hook timeouts use seconds.
+- The repository shims resolve the installed CLI from PATH before falling back
+  to standard package lookup; they contain no account-specific absolute path.
+  The fallback npm lookup is capped at 1.5 seconds. Missing Graft becomes a
+  silent hook no-op; the build wrapper reports a clear nonzero error.
+- User-level host settings are preserved. Start a new agent session to discover
+  the skill and MCP configuration. This does not inject tools into an already
+  running session.
+
+Example queries:
+
+```sh
+graft map
+graft grep "WeatherUtil" --fixed --in client/www/js
+graft skeleton server/controllers/controllerManager.js
+graft ask "normalizeWeather" --source --in packages/weather-core
+graft callers normalizeWeather --depth 2
+```
+
+Read the architecture index first and verify relevant source before edits.
+Graph retrieval does not replace provider/runtime checks or repository gates.
+
+## Updates
+
+Do not blindly rerun `graft init`: the upstream command regenerates the skill,
+shims and hook settings, may write user-level configuration, and does not
+preserve this repository's portable shim adaptation or timeout corrections.
+Use `--no-global --no-build` if reviewing initialization output, then reconcile
+changes against the canonical skill/link layout and both host configurations.
+Do not commit `graft/`, credentials or raw execution reports.
+
+## Verification and provenance
+
+```sh
+python3 scripts/verification/graft/test_adapters.py
+python3 scripts/verification/graft/smoke.py --output reports/verification/graft/smoke
+python3 scripts/verification/graft/smoke_codex_worktree.py --output reports/verification/graft/codex-worktree.json
+```
+
+The first command uses offline fixture packages; the second requires installed
+Graft and builds a fresh isolated source copy. The third requires installed Codex
+and inspects real linked-worktree discovery with an isolated user config; it does
+not submit a model task or copy personal hook trust. No weather server starts.
+
+The skill snapshot is generated unchanged from `@nanonets/graft` 0.21.1
+(`dist/claude/skill-template.js`), from the MIT-licensed
+[upstream project](https://github.com/NanoNets/context-graph-engine). Its license
+is retained beside the skill. Repository shims adapt the upstream templates by
+resolving the CLI through PATH and bounding fallback lookup. Repository guidance
+overrides upstream claims that graph output is complete or needs no source
+verification.
+
+See the [CLI setup manual](graft-manual.md), [PDF manual](graft-manual.pdf) and
+[selected verification evidence](../evidence/tasks/issue-2671/verification.md).

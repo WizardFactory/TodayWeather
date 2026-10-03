@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-03",
+  "kind": "Rendered captures of actual CLI output, not native app screenshots",
+  "captures": [
+    {
+      "file": "verification.png",
+      "source": "reports/sdlc/issue-2671/post-refactor.log",
+      "source_sha256": "25d9ed4f398b7d656401d15019d756bf076db38f0ea5fa63f731736fc2d6290f"
+    },
+    {
+      "file": "codex-worktree.png",
+      "source": "reports/sdlc/issue-2671/codex-worktree.json",
+      "source_sha256": "4e365a9004df4c1df41979b5013e129318a39750b19290004c637036b32ef297"
+    }
+  ]
+}

@@ -135,3 +135,8 @@ The responsive web app is a static PWA that calls the existing public API direct
 npm ci --ignore-scripts
 VITE_WEB_MODE=demo npm run dev
 ```
+
+## Developer code search
+
+See [Graft setup](docs/development/graft.md) for the optional local code graph,
+Codex/Claude integration, focused indexing scope and reproducible checks.

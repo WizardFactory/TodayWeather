@@ -64,3 +64,26 @@ Prefer shared app edits in `client/www/` when that is the intended build source.
 - Reconcile findings, preserve required evidence, and fix references before final verification and commit. Keep original local files when untracking; do not force-add generated reports. Preserve active verification inputs and diagram recovery metadata.
 - Run `python3 scripts/check-artifact-policy.py --staged` on intended staged content. Before push, check the actual outgoing commits using the same checker; maintained links must work without local-only files. Checks and hooks do not delete, rewrite or stage content. Preserve all existing test/review gates.
 - Shared-skill changes are separate from repository configuration; use the [upgrade guide](docs/development/skill-retention-upgrade.md), keep one canonical skill and verify both hosts before claiming execution.
+
+<!-- graft:start -->
+## Graft context graph
+
+After reading the architecture index, use Graft to locate indexed code and trace
+relationships. Treat parser edges as navigation aids; verify relevant source
+before changing behavior. Follow the existing repository verification rules.
+
+- `graft map`: directory and symbol overview.
+- `graft ask "<question>" --source --in server`: ranked source locations.
+- `graft grep "<literal>" --fixed`: all matches within indexed files.
+- `graft skeleton <file>`: definitions and signatures.
+- `graft callers <symbol> --depth 2`: incoming dependencies.
+- `graft check`: graph freshness; `graft build`: refresh the local cache.
+
+The focused graph covers server, shared client JavaScript/build scripts, web
+source, packages, scripts and infrastructure. Native bundles, docs, config and
+unsupported languages are not fully indexed: use `rg` and source inspection
+there. See [Graft setup](docs/development/graft.md) for scope and rebuilding.
+The canonical upstream skill is `.agents/skills/graft/SKILL.md`, linked into
+both host skill directories. Repository guidance takes precedence over generic
+skill advice. Keep generated `graft/` ignored.
+<!-- graft:end -->
