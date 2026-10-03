@@ -56,3 +56,18 @@ Both collector flags are off by default. They are evaluated only when `config.mo
   - Rollback: delete the remaining inserted `_id`s listed above.
 - Cache delay is added on top of the observation age (up to two-minute collection plus the 20-minute read window). The direct `/v000903/kma/...` route uses the CloudFront default behavior (MinTTL/DefaultTTL 300 s, MaxTTL 600 s in the [2026-09-20 evidence](../architecture/aws-readonly-evidence-2026-09-20.json)). The app's `/weather/*` route goes through the weather Lambda (`max-age=300`). The 2026-09-25 live check covered only the direct route.
 - Host `/etc/hosts` repair and PM2 environment were saved on the running instances only. Replacement instances (AMI/provisioning) and a PM2 boot restart were not rehearsed.
+
+## Legacy Mongoose query compatibility
+
+Station metadata/hourly reads and the ASOS history metadata read use
+`Query.setOptions({maxTimeMS: 2000})` with the pinned mongoose 5.1.2. This version
+has no `Query.maxTimeMS()` method; a route can return HTTP 200 while fallback
+station observations are absent after that construction error. Native MongoDB
+cursors in `history/store.js` keep their supported `maxTimeMS(2000)` API. The
+2000 ms option is a Mongo operation limit, not a total API deadline.
+
+Run the [pinned query and HTTP route checks](../../server/test/offline/README.md#station-query-compatibility-2648)
+before release. These checks use actual query construction with fixture
+persistence, and verify temperature/provenance rather than HTTP status alone.
+Production activation, gap readback and historical backfill require separate
+authorization; passing offline checks does not establish recovered coverage.

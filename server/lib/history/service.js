@@ -42,7 +42,7 @@ exports.loadForTown = function (town, callback) {
     if (!ids.length) return done({reason: 'stations-unconfigured', hourly: [], daily: []});
     metadata.read(ids.join(','), function (resolve) {
         require('../../models/modelKmaStnInfo')
-            .find({stnId: {$in: ids}, isCityWeather: true}).maxTimeMS(2000).lean().exec(resolve);
+            .find({stnId: {$in: ids}, isCityWeather: true}).setOptions({maxTimeMS: 2000}).lean().exec(resolve);
     }, function (err, rows) {
         if (finished) return;
         if (err) return done({reason: 'station-read-failed', hourly: [], daily: []});
