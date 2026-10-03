@@ -7,9 +7,32 @@ var xml2json  = require('xml2js').parseString;
 var convert = require('./coordinate2xy');
 var keyBox = require('../config/config').keyString;
 const axios = require('axios');
+let kakaoKeys;
+
+function getKakaoKeys() {
+    if (kakaoKeys !== undefined) { return kakaoKeys; }
+    kakaoKeys = [];
+    try {
+        let keys = JSON.parse(keyBox.kakao_keys);
+        if (Array.isArray(keys)) {
+            kakaoKeys = keys.filter(key => typeof key === 'string' && key.trim().length > 0);
+        }
+    } catch (err) {
+        // Configuration values and parser messages may contain credentials.
+    }
+    if (!kakaoKeys.length) {
+        log.warn('Kakao address conversion unavailable: configure KAKAO_SECRET_KEYS as a JSON array of keys');
+    }
+    return kakaoKeys;
+}
 
 function convertGeocodeByKakao(first, second, third, callback) {
-    let keyList = JSON.parse(keyBox.kakao_keys);
+    let keyList = getKakaoKeys();
+    if (!keyList.length) {
+        let err = new Error('Kakao address conversion unavailable: configure KAKAO_SECRET_KEYS');
+        err.code = 'KAKAO_NOT_CONFIGURED';
+        return callback(err);
+    }
     let kakao_key = keyList[Math.floor(Math.random() * keyList.length)];
     let url = 'https://dapi.kakao.com/v2/local/search/address.json'+
         '?query='+ encodeURIComponent(first + second + third);
@@ -243,7 +266,7 @@ function convertGeocode(first, second, third, callback){
     // convertGeocodeByDaum(first, second, third, function(err, resultXY) {
     convertGeocodeByKakao(first, second, third, function(err, resultXY) {
         if (err)  {
-            log.warn(err);
+            if (err.code !== 'KAKAO_NOT_CONFIGURED') { log.warn(err); }
             convertGeocodeByGoogle(first, second, third, function(err, resultXY){
                 if (err) {
                     return callback(err);
@@ -257,4 +280,3 @@ function convertGeocode(first, second, third, callback){
 }
 
 module.exports = convertGeocode;
-

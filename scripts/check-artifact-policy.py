@@ -163,15 +163,19 @@ def commit_id(root, value):
 
 def history(root, base, tip, remote=None, blobs=None):
     tip = commit_id(root, tip)
-    snap = Snapshot(root, tip, blobs)
     exclusions = []
     if base and set(base) != {'0'}:
+        # An explicit range is authoritative. A policy edited within that range
+        # must not exempt its own commits (including add-then-delete violations).
         exclusions.append(commit_id(root, base))
-    if POLICY in snap.entries:
-        policy = json.loads(snap.read(POLICY))
-        boundary = policy.get('history_base')
-        if boundary:
-            exclusions.append(commit_id(root, boundary))
+    else:
+        # New local refs have no remote base; retain the policy-adoption boundary.
+        snap = Snapshot(root, tip, blobs)
+        if POLICY in snap.entries:
+            policy = json.loads(snap.read(POLICY))
+            boundary = policy.get('history_base')
+            if boundary:
+                exclusions.append(commit_id(root, boundary))
     if not exclusions:
         raise Invalid('Cannot establish outgoing history: provide a base or a committed history_base policy')
     args = ['rev-list', '--reverse', tip, *['^' + x for x in exclusions]]

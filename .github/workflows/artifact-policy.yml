@@ -19,13 +19,14 @@ jobs:
           python-version: '3.12'
       - run: python3 scripts/verification/test_artifact_policy.py
       - run: python3 scripts/verification/smoke_artifact_hooks.py
+      - run: python3 scripts/verification/test_artifact_ci.py
       - name: Check committed snapshots and history
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT: ${{ github.event_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          if [ -n "$BASE" ]; then
-            python3 scripts/check-artifact-policy.py --range "$BASE" "$HEAD"
-          else
-            python3 scripts/check-artifact-policy.py --commit "$HEAD"
-          fi
+          python3 scripts/verification/check-ci-artifacts.py \
+            --event "$EVENT" --base "$BASE" --head "$HEAD" \
+            --default-branch "$DEFAULT_BRANCH"

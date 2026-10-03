@@ -28,9 +28,36 @@ python3 scripts/verification/test_artifact_policy.py
 
 The checker reads Git blobs, checks maintained Markdown/HTML links and screenshot manifests, and rejects tracked local-output paths. It does not check every prose claim, external link, source-line anchor or runtime behavior. Link scanning covers `.md`/`.html` under `docs/`, `intent/`, `specs/`, `plans/` and `scripts/verification/`, plus root `README.md`, `AGENTS.md`, `CLAUDE.md` and `server/test/offline/README.md`. Other documents under `web/`, `client/` and `server/` are outside this gate; validate those with their relevant package checks. Code examples are excluded from link checks. It never modifies files/index, starts a service, fetches remote data or uploads evidence.
 
-The committed `scripts/artifact-policy.json` identifies the last pre-policy baseline. Its ancestors remain historical evidence, not retroactive violations. Each outgoing commit after that boundary and the selected tip are checked. Missing base objects cause an incomplete-check failure; fetch the needed history explicitly and retry. For a new branch in `--pre-push <remote>`, commits already reachable from that named remote’s local tracking refs are excluded; the selected tip is always checked. Refresh those refs with an explicit fetch before pushing if they are stale. With no tracking refs, or a direct URL instead of a configured remote name, checking conservatively falls back to the history boundary. Explicit `--range` checks (including CI) retain their supplied range: remote refs fetched after a push must not hide its intermediate commits. Blob bytes are cached by object ID across snapshots during one invocation.
+Explicit `--range` checks (including CI) and updates to existing pre-push refs
+check every commit reachable from the selected tip but not the supplied non-zero
+base, plus the tip itself. The base is the only history exclusion: neither a
+`history_base` policy edit nor remote refs fetched after a push may shrink that
+range. This also works when the base has no policy file. Deliberately selecting a
+pre-policy base includes old snapshots; select the intended published base rather
+than expecting the checker to silently remove historical violations. Missing base
+objects cause an incomplete-check failure; fetch the needed history explicitly and
+retry. Blob bytes are cached by object ID across snapshots during one invocation.
+
+Only a new local ref in `--pre-push <remote>` has no supplied base. That path uses
+the selected tip's committed `scripts/artifact-policy.json` `history_base`, the
+last pre-policy baseline, and excludes commits already reachable from the named
+remote's local tracking refs. The selected tip is always checked. Refresh those
+refs with an explicit fetch before pushing if they are stale. With no tracking
+refs, or a direct URL instead of a configured remote name, checking falls back to
+the policy boundary. This local new-ref path trusts the committed boundary and
+tracking refs; it does not provide CI's exact-range guarantee. Review policy
+changes and retain the CI range check. The initial policy boundary preserves
+pre-policy ancestors as historical evidence rather than retroactive violations.
 
 ## Local hooks and CI
+
+The CI helper `scripts/verification/check-ci-artifacts.py` preserves explicit PR
+and ordinary-push ranges. For a new branch push (`before` is forty zeroes), it
+checks from the merge base of the head and the remote default branch, avoiding
+already-published default-branch history while retaining every task commit and
+the selected tip. The existing full-history checkout must contain that default
+branch ref; missing baselines fail. Fetched topic refs never exempt intermediate
+task commits. Manual workflow dispatch retains the tip-only check.
 
 The versioned `.githooks/pre-commit` and `pre-push` call the same checker as the **Repository artifacts** workflow, which also runs for documentation-only changes. Installation is explicit:
 
