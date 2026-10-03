@@ -136,6 +136,47 @@ class ArtifactPolicyTests(unittest.TestCase):
         tip = self.commit()
         self.assertNotEqual(self.check('--range', self.base, tip).returncode, 0)
 
+    def test_explicit_base_without_policy_keeps_history_despite_tip_boundary(self):
+        self.write('reports/task.json', '{}')
+        self.git('add', '-f', 'reports/task.json')
+        bad = self.commit()
+        self.git('rm', 'reports/task.json')
+        self.write('scripts/artifact-policy.json', json.dumps({'history_base': bad}))
+        self.git('add', '.')
+        tip = self.commit()
+        result = self.check('--range', self.base, tip)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn(bad[:12], result.stderr)
+        line = f'refs/heads/task {tip} refs/heads/task {self.base}\n'
+        result = self.check('--pre-push', 'origin', stdin=line)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn(bad[:12], result.stderr)
+
+    def test_explicit_range_does_not_retroactively_apply_initial_policy(self):
+        # A caller deliberately selecting a pre-policy base gets the whole range.
+        self.write('reports/pre-policy.json', '{}')
+        self.git('add', '-f', 'reports/pre-policy.json')
+        bad = self.commit()
+        self.git('rm', 'reports/pre-policy.json')
+        boundary = self.commit()
+        self.write('scripts/artifact-policy.json', json.dumps({'history_base': boundary}))
+        self.git('add', '.')
+        tip = self.commit()
+        result = self.check('--range', self.base, tip)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn(bad[:12], result.stderr)
+        # A new local ref still uses the committed policy adoption boundary.
+        line = f'refs/heads/new {tip} refs/heads/new {"0" * 40}\n'
+        self.assertEqual(self.check('--pre-push', 'origin', stdin=line).returncode, 0)
+
+    def test_explicit_range_ignores_unresolvable_tip_policy_boundary(self):
+        self.write('scripts/artifact-policy.json', json.dumps({'history_base': 'f' * 40}))
+        self.git('add', '.')
+        tip = self.commit()
+        result = self.check('--range', self.base, tip)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('1 snapshot(s)', result.stdout)
+
     def test_commit_uses_committed_tree_not_working_files(self):
         tip = self.commit()
         self.write('reports/untracked.txt', 'local')

@@ -59,7 +59,7 @@ module.exports = {
         dongnae_forecast_keys: (process.env.DONGNAE_SECRET_KEYS || '[]'),
         airkorea_keys : (process.env.AIRKOREA_SECRET_KEYS || '["key1", "key2"]'),
         google_key : (process.env.GOOGLE_SECRET_KEY || 'You have to set googe api key'),
-        kakao_keys : (process.env.KAKAO_SECRET_KEYS || '["set string of array of kakao keys","key1", "key2"]')
+        kakao_keys : (process.env.KAKAO_SECRET_KEYS || '[]')
     },
     logToken: {
         gather: (process.env.LOGENTRIES_GATHER_TOKEN||'Your Logentries key'),

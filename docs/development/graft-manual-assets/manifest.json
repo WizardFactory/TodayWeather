@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-03",
+  "kind": "Rendered captures of actual CLI output, not native app screenshots",
+  "captures": [
+    {
+      "file": "verification.png",
+      "source": "reports/sdlc/issue-2671/symlink-post-refactor.log",
+      "source_sha256": "24c99ce41550eb0d96065f02bbfa58a51e76d01225ccb88a40b9d20bf2d8e190"
+    },
+    {
+      "file": "codex-worktree.png",
+      "source": "reports/sdlc/issue-2671/codex-worktree.json",
+      "source_sha256": "4e365a9004df4c1df41979b5013e129318a39750b19290004c637036b32ef297"
+    }
+  ]
+}

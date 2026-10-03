@@ -17,8 +17,30 @@ var dnscache = require('dnscache')({
 var config = require('../config/config');
 
 var daumKeys = JSON.parse(config.keyString.daum_keys);
-let kakaoKeys = JSON.parse(config.keyString.kakao_keys);
+let kakaoKeys;
 var googleApiKey = config.keyString.google_key;
+
+function getKakaoKeys() {
+    if (kakaoKeys !== undefined) {
+        return kakaoKeys;
+    }
+    kakaoKeys = [];
+    try {
+        var keys = JSON.parse(config.keyString.kakao_keys);
+        if (Array.isArray(keys)) {
+            kakaoKeys = keys.filter(function (key) {
+                return typeof key === 'string' && key.trim().length > 0;
+            });
+        }
+    }
+    catch (err) {
+        // Do not include configuration values or JSON parser errors in logs.
+    }
+    if (!kakaoKeys.length) {
+        log.warn('Kakao geocoding unavailable: configure KAKAO_SECRET_KEYS as a JSON array of keys');
+    }
+    return kakaoKeys;
+}
 
 function GeoController(lat, lon, lang, country) {
     var API_DAUM_DOMAIN = 'apis.daum.net';
@@ -194,15 +216,20 @@ GeoController.prototype._parseAddressFromDaum = function (result) {
 GeoController.prototype._getAddressFromKakao = function (callback) {
     var that = this;
     var index = 0;
+    var keys = getKakaoKeys();
+    if (!keys.length) {
+        callback(new Error('Kakao geocoding unavailable: configure KAKAO_SECRET_KEYS as a JSON array of keys'));
+        return this;
+    }
 
-    async.retry(kakaoKeys.length,
+    async.retry(keys.length,
         function (cb) {
             let url = 'https://dapi.kakao.com/v2/local/geo/coord2regioncode.json';
             url += '?x='+that.lon;
             url += '&y='+that.lat;
             url += '&input_coord=WGS84';
             let header = {
-                Authorization: 'KakaoAK ' + kakaoKeys[index]
+                Authorization: 'KakaoAK ' + keys[index]
             };
 
             index++;
@@ -548,6 +575,9 @@ GeoController.prototype.location2address = function(req, res, next) {
                     // Daum Api, It's not available anymore
                     //that._getAddressFromDaum(function (err, result) {
                     that._getAddressFromKakao(function (err, result) {
+                        if (err) {
+                            return callback(err);
+                        }
                         try {
                             //var geoInfo = that._parseAddressFromDaum(result);
                             var geoInfo = that._parseAddressFromKaKao(result);
@@ -590,6 +620,9 @@ GeoController.prototype.location2address = function(req, res, next) {
                 // Daum Api, It's not available anymore
                 //that._getAddressFromDaum(function (err, result) {
                 that._getAddressFromKakao(function (err, result) {
+                    if (err) {
+                        return callback(err);
+                    }
                     try {
                         //var geoInfo = that._parseAddressFromDaum(result);
                         var geoInfo = that._parseAddressFromKaKao(result);
