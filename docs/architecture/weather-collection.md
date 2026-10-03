@@ -42,7 +42,7 @@ The KAQ hour list includes 13 literally; do not silently correct it to 23. Perio
 3. The requester builds `http://apis.data.go.kr` URLs for current, shortest, short and medium-range products, performs HTTP with a 10-second per-request timeout, accepts success code `00`, parses XML through `xml2js`, and maps category values into forecast records. Since #2620 the shortest product maps `POP` (added by `getUltraSrtFcst` in 2026-09) to `pop` (0–100, else `-1`); a category the collector does not know is skipped and logged as one `KMA unknown forecast categories` warning per grid and product, never per row. Invalid/empty responses fail collection without logging service-key-bearing URLs. A quota rejection (HTTP 429 or code `22`) or key rejection (HTTP 401/403, codes `20`/`30`/`31`/`32`), with any HTTP status, stops the pass: nothing new is sent and the requests in flight settle (#2604). Other 4xx responses mark the item as not retryable. The requester's own retry count defaults to zero when constructed without options; manager recursion is a separate retry layer.
 4. `async.mapSeries` saves completed items via `getSaveFunc()`. After a quota/key stop the Manager logs one warning, moves to the next key and requests only the items not yet collected, without using a retry pass; when every key was rejected in the cycle it ends with an error ([quota and key rotation](../operations/gather-runtime-policy.md#quota-and-key-rotation-2604)). Otherwise failed coordinates, except not-retryable 4xx ones, are retried using a decremented recursion count. Invalid temperature coordinates can be retried with an adjusted shortest publication time. Recursion uses a fixed timer delay (`GATHER_RETRY_DELAY_MS`, default 0), not exponential backoff.
 5. `getSaveFunc()` routes current/shortest/short to v2 KMA controllers when `DB_DATA_VERSION === '2.0'`; with `DB_DATA_VERSION === '1.0'`, legacy `saveCurrent`, `saveShortest`, `saveShort` merge/update per-grid documents. Other values have no save branch or callback in these three wrappers; there is no generic fallback. Medium-range products use their own save functions. There is no transaction covering all weather products.
-6. Product-specific cleanup removes old KMA records. `_checkPubDate()` also supports skipping already-current products in callers that use it; the three whole-grid methods shown above directly invoke collection, so do not assume publication deduplication applies uniformly.
+6. Product-specific cleanup removes old KMA records. `_checkPubDate()` also supports skipping already-current products in callers that use it; current collection now filters exact-hour stored coverage before invoking the bounded walk (#2648); short/shortest still directly invoke collection, so deduplication does not apply uniformly.
 
 Sources: [manager collection and save selection](../../server/controllers/controllerManager.js), [requester](../../server/lib/collectTownForecast.js), [v2 current controller](../../server/controllers/kma/kma.town.current.controller.js), [legacy current](../../server/models/modelCurrent.js), [v2 current](../../server/models/kma/kma.town.current.model.js).
 
@@ -225,3 +225,38 @@ success or production recovery is claimed. See the [rollout and rollback
 procedure](../operations/airkorea-recovery.md) for renewal and scheduled
 readback gates. Client-requested nation recovery uses Mongo plus the existing
 global-air chain and never calls AirKorea; see [nation response](mobile-api.md#nation-air-recovery-2636).
+
+## Current-grid quota prevention (#2648)
+
+[Flow](diagrams/current-grid-collection.html) · [Editable design](diagrams/current-grid-collection.json) · [Budget and rollout](../operations/current-grid-collection.md).
+
+[CurrentGridCollection](../../server/lib/currentGridCollection.js) reads the
+requested KST date/hour from DB1 or DB2 grid models, validates all eight supported
+core fields, and sends only incomplete grids to the existing collector. Valid zero
+and negative temperatures count as covered; missing/non-finite/sentinel fields do
+not. DB2 additionally matches UTC BSON fcsDate using its existing index; DB1 uses
+a same-element date/time query and projection. Station/ASOS fallbacks cannot
+mark grid coverage.
+
+Coordinate and coverage reads have a three-second wait deadline; pinned Mongoose
+queries use setOptions({maxTimeMS:2000}). Read failure stops the cycle without an
+unchecked full-grid walk. The wait deadline does not cancel Mongo transport or
+bound the complete collection/write run. Same-manager callers for an active
+publication share its result; another publication receives a busy error and
+remains eligible at the next poll. After writes settle, coverage readback reports
+remaining grids as an error, even when a legacy writer returned success.
+
+[ForecastTraffic](../../server/lib/forecastTraffic.js) retains confirmed code 22
+current-product key rejections until the next KST day, the reset observed in
+the issue's existing operations history. A prior-day request's late response cannot
+block new-day capacity. Code23 and unclassified HTTP429 keep existing bounded
+stop/rotation but do not create a daily cooldown. Other products are not
+preemptively blocked because their approved quota scope is unverified. Memory
+and overlap guards are process-local, not distributed quota controls.
+
+The collector counts actual page attempts, including continuation pages. Sanitized
+stdout records provide UTC time, KST hour, publication, product, configured key
+index, received/pending counts and first rejection. Coverage records describe
+stored complete/pending grids independently from HTTP status. Schedules, keys,
+schemas and mobile API contracts do not change. Production activation, actual
+account entitlement and historical hourly/daily readback remain separate gates.

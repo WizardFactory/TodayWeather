@@ -365,6 +365,8 @@ function rowKey(item) {
 * reason is a static diagnostic string and never includes transport/parser errors.
 * */
 CollectData.prototype._requestPage = function (url, callback) {
+    var self = this;
+    var startedAt = self.onPageRequest ? self.onPageRequest() : undefined;
     req.get(url, {timeout: 1000*10}, function(err, response, body){
         if (err) {
             return callback('KMA transport failure');
@@ -372,6 +374,7 @@ CollectData.prototype._requestPage = function (url, callback) {
         var statusCode = response && response.statusCode;
         var reasonCode = rejection.code(body);
         if (rejection.isQuota(statusCode, reasonCode)) {
+            if (self.onQuota) { self.onQuota(reasonCode, statusCode, startedAt); }
             return callback(QUOTA_FAILURE);
         }
         if (rejection.isAuth(statusCode, reasonCode)) {

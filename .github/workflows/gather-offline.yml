@@ -113,3 +113,32 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/airkorea-offline/node_modules
           MONGOMS_DOWNLOAD_DIR: ${{ runner.temp }}/airkorea-mongodb
         run: node server/test/offline/airkorea-nation-smoke.js
+
+  current-grid-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['16.20.2', '22.22.2']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - name: Install isolated current test dependencies
+        run: npm install --prefix "$RUNNER_TEMP/current-offline" --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.1.2 mongoose-smoke@npm:mongoose@5.13.23 mongodb-memory-server-core@10.1.4 async@2.6.4 request@2.88.2 xml2js@0.4.23 express@4.13.4
+      - name: Verify pinned queries, quota memory and real current persistence
+        env:
+          TZ: UTC
+          NODE_PATH: ${{ runner.temp }}/current-offline/node_modules
+          MONGOMS_DOWNLOAD_DIR: ${{ runner.temp }}/current-mongodb
+        run: |
+          node server/test/offline/current-grid-collection.test.js
+          node server/test/offline/current-manager.test.js
+          node server/test/offline/current-quota-memory.test.js
+          node server/test/offline/forecast-traffic.test.js
+          node server/test/offline/current-collection-smoke.js

@@ -13,6 +13,9 @@ var collectTown = require('../lib/collectTownForecast');
 var town = require('../models/town');
 var config = require('../config/config');
 var gatherPolicy = require('../config/gather');
+var CurrentGridCollection = require('../lib/currentGridCollection');
+var currentGridModel = require('../models/kma/kma.town.current.model');
+var ForecastTraffic = require('../lib/forecastTraffic');
 var convert = require('../utils/coordinate2xy');
 var convertGeocode = require('../utils/convertGeocode');
 
@@ -1041,6 +1044,24 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     var keyCount = Math.max(dongnae_keys.length, 1);
     var keyIndex = (forecastKeyIndex[service] || 0) % keyCount;
     var rejectedCount = 0;
+    var now = self._collectionNow || Date.now;
+    var emit = function(record) { console.log(JSON.stringify(record)); };
+    self._forecastTraffic = self._forecastTraffic || new ForecastTraffic(emit);
+    keyIndex = self._forecastTraffic.available(dataType, keyCount, keyIndex, now());
+    if (keyIndex < 0) {
+        return callback && callback(new Error(dataTypeName + ' quota cooldown: every current key rejected this KST day'));
+    }
+    forecastKeyIndex[service] = keyIndex;
+    var attempts = {};
+    collectInfo.onPageRequest = function() {
+        var startedAt = now();
+        var measurement = self._forecastTraffic.attempt(dataTypeName, keyIndex, startedAt);
+        attempts[measurement.kstHour] = (attempts[measurement.kstHour] || 0) + 1;
+        return startedAt;
+    };
+    collectInfo.onQuota = function(reasonCode, statusCode, startedAt) {
+        self._forecastTraffic.quota(dataType, dataTypeName, keyIndex, now(), reasonCode, startedAt);
+    };
     if (dongnae_keys.length) {
         key = dongnae_keys[keyIndex];
     }
@@ -1051,6 +1072,12 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
 
     collectInfo.requestData(srcList, dataType, key, dateString.date, dateString.time, function(err, dataList) {
         log.info(dataTypeName, 'data receive completed : ', dataList.length);
+        emit({event: 'forecast-pass', utc: new Date(now()).toISOString(),
+            kstHour: ForecastTraffic.kstHour(now()), product: dataTypeName, keyIndex: keyIndex,
+            publication: dateString.date + dateString.time, attemptsByKstHour: attempts,
+            received: dataList.filter(function(item) { return item.isCompleted; }).length,
+            pending: dataList.filter(function(item) { return !item.isCompleted; }).length,
+            stopReason: collectInfo.stopReason || null});
 
         //log.info(JSON.stringify(dataList));
         //log.info(dataList[0]);
@@ -1454,28 +1481,21 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
 
     log.info('C> +++ GET CURRENT INFO : ', dateString);
 
-    town.getCoord(function (err, listTownDb) {
-        if (err) {
-            if (callback) {
-                callback(err);
-            }
-            else {
-                log.error(err);
-            }
-            return this;
-        }
-
-
-        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_CURRENT, key, dateString, gatherPolicy.retry.townCurrent, undefined, function (err, results) {
-            log.info('C> save OK');
-            if (callback) {
-                return callback(err, results);
-            }
-            if (err) {
-                return log.error(err);
+    if (!self._currentCollection) {
+        self._currentCollection = new CurrentGridCollection({
+            model: config.db.version === '1.0' ? modelCurrent : currentGridModel,
+            version: config.db.version,
+            coords: function(cb) { town.getCoord(cb); },
+            emit: function(record) { console.log(JSON.stringify(record)); },
+            collect: function(list, slot, suppliedKey, cb) {
+                self._recursiveRequestData(list, self.DATA_TYPE.TOWN_CURRENT, suppliedKey, slot,
+                    gatherPolicy.retry.townCurrent, undefined, cb);
             }
         });
-        return this;
+    }
+    self._currentCollection.run(dateString, key, function(err, results) {
+        if (callback) { return callback(err, results); }
+        if (err) { log.error(err); }
     });
 
     kmaTownCurrent.remove(new Date());

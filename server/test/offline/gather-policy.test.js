@@ -63,6 +63,8 @@ function managerWith(policy, overrides, globals) {
     return load('controllers/controllerManager.js', Object.assign({
         '../config/config': {db: {version: '2.0'}, keyString: {dongnae_forecast_keys: '[]'}, history: {enabled: false}},
         '../config/gather': policy,
+        '../lib/forecastTraffic': require('../../lib/forecastTraffic'),
+        '../lib/currentGridCollection': require('../../lib/currentGridCollection'),
         async: require('async')
     }, overrides), globals);
 }
@@ -132,6 +134,9 @@ test('town collectors pass the configured retry counts', () => {
         m._recursiveRequestData = (list, type, key, date, retry) => { seen[type] = retry; };
         m.getTownShortData(9, 'k');
         m.getTownShortestData(9, 'k');
+        m._currentCollection = {run: (slot, key) => {
+            m._recursiveRequestData([], m.DATA_TYPE.TOWN_CURRENT, key, slot, policy.retry.townCurrent);
+        }};
         m.getTownCurrentData(9, 'k');
         assert.deepStrictEqual(seen, {s: policy.retry.townShort, st: policy.retry.townShortest, c: policy.retry.townCurrent});
     });
@@ -143,9 +148,10 @@ test('invalid-current and mid collectors read their policy field', () => {
     const fields = [...src.matchAll(/self\._recursiveRequestData\(\w+, self\.DATA_TYPE\.(\w+), key, dateString, ([^,]+),/g)]
         .map(m => m[1] + '>' + m[2].replace(/^gatherPolicy\.retry\./, ''));
     assert.deepStrictEqual(fields, [
-        'TOWN_SHORT>townShort', 'TOWN_SHORTEST>townShortest', 'TOWN_CURRENT>townCurrent', 'TOWN_CURRENT>invalidCurrent',
+        'TOWN_SHORT>townShort', 'TOWN_SHORTEST>townShortest', 'TOWN_CURRENT>invalidCurrent',
         'MID_FORECAST>midForecast', 'MID_LAND>midLand', 'MID_TEMP>midTemp', 'MID_TEMP>midTemp', 'MID_SEA>midSea'
     ]);
+    assert.match(src, /self\._recursiveRequestData\(list, self\.DATA_TYPE\.TOWN_CURRENT, suppliedKey, slot,\s*gatherPolicy\.retry\.townCurrent/);
 });
 
 function runRecursive(policy) {
