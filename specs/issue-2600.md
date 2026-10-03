@@ -10,7 +10,7 @@ Gather/local Manager queues one task at 08:20, 12:20 and 17:20 KST. Startup afte
 
 ## Optional response enrichment
 
-Resolve request params region/city independently of KMA areaNo. Exact district first, then province for each target date. `전남광주통합특별시` with the five Gwangju districts (동구/서구/남구/북구/광산구) resolves to 광주광역시; named Jeonnam cities/counties resolve to 전라남도; unknown/empty district is ambiguous and yields no guessed province. Normalize renamed 전북특별자치도/강원특별자치도 to provider names and ignore subdistrict suffixes after a district match where applicable.
+Resolve request params region/city independently of KMA areaNo. Exact district first, then province for each target date. `전남광주통합특별시` with the five Gwangju districts (동구/서구/남구/북구/광산구) resolves to 광주광역시; named Jeonnam cities/counties resolve to 전라남도; unknown/empty district is ambiguous and yields no guessed province. The recorded provider uses 전북특별자치도/강원특별자치도; normalize their older geocoder names and remove city/district whitespace (수원시 장안구 → 수원시장안구).
 
 Only enrich daily dates in current KST today..+2 that are within the stored baseDate..+2 interval and have a valid nonfuture publication. Never carry values positionally, from neighboring districts or past their target dates. Copy today's value/grade via _appendLifeIndexToCurrent; existing insertStrForData generates localized fsnStr for both daily/current. Store errors/timeouts omit optional fsn while the route continues; add a two-second read deadline and prevent late mutation. Provider failure has no request-time provider effect: existing cache rows remain usable only for valid dates. Historical lifeIndexKma2 fsn remains ignored.
 

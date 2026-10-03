@@ -1,0 +1,17 @@
+# Food-poisoning forecast collection and readback
+
+The domestic API restores the existing `fsn` contract from the MFDS poisonmap: percent, a four-level `fsnGrade`, and localized `fsnStr` on matching daily rows and today's current row. Existing app templates already show these fields. No app build, provider call during a weather request, domestic DB migration or KMA service key is needed.
+
+Gather/local Manager queues one MFDS request at 08:20, 12:20 and 17:20 KST, plus one startup run for the most recent slot after 08:20. The HTTPS deadline is ten seconds and the body limit is 1 MiB. It identifies TodayWeather and neither follows redirects nor retries. An in-process slot/overlap guard also covers failed runs. Separate gather replicas are not coordinated; deploy one normal gather owner when a single request per slot is required. Service mode only reads the database.
+
+The additive `mfds_food_poisoning` store uses region/target-date `_id`, percentages, grades, source baseDate/publication, fetch time and next-KST-midnight TTL. Expiry is enforced during reads even if TTL removal is delayed. Conditional upserts retain newer publications. A failed write batch can leave valid partial rows; completion waits for started writes. No historical KMA food-poisoning records are used.
+
+District rows take priority; the province row fills only a missing target date. The merged Gwangju/Jeonnam province resolves using the five Gwangju district names or the named Jeonnam cities/counties. An unknown/empty district in that merged province is omitted. Other province aliases and city/district spacing follow the recorded provider names. Optional read failure or its two-second deadline leaves other weather fields and HTTP success intact; late results cannot mutate the response. Collection failure may leave an existing forecast usable only for its actual target dates. Missing weather dates are not fabricated to hold an index.
+
+After an authorized deployment, check the normal scheduled job log and inspect `sd`, `sgg`, `date`, `baseDate` and `publication` in the shared Mongo collection. Use the existing domestic coordinate endpoint for Seoul Jongno and a Gwangju district; compare three actual KST target dates against a current MFDS publication, including grades at 31.5%, 55.9% and 74.3%. Check current/day labels and absence on old dates. Do not invoke write-capable `/gather/*` routes as health probes.
+
+The 2026-10-03 UTC read returned 267 rows dated 20260929. No live current-date forecast or production recovery is established. Offline checks and the real local HTTP/Mongo smoke use recorded values with explicitly synthetic publication dates. Production MongoDB compatibility, latest provider publication, deployed gather revision and scheduled runtime need separate operator readback. The local real-Mongo smoke uses Mongoose 5.13; the pinned 5.1.2 model/query API is checked without a live database because its driver needs mongod <=5.0.
+
+Rollback reverts the feature commit and restarts the affected processes through the normal authorized release procedure. The additive collection may remain; documents expire naturally where the TTL index is present. There is no irreversible migration. Local implementation does not authorize deployment.
+
+[Implementation spec](../../specs/issue-2600.md) · [Design diagram](../architecture/diagrams/food-poisoning.html) · [Tests and fixture provenance](../../server/test/offline/README.md#food-poisoning-forecast-recovery-2600).

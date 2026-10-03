@@ -32,6 +32,8 @@ var commands = [
     [path.join(__dirname, 'world-air.test.js')],
     [path.join(__dirname, 'riseset-uv.test.js')],
     [path.join(__dirname, 'life-index-2650.test.js')],
+    [path.join(__dirname, 'food-poisoning.test.js')],
+    [path.join(__dirname, 'food-poisoning-route.test.js')],
     [path.join(__dirname, 'precipitation.test.js')],
     [path.join(__dirname, 'vc-weather.test.js')],
     [path.join(__dirname, 'overseas-uv.test.js')],

@@ -402,3 +402,22 @@ DB lookup and global-provider recovery from scheduled AirKorea collection.
 ### Optional measurement consent (2026-10-01 candidate)
 
 `Monetization.init` restores a versioned explicit local grant only when the persisted native collection preference also allows it; missing, false or unreadable native state requires a fresh settings choice. Collection defaults off. Settings offer grant/refusal/withdrawal, with synchronous event-gate closure and serialized native writes that coalesce pending choices. Failed persistence invalidates the old WebView grant; bridge failures compensate with collection off and all consent modes denied before a newer choice runs. If both storage invalidation and native writes fail, the UI reports failure and cannot promise durable withdrawal. The legacy opt-out facade can withdraw but cannot grant. Advertising storage/user-data/personalization remain denied. Native install defaults and explicit iOS plist entries close fresh-install collection before JS startup; upgrade preference overrides still need device evidence. UMP ad choices remain separate from Analytics consent and provider/location/push flows. `ios-no-tracking.js` enforces nonpersonalized Ads requests/publisher first-party-ID off and removes unused generated GTM linking to avoid indirect IdentitySupport. Privacy manifests mark device-linked coordinates/IDs accurately; these source constraints do not certify whole-app runtime tracking. [Operating review](../operations/store-privacy-review.md) records remaining archive/network/retention/deletion gates.
+
+## Domestic food-poisoning forecast (#2600)
+
+After KMA life-index enrichment, the domestic controller independently reads MFDS
+regional forecasts by request province/district. Exact district values take
+priority over province rows per date. The merged Gwangju/Jeonnam province resolves
+by district; ambiguous merged-province requests omit the optional fields.
+Only current KST today..+2 dates within the source's own three-day interval are
+eligible. Old, future or malformed records remain absent. No weather row is
+created for a missing date.
+
+`midData.dailyData` receives `fsn` in percent and page-threshold `fsnGrade` (0–3);
+`_appendLifeIndexToCurrent` copies today's fields and `insertStrForData` generates
+localized `fsnStr` for daily/current rows. Missing stores, read errors or the
+independent two-second deadline preserve weather HTTP success; late store results
+cannot mutate completed responses. The request never fetches MFDS. Both domestic
+storage versions use this separate region/date reader. Existing app food-poisoning
+rows remain compatible. See the [operating contract](../operations/food-poisoning.md)
+and [design diagram](diagrams/food-poisoning.html).
