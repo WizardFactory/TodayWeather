@@ -297,6 +297,7 @@ Manager.prototype.saveShort = function(newData, callback, control){
                             );
                             if(comparedDate === 0){
                                 if (control && control.product) {
+                                    newItem = ForecastGridCollection.preserveOptional(newItem, dbShortList.shortData[i], 'short', control.slot);
                                     if (typeof dbShortList.shortData.set === 'function') { dbShortList.shortData.set(i, newItem); }
                                     else { dbShortList.shortData[i] = newItem; }
                                     isNew = 0;
@@ -705,6 +706,7 @@ Manager.prototype.saveShortest = function(newData, callback, control){
                             );
                             if(comparedDate === 0) {
                                 if (control && control.product) {
+                                    newItem = ForecastGridCollection.preserveOptional(newItem, dbShortestList.shortestData[i], 'shortest', control.slot);
                                     if (typeof dbShortestList.shortestData.set === 'function') { dbShortestList.shortestData.set(i, newItem); }
                                     else { dbShortestList.shortestData[i] = newItem; }
                                     isNew = 0;
@@ -1152,6 +1154,10 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                         cb(err);
                     }, control);
                 }
+                else if (item.invalidForecast && control && control.product) {
+                    forecastWriteError = forecastWriteError || new Error('Invalid forecast content remains pending');
+                    cb();
+                }
                 else if (item.rejected) {
                     // data.go.kr rejected this request itself (4xx); a retry fails the same way.
                     rejectedCount++;
@@ -1166,7 +1172,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
             function (err, results) {
                 if (control && control.cancelled) { return callback && callback(new Error('Current collection cancelled')); }
                 log.info(dataTypeName + ' saved data');
-                if (forecastWriteError) { return callback && callback(forecastWriteError); }
+                if (forecastWriteError) { cycle.forecastError = cycle.forecastError || forecastWriteError; }
                 if (err) {
                     log.error(err);
                 }
@@ -1217,7 +1223,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 }
                 log.info('received All ', dataTypeName, ' of ', dateString);
                 if (callback) {
-                    callback(err, invalidList);
+                    callback(err || cycle.forecastError, invalidList);
                 }
             });
         //log.info('ST> save OK');

@@ -25,13 +25,19 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
         const model=mongoose.model('forecast_'+product+time+version,new mongoose.Schema({}, {strict:false}));
         let docs=f.documents(product,version,slot,coord,rows);
         model.Query.prototype.exec=function(cb){assert.strictEqual(this.options.maxTimeMS,2000);assert(this._mongooseOptions.lean);
-            assert.deepStrictEqual(this.getQuery(),{pubDate:version==='1.0'?slot.date+slot.time:new Date(f.publication(slot)-9*f.hour)});cb(null,docs)};
+            const query={pubDate:version==='1.0'?slot.date+slot.time:new Date(f.publication(slot)-9*f.hour)};
+            if(version==='2.0')query.fcsDate={$gte:new Date(f.publication(rows[0])-9*f.hour),$lte:new Date(f.publication(rows[rows.length-1])-9*f.hour)};
+            assert.deepStrictEqual(this.getQuery(),query);cb(null,docs)};
         const pending=()=>new Promise((res,rej)=>Forecast.pending(model,version,product,slot,[coord],(e,p)=>e?rej(e):res(p)));
         assert.strictEqual((await pending()).length,0);
         docs=docs.map(d=>({...d,pubDate:version==='1.0'?'202701010000':new Date('2027-01-01')}));
         assert.strictEqual((await pending()).length,1,'newer publication cannot cover requested publication');
     }
  }
+ const optional=Forecast.preserveOptional({date:'20261003',time:'0600',tmn:-50,tmx:-50,wav:-1,t3h:0},{tmn:-3,tmx:25,wav:0.5,t3h:10},'short',{date:'20261003',time:'1400'});
+ assert.strictEqual(optional.tmn,-3);assert.strictEqual(optional.tmx,25);assert.strictEqual(optional.wav,0.5);assert.strictEqual(optional.t3h,0);
+ const required=Forecast.preserveOptional({date:'20261004',time:'0600',tmn:-50},{tmn:-3},'short',{date:'20261003',time:'1400'});
+ assert.strictEqual(required.tmn,-50,'a required slot cannot inherit another publication value');
  // POP was conditional before official June 23 expansion; WAV remains conditional.
  const rawSlot={date:'20261003',time:'1700'};
  const raw=()=>f.items('short',rawSlot,coord);

@@ -541,6 +541,7 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
                 return fail('KMA incomplete or inconsistent response');
             }
             if (self.validateForecastItems && !self.validateForecastItems(allItems, index)) {
+                self.resultList[index].invalidForecast = true;
                 return fail('KMA invalid forecast publication, coordinate or value');
             }
             result.response.body[0].items[0].item = allItems;

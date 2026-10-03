@@ -200,3 +200,5 @@ zero HTTP, incomplete-grid repair and measured continuation/retry attempts. See
 [reproducible forecast commands](../../server/test/offline/README.md#forecast-grid-collection-2676).
 This synthetic check establishes implementation behavior, not provider entitlement
 or production recovery. Deployment and the AC4 production readback remain pending.
+
+Forecast content-validation failures are non-retryable within the active run and remain pending for a later poll; transport/page failures keep the existing bounded retry policy. Writer errors are retained while other grids finish their retries/key rotation. DB2 coverage combines the exact publication with an expected `fcsDate` horizon range using the existing index. DB1 slot replacement preserves previously valid, conditionally absent same-day TMN/TMX and optional WAV; required fields are always replaced from the requested publication.

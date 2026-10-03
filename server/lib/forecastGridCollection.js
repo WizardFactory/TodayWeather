@@ -96,6 +96,20 @@ function rawItems(items, product, slot, coord) {
         return categories && required.every(function(category) { return categories.has(category); });
     });
 }
+// Preserve conditionally absent API inputs while replacing every required forecast field.
+function preserveOptional(row, previous, product, slot) {
+    var result = Object.assign({}, row);
+    if ((!finite(row.wav) || row.wav === -1) && finite(previous.wav) && previous.wav >= 0) { result.wav = previous.wav; }
+    if (product === 'short' && row.date === slot.date) {
+        ['tmn', 'tmx'].forEach(function(field) {
+            var absent = field === 'tmn' ? slot.time !== '0200' : slot.time > '1100';
+            if (absent && (!finite(row[field]) || row[field] === -50) && finite(previous[field]) && previous[field] !== -50) {
+                result[field] = previous[field];
+            }
+        });
+    }
+    return result;
+}
 function coordKey(coord) { return coord.mx + ':' + coord.my; }
 function bounded(callback, ms) {
     var finished = false;
@@ -113,7 +127,13 @@ function pending(model, version, product, slot, coords, callback, timeoutMs) {
     var projection = {_id: 0, mCoord: 1, pubDate: 1, fcsDate: 1}; projection[field] = 1;
     callback = bounded(callback, timeoutMs);
     try {
-        model.find({pubDate: pubDate}, projection).setOptions({maxTimeMS: 2000}).lean().exec(function(err, docs) {
+        var query = {pubDate: pubDate};
+        if (version === '2.0') {
+            var horizon = expected(product, slot);
+            query.fcsDate = {$gte: new Date(stamp(horizon[0]) - 9 * HOUR),
+                $lte: new Date(stamp(horizon[horizon.length - 1]) - 9 * HOUR)};
+        }
+        model.find(query, projection).setOptions({maxTimeMS: 2000}).lean().exec(function(err, docs) {
             if (err) { return callback(err); }
             if (!Array.isArray(docs)) { return callback(new Error('Invalid forecast coverage readback')); }
             var grouped = new Map(), covered = new Set();
@@ -197,6 +217,7 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
     }, options.readTimeoutMs);
     try { options.coords(ready); } catch (err) { ready(err); }
 };
+ForecastGridCollection.preserveOptional = preserveOptional;
 ForecastGridCollection.rawItems = rawItems;
 ForecastGridCollection.expected = expected;
 ForecastGridCollection.complete = complete;
