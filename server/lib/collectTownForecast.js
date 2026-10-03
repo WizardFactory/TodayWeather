@@ -365,13 +365,22 @@ function rowKey(item) {
 * reason is a static diagnostic string and never includes transport/parser errors.
 * */
 CollectData.prototype._requestPage = function (url, callback) {
-    req.get(url, {timeout: 1000*10}, function(err, response, body){
+    var self = this;
+    if (self._cancelled) { return; }
+    self._requests = self._requests || new Set();
+    var startedAt = self.onPageRequest ? self.onPageRequest() : undefined;
+    var settled = false;
+    var request = req.get(url, {timeout: 1000*10}, function(err, response, body){
+        settled = true;
+        self._requests.delete(request);
+        if (self._cancelled) { return; }
         if (err) {
             return callback('KMA transport failure');
         }
         var statusCode = response && response.statusCode;
         var reasonCode = rejection.code(body);
         if (rejection.isQuota(statusCode, reasonCode)) {
+            if (self.onQuota) { self.onQuota(reasonCode, statusCode, startedAt); }
             return callback(QUOTA_FAILURE);
         }
         if (rejection.isAuth(statusCode, reasonCode)) {
@@ -384,6 +393,7 @@ CollectData.prototype._requestPage = function (url, callback) {
             return callback('KMA HTTP failure');
         }
         xml2json(body, function(err, result){
+            if (self._cancelled) { return; }
             var envelope = result && result.response;
             var header = envelope && envelope.header && envelope.header[0];
             var payload = envelope && envelope.body && envelope.body[0];
@@ -399,6 +409,18 @@ CollectData.prototype._requestPage = function (url, callback) {
             callback(null, result, Number(count), items, payload);
         });
     });
+    if (!settled && request) { self._requests.add(request); }
+};
+
+CollectData.prototype.cancel = function() {
+    if (this._cancelled) { return; }
+    this._cancelled = true;
+    this.stopReason = 'cancelled';
+    this._walk = undefined;
+    if (this._requests) {
+        this._requests.forEach(function(request) { if (request.abort) { request.abort(); } });
+        this._requests.clear();
+    }
 };
 
 /*
@@ -1391,4 +1413,3 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
 };
 
 module.exports = CollectData;
-

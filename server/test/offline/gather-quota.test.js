@@ -249,7 +249,8 @@ function loadManager(keys, policy, lines, RealCollector) {
     };
     Object.assign(deps, {
         '../config/config': {db: {version: '2.0'}, keyString: {dongnae_forecast_keys: JSON.stringify(keys)}, history: {enabled: false}},
-        '../config/gather': policy, async: require('async'), '../lib/collectTownForecast': RealCollector || Collector
+        '../config/gather': policy, async: require('async'), '../lib/collectTownForecast': RealCollector || Collector,
+        '../lib/forecastTraffic': require('../../lib/forecastTraffic')
     });
     const module = {exports: {}};
     vm.runInNewContext(code, Object.assign({

@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('assert'),h=require('./harness'),Traffic=require('../../lib/forecastTraffic');
+let pages=0;
+const urls=[],c=h.collector(h.pagedHttp(h.shortProduct(),urls));
+c.onPageRequest=()=>pages++;
+let finished=0;
+c.requestData([{mx:60,my:127}],c.DATA_TYPE.TOWN_SHORT,'SYNTHETIC','20260924','0500',(e,rows)=>{
+    assert.strictEqual(e,false);assert(rows[0].isCompleted);finished++;
+});
+assert.strictEqual(finished,1);assert.strictEqual(pages,2);assert.strictEqual(pages,urls.length);
+const now=Date.parse('2026-10-02T14:59:00Z'),records=[],t=new Traffic(r=>records.push(r));
+assert.strictEqual(t.attempt('TOWN_CURRENT',0,now).kstHour,'2026-10-02T23');
+assert.strictEqual(t.attempt('TOWN_CURRENT',0,now).hourlyAttempts,2);
+t.quota(0,'TOWN_CURRENT',0,now,'23');
+assert.strictEqual(t.available(0,1,0,now),0);
+t.quota(0,'TOWN_CURRENT',0,now,'22');
+assert.strictEqual(t.available(0,1,0,now),-1);
+assert.strictEqual(t.available(1,1,0,now),0);
+assert.strictEqual(t.available(0,1,0,now+60000),0);
+assert.strictEqual(t.attempt('TOWN_CURRENT',0,now+60000).hourlyAttempts,1);
+assert.strictEqual(records[0].cooldown,'none');
+assert.strictEqual(records[1].cooldown,'next-KST-day');
+t.quota(0,'TOWN_CURRENT',0,now+60000,'22',now+60000);
+t.quota(0,'TOWN_CURRENT',1,now+60000,'22',now);
+assert.strictEqual(t.available(0,2,0,now+60000),1,'late prior-day quota cannot poison current-day capacity or clear current-day rejection');
+console.log('forecast traffic: real collector counts continuation pages; KST hour/day reset and confirmed daily-only cooldown passed');

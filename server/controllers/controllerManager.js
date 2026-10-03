@@ -13,6 +13,9 @@ var collectTown = require('../lib/collectTownForecast');
 var town = require('../models/town');
 var config = require('../config/config');
 var gatherPolicy = require('../config/gather');
+var CurrentGridCollection = require('../lib/currentGridCollection');
+var currentGridModel = require('../models/kma/kma.town.current.model');
+var ForecastTraffic = require('../lib/forecastTraffic');
 var foodPoisoning = require('../lib/foodPoisoning');
 var convert = require('../utils/coordinate2xy');
 var convertGeocode = require('../utils/convertGeocode');
@@ -397,7 +400,7 @@ Manager.prototype.saveShort = function(newData, callback){
  *   save current data to DB.
  *   @param newData - only one town's data list.
  */
-Manager.prototype.saveCurrent = function(newData, callback){
+Manager.prototype.saveCurrent = function(newData, callback, control){
     var self = this;
     var invalid = false;
 
@@ -412,6 +415,10 @@ Manager.prototype.saveCurrent = function(newData, callback){
     //log.info('C> db find :', coord);
     try{
         modelCurrent.find({mCoord: coord}, function(err, list){
+            if (control && control.cancelled) {
+                if (callback) { callback(new Error('Current collection cancelled')); }
+                return;
+            }
             if(err){
                 log.error('C> fail to find db item :', coord);
                 if (callback) {
@@ -998,10 +1005,12 @@ Manager.prototype._getForecastService = function (dataType) {
  * pass), so a cycle sends at most srcList.length + (retryCount - 1) * requestConcurrency requests.
  * A quota/key rejection moves to the next forecast key and requests all items not yet
  * collected; when every key was rejected in this cycle it ends with an error (#2604).
- * @param cycle internal, shared by the passes of one cycle: {keysTried, retrying}
+ * @param cycle internal, shared by passes: {keysTried, retrying, rejectedKeys}
  */
 Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateString, retryCount, invalidDataList, callback, cycle) {
     var self = this;
+    var control = cycle && cycle.control;
+    if (control && control.cancelled) { return callback && callback(new Error('Current collection cancelled')); }
     var failedList = [];
     var invalidList = [];
     var collectInfo = new collectTown();
@@ -1038,6 +1047,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     }
 
     cycle = cycle || {keysTried: 1, retrying: false};
+    cycle.rejectedKeys = cycle.rejectedKeys || {};
     var service = self._getForecastService(dataType);
     if (!dongnae_keys.length) {
         err = new Error(dataTypeName + ' no configured data.go.kr keys');
@@ -1047,6 +1057,24 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     var keyCount = dongnae_keys.length;
     var keyIndex = (forecastKeyIndex[service] || 0) % keyCount;
     var rejectedCount = 0;
+    var now = self._collectionNow || Date.now;
+    var emit = function(record) { console.log(JSON.stringify(record)); };
+    self._forecastTraffic = self._forecastTraffic || new ForecastTraffic(emit);
+    keyIndex = self._forecastTraffic.available(dataType, keyCount, keyIndex, now(), cycle.rejectedKeys);
+    if (keyIndex < 0) {
+        return callback && callback(new Error(dataTypeName + ' no eligible forecast key remains for this cycle/KST day'));
+    }
+    forecastKeyIndex[service] = keyIndex;
+    var attempts = {};
+    collectInfo.onPageRequest = function() {
+        var startedAt = now();
+        var measurement = self._forecastTraffic.attempt(dataTypeName, keyIndex, startedAt);
+        attempts[measurement.kstHour] = (attempts[measurement.kstHour] || 0) + 1;
+        return startedAt;
+    };
+    collectInfo.onQuota = function(reasonCode, statusCode, startedAt) {
+        self._forecastTraffic.quota(dataType, dataTypeName, keyIndex, now(), reasonCode, startedAt);
+    };
     if (dongnae_keys.length) {
         key = dongnae_keys[keyIndex];
     }
@@ -1055,16 +1083,29 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
         collectInfo.requestLimit = gatherPolicy.requestConcurrency;
     }
 
+    if (control) { control.collector = collectInfo; }
     collectInfo.requestData(srcList, dataType, key, dateString.date, dateString.time, function(err, dataList) {
+        if (control) { control.collector = null; }
+        if (control && control.cancelled) { return callback && callback(new Error('Current collection cancelled')); }
         log.info(dataTypeName, 'data receive completed : ', dataList.length);
+        emit({event: 'forecast-pass', utc: new Date(now()).toISOString(),
+            kstHour: ForecastTraffic.kstHour(now()), product: dataTypeName, keyIndex: keyIndex,
+            publication: dateString.date + dateString.time, attemptsByKstHour: attempts,
+            received: dataList.filter(function(item) { return item.isCompleted; }).length,
+            pending: dataList.filter(function(item) { return !item.isCompleted; }).length,
+            failed: dataList.filter(function(item) { return !item.isCompleted && !item.rejected; }).length,
+            rejected: dataList.filter(function(item) { return !item.isCompleted && item.rejected; }).length,
+            stopReason: collectInfo.stopReason || null});
 
         //log.info(JSON.stringify(dataList));
         //log.info(dataList[0]);
 
         async.mapSeries(dataList,
             function(item, cb) {
+                if (control && control.cancelled) { return cb(new Error('Current collection cancelled')); }
                 if (item.isCompleted) {
                     self.getSaveFunc(dataType).call(self, item.data, function (err, invalid) {
+                        if (control && control.cancelled) { return cb(new Error('Current collection cancelled')); }
                         if(invalid != undefined && invalid == true){
                             if(invalidList.indexOf(item.mCoord) === -1){
                                 log.info('C> Found invalid t1h', item.mCoord);
@@ -1072,7 +1113,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                             }
                         }
                         cb(err);
-                    });
+                    }, control);
                 }
                 else if (item.rejected) {
                     // data.go.kr rejected this request itself (4xx); a retry fails the same way.
@@ -1086,6 +1127,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 }
             },
             function (err, results) {
+                if (control && control.cancelled) { return callback && callback(new Error('Current collection cancelled')); }
                 log.info(dataTypeName + ' saved data');
                 if (err) {
                     log.error(err);
@@ -1095,6 +1137,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 }
 
                 if (collectInfo.stopReason) {
+                    cycle.rejectedKeys[keyIndex] = true;
                     log.warn(dataTypeName + ' stopped: reason=' + collectInfo.stopReason + ' pending=' + failedList.length +
                         ' keyIndex=' + keyIndex + ' keysTried=' + cycle.keysTried + '/' + keyCount);
                     if (cycle.keysTried < keyCount) {
@@ -1118,18 +1161,20 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 if (failedList.length) {
                     log.verbose(dataTypeName + ' retry pass: failed=' + failedList.length + ' retryCount=' + (retryCount - 1));
                     cycle.retrying = true;
-                    setTimeout(function() {
+                    var failedTimer = setTimeout(function() {
                         self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback, cycle);
                     }, gatherPolicy.retryDelayMs);
+                    if (control) { control.retryTimer = failedTimer; }
                     return;
                 }
 
                 if(invalidList.length){
                     var adjustedDateString = self.getShortestQueryTime(8);
                     cycle.retrying = true;
-                    setTimeout(function() {
+                    var invalidTimer = setTimeout(function() {
                         self._recursiveRequestData(invalidList, dataType, key, adjustedDateString, --retryCount, undefined, callback, cycle);
                     }, gatherPolicy.retryDelayMs);
+                    if (control) { control.retryTimer = invalidTimer; }
                     return;
                 }
                 log.info('received All ', dataTypeName, ' of ', dateString);
@@ -1487,28 +1532,22 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
 
     log.info('C> +++ GET CURRENT INFO : ', dateString);
 
-    town.getCoord(function (err, listTownDb) {
-        if (err) {
-            if (callback) {
-                callback(err);
-            }
-            else {
-                log.error(err);
-            }
-            return this;
-        }
-
-
-        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_CURRENT, key, dateString, gatherPolicy.retry.townCurrent, undefined, function (err, results) {
-            log.info('C> save OK');
-            if (callback) {
-                return callback(err, results);
-            }
-            if (err) {
-                return log.error(err);
+    if (!self._currentCollection) {
+        self._currentCollection = new CurrentGridCollection({
+            model: config.db.version === '1.0' ? modelCurrent : currentGridModel,
+            version: config.db.version,
+            collectTimeoutMs: gatherPolicy.currentDeadlineMs,
+            coords: function(cb) { town.getCoord(cb); },
+            emit: function(record) { console.log(JSON.stringify(record)); },
+            collect: function(list, slot, suppliedKey, cb, control) {
+                self._recursiveRequestData(list, self.DATA_TYPE.TOWN_CURRENT, suppliedKey, slot,
+                    gatherPolicy.retry.townCurrent, undefined, cb, {keysTried: 1, retrying: false, control: control});
             }
         });
-        return this;
+    }
+    self._currentCollection.run(dateString, key, function(err, results) {
+        if (callback) { return callback(err, results); }
+        if (err) { log.error(err); }
     });
 
     kmaTownCurrent.remove(new Date());
@@ -2090,12 +2129,12 @@ Manager.prototype.getDataTypeName = function(value) {
 Manager.prototype.getSaveFunc = function(value) {
     switch (value) {
         case this.DATA_TYPE.TOWN_CURRENT:
-            return function saveCurrent(newData, callback) {
+            return function saveCurrent(newData, callback, control) {
                 if(config.db.version === '1.0') {
-                    this.saveCurrent(newData, callback);
+                    this.saveCurrent(newData, callback, control);
                 }
                 else if(config.db.version === '2.0'){
-                    kmaTownCurrent.saveCurrent(newData, callback);
+                    kmaTownCurrent.saveCurrent(newData, callback, control);
                 }
             };
         case this.DATA_TYPE.TOWN_SHORTEST:

@@ -16,7 +16,7 @@ function kmaTownCurrentController(){
  * @param callback
  * @returns {kmaTownCurrentController}
  */
-kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
+kmaTownCurrentController.prototype.saveCurrent = function(newData, callback, control){
     //log.info('KMA Town C> save :', newData);
     var coord = {
         mx: newData[0].mx,
@@ -30,6 +30,7 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
     try{
         async.mapSeries(newData,
             function(item, cb){
+                if (control && control.cancelled) { return cb(new Error('Current collection cancelled')); }
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
                 if ( pubDate == null || isNaN(pubDate.getTime()) ) {
                     log.warn('pubDate is null, so copy from fcsDate');
@@ -39,6 +40,7 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
                 log.debug('KMA Town C> item : ', JSON.stringify(newItem));
 
                 modelKmaTownCurrent.find({mCoord: coord, fcsDate: fcsDate}).lean().exec(function (err, list) {
+                    if (control && control.cancelled) { return cb(new Error('Current collection cancelled')); }
                     if(err) {
                         log.error('KMA Town C> Fail to find current item');
                         log.error(err);

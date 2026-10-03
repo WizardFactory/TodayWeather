@@ -61,3 +61,5 @@ Use `architecture` for collection and `sequence` for mobile requests. Architectu
 - [Static web client](web-client.md): responsive PWA, direct existing-API reads, local persistence and S3/CloudFront deployment boundaries.
 
 The opt-in [S3 push coordinator](push-s3-design.md) has a separate [interactive diagram](diagrams/push-s3-proposal.html) and [Archify source](diagrams/push-s3-proposal.json); it is repository implementation, not a deployed-topology claim.
+
+Current-grid quota prevention: [flow](diagrams/current-grid-collection.html), [JSON](diagrams/current-grid-collection.json), [operations](../operations/current-grid-collection.md).

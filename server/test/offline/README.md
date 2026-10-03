@@ -425,6 +425,50 @@ provenance, plus degraded station-storage failures. It does not connect to Mongo
 or production, test server-side timeout enforcement, or establish production recovery.
 CI runs both commands on Node 16.20.2 and 22.22.2.
 
+## Current-grid collection (#2648)
+
+`current-lifecycle.test.js` covers joined deadline completion, late-run fencing,
+actual collector abort calls, stalled-write admission and delayed-retry cancellation.
+`current-writer-cancellation.test.js` delays the actual DB1/DB2 writer reads beyond
+the run deadline and verifies their late callbacks cannot admit a new save/update.
+`current-cancellation-smoke.js` uses the real request transport/collector/Manager
+with a synthetic loopback server and fixture storage: one stalled socket is aborted,
+the next publication stores two grids and a repeated successful poll makes no HTTP.
+Run it with Node16/22 and isolated `request`, `async` and `xml2js` dependencies.
+It does not replace the separate temporary-Mongo storage smoke below.
+
+Use an isolated dependency prefix; do not start app.js or query production.
+Pinned-query tests fail on a mongoose version other than 5.1.2. Install
+mongoose@5.1.2, async@2.6.4, request@2.88.2, xml2js@0.4.23, express@4.13.4,
+mongoose-smoke@npm:mongoose@5.13.23 and mongodb-memory-server-core@10.1.4
+in that prefix. NODE_PATH points at its node_modules. CI covers Node16.20.2/22.22.2.
+
+```sh
+node server/test/offline/current-grid-collection.test.js
+node server/test/offline/current-manager.test.js
+node server/test/offline/current-quota-memory.test.js
+node server/test/offline/forecast-traffic.test.js
+node server/test/offline/current-collection-smoke.js
+```
+
+The first four commands cover real pinned queries,2,032-grid deduplication,
+partial/failed/stalled coverage, same-hour coalescing, confirmed daily versus
+per-second rejection, KST rollover and continuation-page counts. Smoke uses the
+actual gather route, Manager, collector, temporary Mongo and synthetic loopback
+provider data. DB1/DB2 each store two complete hours; repeat polls add no fetch,
+and a removed DB2 field refetches one grid. A third hour has three persistent
+wind/REH omissions plus a WSD omission repaired on the second walk: only four
+partial grids refetch once, then four more polls issue zero HTTP and still read
+three pending/deferred grids. A fourth publication collects all2,032grids anew.
+Coverage regression also checks the two-admission policy, overlap, restart and
+no-data/invalid-core eligibility for both formats (19 cases). Mongo 7 requires the5.13 smoke driver;
+deployment keeps5.1.2. TW_MONGOD can identify an existing local Mongo binary;
+otherwise mongodb-memory-server manages its test binary. Temporary servers/DBs
+close at exit. No live data.go.kr call occurs.
+
+This guard does not backfill history, verify provider approval or prove
+multi-process quota capacity.
+
 ## Server payment retirement
 
 ```sh

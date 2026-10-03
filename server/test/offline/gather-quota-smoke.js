@@ -76,7 +76,7 @@ function loadManager(lines, concurrency) {
     Object.assign(deps, {
         '../config/config': {db: {version: '2.0'}, keyString: {dongnae_forecast_keys: JSON.stringify([KEY_A, KEY_B])}, history: {enabled: false}},
         '../config/gather': gather.load({GATHER_TOWN_RETRY: '3', GATHER_REQUEST_CONCURRENCY: String(concurrency || 101)}), async: require('async'),
-        '../lib/collectTownForecast': Collector
+        '../lib/collectTownForecast': Collector, '../lib/forecastTraffic': require('../../lib/forecastTraffic')
     });
     const module = {exports: {}};
     vm.runInNewContext(code, {module, exports: module.exports, Date, JSON, Math, Promise, Error, setTimeout, log,
