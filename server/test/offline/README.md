@@ -463,6 +463,28 @@ close at exit. No live data.go.kr call occurs.
 
 This guard does not backfill history, verify provider approval or prove
 multi-process quota capacity.
+
+## Server payment retirement
+
+```sh
+node server/test/offline/payment-removal.test.js
+NODE_PATH=<offline-dependencies>/node_modules node server/test/offline/payment-removal-smoke.js
+NODE_PATH=<offline-dependencies>/node_modules node server/test/offline/payment-removal-smoke.js production
+```
+
+These commands are also in `test:offline`. The smoke needs Express 4.13.4,
+body-parser 1.20.x, cors 2.8.x, express-session 1.15.x and async 2.x; the
+existing offline dependency install supplies them. It runs real `app.js`, all
+five version indexes, the gateway, shared push input validation and v000903
+geocode redirect over loopback. Controllers, Mongo connection, token encoding,
+translation/template rendering, unused leaf routers and provider results are
+explicit offline collaborators. No `.env` or production secrets are loaded.
+External/socket-path connections and collection are forbidden. Former GET/POST
+URLs match the ordinary unknown-route response; v000803 POST auth and CORS
+preflight remain in place. This does not claim a real Mongo/provider/store call
+or production startup with all service dependencies. Existing gateway/weather/
+push regressions cover the adjacent implementation beyond these boundaries.
+
 ## Unified data.go.kr keys (#2618)
 
 `data-go-kr-keys.test.js` covers list parsing, ignored legacy fields, sanitized

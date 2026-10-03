@@ -41,7 +41,6 @@
     "get-pixels": "^3.3.0",
     "i18n": "^0.8.3",
     "iconv": "2.3.5",
-    "in-app-purchase": "^1.8.4",
     "jade": "~1.11.0",
     "jsonwebtoken": "^5.7.0",
     "jwt-simple": "^0.3.0",
