@@ -1,5 +1,31 @@
 # Isolated weather checks
 
+## Credential-free controller loading (#2589)
+
+`credential-free-load.test.js` is included in `test:offline`. It loads the complete
+Geo/Push modules with explicit dependency boundaries and synthetic configuration.
+It checks missing, malformed and empty Kakao keys, one warning per module instance,
+clear callback/middleware errors, and configured-key retry order. Firebase
+initialization and credential imports are forbidden in the push load check.
+
+The additional smoke uses the real CommonJS dependency graph and server packages.
+Run it with the supported Node 16.20.2 runtime and an isolated installation of the
+server dependencies (including its native modules):
+
+```sh
+NODE_PATH=<server-dependencies>/node_modules node server/test/offline/credential-free-load-smoke.js
+```
+
+Each scenario runs in a subprocess with provider credentials removed. Credential
+file reads, Firebase initialization and external connections are forbidden. The
+configured-key scenario sends real Axios requests to a loopback HTTP server,
+retries a synthetic 503, and checks the resulting KR address middleware fields.
+The smoke does not start the application, collection timers or a database. It
+requires permission to listen on `127.0.0.1`; it is separate from the minimal
+dependency offline runner. The existing `push-worker` job in
+[`rss-offline.yml`](../../../.github/workflows/rss-offline.yml) runs it with the
+locked Node 16.20.2 server dependencies.
+
 ## Gather reconciliation tests
 
 All provider fixtures are synthetic. These tests load real exported functions with explicit VM dependency injection before evaluation. HTTP, DNS initialization, logging, model methods and timers cannot access production; undeclared dependencies/timers fail immediately. No `app.js`, configuration file, `/gather/*` route or Mongo initialization is loaded.

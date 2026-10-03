@@ -224,6 +224,10 @@ jobs:
           mkdir -p "$RUNNER_TEMP/runtime"
           cp server/package.json server/package-lock.json "$RUNNER_TEMP/runtime/"
           npm ci --prefix "$RUNNER_TEMP/runtime" --no-audit --no-fund
+      - name: Credential-free Geo and Push loading on Node 16.20.2
+        env:
+          NODE_PATH: ${{ runner.temp }}/runtime/node_modules
+        run: node server/test/offline/credential-free-load-smoke.js
       - name: Push worker smoke on Node 16.20.2
         env:
           NODE_PATH: ${{ runner.temp }}/runtime/node_modules

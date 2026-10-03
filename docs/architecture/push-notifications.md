@@ -6,6 +6,8 @@ The app stores alarm/alert settings through a REST API. Independent background w
 
 Repository baseline: `c9220de35fe31838e10e692494731b90106b0f65` plus the issue #2565 working-tree compatibility changes below. Source behavior is distinct from production observations. CloudFront push routing was checked on 2026-09-22; read-only follow-up on 2026-09-24 found historical push checkouts on the gather host but no running push process in the inspected inventory. Provider acceptance and actual device delivery remain unverified. Repository content and diagram UI are in English.
 
+Credential-free module loading (#2589): requiring and constructing `controllerPush.js` needs neither an APNs certificate nor Firebase service-account JSON. Direct APNs is removed; `pushProviders.firebase()` reads Firebase credentials and initializes an app only when FCM delivery uses it. The [offline load regression and real-dependency smoke](../../server/test/offline/README.md#credential-free-controller-loading-2589) enforce this loading contract. Successful loading does not establish notification delivery or a gather-host update.
+
 ## App settings and API contracts
 
 [Push service](../../client/www/js/service.push.js) constructs `clientConfig.serverUrl + /v000902/push` and `/v000902/push-list`. Settings are read from local `TwStorage` (`pushData2`), not fetched with a GET to the push API. `getPushListByCityIndex()` filters local data. Token callbacks and notification events come through the [Firebase adapter](../../client/www/js/service.firebase.js).
