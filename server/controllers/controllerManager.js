@@ -1522,6 +1522,8 @@ Manager.prototype._getTownForecastData = function(product, dateString, key, call
             model: config.db.version === '1.0' ? (short ? modelShort : modelShortest) : (short ? shortGridModel : shortestGridModel),
             version: config.db.version,
             collectTimeoutMs: gatherPolicy.forecastDeadlineMs,
+            readTimeoutMs: gatherPolicy.forecastReadTimeoutMs,
+            refreshAfterMs: short ? 0 : gatherPolicy.shortestRefreshAfterMs,
             coords: function(cb) { town.getCoord(cb); },
             emit: function(record) { console.log(JSON.stringify(record)); },
             collect: function(list, slot, suppliedKey, cb, control) {

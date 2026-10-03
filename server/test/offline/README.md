@@ -545,9 +545,9 @@ npm install --prefix /tmp/forecast-offline --ignore-scripts --no-audit --no-fund
 NODE_PATH=/tmp/forecast-offline/node_modules TW_MONGOD=<mongo4.4-binary> <node16.20.2-binary> server/test/offline/forecast-collection-smoke.js
 ```
 
-The smoke binds HTTP/Mongo only to127.0.0.1, starts its own temporary DB process,
+The smoke binds HTTP/Mongo only to 127.0.0.1, starts its own temporary DB process,
 uses dummy provider keys and real request/XML/Manager/writers, and never loads
-app.js or production configuration. It validates all2,033 grids for each product
+app.js or production configuration. It validates all 2,033 grids for each product
 and DB1/DB2, full horizon/field readback, zero repeat/recreated-Manager HTTP and
 single-grid repair, and that an older publication written after completion leaves
 coverage complete (DB1 refuses the downgrade; DB2 adds no duplicate slot). Short responses have two pages and one forced transient

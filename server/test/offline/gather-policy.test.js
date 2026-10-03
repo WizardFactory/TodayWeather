@@ -82,6 +82,9 @@ test('unset environment reproduces master literals', () => {
         midForecast: 70, midLand: 70, midTemp: 70, midSea: 70
     });
     assert.strictEqual(p.forecastDeadlineMs,540000);
+    assert.strictEqual(p.forecastReadTimeoutMs,3000);
+    assert.strictEqual(p.shortestRefreshAfterMs,2400000);
+    assert.strictEqual(gather.load({GATHER_SHORTEST_REFRESH_AFTER_MS:'0'}).shortestRefreshAfterMs,0);
     assert.strictEqual(p.retryDelayMs, 0);
     assert.deepStrictEqual(p.tasks, {past: true, airForecast: true});
     assert.deepStrictEqual(p.pastCondition, {retryCount: 10, retryDivisor: 0});
@@ -117,6 +120,7 @@ test('divisor retry equals the host updateList.length/20 when integral, else rou
 test('invalid values fail at load instead of silently reverting to defaults', () => {
     [
         ['GATHER_FORECAST_DEADLINE_MS','0'], ['GATHER_FORECAST_DEADLINE_MS','2147483648'],
+        ['GATHER_FORECAST_READ_TIMEOUT_MS','1000'], ['GATHER_SHORTEST_REFRESH_AFTER_MS','-1'],
         ['GATHER_TOWN_RETRY', '0'], ['GATHER_TOWN_RETRY', 'abc'], ['GATHER_TOWN_RETRY', '1.5'],
         // Above MAX_SAFE_INTEGER the decrement is lost (1e20 - 1 === 1e20): the retry loop would never end.
         ['GATHER_TOWN_RETRY', '9007199254740992'], ['GATHER_MID_RETRY', '99999999999999999999'],

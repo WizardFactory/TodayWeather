@@ -28,6 +28,9 @@ function run(m,method){return new Promise((resolve,reject)=>m[method](9,'dummy',
     slot={date:'20261003',time:product==='short'?'0800':'0630'};
     await run(m,method);assert.strictEqual(attempts,4067,'new publication collects all expected grids');
     assert.strictEqual(walks.at(-1).length,2033);
+    const options=m._forecastCollections[product].options;
+    assert.strictEqual(options.refreshAfterMs,product==='short'?0:2400000,'only ultra-short refreshes once per publication');
+    assert.strictEqual(options.readTimeoutMs,3000);
     console.log('PASS Manager '+product+' DB'+version+': full-grid / repeat / recreation / repair / rollover');
  }
 })().catch(e=>{console.error(e);process.exitCode=1});

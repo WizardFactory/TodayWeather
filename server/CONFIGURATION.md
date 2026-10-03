@@ -129,8 +129,15 @@ rejected in S3 mode; do not run the legacy/SQLite sender alongside the coordinat
 See [S3 operations](../docs/operations/push-s3.md) before activation.
 
 
-`GATHER_FORECAST_DEADLINE_MS` defaults to540000ms (positive integer, maximum2147483647).
+`GATHER_FORECAST_DEADLINE_MS` defaults to 540000 ms (positive integer, maximum 2147483647).
 It bounds each short/ultra-short publication run independently from
 `GATHER_CURRENT_DEADLINE_MS`, cancels HTTP/retry admission and fences new forecast
 writes after expiry. Polling and formats are unchanged. Issued Mongo operations
-may settle later. See [forecast coverage and rollout](../docs/operations/current-grid-collection.md#forecast-completion-2676).
+may settle later but are publication-fenced and cannot replace a newer publication.
+`GATHER_FORECAST_READ_TIMEOUT_MS` (default 3000, minimum 1001) bounds each forecast
+coverage read wait; Mongo `maxTimeMS` is one second shorter. A failed read leaves
+the run incomplete and, before collection, sends no forecast HTTP.
+`GATHER_SHORTEST_REFRESH_AFTER_MS` (default 2400000, `0` disables) starts a one-hour
+window after an ultra-short publication's base time in which each process refreshes
+every grid once, because KMA updates ultra-short values every ten minutes.
+See [forecast coverage and rollout](../docs/operations/current-grid-collection.md#forecast-completion-2676).

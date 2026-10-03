@@ -10,3 +10,5 @@ Legacy short and ultra-short polls repeat completed grids. Read exact publicatio
 - AC4: Production successive-publication and public-response readback remains pending separate deployment authorization; implementation readiness does not claim recovery.
 
 Main risks: publication provenance in legacy merged arrays, truncated horizon, conditional categories, issued Mongo operations after expiry. Quota entitlement is unknown; deduplication does not establish sufficient capacity. No server2, schema/key/grid/scheduler/backfill changes.
+
+2026-10-04 AK decision: KMA updates ultra-short publications every ten minutes; keep one full refresh walk per current ultra-short publication (default base+40min, configurable/disable) instead of freezing values at the first complete walk.

@@ -27,6 +27,12 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
     assert(!Forecast.batch(product,slot,coord,rows.concat({...rows[0]})),'duplicate slot');
     assert.deepStrictEqual(Forecast.within(product,slot,rows.concat(extra)),rows);
     assert(Forecast.batch(product,slot,coord,Forecast.within(product,slot,rows.concat(extra))));
+    // A valid row just past the documented horizon (provider counts show one) is kept; an invalid one is dropped.
+    const last=rows[rows.length-1],next=f.parts(f.publication(last)+3*f.hour),tail={...last,...next};delete tail.tmn;delete tail.tmx;
+    assert(Forecast.batch(product,slot,coord,rows.concat(tail)));
+    assert.deepStrictEqual(Forecast.within(product,slot,rows.concat(tail,{...tail,...f.parts(f.publication(last)+2*f.day)})),rows.concat(tail));
+    assert.deepStrictEqual(Forecast.within(product,slot,rows.concat({...tail,sky:-1})),rows,'invalid trailing row dropped');
+    assert(!Forecast.batch(product,slot,coord,rows.concat({...tail,sky:-1})));
     for(const version of ['1.0','2.0']){
         const model=mongoose.model('forecast_'+product+time+version,new mongoose.Schema({}, {strict:false}));
         let docs=f.documents(product,version,slot,coord,rows);
@@ -36,6 +42,10 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
             assert.deepStrictEqual(this.getQuery(),query);cb(null,docs)};
         const pending=()=>new Promise((res,rej)=>Forecast.pending(model,version,product,slot,[coord],(e,p)=>e?rej(e):res(p)));
         assert.strictEqual((await pending()).length,0);
+        if(version==='2.0'){
+            const saved=docs;docs=docs.map((d,i)=>i===0?{...d,fcsDate:new Date(+d.fcsDate+f.hour)}:d);
+            assert.strictEqual((await pending()).length,1,'DB2 fcsDate must match the payload slot');docs=saved;
+        }
         docs=docs.map(d=>({...d,pubDate:version==='1.0'?'202701010000':new Date('2027-01-01')}));
         assert.strictEqual((await pending()).length,1,'newer publication cannot cover requested publication');
     }
@@ -75,5 +85,34 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
  bad.options.model={find(){return {setOptions(){return this},lean(){return this},exec(){}}}};
  bad.options.readTimeoutMs=5;
  await new Promise(resolve=>bad.run({...slot,time:'0200'},'dummy',e=>{assert(e);resolve()}));assert.strictEqual(bad.active,null);assert.strictEqual(attempts,0);
+ // Ultra-short: one full refresh walk per current publication from base+40min (KMA updates every 10 minutes).
+ {
+    const rs={date:'20261003',time:'1730'},base=f.publication(rs)-9*f.hour,min=60000;
+    let docs=[],clock=base+18*min,walks=[];
+    const model={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,docs)}}}};
+    const fill=()=>{docs=f.documents('shortest','2.0',rs,coord,f.rows('shortest',rs,coord))};
+    const make=(after)=>new Forecast({product:'shortest',model,version:'2.0',coords:cb=>cb(null,[coord]),emit:()=>{},
+        refreshAfterMs:after,now:()=>clock,collect:(list,s,k,cb)=>{walks.push(list.length);fill();cb()}});
+    const go=c=>new Promise((res,rej)=>c.run(rs,'dummy',(e,r)=>e?rej(e):res(r)));
+    const c=make(40*min);
+    await go(c);assert.deepStrictEqual(walks,[1],'first walk');
+    await go(c);assert.deepStrictEqual(walks,[1],'complete before refresh window');
+    clock=base+44*min;const r=await go(c);assert.deepStrictEqual(walks,[1,1],'one refresh walk');assert.strictEqual(r.refresh,true);
+    clock=base+50*min;await go(c);assert.deepStrictEqual(walks,[1,1],'refresh once per publication');
+    await go(make(40*min));assert.deepStrictEqual(walks,[1,1,1],'process-local: a recreated coordinator may refresh once');
+    clock=base+2*f.hour;await go(make(40*min));assert.deepStrictEqual(walks,[1,1,1],'no refresh once the publication is old');
+    clock=base+44*min;await go(make(0));assert.deepStrictEqual(walks,[1,1,1],'0 disables refresh');
+    docs=[];walks=[];const late=make(40*min);await go(late);await go(late);assert.deepStrictEqual(walks,[1],'a first walk inside the window counts as the refresh');
+ }
+ // A failed after-collection coverage read is never reported as complete.
+ let reads=0;const records=[];
+ const afterModel={find(){return {setOptions(){return this},lean(){return this},exec(cb){if(reads++===0)return cb(null,[]);cb(new Error('read failed'))}}}};
+ const after=new Forecast({product:'shortest',model:afterModel,version:'2.0',coords:cb=>cb(null,[coord]),emit:r=>records.push(r),
+    collect:(list,s,k,cb)=>cb()});
+ await new Promise(resolve=>after.run({date:'20261003',time:'0330'},'dummy',(e,r)=>{
+    assert(e);assert.strictEqual(r.complete,0);assert.strictEqual(r.pending,1);resolve()}));
+ assert.strictEqual(records.at(-1).outcome,'incomplete');assert.strictEqual(records.find(r=>r.stage==='after').outcome,'read-failed');
+ assert(records.filter(r=>r.event==='forecast-coverage').every(r=>typeof r.readMs==='number'));
+ assert.strictEqual(after.active,null);
  console.log('PASS forecast coverage: both horizons, all required fields, signed/zero/conditional values, pinned exact queries, overlap/read/run deadlines and late fencing');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -26,6 +26,13 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
     partial.m.getSaveFunc=()=>function(rows,cb){goodSaves++;cb()};
     partial.m._recursiveRequestData(coords,product==='short'?2:1,'dummy',slot,1,undefined,e=>assert(e),{keysTried:1,control:{product,slot,cancelled:false,httpAttempts:0}});
     assert.strictEqual(goodSaves,1,'an incomplete grid must not discard subsequent complete grids');
+    // Provider rows outside the expected horizon are dropped before saves; the grid still completes.
+    function Extra(){}Extra.prototype.requestData=function(list,type,key,date,time,cb){cb(null,list.map(mCoord=>({mCoord,isCompleted:true,data:fx.rows(product,slot,mCoord).concat({...fx.rows(product,slot,mCoord)[0],date:'20261020',time:'0300'})})))};
+    const extra=mh.load({'../lib/collectTownForecast':Extra});const saved=[];
+    extra.m.getSaveFunc=()=>function(rows,cb){saved.push(rows);cb()};
+    await new Promise(res=>extra.m._recursiveRequestData(coords,product==='short'?2:1,'dummy',slot,1,undefined,e=>{assert(!e,e&&e.message);res()},{keysTried:1,control:{product,slot,cancelled:false,httpAttempts:0}}));
+    assert.strictEqual(saved.length,coords.length,'out-of-horizon rows do not block admission');
+    assert(saved.every(rows=>rows.length===fx.rows(product,slot,coords[0]).length&&rows.every(r=>r.date!=='20261020')));
     // Deterministic content failure remains pending without consuming transport retries.
     let contentCalls=0,contentSaves=0;
     function InvalidContent(){return h.collector({get(url,opts,cb){

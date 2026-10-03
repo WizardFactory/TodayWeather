@@ -336,13 +336,17 @@ into the unchanged bounded collector/retry/key rotation. No current-observation
 completeness or partial-admission policy is reused for forecasts. Complete
 publications skip HTTP after coordinator recreation. Full batch identity/value/
 horizon checks run before saves, and coverage readback after saves is authoritative.
-DB1 replaces overlapping controlled forecast rows without inheriting old fields;
+DB1 replaces required fields of overlapping controlled rows, keeping only conditional
+same-day TMN/TMX and optional WAV;
 DB2 serial writers propagate errors. Both paths fence new writes after expiry.
 Rows outside the expected horizon are dropped before writes. Three-second reads and
 the nine-minute forecast run deadline bound guard lifetime; issued Mongo operations
 may settle later but are publication-fenced (DB2 `pubDate <= own` with an
 absent-slot `$setOnInsert`, DB1 compare-and-set on the read `pubDate`), so they
-cannot replace a newer publication. Guards are
+cannot replace a newer publication. Coverage read waits are configurable through
+`GATHER_FORECAST_READ_TIMEOUT_MS`. Ultra-short publications are updated by KMA every ten
+minutes, so each process refreshes every grid once per current ultra-short
+publication from `GATHER_SHORTEST_REFRESH_AFTER_MS` (default base+40min). Guards are
 process-local. Product/issuance coverage and actual page/retry attempts are emitted
 without secrets. Formats, polling, grid coverage, API output and server2 remain.
 Production deployment, quota approval and successive-publication/output readback
