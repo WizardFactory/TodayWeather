@@ -49,6 +49,7 @@ function load(relative, overrides, globals) {
     const sandbox = Object.assign({
         module, exports: module.exports, Date, JSON, Math, Promise, Error,
         require: name => {
+            if (/(?:^|\/)dataGoKrKeys$/.test(name)) return require('../../lib/dataGoKrKeys');
             if (!Object.prototype.hasOwnProperty.call(deps, name)) { throw new Error('Unstubbed dependency: ' + name); }
             return deps[name];
         },
@@ -61,7 +62,7 @@ function load(relative, overrides, globals) {
 
 function managerWith(policy, overrides, globals) {
     return load('controllers/controllerManager.js', Object.assign({
-        '../config/config': {db: {version: '2.0'}, keyString: {dongnae_forecast_keys: '[]'}, history: {enabled: false}},
+        '../config/config': {db: {version: '2.0'}, keyString: {dongnae_forecast_keys: JSON.stringify(['SYNTHETIC_POLICY_KEYxxxxxxxxxxxxxxxx'])}, history: {enabled: false}},
         '../config/gather': policy,
         '../lib/foodPoisoning': require('../../lib/foodPoisoning'),
         async: require('async')

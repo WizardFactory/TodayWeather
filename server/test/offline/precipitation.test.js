@@ -37,6 +37,8 @@ function load(relative, dependencies = {}) {
     const module = {exports: {}};
     const sandbox = Object.assign({module, exports: module.exports, console, log, Date: FixedDate,
         require: name => {
+            if (/(?:^|\/)dataGoKrKeys$/.test(name)) return require('../../lib/dataGoKrKeys');
+            if (/(?:^|\/)dataGoKrRejection$/.test(name)) return require('../../lib/dataGoKrRejection');
             if (Object.prototype.hasOwnProperty.call(dependencies, name)) return dependencies[name];
             if (name === '../lib/kmaPrecipitation' || name === '../../lib/kmaPrecipitation') return maybePrecipitation();
             if (name === '../lib/midForecastPolicy' || name === '../../lib/midForecastPolicy') return require(path.join(root, 'lib/midForecastPolicy'));

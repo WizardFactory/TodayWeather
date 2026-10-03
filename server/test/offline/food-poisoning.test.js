@@ -166,6 +166,7 @@ test('gather Manager queues the direct MFDS job only at its slots and startup', 
         const source=fs.readFileSync(path.resolve(__dirname,'../../controllers/controllerManager.js'),'utf8');
         for(const match of source.matchAll(/require\('([^']+)'\)/g))deps[match[1]]=function(){};
         deps['../config/config']={keyString:{dongnae_forecast_keys:'[]'},history:{enabled:false}};
+        deps['../lib/dataGoKrKeys']=require('../../lib/dataGoKrKeys');
         deps['../config/gather']={tasks:{airForecast:false,past:false}};
         deps['../lib/foodPoisoning']={due:food.due,shared:()=>({collect:(now,cb)=>{calls.push(now.toISOString());cb(null,801);}})};
         const module={exports:{}};

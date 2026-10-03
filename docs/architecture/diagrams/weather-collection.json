@@ -99,7 +99,7 @@
       "id": "scrape",
       "type": "backend",
       "label": "Scrape timer",
-      "sublabel": "scrape/local · gather opt-in",
+      "sublabel": "scrape/local \u00b7 gather opt-in",
       "pos": [
         35,
         440
@@ -243,9 +243,9 @@
     },
     {
       "dot": "amber",
-      "title": "RSS fallback — issue #2554 local change",
+      "title": "RSS fallback \u2014 issue #2554 local change",
       "items": [
-        "Collector stores wdEn; service maps ws to wsd and wd × 45 to vec.",
+        "Collector stores wdEn; service maps ws to wsd and wd \u00d7 45 to vec.",
         "Newer RSS replaces valid source fields; equal fills gaps; older is skipped."
       ]
     },
@@ -264,6 +264,15 @@
       "items": [
         "UV V5 and seasonal oak/pine/weed pollen V3 run at /gather/lifeindex; pollen queries the current KST hour and all pages share that time; daily areaNo records.",
         "Retired food-poisoning and health-index collectors and the /gather/healthday schedule were removed. Food poisoning is tracked in #2600."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Unified keys \u2014 #2618 design",
+      "items": [
+        "DONGNAE_SECRET_KEYS supplies forecast/mid, warnings, UV/pollen, KASI and forecast-zone requests.",
+        "Auth/quota rejection stops new dispatch and tries each list key once; past rotates unfinished times, retains a successful key, and returns DB save errors.",
+        "AK verifies subscriptions and gather-host runs before deployment; AirKorea and opt-in ASOS keep separate settings."
       ]
     }
   ]

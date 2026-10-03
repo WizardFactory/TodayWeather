@@ -226,6 +226,33 @@ procedure](../operations/airkorea-recovery.md) for renewal and scheduled
 readback gates. Client-requested nation recovery uses Mongo plus the existing
 global-air chain and never calls AirKorea; see [nation response](mobile-api.md#nation-air-recovery-2636).
 
+## Unified data.go.kr key source (#2618)
+
+Forecast/mid, warnings, UV V5/pollen V3, KASI and forecast-zone use only
+`DONGNAE_SECRET_KEYS` through `lib/dataGoKrKeys.js`. Legacy env names warn without
+values and never supply credentials. Empty/invalid lists fail before provider
+HTTP. Shared `dataGoKrRejection.js` classifies authorization/quota responses;
+requesters try each key once per logical request, and Manager retains its
+per-service cycle rotation. Warning quota now rotates instead of immediately
+ending with the first exhausted key. Other failures do not rotate. Coordinate-specific forecast and legacy past
+base-time requests also use the list; past requests start with the last successful
+key for that service and retain non-key retries. The past collector uses the same
+bounded request pump (`GATHER_REQUEST_CONCURRENCY`, default 101), stops new
+dispatch after auth/quota rejection, waits for in-flight requests, and rotates
+only unfinished base times. A DB save error ends that coordinate before rotation;
+an empty work list completes without HTTP, and a collector error without results
+returns through the callback. The update list reports its first failed grid after
+processing the remaining coordinates.
+An empty life-index list completes its public callback with a sanitized error.
+
+UV/pollen preserve issuance/pagination and no partial saves; KASI preserves
+allKeysRejected stopping; forecast-zone keeps bounded transient retries and
+logs only the key index. Its existing endpoint availability is unverified.
+Health-day remains removed. AirKorea and opt-in ASOS retain separate settings.
+See [configuration](../../server/CONFIGURATION.md) and the
+[migration runbook](../operations/data-go-kr-keys.md). This is repository behavior,
+not evidence of deployment or successful gather-host runs.
+
 ## MFDS food-poisoning forecast recovery (#2600)
 
 MFDS batch completion has a 30-second write deadline so a missing Mongo callback cannot hold the serial gather queue indefinitely. Late callbacks are ignored; issued writes may still complete. Queued time identifies the slot; response reception time validates publication and dates.

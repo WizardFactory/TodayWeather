@@ -425,6 +425,22 @@ provenance, plus degraded station-storage failures. It does not connect to Mongo
 or production, test server-side timeout enforcement, or establish production recovery.
 CI runs both commands on Node 16.20.2 and 22.22.2.
 
+## Unified data.go.kr keys (#2618)
+
+`data-go-kr-keys.test.js` covers list parsing, ignored legacy fields, sanitized
+startup warnings and UV/pollen/KASI/warning/forecast-zone auth/quota rotation,
+exhaustion, empty lists and non-key errors. It is selected by `test:offline`.
+`data-go-kr-keys-smoke.js` uses the real `request` library over loopback HTTP
+(20 requests) to check exact key encoding, provider XML quota errors, response
+contracts and bounded success/exhaustion. Run it separately with `request` and
+`async` in the isolated dependencies. Existing `gather-quota-smoke.js` verifies
+Manager/collector cycles on 2,032 grids plus mounted current/shortest/short/past entrypoint success and exhaustion (16 additional HTTP requests). Review regressions
+also cover DB errors concurrent with quota rejection, empty/resultless callback
+paths, bounded past dispatch and successful-key reuse across coordinates. The
+HTTP smoke checks multi-time rotation with two in-flight slots, seven writes per
+coordinate, no repeated successful time, and DB-error priority. These are synthetic integrations; live
+gather acceptance belongs to the [operator runbook](../../../docs/operations/data-go-kr-keys.md).
+
 ## Food-poisoning forecast recovery (#2600)
 
 `food-poisoning.test.js` uses a recorded MFDS response and isolated collaborators to verify grades, KST dates, regional matching, bounded schedules and optional-read failures. `food-poisoning-route.test.js` executes the actual Express coordinate middleware for both domestic DB versions, with provider/model boundaries isolated. These are included in `test:offline`; run it with `TZ=UTC` for the date-bound route harness.

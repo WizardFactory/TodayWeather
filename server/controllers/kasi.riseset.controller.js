@@ -7,6 +7,8 @@
 var async = require('async');
 var req = require('request');
 var config = require('../config/config');
+var keyList = require('../lib/dataGoKrKeys');
+var rejection = require('../lib/dataGoKrRejection');
 
 var kmaTimeLib = require('../lib/kmaTimeLib');
 var KasiRiseSet = require('../models/modelKasiRiseSet');
@@ -26,54 +28,12 @@ var dnscache = require('dnscache')({
 function kasiRiseSet() {
 }
 
-// data.go.kr authorization failures: access denied, request limit, unregistered, expired, unregistered IP.
-var AUTH_REASON_CODES = ['20', '22', '30', '31', '32'];
-
 kasiRiseSet._keyIndex = 0;
-
-/**
- * data.go.kr keys with a possible rise/set subscription (#2587): normal, test_normal, then the
- * forecast key list. On 2026-09-26 the deployed normal/test_normal key had expired for KASI
- * and one forecast key was approved.
- * @returns {Array} configured keys
- */
-kasiRiseSet._getServiceKeys = function () {
-    var keys = [];
-    var candidates = [config.keyString.normal, config.keyString.test_normal];
-    try {
-        candidates = candidates.concat(JSON.parse(config.keyString.dongnae_forecast_keys));
-    }
-    catch (err) {
-        log.warn('kasi rise set - invalid forecast key list');
-    }
-    candidates.forEach(function (key) {
-        if (kasiRiseSet._isUsableKey(key) && keys.indexOf(key) === -1) {
-            keys.push(key);
-        }
-    });
-    return keys;
-};
-
-/**
- * Skip unset defaults ('You have to set ...', '["key1","key2"]'); data.go.kr keys are much longer.
- * @param key
- * @returns {boolean}
- */
-kasiRiseSet._isUsableKey = function (key) {
-    return typeof key === 'string' && key.length >= 20 && key.indexOf('You have to set') !== 0;
-};
-
+kasiRiseSet._getServiceKeys = function () { return keyList.fromConfig(config.keyString); };
 kasiRiseSet._getServiceKey = function () {
     var keys = this._getServiceKeys();
-    if (keys.length === 0) {
-        return config.keyString.normal;
-    }
-    return keys[this._keyIndex % keys.length];
+    return keys.length ? keyList.encode(keys[this._keyIndex % keys.length]) : '';
 };
-
-/**
- * @returns {boolean} false if there is no other key
- */
 
 kasiRiseSet._makeLocationApiUrl = function (geocode, date) {
     var url = kasiUrl+'/'+apiLocationName+'?';
@@ -135,11 +95,10 @@ kasiRiseSet._requestRiseSetFromApi = function (url, callback) {
             return callback(err);
         }
         var reasonCode = self._getReasonCode(body);
-        if (response.statusCode >= 400 || AUTH_REASON_CODES.indexOf(reasonCode) !== -1) {
+        if (response.statusCode >= 400 || (rejection.isAuth(response.statusCode, reasonCode) || rejection.isQuota(response.statusCode, reasonCode))) {
             err = new Error(self._describeUrl(url)+" statusCode="+response.statusCode+" reasonCode="+reasonCode);
             err.statusCode = response.statusCode;
-            err.isAuthError = response.statusCode === 401 || response.statusCode === 403 ||
-                AUTH_REASON_CODES.indexOf(reasonCode) !== -1;
+            err.isAuthError = (rejection.isAuth(response.statusCode, reasonCode) || rejection.isQuota(response.statusCode, reasonCode));
             return callback(err);
         }
         callback(err, body);
@@ -154,7 +113,11 @@ kasiRiseSet._requestRiseSetFromApi = function (url, callback) {
  */
 kasiRiseSet._requestWithKeyRotation = function (makeUrl, callback) {
     var self = this;
-    var keyCount = Math.max(self._getServiceKeys().length, 1);
+    if (!self._getServiceKeys().length) {
+        var missing = new Error('No configured data.go.kr keys'); missing.allKeysRejected = true;
+        return callback(missing);
+    }
+    var keyCount = self._getServiceKeys().length;
     var startIndex = self._keyIndex % keyCount;
     var offset = 0;
 
