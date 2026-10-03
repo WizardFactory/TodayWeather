@@ -66,6 +66,7 @@ function managerWith(policy, overrides, globals) {
         '../config/gather': policy,
         '../lib/forecastTraffic': require('../../lib/forecastTraffic'),
         '../lib/currentGridCollection': require('../../lib/currentGridCollection'),
+        '../lib/forecastGridCollection': require('../../lib/forecastGridCollection'),
         '../lib/foodPoisoning': require('../../lib/foodPoisoning'),
         async: require('async')
     }, overrides), globals);
@@ -80,6 +81,7 @@ test('unset environment reproduces master literals', () => {
         townShort: 70, townShortest: 70, townCurrent: 70, invalidCurrent: 50,
         midForecast: 70, midLand: 70, midTemp: 70, midSea: 70
     });
+    assert.strictEqual(p.forecastDeadlineMs,540000);
     assert.strictEqual(p.retryDelayMs, 0);
     assert.deepStrictEqual(p.tasks, {past: true, airForecast: true});
     assert.deepStrictEqual(p.pastCondition, {retryCount: 10, retryDivisor: 0});
@@ -114,6 +116,7 @@ test('divisor retry equals the host updateList.length/20 when integral, else rou
 
 test('invalid values fail at load instead of silently reverting to defaults', () => {
     [
+        ['GATHER_FORECAST_DEADLINE_MS','0'], ['GATHER_FORECAST_DEADLINE_MS','2147483648'],
         ['GATHER_TOWN_RETRY', '0'], ['GATHER_TOWN_RETRY', 'abc'], ['GATHER_TOWN_RETRY', '1.5'],
         // Above MAX_SAFE_INTEGER the decrement is lost (1e20 - 1 === 1e20): the retry loop would never end.
         ['GATHER_TOWN_RETRY', '9007199254740992'], ['GATHER_MID_RETRY', '99999999999999999999'],
@@ -129,11 +132,14 @@ test('invalid values fail at load instead of silently reverting to defaults', ()
 
 test('town collectors pass the configured retry counts', () => {
     [gather.load({}), gather.load(PRODUCTION_ENV)].forEach(policy => {
-        const Manager = managerWith(policy, {'../models/town': {getCoord: cb => cb(null, [{mx: 60, my: 127}])}});
+        const empty={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,[])}}}};
+        const Manager = managerWith(policy, {'../models/town': {getCoord: cb => cb(null, [{mx: 60, my: 127}])},
+            '../models/kma/kma.town.short.model':empty,'../models/kma/kma.town.shortest.model':empty},
+            {setTimeout,clearTimeout,console:{log:()=>{}}});
         const m = Object.create(Manager.prototype);
         m.DATA_TYPE = {TOWN_SHORT: 's', TOWN_SHORTEST: 'st', TOWN_CURRENT: 'c'};
         const seen = {};
-        m._recursiveRequestData = (list, type, key, date, retry) => { seen[type] = retry; };
+        m._recursiveRequestData = (list, type, key, date, retry,invalid,cb) => { seen[type] = retry; if(cb)cb(new Error("Synthetic end")); };
         m.getTownShortData(9, 'k');
         m.getTownShortestData(9, 'k');
         m._currentCollection = {run: (slot, key) => {
@@ -150,9 +156,10 @@ test('invalid-current and mid collectors read their policy field', () => {
     const fields = [...src.matchAll(/self\._recursiveRequestData\(\w+, self\.DATA_TYPE\.(\w+), key, dateString, ([^,]+),/g)]
         .map(m => m[1] + '>' + m[2].replace(/^gatherPolicy\.retry\./, ''));
     assert.deepStrictEqual(fields, [
-        'TOWN_SHORT>townShort', 'TOWN_SHORTEST>townShortest', 'TOWN_CURRENT>invalidCurrent',
+        'TOWN_CURRENT>invalidCurrent',
         'MID_FORECAST>midForecast', 'MID_LAND>midLand', 'MID_TEMP>midTemp', 'MID_TEMP>midTemp', 'MID_SEA>midSea'
     ]);
+    assert.match(src, /short \? gatherPolicy\.retry\.townShort : gatherPolicy\.retry\.townShortest/);
     assert.match(src, /self\._recursiveRequestData\(list, self\.DATA_TYPE\.TOWN_CURRENT, suppliedKey, slot,\s*gatherPolicy\.retry\.townCurrent/);
 });
 

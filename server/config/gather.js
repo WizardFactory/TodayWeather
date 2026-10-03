@@ -51,6 +51,7 @@ function load(env) {
     var pastConditionRetryDivisor = integer(env, 'GATHER_PAST_CONDITION_RETRY_DIVISOR', 0, 0);
 
     return {
+        forecastDeadlineMs: integer(env, 'GATHER_FORECAST_DEADLINE_MS', 540000, 1, 2147483647),
         currentDeadlineMs: integer(env, 'GATHER_CURRENT_DEADLINE_MS', 540000, 1, 2147483647),
         retry: {
             townShort: townRetry,

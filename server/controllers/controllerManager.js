@@ -21,6 +21,9 @@ var convert = require('../utils/coordinate2xy');
 var convertGeocode = require('../utils/convertGeocode');
 
 var modelCurrent = require('../models/modelCurrent');
+var ForecastGridCollection = require('../lib/forecastGridCollection');
+var shortGridModel = require('../models/kma/kma.town.short.model');
+var shortestGridModel = require('../models/kma/kma.town.shortest.model');
 var modelShort = require('../models/modelShort');
 var modelShortest = require('../models/modelShortest');
 var modelMidForecast = require('../models/modelMidForecast');
@@ -230,8 +233,9 @@ Manager.prototype.compareDate = function(oldDate, newDate){
  *   save short data to DB.
  *   @param newData - only one town's data list.
  */
-Manager.prototype.saveShort = function(newData, callback){
+Manager.prototype.saveShort = function(newData, callback, control){
     var self = this;
+    if (control && control.cancelled) { return callback(new Error('Forecast collection cancelled')); }
 
     //log.info('S> save :', newData);
     var coord = {
@@ -247,6 +251,7 @@ Manager.prototype.saveShort = function(newData, callback){
     //log.info('S> db find :', coord);
     try{
         modelShort.find({mCoord: coord}, function(err, list){
+            if (control && control.cancelled) { return callback(new Error('Forecast collection cancelled')); }
             if(err){
                 log.error('S> fail to find db item :', coord);
                 if(callback){
@@ -272,6 +277,7 @@ Manager.prototype.saveShort = function(newData, callback){
             //log.info('found db item : ', list.length);
 
             list.forEach(function(dbShortList){
+                if (control && control.cancelled) { return; }
                 //log.info('S> coord :', dbShortList.mCoord.mx, dbShortList.mCoord.my);
                 //if (self.saveOnlyLastOne) {
                 //    dbShortList.shortData = newData;
@@ -290,6 +296,13 @@ Manager.prototype.saveShort = function(newData, callback){
                                 {date:newItem.date, time:newItem.time}
                             );
                             if(comparedDate === 0){
+                                if (control && control.product) {
+                                    newItem = ForecastGridCollection.preserveOptional(newItem, dbShortList.shortData[i], 'short', control.slot);
+                                    if (typeof dbShortList.shortData.set === 'function') { dbShortList.shortData.set(i, newItem); }
+                                    else { dbShortList.shortData[i] = newItem; }
+                                    isNew = 0;
+                                    break;
+                                }
                                 //log.info('S> over write :', newItem);
                                 //dbShortList.shortData[i] = newItem;
                                 isNew = 0;
@@ -630,8 +643,9 @@ Manager.prototype._checkInvalidt1h = function(currentData){
  *   save shortest data to DB.
  *   @param newData - only one town's data list.
  */
-Manager.prototype.saveShortest = function(newData, callback){
+Manager.prototype.saveShortest = function(newData, callback, control){
     var self = this;
+    if (control && control.cancelled) { return callback(new Error('Forecast collection cancelled')); }
 
     //log.info('ST> save :', newData);
     try{
@@ -645,6 +659,7 @@ Manager.prototype.saveShortest = function(newData, callback){
         log.verbose('ST> pubDate :', pubDate);
 
         modelShortest.find({mCoord: coord}, function(err, list){
+            if (control && control.cancelled) { return callback(new Error('Forecast collection cancelled')); }
             if(err){
                 log.error('ST> fail to find db item');
                 if (callback) {
@@ -671,6 +686,7 @@ Manager.prototype.saveShortest = function(newData, callback){
             log.silly('ST> found db item : ', list.length);
 
             list.forEach(function(dbShortestList){
+                if (control && control.cancelled) { return; }
                 //log.info('ST> coord :', dbShortestList.mCoord.mx, dbShortestList.mCoord.my);
                 //if (self.saveOnlyLastOne) {
                 //    dbShortestList.shortestData = newData;
@@ -689,6 +705,13 @@ Manager.prototype.saveShortest = function(newData, callback){
                                 {date:newItem.date, time:newItem.time}
                             );
                             if(comparedDate === 0) {
+                                if (control && control.product) {
+                                    newItem = ForecastGridCollection.preserveOptional(newItem, dbShortestList.shortestData[i], 'shortest', control.slot);
+                                    if (typeof dbShortestList.shortestData.set === 'function') { dbShortestList.shortestData.set(i, newItem); }
+                                    else { dbShortestList.shortestData[i] = newItem; }
+                                    isNew = 0;
+                                    break;
+                                }
                                 //log.info('ST> over write :', newItem);
                                 if (newItem.pty !== -1) {
                                     dbShortestList.shortestData[i].pty = newItem.pty;
@@ -1057,6 +1080,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     var keyCount = dongnae_keys.length;
     var keyIndex = (forecastKeyIndex[service] || 0) % keyCount;
     var rejectedCount = 0;
+    var forecastWriteError;
     var now = self._collectionNow || Date.now;
     var emit = function(record) { console.log(JSON.stringify(record)); };
     self._forecastTraffic = self._forecastTraffic || new ForecastTraffic(emit);
@@ -1068,6 +1092,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     var attempts = {};
     collectInfo.onPageRequest = function() {
         var startedAt = now();
+        if (control && control.product) { control.httpAttempts++; }
         var measurement = self._forecastTraffic.attempt(dataTypeName, keyIndex, startedAt);
         attempts[measurement.kstHour] = (attempts[measurement.kstHour] || 0) + 1;
         return startedAt;
@@ -1077,6 +1102,11 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     };
     if (dongnae_keys.length) {
         key = dongnae_keys[keyIndex];
+    }
+    if (control && control.product) {
+        collectInfo.validateForecastItems = function(items, index) {
+            return ForecastGridCollection.rawItems(items, control.product, control.slot, srcList[index]);
+        };
     }
     collectInfo.concurrency = gatherPolicy.requestConcurrency;
     if (cycle.retrying) {
@@ -1104,6 +1134,11 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
             function(item, cb) {
                 if (control && control.cancelled) { return cb(new Error('Current collection cancelled')); }
                 if (item.isCompleted) {
+                    if (control && control.product && !ForecastGridCollection.batch(control.product, control.slot, item.mCoord, item.data)) {
+                        // A parser success or complete transport page count cannot certify forecast slots.
+                        forecastWriteError = forecastWriteError || new Error('Incomplete or mismatched forecast batch');
+                        return cb();
+                    }
                     self.getSaveFunc(dataType).call(self, item.data, function (err, invalid) {
                         if (control && control.cancelled) { return cb(new Error('Current collection cancelled')); }
                         if(invalid != undefined && invalid == true){
@@ -1112,8 +1147,16 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                                 invalidList.push(item.mCoord);
                             }
                         }
+                        if (err && control && control.product) {
+                            forecastWriteError = forecastWriteError || err;
+                            return cb();
+                        }
                         cb(err);
                     }, control);
+                }
+                else if (item.invalidForecast && control && control.product) {
+                    forecastWriteError = forecastWriteError || new Error('Invalid forecast content remains pending');
+                    cb();
                 }
                 else if (item.rejected) {
                     // data.go.kr rejected this request itself (4xx); a retry fails the same way.
@@ -1129,6 +1172,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
             function (err, results) {
                 if (control && control.cancelled) { return callback && callback(new Error('Current collection cancelled')); }
                 log.info(dataTypeName + ' saved data');
+                if (forecastWriteError) { cycle.forecastError = cycle.forecastError || forecastWriteError; }
                 if (err) {
                     log.error(err);
                 }
@@ -1179,7 +1223,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 }
                 log.info('received All ', dataTypeName, ' of ', dateString);
                 if (callback) {
-                    callback(err, invalidList);
+                    callback(err || cycle.forecastError, invalidList);
                 }
             });
         //log.info('ST> save OK');
@@ -1448,79 +1492,37 @@ Manager.prototype.getCurrentQueryTime = function (baseTime) {
     return dateString;
 };
 
-Manager.prototype.getTownShortData = function(baseTime, key, callback){
-    var self = this;
-    var meta = {};
-    meta.fName = 'getTownShortData';
-    //var testListTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
-
-    var dateString = self.getShortQueryTime(baseTime);
-
-    log.info('S> +++ GET SHORT INFO : ', dateString);
-
-    town.getCoord(function(err, listTownDb){
-        if(err){
-            if(callback){
-                callback(err);
-            }
-            else {
-                log.error(err);
-            }
-            return this;
-        }
-
-        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_SHORT, key, dateString, gatherPolicy.retry.townShort, undefined, function (err, results) {
-            log.info('S> save OK');
-            if (callback) {
-                return callback(err, results);
-            }
-            if (err)  {
-                return log.error(err);
+// Keep forecast timing/cleanup unchanged; only exact completed grids skip HTTP.
+Manager.prototype._getTownForecastData = function(product, dateString, key, callback) {
+    var self = this, short = product === 'short';
+    self._forecastCollections = self._forecastCollections || {};
+    if (!self._forecastCollections[product]) {
+        self._forecastCollections[product] = new ForecastGridCollection({
+            product: product,
+            model: config.db.version === '1.0' ? (short ? modelShort : modelShortest) : (short ? shortGridModel : shortestGridModel),
+            version: config.db.version,
+            collectTimeoutMs: gatherPolicy.forecastDeadlineMs,
+            coords: function(cb) { town.getCoord(cb); },
+            emit: function(record) { console.log(JSON.stringify(record)); },
+            collect: function(list, slot, suppliedKey, cb, control) {
+                self._recursiveRequestData(list, short ? self.DATA_TYPE.TOWN_SHORT : self.DATA_TYPE.TOWN_SHORTEST,
+                    suppliedKey, slot, short ? gatherPolicy.retry.townShort : gatherPolicy.retry.townShortest,
+                    undefined, cb, {keysTried: 1, retrying: false, control: control});
             }
         });
-
-        return this;
+    }
+    self._forecastCollections[product].run(dateString, key, function(err, results) {
+        if (callback) { return callback(err, results); }
+        if (err) { log.error(err); }
     });
-
-    kmaTownShort.remove(new Date());
-    return this;
+    (short ? kmaTownShort : kmaTownShortest).remove(new Date());
+    return self;
 };
-
-Manager.prototype.getTownShortestData = function(baseTime, key, callback){
-    var self = this;
-
-    var dateString = self.getShortestQueryTime(baseTime);
-
-    log.info('ST> +++ GET SHORTEST INFO : ', dateString);
-
-    /***************************************************/
-
-    town.getCoord(function(err, listTownDb){
-        if(err){
-            if (callback) {
-                callback(err);
-            }
-            else {
-                log.error(err);
-            }
-            return this;
-        }
-        //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
-        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, gatherPolicy.retry.townShortest, undefined, function (err, results) {
-            log.info('ST> save OK');
-            if (callback) {
-                return callback(err, results);
-            }
-            if (err)  {
-                return log.error(err);
-            }
-        });
-
-        return this;
-    });
-
-    kmaTownShortest.remove(new Date());
-    return this;
+Manager.prototype.getTownShortData = function(baseTime, key, callback) {
+    return this._getTownForecastData('short', this.getShortQueryTime(baseTime), key, callback);
+};
+Manager.prototype.getTownShortestData = function(baseTime, key, callback) {
+    return this._getTownForecastData('shortest', this.getShortestQueryTime(baseTime), key, callback);
 };
 
 Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
@@ -2138,21 +2140,21 @@ Manager.prototype.getSaveFunc = function(value) {
                 }
             };
         case this.DATA_TYPE.TOWN_SHORTEST:
-            return function saveShortest(newData, callback) {
+            return function saveShortest(newData, callback, control) {
                 if(config.db.version === '1.0') {
-                    this.saveShortest(newData, callback);
+                    this.saveShortest(newData, callback, control);
                 }
                 else if(config.db.version === '2.0'){
-                    kmaTownShortest.saveShortest(newData, callback);
+                    kmaTownShortest.saveShortest(newData, callback, control);
                 }
             };
         case this.DATA_TYPE.TOWN_SHORT:
-            return function saveShort(newData, callback) {
+            return function saveShort(newData, callback, control) {
                 if(config.db.version === '1.0') {
-                    this.saveShort(newData, callback);
+                    this.saveShort(newData, callback, control);
                 }
                 else if(config.db.version === '2.0'){
-                    kmaTownShort.saveShort(newData, callback);
+                    kmaTownShort.saveShort(newData, callback, control);
                 }
             };
         case this.DATA_TYPE.MID_FORECAST:

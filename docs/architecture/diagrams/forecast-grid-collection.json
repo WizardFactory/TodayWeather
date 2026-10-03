@@ -1,0 +1,211 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Forecast grid collection design (#2676)",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/forecast-grid-collection.html"
+  },
+  "lanes": [
+    {
+      "id": "control",
+      "label": "Forecast publication collection"
+    },
+    {
+      "id": "failure",
+      "label": "Failure and retry eligibility",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "poll",
+    "coverage",
+    "pending",
+    "fetch",
+    "save",
+    "readback",
+    "done"
+  ],
+  "nodes": [
+    {
+      "id": "poll",
+      "lane": "control",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Forecast poll",
+      "sublabel": "short / ultra-short",
+      "width": 140
+    },
+    {
+      "id": "coverage",
+      "lane": "control",
+      "col": 1,
+      "type": "database",
+      "label": "Read grid coverage",
+      "sublabel": "exact publication / product",
+      "width": 140
+    },
+    {
+      "id": "pending",
+      "lane": "control",
+      "col": 2,
+      "type": "security",
+      "label": "Check full forecast",
+      "sublabel": "horizon and categories",
+      "width": 140
+    },
+    {
+      "id": "fetch",
+      "lane": "control",
+      "col": 3,
+      "type": "cloud",
+      "label": "Bounded grid walk",
+      "sublabel": "pending; pages / retries",
+      "width": 140
+    },
+    {
+      "id": "save",
+      "lane": "control",
+      "col": 4,
+      "type": "database",
+      "label": "Write forecast slots",
+      "sublabel": "batch check; expiry fence",
+      "width": 140
+    },
+    {
+      "id": "readback",
+      "lane": "control",
+      "col": 5,
+      "type": "database",
+      "label": "Verify coverage",
+      "sublabel": "pending is an error",
+      "width": 140
+    },
+    {
+      "id": "done",
+      "lane": "control",
+      "col": 5,
+      "type": "backend",
+      "label": "Collection result",
+      "sublabel": "UTC / KST metrics",
+      "width": 140,
+      "yOffset": 100
+    },
+    {
+      "id": "quota",
+      "lane": "failure",
+      "col": 3,
+      "type": "security",
+      "label": "Collection stop",
+      "sublabel": "key rejection / deadline",
+      "width": 140
+    },
+    {
+      "id": "error",
+      "lane": "failure",
+      "col": 1,
+      "type": "security",
+      "label": "Read failed",
+      "sublabel": "stop without HTTP",
+      "width": 140
+    },
+    {
+      "id": "skip",
+      "lane": "control",
+      "col": 2,
+      "type": "backend",
+      "label": "Complete result",
+      "sublabel": "no HTTP needed",
+      "width": 140,
+      "yOffset": 100
+    }
+  ],
+  "edges": [
+    {
+      "id": "e0",
+      "from": "poll",
+      "to": "coverage",
+      "label": "join"
+    },
+    {
+      "id": "e1",
+      "from": "coverage",
+      "to": "pending",
+      "label": "valid read"
+    },
+    {
+      "id": "e2",
+      "from": "coverage",
+      "to": "error",
+      "label": "DB error"
+    },
+    {
+      "id": "e3",
+      "from": "pending",
+      "to": "fetch",
+      "label": "eligible"
+    },
+    {
+      "id": "e4",
+      "from": "pending",
+      "to": "skip",
+      "label": "all complete",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "e5",
+      "from": "fetch",
+      "to": "save",
+      "label": "received"
+    },
+    {
+      "id": "e6",
+      "from": "save",
+      "to": "readback",
+      "label": "saved"
+    },
+    {
+      "id": "e7",
+      "from": "readback",
+      "to": "done",
+      "label": "coverage",
+      "toSide": "top"
+    },
+    {
+      "id": "e8",
+      "from": "fetch",
+      "to": "quota",
+      "label": "quota / deadline"
+    },
+    {
+      "id": "e9",
+      "from": "quota",
+      "to": "done",
+      "label": "report pending",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Exact coverage",
+      "items": [
+        "DB1 forecast arrays / DB2 per-slot forecasts",
+        "Six ultra-short hours; short hourly and extension-day slots",
+        "Conditional WAV and issuance-specific TMN/TMX; valid signed values"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Lifecycle and limits",
+      "items": [
+        "Same product/publication overlaps join one run",
+        "Nine-minute forecast deadline fences new HTTP and writes",
+        "Readback errors remain incomplete; issued Mongo writes may settle late",
+        "No production recovery, quota entitlement or server2 change claimed"
+      ]
+    }
+  ]
+}

@@ -15,17 +15,65 @@ collects it. Missing data/core fields and failed writes remain eligible; optiona
 partial rows use the bounded repair policy below. This is a source/fixture
 budget, not measured production usage or a hard quota cap.
 
-Short/shortest schedules remain unchanged: their baseline first-pass grid fetches
-are 24 × N and 96 × N respectively. Short continuation pages, retries and other
-consumers add requests. Preserve the [#2604 bounded concurrency/retry budget](gather-runtime-policy.md#quota-and-key-rotation-2604).
+Short/ultra-short schedules remain unchanged. With #2676, persisted exact-publication
+forecast coverage reduces their ideal first-pass walks from 24N + 96N to 8N + 24N
+per day (eight short publications and 24 ultra-short publications). For 2,033 grids,
+forecast first-pass requests fall from 243,960 to 65,056 (73.33% fewer). This assumes
+one complete first walk per publication, one process, successful persistence and
+one page per grid. Actual short responses can require multiple pages: with two
+pages on every short grid the forecast HTTP budget becomes 16N + 24N = 40N,
+or 81,320 at N=2,033. Retries, pending-grid repairs, startup/manual older publications
+and multiple processes add requests. Preserve the [#2604 bounded concurrency/retry
+budget](gather-runtime-policy.md#quota-and-key-rotation-2604).
 
-Summed current/short/shortest first-pass grid traffic after successful filtering is
-144 × N/day: 24N + 24N + 96N, or 292,608 for 2,032 grids. Before filtering it was
-264N, or 536,448. This aggregate reduction is 45.45%; 83.3% applies to current alone.
-It does not establish which operations or consumers share an approved quota.
-Persisted partial wind/REH rows deliberately stay pending; a writer's successful
-callback is not a declaration of complete observations. Measure their frequency
-and later repair before relying on the ideal complete-publication budget.
+Summed current/short/ultra-short ideal first-pass traffic becomes 56N/day:
+24N + 8N + 24N, or 113,848 for 2,033 grids, compared with 264N = 536,712 before
+all filtering (78.79% fewer). Pages and repairs make this a conditional lower budget,
+not measured production usage or a hard cap. It does not establish approved capacity
+or which operations/consumers share quota. Current optional-field repair remains
+separate from forecast completion.
+
+### Forecast completion (#2676)
+
+[Forecast flow](../architecture/diagrams/forecast-grid-collection.html) ·
+[Editable design](../architecture/diagrams/forecast-grid-collection.json).
+
+The [official service and September 2026 guide](https://www.data.go.kr/data/15084084/openapi.do)
+(read 2026-10-03; guide2609 dated2026-09-28) define six ultra-short hours after
+publication and short forecasts through +3 KST days for02/05/08/11/14, through +4
+for17/20/23. Short slots are hourly before the extension day and three-hourly
+on that final day. Coverage requires every expected slot, finite product fields,
+and exact product/publication/coordinate. Short requires temperature, sky, humidity,
+precipitation type/probability/amount/snow and wind fields. TMN06/TMX15 are required
+only when supplied for that issuance (today's TMN only at02; today's TMX through11).
+Ultra-short requires temperature, sky, humidity, precipitation type/amount,
+wind and lightning; POP is required since2026-06-23 11KST. WAV remains conditional.
+Valid zero and negative temperature/wind/lightning are retained; nonfinite,
+schema-sentinel and provider +/-900 missing values remain pending. Existing
+precipitation category conversion and API output are unchanged.
+
+A complete callback/page count does not prove a complete forecast. Incoming batches
+must match the requested publication and grid and cover all required slots/fields
+before writer admission. DB1 controlled writes replace overlapping rows completely,
+preserving older outside slots; they do not inherit missing fields from prior
+publications. DB1 uses the existing top-level publication string and arrays;
+DB2 uses exact BSON publication and per-slot time. No new schema marker/history is
+added. Pre-existing DB1 arrays have no per-field publication provenance to reconstruct;
+the new collector validates all newly admitted batches before relabeling. A newer
+publication never suppresses an older requested one; overwritten old forecasts
+can be pending again for explicitly requested old publications. Normal polling is
+unchanged and no historical backfill is scheduled.
+
+After writes, persisted coverage is read again, including failed collection outcomes.
+Failed writes and coverage reads cannot become a successful result. Same-product,
+same-publication overlaps share one run; different publications receive busy and
+stay eligible for the next poll. Products have separate guards. Forecast reads
+have three-second wait bounds/maxTimeMS2000. `GATHER_FORECAST_DEADLINE_MS` defaults
+to540000ms and aborts active HTTP, clears retries, fences new writer admission and
+releases only its own run. Late callbacks cannot change a newer run. Already issued
+Mongo operations can still settle at their original identity; this is not a
+transaction/distributed lock or Mongo cancellation. Current-observation behavior
+and its separate repair allowance are unchanged.
 
 ### Optional-field repair policy
 
@@ -81,6 +129,11 @@ successful info records.
   differ from persisted coverage.
 - first-quota: UTC response time, KST hour, requestKstDay, product/key index,
   daily-quota/per-second/unclassified-429 reason and current cooldown action.
+- forecast-coverage: UTC time, product/publication, before/after stage,
+  expected/complete/pending grids and actual httpAttempts.
+- forecast-collection: per-product/publication terminal outcome, expected/complete/
+  pending and total httpAttempts across pages/retries/key rotations. Read/deadline
+  failures report unknown coverage conservatively pending, never complete.
 - current-collection-stop: UTC time, publication and static `deadline` reason;
   this is a terminated run, not proof that coverage was recovered.
 
@@ -102,8 +155,10 @@ approval. Before an approved action:
 
 1. Check actual deployed Manager/collector and runtime policy; preserve local
    overrides and backups. Deploy both new helpers, Manager and collector together.
+   Include forecastGridCollection and both forecast writers for #2676.
    No dependency upgrade/schema migration is required.
-2. Verify approved current capacity covers 24 × live valid-grid count plus bounded
+2. Verify approved capacity covers current24N, short8N and ultra-short24N
+   first-pass walks, measured pages and bounded
    retries, other usage and a measured margin. Otherwise obtain an authorized
    entitlement change or reviewed provider design; do not silently drop grids.
 3. Run isolated tests below; inspect process count, time basis and log retention.
@@ -119,7 +174,11 @@ approval. Before an approved action:
    on successive days. Check full-grid coverage, partial writes, rejection onset
    and measured HTTP budgets. Report historical hourly/daily gaps separately.
    PM2 online, HTTP 200 or station enrichment does not establish recovery.
-5. Check the public API's yesterday comparison against stored observations.
+5. For #2676, observe successive short and ultra-short publications across all
+   expected grids/slots, stored values and sanitized per-publication counts.
+   Repeated complete polls must send zero forecast HTTP; gaps must stay pending.
+   Verify the public weather publication/output before reporting production recovery.
+6. Check the public API's yesterday comparison against stored observations.
    Merged #2656/#2665 response fixes do not prove primary collection recovery.
 
 Rollback the scoped source change through the existing approved deployment
@@ -132,3 +191,14 @@ Regression uses real Mongoose 5.1.2 query construction without a DB connection.
 Separate HTTP/Mongo smoke uses synthetic responses, actual gather route/Manager/
 collector and temporary Mongo. Mongo 7 requires Mongoose 5.13.23's driver;
 the smoke adapter does not upgrade deployment or establish provider entitlement.
+
+
+Forecast smoke uses **actual Mongoose5.1.2** with compatible temporary Mongo4.4
+on Node16.20.2 (no newer driver substitution). It exercises all2,033 synthetic grids
+for both products and DB versions with full stored readback, repeat/recreated Manager
+zero HTTP, incomplete-grid repair and measured continuation/retry attempts. See
+[reproducible forecast commands](../../server/test/offline/README.md#forecast-grid-collection-2676).
+This synthetic check establishes implementation behavior, not provider entitlement
+or production recovery. Deployment and the AC4 production readback remain pending.
+
+Forecast content-validation failures are non-retryable within the active run and remain pending for a later poll; transport/page failures keep the existing bounded retry policy. Writer errors are retained while other grids finish their retries/key rotation. DB2 coverage combines the exact publication with an expected `fcsDate` horizon range using the existing index. DB1 slot replacement preserves previously valid, conditionally absent same-day TMN/TMX and optional WAV; required fields are always replaced from the requested publication.
