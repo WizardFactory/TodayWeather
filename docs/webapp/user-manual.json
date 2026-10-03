@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather PWA user manual",
-  "date": "2026-10-01",
+  "date": "2026-10-03",
   "pages": [
     {
       "scenario": "S1",
@@ -92,6 +92,32 @@
       ],
       "expected": "Generated tokens are deterministic. The build contains the hashed Pretendard font and its OFL license.",
       "failure": "A missing browser, Python package or device is a prerequisite failure, not a passing verification."
+    },
+    {
+      "scenario": "2598-S1/S3",
+      "title": "Read hourly rain and snow",
+      "image": "precipitation-hourly.png",
+      "intro": "The forecast amount covers the hours reported by the weather service. Rain and snow can cover different periods.",
+      "steps": [
+        "Open Hourly and read the rain/snow forecast cards.",
+        "A six-hour amount is labelled 6 hours. About marks an approximate sum; exact hourly rain has no approximation marker.",
+        "When no forecast hours are covered, read the rain probability instead."
+      ],
+      "expected": "The screenshot shows exact 2 mm hourly rain, 6-hour rain and snow, about 40.5 mm over 3 hours, and 65% probability.",
+      "failure": "Older responses keep 3-hour forecast labels and approximate shortest labels. Missing values are not invented."
+    },
+    {
+      "scenario": "2598-S2/S4",
+      "title": "Read daily forecast coverage",
+      "image": "precipitation-daily.png",
+      "intro": "Daily forecast amounts show the hours covered by the supplied data. A full day covers 24 hours.",
+      "steps": [
+        "Open Daily and read the forecast period next to each amount.",
+        "About marks approximate rain or snow. Partial-day totals show their supplied covered hours.",
+        "After saving weather, an offline reload keeps these same labels."
+      ],
+      "expected": "The screenshot shows 5.5 mm rain and about 10 mm snow over 24 hours.",
+      "failure": "Older responses without period fields keep the unqualified forecast label. A missing amount shows probability when supplied."
     }
   ]
 }

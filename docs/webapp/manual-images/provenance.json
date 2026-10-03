@@ -32,6 +32,22 @@
     {
       "file": "confirmation.png",
       "sha256": "daa2b5f2938b03e4bc6c657d549fd89f43bd7e0044a35e5951276ca866fe3e6f"
+    },
+    {
+      "file": "precipitation-hourly.png",
+      "sha256": "51bdd64d41cb73b96726d907451e7d4632fd797fdc11b3ef8779044833bc851a",
+      "date": "2026-10-03",
+      "browser": "145.0.7632.6",
+      "fixture": "scripts/verification/precipitation-manual-capture.mjs",
+      "scenario": "2598-S1/S3"
+    },
+    {
+      "file": "precipitation-daily.png",
+      "sha256": "d20111336f938208c76f4faf294096547966ed1e7c8e4ab6d46c091de1f30480",
+      "date": "2026-10-03",
+      "browser": "145.0.7632.6",
+      "fixture": "scripts/verification/precipitation-manual-capture.mjs",
+      "scenario": "2598-S2"
     }
   ]
 }

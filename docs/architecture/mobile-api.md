@@ -174,6 +174,8 @@ Response fields (additive; existing names and meanings of the amounts are kept):
 | `shortest[]` | `pop` | Hourly probability of precipitation, % (#2620); `-1` when the row had no valid `POP`, absent on rows stored before #2620. Not copied to `current` |
 | `midData.dailyData[]` | `r06`, `s06`, `r06Hours`, `s06Hours`, `r06Approx`, `s06Approx` | Day totals; `Hours` is 24 for a fully covered day |
 
+The web PWA consumes these period/approximation fields (#2598). Observed `rn1` keeps its own period; zero-hour forecast placeholders show probability without an amount. Older responses keep 3-hour short and unqualified daily forecast labels. See [web precipitation display](web-client.md#precipitation-and-snow-d45).
+
 Installed apps print `rn1`, then `s06`, then `r06` when truthy (`client/www/js/app.js`, `controller.forecastctrl.js`); they now show slot totals instead of halves or samples. The days beyond the 3-hour template come from daily snapshots and carry no amounts, as before. The precipitation branch of `_convertWeatherData` still passes `toWindUnit` (unchanged, see [client data contracts](../rewrite/client-data-contracts.md#missing-values-time-and-units-are-compatibility-rules)). Checks: `precipitation.test.js` and `precipitation-smoke.js` under `server/test/offline`.
 
 ## World-weather API middleware in order

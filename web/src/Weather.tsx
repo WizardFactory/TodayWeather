@@ -56,7 +56,13 @@ import {
   pollutantUnit,
   standardName,
 } from "./air";
-import { amount, approxAmount, weatherStaleTime, windText } from "./format";
+import {
+  amount,
+  precipitationAmount,
+  forecastAmount,
+  weatherStaleTime,
+  windText,
+} from "./format";
 import { coreText, t, useLanguage } from "./i18n";
 import { placeArea, placeName } from "./places";
 import { HourlyChart, DailyChart } from "./Charts";
@@ -68,10 +74,7 @@ function rainText(p: Point, unit: string): string {
     return p.rainProbability === null
       ? t("rain.none")
       : t("rain.probability", { value: percent(p.rainProbability) });
-  const value =
-    p.precipitationBasis === "approx"
-      ? approxAmount(p.precipitation, unit)
-      : `${amount(p.precipitation, unit)} ${unit}`;
+  const value = precipitationAmount(p, unit);
   return t("rain.amount", { value, suffix: rainSuffix(p) });
 }
 function rainSuffix(p: Point): string {
@@ -427,13 +430,22 @@ function WeatherDetails({
   if (uv) details.push([Sun, t("detail.uv"), uv]);
   const pollen = today || now;
   const pollenText = (grade: number) =>
-    [t("pollen.low"), t("pollen.moderate"), t("pollen.high"), t("pollen.veryHigh")][grade];
+    [
+      t("pollen.low"),
+      t("pollen.moderate"),
+      t("pollen.high"),
+      t("pollen.veryHigh"),
+    ][grade];
   if (pollen.pollenOak !== undefined)
     details.push([Sun, t("detail.pollenOak"), pollenText(pollen.pollenOak)]);
   if (pollen.pollenPine !== undefined)
     details.push([Sun, t("detail.pollenPine"), pollenText(pollen.pollenPine)]);
   if (pollen.pollenWeeds !== undefined)
-    details.push([Sun, t("detail.pollenWeeds"), pollenText(pollen.pollenWeeds)]);
+    details.push([
+      Sun,
+      t("detail.pollenWeeds"),
+      pollenText(pollen.pollenWeeds),
+    ]);
   if (now.discomfort)
     details.push([Thermometer, t("detail.discomfort"), now.discomfort]);
   return (
@@ -607,9 +619,7 @@ function WeatherDetails({
           [
             CloudRainIcon,
             t("metric.precipitation"),
-            now.precipitationBasis === "approx"
-              ? approxAmount(now.precipitation, unit)
-              : `${amount(now.precipitation, unit)} ${unit}`,
+            precipitationAmount(now, unit),
             rainSuffix(now),
           ],
           ...(now.snowfall !== null && now.snowfall > 0
@@ -617,7 +627,7 @@ function WeatherDetails({
                 [
                   CloudRainIcon,
                   snowLabel,
-                  `${amount(now.snowfall, unit)} ${unit}`,
+                  forecastAmount(now.snowfall, unit, now.snowfallApprox),
                   snowSuffix(now, w.source),
                 ],
               ]
@@ -649,7 +659,8 @@ function WeatherDetails({
               <span>{rainText(p, unit)}</span>
               {p.snowfall !== null && p.snowfall > 0 && (
                 <span>
-                  {snowLabel} {amount(p.snowfall, unit)} {unit}
+                  {snowLabel}{" "}
+                  {forecastAmount(p.snowfall, unit, p.snowfallApprox)}
                   {snowSuffix(p, w.source)}
                 </span>
               )}
