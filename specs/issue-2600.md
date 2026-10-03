@@ -1,0 +1,19 @@
+# MFDS food-poisoning contract
+
+## Collection and storage
+
+A separate `mfds_food_poisoning` collection stores one document per JSON-encoded `[sd, sgg, YYYYMMDD]` identity using Mongo's unique `_id`. Fields: sd, sgg (empty for province), date, value in percent, grade, baseDate, publication (regDatetime), fetchedAt, expireAt. No domestic grid/schema migration or KMA service key dependency. TTL at the following KST midnight is cleanup only; read-time date validation is authoritative. Conditional upserts prevent older publications replacing newer ones; duplicate-key races mean an already newer row and are tolerated. Writes are not transactional: report failures after all started writes acknowledge; partial valid rows may remain.
+
+Use native HTTPS with a 10-second total deadline, 1 MiB body cap, 200-only response and identifying User-Agent. No redirect following or transport retries. Reject unsuccessful/empty payloads, invalid identities/dates/publications and duplicate regional identities before writes. Missing/invalid risks are omitted without coercing null/empty/boolean to zero. Risk 0–1 is authoritative; percent is derived from it. Thresholds are <0.315, <0.559, <0.743, else grade 3. Three date keys start at baseDate using UTC calendar arithmetic for KST wall-date labels. Reject future base dates on collection.
+
+Gather/local Manager queues one task at 08:20, 12:20 and 17:20 KST. Startup after the first slot can run once for the latest slot. Per-process in-flight and slot guards prevent overlapping or repeated work; failures wait for the next slot. No new distributed lease is introduced, so separate gather replicas can each request once per slot. Service mode never schedules collection.
+
+## Optional response enrichment
+
+Resolve request params region/city independently of KMA areaNo. Exact district first, then province for each target date. `전남광주통합특별시` with the five Gwangju districts (동구/서구/남구/북구/광산구) resolves to 광주광역시; named Jeonnam cities/counties resolve to 전라남도; unknown/empty district is ambiguous and yields no guessed province. Normalize renamed 전북특별자치도/강원특별자치도 to provider names and ignore subdistrict suffixes after a district match where applicable.
+
+Only enrich daily dates in current KST today..+2 that are within the stored baseDate..+2 interval and have a valid nonfuture publication. Never carry values positionally, from neighboring districts or past their target dates. Copy today's value/grade via _appendLifeIndexToCurrent; existing insertStrForData generates localized fsnStr for both daily/current. Store errors/timeouts omit optional fsn while the route continues; add a two-second read deadline and prevent late mutation. Provider failure has no request-time provider effect: existing cache rows remain usable only for valid dates. Historical lifeIndexKma2 fsn remains ignored.
+
+## Verification and operation
+
+Unit fixtures cover thresholds, invalid data, KST/month rollover, renamed districts, province fallback, partial writes, old/future dates, slot guards and failures. Actual Express coordinate middleware verifies DB1/DB2 success and optional failure without changing other fields. Additional isolated loopback HTTP/Mongo smoke exercises real fetch/store/read. A current live provider snapshot is unavailable in the observed capture; do not claim production recovery or fabricated live acceptance. Deploy/rollback is human-owned; rollback the feature commit while preserving the additive store. No client UI or user workflow change is needed.
