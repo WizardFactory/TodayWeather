@@ -82,6 +82,16 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
     if(version==='1.0')await model.collection.updateOne(query,{$unset:{[field+'.0.reh']:''}});
     else {query[field+'.time']=fx.rows(product,slot,grids[0])[0].time;await model.collection.updateOne(query,{$unset:{[field+'.reh']:''}})}
     assert.strictEqual((await read()).length,1);const repairStart=requests;await gather(f.m,product);assert.strictEqual(requests-repairStart,templates.length);assert.strictEqual((await read()).length,0);
+    // An older publication written after completion keeps the newer slots on real Mongoose (#2678 review).
+    const older={...slot,time:product==='short'?'1400':'1630'},staleControl={product,slot:older,cancelled:false};
+    const staleRows=fx.rows(product,older,grids[0]),save=product==='short'?'saveShort':'saveShortest';
+    if(version==='1.0')assert(await new Promise(r=>f.m[save](staleRows,r,staleControl)),'DB1 refuses to downgrade');
+    else await new Promise((res,rej)=>new Controller()[save](staleRows,e=>e?rej(e):res(),staleControl));
+    assert.strictEqual((await read()).length,0,'older publication cannot replace completed slots');
+    if(version==='2.0'){
+        const slots=(await model.find({'mCoord.mx':grids[0].mx,'mCoord.my':grids[0].my}).lean().exec()).map(d=>Number(d.fcsDate));
+        assert.strictEqual(new Set(slots).size,slots.length,'fenced misses insert no duplicate slot documents');
+    }
     const stored=await model.findOne({'mCoord.mx':grids[0].mx,'mCoord.my':grids[0].my}).lean().exec();
     const row=version==='1.0'?stored[field][0]:stored[field];assert.strictEqual(row[product==='short'?'t3h':'t1h'],-12.5);assert.strictEqual(row.uuu,-2);assert.strictEqual(row.pty,0);
     assert(!f.records.join('').includes('SYNTHETIC_CURRENT_KEY'));assert(!f.records.join('').includes('serviceKey'));

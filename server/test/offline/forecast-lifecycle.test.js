@@ -1,5 +1,5 @@
 'use strict';
-const assert=require('assert'),mh=require('./current-manager-harness'),h=require('./harness'),fx=require('./forecast-grid-fixtures'),policy=require('../../config/gather');
+const assert=require('assert'),mh=require('./current-manager-harness'),h=require('./harness'),fx=require('./forecast-grid-fixtures'),Forecast=require('../../lib/forecastGridCollection'),policy=require('../../config/gather');
 const coords=[{mx:60,my:127},{mx:61,my:127}],empty={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,[])}}}};
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
@@ -61,6 +61,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
  oldRows.find(r=>r.time==='0600').wav=0.5;newRows[0].tmn=-50;newRows[0].wav=-1;
  let oldDoc={shortData:oldRows,pubDate:slot05.date+'0200',save(cb){cb()}};
  function OldModel(){}OldModel.find=(query,cb)=>cb(null,[oldDoc]);
+ OldModel.update=(query,update,options,cb)=>{assert.strictEqual(query.pubDate,slot05.date+'0200');Object.assign(oldDoc,update.$set);cb(null,{n:1})};
  const db1=mh.load({'../models/modelShort':OldModel,'../lib/midForecastPolicy':require('../../lib/midForecastPolicy')});db1.m.MAX_SHORT_COUNT=192;
  await new Promise((resolve,reject)=>db1.m.saveShort(newRows,e=>e?reject(e):resolve(),{product:'short',slot:slot05,cancelled:false}));
  const six=oldDoc.shortData.find(r=>r.date===slot05.date&&r.time==='0600');
@@ -84,11 +85,64 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
                 '../../lib/kmaTimeLib':require('../../lib/kmaTimeLib'),'../../lib/kmaPrecipitation':require('../../lib/kmaPrecipitation'),
                 '../../lib/midForecastPolicy':require('../../lib/midForecastPolicy')},{log:h.logger([])});
             const c=new Controller();c[product==='short'?'saveShort':'saveShortest'](rows,e=>{callbackError=e},control);
-            assert.strictEqual(writes,1);control.cancelled=true;late();assert.strictEqual(writes,1);assert(callbackError);
+            assert.strictEqual(writes,1);control.cancelled=true;late(null,{n:1});assert.strictEqual(writes,1);assert(callbackError);
             control.cancelled=false;callbackError=null;c[product==='short'?'saveShort':'saveShortest'](rows,e=>{callbackError=e},control);
             late(new Error('write failed'));assert(callbackError);assert.strictEqual(writes,2,'write failure stops before another slot');
         }
     }
+ }
+ // A write admitted before the deadline but executed by the DB after a newer publication completes
+ // cannot replace that publication: DB2 fences on pubDate, DB1 compares-and-sets the read pubDate.
+ for(const product of ['short','shortest']){
+    const field=product+'Data',oldSlot={date:'20261003',time:product==='short'?'0200':'1730'},newSlot={...oldSlot,time:product==='short'?'0500':'1830'};
+    const shared=fx.rows(product,newSlot,coords[0])[0],oldPub=oldSlot.date+oldSlot.time,newPub=newSlot.date+newSlot.time;
+    const stored=new Map();let held,inserts=0;
+    function Model(){}
+    Model.find=query=>({setOptions(){return this},lean(){return this},exec(cb){cb(null,[...stored.values()].filter(d=>Number(d.pubDate)===Number(query.pubDate)))}});
+    Model.update=(query,data,options,cb)=>{
+        const key=Number(query.fcsDate);
+        const apply=()=>{const doc=stored.get(key);
+            if(data.$setOnInsert){if(!doc){inserts++;stored.set(key,{...data.$setOnInsert,mCoord:coords[0],fcsDate:query.fcsDate})}return cb(null,{n:doc?1:0})}
+            if(query.$or&&(!doc||!(doc.pubDate==null||Number(doc.pubDate)<=Number(query.$or[0].pubDate.$lte))))return cb(null,{n:0});
+            stored.set(key,data);cb(null,{n:1});
+        };
+        const row=data.$setOnInsert?data.$setOnInsert[field]:data[field];
+        if(row.pubDate===oldPub&&row.date+row.time===shared.date+shared.time&&!held){held=apply}else{apply()}
+    };
+    const Controller=h.load('controllers/kma/kma.town.'+product+'.controller.js',{async:require('async'),['../../models/kma/kma.town.'+product+'.model.js']:Model,
+        '../../lib/kmaTimeLib':require('../../lib/kmaTimeLib'),'../../lib/kmaPrecipitation':require('../../lib/kmaPrecipitation'),
+        '../../lib/midForecastPolicy':require('../../lib/midForecastPolicy')},{log:h.logger([])});
+    const writer=new Controller(),save=product==='short'?'saveShort':'saveShortest';
+    const c=new Forecast({product,model:Model,version:'2.0',coords:cb=>cb(null,[coords[0]]),emit:()=>{},collectTimeoutMs:10,
+        collect:(list,s,key,cb,control)=>writer[save](fx.rows(product,s,coords[0]),cb,control)});
+    await new Promise(res=>c.run(oldSlot,'synthetic',e=>{assert(e);res()}));
+    assert(held&&c.active===null);
+    c.options.collectTimeoutMs=1000;
+    await new Promise((res,rej)=>c.run(newSlot,'synthetic',(e,r)=>{if(e)return rej(e);assert.strictEqual(r.pending,0);res()}));
+    const target=fx.publication(shared)-9*fx.hour,before=inserts;
+    held();
+    assert.strictEqual(stored.get(target)[field].pubDate,newPub,product+' DB2 old admitted write cannot overwrite');
+    assert.strictEqual(inserts,before,'fenced miss on an existing slot inserts no duplicate');
+    // DB1: the delayed older save loses its compare-and-set after the newer save advanced the document.
+    const p0={date:'20261002',time:product==='short'?'2300':'1630'};
+    let doc={_id:1,mCoord:coords[0],pubDate:p0.date+p0.time,[field]:fx.rows(product,p0,coords[0])},hold=true,release;
+    function OldDoc(){}
+    // Unfenced whole-document save, as the pre-#2678-review writer used it.
+    function saveDoc(cb){const snapshot=this,apply=()=>{doc={...snapshot};cb()};if(hold){hold=false;release=apply}else{apply()}}
+    OldDoc.find=(query,cb)=>cb(null,[{...doc,[field]:doc[field].map(r=>({...r})),save:saveDoc}]);
+    OldDoc.update=(query,update,options,cb)=>{
+        const apply=()=>{if(query.pubDate!==doc.pubDate)return cb(null,{n:0});doc={...doc,...update.$set};cb(null,{n:1})};
+        if(hold){hold=false;release=apply}else{apply()}
+    };
+    const db1=mh.load({'../models/modelShort':OldDoc,'../models/modelShortest':OldDoc,'../lib/midForecastPolicy':require('../../lib/midForecastPolicy')});
+    db1.m.MAX_SHORT_COUNT=192;db1.m.MAX_SHORTEST_COUNT=192;
+    let oldError;
+    db1.m[save](fx.rows(product,oldSlot,coords[0]),e=>{oldError=e},{product,slot:oldSlot,cancelled:false});
+    await new Promise((res,rej)=>db1.m[save](fx.rows(product,newSlot,coords[0]),e=>e?rej(e):res(),{product,slot:newSlot,cancelled:false}));
+    assert.strictEqual(doc.pubDate,newPub);release();
+    assert.strictEqual(doc.pubDate,newPub,product+' DB1 delayed older save cannot replace newer document');assert(oldError);
+    let staleError;db1.m[save](fx.rows(product,oldSlot,coords[0]),e=>{staleError=e},{product,slot:oldSlot,cancelled:false});
+    assert(staleError);assert.strictEqual(doc.pubDate,newPub,'older publication never downgrades a newer document');
  }
  console.log('PASS forecast lifecycle: joined HTTP deadline, late-write fencing, incomplete batch rejection, quota/key bounds and DB1/DB2 writer fences/errors');
 })().catch(e=>{console.error(e);process.exitCode=1});

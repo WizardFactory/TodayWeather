@@ -229,6 +229,21 @@ Manager.prototype.compareDate = function(oldDate, newDate){
     return 0;
 };
 
+// Controlled DB1 forecast writes compare-and-set the publication read before merging, so a
+// delayed older save cannot replace a document a later publication already advanced (#2676).
+function saveForecastDocument(model, doc, readPubDate, field, control, callback) {
+    if (!control || !control.product) { return doc.save(callback); }
+    var plain = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+    if (readPubDate && plain.pubDate < readPubDate) { return callback(new Error('Forecast document holds a newer publication')); }
+    var update = {pubDate: plain.pubDate};
+    update[field] = plain[field];
+    if (plain.dailySource) { update.dailySource = plain.dailySource; }
+    model.update({_id: doc._id, pubDate: readPubDate == null ? null : readPubDate}, {$set: update}, {}, function(err, raw) {
+        if (!err && !(raw && raw.n > 0)) { err = new Error('Forecast document advanced by another publication'); }
+        callback(err);
+    });
+}
+
 /*
  *   save short data to DB.
  *   @param newData - only one town's data list.
@@ -278,6 +293,7 @@ Manager.prototype.saveShort = function(newData, callback, control){
 
             list.forEach(function(dbShortList){
                 if (control && control.cancelled) { return; }
+                var readPubDate = dbShortList.pubDate;
                 //log.info('S> coord :', dbShortList.mCoord.mx, dbShortList.mCoord.my);
                 //if (self.saveOnlyLastOne) {
                 //    dbShortList.shortData = newData;
@@ -388,7 +404,7 @@ Manager.prototype.saveShort = function(newData, callback, control){
                 dbShortList.pubDate = pubDate;
                 dbShortList.dailySource = dailySource;
                 //log.info(dbShortList.shortData);
-                dbShortList.save(function(err){
+                saveForecastDocument(modelShort, dbShortList, readPubDate, 'shortData', control, function(err){
                     if(err){
                         log.error('S> fail to save : ', coord);
                     }
@@ -687,6 +703,7 @@ Manager.prototype.saveShortest = function(newData, callback, control){
 
             list.forEach(function(dbShortestList){
                 if (control && control.cancelled) { return; }
+                var readPubDate = dbShortestList.pubDate;
                 //log.info('ST> coord :', dbShortestList.mCoord.mx, dbShortestList.mCoord.my);
                 //if (self.saveOnlyLastOne) {
                 //    dbShortestList.shortestData = newData;
@@ -784,7 +801,7 @@ Manager.prototype.saveShortest = function(newData, callback, control){
 
                 dbShortestList.pubDate = pubDate;
                 //log.info(dbShortestList.shortestData);
-                dbShortestList.save(function(err){
+                saveForecastDocument(modelShortest, dbShortestList, readPubDate, 'shortestData', control, function(err){
                     if(err){
                         log.error('ST> fail to save');
                     }
@@ -1134,6 +1151,9 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
             function(item, cb) {
                 if (control && control.cancelled) { return cb(new Error('Current collection cancelled')); }
                 if (item.isCompleted) {
+                    if (control && control.product) {
+                        item.data = ForecastGridCollection.within(control.product, control.slot, item.data);
+                    }
                     if (control && control.product && !ForecastGridCollection.batch(control.product, control.slot, item.mCoord, item.data)) {
                         // A parser success or complete transport page count cannot certify forecast slots.
                         forecastWriteError = forecastWriteError || new Error('Incomplete or mismatched forecast batch');

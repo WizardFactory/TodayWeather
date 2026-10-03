@@ -52,14 +52,21 @@ Valid zero and negative temperature/wind/lightning are retained; nonfinite,
 schema-sentinel and provider +/-900 missing values remain pending. Existing
 precipitation category conversion and API output are unchanged.
 
-A complete callback/page count does not prove a complete forecast. Incoming batches
-must match the requested publication and grid and cover all required slots/fields
-before writer admission. DB1 controlled writes replace overlapping rows completely,
+A complete callback/page count does not prove a complete forecast. Provider items
+outside the expected horizon are dropped before writes and cannot satisfy an
+expected slot. Incoming batches must then contain exactly the expected slots, match
+the requested publication and grid and cover all required slots/fields before
+writer admission. DB1 controlled writes replace overlapping rows completely,
 preserving older outside slots; they do not inherit missing fields from prior
 publications. DB1 uses the existing top-level publication string and arrays;
 DB2 uses exact BSON publication and per-slot time. No new schema marker/history is
-added. Pre-existing DB1 arrays have no per-field publication provenance to reconstruct;
-the new collector validates all newly admitted batches before relabeling. A newer
+added. Pre-existing DB1 arrays have no per-field publication provenance to reconstruct,
+and pre-existing DB2 rows cannot distinguish a schema default (for example
+ultra-short `lgt=-1`) from a received value. Without a schema marker, such legacy
+rows are trusted only for the publication they already carry at deployment; every
+later publication is collected and validated by the new path. The exposure is at
+most the in-flight publication per product and equals the previous collector's
+output. A newer
 publication never suppresses an older requested one; overwritten old forecasts
 can be pending again for explicitly requested old publications. Normal polling is
 unchanged and no historical backfill is scheduled.
@@ -71,8 +78,12 @@ stay eligible for the next poll. Products have separate guards. Forecast reads
 have three-second wait bounds/maxTimeMS2000. `GATHER_FORECAST_DEADLINE_MS` defaults
 to540000ms and aborts active HTTP, clears retries, fences new writer admission and
 releases only its own run. Late callbacks cannot change a newer run. Already issued
-Mongo operations can still settle at their original identity; this is not a
-transaction/distributed lock or Mongo cancellation. Current-observation behavior
+Mongo operations can still settle, but cannot replace a newer publication: DB2
+controlled slot updates match only `pubDate <= own` (or no `pubDate`) and a miss
+only inserts with `$setOnInsert` when the slot is absent, so no duplicate slot is
+added; DB1 controlled saves compare-and-set the `pubDate` read before merging and
+refuse to downgrade a newer document. This is not a transaction/distributed lock
+or Mongo cancellation. Current-observation behavior
 and its separate repair allowance are unchanged.
 
 ### Optional-field repair policy

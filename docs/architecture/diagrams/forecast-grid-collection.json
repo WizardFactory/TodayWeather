@@ -203,7 +203,7 @@
       "items": [
         "Same product/publication overlaps join one run",
         "Nine-minute forecast deadline fences new HTTP and writes",
-        "Readback errors remain incomplete; issued Mongo writes may settle late",
+        "Readback errors stay incomplete; late issued writes are publication-fenced",
         "No production recovery, quota entitlement or server2 change claimed"
       ]
     }

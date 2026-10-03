@@ -21,6 +21,12 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
     }
     assert(!Forecast.batch(product,slot,coord,rows.map(r=>({...r,pubDate:'202701010000'}))));
     assert(!Forecast.batch(product,slot,{mx:61,my:127},rows));
+    // Rows outside the expected horizon are filtered before writes and never admitted (#2678 review).
+    const extra={...rows[0],date:'20270110',time:'0300'};
+    assert(!Forecast.batch(product,slot,coord,rows.concat(extra)),'out-of-horizon row');
+    assert(!Forecast.batch(product,slot,coord,rows.concat({...rows[0]})),'duplicate slot');
+    assert.deepStrictEqual(Forecast.within(product,slot,rows.concat(extra)),rows);
+    assert(Forecast.batch(product,slot,coord,Forecast.within(product,slot,rows.concat(extra))));
     for(const version of ['1.0','2.0']){
         const model=mongoose.model('forecast_'+product+time+version,new mongoose.Schema({}, {strict:false}));
         let docs=f.documents(product,version,slot,coord,rows);
@@ -43,6 +49,10 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
  const raw=()=>f.items('short',rawSlot,coord);
  assert(Forecast.rawItems(raw(),'short',rawSlot,coord));
  for(const value of ['12junk','', 'NaN', 'Infinity','900','-900']){const items=raw();items[0].fcstValue=[value];assert(!Forecast.rawItems(items,'short',rawSlot,coord))}
+ const outside=raw().find(i=>i.category[0]==='SKY');
+ assert(Forecast.rawItems(raw().concat({...outside,fcstDate:['20261012'],fcstTime:['0300']}),'short',rawSlot,coord),'extra slot is filtered, not a failure');
+ const moved=raw();moved[moved.indexOf(moved.find(i=>i.category[0]==='SKY'))]={...outside,fcstDate:['20261012'],fcstTime:['0300']};
+ assert(!Forecast.rawItems(moved,'short',rawSlot,coord),'out-of-horizon item cannot satisfy an expected slot');
  const wrong=raw();wrong[0].baseTime=['2000'];assert(!Forecast.rawItems(wrong,'short',rawSlot,coord));
  const ultraSlot={...rawSlot,time:'1730'},ultra=f.items('shortest',ultraSlot,coord);
  assert(Forecast.rawItems(ultra,'shortest',ultraSlot,coord));

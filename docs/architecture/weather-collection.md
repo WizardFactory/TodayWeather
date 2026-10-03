@@ -338,8 +338,11 @@ publications skip HTTP after coordinator recreation. Full batch identity/value/
 horizon checks run before saves, and coverage readback after saves is authoritative.
 DB1 replaces overlapping controlled forecast rows without inheriting old fields;
 DB2 serial writers propagate errors. Both paths fence new writes after expiry.
-Three-second reads and the nine-minute forecast run deadline bound guard lifetime;
-issued Mongo operations may settle later at the original identity. Guards are
+Rows outside the expected horizon are dropped before writes. Three-second reads and
+the nine-minute forecast run deadline bound guard lifetime; issued Mongo operations
+may settle later but are publication-fenced (DB2 `pubDate <= own` with an
+absent-slot `$setOnInsert`, DB1 compare-and-set on the read `pubDate`), so they
+cannot replace a newer publication. Guards are
 process-local. Product/issuance coverage and actual page/retry attempts are emitted
 without secrets. Formats, polling, grid coverage, API output and server2 remain.
 Production deployment, quota approval and successive-publication/output readback

@@ -11,6 +11,18 @@ var precipitation = require('../../lib/kmaPrecipitation');
 function kmaTownShortestController(){
 }
 
+// Controlled forecast writes never let an admitted older publication replace a newer slot (#2676).
+// A fenced miss only inserts when the slot is absent, so it cannot add a duplicate slot document.
+function fencedUpdate(model, query, newItem, control, callback) {
+    if (!control || !control.product) { return model.update(query, newItem, {upsert:true}, callback); }
+    var fenced = Object.assign({$or: [{pubDate: {$lte: newItem.pubDate}}, {pubDate: null}]}, query);
+    model.update(fenced, newItem, {}, function(err, raw) {
+        if (err || (raw && raw.n > 0)) { return callback(err); }
+        var insert = {pubDate: newItem.pubDate, shortestData: newItem.shortestData};
+        model.update(query, {$setOnInsert: insert}, {upsert:true}, function(err) { callback(err); });
+    });
+}
+
 kmaTownShortestController.prototype.saveShortest = function(newData, callback, control){
     if (control && control.cancelled) { return callback(new Error('Forecast collection cancelled')); }
     //log.info('KMA Town ST> save :', newData);
@@ -30,7 +42,7 @@ kmaTownShortestController.prototype.saveShortest = function(newData, callback, c
                 var newItem = {mCoord: coord, pubDate: pubDate, fcsDate: fcsDate, shortestData: item};
                 log.debug('KMA Town ST> item : ', JSON.stringify(newItem));
 
-                modelKmaTownShortest.update({'mCoord.mx': coord.mx, 'mCoord.my': coord.my, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
+                fencedUpdate(modelKmaTownShortest, {'mCoord.mx': coord.mx, 'mCoord.my': coord.my, fcsDate: fcsDate}, newItem, control, function(err){
                     if(err){
                         log.error('KMA Town ST> Fail to update short item');
                         log.info(JSON.stringify(newItem));

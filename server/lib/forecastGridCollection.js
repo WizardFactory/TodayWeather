@@ -52,9 +52,20 @@ function complete(product, slot, rows) {
     rows.forEach(function(row) { if (row) { byTime.set(row.date + row.time, row); } });
     return expected(product, slot).every(function(at) { return valid(byTime.get(at.date + at.time), product, at, slot); });
 }
+function horizon(product, slot) {
+    return new Set(expected(product, slot).map(function(at) { return at.date + at.time; }));
+}
+function within(product, slot, rows) {
+    var allowed = horizon(product, slot);
+    return Array.isArray(rows) ? rows.filter(function(row) { return row && allowed.has(row.date + row.time); }) : rows;
+}
+// Writable rows are exactly the expected horizon: extra or duplicate slots could relabel stored data.
 function batch(product, slot, coord, rows) {
-    return Array.isArray(rows) && rows.length > 0 && rows.every(function(row) {
-        return row && row.pubDate === slot.date + slot.time && row.mx === coord.mx && row.my === coord.my;
+    var allowed = horizon(product, slot), seen = new Set();
+    return Array.isArray(rows) && rows.length === allowed.size && rows.every(function(row) {
+        if (!row || !allowed.has(row.date + row.time) || seen.has(row.date + row.time)) { return false; }
+        seen.add(row.date + row.time);
+        return row.pubDate === slot.date + slot.time && row.mx === coord.mx && row.my === coord.my;
     }) && complete(product, slot, rows);
 }
 // Reject permissive parseFloat prefixes before the existing parser can normalize them.
@@ -62,12 +73,13 @@ function rawItems(items, product, slot, coord) {
     var numbers = product === 'short' ? ['TMP', 'T3H', 'SKY', 'REH', 'PTY', 'POP', 'UUU', 'VVV', 'VEC', 'WSD', 'TMN', 'TMX'] :
         ['T1H', 'SKY', 'REH', 'PTY', 'POP', 'UUU', 'VVV', 'VEC', 'WSD', 'LGT'];
     function value(item, name) { return item[name] && item[name][0]; }
-    var slots = new Map();
+    var slots = new Map(), allowed = horizon(product, slot);
     var validItems = Array.isArray(items) && items.every(function(item) {
         if (!item || value(item, 'baseDate') !== slot.date || value(item, 'baseTime') !== slot.time ||
             String(coord.mx) !== value(item, 'nx') || String(coord.my) !== value(item, 'ny')) { return false; }
         var category = value(item, 'category'), text = value(item, 'fcstValue');
         var at = value(item, 'fcstDate') + value(item, 'fcstTime');
+        if (!allowed.has(at)) { return true; } // Filtered by within() before any write.
         if (!slots.has(at)) { slots.set(at, new Set()); }
         slots.get(at).add(category);
         if (numbers.indexOf(category) >= 0) {
@@ -222,5 +234,6 @@ ForecastGridCollection.rawItems = rawItems;
 ForecastGridCollection.expected = expected;
 ForecastGridCollection.complete = complete;
 ForecastGridCollection.batch = batch;
+ForecastGridCollection.within = within;
 ForecastGridCollection.pending = pending;
 module.exports = ForecastGridCollection;
