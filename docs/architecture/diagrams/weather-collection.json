@@ -271,7 +271,7 @@
       "title": "Unified keys \u2014 #2618 design",
       "items": [
         "DONGNAE_SECRET_KEYS supplies forecast/mid, warnings, UV/pollen, KASI and forecast-zone requests.",
-        "Auth/quota rejection tries each list key once; exhaustion stops the logical request/cycle.",
+        "Auth/quota rejection stops new dispatch and tries each list key once; past rotates unfinished times, retains a successful key, and returns DB save errors.",
         "AK verifies subscriptions and gather-host runs before deployment; AirKorea and opt-in ASOS keep separate settings."
       ]
     }

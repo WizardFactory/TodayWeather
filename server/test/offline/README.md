@@ -434,5 +434,9 @@ exhaustion, empty lists and non-key errors. It is selected by `test:offline`.
 (20 requests) to check exact key encoding, provider XML quota errors, response
 contracts and bounded success/exhaustion. Run it separately with `request` and
 `async` in the isolated dependencies. Existing `gather-quota-smoke.js` verifies
-Manager/collector cycles on 2,032 grids plus mounted current/shortest/short/past entrypoint success and exhaustion (16 additional HTTP requests). These are synthetic integrations; live
+Manager/collector cycles on 2,032 grids plus mounted current/shortest/short/past entrypoint success and exhaustion (16 additional HTTP requests). Review regressions
+also cover DB errors concurrent with quota rejection, empty/resultless callback
+paths, bounded past dispatch and successful-key reuse across coordinates. The
+HTTP smoke checks multi-time rotation with two in-flight slots, seven writes per
+coordinate, no repeated successful time, and DB-error priority. These are synthetic integrations; live
 gather acceptance belongs to the [operator runbook](../../../docs/operations/data-go-kr-keys.md).

@@ -1145,8 +1145,11 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
 Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, mCoord, baseTimeList, retryCount, callback, cycle) {
     var self = this;
     var failedList = [];
-    var collectInfo = new collectTown();
     var dataTypeName = self.getDataTypeName(dataType);
+
+    if (Array.isArray(baseTimeList) && !baseTimeList.length) {
+        return callback(undefined, []);
+    }
 
     if (!retryCount) {
         var err = new Error("retryCount is zero for request DATA : ", dataTypeName);
@@ -1163,10 +1166,15 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
         return callback(new Error(dataTypeName + ' no configured data.go.kr keys'));
     }
     var service = self._getForecastService(dataType);
-    cycle = cycle || {keysTried: 1, keyIndex: 0};
+    cycle = cycle || {keysTried: 1, keyIndex: (forecastKeyIndex[service] || 0) % dongnae_keys.length};
     key = dongnae_keys[cycle.keyIndex];
 
+    var collectInfo = new collectTown();
+    collectInfo.concurrency = gatherPolicy.requestConcurrency;
     collectInfo.requestDataByBaseTimeList(mCoord, dataType, key, baseTimeList, function(err, dataList) {
+        if (!Array.isArray(dataList)) {
+            return callback(err || new Error(dataTypeName + ' collector returned no data list'));
+        }
         if (err) {
             log.verbose(dataTypeName, " It has items rcvFailed ");
             log.verbose(err);
@@ -1197,9 +1205,10 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
                 log.info(dataTypeName + ' saved data');
                 if (err) {
                     log.error(err);
+                    return callback(err);
                 }
                 log.info(dataTypeName + ' failedList='+failedList.length);
-                if (collectInfo.stopReason) {
+                if (collectInfo.stopReason && failedList.length) {
                     if (cycle.keysTried < dongnae_keys.length) {
                         cycle.keysTried++;
                         cycle.keyIndex = (cycle.keyIndex + 1) % dongnae_keys.length;

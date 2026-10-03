@@ -235,8 +235,14 @@ HTTP. Shared `dataGoKrRejection.js` classifies authorization/quota responses;
 requesters try each key once per logical request, and Manager retains its
 per-service cycle rotation. Warning quota now rotates instead of immediately
 ending with the first exhausted key. Other failures do not rotate. Coordinate-specific forecast and legacy past
-base-time requests also use the list in configured order; past requests preserve
-non-key retries and report the first failed grid after processing the update list.
+base-time requests also use the list; past requests start with the last successful
+key for that service and retain non-key retries. The past collector uses the same
+bounded request pump (`GATHER_REQUEST_CONCURRENCY`, default 101), stops new
+dispatch after auth/quota rejection, waits for in-flight requests, and rotates
+only unfinished base times. A DB save error ends that coordinate before rotation;
+an empty work list completes without HTTP, and a collector error without results
+returns through the callback. The update list reports its first failed grid after
+processing the remaining coordinates.
 An empty life-index list completes its public callback with a sanitized error.
 
 UV/pollen preserve issuance/pagination and no partial saves; KASI preserves

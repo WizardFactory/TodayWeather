@@ -52,3 +52,23 @@ The renewed forecast HTTP smoke also checked current/shortest/short/past success
 and all-key exhaustion (16 additional real HTTP requests), exact storage counts,
 non-key retry preservation and no key-bearing logs. Review disposition and final
 candidate CI remain recorded on the PR rather than claimed by this builder note.
+
+## Review 5399434418 corrections
+
+Required R2618-3 (storage failure concurrent with quota rejection) now returns
+the storage error before rotating, completes once for resultless collector errors,
+and treats an empty past work list as complete without HTTP. Required R2618-4
+reuses the bounded collector pump for past base times: no new requests after
+auth/quota rejection, in-flight requests settle, and only unfinished times rotate.
+Recommended R2618-5 retains the successful service key for subsequent coordinates.
+
+Six new regressions failed before these corrections; the quota suite then passed
+36/36 in separate Green and post-refactor runs. The complete selected offline
+suite passed. Its historical drift assertion was updated from the old immediate
+200-request cutoff to bounded 101 admission with all 202 times eventually processed.
+The renewed real HTTP smoke saved seven base times, retried only the six unfinished
+times on the next key, used that successful key alone for the next coordinate,
+and returned the original injected storage error exactly once without rotation.
+Two configured in-flight slots limited the rejecting key to three requests.
+Models/storage errors and provider responses were synthetic; no production host
+or live provider was used. Current review/CI disposition remains on the PR.

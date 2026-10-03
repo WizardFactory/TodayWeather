@@ -216,7 +216,7 @@ describe('gather drift: synthetic offline compatibility', function () {
         }, {process: {env: {NODE_ENV: 'production'}}, console: {log: function (e) { messages.push(e.message); }}});
         assert.strictEqual(logger().transports.length, 1); assert.strictEqual(messages.length, 1);
     });
-    it('preserves upstream operational defaults, the request walk and the base-time cutoff', function () {
+    it('preserves upstream operational defaults, the bounded coordinate and base-time request walks', function () {
         var manager = source('controllers/controllerManager.js');
         // Retry budgets moved to config/gather.js (#2588); unset env keeps these values.
         var policy = require('../../config/gather').load({});
@@ -235,7 +235,10 @@ describe('gather drift: synthetic offline compatibility', function () {
         c = h.collector(); sent = [];
         c.getData = function (i) { sent.push(i); };
         c.requestDataByBaseTimeList({mx: 60, my: 127}, c.DATA_TYPE.TOWN_CURRENT, KEY, Array.from({length: 202}, function () { return {date: '20260924', time: '0800'}; }));
-        assert.strictEqual(sent.length, 200); assert.strictEqual(sent[199], 199);
+        // #2618: past requests share the bounded pump and continue beyond the former 200-item cutoff.
+        assert.strictEqual(sent.length, 101); assert.strictEqual(sent[100], 100);
+        for (var i = 0; i < 202; i++) { c.emit('recvData', i, []); }
+        assert.strictEqual(sent.length, 202); assert.strictEqual(c.receivedCount, 202);
     });
 });
 

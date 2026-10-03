@@ -1253,16 +1253,9 @@ CollectData.prototype.requestDataByBaseTimeList = function (src, dataType, key, 
                 self.resultList[i].options.code = src.code;
             }
 
-            //200 connections per 1 term
-            if (i >= 200) {
-                self.receivedCount++;
-                return;
-            }
-
-            if(self.resultList[i].url !== ''){
-                self.getData(parseInt(i), dataType, self.resultList[i].url, self.resultList[i].options);
-            }
         });
+        self._walk = {next: 0, inFlight: 0, sent: 0};
+        self._pump();
     }
     catch(e) {
         if (callback) {
