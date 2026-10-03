@@ -82,3 +82,9 @@ are retained. Stale codes can crowd the bounded nearest list, so indices can
 still remain absent. This does not migrate nationwide metadata or introduce
 read-time life-index expiry. The historical aliases are not hard-coded.
 No production DB update, release, deployment or merge is included.
+
+## SDLC reconciliation and real local smoke
+
+The shared SDLC skill became available during pre-merge on 2026-10-04. The established intent/spec/plan are now recorded in their canonical directories; no earlier stage execution or review is invented. The parent01fc19ef source was loaded into an isolated regression harness to reconstruct the failure (2 passed,11 intended assertion failures); final sources passed13/13 on Node16 and24.
+
+`life-index-area-mongo-smoke.js` then passed3 scenarios with an actual local Mongo7.0.14, mongoose5.13.23 and loopback HTTP: exact-code precedence; missing exact/first-nearest codes reaching4119086000 with zero UV and pollen summary2; and missing all indices retaining the weather response. Only the geographic and area lookup indexes were created; the historical empty-string town index is unsupported by Mongo7. Weather and MFDS input are synthetic. All local HTTP/Mongo processes closed in finally. This does not prove the historical mongoose5.1 driver works with Mongo7 or establish current production metadata freshness.
