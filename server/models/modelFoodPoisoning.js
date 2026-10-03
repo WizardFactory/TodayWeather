@@ -5,6 +5,7 @@ var schema = new mongoose.Schema({
     sd: String,
     sgg: String,
     date: String, // YYYYMMDD target date in KST, independent of host TZ / DB_DATA_VERSION.
+    risk: Number, // Authoritative unrounded provider risk; grade validation uses this value.
     value: Number, // Percent, derived from the MFDS 0..1 risk.
     grade: Number,
     baseDate: String,

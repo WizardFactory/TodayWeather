@@ -11,7 +11,7 @@ const clone = x => JSON.parse(JSON.stringify(x));
 const parse = x => food.parse(x, at);
 const read = (service, town, days, now=at) => new Promise(resolve => service.append(town, days, now, resolve));
 const collect = (service, now=at) => new Promise(resolve => service.collect(now, resolve));
-const row = (sd, sgg, date='20260929', value=31.5) => ({sd,sgg,date,value,grade:1,baseDate:'20260929',publication:'2026-09-291700'});
+const row = (sd, sgg, date='20260929', value=31.5) => ({sd,sgg,date,value,risk:Number((value/100).toFixed(8)),grade:1,baseDate:'20260929',publication:'2026-09-291700'});
 
 test('recorded publication creates exact regional dates, percentages and inclusive grades', () => {
     const rows = parse(fixture);
@@ -34,6 +34,18 @@ test('malformed responses reject before writes; invalid risks are omitted withou
     for(const risk of [null,'',false,[],{},-1,1.01]) {
         const input=clone(fixture);input.data=input.data.slice(0,1);input.data[0].todayRisk=risk;
         assert.equal(parse(input).some(r=>r.date==='20260929'),false);
+    }
+});
+
+test('parse-to-append preserves authoritative grades immediately below and at boundaries', async () => {
+    const input=clone(fixture);input.data=input.data.filter(r=>r.sd==='서울특별시' && r.sgg==='종로구');
+    for(const [risk,expected] of [[0.3149999,0],[0.315,1],[0.5589999,1],[0.559,2],[0.7429999,2],[0.743,3]]) {
+        input.data[0].todayRisk=risk;
+        const data=parse(input), days=[{date:'20260929'}];
+        const service=food.create({store:{find:()=>({lean(){return this;},exec(cb){cb(null,data);}})}});
+        await read(service,{first:'서울특별시',second:'종로구'},days);
+        assert.equal(days[0].fsnGrade,expected,'risk='+risk);
+        assert.equal(days[0].fsn,Number((risk*100).toFixed(4)));
     }
 });
 

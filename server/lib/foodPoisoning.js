@@ -48,7 +48,7 @@ function parse(body, now) {
             var date = dateKey(dayMs(raw.baseDate) + offset * DAY);
             if (date < today(now)) return;
             rows.push({_id: JSON.stringify([sd, sgg, date]), sd: sd, sgg: sgg, date: date,
-                value: Number((risk * 100).toFixed(4)), grade: grade(risk), baseDate: raw.baseDate,
+                risk: risk, value: Number((risk * 100).toFixed(4)), grade: grade(risk), baseDate: raw.baseDate,
                 publication: raw.regDatetime, fetchedAt: now,
                 expireAt: new Date(dayMs(date) + DAY - 9 * 3600000)});
         });
@@ -196,7 +196,8 @@ function create(options) {
                             !isFinite(publicationMs(row.publication)) || publicationMs(row.publication) > now.getTime() ||
                             row.publication.slice(0, 10).replace(/-/g, '') !== row.baseDate ||
                             typeof row.value !== 'number' || !isFinite(row.value) || row.value < 0 || row.value > 100 ||
-                            row.grade !== (row.value < 31.5 ? 0 : row.value < 55.9 ? 1 : row.value < 74.3 ? 2 : 3)) return;
+                            typeof row.risk !== 'number' || !isFinite(row.risk) || row.risk < 0 || row.risk > 1 ||
+                            row.value !== Number((row.risk * 100).toFixed(4)) || row.grade !== grade(row.risk)) return;
                         var prev = byDate[row.date];
                         if (!prev || row.sgg === target.sgg) byDate[row.date] = row;
                     });
