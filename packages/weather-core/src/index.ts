@@ -63,6 +63,8 @@ export type Point = {
   snowfall: number | null;
   snowfallHours: number | null;
   snowfallApprox?: boolean;
+  /** Forecast provenance is independent of covered hours (including 1h). */
+  snowfallBasis?: "forecast";
   rainProbability: number | null;
   feelsLike: number | null;
   icon: string;
@@ -422,7 +424,10 @@ function point(
               ? 24
               : period,
     ...(isKma && forecastRole && snow !== null
-      ? { snowfallApprox: r.s06Approx === true }
+      ? {
+          snowfallApprox: r.s06Approx === true,
+          snowfallBasis: "forecast" as const,
+        }
       : {}),
     rainProbability: numberValue(r.pop),
     feelsLike: temp(r.sensorytem ?? r.sensible),
@@ -485,7 +490,9 @@ function kmaForecast(
       ...(p.precipitation !== null
         ? { precipitationApprox: p.precipitationApprox }
         : {}),
-      ...(p.snowfall !== null ? { snowfallApprox: p.snowfallApprox } : {}),
+      ...(p.snowfall !== null
+        ? { snowfallApprox: p.snowfallApprox, snowfallBasis: p.snowfallBasis }
+        : {}),
     });
   }
   return [...timeline.values()].sort((a, b) => a.at.localeCompare(b.at));

@@ -36,6 +36,7 @@ it("keeps covered forecast periods and approximation in persisted weather", () =
     { snowfallHours: "6" },
     { precipitationApprox: "true" },
     { snowfallApprox: 1 },
+    { snowfallBasis: "invalid" },
   ]) {
     const bad = { ...w, hourly: [{ ...p, ...patch }] };
     expect(

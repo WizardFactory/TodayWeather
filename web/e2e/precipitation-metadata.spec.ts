@@ -68,11 +68,9 @@ function weather() {
   return raw;
 }
 function panel(page: import("@playwright/test").Page) {
-  return page
-    .locator("section.panel")
-    .filter({
-      has: page.getByRole("heading", { name: "강수·눈 예보", exact: true }),
-    });
+  return page.locator("section.panel").filter({
+    has: page.getByRole("heading", { name: "강수·눈 예보", exact: true }),
+  });
 }
 test("D45 coverage and approximation render and survive offline reload", async ({
   page,
@@ -120,4 +118,54 @@ test("legacy daily forecast keeps its original label", async ({ page }) => {
   await page.goto("/weather/seoul/daily");
   await expect(panel(page)).toContainText("강수 5.5 mm · 예보");
   await expect(panel(page)).not.toContainText("시간 예보");
+});
+
+test("one-hour forecast snowfall keeps its forecast label", async ({
+  page,
+  context,
+}) => {
+  const raw = weather();
+  raw.current.sn1 = 2;
+  raw.shortest = [];
+  raw.short = [
+    {
+      date: "20260925",
+      time: 15,
+      t3h: 22,
+      r06: 5,
+      r06Hours: 1,
+      rn1: 1,
+      s06: 2,
+      s06Hours: 1,
+      s06Approx: true,
+    },
+  ];
+  raw.midData.dailyData = [
+    {
+      date: "20260925",
+      time: "0000",
+      r06: 5,
+      r06Hours: 1,
+      s06: 2,
+      s06Hours: 1,
+      s06Approx: false,
+    },
+  ];
+  await page.route("https://todayweather.wizardfactory.net/weather/**", (r) =>
+    r.fulfill({ json: raw }),
+  );
+  await page.goto("/weather/seoul/hourly");
+  await expect(panel(page)).toContainText("적설량 약 2 mm · 1시간 예보");
+  await expect(panel(page)).toContainText("지금까지 관측");
+  const currentSnow = page.locator(".metric").filter({ hasText: "적설량" });
+  await expect(currentSnow).toContainText("1시간");
+  await expect(currentSnow).not.toContainText("예보");
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(panel(page)).toContainText("적설량 약 2 mm · 1시간 예보");
+  await context.setOffline(false);
+  await page.goto("/weather/seoul/daily");
+  await expect(panel(page)).toContainText("적설량 2 mm · 1시간 예보");
 });

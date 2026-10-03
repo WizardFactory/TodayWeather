@@ -103,7 +103,7 @@ function rainSuffix(p: Point): string {
 function snowSuffix(p: Point, source: Weather["source"]): string {
   if (p.snowfall === null) return "";
   const hours = p.snowfallHours;
-  if (source === "KMA" && hours !== 1)
+  if (source === "KMA" && (p.snowfallBasis === "forecast" || hours !== 1))
     return (
       " · " +
       (hours === null

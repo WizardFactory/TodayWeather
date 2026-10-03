@@ -411,6 +411,7 @@ function validPoint(p: unknown): boolean {
     ["precipitationApprox", "snowfallApprox"].every(
       (key) => p[key] === undefined || typeof p[key] === "boolean",
     ) &&
+    (p.snowfallBasis === undefined || p.snowfallBasis === "forecast") &&
     [null, "observed", "partial", "approx", "forecast"].includes(
       p.precipitationBasis,
     )
