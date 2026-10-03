@@ -39,6 +39,7 @@ exports.environment = function(version='2.0', now=instant) {
             if(key.endsWith('/config/config'))deps[key]=config;
             if(key.endsWith('/config/gather'))deps[key]=require('../../config/gather').load({});
             if(key.endsWith('/kmaTimeLib'))deps[key]=time;
+            if(key.endsWith('/foodPoisoning'))deps[key]=require('../../lib/foodPoisoning');
             if(key.endsWith('/midForecastPolicy'))deps[key]=policy;
             if(key.endsWith('/kmaPrecipitation'))deps[key]=require('../../lib/kmaPrecipitation');
             if(key==='async')deps[key]=require('async');

@@ -5035,7 +5035,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <path data-edge-from="fetch" data-edge-to="save" data-edge-label="received" data-edge-key="5" data-edge-id="e5" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="787.6,212;844,212" d="M 787.6 212 L 844 212" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="save" data-edge-to="readback" data-edge-label="saved" data-edge-key="6" data-edge-id="e6" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="984,212;1026,212" d="M 984 212 L 1026 212" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="readback" data-edge-to="done" data-edge-label="coverage" data-edge-key="7" data-edge-id="e7" data-edge-role="" data-composition-points="1096,238;1096,286" d="M 1096 238 L 1096 286" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="fetch" data-edge-to="quota" data-edge-label="quota" data-edge-key="8" data-edge-id="e8" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="717.6,186;717.6,170;1186,170;1186,429;787.6,429" d="M 717.6 186 L 717.6 170 L 1186 170 L 1186 429 L 787.6 429" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="fetch" data-edge-to="quota" data-edge-label="quota / deadline" data-edge-key="8" data-edge-id="e8" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="717.6,186;717.6,170;1186,170;1186,429;787.6,429" d="M 717.6 186 L 717.6 170 L 1186 170 L 1186 429 L 787.6 429" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="quota" data-edge-to="done" data-edge-label="report pending" data-edge-key="9" data-edge-id="e9" data-edge-role="" data-composition-points="717.6,403;717.6,387;1154,387;1154,354;1096,354;1096,338" d="M 717.6 403 L 717.6 387 L 1154 387 L 1154 354 L 1096 354 L 1096 338" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
 
         <!-- Nodes -->
@@ -5135,16 +5135,16 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text data-detail="context" x="296" y="441" class="t-muted" font-size="8" text-anchor="middle">stop without HTTP</text>
         </g>
 
-        <g id="node-quota" data-node-id="quota" data-node-label="Daily quota stop" tabindex="0" role="button" aria-label="Focus Daily quota stop, current key until KST reset, Failure and retry eligibility" aria-pressed="false" data-node-kind="security" data-node-sublabel="current key until KST reset" data-node-context="Failure and retry eligibility">
-          <title>Daily quota stop · current key until KST reset · Failure and retry eligibility</title>
+        <g id="node-quota" data-node-id="quota" data-node-label="Collection stop" tabindex="0" role="button" aria-label="Focus Collection stop, daily quota / run deadline, Failure and retry eligibility" aria-pressed="false" data-node-kind="security" data-node-sublabel="daily quota / run deadline" data-node-context="Failure and retry eligibility">
+          <title>Collection stop · daily quota / run deadline · Failure and retry eligibility</title>
           <rect x="647.6" y="403" width="140" height="52" rx="6" class="c-mask"/>
           <rect x="647.6" y="403" width="140" height="52" rx="6" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(653.6 409) scale(0.6875)">
             <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="719.4" y="424" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Daily quota stop</text>
-          <text data-detail="context" x="717.6" y="441" class="t-muted" font-size="8" text-anchor="middle">current key until KST reset</text>
+          <text data-node-label="" data-detail-anchor="" x="717.6" y="424" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Collection stop</text>
+          <text data-detail="context" x="717.6" y="441" class="t-muted" font-size="8" text-anchor="middle">daily quota / run deadline</text>
         </g>
 
         <!-- Edge labels -->
@@ -5180,9 +5180,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="1071.8" y="252" width="48.4" height="14" rx="3" class="c-mask"/>
           <text x="1096" y="262" class="t-edge-default" font-size="8" text-anchor="middle">coverage</text>
         </g>
-        <g data-detail="context" data-edge-from="fetch" data-edge-to="quota" data-edge-label="quota" data-edge-key="8" data-edge-id="e8">
-          <rect x="934.8" y="150" width="34" height="14" rx="3" class="c-mask"/>
-          <text x="951.8" y="160" class="t-edge-default" font-size="8" text-anchor="middle">quota</text>
+        <g data-detail="context" data-edge-from="fetch" data-edge-to="quota" data-edge-label="quota / deadline" data-edge-key="8" data-edge-id="e8">
+          <rect x="908.4" y="150" width="86.8" height="14" rx="3" class="c-mask"/>
+          <text x="951.8" y="160" class="t-edge-default" font-size="8" text-anchor="middle">quota / deadline</text>
         </g>
         <g data-detail="context" data-edge-from="quota" data-edge-to="done" data-edge-label="report pending" data-edge-key="9" data-edge-id="e9">
           <rect x="897.1999999999999" y="367" width="77.2" height="14" rx="3" class="c-mask"/>
@@ -5408,6 +5408,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <ul>
           <li>Process-local overlap and quota memory; restart is a new process</li>
           <li>No production activation, quota increase or historical backfill</li>
+          <li>Nine-minute current deadline; issued Mongo operations can settle later</li>
         </ul>
       </div>
     </div>

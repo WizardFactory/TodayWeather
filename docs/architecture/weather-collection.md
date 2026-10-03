@@ -240,8 +240,11 @@ mark grid coverage.
 
 Coordinate and coverage reads have a three-second wait deadline; pinned Mongoose
 queries use setOptions({maxTimeMS:2000}). Read failure stops the cycle without an
-unchecked full-grid walk. The wait deadline does not cancel Mongo transport or
-bound the complete collection/write run. Same-manager callers for an active
+unchecked full-grid walk. The read wait deadline does not cancel Mongo transport.
+The current run separately expires after GATHER_CURRENT_DEADLINE_MS (540000 ms
+by default), aborts active HTTP and stops new retry/save admission. Already issued
+Mongo operations may settle later; late callbacks cannot clear a newer run or
+start another write. Same-manager callers for an active
 publication share its result; another publication receives a busy error and
 remains eligible at the next poll. After writes settle, coverage readback reports
 remaining grids as an error, even when a legacy writer returned success.
@@ -262,3 +265,49 @@ schemas and mobile API contracts do not change. Production activation, actual
 account entitlement and historical hourly/daily readback remain separate gates.
 
 Forecast-pass fetch outcomes include received, failed, rejected and pending (failed + rejected). Cycle-local rejected-key exclusion prevents daily cooldown filtering from recycling another already rejected key.
+## Unified data.go.kr key source (#2618)
+
+Forecast/mid, warnings, UV V5/pollen V3, KASI and forecast-zone use only
+`DONGNAE_SECRET_KEYS` through `lib/dataGoKrKeys.js`. Legacy env names warn without
+values and never supply credentials. Empty/invalid lists fail before provider
+HTTP. Shared `dataGoKrRejection.js` classifies authorization/quota responses;
+requesters try each key once per logical request, and Manager retains its
+per-service cycle rotation. Warning quota now rotates instead of immediately
+ending with the first exhausted key. Other failures do not rotate. Coordinate-specific forecast and legacy past
+base-time requests also use the list; past requests start with the last successful
+key for that service and retain non-key retries. The past collector uses the same
+bounded request pump (`GATHER_REQUEST_CONCURRENCY`, default 101), stops new
+dispatch after auth/quota rejection, waits for in-flight requests, and rotates
+only unfinished base times. A DB save error ends that coordinate before rotation;
+an empty work list completes without HTTP, and a collector error without results
+returns through the callback. The update list reports its first failed grid after
+processing the remaining coordinates.
+An empty life-index list completes its public callback with a sanitized error.
+
+UV/pollen preserve issuance/pagination and no partial saves; KASI preserves
+allKeysRejected stopping; forecast-zone keeps bounded transient retries and
+logs only the key index. Its existing endpoint availability is unverified.
+Health-day remains removed. AirKorea and opt-in ASOS retain separate settings.
+See [configuration](../../server/CONFIGURATION.md) and the
+[migration runbook](../operations/data-go-kr-keys.md). This is repository behavior,
+not evidence of deployment or successful gather-host runs.
+
+## MFDS food-poisoning forecast recovery (#2600)
+
+MFDS batch completion has a 30-second write deadline so a missing Mongo callback cannot hold the serial gather queue indefinitely. Late callbacks are ignored; issued writes may still complete. Queued time identifies the slot; response reception time validates publication and dates.
+
+The gather/local Manager queues the separate MFDS regional collector at 08:20,
+12:20 and 17:20 KST and for the most recent publication slot on startup. One
+bounded HTTPS request (ten seconds, 1 MiB, identifying User-Agent, no retries)
+produces up to three target dates per province/district. The additive
+`mfds_food_poisoning` Mongo collection is independent of domestic DB_DATA_VERSION
+and KMA areaNo. Its unique regional/date identity and conditional publication
+upserts preserve newer forecasts; read-time expiry is authoritative, with a
+next-KST-midnight TTL for cleanup. Guards are per process, not distributed.
+
+The existing KMA scheduler already excludes legacy `fsn`; UV/pollen remain
+unchanged. Optional collection/store failures do not trigger provider calls from
+weather requests. See [operations and limitations](../operations/food-poisoning.md),
+[collector](../../server/lib/foodPoisoning.js),
+[model](../../server/models/modelFoodPoisoning.js) and the
+[design diagram](diagrams/food-poisoning.html) / [source](diagrams/food-poisoning.json).

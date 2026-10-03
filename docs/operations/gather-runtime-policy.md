@@ -13,6 +13,7 @@ With no variable set, behaviour equals master before #2588.
 | `GATHER_MID_RETRY` | passes for `MID_FORECAST`, `MID_LAND`, `MID_TEMP` (both call sites), `MID_SEA` | `70` | `2` | integer ≥ 1 |
 | `GATHER_REQUEST_CONCURRENCY` | requests in flight while one `_recursiveRequestData` pass walks its list (town and mid products, #2604) | `101` (the former per-pass cutoff) | not set; recheck the host collector first | integer 1–1000 |
 | `GATHER_RETRY_DELAY_MS` | `setTimeout` delay before each failed-list and invalid-list retry pass | `0` | `50` | integer 0–2147483647 (`setTimeout` limit) |
+| `GATHER_CURRENT_DEADLINE_MS` | Complete current run deadline; abort HTTP, stop retry/save admission and release own guard | `540000` | not verified | integer 1–2147483647; issued Mongo operations can still finish |
 | `GATHER_PAST_ENABLED` | queue the `Past` task at UTC minute 2 / startup | `true` | `false` | `true` / `false` |
 | `GATHER_AIR_FORECAST_ENABLED` | queue the KAQ hourly forecast block (UTC minute 7, existing hour gate) / startup | `true` | `false` | `true` / `false` |
 | `GATHER_PAST_CONDITION_RETRY` | per-coordinate retry count `PastConditionGather.start` passes to `requestDataByUpdateList` | `10` | (unused; divisor set) | integer ≥ 1 |

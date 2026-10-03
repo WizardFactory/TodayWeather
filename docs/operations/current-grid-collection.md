@@ -18,6 +18,14 @@ Short/shortest schedules remain unchanged: their baseline first-pass grid fetche
 are 24 × N and 96 × N respectively. Short continuation pages, retries and other
 consumers add requests. Preserve the [#2604 bounded concurrency/retry budget](gather-runtime-policy.md#quota-and-key-rotation-2604).
 
+Summed current/short/shortest first-pass grid traffic after successful filtering is
+144 × N/day: 24N + 24N + 96N, or 292,608 for 2,032 grids. Before filtering it was
+264N, or 536,448. This aggregate reduction is 45.45%; 83.3% applies to current alone.
+It does not establish which operations or consumers share an approved quota.
+Persisted partial wind/REH rows deliberately stay pending; a writer's successful
+callback is not a declaration of complete observations. Measure their frequency
+and later repair before relying on the ideal complete-publication budget.
+
 The [official data.go.kr service page](https://www.data.go.kr/data/15084084/openapi.do)
 (read 2026-10-03) lists development traffic of 10,000 and operational increase
 applications. It defines code 22 as daily exhaustion and code 23 as per-second
@@ -43,6 +51,8 @@ successful info records.
   differ from persisted coverage.
 - first-quota: UTC response time, KST hour, requestKstDay, product/key index,
   daily-quota/per-second/unclassified-429 reason and current cooldown action.
+- current-collection-stop: UTC time, publication and static `deadline` reason;
+  this is a terminated run, not proof that coverage was recovered.
 
 Records contain no keys, URLs, provider bodies or exception text. A crash before
 pass completion can lose its attempt totals. Existing untimestamped logs cannot
@@ -68,8 +78,13 @@ approval. Before an approved action:
    entitlement change or reviewed provider design; do not silently drop grids.
 3. Run isolated tests below; inspect process count, time basis and log retention.
    Coordinate/coverage reads stop waiting after three seconds without cancelling
-   Mongo transport. The entire collection/write run has no new hard deadline;
-   a stuck writer can keep the local overlap guard busy.
+   Mongo transport. `GATHER_CURRENT_DEADLINE_MS` defaults to 540000 (nine minutes)
+   and bounds the complete current run. On expiry it aborts active HTTP requests,
+   clears delayed recursive retries, stops admission of new saves and releases
+   only its own active run. Late callbacks cannot clear a later run or admit a
+   new write. A previously submitted Mongo read/write may still finish at its
+   original publication identity; there is no Mongo cancellation or rollback.
+   Different-publication busy remains eligible at the next scheduled poll.
 4. After approved activation, read expected current slots across 16:00–22:00 KST
    on successive days. Check full-grid coverage, partial writes, rejection onset
    and measured HTTP budgets. Report historical hourly/daily gaps separately.

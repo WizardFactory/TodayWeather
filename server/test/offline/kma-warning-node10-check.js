@@ -20,7 +20,9 @@ function load(relative, deps) {
     var module = {exports: {}};
     var sandbox = {process: {env: {}}, module: module, exports: module.exports, console: console, log: log, Date: Date,
         setTimeout: setTimeout, clearTimeout: clearTimeout, setImmediate: setImmediate, __dirname: path.dirname(path.join(root, relative)),
-        require: function (name) { if (!(name in deps)) { throw new Error('Unstubbed ' + name); } return deps[name]; }};
+        require: function (name) {
+            if (/(?:^|\/)dataGoKrKeys$/.test(name)) return require('../../lib/dataGoKrKeys');
+            if (/(?:^|\/)dataGoKrRejection$/.test(name)) return require('../../lib/dataGoKrRejection'); if (!(name in deps)) { throw new Error('Unstubbed ' + name); } return deps[name]; }};
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), sandbox, {filename: relative});
     return module.exports;
 }

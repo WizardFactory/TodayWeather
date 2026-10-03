@@ -19,7 +19,7 @@ now=Date.parse('2026-10-02T15:00:00Z');
 run(f.m.DATA_TYPE.TOWN_CURRENT);assert.strictEqual(attempts,6,'next KST day probes again');
 const records=f.records.map(JSON.parse);
 assert(records.some(r=>r.event==='first-quota'&&r.kstHour==='2026-10-02T23'));
-assert(!f.records.join('').includes('SYNTHETIC_A'));
+assert(!f.records.join('').includes('SYNTHETIC_CURRENT_KEY_A'));
 assert(!f.records.join('').includes('serviceKey'));
 reasonCode='23';
 const throttled=h.load({'../lib/collectTownForecast':Collector});
@@ -47,7 +47,7 @@ for(const stopReason of ['quota','key']) {
     let called=0;
     mixed.m._recursiveRequestData([{mx:60,my:127}],0,'unused',slot(),1,undefined,e=>{assert(e);called++});
     assert.strictEqual(called,1);
-    assert.deepStrictEqual(keys,['SYNTHETIC_B'],'R3-001: each eligible rejected key is tried once per cycle');
+    assert.deepStrictEqual(keys,['SYNTHETIC_CURRENT_KEY_B'],'R3-001: each eligible rejected key is tried once per cycle');
 }
 // R3-002: permanent rejection and retryable failures are separately measurable.
 function Outcomes(){}

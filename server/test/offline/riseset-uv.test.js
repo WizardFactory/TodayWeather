@@ -20,9 +20,9 @@ const log = Object.fromEntries(['info','warn','error','debug','verbose','silly']
 // Dummy keys at data.go.kr length; the collectors skip short unset defaults such as "key1".
 const pad = name => name + 'x'.repeat(40);
 const FORECAST_KEY = pad('FORECAST%2FKEY');
-// As deployed on 2026-09-26: the forecast list repeats the test_normal key and adds the approved key.
+// Synthetic unified list: preserve encoded/raw-key and five-entry rotation coverage.
 const KEYS = {normal: pad('NORMAL%2BKEY'), test_normal: pad('TEST+NORMAL'), cert_key: pad('CERT%2FKEY'), test_cert: pad('TEST_CERT'),
-    dongnae_forecast_keys: JSON.stringify([pad('TEST+NORMAL'), FORECAST_KEY])};
+    dongnae_forecast_keys: JSON.stringify([pad('NORMAL%2BKEY'), pad('TEST+NORMAL'), pad('CERT%2FKEY'), pad('TEST_CERT'), FORECAST_KEY])};
 
 function Stub() {}
 // A Date whose argument-less form reads a fixed instant, so clock-driven paths are reproducible.
@@ -36,7 +36,7 @@ function fixedClock(iso) {
 function load(relative, dependencies = {}, clock = Date) {
     const module = {exports: {}};
     const sandbox = {module, exports: module.exports, console, log, Date: clock, setTimeout, clearTimeout, setImmediate,
-        require: name => Object.prototype.hasOwnProperty.call(dependencies, name) ? dependencies[name] : Stub};
+        require: name => /(?:^|\/)dataGoKrKeys$/.test(name) ? require('../../lib/dataGoKrKeys') : /(?:^|\/)dataGoKrRejection$/.test(name) ? require('../../lib/dataGoKrRejection') : Object.prototype.hasOwnProperty.call(dependencies, name) ? dependencies[name] : Stub};
     sandbox.global = sandbox;
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), sandbox, {filename: relative});
     return module.exports;
@@ -170,11 +170,11 @@ test('KASI gather rotates an expired key and keeps keys out of errors', async ()
     const result = await new Promise((resolve, reject) => Kasi.updateAreaRiseSetFromApi('서울', '20260926', (err, res) => err ? reject(err) : resolve(res)));
     assert.equal(result.result, 'ok');
     assert.equal(request.calls.length, 2, 'one retry with the next key');
-    assert(request.calls[1].includes('ServiceKey=' + KEYS.test_normal));
+    assert(request.calls[1].includes('ServiceKey=' + encodeURIComponent(KEYS.test_normal)));
     assert.equal(updates.length, 1);
     // The chosen key stays for later requests.
     await new Promise(resolve => Kasi.updateAreaRiseSetFromApi('부산', '20260926', resolve));
-    assert(request.calls[2].includes('ServiceKey=' + KEYS.test_normal));
+    assert(request.calls[2].includes('ServiceKey=' + encodeURIComponent(KEYS.test_normal)));
 
     const failing = loadKasi(fakeRequest(() => ({statusCode: 500, body: 'Unexpected errors'})));
     failing._getAreaRiseSetFromApi = function (area, date, cb) {
@@ -211,7 +211,7 @@ function loadRequester(request, saved = [], clock = Date) {
         '../models/kma/kma.lifeindex.model': LifeIndexKma2
     }, clock);
     const service = new Requester();
-    service.setServiceKey(KEYS.cert_key, KEYS);
+    service.setServiceKey(JSON.parse(KEYS.dongnae_forecast_keys));
     service.setNextGetTime('ultrv', new Date(0));
     return {service, LifeIndexKma2};
 }
@@ -263,7 +263,7 @@ test('V5 request uses all areas, the latest issued slot and pages through totalC
     assert.equal(url.searchParams.get('areaNo'), '');
     assert.equal(url.searchParams.get('dataType'), 'JSON');
     assert.equal(url.searchParams.get('numOfRows'), '1000');
-    assert.equal(url.searchParams.get('serviceKey'), decodeURIComponent(KEYS.cert_key), 'key encoded once');
+    assert.equal(url.searchParams.get('serviceKey'), decodeURIComponent(KEYS.normal), 'key encoded once');
 
     // Same issuance an hour later: no second save.
     const again = await new Promise(resolve => service.taskUltrvV5(new Date('2026-09-26T03:10:00Z'), (err, count) => resolve({err, count})));
@@ -274,10 +274,10 @@ test('V5 request uses all areas, the latest issued slot and pages through totalC
 test('V5 rotates keys on authorization errors and saves nothing on a failed page', async () => {
     const saved = [];
     const request = fakeRequest(url => {
-        if (url.includes('serviceKey=' + encodeURIComponent(decodeURIComponent(KEYS.cert_key)))) {
+        if (url.includes('serviceKey=' + encodeURIComponent(decodeURIComponent(KEYS.normal)))) {
             return {statusCode: 401, body: {OpenAPI_ServiceResponse: {cmmMsgHeader: {errMsg: 'SERVICE ERROR', returnReasonCode: '30'}}}};
         }
-        if (url.includes('serviceKey=' + encodeURIComponent(KEYS.test_cert))) {
+        if (url.includes('serviceKey=' + encodeURIComponent(KEYS.test_normal))) {
             return {body: {response: {header: {resultCode: '22', resultMsg: 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR'}}}};
         }
         if (/pageNo=2/.test(url)) return new Error('ETIMEDOUT');
@@ -287,7 +287,7 @@ test('V5 rotates keys on authorization errors and saves nothing on a failed page
     const result = await new Promise(resolve => service.taskUltrvV5(new Date('2026-09-25T21:30:00Z'), (err, count) => resolve({err, count})));
     assert(result.err, 'page 2 failure fails the run');
     assert.equal(saved.length, 0, 'no partial save');
-    assert(request.calls[2].includes('serviceKey=' + encodeURIComponent(decodeURIComponent(KEYS.normal))), 'third key after two authorization failures');
+    assert(request.calls[2].includes('serviceKey=' + encodeURIComponent(decodeURIComponent(KEYS.cert_key))), 'third key after two authorization failures');
     for (const key of Object.values(KEYS)) assert(!result.err.message.includes(key));
 
     const denied = loadRequester(fakeRequest(() => ({statusCode: 401, body: {OpenAPI_ServiceResponse: {cmmMsgHeader: {errMsg: 'SERVICE ERROR', returnReasonCode: '30'}}}})));
@@ -312,7 +312,7 @@ const XML_DENIED = '<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR
 
 test('XML gateway errors with HTTP 200 still rotate keys (V5 and KASI)', async () => {
     const saved = [];
-    const request = fakeRequest(url => url.includes('serviceKey=' + encodeURIComponent(decodeURIComponent(KEYS.cert_key))) ?
+    const request = fakeRequest(url => url.includes('serviceKey=' + encodeURIComponent(decodeURIComponent(KEYS.normal))) ?
         {body: XML_DENIED} : {body: onePage()});
     const {service} = loadRequester(request, saved);
     const result = await new Promise(resolve => service.taskUltrvV5(new Date('2026-09-25T21:30:00Z'), (err, count) => resolve({err, count})));
@@ -325,7 +325,7 @@ test('XML gateway errors with HTTP 200 still rotate keys (V5 and KASI)', async (
     const kasi = await new Promise(resolve => Kasi.updateAreaRiseSetFromApi('서울', '20260926', (err, res) => resolve({err, res})));
     assert.ifError(kasi.err);
     assert.equal(kasiRequest.calls.length, 2);
-    assert(kasiRequest.calls[1].includes('ServiceKey=' + KEYS.test_normal));
+    assert(kasiRequest.calls[1].includes('ServiceKey=' + encodeURIComponent(KEYS.test_normal)));
 });
 
 test('a transient failure on the newest slot never saves an older issuance', async () => {
@@ -359,7 +359,7 @@ test('a transient failure on the newest slot never saves an older issuance', asy
     assert.equal(third.count, 0, 'older slot skipped');
 });
 
-test('the approved forecast key is reached for KASI and V5 as deployed on 2026-09-26', async () => {
+test('the approved forecast key is reached for KASI and V5 through the unified list', async () => {
     const approved = url => url.includes('ServiceKey=' + FORECAST_KEY) || url.includes('serviceKey=' + FORECAST_KEY);
     // Recorded gateway answers: expired (31) for the old KASI key, unregistered (30) for keys without a subscription.
     const expired = {statusCode: 401, body: {OpenAPI_ServiceResponse: {cmmMsgHeader: {errMsg: 'SERVICE ERROR', returnAuthMsg: 'DEADLINE_HAS_EXPIRED_ERROR', returnReasonCode: '31'}}}};
@@ -369,14 +369,14 @@ test('the approved forecast key is reached for KASI and V5 as deployed on 2026-0
     const Kasi = loadKasi(kasiRequest);
     const kasi = await new Promise(resolve => Kasi.updateAreaRiseSetFromApi('서울', '20260926', (err, res) => resolve({err, res})));
     assert.ifError(kasi.err);
-    assert.equal(kasiRequest.calls.length, 3, 'normal, test_normal, forecast key (duplicate skipped)');
+    assert.equal(kasiRequest.calls.length, 5, 'all five configured keys tried in order');
 
     const uvRequest = fakeRequest(url => approved(url) ? {body: onePage()} : unregistered);
     const {service} = loadRequester(uvRequest, []);
     const uv = await new Promise(resolve => service.taskUltrvV5(new Date('2026-09-26T03:55:00Z'), (err, count) => resolve({err, count})));
     assert.ifError(uv.err);
     assert.equal(uv.count, 9, 'nine recorded area-days saved');
-    assert.equal(uvRequest.calls.filter(u => !approved(u)).length, 4, 'cert, test_cert, normal, test_normal before the forecast key');
+    assert.equal(uvRequest.calls.filter(u => !approved(u)).length, 4, 'four rejected list entries before the approved key');
 });
 
 test('review: UV waits for the next three-hour slot after saving, retries after failure, runs year-round', async () => {
@@ -429,11 +429,11 @@ test('review: unset default keys are skipped', () => {
     const KasiDefaults = load('controllers/kasi.riseset.controller.js', {'async': async, 'request': fakeRequest(() => ({})), 'dnscache': () => ({}),
         '../config/config': {keyString: defaults}, '../lib/kmaTimeLib': kmaTimeLib, '../models/modelKasiRiseSet': {}});
     assert.equal(KasiDefaults._getServiceKeys().length, 0);
-    assert.equal(Kasi._getServiceKeys().length, 3, 'normal, test_normal, forecast key');
+    assert.equal(Kasi._getServiceKeys().length, 5, 'five unified keys');
     const Requester = load('lib/lifeIndexKmaRequester.js', {'request': fakeRequest(() => ({})), 'async': async, '../lib/kmaTimeLib': kmaTimeLib});
     const service = new Requester();
-    service.setServiceKey(defaults.cert_key, defaults);
-    assert.equal(plain(service.serviceKeyList).length, 1, 'only the legacy first key remains');
+    service.setServiceKey(JSON.parse(defaults.dongnae_forecast_keys));
+    assert.equal(plain(service.serviceKeyList).length, 0, 'no usable keys remain');
 });
 
 test('review: when every key is rejected the chosen key is kept and KASI does not retry', async () => {
@@ -443,7 +443,7 @@ test('review: when every key is rejected the chosen key is kept and KASI does no
     Kasi._keyIndex = 1;
     const result = await new Promise(resolve => Kasi.updateAreaRiseSetFromApi('서울', '20260926', resolve));
     assert(result && result.allKeysRejected, 'error marks all keys rejected');
-    assert.equal(kasiRequest.calls.length, 3, 'each key once; async.retry stops (no 3 x 3 calls)');
+    assert.equal(kasiRequest.calls.length, 5, 'each key once; async.retry stops (no 3 x 3 calls)');
     assert.equal(Kasi._keyIndex, 1, 'previous key choice kept');
 
     const uvRequest = fakeRequest(() => rejected);

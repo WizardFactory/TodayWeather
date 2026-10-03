@@ -27,6 +27,7 @@ var modelAreaNo = require('../models/modelAreaNo');
 var convertGeocode = require('../utils/convertGeocode');
 
 var LifeIndexKmaController = require('../controllers/lifeIndexKmaController');
+var foodPoisoning = require('../lib/foodPoisoning');
 var KecoController = require('../controllers/kecoController');
 
 var controllerKmaStnWeather = require('../controllers/controllerKmaStnWeather');
@@ -2364,7 +2365,7 @@ function ControllerTown() {
                     current.ultrvGrade = dailyData[i].ultrvGrade;
                     current.ultrvStr = dailyData[i].ultrvStr;
                 }
-                ['flowerWoody', 'flowerPine', 'flowerWeeds'].forEach(function (name) {
+                ['fsn', 'flowerWoody', 'flowerPine', 'flowerWeeds'].forEach(function (name) {
                     if (dailyData[i].hasOwnProperty(name)) {
                         current[name] = dailyData[i][name];
                         current[name + 'Grade'] = dailyData[i][name + 'Grade'];
@@ -2513,7 +2514,14 @@ function ControllerTown() {
                         self._appendLifeIndexToCurrent(req.current, req.short, req.midData.dailyData);
                     }
                 }
-                next();
+                // MFDS regions do not depend on KMA areaNo or its optional query result.
+                foodPoisoning.shared().append({first: req.params.region, second: req.params.city},
+                    req.midData && req.midData.dailyData, new Date(), function () {
+                        if (req.current && req.midData && Array.isArray(req.midData.dailyData)) {
+                            self._appendLifeIndexToCurrent(req.current, req.short, req.midData.dailyData);
+                        }
+                        next();
+                    });
             });
 
         return this;
@@ -3598,6 +3606,9 @@ ControllerTown.prototype._makeStrForKma = function(data, res) {
         data.sensorytemStr = self._parseSensoryTem(data.sensorytem, res);
     }
 
+    if (data.hasOwnProperty('fsnGrade')) {
+        data.fsnStr = LifeIndexKmaController.fsnStr(data.fsnGrade, res);
+    }
     if (data.hasOwnProperty('ultrvGrade')) {
         data.ultrvStr = LifeIndexKmaController.ultrvStr(data.ultrvGrade, res);
     }

@@ -65,12 +65,13 @@ function createHarness(version, fixture, historyOptions = {}) {
   const app=fs.readFileSync(path.join(root,'server/app.js'),'utf8');
   for(const match of app.matchAll(/global\.(\w+String)\s*=\s*(\[[\s\S]*?\]);/g)) vm.runInContext(match[0],context);
   function modelData(name) {
-    if(name==='town') return locations;
+    if(name==='town') return fixture.townRows || locations;
     if(name==='modelKmaStnInfo') return historyOptions.stations || [];
     if(name==='modelHealthDay') return [];
     // Optional life index and KASI rise/set store rows (#2587); defaults keep the earlier empty stores.
     if(name==='modelAreaNo') return fixture.areaNoRows || [];
     if(name==='kma.lifeindex.model') return fixture.lifeIndexRows || [];
+    if(name==='modelFoodPoisoning') return fixture.foodPoisoningRows || [];
     if(name==='modelKasiRiseSet') return fixture.kasiRows || [];
     // Optional warning zone state rows for the real kma.specialweather.controller (#2609).
     if(name==='modelKmaSpecialWeatherZone') return fixture.zoneRows || [];

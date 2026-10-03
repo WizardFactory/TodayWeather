@@ -150,7 +150,7 @@ LifeIndexKmaController._addIndexDataToList = function(destList, srcList, indexNa
 LifeIndexKmaController._appendFromKma = function (town, callback){
     var keyBox = require('../config/config').keyString;
     var lifeIndexKma = new (require('../lib/lifeIndexKmaRequester'))();
-    lifeIndexKma.setServiceKey(keyBox.cert_key);
+    lifeIndexKma.setServiceKey(require('../lib/dataGoKrKeys').fromConfig(keyBox));
     lifeIndexKma.getLifeIndexByTown(town, callback);
 };
 

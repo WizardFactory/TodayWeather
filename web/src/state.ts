@@ -396,11 +396,22 @@ function validPoint(p: unknown): boolean {
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(p.at) &&
     finiteOrNull(p.snowfall) &&
     ["pollenOak", "pollenPine", "pollenWeeds"].every(
-      (key) => p[key] === undefined ||
+      (key) =>
+        p[key] === undefined ||
         (Number.isInteger(p[key]) && p[key] >= 0 && p[key] <= 3),
     ) &&
-    [null, 1, 3, 24].includes(p.precipitationHours) &&
-    [null, 1, 3, 24].includes(p.snowfallHours) &&
+    (p.precipitationHours === null ||
+      (typeof p.precipitationHours === "number" &&
+        Number.isFinite(p.precipitationHours) &&
+        p.precipitationHours > 0)) &&
+    (p.snowfallHours === null ||
+      (typeof p.snowfallHours === "number" &&
+        Number.isFinite(p.snowfallHours) &&
+        p.snowfallHours > 0)) &&
+    ["precipitationApprox", "snowfallApprox"].every(
+      (key) => p[key] === undefined || typeof p[key] === "boolean",
+    ) &&
+    (p.snowfallBasis === undefined || p.snowfallBasis === "forecast") &&
     [null, "observed", "partial", "approx", "forecast"].includes(
       p.precipitationBasis,
     )

@@ -49,6 +49,7 @@ function load(relative, overrides, globals) {
     const sandbox = Object.assign({
         module, exports: module.exports, Date, JSON, Math, Promise, Error,
         require: name => {
+            if (/(?:^|\/)dataGoKrKeys$/.test(name)) return require('../../lib/dataGoKrKeys');
             if (!Object.prototype.hasOwnProperty.call(deps, name)) { throw new Error('Unstubbed dependency: ' + name); }
             return deps[name];
         },
@@ -61,10 +62,11 @@ function load(relative, overrides, globals) {
 
 function managerWith(policy, overrides, globals) {
     return load('controllers/controllerManager.js', Object.assign({
-        '../config/config': {db: {version: '2.0'}, keyString: {dongnae_forecast_keys: '[]'}, history: {enabled: false}},
+        '../config/config': {db: {version: '2.0'}, keyString: {dongnae_forecast_keys: JSON.stringify(['SYNTHETIC_POLICY_KEYxxxxxxxxxxxxxxxx'])}, history: {enabled: false}},
         '../config/gather': policy,
         '../lib/forecastTraffic': require('../../lib/forecastTraffic'),
         '../lib/currentGridCollection': require('../../lib/currentGridCollection'),
+        '../lib/foodPoisoning': require('../../lib/foodPoisoning'),
         async: require('async')
     }, overrides), globals);
 }
@@ -232,6 +234,7 @@ async function kaqAccepts(policy, count) {
     function Base() {}
     const Kaq = load('controllers/kaq.hourly.forecast.controller.js', {
         '../config/config': {image: {kaq_korea_image: {}}}, '../config/gather': policy,
+        '../lib/foodPoisoning': require('../../lib/foodPoisoning'),
         './img.hourly.forecast.controller': Base
     });
     const Contents = Array.from({length: count}, (v, i) => ({Key: 'f/' + i + '_PM2_5.09KM.gif'}));

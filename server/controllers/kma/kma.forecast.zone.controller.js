@@ -6,45 +6,62 @@
 
 const request = require('request');
 const async = require('async');
+const keyList = require('../../lib/dataGoKrKeys');
+const rejection = require('../../lib/dataGoKrRejection');
 
 const KmaForecastZoneModel = require('../../models/kma/kma.forecast.zone.model');
 
 class KmaForecastZoneController {
-    constructor(serviceKey) {
+    constructor(serviceKeys) {
         this.kmaApiUrl = 'http://newsky2.kma.go.kr';
         this.apiPath =  '/service/ForecastZoneInfoService/ForecastZoneCodeDataInfo';
         this.queryParam = 'pageNo=1&numOfRows=999&type=json';
-        this.serviceKey = serviceKey;
+        this.serviceKeys = keyList.parse(serviceKeys);
+        this.keyIndex = 0;
     }
 
     _getKmaApiUrl() {
-       return this.kmaApiUrl+this.apiPath+'?'+this.queryParam+'&ServiceKey='+this.serviceKey;
+       return this.kmaApiUrl+this.apiPath+'?'+this.queryParam+'&ServiceKey='+keyList.encode(this.serviceKeys[this.keyIndex] || '');
     }
 
     _request(url) {
-        log.info({kmaForecastZoneCodeUrl: url});
+        if (!this.serviceKeys.length) {
+            return Promise.reject(new Error('No configured data.go.kr keys'));
+        }
+        const start = this.keyIndex;
+        let tried = 0;
+        // Retry transport/server failures without repeating rejected credentials.
         return new Promise((resolve, reject) => {
-            let options = {json:true, timeout: 3000};
-            async.retry(3,
-                callback => {
-                    request(url, options, (err, response, body)=> {
-                        if (err) {
-                            return callback(err);
-                        }
-                        if (response.statusCode >= 400) {
-                            err = new Error(`http response status code: ${response.statusCode}`);
-                            err.statusCode = response.statusCode;
-                            return callback(err);
+            const attempt = () => {
+                const currentUrl = url.replace(/([?&]ServiceKey=)[^&]*/, '$1' +
+                    keyList.encode(this.serviceKeys[this.keyIndex]));
+                log.info('request forecast zone code keyIndex=' + this.keyIndex);
+                async.retry({times: 3, errorFilter: err => !err.keyRejected}, callback => {
+                    request(currentUrl, {json: true, timeout: 3000}, (err, response, body) => {
+                        if (err) { return callback(new Error('forecast zone transport failure')); }
+                        const status = response.statusCode;
+                        const code = typeof body === 'string' ? rejection.code(body) :
+                            body && body.OpenAPI_ServiceResponse && body.OpenAPI_ServiceResponse.cmmMsgHeader ?
+                                String(body.OpenAPI_ServiceResponse.cmmMsgHeader.returnReasonCode) :
+                            body && body.response && body.response.header ? String(body.response.header.resultCode) : undefined;
+                        if (status >= 400 || rejection.isAuth(status, code) || rejection.isQuota(status, code)) {
+                            const failure = new Error('forecast zone status=' + status + ' code=' + code);
+                            failure.statusCode = status;
+                            failure.keyRejected = rejection.isAuth(status, code) || rejection.isQuota(status, code);
+                            return callback(failure);
                         }
                         callback(null, body);
                     });
-                },
-                (err, result) => {
-                    if (err) {
-                        return reject(err);
+                }, (err, result) => {
+                    if (err && err.keyRejected && ++tried < this.serviceKeys.length) {
+                        this.keyIndex = (start + tried) % this.serviceKeys.length;
+                        return attempt();
                     }
+                    if (err) { this.keyIndex = start; return reject(err); }
                     resolve(result);
                 });
+            };
+            attempt();
         });
     }
 

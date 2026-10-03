@@ -23,6 +23,7 @@ Files ending in `.visual-check.html` are local screenshot contact sheets, not th
 
 | View | Standalone HTML | Source |
 | --- | --- | --- |
+| Food-poisoning recovery | [Collector and response design](diagrams/food-poisoning.html) | [JSON](diagrams/food-poisoning.json) |
 | Nation air recovery | [DB and global providers](diagrams/nation-air-recovery.html) | [JSON](diagrams/nation-air-recovery.json) |
 | Historical observations | [Recovery and response](diagrams/historical-observations.html) | [JSON](diagrams/historical-observations.json) |
 | Push notifications | [Settings to device notification](diagrams/push-notifications.html) | [JSON](diagrams/push-notifications.json) |

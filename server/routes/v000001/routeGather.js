@@ -5,9 +5,7 @@
 'use strict';
 
 var router = require('express').Router();
-var server_key = require('../../config/config').keyString.cert_key;
-var normal_key = require('../../config/config').keyString.normal;
-var dongnae_keys = JSON.parse(require('../../config/config').keyString.dongnae_forecast_keys);
+var dongnae_keys = require('../../lib/dataGoKrKeys').fromConfig(require('../../config/config').keyString);
 
 var Scrape = require('../../lib/kmaScraper');
 var PastConditionGather = require('../../lib/PastConditionGather');
@@ -75,7 +73,7 @@ router.get('/midrss', function(req, res) {
 });
 
 router.get('/midtemp', function(req, res) {
-    manager.getMidTempByForecastZone(9, normal_key, function (err) {
+    manager.getMidTempByForecastZone(9, dongnae_keys[0], function (err) {
         if (err) {
             log.error(err);
         }
@@ -84,7 +82,7 @@ router.get('/midtemp', function(req, res) {
 });
 
 router.get('/midland', function(req, res) {
-    manager.getMidLand(9, normal_key, function (err) {
+    manager.getMidLand(9, dongnae_keys[0], function (err) {
         if (err) {
             log.error(err);
         }
@@ -93,7 +91,7 @@ router.get('/midland', function(req, res) {
 });
 
 router.get('/midforecast', function(req, res) {
-    manager.getMidForecast(9, normal_key, function (err) {
+    manager.getMidForecast(9, dongnae_keys[0], function (err) {
         if (err) {
             log.error(err);
         }
@@ -102,7 +100,7 @@ router.get('/midforecast', function(req, res) {
 });
 
 router.get('/midsea', function(req, res) {
-    manager.getMidSea(9, normal_key, function (err) {
+    manager.getMidSea(9, dongnae_keys[0], function (err) {
         if (err) {
             log.error(err);
         }

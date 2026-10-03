@@ -60,14 +60,29 @@ CurrentGridCollection.prototype.run = function(slot, key, callback) {
         else { callback(new Error('Current collection busy with another publication')); }
         return;
     }
-    var run = {identity: identity, callbacks: [callback]};
+    var run = {identity: identity, callbacks: [callback], finished: false};
+    // Stop admission, not an already issued Mongo operation.
+    var control = {cancelled: false, collector: null, retryTimer: null};
     this.active = run;
+    var deadline = setTimeout(function() {
+        control.cancelled = true;
+        if (control.retryTimer) { clearTimeout(control.retryTimer); }
+        if (control.collector && control.collector.cancel) { control.collector.cancel(); }
+        options.emit({event: 'current-collection-stop', utc: new Date().toISOString(), publication: identity, reason: 'deadline'});
+        finish(new Error('Current collection run deadline exceeded'));
+    }, options.collectTimeoutMs || 540000);
     function finish(err, report) {
-        self.active = null;
-        run.callbacks.forEach(function(cb) { cb(err, report); });
+        if (run.finished) { return; }
+        run.finished = true;
+        clearTimeout(deadline);
+        if (self.active === run) { self.active = null; }
+        var callbacks = run.callbacks;
+        run.callbacks = [];
+        callbacks.forEach(function(cb) { cb(err, report); });
     }
     function read(coords, stage, done) {
         pending(options.model, options.version, slot, coords, function(err, list) {
+            if (run.finished || control.cancelled) { return; }
             if (!err) {
                 options.emit({event: 'current-coverage', stage: stage, utc: new Date().toISOString(),
                     publication: identity, total: coords.length, complete: coords.length - list.length, pending: list.length});
@@ -76,18 +91,20 @@ CurrentGridCollection.prototype.run = function(slot, key, callback) {
         }, options.readTimeoutMs);
     }
     var coordinatesReady = bounded(function(err, coords) {
+        if (run.finished || control.cancelled) { return; }
         if (err) { return finish(err); }
         if (!Array.isArray(coords) || !coords.length) { return finish(new Error('Current grid list unavailable')); }
         read(coords, 'before', function(err, list) {
             if (err) { return finish(err); }
             if (!list.length) { return finish(null, {total: coords.length, pending: 0}); }
-            options.collect(list, slot, key, function(collectionError) {
+            try { options.collect(list, slot, key, function(collectionError) {
+                if (run.finished || control.cancelled) { return; }
                 read(coords, 'after', function(readError, remaining) {
                     var error = collectionError || readError;
                     if (!error && remaining.length) { error = new Error('Current collection incomplete: pending=' + remaining.length); }
                     finish(error, {total: coords.length, pending: readError ? coords.length : remaining.length});
                 });
-            });
+            }, control); } catch (err) { finish(err); }
         });
     }, options.readTimeoutMs);
     try { options.coords(coordinatesReady); } catch (err) { coordinatesReady(err); }

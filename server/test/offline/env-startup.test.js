@@ -91,7 +91,7 @@ try {
         "    assert.strictEqual(config.port, expected.port);",
         "    if (expected.mode === 'gather') {",
         "      assert.deepStrictEqual(JSON.parse(config.keyString.dongnae_forecast_keys), ['dummy-a', 'dummy-b']);",
-        "      assert.strictEqual(config.keyString.test_normal, 'synthetic-key');",
+        "      assert.strictEqual(Object.prototype.hasOwnProperty.call(config.keyString, 'test_normal'), false);",
         "      assert.strictEqual(process.env.EMPTY_VALUE, '');",
         "    }",
         "    if (expected.emptyMode) assert.strictEqual(process.env.SERVER_MODE, '');",

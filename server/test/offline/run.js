@@ -4,12 +4,15 @@
 var path = require('path');
 var spawnSync = require('child_process').spawnSync;
 var commands = [
+    [path.join(__dirname, 'data-go-kr-keys.test.js')],
     [path.join(__dirname, 'env-startup.test.js')],
     [require.resolve('mocha/bin/_mocha'), path.join(__dirname, 'gather-code-drift.test.js')],
     [path.join(__dirname, 'gather-smoke.js')],
     [path.join(__dirname, 'gather-policy.test.js')],
     [path.join(__dirname, 'gather-quota.test.js')],
     [path.join(__dirname, 'current-grid-collection.test.js')],
+    [path.join(__dirname, 'current-lifecycle.test.js')],
+    [path.join(__dirname, 'current-writer-cancellation.test.js')],
     [path.join(__dirname, 'current-manager.test.js')],
     [path.join(__dirname, 'current-quota-memory.test.js')],
     [path.join(__dirname, 'forecast-traffic.test.js')],
@@ -36,6 +39,8 @@ var commands = [
     [path.join(__dirname, 'world-air.test.js')],
     [path.join(__dirname, 'riseset-uv.test.js')],
     [path.join(__dirname, 'life-index-2650.test.js')],
+    [path.join(__dirname, 'food-poisoning.test.js')],
+    [path.join(__dirname, 'food-poisoning-route.test.js')],
     [path.join(__dirname, 'precipitation.test.js')],
     [path.join(__dirname, 'vc-weather.test.js')],
     [path.join(__dirname, 'overseas-uv.test.js')],

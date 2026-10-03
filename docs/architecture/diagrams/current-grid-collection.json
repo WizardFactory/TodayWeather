@@ -97,8 +97,8 @@
       "lane": "failure",
       "col": 3,
       "type": "security",
-      "label": "Daily quota stop",
-      "sublabel": "current key until KST reset",
+      "label": "Collection stop",
+      "sublabel": "daily quota / run deadline",
       "width": 140
     },
     {
@@ -166,7 +166,7 @@
       "id": "e8",
       "from": "fetch",
       "to": "quota",
-      "label": "quota"
+      "label": "quota / deadline"
     },
     {
       "id": "e9",
@@ -190,7 +190,8 @@
       "title": "Scope and limits",
       "items": [
         "Process-local overlap and quota memory; restart is a new process",
-        "No production activation, quota increase or historical backfill"
+        "No production activation, quota increase or historical backfill",
+        "Nine-minute current deadline; issued Mongo operations can settle later"
       ]
     }
   ]
