@@ -1,21 +1,24 @@
 'use strict';
-// Actual request transport/collector/Manager; synthetic loopback provider, fixture storage.
+// Actual request transport/collector/Manager; synthetic direct-loopback provider, fixture storage.
 const assert=require('assert'),http=require('http'),h=require('./harness'),mh=require('./current-manager-harness');
 let provider,requests=0,closed=0;const sockets=new Set();
 (async()=>{
     provider=http.createServer((req,res)=>{
         requests++;
         if(requests===1){res.on('close',()=>closed++);return;}
-        const u=new URL(req.url),values={T1H:'0',RN1:'0',UUU:'0',VVV:'0',REH:'50',PTY:'0',VEC:'0',WSD:'0'};
+        const u=new URL(req.url,'http://127.0.0.1'),values={T1H:'0',RN1:'0',UUU:'0',VVV:'0',REH:'50',PTY:'0',VEC:'0',WSD:'0'};
         const items=Object.keys(values).map(category=>({baseDate:[u.searchParams.get('base_date')],baseTime:[u.searchParams.get('base_time')],nx:[u.searchParams.get('nx')],ny:[u.searchParams.get('ny')],category:[category],obsrValue:[values[category]]}));
         res.end(h.xml(h.response(items)));
     });
     provider.on('connection',s=>{sockets.add(s);s.on('close',()=>sockets.delete(s))});
     await new Promise(resolve=>provider.listen(0,'127.0.0.1',resolve));
-    process.env.HTTP_PROXY='http://127.0.0.1:'+provider.address().port;delete process.env.NO_PROXY;delete process.env.no_proxy;
     const coords=[{mx:60,my:127},{mx:61,my:127}];let rows=[],slot={date:'20261003',time:'0000'};
     const model={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,rows)}}}};
-    function Collector(){return h.collector(require('request'));}
+    function Collector(){
+        const collector=h.collector(require('request'));
+        collector.DATA_URL=Object.freeze({TOWN_CURRENT:'http://127.0.0.1:'+provider.address().port+'/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst'});
+        return collector;
+    }
     const f=mh.load({'../lib/collectTownForecast':Collector,'../models/town':{getCoord:cb=>cb(null,coords)},'../models/kma/kma.town.current.model':model,
         '../config/gather':require('../../config/gather').load({GATHER_CURRENT_DEADLINE_MS:'100',GATHER_REQUEST_CONCURRENCY:'1'})});
     f.m.getCurrentQueryTime=()=>slot;f.m.getSaveFunc=()=>function(data,cb){rows.push({mCoord:{mx:data[0].mx,my:data[0].my},currentData:data[0]});cb()};
