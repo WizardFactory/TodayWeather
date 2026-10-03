@@ -13,7 +13,8 @@ var precipitation = require('../../lib/kmaPrecipitation');
 function kmaTownShortController(){
 }
 
-kmaTownShortController.prototype.saveShort = function(newData, callback){
+kmaTownShortController.prototype.saveShort = function(newData, callback, control){
+    if (control && control.cancelled) { return callback(new Error('Forecast collection cancelled')); }
     //log.info('KMA Town S> save :', newData);
     try{
         var coord = {
@@ -26,15 +27,16 @@ kmaTownShortController.prototype.saveShort = function(newData, callback){
 
         async.mapSeries(newData,
             function(item, cb){
+                if (control && control.cancelled) { return cb(new Error('Forecast collection cancelled')); }
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
                 var newItem = {mCoord: coord, pubDate: pubDate, fcsDate: fcsDate, shortData: item};
                 log.debug('KMA Town S> item : ', JSON.stringify(newItem));
 
-                modelKmaTownShort.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
+                modelKmaTownShort.update({'mCoord.mx': coord.mx, 'mCoord.my': coord.my, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
                         log.error('KMA Town S> Fail to update short item');
                         log.info(JSON.stringify(newItem));
-                        return cb();
+                        return cb(err);
                     }
 
                     cb();

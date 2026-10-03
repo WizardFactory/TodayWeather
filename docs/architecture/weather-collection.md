@@ -322,3 +322,26 @@ weather requests. See [operations and limitations](../operations/food-poisoning.
 [collector](../../server/lib/foodPoisoning.js),
 [model](../../server/models/modelFoodPoisoning.js) and the
 [design diagram](diagrams/food-poisoning.html) / [source](diagrams/food-poisoning.json).
+
+
+## Forecast publication coverage (#2676)
+
+[Flow](diagrams/forecast-grid-collection.html) · [Editable design](diagrams/forecast-grid-collection.json) · [Budget/rollout](../operations/current-grid-collection.md#forecast-completion-2676).
+
+Manager short/ultra-short polls now enter separate per-product
+[ForecastGridCollection](../../server/lib/forecastGridCollection.js) coordinators.
+They read exact publication coverage from existing DB1 arrays or DB2 per-slot
+models, validate product horizons/required fields, and admit only pending grids
+into the unchanged bounded collector/retry/key rotation. No current-observation
+completeness or partial-admission policy is reused for forecasts. Complete
+publications skip HTTP after coordinator recreation. Full batch identity/value/
+horizon checks run before saves, and coverage readback after saves is authoritative.
+DB1 replaces overlapping controlled forecast rows without inheriting old fields;
+DB2 serial writers propagate errors. Both paths fence new writes after expiry.
+Three-second reads and the nine-minute forecast run deadline bound guard lifetime;
+issued Mongo operations may settle later at the original identity. Guards are
+process-local. Product/issuance coverage and actual page/retry attempts are emitted
+without secrets. Formats, polling, grid coverage, API output and server2 remain.
+Production deployment, quota approval and successive-publication/output readback
+are separate, unexecuted gates. See the operations contract for issuance-specific
+TMN/TMX, extension-day cadence, conditional WAV and ultra-short POP requirements.

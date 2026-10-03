@@ -127,3 +127,10 @@ and the gather-side `PUSH_WARNING_FEED_ENABLED` default to false. The latter als
 requires the existing KMA warning collector to be enabled. `SERVER_MODE=push` is
 rejected in S3 mode; do not run the legacy/SQLite sender alongside the coordinator.
 See [S3 operations](../docs/operations/push-s3.md) before activation.
+
+
+`GATHER_FORECAST_DEADLINE_MS` defaults to540000ms (positive integer, maximum2147483647).
+It bounds each short/ultra-short publication run independently from
+`GATHER_CURRENT_DEADLINE_MS`, cancels HTTP/retry admission and fences new forecast
+writes after expiry. Polling and formats are unchanged. Issued Mongo operations
+may settle later. See [forecast coverage and rollout](../docs/operations/current-grid-collection.md#forecast-completion-2676).
