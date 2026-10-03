@@ -12,46 +12,16 @@
 var req = require('request');
 var config = require('../config/config');
 var rejection = require('./dataGoKrRejection');
+var keyList = require('./dataGoKrKeys');
 
 var BASE_URL = 'http://apis.data.go.kr/1360000/WthrWrnInfoService/';
 var PAGE_ROWS = 1000;
 var MAX_PAGES = 20;
 var TIMEOUT_MS = 30*1000;
-// Auth and quota codes come from dataGoKrRejection; a quota error is never retried within the cycle (#2604).
+// Auth/quota rejection rotates once through the configured list (#2618).
 
-/**
- * Candidate keys in the #2587 order; unset defaults ('You have to set ...', '["key1","key2"]') are skipped.
- * @param keyBox config.keyString
- * @returns {string[]}
- */
-function candidateKeys(keyBox) {
-    var list = [];
-    if (!keyBox) {
-        return list;
-    }
-    var candidates = [keyBox.normal, keyBox.test_normal];
-    try {
-        candidates = candidates.concat(JSON.parse(keyBox.dongnae_forecast_keys || '[]'));
-    }
-    catch (err) {
-        log.warn('kma warning: invalid forecast key list');
-    }
-    candidates.forEach(function (key) {
-        if (typeof key === 'string' && key.length >= 20 && key.indexOf('You have to set') !== 0 && list.indexOf(key) === -1) {
-            list.push(key);
-        }
-    });
-    return list;
-}
-
-function encodeKey(key) {
-    try {
-        return encodeURIComponent(decodeURIComponent(key));
-    }
-    catch (err) {
-        return encodeURIComponent(key);
-    }
-}
+function candidateKeys(keyBox) { return keyList.fromConfig(keyBox); }
+function encodeKey(key) { return keyList.encode(key); }
 
 /**
  * @param options {keys?: string[], request?: function, baseUrl?: string} baseUrl is for local smoke servers
@@ -59,7 +29,7 @@ function encodeKey(key) {
  */
 function KmaWarningRequester(options) {
     options = options || {};
-    this.keys = options.keys || candidateKeys(config.keyString);
+    this.keys = options.keys ? keyList.parse(options.keys) : candidateKeys(config.keyString);
     this.request = options.request || req;
     this.baseUrl = options.baseUrl || BASE_URL;
     this.keyIndex = 0;
@@ -144,14 +114,15 @@ KmaWarningRequester.prototype.classify = function (operation, statusCode, body) 
 };
 
 /**
- * One page. An authorization error moves to the next key once around the list; nothing else is retried.
+ * One page. An auth/quota error moves to the next key once around the list; nothing else is retried.
  * @param operation e.g. getPwnStatus
  * @param params query parameters without serviceKey/dataType
  * @param callback (err, {items}|{noData: true})
  */
 KmaWarningRequester.prototype.get = function (operation, params, callback) {
     var self = this;
-    var keyCount = Math.max(self.keys.length, 1);
+    if (!self.keys.length) { return callback(makeError(operation, 'no configured data.go.kr keys')); }
+    var keyCount = self.keys.length;
     var start = self.keyIndex % keyCount;
     var offset = 0;
 
@@ -163,8 +134,11 @@ KmaWarningRequester.prototype.get = function (operation, params, callback) {
                     return callback(makeError(operation, err.code || err.message, {cause: err.message}));
                 }
                 var result = self.classify(operation, response.statusCode, body);
+                if (!result.error && response.statusCode >= 400) {
+                    result = {error: codeError(operation, 'http', response.statusCode)};
+                }
                 if (result.error) {
-                    if (result.error.isAuthError && !result.error.isQuotaError && offset + 1 < keyCount) {
+                    if ((result.error.isAuthError || result.error.isQuotaError) && offset + 1 < keyCount) {
                         offset++;
                         return attempt();
                     }

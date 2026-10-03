@@ -24,7 +24,7 @@ var modelMidLand = require('../models/modelMidLand');
 var modelMidSea = require('../models/modelMidSea');
 var modelMidTemp = require('../models/modelMidTemp');
 
-var dongnae_keys = JSON.parse(require('../config/config').keyString.dongnae_forecast_keys);
+var dongnae_keys = require('../lib/dataGoKrKeys').fromConfig(config.keyString);
 // #2604: index of the forecast key in use per data.go.kr service. It is kept across cycles
 // and moves on only when data.go.kr rejects the key (quota or authorization).
 var forecastKeyIndex = {};
@@ -1038,7 +1038,12 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
 
     cycle = cycle || {keysTried: 1, retrying: false};
     var service = self._getForecastService(dataType);
-    var keyCount = Math.max(dongnae_keys.length, 1);
+    if (!dongnae_keys.length) {
+        err = new Error(dataTypeName + ' no configured data.go.kr keys');
+        if (callback) { callback(err); } else { log.error(err); }
+        return this;
+    }
+    var keyCount = dongnae_keys.length;
     var keyIndex = (forecastKeyIndex[service] || 0) % keyCount;
     var rejectedCount = 0;
     if (dongnae_keys.length) {
@@ -1719,7 +1724,7 @@ Manager.prototype.getMidTempByForecastZone = function(gmt, key, callback) {
 
     async.waterfall([
             function (callback) {
-                var kmaForcastZoneCode = new KmaForecastZoneCode(key);
+                var kmaForcastZoneCode = new KmaForecastZoneCode(dongnae_keys);
                 //C:도시
                 kmaForcastZoneCode.findForecastZoneCode({regSp:"C"})
                     .exec(function (err, result) {
@@ -2361,14 +2366,14 @@ Manager.prototype.startManager = function(){
 
     self.keco = keco;
 
-    taskKmaIndexService.setServiceKey(config.keyString.cert_key, config.keyString);
+    taskKmaIndexService.setServiceKey(dongnae_keys);
     taskKmaIndexService.setNextGetTime('ultrv', new Date());
     ['flowerWoody', 'flowerPine', 'flowerWeeds'].forEach(function (name) {
         taskKmaIndexService.setNextGetTime(name, new Date());
     });
     self.taskKmaIndexService = taskKmaIndexService;
 
-    var kmaForecastZoneCode = new KmaForecastZoneCode(config.keyString.test_normal);
+    var kmaForecastZoneCode = new KmaForecastZoneCode(dongnae_keys);
     kmaForecastZoneCode.getFromKma()
         .catch(function (err) {
             log.error(err);

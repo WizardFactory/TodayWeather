@@ -225,3 +225,21 @@ success or production recovery is claimed. See the [rollout and rollback
 procedure](../operations/airkorea-recovery.md) for renewal and scheduled
 readback gates. Client-requested nation recovery uses Mongo plus the existing
 global-air chain and never calls AirKorea; see [nation response](mobile-api.md#nation-air-recovery-2636).
+
+## Unified data.go.kr key source (#2618)
+
+Forecast/mid, warnings, UV V5/pollen V3, KASI and forecast-zone use only
+`DONGNAE_SECRET_KEYS` through `lib/dataGoKrKeys.js`. Legacy env names warn without
+values and never supply credentials. Empty/invalid lists fail before provider
+HTTP. Shared `dataGoKrRejection.js` classifies authorization/quota responses;
+requesters try each key once per logical request, and Manager retains its
+per-service cycle rotation. Warning quota now rotates instead of immediately
+ending with the first exhausted key. Other failures do not rotate.
+
+UV/pollen preserve issuance/pagination and no partial saves; KASI preserves
+allKeysRejected stopping; forecast-zone keeps bounded transient retries and
+logs only the key index. Its existing endpoint availability is unverified.
+Health-day remains removed. AirKorea and opt-in ASOS retain separate settings.
+See [configuration](../../server/CONFIGURATION.md) and the
+[migration runbook](../operations/data-go-kr-keys.md). This is repository behavior,
+not evidence of deployment or successful gather-host runs.

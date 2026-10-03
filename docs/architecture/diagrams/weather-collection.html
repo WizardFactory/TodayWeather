@@ -5417,6 +5417,18 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <li>Retired food-poisoning and health-index collectors and the /gather/healthday schedule were removed. Food poisoning is tracked in #2600.</li>
         </ul>
       </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>Unified keys — #2618 design</h3>
+        </div>
+        <ul>
+          <li>DONGNAE_SECRET_KEYS supplies forecast/mid, warnings, UV/pollen, KASI and forecast-zone requests.</li>
+          <li>Auth/quota rejection tries each list key once; exhaustion stops the logical request/cycle.</li>
+          <li>AK verifies subscriptions and gather-host runs before deployment; AirKorea and opt-in ASOS keep separate settings.</li>
+        </ul>
+      </div>
     </div>
     <nav class="node-outline no-print" id="node-outline" hidden aria-labelledby="node-outline-title">
       <div class="node-outline-head">

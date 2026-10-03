@@ -39,7 +39,7 @@ describe('unit test - kma forecast zone controller', function() {
     it('test send alert push list', function (done) {
         this.timeout(10*1000);
         let keyList = JSON.parse(config.keyString.dongnae_forecast_keys);
-        let ctrl = new KmaForecastZoneController(keyList[0]);
+        let ctrl = new KmaForecastZoneController(keyList);
         ctrl.getFromKma()
             .then(result => {
                 console.info(result);

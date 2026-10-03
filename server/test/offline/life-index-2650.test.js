@@ -17,7 +17,7 @@ const log = {info: noop, warn: noop, error: noop, debug: noop, silly: noop};
 function load(relative, dependencies) {
     const module = {exports: {}};
     const sandbox = {module, exports: module.exports, log, console, Date,
-        require: name => dependencies[name] || function () {}};
+        require: name => /(?:^|\/)dataGoKrKeys$/.test(name) ? require('../../lib/dataGoKrKeys') : /(?:^|\/)dataGoKrRejection$/.test(name) ? require('../../lib/dataGoKrRejection') : dependencies[name] || function () {}};
     sandbox.global = sandbox;
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), sandbox, {filename: relative});
     return module.exports;
@@ -130,7 +130,7 @@ test('seasonal pollen task fetches every page, stores rows, and skips off-season
         request, async: asyncStub, '../lib/kmaTimeLib': time
     });
     const service = new Service();
-    service.serviceKey = 'fixture-key';
+    service.setServiceKey(['fixture-key-xxxxxxxxxxxxxxxxxxxx']);
     let saved;
     service.saveLifeIndex2 = (type, rows, cb) => { saved = {type, rows}; cb(null, rows.length); };
     await new Promise((resolve, reject) => service.taskPollenV3('flowerWeeds',
@@ -163,7 +163,7 @@ test('later pollen issuance on the same KST day replaces the earlier one', async
         '../lib/kmaTimeLib': time
     });
     const service = new Service();
-    service.serviceKey = 'fixture-key';
+    service.setServiceKey(['fixture-key-xxxxxxxxxxxxxxxxxxxx']);
     service.saveLifeIndex2 = (type, rows, callback) => {
         saved.push(rows[0].lastUpdateDate);
         callback(null, rows.length);
@@ -218,7 +218,7 @@ test('incomplete or duplicate pollen pages cannot mark an issuance complete', as
             request, async: asyncStub, '../lib/kmaTimeLib': time
         });
         const service = new Service();
-        service.serviceKey = 'fixture-key';
+        service.setServiceKey(['fixture-key-xxxxxxxxxxxxxxxxxxxx']);
         let saved = false;
         service.saveLifeIndex2 = (type, rows, cb) => { saved = true; cb(null, rows.length); };
         const err = await new Promise(resolve => service.taskPollenV3('flowerWeeds',

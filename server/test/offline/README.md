@@ -424,3 +424,15 @@ paths for both DB formats. It asserts the observed temperature and station
 provenance, plus degraded station-storage failures. It does not connect to MongoDB
 or production, test server-side timeout enforcement, or establish production recovery.
 CI runs both commands on Node 16.20.2 and 22.22.2.
+
+## Unified data.go.kr keys (#2618)
+
+`data-go-kr-keys.test.js` covers list parsing, ignored legacy fields, sanitized
+startup warnings and UV/pollen/KASI/warning/forecast-zone auth/quota rotation,
+exhaustion, empty lists and non-key errors. It is selected by `test:offline`.
+`data-go-kr-keys-smoke.js` uses the real `request` library over loopback HTTP
+(20 requests) to check exact key encoding, provider XML quota errors, response
+contracts and bounded success/exhaustion. Run it separately with `request` and
+`async` in the isolated dependencies. Existing `gather-quota-smoke.js` verifies
+Manager/collector cycles on 2,032 grids. These are synthetic integrations; live
+gather acceptance belongs to the [operator runbook](../../../docs/operations/data-go-kr-keys.md).

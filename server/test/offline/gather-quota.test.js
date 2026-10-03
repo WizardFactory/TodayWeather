@@ -255,6 +255,8 @@ function loadManager(keys, policy, lines, RealCollector) {
     vm.runInNewContext(code, Object.assign({
         module, exports: module.exports, Date, JSON, Math, Promise, Error,
         require: name => {
+            if (/(?:^|\/)dataGoKrKeys$/.test(name)) return require('../../lib/dataGoKrKeys');
+            if (/(?:^|\/)dataGoKrRejection$/.test(name)) return require('../../lib/dataGoKrRejection');
             if (!Object.prototype.hasOwnProperty.call(deps, name)) { throw new Error('Unstubbed dependency: ' + name); }
             return deps[name];
         },

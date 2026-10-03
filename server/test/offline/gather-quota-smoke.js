@@ -74,6 +74,7 @@ function loadManager(lines) {
     const module = {exports: {}};
     vm.runInNewContext(code, {module, exports: module.exports, Date, JSON, Math, Promise, Error, setTimeout, log,
         require: name => {
+            if (/(?:^|\/)dataGoKrKeys$/.test(name)) return require('../../lib/dataGoKrKeys');
             if (!Object.prototype.hasOwnProperty.call(deps, name)) { throw new Error('Unstubbed dependency: ' + name); }
             return deps[name];
         }}, {filename});
