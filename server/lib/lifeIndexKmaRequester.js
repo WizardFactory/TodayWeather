@@ -97,13 +97,13 @@ function KmaIndexService() {
         urlPath: 'getUltrvLifeList'
     };
 
-    // KMA pollen risk is seasonal. Poll the current KST day at four UTC slots;
-    // a missing publication is retried on the next hourly manager pass.
+    // Availability comes from the provider, including at season boundaries.
+    // Publications are at 06/18 KST (21/09 UTC); the manager dispatches at :10.
     ['flowerWoody', 'flowerPine', 'flowerWeeds'].forEach(function (name) {
         this[name] = {
             nextTime: null,
-            offerMonth: name === 'flowerWeeds' ? {start: 7, end: 9} : {start: 3, end: 5},
-            updateTimeTable: [0, 6, 12, 18]
+            offerMonth: {start: 0, end: 11},
+            updateTimeTable: [9, 21]
         };
     }, this);
 
@@ -217,10 +217,9 @@ KmaIndexService.prototype.getLastGetTime = function (indexName) {
 KmaIndexService.prototype.setNextGetTime = function(indexName, time) {
     var l = this[indexName];
 
-    // Pollen availability is determined from KST in taskPollenV3. The legacy UTC
-    // month adjustment below can roll March 31 into May and July 31 into August 31.
+    // Pollen has no month gate. Preserve startup catch-up and align later runs to KST publications.
     if (POLLEN_OPERATIONS[indexName]) {
-        l.nextTime = time ? new Date(time.getTime()) : new Date((l.nextTime || new Date()).getTime() + 3*3600*1000);
+        l.nextTime = time ? new Date(time.getTime()) : this.nextPollenTime(l.nextTime || new Date());
         return this;
     }
 
@@ -1460,8 +1459,12 @@ KmaIndexService.prototype.convertPollenItemsV3 = function (indexName, items) {
         if (!day) {
             return;
         }
-        ['today', 'tomorrow', 'theDayAfterTomorrow'].forEach(function (field, offset) {
+        ['today', 'tomorrow', 'dayaftertomorrow', 'todaysaftertomorrow'].forEach(function (field, offset) {
+            // Current official spec uses lower-case fields; retain older V3 payload compatibility.
             var raw = item[field];
+            if (field === 'dayaftertomorrow' && raw === undefined) {
+                raw = item.theDayAfterTomorrow;
+            }
             if ((typeof raw !== 'string' && typeof raw !== 'number') ||
                     (typeof raw === 'string' && raw.trim() === '')) {
                 return;
@@ -1541,15 +1544,25 @@ KmaIndexService.prototype._validatePollenPageV3 = function (indexName, page, exp
     return null;
 };
 
+/** Publication-hour predicate is independent of host timezone and UTC date rollover. */
+KmaIndexService.isPollenPublicationHour = function (time) {
+    var hour = (time.getUTCHours() + 9) % 24;
+    return hour === 6 || hour === 18;
+};
+
+KmaIndexService.prototype.nextPollenTime = function (now) {
+    var next = new Date(now.getTime());
+    next.setUTCMinutes(10, 0, 0);
+    while (next <= now || !KmaIndexService.isPollenPublicationHour(next)) {
+        next.setUTCHours(next.getUTCHours() + 1);
+    }
+    return next;
+};
+
 KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
     var self = this;
     var kst = new Date(now.getTime() + 9*3600*1000);
     var month = kst.getUTCMonth();
-    var season = this[indexName].offerMonth;
-    if (month < season.start || month > season.end) {
-        this[indexName].nextTime = new Date(now.getTime() + 24*3600*1000);
-        return callback(null, 0);
-    }
     // Query as of the current KST hour so a later publication can replace the
     // previous one during this season. Pagination keeps this exact request time.
     var time = kst.getUTCFullYear() + ('0'+(month+1)).slice(-2) +
@@ -1559,7 +1572,7 @@ KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
             return callback(err);
         }
         if (first.noData) {
-            self[indexName].nextTime = new Date(now.getTime() + 3*3600*1000);
+            self[indexName].nextTime = self.nextPollenTime(now);
             return callback(null, 0);
         }
         var issued = String(first.items[0].date);
@@ -1573,7 +1586,7 @@ KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
             return callback(firstErr);
         }
         if (self[indexName].lastIssued && issued <= self[indexName].lastIssued) {
-            self[indexName].nextTime = new Date(now.getTime() + 3*3600*1000);
+            // A publication may arrive late. Keep the due time for the next manager retry.
             return callback(null, 0);
         }
         var pages = [];
@@ -1600,7 +1613,7 @@ KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
             pageItems.forEach(function (part) { items = items.concat(part); });
             var rows = self.convertPollenItemsV3(indexName, items);
             if (rows.length === 0) {
-                self[indexName].nextTime = new Date(now.getTime() + 3*3600*1000);
+                self[indexName].nextTime = self.nextPollenTime(now);
                 return callback(null, 0);
             }
             self.saveLifeIndex2(indexName, rows, function (saveErr, count) {
@@ -1608,7 +1621,7 @@ KmaIndexService.prototype.taskPollenV3 = function (indexName, now, callback) {
                     return callback(saveErr);
                 }
                 self[indexName].lastIssued = issued;
-                self[indexName].nextTime = new Date(now.getTime() + 3*3600*1000);
+                self[indexName].nextTime = self.nextPollenTime(now);
                 callback(null, count);
             });
         });

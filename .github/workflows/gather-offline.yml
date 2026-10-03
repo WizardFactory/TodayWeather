@@ -47,7 +47,9 @@ jobs:
         env:
           TZ: UTC
           NODE_PATH: ${{ runner.temp }}/gather-offline/node_modules
-        run: node server/test/offline/daily-response-smoke.js
+        run: |
+          node server/test/offline/daily-response-smoke.js
+          node server/test/offline/pollen-route-smoke.js
 
   gateway-node16:
     # The gateway routes (#2606) run on the production Node 16.20.2 as well.

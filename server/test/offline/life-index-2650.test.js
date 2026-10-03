@@ -98,7 +98,7 @@ test('pollen grades reject malformed values instead of coercing them to zero or 
     }]).length, 1, 'trimmed numeric provider text remains usable');
 });
 
-test('seasonal pollen task fetches every page, stores rows, and skips off-season calls', async () => {
+test('pollen task fetches every page and lets the provider decide off-season availability', async () => {
     const requested = [];
     const twoPage = structuredClone(pollenFixture);
     twoPage.response.body.items.item = Array.from({length: 1000}, (_, i) => ({
@@ -111,8 +111,9 @@ test('seasonal pollen task fetches every page, stores rows, and skips off-season
     lastPage.response.body.pageNo = 2;
     const request = (url, options, callback) => {
         requested.push(url);
-        callback(null, {statusCode: 200}, url.includes('pageNo=1')
-            ? twoPage : lastPage);
+        callback(null, {statusCode: 200}, url.includes('time=20260701')
+            ? {response: {header: {resultCode: '99'}}}
+            : url.includes('pageNo=1') ? twoPage : lastPage);
     };
     const asyncStub = {mapSeries(list, worker, done) {
         const results = [];
@@ -143,7 +144,8 @@ test('seasonal pollen task fetches every page, stores rows, and skips off-season
     const count = requested.length;
     await new Promise((resolve, reject) => service.taskPollenV3('flowerWeeds',
         new Date('2026-07-01T03:00:00Z'), err => err ? reject(err) : resolve()));
-    assert.equal(requested.length, count);
+    assert.equal(requested.length, count + 1, 'off-season no-data must come from the provider');
+    assert.equal(service.flowerWeeds.nextTime.toISOString(), '2026-07-01T09:10:00.000Z');
 });
 
 test('later pollen issuance on the same KST day replaces the earlier one', async () => {
@@ -255,4 +257,31 @@ test('daily zero grades survive the current weather response and get labels', ()
     town._makeStrForKma(current, translate);
     assert.equal(current.ultrvStr, 'LOC_LOW');
     assert.equal(current.flowerWeedsStr, 'LOC_LOW');
+});
+
+
+test('unchanged pollen issuance keeps the due time and never writes a duplicate batch', async () => {
+    const response = structuredClone(pollenFixture);
+    response.response.body.totalCount = 1;
+    response.response.body.items.item = [{areaNo: '1100000000', date: '2026100106', today: '1'}];
+    const Service = load('lib/lifeIndexKmaRequester.js', {
+        request: (url, options, callback) => callback(null, {statusCode: 200}, response),
+        async: {mapSeries: (items, worker, done) => done(null, [])},
+        '../lib/kmaTimeLib': time
+    });
+    const service = new Service();
+    service.setServiceKey(['fixture-key-xxxxxxxxxxxxxxxxxxxx']);
+    let writes = 0;
+    service.saveLifeIndex2 = (type, rows, callback) => { writes++; callback(null, rows.length); };
+    const collect = instant => new Promise((resolve, reject) => service.taskPollenV3('flowerWeeds',
+        new Date(instant), (err, count) => err ? reject(err) : resolve(count)));
+    assert.equal(await collect('2026-09-30T21:10:00Z'), 1);
+    const due = service.flowerWeeds.nextTime;
+    assert.equal(due.toISOString(), '2026-10-01T09:10:00.000Z');
+    for (const instant of ['2026-10-01T09:10:00Z', '2026-10-01T10:10:00Z']) {
+        assert.equal(await collect(instant), 0);
+        assert.equal(service.flowerWeeds.nextTime, due, 'same issuance stays due for the next manager pass');
+        assert.equal(service.flowerWeeds.lastIssued, '2026100106');
+        assert.equal(writes, 1, 'only the initial complete batch is written');
+    }
 });

@@ -116,6 +116,11 @@ Do not advertise push delivery before #2626 passes on physical devices. Remove w
 
 ## Provider and privacy review
 
+Use the [policy/disclosure evidence map](store-policy-evidence.md) to reconcile the
+nine draft documents with the exact release candidate, notification storage choice,
+native SDK checks and store answers. Its source review does not clear deployment,
+retention, deletion or final-document approval gates.
+
 ### Privacy/support hosting on the landing site
 
 AK selected the existing `todayweather.ai` landing S3/CloudFront on 2026-10-01. The public review drafts are [privacy](https://todayweather.ai/mobile/privacy.html) and [support](https://todayweather.ai/mobile/support.html). They visibly remain review drafts. AK confirmed the operator/contact and optional Analytics/no-iOS-tracking direction on2026-10-01. On 2026-10-02 the operator requested the Play URL change, which appeared in the review list at the last observation. The pages still carry draft notices; the URL change does not complete retention/deletion, international-processing or runtime review. The root landing page is a separate asset.
@@ -169,6 +174,6 @@ Apple's initial audit found incomplete privacy/age-rating fields and obsolete de
 
 The initial Apple locale export referenced the old company privacy and Facebook support/marketing pages. This runbook records the later Play URL update separately; it does not claim Apple locale URLs were updated. Reconcile all store locales against the finalized mobile policy/support documents. Never work around an old URL's TLS failure by disabling certificate verification.
 
-### Operating decisions and retention proposal (#2660)
+### Operating decisions and retention controls (#2660)
 
-The approved operator is 주식회사 플라잉; privacy contact 김동환/제품팀; support/deletion inbox todayweather@wizardfactory.net. Documents are Korean, English and Japanese only, for Cordova TodayWeather/general audience. Analytics requires optional explicit consent with default-off and settings withdrawal; advertising stays separately governed by UMP. iOS request preparation enforces nonpersonalized ads/first-party-ID off, and removes unused GTM that otherwise adds IdentitySupport indirectly. Exact native defaults must be checked in compiled output because FirebaseX2.0.2 omits iOS plist values from its install-variable handling. See [privacy review](store-privacy-review.md) and the [retention/deletion proposal](store-data-retention.md). The operator confirmed 90-day server request/error logs on 2026-10-02; this is not verification of every logging layer or SDK deletion policy. Other proposed limits, draft finalization and physical-device acceptance remain separate. Documentation edits do not configure cleanup or publish a store release.
+The approved operator is 주식회사 플라잉; privacy contact 김동환/제품팀; support/deletion inbox todayweather@wizardfactory.net. Documents are Korean, English and Japanese only, for Cordova TodayWeather/general audience. Analytics requires optional explicit consent with default-off and settings withdrawal; advertising stays separately governed by UMP. iOS request preparation enforces nonpersonalized ads/first-party-ID off, and removes unused GTM that otherwise adds IdentitySupport indirectly. Exact native defaults must be checked in compiled output because FirebaseX2.0.2 omits iOS plist values from its install-variable handling. See [privacy review](store-privacy-review.md) and the [retention/deletion controls](store-data-retention.md). The operator confirmed 90-day server request/error logs on 2026-10-02; this is not verification of every logging layer or SDK deletion policy. On 2026-10-03, AK confirmed Analytics 2-month, BigQuery 90-day, resolved support 1-year and completed deletion-audit 1-year limits, and named 김동환 as final approver and policy/store-disclosure maintenance owner. These decisions do not establish enforcement or approve the final text. Draft finalization and physical-device acceptance remain separate. Documentation edits do not configure cleanup or publish a store release.

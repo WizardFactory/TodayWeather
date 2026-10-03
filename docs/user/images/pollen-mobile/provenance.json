@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-03",
+  "browser": "145.0.7632.6",
+  "angular": "tw.ios/www/lib/ionic/js/ionic.bundle.min.js",
+  "script": "scripts/verification/pollen-client-smoke.cjs",
+  "fixture": "server/test/offline/pollen-route-smoke.js",
+  "scope": "actual client table; offline v000903 output; shared SCSS with Ionic; no Cordova build",
+  "images": [
+    {
+      "file": "pollen-tab-forecast-spring.png",
+      "scenario": "spring",
+      "template": "tab-forecast",
+      "sha256": "91279c5f434b856dbaf6aa1a2841de193b1656aedaf07dd1d05dc382dc414c6d"
+    },
+    {
+      "file": "pollen-tab-forecast-autumn.png",
+      "scenario": "autumn",
+      "template": "tab-forecast",
+      "sha256": "a88b94d700167e763400755f86ad8fae2e0ead3ae0dbc0eb7adb91554e8b9671"
+    },
+    {
+      "file": "pollen-tab-forecast-low.png",
+      "scenario": "low",
+      "template": "tab-forecast",
+      "sha256": "75484800c6757db82ea286e54ddf8a6b2578bcd9eb46c8af520ffbd4f7480fd9"
+    },
+    {
+      "file": "pollen-tab-forecast-missing.png",
+      "scenario": "missing",
+      "template": "tab-forecast",
+      "sha256": "ae2352c5fe8b33ce6551b6d8c8edc9db3eeca859f2f663a88420f91f9d6403b0"
+    },
+    {
+      "file": "pollen-ta-tab-weather-spring.png",
+      "scenario": "spring",
+      "template": "ta-tab-weather",
+      "sha256": "91279c5f434b856dbaf6aa1a2841de193b1656aedaf07dd1d05dc382dc414c6d"
+    },
+    {
+      "file": "pollen-ta-tab-weather-autumn.png",
+      "scenario": "autumn",
+      "template": "ta-tab-weather",
+      "sha256": "a88b94d700167e763400755f86ad8fae2e0ead3ae0dbc0eb7adb91554e8b9671"
+    },
+    {
+      "file": "pollen-ta-tab-weather-low.png",
+      "scenario": "low",
+      "template": "ta-tab-weather",
+      "sha256": "75484800c6757db82ea286e54ddf8a6b2578bcd9eb46c8af520ffbd4f7480fd9"
+    },
+    {
+      "file": "pollen-ta-tab-weather-missing.png",
+      "scenario": "missing",
+      "template": "ta-tab-weather",
+      "sha256": "ae2352c5fe8b33ce6551b6d8c8edc9db3eeca859f2f663a88420f91f9d6403b0"
+    }
+  ]
+}

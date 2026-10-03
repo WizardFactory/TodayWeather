@@ -1,0 +1,26 @@
+# Pollen summary verification — 2026-10-03
+
+Base: `e0b126c8f5c0872ae03c4e82f1d381feac3cbf52`; issue [#2599](https://github.com/WizardFactory/TodayWeather/issues/2599). AK requested pre-merge and then an Ionic detail popup. No merge or deployment is authorized.
+
+## Contract reconciliation
+
+#2650 had already removed the healthday collector/routes and moved pollen into `lifeIndexKma2`. This change preserves that baseline and existing `flowerWoody` / `flowerPine` / `flowerWeeds` names. It does not restore `healthDayKma`, retired health indices or the old schedule. The issue's old storage/schedule wording is therefore implemented through the current lifeindex path. `git grep -n "203.247.66.146" -- server/` has no matches.
+
+The [official dataset 15085289](https://www.data.go.kr/data/15085289/openapi.do) Swagger was read on 2026-10-03. All three named operations exist; `areaNo` blank requests all areas, `time` has a ten-digit example (`YYYYMMDDHH`), and `dataType` supports JSON/XML. Current response fields are `today`, `tomorrow`, `dayaftertomorrow`, `todaysaftertomorrow`, with `date` as issuance. Lower-case day fields now map all four dates; legacy `theDayAfterTomorrow` remains a fallback. Catalog operation descriptions disagree on March/April for spring availability; there is no month gate. Provider `99`/empty is no data. Due times follow the issue's 06/18 KST publication contract. No live provider call or production database write was made for this task.
+
+## Executed checks
+
+- `node --test server/test/offline/pollen-summary.test.js server/test/offline/life-index-2650.test.js`: 13 tests passed; representative grade/labels, missing values, both publication hours and day fields, pagination and provider no-data. Original regression produced four intended failures before implementation.
+- `NODE_PATH=<isolated dependencies> node server/test/offline/riseset-uv.test.js`: 16 tests passed for shared requester and UV behavior.
+- `TZ=UTC NODE_PATH=<Mongoose 5.1.2 first, other isolated dependencies> node server/test/offline/run.js`: full offline runner passed. Prior attempts are retained locally: first stopped on temporary Mongoose 5.13.23 vs required 5.1.2; second exposed a no-pollen mock collision in precipitation string tests. The final implementation localizes summary strings only when summary grade exists; the final suite passed.
+- `node --test client/test/payment-removal.test.cjs client/test/provider-notice.test.cjs client/test/monetization.test.cjs client/test/privacy-consent.test.cjs client/test/pollen-popup.test.cjs`: existing client checks passed; popup tests additionally cover available species, zero/missing, child-scope cleanup and Enter/Space activation. The popup regression initially failed before the handler existed.
+- `TZ=UTC NODE_PATH=<isolated dependencies> node server/test/offline/pollen-route-smoke.js`: production v000903 middleware passed spring, autumn, Low and absent scenarios with isolated stores/providers. Also passed on production-compatible Node 16.20.2. This is real route execution, with mocked external boundaries, not a live weather request.
+- `scripts/verification/pollen-client-smoke.cjs`: Chromium compiled both actual template current-condition tables and executed the actual shared popup handler using Ionic/Angular assets. Eight scenarios passed: oak/pine, weeds, Low and no item for each template; click/close and keyboard popup verified. This is an isolated browser harness, not a full app/Cordova build. Current shared SCSS was compiled with Sass 1.105.0 and bundled Ionic SCSS. [Screenshots/provenance](../../../user/images/pollen-mobile/provenance.json) and [manual](../../../user/life-index.md) preserve the result.
+- Archify `finalize` passed validation, delivery, strict artifact and Chromium gates for collection and mobile request diagrams. `visual-check` passed captures/readability/theme checks; diagram screenshots were inspected. The initial sandboxed collection browser launch failed; rerun with authorized browser execution passed. No generated HTML was manually patched.
+- [PDF](../../../user/life-index.pdf): three pages rendered and visually inspected after popup captures were renewed. Editable [manual source](../../../user/life-index.md) and reusable [PDF renderer](../../../../scripts/verification/pollen-manual-pdf.py) are retained. No credentials/personal data appear in captures.
+
+Raw executions and state remain ignored locally. PR comments retain subsequent review/CI/head/base results; the maintained tests/manual preserve essential evidence after CI expiry. Both six-locale sets were checked. Native widgets, live collection, deployment and mobile packaging were not run.
+
+## Popup precautions amendment
+
+Each available type has a localized seasonal description and KMA-based advice for its own grade; all eight new keys exist in twelve locale files. Advice is a concise paraphrase of the [KMA April 2019 four-grade table](https://www.kma.go.kr/download_01/kma_201904.pdf), checked 2026-10-03. No medication advice or finer species classification is added. Renewed client tests and eight actual Ionic browser scenarios verify these bindings, opaque popup background, scrolling and Close. Unchanged server collector/response code retains the previously passed full offline suite; locale completeness is rechecked.

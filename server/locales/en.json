@@ -323,5 +323,17 @@
   "LOC_TYPE_SPECIAL_WEATHER": "Special weather",
   "LOC_TYPE_PRELIMINARY_SPECIAL": "Preliminary Special weather",
   "LOC_TYPE_WEATHER_INFORMATION": "Weather information",
-  "LOC_TYPE_WEATHER_FLASH": "Flash weather information"
+  "LOC_TYPE_WEATHER_FLASH": "Flash weather information",
+  "LOC_POLLEN_RISK" : "Pollen risk",
+  "LOC_POLLEN_OAK" : "Oak",
+  "LOC_POLLEN_PINE" : "Pine",
+  "LOC_POLLEN_WEEDS" : "Weeds",
+  "LOC_POLLEN_OAK_INFO" : "Oak pollen mainly occurs in spring. Check the risk before outdoor activities.",
+  "LOC_POLLEN_PINE_INFO" : "Pine pollen mainly occurs in spring. Check the risk before outdoor activities.",
+  "LOC_POLLEN_WEEDS_INFO" : "Weed pollen mainly occurs in late summer and autumn. Check the risk before outdoor activities.",
+  "LOC_POLLEN_ADVICE_0" : "People with severe pollen allergies may still have symptoms at low risk.",
+  "LOC_POLLEN_ADVICE_1" : "If you have pollen allergies, wear a mask and sunglasses outdoors.",
+  "LOC_POLLEN_ADVICE_2" : "Limit outdoor activities. Wear a mask and sunglasses; wash your hands and face after returning.",
+  "LOC_POLLEN_ADVICE_3" : "Stay indoors when possible and keep windows closed. If you must go out, wear a mask and sunglasses.",
+  "LOC_POLLEN_SOURCE" : "Source: Korea Meteorological Administration"
 }

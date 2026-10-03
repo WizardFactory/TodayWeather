@@ -1,19 +1,19 @@
-# TodayWeather retention and deletion proposal (#2660)
+# TodayWeather retention and deletion controls (#2660)
 
-AK confirmed on 2026-10-01 that no documented retention periods exist. The operator is **주식회사 플라잉**, privacy contact **김동환 / 제품팀**, confirmed support/deletion inbox **todayweather@wizardfactory.net**. Scope: Cordova TodayWeather Android/iOS, general audience; TodayAir/PWA excluded. On 2026-10-02, AK confirmed a 90-day retention period for server request/error logs. Other limits remain proposals; this confirmation does not establish expiry/deletion behavior for every logging layer or provider.
+AK confirmed on 2026-10-01 that no documented retention periods exist. The operator is **주식회사 플라잉**, privacy contact **김동환 / 제품팀**, confirmed support/deletion inbox **todayweather@wizardfactory.net**. Scope: Cordova TodayWeather Android/iOS, general audience; TodayAir/PWA excluded. On 2026-10-02, AK confirmed a 90-day retention period for server request/error logs. On 2026-10-03, AK confirmed Analytics event/user-level retention of 2 months, BigQuery events of 90 days, resolved support correspondence of 1 year and completed deletion audits of 1 year. 김동환 is the final document approver and the owner of policy/store-disclosure changes. These are approved operating limits, not evidence that settings, expiry or deletion have been applied and verified.
 
-## Proposed limits and acceptance evidence
+## Operating limits and acceptance evidence
 
-| Data | Proposed limit | Required implementation/evidence |
+| Data | Limit / decision status | Required implementation/evidence |
 | --- | --- | --- |
 | Saved cities, preferences, Analytics choice | On-device until user removal/reset/uninstall | Verify storage migration and withdrawal/restart; cloud-backup restoration may retain old app data |
 | Weather/geocode request/access/error logs | 90 days from creation (operator-confirmed 2026-10-02) | Inventory CloudFront/API Gateway/Lambda/EC2/application logs and backups; configure expiry/rotation; avoid logging full coordinates/UUID/token |
 | Notification registrations | While service remains enabled; delete on verified request or user unregister; remove invalid tokens | Trace both alarms and alerts plus SQLite/Mongo deployment; prove exact-key deletion and no later worker re-creation. Do not equate app inactivity with non-use of notifications |
-| Firebase Analytics event/user-level retention | 2 months | Read/write actual GA4 property settings and disable reset-on-new-activity where appropriate; Google aggregate reporting differs from event/user-level retention |
-| BigQuery analytics event exports | 90 days from event date | Partition/table expiration, existing-table policy, views/copies/materializations/backups; test age boundaries and export lag |
-| Support correspondence | 1 year after resolution | Confirm inbox owner, closure date, mail/attachment cleanup and mailbox backups; delete unnecessary device diagnostics earlier |
+| Firebase Analytics event/user-level retention | 2 months (operator-confirmed 2026-10-03) | Read/write actual GA4 property settings and disable reset-on-new-activity where appropriate; Google aggregate reporting differs from event/user-level retention |
+| BigQuery analytics event exports | 90 days from event date (operator-confirmed 2026-10-03) | Partition/table expiration, existing-table policy, views/copies/materializations/backups; test age boundaries and export lag |
+| Support correspondence | 1 year after resolution (operator-confirmed 2026-10-03) | Confirm inbox owner, closure date, mail/attachment cleanup and mailbox backups; delete unnecessary device diagnostics earlier |
 | Crashlytics/FCM/Remote Config/AdMob data | Actual service-specific retention | Confirm provider-controlled durations and deletion mechanisms; do not apply the GA4 period to all Firebase services |
-| Deletion audit | 1 year after completion, proposed | Store case ID, category/outcome/date and authorized role only; omit raw location, UUID, push token and original payload |
+| Deletion audit | 1 year after completion (operator-confirmed 2026-10-03) | Store case ID, category/outcome/date and authorized role only; omit raw location, UUID, push token and original payload |
 
 Any documented statutory preservation exception needs its exact record category, legal basis, duration and restricted access; do not invent a blanket retention exemption. Effective date follows actual configuration and verified cleanup, not draft creation date.
 
@@ -22,6 +22,26 @@ Any documented statutory preservation exception needs its exact record category,
 [Push controller](../../server/controllers/controllerPush.js) `_removeOldList` removes **selected alarm rows** whose `updatedAt` predates60days during its send pipeline; missing dates are updated. The [schemas](../../server/models/modelPush.js) and [alert schema](../../server/models/alert.push.model.js) do not define a universal TTL. This code is neither evidence of the confirmed log retention period nor a verified production-wide deletion job. Verify selection/startup wiring and the deployed store; no cleanup or test may run against production based on this source-only observation. Existing removal selectors are not proof of secure requester identity.
 
 ## Deletion intake procedure
+
+### Storage-specific verification
+
+Read the deployed `PUSH_STORE` selection before choosing tooling; do not infer it from
+the default or the existence of a schema. The [notification architecture](../architecture/push-notifications.md)
+and [S3 runbook](push-s3.md) describe repository alternatives, not current activation.
+
+| Store | Required deletion/retention check |
+| --- | --- |
+| MongoDB | Match both alarm and alert collections, legacy tokens, backups and any separately running workers. A schema without TTL and selected old-alarm cleanup do not establish complete expiry. |
+| SQLite | Match both JSON record tables and the configured file, lock/temporary files and backups. Confirm no other store/worker still holds the registration. |
+| S3 coordinator | Inventory per-device registrations, endpoint/UUID metadata, delivery-state, campaign checkpoints and historical object versions. `Registry.remove` deletes matching settings and persists the device document; the storage adapter has no object-deletion operation. Setting removal is not full device erasure. A physical deletion performed outside the sole coordinator writer can race in-memory state and later persistence; design and test coordinated erasure before enabling operator tooling. |
+
+The S3 rollout intentionally does not import MongoDB registrations. That decision does
+not authorize deleting legacy records or establish their expiry. Bucket lifecycle,
+versioning, replication/copy handling and worker re-creation checks need deployed
+evidence. SSE-S3 requested by source does not establish every network hop's encryption.
+Use the [release evidence map](store-policy-evidence.md) for the associated final-candidate scenarios.
+
+### Mailbox handling
 
 1. Product team receives mail at the confirmed inbox. Acknowledge and identify the requested categories; request only information required to locate and verify the relevant registration. Do not request government ID, account passwords or a raw push token by email.
 2. Lack of an account does not remove the need for verification. A device UUID is a lookup value, **not authentication**. Prefer a challenge confirmed from the still-installed app/device against its registration; define a safe manual fallback for lost/uninstalled devices before promising deletion of any supplied UUID.
@@ -36,7 +56,7 @@ Any documented statutory preservation exception needs its exact record category,
 - [ ] Apply approved limits and verify expiry on synthetic data without deleting customer records.
 - [ ] Implement secure device ownership verification and operator deletion tooling; validate both current and legacy notification registrations.
 - [ ] Confirm backup/copy handling and support mailbox cleanup.
-- [ ] Replace proposed-period language in all3policy translations only after the above evidence exists.
+- [ ] Reconcile draft-period language in all three policy translations with approved limits; replace it with effective operating claims only after the above evidence exists and 김동환 approves the completed documents.
 - [ ] Review final binary network/SDK behavior, then submit accurate Play/Apple declarations and retry Play screenshots.
 
-References: [PIPC2026.4 drafting guide](https://pipc.go.kr/np/cop/bbs/selectBoardArticle.do?bbsId=BS217&mCode=D010030020&nttId=12018), [Firebase privacy](https://firebase.google.com/support/privacy), [GA4 retention](https://support.google.com/analytics/answer/7667196). Periods above are a product proposal; they are not mandated by those sources.
+References: [PIPC2026.4 drafting guide](https://pipc.go.kr/np/cop/bbs/selectBoardArticle.do?bbsId=BS217&mCode=D010030020&nttId=12018), [Firebase privacy](https://firebase.google.com/support/privacy), [GA4 retention](https://support.google.com/analytics/answer/7667196). The operator-selected periods above are product decisions, not periods mandated by those sources. Provider-specific durations and effective implementation still require evidence.
