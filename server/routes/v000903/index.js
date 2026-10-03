@@ -24,7 +24,6 @@ router.use(function timestamp(req, res, next){
 router.use('/gather', require('../v000001/routeGather'));
 //router.use('/town', require('./route.kma.addr'));
 router.use('/daily', require('../v000705/dailySummary'));
-router.use('/check-purchase', require('../v000705/receiptValidation'));
 router.use('/push', require('../v000705/routePushNotification'));
 router.use('/push-list', require('../v000902/route.push.update.list'));
 router.use('/nation', require('../v000803/route.nation'));

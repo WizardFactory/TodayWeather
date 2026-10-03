@@ -115,7 +115,6 @@ router.get('/', function(req, res) {
 router.use('/gather', require('../v000001/routeGather'));
 router.use('/town', require('./routeTownForecast'));
 router.use('/daily', require('../v000705/dailySummary'));
-router.use('/check-purchase', require('../v000705/receiptValidation'));
 router.use('/push', require('../v000705/routePushNotification'));
 
 router.use('/nation', require('./route.nation'));

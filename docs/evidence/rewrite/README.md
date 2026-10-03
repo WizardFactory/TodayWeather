@@ -1,5 +1,7 @@
 # Rewrite reference verification
 
+The current [push-only historical probe](../../../scripts/verification/rewrite/probes/server-push-text-purchase-expiry.js) retains 19 push checks at `bd6640f2` and requires that local Git object; #2642 retires the receipt-expiry cases. The retained 27-check JSON is historical and is not rewritten.
+
 Source baseline: `bd6640f2` since the [2026-09-25 re-baseline](#2026-09-25-re-baseline); earlier sections record work done at `ff7acf3996ccb66c912d2ed4710cf300197d6966`. Date: 2026-09-23, extended by the 2026-09-24 gap review, its 2026-09-25 final round and the 2026-09-25 re-baseline. User scope: persisted main-screen screenshots and screen definitions, client input/processing contracts, ordered server assembly diagrams, and supporting rewrite references.
 
 ## 2026-09-25 re-baseline
