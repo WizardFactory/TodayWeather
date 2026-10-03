@@ -100,6 +100,19 @@ class ArtifactCI(unittest.TestCase):
             self.assertNotEqual(run.returncode, 0)
             self.assertIn(bad[:12], run.stderr)
 
+    def test_tip_policy_cannot_hide_bad_task_history_for_any_event_range(self):
+        self.write('reports/task.json', '{}')
+        bad = self.commit(force=True)
+        self.git('rm', 'reports/task.json')
+        self.write('scripts/artifact-policy.json', json.dumps({'history_base': bad}))
+        self.tip = self.commit()
+        for event, base in [('pull_request', self.published),
+                            ('push', self.published), ('push', ZERO)]:
+            with self.subTest(event=event, base=base):
+                run = self.check(event, base)
+                self.assertEqual(run.returncode, 1, run.stdout + run.stderr)
+                self.assertIn(bad[:12], run.stderr)
+
     def test_missing_new_branch_ref_and_missing_explicit_base_fail_closed(self):
         self.git('update-ref', '-d', 'refs/remotes/origin/master')
         self.assertNotEqual(self.check('push', ZERO).returncode, 0)

@@ -86,6 +86,8 @@ In `gather` mode, two opt-in collectors (#2573) run outside that task array. `KM
 
 Credential-free module loading (#2589): `geo.controller.js` reads Kakao keys only on the first Kakao call. Missing, malformed or empty key lists produce one sanitized warning per loaded module and a callback error naming `KAKAO_SECRET_KEYS`, without a provider request. The config default is `[]`; valid keys retain their configured retry order. `location2address()` passes provider errors to middleware before parsing a response. This permits the module to load on gather hosts without Kakao keys; the existing station API fallback above remains unchanged. Keys are cached after first use, so configuration changes require a process restart. This is a repository contract, not evidence of a host update. See the [offline checks](../../server/test/offline/README.md#credential-free-controller-loading-2589).
 
+The address-to-coordinate utility also parses Kakao keys lazily and defensively. Without usable keys it warns once per module and skips Kakao directly to its existing Google fallback; Google failure can still lead the scraper to the product API fallback. Configured keys retain random selection and provider-error fallback. Google key handling and Keco coordinate requests are unchanged. Offline verification uses synthetic responses and real request/XML/coordinate modules on loopback; it does not establish live Google availability or an updated gather host.
+
 | Product | Main path | Use at read time |
 | --- | --- | --- |
 | Station minute/hourly | `kmaScraper` → station models | Correct/augment gridded current weather and precipitation |

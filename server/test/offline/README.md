@@ -8,6 +8,11 @@ It checks missing, malformed and empty Kakao keys, one warning per module instan
 clear callback/middleware errors, and configured-key retry order. Firebase
 initialization and credential imports are forbidden in the push load check.
 
+Address-to-coordinate conversion is also covered: missing/invalid Kakao keys skip
+the Kakao request and retain Google fallback, including fallback errors. The real
+smoke runs the request/XML/coordinate conversion against loopback peers; Google
+credentials and live provider acceptance are not verified.
+
 The additional smoke uses the real CommonJS dependency graph and server packages.
 Run it with the supported Node 16.20.2 runtime and an isolated installation of the
 server dependencies (including its native modules):

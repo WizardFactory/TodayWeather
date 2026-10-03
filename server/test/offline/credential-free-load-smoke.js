@@ -106,6 +106,62 @@ if (!mode) {
                 await new Promise(function (resolve) { peer.close(resolve); });
             }
         }
+        // Address conversion executes the real request/XML/coordinate pipeline.
+        // Missing Kakao keys must reach Google directly; transport stays loopback.
+        var addressRequests = [];
+        var addressPeer = http.createServer(function (req, res) {
+            if (req.url.startsWith('/google')) {
+                addressRequests.push('google');
+                res.setHeader('content-type', 'application/xml');
+                res.end('<GeocodeResponse><status>OK</status><result><geometry><location>' +
+                    '<lat>37.5</lat><lng>127</lng></location></geometry></result></GeocodeResponse>');
+            } else {
+                addressRequests.push(req.headers.authorization);
+                res.setHeader('content-type', 'application/json');
+                res.end(JSON.stringify({meta: {total_count: 1}, documents: [{x: '127', y: '37.5'}]}));
+            }
+        });
+        await new Promise(function (resolve, reject) {
+            addressPeer.once('error', reject); addressPeer.listen(0, '127.0.0.1', resolve);
+        });
+        var request = require('request'), realGet = request.get;
+        var addressAxios = require('axios'), realAxiosGet = addressAxios.get;
+        var local = 'http://127.0.0.1:' + addressPeer.address().port;
+        request.get = function (url, options, callback) {
+            assert.ok(url.startsWith('https://maps.googleapis.com/'));
+            return realGet(local + '/google', {proxy: null}, callback);
+        };
+        addressAxios.get = function (url, options) {
+            assert.strictEqual(mode, 'configured', 'no Kakao request without configured keys');
+            assert.ok(url.startsWith('https://dapi.kakao.com/'));
+            return realAxiosGet(local + '/kakao', Object.assign({}, options, {proxy: false}));
+        };
+        global.log.silly = function () {};
+        try {
+            var convertAddress = require('../../utils/convertGeocode');
+            for (var i = 0; i < 2; i++) {
+                var coord = await new Promise(function (resolve, reject) {
+                    convertAddress('Region', 'City', 'Town', function (err, result) {
+                        if (err) { reject(err); } else { resolve(result); }
+                    });
+                });
+                assert.strictEqual(Number(coord.lat), 37.5);
+                assert.strictEqual(Number(coord.lon), 127);
+                assert.ok(Number.isFinite(coord.mx) && Number.isFinite(coord.my));
+            }
+            if (mode !== 'configured') {
+                assert.deepStrictEqual(addressRequests, ['google', 'google']);
+                assert.strictEqual(warnings.length, 2, 'one warning per Geo/address module');
+                assert.ok(warnings.every(function (message) { return !message.includes('SYNTHETIC_SECRET'); }));
+            } else {
+                assert.strictEqual(addressRequests.length, 2);
+                assert.ok(addressRequests.every(function (key) { return ['KakaoAK first', 'KakaoAK second'].includes(key); }));
+                assert.strictEqual(warnings.length, 0);
+            }
+        } finally {
+            request.get = realGet; addressAxios.get = realAxiosGet;
+            await new Promise(function (resolve) { addressPeer.close(resolve); });
+        }
         assert.strictEqual(firebase.apps.length, 0);
         console.log('PASS real controller loads without push credentials; Kakao ' + mode);
     }

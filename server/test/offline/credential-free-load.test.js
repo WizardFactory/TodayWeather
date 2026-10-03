@@ -22,6 +22,39 @@ function call(controller) {
     });
 }
 
+function address(value, kakaoFailure, googleFailure) {
+    var warnings = [], requests = [];
+    var config = {keyString: {kakao_keys: value, google_key: 'synthetic-google'}};
+    var Coordinate = function () { this.toLocation = function () {
+        return {getLocation: function () { return {x: 60, y: 127}; }};
+    }; };
+    var convert = h.load('utils/convertGeocode.js', {
+        events: {}, '../config/config': config, './coordinate2xy': Coordinate,
+        axios: {get: function (url, options) {
+            requests.push(options.headers.Authorization);
+            return kakaoFailure ? Promise.reject(new Error('synthetic rejection')) : Promise.resolve({data: {
+                meta: {total_count: 1}, documents: [{x: '127', y: '37.5'}]
+            }});
+        }},
+        request: {get: function (url, options, callback) {
+            assert.ok(url.startsWith('https://maps.googleapis.com/'));
+            requests.push('google');
+            callback(googleFailure, {statusCode: 200}, 'synthetic XML');
+        }},
+        xml2js: {parseString: function (body, callback) { callback(null, {GeocodeResponse: {
+            status: ['OK'], result: [{geometry: [{location: [{lat: ['37.5'], lng: ['127']}]}]}]
+        }}); }}
+    }, {log: {silly: function () {}, debug: function () {}, error: function () {},
+        warn: function (message) { warnings.push(String(message)); }}});
+    return {convert: convert, config: config, requests: requests, warnings: warnings};
+}
+
+function convertAddress(fixture) {
+    return new Promise(function (resolve) {
+        fixture.convert('Region', 'City', 'Town', function (err, result) { resolve({err: err, result: result}); });
+    });
+}
+
 async function run() {
     var invalid = [undefined, '', 'not-json-SYNTHETIC_SECRET', 'null', '{}', '"key"', '[]',
         '[null, 42, "", "   "]'];
@@ -43,6 +76,34 @@ async function run() {
         assert.ok(!f.warnings[0].includes('SYNTHETIC_SECRET'), 'no raw credential text');
     }
     console.log('PASS missing/invalid Kakao keys load lazily, warn once and return clear errors');
+
+    for (var missing of ['[]'].concat(invalid)) {
+        var addressFixture = address(missing);
+        assert.strictEqual(addressFixture.warnings.length, 0);
+        for (var repeat = 0; repeat < 2; repeat++) {
+            var converted = await convertAddress(addressFixture);
+            assert.ifError(converted.err);
+            assert.strictEqual(converted.result.lat, 37.5);
+            assert.strictEqual(converted.result.lon, 127);
+            assert.strictEqual(converted.result.mx, 60);
+        }
+        assert.deepStrictEqual(addressFixture.requests, ['google', 'google'], 'skip Kakao when unconfigured');
+        assert.strictEqual(addressFixture.warnings.length, 1, 'address conversion warns once');
+        assert.ok(!addressFixture.warnings[0].includes('SYNTHETIC_SECRET'));
+    }
+    var fallbackError = new Error('synthetic Google failure');
+    var failedAddress = address('[]', false, fallbackError);
+    assert.strictEqual((await convertAddress(failedAddress)).err, fallbackError);
+    assert.deepStrictEqual(failedAddress.requests, ['google']);
+    var configuredAddress = address('invalid');
+    configuredAddress.config.keyString.kakao_keys = '[null,"","   ","address-key"]';
+    assert.ifError((await convertAddress(configuredAddress)).err);
+    assert.deepStrictEqual(configuredAddress.requests, ['KakaoAK address-key']);
+    assert.strictEqual(configuredAddress.warnings.length, 0);
+    var rejectedAddress = address('["address-key"]', true);
+    assert.ifError((await convertAddress(rejectedAddress)).err);
+    assert.deepStrictEqual(rejectedAddress.requests, ['KakaoAK address-key', 'google']);
+    console.log('PASS address conversion skips missing/invalid Kakao keys, preserves Google fallback and configured calls');
 
     var valid = geo('not-json');
     // Configure after require, before first use: proves this is lazy initialization.
