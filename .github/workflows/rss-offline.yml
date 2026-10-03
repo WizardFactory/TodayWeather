@@ -51,6 +51,8 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
         run: |
+          node server/test/offline/kma-query-compat.test.js
+          node server/test/offline/kma-query-route-smoke.js
           node server/test/offline/history-observations.test.js
           node server/test/offline/history-recovery.test.js
           node server/test/offline/runtime-node16.test.js

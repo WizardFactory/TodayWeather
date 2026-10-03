@@ -90,12 +90,13 @@ function createHarness(version, fixture, historyOptions = {}) {
   function getModel(name) {
     // Optional shared air provider stores (#2622/#2628: observation cache, usage counters, VC usage/lock); several harnesses may share them like API workers.
     if(historyOptions.airModels && Object.hasOwn(historyOptions.airModels,name)) return historyOptions.airModels[name];
+    if(historyOptions.stationModels && Object.hasOwn(historyOptions.stationModels,name)) return historyOptions.stationModels[name];
     if(models.has(name))return models.get(name);
     const obj={find:(query,projection,cb)=>{
       queries.push({model:name,query:clone(query)});
       const data=()=>clone(modelData(name));
       const failure=fixture.modelErrors&&fixture.modelErrors[name];
-      const q={maxTimeMS(){return q;},sort(){return q;},batchSize(){return q;},limit(){return q;},lean(){return q;},exec(callback){if(failure)return callback(new Error(failure));callback(null,data());}};
+      const q={setOptions(){return q;},sort(){return q;},batchSize(){return q;},limit(){return q;},lean(){return q;},exec(callback){if(failure)return callback(new Error(failure));callback(null,data());}};
       if(typeof projection==='function')projection(null,data());
       if(typeof cb==='function')cb(null,data());
       return q;
@@ -141,6 +142,11 @@ function createHarness(version, fixture, historyOptions = {}) {
       if(resolved.includes('/models/'))return getModel(name);
       if(name==='kasi.riseset.controller' && fixture.kasiRows) return load(resolved);
       if(name==='kma.specialweather.controller' && fixture.zoneRows) return load(resolved);
+      if(name==='controllerKmaStnWeather' && historyOptions.realStationHistory) {
+        const overrides=Object.assign({},optional[name]);
+        delete overrides.getCityHourlyList;
+        return Object.assign(load(resolved),overrides);
+      }
       if(Object.hasOwn(optional,name)) { if(['controllerKmaStnWeather','kecoController'].includes(name)) return Object.assign(load(resolved),optional[name]); return optional[name]; }
       if(name==='kecoRequester') return function(){};
       if(name==='convertGeocode')return ()=>{throw new Error('Unexpected geocode fallback');};
@@ -184,7 +190,7 @@ function createHarness(version, fixture, historyOptions = {}) {
     const res={__:translate,status(code){this.statusCode=code;return this;},send(body){reject(new Error('Unexpected response '+this.statusCode+': '+body));},json(body){resolve({body:JSON.parse(JSON.stringify(body)),traces,queries,logs});},redirect(url){reject(new Error('Unexpected redirect '+url));},setHeader(){}};
     router.handle(req,res,err=>reject(err||new Error('No JSON response')));
   }); }
-  return {request,methods};
+  return {request,methods,router,logs};
 }
 async function main(){
   assert.equal(new RealDate(instant).getTimezoneOffset(),0,'RSS collector full-path smoke requires TZ=UTC; non-UTC calculateTime behavior is a pre-existing limitation');

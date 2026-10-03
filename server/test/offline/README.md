@@ -403,3 +403,24 @@ D23 also verifies the request-local pending/3-second advisory hint on deadline r
 `historical-fallback.test.js` covers invalid temperatures, exact yesterday selection, legacy BSON KST keys, field preservation, temperature provenance, live station replacement, Fahrenheit eligibility and late callbacks after the 250 ms fallback budget. `history-read-cache.test.js` covers coalesced reads, late cache warming, failure caching, timeout and capacity. Both are included in `run.js`.
 
 `TZ=UTC node server/test/offline/history-integration-smoke.js` uses temporary MongoDB and loopback HTTP to exercise recovery/readback plus real v000903 middleware and client parsers for both DB formats and temperature units. Its dependencies and MongoDB binary must already be provisioned in an isolated environment; it never calls the live provider. Current verification and limitations are recorded in [selected evidence](../../../docs/evidence/tasks/issue-2648/verification.md).
+
+## Station query compatibility (#2648)
+
+The pinned `mongoose@5.1.2` supports `Query.setOptions({maxTimeMS: 2000})`,
+not `Query.maxTimeMS()`. Native MongoDB cursors in the ASOS history store retain
+`cursor.maxTimeMS()`. These commands use the exact pinned package, real schemas
+and Query construction/chaining; only `exec` persistence returns fixture rows.
+A version mismatch fails rather than testing a newer Mongoose accidentally.
+
+```sh
+TZ=UTC NODE_PATH=/tmp/issue-2564-master-ci-deps/node_modules node server/test/offline/kma-query-compat.test.js
+TZ=UTC NODE_PATH=/tmp/issue-2564-master-ci-deps/node_modules node server/test/offline/kma-query-route-smoke.js
+```
+
+Use an isolated dependency directory containing the RSS smoke dependencies above,
+including `mongoose@5.1.2`. The separate smoke sends real loopback HTTP requests
+through the v000903 address router and real historical station controller/query
+paths for both DB formats. It asserts the observed temperature and station
+provenance, plus degraded station-storage failures. It does not connect to MongoDB
+or production, test server-side timeout enforcement, or establish production recovery.
+CI runs both commands on Node 16.20.2 and 22.22.2.
