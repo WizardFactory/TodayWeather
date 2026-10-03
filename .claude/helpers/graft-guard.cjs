@@ -4,7 +4,8 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { register } = require('node:module');
 exports.guard = function(entry) {
-  const dist = path.dirname(path.dirname(entry));
+  // Node ESM resolves symlinks before the loader sees a URL. Match that identity.
+  const dist = path.dirname(path.dirname(fs.realpathSync(entry)));
   const pkg = JSON.parse(fs.readFileSync(path.join(dist, '..', 'package.json'), 'utf8'));
   if (pkg.name !== '@nanonets/graft' || pkg.version !== '0.21.1' || typeof register !== 'function') {
     throw new Error('Repository adapters require @nanonets/graft 0.21.1 and Node 20.6+; review upgrades explicitly.');

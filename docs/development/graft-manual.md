@@ -32,7 +32,7 @@ python3 scripts/verification/graft/smoke.py --output reports/verification/graft-
 python3 scripts/verification/graft/smoke_codex_worktree.py --output reports/verification/graft-codex.json
 ```
 
-The offline suite passed ten tests. Real installed-Graft smoke passed a fresh focused build, server/client queries, cache ignoring, two hook events and six MCP tools. Final smoke isolated HOME and checked that hooks/MCP changed no tracked or user files, with both absent and outdated wiring stamps. Initial smoke missed automatic wiring mutations; independent review found them and the guarded rerun corrected this. Codex discovery used an isolated account and submitted no model task. Actual CLI results are captured below as rendered text, rather than native terminal screenshots; provenance is in [the capture manifest](graft-manual-assets/manifest.json).
+The offline suite passed eleven tests. Real installed-Graft smoke passed a fresh focused build, server/client queries, cache ignoring, two hook events and six MCP tools. Final smoke isolated HOME and checked that hooks/MCP changed no tracked or user files, with both absent and outdated wiring stamps. Initial smoke missed automatic wiring mutations; independent review found them and the guarded rerun corrected this. Codex discovery used an isolated account and submitted no model task. Actual CLI results are captured below as rendered text, rather than native terminal screenshots; provenance is in [the capture manifest](graft-manual-assets/manifest.json).
 
 ![Actual offline test result](graft-manual-assets/verification.png)
 

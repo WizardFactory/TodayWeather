@@ -77,6 +77,21 @@ class Adapters(unittest.TestCase):
         self.assertFalse(marker.exists(), 'Upstream automatic wiring executed')
 
     @unittest.skipUnless(NODE, 'Node required')
+    def test_symlinked_global_fallback_cannot_run_upstream_wiring(self):
+        pkg = self.package(self.base / 'real-global/@nanonets/graft', 'global')
+        alias = self.base / 'global-alias'
+        alias.symlink_to(pkg.parents[1], target_is_directory=True)
+        npm = self.bin / 'npm'
+        npm.write_text('#!/bin/sh\nprintf "%s\\n" "' + str(alias) + '"\n')
+        npm.chmod(0o755)
+        marker = self.repo / 'unexpected-wiring.txt'
+        (pkg / 'dist/upkeep-run.js').write_text('import fs from "node:fs"; export function runUpkeep() { fs.writeFileSync(' + json.dumps(str(marker)) + ', "unsafe"); return {lines:[]}; }')
+        (pkg / 'dist/claude/hooks.js').write_text('import {runUpkeep} from "../upkeep-run.js"; export function main() { runUpkeep(); console.log("safe global context"); }')
+        result = self.run_shim('graft-hooks.cjs', 'session-start')
+        self.assertEqual(result.stdout.strip(), 'safe global context')
+        self.assertFalse(marker.exists(), 'Symlinked upstream automatic wiring executed')
+
+    @unittest.skipUnless(NODE, 'Node required')
     def test_unreviewed_package_version_skips_hooks(self):
         pkg = self.package(self.repo / 'node_modules/@nanonets/graft', 'unsupported')
         data = json.loads((pkg / 'package.json').read_text())
