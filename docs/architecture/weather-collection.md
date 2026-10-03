@@ -225,3 +225,23 @@ success or production recovery is claimed. See the [rollout and rollback
 procedure](../operations/airkorea-recovery.md) for renewal and scheduled
 readback gates. Client-requested nation recovery uses Mongo plus the existing
 global-air chain and never calls AirKorea; see [nation response](mobile-api.md#nation-air-recovery-2636).
+
+## MFDS food-poisoning forecast recovery (#2600)
+
+MFDS batch completion has a 30-second write deadline so a missing Mongo callback cannot hold the serial gather queue indefinitely. Late callbacks are ignored; issued writes may still complete. Queued time identifies the slot; response reception time validates publication and dates.
+
+The gather/local Manager queues the separate MFDS regional collector at 08:20,
+12:20 and 17:20 KST and for the most recent publication slot on startup. One
+bounded HTTPS request (ten seconds, 1 MiB, identifying User-Agent, no retries)
+produces up to three target dates per province/district. The additive
+`mfds_food_poisoning` Mongo collection is independent of domestic DB_DATA_VERSION
+and KMA areaNo. Its unique regional/date identity and conditional publication
+upserts preserve newer forecasts; read-time expiry is authoritative, with a
+next-KST-midnight TTL for cleanup. Guards are per process, not distributed.
+
+The existing KMA scheduler already excludes legacy `fsn`; UV/pollen remain
+unchanged. Optional collection/store failures do not trigger provider calls from
+weather requests. See [operations and limitations](../operations/food-poisoning.md),
+[collector](../../server/lib/foodPoisoning.js),
+[model](../../server/models/modelFoodPoisoning.js) and the
+[design diagram](diagrams/food-poisoning.html) / [source](diagrams/food-poisoning.json).

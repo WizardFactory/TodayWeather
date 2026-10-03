@@ -424,3 +424,17 @@ paths for both DB formats. It asserts the observed temperature and station
 provenance, plus degraded station-storage failures. It does not connect to MongoDB
 or production, test server-side timeout enforcement, or establish production recovery.
 CI runs both commands on Node 16.20.2 and 22.22.2.
+
+## Food-poisoning forecast recovery (#2600)
+
+`food-poisoning.test.js` uses a recorded MFDS response and isolated collaborators to verify grades, KST dates, regional matching, bounded schedules and optional-read failures. `food-poisoning-route.test.js` executes the actual Express coordinate middleware for both domestic DB versions, with provider/model boundaries isolated. These are included in `test:offline`; run it with `TZ=UTC` for the date-bound route harness.
+
+The recorded [MFDS fixture](fixtures/mfds-risk-20261003.json) was fetched once on 2026-10-03 UTC from `https://poisonmap.mfds.go.kr/api/risk.do` with the TodayWeather User-Agent. It contains 267 rows, `baseDate=20260929` and `regDatetime=2026-09-291700`. Raw data is retained unchanged. Route/smoke scenarios explicitly shift publication/date metadata to the fixed weather calendar; their values are recorded, but their dates are synthetic. This is not current live forecast evidence.
+
+The distinct `food-poisoning-smoke.js` uses loopback HTTP and a disposable real MongoDB to verify storage/readback, conditional publication upserts and production Express response fields. It creates no application collectors. With isolated `mongoose@5.13`, `mongodb-memory-server-core`, `express`, `async`, `xml2js` and `sprintf`:
+
+```sh
+TZ=UTC NODE_PATH=/tmp/food-poisoning-deps/node_modules node server/test/offline/food-poisoning-smoke.js
+```
+
+`MONGOMS_SYSTEM_BINARY` may select an existing local mongod. Mongoose 5.1.2 schema/query casting is checked separately; its old driver requires MongoDB <=5.0, whereas this real-database smoke uses Mongoose 5.13 with a modern mongod. TTL index creation is disabled only in the smoke's historical fixture database; read-time expiry is still enforced. See the [operating contract](../../../docs/operations/food-poisoning.md).

@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Food-poisoning forecast recovery design",
+    "output": "docs/architecture/diagrams/food-poisoning.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "cfcaec00bb59c28fda210e93f360fd0ccb0fa073",
+      "provider": "github",
+      "link_mode": "local-only"
+    }
+  },
+  "components": [
+    {
+      "id": "schedule",
+      "type": "backend",
+      "label": "Gather Manager",
+      "sublabel": "08:20 / 12:20 / 17:20 KST",
+      "pos": [
+        310,
+        30
+      ],
+      "size": [
+        160,
+        70
+      ],
+      "sources": [
+        {
+          "path": "server/controllers/controllerManager.js"
+        }
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "MFDS poisonmap",
+      "sublabel": "GET api/risk.do",
+      "pos": [
+        40,
+        220
+      ],
+      "size": [
+        160,
+        70
+      ],
+      "sources": [
+        {
+          "path": "specs/issue-2600.md"
+        }
+      ]
+    },
+    {
+      "id": "collector",
+      "type": "backend",
+      "label": "Regional collector",
+      "sublabel": "One call / bounded / no retries",
+      "pos": [
+        310,
+        220
+      ],
+      "size": [
+        160,
+        70
+      ],
+      "sources": [
+        {
+          "path": "specs/issue-2600.md"
+        }
+      ]
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "Dated risk store",
+      "sublabel": "Region + KST date / TTL",
+      "pos": [
+        600,
+        220
+      ],
+      "size": [
+        160,
+        70
+      ],
+      "sources": [
+        {
+          "path": "specs/issue-2600.md"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Domestic API",
+      "sublabel": "District then province / optional",
+      "pos": [
+        600,
+        420
+      ],
+      "size": [
+        160,
+        70
+      ],
+      "sources": [
+        {
+          "path": "server/controllers/controllerTown.js"
+        }
+      ]
+    },
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Existing app rows",
+      "sublabel": "fsn / grade / localized label",
+      "pos": [
+        310,
+        420
+      ],
+      "size": [
+        160,
+        70
+      ],
+      "sources": [
+        {
+          "path": "client/www/templates/tab-dailyforecast.html"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "schedule",
+      "from": "schedule",
+      "to": "collector",
+      "label": "Queue",
+      "variant": "dashed"
+    },
+    {
+      "id": "fetch",
+      "from": "provider",
+      "to": "collector",
+      "label": "HTTPS data"
+    },
+    {
+      "id": "save",
+      "from": "collector",
+      "to": "store",
+      "label": "Upsert"
+    },
+    {
+      "id": "read",
+      "from": "store",
+      "to": "api",
+      "label": "Valid dates"
+    },
+    {
+      "id": "response",
+      "from": "api",
+      "to": "client",
+      "label": "HTTP 200"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Date and region",
+      "items": [
+        "Three forecast dates start at baseDate in KST.",
+        "Renamed provinces resolve by district.",
+        "Missing district falls back to province."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Failure contract",
+      "items": [
+        "One HTTPS attempt with a 10-second deadline.",
+        "Writes release the gather queue after 30 seconds.",
+        "Late DB callbacks are ignored; writes may finish."
+      ]
+    }
+  ]
+}
