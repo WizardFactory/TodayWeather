@@ -8,7 +8,7 @@
     "column_fit": "spread",
     "viewBox": [
       1080,
-      510
+      540
     ],
     "output": "docs/architecture/diagrams/mobile-weather-request.html"
   },
@@ -131,9 +131,9 @@
       "dot": "emerald",
       "title": "UV / pollen response",
       "items": [
-        "VC uvindex: converter, DSF and cache to uvIndex and mobile ultrv / ultrvGrade / ultrvStr; current and daily max. Zero retained, missing absent; rollout separate.",
-        "KMA stored oak/pine/weeds: daily/current pollenGrade (max) and localized pollenStr. Missing areaNo tries up to three nearest candidates; missing types omitted.",
-        "Mobile pollen popup: type grades, seasonal context and precautions; zero Low, no concentrations. V3 oak/pine/weeds; weather-core keeps UV/species grades."
+        "VC current/daily max UV: uvIndex and mobile ultrv / ultrvGrade / ultrvStr via converter, DSF/cache. Zero kept, missing omitted; rollout separate.",
+        "KMA daily/current pollen: max pollenGrade, localized pollenStr, species grades. Absent areaNo checks up to three nearest candidates; DB errors stop reads; missing types omitted.",
+        "Pollen popup: available species grades, seasonal context and precautions. Zero Low; no concentrations. V3 oak/pine/weeds; weather-core keeps UV/species grades."
       ]
     }
   ]

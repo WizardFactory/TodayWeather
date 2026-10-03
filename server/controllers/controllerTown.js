@@ -2405,6 +2405,7 @@ function ControllerTown() {
         }
 
         var gAreaInfo;
+        var attemptedAreaNos = [];
         async.waterfall([
                 function findAreaNo(callback) {
                     var query = {
@@ -2414,9 +2415,7 @@ function ControllerTown() {
                     };
                     modelAreaNo.find(query).limit(1).lean().exec(function(err, areaList) {
                         if (err) {
-                            err.message += ' ' + JSON.stringify(meta);
-                            log.warn(err);
-                            return callback(null, null);
+                            return callback(err);
                         }
                         if (areaList.length < 1) {
                             log.debug('No address area metadata; trying nearby areas', meta);
@@ -2438,6 +2437,7 @@ function ControllerTown() {
                         lon: areaInfo.geo[0]
                     };
 
+                    attemptedAreaNos.push(areaInfo.areaNo);
                     LifeIndexKmaController.appendData2(areaInfo.areaNo, req.midData.dailyData, function (err, result) {
                         if (err) {
                             if (err.code === 'LIFE_INDEX_NOT_FOUND') {
@@ -2496,7 +2496,6 @@ function ControllerTown() {
                 },
                 function appendNearLifeIndex(areaList, callback) {
                     var candidate = 0;
-                    var attemptedAreaNos = [];
                     // Metadata can retain several retired codes. Walk only the existing
                     // bounded nearest list; a store failure must not trigger more reads.
                     function tryNextArea() {
@@ -2531,6 +2530,7 @@ function ControllerTown() {
                 if (err && err !== 'skip') {
                     log.warn({event: 'life-index-area-fallback', sID: meta.sID,
                         requestedAreaNo: gAreaInfo && gAreaInfo.areaNo,
+                        attemptedAreaNos: attemptedAreaNos,
                         cause: err.code || 'lookup-error', message: err.message,
                         result: 'failed'});
                 }

@@ -90,9 +90,9 @@ The first available store result enriches the response and updates
 `req.params.areaNo`. Geographic lookup prefers `req.gCoord`, then the address
 metadata coordinate. No provider call, metadata write or historical alias
 migration occurs. A missing record is optional no-data; exhausted candidates
-leave UV/pollen absent. Store errors stop the search and remain warnings; MFDS
+leave UV/pollen absent. Address-metadata, geographic and life-index store errors stop the search and remain warnings; MFDS
 and the weather response still continue. Structured `life-index-area-fallback`
-records include session ID, requested/resolved codes or attempted candidates,
+records include session ID, requested/resolved codes or all attempted exact/nearby codes,
 cause and result. The existing three-candidate bound can still miss available
 indices if old metadata crowds the nearest list; this repair does not establish
 nationwide metadata freshness or read-time life-index expiry.

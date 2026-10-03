@@ -68,8 +68,8 @@ were preserved.
   1920×1080 and 2048×1320; light/dark screenshots were captured.
 - Perceptual review: inspected light 1440×900 and dark 2048×1320 captures;
   diagram and cards fit without clipping or ambiguous crossings.
-- Source SHA-256: `be548758394e01e09b985b02e25ebd864a023393ea6d10818a0f74b4bb834dd0`.
-- HTML SHA-256: `1b85360b47919d9ceb8419b3a962241ed59dc57736a5d99059620bdfd5615461`.
+- Source SHA-256: `c1dac056124c3de3f8edc399bdf5edf33d824535008f54ef7558f7a9da877db4`.
+- HTML SHA-256: `1b74eb918531ffb1e6a442e159f75e5abef37c23e38d0695f6958261e56d00bf`.
 
 Generated run logs and screenshots remain local-only. The staged snapshot and
 actual outgoing commits must pass the artifact policy before publication.
@@ -88,3 +88,11 @@ No production DB update, release, deployment or merge is included.
 The shared SDLC skill became available during pre-merge on 2026-10-04. The established intent/spec/plan are now recorded in their canonical directories; no earlier stage execution or review is invented. The parent01fc19ef source was loaded into an isolated regression harness to reconstruct the failure (2 passed,11 intended assertion failures); final sources passed13/13 on Node16 and24.
 
 `life-index-area-mongo-smoke.js` then passed3 scenarios with an actual local Mongo7.0.14, mongoose5.13.23 and loopback HTTP: exact-code precedence; missing exact/first-nearest codes reaching4119086000 with zero UV and pollen summary2; and missing all indices retaining the weather response. Only the geographic and area lookup indexes were created; the historical empty-string town index is unsupported by Mongo7. Weather and MFDS input are synthetic. All local HTTP/Mongo processes closed in finally. This does not prove the historical mongoose5.1 driver works with Mongo7 or establish current production metadata freshness.
+
+## Independent review correction
+
+A separate public-only Codex reviewer identified R2183-1 (address metadata DB error still starts fallback) and R2183-2 (failed nearby code missing from logs). Both Required findings were accepted. Three new regressions first failed, then all16 area tests passed on Node16/24 after stopping the metadata error and carrying all attempted codes into the final warning. The real local Mongo/HTTP smoke and complete offline runner passed again. Final reviewer confirmation remains a separate PR record.
+
+The installed Archify changed from2.17 to3.0 during account setup; this task did not update it. The corrective JSON/HTML was regenerated with3.0. Its strict artifact/provenance/browser finalizer passed, and new capture evidence was kept in a separate local output directory without overwriting older unowned evidence. Light1440 and dark2048 captures were inspected; ordinary readable page scrolling is reported by the new viewer, rather than claiming every card fits the initial viewport. Source and HTML hashes below identify this final delivered correction.
+
+Archify3.0 emits whitespace-only lines that produce `git diff --check` warnings in generated HTML. The artifact was not manually patched, preserving its validated delivery/provenance identity. The non-generated diff passes whitespace checks; artifact and browser gates pass independently.

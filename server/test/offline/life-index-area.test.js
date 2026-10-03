@@ -178,3 +178,36 @@ test('nearby pollen preserves the integrated daily and current summary', async (
         assert.equal('flowerWoody' in row, false);
     }
 });
+
+test('R2183-1 address metadata DB failure stops all fallback reads and preserves optional continuation', async () => {
+    const failure = new Error('synthetic address metadata DB failure');
+    const h = harness({areaError: failure});
+    assert.deepEqual(await h.run(), {mfds: 1, next: 1});
+    assert.deepEqual(h.reads, []);
+    assert.equal(h.geoQueries.length, 0);
+    const warnings = h.logs.filter(x => x.level === 'warn');
+    assert.equal(warnings.length, 1);
+    assert.equal(warnings[0].args[0].event, 'life-index-area-fallback');
+    assert.equal(warnings[0].args[0].sID, 'area-regression');
+    assert.equal(warnings[0].args[0].message, failure.message);
+    assert.equal(failure.message, 'synthetic address metadata DB failure');
+});
+
+test('R2183-2 unknown-address store failure records the attempted area code', async () => {
+    const h = harness({noAddress: true, nearby: [{areaNo: 4119086000}],
+        errors: {[4119086000]: new Error('generic store failure')}});
+    assert.deepEqual(await h.run(), {mfds: 1, next: 1});
+    const warnings = h.logs.filter(x => x.level === 'warn');
+    assert.equal(warnings.length, 1);
+    assert.equal(warnings[0].args[0].sID, 'area-regression');
+    assert.deepEqual(Array.from(warnings[0].args[0].attemptedAreaNos), [4119086000]);
+});
+
+test('R2183-2 exact-address nearby failure records both attempted codes', async () => {
+    const h = harness({errors: {[4119900000]: new Error('generic store failure')}});
+    assert.deepEqual(await h.run(), {mfds: 1, next: 1});
+    const warnings = h.logs.filter(x => x.level === 'warn');
+    assert.equal(warnings.length, 1);
+    assert.equal(warnings[0].args[0].requestedAreaNo, 4119700000);
+    assert.deepEqual(Array.from(warnings[0].args[0].attemptedAreaNos), [4119700000, 4119900000]);
+});

@@ -87,3 +87,6 @@ docs/architecture/diagrams/food-poisoning.*.json
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# Local Archify 3.0 delivery provenance; keep for browser/recovery gates.
+/docs/architecture/diagrams/mobile-weather-request.delivery.json

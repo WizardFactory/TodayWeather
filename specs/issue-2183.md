@@ -9,3 +9,5 @@ Empty/exhausted candidate lists leave optional indices absent. Store failures st
 The query limit intentionally bounds work even when obsolete metadata crowds the list. Historical alias replacement was rejected because the issue's 2018 mapping does not prove current administrative authority. General freshness, malformed-metadata repair and request-time expiry are outside scope.
 
 Verify with isolated real controllers, supported runtime tests, real local Mongo/HTTP smoke and existing integrated weather/pollen routes. Failure cases include missing address/code/candidates/publication metadata, exact and nearby store failures, absent coordinates, and unavailable optional data. Relevant response documentation and editable/generated diagram must match. No app UI behavior changes, so a new screenshot PDF manual is not applicable.
+
+Review clarifications: address-metadata errors also stop the optional search. Final failure warnings carry the exact/nearby attempted area codes without mutating the original error. These are the existing AC2/observability contract, not a new feature.
