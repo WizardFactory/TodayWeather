@@ -1,6 +1,7 @@
 'use strict';
 // Actual request transport/collector/Manager; synthetic direct-loopback provider, fixture storage.
 const assert=require('assert'),http=require('http'),h=require('./harness'),mh=require('./current-manager-harness');
+['HTTP_PROXY','http_proxy','HTTPS_PROXY','https_proxy','ALL_PROXY','all_proxy','NO_PROXY','no_proxy'].forEach(name=>delete process.env[name]);
 let provider,requests=0,closed=0;const sockets=new Set();
 (async()=>{
     provider=http.createServer((req,res)=>{
