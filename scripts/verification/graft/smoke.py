@@ -45,7 +45,7 @@ def main():
             target.parent.mkdir(parents=True, exist_ok=True)
             if source.is_file() and not source.is_symlink():
                 shutil.copy2(source, target)
-        for rel in ['.gitignore', '.ignore', '.mcp.json', '.codex', '.claude', '.agents']:
+        for rel in ['.gitignore', '.ignore', '.mcp.json', '.codex', '.claude', '.agents', 'paseo.json']:
             source = ROOT / rel
             if source.is_dir():
                 shutil.copytree(source, repo / rel, symlinks=True)
@@ -91,7 +91,14 @@ def main():
         update = home / '.graft/update-check.json'
         update.parent.mkdir(parents=True, exist_ok=True)
         update.write_text(json.dumps({'checkedAt': time.time() * 1000, 'latest': None}))
-        run('build', ['/bin/sh', 'scripts/build-graft.sh'])
+        # Exercise creation setup without reading the operator's private inputs.
+        env['PASEO_SOURCE_CHECKOUT_PATH'] = str(base / 'absent-source')
+        paseo = json.loads((repo / 'paseo.json').read_text())
+        before = home_snapshot()
+        run('paseo-setup', ['/bin/sh', '-c', paseo['worktree']['setup']])
+        unchanged(before)
+        run('build', ['/bin/sh', '-c', paseo['scripts']['graft-build']['command']])
+        unchanged(before)
         run('freshness', [graft, 'check', '--json'])
         client = run('client-query', [graft, 'grep', 'WeatherUtil', '--fixed', '--in', 'client/www/js', '--json'])
         assert 'service.weatherutil.js' in client

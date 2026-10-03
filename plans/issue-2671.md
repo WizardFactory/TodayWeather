@@ -18,3 +18,7 @@ Scenarios:
 Rollback: revert repository adapters/wrapper/docs; leave user-installed Graft and local graph bytes intact. Personal trust has no authority after hook definition hashes change. Root-checkout local adapter remains local until this branch is integrated; do not merge to synchronize it.
 
 Architecture/design excluded: no service structure/flow changes. Product tests, provider calls, mobile builds and deployment excluded. Review and behavioral adapter verification retained because agent configuration affects behavior. User scenarios are also recorded in the task scenario artifact for verification/review.
+
+Paseo follow-up: retain the existing private-file shell setup byte-for-byte as a prefix, append a guarded build, and expose `scripts.graft-build.command`. First add isolated behavioral regression cases for setup invocation, missing wrapper/tool, failure propagation and manual refresh; record Red. Implement, rerun Green and final regression, exercise a real focused build with isolated HOME, update manual and selected evidence, then push and ask the same independent reviewer for the new exact head.
+
+- **S4 / AC1, AC3:** a contributor creates a Paseo worktree with installed CLI. Expected: focused graph built before agent launch, preserved private-file behavior, no user host configuration writes. Missing CLI/old target branch warns and skips; build failure is visible. Existing workspace uses `graft-build` on demand. Reopening an existing workspace does not run creation setup again.

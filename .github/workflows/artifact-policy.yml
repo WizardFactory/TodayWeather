@@ -22,6 +22,10 @@ jobs:
           node-version: '20'
       - name: Check Graft adapters offline
         run: python3 scripts/verification/graft/test_adapters.py
+      - name: Check Paseo workspace preparation offline
+        run: |
+          python3 scripts/verification/graft/test_paseo_setup.py
+          python3 server/test/offline/paseo-env-setup.test.py
       - run: python3 scripts/verification/test_artifact_policy.py
       - run: python3 scripts/verification/smoke_artifact_hooks.py
       - name: Check committed snapshots and history

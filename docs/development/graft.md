@@ -28,6 +28,22 @@ The build parses source; it does not start the weather server or collectors.
 not run it. Deterministic cards and call edges help navigation but cannot
 establish runtime behavior or every dependency in dynamic JavaScript.
 
+## Paseo workspaces
+
+The committed `paseo.json` preserves the existing private-file setup and then
+runs the focused build when Paseo creates a new worktree. Install Graft on the
+**daemon PATH** before creating it. Setup does not run again when reopening an
+existing workspace. Paseo reads configuration from the selected committed base
+branch, so this behavior applies after that branch contains this configuration.
+
+If the target branch has no build wrapper, or the daemon cannot find Graft,
+setup warns and skips the graph step without installing anything. An installed
+CLI build failure fails setup. After resolving the cause, run the **graft-build**
+workspace script from Paseo, or run `sh scripts/build-graft.sh` in the worktree.
+The same script refreshes existing workspaces. It only builds the local graph;
+it does not run upstream initialization or grant Codex hook trust.
+See [Paseo worktree setup and scripts](https://paseo.sh/docs/worktrees.md).
+
 ## Agent integration
 
 - The upstream-generated skill lives in `.agents/skills/graft/SKILL.md`.
@@ -92,6 +108,8 @@ Do not commit `graft/`, credentials or raw execution reports.
 
 ```sh
 python3 scripts/verification/graft/test_adapters.py
+python3 scripts/verification/graft/test_paseo_setup.py
+python3 server/test/offline/paseo-env-setup.test.py
 python3 scripts/verification/graft/smoke.py --output reports/verification/graft/smoke
 python3 scripts/verification/graft/smoke_codex_worktree.py --output reports/verification/graft/codex-worktree.json
 ```

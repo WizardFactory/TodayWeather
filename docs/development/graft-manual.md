@@ -16,6 +16,8 @@ graft grep WeatherUtil --fixed --in client/www/js
 
 Run the build wrapper from this checkout. It reapplies the focused source scopes even after the ignored `graft/` cache is deleted. Read the architecture index first and verify relevant source before changing behavior. Native bundles and docs need ordinary source inspection.
 
+Paseo creates the focused graph during new worktree setup when Graft is on the daemon PATH. This runs once at creation, not every reopen. Use the **graft-build** workspace script for existing workspaces or refresh. Missing CLI or an older branch without the wrapper warns and skips; an installed build failure fails setup. No tool is automatically installed and hook trust remains separate.
+
 ## 2. Host setup and trust
 
 The canonical skill is `.agents/skills/graft/`; both `.codex/skills/graft` and `.claude/skills/graft` link to it. Claude project settings load portable hooks/statusline and `.mcp.json` supplies Graft MCP. Codex config enables hooks and registers the MCP server. Restart the intended host after configuration changes.
