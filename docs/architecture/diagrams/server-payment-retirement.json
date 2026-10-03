@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Server receipt endpoint retirement",
+    "locale": "en",
+    "output": "docs/architecture/diagrams/server-payment-retirement.html",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      530
+    ],
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "1bc5669c2dbf50b1ccc9ece8734d85fcebf31d06"
+    }
+  },
+  "participants": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Legacy caller",
+      "sublabel": "Receipt request",
+      "sources": [
+        {
+          "path": "server/test/e2e_local/test.receipt.validation.js",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Express app",
+      "sublabel": "Version dispatch",
+      "sources": [
+        {
+          "path": "server/app.js",
+          "line": 105,
+          "end_line": 111
+        }
+      ]
+    },
+    {
+      "id": "version",
+      "type": "security",
+      "label": "Version router",
+      "sublabel": "Existing middleware",
+      "sources": [
+        {
+          "path": "server/routes/v000803/index.js",
+          "line": 24,
+          "end_line": 103
+        }
+      ]
+    },
+    {
+      "id": "fallback",
+      "type": "backend",
+      "label": "Unmatched route",
+      "sublabel": "Existing 404 error",
+      "sources": [
+        {
+          "path": "server/app.js",
+          "line": 167,
+          "end_line": 173
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": "receipt",
+      "from": "caller",
+      "to": "api",
+      "y": 165,
+      "label": "/v.../check-purchase",
+      "variant": "emphasis"
+    },
+    {
+      "id": "dispatch",
+      "from": "api",
+      "to": "version",
+      "y": 215,
+      "label": "Keep middleware order"
+    },
+    {
+      "id": "auth",
+      "from": "version",
+      "to": "caller",
+      "y": 265,
+      "label": "v000803 POST: auth may respond",
+      "variant": "security"
+    },
+    {
+      "id": "unmatched",
+      "from": "version",
+      "to": "fallback",
+      "y": 315,
+      "label": "If middleware continues: no receipt mount"
+    },
+    {
+      "id": "not-found",
+      "from": "fallback",
+      "to": "caller",
+      "y": 365,
+      "label": "Existing HTTP 404 HTML",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Repository change \u00b7 #2642",
+      "items": [
+        "Remove validator, SDK and six payment settings",
+        "No store calls, entitlement migration or deployment"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Preserved contracts",
+      "items": [
+        "Weather, geocode and push keep their mounts",
+        "Existing app fallback and POST authorization remain"
+      ]
+    }
+  ]
+}

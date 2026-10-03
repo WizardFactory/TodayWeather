@@ -359,7 +359,7 @@ The maintained `client/www` app no longer registers a purchase state, loads a bi
 
 `TwAds` enables ordinary ads when its adapter becomes ready and retains in-memory screen visibility requests. Start/guide screens directly request show/hide; native adapter consent and failure behavior are unchanged. `TwStorage` no longer migrates `purchaseInfo`, `storeReceipt` or `twAdsInfo`; existing stale keys are ignored rather than deleted. See the [advertising sequence](diagrams/cordova-advertising.html) and [source](diagrams/cordova-advertising.sequence.json).
 
-The server's receipt-validation endpoints and dependency remain unchanged in this app-only PR; removal is tracked in [#2642](https://github.com/WizardFactory/TodayWeather/issues/2642). Historical native bundled web trees are not the modern Cordova build source and are outside this change. The legacy iOS project files still copied by Gulp have their unused StoreKit links and In-App Purchase capability removed. These are repository changes, not a deployment observation.
+Server receipt validation is now retired in the repository by [#2642](https://github.com/WizardFactory/TodayWeather/issues/2642); see the contract below. Historical native bundled web trees are not the modern Cordova build source and are outside this change. The legacy iOS project files still copied by Gulp have their unused StoreKit links and In-App Purchase capability removed. These are repository changes, not a deployment observation.
 
 ## Nation air recovery (#2636)
 
@@ -402,3 +402,39 @@ DB lookup and global-provider recovery from scheduled AirKorea collection.
 ### Optional measurement consent (2026-10-01 candidate)
 
 `Monetization.init` restores a versioned explicit local grant only when the persisted native collection preference also allows it; missing, false or unreadable native state requires a fresh settings choice. Collection defaults off. Settings offer grant/refusal/withdrawal, with synchronous event-gate closure and serialized native writes that coalesce pending choices. Failed persistence invalidates the old WebView grant; bridge failures compensate with collection off and all consent modes denied before a newer choice runs. If both storage invalidation and native writes fail, the UI reports failure and cannot promise durable withdrawal. The legacy opt-out facade can withdraw but cannot grant. Advertising storage/user-data/personalization remain denied. Native install defaults and explicit iOS plist entries close fresh-install collection before JS startup; upgrade preference overrides still need device evidence. UMP ad choices remain separate from Analytics consent and provider/location/push flows. `ios-no-tracking.js` enforces nonpersonalized Ads requests/publisher first-party-ID off and removes unused generated GTM linking to avoid indirect IdentitySupport. Privacy manifests mark device-linked coordinates/IDs accurately; these source constraints do not certify whole-app runtime tracking. [Operating review](../operations/store-privacy-review.md) records remaining archive/network/retention/deletion gates.
+
+## Server payment retirement (#2642)
+
+The repository no longer mounts `/check-purchase` in **v000705, v000803,
+v000901, v000902 or v000903**. The shared receipt validator, `in-app-purchase`
+SDK and obsolete live receipt test are deleted. Startup no longer configures or
+initializes billing. The exclusive `config.platforms` block is removed, including
+`APPLE_PASSWORD`, `GOOGLE_PUBLIC_KEY`, `PLAY_STORE_API_ACCESS_TOKEN`,
+`PLAY_STORE_API_REFRESH_TOKEN`, `PLAY_STORE_API_CLIENT_ID` and
+`PLAY_STORE_API_CLIENT_SECRET`. Google geocoding and push settings remain.
+SDK-only XML signature/parser dependencies are removed from the lockfile; shared
+HTTP and root JWT dependencies remain.
+
+There is no replacement/tombstone route. After existing middleware continues,
+GET and POST to each former URL return the existing **404 HTML** unmatched-route
+response. `app.js` creates `Error('Not Found url=' + req.originalUrl)` with status
+404. Its three-argument handlers are not Express error middleware, so Express's
+default error handler produces the response: test/development includes the
+error stack; production uses the generic `Not Found` body.
+
+**v000803 POST authorization still precedes matching**: without a bearer token
+and body ID it returns the existing 500 `Not found id.` response; valid login
+credentials return a token. A request admitted by that middleware reaches the
+404 fallback. OPTIONS still follows the existing CORS preflight (204). This
+retirement does not change authorization, weather/geocode/push mounts, KMA
+middleware order, units or response conversion.
+
+The [sequence](diagrams/server-payment-retirement.html) and its
+[Archify source](diagrams/server-payment-retirement.json) show the conditional
+fallthrough. The [isolated checks](../../server/test/offline/README.md#server-payment-retirement)
+compare all five GET/POST URLs with unmatched controls in test and production
+modes and exercise adjacent route boundaries. These are repository/runtime
+facts with offline collaborators; production deployment and store-console
+changes remain operator-owned and were not executed.
+
+See the [verification record](../evidence/tasks/server-payment-retirement/verification.md) for commands and isolation limits.

@@ -67,14 +67,6 @@ module.exports = {
         region: (process.env.AWS_REGION || 'us-east-1'),
         cloudfront_api_version:(process.env.AWS_CLOUDFRONT_API_VERSION || 'latest')
     },
-    platforms: {
-        applePassword: (process.env.APPLE_PASSWORD || 'Your apple password'),
-        googlePublicKey: (process.env.GOOGLE_PUBLIC_KEY || 'Your google public key'),
-        googleAccToken: (process.env.PLAY_STORE_API_ACCESS_TOKEN || "PLAY_STORE_API_ACCESS_TOKEN"),
-        googleRefToken: (process.env.PLAY_STORE_API_REFRESH_TOKEN || "PLAY_STORE_API_REFRESH_TOKEN"),
-        googleClientID: (process.env.PLAY_STORE_API_CLIENT_ID || "PLAY_STORE_API_CLIENT_ID"),
-        googleClientSecret: (process.env.PLAY_STORE_API_CLIENT_SECRET || "PLAY_STORE_API_CLIENT_SECRET")
-    },
     push: {
         gcmAccessKey: (process.env.GCM_ACCESS_KEY || 'Your gcm access key')
     },

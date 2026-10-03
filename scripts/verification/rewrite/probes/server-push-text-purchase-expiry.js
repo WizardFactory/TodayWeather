@@ -1,11 +1,15 @@
 // Command (run from the repository root, offline, plain Node):
 //   mkdir -p reports/verification/rewrite/probes && node scripts/verification/rewrite/probes/server-push-text-purchase-expiry.js > reports/verification/rewrite/probes/server-push-text-purchase-expiry.json
 //
-// Synthetic execution of functions extracted verbatim (by name, from source text) out of
+// Synthetic execution of baseline push functions extracted by name from Git source:
+// requires retained bd6640f2 object (no network fetch). Receipt checks are retired.
+// Original combined 27-check source and record remain available in Git history.
+// Extracted from
 // server/controllers/controllerPush.js, server/controllers/alert.push.controller.js,
-// server/controllers/controllerTown24h.js, server/controllers/controllerTown.js and
-// server/routes/v000705/receiptValidation.js. Those files are never required, so no Mongo model,
-// Firebase (server/lib/pushProviders.js since c80ee014), GCM, i18n, sprintf, in-app-purchase or HTTP
+// server/controllers/controllerTown24h.js and server/controllers/controllerTown.js.
+// Historical filename retained for links; #2642 removes receipt-expiry checks.
+// Those files are never required, so no Mongo model,
+// Firebase (server/lib/pushProviders.js since c80ee014), GCM, i18n, sprintf or HTTP
 // code is loaded; direct APNs delivery was removed in 45b2eb3f. The pure modules
 // server/lib/aqi.converter.js and server/lib/kmaTimeLib.js are required as-is.
 // Stubs: no-op log; manager.leadingZeros; an i18n stub whose setLocale installs a translator returning
@@ -16,12 +20,14 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { spawnSync } = require('child_process');
+const { spawnSync, execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '../../../..');
 const ZONES = ['Asia/Seoul', 'UTC', 'America/Los_Angeles'];
-const src = rel => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-const blob = rel => { const b = fs.readFileSync(path.join(ROOT, rel)); return crypto.createHash('sha1').update(`blob ${b.length}\0`).update(b).digest('hex'); };
+// Historical push-only replay: requires this retained Git object, no fetch.
+const BASELINE = 'bd6640f22c1029c35e8937b108be4b50ea89361a';
+const src = rel => execFileSync('git', ['show', BASELINE + ':' + rel], {cwd: ROOT, encoding: 'utf8'});
+const blob = rel => { const b = Buffer.from(src(rel)); return crypto.createHash('sha1').update(`blob ${b.length}\0`).update(b).digest('hex'); };
 const lineOf = (text, idx) => text.slice(0, idx).split('\n').length;
 const exercised = {};
 
@@ -44,11 +50,6 @@ function extractMethod(file, name) { // ES6 class method written as "    name(ar
   const code = sliceBlock(file, m.index + 1, name);
   return `function ${name}(${m[1]}) ` + code.slice(code.indexOf('{'));
 }
-function extractFunction(file, name) {
-  const s = src(file); const at = s.indexOf(`function ${name}(`);
-  if (at < 0) throw new Error('missing ' + name);
-  return sliceBlock(file, at, name);
-}
 const build = (code, scope) => { const n = Object.keys(scope); return new Function(...n, 'return (' + code + ');')(...n.map(k => scope[k])); };
 const fixedDateClass = iso => { const now = Date.parse(iso);
   return class FixedDate extends Date { constructor(...a) { if (a.length === 0) super(now); else super(...a); } static now() { return now; } }; };
@@ -70,7 +71,7 @@ function child() {
   const P = {};
   for (const n of ['_getAqiStr', '_makeStrTmnTmx', '_makePushAirMessage', '_makeKmaPushWeatherMessage', '_pty2str', '_makeDsfPushWeatherMessage', '_makeKmaPushMessage', '_makeDsfPushMessage'])
     P[n] = build(extractProto('server/controllers/controllerPush.js', 'ControllerPush', n), { cTown, AqiConverter, log, i18n, __dirname: '/stub' });
-  const out = { alarm: {}, alert: {}, aqiStr: {}, purchase: {} };
+  const out = { alarm: {}, alert: {}, aqiStr: {} };
   const units = { temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea', airForecastSource: 'airkorea' };
   const safe = f => { try { return f(); } catch (e) { return { threw: e.message }; } };
 
@@ -153,30 +154,7 @@ function child() {
   alertCase('C4', 5, 7, kma(1, false), { name: '잠실본동', lang: 'ko', airAlertsBreakPoint: 4 });
   alertCase('C5 en', 5, 50, kma(0, false), { name: 'Jamsil', lang: 'en', airAlertsBreakPoint: 3 });
 
-  // §5.4 calcExpirationDate
-  const calcSrc = extractFunction('server/routes/v000705/receiptValidation.js', 'calcExpirationDate');
-  const ms = iso => String(Date.parse(iso));
-  const base = [
-    { product_id: 'tw1year', purchase_date_ms: ms('2026-03-01T00:00:00Z') },
-    { product_id: 'tw1year', purchase_date_ms: ms('2024-01-10T00:00:00Z') },
-    { product_id: 'tw1year', purchase_date_ms: ms('2024-12-20T00:00:00Z') },
-    { product_id: 'tw1year', purchase_date_ms: ms('2026-06-01T00:00:00Z'), cancellation_date: '2026-06-02 00:00:00 Etc/GMT' },
-    { product_id: 'ta1year', purchase_date_ms: ms('2026-07-01T00:00:00Z') }];
-  const two = [{ product_id: 'tw1year', purchase_date_ms: ms('2024-01-10T00:00:00Z') }, { product_id: 'tw1year', purchase_date_ms: ms('2024-01-11T00:00:00Z') }];
-  const run = (label, nowIso, list, pid) => {
-    const calc = build(calcSrc, { log, Date: fixedDateClass(nowIso) });
-    const copy = JSON.parse(JSON.stringify(list)); const r = calc(pid, copy);
-    out.purchase[label] = { now: nowIso, productId: pid === undefined ? '<undefined>' : pid, result: r === undefined ? '<undefined>' : r,
-      sortedInPlace: copy.map(x => new Date(Number(x.purchase_date_ms)).toISOString().slice(0, 10)) };
-  };
-  run('full list, now 2026-09-24', '2026-09-24T00:00:00Z', base, 'tw1year');
-  run('first two tw1year entries, now 2025-06-01', '2025-06-01T00:00:00Z', base.slice(1, 3), 'tw1year');
-  run('full list, now 2027-03-02', '2027-03-02T00:00:00Z', base, 'tw1year');
-  run('two purchases 2024-01-10 and 2024-01-11, now 2024-06-01', '2024-06-01T00:00:00Z', two, 'tw1year');
-  run('two purchases 2024-01-10 and 2024-01-11, now 2026-09-24', '2026-09-24T00:00:00Z', two, 'tw1year');
-  run("id 'ta1year' on the full list, now 2026-09-24", '2026-09-24T00:00:00Z', base, 'ta1year');
-  run('id missing, now 2026-09-24', '2026-09-24T00:00:00Z', base, undefined);
-  out.inputs = { kmaFixture: kmaBody('2026.09.24 07:00'), dsfFixture: dsfBody('2026.09.24 19:00', 0), alertFixture: kma(0, false), purchaseList: base, twoPurchases: two };
+  out.inputs = { kmaFixture: kmaBody('2026.09.24 07:00'), dsfFixture: dsfBody('2026.09.24 19:00', 0), alertFixture: kma(0, false) };
   out.exercised = exercised;
   process.stdout.write(JSON.stringify(out));
 }
@@ -213,39 +191,28 @@ function parent() {
   check('4.3 C3', SPP + ' §4.3', { send: 'none', notification: null, lastState: 0, lastGrade: 3 }, pick('C3'));
   check('4.3 C4', SPP + ' §4.3', { send: 'none', notification: null, lastState: 1, lastGrade: 3 }, pick('C4'));
   check('4.3 lang en air-only title "<name> AQI " and "14h O3 is <o3Str>."', SPP + ' §4.3', { title: 'Jamsil AQI ', text: '14h O3 is 나쁨.' }, al['C5 en'].notification);
-  const pu = ref.purchase;
-  check('5.4 full list, now 2026-09-24', SPP + ' §5.4', 'Mon, 01 Mar 2027 00:00:00 GMT', pu['full list, now 2026-09-24'].result);
-  check('5.4 first two entries, now 2025-06-01', SPP + ' §5.4', 'Sat, 10 Jan 2026 00:00:00 GMT', pu['first two tw1year entries, now 2025-06-01'].result);
-  check('5.4 full list, now 2027-03-02 -> undefined (6778003)', SPP + ' §5.4', '<undefined>', pu['full list, now 2027-03-02'].result);
-  check('5.4 two purchases in one window, now 2024-06-01', SPP + ' §5.4', 'Sat, 10 Jan 2026 00:00:00 GMT', pu['two purchases 2024-01-10 and 2024-01-11, now 2024-06-01'].result);
-  check("5.4 id 'ta1year'", SPP + ' §5.4', 'Thu, 01 Jul 2027 00:00:00 GMT', pu["id 'ta1year' on the full list, now 2026-09-24"].result);
-  check('5.4 id missing -> undefined (6778003)', SPP + ' §5.4', '<undefined>', pu['id missing, now 2026-09-24'].result);
-  check('5.4 in_app sorted ascending in place', SPP + ' §5.4', ['2024-01-10', '2024-12-20', '2026-03-01', '2026-06-01', '2026-07-01'], pu['full list, now 2026-09-24'].sortedInPlace);
   check('4 method: alarm outputs identical under Asia/Seoul, UTC and America/Los_Angeles', SPP + ' §4 method', true,
     ZONES.every(z => same(runs[z].alarm, ref.alarm) && same(runs[z].aqiStr, ref.aqiStr)));
-  check('5.4: identical under TZ=UTC and Asia/Seoul', SPP + ' §5.4', true, same(runs.UTC.purchase, ref.purchase));
 
   const record = {
-    probe: 'server-push-text-purchase-expiry',
+    probe: 'server-push-text',
     evidence_label: 'synthetic execution',
     command: 'mkdir -p reports/verification/rewrite/probes && node scripts/verification/rewrite/probes/server-push-text-purchase-expiry.js > reports/verification/rewrite/probes/server-push-text-purchase-expiry.json',
-    source_commit: 'bd6640f22c1029c35e8937b108be4b50ea89361a',
-    date: '2026-09-25',
-    rebaseline: { previous_source_commit: 'ff7acf3996ccb66c912d2ed4710cf300197d6966',
-      note: 'Re-baselined 2026-09-25 from ff7acf39 to bd6640f2. Four extracted-from files changed upstream: controllerPush.js (c80ee014 moved Firebase Admin initialization to server/lib/pushProviders.js; 45b2eb3f removed sendIOSNotification, the APNs provider and apnFeedback, and sendNotification L1111 now returns "FCM token is required for iOS notifications" for an iOS record without fcmToken), alert.push.controller.js (45b2eb3f, the same error in _sendNotification L671), controllerTown24h.js (2116c6bf, makeResult adds historyStatus and passes short through history/policy.hourlyResponse) and controllerTown.js (gather and history commits). Every extracted function is text-identical at both commits; only line numbers moved. receiptValidation.js, aqi.converter.js, kmaTimeLib.js and both locale files have the same blob hashes. Inputs, outputs and all 27 checks are identical to the ff7acf39 run.',
-      node16_cross_check: 'Also run on 2026-09-25 with Node v16.20.2, the server runtime pinned by server/.nvmrc and package.json engines since c80ee014: every output and check was identical; only runtime.node differed. That run is not the stored record.' },
+    source_commit: BASELINE,
+    date: '2026-10-03',
+    retirement: 'Issue #2642 removes all receipt-expiry cases; retained historical records describe the prior 27 checks.',
     runtime: { node: process.version, TZ: ZONES, note: 'one child process per TZ; the Asia/Seoul run is the reference for checks' },
     source: Object.entries(ref.exercised).map(([file, fns]) => ({ file, blob_sha1: blob(file), extracted: [...new Set(fns)] }))
       .concat([{ file: 'server/lib/aqi.converter.js', blob_sha1: blob('server/lib/aqi.converter.js'), note: 'required as-is' },
         { file: 'server/lib/kmaTimeLib.js', blob_sha1: blob('server/lib/kmaTimeLib.js'), note: 'required as-is' },
         { file: 'server/locales/ko.json, server/locales/en.json', note: 'translator values' }]),
-    stubs: 'no-op log; global.manager.leadingZeros; i18n.configure stub (setLocale installs a locale-file lookup; the real i18n 0.x and sprintf packages are not loaded); positional %d/%s sprintf; fixed-clock Date in the extracted functions\' scope (alert polls at the stated UTC time on 2026-09-24; purchase checks at the stated now). Alert records with "7 h ago" carry pushTime = fixed now - 7 h. The alert database prefilter, state writes, provider submission and HTTP routes are not executed.',
+    stubs: 'no-op log; global.manager.leadingZeros; i18n.configure stub (setLocale installs a locale-file lookup; the real i18n 0.x and sprintf packages are not loaded); positional %d/%s sprintf; fixed-clock Date in the extracted functions\' scope (alert polls at the stated UTC time on 2026-09-24). Alert records with "7 h ago" carry pushTime = fixed now - 7 h. The alert database prefilter, state writes, provider submission and HTTP routes are not executed.',
     inputs: ref.inputs,
-    outputs: { 'Asia/Seoul': { alarm: ref.alarm, aqiStr: ref.aqiStr, alert: ref.alert, purchase: ref.purchase },
-      differencesFromAsiaSeoul: Object.fromEntries(ZONES.filter(z => z !== 'Asia/Seoul').map(z => [z, ['alarm', 'aqiStr', 'alert', 'purchase'].filter(k => !same(runs[z][k], ref[k]))])) },
+    outputs: { 'Asia/Seoul': { alarm: ref.alarm, aqiStr: ref.aqiStr, alert: ref.alert },
+      differencesFromAsiaSeoul: Object.fromEntries(ZONES.filter(z => z !== 'Asia/Seoul').map(z => [z, ['alarm', 'aqiStr', 'alert'].filter(k => !same(runs[z][k], ref[k]))])) },
     checks,
     all_checks_match: checks.every(c => c.match),
-    interpretation: 'Synthetic execution of the alarm and alert text builders and of calcExpirationDate, extracted verbatim from the baseline files and run with stubbed translation, logging and clock. It reproduces the worked examples in server-push-and-purchase.md sections 2.4, 4.1-4.3 and 5.4 and shows they do not change across the three process time zones tried. The i18n and sprintf stubs are simplifications of the real packages, the fixtures are synthetic (strings the server response would supply, such as wfAm, *Str and summaryAir, are fixture values), and no worker, database, push provider, store validator or HTTP endpoint ran, so this is not evidence of delivered notification text or of production purchase responses. Re-run at bd6640f2: the extracted builders are text-identical to ff7acf39 and every result is unchanged. The upstream push changes (FCM-only delivery through server/lib/pushProviders.js; see docs/architecture/push-notifications.md) sit in provider selection and submission, which this probe does not execute.'
+    interpretation: 'Synthetic execution of historical baseline alarm and alert text builders with translation, logging and clock stubs. Payment checks are retired; prior payment records remain historical. No worker, database, push provider or HTTP endpoint runs.'
   };
   process.stdout.write(JSON.stringify(record, null, 1) + '\n');
 }
