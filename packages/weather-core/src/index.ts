@@ -56,10 +56,15 @@ export type Point = {
   visibility: number | null;
   precipitation: number | null;
   precipitationHours: number | null;
-  /** How an amount was obtained: observed, in-progress observation, shortest category lower bound, or the server's KMA forecast (D45 tracks its accuracy). */
+  /** Observed, partial observation, approximate shortest representative, or forecast. Before #2597 deployment, shortest categories still contain lower bounds. */
   precipitationBasis: "observed" | "partial" | "approx" | "forecast" | null;
+  /** True when a forecast total includes a category approximation. */
+  precipitationApprox?: boolean;
   snowfall: number | null;
   snowfallHours: number | null;
+  snowfallApprox?: boolean;
+  /** Forecast provenance is independent of covered hours (including 1h). */
+  snowfallBasis?: "forecast";
   rainProbability: number | null;
   feelsLike: number | null;
   icon: string;
@@ -307,43 +312,52 @@ function point(
   };
   const unit = (v: unknown, kind: string, key: keyof Units) =>
     convertValue(numberValue(v), kind, source[key], target[key]);
-  // KMA: rn1 is observed (current 1h, short 3h, past-day accumulation) or a
-  // shortest 1-hour category lower bound (approximate). r06/s06 are the
-  // server-calculated forecast amounts (3h short rows, daily totals); D45
-  // tracks their server-side accuracy.
+  // KMA rn1 is observed (current 1h, short 3h, past-day accumulation), or
+  // a shortest 1h representative amount. Before #2597 deployment, shortest
+  // categories still contain lower bounds. Forecast r06/s06 carry coverage
+  // and approximation metadata; older responses use the legacy periods.
   const pastDay = role === "daily" && !!today && at.slice(0, 10) < today;
+  const forecastRole = role === "short" || (role === "daily" && !pastDay);
+  const coverage = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null;
+  const forecastRainHours = coverage(r.r06Hours);
+  const forecastSnowHours = coverage(r.s06Hours);
   const observedRain = numberValue(r.rn1);
   const forecastRain =
-    role === "short" || (role === "daily" && !pastDay)
-      ? numberValue(r.r06)
-      : null;
-  const kmaRain =
-    role === "daily" && !pastDay
-      ? forecastRain
-      : (observedRain ?? forecastRain);
+    forecastRole && forecastRainHours !== 0 ? numberValue(r.r06) : null;
+  const usesObservedRain =
+    !(role === "daily" && !pastDay) && observedRain !== null;
+  const kmaRain = usesObservedRain ? observedRain : forecastRain;
   const rain = isKma ? kmaRain : (numberValue(r.rn1) ?? numberValue(r.r06));
   const basis: Point["precipitationBasis"] =
     !isKma || rain === null
       ? null
       : role === "shortest"
-        ? "approx"
-        : rain === observedRain && !(role === "daily" && !pastDay)
+        ? r.rn1Approx === true || r.rn1Approx === undefined
+          ? "approx"
+          : "forecast"
+        : usesObservedRain
           ? "observed"
           : "forecast";
   const rainHours =
-    rain === null || (isKma && role === "daily")
+    rain === null
       ? null
-      : isKma
-        ? role === "short"
-          ? 3
-          : 1
-        : period;
-  const kmaSnow =
-    role === "short" || (role === "daily" && !pastDay)
-      ? numberValue(r.s06)
-      : role === "daily"
-        ? null
-        : numberValue(r.sn1);
+      : !isKma
+        ? period
+        : !usesObservedRain && forecastRole
+          ? (forecastRainHours ?? (role === "short" ? 3 : null))
+          : role === "daily"
+            ? null
+            : role === "short"
+              ? 3
+              : 1;
+  const kmaSnow = forecastRole
+    ? forecastSnowHours === 0
+      ? null
+      : numberValue(r.s06)
+    : role === "daily"
+      ? null
+      : numberValue(r.sn1);
   const snow = isKma
     ? kmaSnow
     : (numberValue(r.sn1) ?? numberValue(r.s1d) ?? numberValue(r.s06));
@@ -386,6 +400,9 @@ function point(
     ),
     precipitationHours: rainHours,
     precipitationBasis: basis,
+    ...(isKma && forecastRole && !usesObservedRain && rain !== null
+      ? { precipitationApprox: r.r06Approx === true }
+      : {}),
     snowfall: convertValue(
       snow,
       "precipitation",
@@ -396,8 +413,8 @@ function point(
       snow === null
         ? null
         : isKma
-          ? role === "short"
-            ? 3
+          ? forecastRole
+            ? (forecastSnowHours ?? (role === "short" ? 3 : null))
             : role === "daily"
               ? null
               : 1
@@ -406,6 +423,12 @@ function point(
             : numberValue(r.s1d) !== null
               ? 24
               : period,
+    ...(isKma && forecastRole && snow !== null
+      ? {
+          snowfallApprox: r.s06Approx === true,
+          snowfallBasis: "forecast" as const,
+        }
+      : {}),
     rainProbability: numberValue(r.pop),
     feelsLike: temp(r.sensorytem ?? r.sensible),
     icon: str(r.skyIcon ?? r.skyAm) || "cloud",
@@ -417,11 +440,12 @@ function point(
     ...(pollenOak !== null ? { pollenOak } : {}),
     ...(pollenPine !== null ? { pollenPine } : {}),
     ...(pollenWeeds !== null ? { pollenWeeds } : {}),
-    uv: ultrv === null
-      ? ""
-      : str(r.ultrvStr)
-        ? `${str(r.ultrvStr)} (${ultrv})`
-        : String(ultrv),
+    uv:
+      ultrv === null
+        ? ""
+        : str(r.ultrvStr)
+          ? `${str(r.ultrvStr)} (${ultrv})`
+          : String(ultrv),
     discomfort:
       dspls !== null && dspls > 60
         ? str(r.dsplsStr)
@@ -460,7 +484,16 @@ function kmaForecast(
           (key !== "icon" || !!str(record(row).skyIcon ?? record(row).skyAm)),
       ),
     );
-    timeline.set(p.at, { ...previous, ...valid });
+    timeline.set(p.at, {
+      ...previous,
+      ...valid,
+      ...(p.precipitation !== null
+        ? { precipitationApprox: p.precipitationApprox }
+        : {}),
+      ...(p.snowfall !== null
+        ? { snowfallApprox: p.snowfallApprox, snowfallBasis: p.snowfallBasis }
+        : {}),
+    });
   }
   return [...timeline.values()].sort((a, b) => a.at.localeCompare(b.at));
 }

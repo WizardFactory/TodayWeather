@@ -1,4 +1,4 @@
-import { COMPASS_POINTS, formatValue } from "@todayweather/core";
+import { COMPASS_POINTS, formatValue, type Point } from "@todayweather/core";
 import { language, t, type MessageKey } from "./i18n";
 import { placeName } from "./places";
 import { dateText } from "./locale";
@@ -12,8 +12,9 @@ export function amount(value: number | null, unit: string) {
     : formatValue(value, digits);
 }
 /**
- * KMA shortest rn1 is the lower bound of a 1-hour category (D45): show it as
- * approximate, and as ranges for the 30~50 / 50+ categories.
+ * KMA shortest rn1 is a 1-hour category representative after #2597. The
+ * current deployment still sends lower bounds until #2597 is deployed.
+ * Both use approximate labels and ranges for the 30~50 / 50+ categories.
  */
 export function approxAmount(value: number | null, unit: string) {
   if (value === null) return "—";
@@ -22,9 +23,24 @@ export function approxAmount(value: number | null, unit: string) {
     to = (v: number) => amount(unit === "in" ? v / 25.4 : v, unit);
   if (mm >= 50 - 1e-6) return t("amount.atLeast", { value: to(50), unit });
   if (mm >= 30 - 1e-6) return `${to(30)}~${to(50)} ${unit}`;
-  // "1mm 미만" and "1.0mm" both parse to 1: only an upper bound is known.
+  // The under-1 category is now 0.5; legacy responses used 1 for this category.
   if (mm <= 1 + 1e-6) return t("amount.atMost", { value: to(1), unit });
   return t("amount.about", { value: amount(value, unit), unit });
+}
+/** Forecast totals are approximate sums, not reconstructable hourly categories. */
+export function precipitationAmount(p: Point, unit: string) {
+  if (p.precipitationBasis === "approx")
+    return approxAmount(p.precipitation, unit);
+  return forecastAmount(p.precipitation, unit, p.precipitationApprox);
+}
+export function forecastAmount(
+  value: number | null,
+  unit: string,
+  approximate?: boolean,
+) {
+  return approximate && value !== null && value > 0
+    ? t("amount.about", { value: amount(value, unit), unit })
+    : `${amount(value, unit)} ${unit}`;
 }
 const WORDS: Record<number, string> = {
   [-3]: "엊그제",
