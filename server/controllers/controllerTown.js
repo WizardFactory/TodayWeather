@@ -2419,7 +2419,7 @@ function ControllerTown() {
                             return callback(null, null);
                         }
                         if (areaList.length < 1) {
-                            log.warn('Fail to get area no', meta);
+                            log.debug('No address area metadata; trying nearby areas', meta);
                             return callback(null, null);
                         }
                         callback(null, areaList[0]);
@@ -2440,9 +2440,10 @@ function ControllerTown() {
 
                     LifeIndexKmaController.appendData2(areaInfo.areaNo, req.midData.dailyData, function (err, result) {
                         if (err) {
-                            err.message += ' areaNo:'+ areaInfo.areaNo + ' ' + JSON.stringify(meta) ;
-                            log.warn(err);
-                            return callback(null, null);
+                            if (err.code === 'LIFE_INDEX_NOT_FOUND') {
+                                return callback(null, null);
+                            }
+                            return callback(err);
                         }
                         callback('skip', result);
                     });
@@ -2485,32 +2486,53 @@ function ControllerTown() {
                                });
                             }
                             if (areaNoList.length < 1) {
-                                err = new Error('Fail to get area no query:'+JSON.stringify(gcoord));
-                                return callback(err);
+                                log.info({event: 'life-index-area-fallback', sID: meta.sID,
+                                    requestedAreaNo: gAreaInfo && gAreaInfo.areaNo,
+                                    cause: 'no-nearby-area', result: 'unavailable'});
+                                return callback('skip');
                             }
-                            callback(null, areaNoList[0]);
+                            callback(null, areaNoList);
                         });
                 },
-                function appendNearLifeIndex(areaInfo, callback) {
-                    if (areaInfo == undefined) {
-                        var err = new Error("area info is not valid");
-                        return callback(err);
-                    }
-                    //get lifeindex by near area no
-                    LifeIndexKmaController.appendData2(areaInfo.areaNo, req.midData.dailyData, function (err, result) {
-                        if (err) {
-                            err.message = err.message || '';
-                            err.message += ' areaNo:'+ areaInfo.areaNo + ' at ' + meta.method;
-                            return callback(err, null);
+                function appendNearLifeIndex(areaList, callback) {
+                    var candidate = 0;
+                    var attemptedAreaNos = [];
+                    // Metadata can retain several retired codes. Walk only the existing
+                    // bounded nearest list; a store failure must not trigger more reads.
+                    function tryNextArea() {
+                        if (candidate >= areaList.length) {
+                            log.info({event: 'life-index-area-fallback', sID: meta.sID,
+                                requestedAreaNo: gAreaInfo && gAreaInfo.areaNo,
+                                attemptedAreaNos: attemptedAreaNos, cause: 'area-data-unavailable',
+                                result: 'unavailable'});
+                            return callback(null, null);
                         }
-                        callback(err, result);
-                    });
+                        var areaInfo = areaList[candidate++];
+                        attemptedAreaNos.push(areaInfo.areaNo);
+                        LifeIndexKmaController.appendData2(areaInfo.areaNo, req.midData.dailyData, function (err, result) {
+                            if (err) {
+                                if (err.code === 'LIFE_INDEX_NOT_FOUND') {
+                                    return tryNextArea();
+                                }
+                                return callback(err);
+                            }
+                            req.params.areaNo = areaInfo.areaNo;
+                            log.info({event: 'life-index-area-fallback', sID: meta.sID,
+                                requestedAreaNo: gAreaInfo && gAreaInfo.areaNo,
+                                resolvedAreaNo: areaInfo.areaNo, attemptedAreaNos: attemptedAreaNos,
+                                cause: 'area-data-unavailable', result: 'resolved'});
+                            callback(null, result);
+                        });
+                    }
+                    tryNextArea();
                 }
             ],
             function(err, result) {
                 if (err && err !== 'skip') {
-                    err.message += ' ' + JSON.stringify(meta);
-                    log.warn(err);
+                    log.warn({event: 'life-index-area-fallback', sID: meta.sID,
+                        requestedAreaNo: gAreaInfo && gAreaInfo.areaNo,
+                        cause: err.code || 'lookup-error', message: err.message,
+                        result: 'failed'});
                 }
                 if (result) {
                     //add lifeIndex to current

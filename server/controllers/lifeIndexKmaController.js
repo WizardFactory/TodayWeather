@@ -273,7 +273,9 @@ LifeIndexKmaController._fromLifeIndexDb2 = function (areaNo, callback) {
                 return callback(err);
             }
             if (indexDataList.length === 0 || !(indexDataList[0].lastUpdateDate)) {
-                err = new Error("it is not invalid areaNo="+areaNo);
+                // Area codes can disappear after an administrative reorganization.
+                err = new Error("Life index data unavailable for areaNo="+areaNo);
+                err.code = 'LIFE_INDEX_NOT_FOUND';
                 return callback(err);
             }
             callback(null, indexDataList);

@@ -550,3 +550,13 @@ TZ=UTC NODE_PATH=/tmp/food-poisoning-deps/node_modules node server/test/offline/
 ```
 
 `MONGOMS_SYSTEM_BINARY` may select an existing local mongod. Mongoose 5.1.2 schema/query casting is checked separately; its old driver requires MongoDB <=5.0, whereas this real-database smoke uses Mongoose 5.13 with a modern mongod. TTL index creation is disabled only in the smoke's historical fixture database; read-time expiry is still enforced. See the [operating contract](../../../docs/operations/food-poisoning.md).
+
+
+`life-index-area.test.js` (#2183, part of `test:offline`) uses real life-index and
+weather controllers with isolated models. It reproduces obsolete exact and
+nearest codes, verifies ordered bounded fallback and valid zero enrichment,
+and covers missing address/records/publication metadata, lookup failures,
+resolved `areaNo`, structured logs, integrated pollen summaries, and MFDS/next continuation. It makes no live
+provider or database call and does not verify current nationwide area mappings.
+
+[Issue #2183 pre-merge verification](../../../docs/evidence/tasks/issue-2183/pre-merge.md) records local runtime and response checks. The RSS matrix explicitly runs the area and pollen suites on Node 16/22. Pollen fixtures use JSON copies so Node 16 does not require `structuredClone`.
