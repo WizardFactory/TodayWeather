@@ -13,6 +13,7 @@ var collectTown = require('../lib/collectTownForecast');
 var town = require('../models/town');
 var config = require('../config/config');
 var gatherPolicy = require('../config/gather');
+var foodPoisoning = require('../lib/foodPoisoning');
 var convert = require('../utils/coordinate2xy');
 var convertGeocode = require('../utils/convertGeocode');
 
@@ -2207,6 +2208,17 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     var hours = (new Date()).getUTCHours();
 
     log.verbose('check time and request task');
+
+    var riskNow = new Date();
+    if (foodPoisoning.due(riskNow, putAll)) {
+        self.asyncTasks.push(function FoodPoisoning(callback) {
+            foodPoisoning.shared().collect(riskNow, function (err, count) {
+                if (err) log.warn('MFDS food-poisoning collection unavailable');
+                else log.info('MFDS food-poisoning collection complete', {rows: count});
+                callback();
+            });
+        });
+    }
 
     if (gatherPolicy.tasks.airForecast && (time === 7 || putAll)) {
         if (hours === 8 || hours === 9 || hours === 10 || hours === 11 ||

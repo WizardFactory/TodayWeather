@@ -1,6 +1,6 @@
 # PWA user manual
 
-[Read the seven-page PDF](user-manual.pdf). The [editable JSON](user-manual.json) contains the same instructions; [scenario screenshots and provenance](manual-images/provenance.json) come from the actual static PWA using synthetic weather data.
+[Read the nine-page PDF](user-manual.pdf). The [editable JSON](user-manual.json) contains the same instructions; [scenario screenshots and provenance](manual-images/provenance.json) come from the actual static PWA using synthetic weather data.
 
 The manual covers display preferences, hourly comparison, daily ranges, air information, enlarged text, saved browser data and clean-checkout reproduction. Its S1–S7 scenarios match the [adoption plan](../../plans/pwa-design-adoption.md). Choose Hourly or Daily to scroll to and focus its chart. Daily AM/PM conditions and precipitation are available in the cursor and table; partial extrema retain the shared scale. Missing values remain dashes; timestamps and stale-data warnings remain visible. Browser text size is independent of system text size. The accepted iOS system comparison is 23pt / 17pt (about135%), while the PWA control offers exactly130%.
 
@@ -27,3 +27,9 @@ python scripts/verification/pwa-manual-pdf.py
 The source and selected screenshots are maintained deliverables. After updates, rasterize and inspect every PDF page for clipping, readable text and correct screenshots. Preserve the image digests in the provenance file. See [testing](testing.md) and the [physical comparison](../design-system/physical-pwa-comparison.md) for the limits of automated and device evidence.
 
 When no saved weather is available, Hourly/Daily loading or error states focus the main content. Retry success focuses and scrolls the selected chart. Existing scenario screenshots show unchanged successful layouts.
+
+## Rain and snow coverage (#2598)
+
+Hourly and daily forecast cards use the service's covered hours. RSS amounts can cover six hours; a full daily total covers 24 hours. Approximate forecast totals show “about”; exact shortest rain no longer carries that marker. A zero-hour placeholder shows rain probability without an amount or period. Older responses keep the previous three-hour short and unqualified daily forecast labels. Observed rain keeps its observed period. These labels also survive an offline reload after weather has been saved.
+
+The last two PDF pages document [issue 2598 scenarios](../../plans/issue-2598.md), using Korean synthetic fixture screenshots. Reproduce only these captures after building with `node scripts/verification/precipitation-manual-capture.mjs`; set `PLAYWRIGHT_EXECUTABLE_PATH` when using an existing Chromium binary. Then regenerate the PDF with the existing manual renderer.

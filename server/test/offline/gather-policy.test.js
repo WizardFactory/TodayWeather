@@ -64,6 +64,7 @@ function managerWith(policy, overrides, globals) {
     return load('controllers/controllerManager.js', Object.assign({
         '../config/config': {db: {version: '2.0'}, keyString: {dongnae_forecast_keys: JSON.stringify(['SYNTHETIC_POLICY_KEYxxxxxxxxxxxxxxxx'])}, history: {enabled: false}},
         '../config/gather': policy,
+        '../lib/foodPoisoning': require('../../lib/foodPoisoning'),
         async: require('async')
     }, overrides), globals);
 }
@@ -227,6 +228,7 @@ async function kaqAccepts(policy, count) {
     function Base() {}
     const Kaq = load('controllers/kaq.hourly.forecast.controller.js', {
         '../config/config': {image: {kaq_korea_image: {}}}, '../config/gather': policy,
+        '../lib/foodPoisoning': require('../../lib/foodPoisoning'),
         './img.hourly.forecast.controller': Base
     });
     const Contents = Array.from({length: count}, (v, i) => ({Key: 'f/' + i + '_PM2_5.09KM.gif'}));

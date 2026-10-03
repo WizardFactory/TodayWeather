@@ -18,7 +18,14 @@ import {
   type Weather,
 } from "@todayweather/core";
 import { WeatherIcon, Empty, SectionHead, percent } from "./components";
-import { amount, approxAmount, dayLabel, windText, iconKind } from "./format";
+import {
+  amount,
+  precipitationAmount,
+  forecastAmount,
+  dayLabel,
+  windText,
+  iconKind,
+} from "./format";
 import { hourText } from "./locale";
 import { t, useLanguage } from "./i18n";
 import { useApp } from "./context";
@@ -86,12 +93,9 @@ function measuredWidth(labels: string[], font: string, floor: number): number {
 }
 function rain(point: Point, unit: string) {
   if (point.precipitation === null && point.snowfall === null) return "—";
-  const value =
-    point.precipitationBasis === "approx"
-      ? approxAmount(point.precipitation, unit)
-      : `${amount(point.precipitation, unit)} ${unit}`;
+  const value = precipitationAmount(point, unit);
   return point.snowfall !== null && point.snowfall > 0
-    ? `${value} / ${amount(point.snowfall, unit)} ${unit}`
+    ? `${value} / ${forecastAmount(point.snowfall, unit, point.snowfallApprox)}`
     : value;
 }
 function WindValue({ point, unit }: { point: Point; unit: string }) {

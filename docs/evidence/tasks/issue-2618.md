@@ -72,3 +72,17 @@ and returned the original injected storage error exactly once without rotation.
 Two configured in-flight slots limited the rejecting key to three requests.
 Models/storage errors and provider responses were synthetic; no production host
 or live provider was used. Current review/CI disposition remains on the PR.
+
+## Current-master integration — 2026-10-03
+
+AK authorized resolving conflicts and pushing PR #2667. Master
+`f8266bd3a1ba1bd1501d2706f8b1709916f32a52` was merged into the candidate.
+Both the unified-key and MFDS sections were preserved in the collection
+architecture and offline-test README. The MFDS Manager scheduling fixture now
+injects the real `dataGoKrKeys` parser: its initial integrated run failed because
+the fixture replaced that dependency with a function without `fromConfig`.
+The corrected MFDS checks pass 15/15 on Node 24.19.0. The integrated selected
+offline suite and both existing loopback HTTP smokes passed. Remote CI and
+review for the resulting merge commit require fresh observations. No new
+production or gather-host acceptance is claimed. Existing reviewer recheck and
+live acceptance requirements remain. Generated diagrams were preserved unchanged.
