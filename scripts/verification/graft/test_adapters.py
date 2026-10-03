@@ -148,6 +148,9 @@ class Adapters(unittest.TestCase):
         scripts = repo / 'scripts'
         scripts.mkdir()
         shutil.copy2(ROOT / 'scripts/check-artifact-policy.py', scripts)
+        verification = scripts / 'verification'
+        verification.mkdir()
+        shutil.copy2(ROOT / 'scripts/verification/check-ci-artifacts.py', verification)
         (scripts / 'artifact-policy.json').write_text(json.dumps({'history_base': first}))
         reports = repo / 'reports'
         reports.mkdir()
@@ -161,7 +164,7 @@ class Adapters(unittest.TestCase):
         workflow = (ROOT / '.github/workflows/artifact-policy.yml').read_text()
         run = workflow.split('        run: |\n')[-1]
         script = '\n'.join(line[10:] for line in run.splitlines())
-        env = dict(os.environ, BASE='0' * 40, HEAD='HEAD', DEFAULT_BRANCH='master')
+        env = dict(os.environ, EVENT='push', BASE='0' * 40, HEAD='HEAD', DEFAULT_BRANCH='master')
         clean = subprocess.run(['/bin/sh', '-c', script], cwd=repo, env=env, capture_output=True, text=True)
         self.assertEqual(clean.returncode, 0, clean.stderr)
         (reports / 'new.txt').write_text('Forbidden outgoing output\n')
