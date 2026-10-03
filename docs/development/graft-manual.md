@@ -16,7 +16,7 @@ graft grep WeatherUtil --fixed --in client/www/js
 
 Run the build wrapper from this checkout. It reapplies the focused source scopes even after the ignored `graft/` cache is deleted. Read the architecture index first and verify relevant source before changing behavior. Native bundles and docs need ordinary source inspection.
 
-Paseo creates the focused graph during new worktree setup when Graft is on the daemon PATH. This runs once at creation, not every reopen. Use the **graft-build** workspace script for existing workspaces or refresh. Missing CLI or an older branch without the wrapper warns and skips; an installed build failure fails setup. No tool is automatically installed and hook trust remains separate.
+Paseo creates the focused graph during new worktree setup when Graft is on the daemon PATH. This runs once at creation, not every reopen. Use the **graft-build** workspace script for existing workspaces or refresh. Missing CLI or an older branch without the wrapper warns and skips; an installed build failure fails setup before private-file copying. The wrapper disables telemetry, while CLI update checks may write `~/.graft/update-check.json` and query the npm registry. These tool-cache side effects are accepted; host settings and telemetry state must remain unchanged. No tool is automatically installed and hook trust remains separate.
 
 ## 2. Host setup and trust
 

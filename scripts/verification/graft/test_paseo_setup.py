@@ -27,6 +27,7 @@ class PaseoSetupTests(unittest.TestCase):
                         PASEO_SOURCE_CHECKOUT_PATH=str(self.base / 'absent source'))
         for key in ('GRAFT_PROJECT_ROOT', 'GIT_DIR', 'GIT_WORK_TREE'):
             self.env.pop(key, None)
+        self.env.pop('DO_NOT_TRACK', None)
 
     def wrapper(self):
         scripts = self.repo / 'scripts'
@@ -35,7 +36,8 @@ class PaseoSetupTests(unittest.TestCase):
 
     def cli(self, code=0):
         path = self.bin / 'graft'
-        path.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > invocation.txt\nexit ' + str(code) + '\n')
+        path.write_text('#!/bin/sh\n[ "${DO_NOT_TRACK:-}" = 1 ] || exit 90\n'
+                        'printf "%s\\n" "$@" > invocation.txt\nexit ' + str(code) + '\n')
         path.chmod(0o700)
 
     def run_command(self, command):
@@ -72,6 +74,24 @@ class PaseoSetupTests(unittest.TestCase):
         self.cli(42)
         result = self.run_command(CONFIG['worktree']['setup'])
         self.assertEqual(result.returncode, 42, result.stderr)
+        self.assertFalse((self.repo / '.aws').exists(), 'Private setup ran before failed build')
+
+    def test_build_precedes_private_copy(self):
+        self.wrapper()
+        self.cli()
+        source = self.base / 'synthetic source'
+        (source / 'server').mkdir(parents=True)
+        (source / '.aws').mkdir()
+        (source / 'server/.env').write_text('SYNTHETIC=1\n')
+        (source / '.aws/credentials').write_text('synthetic-only')
+        self.env['PASEO_SOURCE_CHECKOUT_PATH'] = str(source)
+        cli = self.bin / 'graft'
+        cli.write_text(cli.read_text().replace('printf ',
+                       '[ ! -e server/.env ] && [ ! -e .aws/credentials ] || exit 91\nprintf '))
+        result = self.run_command(CONFIG['worktree']['setup'])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.repo / 'server/.env').read_text(), 'SYNTHETIC=1\n')
+        self.assertEqual((self.repo / '.aws/credentials').read_text(), 'synthetic-only')
 
     def test_manual_refresh_uses_same_wrapper(self):
         self.wrapper()

@@ -30,8 +30,7 @@ establish runtime behavior or every dependency in dynamic JavaScript.
 
 ## Paseo workspaces
 
-The committed `paseo.json` preserves the existing private-file setup and then
-runs the focused build when Paseo creates a new worktree. Install Graft on the
+The committed `paseo.json` runs the focused build before the existing private-file setup when Paseo creates a new worktree. Install Graft on the
 **daemon PATH** before creating it. Setup does not run again when reopening an
 existing workspace. Paseo reads configuration from the selected committed base
 branch, so this behavior applies after that branch contains this configuration.
@@ -40,8 +39,14 @@ If the target branch has no build wrapper, or the daemon cannot find Graft,
 setup warns and skips the graph step without installing anything. An installed
 CLI build failure fails setup. After resolving the cause, run the **graft-build**
 workspace script from Paseo, or run `sh scripts/build-graft.sh` in the worktree.
-The same script refreshes existing workspaces. It only builds the local graph;
-it does not run upstream initialization or grant Codex hook trust.
+The same script refreshes existing workspaces. The wrapper disables telemetry
+with `DO_NOT_TRACK=1`. Graft 0.21.1 can also write its update-check cache at
+`~/.graft/update-check.json` and run `npm view @nanonets/graft version` against
+the npm registry. These CLI side effects are accepted; host settings and
+telemetry state must remain unchanged. Build runs before private-file copying
+so fresh branch code does not receive those copied inputs. The selected branch
+and installed CLI still need to be trusted. It does not run upstream
+initialization or grant Codex hook trust.
 See [Paseo worktree setup and scripts](https://paseo.sh/docs/worktrees.md).
 
 ## Agent integration
@@ -114,8 +119,12 @@ python3 scripts/verification/graft/smoke.py --output reports/verification/graft/
 python3 scripts/verification/graft/smoke_codex_worktree.py --output reports/verification/graft/codex-worktree.json
 ```
 
-The first command uses offline fixture packages; the second requires installed
+The adapter and workspace tests use offline fixture packages; the real smoke requires installed
 Graft and builds a fresh isolated source copy with isolated HOME/CODEX_HOME.
+Creation setup starts with empty HOME, no inherited `DO_NOT_TRACK`, and no
+preseeded update cache. A fake npm intercepts registry checks; a closed local
+telemetry endpoint prevents external transmission if an opt-out regresses.
+Only the disclosed update-check file may appear; telemetry state is forbidden.
 Before building it runs both hosts' SessionStart commands with absent and stale
 wiring stamps; guarded MCP boot is checked with both states too. Every hook/MCP
 run checks unchanged user files and a clean tracked working tree. The third requires installed Codex

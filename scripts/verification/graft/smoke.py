@@ -29,8 +29,20 @@ def main():
         repo = base / 'repo'
         home = base / 'home'
         home.mkdir()
-        env = dict(os.environ, HOME=str(home), CODEX_HOME=str(home / '.codex'), DO_NOT_TRACK='1')
+        env = dict(os.environ, HOME=str(home), CODEX_HOME=str(home / '.codex'),
+                   GRAFT_POSTHOG_HOST='http://127.0.0.1:1')
+        env.pop('DO_NOT_TRACK', None)
+        env.pop('CI', None)
         env.pop('CLAUDE_PROJECT_DIR', None)
+        fake_bin = base / 'bin'
+        fake_bin.mkdir()
+        npm_calls = base / 'npm-calls.log'
+        npm = fake_bin / 'npm'
+        npm.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$GRAFT_TEST_NPM_LOG"\n'
+                       '[ "$1" = view ] || exit 1\nprintf "0.21.1\\n"\n')
+        npm.chmod(0o700)
+        env['GRAFT_TEST_NPM_LOG'] = str(npm_calls)
+        env['PATH'] = str(fake_bin) + os.pathsep + env['PATH']
         repo.mkdir()
         # Copy Git-visible maintained sources, excluding ignored release inputs/dependencies.
         files = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], cwd=ROOT).split(b'\0')
@@ -59,8 +71,11 @@ def main():
             return {str(p.relative_to(home)): hashlib.sha256(p.read_bytes()).hexdigest()
                     for p in home.rglob('*') if p.is_file()}
 
-        def unchanged(before):
-            assert home_snapshot() == before, 'Hook/MCP changed isolated user configuration'
+        def unchanged(before, allow_update_cache=False):
+            after = home_snapshot()
+            if allow_update_cache:
+                after.pop('.graft/update-check.json', None)
+            assert after == before, 'Hook/MCP/build changed isolated user configuration'
             assert not subprocess.check_output(['git', 'status', '--porcelain'], cwd=repo), 'Hook/MCP rewrote repository files'
 
 
@@ -87,18 +102,19 @@ def main():
                 before = home_snapshot()
                 run('unbuilt-' + host + ('-mismatch' if stamp else ''), ['/bin/sh', '-c', command], json.dumps({'cwd': str(repo)}))
                 unchanged(before)
-        # Seed only the isolated registry-update cache to prevent CLI background fetches.
-        update = home / '.graft/update-check.json'
-        update.parent.mkdir(parents=True, exist_ok=True)
-        update.write_text(json.dumps({'checkedAt': time.time() * 1000, 'latest': None}))
         # Exercise creation setup without reading the operator's private inputs.
         env['PASEO_SOURCE_CHECKOUT_PATH'] = str(base / 'absent-source')
         paseo = json.loads((repo / 'paseo.json').read_text())
         before = home_snapshot()
         run('paseo-setup', ['/bin/sh', '-c', paseo['worktree']['setup']])
-        unchanged(before)
+        unchanged(before, allow_update_cache=True)
+        assert (home / '.graft/update-check.json').is_file(), 'Expected disclosed CLI cache'
+        before = home_snapshot()
         run('build', ['/bin/sh', '-c', paseo['scripts']['graft-build']['command']])
         unchanged(before)
+        # Only subsequent raw CLI queries receive a harness opt-out. Creation and
+        # refresh above must obtain their opt-out from the maintained wrapper.
+        env['DO_NOT_TRACK'] = '1'
         run('freshness', [graft, 'check', '--json'])
         client = run('client-query', [graft, 'grep', 'WeatherUtil', '--fixed', '--in', 'client/www/js', '--json'])
         assert 'service.weatherutil.js' in client
@@ -154,7 +170,11 @@ def main():
                 process.wait(timeout=5)
                 selector.close()
             unchanged(before)
-    (args.output / 'results.json').write_text(json.dumps({'runs': results, 'real_installed_graft': True, 'provider_calls': False, 'home_isolated': True, 'hook_mcp_config_unchanged': True}, indent=2) + '\n')
+        calls = npm_calls.read_text().splitlines()
+        assert calls and all(c == 'view @nanonets/graft version' for c in calls), calls
+        (args.output / 'npm-calls.log').write_text('\n'.join(calls) + '\n')
+        assert set(home_snapshot()) == {'.graft/update-check.json'}, 'Unexpected user/telemetry state'
+    (args.output / 'results.json').write_text(json.dumps({'runs': results, 'real_installed_graft': True, 'provider_calls': False, 'home_isolated': True, 'hook_mcp_config_unchanged': True, 'creation_inherited_opt_out': False, 'creation_cache_seeded': False, 'allowed_home_write': '.graft/update-check.json', 'registry_checks_intercepted': calls, 'telemetry_state_created': False}, indent=2) + '\n')
     print('Real Graft smoke passed: ' + ', '.join(r['name'] for r in results))
 
 
