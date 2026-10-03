@@ -1,10 +1,10 @@
 # Graft quick manual
 
-Verified 2026-10-03 with Graft 0.21.1 and Codex CLI 0.159.2. This manual describes repository tooling; no weather collector, database, mobile build or live provider request was run.
+Verified 2026-10-03 with Graft 0.21.1 and Codex CLI 0.159.2. Guarded hook/MCP adapters suppress automatic upstream initialization for the exact tested version. This manual describes repository tooling; no weather collector, database, mobile build or live provider request was run.
 
 ## 1. Install and build
 
-Install Node 20 or later and the account-scoped CLI explicitly:
+Install Node 20.6 or later and the account-scoped CLI explicitly:
 
 ```sh
 npm install --global @nanonets/graft@0.21.1
@@ -32,7 +32,7 @@ python3 scripts/verification/graft/smoke.py --output reports/verification/graft-
 python3 scripts/verification/graft/smoke_codex_worktree.py --output reports/verification/graft-codex.json
 ```
 
-The offline suite passed eight tests. Real installed-Graft smoke passed a fresh focused build, server/client queries, cache ignoring, two hook events and six MCP tools. Codex discovery used an isolated account and submitted no model task. Actual CLI results are captured below as rendered text, rather than native terminal screenshots; provenance is in [the capture manifest](graft-manual-assets/manifest.json).
+The offline suite passed ten tests. Real installed-Graft smoke passed a fresh focused build, server/client queries, cache ignoring, two hook events and six MCP tools. Final smoke isolated HOME and checked that hooks/MCP changed no tracked or user files, with both absent and outdated wiring stamps. Initial smoke missed automatic wiring mutations; independent review found them and the guarded rerun corrected this. Codex discovery used an isolated account and submitted no model task. Actual CLI results are captured below as rendered text, rather than native terminal screenshots; provenance is in [the capture manifest](graft-manual-assets/manifest.json).
 
 ![Actual offline test result](graft-manual-assets/verification.png)
 

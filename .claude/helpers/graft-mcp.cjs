@@ -77,5 +77,7 @@ function entry(name) {
 Promise.resolve().then(() => {
   const target = entry('hooks.js');
   require('./graft-guard.cjs').guard(target);
-  return import(pathToFileURL(target).href);
-}).then((m) => m.main(process.argv[2])).catch(() => { /* absent/unsupported graft — no-op */ });
+  const root = execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: dir, encoding: 'utf8', timeout: 1500 }).trim();
+  return import(pathToFileURL(path.join(path.dirname(target), '..', 'mcp', 'server.js')).href)
+    .then((m) => m.startMcpServer(root, undefined, '0.21.1'));
+}).catch((error) => { console.error('Graft MCP unavailable: ' + error.message); process.exitCode = 1; });

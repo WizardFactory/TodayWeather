@@ -1,9 +1,10 @@
 {
   "mcpServers": {
     "graft": {
-      "command": "graft",
+      "command": "sh",
       "args": [
-        "mcp"
+        "-c",
+        "repo_root=$(git rev-parse --show-toplevel) && exec node \"$repo_root/.claude/helpers/graft-mcp.cjs\""
       ]
     }
   }

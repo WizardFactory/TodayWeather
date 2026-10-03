@@ -66,6 +66,25 @@ class Adapters(unittest.TestCase):
         result = self.run_shim('graft-hooks.cjs', 'prompt', timeout=3)
         self.assertEqual((result.returncode, result.stdout, result.stderr), (0, '', ''))
 
+    @unittest.skipUnless(NODE, 'Node required')
+    def test_session_start_cannot_run_upstream_wiring(self):
+        pkg = self.package(self.repo / 'node_modules/@nanonets/graft', 'local')
+        marker = self.repo / 'unexpected-wiring.txt'
+        (pkg / 'dist/upkeep-run.js').write_text('import fs from "node:fs"; export function runUpkeep() { fs.writeFileSync(' + json.dumps(str(marker)) + ', "unsafe"); return {lines:[]}; }')
+        (pkg / 'dist/claude/hooks.js').write_text('import {runUpkeep} from "../upkeep-run.js"; export function main() { runUpkeep(); console.log("safe context"); }')
+        result = self.run_shim('graft-hooks.cjs', 'session-start')
+        self.assertEqual(result.stdout.strip(), 'safe context')
+        self.assertFalse(marker.exists(), 'Upstream automatic wiring executed')
+
+    @unittest.skipUnless(NODE, 'Node required')
+    def test_unreviewed_package_version_skips_hooks(self):
+        pkg = self.package(self.repo / 'node_modules/@nanonets/graft', 'unsupported')
+        data = json.loads((pkg / 'package.json').read_text())
+        data['version'] = '0.22.0'
+        (pkg / 'package.json').write_text(json.dumps(data))
+        result = self.run_shim('graft-hooks.cjs', 'session-start')
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, '', ''))
+
     def test_canonical_skill_links_survive_a_copy(self):
         canonical = self.repo / '.agents/skills/graft'
         canonical.mkdir(parents=True)
@@ -153,7 +172,9 @@ class Adapters(unittest.TestCase):
         self.assertEqual((result.returncode, result.stdout), (0, ''))
         target = self.repo / '.claude/helpers'
         target.mkdir(parents=True)
-        shutil.copy2(SHIMS / 'graft-hooks.cjs', target)
+        for helper in SHIMS.iterdir():
+            if helper.is_file():
+                shutil.copy2(helper, target)
         result = subprocess.run(['/bin/sh', '-c', command], cwd=nested, env=self.env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)['label'], 'worktree')

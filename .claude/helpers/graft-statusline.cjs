@@ -74,4 +74,8 @@ function entry(name) {
   return path.join(dir, 'dist', 'claude', name); // last-ditch; import will no-op if absent
 }
 
-import(pathToFileURL(entry("statusline.js")).href).then((m) => m.main()).catch(() => { /* graft unavailable — no-op */ });
+Promise.resolve().then(() => {
+  const target = entry('statusline.js');
+  require('./graft-guard.cjs').guard(target);
+  return import(pathToFileURL(target).href);
+}).then((m) => m.main()).catch(() => { /* absent/unsupported graft — no-op */ });

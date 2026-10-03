@@ -2,5 +2,5 @@
 hooks = true
 
 [mcp_servers.graft]
-command = "graft"
-args = ["mcp"]
+command = "sh"
+args = ["-c", 'repo_root=$(git rev-parse --show-toplevel) && exec node "$repo_root/.claude/helpers/graft-mcp.cjs"']
