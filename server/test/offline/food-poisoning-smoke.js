@@ -35,7 +35,7 @@ async function main(){
         await new Promise(resolve=>provider.listen(0,'127.0.0.1',resolve));
         const url='http://127.0.0.1:'+provider.address().port+'/risk';
         const fetch=cb=>food.fetch(cb,{url,transport:http,timeoutMs:300,maxBytes:1000000});
-        const service=food.create({store:Model,fetch});
+        const service=food.create({now:()=>now,store:Model,fetch});
         assert.equal(await collect(service),801);assert.equal(await Model.countDocuments({}),801);
         assert.ok(agent.includes('TodayWeather'));assert.equal(calls,1);
         await collect(service);assert.equal(calls,1,'no duplicate in the same slot');
@@ -43,7 +43,7 @@ async function main(){
         const jongno=await Model.findOne({sd:'서울특별시',sgg:'종로구',date:'20260924'}).lean();
         assert.ok(jongno);
         fixture.data.forEach(r=>{r.regDatetime='2026-09-240700';r.todayRisk=0;});
-        await collect(food.create({store:Model,fetch}));
+        await collect(food.create({now:()=>now,store:Model,fetch}));
         assert.equal((await Model.findById(jongno._id).lean()).value,jongno.value);
         fixture.data.forEach(r=>{r.regDatetime='2026-09-240800';});
         // Real HTTP request traverses the production Express coordinate route, with real MFDS model.

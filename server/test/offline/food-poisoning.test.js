@@ -82,7 +82,7 @@ test('read filters expired, future and corrupt stored values; store failures and
 
 test('scheduled requests run after publication slots with no tight-loop retry or overlap', async () => {
     let calls=0, pending;
-    const service=food.create({fetch:cb=>{calls++;pending=cb;},store:{updateOne(q,u,o,cb){cb(null);}}});
+    const service=food.create({now:()=>at,fetch:cb=>{calls++;pending=cb;},store:{updateOne(q,u,o,cb){cb(null);}}});
     const first=collect(service,at);await collect(service,at);assert.equal(calls,1);
     pending(new Error('provider unavailable'));assert.ok(await first);
     await collect(service,at);assert.equal(calls,1);
@@ -96,12 +96,50 @@ test('scheduled requests run after publication slots with no tight-loop retry or
 
 test('collection waits for all writes after one fails; stale fixtures make no writes', async () => {
     const callbacks=[];let completed=false;
-    const service=food.create({fetch:cb=>cb(null,fixture),store:{updateOne(q,u,o,cb){callbacks.push(cb);}}});
+    const service=food.create({now:()=>at,fetch:cb=>cb(null,fixture),store:{updateOne(q,u,o,cb){callbacks.push(cb);}}});
     const pending=collect(service).then(err=>{completed=true;assert.ok(err);});
     assert.equal(callbacks.length,801);callbacks[0](new Error('store unavailable'));
     assert.equal(completed,false);callbacks.slice(1).forEach(cb=>cb(null));await pending;
-    const stale=food.create({fetch:cb=>cb(null,fixture),store:{updateOne(){throw new Error('must not write');}}});
+    const stale=food.create({now:()=>new Date("2026-10-03T01:00:00Z"),fetch:cb=>cb(null,fixture),store:{updateOne(){throw new Error('must not write');}}});
     assert.ok(await collect(stale,new Date('2026-10-03T01:00:00Z')));
+});
+
+test('write deadline releases gather exactly once and ignores late writes', async () => {
+    const callbacks=[];let completions=0;
+    const service=food.create({now:()=>at,writeTimeoutMs:15,fetch:cb=>cb(null,fixture),store:{updateOne(q,u,o,cb){callbacks.push(cb);}}});
+    const result=await Promise.race([new Promise(resolve=>service.collect(at,err=>{completions++;resolve(err);})),
+        new Promise(resolve=>setTimeout(()=>resolve('not completed'),100))]);
+    assert.ok(result instanceof Error);assert.match(result.message,/write deadline/);assert.equal(service.running,false);
+    callbacks.forEach(cb=>cb(null));assert.equal(completions,1);
+    await collect(service,at);assert.equal(callbacks.length,801);
+});
+
+test('response reception clock validates newer publication while retaining queued slot identity', async () => {
+    const queued=new Date('2026-09-29T03:20:59Z'),received=new Date('2026-09-29T03:21:01Z');
+    const input=clone(fixture);input.data.forEach(r=>{r.regDatetime='2026-09-291221';});let writes=0,calls=0;
+    const service=food.create({now:()=>received,fetch:cb=>{calls++;cb(null,input);},store:{updateOne(q,u,o,cb){assert.equal(u.$set.fetchedAt,received);writes++;cb(null);}}});
+    assert.equal(await collect(service,queued),undefined);assert.equal(writes,801);
+    await collect(service,queued);assert.equal(calls,1);
+});
+
+test('same-scope newest publication wins in either return order; district still precedes province', async () => {
+    const latest=row('서울특별시','종로구','20260929',80);latest.grade=3;
+    const old={...latest,publication:'2026-09-291100',value:10,risk:.1,grade:0};
+    const province={...latest,sgg:'',publication:'2026-09-291730',value:90,risk:.9};
+    for(const data of [[latest,old,province],[province,old,latest]]) {
+        const service=food.create({store:{find:()=>({lean(){return this;},exec(cb){cb(null,data);}})}});
+        const days=[{date:'20260929'}];await read(service,{first:'서울특별시',second:'종로구'},days);
+        assert.equal(days[0].fsn,80);
+    }
+});
+
+test('old Incheon district names use province instead of guessing split district', async () => {
+    for(const sgg of ['중구','동구','서구']) {
+        const province=row('인천광역시','');const newDistrict=row('인천광역시','영종구', '20260929',80);newDistrict.grade=3;
+        const service=food.create({store:{find:()=>({lean(){return this;},exec(cb){cb(null,[province,newDistrict]);}})}});
+        const days=[{date:'20260929'}];await read(service,{first:'인천광역시',second:sgg},days);
+        assert.equal(days[0].fsn,31.5);
+    }
 });
 
 test('existing current and localization hooks restore fsn zero without changing other indices', () => {

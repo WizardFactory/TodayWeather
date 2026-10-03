@@ -8,7 +8,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "6fa850db1370033628798388af12a367503f19f8",
+      "revision": "cfcaec00bb59c28fda210e93f360fd0ccb0fa073",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -176,9 +176,9 @@
       "dot": "amber",
       "title": "Failure contract",
       "items": [
-        "Provider and store failures do not fail weather.",
-        "Expired target dates are omitted at read time.",
-        "Separate gather replicas have no shared lock."
+        "One HTTPS attempt with a 10-second deadline.",
+        "Writes release the gather queue after 30 seconds.",
+        "Late DB callbacks are ignored; writes may finish."
       ]
     }
   ]

@@ -421,3 +421,5 @@ cannot mutate completed responses. The request never fetches MFDS. Both domestic
 storage versions use this separate region/date reader. Existing app food-poisoning
 rows remain compatible. See the [operating contract](../operations/food-poisoning.md)
 and [design diagram](diagrams/food-poisoning.html).
+
+MFDS reads defensively choose the newest publication within the district or province scope, retaining district priority. Incheon old 중구/동구/서구 requests without an exact provider row use the province row; split districts are not inferred from these names alone.

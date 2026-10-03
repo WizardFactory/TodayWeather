@@ -138,24 +138,28 @@ function create(options) {
         if (!key || service.running || service.lastSlot === key) return callback(null, 0);
         service.running = true;
         service.lastSlot = key; // Failure waits for the next slot, including a repeated startup call.
-        var finished = false;
+        var finished = false, writeTimer;
         function done(err, count) {
             if (finished) return;
             finished = true;
+            clearTimeout(writeTimer);
             service.running = false;
             callback(err, count);
         }
         try {
             (options.fetch || fetchRisk)(function (err, body) {
+                if (finished) return;
                 if (err) return done(err);
                 var rows, model;
-                try { rows = parse(body, now); model = store(); }
+                // Keep queued time for slot identity; publication validity uses reception time.
+                try { rows = parse(body, (options.now || function () { return new Date(); })()); model = store(); }
                 catch (error) { return done(error); }
                 var remaining = rows.length, firstError;
+                writeTimer = setTimeout(function () { done(new Error('MFDS write deadline')); }, options.writeTimeoutMs || 30000);
                 rows.forEach(function (row) {
                     var acknowledged = false;
                     function saved(error) {
-                        if (acknowledged) return;
+                        if (acknowledged || finished) return;
                         acknowledged = true;
                         // Older publication/upsert races cannot replace an existing newer _id.
                         if (error && error.code !== 11000 && !firstError) firstError = error;
@@ -199,7 +203,8 @@ function create(options) {
                             typeof row.risk !== 'number' || !isFinite(row.risk) || row.risk < 0 || row.risk > 1 ||
                             row.value !== Number((row.risk * 100).toFixed(4)) || row.grade !== grade(row.risk)) return;
                         var prev = byDate[row.date];
-                        if (!prev || row.sgg === target.sgg) byDate[row.date] = row;
+                        if (!prev || (row.sgg === target.sgg && prev.sgg !== target.sgg) ||
+                            (row.sgg === prev.sgg && row.publication > prev.publication)) byDate[row.date] = row;
                     });
                     days.forEach(function (day) {
                         var row = byDate[day.date];

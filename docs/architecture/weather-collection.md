@@ -228,6 +228,8 @@ global-air chain and never calls AirKorea; see [nation response](mobile-api.md#n
 
 ## MFDS food-poisoning forecast recovery (#2600)
 
+MFDS batch completion has a 30-second write deadline so a missing Mongo callback cannot hold the serial gather queue indefinitely. Late callbacks are ignored; issued writes may still complete. Queued time identifies the slot; response reception time validates publication and dates.
+
 The gather/local Manager queues the separate MFDS regional collector at 08:20,
 12:20 and 17:20 KST and for the most recent publication slot on startup. One
 bounded HTTPS request (ten seconds, 1 MiB, identifying User-Agent, no retries)
