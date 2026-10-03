@@ -100,6 +100,44 @@ class Adapters(unittest.TestCase):
         self.assertEqual(result.returncode, 127)
         self.assertIn('Graft CLI is not on PATH', result.stderr)
 
+    def test_new_branch_ci_excludes_old_history_and_catches_removed_output(self):
+        repo = self.repo
+        subprocess.run(['git', 'init', '-q', '--initial-branch=master', str(repo)], check=True)
+        subprocess.run(['git', '-C', str(repo), 'config', 'user.email', 'fixture@example.invalid'], check=True)
+        subprocess.run(['git', '-C', str(repo), 'config', 'user.name', 'Fixture'], check=True)
+        def commit(message):
+            subprocess.run(['git', '-C', str(repo), 'add', '-A'], check=True)
+            subprocess.run(['git', '-C', str(repo), 'commit', '-qm', message], check=True)
+            return subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip()
+        (repo / 'README.md').write_text('Fixture\n')
+        first = commit('initial')
+        scripts = repo / 'scripts'
+        scripts.mkdir()
+        shutil.copy2(ROOT / 'scripts/check-artifact-policy.py', scripts)
+        (scripts / 'artifact-policy.json').write_text(json.dumps({'history_base': first}))
+        reports = repo / 'reports'
+        reports.mkdir()
+        (reports / 'old.txt').write_text('Historical policy violation\n')
+        commit('old violation')
+        (reports / 'old.txt').unlink()
+        base = commit('clean default branch')
+        subprocess.run(['git', '-C', str(repo), 'update-ref', 'refs/remotes/origin/master', base], check=True)
+        (repo / 'README.md').write_text('Current outgoing change\n')
+        commit('new branch')
+        workflow = (ROOT / '.github/workflows/artifact-policy.yml').read_text()
+        run = workflow.split('        run: |\n')[-1]
+        script = '\n'.join(line[10:] for line in run.splitlines())
+        env = dict(os.environ, BASE='0' * 40, HEAD='HEAD', DEFAULT_BRANCH='master')
+        clean = subprocess.run(['/bin/sh', '-c', script], cwd=repo, env=env, capture_output=True, text=True)
+        self.assertEqual(clean.returncode, 0, clean.stderr)
+        (reports / 'new.txt').write_text('Forbidden outgoing output\n')
+        commit('new output')
+        (reports / 'new.txt').unlink()
+        commit('remove output')
+        bad = subprocess.run(['/bin/sh', '-c', script], cwd=repo, env=env, capture_output=True, text=True)
+        self.assertNotEqual(bad.returncode, 0)
+        self.assertIn('generated/local output must not be tracked', bad.stderr)
+
     @unittest.skipUnless(NODE, 'Node required')
     def test_codex_hook_selects_active_worktree_and_skips_missing_shim(self):
         subprocess.run(['git', 'init', '-q', str(self.repo)], check=True, capture_output=True)

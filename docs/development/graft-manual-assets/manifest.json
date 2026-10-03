@@ -4,8 +4,8 @@
   "captures": [
     {
       "file": "verification.png",
-      "source": "reports/sdlc/issue-2671/post-refactor.log",
-      "source_sha256": "25d9ed4f398b7d656401d15019d756bf076db38f0ea5fa63f731736fc2d6290f"
+      "source": "reports/sdlc/issue-2671/ci-post-refactor.log",
+      "source_sha256": "d36da7dded8fa8bcf377d9dc87f6531e6909a521163210047a1bafde10d9ae3d"
     },
     {
       "file": "codex-worktree.png",
