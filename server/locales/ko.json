@@ -323,5 +323,17 @@
   "LOC_TYPE_SPECIAL_WEATHER": "기상특보",
   "LOC_TYPE_PRELIMINARY_SPECIAL": "예비특보",
   "LOC_TYPE_WEATHER_INFORMATION": "기상정보",
-  "LOC_TYPE_WEATHER_FLASH": "기상속보"
+  "LOC_TYPE_WEATHER_FLASH": "기상속보",
+  "LOC_POLLEN_RISK" : "꽃가루 위험도",
+  "LOC_POLLEN_OAK" : "참나무",
+  "LOC_POLLEN_PINE" : "소나무",
+  "LOC_POLLEN_WEEDS" : "잡초류",
+  "LOC_POLLEN_OAK_INFO" : "참나무 꽃가루는 주로 봄에 발생합니다. 야외활동 전에 위험도를 확인하세요.",
+  "LOC_POLLEN_PINE_INFO" : "소나무 꽃가루는 주로 봄에 발생합니다. 야외활동 전에 위험도를 확인하세요.",
+  "LOC_POLLEN_WEEDS_INFO" : "잡초류 꽃가루는 주로 늦여름과 가을에 발생합니다. 야외활동 전에 위험도를 확인하세요.",
+  "LOC_POLLEN_ADVICE_0" : "위험도가 낮아도 꽃가루 알레르기가 심한 분은 증상이 나타날 수 있습니다.",
+  "LOC_POLLEN_ADVICE_1" : "꽃가루 알레르기가 있다면 야외활동 시 마스크와 선글라스를 착용하세요.",
+  "LOC_POLLEN_ADVICE_2" : "야외활동을 줄이세요. 외출 시 마스크와 선글라스를 착용하고, 귀가 후 손과 얼굴을 씻으세요.",
+  "LOC_POLLEN_ADVICE_3" : "가능하면 실내에 머물고 창문을 닫으세요. 꼭 외출해야 한다면 마스크와 선글라스를 착용하세요.",
+  "LOC_POLLEN_SOURCE" : "출처: 기상청"
 }

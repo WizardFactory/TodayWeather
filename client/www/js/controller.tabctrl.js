@@ -286,6 +286,42 @@ angular.module('controller.tabctrl', [])
             Util.ga.trackEvent('action', 'tab', 'share');
         };
 
+        $scope.showPollenInfo = function(day, event) {
+            if (event) {
+                if (event.keyCode !== 13 && event.keyCode !== 32) {
+                    return;
+                }
+                event.preventDefault();
+            }
+            if (!day || day.pollenGrade === undefined) {
+                return;
+            }
+            var popupScope = $scope.$new(true);
+            popupScope.pollenTypes = [
+                {field: 'flowerWoody', labelKey: 'LOC_POLLEN_OAK'},
+                {field: 'flowerPine', labelKey: 'LOC_POLLEN_PINE'},
+                {field: 'flowerWeeds', labelKey: 'LOC_POLLEN_WEEDS'}
+            ].filter(function (type) {
+                return day[type.field + 'Grade'] !== undefined;
+            }).map(function (type) {
+                return {labelKey: type.labelKey, gradeLabel: day[type.field + 'Str'],
+                    infoKey: type.labelKey + '_INFO',
+                    adviceKey: 'LOC_POLLEN_ADVICE_' + day[type.field + 'Grade']};
+            });
+            return $ionicPopup.alert({
+                title: $translate.instant('LOC_POLLEN_RISK'),
+                cssClass: 'pollen-popup',
+                template: '<section ng-repeat="type in pollenTypes">' +
+                    '<p><strong>{{type.labelKey | translate}}: {{type.gradeLabel}}</strong></p>' +
+                    '<p>{{type.infoKey | translate}}</p><p>{{type.adviceKey | translate}}</p></section>' +
+                    '<small>{{"LOC_POLLEN_SOURCE" | translate}}</small>',
+                scope: popupScope,
+                okText: $translate.instant('LOC_CLOSE')
+            }).finally(function () {
+                popupScope.$destroy();
+            });
+        };
+
         $scope.goAirInfoPage = function(code) {
             console.log('go air info page code='+code);
             var path = '/tab/air';

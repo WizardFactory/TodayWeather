@@ -5382,11 +5382,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>LifeIndex response (#2650)</h3>
+          <h3>LifeIndex response (#2599, #2650)</h3>
         </div>
         <ul>
-          <li>KMA getLifeIndexKma adds optional daily UV and oak/pine/weed pollen fields from valid stored values.</li>
-          <li>Health enrichment and stale food-poisoning are absent; weather-core exposes optional uvIndex and three pollen grades.</li>
+          <li>KMA getLifeIndexKma adds optional daily UV and oak/pine/weeds grades; pollenGrade is the max available grade and pollenStr its localized label. Daily and current; missing types absent.</li>
+          <li>Shared mobile templates: pollen risk beside UV; tap the button for an Ionic popup listing available type labels/grades. Valid zero is Low; no numeric concentration. No pollen means no item.</li>
+          <li>V3 source: getOakPollenRiskIdxV3 / getPinePollenRiskIdxV3 / getWeedsPollenRiskndxV3. Weather-core retains optional uvIndex and three pollen grades.</li>
         </ul>
       </div>
     </div>

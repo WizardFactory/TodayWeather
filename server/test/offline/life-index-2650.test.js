@@ -98,7 +98,7 @@ test('pollen grades reject malformed values instead of coercing them to zero or 
     }]).length, 1, 'trimmed numeric provider text remains usable');
 });
 
-test('seasonal pollen task fetches every page, stores rows, and skips off-season calls', async () => {
+test('pollen task fetches every page and lets the provider decide off-season availability', async () => {
     const requested = [];
     const twoPage = structuredClone(pollenFixture);
     twoPage.response.body.items.item = Array.from({length: 1000}, (_, i) => ({
@@ -111,8 +111,9 @@ test('seasonal pollen task fetches every page, stores rows, and skips off-season
     lastPage.response.body.pageNo = 2;
     const request = (url, options, callback) => {
         requested.push(url);
-        callback(null, {statusCode: 200}, url.includes('pageNo=1')
-            ? twoPage : lastPage);
+        callback(null, {statusCode: 200}, url.includes('time=20260701')
+            ? {response: {header: {resultCode: '99'}}}
+            : url.includes('pageNo=1') ? twoPage : lastPage);
     };
     const asyncStub = {mapSeries(list, worker, done) {
         const results = [];
@@ -143,7 +144,8 @@ test('seasonal pollen task fetches every page, stores rows, and skips off-season
     const count = requested.length;
     await new Promise((resolve, reject) => service.taskPollenV3('flowerWeeds',
         new Date('2026-07-01T03:00:00Z'), err => err ? reject(err) : resolve()));
-    assert.equal(requested.length, count);
+    assert.equal(requested.length, count + 1, 'off-season no-data must come from the provider');
+    assert.equal(service.flowerWeeds.nextTime.toISOString(), '2026-07-01T09:10:00.000Z');
 });
 
 test('later pollen issuance on the same KST day replaces the earlier one', async () => {

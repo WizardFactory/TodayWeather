@@ -41,7 +41,7 @@
       "id": "backend",
       "type": "backend",
       "label": "Service EC2",
-      "sublabel": "nginx / PM2 × 10"
+      "sublabel": "nginx / PM2 \u00d7 10"
     }
   ],
   "messages": [
@@ -123,7 +123,7 @@
       "dot": "amber",
       "title": "Repository gateway: temporary outage (#2635)",
       "items": [
-        "tw-svc replaces Lambda: typed provider-down / budget errors return 503 + Retry-After (1–3600 s), CORS and no-store.",
+        "tw-svc replaces Lambda: typed provider-down / budget errors return 503 + Retry-After (1\u20133600 s), CORS and no-store.",
         "Stored weather still succeeds; other failures remain 501. Known outages skip gateway retries."
       ]
     },
@@ -137,10 +137,11 @@
     },
     {
       "dot": "emerald",
-      "title": "LifeIndex response (#2650)",
+      "title": "LifeIndex response (#2599, #2650)",
       "items": [
-        "KMA getLifeIndexKma adds optional daily UV and oak/pine/weed pollen fields from valid stored values.",
-        "Health enrichment and stale food-poisoning are absent; weather-core exposes optional uvIndex and three pollen grades."
+        "KMA getLifeIndexKma adds optional daily UV and oak/pine/weeds grades; pollenGrade is the max available grade and pollenStr its localized label. Daily and current; missing types absent.",
+        "Shared mobile templates: pollen risk beside UV; tap the button for an Ionic popup listing available type labels/grades. Valid zero is Low; no numeric concentration. No pollen means no item.",
+        "V3 source: getOakPollenRiskIdxV3 / getPinePollenRiskIdxV3 / getWeedsPollenRiskndxV3. Weather-core retains optional uvIndex and three pollen grades."
       ]
     }
   ]
