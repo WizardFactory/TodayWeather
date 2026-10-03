@@ -323,5 +323,17 @@
   "LOC_TYPE_SPECIAL_WEATHER": "Special weather",
   "LOC_TYPE_PRELIMINARY_SPECIAL": "Preliminary Special weather",
   "LOC_TYPE_WEATHER_INFORMATION": "Weather information",
-  "LOC_TYPE_WEATHER_FLASH": "Flash weather information"
+  "LOC_TYPE_WEATHER_FLASH": "Flash weather information",
+  "LOC_POLLEN_RISK" : "花粉風險",
+  "LOC_POLLEN_OAK" : "櫟樹",
+  "LOC_POLLEN_PINE" : "松樹",
+  "LOC_POLLEN_WEEDS" : "雜草類",
+  "LOC_POLLEN_OAK_INFO" : "櫟樹花粉主要出現在春季。戶外活動前請查看風險等級。",
+  "LOC_POLLEN_PINE_INFO" : "松樹花粉主要出現在春季。戶外活動前請查看風險等級。",
+  "LOC_POLLEN_WEEDS_INFO" : "雜草類花粉主要出現在夏末和秋季。戶外活動前請查看風險等級。",
+  "LOC_POLLEN_ADVICE_0" : "即使風險較低，花粉過敏嚴重的人仍可能出現症狀。",
+  "LOC_POLLEN_ADVICE_1" : "花粉過敏者在戶外請佩戴口罩和太陽眼鏡。",
+  "LOC_POLLEN_ADVICE_2" : "減少戶外活動。外出時佩戴口罩和太陽眼鏡，回家後清洗雙手和臉部。",
+  "LOC_POLLEN_ADVICE_3" : "盡量待在室內並關閉窗戶。如必須外出，請佩戴口罩和太陽眼鏡。",
+  "LOC_POLLEN_SOURCE" : "來源：韓國氣象廳"
 }

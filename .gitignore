@@ -84,3 +84,6 @@ visual-check.*
 
 # Local Archify verification/provenance for the MFDS design; keep JSON source and HTML.
 docs/architecture/diagrams/food-poisoning.*.json
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

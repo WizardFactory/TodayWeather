@@ -307,7 +307,23 @@ LifeIndexKmaController._addIndexData2 = function (midList, lifeIndexList) {
                 dayObj[indexType + 'Grade'] = indexObj.index;
             }
         });
+        self.appendPollenSummary(dayObj);
     });
+};
+
+/** Only present grades contribute; zero is a valid low risk grade. */
+LifeIndexKmaController.appendPollenSummary = function (data, translate) {
+    var grades = ['flowerWoody', 'flowerPine', 'flowerWeeds'].map(function (name) {
+        return data[name + 'Grade'];
+    }).filter(function (grade) {
+        return Number.isInteger(grade) && grade >= 0 && grade <= 3;
+    });
+    if (grades.length) {
+        data.pollenGrade = Math.max.apply(Math, grades);
+        if (translate) {
+            data.pollenStr = this.grade2strHighLow(data.pollenGrade, translate);
+        }
+    }
 };
 
 LifeIndexKmaController.appendData2 = function (areaNo, midList, callback) {

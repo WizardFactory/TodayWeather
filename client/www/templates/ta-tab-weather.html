@@ -178,6 +178,15 @@
                         </span>
                     </td>
                 </tr>
+                <tr ng-if="currentWeather.today.pollenGrade != undefined">
+                    <td>
+                        <button type="button" class="button button-clear button-dark pollen-risk" ng-click="showPollenInfo(currentWeather.today)" ng-keydown="showPollenInfo(currentWeather.today, $event)" aria-haspopup="dialog">
+                            <img ng-src="{{::iconsImgPath}}/pollen.png">
+                            <span>{{"LOC_POLLEN_RISK"|translate}}: {{currentWeather.today.pollenStr}}</span>
+                            <i class="ion-ios-information-outline" aria-hidden="true"></i>
+                        </button>
+                    </td>
+                </tr>
                 <tr ng-if="currentWeather.today.fsnGrade != undefined">
                     <td>
                         <img ng-src="{{::iconsImgPath}}/food_poisoning.png">

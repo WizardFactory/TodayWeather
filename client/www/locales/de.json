@@ -318,5 +318,17 @@
     "LOC_AD_PRIVACY_CHOICES": "Ad privacy choices",
     "LOC_AD_PRIVACY_UNAVAILABLE": "Ad privacy choices could not open. Try again later. A choices form may not be required in your region.",
     "LOC_PRIVACY_POLICY": "Privacy policy",
-    "LOC_TERMS": "Terms of use"
+    "LOC_TERMS": "Terms of use",
+  "LOC_POLLEN_RISK" : "Pollenrisiko",
+  "LOC_POLLEN_OAK" : "Eiche",
+  "LOC_POLLEN_PINE" : "Kiefer",
+  "LOC_POLLEN_WEEDS" : "Wildkräuter",
+  "LOC_POLLEN_OAK_INFO" : "Eichenpollen treten vor allem im Frühling auf. Prüfen Sie das Risiko vor Aktivitäten im Freien.",
+  "LOC_POLLEN_PINE_INFO" : "Kiefernpollen treten vor allem im Frühling auf. Prüfen Sie das Risiko vor Aktivitäten im Freien.",
+  "LOC_POLLEN_WEEDS_INFO" : "Wildkräuterpollen treten vor allem im Spätsommer und Herbst auf. Prüfen Sie das Risiko vor Aktivitäten im Freien.",
+  "LOC_POLLEN_ADVICE_0" : "Bei starker Pollenallergie können auch bei niedrigem Risiko Beschwerden auftreten.",
+  "LOC_POLLEN_ADVICE_1" : "Tragen Sie bei Pollenallergie im Freien eine Maske und eine Sonnenbrille.",
+  "LOC_POLLEN_ADVICE_2" : "Reduzieren Sie Aktivitäten im Freien. Tragen Sie eine Maske und Sonnenbrille und waschen Sie nach der Rückkehr Hände und Gesicht.",
+  "LOC_POLLEN_ADVICE_3" : "Bleiben Sie möglichst drinnen und schließen Sie die Fenster. Tragen Sie bei notwendigen Ausgängen eine Maske und Sonnenbrille.",
+  "LOC_POLLEN_SOURCE" : "Quelle: Koreanischer Wetterdienst"
 }

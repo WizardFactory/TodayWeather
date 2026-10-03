@@ -1,0 +1,49 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "repo_root=$(git rev-parse --show-toplevel) && if [ -f \"$repo_root/.claude/helpers/graft-hooks.cjs\" ]; then node \"$repo_root/.claude/helpers/graft-hooks.cjs\" session-start; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "repo_root=$(git rev-parse --show-toplevel) && if [ -f \"$repo_root/.claude/helpers/graft-hooks.cjs\" ]; then node \"$repo_root/.claude/helpers/graft-hooks.cjs\" prompt; fi",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "repo_root=$(git rev-parse --show-toplevel) && if [ -f \"$repo_root/.claude/helpers/graft-hooks.cjs\" ]; then node \"$repo_root/.claude/helpers/graft-hooks.cjs\" post-edit; fi",
+            "timeout": 10
+          }
+        ],
+        "matcher": "apply_patch|Write|Edit|MultiEdit"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "repo_root=$(git rev-parse --show-toplevel) && if [ -f \"$repo_root/.claude/helpers/graft-hooks.cjs\" ]; then node \"$repo_root/.claude/helpers/graft-hooks.cjs\" stop; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

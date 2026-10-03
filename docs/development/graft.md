@@ -1,0 +1,143 @@
+# Graft project setup
+
+The repository adapters are tested with Graft 0.21.1 and Node 20.6+. The graph is a local,
+regenerable cache in ignored `graft/`; configuration and host shims are shared.
+Install `@nanonets/graft` with the account tool registry or your package manager
+and ensure `graft` and `node` are on PATH. For a reproducible npm installation,
+use `npm install --global @nanonets/graft@0.21.1`. Installation is explicit;
+the repository does not install or upgrade the tool automatically.
+
+## Build and scope
+
+From the repository root, generate the focused graph without an LLM key:
+
+```sh
+./scripts/build-graft.sh
+graft check
+```
+
+These paths persist in the local graph fingerprint. Subsequent `graft build`
+and query refreshes reuse the scope. Run the wrapper again after deleting the
+cache or opening a new worktree. It always reapplies the maintained scope. Checked-in native bundles, retired TodayAir,
+Cordova plugins, documentation and configuration are outside this focused
+scope. The extensionless `server/bin/www` and Objective-C sources are not
+covered by the default parsers. Use `rg` and inspect source for those areas.
+
+The build parses source; it does not start the weather server or collectors.
+`--deep` is optional and requires a configured LLM provider; this setup does
+not run it. Deterministic cards and call edges help navigation but cannot
+establish runtime behavior or every dependency in dynamic JavaScript.
+
+## Paseo workspaces
+
+The committed `paseo.json` runs the focused build before the existing private-file setup when Paseo creates a new worktree. Install Graft on the
+**daemon PATH** before creating it. Setup does not run again when reopening an
+existing workspace. Paseo reads configuration from the selected committed base
+branch, so this behavior applies after that branch contains this configuration.
+
+If the target branch has no build wrapper, or the daemon cannot find Graft,
+setup warns and skips the graph step without installing anything. An installed
+CLI build failure fails setup. After resolving the cause, run the **graft-build**
+workspace script from Paseo, or run `sh scripts/build-graft.sh` in the worktree.
+The same script refreshes existing workspaces. The wrapper disables telemetry
+with `DO_NOT_TRACK=1`. Graft 0.21.1 can also write its update-check cache at
+`~/.graft/update-check.json` and run `npm view @nanonets/graft version` against
+the npm registry. These CLI side effects are accepted; host settings and
+telemetry state must remain unchanged. Build runs before private-file copying
+so fresh branch code does not receive those copied inputs. The selected branch
+and installed CLI still need to be trusted. It does not run upstream
+initialization or grant Codex hook trust.
+See [Paseo worktree setup and scripts](https://paseo.sh/docs/worktrees.md).
+
+## Agent integration
+
+- The upstream-generated skill lives in `.agents/skills/graft/SKILL.md`.
+  `.codex/skills/graft` and `.claude/skills/graft` link to that single copy.
+- Codex uses `.codex/config.toml` for MCP and `.codex/hooks.json` for
+  SessionStart, UserPromptSubmit, PostToolUse and Stop. Codex resolves hook
+  configuration for linked Git worktrees from the original repository root,
+  so that root also needs the Graft hook configuration. Commands resolve the
+  active worktree through Git and skip worktrees without the Graft shim.
+  New or changed hooks require trust through `/hooks`; project configuration
+  also requires a trusted project. In Codex, enter `/hooks`, select each event,
+  review the project Graft command and press `t` to trust that hook. Approve only
+  the intended Graft hooks; do not use Trust all to approve unrelated hooks.
+  Trust belongs to the account and exact hook definition, and is not committed.
+  For a linked worktree before integration, ensure the original checkout has
+  this branch's `.codex/config.toml` and `.codex/hooks.json`; after integration,
+  check that the original checkout is updated before starting a new worktree.
+  See the official [MCP configuration](https://developers.openai.com/codex/mcp)
+  and [hook configuration](https://developers.openai.com/codex/hooks).
+- Claude uses `.mcp.json`, `.claude/settings.json` and `.claude/helpers/`
+  for MCP, retrieval, refresh and statusline. `CLAUDE.md` still imports
+  `AGENTS.md`. Hook timeouts use seconds.
+- The repository shims resolve the installed CLI from PATH before falling back
+  to standard package lookup; they contain no account-specific absolute path.
+  The fallback npm lookup is capped at 1.5 seconds. Missing Graft becomes a
+  silent hook no-op; the build wrapper reports a clear nonzero error.
+- The hooks and MCP adapter use a Node module loader to suppress only the tested
+  package's `upkeep-run.js` automatic wiring/update pass. Graft 0.21.1 otherwise
+  replays `init` at SessionStart or MCP boot when its ignored wiring stamp is
+  absent or outdated, including global host writes. Repository-managed settings
+  must never be regenerated by that pass. The guard requires the exact 0.21.1
+  package and Node 20.6+; unsupported versions skip hooks or report unavailable
+  MCP. Review and test an upgrade explicitly. MCP starts through the guarded
+  project shim, rather than raw `graft mcp`. Telemetry is disabled in adapters.
+- User-level host settings are preserved. Start a new agent session to discover
+  the skill and MCP configuration. This does not inject tools into an already
+  running session.
+
+Example queries:
+
+```sh
+graft map
+graft grep "WeatherUtil" --fixed --in client/www/js
+graft skeleton server/controllers/controllerManager.js
+graft ask "normalizeWeather" --source --in packages/weather-core
+graft callers normalizeWeather --depth 2
+```
+
+Read the architecture index first and verify relevant source before edits.
+Graph retrieval does not replace provider/runtime checks or repository gates.
+
+## Updates
+
+Do not blindly rerun `graft init`: the upstream command regenerates the skill,
+shims and hook settings, may write user-level configuration, and does not
+preserve this repository's portable shim adaptation or timeout corrections.
+Use `--no-global --no-build` if reviewing initialization output, then reconcile
+changes against the canonical skill/link layout and both host configurations.
+Do not commit `graft/`, credentials or raw execution reports.
+
+## Verification and provenance
+
+```sh
+python3 scripts/verification/graft/test_adapters.py
+python3 scripts/verification/graft/test_paseo_setup.py
+python3 server/test/offline/paseo-env-setup.test.py
+python3 scripts/verification/graft/smoke.py --output reports/verification/graft/smoke
+python3 scripts/verification/graft/smoke_codex_worktree.py --output reports/verification/graft/codex-worktree.json
+```
+
+The adapter and workspace tests use offline fixture packages; the real smoke requires installed
+Graft and builds a fresh isolated source copy with isolated HOME/CODEX_HOME.
+Creation setup starts with empty HOME, no inherited `DO_NOT_TRACK`, and no
+preseeded update cache. A fake npm intercepts registry checks; a closed local
+telemetry endpoint prevents external transmission if an opt-out regresses.
+Only the disclosed update-check file may appear; telemetry state is forbidden.
+Before building it runs both hosts' SessionStart commands with absent and stale
+wiring stamps; guarded MCP boot is checked with both states too. Every hook/MCP
+run checks unchanged user files and a clean tracked working tree. The third requires installed Codex
+and inspects real linked-worktree discovery with an isolated user config; it does
+not submit a model task or copy personal hook trust. No weather server starts.
+
+The skill snapshot is generated unchanged from `@nanonets/graft` 0.21.1
+(`dist/claude/skill-template.js`), from the MIT-licensed
+[upstream project](https://github.com/NanoNets/context-graph-engine). Its license
+is retained beside the skill. Repository shims adapt the upstream templates by
+resolving the CLI through PATH bounding fallback lookup, and suppressing automatic upkeep for the pinned version. Repository guidance
+overrides upstream claims that graph output is complete or needs no source
+verification.
+
+See the [CLI setup manual](graft-manual.md), [PDF manual](graft-manual.pdf) and
+[selected verification evidence](../evidence/tasks/issue-2671/verification.md).
