@@ -1000,7 +1000,7 @@ Manager.prototype._getForecastService = function (dataType) {
  * pass), so a cycle sends at most srcList.length + (retryCount - 1) * requestConcurrency requests.
  * A quota/key rejection moves to the next forecast key and requests all items not yet
  * collected; when every key was rejected in this cycle it ends with an error (#2604).
- * @param cycle internal, shared by the passes of one cycle: {keysTried, retrying}
+ * @param cycle internal, shared by passes: {keysTried, retrying, rejectedKeys}
  */
 Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateString, retryCount, invalidDataList, callback, cycle) {
     var self = this;
@@ -1040,6 +1040,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     }
 
     cycle = cycle || {keysTried: 1, retrying: false};
+    cycle.rejectedKeys = cycle.rejectedKeys || {};
     var service = self._getForecastService(dataType);
     var keyCount = Math.max(dongnae_keys.length, 1);
     var keyIndex = (forecastKeyIndex[service] || 0) % keyCount;
@@ -1047,9 +1048,9 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     var now = self._collectionNow || Date.now;
     var emit = function(record) { console.log(JSON.stringify(record)); };
     self._forecastTraffic = self._forecastTraffic || new ForecastTraffic(emit);
-    keyIndex = self._forecastTraffic.available(dataType, keyCount, keyIndex, now());
+    keyIndex = self._forecastTraffic.available(dataType, keyCount, keyIndex, now(), cycle.rejectedKeys);
     if (keyIndex < 0) {
-        return callback && callback(new Error(dataTypeName + ' quota cooldown: every current key rejected this KST day'));
+        return callback && callback(new Error(dataTypeName + ' no eligible forecast key remains for this cycle/KST day'));
     }
     forecastKeyIndex[service] = keyIndex;
     var attempts = {};
@@ -1077,6 +1078,8 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
             publication: dateString.date + dateString.time, attemptsByKstHour: attempts,
             received: dataList.filter(function(item) { return item.isCompleted; }).length,
             pending: dataList.filter(function(item) { return !item.isCompleted; }).length,
+            failed: dataList.filter(function(item) { return !item.isCompleted && !item.rejected; }).length,
+            rejected: dataList.filter(function(item) { return !item.isCompleted && item.rejected; }).length,
             stopReason: collectInfo.stopReason || null});
 
         //log.info(JSON.stringify(dataList));
@@ -1116,6 +1119,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 }
 
                 if (collectInfo.stopReason) {
+                    cycle.rejectedKeys[keyIndex] = true;
                     log.warn(dataTypeName + ' stopped: reason=' + collectInfo.stopReason + ' pending=' + failedList.length +
                         ' keyIndex=' + keyIndex + ' keysTried=' + cycle.keysTried + '/' + keyCount);
                     if (cycle.keysTried < keyCount) {

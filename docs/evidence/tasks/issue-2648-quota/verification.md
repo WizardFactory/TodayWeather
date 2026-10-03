@@ -12,3 +12,5 @@ Verified 2026-10-03 before commit, based on 1bc5669c. Synthetic provider data on
 For one successful collector and 2,032 fixture grids, repeated current first passes fall from 292,608 to 48,768/day (83.3%). Pages, failures, retries, other products and processes remain additional traffic. Actual approved entitlement remains unverified. Production daily/hourly recovery and the issue’s broader historical-coverage acceptance require separately approved rollout/readback.
 
 Reproduction commands and dependency caveats: [offline README](../../../../server/test/offline/README.md#current-grid-collection-2648). Behavior and rollout: [operations](../../../operations/current-grid-collection.md).
+
+Independent PR review required two corrections: R3-001 mixed daily cooldown plus per-cycle key rejection could reselect the remaining rejected key; R3-002 structured receipts omitted separate failed/rejected counts. Both were reproduced with failing regressions, corrected and tested; see PR #2670 for final re-review disposition.

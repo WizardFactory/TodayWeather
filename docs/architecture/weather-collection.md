@@ -260,3 +260,5 @@ index, received/pending counts and first rejection. Coverage records describe
 stored complete/pending grids independently from HTTP status. Schedules, keys,
 schemas and mobile API contracts do not change. Production activation, actual
 account entitlement and historical hourly/daily readback remain separate gates.
+
+Forecast-pass fetch outcomes include received, failed, rejected and pending (failed + rejected). Cycle-local rejected-key exclusion prevents daily cooldown filtering from recycling another already rejected key.

@@ -12,12 +12,12 @@ ForecastTraffic.prototype.advance = function(now) {
     var day = kstHour(now).slice(0,10);
     if (this.day === null || day > this.day) { this.day = day; this.rejected = {}; this.blocked = {}; this.hourly = {}; }
 };
-ForecastTraffic.prototype.available = function(type, count, preferred, now) {
+ForecastTraffic.prototype.available = function(type, count, preferred, now, rejected) {
     this.advance(now);
     for (var offset = 0; offset < count; offset++) {
         var index = (preferred + offset) % count;
         // Only current traffic is governed here; other product quota scopes remain unverified.
-        if (type !== 0 || !this.blocked[type + ':' + index]) { return index; }
+        if ((!rejected || !rejected[index]) && (type !== 0 || !this.blocked[type + ':' + index])) { return index; }
     }
     return -1;
 };

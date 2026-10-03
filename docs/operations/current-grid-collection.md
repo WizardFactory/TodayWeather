@@ -36,6 +36,9 @@ successful info records.
   gather route's HTTP 200 response.
 - forecast-pass: UTC completion time, KST hour, product/key index, publication,
   attemptsByKstHour including pages, received/pending counts and stop reason.
+  Received counts completed fetches; pending equals failed plus rejected. Failed
+  counts retryable incomplete rows, rejected counts non-retryable rejected rows.
+  These fetch outcomes do not replace persisted coverage.
   Aggregate each pass once by product, key index and KST hour. Fetch counts
   differ from persisted coverage.
 - first-quota: UTC response time, KST hour, requestKstDay, product/key index,
@@ -47,7 +50,8 @@ reconstruct first-rejection instants. Retain first-quota records and aggregate
 windows for future incidents.
 
 Only confirmed code 22 blocks current keys until the next KST day. Other products
-retain their own bounded stop/rotation. Memory is per Manager/process; restarts
+retain their own bounded stop/rotation. Each cycle excludes its already rejected
+indices as well as any daily-blocked current keys. Memory is per Manager/process; restarts
 and multiple workers need separate accounting. This is not a global reservation
 or hard daily request cap.
 

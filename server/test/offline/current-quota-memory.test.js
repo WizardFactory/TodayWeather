@@ -31,3 +31,34 @@ for(let i=0;i<2;i++){
 assert.strictEqual(attempts-start,4,'HTTP429/code23 is not a verified daily rejection');
 function slot(){return {date:'20261003',time:'0000'}}
 console.log('current quota memory: day isolation, reset, product boundary and secret-free records passed');
+// R3-001: cooldown filtering must not recycle the only remaining rejected key.
+for(const stopReason of ['quota','key']) {
+    const keys=[];
+    function Mixed(){}
+    Mixed.prototype.requestData=function(list,type,key,date,time,cb){
+        keys.push(key);this.stopReason=stopReason;
+        this.onPageRequest();if(stopReason==='quota'){this.onQuota('23',429)}
+        cb(true,list.map(mCoord=>({mCoord,isCompleted:false})));
+    };
+    const mixed=h.load({'../lib/collectTownForecast':Mixed});
+    mixed.m._collectionNow=()=>now;mixed.m.getSaveFunc=()=>function(d,cb){cb()};
+    mixed.m._forecastTraffic=new (require('../../lib/forecastTraffic'))(()=>{});
+    mixed.m._forecastTraffic.quota(0,'TOWN_CURRENT',0,now,'22',now);
+    let called=0;
+    mixed.m._recursiveRequestData([{mx:60,my:127}],0,'unused',slot(),1,undefined,e=>{assert(e);called++});
+    assert.strictEqual(called,1);
+    assert.deepStrictEqual(keys,['SYNTHETIC_B'],'R3-001: each eligible rejected key is tried once per cycle');
+}
+// R3-002: permanent rejection and retryable failures are separately measurable.
+function Outcomes(){}
+Outcomes.prototype.requestData=function(list,type,key,date,time,cb){
+    list.forEach(()=>this.onPageRequest());
+    cb(true,[{mCoord:list[0],isCompleted:true,data:{}},{mCoord:list[1],isCompleted:false,rejected:true},{mCoord:list[2],isCompleted:false}]);
+};
+const outcomes=h.load({'../lib/collectTownForecast':Outcomes});
+outcomes.m.getSaveFunc=()=>function(d,cb){cb()};
+outcomes.m._recursiveRequestData([{mx:1,my:1},{mx:2,my:2},{mx:3,my:3}],0,'unused',slot(),1,undefined,()=>{});
+const pass=outcomes.records.map(JSON.parse).find(r=>r.event==='forecast-pass');
+assert.strictEqual(pass.received,1);assert.strictEqual(pass.pending,2);
+assert.strictEqual(pass.failed,1,'R3-002: retryable incomplete items counted separately');
+assert.strictEqual(pass.rejected,1,'R3-002: non-retryable rejected items counted separately');
