@@ -6,6 +6,7 @@ process.env.TW_SMOKE_NOW='2026-09-24T00:10:00Z';
 const assert=require('assert');
 const http=require('http');
 const fs=require('fs');
+process.env.TW_REPO=process.env.TW_REPO || require('path').resolve(__dirname,'../../..');
 const mongoose=require('mongoose');
 const {MongoMemoryServer}=require('mongodb-memory-server-core');
 const food=require('../../lib/foodPoisoning');

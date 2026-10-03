@@ -4,6 +4,7 @@ process.env.TW_SMOKE_NOW = '2026-09-24T00:10:00Z';
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+process.env.TW_REPO = process.env.TW_REPO || path.resolve(__dirname, '../../..');
 const route = require('./rss-response-smoke');
 const food = require('../../lib/foodPoisoning');
 const recorded = require('./fixtures/mfds-risk-20261003.json');
