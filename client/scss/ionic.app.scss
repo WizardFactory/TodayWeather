@@ -1376,6 +1376,18 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   color: #ffffff;
 }
 
+/* Pollen explanations remain readable over current conditions. */
+.pollen-popup .popup {
+  background-color: #ffffff;
+  width: 300px;
+  max-width: 90%;
+}
+
+.pollen-popup .popup-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
 /* update information popup */
 .update_information_popup .popup {
   width: 85%;

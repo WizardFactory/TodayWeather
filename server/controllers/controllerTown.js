@@ -2365,6 +2365,10 @@ function ControllerTown() {
                     current.ultrvGrade = dailyData[i].ultrvGrade;
                     current.ultrvStr = dailyData[i].ultrvStr;
                 }
+                if (dailyData[i].hasOwnProperty('pollenGrade')) {
+                    current.pollenGrade = dailyData[i].pollenGrade;
+                    current.pollenStr = dailyData[i].pollenStr;
+                }
                 ['fsn', 'flowerWoody', 'flowerPine', 'flowerWeeds'].forEach(function (name) {
                     if (dailyData[i].hasOwnProperty(name)) {
                         current[name] = dailyData[i][name];
@@ -3617,6 +3621,9 @@ ControllerTown.prototype._makeStrForKma = function(data, res) {
             data[name + 'Str'] = LifeIndexKmaController.grade2strHighLow(data[name + 'Grade'], res);
         }
     });
+    if (data.hasOwnProperty('pollenGrade')) {
+        data.pollenStr = LifeIndexKmaController.grade2strHighLow(data.pollenGrade, res);
+    }
 
 
     if (data.hasOwnProperty('wsd')) {

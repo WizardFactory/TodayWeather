@@ -5410,11 +5410,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>LifeIndex collection (#2650)</h3>
+          <h3>LifeIndex collection (#2599, #2650)</h3>
         </div>
         <ul>
-          <li>UV V5 and seasonal oak/pine/weed pollen V3 run at /gather/lifeindex; pollen queries the current KST hour and all pages share that time; daily areaNo records.</li>
-          <li>Retired food-poisoning and health-index collectors and the /gather/healthday schedule were removed. Food poisoning is tracked in #2600.</li>
+          <li>UV V5 and oak/pine/weeds V3 at /gather/lifeindex. Pollen: year-round queries; provider decides no-data. Startup catch-up then 06:10/18:10 KST; failure/old issuance retries.</li>
+          <li>HealthWthrIdxServiceV3: getOakPollenRiskIdxV3 / getPinePollenRiskIdxV3 / getWeedsPollenRiskndxV3; today, tomorrow, dayaftertomorrow, todaysaftertomorrow. Valid grades 0–3 in lifeIndexKma2.</li>
+          <li>Legacy healthday was removed by #2650. Existing flowerWoody / flowerPine / flowerWeeds index types remain.</li>
         </ul>
       </div>
 

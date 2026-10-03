@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test client/test/payment-removal.test.cjs client/test/provider-notice.test.cjs client/test/monetization.test.cjs client/test/privacy-consent.test.cjs
+      - run: node --test client/test/payment-removal.test.cjs client/test/provider-notice.test.cjs client/test/monetization.test.cjs client/test/privacy-consent.test.cjs client/test/pollen-popup.test.cjs
 
   store-release:
     runs-on: ubuntu-latest

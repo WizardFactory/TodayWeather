@@ -323,5 +323,17 @@
   "LOC_TYPE_SPECIAL_WEATHER": "Special weather",
   "LOC_TYPE_PRELIMINARY_SPECIAL": "Preliminary Special weather",
   "LOC_TYPE_WEATHER_INFORMATION": "Weather information",
-  "LOC_TYPE_WEATHER_FLASH": "Flash weather information"
+  "LOC_TYPE_WEATHER_FLASH": "Flash weather information",
+  "LOC_POLLEN_RISK" : "花粉リスク",
+  "LOC_POLLEN_OAK" : "ナラ",
+  "LOC_POLLEN_PINE" : "マツ",
+  "LOC_POLLEN_WEEDS" : "雑草類",
+  "LOC_POLLEN_OAK_INFO" : "ナラの花粉は主に春に飛散します。屋外活動の前にリスクを確認しましょう。",
+  "LOC_POLLEN_PINE_INFO" : "マツの花粉は主に春に飛散します。屋外活動の前にリスクを確認しましょう。",
+  "LOC_POLLEN_WEEDS_INFO" : "雑草類の花粉は主に夏の終わりから秋に飛散します。屋外活動の前にリスクを確認しましょう。",
+  "LOC_POLLEN_ADVICE_0" : "リスクが低くても、花粉アレルギーが重い方には症状が出ることがあります。",
+  "LOC_POLLEN_ADVICE_1" : "花粉アレルギーがある方は、屋外でマスクとサングラスを着用しましょう。",
+  "LOC_POLLEN_ADVICE_2" : "屋外活動を控えましょう。外出時はマスクとサングラスを着用し、帰宅後は手と顔を洗いましょう。",
+  "LOC_POLLEN_ADVICE_3" : "できるだけ屋内で過ごし、窓を閉めましょう。外出が必要な場合はマスクとサングラスを着用しましょう。",
+  "LOC_POLLEN_SOURCE" : "出典：韓国気象庁"
 }
