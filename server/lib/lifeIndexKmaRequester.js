@@ -11,6 +11,8 @@
 "use strict";
 var req = require('request');
 var async = require('async');
+var keyList = require('./dataGoKrKeys');
+var rejection = require('./dataGoKrRejection');
 
 var Town = require('../models/town');
 var LifeIndexKma = require('../models/lifeIndexKma');
@@ -31,8 +33,6 @@ var POLLEN_OPERATIONS = {
 var UV_V5_ROWS = 1000;
 // Current three-hour KST slot and earlier ones, to reach the latest issuance.
 var UV_V5_SLOT_COUNT = 5;
-// data.go.kr authorization failures: access denied, request limit, unregistered, expired, unregistered IP.
-var DATA_GO_KR_AUTH_CODES = ['20', '22', '30', '31', '32'];
 
 /**
  * fsn 식중독지수, rot 부패지수, Sensorytem 체감온도, Frostbite 동상가능 지수, Heat 열, Dspls 불쾌
@@ -115,40 +115,11 @@ function KmaIndexService() {
     //};
 }
 
-/**
- * #984 이슈 문제와, 차후 키가 늘어날 경우를 위해서 array처리함
- * 깔끔하게 만들어지는 형태가 아니라 아쉬움.
- * @param key
- * @param keyBox
- * @returns {KmaIndexService}
- */
-KmaIndexService.prototype.setServiceKey = function(key, keyBox) {
-    this.serviceKeyList.push(key);
-    if (keyBox && keyBox.test_cert && keyBox.test_cert !== key) {
-        this.serviceKeyList.push(keyBox.test_cert);
-    }
-    // An existing data.go.kr key can cover both UV V5 and pollen V3; on 2026-10-01
-    // one configured forecast key returned live UV and weeds rows.
-    if (keyBox) {
-        var list = this.serviceKeyList;
-        var candidates = [keyBox.normal, keyBox.test_normal];
-        try {
-            candidates = candidates.concat(JSON.parse(keyBox.dongnae_forecast_keys || '[]'));
-        }
-        catch (err) {
-            log.warn('invalid forecast key list for kma index service');
-        }
-        candidates.forEach(function (candidate) {
-            // Skip unset defaults ('You have to set ...', '["key1","key2"]'); data.go.kr keys are much longer.
-            if (typeof candidate === 'string' && candidate.length >= 20 &&
-                candidate.indexOf('You have to set') !== 0 && list.indexOf(candidate) === -1) {
-                list.push(candidate);
-            }
-        });
-    }
+/** Replace the active list; repeated setup never retains old credentials. */
+KmaIndexService.prototype.setServiceKey = function(keys) {
+    this.serviceKeyList = keyList.parse(keys);
     this.serviceKeyIndex = 0;
-    this.serviceKey = this.serviceKeyList[this.serviceKeyIndex];
-    log.info('Set KEY!!');
+    this.serviceKey = this.serviceKeyList[0];
     return this;
 };
 
@@ -760,7 +731,9 @@ KmaIndexService.prototype.findAreaByTown = function(townInfo, callback) {
 KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
     log.info("Called KMA Index service By Town");
     if (!this.serviceKey) {
-        return log.error("You have to set KEY first!");
+        var missing = new Error('No configured data.go.kr keys');
+        if (callback) { return callback(missing); }
+        return log.error(missing.message);
     }
 
     var self = this;
@@ -849,7 +822,9 @@ KmaIndexService.prototype.updateLifeIndexDbFromTowns = function (callback) {
 KmaIndexService.prototype.cbKmaIndexProcess = function(self, callback) {
     log.info("Called KMA Index service Main process");
     if (!self.serviceKey) {
-        return log.error("You have to set KEY first!");
+        var missing = new Error('No configured data.go.kr keys');
+        if (callback) { return callback(missing); }
+        return log.error(missing.message);
     }
 
     //SensorytemLife
@@ -1177,7 +1152,7 @@ KmaIndexService.prototype.parseUvIdxV5 = function (body, label) {
             err = new Error('Fail to parse '+label+' body' + (match ? ' code='+match[2] : ''));
             if (match) {
                 err.returnCode = match[2];
-                err.isAuthError = DATA_GO_KR_AUTH_CODES.indexOf(match[2]) !== -1;
+                err.isAuthError = rejection.isAuth(200, match[2]) || rejection.isQuota(200, match[2]);
             }
             return {error: err};
         }
@@ -1187,7 +1162,7 @@ KmaIndexService.prototype.parseUvIdxV5 = function (body, label) {
         var gateway = body.OpenAPI_ServiceResponse.cmmMsgHeader;
         err = new Error(label+' reasonCode='+gateway.returnReasonCode+' errMsg='+gateway.errMsg);
         err.returnCode = ''+gateway.returnReasonCode;
-        err.isAuthError = DATA_GO_KR_AUTH_CODES.indexOf(err.returnCode) !== -1;
+        err.isAuthError = rejection.isAuth(200, err.returnCode) || rejection.isQuota(200, err.returnCode);
         return {error: err};
     }
 
@@ -1202,7 +1177,7 @@ KmaIndexService.prototype.parseUvIdxV5 = function (body, label) {
     if (resultCode !== '00' && resultCode !== '0') {
         err = new Error(label+' resultCode='+resultCode+' resultMsg='+body.response.header.resultMsg);
         err.returnCode = resultCode;
-        err.isAuthError = DATA_GO_KR_AUTH_CODES.indexOf(resultCode) !== -1;
+        err.isAuthError = rejection.isAuth(200, resultCode) || rejection.isQuota(200, resultCode);
         return {error: err};
     }
 
@@ -1291,7 +1266,8 @@ KmaIndexService.prototype._useServiceKeyV5 = function (index) {
  */
 KmaIndexService.prototype._requestUvPageV5 = function (time, pageNo, callback) {
     var self = this;
-    var keyCount = Math.max(self.serviceKeyList.length, 1);
+    if (!self.serviceKeyList.length) { return callback(new Error('No configured data.go.kr keys')); }
+    var keyCount = self.serviceKeyList.length;
     var startIndex = Math.max(self.serviceKeyIndex, 0) % keyCount;
     var offset = 0;
 
@@ -1309,7 +1285,7 @@ KmaIndexService.prototype._requestUvPageV5 = function (time, pageNo, callback) {
                 parsed = {error: new Error('uv index v5 statusCode='+response.statusCode)};
             }
             if (parsed.error) {
-                if (response.statusCode === 401 || response.statusCode === 403) {
+                if (rejection.isAuth(response.statusCode, parsed.error.returnCode) || rejection.isQuota(response.statusCode, parsed.error.returnCode)) {
                     parsed.error.isAuthError = true;
                 }
                 if (parsed.error.isAuthError && offset + 1 < keyCount) {
@@ -1505,7 +1481,8 @@ KmaIndexService.prototype.convertPollenItemsV3 = function (indexName, items) {
 
 KmaIndexService.prototype._requestPollenPageV3 = function (indexName, time, pageNo, callback) {
     var self = this;
-    var keyCount = Math.max(this.serviceKeyList.length, 1);
+    if (!this.serviceKeyList.length) { return callback(new Error('No configured data.go.kr keys')); }
+    var keyCount = this.serviceKeyList.length;
     var firstKey = Math.max(this.serviceKeyIndex, 0) % keyCount;
     var offset = 0;
     function attempt() {
@@ -1522,7 +1499,7 @@ KmaIndexService.prototype._requestPollenPageV3 = function (indexName, time, page
                     parsed = {error: new Error('pollen v3 HTTP '+response.statusCode)};
                 }
                 if (parsed.error) {
-                    if (response.statusCode === 401 || response.statusCode === 403) {
+                    if (rejection.isAuth(response.statusCode, parsed.error.returnCode) || rejection.isQuota(response.statusCode, parsed.error.returnCode)) {
                         parsed.error.isAuthError = true;
                     }
                     if (parsed.error.isAuthError && offset + 1 < keyCount) {

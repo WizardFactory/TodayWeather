@@ -1,13 +1,13 @@
 # TodayWeather retention and deletion proposal (#2660)
 
-AK confirmed on 2026-10-01 that no documented retention periods exist. The operator is **주식회사 플라잉**, privacy contact **김동환 / 제품팀**, confirmed support/deletion inbox **todayweather@wizardfactory.net**. Scope: Cordova TodayWeather Android/iOS, general audience; TodayAir/PWA excluded. These are proposed operational limits, not an assertion that cleanup is deployed.
+AK confirmed on 2026-10-01 that no documented retention periods exist. The operator is **주식회사 플라잉**, privacy contact **김동환 / 제품팀**, confirmed support/deletion inbox **todayweather@wizardfactory.net**. Scope: Cordova TodayWeather Android/iOS, general audience; TodayAir/PWA excluded. On 2026-10-02, AK confirmed a 90-day retention period for server request/error logs. Other limits remain proposals; this confirmation does not establish expiry/deletion behavior for every logging layer or provider.
 
 ## Proposed limits and acceptance evidence
 
 | Data | Proposed limit | Required implementation/evidence |
 | --- | --- | --- |
 | Saved cities, preferences, Analytics choice | On-device until user removal/reset/uninstall | Verify storage migration and withdrawal/restart; cloud-backup restoration may retain old app data |
-| Weather/geocode request/access/error logs | 30 days from creation | Inventory CloudFront/API Gateway/Lambda/EC2/application logs and backups; configure expiry/rotation; avoid logging full coordinates/UUID/token |
+| Weather/geocode request/access/error logs | 90 days from creation (operator-confirmed 2026-10-02) | Inventory CloudFront/API Gateway/Lambda/EC2/application logs and backups; configure expiry/rotation; avoid logging full coordinates/UUID/token |
 | Notification registrations | While service remains enabled; delete on verified request or user unregister; remove invalid tokens | Trace both alarms and alerts plus SQLite/Mongo deployment; prove exact-key deletion and no later worker re-creation. Do not equate app inactivity with non-use of notifications |
 | Firebase Analytics event/user-level retention | 2 months | Read/write actual GA4 property settings and disable reset-on-new-activity where appropriate; Google aggregate reporting differs from event/user-level retention |
 | BigQuery analytics event exports | 90 days from event date | Partition/table expiration, existing-table policy, views/copies/materializations/backups; test age boundaries and export lag |
@@ -19,7 +19,7 @@ Any documented statutory preservation exception needs its exact record category,
 
 ## Existing-source limitations
 
-[Push controller](../../server/controllers/controllerPush.js) `_removeOldList` removes **selected alarm rows** whose `updatedAt` predates60days during its send pipeline; missing dates are updated. The [schemas](../../server/models/modelPush.js) and [alert schema](../../server/models/alert.push.model.js) do not define a universal TTL. This code is neither a30day log limit nor a verified production-wide deletion job. Verify selection/startup wiring and the deployed store; no cleanup or test may run against production based on this source-only observation. Existing removal selectors are not proof of secure requester identity.
+[Push controller](../../server/controllers/controllerPush.js) `_removeOldList` removes **selected alarm rows** whose `updatedAt` predates60days during its send pipeline; missing dates are updated. The [schemas](../../server/models/modelPush.js) and [alert schema](../../server/models/alert.push.model.js) do not define a universal TTL. This code is neither evidence of the confirmed log retention period nor a verified production-wide deletion job. Verify selection/startup wiring and the deployed store; no cleanup or test may run against production based on this source-only observation. Existing removal selectors are not proof of secure requester identity.
 
 ## Deletion intake procedure
 

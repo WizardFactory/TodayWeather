@@ -28,7 +28,7 @@ function Stub() {}
 function load(relative, dependencies = {}, clock = Date) {
     const module = {exports: {}};
     const sandbox = {process: {env: {}}, module, exports: module.exports, console, log, Date: clock, setTimeout, clearTimeout, setImmediate, __dirname: path.dirname(path.join(root, relative)),
-        require: name => Object.prototype.hasOwnProperty.call(dependencies, name) ? dependencies[name] : Stub};
+        require: name => /(?:^|\/)dataGoKrKeys$/.test(name) ? require('../../lib/dataGoKrKeys') : /(?:^|\/)dataGoKrRejection$/.test(name) ? require('../../lib/dataGoKrRejection') : Object.prototype.hasOwnProperty.call(dependencies, name) ? dependencies[name] : Stub};
     sandbox.global = sandbox;
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), sandbox, {filename: relative});
     return module.exports;
@@ -210,7 +210,7 @@ test('requester: stored key sent once-encoded, auth rotation, error classes (AC9
         requester = new Requester({keys: [APPROVED, pad('SECOND')], request});
         out = await call(requester, 'getWthrInfo', {stnId: 108});
         assert.ok(out.err && check(out.err), JSON.stringify(result).slice(0, 80) + ' -> ' + (out.err && out.err.message));
-        assert.equal(request.calls.length, out.err.isAuthError ? 2 : 1, 'quota and other errors are not retried');
+        assert.equal(request.calls.length, out.err.isAuthError || out.err.isQuotaError ? 2 : 1, 'key/quota errors rotate once; other errors do not');
         assert.ok(out.err.message.indexOf('APPROVED') === -1 && out.err.message.indexOf('SECOND') === -1, 'no key in message');
     }
     request = fakeProvider(() => ({body: NODATA}));
@@ -434,7 +434,7 @@ test('collector: errors leave documents and state unchanged (AC9)', async () => 
         assert.equal(situations.docs.length, 0, name);
         assert.equal(zoneStore.docs.filter(d => d.areaCode !== '_sync').length, 0, name);
         if (name === 'nodata') { assert.equal(err, 'skip'); } else { assert.ok(err && err !== 'skip', name); }
-        if (name === 'quota') { assert.equal(request.calls.length, 1, 'quota stops the cycle'); }
+        if (name === 'quota') { assert.equal(request.calls.length, 1, 'single configured key: quota stops'); }
         if (name === 'auth') { assert.equal(request.calls.filter(c => c.operation === 'getPwnStatus').length, 1, 'single key: no retry'); }
     }
     // A failed zone write stores no type 1 document.

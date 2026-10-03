@@ -25,6 +25,8 @@ function load(relative, dependencies) {
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), {
         module, exports: module.exports, Date:FixedDate, console, log, rssString,
         require: name => {
+            if (/(?:^|\/)dataGoKrKeys$/.test(name)) return require('../../lib/dataGoKrKeys');
+            if (/(?:^|\/)dataGoKrRejection$/.test(name)) return require('../../lib/dataGoKrRejection');
             if (Object.prototype.hasOwnProperty.call(dependencies, name)) return dependencies[name];
             throw new Error('Unexpected dependency: '+ name);
         }

@@ -81,3 +81,6 @@ visual-check.*
 
 # PWA token copies are generated from the canonical package.
 /web/src/generated/
+
+# Local Archify verification/provenance for the MFDS design; keep JSON source and HTML.
+docs/architecture/diagrams/food-poisoning.*.json

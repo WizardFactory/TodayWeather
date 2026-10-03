@@ -64,12 +64,33 @@ The example selects `service` to avoid automatically starting background workers
 startup still connects to the configured database and initializes application
 dependencies. See the [runtime modes](../docs/architecture/service-overview.md#runtime-modes).
 
-`DATA_GO_KR_NORMAL_KEY` and `DATA_GO_KR_CERT_KEY` remain configuration fields for
-legacy source callers; `TEST_*` settings do not automatically substitute for
-them. Other optional settings depend on the features used; the example is not a
-complete production configuration. Deployment-specific observations about
-operator-supplied environment files are kept in the
-[gather environment file review](../docs/operations/tw-gather-env-review-2026-09-24.md).
+`DONGNAE_SECRET_KEYS` is the sole key source for forecast/mid, warnings, UV/pollen,
+KASI and forecast-zone clients. Supply a JSON array in intended rotation order.
+Unset, malformed, non-array and placeholder-only lists supply no keys; affected
+requests fail before HTTP. Auth/quota failures (HTTP 401/403/429, provider codes
+20/22/30/31/32) try each list key once per logical request or forecast cycle.
+Other failures do not rotate credentials. Repeated UV setup replaces its list.
+Legacy data.go.kr environment settings are ignored and produce a startup warning
+listing names only. Remove them from process-manager environments and `.env`.
+
+Required subscriptions for at least one key per used service:
+
+| Client | data.go.kr service approval |
+| --- | --- |
+| Grid forecast/current/shortest | `VilageFcstInfoService_2.0` |
+| Mid forecast/land/temp/sea | `MidFcstInfoService` |
+| Warnings | `WthrWrnInfoService` |
+| UV | `LivingWthrIdxServiceV5` |
+| Seasonal oak/pine/weed pollen | `HealthWthrIdxServiceV3` |
+| KASI rise/set | `RiseSetInfoService` (`B090041`) |
+| Legacy forecast-zone startup refresh | `ForecastZoneInfoService` (legacy endpoint; availability unverified) |
+| AirKorea, when the same account is used | `ArpltnInforInqireSvc` and other enabled AirKorea operations |
+
+AirKorea retains `AIRKOREA_SECRET_KEYS`; opt-in historical ASOS recovery retains
+its explicit `ASOS_HISTORY_SERVICE_KEY` subscription/rollout contract. Health-day
+and retired life-index endpoints removed by #2650 remain removed. Key approval
+does not establish that the legacy forecast-zone endpoint still works.
+See the [migration and verification runbook](../docs/operations/data-go-kr-keys.md).
 
 ## Push store
 

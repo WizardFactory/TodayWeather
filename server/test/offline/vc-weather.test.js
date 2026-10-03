@@ -36,6 +36,8 @@ function load(relative, dependencies = {}, globals = {}) {
     const module = {exports: {}};
     const sandbox = Object.assign({module, exports: module.exports, console, log, Date, Buffer, setTimeout, clearTimeout, setImmediate,
         require: name => {
+            if (/(?:^|\/)dataGoKrKeys$/.test(name)) return require('../../lib/dataGoKrKeys');
+            if (/(?:^|\/)dataGoKrRejection$/.test(name)) return require('../../lib/dataGoKrRejection');
             if (Object.prototype.hasOwnProperty.call(dependencies, name)) return dependencies[name];
             throw new Error('Unstubbed dependency ' + name + ' in ' + relative);
         }}, globals);

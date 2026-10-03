@@ -3,6 +3,15 @@
  */
 'use strict';
 
+var legacyKeyNames = ['DATA_GO_KR_NORMAL_KEY', 'DATA_GO_KR_TEST_NORMAL_KEY',
+    'DATA_GO_KR_CERT_KEY', 'DATA_GO_KR_TEST_CERT_KEY'].filter(function (name) {
+    return Object.prototype.hasOwnProperty.call(process.env, name);
+});
+if (legacyKeyNames.length) {
+    console.warn('Ignored legacy data.go.kr settings: ' + legacyKeyNames.join(', ') +
+        '; configure DONGNAE_SECRET_KEYS instead.');
+}
+
 module.exports = {
     ipAddress: (process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1'),
     port: (process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000'),
@@ -23,12 +32,6 @@ module.exports = {
         dailyRecordLimit: Number(process.env.VC_DAILY_RECORD_LIMIT) || 0
     },
     keyString: {
-        test_normal: (process.env.DATA_GO_KR_TEST_NORMAL_KEY || 'You have to set key of data.go.kr'),
-        test_cert: (process.env.DATA_GO_KR_TEST_CERT_KEY || 'You have to set key of data.go.kr'),
-        // Not used by the current production server (operator-confirmed 2026-09-24).
-        // Retained for legacy callers; these settings may remain unset in production.
-        normal: (process.env.DATA_GO_KR_NORMAL_KEY || 'You have to set key of data.go.kr'),
-        cert_key: (process.env.DATA_GO_KR_CERT_KEY || 'You have to set key of data.go.kr'),
         aws_access_key:(process.env.AWS_ACCESS_KEY || 'You have to set key of AWS'),
         aws_secret_key:(process.env.AWS_SECRET_KEY || 'You have to set key of AWS'),
         owm_keys : [{
@@ -53,7 +56,7 @@ module.exports = {
             key: (process.env.WAQI_SECRET_KEY || 'You have to set key of WAQI')
         }],
         daum_keys : (process.env.DAUM_SECRET_KEYS || '["set string of array of daum keys","key1", "key2"]'),
-        dongnae_forecast_keys: (process.env.DONGNAE_SECRET_KEYS || '["key1","key2"]'),
+        dongnae_forecast_keys: (process.env.DONGNAE_SECRET_KEYS || '[]'),
         airkorea_keys : (process.env.AIRKOREA_SECRET_KEYS || '["key1", "key2"]'),
         google_key : (process.env.GOOGLE_SECRET_KEY || 'You have to set googe api key'),
         kakao_keys : (process.env.KAKAO_SECRET_KEYS || '["set string of array of kakao keys","key1", "key2"]')

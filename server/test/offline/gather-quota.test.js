@@ -255,6 +255,8 @@ function loadManager(keys, policy, lines, RealCollector) {
     vm.runInNewContext(code, Object.assign({
         module, exports: module.exports, Date, JSON, Math, Promise, Error,
         require: name => {
+            if (/(?:^|\/)dataGoKrKeys$/.test(name)) return require('../../lib/dataGoKrKeys');
+            if (/(?:^|\/)dataGoKrRejection$/.test(name)) return require('../../lib/dataGoKrRejection');
             if (!Object.prototype.hasOwnProperty.call(deps, name)) { throw new Error('Unstubbed dependency: ' + name); }
             return deps[name];
         },
@@ -403,6 +405,159 @@ test('R6 GATHER_REQUEST_CONCURRENCY reaches the collector', () => {
     env.Collector.behaviour = () => ({completed: () => true});
     assert.ifError(cycle(env, TOWN_SHORTEST, grids(1)));
     assert.strictEqual(env.calls[0].concurrency, 21);
+});
+
+// Actual gather entrypoints, distinct from the scheduled-cycle helper.
+test('R2618-2 direct-grid forecast rotates configured keys, terminates exhaustion/empty list', () => {
+    for (const kind of ['current', 'shortest', 'short']) {
+        for (const list of [[KEY_A, KEY_B], []]) {
+            for (const rejectAll of [false, true]) {
+                const env = loadManager(list, gather.load({}), []);
+                Object.assign(env.Collector.prototype, {
+                    DATA_TYPE: {TOWN_CURRENT: 2, TOWN_SHORTEST: 1, TOWN_SHORT: 0},
+                    resetResult() {this.resultList = [{data: [{mCoord: this.srcList[0], pubDate: '202609260800'}]}];},
+                    getUrl(type, key) {this.testKey = key; return 'synthetic';},
+                    getData(index, type, url, options, cb) {
+                        env.calls[env.calls.length - 1].key = this.testKey;
+                        this.stopReason = rejectAll || this.testKey === KEY_A ? 'quota' : undefined;
+                        cb(this.stopReason ? new Error('quota') : null);
+                    }
+                });
+                for (const fn of ['getCurrentQueryTime','getShortestQueryTime','getShortQueryTime']) env.m[fn] = () => ({date:'20260926',time:'0800'});
+                let callbacks = 0, error;
+                env.m.getKmaData(kind, {mx:60,my:127}, 'ignored-key', err => {callbacks++; error=err;});
+                assert.equal(callbacks,1);
+                assert.equal(!!error, rejectAll || !list.length);
+                assert.deepStrictEqual(env.calls.filter(c => c.key).map(c => c.key), list);
+            }
+        }
+    }
+});
+test('R2618-2 past base-time request rotates once and update-list reports exhausted keys', () => {
+    for (const list of [[KEY_A, KEY_B], []]) {
+        for (const rejectAll of [false, true]) {
+            const env = loadManager(list, gather.load({}), []);
+            env.Collector.prototype.requestDataByBaseTimeList = function (coord,type,key,times,cb) {
+                env.calls[env.calls.length-1].key=key;
+                this.stopReason = rejectAll || key === KEY_A ? 'quota' : undefined;
+                cb(!!this.stopReason, times.map(t => ({isCompleted:!this.stopReason, options:t, data:[{mCoord:coord}]})));
+            };
+            let callbacks=0,error;
+            env.m.requestDataByUpdateList(2, 'ignored-key', [{mCoord:{mx:60,my:127},baseTimeList:[{date:'20260926',time:'0800'}]}], 3, err => {callbacks++;error=err;});
+            assert.equal(callbacks,1);assert.equal(!!error,rejectAll || !list.length);
+            assert.deepStrictEqual(env.calls.filter(c=>c.key).map(c=>c.key),list);
+        }
+    }
+});
+
+test('R2618-2 non-key failures never rotate direct-grid or past requests', () => {
+    const env = loadManager([KEY_A, KEY_B], gather.load({}), []);
+    Object.assign(env.Collector.prototype, {
+        DATA_TYPE: {TOWN_CURRENT: 2}, resetResult() {this.resultList=[];},
+        getUrl(type,key) {this.testKey=key;return 'synthetic';},
+        getData(i,type,url,opts,cb) {env.calls[env.calls.length-1].key=this.testKey;cb(new Error('transport'));},
+        requestDataByBaseTimeList(coord,type,key,times,cb) {
+            env.calls[env.calls.length-1].key=key;
+            cb(true,times.map(t=>({isCompleted:false,options:t})));
+        }
+    });
+    env.m.getCurrentQueryTime=()=>({date:'20260926',time:'0800'});
+    let directError,pastError;
+    env.m.getKmaData('current',{mx:60,my:127},KEY_B,err=>{directError=err;});
+    assert(directError);assert.deepStrictEqual(env.calls.filter(c=>c.key).map(c=>c.key),[KEY_A]);
+    env.calls.length=0;
+    env.m._recursiveRequestDataByBaseTimList(2,KEY_B,{mx:60,my:127},[{date:'20260926',time:'0800'}],3,err=>{pastError=err;});
+    assert(pastError);assert.deepStrictEqual(env.calls.filter(c=>c.key).map(c=>c.key),[KEY_A,KEY_A,KEY_A]);
+});
+
+
+// Review 5399434418: real past collector scheduling and mixed storage/key failures.
+test('R2618-3 past DB save errors take priority over quota and never rotate', () => {
+    const env = loadManager([KEY_A, KEY_B], gather.load({}), []);
+    const storageError = new Error('synthetic storage failure');
+    env.Collector.prototype.requestDataByBaseTimeList = function (coord, type, key, times, cb) {
+        env.calls[env.calls.length - 1].key = key;
+        this.stopReason = 'quota';
+        if (!times.length) { return cb(new Error('There is no baseTime list')); }
+        cb(true, [{isCompleted: true, data: [{mCoord: coord}]}, {isCompleted: false, options: times[1]}]);
+    };
+    env.m.getSaveFunc = () => function (data, cb) { cb(storageError); };
+    let callbacks = 0, error;
+    env.m._recursiveRequestDataByBaseTimList(2, 'ignored', grids(1)[0],
+        [{date: '20260926', time: '0800'}, {date: '20260926', time: '0900'}], 3, err => { callbacks++; error = err; });
+    assert.equal(callbacks, 1);
+    assert.strictEqual(error, storageError);
+    assert.deepStrictEqual(env.calls.filter(c => c.key).map(c => c.key), [KEY_A]);
+});
+
+test('R2618-3 past collector errors without results complete once without saving or rotating', () => {
+    const env = loadManager([KEY_A, KEY_B], gather.load({}), []);
+    const collectorError = new Error('synthetic URL setup failure');
+    env.Collector.prototype.requestDataByBaseTimeList = function (coord, type, key, times, cb) {
+        env.calls[env.calls.length - 1].key = key;
+        cb(collectorError);
+    };
+    let callbacks = 0, error;
+    env.m._recursiveRequestDataByBaseTimList(2, 'ignored', grids(1)[0],
+        [{date: '20260926', time: '0800'}], 3, err => { callbacks++; error = err; });
+    assert.equal(callbacks, 1); assert.strictEqual(error, collectorError);
+    assert.equal(env.m.saved.length, 0);
+    assert.deepStrictEqual(env.calls.filter(c => c.key).map(c => c.key), [KEY_A]);
+});
+
+test('R2618-3 empty past work completes once without constructing a collector or HTTP', () => {
+    const env = loadManager([KEY_A, KEY_B], gather.load({}), []);
+    let callbacks = 0, error;
+    env.m._recursiveRequestDataByBaseTimList(2, 'ignored', grids(1)[0], [], 3, err => { callbacks++; error = err; });
+    assert.equal(callbacks, 1); assert.ifError(error); assert.equal(env.calls.length, 0);
+});
+
+test('R2618-4 past collector stops synchronous quota/auth dispatch and retains all unfinished times', () => {
+    for (const reason of ['quota', 'auth']) {
+        const t = deferredCollector(); let sent = 0, callbacks = 0, results;
+        t.c.getData = function (i) {
+            sent++; this.stopReason = reason; this.resultList[i].rejected = true;
+            this.emit('recvFail', i);
+        };
+        const times = Array.from({length: 5}, (_, i) => ({date: '20260926', time: '0' + i + '00'}));
+        t.c.requestDataByBaseTimeList(grids(1)[0], t.c.DATA_TYPE.TOWN_SHORT, KEY_A, times,
+            (err, data) => { callbacks++; assert(err); results = data; });
+        assert.equal(sent, 1); assert.equal(callbacks, 1);
+        assert.equal(results.length, times.length);
+        assert(results.every(item => !item.isCompleted && item.options.date && item.options.time));
+    }
+});
+
+test('R2618-4 past walk bounds in-flight requests, settles them and counts unsent work once', () => {
+    const t = deferredCollector(); t.c.concurrency = 2;
+    let callbacks = 0, results;
+    const times = Array.from({length: 205}, (_, i) => ({date: '20260926', time: String(i)}));
+    t.c.requestDataByBaseTimeList(grids(1)[0], t.c.DATA_TYPE.TOWN_SHORT, KEY_A, times,
+        (err, data) => { callbacks++; assert(err); results = data; });
+    assert.equal(t.stats.requests, 2);
+    t.answer(t.pending[0], 429, QUOTA_BODY);
+    assert.equal(callbacks, 0); assert.equal(t.stats.requests, 2);
+    t.answer(t.pending[0], 200, OK_BODY);
+    assert.equal(callbacks, 1); assert.equal(t.stats.requests, 2);
+    assert.equal(results.filter(item => item.isCompleted).length, 1);
+    assert.equal(results.filter(item => !item.isCompleted).length, 204);
+    assert.equal(t.c.receivedCount, 205);
+});
+
+test('R2618-5 past requests retain the successful key across sequential coordinates', () => {
+    const env = loadManager([KEY_A, KEY_B], gather.load({}), []);
+    env.Collector.prototype.requestDataByBaseTimeList = function (coord, type, key, times, cb) {
+        Object.assign(env.calls[env.calls.length - 1], {key, coord});
+        this.stopReason = key === KEY_A ? 'quota' : undefined;
+        cb(!!this.stopReason, times.map(t => ({isCompleted: !this.stopReason, options: t, data: [{mCoord: coord}]})));
+    };
+    for (const coord of grids(2)) {
+        let callbacks = 0;
+        env.m._recursiveRequestDataByBaseTimList(2, 'ignored', coord,
+            [{date: '20260926', time: '0800'}], 3, err => { assert.ifError(err); callbacks++; });
+        assert.equal(callbacks, 1);
+    }
+    assert.deepStrictEqual(env.calls.filter(c => c.key).map(c => c.key), [KEY_A, KEY_B, KEY_B]);
 });
 
 (async () => {

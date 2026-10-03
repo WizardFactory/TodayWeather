@@ -6,6 +6,7 @@ var path = require('path');
 var vm = require('vm');
 var util = require('util');
 exports.load = function (relative, dependencies, globals) {
+    dependencies = Object.assign({}, dependencies, {'../lib/dataGoKrKeys': require('../../lib/dataGoKrKeys'), './dataGoKrKeys': require('../../lib/dataGoKrKeys'), '../../lib/dataGoKrKeys': require('../../lib/dataGoKrKeys')});
     var filename = path.resolve(__dirname, '../..', relative);
     var module = {exports: {}};
     var sandbox = Object.assign({module: module, exports: module.exports,

@@ -445,3 +445,33 @@ URLs match the ordinary unknown-route response; v000803 POST auth and CORS
 preflight remain in place. This does not claim a real Mongo/provider/store call
 or production startup with all service dependencies. Existing gateway/weather/
 push regressions cover the adjacent implementation beyond these boundaries.
+
+## Unified data.go.kr keys (#2618)
+
+`data-go-kr-keys.test.js` covers list parsing, ignored legacy fields, sanitized
+startup warnings and UV/pollen/KASI/warning/forecast-zone auth/quota rotation,
+exhaustion, empty lists and non-key errors. It is selected by `test:offline`.
+`data-go-kr-keys-smoke.js` uses the real `request` library over loopback HTTP
+(20 requests) to check exact key encoding, provider XML quota errors, response
+contracts and bounded success/exhaustion. Run it separately with `request` and
+`async` in the isolated dependencies. Existing `gather-quota-smoke.js` verifies
+Manager/collector cycles on 2,032 grids plus mounted current/shortest/short/past entrypoint success and exhaustion (16 additional HTTP requests). Review regressions
+also cover DB errors concurrent with quota rejection, empty/resultless callback
+paths, bounded past dispatch and successful-key reuse across coordinates. The
+HTTP smoke checks multi-time rotation with two in-flight slots, seven writes per
+coordinate, no repeated successful time, and DB-error priority. These are synthetic integrations; live
+gather acceptance belongs to the [operator runbook](../../../docs/operations/data-go-kr-keys.md).
+
+## Food-poisoning forecast recovery (#2600)
+
+`food-poisoning.test.js` uses a recorded MFDS response and isolated collaborators to verify grades, KST dates, regional matching, bounded schedules and optional-read failures. `food-poisoning-route.test.js` executes the actual Express coordinate middleware for both domestic DB versions, with provider/model boundaries isolated. These are included in `test:offline`; run it with `TZ=UTC` for the date-bound route harness.
+
+The recorded [MFDS fixture](fixtures/mfds-risk-20261003.json) was fetched once on 2026-10-03 UTC from `https://poisonmap.mfds.go.kr/api/risk.do` with the TodayWeather User-Agent. It contains 267 rows, `baseDate=20260929` and `regDatetime=2026-09-291700`. Raw data is retained unchanged. Route/smoke scenarios explicitly shift publication/date metadata to the fixed weather calendar; their values are recorded, but their dates are synthetic. This is not current live forecast evidence.
+
+The distinct `food-poisoning-smoke.js` uses loopback HTTP and a disposable real MongoDB to verify storage/readback, conditional publication upserts and production Express response fields. It creates no application collectors. With isolated `mongoose@5.13`, `mongodb-memory-server-core`, `express`, `async`, `xml2js` and `sprintf`:
+
+```sh
+TZ=UTC NODE_PATH=/tmp/food-poisoning-deps/node_modules node server/test/offline/food-poisoning-smoke.js
+```
+
+`MONGOMS_SYSTEM_BINARY` may select an existing local mongod. Mongoose 5.1.2 schema/query casting is checked separately; its old driver requires MongoDB <=5.0, whereas this real-database smoke uses Mongoose 5.13 with a modern mongod. TTL index creation is disabled only in the smoke's historical fixture database; read-time expiry is still enforced. See the [operating contract](../../../docs/operations/food-poisoning.md).
