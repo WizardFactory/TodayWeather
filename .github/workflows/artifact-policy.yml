@@ -17,15 +17,29 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check Graft adapters offline
+        run: python3 scripts/verification/graft/test_adapters.py
+      - name: Check Paseo workspace preparation offline
+        run: |
+          python3 scripts/verification/graft/test_paseo_setup.py
+          python3 server/test/offline/paseo-env-setup.test.py
       - run: python3 scripts/verification/test_artifact_policy.py
       - run: python3 scripts/verification/smoke_artifact_hooks.py
       - name: Check committed snapshots and history
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          if [ -n "$BASE" ]; then
+          # A new branch has an all-zero before SHA; check only its outgoing history.
+          if [ -n "$BASE" ] && ! printf '%s' "$BASE" | grep -q '^0*$'; then
             python3 scripts/check-artifact-policy.py --range "$BASE" "$HEAD"
+          elif [ -n "$BASE" ]; then
+            branch_base=$(git merge-base "$HEAD" "origin/$DEFAULT_BRANCH")
+            python3 scripts/check-artifact-policy.py --range "$branch_base" "$HEAD"
           else
             python3 scripts/check-artifact-policy.py --commit "$HEAD"
           fi
