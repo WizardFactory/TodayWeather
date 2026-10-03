@@ -32,6 +32,14 @@ The committed `scripts/artifact-policy.json` identifies the last pre-policy base
 
 ## Local hooks and CI
 
+The CI helper `scripts/verification/check-ci-artifacts.py` preserves explicit PR
+and ordinary-push ranges. For a new branch push (`before` is forty zeroes), it
+checks from the merge base of the head and the remote default branch, avoiding
+already-published default-branch history while retaining every task commit and
+the selected tip. The existing full-history checkout must contain that default
+branch ref; missing baselines fail. Fetched topic refs never exempt intermediate
+task commits. Manual workflow dispatch retains the tip-only check.
+
 The versioned `.githooks/pre-commit` and `pre-push` call the same checker as the **Repository artifacts** workflow, which also runs for documentation-only changes. Installation is explicit:
 
 ```sh
