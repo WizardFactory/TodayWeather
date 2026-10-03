@@ -72,3 +72,14 @@ test('config retires legacy slots and warns by name without values', () => {
     for (const name of ['normal', 'test_normal', 'cert_key', 'test_cert']) assert.equal(Object.prototype.hasOwnProperty.call(c.keyString, name), false);
     assert.equal(warnings.length, 1); assert(warnings[0].includes('DATA_GO_KR_TEST_CERT_KEY')); assert(!warnings[0].includes('SECRET_SENTINEL'));
 });
+
+test('R2618-1 actual life-index entrypoints terminate empty/malformed lists', () => {
+    for (const list of [[], '{malformed']) {
+        const r = fake([success]), s = loadLife(r); s.setServiceKey(list);
+        let mainCalls = 0, townCalls = 0;
+        s.cbKmaIndexProcess(s, err => {mainCalls++; assert(err && /configured/.test(err.message));});
+        s.getLifeIndexByTown({}, err => {townCalls++; assert(err && /configured/.test(err.message));});
+        assert.equal(mainCalls, 1); assert.equal(townCalls, 1); assert.equal(r.calls.length, 0);
+        assert.doesNotThrow(() => s.cbKmaIndexProcess(s));
+    }
+});

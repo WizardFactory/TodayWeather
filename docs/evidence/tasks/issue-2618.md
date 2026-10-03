@@ -9,7 +9,7 @@ to the PR and are bound to its head. This record reports builder execution only.
   or DB was accessed during Red. Environment/harness failures were corrected
   separately and are not counted as intended Red.
 - `NODE_PATH=<isolated>/node_modules node server/test/offline/data-go-kr-keys.test.js`:
-  32 passing checks for parsing, list-only source, warning sanitation and each
+  33 passing checks for parsing, list-only source, warning sanitation and each
   UV/pollen/KASI/warning/zone auth/quota rotation, exhaustion/empty list/non-key
   failure. HTTP auth overrides provider no-data responses. Separate Green and
   post-refactor executions passed.
@@ -43,3 +43,12 @@ approved subscriptions. The historical 2026-09-27 comment does not satisfy that
 acceptance. Forecast-zone endpoint availability is also unverified. AirKorea
 and opt-in ASOS keys are outside this issue's enumerated migration scope.
 See [operator runbook](../../operations/data-go-kr-keys.md).
+
+Independent review found and reproduced two missing entrypoint cases. R2618-1
+(empty-list life-index callback hang) and R2618-2 (coordinate/past forecast paths
+bypassing rotation) were corrected with failing regression tests before the fix.
+The 33-test key matrix and 30-test forecast quota suite passed after corrections.
+The renewed forecast HTTP smoke also checked current/shortest/short/past success
+and all-key exhaustion (16 additional real HTTP requests), exact storage counts,
+non-key retry preservation and no key-bearing logs. Review disposition and final
+candidate CI remain recorded on the PR rather than claimed by this builder note.

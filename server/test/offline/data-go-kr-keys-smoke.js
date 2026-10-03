@@ -46,6 +46,11 @@ async function main() {
     const Zone = h.load('controllers/kma/kma.forecast.zone.controller.js', dependencies, {log});
     const Kasi = h.load('controllers/kasi.riseset.controller.js', dependencies, {log});
     const callbackRun = fn => new Promise((resolve, reject) => fn((err, result) => err ? reject(err) : resolve(result)));
+    const missing = new Life(); missing.setServiceKey([]);
+    let missingCalls = 0;
+    missing.cbKmaIndexProcess(missing, err => {assert(err); missingCalls++;});
+    missing.getLifeIndexByTown({}, err => {assert(err); missingCalls++;});
+    assert.equal(missingCalls, 2); assert.equal(calls.length, 0);
     const scenarios = {
         uv: () => {const s = new Life(); s.setServiceKey(keys); return callbackRun(cb => s._requestUvPageV5('2026100309', 1, cb));},
         pollen: () => {const s = new Life(); s.setServiceKey(keys); return callbackRun(cb => s._requestPollenPageV3('flowerWeeds', '2026100309', 1, cb));},

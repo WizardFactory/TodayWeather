@@ -407,6 +407,69 @@ test('R6 GATHER_REQUEST_CONCURRENCY reaches the collector', () => {
     assert.strictEqual(env.calls[0].concurrency, 21);
 });
 
+// Actual gather entrypoints, distinct from the scheduled-cycle helper.
+test('R2618-2 direct-grid forecast rotates configured keys, terminates exhaustion/empty list', () => {
+    for (const kind of ['current', 'shortest', 'short']) {
+        for (const list of [[KEY_A, KEY_B], []]) {
+            for (const rejectAll of [false, true]) {
+                const env = loadManager(list, gather.load({}), []);
+                Object.assign(env.Collector.prototype, {
+                    DATA_TYPE: {TOWN_CURRENT: 2, TOWN_SHORTEST: 1, TOWN_SHORT: 0},
+                    resetResult() {this.resultList = [{data: [{mCoord: this.srcList[0], pubDate: '202609260800'}]}];},
+                    getUrl(type, key) {this.testKey = key; return 'synthetic';},
+                    getData(index, type, url, options, cb) {
+                        env.calls[env.calls.length - 1].key = this.testKey;
+                        this.stopReason = rejectAll || this.testKey === KEY_A ? 'quota' : undefined;
+                        cb(this.stopReason ? new Error('quota') : null);
+                    }
+                });
+                for (const fn of ['getCurrentQueryTime','getShortestQueryTime','getShortQueryTime']) env.m[fn] = () => ({date:'20260926',time:'0800'});
+                let callbacks = 0, error;
+                env.m.getKmaData(kind, {mx:60,my:127}, 'ignored-key', err => {callbacks++; error=err;});
+                assert.equal(callbacks,1);
+                assert.equal(!!error, rejectAll || !list.length);
+                assert.deepStrictEqual(env.calls.filter(c => c.key).map(c => c.key), list);
+            }
+        }
+    }
+});
+test('R2618-2 past base-time request rotates once and update-list reports exhausted keys', () => {
+    for (const list of [[KEY_A, KEY_B], []]) {
+        for (const rejectAll of [false, true]) {
+            const env = loadManager(list, gather.load({}), []);
+            env.Collector.prototype.requestDataByBaseTimeList = function (coord,type,key,times,cb) {
+                env.calls[env.calls.length-1].key=key;
+                this.stopReason = rejectAll || key === KEY_A ? 'quota' : undefined;
+                cb(!!this.stopReason, times.map(t => ({isCompleted:!this.stopReason, options:t, data:[{mCoord:coord}]})));
+            };
+            let callbacks=0,error;
+            env.m.requestDataByUpdateList(2, 'ignored-key', [{mCoord:{mx:60,my:127},baseTimeList:[{date:'20260926',time:'0800'}]}], 3, err => {callbacks++;error=err;});
+            assert.equal(callbacks,1);assert.equal(!!error,rejectAll || !list.length);
+            assert.deepStrictEqual(env.calls.filter(c=>c.key).map(c=>c.key),list);
+        }
+    }
+});
+
+test('R2618-2 non-key failures never rotate direct-grid or past requests', () => {
+    const env = loadManager([KEY_A, KEY_B], gather.load({}), []);
+    Object.assign(env.Collector.prototype, {
+        DATA_TYPE: {TOWN_CURRENT: 2}, resetResult() {this.resultList=[];},
+        getUrl(type,key) {this.testKey=key;return 'synthetic';},
+        getData(i,type,url,opts,cb) {env.calls[env.calls.length-1].key=this.testKey;cb(new Error('transport'));},
+        requestDataByBaseTimeList(coord,type,key,times,cb) {
+            env.calls[env.calls.length-1].key=key;
+            cb(true,times.map(t=>({isCompleted:false,options:t})));
+        }
+    });
+    env.m.getCurrentQueryTime=()=>({date:'20260926',time:'0800'});
+    let directError,pastError;
+    env.m.getKmaData('current',{mx:60,my:127},KEY_B,err=>{directError=err;});
+    assert(directError);assert.deepStrictEqual(env.calls.filter(c=>c.key).map(c=>c.key),[KEY_A]);
+    env.calls.length=0;
+    env.m._recursiveRequestDataByBaseTimList(2,KEY_B,{mx:60,my:127},[{date:'20260926',time:'0800'}],3,err=>{pastError=err;});
+    assert(pastError);assert.deepStrictEqual(env.calls.filter(c=>c.key).map(c=>c.key),[KEY_A,KEY_A,KEY_A]);
+});
+
 (async () => {
     let failed = 0;
     for (const t of tests) {

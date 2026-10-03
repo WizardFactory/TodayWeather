@@ -731,7 +731,9 @@ KmaIndexService.prototype.findAreaByTown = function(townInfo, callback) {
 KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
     log.info("Called KMA Index service By Town");
     if (!this.serviceKey) {
-        return log.error("You have to set KEY first!");
+        var missing = new Error('No configured data.go.kr keys');
+        if (callback) { return callback(missing); }
+        return log.error(missing.message);
     }
 
     var self = this;
@@ -820,7 +822,9 @@ KmaIndexService.prototype.updateLifeIndexDbFromTowns = function (callback) {
 KmaIndexService.prototype.cbKmaIndexProcess = function(self, callback) {
     log.info("Called KMA Index service Main process");
     if (!self.serviceKey) {
-        return log.error("You have to set KEY first!");
+        var missing = new Error('No configured data.go.kr keys');
+        if (callback) { return callback(missing); }
+        return log.error(missing.message);
     }
 
     //SensorytemLife

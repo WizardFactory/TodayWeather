@@ -1142,7 +1142,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     return this;
 };
 
-Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, mCoord, baseTimeList, retryCount, callback) {
+Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, mCoord, baseTimeList, retryCount, callback, cycle) {
     var self = this;
     var failedList = [];
     var collectInfo = new collectTown();
@@ -1158,6 +1158,13 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
         }
         return this;
     }
+
+    if (!dongnae_keys.length) {
+        return callback(new Error(dataTypeName + ' no configured data.go.kr keys'));
+    }
+    var service = self._getForecastService(dataType);
+    cycle = cycle || {keysTried: 1, keyIndex: 0};
+    key = dongnae_keys[cycle.keyIndex];
 
     collectInfo.requestDataByBaseTimeList(mCoord, dataType, key, baseTimeList, function(err, dataList) {
         if (err) {
@@ -1179,7 +1186,6 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
                     });
                 }
                 else {
-                    log.silly(item);
                     log.verbose(dataTypeName, " request retry date:",item.options.date,' time:',item.options.time);
                     var baseTime = {date: item.options.date, time: item.options.time};
                     failedList.push(baseTime);
@@ -1193,8 +1199,18 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
                     log.error(err);
                 }
                 log.info(dataTypeName + ' failedList='+failedList.length);
+                if (collectInfo.stopReason) {
+                    if (cycle.keysTried < dongnae_keys.length) {
+                        cycle.keysTried++;
+                        cycle.keyIndex = (cycle.keyIndex + 1) % dongnae_keys.length;
+                        return self._recursiveRequestDataByBaseTimList(dataType, key, mCoord,
+                            failedList, retryCount, callback, cycle);
+                    }
+                    return callback(new Error(dataTypeName + ' every data.go.kr key was rejected: ' + collectInfo.stopReason));
+                }
+                forecastKeyIndex[service] = cycle.keyIndex;
                 if (failedList.length) {
-                    return self._recursiveRequestDataByBaseTimList(dataType, key, mCoord, failedList, --retryCount, callback);
+                    return self._recursiveRequestDataByBaseTimList(dataType, key, mCoord, failedList, --retryCount, callback, cycle);
                 }
                 log.info('received All ', dataTypeName, ' of baseTimes=', baseTimeList.length);
                 if (callback) {
@@ -1208,12 +1224,14 @@ Manager.prototype.requestDataByUpdateList = function (dataType, key, updateList,
     var self = this;
     var dataTypeName = self.getDataTypeName(dataType);
 
+    var firstError;
     async.mapLimit(updateList, 20,
         function(updateObject, cb){
             log.info(updateObject);
             self._recursiveRequestDataByBaseTimList(dataType, key, updateObject.mCoord, updateObject.baseTimeList, retryCount, function(err, result){
                 log.info(dataTypeName+' '+JSON.stringify(updateObject.mCoord)+' was updated counts='+updateObject.baseTimeList.length);
                 if (err) {
+                    firstError = firstError || err;
                     log.error(err);
                 }
                 //unless previous item was failed, continues next item
@@ -1223,7 +1241,7 @@ Manager.prototype.requestDataByUpdateList = function (dataType, key, updateList,
         function (err, results) {
             log.info('Finished '+dataTypeName+' requests='+updateList.length);
             if (callback) {
-                callback(err, results);
+                callback(err || firstError, results);
             }
             else if (err) {
                 log.error(err);
@@ -1960,6 +1978,7 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
 Manager.prototype.getKmaData = function (typeStr, mCoord, serviceKey, callback) {
     var self = this;
     var collectInfo = new collectTown();
+    var keyIndex = 0;
 
     var dateString;
     var dataType = collectInfo.DATA_TYPE.TOWN_CURRENT;
@@ -1977,41 +1996,53 @@ Manager.prototype.getKmaData = function (typeStr, mCoord, serviceKey, callback) 
         dateString = self.getShortQueryTime(9);
     }
 
-    collectInfo.srcList = [mCoord];
-    collectInfo.listCount = 1;
-    collectInfo.resetResult();
-    var url = collectInfo.getUrl(dataType, serviceKey, dateString.date, dateString.time, mCoord);
+    if (!dongnae_keys.length) {
+        return callback(new Error('No configured data.go.kr keys'));
+    }
+    function attempt() {
+        collectInfo = new collectTown();
+        serviceKey = dongnae_keys[keyIndex];
+        collectInfo.srcList = [mCoord];
+        collectInfo.listCount = 1;
+        collectInfo.resetResult();
+        var url = collectInfo.getUrl(dataType, serviceKey, dateString.date, dateString.time, mCoord);
 
-    collectInfo.getData(0, dataType, url, undefined, function (err) {
-        if (err)  {
-            callback(err);
-            return;
-        }
-
-        if (collectInfo.resultList && collectInfo.resultList[0].data) {
-            log.info(collectInfo.resultList[0].data);
-            var data = collectInfo.resultList[0].data[0];
-            if (data == undefined) {
-               return callback("Fail to get "+typeStr+" mCoord="+JSON.stringify(mCoord));
+        collectInfo.getData(0, dataType, url, undefined, function (err) {
+            if (err && collectInfo.stopReason && keyIndex + 1 < dongnae_keys.length) {
+                keyIndex++;
+                return attempt();
             }
-            var modelObj = {mCoord: mCoord, pubDate: data.pubDate};
-            //controllerTown에서는 db에서 데이터를 꺼내, ret에 data array를 넣음.
-            modelObj.ret = collectInfo.resultList[0].data;
+            if (err)  {
+                callback(err);
+                return;
+            }
 
-            self.getSaveFunc(dataType).call(self, collectInfo.resultList[0].data, function (err) {
-                if (err) {
-                    log.error(err.message);
-                    return;
+            if (collectInfo.resultList && collectInfo.resultList[0].data) {
+                log.info(collectInfo.resultList[0].data);
+                var data = collectInfo.resultList[0].data[0];
+                if (data == undefined) {
+                   return callback("Fail to get "+typeStr+" mCoord="+JSON.stringify(mCoord));
                 }
-                log.info("save new "+typeStr+" mCoord="+JSON.stringify(mCoord));
-            });
+                var modelObj = {mCoord: mCoord, pubDate: data.pubDate};
+                //controllerTown에서는 db에서 데이터를 꺼내, ret에 data array를 넣음.
+                modelObj.ret = collectInfo.resultList[0].data;
 
-            callback(err, modelObj);
-        }
-        else {
-            callback(new Error("Fail to get current mCoord"+JSON.stringify(mCoord)));
-        }
-    });
+                self.getSaveFunc(dataType).call(self, collectInfo.resultList[0].data, function (err) {
+                    if (err) {
+                        log.error(err.message);
+                        return;
+                    }
+                    log.info("save new "+typeStr+" mCoord="+JSON.stringify(mCoord));
+                });
+
+                callback(err, modelObj);
+            }
+            else {
+                callback(new Error("Fail to get current mCoord"+JSON.stringify(mCoord)));
+            }
+        });
+    }
+    attempt();
 };
 
 /**

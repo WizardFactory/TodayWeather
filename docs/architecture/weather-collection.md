@@ -234,7 +234,10 @@ values and never supply credentials. Empty/invalid lists fail before provider
 HTTP. Shared `dataGoKrRejection.js` classifies authorization/quota responses;
 requesters try each key once per logical request, and Manager retains its
 per-service cycle rotation. Warning quota now rotates instead of immediately
-ending with the first exhausted key. Other failures do not rotate.
+ending with the first exhausted key. Other failures do not rotate. Coordinate-specific forecast and legacy past
+base-time requests also use the list in configured order; past requests preserve
+non-key retries and report the first failed grid after processing the update list.
+An empty life-index list completes its public callback with a sanitized error.
 
 UV/pollen preserve issuance/pagination and no partial saves; KASI preserves
 allKeysRejected stopping; forecast-zone keeps bounded transient retries and

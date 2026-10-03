@@ -20,8 +20,14 @@ const GRIDS = 2032;
 const QUOTA_BODY = '<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg>' +
     '<returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg>' +
     '<returnReasonCode>22</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>';
-function okBody(nx, ny) {
-    const items = h.shortItems();
+function okBody(nx, ny, pathname) {
+    let items = h.shortItems();
+    if (/getUltraSrtFcst/.test(pathname)) { items = h.shortestItems(); }
+    if (/getUltraSrtNcst/.test(pathname)) {
+        items = Object.entries({T1H:'12.5',RN1:'0',PTY:'0',REH:'60',UUU:'0',VVV:'0',VEC:'0',WSD:'0'}).map(([k,v]) => {
+            const item = h.item(k,v); item.obsrValue=item.fcstValue; delete item.fcstValue; return item;
+        });
+    }
     items.forEach(item => { item.nx = [nx]; item.ny = [ny]; });
     return h.xml(h.response(items));
 }
@@ -43,7 +49,7 @@ function handler(req, res) {
     setTimeout(() => {
         server.inFlight--;
         res.writeHead(over ? 429 : 200, {'Content-Type': 'text/xml'});
-        res.end(over ? QUOTA_BODY : okBody(url.searchParams.get('nx'), url.searchParams.get('ny')));
+        res.end(over ? QUOTA_BODY : okBody(url.searchParams.get('nx'), url.searchParams.get('ny'), url.pathname));
     }, 2);
 }
 
@@ -131,6 +137,29 @@ async function main() {
         assert.strictEqual(server.foreign, 0, 'every request carried a configured key to the forecast service');
         const text = lines.map(l => l.text).join('\n');
         assert(!text.includes(KEY_A) && !text.includes(KEY_B), 'no key in logs');
+        // R2618-2: mounted coordinate and past entrypoints use the real collector.
+        report.entrypoints = [];
+        m.getCurrentQueryTime = m.getShortestQueryTime = m.getShortQueryTime = () => ({date:'20260926',time:'0800'});
+        for (const kind of ['current','shortest','short','past']) {
+            for (const exhausted of [false,true]) {
+                server.served={};m.saved.clear();lines.length=0;
+                server.limits={[KEY_A]:0,[KEY_B]:exhausted ? 0 : 1e9};
+                const result = await new Promise(resolve => {
+                    const cb = (err,data) => resolve({err,data});
+                    if (kind==='past') {
+                        m.requestDataByUpdateList(m.DATA_TYPE.TOWN_CURRENT,'ignored',[
+                            {mCoord:{mx:60,my:127},baseTimeList:[{date:'20260926',time:'0800'}]}],3,cb);
+                    } else {m.getKmaData(kind,{mx:60,my:127},'ignored',cb);}
+                });
+                assert.strictEqual(!!result.err,exhausted,kind+' outcome');
+                assert.strictEqual(server.served[KEY_A],1,kind+' key A once');
+                assert.strictEqual(server.served[KEY_B],1,kind+' key B once');
+                assert.strictEqual(m.saved.size,exhausted ? 0 : 1,kind+' storage');
+                const observed=lines.map(l=>l.text).join('\n');
+                assert(!observed.includes(KEY_A) && !observed.includes(KEY_B),kind+' sanitized logs');
+                report.entrypoints.push({kind,exhausted,requests:2,saved:m.saved.size});
+            }
+        }
         report.result = 'passed';
     }
     finally {
