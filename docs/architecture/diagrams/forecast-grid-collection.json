@@ -150,7 +150,7 @@
       "id": "e4",
       "from": "pending",
       "to": "skip",
-      "label": "all complete",
+      "label": "all complete (ultra-short: one refresh walk)",
       "fromSide": "bottom",
       "toSide": "top"
     },

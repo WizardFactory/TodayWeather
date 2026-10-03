@@ -3,6 +3,8 @@ const assert=require('assert'),mongoose=require('mongoose'),Forecast=require('..
 const coord={mx:60,my:127};
 const empty={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,[])}}}};
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
+// A test that stops before its final PASS (e.g. a swallowed assertion) must fail, not exit 0.
+let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended before final PASS');process.exitCode=1}});
 (async()=>{
  assert.strictEqual(mongoose.version,'5.1.2');
  for(const product of ['short','shortest'])for(const time of product==='short'?['0200','0500','1100','1400','1700','2300']:['0030','2330']){
@@ -63,6 +65,11 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
  assert(Forecast.rawItems(raw().concat({...outside,fcstDate:['20261012'],fcstTime:['0300']}),'short',rawSlot,coord),'extra slot is filtered, not a failure');
  const moved=raw();moved[moved.indexOf(moved.find(i=>i.category[0]==='SKY'))]={...outside,fcstDate:['20261012'],fcstTime:['0300']};
  assert(!Forecast.rawItems(moved,'short',rawSlot,coord),'out-of-horizon item cannot satisfy an expected slot');
+ // A malformed value in the storable trailing slot fails like an in-horizon value (parseFloat would accept it).
+ const lastRaw=raw().at(-1),trailAt=f.parts(f.publication({date:lastRaw.fcstDate[0],time:lastRaw.fcstTime[0]})+3*f.hour);
+ const trailItem=v=>({...raw().find(i=>i.category[0]==='SKY'),fcstDate:[trailAt.date],fcstTime:[trailAt.time],fcstValue:[v]});
+ assert(Forecast.rawItems(raw().concat(trailItem('1')),'short',rawSlot,coord));
+ assert(!Forecast.rawItems(raw().concat(trailItem('12junk')),'short',rawSlot,coord),'malformed trailing value');
  const wrong=raw();wrong[0].baseTime=['2000'];assert(!Forecast.rawItems(wrong,'short',rawSlot,coord));
  const ultraSlot={...rawSlot,time:'1730'},ultra=f.items('shortest',ultraSlot,coord);
  assert(Forecast.rawItems(ultra,'shortest',ultraSlot,coord));
@@ -74,7 +81,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
  const c=new Forecast({product:'shortest',model:empty,version:'2.0',readTimeoutMs:10,collectTimeoutMs:20,
     coords:cb=>cb(null,[coord]),emit:()=>{},collect:(list,s,k,cb,control)=>{calls++;callbacks.push(cb);controls.push(control)}});
  const slot={date:'20261003',time:'0030'};
- c.run(slot,'dummy',e=>{assert(e);finished++});c.run(slot,'dummy',e=>{assert(e);finished++});
+ c.run(slot,'dummy',e=>{assert(e);finished++});c.run(slot,'dummy',e=>{assert.doesNotMatch(e.message,/busy/,'same publication joins');finished++});
  c.run({...slot,time:'0130'},'dummy',e=>{assert.match(e.message,/busy/);finished++});assert.strictEqual(calls,1);
  await wait(40);assert.strictEqual(finished,3);assert.strictEqual(c.active,null);assert(controls[0].cancelled);
  c.options.collectTimeoutMs=1000;c.run({...slot,time:'0130'},'dummy',e=>{assert(e);finished++});const newer=c.active;
@@ -114,5 +121,6 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
  assert.strictEqual(records.at(-1).outcome,'incomplete');assert.strictEqual(records.find(r=>r.stage==='after').outcome,'read-failed');
  assert(records.filter(r=>r.event==='forecast-coverage').every(r=>typeof r.readMs==='number'));
  assert.strictEqual(after.active,null);
+ passed=true;
  console.log('PASS forecast coverage: both horizons, all required fields, signed/zero/conditional values, pinned exact queries, overlap/read/run deadlines and late fencing');
 })().catch(e=>{console.error(e);process.exitCode=1});

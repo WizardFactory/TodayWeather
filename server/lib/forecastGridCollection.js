@@ -83,15 +83,22 @@ function rawItems(items, product, slot, coord) {
     var numbers = product === 'short' ? ['TMP', 'T3H', 'SKY', 'REH', 'PTY', 'POP', 'UUU', 'VVV', 'VEC', 'WSD', 'TMN', 'TMX'] :
         ['T1H', 'SKY', 'REH', 'PTY', 'POP', 'UUU', 'VVV', 'VEC', 'WSD', 'LGT'];
     function value(item, name) { return item[name] && item[name][0]; }
-    var slots = new Map(), allowed = horizon(product, slot);
+    var slots = new Map(), allowed = horizon(product, slot), times = expected(product, slot);
+    var last = stamp(times[times.length - 1]);
     var validItems = Array.isArray(items) && items.every(function(item) {
         if (!item || value(item, 'baseDate') !== slot.date || value(item, 'baseTime') !== slot.time ||
             String(coord.mx) !== value(item, 'nx') || String(coord.my) !== value(item, 'ny')) { return false; }
         var category = value(item, 'category'), text = value(item, 'fcstValue');
         var at = value(item, 'fcstDate') + value(item, 'fcstTime');
-        if (!allowed.has(at)) { return true; } // Out-of-horizon rows are filtered by within() before writes.
-        if (!slots.has(at)) { slots.set(at, new Set()); }
-        slots.get(at).add(category);
+        if (!allowed.has(at)) {
+            // within() drops out-of-horizon rows before writes; a storable trailing row is still value-checked.
+            var t = stamp({date: value(item, 'fcstDate'), time: value(item, 'fcstTime')});
+            if (!(t > last && t <= last + DAY)) { return true; }
+        }
+        else {
+            if (!slots.has(at)) { slots.set(at, new Set()); }
+            slots.get(at).add(category);
+        }
         if (numbers.indexOf(category) >= 0) {
             return typeof text === 'string' && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text.trim()) && finite(Number(text));
         }
@@ -149,6 +156,7 @@ function pending(model, version, product, slot, coords, callback, timeoutMs) {
     var projection = {_id: 0, mCoord: 1, pubDate: 1, fcsDate: 1}; projection[field] = 1;
     timeoutMs = timeoutMs || 3000;
     callback = bounded(callback, timeoutMs);
+    var delivered = false;
     try {
         var query = {pubDate: pubDate};
         if (version === '2.0') {
@@ -157,6 +165,7 @@ function pending(model, version, product, slot, coords, callback, timeoutMs) {
                 $lte: new Date(stamp(horizon[horizon.length - 1]) - 9 * HOUR)};
         }
         model.find(query, projection).setOptions({maxTimeMS: Math.max(1, timeoutMs - 1000)}).lean().exec(function(err, docs) {
+            delivered = true;
             if (err) { return callback(err); }
             if (!Array.isArray(docs)) { return callback(new Error('Invalid forecast coverage readback')); }
             var grouped = new Map(), covered = new Set();
@@ -175,7 +184,11 @@ function pending(model, version, product, slot, coords, callback, timeoutMs) {
             grouped.forEach(function(rows, id) { if (complete(product, slot, rows)) { covered.add(id); } });
             callback(null, coords.filter(function(coord) { return !covered.has(coordKey(coord)); }));
         });
-    } catch (err) { callback(err); }
+    } catch (err) {
+        // Only query construction/dispatch failures are read errors; never swallow a caller's exception.
+        if (delivered) { throw err; }
+        callback(err);
+    }
 }
 function ForecastGridCollection(options) { this.options = options; this.active = null; }
 ForecastGridCollection.prototype.run = function(requested, key, callback) {
@@ -243,10 +256,10 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
                             pending: readError ? coords.length : remaining.length, refresh: refreshed});
                     });
                 }, control);
-            } catch (error) { finish(error); }
+            } catch (error) { if (run.finished) { throw error; } finish(error); }
         });
     }, options.readTimeoutMs);
-    try { options.coords(ready); } catch (err) { ready(err); }
+    try { options.coords(ready); } catch (err) { if (run.finished) { throw err; } ready(err); }
 };
 ForecastGridCollection.preserveOptional = preserveOptional;
 ForecastGridCollection.rawItems = rawItems;

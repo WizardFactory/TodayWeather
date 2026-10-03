@@ -9,7 +9,8 @@ provider entitlement or activate production.
 For N grids, the existing scheduler polls current six times each hour:
 144 × N first-pass grid fetches/day, before retries, pages, startup/manual calls
 and multiple processes. Complete-publication filtering needs 24 × N successful
-current fetches/day. For the deterministic 2,032-grid fixture this is 292,608
+current fetches/day. For the deterministic 2,032-grid #2648 current fixture (the forecast budget below
+uses the 2,033-grid forecast fixture) this is 292,608
 versus 48,768 (83.3% fewer), when every publication is complete and one process
 collects it. Missing data/core fields and failed writes remain eligible; optional-only
 partial rows use the bounded repair policy below. This is a source/fixture
@@ -61,7 +62,7 @@ precipitation category conversion and API output are unchanged.
 A complete callback/page count does not prove a complete forecast. Provider items
 outside the expected horizon cannot satisfy an expected slot. Before writes they are
 dropped, except a row within one day after the final expected slot that is itself
-valid: production row counts (2026-09-26) show one such trailing slot, which the
+valid: production row counts (2026-09-26) show one extra slot beyond the computed horizon, which the
 previous collector stored. Incoming batches must then contain each expected slot once, match
 the requested publication and grid and cover all required slots/fields before
 writer admission. DB1 controlled writes replace overlapping required fields from
@@ -75,11 +76,14 @@ and pre-existing DB2 rows cannot distinguish a schema default (for example
 ultra-short `lgt=-1`) from a received value. Without a schema marker (excluded by
 #2676), such legacy rows are trusted only for the publication they already carry
 at deployment; every later publication is collected and validated by the new path.
-A one-time re-collection would also contradict AC1 (zero HTTP after coordinator
-recreation). The exposure is at most the in-flight publication per product (about
+Short has no refresh, so a one-time short re-collection would contradict AC1 (zero
+HTTP after coordinator recreation); the scheduled ultra-short refresh (AC1 amendment
+below) also re-collects legacy ultra-short rows within an hour. The exposure is at most the in-flight publication per product (about
 three hours short, one hour ultra-short) and equals the previous collector's output.
 A rollback followed by redeployment, mixed-version processes or manual tools such as
 `utils/convertDbForm.js` (which writes DB2 rows without the fence) reopen that window.
+The DB1 path that creates a grid's first document is not fenced either: a late older
+write and a new run can both insert one when no document exists yet.
 
 A newer publication never suppresses an older requested one in coverage. Writes
 are fenced, however, so an explicitly requested older publication whose slots or
@@ -190,8 +194,8 @@ approval. Before an approved action:
    overrides and backups. Deploy both new helpers, Manager and collector together.
    Include forecastGridCollection and both forecast writers for #2676.
    No dependency upgrade/schema migration is required.
-2. Verify approved capacity covers current 24N, short 8N and ultra-short 24N
-   first-pass walks (ultra-short 48N with the refresh), measured pages and bounded
+2. Verify approved capacity covers current 24N, short 8N and ultra-short 48N
+   first-pass walks (ultra-short 24N with the refresh disabled), measured pages and bounded
    retries, other usage and a measured margin. Otherwise obtain an authorized
    entitlement change or reviewed provider design; do not silently drop grids.
 3. Run isolated tests below; inspect process count, time basis and log retention.
@@ -209,7 +213,10 @@ approval. Before an approved action:
    PM2 online, HTTP 200 or station enrichment does not establish recovery.
 5. For #2676, observe successive short and ultra-short publications across all
    expected grids/slots, stored values and sanitized per-publication counts.
-   Repeated complete polls must send zero forecast HTTP; gaps must stay pending.
+   Repeated complete short polls must send zero forecast HTTP; ultra-short sends
+   exactly one refresh walk per publication per process (AC1 amendment, AK
+   2026-10-04; `refresh: true` in `forecast-collection`), otherwise zero. Gaps must
+   stay pending.
    Verify the public weather publication/output before reporting production recovery.
    Check `forecast-coverage` `readMs` and `read-failed` frequency on production-size
    collections; a read that exceeds `GATHER_FORECAST_READ_TIMEOUT_MS` before collection

@@ -134,10 +134,16 @@ It bounds each short/ultra-short publication run independently from
 `GATHER_CURRENT_DEADLINE_MS`, cancels HTTP/retry admission and fences new forecast
 writes after expiry. Polling and formats are unchanged. Issued Mongo operations
 may settle later but are publication-fenced and cannot replace a newer publication.
-`GATHER_FORECAST_READ_TIMEOUT_MS` (default 3000, minimum 1001) bounds each forecast
-coverage read wait; Mongo `maxTimeMS` is one second shorter. A failed read leaves
+`GATHER_FORECAST_READ_TIMEOUT_MS` (default 3000, minimum 1001) bounds the coordinate
+read and each forecast coverage read wait; Mongo coverage `maxTimeMS` is one second
+shorter (the coordinate read has no `maxTimeMS`). A failed read leaves
 the run incomplete and, before collection, sends no forecast HTTP.
 `GATHER_SHORTEST_REFRESH_AFTER_MS` (default 2400000, `0` disables) starts a one-hour
 window after an ultra-short publication's base time in which each process refreshes
-every grid once, because KMA updates ultra-short values every ten minutes.
+every grid once, because KMA updates ultra-short values every ten minutes. The
+window must contain a scheduled shortest poll: an HH30 publication is polled about
+18/24/34/44 minutes after its base time, so the default 40 minutes uses the +44 poll;
+any value above 2640000 leaves no scheduled poll in the window (later polls request
+the next publication), effectively disabling refresh. A refresh that joins an active run, fails or hits the
+deadline is not retried within that window; stored same-publication data remains.
 See [forecast coverage and rollout](../docs/operations/current-grid-collection.md#forecast-completion-2676).

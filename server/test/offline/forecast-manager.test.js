@@ -2,6 +2,8 @@
 const assert=require('assert'),mh=require('./current-manager-harness'),fixture=require('./forecast-grid-fixtures');
 const grids=Array.from({length:2033},(_,i)=>({mx:i%149,my:Math.floor(i/149)}));
 function run(m,method){return new Promise((resolve,reject)=>m[method](9,'dummy',(e,r)=>e?reject(e):resolve(r)))}
+// A test that stops before its final PASS (e.g. a swallowed assertion) must fail, not exit 0.
+let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended before final PASS');process.exitCode=1}});
 (async()=>{
  for(const version of ['1.0','2.0'])for(const product of ['short','shortest']){
     let slot={date:'20261003',time:product==='short'?'0500':'0530'},stored=new Map(),attempts=0,walks=[];
@@ -33,4 +35,5 @@ function run(m,method){return new Promise((resolve,reject)=>m[method](9,'dummy',
     assert.strictEqual(options.readTimeoutMs,3000);
     console.log('PASS Manager '+product+' DB'+version+': full-grid / repeat / recreation / repair / rollover');
  }
+ passed=true;
 })().catch(e=>{console.error(e);process.exitCode=1});

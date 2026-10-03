@@ -52,9 +52,9 @@ function load(env) {
 
     return {
         forecastDeadlineMs: integer(env, 'GATHER_FORECAST_DEADLINE_MS', 540000, 1, 2147483647),
-        // Coverage-read wait bound; Mongo maxTimeMS is one second shorter (#2676).
         // One full ultra-short refresh per current publication after this delay; 0 disables (#2676).
         shortestRefreshAfterMs: integer(env, 'GATHER_SHORTEST_REFRESH_AFTER_MS', 2400000, 0, 2147483647),
+        // Coordinate/coverage-read wait bound; Mongo coverage maxTimeMS is one second shorter (#2676).
         forecastReadTimeoutMs: integer(env, 'GATHER_FORECAST_READ_TIMEOUT_MS', 3000, 1001, 2147483647),
         currentDeadlineMs: integer(env, 'GATHER_CURRENT_DEADLINE_MS', 540000, 1, 2147483647),
         retry: {
