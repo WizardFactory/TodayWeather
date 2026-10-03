@@ -456,7 +456,12 @@ partial/failed/stalled coverage, same-hour coalescing, confirmed daily versus
 per-second rejection, KST rollover and continuation-page counts. Smoke uses the
 actual gather route, Manager, collector, temporary Mongo and synthetic loopback
 provider data. DB1/DB2 each store two complete hours; repeat polls add no fetch,
-and a removed DB2 field refetches one grid. Mongo 7 requires the5.13 smoke driver;
+and a removed DB2 field refetches one grid. A third hour has three persistent
+wind/REH omissions plus a WSD omission repaired on the second walk: only four
+partial grids refetch once, then four more polls issue zero HTTP and still read
+three pending/deferred grids. A fourth publication collects all2,032grids anew.
+Coverage regression also checks the two-admission policy, overlap, restart and
+no-data/invalid-core eligibility for both formats (19 cases). Mongo 7 requires the5.13 smoke driver;
 deployment keeps5.1.2. TW_MONGOD can identify an existing local Mongo binary;
 otherwise mongodb-memory-server manages its test binary. Temporary servers/DBs
 close at exit. No live data.go.kr call occurs.

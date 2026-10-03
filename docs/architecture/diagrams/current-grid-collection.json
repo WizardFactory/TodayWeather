@@ -51,8 +51,8 @@
       "lane": "control",
       "col": 2,
       "type": "security",
-      "label": "Pending grids",
-      "sublabel": "all core fields validated",
+      "label": "Coverage / repair",
+      "sublabel": "two partial walks / slot",
       "width": 140
     },
     {
@@ -109,6 +109,25 @@
       "label": "Read failed",
       "sublabel": "stop without HTTP",
       "width": 140
+    },
+    {
+      "id": "defer",
+      "lane": "failure",
+      "col": 2,
+      "type": "security",
+      "label": "Deferred result",
+      "sublabel": "pending error; no HTTP",
+      "width": 140
+    },
+    {
+      "id": "skip",
+      "lane": "control",
+      "col": 2,
+      "type": "backend",
+      "label": "Complete result",
+      "sublabel": "no HTTP needed",
+      "width": 140,
+      "yOffset": 100
     }
   ],
   "edges": [
@@ -134,14 +153,15 @@
       "id": "e3",
       "from": "pending",
       "to": "fetch",
-      "label": "missing only"
+      "label": "eligible"
     },
     {
       "id": "e4",
       "from": "pending",
-      "to": "done",
+      "to": "skip",
       "label": "all complete",
-      "toSide": "left"
+      "fromSide": "bottom",
+      "toSide": "top"
     },
     {
       "id": "e5",
@@ -174,6 +194,12 @@
       "to": "done",
       "label": "report pending",
       "toSide": "bottom"
+    },
+    {
+      "id": "e11",
+      "from": "pending",
+      "to": "defer",
+      "label": "all deferred"
     }
   ],
   "cards": [
@@ -182,7 +208,8 @@
       "title": "Coverage contract",
       "items": [
         "Complete core fields; zero and negative temperatures are valid",
-        "Stored grid observations only; station fallback never marks coverage"
+        "Stored grid observations only; station fallback never marks coverage",
+        "No-data / invalid temperature-rain-type rows remain eligible"
       ]
     },
     {
@@ -191,7 +218,8 @@
       "items": [
         "Process-local overlap and quota memory; restart is a new process",
         "No production activation, quota increase or historical backfill",
-        "Nine-minute current deadline; issued Mongo operations can settle later"
+        "Nine-minute current deadline; issued Mongo operations can settle later",
+        "Partial repair admission memory resets on publication change or restart"
       ]
     }
   ]

@@ -232,11 +232,22 @@ global-air chain and never calls AirKorea; see [nation response](mobile-api.md#n
 
 [CurrentGridCollection](../../server/lib/currentGridCollection.js) reads the
 requested KST date/hour from DB1 or DB2 grid models, validates all eight supported
-core fields, and sends only incomplete grids to the existing collector. Valid zero
+core fields, and sends eligible incomplete grids to the existing collector. Valid zero
 and negative temperatures count as covered; missing/non-finite/sentinel fields do
 not. DB2 additionally matches UTC BSON fcsDate using its existing index; DB1 uses
 a same-element date/time query and projection. Station/ASOS fallbacks cannot
 mark grid coverage.
+
+A per-publication, per-coordinate admission counter limits repeated optional-field
+repair. After two collection admissions, an exact-hour stored row with valid
+finite temperature/rain/type but incomplete wind/REH is deferred. It remains
+pending and produces an incomplete result; it never counts as covered. No-data
+and core-invalid rows remain eligible. Same-hour overlap shares one admission;
+a different inactive publication or process restart resets this process-local
+memory. The counter is capped at two and retained for one publication, without
+a schema change. Transport retries/pages and other workers are outside this
+admission bound. The `current-repair-plan` receipt records pending, eligible,
+deferred and limit; the result also reports deferred grids.
 
 Coordinate and coverage reads have a three-second wait deadline; pinned Mongoose
 queries use setOptions({maxTimeMS:2000}). Read failure stops the cycle without an

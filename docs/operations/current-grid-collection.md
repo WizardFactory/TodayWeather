@@ -11,7 +11,8 @@ For N grids, the existing scheduler polls current six times each hour:
 and multiple processes. Complete-publication filtering needs 24 × N successful
 current fetches/day. For the deterministic 2,032-grid fixture this is 292,608
 versus 48,768 (83.3% fewer), when every publication is complete and one process
-collects it. Missing fields/failed writes remain eligible. This is a source/fixture
+collects it. Missing data/core fields and failed writes remain eligible; optional-only
+partial rows use the bounded repair policy below. This is a source/fixture
 budget, not measured production usage or a hard quota cap.
 
 Short/shortest schedules remain unchanged: their baseline first-pass grid fetches
@@ -25,6 +26,33 @@ It does not establish which operations or consumers share an approved quota.
 Persisted partial wind/REH rows deliberately stay pending; a writer's successful
 callback is not a declaration of complete observations. Measure their frequency
 and later repair before relying on the ideal complete-publication budget.
+
+### Optional-field repair policy
+
+Each Manager remembers at most two collection admissions per coordinate for its
+current publication. Initial and joined polls use one admission together. Once
+an exact-hour stored row has valid finite t1h/rn1/pty but incomplete wind or REH,
+after two admissions later polls defer it. One initial partial observation can
+therefore receive one later repair walk; if that response is complete, subsequent
+polls skip it through ordinary coverage. Useful partial observations stay stored.
+Deferred rows stay pending and the callback returns an incomplete error, including
+when every pending row is deferred and no HTTP is sent. Missing/wrong-hour data
+and invalid temperature/rain/type remain eligible on later polls.
+
+The allowance resets when the inactive coordinator starts another publication,
+and on process restart. It is a per-process admission policy, not a persisted
+repair ledger or shared HTTP quota cap: pages/transport retries, absent/core-invalid
+grids, multiple workers, restarts and alternating manual publication requests
+remain additional traffic. Values that arrive after the two-admission allowance
+is consumed are not fetched again for that publication by that coordinator;
+next-hour collection proceeds, and historical gaps remain separately reported.
+Measure deferred frequency and decide any historical recovery through a separately
+reviewed/authorized policy; no backfill is added here.
+
+For N grids and P consistently optional-only partial grids per publication,
+six-poll first-pass volume becomes N+P/hour (24N+24P/day), under one uninterrupted
+process and successful persistence, before the exclusions above. The ideal83.3%
+current saving applies to P=0. Complete coverage must not be claimed when P>0.
 
 The [official data.go.kr service page](https://www.data.go.kr/data/15084084/openapi.do)
 (read 2026-10-03) lists development traffic of 10,000 and operational increase
@@ -42,6 +70,8 @@ successful info records.
 - current-coverage: UTC timestamp, publication, before/after stage, total,
   complete and pending grids. Remaining coverage is an error despite the legacy
   gather route's HTTP 200 response.
+- current-repair-plan: UTC time, publication, pending, eligible, deferred and
+  limit2. The callback also reports deferred; these rows are included in pending.
 - forecast-pass: UTC completion time, KST hour, product/key index, publication,
   attemptsByKstHour including pages, received/pending counts and stop reason.
   Received counts completed fetches; pending equals failed plus rejected. Failed

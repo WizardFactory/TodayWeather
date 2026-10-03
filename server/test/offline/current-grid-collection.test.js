@@ -90,4 +90,65 @@ test('stalled read releases the guard without HTTP and ignores late completion',
     assert.strictEqual(c.active,null);
     late(null,[]);assert.strictEqual(done,1);assert.strictEqual(walks,0);
 });
+
+// Real producer accepts these useful partial observations; coverage must remain truthful.
+const organizer = require('./harness');
+function observation(s, missing) {
+    const values = {T1H:'-12',RN1:'0',UUU:'0',VVV:'0',REH:'50',PTY:'0',VEC:'0',WSD:'0'};
+    const items=Object.keys(values).filter(category=>category!==missing).map(category=>({baseDate:[s.date],baseTime:[s.time],nx:['60'],ny:['127'],category:[category],obsrValue:[values[category]]}));
+    const c=organizer.prepare(organizer.collector());c.organizeCurrentData(0,organizer.response(items));
+    assert(c.resultList[0].isCompleted,'actual producer accepts optional-field partial rows');
+    const row={};for(const key in c.resultList[0].data[0]){row[key]=c.resultList[0].data[0][key]}return row;
+}
+function partialFixture(version, missing, repairAt, extraCoords) {
+    let rows=[],calls=0,release;
+    const points=extraCoords||[{mx:60,my:127}],events=[];
+    const model={find(){return{setOptions(){return this},lean(){return this},exec(cb){cb(null,rows)}}}};
+    const c=new Current({model,version,collectTimeoutMs:100,coords:cb=>cb(null,points),emit:r=>events.push(r),collect:(list,s,k,cb)=>{
+        calls++;release=()=>{rows=list.map(mCoord=>({mCoord,currentData:version==='1.0'?[observation(s,calls===repairAt?undefined:missing)]:observation(s,calls===repairAt?undefined:missing)}));cb()};
+    }});
+    return {c,model,events,points,get calls(){return calls},release:()=>release(),rows:r=>{rows=r}};
+}
+for (const version of ['1.0','2.0']) {
+    for(const missing of ['VEC','UUU','REH']) {
+        test(version+': persistent '+missing+' partial is pending but only admits two same-hour collections',()=>{
+            const f=partialFixture(version,missing);let finished=0;
+            for(let i=0;i<6;i++) {
+                f.c.run(slot,'synthetic',(err,r)=>{assert(err);assert.strictEqual(r.pending,1);assert.strictEqual(r.deferred,i>=2?1:0);finished++});
+                if(i<2){assert.strictEqual(f.calls,i+1);f.release()}
+                else{assert.strictEqual(f.calls,2)}
+            }
+            assert.strictEqual(finished,6);assert.strictEqual(f.events.at(-1).deferred,1);
+            assert(f.events.some(e=>e.event==='current-coverage'&&e.pending===1&&e.complete===0));
+            assert(f.events.some(e=>e.event==='current-repair-plan'&&e.eligible===0&&e.deferred===1&&e.limit===2));
+            let done=0;f.c.run({...slot,time:'0100'},'synthetic',(err,r)=>{assert(err);assert.strictEqual(r.deferred,0);done++});f.release();assert.strictEqual(f.calls,3);assert.strictEqual(done,1);
+        });
+    }
+    test(version+': overlap shares admission; a complete second observation repairs and then skips',()=>{
+        const f=partialFixture(version,'VEC',2);let callbacks=0;
+        f.c.run(slot,'synthetic',e=>{assert(e);callbacks++});f.c.run(slot,'synthetic',e=>{assert(e);callbacks++});assert.strictEqual(f.calls,1);f.release();assert.strictEqual(callbacks,2);
+        f.c.run(slot,'synthetic',(e,r)=>{assert.ifError(e);assert.strictEqual(r.pending,0);callbacks++});f.release();
+        for(let i=0;i<4;i++){f.c.run(slot,'synthetic',e=>{assert.ifError(e);callbacks++})}
+        assert.strictEqual(f.calls,2);assert.strictEqual(callbacks,7);
+    });
+    test(version+': absent and invalid temperature/rain/type stay eligible beyond two admissions',()=>{
+        for(const invalid of [null,{t1h:-50},{rn1:-1},{pty:-1}]) {
+            let calls=0;
+            const row=invalid?{...valid(),...invalid}:null;
+            const model={find(){return{setOptions(){return this},lean(){return this},exec(cb){cb(null,row?[{mCoord:{mx:60,my:127},currentData:version==='1.0'?[row]:row}]:[])}}}};
+            const c=new Current({model,version,coords:cb=>cb(null,[{mx:60,my:127}]),emit:()=>{},collect:(p,s,k,cb)=>{calls++;cb()}});
+            for(let i=0;i<6;i++){c.run(slot,'synthetic',(e,r)=>{assert(e);assert.strictEqual(r.pending,1);assert.strictEqual(r.deferred,0)})}
+            assert.strictEqual(calls,6);
+        }
+    });
+    test(version+': a deferred partial does not suppress a missing grid and restart has a fresh budget',()=>{
+        const points=[{mx:60,my:127},{mx:61,my:127}],row={...valid(),vec:-1};let collected=[];
+        const model={find(){return{setOptions(){return this},lean(){return this},exec(cb){cb(null,[{mCoord:points[0],currentData:version==='1.0'?[row]:row}])}}}};
+        const options={model,version,coords:cb=>cb(null,points),emit:()=>{},collect:(p,s,k,cb)=>{collected.push(p);cb()}};
+        const c=new Current(options);
+        for(let i=0;i<6;i++){c.run(slot,'synthetic',(e,r)=>{assert(e);assert.strictEqual(r.pending,2);assert.strictEqual(r.deferred,i>=2?1:0)})}
+        assert.deepStrictEqual(collected.slice(0,2),[points,points]);assert(collected.slice(2).every(p=>p.length===1&&p[0]===points[1]));
+        new Current(options).run(slot,'synthetic',e=>assert(e));assert.deepStrictEqual(collected.at(-1),points);
+    });
+}
 (async()=>{for(const t of tests){await t.fn();console.log('ok - '+t.name)}console.log('current coverage: '+tests.length+' passed')})().catch(e=>{console.error(e);process.exitCode=1});

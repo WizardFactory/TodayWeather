@@ -7,6 +7,7 @@ const mongoose=require('mongoose-smoke');
 const h=require('./harness'),mh=require('./current-manager-harness');
 const grids=Array.from({length:2032},(_,i)=>({mx:i%149,my:Math.floor(i/149)}));
 let mongo,connection,proxy,appServer,requests=0,foreign=0;
+const partialRequests=new Map();
 function get(port){return new Promise((resolve,reject)=>{
     http.get({hostname:'127.0.0.1',port,path:'/gather/current'},res=>{
         let body='';res.on('data',c=>{body+=c});res.on('end',()=>resolve({status:res.statusCode,body}));
@@ -23,6 +24,13 @@ function get(port){return new Promise((resolve,reject)=>{
         if(u.host!=='apis.data.go.kr'||!u.pathname.endsWith('/getUltraSrtNcst')){foreign++;res.writeHead(400);return res.end()}
         requests++;
         const values={T1H:'-12.5',RN1:'0',UUU:'-2',VVV:'0',REH:'50',PTY:'0',VEC:'0',WSD:'0'};
+        // Three persistent optional omissions; a fourth repairs on its second walk.
+        const coord=Number(u.searchParams.get('nx'))+':'+Number(u.searchParams.get('ny'));
+        const index=grids.findIndex(g=>g.mx+':'+g.my===coord);
+        if(u.searchParams.get('base_time')==='0200'&&index>=0&&index<4){
+            const count=(partialRequests.get(coord)||0)+1;partialRequests.set(coord,count);
+            if(index<3||count===1){delete values[['VEC','UUU','REH','WSD'][index]]}
+        }
         const items=Object.keys(values).map(category=>({
             baseDate:[u.searchParams.get('base_date')],baseTime:[u.searchParams.get('base_time')],
             nx:[u.searchParams.get('nx')],ny:[u.searchParams.get('ny')],category:[category],obsrValue:[values[category]]
@@ -71,11 +79,26 @@ function get(port){return new Promise((resolve,reject)=>{
             const before=requests;await get(port);assert.strictEqual(requests,before+1);
             assert.strictEqual(await db2.countDocuments({'currentData.time':'0100'}),2032);
         }
+        partialRequests.clear();slot={date:'20261003',time:'0200'};
+        const partialStart=requests;
+        await get(port);assert.strictEqual(requests-partialStart,2032);
+        const storedPending=()=>new Promise((resolve,reject)=>require('../../lib/currentGridCollection').pending(version==='1.0'?db1:db2,version,slot,grids,(e,p)=>e?reject(e):resolve(p)));
+        assert.strictEqual((await storedPending()).length,4);
+        await get(port);assert.strictEqual(requests-partialStart,2036,'only four persisted partial rows receive a repair');
+        assert.strictEqual((await storedPending()).length,3,'second response repaired WSD, three persistent omissions remain');
+        for(let poll=0;poll<4;poll++){await get(port);assert.strictEqual(requests-partialStart,2036,'partial repair budget sends no further HTTP')}
+        assert.strictEqual((await storedPending()).length,3,'deferred rows never count complete');
+        const deferredRecord=f.records.map(JSON.parse).filter(r=>r.event==='current-repair-plan').at(-1);
+        assert.strictEqual(deferredRecord.pending,3);assert.strictEqual(deferredRecord.deferred,3);assert.strictEqual(deferredRecord.eligible,0);
+        slot={date:'20261003',time:'0300'};const rolloverStart=requests;
+        await get(port);assert.strictEqual(requests-rolloverStart,2032,'new publication receives initial full walk');
+        assert.strictEqual((await storedPending()).length,0);
+        await get(port);assert.strictEqual(requests-rolloverStart,2032);
         const records=f.records.map(JSON.parse);
         assert(records.some(r=>r.event==='forecast-pass'&&Object.values(r.attemptsByKstHour).reduce((a,b)=>a+b,0)===2032));
         assert(records.some(r=>r.event==='current-coverage'&&r.pending===0&&r.total===2032));
         assert(!f.records.join('').includes('SYNTHETIC_A'));assert(!f.records.join('').includes('serviceKey'));
-        summary.push({version,hours:2,grids:2032,httpAttempts:requests-begin,readback:'complete',sameHourJoined:true});
+        summary.push({version,hours:4,grids:2032,httpAttempts:requests-begin,readback:'complete except three explicitly deferred optional-field rows at0200',partialWalks:2036,partialDeferred:3,secondWalkRepair:true,sameHourJoined:true});
         await new Promise(resolve=>appServer.close(resolve));appServer=null;
     }
     assert.strictEqual(foreign,0);
