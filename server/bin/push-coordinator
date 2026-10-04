@@ -16,6 +16,9 @@ async function main() {
     if (process.env.PUSH_STORE !== 's3') throw new Error('PUSH_STORE=s3 is required');
     var socket = process.env.PUSH_SOCKET_PATH;
     if (!socket || socket[0] !== '/') throw new Error('PUSH_SOCKET_PATH must be absolute');
+    var prepareAttempts = process.env.PUSH_PREPARE_ATTEMPTS ? Number(process.env.PUSH_PREPARE_ATTEMPTS) : 4;
+    if (!Number.isInteger(prepareAttempts) || prepareAttempts < 1)
+        throw new Error('PUSH_PREPARE_ATTEMPTS must be a positive integer');
     if (fs.existsSync(socket))
         throw new Error('Push socket already exists; verify old owner is stopped before removing it');
     var storage = require('../lib/pushCoordinator/storage').create({
@@ -37,7 +40,8 @@ async function main() {
     var dispatcher = new Dispatcher({
         send: runtime.send,
         concurrency: Number(process.env.PUSH_SEND_CONCURRENCY) || 128,
-        rate: Number(process.env.PUSH_SEND_RATE) || 500
+        rate: Number(process.env.PUSH_SEND_RATE) || 500,
+        prepareAttempts: prepareAttempts
     });
     var engine = new Engine({
         registry: registry,

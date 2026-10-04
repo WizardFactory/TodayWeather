@@ -1,4 +1,7 @@
 'use strict';
+var errors = require('./errors'),
+    PreparationError = errors.PreparationError,
+    safeReason = errors.safeReason;
 // Bounded async admission. Registration processing never runs on this queue.
 class Queue {
     constructor() {
@@ -29,6 +32,10 @@ class Dispatcher {
         this.maxQueue = o.maxQueue || 250000;
         this.retryFloor = o.retryFloorMs === undefined ? 10000 : o.retryFloorMs;
         this.timeout = o.timeoutMs || 15000;
+        // Preparation (weather) retries are counted apart from transport attempts and stop at the deadline.
+        this.prepareAttempts =
+            Number.isInteger(o.prepareAttempts) && o.prepareAttempts >= 1 ? o.prepareAttempts : 4;
+        this.prepareRetry = o.prepareRetryMs === undefined ? 1000 : o.prepareRetryMs;
         this.now = o.now || Date.now;
         this.onInvalid = o.onInvalid || function () {};
         this.queues = { warning: new Queue(), normal: new Queue() };
@@ -49,7 +56,14 @@ class Dispatcher {
             return Promise.reject(new Error('Push dispatch queue unavailable'));
         this.total++;
         return new Promise(function (resolve) {
-            var item = { job: job, resolve: resolve, attempt: 0, done: false };
+            var item = {
+                job: job,
+                resolve: resolve,
+                attempt: 0,
+                preparations: job.preparationAttempts || 0,
+                prepFailures: job.preparationFailures || 0,
+                done: false
+            };
             self.items.add(item);
             self.queues[job.priority === 'warning' ? 'warning' : 'normal'].push(item);
             self.schedule();
@@ -111,13 +125,49 @@ class Dispatcher {
         b.tokens--;
         return true;
     }
-    finish(item, status, error) {
+    finish(item, status, error, stage) {
         if (item.done) return;
         item.done = true;
         this.items.delete(item);
         this.total--;
         this.metrics[status] = (this.metrics[status] || 0) + 1;
-        item.resolve({ status: status, error: error, attempts: item.attempt });
+        // Results are persisted by the engine: only a short identifier is kept, never error text.
+        item.resolve({
+            status: status,
+            error: error === undefined ? undefined : safeReason(error),
+            stage: stage,
+            attempts: item.attempt,
+            preparationAttempts: item.preparations,
+            preparationFailures: item.prepFailures
+        });
+    }
+    // A retryable typed weather failure is retried with bounded backoff before any FCM submission.
+    // The retry re-enters the queue, so the registration guard and deadline are checked again.
+    prepareFailed(item, lane, e) {
+        var self = this,
+            job = item.job,
+            typed = e instanceof PreparationError,
+            reason = typed ? e.code : 'preparation-error';
+        // The bound counts failed preparations only: an explicit FCM retry prepares again without using it.
+        item.prepFailures++;
+        // The item now waits for a preparation retry; expiry in the queue is a preparation expiry.
+        item.waiting = { reason: reason, stage: 'preparation' };
+        if (job.onPreparationFailure) job.onPreparationFailure(item.prepFailures);
+        if (!typed || !e.retryable || item.prepFailures >= this.prepareAttempts)
+            return this.finish(item, 'failed', reason, 'preparation');
+        var delay =
+            Math.min(30000, this.prepareRetry * Math.pow(2, Math.max(0, item.prepFailures - 1))) +
+            Math.floor(Math.random() * Math.min(1000, this.prepareRetry));
+        if (job.deadline !== undefined && this.now() + delay >= job.deadline)
+            return this.finish(item, 'expired', reason, 'preparation');
+        this.metrics.prepareRetries = (this.metrics.prepareRetries || 0) + 1;
+        this.later(function () {
+            if (self.stopped) self.finish(item, 'failed', 'stopped');
+            else {
+                self.queues[lane].push(item);
+                self.schedule();
+            }
+        }, delay);
     }
     pump() {
         if (this.stopped) return;
@@ -138,7 +188,9 @@ class Dispatcher {
             if (!item) break;
             var job = item.job;
             if (job.deadline !== undefined && this.now() >= job.deadline) {
-                this.finish(item, 'expired');
+                // Expiry while waiting for a retry records what the item was waiting for.
+                if (item.waiting) this.finish(item, 'expired', item.waiting.reason, item.waiting.stage);
+                else this.finish(item, 'expired');
                 continue;
             }
             this.inflight++;
@@ -150,13 +202,26 @@ class Dispatcher {
     }
     async run(item, lane) {
         var self = this,
-            job = item.job;
+            job = item.job,
+            phase = 'prepare';
         try {
             if (job.guard && !job.guard()) {
                 this.finish(item, 'superseded');
                 return;
             }
-            var payload = item.prepared ? item.payload : job.prepare ? await job.prepare() : job;
+            var payload;
+            if (item.prepared) payload = item.payload;
+            else if (job.prepare) {
+                // The failure bound also holds for work re-admitted after supersession or recovery.
+                if (item.prepFailures >= this.prepareAttempts) {
+                    this.finish(item, 'failed', 'preparation-attempts-exhausted', 'preparation');
+                    return;
+                }
+                item.preparations++;
+                if (job.onPreparation) job.onPreparation(item.preparations);
+                payload = await job.prepare();
+                delete item.waiting;
+            } else payload = job;
             if (this.stopped) return;
             if (payload === null) {
                 this.finish(item, 'not-needed');
@@ -173,7 +238,7 @@ class Dispatcher {
             item.project = payload.authorization ? payload.authorization.projectId : job.project || 'default';
             var allowed = this.budget(item.project, lane);
             if (allowed === 'paused') {
-                this.finish(item, 'failed', 'project-paused');
+                this.finish(item, 'failed', 'project-paused', 'transport');
                 return;
             }
             if (!allowed) {
@@ -183,12 +248,13 @@ class Dispatcher {
                 return;
             }
             item.attempt++;
+            phase = 'send';
             // Watchdog never releases a physical send slot or retries an ambiguous send.
             // The SDK promise must settle before this slot is reusable.
             var timeout = this.later(function () {
                 var budget = self.projects.get(item.project);
                 if (budget) budget.paused = true;
-                self.finish(item, 'failed', 'transport-timeout-ambiguous');
+                self.finish(item, 'failed', 'transport-timeout-ambiguous', 'transport');
             }, this.timeout);
             try {
                 await this.send(payload, job);
@@ -201,6 +267,10 @@ class Dispatcher {
             if (item.done || this.stopped) return;
             item.prepared = false;
             delete item.payload;
+            if (phase === 'prepare') {
+                this.prepareFailed(item, lane, e);
+                return;
+            }
             var code = e.code || (e.errorInfo && e.errorInfo.code),
                 status = e.statusCode || e.status;
             if (status === 429) {
@@ -215,11 +285,11 @@ class Dispatcher {
             }
             if (code === 'messaging/registration-token-not-registered') {
                 this.onInvalid(job);
-                this.finish(item, 'invalid');
+                this.finish(item, 'invalid', undefined, 'transport');
             } else if (status === 401 || status === 403 || code === 'messaging/authentication-error') {
                 var b = this.projects.get(item.project || job.project || 'default');
                 if (b) b.paused = true;
-                this.finish(item, 'failed', 'authentication');
+                this.finish(item, 'failed', 'authentication', 'transport');
             } else if (
                 (status === 429 ||
                     status >= 500 ||
@@ -237,9 +307,10 @@ class Dispatcher {
                     Math.max(this.retryFloor, delay) +
                     Math.floor(Math.random() * Math.min(1000, this.retryFloor));
                 if (job.deadline !== undefined && this.now() + delay >= job.deadline)
-                    this.finish(item, 'expired');
+                    this.finish(item, 'expired', 'transport-retry-deadline', 'transport');
                 else {
                     this.metrics.retries++;
+                    item.waiting = { reason: 'transport-retry-deadline', stage: 'transport' };
                     this.later(function () {
                         if (self.stopped) self.finish(item, 'failed', 'stopped');
                         else {
@@ -248,7 +319,7 @@ class Dispatcher {
                         }
                     }, delay);
                 }
-            } else this.finish(item, 'failed', code || status || 'preparation');
+            } else this.finish(item, 'failed', code || status || 'transport-error', 'transport');
         } finally {
             this.inflight--;
             this.active[lane]--;

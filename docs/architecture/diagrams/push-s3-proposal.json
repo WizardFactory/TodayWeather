@@ -24,8 +24,20 @@
           "dispatch",
           "fcm"
         ]
+      },
+      {
+        "id": "alarm",
+        "label": "Scheduled alarms",
+        "focus": [
+          "coordinator",
+          "weather",
+          "dispatch",
+          "fcm",
+          "s3"
+        ]
       }
-    ]
+    ],
+    "output": "docs/architecture/diagrams/push-s3-proposal.html"
   },
   "components": [
     {
@@ -130,8 +142,8 @@
     {
       "id": "weather",
       "type": "backend",
-      "label": "Weather cache",
-      "sublabel": "Shared templates",
+      "label": "Weather source",
+      "sublabel": "Bounded, shared fetch",
       "pos": [
         750,
         80
@@ -175,7 +187,7 @@
     {
       "from": "weather",
       "to": "dispatch",
-      "label": "Reuse",
+      "label": "Retry before send",
       "fromSide": "bottom",
       "toSide": "top",
       "labelDy": 24
@@ -210,6 +222,14 @@
       "items": [
         "Reserve capacity for warnings",
         "Measure acceptance and receipt separately"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Preparation failures retry",
+      "items": [
+        "Typed weather error, bounded backoff before FCM",
+        "Campaign records stage, reason and attempt counts only"
       ]
     }
   ]

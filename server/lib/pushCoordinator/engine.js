@@ -3,10 +3,41 @@ var hash = require('./registry').hash,
     inside = require('./registry').inside;
 var zones = require('../kmaWarningZones');
 var mapLimit = require('./storage').mapLimit;
+var safeReason = require('./errors').safeReason;
 function yieldTurn() {
     return new Promise(function (resolve) {
         setImmediate(resolve);
     });
+}
+// Readback summary of a campaign: counts only, derived from the persisted job fields.
+function summarize(jobs) {
+    var summary = { jobs: jobs.length, status: {}, failures: {}, preparationAttempts: 0, transportAttempts: 0 };
+    jobs.forEach(function (j) {
+        summary.status[j.status] = (summary.status[j.status] || 0) + 1;
+        summary.preparationAttempts += j.preparationAttempts || 0;
+        summary.transportAttempts += j.attempts || 0;
+        if (j.reason) {
+            var key = (j.stage || 'dispatch') + ':' + j.reason;
+            summary.failures[key] = (summary.failures[key] || 0) + 1;
+        }
+    });
+    return summary;
+}
+// Keep only safe outcome fields from a dispatcher result; never the error object, payload or record.
+function recordResult(job, result) {
+    job.status = result.status === 'superseded' ? 'pending' : result.status;
+    job.preparationAttempts = Number(result.preparationAttempts) || 0;
+    job.preparationFailures = Number(result.preparationFailures) || 0;
+    job.attempts = (job.attempts || 0) + (Number(result.attempts) || 0);
+    if (result.status === 'superseded' || result.status === 'accepted') {
+        delete job.stage;
+        delete job.reason;
+    } else {
+        if (result.stage === 'preparation' || result.stage === 'transport') job.stage = result.stage;
+        else delete job.stage;
+        if (result.error !== undefined) job.reason = safeReason(result.error);
+        else delete job.reason;
+    }
 }
 function stateDate(state) {
     var s = JSON.parse(JSON.stringify(state || {}));
@@ -134,7 +165,8 @@ class Engine {
             event: c.event,
             createdAt: c.createdAt,
             deadline: c.deadline,
-            parts: parts
+            parts: parts,
+            summary: summarize(jobs)
         });
     }
     partition(ref) {
@@ -218,7 +250,11 @@ class Engine {
     }
     async prepare(c, j, r) {
         if (c.kind === 'alarm')
-            return { notification: await this.runtime.alarm(r), record: r, eventId: c.id };
+            return {
+                notification: await this.runtime.alarm(r, { deadline: c.deadline }),
+                record: r,
+                eventId: c.id
+            };
         if (c.kind === 'warning')
             return { notification: this.runtime.warning(c.event, r), record: r, eventId: c.id };
         var current = this.state[r.ref];
@@ -232,7 +268,9 @@ class Engine {
             })
         )
             return null;
-        var result = await this.runtime.conditional(r, stateDate(current), new Date(this.now()));
+        var result = await this.runtime.conditional(r, stateDate(current), new Date(this.now()), {
+            deadline: c.deadline
+        });
         j.nextState = Object.assign(result.state, { generation: r.generation });
         if (!result.notification) {
             var fresh = this.registry.get(r.ref);
@@ -296,6 +334,17 @@ class Engine {
                         project: record.package,
                         priority: c.kind === 'warning' ? 'warning' : 'normal',
                         deadline: c.deadline,
+                        preparationAttempts: job.preparationAttempts || 0,
+                        preparationFailures: job.preparationFailures || 0,
+                        onPreparationFailure: function (n) {
+                            job.preparationFailures = n;
+                            c.dirty = true;
+                        },
+                        // Checkpoints must keep the count of an unfinished job so restarts cannot reset the bound.
+                        onPreparation: function (n) {
+                            job.preparationAttempts = n;
+                            c.dirty = true;
+                        },
                         ref: record.ref,
                         generation: record.generation,
                         guard: function () {
@@ -313,7 +362,7 @@ class Engine {
                     })
                     .then(
                         function (result) {
-                            job.status = result.status === 'superseded' ? 'pending' : result.status;
+                            recordResult(job, result);
                             var fresh = self.registry.get(record.ref);
                             if (
                                 result.status === 'accepted' &&

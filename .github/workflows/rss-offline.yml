@@ -41,6 +41,8 @@ jobs:
           sql.js@1.8.0 body-parser@1.13.3
       - name: S3 registration and priority dispatch regressions (#2626)
         run: node server/test/offline/push-s3.test.js
+      - name: Scheduled alarm preparation retry regressions (#2677)
+        run: node server/test/offline/push-preparation-retry.test.js
       - name: Push store (SQLite) checks (#2626)
         env:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
@@ -247,6 +249,7 @@ jobs:
           TZ=UTC node server/test/offline/push-s3-smoke.js --client
           TZ=Asia/Seoul node server/test/offline/push-s3-smoke.js --client
           node server/test/offline/push-s3-runtime-smoke.js
+          node server/test/offline/push-preparation-smoke.js
       - name: S3 warning capacity with a normal backlog (synthetic, no FCM)
         run: timeout 120 node server/test/offline/push-s3-capacity.js
       - name: Push worker smoke on historical Node 10.15.3 (image provides python 2 for native builds)
