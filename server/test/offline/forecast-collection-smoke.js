@@ -104,6 +104,18 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
         const slots=(await model.find({'mCoord.mx':grids[0].mx,'mCoord.my':grids[0].my}).lean().exec()).map(d=>Number(d.fcsDate));
         assert.strictEqual(new Set(slots).size,slots.length,'fenced misses insert no duplicate slot documents');
     }
+    // Review R1-04: an invalid duplicate slot document is repaired by the real writer, not re-walked forever.
+    const dupGrid=grids[3],first=fx.rows(product,slot,dupGrid)[0],dq={'mCoord.mx':dupGrid.mx,'mCoord.my':dupGrid.my};
+    if(version==='1.0'){const doc=await model.collection.findOne(dq);const row=doc[field].find(r=>r.date===first.date&&r.time===first.time);
+        await model.collection.updateOne(dq,{$push:{[field]:{...row,wsd:-1}}})}
+    else {const doc=await model.collection.findOne({...dq,[field+'.date']:first.date,[field+'.time']:first.time});delete doc._id;
+        await model.collection.insertOne({...doc,[field]:{...doc[field],wsd:-1}})}
+    assert.deepStrictEqual((await read()).map(g=>g.mx+':'+g.my),[dupGrid.mx+':'+dupGrid.my],'conflicting duplicate is pending');
+    const dupStart=requests;await gather(f.m,product);assert.strictEqual(requests-dupStart,templates.length,'one walk repairs it');
+    assert.strictEqual((await read()).length,0,'every duplicate rewritten');
+    const dupRows=version==='1.0'?(await model.collection.findOne(dq))[field].filter(r=>r.date===first.date&&r.time===first.time):
+        (await model.collection.find({...dq,[field+'.date']:first.date,[field+'.time']:first.time}).toArray()).map(d=>d[field]);
+    assert(dupRows.length===2&&dupRows.every(r=>r.wsd===0),'both duplicates hold the new publication values');
     const stored=await model.findOne({'mCoord.mx':grids[0].mx,'mCoord.my':grids[0].my}).lean().exec();
     // Rows are stored under the provider's echoed publication (ultra-short HH30 request -> HH00).
     const echoed=version==='1.0'?slot.date+fx.echo(product,slot):new Date(fx.publication({date:slot.date,time:fx.echo(product,slot)})-9*fx.hour);
@@ -112,7 +124,7 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
     assert(reads.length&&reads.every(r=>r.outcome!=='read-failed'));
     const row=version==='1.0'?stored[field][0]:stored[field];assert.strictEqual(row[product==='short'?'t3h':'t1h'],-12.5);assert.strictEqual(row.uuu,-2);assert.strictEqual(row.pty,0);
     assert(!f.records.join('').includes('SYNTHETIC_CURRENT_KEY'));assert(!f.records.join('').includes('serviceKey'));
-    summaries.push({version,product,grids:2033,slots:fx.rows(product,slot,grids[0]).length,httpAttempts:requests-start,continuationAttempts:pages-pageStart,transientFailures:retries-retryStart,repeatAttempts:0,repairAttempts:templates.length,readbackPending:0,lateGrids:2,walks:results[0].walks,maxCoverageReadMs:Math.max(...reads.map(r=>r.readMs))});
+    summaries.push({version,product,grids:2033,slots:fx.rows(product,slot,grids[0]).length,httpAttempts:requests-start,continuationAttempts:pages-pageStart,transientFailures:retries-retryStart,repeatAttempts:0,repairAttempts:templates.length,duplicateRepairAttempts:templates.length,readbackPending:0,lateGrids:2,walks:results[0].walks,maxCoverageReadMs:Math.max(...reads.map(r=>r.readMs))});
     console.log(JSON.stringify({event:'smoke-product',...summaries[summaries.length-1]}));
  }
  console.log(JSON.stringify({result:'passed',node:process.versions.node,mongoose:mongoose.version,mongo:'4.4',provider:'synthetic loopback',summaries}));

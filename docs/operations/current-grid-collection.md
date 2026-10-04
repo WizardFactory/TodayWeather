@@ -127,7 +127,9 @@ Already issued Mongo operations can still settle, but cannot replace a newer
 publication: DB2 controlled slot updates match only `pubDate <= own` (or no
 `pubDate`) and a miss inserts with `$setOnInsert` only when the slot is absent;
 DB1 controlled saves compare-and-set the `pubDate` read before merging and refuse
-to downgrade a newer document. The slot index is not unique, so two overlapping
+to downgrade a newer document. Because coverage requires every stored duplicate of
+a slot to be valid, controlled writes rewrite all eligible duplicates: the DB2
+fenced update uses `multi`, and DB1 replaces every matching array row. The slot index is not unique, so two overlapping
 upserts of the same absent slot (for example across processes) can still both
 insert, as before #2676. The publication fence cannot order two writes of the same
 publication (for example an expired first walk and the later ultra-short refresh),

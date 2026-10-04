@@ -85,3 +85,11 @@ is valid, in Mongo (`bad` set in `$group`) and in JS; and the admitted first run
 the re-walks. New regressions failed on 0b09c5c0 and pass now, including real-Mongo
 duplicate cases in both insertion orders. The budget table separates the NO_DATA and
 previous-publication worst cases.
+
+Re-review (68bb4fad) confirmed those fixes and reproduced R1-04: the DB2 fenced update
+changed one document per slot and DB1 replaced only the first matching row, so an
+invalid duplicate could never be repaired. Controlled writes now rewrite every eligible
+duplicate (DB2 `multi` within the publication fence; DB1 every matching row). The
+HTTP/Mongo smoke inserts an invalid duplicate per product/storage after completion; it
+failed on 68bb4fad (`pending=1`) and is now repaired by one walk (two pages for short,
+one for ultra-short) with both duplicates holding the new values.

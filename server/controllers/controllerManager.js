@@ -325,11 +325,12 @@ Manager.prototype.saveShort = function(newData, callback, control){
                             );
                             if(comparedDate === 0){
                                 if (control && control.product) {
-                                    newItem = ForecastGridCollection.preserveOptional(newItem, dbShortList.shortData[i], 'short', control.slot);
+                                    // Replace every duplicate row of the slot: coverage requires all of them valid.
+                                    if (isNew) { newItem = ForecastGridCollection.preserveOptional(newItem, dbShortList.shortData[i], 'short', control.slot); }
                                     if (typeof dbShortList.shortData.set === 'function') { dbShortList.shortData.set(i, newItem); }
                                     else { dbShortList.shortData[i] = newItem; }
                                     isNew = 0;
-                                    break;
+                                    continue;
                                 }
                                 //log.info('S> over write :', newItem);
                                 //dbShortList.shortData[i] = newItem;
@@ -735,11 +736,12 @@ Manager.prototype.saveShortest = function(newData, callback, control){
                             );
                             if(comparedDate === 0) {
                                 if (control && control.product) {
-                                    newItem = ForecastGridCollection.preserveOptional(newItem, dbShortestList.shortestData[i], 'shortest', control.slot);
+                                    // Replace every duplicate row of the slot: coverage requires all of them valid.
+                                    if (isNew) { newItem = ForecastGridCollection.preserveOptional(newItem, dbShortestList.shortestData[i], 'shortest', control.slot); }
                                     if (typeof dbShortestList.shortestData.set === 'function') { dbShortestList.shortestData.set(i, newItem); }
                                     else { dbShortestList.shortestData[i] = newItem; }
                                     isNew = 0;
-                                    break;
+                                    continue;
                                 }
                                 //log.info('ST> over write :', newItem);
                                 if (newItem.pty !== -1) {
