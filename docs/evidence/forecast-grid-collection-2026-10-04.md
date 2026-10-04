@@ -73,3 +73,15 @@ With the default offsets, one permanently unpublished grid received three reques
 
 Reproduce with the [offline commands](../../server/test/offline/README.md#forecast-grid-collection-2676).
 Budget and operating rules: [operations](../operations/current-grid-collection.md#late-and-staggered-publication-2676).
+
+## Review 1 corrections
+
+Review 1 (OpenAI Codex, PR #2681 comment 5978120024) reproduced two issues on 0b09c5c0.
+First, a valid and an invalid duplicate of one slot made Mongo report the slot complete,
+while the JS check did not. Second, a first run that ended without scheduling a retry
+(complete, read failure, key exhaustion, deadline) left later runs eligible for delayed
+re-walks. Both rules are now conservative: a slot counts only when every stored duplicate
+is valid, in Mongo (`bad` set in `$group`) and in JS; and the admitted first run consumes
+the re-walks. New regressions failed on 0b09c5c0 and pass now, including real-Mongo
+duplicate cases in both insertion orders. The budget table separates the NO_DATA and
+previous-publication worst cases.

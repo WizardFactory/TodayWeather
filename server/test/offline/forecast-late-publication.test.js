@@ -85,5 +85,30 @@ function noData(){return h.xml({response:{header:[{resultCode:['03'],resultMsg:[
     const quota=await poll(q);assert(quota.e);assert.strictEqual(quota.r.walks,1);assert.strictEqual(rejected,2,'one attempt per rejected key');
     console.log('PASS late publication '+product+': staggered grids re-walked at +5/+10-minute offsets, no immediate retry storm');
  }
+ // Review R1-02: the first run of a publication consumes the delayed re-walks however it ends.
+ {
+    const Forecast=require('../../lib/forecastGridCollection'),slot={date:'20261004',time:'1400'},one=[coords[0]];
+    const make=(collect,model)=>new Forecast({product:'short',version:'2.0',model:model||fx.memoryModel(()=>[]),coords:cb=>cb(null,one),
+        emit:()=>{},retryAtMs:[15,30],readTimeoutMs:200,collectTimeoutMs:1000,collect});
+    const go=c=>new Promise(res=>c.run(slot,'dummy',(e,r)=>res({e,r})));
+    const branches={
+        exhausted:(n,cb,control)=>{if(n===1)control.keysExhausted=true;cb(new Error('keys'))},
+        complete:(n,cb)=>cb(),
+        failing:(n,cb)=>cb(new Error('provider'))};
+    for(const [name,first] of Object.entries(branches)){
+        // 'complete' persists the grid on its first walk; the slot is then damaged before the later run.
+        let n=0,docs=[];const c=make((list,s,k,cb,control)=>{n++;
+            if(name==='complete'&&n===1)docs=fx.documents('short','2.0',slot,one[0],fx.rows('short',slot,one[0]));first(n,cb,control)},fx.memoryModel(()=>docs));
+        const a=await go(c);assert.strictEqual(a.r.walks,name==='failing'?3:1,name+': first run');
+        if(name==='complete'){assert.strictEqual(a.r.pending,0);docs[0]={...docs[0],shortData:{...docs[0].shortData,wsd:-1}}}
+        const b=await go(c);assert.strictEqual(b.r.walks,1,name+': a later run of the publication walks once');
+    }
+    // A first run that fails its coverage read or expires also consumes the re-walks.
+    let reads=0,calls=0;const flaky={aggregate(){return {option(){return this},exec(cb){if(reads++===0)return cb(new Error('read'));cb(null,[])}}}};
+    const r=make((list,s,k,cb)=>{calls++;cb()},flaky);
+    assert((await go(r)).e,'read failure');assert.strictEqual((await go(r)).r.walks,1,'after a read failure');
+    const stalled=make((list,s,k,cb)=>{calls++;if(calls===2)return;cb()});stalled.options.collectTimeoutMs=10;
+    assert((await go(stalled)).e,'deadline');stalled.options.collectTimeoutMs=1000;assert.strictEqual((await go(stalled)).r.walks,1,'after a deadline');
+ }
  passed=true;
 })().catch(e=>{console.error(e);process.exitCode=1});

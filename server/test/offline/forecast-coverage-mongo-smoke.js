@@ -36,6 +36,7 @@ const key=c=>c.mx+':'+c.my;
     const numeric=Object.keys(base[0]).filter(k=>typeof base[0][k]==='number'&&!['mx','my'].includes(k)).concat(product==='short'?['tmn','tmx']:[]);
     // Non-string payload date/time must leave a slot pending, never fail the whole read.
     const cases=[{name:'complete'},{name:'literal-echo',pub:slot.time},{name:'previous-hour',pub:fx.parts(fx.publication(slot)-fx.hour).time},{name:'numeric-time',field:'time',value:1600},
+        {name:'duplicate-invalid-after',dup:'after'},{name:'duplicate-invalid-before',dup:'before'},{name:'duplicate-valid',dup:'valid'},
         {name:'missing-slot',drop:true},{name:'moved-slot',move:true}];
     for(const f of numeric)for(const v of [undefined,null,NaN,'0',-900,900,-50,-100,-1,0,4,5,9,101,361])cases.push({name:f+'='+String(v),field:f,value:v});
     const coords=cases.map((c,i)=>({mx:i%149,my:200+Math.floor(i/149)})),oracle=new Set();
@@ -46,6 +47,11 @@ const key=c=>c.mx+':'+c.my;
         const docs=fx.documents(product,version,slot,coord,data);
         if(c.move&&version==='2.0')docs[0].fcsDate=new Date(+docs[0].fcsDate+fx.hour);
         if(c.move&&version==='1.0')docs[0][field][0]={...docs[0][field][0],time:'0000'};
+        // Review R1-01: a slot with a conflicting duplicate document is incomplete in both orders.
+        if(c.dup&&version==='2.0'){const extra={...docs[0],[field]:{...docs[0][field],...(c.dup==='valid'?{}:{wsd:-1})}};
+            if(c.dup==='before')docs.unshift(extra);else docs.push(extra)}
+        if(c.dup&&version==='1.0'){const extra={...docs[0][field][0],...(c.dup==='valid'?{}:{wsd:-1})};
+            docs[0][field]=c.dup==='before'?[extra,...docs[0][field]]:docs[0][field].concat(extra)}
         if(c.field==='time'){if(version==='1.0')docs[0][field][0]={...docs[0][field][0],time:c.value};else docs[0][field]={...docs[0][field],time:c.value}}
         await model.collection.insertMany(docs);
         const stored=version==='1.0'?docs[0][field]:docs.filter(d=>typeof d[field].time==='string'&&+d.fcsDate===fx.publication(d[field])-9*fx.hour).map(d=>d[field]);

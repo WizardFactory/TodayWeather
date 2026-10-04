@@ -63,6 +63,8 @@ function evaluate(doc,e){
   case '$not':return !truthy(x(0));case '$in':return a[1].some(v=>cmp(x(0),v)===0);
   case '$cond':return truthy(x(0))?x(1):x(2);
   case '$add':{const d=x(0);return d instanceof Date?new Date(+d+x(1)):null}
+  case '$size':return evaluate(doc,a).length;
+  case '$setDifference':{const b=x(1);return x(0).filter(v=>!b.some(w=>cmp(v,w)===0))}
   case '$dateToString':{const d=evaluate(doc,a.date);if(!(d instanceof Date))return null;const t=d.toISOString();
    if(a.format==='%Y%m%d')return t.slice(0,4)+t.slice(5,7)+t.slice(8,10);assert.strictEqual(a.format,'%H%M');return t.slice(11,13)+t.slice(14,16)}
  }
@@ -70,10 +72,10 @@ function evaluate(doc,e){
 function memoryModel(docs){
  return {find(query){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,docs().filter(d=>matches(d,query)))}}},
   aggregate(pipeline){return {option(){return this},exec(cb){
-   assert.strictEqual(pipeline.length,4);assert.deepStrictEqual(pipeline[2],{$project:{n:{$size:{$setDifference:['$slots',[null]]}}}});
-   const groups=new Map(),slot=pipeline[1].$group.slots.$addToSet;
-   for(const d of docs().filter(d=>matches(d,pipeline[0].$match))){const id=d.mCoord.mx+':'+d.mCoord.my,v=evaluate(d,slot);
-    if(!groups.has(id))groups.set(id,{_id:{mx:d.mCoord.mx,my:d.mCoord.my},slots:new Set()});if(v!=null)groups.get(id).slots.add(+v)}
-   cb(null,[...groups.values()].map(g=>({_id:g._id,n:g.slots.size})).filter(g=>g.n===pipeline[3].$match.n))}}}};
+   assert.strictEqual(pipeline.length,4);const {_id,...accumulators}=pipeline[1].$group,groups=new Map();
+   for(const d of docs().filter(d=>matches(d,pipeline[0].$match))){const id=d.mCoord.mx+':'+d.mCoord.my;
+    if(!groups.has(id))groups.set(id,{_id:{mx:d.mCoord.mx,my:d.mCoord.my}});const g=groups.get(id);
+    for(const [name,acc] of Object.entries(accumulators)){const v=evaluate(d,acc.$addToSet);g[name]=g[name]||[];if(!g[name].some(w=>cmp(v,w)===0))g[name].push(v)}}
+   cb(null,[...groups.values()].map(g=>({_id:g._id,n:evaluate(g,pipeline[2].$project.n)})).filter(g=>g.n===pipeline[3].$match.n))}}}};
 }
 module.exports={rows,documents,publication,parts,hour,day,items,echo,memoryModel,matches};

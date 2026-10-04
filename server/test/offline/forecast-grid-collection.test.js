@@ -13,6 +13,9 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     assert(Forecast.complete(product,slot,rows));
     assert(!Forecast.complete(product,slot,rows.slice(1)),'missing first slot');
     assert(!Forecast.complete(product,slot,rows.slice(0,-1)),'missing final slot');
+    assert(!Forecast.complete(product,slot,rows.concat({...rows[0],wsd:-1})),'invalid duplicate after');
+    assert(!Forecast.complete(product,slot,[{...rows[0],wsd:-1}].concat(rows)),'invalid duplicate before');
+    assert(Forecast.complete(product,slot,rows.concat({...rows[0]})),'valid duplicate');
     for(const field of product==='short'?['t3h','sky','reh','pty','r06','s06','pop','uuu','vvv','vec','wsd']:['t1h','sky','reh','pty','rn1','lgt','pop','uuu','vvv','vec','wsd']){
         for(const value of [undefined,NaN,Infinity,'0',-900,900]){
             const bad=rows.map(r=>({...r}));bad[0][field]=value;assert(!Forecast.complete(product,slot,bad),field+' invalid '+value);
@@ -63,6 +66,10 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
                 docs=saved.map((d,i)=>i===0?{...d,[product+'Data']:{...d[product+'Data'],[field]:value}}:d);
                 assert.strictEqual((await pending()).length,Forecast.complete(product,slot,docs.map(d=>d[product+'Data']))?0:1,'Mongo and JS rules agree: '+field+'='+value);
             }
+            // Review R1-01: duplicate slot documents count only when every duplicate is valid, in either order.
+            const bad={...saved[0],[product+'Data']:{...saved[0][product+'Data'],wsd:-1}};
+            for(const order of [[bad,...saved],[...saved,bad]]){docs=order;assert.strictEqual((await pending()).length,1,'conflicting duplicate stays pending')}
+            docs=[...saved,{...saved[0]}];assert.strictEqual((await pending()).length,0,'identical valid duplicate is complete');
             docs=saved;
         }
         if(product==='shortest'){

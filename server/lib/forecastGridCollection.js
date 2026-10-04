@@ -73,11 +73,19 @@ function stale(items, product, slot) {
         return item && item.baseDate && item.baseTime && String(item.baseDate[0]) + String(item.baseTime[0]) === pub;
     });
 }
+// A slot is complete only when every stored row for it is valid: readers return all duplicates (#2676 review).
 function complete(product, slot, rows) {
     if (!Array.isArray(rows)) { return false; }
     var byTime = new Map();
-    rows.forEach(function(row) { if (row) { byTime.set(row.date + row.time, row); } });
-    return expected(product, slot).every(function(at) { return valid(byTime.get(at.date + at.time), product, at, slot); });
+    rows.forEach(function(row) {
+        if (!row) { return; }
+        if (!byTime.has(row.date + row.time)) { byTime.set(row.date + row.time, []); }
+        byTime.get(row.date + row.time).push(row);
+    });
+    return expected(product, slot).every(function(at) {
+        var found = byTime.get(at.date + at.time);
+        return !!found && found.every(function(row) { return valid(row, product, at, slot); });
+    });
 }
 function horizon(product, slot) {
     return new Set(expected(product, slot).map(function(at) { return at.date + at.time; }));
@@ -227,8 +235,10 @@ function pending(model, version, product, slot, coords, callback, timeoutMs) {
         model.aggregate([
             {$match: {pubDate: {$in: ids.map(function(id) { return new Date(stamp({date: id.slice(0, 8), time: id.slice(8)}) - 9 * HOUR); })},
                 fcsDate: {$in: dates}}},
-            {$group: {_id: {mx: '$mCoord.mx', my: '$mCoord.my'}, slots: {$addToSet: {$cond: [{$and: ok}, '$fcsDate', null]}}}},
-            {$project: {n: {$size: {$setDifference: ['$slots', [null]]}}}},
+            // A slot counts only when no stored duplicate of it is invalid, matching complete().
+            {$group: {_id: {mx: '$mCoord.mx', my: '$mCoord.my'}, slots: {$addToSet: '$fcsDate'},
+                bad: {$addToSet: {$cond: [{$and: ok}, null, '$fcsDate']}}}},
+            {$project: {n: {$size: {$setDifference: ['$slots', '$bad']}}}},
             {$match: {n: at.length}}])
             .option({maxTimeMS: maxTimeMS}).exec(function(err, docs) {
                 if (err || !Array.isArray(docs)) { return done(err || new Error('Invalid forecast coverage readback')); }
@@ -269,6 +279,8 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
     // Delayed re-walks belong to the first run of a publication in this process; later scheduled
     // polls of that publication walk their pending grids once, so a late publication ends near +10 min.
     var coords, refreshed = false, delay = null, retries = self.retried === identity ? [] : (options.retryAtMs || []).slice();
+    // The admitted first run consumes them however it ends (review R1-02).
+    if (retries.length) { self.retried = identity; }
     var deadline = setTimeout(function() {
         control.cancelled = true;
         if (control.retryTimer) { clearTimeout(control.retryTimer); }
@@ -322,7 +334,6 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
                     if (!error && remaining.length) { error = new Error('Forecast collection incomplete: pending=' + remaining.length); }
                     if (!readError && remaining.length && retries.length && !control.keysExhausted) {
                         var wait = Math.max(0, now + retries.shift() - clock());
-                        self.retried = identity;
                         options.emit({event: 'forecast-retry', utc: new Date().toISOString(), product: product, publication: identity,
                             walk: walks + 1, pending: remaining.length, delayMs: wait, httpAttempts: control.httpAttempts});
                         delay = setTimeout(function() {

@@ -157,11 +157,13 @@ or still the previous publication. The collection therefore works as follows:
   in production) and a fully unpublished short poll up to 20,111 requests.
 - After a walk, the coordinator reads persisted coverage. Grids still pending for
   any reason (not published, previous publication, incomplete content such as
-  missing wind, failed write or exhausted transport retries) are walked again at
+  missing wind, a conflicting duplicate slot document, failed write or exhausted
+  transport retries) are walked again at
   `GATHER_FORECAST_RETRY_AT_MS` offsets from the run start, default
   `180000,480000`: about +5 and +10 minutes after the provision time. Then the run
   ends; remaining grids report `pending` and an error.
-- Only the first run of a publication in a process uses these delayed re-walks.
+- Only the first run of a publication in a process uses these delayed re-walks,
+  however that run ends (complete, failed read, key exhaustion or deadline).
   Later scheduled polls of that publication (ultra-short 04 and the 14 refresh;
   short one and two hours later) walk their pending grids once. A run whose keys
   are all rejected (quota/key) makes no delayed re-walk. `none` disables re-walks;
@@ -177,13 +179,16 @@ answer one page; current observations add 24N = 48,792):
 |---|---:|---:|---:|
 | Every grid complete on the first walk | 8 x 2N = 16N | 24 x 2N = 48N (walk + refresh) | 64N = 130,112 |
 | 10% of grids late once, collected at +5 min | +8 x 0.1N to 0.2N | +24 x 0.1N | 67.2N to 68N = 136,618 to 138,244 |
-| Worst case: every grid unpublished until after +10 min, every publication | 8 x 5N = 40N | 24 x 5N = 120N | 160N = 325,280 |
+| Every grid answers one-page NO_DATA until after +10 min, every publication | 8 x 5N = 40N | 24 x 5N = 120N | 160N = 325,280 |
+| Every grid answers the two-page previous publication or incomplete content until after +10 min | 8 x 8N = 64N | 24 x 5N = 120N | 184N = 374,072 |
 | Before #2676 (ideal, no storms) | 24 x 2N = 48N | 96N | 144N = 292,752 |
 
 The 10% row depends on whether a late grid answers one-page NO_DATA or the
-two-page previous publication. The worst row assumes three one-page NO_DATA walks, then a two-page collection at
+two-page previous publication. The NO_DATA row assumes three one-page NO_DATA walks, then a two-page collection at
 the next scheduled short poll, and for ultra-short three walks, the 04 walk and the
-14 refresh. It also assumes one process and no other failures. Approved daily
+14 refresh. The previous-publication row counts three two-page short walks plus
+the next scheduled two-page collection. Both rows assume one process and no other
+failures; transport retries add requests. Approved daily
 traffic per key/operation is not established (#2648); the data.go.kr page lists
 10,000 development calls per day, below even the normal case. Rotation across
 `DONGNAE_SECRET_KEYS` adds capacity only if the quota is counted per key.
