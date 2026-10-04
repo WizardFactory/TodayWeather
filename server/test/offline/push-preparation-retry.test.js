@@ -980,6 +980,42 @@ runner.test('review R4: invalid preparation attempt limits fall back to the defa
     assert.equal(d.prepareAttempts, 2);
     d.close();
 });
+runner.test('review F10: expiry while waiting for an FCM retry after a recovered preparation is a transport expiry', async function () {
+    var clock = Date.now(),
+        prepared = 0,
+        sends = 0;
+    var d = dispatcher({
+        prepareRetryMs: 10,
+        retryFloorMs: 40,
+        now: function () {
+            return clock;
+        },
+        send: async function () {
+            sends++;
+            // The FCM retry delay fits the deadline; the clock then passes it before the retry runs.
+            setTimeout(function () {
+                clock += 5000;
+            }, 5);
+            var e = new Error('unavailable');
+            e.statusCode = 503;
+            throw e;
+        }
+    });
+    var r = await d.enqueue({
+        deadline: clock + 2000,
+        prepare: async function () {
+            if (prepared++ === 0) throw transient('weather-timeout');
+            return {};
+        }
+    });
+    d.close();
+    assert.equal(prepared, 2);
+    assert.equal(sends, 1);
+    assert.equal(r.status, 'expired');
+    assert.equal(r.stage, 'transport', 'the job was waiting for an FCM retry, not a preparation retry');
+    assert.equal(r.error, 'transport-retry-deadline');
+    assert.equal(r.preparationFailures, 1);
+});
 if (require.main === module)
     runner.run().then(function (failed) {
         process.exitCode = failed ? 1 : 0;

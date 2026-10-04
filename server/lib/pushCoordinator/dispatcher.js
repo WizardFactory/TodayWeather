@@ -150,7 +150,8 @@ class Dispatcher {
             reason = typed ? e.code : 'preparation-error';
         // The bound counts failed preparations only: an explicit FCM retry prepares again without using it.
         item.prepFailures++;
-        item.lastPrepReason = reason;
+        // The item now waits for a preparation retry; expiry in the queue is a preparation expiry.
+        item.waiting = { reason: reason, stage: 'preparation' };
         if (job.onPreparationFailure) job.onPreparationFailure(item.prepFailures);
         if (!typed || !e.retryable || item.prepFailures >= this.prepareAttempts)
             return this.finish(item, 'failed', reason, 'preparation');
@@ -187,8 +188,8 @@ class Dispatcher {
             if (!item) break;
             var job = item.job;
             if (job.deadline !== undefined && this.now() >= job.deadline) {
-                // Expiry while waiting for a preparation retry keeps the last preparation failure for readback.
-                if (item.lastPrepReason) this.finish(item, 'expired', item.lastPrepReason, 'preparation');
+                // Expiry while waiting for a retry records what the item was waiting for.
+                if (item.waiting) this.finish(item, 'expired', item.waiting.reason, item.waiting.stage);
                 else this.finish(item, 'expired');
                 continue;
             }
@@ -219,6 +220,7 @@ class Dispatcher {
                 item.preparations++;
                 if (job.onPreparation) job.onPreparation(item.preparations);
                 payload = await job.prepare();
+                delete item.waiting;
             } else payload = job;
             if (this.stopped) return;
             if (payload === null) {
@@ -308,6 +310,7 @@ class Dispatcher {
                     this.finish(item, 'expired', 'transport-retry-deadline', 'transport');
                 else {
                     this.metrics.retries++;
+                    item.waiting = { reason: 'transport-retry-deadline', stage: 'transport' };
                     this.later(function () {
                         if (self.stopped) self.finish(item, 'failed', 'stopped');
                         else {

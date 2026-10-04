@@ -119,7 +119,8 @@ for later investigation. No deployment, data migration or automatic deletion is 
   submission with 1s exponential backoff and jitter until `PUSH_PREPARE_ATTEMPTS` (default 4)
   preparations of that recipient have failed, and never past the campaign deadline. The counts are
   written with each checkpoint while a job is in flight, so supersession and coordinator restart do
-  not reset them; a recipient that expires while waiting for a retry keeps that failure's `reason`;
+  not reset them; a recipient that expires while waiting for a preparation retry keeps that failure's `reason`
+  (one waiting for an FCM retry ends `transport`/`transport-retry-deadline`);
   a recipient already at the bound ends `preparation-attempts-exhausted` without
   another weather call. An explicit FCM retry (429/5xx) prepares again as before and does not use this bound.
   A weather request shared by several recipients is dropped at the concurrency gate only when every
