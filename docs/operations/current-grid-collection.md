@@ -80,6 +80,13 @@ that echo as `pubDate`. Request validation, batch admission and coverage therefo
 accept the same-date `HH00` echo and the literal `HH30` request as one ultra-short
 publication; any other hour is another publication and is rejected. One response
 or batch must carry one publication. Short publications keep exact identity.
+Rows are then stored, fenced and covered under one canonical publication, the
+`HH00` base hour (AK review 5406464242): a literal `HH30` echo is rewritten to
+`HH00` before saving, coverage counts only `HH00`, and a legacy same-hour `HH30`
+slot is re-collected once and overwritten (the DB2 fence admits `pubDate <= HH30`
+of the same hour; DB1 compares the canonical form). The response filter, which
+keeps only rows of the latest publication, therefore never splits a grid between
+`HH00` and `HH30`.
 Horizon, POP requirement and the refresh window still use the requested time.
 The e22c678f deployment compared the echo with `HH30`, rejected every grid
 (`received 0, failed 2033`) and was rolled back.
@@ -164,6 +171,10 @@ or still the previous publication. The collection therefore works as follows:
   `GATHER_FORECAST_RETRY_AT_MS` offsets from the run start, default
   `180000,480000`: about +5 and +10 minutes after the provision time. Then the run
   ends; remaining grids report `pending` and an error.
+- A refresh run must rewrite every grid. The Manager records the grids it wrote;
+  a grid whose refresh write failed still looks complete in coverage, so it stays
+  due for the next walk, and the run succeeds and consumes the refresh only when
+  every grid was written (`forecast-collection` reports `unwritten`).
 - Only the first run of a publication in a process uses these delayed re-walks,
   however that run ends (complete, failed read, key exhaustion or deadline).
   Later scheduled polls of that publication (ultra-short 04 and the 14 refresh;

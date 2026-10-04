@@ -100,3 +100,18 @@ absent-slot `$setOnInsert`, which is a new write after cancellation. The writers
 cancellation before that insert; the lifecycle regression failed before the fix and passes
 now for both products. CI's late-publication timing assertion was made order-based after
 it failed on slower runners (513edd6a).
+
+## AK review 5406464242 (on 0c465c4c)
+
+Two required findings, both reproduced before the fix. First, the HH00/HH30 equivalence
+covered only coverage. The DB2 fence still treated a stored legacy `HH30` slot as newer than
+a new `HH00` write, so the old values stayed while coverage reported complete. A mix of three
+`HH30` and three `HH00` slots also counted as complete, but the reader's latest-pubDate filter
+served only three rows. Second, a delayed walk dropped an earlier walk's write failure: a
+refresh write that failed for an already complete grid was not retried, yet the run still
+succeeded and consumed the refresh. Fixes (391289f9): ultra-short rows are stored under the
+canonical `HH00`, coverage counts only `HH00`, the DB2 fence admits the same hour's `HH30`, and
+DB1 compares the canonical form. A refresh run tracks the grids it wrote and re-walks
+unwritten ones; it ends incomplete until every grid is written. Real HTTP/Mongo smoke: legacy
+and mixed `HH30` grids are re-collected once and served as six `HH00` rows with new values,
+for DB1 and DB2. The unit, late-publication and smoke regressions fail on 0c465c4c and pass now.
