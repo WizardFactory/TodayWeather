@@ -178,4 +178,6 @@ jobs:
           node server/test/offline/forecast-grid-collection.test.js
           node server/test/offline/forecast-manager.test.js
           node server/test/offline/forecast-lifecycle.test.js
+          node server/test/offline/forecast-late-publication.test.js
           node server/test/offline/forecast-collection-smoke.js
+          node server/test/offline/forecast-coverage-mongo-smoke.js

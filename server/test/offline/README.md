@@ -573,7 +573,16 @@ coordinator recreation, overlap/deadline/late callbacks and writer/quota failure
 NODE_PATH=<isolated-deps>/node_modules node server/test/offline/forecast-grid-collection.test.js
 NODE_PATH=<isolated-deps>/node_modules node server/test/offline/forecast-manager.test.js
 NODE_PATH=<isolated-deps>/node_modules node server/test/offline/forecast-lifecycle.test.js
+NODE_PATH=<isolated-deps>/node_modules node server/test/offline/forecast-late-publication.test.js
 ```
+
+`forecast-late-publication.test.js` uses the real collector with a synthetic HTTP
+stub: grids answering NO_DATA, the previous publication or incomplete content are
+not retried at once, are re-walked at the configured offsets, and only by the first
+run of a publication; transport failures keep the bounded immediate retry and a
+quota/key stop schedules no re-walk. The HTTP/Mongo smoke below also serves one
+NO_DATA grid and one previous-publication grid per product/storage and collects
+them with the first delayed re-walk.
 
 These are also selected by `test:offline`. The separate full-grid HTTP/Mongo smoke
 must use Node16.20.2 and **Mongoose5.1.2**, not the `mongoose-smoke` alias used by
@@ -585,7 +594,17 @@ Node16.20.2 container and a temporary Mongo4.4.29 binary without external creden
 npm install --prefix /tmp/forecast-offline --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.1.2 async@2.6.4 request@2.88.2 xml2js@0.4.23
 # Supply a local Mongo4.4 binary for your OS; CI downloads the Ubuntu20.04 build.
 NODE_PATH=/tmp/forecast-offline/node_modules TW_MONGOD=<mongo4.4-binary> <node16.20.2-binary> server/test/offline/forecast-collection-smoke.js
+NODE_PATH=/tmp/forecast-offline/node_modules TW_MONGOD=<mongo4.4-binary> <node16.20.2-binary> server/test/offline/forecast-coverage-mongo-smoke.js
 ```
+
+The synthetic provider answers ultra-short `HH30` requests with `baseTime=HH00`, as
+data.go.kr did in production on 2026-10-04; fixtures use the same echo, and unit tests
+also cover the literal `HH30` echo, another hour and mixed echoes. The offline in-memory
+model evaluates the generated DB2 aggregation with Mongo comparison order.
+`forecast-coverage-mongo-smoke.js` checks the real Mongo aggregation against the JS
+completeness rule for every required field and invalid value (DB1/DB2, both products),
+then seeds a production-sized DB2 short collection (579,405 documents, 150,442 for
+the publication) and records five coverage read times within the default wait.
 
 The smoke binds HTTP/Mongo only to 127.0.0.1, starts its own temporary DB process,
 uses dummy provider keys and real request/XML/Manager/writers, and never loads

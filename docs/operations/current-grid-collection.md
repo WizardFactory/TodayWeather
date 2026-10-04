@@ -16,7 +16,9 @@ collects it. Missing data/core fields and failed writes remain eligible; optiona
 partial rows use the bounded repair policy below. This is a source/fixture
 budget, not measured production usage or a hard quota cap.
 
-Short/ultra-short schedules remain unchanged. With #2676, persisted exact-publication
+Short/ultra-short poll frequency is unchanged; their first poll moved one minute
+earlier (see [late and staggered publication](#late-and-staggered-publication-2676)).
+With #2676, persisted exact-publication
 forecast coverage reduces their ideal first-pass walks from 24N + 96N to 8N + 48N
 per day: one walk for each of eight short publications, and for each of 24
 ultra-short publications one first walk plus one full refresh walk. KMA updates
@@ -71,6 +73,17 @@ same-day TMN/TMX and optional WAV described below. DB1 uses the existing top-lev
 publication string and arrays; DB2 uses exact BSON publication and per-slot time.
 No new schema marker/history is added.
 
+Publication identity follows the provider echo. data.go.kr answers an ultra-short
+`base_time=HH30` request with `baseTime=HH00` (observed in production on
+2026-10-04: request `20261004 1530`, items `baseTime 1500`), and the parser stores
+that echo as `pubDate`. Request validation, batch admission and coverage therefore
+accept the same-date `HH00` echo and the literal `HH30` request as one ultra-short
+publication; any other hour is another publication and is rejected. One response
+or batch must carry one publication. Short publications keep exact identity.
+Horizon, POP requirement and the refresh window still use the requested time.
+The e22c678f deployment compared the echo with `HH30`, rejected every grid
+(`received 0, failed 2033`) and was rolled back.
+
 Pre-existing DB1 arrays have no per-field publication provenance to reconstruct,
 and pre-existing DB2 rows cannot distinguish a schema default (for example
 ultra-short `lgt=-1`) from a received value. Without a schema marker (excluded by
@@ -97,10 +110,18 @@ After writes, persisted coverage is read again, including failed collection outc
 Failed writes and coverage reads cannot become a successful result. Same-product,
 same-publication overlaps share one run; different publications receive busy and
 stay eligible for the next poll. Products have separate guards. Forecast coverage
-reads wait `GATHER_FORECAST_READ_TIMEOUT_MS` (default 3000 ms) with Mongo
-`maxTimeMS` one second shorter; each `forecast-coverage` record reports `readMs`,
+reads wait `GATHER_FORECAST_READ_TIMEOUT_MS` (default 10000 ms) with Mongo
+`maxTimeMS` one second shorter. DB2 evaluates slot completeness in one aggregation:
+it matches the accepted `pubDate` values and expected `fcsDate` values, checks each
+slot's payload date/time and required fields with the same field-rule table as the
+JS check (BSON comparison order limits values to finite numbers in (-900, 900)), and
+returns only grids with every expected slot. The previous `find` transferred every
+slot document (134,178 per short publication in production) and took 1.6-2.4 s idle
+and 3.1-7.5 s in process, so the former 3000 ms default stopped short polls before
+HTTP. DB1 reads stay a `find` on the accepted publication strings; each `forecast-coverage` record reports `readMs`,
 and a failed read reports `outcome: read-failed`. `GATHER_FORECAST_DEADLINE_MS`
-defaults to 540000 ms and aborts active HTTP, clears retries, fences new writer
+defaults to 840000 ms (raised from 540000 so the +10-minute re-walk below can finish)
+and aborts active HTTP, clears retries and delayed re-walks, fences new writer
 admission and releases only its own run. Late callbacks cannot change a newer run.
 Already issued Mongo operations can still settle, but cannot replace a newer
 publication: DB2 controlled slot updates match only `pubDate <= own` (or no
@@ -116,6 +137,56 @@ other publications proceed. A Mongo operation that never calls back keeps only t
 publication from rerunning in the process. This is not a transaction/distributed
 lock or Mongo cancellation. Current-observation behavior and its separate repair allowance are
 unchanged.
+
+### Late and staggered publication (#2676)
+
+The [September 2026 guide](https://www.data.go.kr/data/15084084/openapi.do)
+(guide 260928) states API availability after HH:10 for short publications
+(02/05/08/11/14/17/20/23) and after HH:45 for ultra-short `HH30` publications,
+which are generated at HH:30 and updated every ten minutes. AK reported on
+2026-10-04 that grids of one publication become available at different times and
+often later than these times: a grid can answer NO_DATA (`resultCode 03` or no rows)
+or still the previous publication. The collection therefore works as follows:
+
+- The first poll runs about two minutes after the provision time: short at UTC
+  minute 12 (was 13), ultra-short at 47 (was 48). The remaining ultra-short polls
+  (54, 4, 14) are unchanged.
+- A grid that answers NO_DATA on its first page, or consistently the previous
+  publication, is not retried by the immediate #2604 retry passes. Before this
+  change one unpublished grid consumed every pass (70 requests at the default, 180
+  in production) and a fully unpublished short poll up to 20,111 requests.
+- After a walk, the coordinator reads persisted coverage. Grids still pending for
+  any reason (not published, previous publication, incomplete content such as
+  missing wind, failed write or exhausted transport retries) are walked again at
+  `GATHER_FORECAST_RETRY_AT_MS` offsets from the run start, default
+  `180000,480000`: about +5 and +10 minutes after the provision time. Then the run
+  ends; remaining grids report `pending` and an error.
+- Only the first run of a publication in a process uses these delayed re-walks.
+  Later scheduled polls of that publication (ultra-short 04 and the 14 refresh;
+  short one and two hours later) walk their pending grids once. A run whose keys
+  are all rejected (quota/key) makes no delayed re-walk. `none` disables re-walks;
+  offsets must increase and stay below `GATHER_FORECAST_DEADLINE_MS`.
+- `forecast-pass` records count `notPublished` and `previousPublication` grids;
+  each delayed re-walk emits `forecast-retry` with its walk number, pending grids
+  and delay, and `forecast-collection` reports `walks`.
+
+Daily request budget for N=2,033 grids (short responses take two pages, a NO_DATA
+answer one page; current observations add 24N = 48,792):
+
+| Case | Short | Ultra-short | Forecast total |
+|---|---:|---:|---:|
+| Every grid complete on the first walk | 8 x 2N = 16N | 24 x 2N = 48N (walk + refresh) | 64N = 130,112 |
+| 10% of grids late once, collected at +5 min | +8 x 0.1N to 0.2N | +24 x 0.1N | 67.2N to 68N = 136,618 to 138,244 |
+| Worst case: every grid unpublished until after +10 min, every publication | 8 x 5N = 40N | 24 x 5N = 120N | 160N = 325,280 |
+| Before #2676 (ideal, no storms) | 24 x 2N = 48N | 96N | 144N = 292,752 |
+
+The 10% row depends on whether a late grid answers one-page NO_DATA or the
+two-page previous publication. The worst row assumes three one-page NO_DATA walks, then a two-page collection at
+the next scheduled short poll, and for ultra-short three walks, the 04 walk and the
+14 refresh. It also assumes one process and no other failures. Approved daily
+traffic per key/operation is not established (#2648); the data.go.kr page lists
+10,000 development calls per day, below even the normal case. Rotation across
+`DONGNAE_SECRET_KEYS` adds capacity only if the quota is counted per key.
 
 ### Optional-field repair policy
 
@@ -225,8 +296,13 @@ approval. Before an approved action:
    Verify the public weather publication/output before reporting production recovery.
    Check `forecast-coverage` `readMs` and `read-failed` frequency on production-size
    collections; a read that exceeds `GATHER_FORECAST_READ_TIMEOUT_MS` before collection
-   skips that poll's forecast HTTP. Local Mongo 4.4 smoke measured about 0.7-1.0 s for
-   DB2 short (174,838 documents) and 0.3-0.4 s for DB1 short; production is unmeasured.
+   skips that poll's forecast HTTP. On a production-sized temporary collection
+   (579,405 DB2 short documents, 150,442 for the publication; Mongo 4.4 x86_64
+   under emulation) the aggregation read took 1.05-1.08 s and the previous `find`
+   0.83-0.85 s; production was 2-3x slower than this host for the `find`, so the
+   10 s default keeps about 3x headroom over the estimated production read. The
+   in-process smoke measured at most 1.2 s for DB2 short. Production read time is
+   unmeasured; see [the 2026-10-04 evidence](../evidence/forecast-grid-collection-2026-10-04.md).
 6. Check the public API's yesterday comparison against stored observations.
    Merged #2656/#2665 response fixes do not prove primary collection recovery.
 

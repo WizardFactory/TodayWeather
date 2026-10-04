@@ -29,22 +29,49 @@ function expected(product, slot) {
     return times.map(parts);
 }
 function finite(value) { return typeof value === 'number' && isFinite(value) && value > -900 && value < 900; }
+// One field-rule table drives both the JS check and the Mongo coverage query, so they cannot diverge.
+var RULES = {t3h: {ne: -50, gte: -100}, t1h: {ne: -50, gte: -100}, sky: {gte: 1, lte: 4}, reh: {gte: 0, lte: 100},
+    pty: {gte: 0, lte: 8}, uuu: {ne: -100}, vvv: {ne: -100}, vec: {gte: 0, lte: 360}, wsd: {gte: 0},
+    r06: {gte: 0}, s06: {gte: 0}, rn1: {gte: 0}, pop: {gte: 0, lte: 100}, tmn: {ne: -50}, tmx: {ne: -50}, lgt: {}};
+function fields(product, at, slot) {
+    var list = [product === 'short' ? 't3h' : 't1h', 'sky', 'reh', 'pty', 'uuu', 'vvv', 'vec', 'wsd']
+        .concat(product === 'short' ? ['r06', 's06'] : ['rn1']);
+    if (product === 'short' || slot.date + slot.time >= '202606231100') { list.push('pop'); }
+    if (product === 'shortest') { list.push('lgt'); }
+    if (product === 'short' && at.time === '0600' && (at.date !== slot.date || slot.time === '0200')) { list.push('tmn'); }
+    if (product === 'short' && at.time === '1500' && (at.date !== slot.date || slot.time <= '1100')) { list.push('tmx'); }
+    return list;
+}
+function accepts(rule, value) {
+    return finite(value) && (rule.ne === undefined || value !== rule.ne) &&
+        (rule.gte === undefined || value >= rule.gte) && (rule.lte === undefined || value <= rule.lte);
+}
+// Aggregation comparisons use BSON order, so (-900, 900) admits only numbers: missing, null and NaN
+// sort below every number; strings, objects, arrays, booleans and dates sort above.
+function condition(rule, path) {
+    var c = [{$gt: [path, -900]}, {$lt: [path, 900]}];
+    if (rule.ne !== undefined) { c.push({$ne: [path, rule.ne]}); }
+    if (rule.gte !== undefined) { c.push({$gte: [path, rule.gte]}); }
+    if (rule.lte !== undefined) { c.push({$lte: [path, rule.lte]}); }
+    return c;
+}
 function valid(row, product, at, slot) {
     if (!row || row.date !== at.date || row.time !== at.time) { return false; }
-    var temp = product === 'short' ? 't3h' : 't1h';
-    var rain = product === 'short' ? ['r06', 's06'] : ['rn1'];
-    var fields = [temp, 'sky', 'reh', 'pty', 'uuu', 'vvv', 'vec', 'wsd'].concat(rain);
-    if (product === 'short' || slot.date + slot.time >= '202606231100') { fields.push('pop'); }
-    if (product === 'shortest') { fields.push('lgt'); }
-    if (product === 'short' && at.time === '0600' && (at.date !== slot.date || slot.time === '0200')) { fields.push('tmn'); }
-    if (product === 'short' && at.time === '1500' && (at.date !== slot.date || slot.time <= '1100')) { fields.push('tmx'); }
-    if (fields.some(function(f) { return !finite(row[f]); })) { return false; }
-    return row[temp] !== -50 && row[temp] >= -100 && row.sky >= 1 && row.sky <= 4 &&
-        row.reh >= 0 && row.reh <= 100 && row.pty >= 0 && row.pty <= 8 &&
-        row.uuu !== -100 && row.vvv !== -100 && row.vec >= 0 && row.vec <= 360 && row.wsd >= 0 &&
-        rain.every(function(f) { return row[f] >= 0; }) &&
-        (fields.indexOf('pop') < 0 || (row.pop >= 0 && row.pop <= 100)) &&
-        (fields.indexOf('tmn') < 0 || row.tmn !== -50) && (fields.indexOf('tmx') < 0 || row.tmx !== -50);
+    return fields(product, at, slot).every(function(f) { return accepts(RULES[f], row[f]); });
+}
+// data.go.kr answers an ultra-short HH30 request with its HH00 base hour (production, 2026-10-04);
+// both strings name the requested publication, any other hour is another publication.
+function identities(product, slot) {
+    var exact = slot.date + slot.time;
+    return product === 'shortest' && slot.time.slice(2) !== '00' ? [slot.date + slot.time.slice(0, 2) + '00', exact] : [exact];
+}
+// A response that consistently names an older publication means the grid is not updated yet.
+function stale(items, product, slot) {
+    var first = Array.isArray(items) && items[0], pub = first && first.baseDate && first.baseTime &&
+        String(first.baseDate[0]) + String(first.baseTime[0]);
+    return !!pub && /^\d{12}$/.test(pub) && pub < identities(product, slot)[0] && items.every(function(item) {
+        return item && item.baseDate && item.baseTime && String(item.baseDate[0]) + String(item.baseTime[0]) === pub;
+    });
 }
 function complete(product, slot, rows) {
     if (!Array.isArray(rows)) { return false; }
@@ -70,12 +97,12 @@ function within(product, slot, rows) {
 // Writable rows are the expected horizon plus valid trailing rows, without duplicates:
 // arbitrary extra slots could relabel stored data.
 function batch(product, slot, coord, rows) {
-    var allowed = horizon(product, slot), seen = new Set();
-    return Array.isArray(rows) && rows.length > 0 && rows.every(function(row) {
+    var allowed = horizon(product, slot), seen = new Set(), ids = identities(product, slot);
+    return Array.isArray(rows) && rows.length > 0 && ids.indexOf(rows[0] && rows[0].pubDate) >= 0 && rows.every(function(row) {
         if (!row || seen.has(row.date + row.time)) { return false; }
         seen.add(row.date + row.time);
         if (!allowed.has(row.date + row.time) && !trailing(product, slot, row)) { return false; }
-        return row.pubDate === slot.date + slot.time && row.mx === coord.mx && row.my === coord.my;
+        return row.pubDate === rows[0].pubDate && row.mx === coord.mx && row.my === coord.my;
     }) && complete(product, slot, rows);
 }
 // Reject permissive parseFloat prefixes before the existing parser can normalize them.
@@ -84,9 +111,11 @@ function rawItems(items, product, slot, coord) {
         ['T1H', 'SKY', 'REH', 'PTY', 'POP', 'UUU', 'VVV', 'VEC', 'WSD', 'LGT'];
     function value(item, name) { return item[name] && item[name][0]; }
     var slots = new Map(), allowed = horizon(product, slot), times = expected(product, slot);
-    var last = stamp(times[times.length - 1]);
+    var last = stamp(times[times.length - 1]), ids = identities(product, slot), echoed;
     var validItems = Array.isArray(items) && items.every(function(item) {
-        if (!item || value(item, 'baseDate') !== slot.date || value(item, 'baseTime') !== slot.time ||
+        var pub = item && value(item, 'baseDate') + value(item, 'baseTime');
+        echoed = echoed || pub;
+        if (!item || ids.indexOf(pub) < 0 || pub !== echoed ||
             String(coord.mx) !== value(item, 'nx') || String(coord.my) !== value(item, 'ny')) { return false; }
         var category = value(item, 'category'), text = value(item, 'fcstValue');
         var at = value(item, 'fcstDate') + value(item, 'fcstTime');
@@ -142,7 +171,7 @@ function preserveOptional(row, previous, product, slot) {
 function coordKey(coord) { return coord.mx + ':' + coord.my; }
 function bounded(callback, ms) {
     var finished = false;
-    var timer = setTimeout(function() { done(new Error('Forecast coverage read deadline exceeded')); }, ms || 3000);
+    var timer = setTimeout(function() { done(new Error('Forecast coverage read deadline exceeded')); }, ms || 10000);
     function done(err, result) {
         if (finished) { return; }
         finished = true; clearTimeout(timer); callback(err, result);
@@ -150,40 +179,61 @@ function bounded(callback, ms) {
     return done;
 }
 function pending(model, version, product, slot, coords, callback, timeoutMs) {
-    var field = product + 'Data', identity = slot.date + slot.time;
+    var field = product + 'Data', ids = identities(product, slot);
     if (version !== '1.0' && version !== '2.0') { return callback(new Error('Unsupported forecast coverage storage version')); }
-    var pubDate = version === '1.0' ? identity : new Date(stamp(slot) - 9 * HOUR);
-    var projection = {_id: 0, mCoord: 1, pubDate: 1, fcsDate: 1}; projection[field] = 1;
-    timeoutMs = timeoutMs || 3000;
+    timeoutMs = timeoutMs || 10000;
     callback = bounded(callback, timeoutMs);
-    var delivered = false;
+    var delivered = false, maxTimeMS = Math.max(1, timeoutMs - 1000);
+    function done(err, covered) {
+        delivered = true;
+        if (err) { return callback(err); }
+        callback(null, coords.filter(function(coord) { return !covered.has(coordKey(coord)); }));
+    }
     try {
-        var query = {pubDate: pubDate};
-        if (version === '2.0') {
-            var horizon = expected(product, slot);
-            query.fcsDate = {$gte: new Date(stamp(horizon[0]) - 9 * HOUR),
-                $lte: new Date(stamp(horizon[horizon.length - 1]) - 9 * HOUR)};
-        }
-        model.find(query, projection).setOptions({maxTimeMS: Math.max(1, timeoutMs - 1000)}).lean().exec(function(err, docs) {
-            delivered = true;
-            if (err) { return callback(err); }
-            if (!Array.isArray(docs)) { return callback(new Error('Invalid forecast coverage readback')); }
-            var grouped = new Map(), covered = new Set();
-            docs.forEach(function(doc) {
-                var exact = version === '1.0' ? doc.pubDate === identity : doc.pubDate && Number(doc.pubDate) === Number(pubDate);
-                if (!exact || !doc.mCoord) { return; }
-                var id = coordKey(doc.mCoord), data = version === '1.0' ? doc[field] : [doc[field]];
-                if (!Array.isArray(data)) { return; }
-                // DB2 fcsDate and payload time must describe the same persisted slot.
-                if (version === '2.0') {
-                    data = data.filter(function(row) { return row && Number(doc.fcsDate) === stamp(row) - 9 * HOUR; });
-                }
-                if (!grouped.has(id)) { grouped.set(id, []); }
-                grouped.get(id).push.apply(grouped.get(id), data);
+        if (version === '1.0') {
+            var projection = {_id: 0, mCoord: 1, pubDate: 1}; projection[field] = 1;
+            model.find({pubDate: {$in: ids}}, projection).setOptions({maxTimeMS: maxTimeMS}).lean().exec(function(err, docs) {
+                if (err || !Array.isArray(docs)) { return done(err || new Error('Invalid forecast coverage readback')); }
+                var grouped = new Map(), covered = new Set();
+                docs.forEach(function(doc) {
+                    if (ids.indexOf(doc.pubDate) < 0 || !doc.mCoord || !Array.isArray(doc[field])) { return; }
+                    var id = coordKey(doc.mCoord);
+                    if (!grouped.has(id)) { grouped.set(id, []); }
+                    grouped.get(id).push.apply(grouped.get(id), doc[field]);
+                });
+                grouped.forEach(function(rows, id) { if (complete(product, slot, rows)) { covered.add(id); } });
+                done(null, covered);
             });
-            grouped.forEach(function(rows, id) { if (complete(product, slot, rows)) { covered.add(id); } });
-            callback(null, coords.filter(function(coord) { return !covered.has(coordKey(coord)); }));
+            return;
+        }
+        // DB2 evaluates every slot in Mongo and returns only complete grids: transferring each slot
+        // document (about 150k per short publication) exceeded the read wait in production (#2676).
+        var at = expected(product, slot), dates = at.map(function(t) { return new Date(stamp(t) - 9 * HOUR); });
+        // The payload date/time must name the slot's fcsDate (KST); $eq tolerates any stored type.
+        var prefix = '$' + field + '.', required = new Map(), kst = {$add: ['$fcsDate', 9 * HOUR]}, ok = [
+            {$eq: [{$dateToString: {format: '%Y%m%d', date: kst}}, prefix + 'date']},
+            {$eq: [{$dateToString: {format: '%H%M', date: kst}}, prefix + 'time']}];
+        at.forEach(function(t, i) {
+            fields(product, t, slot).forEach(function(f) {
+                if (!required.has(f)) { required.set(f, []); }
+                required.get(f).push(dates[i]);
+            });
         });
+        required.forEach(function(when, f) {
+            var checks = condition(RULES[f], prefix + f);
+            // Conditional fields (issuance-specific TMN/TMX) are required only at their slots.
+            ok = ok.concat(when.length === at.length ? checks : [{$or: [{$not: [{$in: ['$fcsDate', when]}]}, {$and: checks}]}]);
+        });
+        model.aggregate([
+            {$match: {pubDate: {$in: ids.map(function(id) { return new Date(stamp({date: id.slice(0, 8), time: id.slice(8)}) - 9 * HOUR); })},
+                fcsDate: {$in: dates}}},
+            {$group: {_id: {mx: '$mCoord.mx', my: '$mCoord.my'}, slots: {$addToSet: {$cond: [{$and: ok}, '$fcsDate', null]}}}},
+            {$project: {n: {$size: {$setDifference: ['$slots', [null]]}}}},
+            {$match: {n: at.length}}])
+            .option({maxTimeMS: maxTimeMS}).exec(function(err, docs) {
+                if (err || !Array.isArray(docs)) { return done(err || new Error('Invalid forecast coverage readback')); }
+                done(null, new Set(docs.filter(function(doc) { return doc && doc._id; }).map(function(doc) { return coordKey(doc._id); })));
+            });
     } catch (err) {
         // Only query construction/dispatch failures are read errors; never swallow a caller's exception.
         if (delivered) { throw err; }
@@ -209,23 +259,25 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
     }
     // Ultra-short publications are updated every ten minutes after generation: while the
     // publication is current, one process-local full refresh walk per publication is due.
-    var base = stamp(slot) - 9 * HOUR, now = (options.now || Date.now)();
+    var clock = options.now || Date.now, base = stamp(slot) - 9 * HOUR, now = clock();
     var refreshDue = options.refreshAfterMs > 0 && now >= base + options.refreshAfterMs &&
         now < base + options.refreshAfterMs + (options.refreshWindowMs || HOUR) && self.refreshed !== identity;
     var run = {identity: identity, callbacks: [callback], finished: false};
     var control = {cancelled: false, collector: null, retryTimer: null, product: product, slot: slot, httpAttempts: 0,
         pendingWrites: 0};
     self.active = run;
-    var coords;
+    // Delayed re-walks belong to the first run of a publication in this process; later scheduled
+    // polls of that publication walk their pending grids once, so a late publication ends near +10 min.
+    var coords, refreshed = false, delay = null, retries = self.retried === identity ? [] : (options.retryAtMs || []).slice();
     var deadline = setTimeout(function() {
         control.cancelled = true;
         if (control.retryTimer) { clearTimeout(control.retryTimer); }
         if (control.collector && control.collector.cancel) { control.collector.cancel(); }
         finish(new Error('Forecast collection run deadline exceeded'));
-    }, options.collectTimeoutMs || 540000);
+    }, options.collectTimeoutMs || 840000);
     function finish(err, report) {
         if (run.finished) { return; }
-        run.finished = true; clearTimeout(deadline);
+        run.finished = true; clearTimeout(deadline); clearTimeout(delay);
         if (self.active === run) { self.active = null; }
         if (control.pendingWrites > 0) { self.settling = (self.settling || []).concat(control); }
         report = report || {expected: coords ? coords.length : 0, complete: 0, pending: coords ? coords.length : 0};
@@ -252,24 +304,41 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
         coords = list;
         read('before', function(err, list) {
             if (err) { return finish(err); }
-            var walk = list, refreshed = refreshDue && list.length < coords.length;
+            var walk = list;
+            refreshed = refreshDue && list.length < coords.length;
             if (refreshDue) { walk = coords; }
             if (!walk.length) { return finish(null, {expected: coords.length, complete: coords.length, pending: 0}); }
-            try {
-                options.collect(walk, slot, key, function(collectionError) {
-                    if (run.finished || control.cancelled) { return; }
-                    read('after', function(readError, remaining) {
-                        var error = collectionError || readError;
-                        if (!error && remaining.length) { error = new Error('Forecast collection incomplete: pending=' + remaining.length); }
-                        // Only a successful full walk consumes the publication's refresh.
-                        if (!error && refreshDue) { self.refreshed = identity; }
-                        finish(error, {expected: coords.length, complete: readError ? 0 : coords.length - remaining.length,
-                            pending: readError ? coords.length : remaining.length, refresh: refreshed});
-                    });
-                }, control);
-            } catch (error) { if (run.finished) { throw error; } finish(error); }
+            collect(walk, 1);
         });
     }, options.readTimeoutMs);
+    // Grids publish at different times after the provision time: still pending grids are walked
+    // again at the configured offsets from the run start, then the run ends (AK, 2026-10-04).
+    function collect(list, walks) {
+        try {
+            options.collect(list, slot, key, function(collectionError) {
+                if (run.finished || control.cancelled) { return; }
+                read('after', function(readError, remaining) {
+                    var error = collectionError || readError;
+                    if (!error && remaining.length) { error = new Error('Forecast collection incomplete: pending=' + remaining.length); }
+                    if (!readError && remaining.length && retries.length && !control.keysExhausted) {
+                        var wait = Math.max(0, now + retries.shift() - clock());
+                        self.retried = identity;
+                        options.emit({event: 'forecast-retry', utc: new Date().toISOString(), product: product, publication: identity,
+                            walk: walks + 1, pending: remaining.length, delayMs: wait, httpAttempts: control.httpAttempts});
+                        delay = setTimeout(function() {
+                            delay = null;
+                            if (!run.finished && !control.cancelled) { collect(remaining, walks + 1); }
+                        }, wait);
+                        return;
+                    }
+                    // Only a successful full walk consumes the publication's refresh.
+                    if (!error && refreshDue) { self.refreshed = identity; }
+                    finish(error, {expected: coords.length, complete: readError ? 0 : coords.length - remaining.length,
+                        pending: readError ? coords.length : remaining.length, refresh: refreshed, walks: walks});
+                });
+            }, control);
+        } catch (error) { if (run.finished) { throw error; } finish(error); }
+    }
     try { options.coords(ready); } catch (err) { if (run.finished) { throw err; } ready(err); }
 };
 ForecastGridCollection.preserveOptional = preserveOptional;
@@ -279,4 +348,6 @@ ForecastGridCollection.complete = complete;
 ForecastGridCollection.batch = batch;
 ForecastGridCollection.within = within;
 ForecastGridCollection.pending = pending;
+ForecastGridCollection.identities = identities;
+ForecastGridCollection.stale = stale;
 module.exports = ForecastGridCollection;

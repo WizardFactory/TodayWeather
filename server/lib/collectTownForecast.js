@@ -404,7 +404,10 @@ CollectData.prototype._requestPage = function (url, callback) {
                 !Array.isArray(items) || items.length === 0 || items.some(function (item) {
                     return !item || typeof item !== 'object' || Array.isArray(item);
                 })) {
-                return callback('KMA invalid or empty response');
+                // NO_DATA (code 03) or a normal header without rows: the grid is not published yet.
+                var code = header && header.resultCode && header.resultCode[0];
+                var noData = !err && (code === '03' || (code === '00' && (count === '0' || !items || !items.length)));
+                return callback('KMA invalid or empty response', undefined, undefined, undefined, {noData: noData});
             }
             callback(null, result, Number(count), items, payload);
         });
@@ -530,6 +533,8 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
 
     self._requestPage(url, function (reason, result, total, items, payload) {
         if (reason) {
+            // Only a first-page NO_DATA marks a forecast grid as not yet published (#2676).
+            if (payload && payload.noData) { self.resultList[index].notPublished = true; }
             return fail(reason);
         }
         self._requestRemainingPages(url, total, {items: items, payload: payload}, function (reason, allItems, diagnostic) {

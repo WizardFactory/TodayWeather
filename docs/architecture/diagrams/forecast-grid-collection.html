@@ -5029,18 +5029,19 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <!-- Edge paths -->
         <path data-edge-from="poll" data-edge-to="coverage" data-edge-label="join" data-edge-key="0" data-edge-id="e0" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="188,212;226,212" d="M 188 212 L 226 212" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="coverage" data-edge-to="pending" data-edge-label="valid read" data-edge-key="1" data-edge-id="e1" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="366,212;432,212" d="M 366 212 L 432 212" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="coverage" data-edge-to="error" data-edge-label="DB error" data-edge-key="2" data-edge-id="e2" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="296,238;296,403" d="M 296 238 L 296 403" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="pending" data-edge-to="fetch" data-edge-label="eligible" data-edge-key="3" data-edge-id="e3" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="572,212;628.4,212" d="M 572 212 L 628.4 212" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="pending" data-edge-to="skip" data-edge-label="all complete (ultra-short: one refresh walk)" data-edge-key="4" data-edge-id="e4" data-edge-role="" data-composition-points="502,238;502,286" d="M 502 238 L 502 286" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="fetch" data-edge-to="save" data-edge-label="received" data-edge-key="5" data-edge-id="e5" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="768.4,212;824.8,212" d="M 768.4 212 L 824.8 212" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="save" data-edge-to="readback" data-edge-label="saved" data-edge-key="6" data-edge-id="e6" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="964.8,212;1006.8,212" d="M 964.8 212 L 1006.8 212" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="readback" data-edge-to="done" data-edge-label="coverage" data-edge-key="7" data-edge-id="e7" data-edge-role="" data-composition-points="1076.8,238;1076.8,286" d="M 1076.8 238 L 1076.8 286" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="fetch" data-edge-to="quota" data-edge-label="quota / deadline" data-edge-key="8" data-edge-id="e8" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="698.4,238;698.4,403" d="M 698.4 238 L 698.4 403" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="quota" data-edge-to="done" data-edge-label="report pending" data-edge-key="9" data-edge-id="e9" data-edge-role="" data-composition-points="768.4,429;1076.8,429;1076.8,338" d="M 768.4 429 L 1076.8 429 L 1076.8 338" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="readback" data-edge-to="fetch" data-edge-label="pending: re-walk at +5 / +10 min" data-edge-key="2" data-edge-id="e10" data-edge-role="" data-composition-points="1076.8,186;1076.8,170;698.4,170;698.4,186" d="M 1076.8 186 L 1076.8 170 L 698.4 170 L 698.4 186" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="coverage" data-edge-to="error" data-edge-label="DB error" data-edge-key="3" data-edge-id="e2" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="296,238;296,403" d="M 296 238 L 296 403" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="pending" data-edge-to="fetch" data-edge-label="eligible" data-edge-key="4" data-edge-id="e3" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="572,212;628.4,212" d="M 572 212 L 628.4 212" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="pending" data-edge-to="skip" data-edge-label="all complete (ultra-short: one refresh walk)" data-edge-key="5" data-edge-id="e4" data-edge-role="" data-composition-points="502,238;502,286" d="M 502 238 L 502 286" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="fetch" data-edge-to="save" data-edge-label="received" data-edge-key="6" data-edge-id="e5" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="768.4,212;824.8,212" d="M 768.4 212 L 824.8 212" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="save" data-edge-to="readback" data-edge-label="saved" data-edge-key="7" data-edge-id="e6" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="964.8,212;1006.8,212" d="M 964.8 212 L 1006.8 212" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="readback" data-edge-to="done" data-edge-label="coverage" data-edge-key="8" data-edge-id="e7" data-edge-role="" data-composition-points="1076.8,238;1076.8,286" d="M 1076.8 238 L 1076.8 286" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="fetch" data-edge-to="quota" data-edge-label="quota / deadline" data-edge-key="9" data-edge-id="e8" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="698.4,238;698.4,403" d="M 698.4 238 L 698.4 403" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="quota" data-edge-to="done" data-edge-label="report pending" data-edge-key="10" data-edge-id="e9" data-edge-role="" data-composition-points="768.4,429;1076.8,429;1076.8,338" d="M 768.4 429 L 1076.8 429 L 1076.8 338" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
 
         <!-- Nodes -->
-        <g id="node-poll" data-node-id="poll" data-node-label="Forecast poll" tabindex="0" role="button" aria-label="Focus Forecast poll, short / ultra-short, Forecast publication collection" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="short / ultra-short" data-node-context="Forecast publication collection">
-          <title>Forecast poll · short / ultra-short · Forecast publication collection</title>
+        <g id="node-poll" data-node-id="poll" data-node-label="Forecast poll" tabindex="0" role="button" aria-label="Focus Forecast poll, provision +2 min, Forecast publication collection" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="provision +2 min" data-node-context="Forecast publication collection">
+          <title>Forecast poll · provision +2 min · Forecast publication collection</title>
           <rect x="48" y="186" width="140" height="52" rx="6" class="c-mask"/>
           <rect x="48" y="186" width="140" height="52" rx="6" class="c-messagebus" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(54 192) scale(0.6875)">
@@ -5050,11 +5051,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="118" y="207" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Forecast poll</text>
-          <text data-detail="context" x="118" y="224" class="t-muted" font-size="8" text-anchor="middle">short / ultra-short</text>
+          <text data-detail="context" x="118" y="224" class="t-muted" font-size="8" text-anchor="middle">provision +2 min</text>
         </g>
 
-        <g id="node-coverage" data-node-id="coverage" data-node-label="Read grid coverage" tabindex="0" role="button" aria-label="Focus Read grid coverage, exact publication / product, Forecast publication collection" aria-pressed="false" data-node-kind="database" data-node-sublabel="exact publication / product" data-node-context="Forecast publication collection">
-          <title>Read grid coverage · exact publication / product · Forecast publication collection</title>
+        <g id="node-coverage" data-node-id="coverage" data-node-label="Read grid coverage" tabindex="0" role="button" aria-label="Focus Read grid coverage, publication / product, Forecast publication collection" aria-pressed="false" data-node-kind="database" data-node-sublabel="publication / product" data-node-context="Forecast publication collection">
+          <title>Read grid coverage · publication / product · Forecast publication collection</title>
           <rect x="226" y="186" width="140" height="52" rx="6" class="c-mask"/>
           <rect x="226" y="186" width="140" height="52" rx="6" class="c-database" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(232 192) scale(0.6875)">
@@ -5062,7 +5063,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="296" y="218.2" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Read grid coverage</text>
-          <text data-detail="context" x="296" y="233.1" class="t-muted" font-size="8" text-anchor="middle">exact publication / product</text>
+          <text data-detail="context" x="296" y="233.1" class="t-muted" font-size="8" text-anchor="middle">publication / product</text>
         </g>
 
         <g id="node-pending" data-node-id="pending" data-node-label="Check full forecast" tabindex="0" role="button" aria-label="Focus Check full forecast, horizon and categories, Forecast publication collection" aria-pressed="false" data-node-kind="security" data-node-sublabel="horizon and categories" data-node-context="Forecast publication collection">
@@ -5167,35 +5168,39 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="370" y="192" width="58" height="14" rx="3" class="c-mask"/>
           <text x="399" y="202" class="t-edge-default" font-size="8" text-anchor="middle">valid read</text>
         </g>
-        <g data-detail="context" data-edge-from="coverage" data-edge-to="error" data-edge-label="DB error" data-edge-key="2" data-edge-id="e2">
+        <g data-detail="context" data-edge-from="readback" data-edge-to="fetch" data-edge-label="pending: re-walk at +5 / +10 min" data-edge-key="2" data-edge-id="e10">
+          <rect x="805.8" y="150" width="163.6" height="14" rx="3" class="c-mask"/>
+          <text x="887.5999999999999" y="160" class="t-edge-default" font-size="8" text-anchor="middle">pending: re-walk at +5 / +10 min</text>
+        </g>
+        <g data-detail="context" data-edge-from="coverage" data-edge-to="error" data-edge-label="DB error" data-edge-key="3" data-edge-id="e2">
           <rect x="271.8" y="310.5" width="48.4" height="14" rx="3" class="c-mask"/>
           <text x="296" y="320.5" class="t-edge-default" font-size="8" text-anchor="middle">DB error</text>
         </g>
-        <g data-detail="context" data-edge-from="pending" data-edge-to="fetch" data-edge-label="eligible" data-edge-key="3" data-edge-id="e3">
+        <g data-detail="context" data-edge-from="pending" data-edge-to="fetch" data-edge-label="eligible" data-edge-key="4" data-edge-id="e3">
           <rect x="576" y="192" width="48.4" height="14" rx="3" class="c-mask"/>
           <text x="600.2" y="202" class="t-edge-default" font-size="8" text-anchor="middle">eligible</text>
         </g>
-        <g data-detail="context" data-edge-from="pending" data-edge-to="skip" data-edge-label="all complete (ultra-short: one refresh walk)" data-edge-key="4" data-edge-id="e4">
+        <g data-detail="context" data-edge-from="pending" data-edge-to="skip" data-edge-label="all complete (ultra-short: one refresh walk)" data-edge-key="5" data-edge-id="e4">
           <rect x="391.4" y="252" width="221.2" height="14" rx="3" class="c-mask"/>
           <text x="502" y="262" class="t-edge-default" font-size="8" text-anchor="middle">all complete (ultra-short: one refresh walk)</text>
         </g>
-        <g data-detail="context" data-edge-from="fetch" data-edge-to="save" data-edge-label="received" data-edge-key="5" data-edge-id="e5">
+        <g data-detail="context" data-edge-from="fetch" data-edge-to="save" data-edge-label="received" data-edge-key="6" data-edge-id="e5">
           <rect x="772.3999999999999" y="192" width="48.4" height="14" rx="3" class="c-mask"/>
           <text x="796.5999999999999" y="202" class="t-edge-default" font-size="8" text-anchor="middle">received</text>
         </g>
-        <g data-detail="context" data-edge-from="save" data-edge-to="readback" data-edge-label="saved" data-edge-key="6" data-edge-id="e6">
+        <g data-detail="context" data-edge-from="save" data-edge-to="readback" data-edge-label="saved" data-edge-key="7" data-edge-id="e6">
           <rect x="968.8" y="192" width="34" height="14" rx="3" class="c-mask"/>
           <text x="985.8" y="202" class="t-edge-default" font-size="8" text-anchor="middle">saved</text>
         </g>
-        <g data-detail="context" data-edge-from="readback" data-edge-to="done" data-edge-label="coverage" data-edge-key="7" data-edge-id="e7">
+        <g data-detail="context" data-edge-from="readback" data-edge-to="done" data-edge-label="coverage" data-edge-key="8" data-edge-id="e7">
           <rect x="1052.6" y="252" width="48.4" height="14" rx="3" class="c-mask"/>
           <text x="1076.8" y="262" class="t-edge-default" font-size="8" text-anchor="middle">coverage</text>
         </g>
-        <g data-detail="context" data-edge-from="fetch" data-edge-to="quota" data-edge-label="quota / deadline" data-edge-key="8" data-edge-id="e8">
+        <g data-detail="context" data-edge-from="fetch" data-edge-to="quota" data-edge-label="quota / deadline" data-edge-key="9" data-edge-id="e8">
           <rect x="655" y="310.5" width="86.8" height="14" rx="3" class="c-mask"/>
           <text x="698.4" y="320.5" class="t-edge-default" font-size="8" text-anchor="middle">quota / deadline</text>
         </g>
-        <g data-detail="context" data-edge-from="quota" data-edge-to="done" data-edge-label="report pending" data-edge-key="9" data-edge-id="e9">
+        <g data-detail="context" data-edge-from="quota" data-edge-to="done" data-edge-label="report pending" data-edge-key="10" data-edge-id="e9">
           <rect x="883.9999999999999" y="409" width="77.2" height="14" rx="3" class="c-mask"/>
           <text x="922.5999999999999" y="419" class="t-edge-default" font-size="8" text-anchor="middle">report pending</text>
         </g>
@@ -5407,6 +5412,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </div>
         <ul>
           <li>DB1 forecast arrays / DB2 per-slot forecasts</li>
+          <li>Ultra-short HH30 request matches the provider HH00 base hour</li>
+          <li>DB2 completeness evaluated in Mongo; complete grids returned</li>
           <li>Six ultra-short hours; short hourly and extension-day slots</li>
           <li>Conditional WAV and issuance-specific TMN/TMX; valid signed values</li>
         </ul>
@@ -5419,9 +5426,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </div>
         <ul>
           <li>Same product/publication overlaps join one run</li>
+          <li>NO_DATA / previous publication: no immediate retry storm</li>
           <li>Ultra-short: one full refresh per current publication from base+40min</li>
           <li>Same-publication rerun waits for an expired run&#39;s writes to settle</li>
-          <li>Nine-minute forecast deadline fences new HTTP and writes</li>
+          <li>14-minute forecast deadline fences new HTTP and writes</li>
           <li>Readback errors stay incomplete; late issued writes are publication-fenced</li>
           <li>No production recovery, quota entitlement or server2 change claimed</li>
         </ul>

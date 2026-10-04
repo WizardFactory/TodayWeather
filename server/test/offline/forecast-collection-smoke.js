@@ -5,15 +5,16 @@ const assert=require('assert'),fs=require('fs'),os=require('os'),path=require('p
 const mongoose=require('mongoose'),request=require('request'),h=require('./harness'),mh=require('./current-manager-harness'),fx=require('./forecast-grid-fixtures'),Forecast=require('../../lib/forecastGridCollection');
 const grids=Array.from({length:2033},(_,i)=>({mx:i%149,my:Math.floor(i/149)}));
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-let dbProcess,connection,provider,scratch,logFd,requests=0,pages=0,retries=0,retried=false,currentProduct,slot;
+let dbProcess,connection,provider,scratch,logFd,requests=0,pages=0,retries=0,retried=false,currentProduct,slot,late,staleTemplates;
 const summaries=[];
 async function freePort(){const s=net.createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r));const p=s.address().port;await new Promise(r=>s.close(r));return p}
 function writeXML(product,s){
  const categories={t3h:'TMP',r06:'PCP',s06:'SNO',t1h:'T1H',rn1:'RN1',sky:'SKY',reh:'REH',pty:'PTY',pop:'POP',uuu:'UUU',vvv:'VVV',vec:'VEC',wsd:'WSD',tmn:'TMN',tmx:'TMX',lgt:'LGT'};
  const items=[];
  for(const row of fx.rows(product,s,{mx:60,my:127})){
-    for(const name of Object.keys(categories))if(row[name]!==undefined){items.push({baseDate:[s.date],baseTime:[s.time],fcstDate:[row.date],fcstTime:[row.time],nx:['NX_TOKEN'],ny:['NY_TOKEN'],category:[categories[name]],fcstValue:[String(row[name])]})}
-    if(product==='short')items.push({baseDate:[s.date],baseTime:[s.time],fcstDate:[row.date],fcstTime:[row.time],nx:['NX_TOKEN'],ny:['NY_TOKEN'],category:['WAV'],fcstValue:['0']});
+    // The provider answers an ultra-short HH30 request with baseTime HH00 (production, 2026-10-04).
+    for(const name of Object.keys(categories))if(row[name]!==undefined){items.push({baseDate:[s.date],baseTime:[fx.echo(product,s)],fcstDate:[row.date],fcstTime:[row.time],nx:['NX_TOKEN'],ny:['NY_TOKEN'],category:[categories[name]],fcstValue:[String(row[name])]})}
+    if(product==='short')items.push({baseDate:[s.date],baseTime:[fx.echo(product,s)],fcstDate:[row.date],fcstTime:[row.time],nx:['NX_TOKEN'],ny:['NY_TOKEN'],category:['WAV'],fcstValue:['0']});
  }
  const out=[];
  for(let i=0;i<items.length;i+=999){const r=h.response(items.slice(i,i+999));r.response.body[0].totalCount=[String(items.length)];r.response.body[0].pageNo=[String(out.length+1)];r.response.body[0].numOfRows=['999'];out.push(h.xml(r))}
@@ -49,6 +50,14 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
     assert.strictEqual(u.searchParams.get('base_date'),slot.date);assert.strictEqual(u.searchParams.get('base_time'),slot.time);
     requests++;const page=Number(u.searchParams.get('pageNo')||1);if(page>1)pages++;
     // One transient failed continuation/page per product/version; existing bounded retry repairs it.
+    // Grids publish at different times: grid 1 first answers NO_DATA, grid 2 the previous publication;
+    // both are collected by the delayed re-walk, not by immediate retries (AK, 2026-10-04).
+    const at=grids.findIndex(g=>String(g.mx)===u.searchParams.get('nx')&&String(g.my)===u.searchParams.get('ny'));
+    if((at===1||at===2)&&!late.has(at)){
+        late.add(at);res.writeHead(200,{'Content-Type':'text/xml'});
+        if(at===1)return res.end(h.xml({response:{header:[{resultCode:['03'],resultMsg:['NO_DATA']}],body:[{totalCount:['0']}]}}));
+        return res.end(staleTemplates[0].replace(/NX_TOKEN/g,u.searchParams.get('nx')).replace(/NY_TOKEN/g,u.searchParams.get('ny')));
+    }
     if(!retried&&u.searchParams.get('nx')===String(grids[0].mx)&&u.searchParams.get('ny')===String(grids[0].my)&&page===(templates.length>1?2:1)){
         retried=true;retries++;res.writeHead(503);return res.end('synthetic transient failure');
     }
@@ -58,7 +67,8 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
  await new Promise(r=>provider.listen(0,'127.0.0.1',r));
  function Collector(){return h.collector({get(url,opts,cb){const u=new URL(url);assert.strictEqual(u.host,'apis.data.go.kr');return request.get('http://127.0.0.1:'+provider.address().port+u.pathname+u.search,{...opts,proxy:null},cb)}},[])}
  for(const version of ['1.0','2.0'])for(const product of ['short','shortest']){
-    currentProduct=product;slot={date:'20261003',time:product==='short'?'1700':'1730'};retried=false;templates=writeXML(product,slot);
+    currentProduct=product;slot={date:'20261003',time:product==='short'?'1700':'1730'};retried=false;templates=writeXML(product,slot);late=new Set();
+    staleTemplates=writeXML(product,{date:slot.date,time:product==='short'?'1400':'1630'});
     const model=models[product+(version==='1.0'?'1':'2')],log=h.logger([]);
     const Controller=h.load('controllers/kma/kma.town.'+product+'.controller.js',{
         async:require('async'),['../../models/kma/kma.town.'+product+'.model.js']:models[product+'2'],
@@ -68,12 +78,14 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
         '../models/modelShort':models.short1,'../models/modelShortest':models.shortest1,
         '../models/kma/kma.town.short.model':models.short2,'../models/kma/kma.town.shortest.model':models.shortest2,
         ['./kma/kma.town.'+product+'.controller.js']:Controller,'../lib/midForecastPolicy':require('../../lib/midForecastPolicy'),
-        '../config/gather':require('../../config/gather').load({GATHER_TOWN_RETRY:'2',GATHER_REQUEST_CONCURRENCY:'16'})};
+        '../config/gather':require('../../config/gather').load({GATHER_TOWN_RETRY:'2',GATHER_REQUEST_CONCURRENCY:'16',GATHER_FORECAST_RETRY_AT_MS:'500,1000',GATHER_SHORTEST_REFRESH_AFTER_MS:'0'})};
     function manager(){const f=mh.load(overrides);f.config.db.version=version;f.m.MAX_SHORT_COUNT=192;f.m.MAX_SHORTEST_COUNT=192;
         f.m[product==='short'?'getShortQueryTime':'getShortestQueryTime']=()=>slot;return f}
     const f=manager(),start=requests,pageStart=pages,retryStart=retries;
     const results=await Promise.all([gather(f.m,product),gather(f.m,product)]);
-    assert.strictEqual(requests-start,2033*templates.length+templates.length,'initial full-grid plus one grid retry');
+    // NO_DATA answers one page; the previous publication's first page fails strict validation.
+    assert.strictEqual(requests-start,2033*templates.length+templates.length-2*(templates.length-1)+2*templates.length,'full grid, one transient retry, two late grids re-walked once');
+    assert.strictEqual(results[0].walks,2,'late grids are collected by the first delayed re-walk');
     assert.strictEqual(results[0].pending,0);assert.strictEqual(results[0].httpAttempts,requests-start);
     const read=()=>new Promise((res,rej)=>Forecast.pending(model,version,product,slot,grids,(e,p)=>e?rej(e):res(p)));
     assert.strictEqual((await read()).length,0,'full persisted horizon/categories for every grid');
@@ -93,9 +105,14 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
         assert.strictEqual(new Set(slots).size,slots.length,'fenced misses insert no duplicate slot documents');
     }
     const stored=await model.findOne({'mCoord.mx':grids[0].mx,'mCoord.my':grids[0].my}).lean().exec();
+    // Rows are stored under the provider's echoed publication (ultra-short HH30 request -> HH00).
+    const echoed=version==='1.0'?slot.date+fx.echo(product,slot):new Date(fx.publication({date:slot.date,time:fx.echo(product,slot)})-9*fx.hour);
+    assert.strictEqual(await model.count({'mCoord.mx':grids[0].mx,'mCoord.my':grids[0].my,pubDate:echoed}).exec(),version==='1.0'?1:fx.rows(product,slot,grids[0]).length,'stored publication is the provider echo');
+    const reads=f.records.join('\n').split('\n').filter(l=>l.includes('"forecast-coverage"')).map(l=>JSON.parse(l.slice(l.indexOf('{')))).filter(r=>typeof r.readMs==='number');
+    assert(reads.length&&reads.every(r=>r.outcome!=='read-failed'));
     const row=version==='1.0'?stored[field][0]:stored[field];assert.strictEqual(row[product==='short'?'t3h':'t1h'],-12.5);assert.strictEqual(row.uuu,-2);assert.strictEqual(row.pty,0);
     assert(!f.records.join('').includes('SYNTHETIC_CURRENT_KEY'));assert(!f.records.join('').includes('serviceKey'));
-    summaries.push({version,product,grids:2033,slots:fx.rows(product,slot,grids[0]).length,httpAttempts:requests-start,continuationAttempts:pages-pageStart,transientFailures:retries-retryStart,repeatAttempts:0,repairAttempts:templates.length,readbackPending:0});
+    summaries.push({version,product,grids:2033,slots:fx.rows(product,slot,grids[0]).length,httpAttempts:requests-start,continuationAttempts:pages-pageStart,transientFailures:retries-retryStart,repeatAttempts:0,repairAttempts:templates.length,readbackPending:0,lateGrids:2,walks:results[0].walks,maxCoverageReadMs:Math.max(...reads.map(r=>r.readMs))});
     console.log(JSON.stringify({event:'smoke-product',...summaries[summaries.length-1]}));
  }
  console.log(JSON.stringify({result:'passed',node:process.versions.node,mongoose:mongoose.version,mongo:'4.4',provider:'synthetic loopback',summaries}));

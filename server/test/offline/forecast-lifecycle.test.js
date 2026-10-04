@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('assert'),mh=require('./current-manager-harness'),h=require('./harness'),fx=require('./forecast-grid-fixtures'),Forecast=require('../../lib/forecastGridCollection'),policy=require('../../config/gather');
-const coords=[{mx:60,my:127},{mx:61,my:127}],empty={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,[])}}}};
+const coords=[{mx:60,my:127},{mx:61,my:127}],empty={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,[])}}},aggregate(){return {option(){return this},exec(cb){cb(null,[])}}}};
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 // A test that stops before its final PASS (e.g. a swallowed assertion) must fail, not exit 0.
 let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended before final PASS');process.exitCode=1}});
@@ -52,10 +52,12 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
         setImmediate(()=>cb(null,{statusCode:200},h.xml(response)));return {abort(){}};
     }})}
     const bad=mh.load({'../lib/collectTownForecast':InvalidContent,'../models/town':{getCoord:cb=>cb(null,[coords[0]])},
-        '../models/kma/kma.town.short.model':empty,'../models/kma/kma.town.shortest.model':empty,'../config/gather':policy.load({})});
+        '../models/kma/kma.town.short.model':empty,'../models/kma/kma.town.shortest.model':empty,
+        '../config/gather':policy.load({GATHER_FORECAST_RETRY_AT_MS:'20,40',GATHER_SHORTEST_REFRESH_AFTER_MS:'0'})});
     bad.m[product==='short'?'getShortQueryTime':'getShortestQueryTime']=()=>slot;bad.m.getSaveFunc=()=>function(rows,cb){contentSaves++;cb()};
-    await new Promise(resolve=>bad.m[method](9,'dummy',(e,r)=>{assert(e);assert.strictEqual(r.pending,1);resolve()}));
-    assert.strictEqual(contentCalls,1,'invalid content must not use the default 70 transport attempts');assert.strictEqual(contentSaves,0);
+    await new Promise(resolve=>bad.m[method](9,'dummy',(e,r)=>{assert(e);assert.strictEqual(r.pending,1);assert.strictEqual(r.walks,3);resolve()}));
+    // Incomplete content is re-walked only at the delayed offsets (AK 2026-10-04), never with the 70 transport attempts.
+    assert.strictEqual(contentCalls,3,'invalid content must not use the default 70 transport attempts');assert.strictEqual(contentSaves,0);
     // One writer error must not prevent another grid's transient HTTP recovery.
     let mixedPasses=0,mixedSaves=0;
     function Mixed(){}Mixed.prototype.requestData=function(list,type,key,date,time,cb){mixedPasses++;cb(null,list.map((mCoord,i)=>({mCoord,isCompleted:mixedPasses>1||i===0,data:fx.rows(product,slot,mCoord)})))};
@@ -113,10 +115,10 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
  // cannot replace that publication: DB2 fences on pubDate, DB1 compares-and-sets the read pubDate.
  for(const product of ['short','shortest']){
     const field=product+'Data',oldSlot={date:'20261003',time:product==='short'?'0200':'1730'},newSlot={...oldSlot,time:product==='short'?'0500':'1830'};
-    const shared=fx.rows(product,newSlot,coords[0])[0],oldPub=oldSlot.date+oldSlot.time,newPub=newSlot.date+newSlot.time;
+    const shared=fx.rows(product,newSlot,coords[0])[0],oldPub=oldSlot.date+fx.echo(product,oldSlot),newPub=newSlot.date+fx.echo(product,newSlot);
     const stored=new Map();let held,inserts=0;
     function Model(){}
-    Model.find=query=>({setOptions(){return this},lean(){return this},exec(cb){cb(null,[...stored.values()].filter(d=>Number(d.pubDate)===Number(query.pubDate)))}});
+    Model.aggregate=fx.memoryModel(()=>[...stored.values()]).aggregate;
     Model.update=(query,data,options,cb)=>{
         const key=Number(query.fcsDate);
         const apply=()=>{const doc=stored.get(key);
@@ -162,7 +164,6 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     let staleError;db1.m[save](fx.rows(product,oldSlot,coords[0]),e=>{staleError=e},{product,slot:oldSlot,cancelled:false});
     assert(staleError);assert.strictEqual(doc.pubDate,newPub,'older publication never downgrades a newer document');
  }
- passed=true;
  // Same-publication writes admitted by an expired run must settle before another run of that publication
  // (e.g. the ultra-short refresh) may write; otherwise the older write can revert newer values (review 5403438544).
  {
@@ -171,7 +172,7 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     const stored=new Map();let held,gen=0,walks=0;
     function Model(){}
     Model.remove=()=>({exec(){}});
-    Model.find=query=>({setOptions(){return this},lean(){return this},exec(cb){cb(null,[...stored.values()].filter(d=>Number(d.pubDate)===Number(query.pubDate)))}});
+    Model.aggregate=fx.memoryModel(()=>[...stored.values()]).aggregate;
     Model.update=(query,data,options,cb)=>{
         const key=Number(query.fcsDate);
         const apply=()=>{const doc=stored.get(key);
@@ -200,5 +201,6 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     const third=await poll();assert(!third.e,third.e&&third.e.message);assert.strictEqual(walks,2,'refresh runs once settled');
     assert([...stored.values()].every(d=>d.shortestData.t1h===2),'refresh values are not reverted by the earlier write');
  }
+ passed=true;
  console.log('PASS forecast lifecycle: joined HTTP deadline, late-write fencing, incomplete batch rejection, quota/key bounds and DB1/DB2 writer fences/errors');
 })().catch(e=>{console.error(e);process.exitCode=1});

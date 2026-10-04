@@ -1132,8 +1132,14 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     if (dongnae_keys.length) {
         key = dongnae_keys[keyIndex];
     }
+    // Grids answering NO_DATA or the previous publication are published later; the forecast
+    // coordinator re-walks them after a delay instead of an immediate retry pass (#2676).
+    var previousPublication = new Set(), late = 0;
     if (control && control.product) {
         collectInfo.validateForecastItems = function(items, index) {
+            if (ForecastGridCollection.stale(items, control.product, control.slot)) {
+                previousPublication.add(srcList[index].mx + ':' + srcList[index].my);
+            }
             return ForecastGridCollection.rawItems(items, control.product, control.slot, srcList[index]);
         };
     }
@@ -1153,6 +1159,8 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
             received: dataList.filter(function(item) { return item.isCompleted; }).length,
             pending: dataList.filter(function(item) { return !item.isCompleted; }).length,
             failed: dataList.filter(function(item) { return !item.isCompleted && !item.rejected; }).length,
+            notPublished: dataList.filter(function(item) { return !item.isCompleted && item.notPublished; }).length,
+            previousPublication: previousPublication.size,
             rejected: dataList.filter(function(item) { return !item.isCompleted && item.rejected; }).length,
             stopReason: collectInfo.stopReason || null});
 
@@ -1189,7 +1197,12 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                     }, control);
                 }
                 else if (item.invalidForecast && control && control.product) {
-                    forecastWriteError = forecastWriteError || new Error('Invalid forecast content remains pending');
+                    if (previousPublication.has(item.mCoord.mx + ':' + item.mCoord.my)) { late++; }
+                    else { forecastWriteError = forecastWriteError || new Error('Invalid forecast content remains pending'); }
+                    cb();
+                }
+                else if (item.notPublished && control && control.product) {
+                    late++;
                     cb();
                 }
                 else if (item.rejected) {
@@ -1207,6 +1220,10 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 if (control && control.cancelled) { return callback && callback(new Error('Current collection cancelled')); }
                 log.info(dataTypeName + ' saved data');
                 if (forecastWriteError) { cycle.forecastError = cycle.forecastError || forecastWriteError; }
+                if (late) {
+                    cycle.forecastError = cycle.forecastError ||
+                        new Error(dataTypeName + ' publication not yet available for ' + late + ' grids');
+                }
                 if (err) {
                     log.error(err);
                 }
@@ -1227,6 +1244,8 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                     }
                     err = new Error(dataTypeName + ' stopped for this cycle: every forecast key was rejected, last reason=' +
                         collectInfo.stopReason);
+                    // Delayed forecast re-walks would only repeat the rejection.
+                    if (control) { control.keysExhausted = true; }
                     if (callback) {
                         callback(err);
                     }
@@ -1538,6 +1557,7 @@ Manager.prototype._getTownForecastData = function(product, dateString, key, call
             collectTimeoutMs: gatherPolicy.forecastDeadlineMs,
             readTimeoutMs: gatherPolicy.forecastReadTimeoutMs,
             refreshAfterMs: short ? 0 : gatherPolicy.shortestRefreshAfterMs,
+            retryAtMs: gatherPolicy.forecastRetryAtMs,
             coords: function(cb) { town.getCoord(cb); },
             emit: function(record) { console.log(JSON.stringify(record)); },
             collect: function(list, slot, suppliedKey, cb, control) {
@@ -2395,7 +2415,9 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 13 || putAll) {
+    // Forecast polls start about two minutes after the KMA provision time (short HH:10,
+    // ultra-short HH:45); the coordinator re-walks late grids near +5 and +10 minutes (#2676).
+    if (time === 12 || putAll) {
         log.info('push short');
         // self.asyncTasks.push(function Short(callback) {
             self._requestApi("short", function () {
@@ -2416,7 +2438,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         //});
     }
 
-    if (time === 48 || time === 54 || time === 4 || time === 14 || putAll) {
+    if (time === 47 || time === 54 || time === 4 || time === 14 || putAll) {
         log.info('push shortest');
         // self.asyncTasks.push(function Shortest(callback) {
             self._requestApi("shortest", function () {

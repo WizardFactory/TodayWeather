@@ -34,7 +34,7 @@
       "col": 0,
       "type": "messagebus",
       "label": "Forecast poll",
-      "sublabel": "short / ultra-short",
+      "sublabel": "provision +2 min",
       "width": 140
     },
     {
@@ -43,7 +43,7 @@
       "col": 1,
       "type": "database",
       "label": "Read grid coverage",
-      "sublabel": "exact publication / product",
+      "sublabel": "publication / product",
       "width": 140
     },
     {
@@ -185,6 +185,14 @@
       "to": "done",
       "label": "report pending",
       "toSide": "bottom"
+    },
+    {
+      "id": "e10",
+      "from": "readback",
+      "to": "fetch",
+      "label": "pending: re-walk at +5 / +10 min",
+      "fromSide": "top",
+      "toSide": "top"
     }
   ],
   "cards": [
@@ -193,6 +201,8 @@
       "title": "Exact coverage",
       "items": [
         "DB1 forecast arrays / DB2 per-slot forecasts",
+        "Ultra-short HH30 request matches the provider HH00 base hour",
+        "DB2 completeness evaluated in Mongo; complete grids returned",
         "Six ultra-short hours; short hourly and extension-day slots",
         "Conditional WAV and issuance-specific TMN/TMX; valid signed values"
       ]
@@ -202,9 +212,10 @@
       "title": "Lifecycle and limits",
       "items": [
         "Same product/publication overlaps join one run",
+        "NO_DATA / previous publication: no immediate retry storm",
         "Ultra-short: one full refresh per current publication from base+40min",
         "Same-publication rerun waits for an expired run's writes to settle",
-        "Nine-minute forecast deadline fences new HTTP and writes",
+        "14-minute forecast deadline fences new HTTP and writes",
         "Readback errors stay incomplete; late issued writes are publication-fenced",
         "No production recovery, quota entitlement or server2 change claimed"
       ]

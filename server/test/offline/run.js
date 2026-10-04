@@ -17,6 +17,7 @@ var commands = [
     [path.join(__dirname, 'forecast-grid-collection.test.js')],
     [path.join(__dirname, 'forecast-manager.test.js')],
     [path.join(__dirname, 'forecast-lifecycle.test.js')],
+    [path.join(__dirname, 'forecast-late-publication.test.js')],
     [path.join(__dirname, 'current-grid-collection.test.js')],
     [path.join(__dirname, 'current-lifecycle.test.js')],
     [path.join(__dirname, 'current-writer-cancellation.test.js')],

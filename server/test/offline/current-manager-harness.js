@@ -12,7 +12,7 @@ function load(overrides) {
     }
     const log={};for(const name of ['info','error','warn','debug','verbose','silly']){log[name]=()=>{}}
     const config={db:{version:'2.0'},keyString:{dongnae_forecast_keys:'["SYNTHETIC_CURRENT_KEY_A","SYNTHETIC_CURRENT_KEY_B"]'},history:{enabled:false}};
-    Object.assign(deps,{'../config/config':config,'../config/gather':require('../../config/gather').load({GATHER_TOWN_RETRY:'1'}),
+    Object.assign(deps,{'../config/config':config,'../config/gather':require('../../config/gather').load({GATHER_TOWN_RETRY:'1',GATHER_FORECAST_RETRY_AT_MS:'none'}),
         async:require('async'),'../lib/dataGoKrKeys':require('../../lib/dataGoKrKeys')},overrides);
     for(const name of ['../lib/currentGridCollection','../lib/forecastTraffic','../lib/forecastGridCollection']) {
         const file=path.resolve(root,'controllers',name);
