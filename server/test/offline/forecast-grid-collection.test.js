@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('assert'),mongoose=require('mongoose'),Forecast=require('../../lib/forecastGridCollection'),f=require('./forecast-grid-fixtures');
 const coord={mx:60,my:127};
-const empty={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,[])}}}};
+const empty={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,[])}}},aggregate(){return {option(){return this},exec(cb){cb(null,[])}}}};
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 // A test that stops before its final PASS (e.g. a swallowed assertion) must fail, not exit 0.
 let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended before final PASS');process.exitCode=1}});
@@ -13,6 +13,9 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     assert(Forecast.complete(product,slot,rows));
     assert(!Forecast.complete(product,slot,rows.slice(1)),'missing first slot');
     assert(!Forecast.complete(product,slot,rows.slice(0,-1)),'missing final slot');
+    assert(!Forecast.complete(product,slot,rows.concat({...rows[0],wsd:-1})),'invalid duplicate after');
+    assert(!Forecast.complete(product,slot,[{...rows[0],wsd:-1}].concat(rows)),'invalid duplicate before');
+    assert(Forecast.complete(product,slot,rows.concat({...rows[0]})),'valid duplicate');
     for(const field of product==='short'?['t3h','sky','reh','pty','r06','s06','pop','uuu','vvv','vec','wsd']:['t1h','sky','reh','pty','rn1','lgt','pop','uuu','vvv','vec','wsd']){
         for(const value of [undefined,NaN,Infinity,'0',-900,900]){
             const bad=rows.map(r=>({...r}));bad[0][field]=value;assert(!Forecast.complete(product,slot,bad),field+' invalid '+value);
@@ -35,18 +38,45 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     assert.deepStrictEqual(Forecast.within(product,slot,rows.concat(tail,{...tail,...f.parts(f.publication(last)+2*f.day)})),rows.concat(tail));
     assert.deepStrictEqual(Forecast.within(product,slot,rows.concat({...tail,sky:-1})),rows,'invalid trailing row dropped');
     assert(!Forecast.batch(product,slot,coord,rows.concat({...tail,sky:-1})));
+    // Ultra-short HH30 requests are answered with the HH00 base hour; both name the requested publication.
+    const ids=product==='shortest'?[slot.date+time.slice(0,2)+'00',slot.date+time]:[slot.date+time];
+    if(product==='shortest'){
+        const literal=f.rows(product,slot,coord,time),other=f.rows(product,slot,coord,f.parts(f.publication(slot)-f.hour).time);
+        assert(Forecast.batch(product,slot,coord,rows),'HH00 echo admitted');assert(Forecast.batch(product,slot,coord,literal),'literal HH30 admitted');
+        assert(!Forecast.batch(product,slot,coord,other),'another hour is another publication');
+        assert(!Forecast.batch(product,slot,coord,rows.map((r,i)=>i?r:literal[0])),'one batch carries one publication');
+    }
     for(const version of ['1.0','2.0']){
-        const model=mongoose.model('forecast_'+product+time+version,new mongoose.Schema({}, {strict:false}));
-        let docs=f.documents(product,version,slot,coord,rows);
-        model.Query.prototype.exec=function(cb){assert.strictEqual(this.options.maxTimeMS,2000);assert(this._mongooseOptions.lean);
-            const query={pubDate:version==='1.0'?slot.date+slot.time:new Date(f.publication(slot)-9*f.hour)};
-            if(version==='2.0')query.fcsDate={$gte:new Date(f.publication(rows[0])-9*f.hour),$lte:new Date(f.publication(rows[rows.length-1])-9*f.hour)};
-            assert.deepStrictEqual(this.getQuery(),query);cb(null,docs)};
+        let docs=f.documents(product,version,slot,coord,rows),seen;
+        const memory=f.memoryModel(()=>docs);
+        const model=version==='1.0'?mongoose.model('forecast_'+product+time+version,new mongoose.Schema({}, {strict:false})):{
+            aggregate(pipeline){seen=pipeline;const a=memory.aggregate(pipeline),option=a.option;a.option=o=>{assert.deepStrictEqual(o,{maxTimeMS:9000});return option.call(a,o)};return a},
+            find(){throw new Error('DB2 coverage must not transfer every slot document')}};
+        if(version==='1.0')model.Query.prototype.exec=function(cb){assert.strictEqual(this.options.maxTimeMS,9000);assert(this._mongooseOptions.lean);
+            assert.deepStrictEqual(this.getQuery(),{pubDate:{$in:[ids[0]]}});memory.find(this.getQuery()).exec(cb)};
         const pending=()=>new Promise((res,rej)=>Forecast.pending(model,version,product,slot,[coord],(e,p)=>e?rej(e):res(p)));
         assert.strictEqual((await pending()).length,0);
         if(version==='2.0'){
+            const match=seen[0].$match,dates=rows.map(r=>+new Date(f.publication(r)-9*f.hour));
+            assert.deepStrictEqual(match.pubDate.$in.map(Number),[ids[0]].map(id=>f.publication({date:id.slice(0,8),time:id.slice(8)})-9*f.hour));
+            assert.deepStrictEqual(match.fcsDate.$in.map(Number),dates);assert.deepStrictEqual(Object.keys(match),['pubDate','fcsDate']);
             const saved=docs;docs=docs.map((d,i)=>i===0?{...d,fcsDate:new Date(+d.fcsDate+f.hour)}:d);
             assert.strictEqual((await pending()).length,1,'DB2 fcsDate must match the payload slot');docs=saved;
+            for(const field of Object.keys(rows[0]).filter(k=>typeof rows[0][k]==='number'&&!['mx','my'].includes(k)))for(const value of [undefined,NaN,Infinity,-900,'0',-50,-100,-1,0,1,4,5,8,9,100,101,360,361]){
+                docs=saved.map((d,i)=>i===0?{...d,[product+'Data']:{...d[product+'Data'],[field]:value}}:d);
+                assert.strictEqual((await pending()).length,Forecast.complete(product,slot,docs.map(d=>d[product+'Data']))?0:1,'Mongo and JS rules agree: '+field+'='+value);
+            }
+            // Review R1-01: duplicate slot documents count only when every duplicate is valid, in either order.
+            const bad={...saved[0],[product+'Data']:{...saved[0][product+'Data'],wsd:-1}};
+            for(const order of [[bad,...saved],[...saved,bad]]){docs=order;assert.strictEqual((await pending()).length,1,'conflicting duplicate stays pending')}
+            docs=[...saved,{...saved[0]}];assert.strictEqual((await pending()).length,0,'identical valid duplicate is complete');
+            docs=saved;
+        }
+        if(product==='shortest'){
+            const saved=docs;docs=f.documents(product,version,slot,coord,f.rows(product,slot,coord,time));
+            assert.strictEqual((await pending()).length,1,'stored literal HH30 rows are rewritten under the canonical HH00 identity (review 5406464242)');
+            docs=f.documents(product,version,slot,coord,f.rows(product,slot,coord,f.parts(f.publication(slot)-f.hour).time));
+            assert.strictEqual((await pending()).length,1,'previous hour cannot cover the requested publication');docs=saved;
         }
         docs=docs.map(d=>({...d,pubDate:version==='1.0'?'202701010000':new Date('2027-01-01')}));
         assert.strictEqual((await pending()).length,1,'newer publication cannot cover requested publication');
@@ -72,7 +102,11 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
  assert(!Forecast.rawItems(raw().concat(trailItem('12junk')),'short',rawSlot,coord),'malformed trailing value');
  const wrong=raw();wrong[0].baseTime=['2000'];assert(!Forecast.rawItems(wrong,'short',rawSlot,coord));
  const ultraSlot={...rawSlot,time:'1730'},ultra=f.items('shortest',ultraSlot,coord);
- assert(Forecast.rawItems(ultra,'shortest',ultraSlot,coord));
+ assert.strictEqual(ultra[0].baseTime[0],'1700','fixture uses the real HH00 echo');
+ assert(Forecast.rawItems(ultra,'shortest',ultraSlot,coord),'HH30 request answered with HH00 is valid');
+ assert(Forecast.rawItems(f.items('shortest',ultraSlot,coord,'1730'),'shortest',ultraSlot,coord),'literal HH30 echo stays valid');
+ for(const other of ['1600','1800','1630'])assert(!Forecast.rawItems(f.items('shortest',ultraSlot,coord,other),'shortest',ultraSlot,coord),'echo '+other+' is another publication');
+ assert(!Forecast.rawItems(ultra.map((r,i)=>i?r:{...r,baseTime:['1730']}),'shortest',ultraSlot,coord),'one response carries one publication');
  assert(!Forecast.rawItems(ultra.filter(r=>r.category[0]!=='LGT'),'shortest',ultraSlot,coord),'missing LGT cannot inherit schema -1 default');
  assert(Forecast.rawItems(ultra.map(r=>r.category[0]==='LGT'?{...r,fcstValue:['-1']}:r),'shortest',ultraSlot,coord),'actual signed lightning -1 is preserved');
  const old={date:'20260622',time:'0030'},oldRows=f.rows('shortest',old,coord).map(r=>{delete r.pop;return r});
@@ -87,19 +121,20 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
  c.options.collectTimeoutMs=1000;c.run({...slot,time:'0130'},'dummy',e=>{assert(e);finished++});const newer=c.active;
  callbacks[0]();assert.strictEqual(c.active,newer);callbacks[1]();assert.strictEqual(c.active,null);assert.strictEqual(finished,4);
  let attempts=0;
- const bad=new Forecast({product:'short',version:'2.0',model:{find(){throw new Error('DB failed')}},coords:cb=>cb(null,[coord]),emit:()=>{},collect:()=>attempts++});
+ const bad=new Forecast({product:'short',version:'2.0',model:{find(){throw new Error('DB failed')},aggregate(){throw new Error('DB failed')}},coords:cb=>cb(null,[coord]),emit:()=>{},collect:()=>attempts++});
  bad.run({...slot,time:'0200'},'dummy',e=>assert(e));assert.strictEqual(attempts,0);assert.strictEqual(bad.active,null);
- bad.options.model={find(){return {setOptions(){return this},lean(){return this},exec(){}}}};
+ bad.options.model={find(){return {setOptions(){return this},lean(){return this},exec(){}}},aggregate(){return {option(){return this},exec(){}}}};
  bad.options.readTimeoutMs=5;
  await new Promise(resolve=>bad.run({...slot,time:'0200'},'dummy',e=>{assert(e);resolve()}));assert.strictEqual(bad.active,null);assert.strictEqual(attempts,0);
  // Ultra-short: one full refresh walk per current publication from base+40min (KMA updates every 10 minutes).
  {
     const rs={date:'20261003',time:'1730'},base=f.publication(rs)-9*f.hour,min=60000;
     let docs=[],clock=base+18*min,walks=[];
-    const model={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,docs)}}}};
+    const model=f.memoryModel(()=>docs);
     const fill=()=>{docs=f.documents('shortest','2.0',rs,coord,f.rows('shortest',rs,coord))};
     const make=(after)=>new Forecast({product:'shortest',model,version:'2.0',coords:cb=>cb(null,[coord]),emit:()=>{},
-        refreshAfterMs:after,now:()=>clock,collect:(list,s,k,cb)=>{walks.push(list.length);fill();cb()}});
+        refreshAfterMs:after,now:()=>clock,collect:(list,s,k,cb,control)=>{walks.push(list.length);fill();
+        list.forEach(c=>control.written.add(c.mx+':'+c.my));cb()}}); // the Manager records grids it wrote
     const go=c=>new Promise((res,rej)=>c.run(rs,'dummy',(e,r)=>e?rej(e):res(r)));
     const c=make(40*min);
     await go(c);assert.deepStrictEqual(walks,[1],'first walk');
@@ -113,14 +148,15 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     // The refresh is consumed only by a successful full walk; a failed refresh stays due (review 5403438544).
     clock=base+44*min;fill();walks=[];let fail=true;
     const flaky=new Forecast({product:'shortest',model,version:'2.0',coords:cb=>cb(null,[coord]),emit:()=>{},
-        refreshAfterMs:40*min,now:()=>clock,collect:(list,s,k,cb)=>{walks.push(list.length);cb(fail?new Error('provider'):null)}});
+        refreshAfterMs:40*min,now:()=>clock,collect:(list,s,k,cb,control)=>{walks.push(list.length);
+        if(!fail)list.forEach(c=>control.written.add(c.mx+':'+c.my));cb(fail?new Error('provider'):null)}});
     await new Promise(res=>flaky.run(rs,'dummy',e=>{assert(e);res()}));
     fail=false;await go(flaky);assert.deepStrictEqual(walks,[1,1],'failed refresh is retried in the window');
     await go(flaky);assert.deepStrictEqual(walks,[1,1],'successful refresh is consumed');
  }
  // A failed after-collection coverage read is never reported as complete.
  let reads=0;const records=[];
- const afterModel={find(){return {setOptions(){return this},lean(){return this},exec(cb){if(reads++===0)return cb(null,[]);cb(new Error('read failed'))}}}};
+ const afterModel={aggregate(){return {option(){return this},exec(cb){if(reads++===0)return cb(null,[]);cb(new Error('read failed'))}}}};
  const after=new Forecast({product:'shortest',model:afterModel,version:'2.0',coords:cb=>cb(null,[coord]),emit:r=>records.push(r),
     collect:(list,s,k,cb)=>cb()});
  await new Promise(resolve=>after.run({date:'20261003',time:'0330'},'dummy',(e,r)=>{

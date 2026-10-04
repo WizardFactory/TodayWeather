@@ -7,7 +7,7 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
 (async()=>{
  for(const version of ['1.0','2.0'])for(const product of ['short','shortest']){
     let slot={date:'20261003',time:product==='short'?'0500':'0530'},stored=new Map(),attempts=0,walks=[];
-    const model={find(query){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,Array.from(stored.values()).flat())}}}};
+    const model=fixture.memoryModel(()=>Array.from(stored.values()).flat());
     const overrides={'../models/town':{getCoord:cb=>cb(null,grids)},'../models/modelShort':model,'../models/modelShortest':model,
         '../models/kma/kma.town.short.model':model,'../models/kma/kma.town.shortest.model':model};
     // New coordinator uses the real module when present, never an implementation mock.
@@ -32,7 +32,7 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     assert.strictEqual(walks.at(-1).length,2033);
     const options=m._forecastCollections[product].options;
     assert.strictEqual(options.refreshAfterMs,product==='short'?0:2400000,'only ultra-short refreshes once per publication');
-    assert.strictEqual(options.readTimeoutMs,3000);
+    assert.strictEqual(options.readTimeoutMs,10000);
     console.log('PASS Manager '+product+' DB'+version+': full-grid / repeat / recreation / repair / rollover');
  }
  passed=true;

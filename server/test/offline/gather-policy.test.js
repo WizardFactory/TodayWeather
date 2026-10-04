@@ -81,8 +81,9 @@ test('unset environment reproduces master literals', () => {
         townShort: 70, townShortest: 70, townCurrent: 70, invalidCurrent: 50,
         midForecast: 70, midLand: 70, midTemp: 70, midSea: 70
     });
-    assert.strictEqual(p.forecastDeadlineMs,540000);
-    assert.strictEqual(p.forecastReadTimeoutMs,3000);
+    assert.strictEqual(p.forecastDeadlineMs,840000);
+    assert.deepStrictEqual(p.forecastRetryAtMs,[180000,480000]);
+    assert.strictEqual(p.forecastReadTimeoutMs,10000);
     assert.strictEqual(p.shortestRefreshAfterMs,2400000);
     assert.strictEqual(gather.load({GATHER_SHORTEST_REFRESH_AFTER_MS:'0'}).shortestRefreshAfterMs,0);
     assert.strictEqual(p.retryDelayMs, 0);
@@ -135,8 +136,9 @@ test('invalid values fail at load instead of silently reverting to defaults', ()
 });
 
 test('town collectors pass the configured retry counts', () => {
-    [gather.load({}), gather.load(PRODUCTION_ENV)].forEach(policy => {
-        const empty={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,[])}}}};
+    // Delayed forecast re-walks are covered by forecast-late-publication.test.js.
+    [gather.load({GATHER_FORECAST_RETRY_AT_MS: 'none'}), gather.load(Object.assign({}, PRODUCTION_ENV, {GATHER_FORECAST_RETRY_AT_MS: 'none'}))].forEach(policy => {
+        const empty={find(){return {setOptions(){return this},lean(){return this},exec(cb){cb(null,[])}}},aggregate(){return {option(){return this},exec(cb){cb(null,[])}}}};
         const Manager = managerWith(policy, {'../models/town': {getCoord: cb => cb(null, [{mx: 60, my: 127}])},
             '../models/kma/kma.town.short.model':empty,'../models/kma/kma.town.shortest.model':empty},
             {setTimeout,clearTimeout,console:{log:()=>{}}});

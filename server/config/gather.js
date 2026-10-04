@@ -42,20 +42,47 @@ function flag(env, name, defaultValue) {
     return text === 'true';
 }
 
+// Comma-separated, strictly increasing millisecond offsets below `limit`; 'none' disables them.
+function offsets(env, name, defaultValue, limit) {
+    var raw = env[name];
+    if (raw === undefined || String(raw).trim() === '') {
+        return defaultValue.filter(function (value) { return value < limit; });
+    }
+    var text = String(raw).trim();
+    if (text === 'none') {
+        return [];
+    }
+    var values = text.split(',').map(function (part) { return part.trim(); });
+    if (values.some(function (part, i) {
+        var value = Number(part);
+        return !/^\d+$/.test(part) || value < 1 || value >= limit || (i > 0 && value <= Number(values[i - 1]));
+    })) {
+        throw new Error('Invalid ' + name + ': expected increasing integers from 1 below ' + limit + ' or none');
+    }
+    return values.map(Number);
+}
+
 function load(env) {
     var townRetry = integer(env, 'GATHER_TOWN_RETRY', 70, 1);
     var midRetry = integer(env, 'GATHER_MID_RETRY', 70, 1);
+    // Bounds one forecast run including its delayed re-walks (#2676).
+    var forecastDeadlineMs = integer(env, 'GATHER_FORECAST_DEADLINE_MS', 840000, 1, 2147483647);
 
     var pastConditionRetry = integer(env, 'GATHER_PAST_CONDITION_RETRY', 10, 1);
     // When set, the retry count is ceil(updateList.length / divisor) instead.
     var pastConditionRetryDivisor = integer(env, 'GATHER_PAST_CONDITION_RETRY_DIVISOR', 0, 0);
 
     return {
-        forecastDeadlineMs: integer(env, 'GATHER_FORECAST_DEADLINE_MS', 540000, 1, 2147483647),
+        forecastDeadlineMs: forecastDeadlineMs,
+        // Coverage-based re-walks of still pending forecast grids, measured from the run start. The
+        // first walk follows the provision time by about two minutes, so the defaults land near +5
+        // and +10 minutes: grids publish at different times and may first answer NO_DATA or the
+        // previous publication (AK, 2026-10-04, #2676).
+        forecastRetryAtMs: offsets(env, 'GATHER_FORECAST_RETRY_AT_MS', [180000, 480000], forecastDeadlineMs),
         // One full ultra-short refresh per current publication after this delay; 0 disables (#2676).
         shortestRefreshAfterMs: integer(env, 'GATHER_SHORTEST_REFRESH_AFTER_MS', 2400000, 0, 2147483647),
         // Coordinate/coverage-read wait bound; Mongo coverage maxTimeMS is one second shorter (#2676).
-        forecastReadTimeoutMs: integer(env, 'GATHER_FORECAST_READ_TIMEOUT_MS', 3000, 1001, 2147483647),
+        forecastReadTimeoutMs: integer(env, 'GATHER_FORECAST_READ_TIMEOUT_MS', 10000, 1001, 2147483647),
         currentDeadlineMs: integer(env, 'GATHER_CURRENT_DEADLINE_MS', 540000, 1, 2147483647),
         retry: {
             townShort: townRetry,

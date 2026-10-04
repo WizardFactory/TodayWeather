@@ -13,11 +13,16 @@ function kmaTownShortestController(){
 
 // Controlled forecast writes never let an admitted older publication replace a newer slot (#2676).
 // A fenced miss only inserts when the slot is absent, so it cannot add a duplicate slot document.
+// Every eligible duplicate of the slot is rewritten: coverage requires all of them valid (#2676 review).
 function fencedUpdate(model, query, newItem, control, callback) {
     if (!control || !control.product) { return model.update(query, newItem, {upsert:true}, callback); }
-    var fenced = Object.assign({$or: [{pubDate: {$lte: newItem.pubDate}}, {pubDate: null}]}, query);
-    model.update(fenced, newItem, {}, function(err, raw) {
+    // The canonical HH00 write also replaces a same-hour literal HH30 slot (same publication), never a later hour.
+    var bound = new Date(newItem.pubDate.getTime() + 30 * 60000);
+    var fenced = Object.assign({$or: [{pubDate: {$lte: bound}}, {pubDate: null}]}, query);
+    model.update(fenced, newItem, {multi: true}, function(err, raw) {
         if (err || (raw && raw.n > 0)) { return callback(err); }
+        // The absent-slot insert is a new write: never admit it after the run was cancelled.
+        if (control.cancelled) { return callback(new Error('Forecast collection cancelled')); }
         var insert = {pubDate: newItem.pubDate, shortestData: newItem.shortestData};
         model.update(query, {$setOnInsert: insert}, {upsert:true}, function(err) { callback(err); });
     });

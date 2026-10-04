@@ -23,8 +23,8 @@ These are scheduler trigger times, **not provider publication guarantees**. `get
 | Task / endpoint | UTC minute check | Dispatch |
 | --- | --- | --- |
 | `current` | 2, 12, 22, 32, 42, 52 | Direct self-HTTP |
-| `shortest` | 48, 54, 4, 14 | Direct self-HTTP |
-| `short` | 13 | Direct self-HTTP |
+| `shortest` | 47, 54, 4, 14 | Direct self-HTTP |
+| `short` | 12 | Direct self-HTTP |
 | `keco` real-time station air | 3, 13, 23, 33, 43, 53 | Direct self-HTTP |
 | `kecoSido` regional air | 4, 14, 24, 34, 44, 54 | Direct self-HTTP |
 | `past`, `kecoForecast`, `midtemp`, `midland`, `midforecast`, `midsea`, `shortrss` | 2 | Queued, drained in reverse insertion order; `past` only while `GATHER_PAST_ENABLED` is not `false` |
@@ -343,13 +343,20 @@ horizon checks run before saves, and coverage readback after saves is authoritat
 DB1 replaces required fields of overlapping controlled rows, keeping only conditional
 same-day TMN/TMX and optional WAV;
 DB2 serial writers propagate errors. Both paths fence new writes after expiry.
-Rows outside the expected horizon are dropped before writes. Three-second reads and
-the nine-minute forecast run deadline bound guard lifetime; issued Mongo operations
+Rows outside the expected horizon are dropped before writes. Bounded coverage reads and
+the 14-minute forecast run deadline bound guard lifetime; issued Mongo operations
 may settle later but are publication-fenced (DB2 `pubDate <= own` with an
 absent-slot `$setOnInsert`, DB1 compare-and-set on the read `pubDate`), so they
 cannot replace a newer publication; a same-publication rerun waits until an expired
 run's admitted writes have settled. Coverage read waits are configurable through
-`GATHER_FORECAST_READ_TIMEOUT_MS`. Ultra-short publications are updated by KMA every ten
+`GATHER_FORECAST_READ_TIMEOUT_MS` (default 10 s); DB2 coverage is one Mongo
+aggregation that returns only complete grids instead of every slot document. An
+ultra-short `HH30` request is answered with the provider's `HH00` base hour; both
+name the requested publication in validation, admission and coverage. Grids publish
+at different times after the provision time, so a first-page NO_DATA or a previous
+publication is not retried at once: the first run of a publication walks still
+pending grids again at `GATHER_FORECAST_RETRY_AT_MS` (default +3 and +8 minutes
+from the run, which starts about two minutes after provision). Ultra-short publications are updated by KMA every ten
 minutes, so each process refreshes every grid once per current ultra-short
 publication from `GATHER_SHORTEST_REFRESH_AFTER_MS` (default base+40min). Guards are
 process-local. Product/issuance coverage and actual page/retry attempts are emitted

@@ -5,15 +5,21 @@ const assert=require('assert'),fs=require('fs'),os=require('os'),path=require('p
 const mongoose=require('mongoose'),request=require('request'),h=require('./harness'),mh=require('./current-manager-harness'),fx=require('./forecast-grid-fixtures'),Forecast=require('../../lib/forecastGridCollection');
 const grids=Array.from({length:2033},(_,i)=>({mx:i%149,my:Math.floor(i/149)}));
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-let dbProcess,connection,provider,scratch,logFd,requests=0,pages=0,retries=0,retried=false,currentProduct,slot;
+let dbProcess,connection,provider,scratch,logFd,requests=0,pages=0,retries=0,retried=false,currentProduct,slot,late,staleTemplates;
 const summaries=[];
+// The production reader uses field lists that app.js installs as globals; take them from app.js itself.
+const readerGlobals=Object.fromEntries(['commonString','shortestString'].map(name=>{
+    const m=new RegExp('global\\.'+name+' = (\\[[^\\]]*\\])').exec(fs.readFileSync(path.join(__dirname,'../../app.js'),'utf8'));
+    return [name,JSON.parse(m[1].replace(/'/g,'"'))];
+}));
 async function freePort(){const s=net.createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r));const p=s.address().port;await new Promise(r=>s.close(r));return p}
 function writeXML(product,s){
  const categories={t3h:'TMP',r06:'PCP',s06:'SNO',t1h:'T1H',rn1:'RN1',sky:'SKY',reh:'REH',pty:'PTY',pop:'POP',uuu:'UUU',vvv:'VVV',vec:'VEC',wsd:'WSD',tmn:'TMN',tmx:'TMX',lgt:'LGT'};
  const items=[];
  for(const row of fx.rows(product,s,{mx:60,my:127})){
-    for(const name of Object.keys(categories))if(row[name]!==undefined){items.push({baseDate:[s.date],baseTime:[s.time],fcstDate:[row.date],fcstTime:[row.time],nx:['NX_TOKEN'],ny:['NY_TOKEN'],category:[categories[name]],fcstValue:[String(row[name])]})}
-    if(product==='short')items.push({baseDate:[s.date],baseTime:[s.time],fcstDate:[row.date],fcstTime:[row.time],nx:['NX_TOKEN'],ny:['NY_TOKEN'],category:['WAV'],fcstValue:['0']});
+    // The provider answers an ultra-short HH30 request with baseTime HH00 (production, 2026-10-04).
+    for(const name of Object.keys(categories))if(row[name]!==undefined){items.push({baseDate:[s.date],baseTime:[fx.echo(product,s)],fcstDate:[row.date],fcstTime:[row.time],nx:['NX_TOKEN'],ny:['NY_TOKEN'],category:[categories[name]],fcstValue:[String(row[name])]})}
+    if(product==='short')items.push({baseDate:[s.date],baseTime:[fx.echo(product,s)],fcstDate:[row.date],fcstTime:[row.time],nx:['NX_TOKEN'],ny:['NY_TOKEN'],category:['WAV'],fcstValue:['0']});
  }
  const out=[];
  for(let i=0;i<items.length;i+=999){const r=h.response(items.slice(i,i+999));r.response.body[0].totalCount=[String(items.length)];r.response.body[0].pageNo=[String(out.length+1)];r.response.body[0].numOfRows=['999'];out.push(h.xml(r))}
@@ -49,6 +55,14 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
     assert.strictEqual(u.searchParams.get('base_date'),slot.date);assert.strictEqual(u.searchParams.get('base_time'),slot.time);
     requests++;const page=Number(u.searchParams.get('pageNo')||1);if(page>1)pages++;
     // One transient failed continuation/page per product/version; existing bounded retry repairs it.
+    // Grids publish at different times: grid 1 first answers NO_DATA, grid 2 the previous publication;
+    // both are collected by the delayed re-walk, not by immediate retries (AK, 2026-10-04).
+    const at=grids.findIndex(g=>String(g.mx)===u.searchParams.get('nx')&&String(g.my)===u.searchParams.get('ny'));
+    if((at===1||at===2)&&!late.has(at)){
+        late.add(at);res.writeHead(200,{'Content-Type':'text/xml'});
+        if(at===1)return res.end(h.xml({response:{header:[{resultCode:['03'],resultMsg:['NO_DATA']}],body:[{totalCount:['0']}]}}));
+        return res.end(staleTemplates[0].replace(/NX_TOKEN/g,u.searchParams.get('nx')).replace(/NY_TOKEN/g,u.searchParams.get('ny')));
+    }
     if(!retried&&u.searchParams.get('nx')===String(grids[0].mx)&&u.searchParams.get('ny')===String(grids[0].my)&&page===(templates.length>1?2:1)){
         retried=true;retries++;res.writeHead(503);return res.end('synthetic transient failure');
     }
@@ -58,22 +72,25 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
  await new Promise(r=>provider.listen(0,'127.0.0.1',r));
  function Collector(){return h.collector({get(url,opts,cb){const u=new URL(url);assert.strictEqual(u.host,'apis.data.go.kr');return request.get('http://127.0.0.1:'+provider.address().port+u.pathname+u.search,{...opts,proxy:null},cb)}},[])}
  for(const version of ['1.0','2.0'])for(const product of ['short','shortest']){
-    currentProduct=product;slot={date:'20261003',time:product==='short'?'1700':'1730'};retried=false;templates=writeXML(product,slot);
+    currentProduct=product;slot={date:'20261003',time:product==='short'?'1700':'1730'};retried=false;templates=writeXML(product,slot);late=new Set();
+    staleTemplates=writeXML(product,{date:slot.date,time:product==='short'?'1400':'1630'});
     const model=models[product+(version==='1.0'?'1':'2')],log=h.logger([]);
     const Controller=h.load('controllers/kma/kma.town.'+product+'.controller.js',{
         async:require('async'),['../../models/kma/kma.town.'+product+'.model.js']:models[product+'2'],
         '../../lib/kmaTimeLib':require('../../lib/kmaTimeLib'),'../../lib/kmaPrecipitation':require('../../lib/kmaPrecipitation'),
-        '../../lib/midForecastPolicy':require('../../lib/midForecastPolicy')},{log});
+        '../../lib/midForecastPolicy':require('../../lib/midForecastPolicy')},{log,...readerGlobals});
     const overrides={'../lib/collectTownForecast':Collector,'../models/town':{getCoord:cb=>cb(null,grids)},
         '../models/modelShort':models.short1,'../models/modelShortest':models.shortest1,
         '../models/kma/kma.town.short.model':models.short2,'../models/kma/kma.town.shortest.model':models.shortest2,
         ['./kma/kma.town.'+product+'.controller.js']:Controller,'../lib/midForecastPolicy':require('../../lib/midForecastPolicy'),
-        '../config/gather':require('../../config/gather').load({GATHER_TOWN_RETRY:'2',GATHER_REQUEST_CONCURRENCY:'16'})};
+        '../config/gather':require('../../config/gather').load({GATHER_TOWN_RETRY:'2',GATHER_REQUEST_CONCURRENCY:'16',GATHER_FORECAST_RETRY_AT_MS:'500,1000',GATHER_SHORTEST_REFRESH_AFTER_MS:'0'})};
     function manager(){const f=mh.load(overrides);f.config.db.version=version;f.m.MAX_SHORT_COUNT=192;f.m.MAX_SHORTEST_COUNT=192;
         f.m[product==='short'?'getShortQueryTime':'getShortestQueryTime']=()=>slot;return f}
     const f=manager(),start=requests,pageStart=pages,retryStart=retries;
     const results=await Promise.all([gather(f.m,product),gather(f.m,product)]);
-    assert.strictEqual(requests-start,2033*templates.length+templates.length,'initial full-grid plus one grid retry');
+    // NO_DATA answers one page; the previous publication's first page fails strict validation.
+    assert.strictEqual(requests-start,2033*templates.length+templates.length-2*(templates.length-1)+2*templates.length,'full grid, one transient retry, two late grids re-walked once');
+    assert.strictEqual(results[0].walks,2,'late grids are collected by the first delayed re-walk');
     assert.strictEqual(results[0].pending,0);assert.strictEqual(results[0].httpAttempts,requests-start);
     const read=()=>new Promise((res,rej)=>Forecast.pending(model,version,product,slot,grids,(e,p)=>e?rej(e):res(p)));
     assert.strictEqual((await read()).length,0,'full persisted horizon/categories for every grid');
@@ -92,10 +109,51 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
         const slots=(await model.find({'mCoord.mx':grids[0].mx,'mCoord.my':grids[0].my}).lean().exec()).map(d=>Number(d.fcsDate));
         assert.strictEqual(new Set(slots).size,slots.length,'fenced misses insert no duplicate slot documents');
     }
+    // AK review 5406464242 #1: legacy literal-HH30 ultra-short slots (all, or mixed with HH00) are rewritten under the
+    // canonical HH00 publication, so the reader's latest-pubDate filter returns every slot with the new values.
+    if(product==='shortest'){
+        const legacy=fx.rows(product,slot,grids[5],slot.time).map(r=>({...r,t1h:3.5}));
+        for(const mixed of [false,true]){
+            const lq={'mCoord.mx':grids[5].mx,'mCoord.my':grids[5].my};
+            const rows=mixed?legacy.map((r,i)=>i<3?r:{...fx.rows(product,slot,grids[5])[i],t1h:3.5}):legacy;
+            await model.collection.deleteMany(lq);await model.collection.insertMany(fx.documents(product,version,slot,grids[5],rows).map(d=>({...d})).flatMap(d=>
+                version==='1.0'?[d]:[d]).map(d=>version==='1.0'||!mixed?d:{...d,pubDate:new Date(fx.publication({date:d[field].pubDate.slice(0,8),time:d[field].pubDate.slice(8)})-9*fx.hour)}));
+            const before=requests;await gather(f.m,product);assert.strictEqual(requests-before,templates.length,(mixed?'mixed':'literal')+' HH30 slots are re-collected once');
+            assert.strictEqual((await read()).length,0);
+            let served;
+            if(version==='2.0'){
+                const out=await new Promise((res,rej)=>new Controller().getShortestFromDB(null,grids[5],undefined,(e,r)=>e?rej(e):res(r)));
+                served=out.ret.filter(r=>r.pubDate===out.pubDate&&fx.rows(product,slot,grids[5]).some(x=>x.date===r.date&&x.time===r.time));
+                assert.strictEqual(out.pubDate,slot.date+fx.echo(product,slot),'reader publication is canonical HH00');
+            } else {
+                const doc=await model.collection.findOne(lq);assert.strictEqual(doc.pubDate,slot.date+fx.echo(product,slot));
+                // DB1 rows have no per-row publication; the document pubDate (checked above) applies to all of them.
+                served=doc[field].filter(r=>fx.rows(product,slot,grids[5]).some(x=>x.date===r.date&&x.time===r.time));
+            }
+            assert.strictEqual(served.length,6,'every slot served under one publication');assert(served.every(r=>r.t1h===-12.5),'new values stored');
+        }
+    }
+    // Review R1-04: an invalid duplicate slot document is repaired by the real writer, not re-walked forever.
+    const dupGrid=grids[3],first=fx.rows(product,slot,dupGrid)[0],dq={'mCoord.mx':dupGrid.mx,'mCoord.my':dupGrid.my};
+    if(version==='1.0'){const doc=await model.collection.findOne(dq);const row=doc[field].find(r=>r.date===first.date&&r.time===first.time);
+        await model.collection.updateOne(dq,{$push:{[field]:{...row,wsd:-1}}})}
+    else {const doc=await model.collection.findOne({...dq,[field+'.date']:first.date,[field+'.time']:first.time});delete doc._id;
+        await model.collection.insertOne({...doc,[field]:{...doc[field],wsd:-1}})}
+    assert.deepStrictEqual((await read()).map(g=>g.mx+':'+g.my),[dupGrid.mx+':'+dupGrid.my],'conflicting duplicate is pending');
+    const dupStart=requests;await gather(f.m,product);assert.strictEqual(requests-dupStart,templates.length,'one walk repairs it');
+    assert.strictEqual((await read()).length,0,'every duplicate rewritten');
+    const dupRows=version==='1.0'?(await model.collection.findOne(dq))[field].filter(r=>r.date===first.date&&r.time===first.time):
+        (await model.collection.find({...dq,[field+'.date']:first.date,[field+'.time']:first.time}).toArray()).map(d=>d[field]);
+    assert(dupRows.length===2&&dupRows.every(r=>r.wsd===0),'both duplicates hold the new publication values');
     const stored=await model.findOne({'mCoord.mx':grids[0].mx,'mCoord.my':grids[0].my}).lean().exec();
+    // Rows are stored under the provider's echoed publication (ultra-short HH30 request -> HH00).
+    const echoed=version==='1.0'?slot.date+fx.echo(product,slot):new Date(fx.publication({date:slot.date,time:fx.echo(product,slot)})-9*fx.hour);
+    assert.strictEqual(await model.count({'mCoord.mx':grids[0].mx,'mCoord.my':grids[0].my,pubDate:echoed}).exec(),version==='1.0'?1:fx.rows(product,slot,grids[0]).length,'stored publication is the provider echo');
+    const reads=f.records.join('\n').split('\n').filter(l=>l.includes('"forecast-coverage"')).map(l=>JSON.parse(l.slice(l.indexOf('{')))).filter(r=>typeof r.readMs==='number');
+    assert(reads.length&&reads.every(r=>r.outcome!=='read-failed'));
     const row=version==='1.0'?stored[field][0]:stored[field];assert.strictEqual(row[product==='short'?'t3h':'t1h'],-12.5);assert.strictEqual(row.uuu,-2);assert.strictEqual(row.pty,0);
     assert(!f.records.join('').includes('SYNTHETIC_CURRENT_KEY'));assert(!f.records.join('').includes('serviceKey'));
-    summaries.push({version,product,grids:2033,slots:fx.rows(product,slot,grids[0]).length,httpAttempts:requests-start,continuationAttempts:pages-pageStart,transientFailures:retries-retryStart,repeatAttempts:0,repairAttempts:templates.length,readbackPending:0});
+    summaries.push({version,product,grids:2033,slots:fx.rows(product,slot,grids[0]).length,httpAttempts:requests-start,continuationAttempts:pages-pageStart,transientFailures:retries-retryStart,repeatAttempts:0,repairAttempts:templates.length,duplicateRepairAttempts:templates.length,readbackPending:0,lateGrids:2,walks:results[0].walks,maxCoverageReadMs:Math.max(...reads.map(r=>r.readMs))});
     console.log(JSON.stringify({event:'smoke-product',...summaries[summaries.length-1]}));
  }
  console.log(JSON.stringify({result:'passed',node:process.versions.node,mongoose:mongoose.version,mongo:'4.4',provider:'synthetic loopback',summaries}));
