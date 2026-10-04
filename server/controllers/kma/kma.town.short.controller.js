@@ -21,6 +21,8 @@ function fencedUpdate(model, query, newItem, control, callback) {
     var fenced = Object.assign({$or: [{pubDate: {$lte: newItem.pubDate}}, {pubDate: null}]}, query);
     model.update(fenced, newItem, {multi: true}, function(err, raw) {
         if (err || (raw && raw.n > 0)) { return callback(err); }
+        // The absent-slot insert is a new write: never admit it after the run was cancelled.
+        if (control.cancelled) { return callback(new Error('Forecast collection cancelled')); }
         var insert = {pubDate: newItem.pubDate, shortData: newItem.shortData};
         model.update(query, {$setOnInsert: insert}, {upsert:true}, function(err) { callback(err); });
     });

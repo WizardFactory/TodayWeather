@@ -93,3 +93,10 @@ duplicate (DB2 `multi` within the publication fence; DB1 every matching row). Th
 HTTP/Mongo smoke inserts an invalid duplicate per product/storage after completion; it
 failed on 68bb4fad (`pending=1`) and is now repaired by one walk (two pages for short,
 one for ultra-short) with both duplicates holding the new values.
+
+Re-review 3 (dc41f48c) confirmed R1-04 and reproduced R1-05, a gap that predates this PR:
+a fenced update whose no-match callback arrived after the run deadline still issued the
+absent-slot `$setOnInsert`, which is a new write after cancellation. The writers now check
+cancellation before that insert; the lifecycle regression failed before the fix and passes
+now for both products. CI's late-publication timing assertion was made order-based after
+it failed on slower runners (513edd6a).

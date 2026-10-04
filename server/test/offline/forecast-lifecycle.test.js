@@ -201,6 +201,21 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     const third=await poll();assert(!third.e,third.e&&third.e.message);assert.strictEqual(walks,2,'refresh runs once settled');
     assert([...stored.values()].every(d=>d.shortestData.t1h===2),'refresh values are not reverted by the earlier write');
  }
+ // Review R1-05: a fenced miss that calls back after cancellation must not start the absent-slot insert.
+ for(const product of ['short','shortest']){
+    const slot={date:'20261003',time:product==='short'?'1700':'1730'},updates=[];let pendingCb;
+    function Model(){}
+    Model.update=(query,data,options,cb)=>{updates.push(data.$setOnInsert?'insert':'update');pendingCb=cb};
+    const Controller=h.load('controllers/kma/kma.town.'+product+'.controller.js',{async:require('async'),['../../models/kma/kma.town.'+product+'.model.js']:Model,
+        '../../lib/kmaTimeLib':require('../../lib/kmaTimeLib'),'../../lib/kmaPrecipitation':require('../../lib/kmaPrecipitation'),
+        '../../lib/midForecastPolicy':require('../../lib/midForecastPolicy')},{log:h.logger([])});
+    const control={product,slot,cancelled:false};let result;
+    new Controller()[product==='short'?'saveShort':'saveShortest'](fx.rows(product,slot,coords[0]),e=>{result=e},control);
+    assert.deepStrictEqual(updates,['update']);
+    control.cancelled=true;pendingCb(null,{n:0});
+    assert.deepStrictEqual(updates,['update'],product+': no insert is issued after cancellation');
+    assert(result&&/cancel/i.test(result.message),'the cancelled write reports an error');
+ }
  passed=true;
  console.log('PASS forecast lifecycle: joined HTTP deadline, late-write fencing, incomplete batch rejection, quota/key bounds and DB1/DB2 writer fences/errors');
 })().catch(e=>{console.error(e);process.exitCode=1});
