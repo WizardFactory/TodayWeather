@@ -60,6 +60,7 @@ class Dispatcher {
                 resolve: resolve,
                 attempt: 0,
                 preparations: job.preparationAttempts || 0,
+                prepFailures: job.preparationFailures || 0,
                 done: false
             };
             self.items.add(item);
@@ -135,7 +136,8 @@ class Dispatcher {
             error: error === undefined ? undefined : safeReason(error),
             stage: stage,
             attempts: item.attempt,
-            preparationAttempts: item.preparations
+            preparationAttempts: item.preparations,
+            preparationFailures: item.prepFailures
         });
     }
     // A retryable typed weather failure is retried with bounded backoff before any FCM submission.
@@ -145,10 +147,13 @@ class Dispatcher {
             job = item.job,
             typed = e instanceof PreparationError,
             reason = typed ? e.code : 'preparation-error';
-        if (!typed || !e.retryable || item.preparations >= this.prepareAttempts)
+        // The bound counts failed preparations only: an explicit FCM retry prepares again without using it.
+        item.prepFailures++;
+        if (job.onPreparationFailure) job.onPreparationFailure(item.prepFailures);
+        if (!typed || !e.retryable || item.prepFailures >= this.prepareAttempts)
             return this.finish(item, 'failed', reason, 'preparation');
         var delay =
-            Math.min(30000, this.prepareRetry * Math.pow(2, Math.max(0, item.preparations - 1))) +
+            Math.min(30000, this.prepareRetry * Math.pow(2, Math.max(0, item.prepFailures - 1))) +
             Math.floor(Math.random() * Math.min(1000, this.prepareRetry));
         if (job.deadline !== undefined && this.now() + delay >= job.deadline)
             return this.finish(item, 'expired', reason, 'preparation');
@@ -202,8 +207,8 @@ class Dispatcher {
             var payload;
             if (item.prepared) payload = item.payload;
             else if (job.prepare) {
-                // The cumulative bound also holds for work re-admitted after supersession or recovery.
-                if (item.preparations >= this.prepareAttempts) {
+                // The failure bound also holds for work re-admitted after supersession or recovery.
+                if (item.prepFailures >= this.prepareAttempts) {
                     this.finish(item, 'failed', 'preparation-attempts-exhausted', 'preparation');
                     return;
                 }

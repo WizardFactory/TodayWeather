@@ -115,17 +115,21 @@ for later investigation. No deployment, data migration or automatic deletion is 
   at once; a rejected request is never cached, the 5s timeout starts when the request is issued,
   and a request still queued behind the limit when its campaign expires is not sent (`weather-deadline`).
   A retryable failure (`weather-timeout`, `weather-unavailable`, `weather-deadline`) is retried before any FCM
-  submission with 1s exponential backoff and jitter, at most `PUSH_PREPARE_ATTEMPTS` (default 4)
-  preparations per recipient, and never past the campaign deadline. The count is written with
-  each checkpoint while a job is in flight, so supersession and coordinator restart do not reset it;
-  a recipient already at the bound ends `preparation-attempts-exhausted` without another weather call.
+  submission with 1s exponential backoff and jitter until `PUSH_PREPARE_ATTEMPTS` (default 4)
+  preparations of that recipient have failed, and never past the campaign deadline. The counts are
+  written with each checkpoint while a job is in flight, so supersession and coordinator restart do
+  not reset them; a recipient already at the bound ends `preparation-attempts-exhausted` without
+  another weather call. An explicit FCM retry (429/5xx) prepares again as before and does not use this bound.
+  A weather request shared by several recipients is dropped at the concurrency gate only when every
+  one of them has passed its deadline.
   Each retry repeats the registration revision, eligibility and disabled-state checks; a
   changed registration is re-admitted with its new record, a disabled one is not sent.
-  `weather-rejected` (other 4xx) and unclassified errors are not retried. An ambiguous or
-  failed FCM send is never resent by this path.
+  `weather-rejected` (other 4xx) and unclassified errors are not retried. The preparation retry
+  never resends an FCM request; the existing 429/5xx transport retries are unchanged and an
+  ambiguous send is still not resent.
 - Campaign readback: each persisted job keeps `status`, `stage` (`preparation` or `transport`),
   `reason` (a code from a closed list such as `weather-timeout`, `messaging/invalid-argument`,
-  `transport-timeout-ambiguous` or an HTTP status; anything else is stored as `unknown`), `preparationAttempts` and transport `attempts`. The manifest
+  `transport-timeout-ambiguous` or an HTTP status; anything else is stored as `unknown`), `preparationAttempts`, `preparationFailures` and transport `attempts`. The manifest
   `summary` counts jobs by status, failures by `stage:reason` and total attempts, from the same
   job snapshot as the accompanying parts. Only fixed codes
   and counts are stored: never tokens, credentials, positions or provider bodies. Preparation

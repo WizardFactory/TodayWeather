@@ -39,10 +39,11 @@ function create(o) {
         if (next) next();
         else active--;
     }
-    function fetch(url, lang, deadline) {
+    function fetch(url, lang, entry) {
         return acquire().then(function () {
             // A request queued behind the concurrency gate must not start once its campaign has expired.
-            if (deadline !== undefined && now() >= deadline) {
+            // The request is shared: it is dropped only when no consumer is still within its deadline.
+            if (entry.deadline !== undefined && now() >= entry.deadline) {
                 release();
                 throw new PreparationError('weather-deadline', true);
             }
@@ -74,8 +75,13 @@ function create(o) {
         get: function (url, lang, deadline) {
             var key = JSON.stringify(['weather', url, lang]),
                 old = cache.get(key);
-            if (old && old.until > now()) return old.promise;
-            var entry = { until: now() + cacheMs, promise: fetch(url, lang, deadline) };
+            if (old && old.until > now()) {
+                old.deadline =
+                    old.deadline === undefined || deadline === undefined ? undefined : Math.max(old.deadline, deadline);
+                return old.promise;
+            }
+            var entry = { until: now() + cacheMs, deadline: deadline };
+            entry.promise = fetch(url, lang, entry);
             cache.set(key, entry);
             entry.promise.catch(function () {
                 if (cache.get(key) === entry) cache.delete(key);

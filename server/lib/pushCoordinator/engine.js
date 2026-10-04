@@ -27,6 +27,7 @@ function summarize(jobs) {
 function recordResult(job, result) {
     job.status = result.status === 'superseded' ? 'pending' : result.status;
     job.preparationAttempts = Number(result.preparationAttempts) || 0;
+    job.preparationFailures = Number(result.preparationFailures) || 0;
     job.attempts = (job.attempts || 0) + (Number(result.attempts) || 0);
     if (result.status === 'superseded' || result.status === 'accepted') {
         delete job.stage;
@@ -334,6 +335,11 @@ class Engine {
                         priority: c.kind === 'warning' ? 'warning' : 'normal',
                         deadline: c.deadline,
                         preparationAttempts: job.preparationAttempts || 0,
+                        preparationFailures: job.preparationFailures || 0,
+                        onPreparationFailure: function (n) {
+                            job.preparationFailures = n;
+                            c.dirty = true;
+                        },
                         // Checkpoints must keep the count of an unfinished job so restarts cannot reset the bound.
                         onPreparation: function (n) {
                             job.preparationAttempts = n;

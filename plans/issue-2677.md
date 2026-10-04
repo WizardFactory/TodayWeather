@@ -3,11 +3,12 @@ Input: [specification](../specs/issue-2677.md). Owner: main (Claude). Endpoint: 
 
 1. Add failing regressions first: dispatcher retry/bound/deadline/guard/ambiguous-send, weatherSource bounds and typing, engine scheduled-batch recovery and safe readback including a sensitive-field exclusion check. Record the intended Red.
 2. Add `errors.js` (PreparationError) and `weatherSource.js`; wire `runtime.js` weather() through it.
-3. Update `dispatcher.js` (phase split, preparation retry, stage/reason/attempts, sanitized reasons) and `engine.js` (persist result fields, manifest summary, pass cumulative preparation count).
+3. Update `dispatcher.js` (phase split, preparation retry, stage/reason/attempts, sanitized reasons) and `engine.js` (persist result fields, manifest summary, pass the checkpointed preparation and failure counts).
 4. Run the push offline suite and the complete `npm run test:offline` where the environment permits. Additional smoke: a loopback HTTP origin that hangs the first request per URL, driven through the real `weatherSource`, Dispatcher and Engine with in-memory storage.
 5. Update `docs/architecture/push-notifications.md` and `push-s3-design.md` for the retry/readback contract; assess the Archify push diagrams.
 6. Commit, push, open the PR, wait for CI, run independent review, apply selected findings, renew affected checks.
 7. Review 1 (PR #2680, Codex) Required F1-F6 plus the gather-offline CI failure: enforce the bound before preparing, checkpoint in-flight counts, derive the manifest summary from the part snapshot, closed reason list, deadline-aware weather queue, architecture docs and regenerated Archify push diagram (finalize + visual-check). Red/Green for each in `push-preparation-retry.test.js`; the smoke is not in `run.js` (gather-offline installs a minimal dependency set).
+8. Review 2 (same reviewer) F7/F8: the bound counts failed preparations only so explicit FCM retries keep their five attempts, and a shared weather request is dropped only when every consumer's deadline has passed.
 
 Scenarios: S1 scheduled alarm batch with one weather outage (AC1); S2 persistent outage, disabled/changed registration, ambiguous send (AC2); S3 campaign readback of mixed preparation/FCM failures with sensitive data absent (AC3). Machine definitions: `reports/sdlc/issue-2677/user-scenarios.json`.
 

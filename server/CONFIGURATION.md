@@ -124,7 +124,7 @@ chain select the storage account. API workers do not need S3 credentials.
 `PUSH_SEND_RATE=500` limits each Firebase project's attempted submissions per second
 with a 100ms token bucket. `PUSH_WEATHER_CONCURRENCY=16` bounds simultaneous weather
 requests to the service API during preparation, and `PUSH_PREPARE_ATTEMPTS=4` is the
-total preparation attempts per recipient (retried only for a retryable weather failure,
+failed preparations tolerated per recipient (retried only for a retryable weather failure,
 within the five-minute campaign deadline; see [S3 operations](../docs/operations/push-s3.md)).
 Urgent work has reserved capacity. `WARNING_PUSH_ENABLED`
 and the gather-side `PUSH_WARNING_FEED_ENABLED` default to false. The latter also

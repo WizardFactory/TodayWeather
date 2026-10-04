@@ -217,7 +217,7 @@ runner.test('preparation attempts carried by the job count toward the bound', as
     var d = dispatcher({ prepareAttempts: 4, send: async function () {} });
     var r = await d.enqueue({
         deadline: Date.now() + 60000,
-        preparationAttempts: 3,
+        preparationFailures: 3,
         prepare: async function () {
             prepared++;
             throw transient();
@@ -226,7 +226,7 @@ runner.test('preparation attempts carried by the job count toward the bound', as
     d.close();
     assert.equal(r.status, 'failed');
     assert.equal(prepared, 1);
-    assert.equal(r.preparationAttempts, 4);
+    assert.equal(r.preparationFailures, 4);
 });
 // ---- Weather source ---------------------------------------------------------------------------
 function source(request, options) {
@@ -440,6 +440,7 @@ runner.test('persistent weather outage ends at the attempt bound and reads back 
         assert.equal(j.stage, 'preparation');
         assert.equal(j.reason, 'weather-timeout');
         assert.equal(j.preparationAttempts, 3);
+        assert.equal(j.preparationFailures, 3);
         assert.equal(j.attempts, 0);
     });
     assert.equal(out.manifest.summary.failures['preparation:weather-timeout'], 4);
@@ -575,7 +576,7 @@ runner.test('review F1: carried preparation count at the bound prepares nothing 
     var d = dispatcher({ prepareAttempts: 4, send: async function () { throw new Error('must not send'); } });
     var r = await d.enqueue({
         deadline: Date.now() + 60000,
-        preparationAttempts: 4,
+        preparationFailures: 4,
         prepare: async function () {
             prepared++;
             return {};
@@ -585,7 +586,7 @@ runner.test('review F1: carried preparation count at the bound prepares nothing 
     assert.equal(r.status, 'failed');
     assert.equal(r.stage, 'preparation');
     assert.equal(r.error, 'preparation-attempts-exhausted');
-    assert.equal(r.preparationAttempts, 4);
+    assert.equal(r.preparationFailures, 4);
     assert.equal(prepared, 0);
 });
 runner.test('review F2: an in-flight preparation count survives checkpoint and restart', async function () {
@@ -605,6 +606,7 @@ runner.test('review F2: an in-flight preparation count survives checkpoint and r
     var mid = stored(x.s);
     assert.equal(mid.parts[0].status, 'sending');
     assert.equal(mid.parts[0].preparationAttempts, 1, 'checkpoint carries the attempt in progress');
+    assert.equal(mid.parts[0].preparationFailures, 1, 'and the failure that bounds the retries');
     assert.equal(mid.manifest.summary.preparationAttempts, 1);
     x.d.close();
     var d2 = dispatcher({ now: x.now, prepareRetryMs: 10, prepareAttempts: 2, send: async function () { throw new Error('must not send'); } });
@@ -730,6 +732,99 @@ runner.test('review F5: a request queued behind the concurrency gate does not st
     assert.equal(error.retryable, true);
     assert.deepEqual(started, ['http://origin/a'], 'the expired request never reached the origin');
     assert.deepEqual(await s.get('http://origin/b', 'ko', 500), {}, 'the gate is released and later work proceeds');
+});
+// ---- Review round 2 (PR #2680) ----------------------------------------------------------------
+runner.test('review F7: explicit FCM retries are not limited by the preparation bound', async function () {
+    var sends = 0,
+        prepared = 0;
+    var d = dispatcher({
+        prepareAttempts: 4,
+        send: async function () {
+            if (++sends < 5) {
+                var e = new Error('unavailable');
+                e.statusCode = 503;
+                throw e;
+            }
+        }
+    });
+    var r = await d.enqueue({
+        deadline: Date.now() + 60000,
+        prepare: async function () {
+            prepared++;
+            return {};
+        }
+    });
+    d.close();
+    assert.equal(r.status, 'accepted');
+    assert.equal(r.attempts, 5, 'the existing five transport attempts are kept');
+    assert.equal(r.preparationFailures, 0);
+    assert.equal(prepared, 5, 'every transport retry prepares again, as before');
+});
+runner.test('review F8: a shared weather request honors the latest deadline of its consumers', async function () {
+    var clock = 0,
+        started = [],
+        releaseBlocker;
+    var s = source(
+        function (opts, cb) {
+            started.push(opts.url);
+            if (opts.url === 'http://origin/blocker')
+                releaseBlocker = function () {
+                    cb(null, { statusCode: 200 }, {});
+                };
+            else cb(null, { statusCode: 200 }, { url: opts.url });
+        },
+        {
+            concurrency: 1,
+            now: function () {
+                return clock;
+            }
+        }
+    );
+    var blocker = s.get('http://origin/blocker', 'ko');
+    var early = s.get('http://origin/shared', 'ko', 10);
+    var late = s.get('http://origin/shared', 'ko', 100);
+    await sleep(5);
+    clock = 20;
+    releaseBlocker();
+    await blocker;
+    assert.deepEqual(await late, { url: 'http://origin/shared' }, 'the later consumer is still served');
+    assert.deepEqual(await early, { url: 'http://origin/shared' });
+    assert.deepEqual(started, ['http://origin/blocker', 'http://origin/shared'], 'one shared origin request');
+});
+runner.test('review F8: a shared request is dropped only when every consumer has expired', async function () {
+    var PreparationError = feature('errors').PreparationError;
+    var clock = 0,
+        started = [],
+        releaseBlocker;
+    var s = source(
+        function (opts, cb) {
+            started.push(opts.url);
+            if (opts.url === 'http://origin/blocker')
+                releaseBlocker = function () {
+                    cb(null, { statusCode: 200 }, {});
+                };
+            else cb(null, { statusCode: 200 }, {});
+        },
+        {
+            concurrency: 1,
+            now: function () {
+                return clock;
+            }
+        }
+    );
+    var blocker = s.get('http://origin/blocker', 'ko');
+    var a = s.get('http://origin/shared', 'ko', 10).catch(function (e) { return e; });
+    var b = s.get('http://origin/shared', 'ko', 15).catch(function (e) { return e; });
+    await sleep(5);
+    clock = 20;
+    releaseBlocker();
+    await blocker;
+    var errors = await Promise.all([a, b]);
+    errors.forEach(function (e) {
+        assert(e instanceof PreparationError);
+        assert.equal(e.code, 'weather-deadline');
+    });
+    assert.deepEqual(started, ['http://origin/blocker']);
 });
 if (require.main === module)
     runner.run().then(function (failed) {

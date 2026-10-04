@@ -126,9 +126,9 @@ not evidence of deployment or actual provider delivery.
 A rejected weather fetch used to end alarm preparation as a terminal failure although
 the five-minute campaign deadline was still open. Preparation now goes through a bounded,
 shared weather source (`PUSH_WEATHER_CONCURRENCY`, default 16). A typed retryable failure
-is retried with backoff before any FCM call, at most `PUSH_PREPARE_ATTEMPTS` (default 4)
-preparations per recipient, counted apart from transport attempts. The count is
-checkpointed while a job is in flight, so a coordinator restart cannot reset the bound.
+is retried with backoff before any FCM call until `PUSH_PREPARE_ATTEMPTS` (default 4)
+preparations of that recipient have failed, counted apart from transport attempts. The counts
+are checkpointed while a job is in flight, so a coordinator restart cannot reset the bound.
 Retries repeat the registration revision and eligibility checks; an ambiguous or failed
 FCM send is still never resent. Each campaign job stores a `stage` (`preparation` or
 `transport`), a reason from a closed list of codes, and both attempt counts, and the
@@ -139,4 +139,3 @@ fan-out and recovers, it does not prove a root cause. See the
 [operations contract](../operations/push-s3.md#delivery-and-failure-contract).
 
 The #2677 update of [the S3 diagram](diagrams/push-s3-proposal.html) (weather source retry, scheduled alarm view and preparation card) passed Archify `finalize` (validate, deliver, strict check and real-browser check, zero diagnostics) and `visual-check`; the light 1440×900 and dark 2048×1320 captures were inspected by eye. Receipts are local-only under `.archify/`.
-
