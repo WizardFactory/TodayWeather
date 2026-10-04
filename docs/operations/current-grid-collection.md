@@ -84,9 +84,11 @@ Rows are then stored, fenced and covered under one canonical publication, the
 `HH00` base hour (AK review 5406464242): a literal `HH30` echo is rewritten to
 `HH00` before saving, coverage counts only `HH00`, and a legacy same-hour `HH30`
 slot is re-collected once and overwritten (the DB2 fence admits `pubDate <= HH30`
-of the same hour; DB1 compares the canonical form). The response filter, which
-keeps only rows of the latest publication, therefore never splits a grid between
-`HH00` and `HH30`.
+of the same hour; DB1 compares the canonical form). Once that repair has
+completed, the response filter, which keeps only rows of the latest publication,
+serves every slot of the grid under `HH00`. The slot writes are serial, not atomic:
+while a repair is in progress the filter can briefly serve only the slots already
+rewritten.
 Horizon, POP requirement and the refresh window still use the requested time.
 The e22c678f deployment compared the echo with `HH30`, rejected every grid
 (`received 0, failed 2033`) and was rolled back.
