@@ -37,7 +37,8 @@ async function main() {
     var dispatcher = new Dispatcher({
         send: runtime.send,
         concurrency: Number(process.env.PUSH_SEND_CONCURRENCY) || 128,
-        rate: Number(process.env.PUSH_SEND_RATE) || 500
+        rate: Number(process.env.PUSH_SEND_RATE) || 500,
+        prepareAttempts: Number(process.env.PUSH_PREPARE_ATTEMPTS) || 4
     });
     var engine = new Engine({
         registry: registry,

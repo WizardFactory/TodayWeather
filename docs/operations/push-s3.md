@@ -111,6 +111,23 @@ for later investigation. No deployment, data migration or automatic deletion is 
   60 seconds. Formatting remains the existing alarm/alert code. Warning messages use
   Korean source terms for `ko`, English fallback otherwise; region names remain KMA
   names. Broader reviewed warning translations are a separate activation follow-up.
+- Weather preparation (#2677): at most `PUSH_WEATHER_CONCURRENCY` (default 16) origin requests run
+  at once; a rejected request is never cached and the 5s timeout starts when the request is issued.
+  A retryable failure (`weather-timeout`, `weather-unavailable`) is retried before any FCM
+  submission with 1s exponential backoff and jitter, at most `PUSH_PREPARE_ATTEMPTS` (default 4)
+  preparations per recipient across supersession and restart, and never past the campaign deadline.
+  Each retry repeats the registration revision, eligibility and disabled-state checks; a
+  changed registration is re-admitted with its new record, a disabled one is not sent.
+  `weather-rejected` (other 4xx) and unclassified errors are not retried. An ambiguous or
+  failed FCM send is never resent by this path.
+- Campaign readback: each persisted job keeps `status`, `stage` (`preparation` or `transport`),
+  `reason` (a short code such as `weather-timeout`, `messaging/invalid-argument` or
+  `transport-timeout-ambiguous`), `preparationAttempts` and transport `attempts`. The manifest
+  `summary` counts jobs by status, failures by `stage:reason` and total attempts. Only fixed codes
+  and counts are stored: never tokens, credentials, positions or provider bodies. Preparation
+  failure means no FCM request was made for that recipient; `transport` failure arose at
+  the FCM submission step (including project pause). FCM acceptance alone does not prove
+  device delivery.
 - 429 uses Retry-After (60s default), 5xx uses exponential backoff/jitter, minimum 10s,
   at most five attempts within freshness. 400/401/403/404 are not blindly retried.
   The dispatcher enforces one rate budget per actual Firebase project and reserves

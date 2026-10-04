@@ -16,24 +16,18 @@ function create() {
     var Alert = require('../../controllers/alert.push.controller');
     var push = new Controller();
     var providers = require('../pushProviders');
-    var cache = new Map(),
-        auth = new Map();
+    var auth = new Map();
+    // Distinct towns fan out to the service's own API at the same minute; bound those requests.
+    var weatherSource = require('./weatherSource').create({
+        concurrency: Number(process.env.PUSH_WEATHER_CONCURRENCY) || 16,
+        normalize: function (body) {
+            if (!body.units) body.units = require('../unitConverter').initUnits({});
+            return body;
+        }
+    });
     var transport = require('./transport').create({
         concurrency: Number(process.env.PUSH_SEND_CONCURRENCY) || 128
     });
-    function cached(key, fn) {
-        var old = cache.get(key);
-        if (old && old.until > Date.now()) return old.promise;
-        var promise = fn();
-        cache.set(key, { until: Date.now() + 60000, promise: promise });
-        promise.catch(function () {
-            cache.delete(key);
-        });
-        if (cache.size > 10000) {
-            cache.delete(cache.keys().next().value);
-        }
-        return promise;
-    }
     function normalized(record) {
         var r = JSON.parse(JSON.stringify(record));
         r.lang = r.lang || 'ko';
@@ -46,19 +40,7 @@ function create() {
     function weather(record) {
         var r = normalized(record),
             url = new Alert()._makeRequestUrl(r);
-        return cached(JSON.stringify(['weather', url, r.lang]), function () {
-            return new Promise(function (resolve, reject) {
-                require('request')(
-                    { url: url, headers: { 'Accept-Language': r.lang }, json: true, timeout: 5000 },
-                    function (err, res, body) {
-                        if (err || !res || res.statusCode >= 400 || !body)
-                            return reject(new Error('Push weather request failed'));
-                        if (!body.units) body.units = require('../unitConverter').initUnits({});
-                        resolve(body);
-                    }
-                );
-            });
-        });
+        return weatherSource.get(url, r.lang);
     }
     return {
         resolve: async function (loc, r) {
