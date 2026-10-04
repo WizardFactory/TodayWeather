@@ -826,6 +826,160 @@ runner.test('review F8: a shared request is dropped only when every consumer has
     });
     assert.deepEqual(started, ['http://origin/blocker']);
 });
+// ---- PR review 5404350134 ----------------------------------------------------------------------
+runner.test('review R1: a non-JSON 200 body is a typed failure and releases the slot', async function () {
+    var PreparationError = feature('errors').PreparationError;
+    var calls = 0,
+        uncaught = [];
+    // The real request library calls back asynchronously, outside any try around request().
+    function later(fn) {
+        setImmediate(fn);
+    }
+    function record(e) {
+        uncaught.push(e);
+    }
+    process.on('uncaughtException', record);
+    try {
+    var s = source(
+        function (opts, cb) {
+            calls++;
+            later(function () {
+                if (opts.url === 'http://origin/html') return cb(null, { statusCode: 200 }, '<html>proxy</html>');
+                cb(null, { statusCode: 200 }, { ok: true });
+            });
+        },
+        {
+            concurrency: 1,
+            normalize: function (body) {
+                if (!body.units) body.units = {};
+                return body;
+            }
+        }
+    );
+    function settle(promise) {
+        return Promise.race([
+            promise.then(
+                function () {
+                    return null;
+                },
+                function (e) {
+                    return e;
+                }
+            ),
+            new Promise(function (r) {
+                setTimeout(function () {
+                    r('unsettled');
+                }, 200);
+            })
+        ]);
+    }
+    var error = await settle(s.get('http://origin/html', 'ko'));
+    assert.deepEqual(uncaught.map(String), [], 'no uncaught exception');
+    assert(error instanceof PreparationError, 'typed failure, got ' + error);
+    assert.equal(error.code, 'weather-unavailable');
+    assert.equal(error.retryable, true);
+    assert.deepEqual(await s.get('http://origin/next', 'ko'), { ok: true, units: {} }, 'the slot was released');
+    var thrown = source(
+        function (opts, cb) {
+            later(function () {
+                cb(null, { statusCode: 200 }, { ok: true });
+            });
+        },
+        {
+            concurrency: 1,
+            normalize: function () {
+                throw new TypeError('bad body');
+            }
+        }
+    );
+    var second = await settle(thrown.get('http://origin/a', 'ko'));
+    assert.deepEqual(uncaught.map(String), [], 'no uncaught exception from normalize');
+    assert(second instanceof PreparationError, 'typed failure, got ' + second);
+    assert.equal(second.code, 'weather-unavailable');
+    assert.equal(calls, 2);
+    } finally {
+        process.removeListener('uncaughtException', record);
+    }
+});
+runner.test('review R2: an unfinished shared request is reused past the TTL; TTL starts at success', async function () {
+    var clock = 0,
+        started = [],
+        towns = 0,
+        releaseBlocker;
+    var s = source(
+        function (opts, cb) {
+            started.push(opts.url);
+            if (opts.url === 'http://origin/blocker')
+                releaseBlocker = function () {
+                    cb(null, { statusCode: 200 }, {});
+                };
+            else {
+                var n = ++towns;
+                setImmediate(function () {
+                    cb(null, { statusCode: 200 }, { n: n });
+                });
+            }
+        },
+        {
+            concurrency: 1,
+            cacheMs: 60000,
+            now: function () {
+                return clock;
+            }
+        }
+    );
+    var blocker = s.get('http://origin/blocker', 'ko');
+    var first = s.get('http://origin/town', 'ko');
+    // The town request waits behind the gate for longer than the 60 s TTL.
+    clock = 70000;
+    var second = s.get('http://origin/town', 'ko');
+    await sleep(5);
+    releaseBlocker();
+    await blocker;
+    var bodies = await Promise.all([first, second]);
+    assert.deepEqual(bodies[0], bodies[1], 'both callers share the unfinished request');
+    clock = 70000 + 59000;
+    await s.get('http://origin/town', 'ko');
+    assert.equal(towns, 1, 'one town request: TTL counts from the successful response');
+});
+runner.test('review R3: expiry while waiting for a preparation retry keeps the preparation reason', async function () {
+    var clock = Date.now();
+    var d = dispatcher({
+        prepareRetryMs: 40,
+        now: function () {
+            return clock;
+        },
+        send: async function () {
+            throw new Error('must not send');
+        }
+    });
+    var pending = d.enqueue({
+        deadline: clock + 1000,
+        prepare: async function () {
+            // The retry delay fits the deadline; the clock then jumps past it before the retry runs.
+            setTimeout(function () {
+                clock += 5000;
+            }, 5);
+            throw transient('weather-timeout');
+        }
+    });
+    var r = await pending;
+    d.close();
+    assert.equal(r.status, 'expired');
+    assert.equal(r.stage, 'preparation');
+    assert.equal(r.error, 'weather-timeout');
+    assert.equal(r.preparationFailures, 1);
+});
+runner.test('review R4: invalid preparation attempt limits fall back to the default', async function () {
+    [-1, 0, 1.5, NaN].forEach(function (value) {
+        var d = dispatcher({ prepareAttempts: value, send: async function () {} });
+        assert.equal(d.prepareAttempts, 4, String(value));
+        d.close();
+    });
+    var d = dispatcher({ prepareAttempts: 2, send: async function () {} });
+    assert.equal(d.prepareAttempts, 2);
+    d.close();
+});
 if (require.main === module)
     runner.run().then(function (failed) {
         process.exitCode = failed ? 1 : 0;

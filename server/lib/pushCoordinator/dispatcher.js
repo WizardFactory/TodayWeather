@@ -33,7 +33,8 @@ class Dispatcher {
         this.retryFloor = o.retryFloorMs === undefined ? 10000 : o.retryFloorMs;
         this.timeout = o.timeoutMs || 15000;
         // Preparation (weather) retries are counted apart from transport attempts and stop at the deadline.
-        this.prepareAttempts = o.prepareAttempts || 4;
+        this.prepareAttempts =
+            Number.isInteger(o.prepareAttempts) && o.prepareAttempts >= 1 ? o.prepareAttempts : 4;
         this.prepareRetry = o.prepareRetryMs === undefined ? 1000 : o.prepareRetryMs;
         this.now = o.now || Date.now;
         this.onInvalid = o.onInvalid || function () {};
@@ -149,6 +150,7 @@ class Dispatcher {
             reason = typed ? e.code : 'preparation-error';
         // The bound counts failed preparations only: an explicit FCM retry prepares again without using it.
         item.prepFailures++;
+        item.lastPrepReason = reason;
         if (job.onPreparationFailure) job.onPreparationFailure(item.prepFailures);
         if (!typed || !e.retryable || item.prepFailures >= this.prepareAttempts)
             return this.finish(item, 'failed', reason, 'preparation');
@@ -185,7 +187,9 @@ class Dispatcher {
             if (!item) break;
             var job = item.job;
             if (job.deadline !== undefined && this.now() >= job.deadline) {
-                this.finish(item, 'expired');
+                // Expiry while waiting for a preparation retry keeps the last preparation failure for readback.
+                if (item.lastPrepReason) this.finish(item, 'expired', item.lastPrepReason, 'preparation');
+                else this.finish(item, 'expired');
                 continue;
             }
             this.inflight++;

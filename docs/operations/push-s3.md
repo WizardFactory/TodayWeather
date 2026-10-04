@@ -112,19 +112,22 @@ for later investigation. No deployment, data migration or automatic deletion is 
   Korean source terms for `ko`, English fallback otherwise; region names remain KMA
   names. Broader reviewed warning translations are a separate activation follow-up.
 - Weather preparation (#2677): at most `PUSH_WEATHER_CONCURRENCY` (default 16) origin requests run
-  at once; a rejected request is never cached, the 5s timeout starts when the request is issued,
+  at once; a rejected request is never cached, an unfinished request is always shared and the
+  60s reuse window starts at its successful response, the 5s timeout starts when the request is issued,
   and a request still queued behind the limit when its campaign expires is not sent (`weather-deadline`).
   A retryable failure (`weather-timeout`, `weather-unavailable`, `weather-deadline`) is retried before any FCM
   submission with 1s exponential backoff and jitter until `PUSH_PREPARE_ATTEMPTS` (default 4)
   preparations of that recipient have failed, and never past the campaign deadline. The counts are
   written with each checkpoint while a job is in flight, so supersession and coordinator restart do
-  not reset them; a recipient already at the bound ends `preparation-attempts-exhausted` without
+  not reset them; a recipient that expires while waiting for a retry keeps that failure's `reason`;
+  a recipient already at the bound ends `preparation-attempts-exhausted` without
   another weather call. An explicit FCM retry (429/5xx) prepares again as before and does not use this bound.
   A weather request shared by several recipients is dropped at the concurrency gate only when every
   one of them has passed its deadline.
   Each retry repeats the registration revision, eligibility and disabled-state checks; a
   changed registration is re-admitted with its new record, a disabled one is not sent.
-  `weather-rejected` (other 4xx) and unclassified errors are not retried. The preparation retry
+  A 200 response with an empty or non-JSON body (for example a proxy HTML page) is
+  `weather-unavailable`. `weather-rejected` (other 4xx) and unclassified errors are not retried. The preparation retry
   never resends an FCM request; the existing 429/5xx transport retries are unchanged and an
   ambiguous send is still not resent.
 - Campaign readback: each persisted job keeps `status`, `stage` (`preparation` or `transport`),
