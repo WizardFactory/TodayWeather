@@ -99,6 +99,8 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/rss-smoke/node_modules
           TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
         run: |
+          node server/test/offline/life-index-area.test.js
+          node server/test/offline/life-index-2650.test.js
           node server/test/offline/riseset-uv.test.js
           node server/test/offline/riseset-uv-smoke.js
       - name: Forecast precipitation period response smoke
@@ -200,6 +202,11 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules
         run: node server/test/offline/food-poisoning-smoke.js
+      - name: Administrative-area fallback on real Mongo and HTTP (#2183)
+        env:
+          TZ: UTC
+          NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules
+        run: node server/test/offline/life-index-area-mongo-smoke.js
       - name: Shared air budgets and cache across worker processes on a real mongod (#2622, #2628)
         env:
           NODE_PATH: ${{ runner.temp }}/vc-mongo/node_modules

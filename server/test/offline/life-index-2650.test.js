@@ -12,6 +12,8 @@ const root = path.resolve(__dirname, '../..');
 const fixture = require('./fixtures/uv-idx-v5.json');
 const pollenFixture = require('./fixtures/pollen-risk-v3.json');
 const livePollenFixture = require('./fixtures/pollen-risk-v3-live-20261001.json');
+// These fixtures contain JSON only; keep copies compatible with Node 16.
+const cloneFixture = value => JSON.parse(JSON.stringify(value));
 const noop = function () {};
 const log = {info: noop, warn: noop, error: noop, debug: noop, silly: noop};
 function load(relative, dependencies) {
@@ -100,12 +102,12 @@ test('pollen grades reject malformed values instead of coercing them to zero or 
 
 test('pollen task fetches every page and lets the provider decide off-season availability', async () => {
     const requested = [];
-    const twoPage = structuredClone(pollenFixture);
+    const twoPage = cloneFixture(pollenFixture);
     twoPage.response.body.items.item = Array.from({length: 1000}, (_, i) => ({
         areaNo: String(1100000000 + i), date: '2026100106', today: '0'
     }));
     twoPage.response.body.totalCount = 1001;
-    const lastPage = structuredClone(pollenFixture);
+    const lastPage = cloneFixture(pollenFixture);
     lastPage.response.body.items.item = [{areaNo: '1100001000', date: '2026100106', today: '0'}];
     lastPage.response.body.totalCount = 1001;
     lastPage.response.body.pageNo = 2;
@@ -155,7 +157,7 @@ test('later pollen issuance on the same KST day replaces the earlier one', async
         const queryTime = new URL(url).searchParams.get('time');
         requested.push(queryTime);
         const issued = queryTime === '2026100112' ? '2026100106' : '2026100112';
-        const body = structuredClone(pollenFixture);
+        const body = cloneFixture(pollenFixture);
         body.response.body.totalCount = 1;
         body.response.body.items.item = [{areaNo: '1100000000', date: issued, today: '1'}];
         callback(null, {statusCode: 200}, body);
@@ -180,25 +182,25 @@ test('later pollen issuance on the same KST day replaces the earlier one', async
 });
 
 test('incomplete or duplicate pollen pages cannot mark an issuance complete', async () => {
-    const first = structuredClone(pollenFixture);
+    const first = cloneFixture(pollenFixture);
     first.response.body.totalCount = 1001;
     first.response.body.items.item = Array.from({length: 1000}, (_, i) => ({
         areaNo: String(1100000000 + i), date: '2026100106', today: '0'
     }));
-    const duplicate = structuredClone(pollenFixture);
+    const duplicate = cloneFixture(pollenFixture);
     duplicate.response.body.totalCount = 1001;
     duplicate.response.body.pageNo = 2;
     duplicate.response.body.items.item = [{areaNo: '1100000000', date: '2026100106', today: '0'}];
-    const wrongPage = structuredClone(duplicate);
+    const wrongPage = cloneFixture(duplicate);
     wrongPage.response.body.pageNo = 1;
     wrongPage.response.body.items.item[0].areaNo = '1100001000';
-    const wrongCount = structuredClone(wrongPage);
+    const wrongCount = cloneFixture(wrongPage);
     wrongCount.response.body.pageNo = 2;
     wrongCount.response.body.totalCount = 1002;
-    const wrongIssue = structuredClone(wrongPage);
+    const wrongIssue = cloneFixture(wrongPage);
     wrongIssue.response.body.pageNo = 2;
     wrongIssue.response.body.items.item[0].date = '2026100112';
-    const emptyPage = structuredClone(wrongPage);
+    const emptyPage = cloneFixture(wrongPage);
     emptyPage.response.body.pageNo = 2;
     emptyPage.response.body.items.item = [];
     const asyncStub = {mapSeries(list, worker, done) {
@@ -261,7 +263,7 @@ test('daily zero grades survive the current weather response and get labels', ()
 
 
 test('unchanged pollen issuance keeps the due time and never writes a duplicate batch', async () => {
-    const response = structuredClone(pollenFixture);
+    const response = cloneFixture(pollenFixture);
     response.response.body.totalCount = 1;
     response.response.body.items.item = [{areaNo: '1100000000', date: '2026100106', today: '1'}];
     const Service = load('lib/lifeIndexKmaRequester.js', {

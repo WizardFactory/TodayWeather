@@ -552,6 +552,17 @@ TZ=UTC NODE_PATH=/tmp/food-poisoning-deps/node_modules node server/test/offline/
 `MONGOMS_SYSTEM_BINARY` may select an existing local mongod. Mongoose 5.1.2 schema/query casting is checked separately; its old driver requires MongoDB <=5.0, whereas this real-database smoke uses Mongoose 5.13 with a modern mongod. TTL index creation is disabled only in the smoke's historical fixture database; read-time expiry is still enforced. See the [operating contract](../../../docs/operations/food-poisoning.md).
 
 
+`life-index-area.test.js` (#2183, part of `test:offline`) uses real life-index and
+weather controllers with isolated models. It reproduces obsolete exact and
+nearest codes (including codes holding only past-date rows), verifies ordered bounded fallback and valid zero enrichment,
+and covers missing address/records/publication metadata, lookup failures,
+resolved `areaNo`, structured logs, integrated pollen summaries, and MFDS/next continuation. It makes no live
+provider or database call and does not verify current nationwide area mappings.
+
+[Issue #2183 pre-merge verification](../../../docs/evidence/tasks/issue-2183/pre-merge.md) records local runtime and response checks. The RSS matrix explicitly runs the area and pollen suites on Node 16/22. Pollen fixtures use JSON copies so Node 16 does not require `structuredClone`.
+
+`life-index-area-mongo-smoke.js` verifies exact precedence, an obsolete nearest code followed by available UV/pollen, and optional no-data continuation using a real local Mongo 7.0.14 and loopback HTTP. It uses an isolated mongoose 5.13.x driver because the historical 5.1 driver cannot connect to the runner Mongo; only the geographic and area indexes are created. Run with `TZ=UTC` and the RSS Mongo job dependencies. Weather/MFDS input is synthetic; no live provider, production database or app startup is used.
+
 ## Forecast-grid collection (#2676)
 
 Credential-free full-grid regressions cover both forecast products/DB versions,

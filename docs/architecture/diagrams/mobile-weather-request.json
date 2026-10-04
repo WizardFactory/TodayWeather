@@ -8,7 +8,7 @@
     "column_fit": "spread",
     "viewBox": [
       1080,
-      560
+      540
     ],
     "output": "docs/architecture/diagrams/mobile-weather-request.html"
   },
@@ -105,7 +105,7 @@
       "id": "step-7",
       "from": "edge",
       "to": "app",
-      "y": 437,
+      "y": 425,
       "label": "JSON; app converts and persists city state",
       "variant": "return"
     }
@@ -129,19 +129,11 @@
     },
     {
       "dot": "emerald",
-      "title": "Overseas UV contract (#2634)",
+      "title": "UV / pollen response",
       "items": [
-        "Repository change: VC uvindex travels through the converter, DSF parser and optional cache fields.",
-        "Current UV and daily maximum: uvIndex plus mobile ultrv / ultrvGrade / ultrvStr. Valid zero survives; missing stays absent. Production rollout is separate."
-      ]
-    },
-    {
-      "dot": "emerald",
-      "title": "LifeIndex response (#2599, #2650)",
-      "items": [
-        "KMA getLifeIndexKma adds optional daily UV and oak/pine/weeds grades; pollenGrade is the max available grade and pollenStr its localized label. Daily and current; missing types absent.",
-        "Shared mobile templates: pollen risk beside UV; tap the button for an Ionic popup listing available type labels/grades, seasonal explanations and own-grade precautions. Valid zero is Low; no numeric concentration. No pollen means no item.",
-        "V3 source: getOakPollenRiskIdxV3 / getPinePollenRiskIdxV3 / getWeedsPollenRiskndxV3. Weather-core retains optional uvIndex and three pollen grades."
+        "VC current/daily max UV: uvIndex and mobile ultrv / ultrvGrade / ultrvStr via converter, DSF/cache. Zero kept, missing omitted; rollout separate.",
+        "KMA daily/current pollen: max pollenGrade, localized pollenStr, species grades. Absent areaNo checks up to three nearest candidates; DB errors stop reads; missing types omitted.",
+        "Pollen popup: available species grades, seasonal context and precautions. Zero Low; no concentrations. V3 oak/pine/weeds; weather-core keeps UV/species grades."
       ]
     }
   ]

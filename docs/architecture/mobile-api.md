@@ -82,6 +82,23 @@ The [v000903 KMA router](../../server/routes/v000903/route.kma.v000903.js) defin
 
 `getRiseSetInfo` copies stored KASI values into `midData.dailyData`. Days without a stored row, or all days when the store lookup fails, get `sunrise`/`sunset` (`YYYY.MM.DD HH:MM`, KST) computed from the request coordinate with the NOAA solar equations; the other KASI fields (`moon*`, twilight, `suntransit`, `locationName`, `locationGeo`) appear only for stored rows. `getLifeIndexKma` adds optional `ultrv`/`ultrvGrade`/`ultrvStr` and `flowerWoody`/`flowerPine`/`flowerWeeds` with matching `Grade` and `Str` fields to `midData.dailyData`; available daily values, including grade zero, are copied to `current`. Invalid or absent grades are omitted, so older clients see their existing fields unchanged. For each day with pollen, `pollenGrade` is the maximum available type grade (0–3) and `pollenStr` is its request-local label (`LOC_LOW`, `LOC_NORMAL`, `LOC_HIGH`, `LOC_VERY_HIGH`). Both fields are also copied to `current`; days with no pollen omit both. Individual `flowerWoody` (oak), `flowerPine` (pine), `flowerWeeds` (weeds) and their `Grade`/`Str` fields appear only with data. The shared `client/www` TodayWeather and TodayAir current-conditions templates read `currentWeather.today.pollenGrade`/`pollenStr` beside UV; tapping the pollen risk button opens an Ionic popup showing only the available types with labels, seasonal explanations and precautions for each type's own grade, never particle counts. Its source is `https://apis.data.go.kr/1360000/HealthWthrIdxServiceV3/` operations `getOakPollenRiskIdxV3`, `getPinePollenRiskIdxV3` and `getWeedsPollenRiskndxV3`; [collection details](weather-collection.md) document day fields and publication timing. TodayAir remains retired; its shared template is maintained for compatibility, without a release claim. `packages/weather-core` maps them to optional `uvIndex`, `pollenOak`, `pollenPine`, `pollenWeeds`; the Web details display available species. The removed `getHealthDay` enrichment does not run, and historical KMA food-poisoning rows stay out of responses. The separate MFDS regional store restores optional `fsn`/`fsnGrade`/`fsnStr` for valid dates under [#2600](https://github.com/WizardFactory/TodayWeather/issues/2600). Activity suitability is not offered.
 
+For administrative-area changes (#2183), the address `areaNo` remains the first
+life-index lookup. A typed `LIFE_INDEX_NOT_FOUND` result, returned for missing
+records or when stored rows add no valid index to a requested day (for example,
+past-date rows left at a retired code), tries the existing
+nearest metadata query (`[longitude, latitude]`, `$maxDistance: 0.3`, limit 3),
+excludes the failed exact code, and checks each remaining candidate in order.
+The first available store result enriches the response and updates
+`req.params.areaNo`. Geographic lookup prefers `req.gCoord`, then the address
+metadata coordinate. No provider call, metadata write or historical alias
+migration occurs. A missing record is optional no-data; exhausted candidates
+leave UV/pollen absent. Address-metadata, geographic and life-index store errors stop the search and remain warnings; MFDS
+and the weather response still continue. Structured `life-index-area-fallback`
+records include session ID, requested/resolved codes or all attempted exact/nearby codes,
+cause and result. The existing three-candidate bound can still miss available
+indices if old metadata crowds the nearest list; this repair does not establish
+nationwide metadata freshness or read-time life-index expiry.
+
 `ControllerTown24h` calls the base `ControllerTown` constructor and overrides selected methods. `getAllDataFromDb` performs parallel product-family loading, with serial reads inside individual groups. It tolerates some missing product reads so later middleware can decide how to proceed. There is no single all-products freshness transaction.
 
 The important ordering constraints are documented in the router itself: current depends on short/shortest; icons precede unit conversion; descriptions and final summary follow conversion. Reordering these functions can change meaning even when the endpoint still returns 200.
