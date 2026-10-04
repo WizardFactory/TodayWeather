@@ -87,8 +87,8 @@ slot is re-collected once and overwritten (the DB2 fence admits `pubDate <= HH30
 of the same hour; DB1 compares the canonical form). Once that repair has
 completed, the response filter, which keeps only rows of the latest publication,
 serves every slot of the grid under `HH00`. The slot writes are serial, not atomic:
-while a repair is in progress the filter can briefly serve only the slots already
-rewritten.
+while a repair is in progress the filter can briefly serve only part of the grid's
+slots.
 Horizon, POP requirement and the refresh window still use the requested time.
 The e22c678f deployment compared the echo with `HH30`, rejected every grid
 (`received 0, failed 2033`) and was rolled back.
