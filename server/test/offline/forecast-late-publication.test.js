@@ -50,15 +50,16 @@ function noData(){return h.xml({response:{header:[{resultCode:['03'],resultMsg:[
         return f;
     }
     const poll=f=>new Promise(res=>f.m[method](9,'dummy',(e,r)=>res({e,r})));
-    const f=manager({GATHER_FORECAST_RETRY_AT_MS:'150,300'});started=Date.now();
+    const f=manager({GATHER_FORECAST_RETRY_AT_MS:'600,1200'});started=Date.now();
     const result=await poll(f);
     assert(result.e,product+': a grid still unpublished after the final walk stays an error');
     assert.strictEqual(result.r.pending,1);assert.strictEqual(result.r.walks,3);
     assert.deepStrictEqual([...stored.keys()].sort(),coords.filter((c,i)=>i!==3).map(key).sort());
     assert.deepStrictEqual(coords.map(c=>calls.get(key(c))),[1,2,2,3,2,2],product+': late/incomplete grids re-walked at the offsets only; transport failure retried as before');
-    for(const i of [1,2,3,5])assert(times.get(key(coords[i]))[1]>=150,'second walk waits for the first offset');
-    assert(times.get(key(coords[3]))[2]>=300,'final walk waits for the second offset');
-    assert(times.get(key(coords[4]))[1]<150,'transport retry is not delayed');
+    for(const i of [1,2,3,5])assert(times.get(key(coords[i]))[1]>=600,'second walk waits for the first offset');
+    assert(times.get(key(coords[3]))[2]>=1200,'final walk waits for the second offset');
+    // Ordering, not wall-clock bounds, so slow CI runners cannot flip it.
+    assert(times.get(key(coords[4]))[1]<Math.min(...[1,2,3,5].map(i=>times.get(key(coords[i]))[1])),'transport retry is not delayed');
     const records=f.records.map(r=>JSON.parse(r));
     assert.deepStrictEqual(records.filter(r=>r.event==='forecast-retry').map(r=>[r.walk,r.pending]),[[2,4],[3,1]],'sanitized re-walk records');
     const pass=records.find(r=>r.event==='forecast-pass');assert.strictEqual(pass.notPublished,2);assert.strictEqual(pass.previousPublication,1);
