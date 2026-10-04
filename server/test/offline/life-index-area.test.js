@@ -211,3 +211,44 @@ test('R2183-2 exact-address nearby failure records both attempted codes', async 
     assert.equal(warnings[0].args[0].requestedAreaNo, 4119700000);
     assert.deepEqual(Array.from(warnings[0].args[0].attemptedAreaNos), [4119700000, 4119900000]);
 });
+
+test('R2183-3 exact code with only past-date rows falls back to a nearby requested-date index', async () => {
+    const past = areaNo => [{areaNo, date: time.convertStringToDate('20260901'),
+        indexType: 'ultrv', index: 7, lastUpdateDate: '2026090106'}];
+    const h = harness({rows: {[4119700000]: past(4119700000), [4119086000]: [{areaNo: 4119086000,
+        date: time.convertStringToDate('20261003'), indexType: 'ultrv', index: 5, lastUpdateDate: '2026100306'}]}});
+    assert.deepEqual(await h.run(), {mfds: 1, next: 1});
+    assert.deepEqual(h.reads, [4119700000, 4119900000, 4119086000]);
+    assert.equal(h.req.current.ultrv, 5);
+    assert.equal(h.req.params.areaNo, 4119086000);
+    assert.equal(h.logs.filter(x => x.level === 'warn').length, 0);
+});
+
+test('R2183-3 nearby code with only past-date or invalid rows does not stop the candidate walk', async () => {
+    const h = harness({rows: {
+        [4119900000]: [{areaNo: 4119900000, date: time.convertStringToDate('20260901'),
+            indexType: 'ultrv', index: 7, lastUpdateDate: '2026090106'},
+        {areaNo: 4119900000, date: time.convertStringToDate('20261003'),
+            indexType: 'ultrv', index: -1, lastUpdateDate: '2026100306'}],
+        [4119086000]: [{areaNo: 4119086000, date: time.convertStringToDate('20261003'),
+            indexType: 'flowerPine', index: 1, lastUpdateDate: '2026100306'}]}});
+    assert.deepEqual(await h.run(), {mfds: 1, next: 1});
+    assert.deepEqual(h.reads, [4119700000, 4119900000, 4119086000]);
+    assert.equal('ultrv' in h.req.current, false);
+    assert.equal(h.req.current.flowerPine, 1);
+    assert.equal(h.req.params.areaNo, 4119086000);
+});
+
+test('R2183-3 past-date rows in every candidate omit indices without warning', async () => {
+    const past = areaNo => [{areaNo, date: time.convertStringToDate('20260901'),
+        indexType: 'ultrv', index: 7, lastUpdateDate: '2026090106'}];
+    const h = harness({rows: {[4119700000]: past(4119700000), [4119900000]: past(4119900000),
+        [4119086000]: past(4119086000)}});
+    assert.deepEqual(await h.run(), {mfds: 1, next: 1});
+    assert.deepEqual(h.reads, [4119700000, 4119900000, 4119086000]);
+    assert.equal('ultrv' in h.req.current, false);
+    assert.equal(h.req.midData.dailyData[0].ultrv, undefined);
+    assert.equal(h.logs.filter(x => x.level === 'warn').length, 0);
+    const err = await new Promise(resolve => h.controller.appendData2(4119900000, [{date: '20261003'}], resolve));
+    assert.equal(err.code, 'LIFE_INDEX_NOT_FOUND');
+});

@@ -282,8 +282,10 @@ LifeIndexKmaController._fromLifeIndexDb2 = function (areaNo, callback) {
         });
 };
 
+/** Returns the number of valid index values applied to the requested days. */
 LifeIndexKmaController._addIndexData2 = function (midList, lifeIndexList) {
     var self = this;
+    var applied = 0;
 
     midList.forEach(function (dayObj) {
         var list = lifeIndexList.filter(function (indexObj) {
@@ -301,16 +303,19 @@ LifeIndexKmaController._addIndexData2 = function (midList, lifeIndexList) {
                     isFinite(indexObj.index) && indexObj.index >= 0) {
                 dayObj[indexType] = indexObj.index;
                 dayObj['ultrvGrade'] = self._ultrvGrade(indexObj.index);
+                applied++;
             }
             else if (['flowerWoody', 'flowerPine', 'flowerWeeds'].indexOf(indexType) !== -1 &&
                      typeof indexObj.index === 'number' && Number.isInteger(indexObj.index) &&
                      indexObj.index >= 0 && indexObj.index <= 3) {
                 dayObj[indexType] = indexObj.index;
                 dayObj[indexType + 'Grade'] = indexObj.index;
+                applied++;
             }
         });
         self.appendPollenSummary(dayObj);
     });
+    return applied;
 };
 
 /** Only present grades contribute; zero is a valid low risk grade. */
@@ -339,10 +344,17 @@ LifeIndexKmaController.appendData2 = function (areaNo, midList, callback) {
                 });
             },
             function (lifeIndexList, callback) {
+                var applied;
                 try {
-                    self._addIndexData2(midList, lifeIndexList);
+                    applied = self._addIndexData2(midList, lifeIndexList);
                 }
                 catch (err) {
+                    return callback(err);
+                }
+                if (applied === 0) {
+                    // Retired codes can keep rows for past dates only; let callers try another area.
+                    var err = new Error("No valid life index for requested dates at areaNo="+areaNo);
+                    err.code = 'LIFE_INDEX_NOT_FOUND';
                     return callback(err);
                 }
                 callback(null, lifeIndexList);

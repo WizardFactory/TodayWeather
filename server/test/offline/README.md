@@ -554,7 +554,7 @@ TZ=UTC NODE_PATH=/tmp/food-poisoning-deps/node_modules node server/test/offline/
 
 `life-index-area.test.js` (#2183, part of `test:offline`) uses real life-index and
 weather controllers with isolated models. It reproduces obsolete exact and
-nearest codes, verifies ordered bounded fallback and valid zero enrichment,
+nearest codes (including codes holding only past-date rows), verifies ordered bounded fallback and valid zero enrichment,
 and covers missing address/records/publication metadata, lookup failures,
 resolved `areaNo`, structured logs, integrated pollen summaries, and MFDS/next continuation. It makes no live
 provider or database call and does not verify current nationwide area mappings.
