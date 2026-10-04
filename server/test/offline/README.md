@@ -550,3 +550,40 @@ TZ=UTC NODE_PATH=/tmp/food-poisoning-deps/node_modules node server/test/offline/
 ```
 
 `MONGOMS_SYSTEM_BINARY` may select an existing local mongod. Mongoose 5.1.2 schema/query casting is checked separately; its old driver requires MongoDB <=5.0, whereas this real-database smoke uses Mongoose 5.13 with a modern mongod. TTL index creation is disabled only in the smoke's historical fixture database; read-time expiry is still enforced. See the [operating contract](../../../docs/operations/food-poisoning.md).
+
+
+## Forecast-grid collection (#2676)
+
+Credential-free full-grid regressions cover both forecast products/DB versions,
+exact publication, missing slots/fields, conditional categories, zero/signed values,
+coordinator recreation, overlap/deadline/late callbacks and writer/quota failures:
+
+```sh
+NODE_PATH=<isolated-deps>/node_modules node server/test/offline/forecast-grid-collection.test.js
+NODE_PATH=<isolated-deps>/node_modules node server/test/offline/forecast-manager.test.js
+NODE_PATH=<isolated-deps>/node_modules node server/test/offline/forecast-lifecycle.test.js
+```
+
+These are also selected by `test:offline`. The separate full-grid HTTP/Mongo smoke
+must use Node16.20.2 and **Mongoose5.1.2**, not the `mongoose-smoke` alias used by
+some older smokes. Mongo4.4 supports that driver's legacy wire operations; Mongo7
+is incompatible. The dedicated `forecast-grid-node16` CI job uses a Debian11
+Node16.20.2 container and a temporary Mongo4.4.29 binary without external credentials:
+
+```sh
+npm install --prefix /tmp/forecast-offline --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.1.2 async@2.6.4 request@2.88.2 xml2js@0.4.23
+# Supply a local Mongo4.4 binary for your OS; CI downloads the Ubuntu20.04 build.
+NODE_PATH=/tmp/forecast-offline/node_modules TW_MONGOD=<mongo4.4-binary> <node16.20.2-binary> server/test/offline/forecast-collection-smoke.js
+```
+
+The smoke binds HTTP/Mongo only to 127.0.0.1, starts its own temporary DB process,
+uses dummy provider keys and real request/XML/Manager/writers, and never loads
+app.js or production configuration. It validates all 2,033 grids for each product
+and DB1/DB2, full horizon/field readback, zero repeat/recreated-Manager HTTP and
+single-grid repair, and that an older publication written after completion leaves
+coverage complete (DB1 refuses the downgrade; DB2 adds no duplicate slot). Short responses have two pages and one forced transient
+continuation failure; ultra-short has one page and one forced transient failure.
+JSON results report actual HTTP/page/retry counts. `finally` closes services,
+connection and Mongo and removes the task-owned temporary DB directory. A nonzero
+exit is failure; a provider/production/mobile check is not claimed. See
+[forecast operations](../../../docs/operations/current-grid-collection.md#forecast-completion-2676).

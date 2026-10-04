@@ -326,3 +326,34 @@ weather requests. See [operations and limitations](../operations/food-poisoning.
 [collector](../../server/lib/foodPoisoning.js),
 [model](../../server/models/modelFoodPoisoning.js) and the
 [design diagram](diagrams/food-poisoning.html) / [source](diagrams/food-poisoning.json).
+
+
+## Forecast publication coverage (#2676)
+
+[Flow](diagrams/forecast-grid-collection.html) · [Editable design](diagrams/forecast-grid-collection.json) · [Budget/rollout](../operations/current-grid-collection.md#forecast-completion-2676).
+
+Manager short/ultra-short polls now enter separate per-product
+[ForecastGridCollection](../../server/lib/forecastGridCollection.js) coordinators.
+They read exact publication coverage from existing DB1 arrays or DB2 per-slot
+models, validate product horizons/required fields, and admit only pending grids
+into the unchanged bounded collector/retry/key rotation. No current-observation
+completeness or partial-admission policy is reused for forecasts. Complete
+publications skip HTTP after coordinator recreation. Full batch identity/value/
+horizon checks run before saves, and coverage readback after saves is authoritative.
+DB1 replaces required fields of overlapping controlled rows, keeping only conditional
+same-day TMN/TMX and optional WAV;
+DB2 serial writers propagate errors. Both paths fence new writes after expiry.
+Rows outside the expected horizon are dropped before writes. Three-second reads and
+the nine-minute forecast run deadline bound guard lifetime; issued Mongo operations
+may settle later but are publication-fenced (DB2 `pubDate <= own` with an
+absent-slot `$setOnInsert`, DB1 compare-and-set on the read `pubDate`), so they
+cannot replace a newer publication; a same-publication rerun waits until an expired
+run's admitted writes have settled. Coverage read waits are configurable through
+`GATHER_FORECAST_READ_TIMEOUT_MS`. Ultra-short publications are updated by KMA every ten
+minutes, so each process refreshes every grid once per current ultra-short
+publication from `GATHER_SHORTEST_REFRESH_AFTER_MS` (default base+40min). Guards are
+process-local. Product/issuance coverage and actual page/retry attempts are emitted
+without secrets. Formats, polling, grid coverage, API output and server2 remain.
+Production deployment, quota approval and successive-publication/output readback
+are separate, unexecuted gates. See the operations contract for issuance-specific
+TMN/TMX, extension-day cadence, conditional WAV and ultra-short POP requirements.
