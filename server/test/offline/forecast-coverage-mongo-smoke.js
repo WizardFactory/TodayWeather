@@ -55,12 +55,13 @@ const key=c=>c.mx+':'+c.my;
         if(c.field==='time'){if(version==='1.0')docs[0][field][0]={...docs[0][field][0],time:c.value};else docs[0][field]={...docs[0][field],time:c.value}}
         await model.collection.insertMany(docs);
         const stored=version==='1.0'?docs[0][field]:docs.filter(d=>typeof d[field].time==='string'&&+d.fcsDate===fx.publication(d[field])-9*fx.hour).map(d=>d[field]);
-        if(!(Forecast.identities(product,slot).includes(data[0].pubDate)&&Forecast.complete(product,slot,stored)))oracle.add(key(coord));
+        if(!(Forecast.canonical(product,Forecast.identities(product,slot)[0])===data[0].pubDate&&Forecast.complete(product,slot,stored)))oracle.add(key(coord));
     }
     const actual=new Set((await pending(model,version,product,slot,coords)).map(key));
     const disagree=cases.filter((c,i)=>actual.has(key(coords[i]))!==oracle.has(key(coords[i]))).map(c=>c.name);
     assert.deepStrictEqual(disagree,[],product+' DB'+version+' Mongo coverage differs from the JS rule');
-    assert(!actual.has(key(coords[0]))&&!actual.has(key(coords[1])),'HH00 and literal echoes cover');
+    assert(!actual.has(key(coords[0])),'the canonical publication covers');
+    assert.strictEqual(actual.has(key(coords[1])),product==='shortest','a stored literal HH30 ultra-short grid is rewritten as HH00');
     assert(actual.has(key(coords[2])),'previous hour never covers');
     differential.push({product,version,cases:cases.length,pending:actual.size});
  }

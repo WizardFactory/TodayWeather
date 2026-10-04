@@ -65,6 +65,11 @@ function identities(product, slot) {
     var exact = slot.date + slot.time;
     return product === 'shortest' && slot.time.slice(2) !== '00' ? [slot.date + slot.time.slice(0, 2) + '00', exact] : [exact];
 }
+// Rows are stored, fenced, covered and served under one canonical publication: the HH00 base hour for
+// ultra-short (AK review 5406464242), so a literal HH30 echo or legacy HH30 slot cannot split a grid.
+function canonical(product, pub) {
+    return product === 'shortest' && typeof pub === 'string' && /^\d{12}$/.test(pub) ? pub.slice(0, 10) + '00' : pub;
+}
 // A response that consistently names an older publication means the grid is not updated yet.
 function stale(items, product, slot) {
     var first = Array.isArray(items) && items[0], pub = first && first.baseDate && first.baseTime &&
@@ -187,7 +192,8 @@ function bounded(callback, ms) {
     return done;
 }
 function pending(model, version, product, slot, coords, callback, timeoutMs) {
-    var field = product + 'Data', ids = identities(product, slot);
+    // Only the canonical publication covers a grid; other stored forms are rewritten by the next walk.
+    var field = product + 'Data', ids = [canonical(product, identities(product, slot)[0])];
     if (version !== '1.0' && version !== '2.0') { return callback(new Error('Unsupported forecast coverage storage version')); }
     timeoutMs = timeoutMs || 10000;
     callback = bounded(callback, timeoutMs);
@@ -326,26 +332,37 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
     // Grids publish at different times after the provision time: still pending grids are walked
     // again at the configured offsets from the run start, then the run ends (AK, 2026-10-04).
     function collect(list, walks) {
+        control.written = control.written || new Set();
         try {
             options.collect(list, slot, key, function(collectionError) {
                 if (run.finished || control.cancelled) { return; }
                 read('after', function(readError, remaining) {
+                    // A refresh must rewrite every grid: a grid whose new write failed still looks complete
+                    // in coverage, so it stays due until written (AK review 5406464242).
+                    var unwritten = refreshDue ? coords.filter(function(c) { return !control.written.has(coordKey(c)); }) : [];
+                    var due = readError ? [] : remaining.concat(unwritten.filter(function(c) {
+                        return !remaining.some(function(p) { return coordKey(p) === coordKey(c); });
+                    }));
                     var error = collectionError || readError;
-                    if (!error && remaining.length) { error = new Error('Forecast collection incomplete: pending=' + remaining.length); }
-                    if (!readError && remaining.length && retries.length && !control.keysExhausted) {
+                    if (!error && due.length) {
+                        error = new Error('Forecast collection incomplete: pending=' + remaining.length + ' unwritten=' + unwritten.length);
+                    }
+                    if (!readError && due.length && retries.length && !control.keysExhausted) {
                         var wait = Math.max(0, now + retries.shift() - clock());
                         options.emit({event: 'forecast-retry', utc: new Date().toISOString(), product: product, publication: identity,
-                            walk: walks + 1, pending: remaining.length, delayMs: wait, httpAttempts: control.httpAttempts});
+                            walk: walks + 1, pending: remaining.length, unwritten: unwritten.length, delayMs: wait,
+                            httpAttempts: control.httpAttempts});
                         delay = setTimeout(function() {
                             delay = null;
-                            if (!run.finished && !control.cancelled) { collect(remaining, walks + 1); }
+                            if (!run.finished && !control.cancelled) { collect(due, walks + 1); }
                         }, wait);
                         return;
                     }
                     // Only a successful full walk consumes the publication's refresh.
                     if (!error && refreshDue) { self.refreshed = identity; }
                     finish(error, {expected: coords.length, complete: readError ? 0 : coords.length - remaining.length,
-                        pending: readError ? coords.length : remaining.length, refresh: refreshed, walks: walks});
+                        pending: readError ? coords.length : remaining.length, unwritten: unwritten.length,
+                        refresh: refreshed, walks: walks});
                 });
             }, control);
         } catch (error) { if (run.finished) { throw error; } finish(error); }
@@ -361,4 +378,5 @@ ForecastGridCollection.within = within;
 ForecastGridCollection.pending = pending;
 ForecastGridCollection.identities = identities;
 ForecastGridCollection.stale = stale;
+ForecastGridCollection.canonical = canonical;
 module.exports = ForecastGridCollection;

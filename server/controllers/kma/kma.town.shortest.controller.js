@@ -16,7 +16,9 @@ function kmaTownShortestController(){
 // Every eligible duplicate of the slot is rewritten: coverage requires all of them valid (#2676 review).
 function fencedUpdate(model, query, newItem, control, callback) {
     if (!control || !control.product) { return model.update(query, newItem, {upsert:true}, callback); }
-    var fenced = Object.assign({$or: [{pubDate: {$lte: newItem.pubDate}}, {pubDate: null}]}, query);
+    // The canonical HH00 write also replaces a same-hour literal HH30 slot (same publication), never a later hour.
+    var bound = new Date(newItem.pubDate.getTime() + 30 * 60000);
+    var fenced = Object.assign({$or: [{pubDate: {$lte: bound}}, {pubDate: null}]}, query);
     model.update(fenced, newItem, {multi: true}, function(err, raw) {
         if (err || (raw && raw.n > 0)) { return callback(err); }
         // The absent-slot insert is a new write: never admit it after the run was cancelled.

@@ -246,7 +246,10 @@ function admitForecastWrite(control) {
 function saveForecastDocument(model, doc, readPubDate, field, control, callback) {
     if (!control || !control.product) { return doc.save(callback); }
     var plain = typeof doc.toObject === 'function' ? doc.toObject() : doc;
-    if (readPubDate && plain.pubDate < readPubDate) { return callback(new Error('Forecast document holds a newer publication')); }
+    // A same-hour literal HH30 ultra-short document is the same publication as its canonical HH00.
+    if (readPubDate && plain.pubDate < ForecastGridCollection.canonical(control.product, readPubDate)) {
+        return callback(new Error('Forecast document holds a newer publication'));
+    }
     var update = {pubDate: plain.pubDate};
     update[field] = plain[field];
     if (plain.dailySource) { update.dailySource = plain.dailySource; }
@@ -1181,6 +1184,10 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                         forecastWriteError = forecastWriteError || new Error('Incomplete or mismatched forecast batch');
                         return cb();
                     }
+                    if (control && control.product) {
+                        // Store the canonical publication (ultra-short HH00) whatever form the provider echoed.
+                        item.data.forEach(function(row) { row.pubDate = ForecastGridCollection.canonical(control.product, row.pubDate); });
+                    }
                     var settle = admitForecastWrite(control);
                     self.getSaveFunc(dataType).call(self, item.data, function (err, invalid) {
                         settle();
@@ -1194,6 +1201,10 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                         if (err && control && control.product) {
                             forecastWriteError = forecastWriteError || err;
                             return cb();
+                        }
+                        if (control && control.product) {
+                            control.written = control.written || new Set();
+                            control.written.add(item.mCoord.mx + ':' + item.mCoord.my);
                         }
                         cb(err);
                     }, control);

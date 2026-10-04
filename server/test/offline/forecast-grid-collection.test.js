@@ -53,12 +53,12 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
             aggregate(pipeline){seen=pipeline;const a=memory.aggregate(pipeline),option=a.option;a.option=o=>{assert.deepStrictEqual(o,{maxTimeMS:9000});return option.call(a,o)};return a},
             find(){throw new Error('DB2 coverage must not transfer every slot document')}};
         if(version==='1.0')model.Query.prototype.exec=function(cb){assert.strictEqual(this.options.maxTimeMS,9000);assert(this._mongooseOptions.lean);
-            assert.deepStrictEqual(this.getQuery(),{pubDate:{$in:ids}});memory.find(this.getQuery()).exec(cb)};
+            assert.deepStrictEqual(this.getQuery(),{pubDate:{$in:[ids[0]]}});memory.find(this.getQuery()).exec(cb)};
         const pending=()=>new Promise((res,rej)=>Forecast.pending(model,version,product,slot,[coord],(e,p)=>e?rej(e):res(p)));
         assert.strictEqual((await pending()).length,0);
         if(version==='2.0'){
             const match=seen[0].$match,dates=rows.map(r=>+new Date(f.publication(r)-9*f.hour));
-            assert.deepStrictEqual(match.pubDate.$in.map(Number),ids.map(id=>f.publication({date:id.slice(0,8),time:id.slice(8)})-9*f.hour));
+            assert.deepStrictEqual(match.pubDate.$in.map(Number),[ids[0]].map(id=>f.publication({date:id.slice(0,8),time:id.slice(8)})-9*f.hour));
             assert.deepStrictEqual(match.fcsDate.$in.map(Number),dates);assert.deepStrictEqual(Object.keys(match),['pubDate','fcsDate']);
             const saved=docs;docs=docs.map((d,i)=>i===0?{...d,fcsDate:new Date(+d.fcsDate+f.hour)}:d);
             assert.strictEqual((await pending()).length,1,'DB2 fcsDate must match the payload slot');docs=saved;
@@ -74,7 +74,7 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
         }
         if(product==='shortest'){
             const saved=docs;docs=f.documents(product,version,slot,coord,f.rows(product,slot,coord,time));
-            assert.strictEqual((await pending()).length,0,'literal HH30 rows also cover the publication');
+            assert.strictEqual((await pending()).length,1,'stored literal HH30 rows are rewritten under the canonical HH00 identity (review 5406464242)');
             docs=f.documents(product,version,slot,coord,f.rows(product,slot,coord,f.parts(f.publication(slot)-f.hour).time));
             assert.strictEqual((await pending()).length,1,'previous hour cannot cover the requested publication');docs=saved;
         }
@@ -133,7 +133,8 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     const model=f.memoryModel(()=>docs);
     const fill=()=>{docs=f.documents('shortest','2.0',rs,coord,f.rows('shortest',rs,coord))};
     const make=(after)=>new Forecast({product:'shortest',model,version:'2.0',coords:cb=>cb(null,[coord]),emit:()=>{},
-        refreshAfterMs:after,now:()=>clock,collect:(list,s,k,cb)=>{walks.push(list.length);fill();cb()}});
+        refreshAfterMs:after,now:()=>clock,collect:(list,s,k,cb,control)=>{walks.push(list.length);fill();
+        list.forEach(c=>control.written.add(c.mx+':'+c.my));cb()}}); // the Manager records grids it wrote
     const go=c=>new Promise((res,rej)=>c.run(rs,'dummy',(e,r)=>e?rej(e):res(r)));
     const c=make(40*min);
     await go(c);assert.deepStrictEqual(walks,[1],'first walk');
@@ -147,7 +148,8 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     // The refresh is consumed only by a successful full walk; a failed refresh stays due (review 5403438544).
     clock=base+44*min;fill();walks=[];let fail=true;
     const flaky=new Forecast({product:'shortest',model,version:'2.0',coords:cb=>cb(null,[coord]),emit:()=>{},
-        refreshAfterMs:40*min,now:()=>clock,collect:(list,s,k,cb)=>{walks.push(list.length);cb(fail?new Error('provider'):null)}});
+        refreshAfterMs:40*min,now:()=>clock,collect:(list,s,k,cb,control)=>{walks.push(list.length);
+        if(!fail)list.forEach(c=>control.written.add(c.mx+':'+c.my));cb(fail?new Error('provider'):null)}});
     await new Promise(res=>flaky.run(rs,'dummy',e=>{assert(e);res()}));
     fail=false;await go(flaky);assert.deepStrictEqual(walks,[1,1],'failed refresh is retried in the window');
     await go(flaky);assert.deepStrictEqual(walks,[1,1],'successful refresh is consumed');

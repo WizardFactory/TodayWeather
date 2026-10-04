@@ -86,6 +86,24 @@ function noData(){return h.xml({response:{header:[{resultCode:['03'],resultMsg:[
     const quota=await poll(q);assert(quota.e);assert.strictEqual(quota.r.walks,1);assert.strictEqual(rejected,2,'one attempt per rejected key');
     console.log('PASS late publication '+product+': staggered grids re-walked at +5/+10-minute offsets, no immediate retry storm');
  }
+ // AK review 5406464242 #2: a refresh write that fails for an already complete grid is re-walked, and the run
+ // succeeds (consuming the refresh) only once every grid was written.
+ for(const keepFailing of [false,true]){
+    const Forecast=require('../../lib/forecastGridCollection'),slot={date:'20261004',time:'1530'},A=coords[0],B=coords[1];
+    const base=fx.publication(slot)-9*fx.hour;let docs=fx.documents('shortest','2.0',slot,A,fx.rows('shortest',slot,A)),walks=[];
+    const c=new Forecast({product:'shortest',version:'2.0',model:fx.memoryModel(()=>docs),coords:cb=>cb(null,[A,B]),emit:()=>{},
+        retryAtMs:[15,30],refreshAfterMs:60000,now:()=>base+2*60000,readTimeoutMs:200,collectTimeoutMs:2000,
+        collect:(list,s,k,cb,control)=>{walks.push(list.map(key).sort());control.written=control.written||new Set();
+            if(walks.length===1)return cb(new Error('write failed for A; B not published'));
+            if(!keepFailing)control.written.add(key(A));
+            docs=docs.concat(fx.documents('shortest','2.0',slot,B,fx.rows('shortest',slot,B)));control.written.add(key(B));
+            cb(keepFailing?new Error('write failed for A'):null)}});
+    const r=await new Promise(res=>c.run(slot,'dummy',(e,r)=>res({e,r})));
+    assert.deepStrictEqual(walks[1],[key(A),key(B)],'the failed refresh grid is kept for the next walk');
+    if(keepFailing){assert(r.e,'an unwritten refresh grid keeps the run incomplete');assert.strictEqual(r.r.pending,0);assert.strictEqual(r.r.unwritten,1);
+        assert.notStrictEqual(c.refreshed,'202610041530','refresh not consumed');}
+    else{assert(!r.e,r.e&&r.e.message);assert.strictEqual(r.r.walks,2);assert.strictEqual(c.refreshed,'202610041530')}
+ }
  // Review R1-02: the first run of a publication consumes the delayed re-walks however it ends.
  {
     const Forecast=require('../../lib/forecastGridCollection'),slot={date:'20261004',time:'1400'},one=[coords[0]];

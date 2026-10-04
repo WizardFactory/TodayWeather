@@ -7,6 +7,11 @@ const grids=Array.from({length:2033},(_,i)=>({mx:i%149,my:Math.floor(i/149)}));
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 let dbProcess,connection,provider,scratch,logFd,requests=0,pages=0,retries=0,retried=false,currentProduct,slot,late,staleTemplates;
 const summaries=[];
+// The production reader uses field lists that app.js installs as globals; take them from app.js itself.
+const readerGlobals=Object.fromEntries(['commonString','shortestString'].map(name=>{
+    const m=new RegExp('global\\.'+name+' = (\\[[^\\]]*\\])').exec(fs.readFileSync(path.join(__dirname,'../../app.js'),'utf8'));
+    return [name,JSON.parse(m[1].replace(/'/g,'"'))];
+}));
 async function freePort(){const s=net.createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r));const p=s.address().port;await new Promise(r=>s.close(r));return p}
 function writeXML(product,s){
  const categories={t3h:'TMP',r06:'PCP',s06:'SNO',t1h:'T1H',rn1:'RN1',sky:'SKY',reh:'REH',pty:'PTY',pop:'POP',uuu:'UUU',vvv:'VVV',vec:'VEC',wsd:'WSD',tmn:'TMN',tmx:'TMX',lgt:'LGT'};
@@ -73,7 +78,7 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
     const Controller=h.load('controllers/kma/kma.town.'+product+'.controller.js',{
         async:require('async'),['../../models/kma/kma.town.'+product+'.model.js']:models[product+'2'],
         '../../lib/kmaTimeLib':require('../../lib/kmaTimeLib'),'../../lib/kmaPrecipitation':require('../../lib/kmaPrecipitation'),
-        '../../lib/midForecastPolicy':require('../../lib/midForecastPolicy')},{log});
+        '../../lib/midForecastPolicy':require('../../lib/midForecastPolicy')},{log,...readerGlobals});
     const overrides={'../lib/collectTownForecast':Collector,'../models/town':{getCoord:cb=>cb(null,grids)},
         '../models/modelShort':models.short1,'../models/modelShortest':models.shortest1,
         '../models/kma/kma.town.short.model':models.short2,'../models/kma/kma.town.shortest.model':models.shortest2,
@@ -103,6 +108,30 @@ function gather(m,product){return new Promise((res,rej)=>m[product==='short'?'ge
     if(version==='2.0'){
         const slots=(await model.find({'mCoord.mx':grids[0].mx,'mCoord.my':grids[0].my}).lean().exec()).map(d=>Number(d.fcsDate));
         assert.strictEqual(new Set(slots).size,slots.length,'fenced misses insert no duplicate slot documents');
+    }
+    // AK review 5406464242 #1: legacy literal-HH30 ultra-short slots (all, or mixed with HH00) are rewritten under the
+    // canonical HH00 publication, so the reader's latest-pubDate filter returns every slot with the new values.
+    if(product==='shortest'){
+        const legacy=fx.rows(product,slot,grids[5],slot.time).map(r=>({...r,t1h:3.5}));
+        for(const mixed of [false,true]){
+            const lq={'mCoord.mx':grids[5].mx,'mCoord.my':grids[5].my};
+            const rows=mixed?legacy.map((r,i)=>i<3?r:{...fx.rows(product,slot,grids[5])[i],t1h:3.5}):legacy;
+            await model.collection.deleteMany(lq);await model.collection.insertMany(fx.documents(product,version,slot,grids[5],rows).map(d=>({...d})).flatMap(d=>
+                version==='1.0'?[d]:[d]).map(d=>version==='1.0'||!mixed?d:{...d,pubDate:new Date(fx.publication({date:d[field].pubDate.slice(0,8),time:d[field].pubDate.slice(8)})-9*fx.hour)}));
+            const before=requests;await gather(f.m,product);assert.strictEqual(requests-before,templates.length,(mixed?'mixed':'literal')+' HH30 slots are re-collected once');
+            assert.strictEqual((await read()).length,0);
+            let served;
+            if(version==='2.0'){
+                const out=await new Promise((res,rej)=>new Controller().getShortestFromDB(null,grids[5],undefined,(e,r)=>e?rej(e):res(r)));
+                served=out.ret.filter(r=>r.pubDate===out.pubDate&&fx.rows(product,slot,grids[5]).some(x=>x.date===r.date&&x.time===r.time));
+                assert.strictEqual(out.pubDate,slot.date+fx.echo(product,slot),'reader publication is canonical HH00');
+            } else {
+                const doc=await model.collection.findOne(lq);assert.strictEqual(doc.pubDate,slot.date+fx.echo(product,slot));
+                // DB1 rows have no per-row publication; the document pubDate (checked above) applies to all of them.
+                served=doc[field].filter(r=>fx.rows(product,slot,grids[5]).some(x=>x.date===r.date&&x.time===r.time));
+            }
+            assert.strictEqual(served.length,6,'every slot served under one publication');assert(served.every(r=>r.t1h===-12.5),'new values stored');
+        }
     }
     // Review R1-04: an invalid duplicate slot document is repaired by the real writer, not re-walked forever.
     const dupGrid=grids[3],first=fx.rows(product,slot,dupGrid)[0],dq={'mCoord.mx':dupGrid.mx,'mCoord.my':dupGrid.my};
