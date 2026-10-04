@@ -203,6 +203,7 @@
       "items": [
         "Same product/publication overlaps join one run",
         "Ultra-short: one full refresh per current publication from base+40min",
+        "Same-publication rerun waits for an expired run's writes to settle",
         "Nine-minute forecast deadline fences new HTTP and writes",
         "Readback errors stay incomplete; late issued writes are publication-fenced",
         "No production recovery, quota entitlement or server2 change claimed"

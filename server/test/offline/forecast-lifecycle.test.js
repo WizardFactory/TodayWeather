@@ -163,5 +163,42 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     assert(staleError);assert.strictEqual(doc.pubDate,newPub,'older publication never downgrades a newer document');
  }
  passed=true;
+ // Same-publication writes admitted by an expired run must settle before another run of that publication
+ // (e.g. the ultra-short refresh) may write; otherwise the older write can revert newer values (review 5403438544).
+ {
+    const now=Date.now(),baseUtc=now-44*60000,k=new Date(baseUtc+9*fx.hour).toISOString();
+    const slot={date:k.slice(0,10).replace(/-/g,''),time:k.slice(11,13)+k.slice(14,16)};
+    const stored=new Map();let held,gen=0,walks=0;
+    function Model(){}
+    Model.remove=()=>({exec(){}});
+    Model.find=query=>({setOptions(){return this},lean(){return this},exec(cb){cb(null,[...stored.values()].filter(d=>Number(d.pubDate)===Number(query.pubDate)))}});
+    Model.update=(query,data,options,cb)=>{
+        const key=Number(query.fcsDate);
+        const apply=()=>{const doc=stored.get(key);
+            if(data.$setOnInsert){if(!doc){stored.set(key,{...data.$setOnInsert,mCoord:coords[0],fcsDate:query.fcsDate})}return cb(null,{n:doc?1:0})}
+            if(query.$or&&(!doc||!(doc.pubDate==null||Number(doc.pubDate)<=Number(query.$or[0].pubDate.$lte))))return cb(null,{n:0});
+            stored.set(key,data);cb(null,{n:1});
+        };
+        const row=data.$setOnInsert?data.$setOnInsert.shortestData:data.shortestData;
+        if(row.t1h===1&&!held){held=apply}else{apply()}
+    };
+    const Controller=h.load('controllers/kma/kma.town.shortest.controller.js',{async:require('async'),'../../models/kma/kma.town.shortest.model.js':Model,
+        '../../lib/kmaTimeLib':require('../../lib/kmaTimeLib'),'../../lib/kmaPrecipitation':require('../../lib/kmaPrecipitation'),
+        '../../lib/midForecastPolicy':require('../../lib/midForecastPolicy')},{log:h.logger([])});
+    function Gen(){}Gen.prototype.requestData=function(list,type,key,date,time,cb){walks++;gen++;const g=gen;
+        cb(null,list.map(mCoord=>({mCoord,isCompleted:true,data:fx.rows('shortest',slot,mCoord).map(r=>({...r,t1h:g}))})))};
+    Gen.prototype.cancel=function(){};
+    const f=mh.load({'../lib/collectTownForecast':Gen,'../models/town':{getCoord:cb=>cb(null,[coords[0]])},
+        '../models/kma/kma.town.shortest.model':Model,'./kma/kma.town.shortest.controller.js':Controller,
+        '../config/gather':policy.load({GATHER_FORECAST_DEADLINE_MS:'30'})});
+    f.m.getShortestQueryTime=()=>slot;
+    const poll=()=>new Promise(res=>f.m.getTownShortestData(9,'dummy',(e,r)=>res({e,r})));
+    const first=await poll();assert(first.e,'first run expires while its admitted write is held');assert(held);
+    const second=await poll();assert(second.e&&/settling/.test(second.e.message),'refresh must wait for the earlier same-publication write');
+    assert.strictEqual(walks,1,'no HTTP while earlier writes settle');
+    held();await wait(5);
+    const third=await poll();assert(!third.e,third.e&&third.e.message);assert.strictEqual(walks,2,'refresh runs once settled');
+    assert([...stored.values()].every(d=>d.shortestData.t1h===2),'refresh values are not reverted by the earlier write');
+ }
  console.log('PASS forecast lifecycle: joined HTTP deadline, late-write fencing, incomplete batch rejection, quota/key bounds and DB1/DB2 writer fences/errors');
 })().catch(e=>{console.error(e);process.exitCode=1});

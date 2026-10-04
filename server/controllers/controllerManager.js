@@ -229,6 +229,18 @@ Manager.prototype.compareDate = function(oldDate, newDate){
     return 0;
 };
 
+// Count forecast writes still settling so the coordinator can hold a same-publication rerun (#2676).
+function admitForecastWrite(control) {
+    if (!control || !control.product) { return function() {}; }
+    var settled = false;
+    control.pendingWrites = (control.pendingWrites || 0) + 1;
+    return function() {
+        if (settled) { return; }
+        settled = true;
+        control.pendingWrites--;
+    };
+}
+
 // Controlled DB1 forecast writes compare-and-set the publication read before merging, so a
 // delayed older save cannot replace a document a later publication already advanced (#2676).
 function saveForecastDocument(model, doc, readPubDate, field, control, callback) {
@@ -1159,7 +1171,9 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                         forecastWriteError = forecastWriteError || new Error('Incomplete or mismatched forecast batch');
                         return cb();
                     }
+                    var settle = admitForecastWrite(control);
                     self.getSaveFunc(dataType).call(self, item.data, function (err, invalid) {
+                        settle();
                         if (control && control.cancelled) { return cb(new Error('Current collection cancelled')); }
                         if(invalid != undefined && invalid == true){
                             if(invalidList.indexOf(item.mCoord) === -1){

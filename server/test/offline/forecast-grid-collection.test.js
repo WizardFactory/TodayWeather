@@ -110,6 +110,13 @@ let passed=false;process.on('exit',()=>{if(!passed){console.error('FAIL: ended b
     clock=base+2*f.hour;await go(make(40*min));assert.deepStrictEqual(walks,[1,1,1],'no refresh once the publication is old');
     clock=base+44*min;await go(make(0));assert.deepStrictEqual(walks,[1,1,1],'0 disables refresh');
     docs=[];walks=[];const late=make(40*min);await go(late);await go(late);assert.deepStrictEqual(walks,[1],'a first walk inside the window counts as the refresh');
+    // The refresh is consumed only by a successful full walk; a failed refresh stays due (review 5403438544).
+    clock=base+44*min;fill();walks=[];let fail=true;
+    const flaky=new Forecast({product:'shortest',model,version:'2.0',coords:cb=>cb(null,[coord]),emit:()=>{},
+        refreshAfterMs:40*min,now:()=>clock,collect:(list,s,k,cb)=>{walks.push(list.length);cb(fail?new Error('provider'):null)}});
+    await new Promise(res=>flaky.run(rs,'dummy',e=>{assert(e);res()}));
+    fail=false;await go(flaky);assert.deepStrictEqual(walks,[1,1],'failed refresh is retried in the window');
+    await go(flaky);assert.deepStrictEqual(walks,[1,1],'successful refresh is consumed');
  }
  // A failed after-collection coverage read is never reported as complete.
  let reads=0;const records=[];

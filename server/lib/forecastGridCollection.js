@@ -200,13 +200,21 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
         else { callback(new Error('Forecast collection busy with another publication')); }
         return;
     }
+    // Writes admitted by an expired run of this publication may still settle; a new run of the
+    // same publication could otherwise have its newer values reverted by them.
+    self.settling = (self.settling || []).filter(function(c) { return c.pendingWrites > 0; });
+    if (self.settling.some(function(c) { return c.slot.date + c.slot.time === identity; })) {
+        callback(new Error('Forecast writes from an earlier run of this publication are still settling'));
+        return;
+    }
     // Ultra-short publications are updated every ten minutes after generation: while the
     // publication is current, one process-local full refresh walk per publication is due.
     var base = stamp(slot) - 9 * HOUR, now = (options.now || Date.now)();
     var refreshDue = options.refreshAfterMs > 0 && now >= base + options.refreshAfterMs &&
         now < base + options.refreshAfterMs + (options.refreshWindowMs || HOUR) && self.refreshed !== identity;
     var run = {identity: identity, callbacks: [callback], finished: false};
-    var control = {cancelled: false, collector: null, retryTimer: null, product: product, slot: slot, httpAttempts: 0};
+    var control = {cancelled: false, collector: null, retryTimer: null, product: product, slot: slot, httpAttempts: 0,
+        pendingWrites: 0};
     self.active = run;
     var coords;
     var deadline = setTimeout(function() {
@@ -219,6 +227,7 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
         if (run.finished) { return; }
         run.finished = true; clearTimeout(deadline);
         if (self.active === run) { self.active = null; }
+        if (control.pendingWrites > 0) { self.settling = (self.settling || []).concat(control); }
         report = report || {expected: coords ? coords.length : 0, complete: 0, pending: coords ? coords.length : 0};
         report.httpAttempts = control.httpAttempts;
         options.emit(Object.assign({event: 'forecast-collection', utc: new Date().toISOString(), product: product,
@@ -244,7 +253,7 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
         read('before', function(err, list) {
             if (err) { return finish(err); }
             var walk = list, refreshed = refreshDue && list.length < coords.length;
-            if (refreshDue) { self.refreshed = identity; walk = coords; }
+            if (refreshDue) { walk = coords; }
             if (!walk.length) { return finish(null, {expected: coords.length, complete: coords.length, pending: 0}); }
             try {
                 options.collect(walk, slot, key, function(collectionError) {
@@ -252,6 +261,8 @@ ForecastGridCollection.prototype.run = function(requested, key, callback) {
                     read('after', function(readError, remaining) {
                         var error = collectionError || readError;
                         if (!error && remaining.length) { error = new Error('Forecast collection incomplete: pending=' + remaining.length); }
+                        // Only a successful full walk consumes the publication's refresh.
+                        if (!error && refreshDue) { self.refreshed = identity; }
                         finish(error, {expected: coords.length, complete: readError ? 0 : coords.length - remaining.length,
                             pending: readError ? coords.length : remaining.length, refresh: refreshed});
                     });

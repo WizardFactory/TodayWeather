@@ -108,8 +108,13 @@ publication: DB2 controlled slot updates match only `pubDate <= own` (or no
 DB1 controlled saves compare-and-set the `pubDate` read before merging and refuse
 to downgrade a newer document. The slot index is not unique, so two overlapping
 upserts of the same absent slot (for example across processes) can still both
-insert, as before #2676. This is not a transaction/distributed lock or Mongo
-cancellation. Current-observation behavior and its separate repair allowance are
+insert, as before #2676. The publication fence cannot order two writes of the same
+publication (for example an expired first walk and the later ultra-short refresh),
+so a coordinator counts each run's admitted writes and refuses another run of the
+same publication ("still settling") until an expired run's writes have called back;
+other publications proceed. A Mongo operation that never calls back keeps only that
+publication from rerunning in the process. This is not a transaction/distributed
+lock or Mongo cancellation. Current-observation behavior and its separate repair allowance are
 unchanged.
 
 ### Optional-field repair policy

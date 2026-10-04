@@ -144,6 +144,8 @@ every grid once, because KMA updates ultra-short values every ten minutes. The
 window must contain a scheduled shortest poll: an HH30 publication is polled about
 18/24/34/44 minutes after its base time, so the default 40 minutes uses the +44 poll;
 any value above 2640000 leaves no scheduled poll in the window (later polls request
-the next publication), effectively disabling refresh. A refresh that joins an active run, fails or hits the
-deadline is not retried within that window; stored same-publication data remains.
+the next publication), effectively disabling refresh. Only a successful full walk
+consumes the refresh; a failed or expired refresh stays due for later calls inside
+the window. A refresh that joins an already active run of the publication does not
+walk separately; stored same-publication data remains.
 See [forecast coverage and rollout](../docs/operations/current-grid-collection.md#forecast-completion-2676).

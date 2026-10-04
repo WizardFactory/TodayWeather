@@ -5420,6 +5420,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <ul>
           <li>Same product/publication overlaps join one run</li>
           <li>Ultra-short: one full refresh per current publication from base+40min</li>
+          <li>Same-publication rerun waits for an expired run&#39;s writes to settle</li>
           <li>Nine-minute forecast deadline fences new HTTP and writes</li>
           <li>Readback errors stay incomplete; late issued writes are publication-fenced</li>
           <li>No production recovery, quota entitlement or server2 change claimed</li>

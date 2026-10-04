@@ -347,7 +347,8 @@ Rows outside the expected horizon are dropped before writes. Three-second reads 
 the nine-minute forecast run deadline bound guard lifetime; issued Mongo operations
 may settle later but are publication-fenced (DB2 `pubDate <= own` with an
 absent-slot `$setOnInsert`, DB1 compare-and-set on the read `pubDate`), so they
-cannot replace a newer publication. Coverage read waits are configurable through
+cannot replace a newer publication; a same-publication rerun waits until an expired
+run's admitted writes have settled. Coverage read waits are configurable through
 `GATHER_FORECAST_READ_TIMEOUT_MS`. Ultra-short publications are updated by KMA every ten
 minutes, so each process refreshes every grid once per current ultra-short
 publication from `GATHER_SHORTEST_REFRESH_AFTER_MS` (default base+40min). Guards are
