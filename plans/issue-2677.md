@@ -7,6 +7,7 @@ Input: [specification](../specs/issue-2677.md). Owner: main (Claude). Endpoint: 
 4. Run the push offline suite and the complete `npm run test:offline` where the environment permits. Additional smoke: a loopback HTTP origin that hangs the first request per URL, driven through the real `weatherSource`, Dispatcher and Engine with in-memory storage.
 5. Update `docs/architecture/push-notifications.md` and `push-s3-design.md` for the retry/readback contract; assess the Archify push diagrams.
 6. Commit, push, open the PR, wait for CI, run independent review, apply selected findings, renew affected checks.
+7. Review 1 (PR #2680, Codex) Required F1-F6 plus the gather-offline CI failure: enforce the bound before preparing, checkpoint in-flight counts, derive the manifest summary from the part snapshot, closed reason list, deadline-aware weather queue, architecture docs and regenerated Archify push diagram (finalize + visual-check). Red/Green for each in `push-preparation-retry.test.js`; the smoke is not in `run.js` (gather-offline installs a minimal dependency set).
 
 Scenarios: S1 scheduled alarm batch with one weather outage (AC1); S2 persistent outage, disabled/changed registration, ambiguous send (AC2); S3 campaign readback of mixed preparation/FCM failures with sensitive data absent (AC3). Machine definitions: `reports/sdlc/issue-2677/user-scenarios.json`.
 

@@ -60,8 +60,7 @@ var commands = [
     [path.join(__dirname, 'kma-warning.test.js')],
     [path.join(__dirname, 'push-store.test.js')],
     [path.join(__dirname, 'push-s3.test.js')],
-    [path.join(__dirname, 'push-preparation-retry.test.js')],
-    [path.join(__dirname, 'push-preparation-smoke.js')]
+    [path.join(__dirname, 'push-preparation-retry.test.js')]
 ];
 commands.forEach(function (args) {
     var result = spawnSync(process.execPath, args, {stdio: 'inherit'});

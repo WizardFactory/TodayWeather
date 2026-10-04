@@ -112,18 +112,22 @@ for later investigation. No deployment, data migration or automatic deletion is 
   Korean source terms for `ko`, English fallback otherwise; region names remain KMA
   names. Broader reviewed warning translations are a separate activation follow-up.
 - Weather preparation (#2677): at most `PUSH_WEATHER_CONCURRENCY` (default 16) origin requests run
-  at once; a rejected request is never cached and the 5s timeout starts when the request is issued.
-  A retryable failure (`weather-timeout`, `weather-unavailable`) is retried before any FCM
+  at once; a rejected request is never cached, the 5s timeout starts when the request is issued,
+  and a request still queued behind the limit when its campaign expires is not sent (`weather-deadline`).
+  A retryable failure (`weather-timeout`, `weather-unavailable`, `weather-deadline`) is retried before any FCM
   submission with 1s exponential backoff and jitter, at most `PUSH_PREPARE_ATTEMPTS` (default 4)
-  preparations per recipient across supersession and restart, and never past the campaign deadline.
+  preparations per recipient, and never past the campaign deadline. The count is written with
+  each checkpoint while a job is in flight, so supersession and coordinator restart do not reset it;
+  a recipient already at the bound ends `preparation-attempts-exhausted` without another weather call.
   Each retry repeats the registration revision, eligibility and disabled-state checks; a
   changed registration is re-admitted with its new record, a disabled one is not sent.
   `weather-rejected` (other 4xx) and unclassified errors are not retried. An ambiguous or
   failed FCM send is never resent by this path.
 - Campaign readback: each persisted job keeps `status`, `stage` (`preparation` or `transport`),
-  `reason` (a short code such as `weather-timeout`, `messaging/invalid-argument` or
-  `transport-timeout-ambiguous`), `preparationAttempts` and transport `attempts`. The manifest
-  `summary` counts jobs by status, failures by `stage:reason` and total attempts. Only fixed codes
+  `reason` (a code from a closed list such as `weather-timeout`, `messaging/invalid-argument`,
+  `transport-timeout-ambiguous` or an HTTP status; anything else is stored as `unknown`), `preparationAttempts` and transport `attempts`. The manifest
+  `summary` counts jobs by status, failures by `stage:reason` and total attempts, from the same
+  job snapshot as the accompanying parts. Only fixed codes
   and counts are stored: never tokens, credentials, positions or provider bodies. Preparation
   failure means no FCM request was made for that recipient; `transport` failure arose at
   the FCM submission step (including project pause). FCM acceptance alone does not prove

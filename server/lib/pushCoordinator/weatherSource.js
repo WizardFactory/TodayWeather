@@ -39,8 +39,13 @@ function create(o) {
         if (next) next();
         else active--;
     }
-    function fetch(url, lang) {
+    function fetch(url, lang, deadline) {
         return acquire().then(function () {
+            // A request queued behind the concurrency gate must not start once its campaign has expired.
+            if (deadline !== undefined && now() >= deadline) {
+                release();
+                throw new PreparationError('weather-deadline', true);
+            }
             return new Promise(function (resolve, reject) {
                 var done = false;
                 function finish(error, body) {
@@ -66,11 +71,11 @@ function create(o) {
         });
     }
     return {
-        get: function (url, lang) {
+        get: function (url, lang, deadline) {
             var key = JSON.stringify(['weather', url, lang]),
                 old = cache.get(key);
             if (old && old.until > now()) return old.promise;
-            var entry = { until: now() + cacheMs, promise: fetch(url, lang) };
+            var entry = { until: now() + cacheMs, promise: fetch(url, lang, deadline) };
             cache.set(key, entry);
             entry.promise.catch(function () {
                 if (cache.get(key) === entry) cache.delete(key);

@@ -569,6 +569,168 @@ runner.test('location change during backoff sends once with the new registration
     assert.equal(x.sent.length, 1);
     assert.equal(seen[seen.length - 1], 38.5);
 });
+// ---- Review findings (PR #2680) ---------------------------------------------------------------
+runner.test('review F1: carried preparation count at the bound prepares nothing more', async function () {
+    var prepared = 0;
+    var d = dispatcher({ prepareAttempts: 4, send: async function () { throw new Error('must not send'); } });
+    var r = await d.enqueue({
+        deadline: Date.now() + 60000,
+        preparationAttempts: 4,
+        prepare: async function () {
+            prepared++;
+            return {};
+        }
+    });
+    d.close();
+    assert.equal(r.status, 'failed');
+    assert.equal(r.stage, 'preparation');
+    assert.equal(r.error, 'preparation-attempts-exhausted');
+    assert.equal(r.preparationAttempts, 4);
+    assert.equal(prepared, 0);
+});
+runner.test('review F2: an in-flight preparation count survives checkpoint and restart', async function () {
+    var calls = 0,
+        contexts = [];
+    var runtime = {
+        alarm: async function (r, context) {
+            calls++;
+            contexts.push(context);
+            throw transient('weather-timeout');
+        }
+    };
+    var x = await alarmFixture({ count: 1, towns: 1, prepareAttempts: 2, prepareRetryMs: 300, runtime: runtime });
+    await x.e.tick();
+    await sleep(60);
+    await x.e.flush();
+    var mid = stored(x.s);
+    assert.equal(mid.parts[0].status, 'sending');
+    assert.equal(mid.parts[0].preparationAttempts, 1, 'checkpoint carries the attempt in progress');
+    assert.equal(mid.manifest.summary.preparationAttempts, 1);
+    x.d.close();
+    var d2 = dispatcher({ now: x.now, prepareRetryMs: 10, prepareAttempts: 2, send: async function () { throw new Error('must not send'); } });
+    var e2 = new (feature('engine').Engine)({ registry: x.r, storage: x.s, dispatcher: d2, now: x.now, runtime: runtime });
+    await e2.init();
+    await e2.tick();
+    await d2.idle();
+    await e2.flush();
+    d2.close();
+    assert.equal(calls, 2, 'the bound holds across restart');
+    var end = stored(x.s);
+    assert.equal(end.parts[0].status, 'failed');
+    assert.equal(end.parts[0].preparationAttempts, 2);
+    contexts.forEach(function (c) {
+        assert.equal(c.deadline, SLOT + 300000, 'campaign deadline reaches the weather source');
+    });
+});
+runner.test('review F3: manifest summary is derived from the part snapshot it accompanies', async function () {
+    var x = await alarmFixture({
+        count: 1,
+        towns: 1,
+        runtime: {
+            alarm: function () {
+                return new Promise(function () {});
+            }
+        }
+    });
+    await x.e.tick();
+    await sleep(30);
+    var campaign = Array.from(x.e.campaigns.values())[0];
+    var put = x.s.put;
+    x.s.put = async function (key, value) {
+        if (/parts\//.test(key)) {
+            await sleep(40);
+            // The dispatcher result arrives while the part PUT is in flight.
+            Object.assign(campaign.jobs[0], {
+                status: 'failed',
+                stage: 'preparation',
+                reason: 'weather-timeout',
+                preparationAttempts: 4
+            });
+        }
+        return put.call(this, key, value);
+    };
+    campaign.dirty = true;
+    await x.e.flush();
+    x.s.put = put;
+    x.d.close();
+    var out = stored(x.s);
+    assert.equal(out.parts[0].status, 'sending');
+    assert.deepEqual(out.manifest.summary.status, { sending: 1 });
+    assert.deepEqual(out.manifest.summary.failures, {});
+    assert.equal(out.manifest.summary.preparationAttempts, out.parts[0].preparationAttempts || 0);
+});
+runner.test('review F4: only closed-list reasons are persisted, credential-like codes are not', async function () {
+    var safeReason = feature('errors').safeReason;
+    assert.equal(typeof safeReason, 'function');
+    ['AIza-secret-credential', 'token-secret-1', '37.5665', 'http://origin/37.5665,126.978', 'x'.repeat(65), 'messaging/AIza-secret'].forEach(
+        function (value) {
+            assert.equal(safeReason(value), 'unknown', value);
+        }
+    );
+    ['weather-timeout', 'messaging/invalid-argument', 'transport-timeout-ambiguous', 503, '400'].forEach(function (value) {
+        assert.equal(safeReason(value), String(value));
+    });
+    var x = await alarmFixture({
+        count: 1,
+        towns: 1,
+        send: async function () {
+            var e = new Error('rejected');
+            e.code = 'AIza-secret-credential';
+            throw e;
+        },
+        runtime: {
+            alarm: async function () {
+                return { title: 't', text: 'w' };
+            }
+        }
+    });
+    await runCampaign(x);
+    x.d.close();
+    var out = stored(x.s);
+    assert.equal(out.parts[0].stage, 'transport');
+    assert.equal(out.parts[0].reason, 'unknown');
+    var dump = JSON.stringify(out);
+    assert.equal(dump.indexOf('AIza'), -1);
+});
+runner.test('review F5: a request queued behind the concurrency gate does not start after its deadline', async function () {
+    var PreparationError = feature('errors').PreparationError;
+    var clock = 0,
+        started = [],
+        releaseFirst;
+    var s = source(
+        function (opts, cb) {
+            started.push(opts.url);
+            if (started.length === 1)
+                releaseFirst = function () {
+                    cb(null, { statusCode: 200 }, {});
+                };
+            else cb(null, { statusCode: 200 }, {});
+        },
+        {
+            concurrency: 1,
+            now: function () {
+                return clock;
+            }
+        }
+    );
+    var first = s.get('http://origin/a', 'ko', 50);
+    var second = s.get('http://origin/b', 'ko', 50);
+    await sleep(5);
+    clock = 100;
+    releaseFirst();
+    await first;
+    var error = null;
+    try {
+        await second;
+    } catch (e) {
+        error = e;
+    }
+    assert(error instanceof PreparationError);
+    assert.equal(error.code, 'weather-deadline');
+    assert.equal(error.retryable, true);
+    assert.deepEqual(started, ['http://origin/a'], 'the expired request never reached the origin');
+    assert.deepEqual(await s.get('http://origin/b', 'ko', 500), {}, 'the gate is released and later work proceeds');
+});
 if (require.main === module)
     runner.run().then(function (failed) {
         process.exitCode = failed ? 1 : 0;

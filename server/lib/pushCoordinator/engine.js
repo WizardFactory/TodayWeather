@@ -165,7 +165,7 @@ class Engine {
             createdAt: c.createdAt,
             deadline: c.deadline,
             parts: parts,
-            summary: summarize(c.jobs)
+            summary: summarize(jobs)
         });
     }
     partition(ref) {
@@ -249,7 +249,11 @@ class Engine {
     }
     async prepare(c, j, r) {
         if (c.kind === 'alarm')
-            return { notification: await this.runtime.alarm(r), record: r, eventId: c.id };
+            return {
+                notification: await this.runtime.alarm(r, { deadline: c.deadline }),
+                record: r,
+                eventId: c.id
+            };
         if (c.kind === 'warning')
             return { notification: this.runtime.warning(c.event, r), record: r, eventId: c.id };
         var current = this.state[r.ref];
@@ -263,7 +267,9 @@ class Engine {
             })
         )
             return null;
-        var result = await this.runtime.conditional(r, stateDate(current), new Date(this.now()));
+        var result = await this.runtime.conditional(r, stateDate(current), new Date(this.now()), {
+            deadline: c.deadline
+        });
         j.nextState = Object.assign(result.state, { generation: r.generation });
         if (!result.notification) {
             var fresh = this.registry.get(r.ref);
@@ -328,6 +334,11 @@ class Engine {
                         priority: c.kind === 'warning' ? 'warning' : 'normal',
                         deadline: c.deadline,
                         preparationAttempts: job.preparationAttempts || 0,
+                        // Checkpoints must keep the count of an unfinished job so restarts cannot reset the bound.
+                        onPreparation: function (n) {
+                            job.preparationAttempts = n;
+                            c.dirty = true;
+                        },
                         ref: record.ref,
                         generation: record.generation,
                         guard: function () {

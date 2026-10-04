@@ -11,7 +11,7 @@ function call(target, method, args) {
         );
     });
 }
-function create() {
+function create(options) {
     var Controller = require('../../controllers/controllerPush');
     var Alert = require('../../controllers/alert.push.controller');
     var push = new Controller();
@@ -20,6 +20,7 @@ function create() {
     // Distinct towns fan out to the service's own API at the same minute; bound those requests.
     var weatherSource = require('./weatherSource').create({
         concurrency: Number(process.env.PUSH_WEATHER_CONCURRENCY) || 16,
+        now: options && options.now,
         normalize: function (body) {
             if (!body.units) body.units = require('../unitConverter').initUnits({});
             return body;
@@ -37,10 +38,10 @@ function create() {
         if (r.source === 'KMA' && r.town && r.town.first) delete r.geo;
         return r;
     }
-    function weather(record) {
+    function weather(record, deadline) {
         var r = normalized(record),
             url = new Alert()._makeRequestUrl(r);
-        return weatherSource.get(url, r.lang);
+        return weatherSource.get(url, r.lang, deadline);
     }
     return {
         resolve: async function (loc, r) {
@@ -77,17 +78,17 @@ function create() {
                 weatherKey: JSON.stringify([r.source || 'KMA', loc.lat, loc.long, town])
             };
         },
-        alarm: async function (r) {
+        alarm: async function (r, context) {
             var settings = normalized(r),
-                body = JSON.parse(JSON.stringify(await weather(settings)));
+                body = JSON.parse(JSON.stringify(await weather(settings, context && context.deadline)));
             return settings.source === 'KMA'
                 ? push._makeKmaPushMessage(settings, body)
                 : push._makeDsfPushMessage(settings, body);
         },
-        conditional: async function (r, state, date) {
+        conditional: async function (r, state, date, context) {
             var worker = new Alert();
             worker.time = date.getUTCHours() * 3600 + date.getUTCMinutes() * 60;
-            var body = JSON.parse(JSON.stringify(await weather(r)));
+            var body = JSON.parse(JSON.stringify(await weather(r, context && context.deadline)));
             var settings = Object.assign(normalized(r), state || {}),
                 info = worker._parseWeatherAirData(settings, body);
             var send = worker._compareWithLastInfo(settings, info);

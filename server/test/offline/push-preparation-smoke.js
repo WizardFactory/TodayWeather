@@ -67,7 +67,13 @@ server.listen(0, '127.0.0.1', async function () {
                 }
             }
         });
-        runtime = require('../../lib/pushCoordinator/runtime').create();
+        var slot = Date.parse('2026-09-27T22:00:00Z'),
+            start = Date.now(),
+            now = function () {
+                return slot + 1000 + (Date.now() - start);
+            };
+        // The weather source compares campaign deadlines with the same clock as the engine.
+        runtime = require('../../lib/pushCoordinator/runtime').create({ now: now });
         var storage = base.memory(),
             towns = ['삼성동', '역삼동', '논현동', '청담동', '대치동'],
             registry = await base.registry(storage, async function (loc, r) {
@@ -89,12 +95,7 @@ server.listen(0, '127.0.0.1', async function () {
             );
         await registry.upsert(records);
         await registry.settled();
-        var slot = Date.parse('2026-09-27T22:00:00Z'),
-            start = Date.now(),
-            now = function () {
-                return slot + 1000 + (Date.now() - start);
-            },
-            sent = [];
+        var sent = [];
         var Dispatcher = require('../../lib/pushCoordinator/dispatcher').Dispatcher,
             Engine = require('../../lib/pushCoordinator/engine').Engine;
         dispatcher = new Dispatcher({

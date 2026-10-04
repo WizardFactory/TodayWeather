@@ -202,7 +202,13 @@ class Dispatcher {
             var payload;
             if (item.prepared) payload = item.payload;
             else if (job.prepare) {
+                // The cumulative bound also holds for work re-admitted after supersession or recovery.
+                if (item.preparations >= this.prepareAttempts) {
+                    this.finish(item, 'failed', 'preparation-attempts-exhausted', 'preparation');
+                    return;
+                }
                 item.preparations++;
+                if (job.onPreparation) job.onPreparation(item.preparations);
                 payload = await job.prepare();
             } else payload = job;
             if (this.stopped) return;
