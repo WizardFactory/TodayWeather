@@ -127,3 +127,25 @@ and the gather-side `PUSH_WARNING_FEED_ENABLED` default to false. The latter als
 requires the existing KMA warning collector to be enabled. `SERVER_MODE=push` is
 rejected in S3 mode; do not run the legacy/SQLite sender alongside the coordinator.
 See [S3 operations](../docs/operations/push-s3.md) before activation.
+
+
+`GATHER_FORECAST_DEADLINE_MS` defaults to 540000 ms (positive integer, maximum 2147483647).
+It bounds each short/ultra-short publication run independently from
+`GATHER_CURRENT_DEADLINE_MS`, cancels HTTP/retry admission and fences new forecast
+writes after expiry. Polling and formats are unchanged. Issued Mongo operations
+may settle later but are publication-fenced and cannot replace a newer publication.
+`GATHER_FORECAST_READ_TIMEOUT_MS` (default 3000, minimum 1001) bounds the coordinate
+read and each forecast coverage read wait; Mongo coverage `maxTimeMS` is one second
+shorter (the coordinate read has no `maxTimeMS`). A failed read leaves
+the run incomplete and, before collection, sends no forecast HTTP.
+`GATHER_SHORTEST_REFRESH_AFTER_MS` (default 2400000, `0` disables) starts a one-hour
+window after an ultra-short publication's base time in which each process refreshes
+every grid once, because KMA updates ultra-short values every ten minutes. The
+window must contain a scheduled shortest poll: an HH30 publication is polled about
+18/24/34/44 minutes after its base time, so the default 40 minutes uses the +44 poll;
+any value above 2640000 leaves no scheduled poll in the window (later polls request
+the next publication), effectively disabling refresh. Only a successful full walk
+consumes the refresh; a failed or expired refresh stays due for later calls inside
+the window. A refresh that joins an already active run of the publication does not
+walk separately; stored same-publication data remains.
+See [forecast coverage and rollout](../docs/operations/current-grid-collection.md#forecast-completion-2676).

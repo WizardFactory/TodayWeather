@@ -13,7 +13,20 @@ var precipitation = require('../../lib/kmaPrecipitation');
 function kmaTownShortController(){
 }
 
-kmaTownShortController.prototype.saveShort = function(newData, callback){
+// Controlled forecast writes never let an admitted older publication replace a newer slot (#2676).
+// A fenced miss only inserts when the slot is absent, so it cannot add a duplicate slot document.
+function fencedUpdate(model, query, newItem, control, callback) {
+    if (!control || !control.product) { return model.update(query, newItem, {upsert:true}, callback); }
+    var fenced = Object.assign({$or: [{pubDate: {$lte: newItem.pubDate}}, {pubDate: null}]}, query);
+    model.update(fenced, newItem, {}, function(err, raw) {
+        if (err || (raw && raw.n > 0)) { return callback(err); }
+        var insert = {pubDate: newItem.pubDate, shortData: newItem.shortData};
+        model.update(query, {$setOnInsert: insert}, {upsert:true}, function(err) { callback(err); });
+    });
+}
+
+kmaTownShortController.prototype.saveShort = function(newData, callback, control){
+    if (control && control.cancelled) { return callback(new Error('Forecast collection cancelled')); }
     //log.info('KMA Town S> save :', newData);
     try{
         var coord = {
@@ -26,15 +39,16 @@ kmaTownShortController.prototype.saveShort = function(newData, callback){
 
         async.mapSeries(newData,
             function(item, cb){
+                if (control && control.cancelled) { return cb(new Error('Forecast collection cancelled')); }
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
                 var newItem = {mCoord: coord, pubDate: pubDate, fcsDate: fcsDate, shortData: item};
                 log.debug('KMA Town S> item : ', JSON.stringify(newItem));
 
-                modelKmaTownShort.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
+                fencedUpdate(modelKmaTownShort, {'mCoord.mx': coord.mx, 'mCoord.my': coord.my, fcsDate: fcsDate}, newItem, control, function(err){
                     if(err){
                         log.error('KMA Town S> Fail to update short item');
                         log.info(JSON.stringify(newItem));
-                        return cb();
+                        return cb(err);
                     }
 
                     cb();

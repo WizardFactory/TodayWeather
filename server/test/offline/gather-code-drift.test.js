@@ -220,7 +220,8 @@ describe('gather drift: synthetic offline compatibility', function () {
         var manager = source('controllers/controllerManager.js');
         // Retry budgets moved to config/gather.js (#2588); unset env keeps these values.
         var policy = require('../../config/gather').load({});
-        assert.strictEqual((manager.match(/self\._recursiveRequestData\([^;]*?,\s*gatherPolicy\.retry\.\w+,/g) || []).length, 9);
+        assert.strictEqual((manager.match(/self\._recursiveRequestData\([^;]*?,\s*gatherPolicy\.retry\.\w+,/g) || []).length, 7);
+        assert(manager.includes('short ? gatherPolicy.retry.townShort : gatherPolicy.retry.townShortest'));
         assert.deepStrictEqual([policy.retry.townShort, policy.retry.midSea, policy.retry.invalidCurrent], [70, 70, 50]);
         assert(manager.includes('self.checkTimeAndRequestTask(true);'));
         assert(source('lib/PastConditionGather.js').includes('self.updateList, retryCount,'));

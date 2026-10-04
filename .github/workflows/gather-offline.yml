@@ -153,3 +153,29 @@ jobs:
           node server/test/offline/current-quota-memory.test.js
           node server/test/offline/forecast-traffic.test.js
           node server/test/offline/current-collection-smoke.js
+
+  forecast-grid-node16:
+    # Mongo4.4 retains the wire operations used by the production Mongoose5.1.2 driver.
+    runs-on: ubuntu-latest
+    container: node:16.20.2-bullseye
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install isolated pinned forecast test dependencies
+        run: npm install --prefix /tmp/forecast-offline --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.1.2 async@2.6.4 request@2.88.2 xml2js@0.4.23
+      - name: Prepare compatible temporary Mongo binary
+        run: |
+          curl -fsSL https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-4.4.29.tgz -o /tmp/forecast-mongo.tgz
+          tar -xzf /tmp/forecast-mongo.tgz -C /tmp
+      - name: Verify forecast coverage, lifecycle and real pinned persistence
+        env:
+          TZ: UTC
+          NODE_PATH: /tmp/forecast-offline/node_modules
+          TW_MONGOD: /tmp/mongodb-linux-x86_64-ubuntu2004-4.4.29/bin/mongod
+        run: |
+          node server/test/offline/forecast-grid-collection.test.js
+          node server/test/offline/forecast-manager.test.js
+          node server/test/offline/forecast-lifecycle.test.js
+          node server/test/offline/forecast-collection-smoke.js
