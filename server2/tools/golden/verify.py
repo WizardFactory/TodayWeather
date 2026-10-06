@@ -70,9 +70,17 @@ def compare_bytes(expected, actual):
     if expected != actual:
         raise ValueError('baseline differs; inspect explicit record output, never auto-update')
 
+def output_path(root, output):
+    output=output.resolve()
+    baseline=(root/'server2/tests/golden').resolve()
+    if output==baseline or baseline in output.parents:
+        raise ValueError('record output must not overwrite committed golden directory')
+    return output
+
 def record(root, output, node):
     declaration = json.loads((root/'server2/config/tasks/S02.json').read_text())
     oracle = oracle_path(root, declaration)
+    output=output_path(root,output)
     output.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, TZ='UTC', NODE_ENV='production')
     # Remove host live-mode and credential hints rather than forwarding them to the oracle.

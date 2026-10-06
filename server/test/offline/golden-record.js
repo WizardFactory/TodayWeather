@@ -14,8 +14,11 @@ if (process.env.TZ !== 'UTC' || process.env.NODE_ENV !== 'production') throw new
 if(process.version!=='v16.20.2')throw new Error('Pinned oracle Node v16.20.2 required');
 const outputArg = process.argv.indexOf('--output');
 if (outputArg < 0 || !process.argv[outputArg+1]) throw new Error('Explicit --output required');
-const outputDir = path.resolve(process.argv[outputArg+1]);
-assert(!outputDir.startsWith(server + path.sep), 'No golden output under legacy server');
+function canonicalOutput(file){let p=path.resolve(file),tail=[];while(!fs.existsSync(p)){tail.unshift(path.basename(p));p=path.dirname(p);}return path.join(fs.realpathSync(p),...tail);}
+const outputDir = canonicalOutput(process.argv[outputArg+1]);
+const committedGolden = fs.realpathSync(path.join(root,'server2/tests/golden'));
+assert(outputDir!==committedGolden&&!outputDir.startsWith(committedGolden+path.sep),'No output over committed golden baseline');
+assert(outputDir!==server&&!outputDir.startsWith(server + path.sep), 'No golden output under legacy server');
 fs.mkdirSync(outputDir, {recursive:true});
 process.env.TW_SMOKE_OUTPUT_DIR=path.join(outputDir,'harness-scratch');
 const sourceFiles = {}, rawRead = fs.readFileSync;
@@ -54,6 +57,7 @@ for (const method of ['request','get']) require('https')[method] = () => { throw
 require('dgram').createSocket = () => { throw new Error('Oracle UDP denied'); };
 for (const method of ['exec','execFile','execFileSync','spawn','fork','execSync','spawnSync']) require('child_process')[method] = () => { throw new Error('Oracle child process denied'); };
 assert.throws(()=>require('net').connect({host:'127.0.0.1',port:1}), /Oracle network denied/);
+for(const probe of [()=>require('net').connect({host:'provider.invalid',port:443}),()=>require('dns').lookup('provider.invalid',()=>{}),()=>require('dns').resolve4('provider.invalid',()=>{}),()=>require('https').get('https://provider.invalid'),()=>require('dgram').createSocket('udp4'),()=>require('child_process').execFileSync('echo',['denied'])])assert.throws(probe,/Oracle .* denied/);
 const express = require('express'), cors = require('cors'), session = require('express-session');
 const bodyParser = require('body-parser'), cookieParser = require('cookie-parser'), i18n = require('i18n');
 const locales = ['en','ko','ja','zh-CN','de','zh-TW'];
@@ -89,7 +93,7 @@ function makeDomesticHarness(){return harnessModule(path.join(__dirname,'rss-res
   for(const layer of family.stack) if(layer.route) {
     layer.route.stack.forEach((entry,index)=>{
       const original=entry.handle;
-      entry.handle=function(req,res,next){activeMethod=entry.routeMethod || original.name || 'layer-'+index;traces.push(activeMethod);return original(req,res,next);};
+      entry.handle=function(req,res,next){activeMethod=entry.routeMethod || original.name || 'layer-'+index;traces.push({name:activeMethod,implementation_sha256:require('crypto').createHash('sha256').update(original.toString()).digest('hex')});return original(req,res,next);};
     });
   }
   return {router,logs,queries,traces,load};
@@ -126,6 +130,13 @@ async function wire(app, input) {
             res.on('end',()=>resolve({status:res.statusCode,headers:Object.entries(res.headers).sort(([a],[b])=>a.localeCompare(b)),raw:Buffer.concat(chunks)}));
         });req.setTimeout(12000,()=>req.destroy(new Error('Oracle case timeout')));req.on('error',reject);req.end(body);
     });} finally {for(const s of sockets)s.destroy();await new Promise(resolve=>listener.close(resolve));allowedPorts.delete(port);}
+}
+async function withLoopback(app,run){
+    const listener=http.createServer(app),sockets=new Set();listener.on('connection',s=>{sockets.add(s);s.on('close',()=>sockets.delete(s));});
+    await new Promise((ok,bad)=>{listener.once('error',bad);listener.listen(0,'127.0.0.1',ok);});const port=listener.address().port;allowedPorts.add(port);
+    const transport=require('../../lib/geocoder/transport');
+    const call=(p,headers,timeoutMs,signal)=>transport.getJson('http://127.0.0.1:'+port+p,{headers,timeoutMs,signal,maxBytes:4*1024*1024});
+    try{return await run(call);}finally{for(const socket of sockets)socket.destroy();await new Promise(ok=>listener.close(ok));allowedPorts.delete(port);}
 }
 async function capture(id,group,handler,app,input,details={}) {
     const response=await wire(app,input);
@@ -221,6 +232,13 @@ async function worldCases(){
         assert.equal(response.status,200);const body=JSON.parse(response.raw);assert.equal(body.source,'VC');assert(body.hourly.length>24);assert(h.providerCalls.length>0);
         cases[cases.length-1].backend='world-'+version;coverage.add('world-'+version);
     }
+    for(const locale of locales){
+        const {h,router,handler}=world('v000903');
+        const r=await capture('world-locale-'+locale,null,handler,appFor(router,'/v000903/dsf/coord'),
+            {path:'/v000903/dsf/coord/35.68,139.76?temperatureUnit=C&windSpeedUnit=km%2Fh&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea',headers:{'accept-language':locale}},
+            {dependency_trace:{locale,units:'actual SI weather query',provider:'recorded Visual Crossing',calls:h.providerCalls}});
+        assert.equal(r.status,200);assert.equal(JSON.parse(r.raw).units.temperatureUnit,'C');
+    }
 }
 function geocoder(kind,fail){
     const mod=require('../../lib/geocoder');
@@ -240,8 +258,8 @@ function geocoder(kind,fail){
 async function gatewayCases(){
     global.log=quiet;
     const create=require('../../routes/gateway').createGatewayRouter;
-    for(const version of ['default','v000901','v000902','v000903'])for(const kind of ['domestic','world']){
-        const actualVersion=version==='default'?'v000901':version;
+    for(const version of ['default','v000901','v000902','v000903','query'])for(const kind of (version==='query'?['domestic']:['domestic','world'])){
+        const actualVersion=version==='default'?'v000901':version==='query'?'v000903':version;
         let backend, handler;
         if(kind==='domestic'){
             now='2026-09-24T00:10:00.000Z';const h=domestic(actualVersion,'en',f=>{f.townRows=[{...clone(f.place),town:{first:'서울특별시',second:'중구',third:'명동'}}];});
@@ -252,24 +270,26 @@ async function gatewayCases(){
         }
         const {geo,calls}=geocoder(kind);
         const backendCalls=[];
-        const gateway=create({geocoder:()=>geo,log:quiet,loopback:async(p,headers)=>{
-            backendCalls.push({path:p,headers});const r=await wire(backend,{path:p,headers});
-            const type=Object.fromEntries(r.headers)['content-type'];let body;try{body=JSON.parse(r.raw);}catch(_){body=r.raw.toString();}
-            return {status:r.status,json:!!type&&type.includes('application/json'),body};
-        }});
-        const prefix='/weather'+(version==='default'?'':'/'+version);
-        const response=await capture('gateway-'+version+'-'+kind,'GET '+prefix+'/coord/{location}',handler,appFor(null,null,gateway),
-            {path:prefix+'/coord/'+(kind==='domestic'?'37.5663,126.9779':'51.507,-0.128')},
-            {dependency_trace:{geocoder:calls,backend:backendCalls,actual_backend:true}});
-        assert.equal(response.status,200,'Actual gateway '+version+'/'+kind+' '+response.raw.toString().slice(0,300)+' '+JSON.stringify({backendCalls,calls}));assert(backendCalls.length>0);if(kind==='domestic')assert.equal(JSON.parse(response.raw).current.t1h,20,'Seeded matching geocode town preserves actual full backend observations');assert(!Object.fromEntries(response.headers)['set-cookie']);
+        await withLoopback(backend,async call=>{
+        const gateway=create({geocoder:()=>geo,log:quiet,loopback:(p,headers,timeoutMs,signal)=>{backendCalls.push({path:p,headers:Object.fromEntries(Object.entries(headers).map(([k,v])=>[k.toLowerCase(),v]))});return call(p,headers,timeoutMs,signal);}});
+        const prefix='/weather'+(version==='default'?'':'/'+actualVersion);
+        const appQuery='?temperatureUnit=F&windSpeedUnit=mph&pressureUnit=inHg&distanceUnit=mi&precipitationUnit=in&airUnit=aqicn&airForecastSource=kaq';
+        const query=version==='query'?'?temperatureUnit=C&temperatureUnit=F&note=a+b&bad=%ZZ&airForecastSource=kaq':appQuery;
+        const response=await capture(version==='query'?'gateway-query-normalization':'gateway-'+version+'-'+kind,'GET '+prefix+'/coord/{location}',handler,appFor(null,null,gateway),
+            {path:prefix+'/coord/'+(kind==='domestic'?'37.5663,126.9779':'51.507,-0.128')+query,headers:{'accept-language':'ko-KR,ko;q=0.9'}},
+            {dependency_trace:{geocoder:calls,backend:backendCalls,actual_backend:true,transport:'actual getJson total timer/parser over registered local HTTP'}});
+        assert.equal(response.status,200,'Actual gateway '+version+'/'+kind+' '+response.raw.toString().slice(0,300));assert(backendCalls.length>0);assert.equal(backendCalls[0].headers['accept-language'],'ko');assert(!Object.fromEntries(response.headers)['set-cookie']);
+        if(version==='query'){assert(backendCalls[0].path.includes('temperatureUnit=F&note=a%20b&airForecastSource=kaq'));assert(!backendCalls[0].path.includes('bad='));}
+        });
     }
 
     for(const [id,hours] of [['never-requested',1],['resumed-after-eight-days',1],['partial-eight-day-history',12]]){
-        now='2026-09-24T00:10:00.000Z';const h=domestic('v000903','en',f=>{f.current=f.current.slice(-hours);f.townRows=[{...clone(f.place),town:{first:'서울특별시',second:'중구',third:'명동'}}];});
+        now='2026-09-24T00:10:00.000Z';const h=domestic('v000903','en',f=>{const recent=f.current.slice(-hours);if(id==='resumed-after-eight-days'){const old=clone(f.current.slice(0,24)).map((r,i)=>({...r,date:'20260915',time:String(i*100).padStart(4,'0'),t1h:-9}));f.current=[...old,...recent];}else f.current=recent;f.townRows=[{...clone(f.place),town:{first:'서울특별시',second:'중구',third:'명동'}}];});
         const backend=appFor(h.router,'/v000903/kma'),{geo,calls}=geocoder('domestic');const forwarded=[];
+        const dates=id==='resumed-after-eight-days'?['20260915','20260924']:['20260924'];
         const gateway=create({geocoder:()=>geo,log:quiet,loopback:async(p,headers)=>{forwarded.push({path:p});const r=await wire(backend,{path:p,headers});return {status:r.status,json:true,body:JSON.parse(r.raw)};}});
         const r=await capture('gateway-history-'+id,'GET /weather/v000903/coord/{location}','server/routes/gateway.js',appFor(null,null,gateway),{path:'/weather/v000903/coord/37.5663,126.9779'},
-            {dependency_trace:{geocoder:calls,forwarded,available_observation_hours:hours,history_policy:'actual missing legacy grid observations; no synthetic ASOS replacement'}});
+            {dependency_trace:{geocoder:calls,forwarded,available_observation_hours:id==='resumed-after-eight-days'?25:hours,observation_dates:dates,gap_days:id==='resumed-after-eight-days'?8:0,history_policy:'actual missing legacy grid observations; no synthetic ASOS replacement'}});
         assert.equal(r.status,200);const body=JSON.parse(r.raw);assert.equal(body.current.yesterday.missing,true);assert(body.midData.dailyData.length<18);
     }
     for(const [version,kind] of [['v000903','coord'],['v000903','addr'],['v000901','addr']]){
@@ -291,6 +311,20 @@ async function gatewayCases(){
     const failedResponse=await capture('gateway-non-json-backend-error','GET /weather/v000903/coord/{location}','server/routes/gateway.js',appFor(null,null,failedGateway),{path:'/weather/v000903/coord/37.5,127'},
         {dependency_trace:{attempts,geocoder:failedGeo.calls,fixed_outcome:'non-JSON upstream503, actual max3 attempts'}});
     assert.equal(failedResponse.status,501);assert.equal(attempts.length,3);assert.equal(Object.fromEntries(failedResponse.headers)['cache-control'],'no-store');
+    now='2026-09-24T00:10:00.000Z';
+    const unavailableApp=express();unavailableApp.get('*',(req,res)=>res.status(503).type('text/plain').send(JSON.stringify({code:'EWEATHERUNAVAILABLE',retryAt:Date.now()+60000})));
+    await withLoopback(unavailableApp,async call=>{const g=geocoder('domestic');const gateway=create({geocoder:()=>g.geo,log:quiet,loopback:call});
+        const r=await capture('gateway-unavailable','GET /weather/v000903/coord/{location}','server/routes/gateway.js',appFor(null,null,gateway),{path:'/weather/v000903/coord/37.5,127'},
+            {dependency_trace:{body:'synthetic valid unavailable marker/retryAt',transport:'actual getJson JSON parsing despite text/plain upstream'}});
+        assert.equal(r.status,503);assert.equal(Object.fromEntries(r.headers)['retry-after'],'60');});
+    for(const [id,p] of [['gateway-excluded','/weather/v000705/coord/37.5,127'],['gateway-zero','/weather/coord/0.0001,0.0001']]){
+        const gateway=create({geocoder:()=>{throw new Error('404 input must not call geocoder');},log:quiet});
+        const r=await capture(id,null,'server/routes/gateway.js',appFor(null,null,gateway),{path:p},{dependency_trace:{input_rejection:true}});assert.equal(r.status,404);
+    }
+    const hanging={coord:()=>new Promise(()=>{})};
+    const timed=await capture('gateway-deadline','GET /weather/v000903/coord/{location}','server/routes/gateway.js',appFor(null,null,create({geocoder:()=>hanging,log:quiet})),{path:'/weather/v000903/coord/37.5,127'},
+        {dependency_trace:{outcome:'unresolved geocoder promise; actual production default9000ms deadline; no IO'}});assert.equal(timed.status,501);
+
     for(const [id,p,kind] of [['weather-invalid','/weather/coord/not-a-coordinate','domestic'],['weather-no-geocode','/weather/v000903/coord/37.5,127','domestic'],['geocode-empty','/geocode/v000903/coord/37.5,127','coord']]){
         const {geo,calls}=geocoder(kind,true);
         const gateway=create({geocoder:()=>geo,log:quiet,loopback:()=>{throw new Error('Failed geocode must not call backend');}});
@@ -313,14 +347,14 @@ async function nationCases(){
             'controllers/controllerTown24h.js':Town,'controllers/kecoController.js':Keco,
             'lib/AQI/airFallback.js':{getArpltn(){throw new Error('Fresh nation store fixture must not call provider');}},
             request:(url,options,cb)=>{requests.push({path:new URL(url).pathname,language:options.headers['Accept-Language']||null});
-                if(version==='v000901')return setImmediate(()=>cb(Object.assign(new Error('frozen nation backend failure'),{status:502})));
+                if(version==='v000901')return setImmediate(()=>cb(Object.assign(new Error('frozen nation backend failure'),{code:'ESOCKETTIMEDOUT'})));
                 setImmediate(()=>cb(null,{statusCode:200},clone(domesticBodies.v000903)));}
         }});
         const router=l.load('routes/v000803/route.nation.js');
         const r=await capture('nation-'+version,'GET /'+version+'/nation/KR','server/routes/v000803/route.nation.js',appFor(router,'/'+version+'/nation'),{path:'/'+version+'/nation/KR',headers:{'accept-language':'ko'}},
-            {dependency_trace:{province_store:'17 fixed valid observations',backend_requests:requests,outcome:version==='v000901'?'fixed backend502':'actual domestic body repeated as fixed HTTP dependency'},baseline_scope:version==='v000901'?'failure-only observed group; frozen actual dependency failure':'actual nation/NationAir assembly'});
-        assert.equal(r.status,version==='v000901'?502:200);
-        if(version==='v000903'){const b=JSON.parse(r.raw);assert.equal(b.air.length,17);assert.equal(b.weather.length,15);cases[cases.length-1].backend='nation';coverage.add('nation');}
+            {dependency_trace:{province_store:'17 fixed valid observations',backend_requests:requests,outcome:version==='v000901'?'realistic request ESOCKETTIMEDOUT; no status; actual500':'actual domestic body repeated as fixed HTTP dependency'},baseline_scope:version==='v000901'?'failure-only observed group; frozen actual dependency failure':'actual nation/NationAir assembly'});
+        assert.equal(r.status,version==='v000901'?500:200);
+        if(version==='v000903'){const b=JSON.parse(r.raw);assert.equal(b.air.length,17);assert.equal(b.weather.length,15);cases[cases.length-1].backend='nation';coverage.add('nation');const etag=Object.fromEntries(r.headers).etag;assert(etag);const q=await capture('nation-v000903-304','GET /v000903/nation/KR','server/routes/v000803/route.nation.js',appFor(router,'/v000903/nation'),{path:'/v000903/nation/KR',headers:{'accept-language':'ko','if-none-match':etag}});assert.equal(q.status,304);assert.equal(q.raw.length,0);}
         else assert(Object.fromEntries(r.headers)['content-type'].startsWith('text/html'));
     }
 }
@@ -343,11 +377,12 @@ async function pushCases(){
         ['push-list','POST /v000902/push-list',{method:'POST',path:'/v000902/push-list',headers:{'accept-language':'ja'},body:[{type:'ios',fcmToken:'synthetic-token',location:{lat:37.5,long:127},source:'KMA',units:{temperatureUnit:'F'},cityIndex:0}]},200],
         ['push-options','OPTIONS /v000902/push',{method:'OPTIONS',path:'/v000902/push',headers:{origin:'https://synthetic.invalid','access-control-request-method':'PUT','access-control-request-headers':'content-type,device-id'}},204],
         ['push-delete','DELETE /v000902/push',{method:'DELETE',path:'/v000902/push',body:{fcmToken:'synthetic-token',cityIndex:0,id:0}},200],
+        ['push-v705-store-success','POST /v000705/push',{method:'POST',path:'/v000705/push',body:{type:'android',registrationId:'synthetic-reg',location:{lat:37.5,long:127},source:'KMA',cityIndex:0}},200],
         ['push-v705-store-failure','POST /v000705/push',{method:'POST',path:'/v000705/push',body:{type:'android',registrationId:'synthetic-reg',location:{lat:37.5,long:127},source:'KMA',cityIndex:0}},500]
     ];
     for(const [id,group,input,status] of rows){failed=id==='push-v705-store-failure';calls.length=0;
         const r=await capture(id,group,group.includes('push-list')?'server/routes/v000902/route.push.update.list.js':'server/routes/v000705/routePushNotification.js',app,input,
-            {dependency_trace:{store:calls,outcome:failed?'fixed upsert failure':'fixed successful store callbacks'},baseline_scope:failed?'failure-only group, actual controller/store failure':'legacy registration contract; no sends'});
+            {dependency_trace:{store:calls,outcome:failed?'synthetic err.message text; actual pass-through body, historical failure cause unknown':'fixed successful store callbacks'},baseline_scope:failed?'failure-only group, actual controller/store failure':'legacy registration contract; no sends'});
         assert.equal(r.status,status);if(id==='push-options')assert.equal(r.raw.length,0);if(id==='push-v705-store-failure')assert.equal(r.raw.toString(),'frozen push store unavailable');
     }
     cases.find(c=>c.id==='push-list').backend='push';coverage.add('push');
@@ -375,7 +410,7 @@ async function warningCases(){
         const r=await capture('warning-'+id,'GET /v000903/kma/special','server/routes/v000903/route.kma.v000903.js',appFor(h.router,'/v000903/kma'),{path:'/v000903/kma/special',headers:{'accept-language':'ko'}},
             {dependency_trace:{seed:'recorded provider bodies converted through real model parsers; fixed legacy store dates',announcement_actual:'2026-09-27T00:10:00.000Z',comparison:id}});
         assert.equal(r.status,200);const list=JSON.parse(r.raw);assert.equal(list.some(r=>r.type===4),include);assert(list.some(r=>r.type===2)&&list.some(r=>r.type===3));
-        if(id==='week-old'){assert.equal(list.length,3);cases[cases.length-1].backend='special';coverage.add('special');}
+        if(id==='week-old'){assert.equal(list.length,3);cases[cases.length-1].backend='special';coverage.add('special');const etag=Object.fromEntries(r.headers).etag;assert(etag);const q=await capture('warning-week-old-304','GET /v000903/kma/special','server/routes/v000903/route.kma.v000903.js',appFor(h.router,'/v000903/kma'),{path:'/v000903/kma/special',headers:{'accept-language':'ko','if-none-match':etag}});assert.equal(q.status,304);assert.equal(q.raw.length,0);}
     }
 }
 
