@@ -31,7 +31,9 @@ class Dispatcher {
         this.rate = o.rate || 1000;
         this.maxQueue = o.maxQueue || 250000;
         this.retryFloor = o.retryFloorMs === undefined ? 10000 : o.retryFloorMs;
-        this.timeout = o.timeoutMs || 15000;
+        this.timeout = o.timeoutMs || 20000;
+        this.recoveryMs = o.recoveryMs === undefined ? 30000 : o.recoveryMs;
+        this.recoveryProbes = o.recoveryProbes || 2;
         // Preparation (weather) retries are counted apart from transport attempts and stop at the deadline.
         this.prepareAttempts =
             Number.isInteger(o.prepareAttempts) && o.prepareAttempts >= 1 ? o.prepareAttempts : 4;
@@ -104,6 +106,13 @@ class Dispatcher {
                 warning: Math.max(1, cap * 0.8),
                 time: now,
                 paused: false,
+                pauseReason: null,
+                recoverAt: 0,
+                ambiguous: 0,
+                probes: 0,
+                probing: false,
+                proven: false,
+                epoch: 0,
                 cooldownUntil: 0
             };
             this.projects.set(project, b);
@@ -113,7 +122,13 @@ class Dispatcher {
         b.normal = Math.min(Math.max(1, cap * 0.2), b.normal + refill * 0.2);
         b.warning = Math.min(Math.max(1, cap * 0.8), b.warning + refill * 0.8);
         b.time = now;
-        if (b.paused) return 'paused';
+        if (b.paused) {
+            if (b.pauseReason === 'authentication' || (b.ambiguous && b.probes >= this.recoveryProbes && !b.probing))
+                return 'paused';
+            if (b.probing || now < b.recoverAt) return false;
+            // The single recovery gate belongs to a waiting warning before normal fairness.
+            if (lane === 'normal' && (this.queues.warning.length || this.active.warning)) return false;
+        }
         if (now < b.cooldownUntil || b.tokens < 1) return false;
         var source = lane;
         // Warnings never borrow the normal reservation. Normal traffic can use spare
@@ -123,7 +138,79 @@ class Dispatcher {
         if (b[source] < 1) return false;
         b[source]--;
         b.tokens--;
+        if (b.paused) {
+            b.probing = true;
+            b.probes++;
+            this.metrics.recoveryProbes = (this.metrics.recoveryProbes || 0) + 1;
+            return 'probe';
+        }
         return true;
+    }
+    // Pause admission, never release or replay an ambiguous physical request.
+    ambiguous(item, reason) {
+        var b = this.projects.get(item.project);
+        if (!item.ambiguous) {
+            item.ambiguous = true;
+            b.ambiguous++;
+            b.epoch++;
+        }
+        if (b.probing === item) b.probing = false;
+        if (b.pauseReason !== 'authentication') {
+            b.paused = true;
+            b.pauseReason = reason;
+            b.proven = false;
+            b.recoverAt = Math.max(b.recoverAt, this.now() + this.recoveryMs);
+        }
+        this.finish(item, 'failed', reason, 'transport');
+    }
+    // Observe even late outcomes for project safety, but never change the original job's result.
+    settled(item, error) {
+        var b = this.projects.get(item.project),
+            status = error && (error.statusCode || error.status),
+            code = error && (error.code || (error.errorInfo && error.errorInfo.code));
+        if (item.ambiguous) {
+            b.ambiguous--;
+            item.ambiguous = false;
+            if (!b.ambiguous) b.probes = 0;
+        }
+        if (b.probing === item) {
+            b.probing = false;
+            b.recoverAt = Math.max(b.recoverAt, this.now() + this.recoveryMs);
+        }
+        if (status === 429) {
+            var after = Number.isFinite(error.retryAfterMs) && error.retryAfterMs >= 0 ? error.retryAfterMs : 60000;
+            b.cooldownUntil = Math.max(b.cooldownUntil, this.now() + Math.max(this.retryFloor, after));
+        }
+        if (status === 401 || status === 403 || code === 'messaging/authentication-error') {
+            b.paused = true;
+            b.pauseReason = 'authentication';
+        } else if (item.probe && !error && item.probeEpoch === b.epoch) b.proven = true;
+        if (b.paused && b.pauseReason !== 'authentication' && b.proven && !b.ambiguous && !b.probing) {
+            b.paused = false;
+            b.pauseReason = null;
+            b.probes = 0;
+            this.metrics.recoveries = (this.metrics.recoveries || 0) + 1;
+        }
+    }
+    health() {
+        var self = this, result = { ready: !this.stopped, readyProjects: 0, paused: 0, recovering: 0,
+            cooldown: 0, unresolved: 0, reasons: {}, nextRecoveryMs: null };
+        this.projects.forEach(function (b) {
+            result.unresolved += b.ambiguous;
+            if (self.now() < b.cooldownUntil) { result.cooldown++; result.ready = false; }
+            if (!b.paused) { result.readyProjects++; return; }
+            result.ready = false;
+            var exhausted = b.ambiguous && b.probes >= self.recoveryProbes && !b.probing;
+            var reason = b.pauseReason === 'authentication' ? 'authentication' : exhausted ? 'recovery-exhausted' : b.pauseReason;
+            result.reasons[reason] = (result.reasons[reason] || 0) + 1;
+            if (b.probing) result.recovering++;
+            else result.paused++;
+            if (reason !== 'authentication' && !exhausted && !b.probing) {
+                var delay = Math.max(0, Math.max(b.recoverAt, b.cooldownUntil) - self.now());
+                result.nextRecoveryMs = result.nextRecoveryMs === null ? delay : Math.min(result.nextRecoveryMs, delay);
+            }
+        });
+        return result;
     }
     finish(item, status, error, stage) {
         if (item.done) return;
@@ -247,17 +334,29 @@ class Dispatcher {
                 this.queues[lane].push(item);
                 return;
             }
+            item.probe = allowed === 'probe';
+            if (item.probe) {
+                var projectBudget = this.projects.get(item.project);
+                projectBudget.probing = item;
+                item.probeEpoch = projectBudget.epoch;
+            }
             item.attempt++;
             phase = 'send';
             // Watchdog never releases a physical send slot or retries an ambiguous send.
             // The SDK promise must settle before this slot is reusable.
             var timeout = this.later(function () {
-                var budget = self.projects.get(item.project);
-                if (budget) budget.paused = true;
-                self.finish(item, 'failed', 'transport-timeout-ambiguous', 'transport');
+                self.ambiguous(item, 'transport-timeout-ambiguous');
             }, this.timeout);
             try {
-                await this.send(payload, job);
+                try {
+                    await this.send(payload, job);
+                    this.settled(item);
+                } catch (error) {
+                    if (error.code === 'transport-timeout-ambiguous' || error.code === 'transport-ambiguous')
+                        this.ambiguous(item, error.code);
+                    this.settled(item, error);
+                    throw error;
+                }
             } finally {
                 clearTimeout(timeout);
                 this.timers.delete(timeout);
@@ -273,22 +372,10 @@ class Dispatcher {
             }
             var code = e.code || (e.errorInfo && e.errorInfo.code),
                 status = e.statusCode || e.status;
-            if (status === 429) {
-                var projectBudget = this.projects.get(item.project || job.project || 'default');
-                var retryAfter =
-                    Number.isFinite(e.retryAfterMs) && e.retryAfterMs >= 0 ? e.retryAfterMs : 60000;
-                if (projectBudget)
-                    projectBudget.cooldownUntil = Math.max(
-                        projectBudget.cooldownUntil,
-                        this.now() + Math.max(this.retryFloor, retryAfter)
-                    );
-            }
             if (code === 'messaging/registration-token-not-registered') {
                 this.onInvalid(job);
                 this.finish(item, 'invalid', undefined, 'transport');
             } else if (status === 401 || status === 403 || code === 'messaging/authentication-error') {
-                var b = this.projects.get(item.project || job.project || 'default');
-                if (b) b.paused = true;
                 this.finish(item, 'failed', 'authentication', 'transport');
             } else if (
                 (status === 429 ||

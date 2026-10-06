@@ -22,8 +22,9 @@ on **2026-09-28** (confirmation date, not a known shutdown date); exclude it fro
 restoration and credential renewal. See [product lifecycle](../architecture/service-overview.md#product-lifecycle).
 Tokens are acquired through
 its credential interface; messages use direct HTTPS FCM HTTP v1 without messaging-SDK
-retries. HTTP requests have a 15s abort deadline. A watchdog/ambiguous timeout does not
-release an unfinished transport slot or trigger immediate retry. Authentication failure
+retries. HTTP requests have a 15s abort deadline; the dispatcher watchdog is 20s. Abort/error
+settles on request close. An ambiguous timeout/network interruption finishes that job once,
+without replay, and keeps any unfinished physical send slot charged. Authentication failure
 pauses that project until operator recovery/restart. The fixed SDK dependency is not
 being upgraded across the service in this change.
 
@@ -147,7 +148,11 @@ for later investigation. No deployment, data migration or automatic deletion is 
 
 `push-metrics` logs aggregate queue, active count, results, unresolved devices and RSS
 once a minute. `tick-failed`, `warning-feed-failed`, `checkpoint-failed` require attention.
-Socket `GET /health` reports readiness. Do not log raw registration/FCM tokens, positions,
+Socket `GET /health` keeps `ready` and HTTP status as registration readiness and adds
+`transport`: aggregate `ready`, `readyProjects`, `paused`, `recovering`, `cooldown`,
+`unresolved`, fixed `reasons` counts and `nextRecoveryMs`. Inspect `transport.ready`
+separately; registration HTTP200 does not prove delivery can submit. `push-metrics`
+contains the same transport state. No project identifiers are exposed. Do not log raw registration/FCM tokens, positions,
 S3 object bodies or OAuth responses. Legacy formatter logs are suppressed in this process.
 
 ## Local evidence
@@ -201,3 +206,44 @@ including simulated reseal PUTs. Event-loop p99 was57ms, above the exploratory50
 measurement budget; the selected30s warning target passed. These are synthetic results.
 
 S3 preconditions: [AWS conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html).
+
+## Transport recovery — #2683
+
+After `transport-timeout-ambiguous` or `transport-ambiguous`, the project's new
+admissions wait 30s. Queued/active warnings take preference for this one recovery admission; normal
+fairness resumes after recovery. One fresh eligible job can then act as a probe under the same
+rate, lane, cooldown, deadline and registration guards; no synthetic or duplicate
+notification is sent. An accepted probe restores normal admission when no ambiguous
+physical requests remain. While any remain unresolved, at most two probes may be
+admitted, separated by at least 30s and with only one live probe before its watchdog.
+A watchdog finishes the probe logically but retains its physical slot; the next
+bounded probe still needs available capacity. Exhaustion reports `recovery-exhausted`
+and fails new jobs with `project-paused` until all unresolved sends settle or an
+operator performs an approved recovery. Late original outcomes cannot overwrite the
+original ambiguous result. A late 401/403 still pauses authentication and a late 429
+still extends cooldown. Authentication pause never auto-recovers.
+
+After separate approval, deploy the reviewed revision to the existing single
+coordinator only: preserve S3 prefix/config and prior source/runtime, stop and verify
+the old process, then start one fork instance. Do not replay failed/ambiguous campaigns,
+clear disabled generations, migrate storage or run a second sender. Read back subsequent
+scheduled campaigns (`stage`, `reason`, attempts and summary) and minute metrics.
+Check no sustained project-paused/transport-ready mismatch, retries remain bounded,
+warning priority and normal reservations hold, and transport pause recovers for new
+jobs. Unexpected auth errors, increasing unresolved slots, exhausted recovery, duplicate
+notifications or lost warning priority are stop/rollback triggers.
+
+Rollback after approval: stop and verify the sole coordinator, restore its preserved
+source/runtime revision without reverting S3 registrations/delivery-state, then start
+one instance and verify registration health and campaign checkpoints. The prior revision
+retains the known indefinite-pause defect; observe it and avoid repeatedly restarting
+or resending ambiguous original jobs.
+
+Share one controlled older-iOS/Android alarm and alert receipt result between #2626
+and #2677; verify notification taps and new-token registration separately. The Cordova
+1.1.0 physical-device rollout remains its own acceptance check. Compare the old and
+new release Firebase project/sender/app/bundle identity and Firebase APNs key metadata
+without copying keys/tokens into evidence. A build script copying config does not
+establish key rotation. Same invalid token POST must remain fenced; a new token
+PUT/POST advances generation and can restore eligibility. Never force-enable invalid
+tokens or infer the currently disabled cohort is AK's device.

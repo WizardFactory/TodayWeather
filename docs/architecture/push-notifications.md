@@ -139,3 +139,19 @@ fan-out and recovers, it does not prove a root cause. See the
 [operations contract](../operations/push-s3.md#delivery-and-failure-contract).
 
 The #2677 update of [the S3 diagram](diagrams/push-s3-proposal.html) (weather source retry, scheduled alarm view and preparation card) passed Archify `finalize` (validate, deliver, strict check and real-browser check, zero diagnostics) and `visual-check`; the light 1440×900 and dark 2048×1320 captures were inspected by eye. Receipts are local-only under `.archify/`.
+
+## Transport recovery (#2683, 2026-10-06)
+
+The S3 coordinator distinguishes registration readiness from transport readiness.
+Ambiguous original sends are never replayed; their unfinished physical slots remain
+charged. New eligible jobs probe recovery after 30s, with warning preference, at most
+two probes while ambiguous requests remain unresolved. HTTP abort/close at 15s precedes
+the 20s watchdog. Late auth/429 still protects project admission; authentication never
+auto-recovers. See [S3 failure contract](push-s3-design.md#bounded-transport-recovery-2683),
+[operations](../operations/push-s3.md#transport-recovery--2683) and
+[verification](../evidence/tasks/push-reliability-2683/verification.md).
+
+AK reports receipt on the older iOS app early last week (exact timestamp/version
+unknown); an app update is not an established repair requirement. Current enabled
+registrations with disabled matching generations remain an unresolved token/receipt
+investigation under #2626, separate from this reproduced transport defect.

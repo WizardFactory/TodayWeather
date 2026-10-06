@@ -1,0 +1,21 @@
+# Implementation plan
+Revision 2. Owner root; consumes intent/spec and the S3 overview diagram. One integration branch/PR at base 182f4fd7.
+
+1. Add missing delayed/never-settling/late-status/probe/health regression tests. Run intended Red before changing product code.
+2. Dispatcher: add recoverable pause state, 30s gate, one fresh-job probe and at most two probes while ambiguous physical sends remain unresolved. Preserve capacity, queues, registration guards, rate shares and cooldowns. Give queued/active warnings preference for the single recovery gate without changing normal fairness after recovery. Separate auth pause; observe late status without revising original job.
+3. Transport: type ambiguous network/timeout errors; reject aborted requests on close; 15s abort vs 20s watchdog. IPC/entry: expose aggregate health and metrics.
+4. Run preparation, S3/store regression, real loopback protocol/runtime/client smokes and backlog warning capacity. Add recovery to offline runner and Node16/22 CI. Keep dependencies isolated in /private/tmp/tw2677.
+5. Update push-s3 design/runbook/diagram and retained investigation/evidence; validate diagram artifact/browser/visual captures and maintained links. New feature/UI manual not applicable: this repairs existing delivery behavior and existing health semantics.
+6. Hash candidate, self-verify, staged/outgoing artifact policy checks, commit/push/PR. Independent eligible review with fallback/corrections; record real CI. Confirm current head/base, no auto-merge/queue, unresolved production/device checks, endpoint merge_authorized=false.
+
+Files: dispatcher.js, transport.js, errors.js, ipc.js, bin/push-coordinator; new push-transport-recovery.test.js and push-transport-recovery-smoke.js, offline/run.js and targeted CI; existing push-s3 docs/JSON/HTML and this task's maintained intent/spec/plan and findings.
+
+Scenarios:
+- S1/AC1: Alarm recipient, configured S3 coordinator. Delay an FCM send beyond watchdog, let it settle; queue a fresh eligible alarm. Original stays ambiguous with one attempt; fresh alarm recovers within bounded gate. Failure: project permanently paused or original replay.
+- S2/AC2: Operator, never-settling local transport. Exhaust limited fresh-job probes, inspect physical/lane counts, send unrelated-project warning. Counts retain unfinished slots, no unbounded probes, other project uses spare reserved capacity. Failure: released hung capacity, rate/cooldown or auth bypass.
+- S3/AC3: Monitoring operator, real IPC health. Observe initial, paused, recovering, restored states. Existing ready remains registry-ready; transport status and reasons are aggregate. Failure: false transport-ready or secret/project identifier leak.
+- S4/AC4: Existing iOS/Android registration user. Register alarm/alert, disable captured token generation, repost same token then rotate/change token, retry preparation with warning backlog. Same invalid token stays fenced; changed generation restores new-job eligibility; old revision cannot submit; warning priority/preparation retry preserved. Failure: force-enabled invalid token or duplicate ambiguous send.
+
+Riskiest part is late transport settlement racing recovery/auth/cooldown state; explicit tests cover these. Rejected releasing unresolved capacity or retrying original ambiguity. Blast radius is coordinator delivery; no client/store migration. Rollback: separately approved single-coordinator stop, revert code only, preserve S3 state and config, start one process. The prior revision has the indefinite-pause defect; restoring it may require operator intervention and does not justify replaying ambiguous campaigns.
+
+Generated state/logs/captures under ignored reports/.planning/.archify. Maintain selected sanitized evidence in docs/evidence/tasks/push-reliability-2683 and durable PR comments/reviews. Check python3 scripts/check-artifact-policy.py --staged and actual outgoing range before push. Existing CI retention is not the sole evidence store. Production origin timings/config/device receipt remain explicitly pending if required assets are unavailable.

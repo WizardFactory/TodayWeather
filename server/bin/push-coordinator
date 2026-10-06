@@ -52,7 +52,7 @@ async function main() {
         warnings: process.env.WARNING_PUSH_ENABLED === 'true'
     });
     await engine.init();
-    var server = await ipc.listen(socket, registry);
+    var server = await ipc.listen(socket, registry, dispatcher);
     engine.start();
     console.log(
         JSON.stringify({
@@ -70,6 +70,7 @@ async function main() {
                 unresolvedDevices: registry.retryAt.size,
                 regionLookups: registry.resolving,
                 results: dispatcher.metrics,
+                transport: dispatcher.health(),
                 rss: process.memoryUsage().rss
             })
         );

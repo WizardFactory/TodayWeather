@@ -61,6 +61,7 @@ var commands = [
     [path.join(__dirname, 'kma-warning.test.js')],
     [path.join(__dirname, 'push-store.test.js')],
     [path.join(__dirname, 'push-s3.test.js')],
+    [path.join(__dirname, 'push-transport-recovery.test.js')],
     [path.join(__dirname, 'push-preparation-retry.test.js')]
 ];
 commands.forEach(function (args) {

@@ -21,6 +21,7 @@ var REASONS = new Set([
     'preparation-attempts-exhausted',
     'transport-error',
     'transport-timeout-ambiguous',
+    'transport-ambiguous',
     'transport-retry-deadline',
     'project-paused',
     'authentication',

@@ -1,0 +1,16 @@
+# Transport recovery specification
+Revision 2, consumes intent and investigation at base 182f4fd7.
+
+Separate authentication pause (operator recovery only) from ambiguous transport recovery. A timeout finishes the original job once with transport-timeout-ambiguous and retains its physical slot until settlement. A network interruption is likewise ambiguous and never automatically resent. Default HTTP abort is 15s; dispatcher watchdog is 20s, allowing real transport abort/close to settle first. The transport rejects only after the request closes on abort/error.
+
+After ambiguity, wait 30s before admitting one fresh eligible job as a recovery probe. Project budgets, cooldowns, lane reservations, deadline and registration guards still apply. While a probe is pending no other project admissions occur. Successful probe restores normal admission only when no ambiguous physical requests remain. If an original request never settles, admit at most two probes, retaining every unfinished slot; exhaustion remains paused with a fixed operator-visible reason. When all ambiguous requests eventually settle, allow bounded recovery again. A late 401/403 must retain authentication pause; late 429 must extend cooldown. Late results never revise the original result or replay it.
+
+Reuse existing queue/deadline checks while waiting for recovery; do not add unbounded recovery timers or synthetic sends. Project state is memory only and follows existing restart model; no store/client migration. Physical global and lane caps remain unchanged.
+
+Expose aggregate transport status via Dispatcher.health(), IPC /health and push-metrics. Preserve ready as registration readiness for existing API users and include transport.ready, ready/paused/recovering project counts, unresolved send count, fixed reason counts and next-recovery delay. No project IDs, tokens, credentials or payloads. Authentication or exhausted probes require operator attention; pending recovery must not masquerade as transport ready.
+
+AC4: reuse preparation and registration suites and loopback runtime/client smoke plus warning-backlog capacity. Investigate release and latency as evidence work, not speculative code changes. Operation handoff includes single-coordinator stop/start, readback and shared controlled receipt after separate approval.
+
+Rejected: clearing pause immediately (storms/race), releasing unresolved slots (unbounded physical sends), replaying timed-out jobs (duplicates), auth auto-recovery (credential failure), increasing weather timeout (different stage, no cause evidence).
+
+Recovery probe preference: when a warning is queued or active, normal work waits for the warning to own the single probe gate. The existing normal fairness turn applies again after recovery; this prevents that turn from letting an alarm occupy the sole recovery admission ahead of a warning.

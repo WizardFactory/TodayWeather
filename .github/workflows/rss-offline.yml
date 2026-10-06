@@ -250,6 +250,8 @@ jobs:
           TZ=Asia/Seoul node server/test/offline/push-s3-smoke.js --client
           node server/test/offline/push-s3-runtime-smoke.js
           node server/test/offline/push-preparation-smoke.js
+          node server/test/offline/push-transport-recovery.test.js
+          node server/test/offline/push-transport-recovery-smoke.js
       - name: S3 warning capacity with a normal backlog (synthetic, no FCM)
         run: timeout 120 node server/test/offline/push-s3-capacity.js
       - name: Push worker smoke on historical Node 10.15.3 (image provides python 2 for native builds)

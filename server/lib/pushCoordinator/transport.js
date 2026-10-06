@@ -27,7 +27,8 @@ function create(options) {
                     };
                 var body = JSON.stringify({ message: message }),
                     done = false,
-                    timer;
+                    timer,
+                    failure;
                 function finish(err, value) {
                     if (done) return;
                     done = true;
@@ -63,7 +64,7 @@ function create(options) {
                             chunks += c;
                         });
                         res.on('error', function () {
-                            finish(new Error('FCM response interrupted'));
+                            req.destroy(new Error('FCM response interrupted'));
                         });
                         res.on('end', function () {
                             var data;
@@ -98,11 +99,22 @@ function create(options) {
                     }
                 );
                 req.on('error', function () {
-                    finish(new Error('FCM transport failed; result may be ambiguous'));
+                    failure = failure || new Error('FCM transport failed; result may be ambiguous');
+                    failure.code = failure.code || 'transport-ambiguous';
+                    req.destroy();
+                });
+                req.on('close', function () {
+                    if (!done) {
+                        failure = failure || new Error('FCM request closed; result may be ambiguous');
+                        failure.code = failure.code || 'transport-ambiguous';
+                        finish(failure);
+                    }
                 });
                 // Total timeout includes connection/TLS/response. Abort the request, never retry an ambiguous timeout.
                 timer = setTimeout(function () {
-                    req.destroy(new Error('FCM timeout'));
+                    failure = new Error('FCM timeout');
+                    failure.code = 'transport-timeout-ambiguous';
+                    req.destroy(failure);
                 }, options.timeoutMs || 15000);
                 req.end(body);
             });
