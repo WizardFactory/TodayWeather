@@ -3,7 +3,9 @@
 Builder: OpenAI Codex, one branch based on 182f4fd7. Scope: #2683 fix, #2626
 registration investigation and #2677 regression. Local runtime Node 24.19.0;
 supported-runtime regression/smoke also exercised Node 16.20.2 and 22.22.2.
-No live FCM, mobile build, deployment, restart or device receipt is claimed.
+The original pre-merge tests below use isolated dependencies. Separately authorized
+live FCM/device and read-only host follow-ups are recorded in the dated section
+below. No mobile build, deployment or restart was performed in these follow-ups.
 
 | Check | Actual result |
 | --- | --- |
@@ -39,10 +41,11 @@ base, review findings/settings and final readiness are published durably on the 
 Maintained docs contain no link to local-only reports. Local artifact hooks are
 available but not installed; staged/outgoing checker and CI remain the actual gates.
 
-Pending: current source-matched origin latency, installed-binary/APNs Console
-identity and actual older-iOS/Android receipt. Bounded S3 campaign readback and
-backed-up Firebase identity comparison are now complete. SSH remains unavailable;
-expected release files are absent from this checkout. See [investigation](investigation.md)
+Pending: source-matched origin latency, installed-binary/Firebase configuration
+identity, APNs Console association and actual older-iOS/Android receipt. Bounded S3
+campaign readback and backed-up Firebase identity comparison are complete. The
+earlier SSH limitation was later resolved; expected release files remain absent
+from this checkout. See the dated follow-up below, [investigation](investigation.md)
 and [operation handoff](../../../operations/push-s3.md#transport-recovery--2683).
 
 Independent review round1 reproduced Required F1 (global warning recovery starvation) and Recommended F2 (late ambiguity erased newer proof). Author added three regressions: all fail as intended on reviewed 56cea09d, then pass after correction, while all prior 13 stay green. F3 conservative pre-connect gate retained/documented; F4 settled-outage probe reset clarified. Affected combined HTTP/IPC smoke is renewed on Node16/22; final independent re-review and current CI remain required. AK-requested private S3 read-only investigation establishes backed-up Firebase input continuity without claiming current Console binding, installed binary identity or actual iOS receipt.
@@ -65,3 +68,43 @@ The 00:50 and 01:07UTC conditional campaigns have27 and 20 expired jobs with pre
 Round2 independently resolved F1-F4 and found Recommended F5: warning scans repeated during overlapping recovery/cooldown and large unrelated or preparation-waiting backlogs (20k warnings, synthetic p99 event-loop lag283–573ms). Author selected a bounded ordering correction: check cooldown and total/lane tokens before warning preference inspection. The new regression fails before this change and passes afterward; all17 regressions and actual combined smoke pass on Node16/22. Ordinary queues, preparation/S3/store behavior and diagram topology are unchanged. Independent final review and current CI remain the final pre-merge gates.
 
 After F5 correction, the same independent20k-warning profiles were executed locally: Node16 unrelated/preparation-wait loop-lag p99=6/6ms, Node22=8/6ms; pump p99=2.51–3.62ms. Prepared same-project warning priority passes in both profiles. Synthetic local measurements establish the scoped improvement, not a production latency guarantee. Full offline evidence is from576726b0; only admission-check ordering and its regression changed afterward, with focused regression/smoke/benchmark renewed.
+
+## Physical iOS and host follow-up — 2026-10-06 UTC
+
+AK separately authorized bounded direct tests on the locally connected physical
+iPhone12 Pro Max / iOS26.0.1 / TodayWeather1.1.0 build1 (developer-installed).
+Each test sent one request to one device and received HTTP200; neither request was
+replayed.
+
+| Check | Actual result and limit |
+| --- | --- |
+| Foreground at02:23:24UTC | Matching app callback/event and visible notification popup confirmed receipt; callback was not a notification tap |
+| Background at02:44:42UTC | Native Settings app was foregrounded; SpringBoard reported remote notification delivery and notification-list insertion for the exact bundle/timestamp of the sole targeted send |
+| Background visual/sound | No banner observed; Focus icon visible, suppression cause unproven. Payload had no sound; audible alert not tested |
+| Current registration | Live token matched S3 generation1, three enabled rows, no current-generation fence; new-token rotation not proven |
+| Lock screen/tap/city navigation | Not tested: touch-control surfaces returned `cgWindowNotFound` and AK could not operate the device |
+
+Both direct FCM tests bypassed the deployed coordinator/weather preparation. They
+prove receipt on this developer-installed build, not scheduled batch success,
+deployed #2683 recovery, #2677 preparation completion or all older iOS registrations.
+The app was restored to the foreground. Temporary credential/token files and
+approved LocalStorage copies were deleted after extracting push fields; device
+identifiers and personal content are excluded from maintained evidence.
+
+Read-only host verification at03:38–03:43UTC compared five deployed push files by
+SHA256. Engine/registry/runtime match PR head83dc948d and base182f4fd7;
+transport/dispatcher match the base. One coordinator process was online. Retained
+logs contain7,381 aggregate metrics records, two startup records and no raw FCM
+response/token audit. The same-token fence and newer-generation eligibility
+observations are recorded in [investigation](investigation.md#registration-and-host-follow-up--2026-10-06-utc)
+and [#2626](https://github.com/WizardFactory/TodayWeather/issues/2626#issuecomment-6008851814).
+No host/S3 state mutation, notification, restart or deployment occurred during the
+host investigation.
+
+Independent review round3 was PASS at83dc948d, with Required/selected F1–F5
+resolved and optional F6 unselected. CI was20/20SUCCESS at that head. This follow-up
+changes only maintained investigation/verification evidence. Those historical
+results are not a renewed review of the subsequent documentation commit; AK's
+requested review will assess the updated PR. Missing raw historical responses,
+device-specific changed-token re-registration, lock-screen/tap, origin latency and
+scheduled production receipt remain explicit verification limits.

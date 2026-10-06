@@ -1,8 +1,9 @@
 # Push reliability investigation — 2026-10-06
 
-Evidence at repository base 182f4fd7, with GitHub issue observations fetched on
-2026-10-06 UTC. Deployment/user reports below are attributed observations, not new
-live checks. No production mutation or actual notification was performed.
+Initial evidence is at repository base 182f4fd7, with GitHub issue observations
+fetched on 2026-10-06 UTC. Initial deployment/user reports are attributed
+observations. The dated follow-up below adds authorized host, S3 and physical-device
+checks; distinguish those from the original source investigation.
 
 ## #2683 confirmed defect
 
@@ -124,3 +125,65 @@ See [operations and rollback](../../../operations/push-s3.md#transport-recovery-
 ## Independent review findings
 
 F1 reproduces recovery starvation caused by process-wide queued/active warning state: an unrelated cooldown warning or a logically finished hung warning can block fresh normal probes indefinitely. F2 shows late ambiguity resetting already established probe proof. Correct both while retaining physical slots and same-project eligible warning preference. F3 conservative pre-connect classification is retained and documented; F4 clarifies probe exhaustion only while physical requests remain unresolved. Independent Node16/22 regressions/smokes and Node16 broad suite confirm these observations.
+
+## Registration and host follow-up — 2026-10-06 UTC
+
+The earlier SSH limitation was resolved after AK supplied the local key directory.
+Read-only SSH inspection at 03:38–03:43UTC reached the service host at its documented
+address. AWS inventory shows a replacement service instance; the September20
+instance ID is stale. The deployed checkout still reports legacy Git HEAD5bca407
+with substantial overlays, so Git HEAD alone cannot identify the push release.
+The coordinator was online with one PM2 process. No restart or deployment occurred.
+
+Deployed on-disk `engine.js`, `registry.js` and `runtime.js` are byte-identical to
+PR head83dc948d and base182f4fd7. `transport.js` and `dispatcher.js` match the base;
+the #2683 recovery fix is not deployed. The inspected transport classifies only a
+typed FCM `UNREGISTERED` response as `messaging/registration-token-not-registered`.
+Only that code produces `invalid`, after which the engine fences the submitted
+generation if it is still current. This supports normal invalid-token handling in
+the inspected implementation, without recovering each historical raw response or
+proving the historical in-memory source revision.
+
+The retained coordinator logs contain7,381 aggregate metrics records and two
+startup records. They have no per-token response or re-registration audit; the
+error log is empty. Invalid S3 job results omit the original FCM reason and captured
+generation. Some deployed file timestamps are epoch values, so they cannot prove
+deployment chronology. These limitations prevent exact historical attribution.
+
+At03:16:45UTC, read-only S3 correlation covered82 registration objects,102
+delivery-state partitions and all719 retained campaign manifests/parts. Eighteen
+non-superseded iOS registrations yield the following device-level observations:
+
+- Five enabled devices have a current-generation fence and at least one retained
+  invalid job whose endpoint hash matches the current token.
+- Four devices have fences only on older generations. Those fences do not block
+  their current generation; two have later accepted jobs using the current token.
+- One of the five currently blocked devices updated its registration after an
+  invalid result but retained the same token and generation. A same-token POST
+  intentionally preserves that fence. A changed-token PUT or POST advances the
+  generation; opening the app or saving settings does not force Firebase to issue
+  a new token.
+
+This is an observational correlation, not a historical generation audit. Current
+S3 objects are overwritten and bucket versioning is not enabled. Acceptance is
+not proof of device receipt. Anonymous device labels, token hashes, locations and
+private resource identifiers are omitted from this maintained record.
+
+Decision: no registration/disable code correction is justified by this evidence.
+Preserve fences and generation guards; do not force token rotation or enable blocked
+recipients. Retain the missing historical reason/generation evidence as a limitation
+in #2626. A future naturally changed token can complete the remaining device-specific
+re-registration observation. Findings and this decision are recorded in
+[the #2626 host investigation](https://github.com/WizardFactory/TodayWeather/issues/2626#issuecomment-6008851814), extending
+[the S3 correlation](https://github.com/WizardFactory/TodayWeather/issues/2626#issuecomment-6008770680).
+
+Two earlier separately authorized direct FCM tests reached the connected iPhone12
+Pro Max running iOS26.0.1, TodayWeather1.1.0 build1 (developer-installed). Foreground
+receipt was confirmed by the matching callback/event and visible app popup;
+background receipt was confirmed by native notification delivery/list insertion.
+The current device token matched S3 generation1 with three enabled rows and no
+current-generation fence. This device does not explain the blocked cohort or prove
+new-token rotation. Direct tests bypassed coordinator/weather preparation; see
+[the dated physical verification](verification.md#physical-ios-and-host-follow-up--2026-10-06-utc)
+for limits. PR updates after83dc948d reconcile evidence only; no new behavior change
+is selected.
