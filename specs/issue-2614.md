@@ -13,8 +13,18 @@ traceability without duplicating that contract.
 | AC1 | No local persistence; exact raw/revision storage, catalog CAS plus complete fetch-group reader eligibility across partitions, bounded raw packs with canonical fallback, one-process shared-cache concurrency and future multi-host plan |
 | AC2 | All 19 accepted traffic groups are included; zero-observed public APIs excluded within evidence scope, internal used behaviors retained; old versions/errors/preflight and precise-geocode privacy reconciled |
 | AC3 | Source JSON and standalone HTML linked from architecture index; checked latency, dominant cold-geocoder demand/deadlines and catalog-version cost arithmetic; independent review; assumptions and pending decisions explicit |
+| AC4 | All server-equivalent runtime/supporting assets under `server2/`; each task declares paths and bounded exceptions, reviews dependencies and satisfies the common placement criterion; Rust foundation introduces the local/CI gate before later implementation |
 
 ## Verification and implementation constraints
+
+The [implementation placement contract](../docs/architecture/server2.md#implementation-placement)
+and [common task contract](../plans/issue-2614.md#common-contract-for-every-implementation-task)
+apply to every future task, including tests, tooling, migration and deployment.
+Root `AGENTS.md` carries the execution instruction for both agent hosts. The new
+runtime cannot depend on legacy source/data outside `server2/`; the explicit
+HTTP coexistence path is allowed. Documentation/shared CI wiring and named
+legacy recorder/export changes are bounded exceptions, not alternate locations
+for implementation. No task is complete with an unexplained outside path.
 
 This PR's checks are content/link/schema, browser/visual diagram checks and
 latency arithmetic, not execution of a future Rust implementation. Runtime

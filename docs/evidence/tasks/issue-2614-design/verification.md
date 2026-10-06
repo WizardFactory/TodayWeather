@@ -95,3 +95,20 @@ retains reviewer configuration, exact reviewed revision and findings in GitHub.
 Maintained links do not depend on those local files or expiring CI artifacts.
 Independent review and remote checks are reported on the PR, not pre-claimed
 by this pre-commit summary.
+
+## Placement and subtask follow-up (2026-10-06)
+
+AK broadened placement from Rust source to every new server-equivalent asset
+under `server2/` and authorized publishing the 21 required tasks plus one
+conditional raw-pack task. Root agent instructions, architecture, intent/spec
+and plan now define per-task paths, bounded outside exceptions and the common
+completion check. S04 must implement the local/CI placement gate before later
+implementation tasks; this documentation amendment introduces no checker or
+runtime code. Manual path/dependency review applies before that gate.
+
+The runtime topology, data flow, latency arithmetic, route inventory and diagram
+JSON/HTML are unchanged; existing diagram evidence is reused only for those exact
+artifacts. New instructions require a fresh independent review; earlier PASS and
+CI refer to their previous heads. The linked task index in the maintained plan
+is the tracker map. S01 reconciles pending choices; issue creation does not
+authorize production changes or imply that pending decisions are accepted.

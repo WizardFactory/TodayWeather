@@ -16,7 +16,98 @@ Current endpoint: documentation PR, no merge/deployment or runtime implementatio
 
 Generated stage receipts, notebook, screenshots and browser receipts remain in
 ignored reports/.planning/.archify; maintained evidence links only to tracked
-inputs. No client/server/runtime/CI/configuration changes are planned.
+inputs. The initial design PR added no runtime or CI changes. The follow-up adds task
+placement instructions and issue decomposition; no runtime/checker is introduced.
+
+## Common contract for every implementation task
+
+AK authorized publishing the proposed S01–S21 tasks and optional raw-pack task
+on 2026-10-06. Their tracker links are recorded below.
+Each published issue body includes the following required
+change and completion criterion, rather than relying only on a parent link:
+
+> **Required change:** Place all new server-equivalent implementation and
+> supporting assets under `server2/`, including runtime, configuration/static
+> data, build/dependencies, tests/fixtures, tooling, migration and deployment.
+> Declare this task's intended paths and enumerate any outside-path changes with
+> their reason before implementation. Follow the architecture placement contract
+> and root `AGENTS.md`; add no server2 business logic to legacy or shared paths.
+>
+> **Completion criterion:** Every added, modified and renamed path conforms to
+> the declaration; outside changes are limited to the declared documentation,
+> shared wiring, legacy verification/export/coexistence or authorized retirement
+> work. No new runtime dependency, include or symlink reaches legacy source/data
+> outside `server2/`. The placement gate passes, or a recorded manual review is
+> supplied for tasks before that gate exists. Fix unexplained violations before
+> marking the task complete.
+
+Task intake must name its `server2/` subdirectories and exact outside paths;
+generic exceptions such as "shared scripts" or "legacy support" are insufficient.
+New exceptions require a decision before dependent edits. Documentation-only or
+infrastructure-only tasks record implementation placement as not applicable and
+check their actual changed paths against the declared exceptions.
+
+The Rust foundation task (proposed S04, within P2) owns the first placement gate:
+
+- Keep its checker, tests and server2 path declarations under `server2/`; shared
+  `.github/workflows/server2.yml` invokes the checker and Rust commands from there.
+- Check the full PR diff, including rename destinations and all outside changes,
+  against the task's explicit allowed paths. Review the actual runtime dependency
+  and resource layout as well; a changed-file allowlist alone cannot prove that
+  a dependency on legacy data was removed.
+- Reject new server2 source/resources/build files in legacy, root or shared
+  packages, and reject imports/includes/symlinks that escape into legacy runtime
+  assets. Exercise allowed documentation/legacy-recorder changes and rejected
+  misplaced configuration, fixtures, deployment scripts and escaped assets.
+- Later implementation tasks depend on this gate. Reviewer verification includes
+  the task declaration, checker result and dependency/resource review. Preserve
+  existing CI gates; configuring remote required checks is a separate action.
+
+No checker or Rust implementation is introduced by this documentation change.
+Before S04, the same boundary is enforced through agent instructions and a
+recorded manual review. AK has authorized creating the subtask issues; implementation still follows
+their recorded decision and dependency gates.
+
+## Task issue index
+
+All 21 required tasks and one conditional optimization were published as native
+sub-issues of #2614 on 2026-10-06. Dependency links in each body are authoritative
+for execution; runtime work also follows the common S01/S04/S02 gates above.
+S01 decision reconciliation and S02 inventory preparation have started; this
+does not claim either issue is complete.
+
+| Task | Tracker | Required predecessors |
+| --- | --- | --- |
+| S01 | [server2 S01: record remaining decisions and implementation gates](https://github.com/WizardFactory/TodayWeather/issues/2686) | None for preparation |
+| S02 | [server2 S02: freeze the used-API inventory and byte parity goldens](https://github.com/WizardFactory/TodayWeather/issues/2687) | None for preparation |
+| S03 | [server2 S03: prepare isolated infrastructure and Spot prerequisites](https://github.com/WizardFactory/TodayWeather/issues/2688) | [S01](https://github.com/WizardFactory/TodayWeather/issues/2686) |
+| S04 | [server2 S04: establish the Rust workspace, CI and placement gate](https://github.com/WizardFactory/TodayWeather/issues/2689) | [S01](https://github.com/WizardFactory/TodayWeather/issues/2686) |
+| S05 | [server2 S05: implement immutable raw S3 records](https://github.com/WizardFactory/TodayWeather/issues/2690) | [S04](https://github.com/WizardFactory/TodayWeather/issues/2689) |
+| S06 | [server2 S06: publish catalogs and recover complete fetch groups](https://github.com/WizardFactory/TodayWeather/issues/2691) | [S05](https://github.com/WizardFactory/TodayWeather/issues/2690) |
+| S07 | [server2 S07: implement bounded memory lookup and the resolver](https://github.com/WizardFactory/TodayWeather/issues/2692) | [S06](https://github.com/WizardFactory/TodayWeather/issues/2691) |
+| S08 | [server2 S08: enforce provider reservations and rejection rules](https://github.com/WizardFactory/TodayWeather/issues/2693) | [S04](https://github.com/WizardFactory/TodayWeather/issues/2689), [S05](https://github.com/WizardFactory/TodayWeather/issues/2690), [S06](https://github.com/WizardFactory/TodayWeather/issues/2691) |
+| S09 | [server2 S09: measure Rust feasibility and cold origin cost](https://github.com/WizardFactory/TodayWeather/issues/2694) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S03](https://github.com/WizardFactory/TodayWeather/issues/2688), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693) |
+| S10 | [server2 S10: port gateway and geocoding with legacy backend switches](https://github.com/WizardFactory/TodayWeather/issues/2695) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
+| S11 | [server2 S11: port world weather and air](https://github.com/WizardFactory/TodayWeather/issues/2696) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
+| S12 | [server2 S12: port warning history and latest bulletin recovery](https://github.com/WizardFactory/TodayWeather/issues/2697) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
+| S13 | [server2 S13: port domestic provider acquisition and raw formats](https://github.com/WizardFactory/TodayWeather/issues/2698) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
+| S14 | [server2 S14: migrate legacy history and close acquisition gaps](https://github.com/WizardFactory/TodayWeather/issues/2699) | [S01](https://github.com/WizardFactory/TodayWeather/issues/2686), [S13](https://github.com/WizardFactory/TodayWeather/issues/2698) |
+| S15 | [server2 S15: port domestic KMA v000903 assembly and Rust checkpoint](https://github.com/WizardFactory/TodayWeather/issues/2700) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S11](https://github.com/WizardFactory/TodayWeather/issues/2696), [S12](https://github.com/WizardFactory/TodayWeather/issues/2697), [S13](https://github.com/WizardFactory/TodayWeather/issues/2698), [S14](https://github.com/WizardFactory/TodayWeather/issues/2699) |
+| S16 | [server2 S16: store daily summaries and last-year lookup](https://github.com/WizardFactory/TodayWeather/issues/2701) | [S11](https://github.com/WizardFactory/TodayWeather/issues/2696), [S14](https://github.com/WizardFactory/TodayWeather/issues/2699), [S15](https://github.com/WizardFactory/TodayWeather/issues/2700) |
+| S17 | [server2 S17: port used older weather versions, nation and town](https://github.com/WizardFactory/TodayWeather/issues/2702) | [S15](https://github.com/WizardFactory/TodayWeather/issues/2700) |
+| S18 | [server2 S18: migrate used push and notice state](https://github.com/WizardFactory/TodayWeather/issues/2703) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S12](https://github.com/WizardFactory/TodayWeather/issues/2697), [S15](https://github.com/WizardFactory/TodayWeather/issues/2700) |
+| S19 | [server2 S19: build integrated smoke, shadow and rollback tooling](https://github.com/WizardFactory/TodayWeather/issues/2704) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
+| S20 | [server2 S20: verify and perform approved family cutovers](https://github.com/WizardFactory/TodayWeather/issues/2705) | [S19](https://github.com/WizardFactory/TodayWeather/issues/2704) |
+| S21 | [server2 S21: retire legacy and MongoDB after all included families migrate](https://github.com/WizardFactory/TodayWeather/issues/2706) | [S20](https://github.com/WizardFactory/TodayWeather/issues/2705) |
+| O01 | [server2 O01: conditionally reduce raw GET fan-out with exact-raw packs](https://github.com/WizardFactory/TodayWeather/issues/2707) | [S06](https://github.com/WizardFactory/TodayWeather/issues/2691), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
+
+Start with S01, then S02/S03/S04 as their gates permit; storage/resolver/budgets
+lead to S09 feasibility and S10 gateway. World, warnings and domestic acquisition
+can proceed independently when their listed prerequisites hold. S19 verification
+and S20 cutover repeat per ready family; they do not wait for every port before
+starting. S20 cannot be completed until every included family is dispositioned;
+S21 retirement waits for all included families and scope gaps. O01 is optional
+and does not become a cutover dependency unless its measured use requires it.
 
 ## Later implementation phases
 
@@ -26,7 +117,7 @@ Each route port depends on P1 and recorded issue decisions; one PR per phase.
 | --- | --- |
 | P0 | Record remaining issue choices; keys/IAM/bucket/versioning/lifecycle, actual runtime/Spot prerequisites and rollback ownership. No persistent gp3 requirement. Use accepted traffic report; supplement only its scope gaps/new paths before their cutover. |
 | P1 | Golden harness for the 19 observed groups and retained internal dependencies; current deployment/source/client contract reconciliation, error/CORS/cache/304/preflight fixtures, #2609/#2620 and acquired-history cases. Freeze clock and raw input; two runs byte-identical. |
-| P2 | Rust storage/resolver, synchronous publication, memory/single-flight limits; property/crash tests with recorded providers and local S3-compatible peer. Measure actual host build compatibility, S3 tails/throughput, RSS/CPU and cold request fan-out. Raw packs are a measured optional optimization. |
+| P2 | First establish the `server2/` Rust workspace/CI and placement gate (S04); later implementation tasks depend on it. Then storage/resolver, synchronous publication, memory/single-flight limits; property/crash tests with recorded providers and local S3-compatible peer. Measure actual host build compatibility, S3 tails/throughput, RSS/CPU and cold request fan-out. Raw packs are a measured optional optimization. |
 | P2b | Gateway/geocoder with backend switches to legacy, exact validation/errors/cache/deadline and privacy-safe coordinate handling. Whole-gateway shadow and rollback rehearsal. |
 | P3/P4 | World providers used by gateway and warning catalogs/restore; no deletion of a backend solely due to unused direct public paths. |
 | P5/P6 | Domestic raw JSON, legacy-history export, summaries and v000903 assembly; close O-1/O-11 acquisition gaps and Rust time-box. Active health/air behavior follows current fixtures. |
@@ -47,6 +138,8 @@ Each route port depends on P1 and recorded issue decisions; one PR per phase.
 | S6 / client uses historical pack | Build pack from durable fixtures, introduce late revision, corrupt/delete serving pack in test peer | Late fields retained; verified canonical fallback yields same bytes; pack-before-index crash harmless | AC1/2; pack hash/range/fallback smoke |
 | S7 / operator checks outage and warning history | Valid memory, S3 outage; then empty memory; providers disabled with old type 2/3 and type 4 fixtures | Memory within TTL works; new undurable success rejected according to decided contract; warnings equal legacy at +10h/+19h | AC1/2; failure matrix/golden |
 | S8 / reviewer assesses speed and future scale-out | Fixed fixture workload; clear caches; measure 8/16/32/64 concurrency, sibling-catalog hops, provider misses and replacement geocoder bursts | Report full p50/p95/p99, bytes/RSS/CPU, catalog-version cost, geocoder quota and attempt time; no estimate relabeled p95; future coordination remains prerequisite | AC3; P2/P2b benchmarks and later scale-out fault tests |
+
+| S9 / implementer preserves the new runtime boundary | Task declares paths; add server2 configuration, fixture or deployment assets, then review/check the full diff and dependencies | Assets under `server2/` pass; misplaced files or legacy resource dependencies fail; only declared outside wiring/verification changes pass | AC4; manual review before S04, then placement gate plus dependency/resource review |
 
 ## Risks, rollback and proof
 

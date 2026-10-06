@@ -20,6 +20,9 @@ start on one Spot instance before scaling up and later out.
 - Used existing APIs must be fully compatible. Exclude APIs unused in a 30-day
   window; the existing traffic investigation is an accepted baseline and need
   not be refreshed for this PR.
+- All new implementation and supporting assets equivalent to `server/` belong
+  under `server2/`, including configuration, data, tests, tools and deployment
+  assets. Every future task must declare paths and verify this boundary.
 - Review the design, maintain documents/diagrams and create a PR. No merge,
   runtime implementation, AWS configuration change or deployment.
 
@@ -35,6 +38,10 @@ start on one Spot instance before scaling up and later out.
   latency arithmetic and actual artifact/browser/visual checks; the PR has an
   independent review and records limitations without claiming implementation.
 
+- **AC4:** The architecture, agent instructions and every future task's common
+  contract specify `server2/` placement, bounded outside-path exceptions and a
+  required path/dependency gate introduced by the Rust foundation task.
+
 ## Risks and open decisions
 
 History capture, S3-outage failure policy, mutable identity indexes, raw-pack
@@ -42,3 +49,13 @@ duplication/lifecycle and state migration still require issue decision records
 before implementation. Exact active-API parity takes precedence over optional
 performance improvements. See the [spec](../specs/issue-2614.md) and
 [delivery plan](../plans/issue-2614.md).
+
+## Follow-up authority (2026-10-06)
+
+AK requires all server-equivalent assets under `server2/` and the rule to be
+checked in every task. AK then authorized publishing all proposed subtasks and
+proceeding in the recommended dependency order. This adds issue creation and
+S01 decision reconciliation to the current follow-up; future runtime work still
+requires the issue decision gates, task-owned implementation PRs and applicable
+verification. Production cutover/resource actions and merge are not authorized
+by this follow-up. Pending choices are not inferred accepted from issue creation.

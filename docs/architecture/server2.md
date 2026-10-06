@@ -30,6 +30,41 @@ history capture (O-1/O-11), outage policy, lifecycle costs and state migration
 still need issue decisions before runtime implementation. No approved-difference
 list silently relaxes compatibility for an active API.
 
+### Implementation placement
+
+AK's binding direction is broader than Rust source placement: **all new assets
+equivalent to `server/` responsibilities or assets belong under `server2/`**.
+The new runtime must not depend on files in `server/` through imports, includes,
+symlinks or runtime file reads. Explicit HTTP forwarding to legacy remains the
+coexistence mechanism. Port required assets with provenance/license preserved;
+this does not require copying unused APIs or the legacy directory layout.
+
+| Asset | Required placement |
+| --- | --- |
+| Entrypoints, routes/controllers, providers, response assembly, cache/storage, jobs, push/notice state | `server2/` (normally Rust source under `server2/src/`) |
+| Configuration/defaults, static lookup data, templates and runtime resources | `server2/` |
+| Rust workspace/manifests/lockfile, toolchain, dependency and build settings | `server2/`; run workspace commands there, without a repository-root server2 Cargo workspace |
+| Server2 tests, golden consumer/fixtures, provider stubs, benchmarks and smoke verification | `server2/tests/`, `server2/benches/` or `server2/` verification subdirectories |
+| Export/import/migration tools, deployment/operations scripts, container and service configuration | `server2/` (for example `server2/tools/` and `server2/deploy/`) |
+| Maintained architecture/API/operations documents and selected durable evidence | Existing `docs/` paths |
+| Intent/spec/plan and canonical agent instructions | Existing `intent/`, `specs/`, `plans/` and root `AGENTS.md` |
+| Shared CI and infrastructure entrypoints | Existing shared paths only for explicitly declared wiring; invoke logic/configuration under `server2/` |
+
+The legacy golden recorder at `server/test/offline/golden-record.js` may remain
+in `server/` because it executes the legacy parity target. A named legacy export
+or coexistence change is likewise permitted when a task explains why it must run
+in legacy. These exceptions do not permit placing the new runtime, fixtures or
+server2-specific tooling in legacy. Legacy retirement is a separate authorized
+task after cutover. Existing unrelated assets need not be moved by this rule.
+
+Every implementation task must declare paths, enumerate necessary outside
+changes with reasons, and include the placement completion criterion from the
+[common task contract](../../plans/issue-2614.md#common-contract-for-every-implementation-task).
+The Rust foundation task must implement a local/CI placement check before later
+implementation tasks proceed. Until then, task completion requires a recorded
+manual path/dependency review. This design specifies the gate; it does not claim
+that the checker or remote merge enforcement is already installed.
+
 ## 2. Compatibility inventory
 
 AK accepted the existing [30-day CloudFront investigation](../evidence/aws/api-traffic-2026-09-22.md)
