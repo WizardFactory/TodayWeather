@@ -145,3 +145,24 @@ archify visual-check docs/architecture/diagrams/server2.html --out-dir .archify/
 
 The new foundation has a separate task/branch/PR; no Rust code, live capture or
 production switch is included in this documentation PR.
+
+## Cold-cell and demand-state correction (R16/R18)
+
+The [parent clarification](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009294236)
+and actual S14/S20/S21 issue bodies preserve legacy fallback for never-requested,
+resumed-after-more-than-8-days and partial S3 histories. Retirement is blocked
+until equivalent history is available; keeping legacy collectors retains their
+quota and operational cost. Demand identity is grid/time/expiry only under
+state/demand/grid/, without precise coordinates or personal/request identifiers.
+All four remote bodies were read back exactly. S01 is now completed as a
+decision task; PR review, S04 runtime and cutover are separate gates.
+
+The diagram's cold-cell/privacy cards were regenerated; topology is unchanged.
+The complete finalize run in cold-cell-fix passed validation, delivery, strict
+artifact and real browser gates. Four fresh light/dark captures in cold-visual
+were inspected. No runtime or provider test is claimed by this correction.
+
+| Corrected artifact | SHA-256 |
+| --- | --- |
+| server2.json | `6de43f7645ada89872a3a1d6e39a4543a9f66903c7ea1df38060e8dd33ffe72a` |
+| server2.html | `ecb6cdb8950bcc993230d14a526461b62e146fe89c8f170ae72ecfbe0f0400a6` |

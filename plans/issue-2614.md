@@ -74,8 +74,9 @@ All 21 required tasks and one conditional optimization were published as native
 sub-issues of #2614 on 2026-10-06. Dependency links in each body are authoritative
 for execution; runtime work also follows the common S01/S04/S02 gates above.
 AK's core S01 decisions are [recorded on the parent](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640).
-S01 documentation reconciliation and isolated S04 foundation are in progress;
-S02 inventory preparation has started. No foundation gate is claimed to pass yet.
+S01 decision recording is [complete](https://github.com/WizardFactory/TodayWeather/issues/2686#issuecomment-6009248131).
+S04 foundation follows that recorded gate in its own implementation PR; S02
+inventory preparation has started. No foundation gate is claimed to pass yet.
 
 | Task | Tracker | Required predecessors |
 | --- | --- | --- |
@@ -205,3 +206,16 @@ parent record and follows S04's O-2/O-4/O-12 prerequisites. Expected: foundation
 work is permitted in its own PR; an attempt to start S18 without exact O-3
 decisions or a route switch without goldens/shadow/approval remains blocked.
 This document verification checks the recorded disposition, not runtime capture.
+
+## Cold-cell compatibility gate (R16)
+
+The [parent clarification](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009294236)
+retains the accepted demand-limited policy without approving absent history.
+S14 #2699 tests never-requested, resumed-after-more-than-8-days and partial S3
+history cells. Only verified S3 revisions, legacy exports and legacy-equivalent
+recovery may reproduce history; ASOS does not replace missing grid-hour values.
+S20 #2705 preserves per-family legacy fallback, deadlines/errors and measured
+coexistence quota costs even after nominal cutover. S21 #2706 is blocked while
+cold-cell behavior needs legacy/Mongo; retirement is not promised without proof.
+Demand identity under state/demand/grid/ is grid, last-demand time and expiry
+only, without user coordinates/identifiers, tokens or per-request logs.

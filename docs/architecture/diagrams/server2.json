@@ -173,7 +173,8 @@
       "items": [
         "Preserve the 19 observed API groups",
         "No local persistent serving store",
-        "Precise reverse geocoding stays volatile"
+        "Precise reverse geocoding stays volatile",
+        "Demand state: grid identity and times only"
       ]
     },
     {
@@ -191,7 +192,7 @@
       "title": "Scope and gates",
       "items": [
         "Proposed design; no runtime deployed",
-        "Demand capture approved; state details gated",
+        "Cold cells keep legacy until parity is proven",
         "Later scale-out: independent caches and shared S3",
         "Design source: docs/architecture/server2.md"
       ]

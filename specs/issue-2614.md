@@ -53,3 +53,15 @@ new success, existing error/fallback or valid memory during S3 outages,
 conditional measured packs and no lifecycle deletions now. Capture demand and
 ownership are implemented in S14; this PR only records the decision. S18's exact
 state design and separate activation/provisioning/cutover gates remain deferred.
+
+## Cold-cell compatibility and demand privacy (R16/R18)
+
+For never-requested cells, renewed demand after more than 8 days, or partial S3
+history, only verified S3/legacy-export data and legacy-equivalent recovery are
+eligible. ASOS cannot replace missing grid-hour history as an approved difference.
+If parity cannot be reconstructed, the affected behavior stays on or forwards
+to legacy through S20; S21 retirement waits for cold-cell parity. Continuing
+legacy capture retains quota/cost and must be measured in coexistence budgets.
+S14 fixtures cover all three cold-cell cases. Durable demand records under
+`state/demand/grid/` contain grid identity, last-demand time and expiry only,
+without coordinates, IPs, device/user/subscriber IDs, tokens or request logs.

@@ -607,6 +607,34 @@ raw/group publication policy. Later multi-instance capture requires the
 coordination gate in section 9. Capture alone cannot fabricate unavailable
 history; golden parity and history catch-up still precede dependent cutover.
 
+A **cold cell** has never been requested, resumes after more than 8 days without
+demand, or has only partial archived history. Demand-limited capture cannot
+recover all older hourly slots from KMA's roughly 23-hour window. Read verified
+S3 revisions, legacy-export records and only recovery transformations proven
+equivalent to legacy. ASOS may participate only where the existing handler uses
+it with proven parity; it is not a substitute for missing grid-hour values. No
+invented history or approved missing-history difference is introduced here.
+
+If the response cannot be reconstructed with the same history, status, absent
+fields and comparisons as legacy, keep that route behavior on legacy or forward
+the request to legacy during coexistence. A family switch must preserve this
+cold-cell fallback and its deadline/error contract. After a nominal family
+cutover, the unsupported cell behavior still requires legacy. S21 cannot retire
+legacy/MongoDB until cold-cell parity is proven for every retained behavior.
+If no equivalent acquisition becomes available, retirement remains blocked;
+this design does not promise that demand capture alone makes it possible.
+Continuing the needed legacy collectors also retains their quota and operating
+cost (#2604); S03/S08/S14/S20 must measure and budget that coexistence cost.
+
+Durable acquisition demand records live under `state/demand/grid/` and contain
+only KMA grid identity, last-demand time and expiry. Push demand is aggregated
+to the same grid identity without copying subscription details. No precise
+coordinate, IP address, device/user/subscriber ID, token or per-request log is
+stored in these records or added to weather archive identities/metadata. Exact
+demand update/reconstruction and capture ownership are S14 acceptance work;
+S18's separate push state design remains gated by O-3.
+
+
 
 | Original item | Amendment / remaining decision |
 | --- | --- |
