@@ -14,9 +14,9 @@
     "RESTORE verified 957650d318e41992856dc73bfedbb122ad8fa0b5343cd1f64e3083bf988e4e33",
     "PASS: exact binary, both collision bodies, conditional repeat and empty-client restore; no catalog/client publication"
   ],
-  "binary_sha256": "bc3c3c420abeb6ee09353ba86e34b9a5c73bcf1bde4d504dfc1ce4414f225f17",
-  "source_sha256": "c49c2144bd25bd8210032a0bdbf29b13c5f49d95a566a11ab810d8828cc666d2",
-  "pdf_sha256": "63980c4398143e0414be313e1daec727f12f24755706761b0855c6ef7035d27d",
+  "binary_sha256": "5b9f1793c3e6e79a864a8b86a83481af4ac928155502394e33be438b8c8bb6dd",
+  "source_sha256": "f31d6e7e31b62f0a57b5460e945d5eebbcc45131a9c4f71c744ab223b5c650e3",
+  "pdf_sha256": "9785252c5d7ed286bf7919edf13b45ce767eba8c08d79aac5a86f7d4923a7673",
   "screenshot_sha256": "70ce7fbf040f9e1c0b8bf0326e61ea3e3a1b1934581f0ff837bdd1b24a210865",
   "pages": 2
 }

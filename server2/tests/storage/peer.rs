@@ -19,6 +19,8 @@ pub enum Fault {
     DropAfterPut,
     ErrorAfterPut,
     ErrorBeforePut,
+    ConflictBeforePut,
+    ConflictExisting,
     WrongHead,
     Slow,
 }
@@ -27,6 +29,7 @@ pub struct PeerState {
     pub objects: BTreeMap<String, (BTreeMap<String, String>, Vec<u8>)>,
     pub calls: Vec<(String, String)>,
     pub fault: Fault,
+    pub credential_ids: Vec<String>,
 }
 pub struct Peer {
     pub endpoint: String,
@@ -132,6 +135,19 @@ fn serve(mut stream: TcpStream, state: Arc<Mutex<PeerState>>) {
     }
     let mut s = state.lock().unwrap();
     s.calls.push((method.clone(), key.clone()));
+    // Keep only the dummy access-key ID, never the signed URL or session credential material.
+    if let Some(credential) = target.split("X-Amz-Credential=").nth(1) {
+        s.credential_ids.push(
+            credential
+                .split("%2F")
+                .next()
+                .unwrap()
+                .split('&')
+                .next()
+                .unwrap()
+                .into(),
+        );
+    }
     let fault = s.fault;
     if matches!(fault, Fault::Slow) {
         drop(s);
@@ -142,7 +158,11 @@ fn serve(mut stream: TcpStream, state: Arc<Mutex<PeerState>>) {
     if method == "PUT" {
         if matches!(
             fault,
-            Fault::DropAfterPut | Fault::ErrorAfterPut | Fault::ErrorBeforePut
+            Fault::DropAfterPut
+                | Fault::ErrorAfterPut
+                | Fault::ErrorBeforePut
+                | Fault::ConflictBeforePut
+                | Fault::ConflictExisting
         ) {
             s.fault = Fault::None;
         }
@@ -155,12 +175,32 @@ fn serve(mut stream: TcpStream, state: Arc<Mutex<PeerState>>) {
         }
         if s.objects.contains_key(&key) {
             drop(s);
-            respond(&mut stream, 412, BTreeMap::new(), b"", false);
+            respond(
+                &mut stream,
+                if matches!(fault, Fault::ConflictExisting) {
+                    409
+                } else {
+                    412
+                },
+                BTreeMap::new(),
+                b"",
+                false,
+            );
             return;
         }
-        if matches!(fault, Fault::ErrorBeforePut) {
+        if matches!(fault, Fault::ErrorBeforePut | Fault::ConflictBeforePut) {
             drop(s);
-            respond(&mut stream, 500, BTreeMap::new(), b"", false);
+            respond(
+                &mut stream,
+                if matches!(fault, Fault::ConflictBeforePut) {
+                    409
+                } else {
+                    500
+                },
+                BTreeMap::new(),
+                b"",
+                false,
+            );
             return;
         }
         let metadata = headers

@@ -1,13 +1,34 @@
 use super::{Error, Object, ObjectTransport, PreparedRecord};
 use reqwest::{Client, Method, redirect::Policy};
 use rusty_s3::{Bucket, Credentials, S3Action, UrlStyle};
-use std::{collections::BTreeMap, net::IpAddr, time::Duration};
+use std::{
+    collections::BTreeMap,
+    net::IpAddr,
+    sync::{Arc, RwLock},
+    time::Duration,
+};
+/// Caller-managed credential handle. No discovery, refresh task, Debug or credential diagnostics.
+/// Replace before expiry; each request uses one coherent snapshot. In-flight requests retain it.
+#[derive(Clone)]
+pub struct RefreshableCredentials(Arc<RwLock<Credentials>>);
+impl RefreshableCredentials {
+    pub fn new(credentials: Credentials) -> Self {
+        Self(Arc::new(RwLock::new(credentials)))
+    }
+    pub fn replace(&self, credentials: Credentials) -> Result<(), Error> {
+        *self.0.try_write().map_err(|_| Error::Transport)? = credentials;
+        Ok(())
+    }
+    fn snapshot(&self) -> Result<Credentials, Error> {
+        Ok(self.0.try_read().map_err(|_| Error::Transport)?.clone())
+    }
+}
 /// SigV4 HTTP adapter. Credentials are supplied/refreshed by the caller; never discovered here.
 /// No Debug implementation: neither credentials nor signed URLs belong in diagnostics.
 pub struct HttpS3Transport {
     client: Client,
     bucket: Bucket,
-    credentials: Credentials,
+    credentials: RefreshableCredentials,
 }
 impl HttpS3Transport {
     pub fn new(
@@ -15,6 +36,19 @@ impl HttpS3Transport {
         bucket: &str,
         region: &str,
         credentials: Credentials,
+    ) -> Result<Self, Error> {
+        Self::with_credentials(
+            endpoint,
+            bucket,
+            region,
+            RefreshableCredentials::new(credentials),
+        )
+    }
+    pub fn with_credentials(
+        endpoint: &str,
+        bucket: &str,
+        region: &str,
+        credentials: RefreshableCredentials,
     ) -> Result<Self, Error> {
         let url: reqwest::Url = endpoint.parse().map_err(|_| Error::Invalid("endpoint"))?;
         let loopback = url
@@ -107,13 +141,14 @@ impl HttpS3Transport {
         Ok((metadata, length))
     }
     async fn read(&self, key: &str, head: bool, maximum: usize) -> Result<Object, Error> {
+        let credentials = self.credentials.snapshot()?;
         let url = if head {
             self.bucket
-                .head_object(Some(&self.credentials), key)
+                .head_object(Some(&credentials), key)
                 .sign(Duration::from_secs(30))
         } else {
             self.bucket
-                .get_object(Some(&self.credentials), key)
+                .get_object(Some(&credentials), key)
                 .sign(Duration::from_secs(30))
         };
         let mut response = self
@@ -151,7 +186,8 @@ impl HttpS3Transport {
 }
 impl ObjectTransport for HttpS3Transport {
     async fn put(&self, record: &PreparedRecord) -> Result<u16, Error> {
-        let mut action = self.bucket.put_object(Some(&self.credentials), &record.key);
+        let credentials = self.credentials.snapshot()?;
+        let mut action = self.bucket.put_object(Some(&credentials), &record.key);
         action.headers_mut().insert("if-none-match", "*");
         action
             .headers_mut()

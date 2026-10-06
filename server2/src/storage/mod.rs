@@ -8,12 +8,15 @@ pub use codec::{
 };
 use std::fmt;
 pub use store::{ObjectTransport, PublishOutcome, RawRecordStore};
-pub use transport::HttpS3Transport;
+pub use transport::{HttpS3Transport, RefreshableCredentials};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     Invalid(&'static str),
     Corrupt(&'static str),
+    /// I/O admission rejected before any request; no PUT attempted.
     Capacity,
+    /// PUT sent, but durability could not be verified; same identity must be reconciled.
+    Ambiguous,
     Timeout,
     Transport,
     Status(u16),

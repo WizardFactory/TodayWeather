@@ -248,6 +248,17 @@ impl RawRecord {
         envelope.validate(limits)?;
         Ok(Self { envelope, bytes })
     }
+    /// S06 supplies a descriptor reference before any immutable PUT.
+    /// This validates shape only; descriptor membership/completeness is S06's responsibility.
+    pub fn with_fetch_group(
+        mut self,
+        group: FetchGroupRef,
+        limits: &Limits,
+    ) -> Result<Self, Error> {
+        self.envelope.fetch_group = Some(group);
+        self.envelope.validate(limits)?;
+        Ok(self)
+    }
     pub fn prepare(&self, limits: &Limits) -> Result<PreparedRecord, Error> {
         self.envelope.validate(limits)?;
         if self.bytes.len() != self.envelope.raw_length

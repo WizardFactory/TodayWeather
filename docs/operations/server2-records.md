@@ -54,6 +54,12 @@ optional identity-only fetch-group reference. `x-amz-meta-s2-gzip-sha256` is the
 compressed body's full hash. Total user metadata is limited to 2 KiB including
 base64 expansion. A group reference has full group/member/partition digests and
 a bounded member count; its descriptor key is `index/v2/groups/{group_sha256}.json`.
+`with_fetch_group` validates and attaches the reference before PUT. S05 accepts
+one group reference per immutable body and validates its shape only. S06 must
+resolve the descriptor to the full ordered partition/member list and expected
+page counts, require group membership for grouped acquisitions, and reject missing
+or inconsistent descriptors. It must decide canonical shared-body ownership before
+publishing; S05 does not implement multiple group affiliations or descriptor repair.
 S06 supplies this reference before PUT and validates complete membership. An
 ungrouped body does not prove a complete paginated or cross-partition acquisition.
 
@@ -61,15 +67,26 @@ ungrouped body does not prove a complete paginated or cross-partition acquisitio
 
 PUT always sends `If-None-Match: *` and Content-MD5 of compressed bytes. Only
 HTTP 200 acknowledges a completed PUT; 201/202/204 do not. On 412, 409, 5xx or an
-ambiguous transport outcome, HEAD must match the complete metadata and compressed
-length, and GET must verify the identity/envelope/hashes and exact gzip body.
+ambiguous transport outcome, HEAD must match the canonical envelope and configured
+size limit. GET must agree with that stored HEAD and verify its own compressed hash,
+full raw identity, envelope, length and gzip integrity. A valid alternative gzip
+encoding of the same exact raw bytes/envelope is accepted across compressor builds;
+the new writer's gzip length/hash need not equal the stored encoding.
 HEAD alone and ETag never establish the raw identity. If HEAD finds no object,
 one retry uses the identical conditional key and bytes; there is no overwrite,
 new fetch timestamp or hidden retry. Auth/other responses fail immediately.
 
 Default limits are 8 MiB raw, 8 MiB + 64 KiB compressed, 16 I/O operations,
-2 CPU workers and a 3-second monotonic operation deadline. Admission fails closed
-when capacity is busy. Compression is capped while writing; downloads are capped
+2 CPU workers and a 3-second monotonic operation deadline. I/O admission fails
+closed with `Capacity` before a PUT is attempted. Admitted operations wait for CPU
+within that same deadline; loads/reconciliation acquire CPU before downloading.
+Thus up to 16 admitted operations can wait for two CPU workers, with no unbounded
+queue or wasted GET on CPU rejection. At most two GET-and-decode operations run
+at once by default because the CPU reservation spans their download; S07/S09 must
+measure that conservative tradeoff before tuning concurrency. A pre-PUT deadline returns `Timeout`.
+Once PUT has been sent, a verification deadline or transport uncertainty returns
+`Ambiguous`, never `Capacity`: reconcile the same identity, do not infer not-written
+or fetch a new provider response. Other integrity/status errors still fail closed. Compression is capped while writing; downloads are capped
 while reading, even with false Content-Length. Decode validates CRC, full raw hash,
 length, exactly one gzip member and no trailing bytes. CPU permits stay inside
 blocking closures if the caller cancels. Limits are per store/operation, not a
@@ -78,7 +95,14 @@ hard global RSS guarantee: the caller must bound admitted bytes and shared work.
 `HttpS3Transport` signs requests with supplied credentials using rusty-s3 and sends
 with reqwest, without proxies, redirects, automatic retries or decompression.
 HTTP is permitted only for literal loopback; other endpoints require TLS.
-The caller owns credential refresh/instance-role setup. Signed URLs and credentials
+Use a cloned `RefreshableCredentials` handle with `HttpS3Transport::with_credentials`
+and call `replace` before supplied credentials expire. This keeps the same transport,
+connection pool and store admission limits. Each PUT/HEAD/GET signs from one coherent
+snapshot; in-flight requests retain their snapshot. Credential locks use non-blocking
+access and fail with redacted `Transport` on contention/poisoning. The caller owns
+expiry, refresh scheduling and instance-role acquisition; no AWS/environment discovery
+is added. Fixed credentials through `new` remain useful for local tests.
+Signed URLs and credentials
 are never returned in errors or logged. Public synchronous codec helpers require
 the caller to schedule CPU work; `RawRecordStore` schedules and bounds that work.
 

@@ -197,3 +197,36 @@ fn valid_gzip_with_same_prefix_raw_hash_but_wrong_full_identity_is_rejected() {
         Err(Error::Corrupt("raw/member limit/hash"))
     ));
 }
+
+#[test]
+fn validated_group_builder_requires_s06_descriptor_for_completeness() {
+    let limits = Limits::default();
+    let r = RawRecord::new(
+        "kma",
+        "current",
+        &ProviderKey::Grid { nx: 60, ny: 127 },
+        Period {
+            local_date: 20260131,
+            slot: "2300".into(),
+        },
+        1769871600123,
+        200,
+        "application/json",
+        None,
+        b"builder".as_slice().into(),
+        &limits,
+    )
+    .unwrap();
+    let group = FetchGroupRef {
+        group_sha256: sha256(b"g"),
+        member_sha256: sha256(b"m"),
+        partitions_sha256: sha256(b"p"),
+        members: 2,
+    };
+    let grouped = r.clone().with_fetch_group(group.clone(), &limits).unwrap();
+    assert_eq!(grouped.envelope.fetch_group, Some(group.clone()));
+    grouped.prepare(&limits).unwrap();
+    let mut invalid = group;
+    invalid.members = 0;
+    assert!(r.with_fetch_group(invalid, &limits).is_err());
+}

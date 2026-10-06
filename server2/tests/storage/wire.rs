@@ -243,3 +243,119 @@ async fn wire_rejects_wrong_content_md5_without_object() {
     assert_eq!(transport.put(&prepared).await.unwrap(), 400);
     assert!(peer.state.lock().unwrap().objects.is_empty());
 }
+
+#[tokio::test]
+async fn conflict_409_existing_or_missing_reconciles_same_key() {
+    for fault in [Fault::ConflictBeforePut, Fault::ConflictExisting] {
+        let peer = Peer::new();
+        let store = store(&peer, Limits::default());
+        let r = record(b"conflict409");
+        if matches!(fault, Fault::ConflictExisting) {
+            store.publish(r.clone()).await.unwrap();
+        }
+        peer.state.lock().unwrap().fault = fault;
+        assert_eq!(
+            store.publish(r).await.unwrap(),
+            if matches!(fault, Fault::ConflictExisting) {
+                PublishOutcome::AlreadyPresent
+            } else {
+                PublishOutcome::Created
+            }
+        );
+        let state = peer.state.lock().unwrap();
+        assert_eq!(state.objects.len(), 1);
+        let keys: Vec<_> = state
+            .calls
+            .iter()
+            .filter(|(m, _)| m == "PUT")
+            .map(|(_, k)| k)
+            .collect();
+        assert_eq!(keys.len(), 2);
+        assert_eq!(keys[0], keys[1]);
+    }
+}
+#[tokio::test]
+async fn valid_alternate_gzip_reconciles_by_raw_envelope() {
+    use flate2::{Compression, GzBuilder};
+    use std::io::Write;
+    let peer = Peer::new();
+    let store = store(&peer, Limits::default());
+    let r = record(&vec![b'a'; 10000]);
+    store.publish(r.clone()).await.unwrap();
+    let mut gzip = GzBuilder::new()
+        .mtime(0)
+        .operating_system(255)
+        .write(Vec::new(), Compression::new(9));
+    gzip.write_all(&r.bytes).unwrap();
+    let alternate = gzip.finish().unwrap();
+    {
+        let mut state = peer.state.lock().unwrap();
+        let (meta, body) = state.objects.values_mut().next().unwrap();
+        assert_ne!(*body, alternate);
+        meta.insert("x-amz-meta-s2-gzip-sha256".into(), sha256(&alternate));
+        *body = alternate;
+    }
+    assert_eq!(store.publish(r).await, Ok(PublishOutcome::AlreadyPresent));
+    assert_eq!(peer.state.lock().unwrap().objects.len(), 1);
+}
+
+#[tokio::test]
+async fn credential_replacement_preserves_same_store_and_signed_requests() {
+    let peer = Peer::new();
+    let credentials =
+        RefreshableCredentials::new(Credentials::new("server2-local", "server2-local-secret"));
+    let transport = HttpS3Transport::with_credentials(
+        &peer.endpoint,
+        "records",
+        "us-east-1",
+        credentials.clone(),
+    )
+    .unwrap();
+    let store = RawRecordStore::new(transport, Limits::default()).unwrap();
+    let r = record(b"credential-rotation");
+    let id = r.envelope.identity.clone();
+    store.publish(r.clone()).await.unwrap();
+    credentials
+        .replace(Credentials::new(
+            "server2-local-rotated",
+            "server2-local-rotated-secret",
+        ))
+        .unwrap();
+    assert_eq!(store.publish(r).await, Ok(PublishOutcome::AlreadyPresent));
+    assert_eq!(
+        &*store.load(&id).await.unwrap().bytes,
+        b"credential-rotation"
+    );
+    let state = peer.state.lock().unwrap();
+    assert_eq!(state.credential_ids[0], "server2-local");
+    assert!(
+        state.credential_ids[1..]
+            .iter()
+            .all(|id| id == "server2-local-rotated")
+    );
+    assert_eq!(state.objects.len(), 1);
+}
+#[tokio::test]
+async fn sixteen_io_operations_queue_for_two_cpu_workers() {
+    let peer = Peer::new();
+    let store = Arc::new(store(&peer, Limits::default()));
+    let mut jobs = tokio::task::JoinSet::new();
+    let mut ids = Vec::new();
+    for i in 0..16 {
+        let r = record(format!("sixteen-{i}").as_bytes());
+        ids.push(r.envelope.identity.clone());
+        let s = store.clone();
+        jobs.spawn(async move { s.publish(r).await });
+    }
+    while let Some(result) = jobs.join_next().await {
+        assert_eq!(result.unwrap().unwrap(), PublishOutcome::Created);
+    }
+    for id in ids {
+        let s = store.clone();
+        jobs.spawn(async move { s.load(&id).await.map(|_| PublishOutcome::AlreadyPresent) });
+    }
+    while let Some(result) = jobs.join_next().await {
+        assert_eq!(result.unwrap().unwrap(), PublishOutcome::AlreadyPresent);
+    }
+    assert_eq!(peer.state.lock().unwrap().objects.len(), 16);
+}
