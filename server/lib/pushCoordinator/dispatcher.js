@@ -128,8 +128,6 @@ class Dispatcher {
             if (b.pauseReason === 'authentication' || (b.ambiguous && b.probes >= this.recoveryProbes && !b.probing))
                 return 'paused';
             if (b.probing || now < b.recoverAt) return false;
-            // Only a ready warning for this project can reserve its recovery gate.
-            if (lane === 'normal' && this.recoveryWarning(project, b)) return false;
         }
         if (now < b.cooldownUntil || b.tokens < 1) return false;
         var source = lane;
@@ -138,6 +136,8 @@ class Dispatcher {
         if (lane === 'normal' && b.normal < 1 && !this.queues.warning.length && !this.active.warning)
             source = 'warning';
         if (b[source] < 1) return false;
+        // Inspect warnings only when cooldown and tokens permit this admission.
+        if (b.paused && lane === 'normal' && this.recoveryWarning(project, b)) return false;
         b[source]--;
         b.tokens--;
         if (b.paused) {

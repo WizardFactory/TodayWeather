@@ -197,4 +197,24 @@ runner.test('late duplicate ambiguity preserves successful probe proof', async f
         assert(f.d.health().ready); assert.equal(calls, 2);
     } finally { await f.close(); }
 });
+runner.test('blocked project budget does not inspect recovery warning guards', async function () {
+    var f = fixture(), checks = 0;
+    try {
+        f.d.budget('one', 'normal');
+        var budget = f.d.projects.get('one');
+        budget.paused = true; budget.pauseReason = 'transport-ambiguous'; budget.recoverAt = 0;
+        var warning = {prepared: true, job: job('one', {priority: 'warning', guard: function () { checks++; return true; }})};
+        f.d.warningItems.add(warning);
+        budget.cooldownUntil = 5000;
+        for (var i = 0; i < 100; i++) assert.equal(f.d.budget('one', 'normal'), false);
+        assert.equal(checks, 0, 'cooldown must prevent repeated preference work');
+        budget.cooldownUntil = 0; budget.tokens = 0;
+        assert.equal(f.d.budget('one', 'normal'), false); assert.equal(checks, 0);
+        budget.tokens = 10; budget.normal = 0; budget.warning = 0;
+        assert.equal(f.d.budget('one', 'normal'), false); assert.equal(checks, 0);
+        budget.normal = 1; budget.warning = 1;
+        assert.equal(f.d.budget('one', 'normal'), false); assert.equal(checks, 1);
+        assert.equal(f.d.budget('one', 'warning'), 'probe');
+    } finally { await f.close(); }
+});
 runner.run().then(function(failed){process.exitCode=failed?1:0;});

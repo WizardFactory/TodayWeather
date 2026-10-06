@@ -10,7 +10,7 @@ No live FCM, mobile build, deployment, restart or device receipt is claimed.
 | Initial new regression, before implementation | 8 intended failures / 1 pass; permanent pause, late status and absent health |
 | Additional recovery warning-priority regression | Intended failure on the normal fairness turn; corrected before commit |
 | Final full offline suite | Node22 server/test/offline/run.js passed after F1/F2 correction; same full test list |
-| Final transport recovery/generation suite | 16 passed |
+| Final transport recovery/generation suite | 17 passed |
 | Existing S3 coordinator suite | 27 passed |
 | Existing preparation retry suite (#2677) | 32 passed |
 | Store compatibility suite | 12 passed |
@@ -61,3 +61,7 @@ Inventory selection: six manifests modified October 6, listed through 01:07:05UT
 | 01:07 | conditional | 96 | expired:32, not-needed:64 | weather-timeout:11, weather-unavailable:4, weather-deadline:5 | 0 |
 
 The 00:50 and 01:07UTC conditional campaigns have27 and 20 expired jobs with preparation weather-timeout/deadline/unavailable reasons, respectively. This extends the earlier issue observation: the #2677 retry code is present and retries are observed, but preparation still fails to finish for this bounded later cohort. Do not report all new campaigns preparation-clean. The five conditional campaigns total 480 jobs, 373 not-needed, 107 expired, 467 preparation attempts and 94 preparation failures; reasoned preparation expiries account for 47, while 60 expiries have no recorded reason. Their zero transport attempts separate these outcomes from #2683. The 00:00UTC alarm failed project-paused with one preparation and zero transport attempts. Origin-stage latency and device receipt remain unverified.
+
+Round2 independently resolved F1-F4 and found Recommended F5: warning scans repeated during overlapping recovery/cooldown and large unrelated or preparation-waiting backlogs (20k warnings, synthetic p99 event-loop lag283–573ms). Author selected a bounded ordering correction: check cooldown and total/lane tokens before warning preference inspection. The new regression fails before this change and passes afterward; all17 regressions and actual combined smoke pass on Node16/22. Ordinary queues, preparation/S3/store behavior and diagram topology are unchanged. Independent final review and current CI remain the final pre-merge gates.
+
+After F5 correction, the same independent20k-warning profiles were executed locally: Node16 unrelated/preparation-wait loop-lag p99=6/6ms, Node22=8/6ms; pump p99=2.51–3.62ms. Prepared same-project warning priority passes in both profiles. Synthetic local measurements establish the scoped improvement, not a production latency guarantee. Full offline evidence is from576726b0; only admission-check ordering and its regression changed afterward, with focused regression/smoke/benchmark renewed.
