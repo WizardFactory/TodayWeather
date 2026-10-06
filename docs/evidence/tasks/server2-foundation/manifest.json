@@ -1,0 +1,9 @@
+{
+  "captured_at": "2026-10-06",
+  "kind": "actual-api-cli-usage",
+  "command": "python3.11 server2/tools/smoke.py --binary server2/target/release/server2",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "binary_sha256": "d1d70a2a9876e2dfef0919ce7caabc8a495283c1e9e85563b4d492e330a46888",
+  "capture_sha256": "9416b1c954ee62b7d4dedceac41283c3510445924521cd5d473346620c729f38",
+  "limitations": "isolated local foundation; no providers, S3 or full legacy parity"
+}

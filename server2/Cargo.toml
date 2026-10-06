@@ -1,0 +1,18 @@
+[workspace]
+members = ["."]
+resolver = "3"
+
+[package]
+name = "server2"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+publish = false
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "signal", "sync", "time", "macros"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

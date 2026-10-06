@@ -1,0 +1,19 @@
+name: Server2
+on:
+  pull_request:
+    paths:
+      - "server2/**"
+      - ".github/workflows/server2.yml"
+permissions:
+  contents: read
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh
