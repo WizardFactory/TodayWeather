@@ -91,6 +91,51 @@ def audit_manifest(root, path, body):
     return errors
 
 
+def rust_character(body, start):
+    """Classify one apostrophe per Rust Reference char/byte/lifetime grammar.
+
+    Never resume inside an unclassified quoted region: caller fails incomplete.
+    Python identifier checks conservatively bound Unicode lifetime spellings;
+    unsupported identifier syntax fails closed instead of masking later code.
+    """
+    byte = start > 0 and body[start - 1] == 'b'
+    pos = start + 1
+    if pos >= len(body): return None
+    if body[pos] == '\\':
+        pos += 1
+        if pos >= len(body): return None
+        escape = body[pos]; pos += 1
+        if escape in "nrt\\0'\"": pass
+        elif escape == 'x':
+            digits = body[pos:pos + 2]
+            if len(digits) != 2 or not re.fullmatch('[0-9a-fA-F]{2}', digits): return None
+            if not byte and int(digits, 16) > 127: return None
+            pos += 2
+        elif escape == 'u' and not byte:
+            match = re.match(r'\{((?:[0-9a-fA-F]_*){1,6})\}', body[pos:])
+            if not match: return None
+            scalar = int(match[1].replace('_', ''), 16)
+            if scalar > 0x10ffff or 0xd800 <= scalar <= 0xdfff: return None
+            pos += match.end()
+        else: return None
+    elif body[pos] not in "'\n\r\t":
+        scalar = ord(body[pos])
+        if byte and scalar > 127 or 0xd800 <= scalar <= 0xdfff: return None
+        pos += 1
+    else: return None
+    if body[pos:pos + 1] == "'": return pos + 1, True
+    # A lifetime or label is an apostrophe plus identifier, not a quoted string.
+    # Byte/escape prefixes cannot become lifetimes on parse failure.
+    if byte or body[start + 1] == '\\': return None
+    pos = start + 1
+    if body.startswith('r#', pos): pos += 2
+    begin = pos
+    while pos < len(body) and (body[pos] == '_' or ('a' + body[pos]).isidentifier()): pos += 1
+    name = body[begin:pos]
+    if not name or not name.isidentifier() or body[pos:pos + 1] == "'": return None
+    return pos, False
+
+
 def rust_tokens(body):
     """Small bounded lexer: mask comments/strings, retaining direct string identities.
 
@@ -114,10 +159,15 @@ def rust_tokens(body):
                 else: i += 1
             if depth: errors.append('unterminated Rust comment')
             hide(start, i); continue
-        # Character literals cannot be filesystem paths; leave lifetimes unmasked.
-        char = re.match(r"'(?:\\.|[^'\\\n])'", body[i:]) if body[i] == "'" else None
-        if char:
-            hide(i, i + char.end()); i += char.end(); continue
+        # Classify the complete char escape before moving past any apostrophe.
+        if body[i] == "'":
+            char = rust_character(body, i)
+            if char is None:
+                errors.append('unsupported Rust character/lifetime token')
+                hide(i, len(body)); break
+            end, character = char
+            if character: hide(i, end)
+            i = end; continue
         raw = re.match(r'r(#{0,255})"', body[i:])
         if raw:
             start = i; content = i + raw.end(); end = body.find('"' + raw[1], content)

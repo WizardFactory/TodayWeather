@@ -41,3 +41,5 @@ Compiler resource checks use comment/string-aware tokens for all include macro
 delimiters and nested cfg_attr paths. Rust-wide static legacy references and direct
 Path/PathBuf paths remain guarded. Executable/shebang and .bash/.zsh scripts are
 also checked; compiled fixture tests require the pinned Rust toolchain on PATH.
+
+Character/byte-character escapes and lifetime/label tokens remain distinct; unsupported apostrophes fail incomplete without hiding later resource calls.

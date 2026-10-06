@@ -84,7 +84,8 @@ and direct read/read_to_string/read_dir/open/create/Path/PathBuf strings. Plain/
 borrowed/parenthesized literals are supported; encoded or unsupported compiler
 arguments reject. Source-relative compiler paths are verified owned separately
 from runtime-CWD paths. Other Rust literals retain the legacy/sibling path guard,
-including Command arguments.
+including Command arguments. Char/byte-char escape tokens and lifetimes stay aligned;
+ambiguous apostrophes reject incomplete.
 
 Python executable-call AST, decoded JSON/TOML and shell/deploy paths are checked,
 including executable/shebang and .bash/.zsh scripts. Only validated task outside.path

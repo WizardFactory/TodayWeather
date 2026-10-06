@@ -131,6 +131,31 @@ class PlacementTests(unittest.TestCase):
             print('compiled fixture -> '+ran.stdout.strip())
         finally:
             if binary.exists():binary.unlink()
+    def test_char_escape_sequences_cannot_hide_resources(self):
+        self.compiler_fixture_assets()
+        chars = [r"'\x00'", r"'\x22'", r"'\x41'", r"'\x7f'", r"'\u{41}'",
+                 r"'\u{0_0_4_1_}'", r"'\u{1F600}'", r"'\u{10ffff}'", r"'\n'",
+                 r"'\r'", r"'\t'", r"'\0'", r"'\\'", r"'\''", r"'\"'", "'é'", "'😀'",
+                 r"b'\x41'", r"b'\xff'", r"b'\n'", r"b'\\'", r"b'\''", r"b'\"'"]
+        forms = ['fn main(){let x=include_str!("../../client/data.txt");println!("{}",x);}',
+                 '#[cfg_attr(all(), path="../../client/module.rs")] mod m; fn main(){println!("{}",m::outside());}',
+                 'fn main(){let x=std::fs::read_to_string("../client/data.txt").unwrap();println!("{}",x);}']
+        for char in chars:
+            prefix='const A:['+('u8' if char.startswith('b') else 'char')+';2]=['+char+','+('b' if char.startswith('b') else '')+'\'"\'];'
+            for form in forms:
+                with self.subTest(char=char,form=form):
+                    source=prefix+form+'''const Q:char='"';'''
+                    self.compile_fixture(source);self.assertTrue(self.errors(),source)
+        owned=r'''const A:[char;2]=['\u{0_0_4_1_}','"'];
+fn identity<'é>(value:&'é str)->&'é str { 'label: loop { break 'label value; } }
+fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
+        self.compile_fixture(owned,'owned');self.assertEqual([],self.errors())
+        raw_lifetime='fn identity<\'r#life>(v:&\'r#life str)->&\'r#life str{v} fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'
+        self.compile_fixture(raw_lifetime,'owned');self.assertEqual([],self.errors())
+    def test_unclassifiable_apostrophes_fail_incomplete(self):
+        for char in [r"'\x4'", r"'\q'", r"'\u{_41}'", r"'\u{D800}'", r"'\u{110000}'", r"'\u{1234567}'", "'ab'", "'", r"b'\u{41}'"]:
+            self.write('server2/src/main.rs','const A='+char+';fn main(){}')
+            self.assertTrue(any('incomplete Rust literal' in error for error in self.errors()),char)
     def test_compiler_macro_delimiters_and_comment_separators(self):
         self.compiler_fixture_assets()
         for name in ['include_str','include_bytes','include']:

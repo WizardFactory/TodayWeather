@@ -43,3 +43,5 @@ Use comment/string-aware bounded Rust tokens, all macro delimiters/nested path
 attributes and retained Rust-wide legacy guard. Audit executable/shebang scripts.
 Preserve owned controls and all previous fixes; full CI, distinct smoke/manual QA
 and exact new-head review remain required.
+
+Actual r3 selects Required R12 only: classify char/byte-char escapes and lifetimes without quote resync. Compile full-Git escape/quote-sequence matrix preceding include, cfg_attr and runtime reads with harmless fixture files; olded354d1 must fail assertions, repaired checker must reject. Owned resource/lifetime/label controls remain accepted; malformed apostrophes reject incomplete. Preserve all27 earlier fixtures, fullCI/release smoke/manual visual checks. R13 alias macros remain explicit manual review; R14 path-looking nonresource strings remain conservatively rejected, with no follow-up tracking or broad exemptions.

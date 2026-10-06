@@ -59,3 +59,5 @@
   conservatively. Computed/aliased/macro-generated runtime access remains manual.
 - Extensionless executable/shebang scripts and .bash/.zsh assets are also checked;
   non-text executables are not interpreted as script source.
+
+- Character and byte-character token masking follows direct Rust quote/ASCII/hex/Unicode escapes, single scalar characters and lifetime/label separation. Unsupported apostrophe syntax fails incomplete instead of resynchronizing at later quotes. Encoded character values cannot hide subsequent compiler/runtime resource literals. Aliased macros and conservative non-path lookalikes retain the documented manual-review scope.
