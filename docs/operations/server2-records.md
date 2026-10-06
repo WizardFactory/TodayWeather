@@ -78,15 +78,22 @@ new fetch timestamp or hidden retry. Auth/other responses fail immediately.
 
 Default limits are 8 MiB raw, 8 MiB + 64 KiB compressed, 16 I/O operations,
 2 CPU workers and a 3-second monotonic operation deadline. I/O admission fails
-closed with `Capacity` before a PUT is attempted. Admitted operations wait for CPU
-within that same deadline; loads/reconciliation acquire CPU before downloading.
-Thus up to 16 admitted operations can wait for two CPU workers, with no unbounded
-queue or wasted GET on CPU rejection. At most two GET-and-decode operations run
-at once by default because the CPU reservation spans their download; S07/S09 must
-measure that conservative tradeoff before tuning concurrency. A pre-PUT deadline returns `Timeout`.
+closed with `Capacity` before a PUT is attempted. Admitted compression/decode waits for CPU within the same deadline. A separate
+pool of `io` download-buffer slots spans GET, CPU wait and decode, and stays owned
+by a running decoder even after caller cancellation. Network GET therefore uses
+up to 16 slots independently of the two CPU workers. Retained compressed payloads
+are bounded by `io × gzip_bytes` (129 MiB by default), plus decoded worker payloads
+of at most `cpu × raw_bytes` (16 MiB); returned records, upload buffers, allocation
+capacity and networking overhead require separate caller/RSS accounting. This is
+a logical payload bound, not a process RSS promise. Waiters do not use try-acquire
+CPU rejection, and their queue is limited by I/O admission. The 16-load/50 ms peer
+regression checks concurrent downloads and records observed timing; it is not an
+AWS latency benchmark. A pre-PUT deadline returns `Timeout`.
 Once PUT has been sent, a verification deadline or transport uncertainty returns
 `Ambiguous`, never `Capacity`: reconcile the same identity, do not infer not-written
-or fetch a new provider response. Other integrity/status errors still fail closed. Compression is capped while writing; downloads are capped
+or fetch a new provider response. Reconciliation integrity failures stay `Corrupt`/`Invalid`; every other HEAD/GET
+failure, including 403/503, becomes `Ambiguous`. Direct definitive PUT rejections
+keep their status and are distinct from uncertain reconciliation. Compression is capped while writing; downloads are capped
 while reading, even with false Content-Length. Decode validates CRC, full raw hash,
 length, exactly one gzip member and no trailing bytes. CPU permits stay inside
 blocking closures if the caller cancels. Limits are per store/operation, not a
@@ -96,10 +103,12 @@ hard global RSS guarantee: the caller must bound admitted bytes and shared work.
 with reqwest, without proxies, redirects, automatic retries or decompression.
 HTTP is permitted only for literal loopback; other endpoints require TLS.
 Use a cloned `RefreshableCredentials` handle with `HttpS3Transport::with_credentials`
-and call `replace` before supplied credentials expire. This keeps the same transport,
+and use `handle.replace(credentials).await` before supplied credentials expire. This keeps the same transport,
 connection pool and store admission limits. Each PUT/HEAD/GET signs from one coherent
-snapshot; in-flight requests retain their snapshot. Credential locks use non-blocking
-access and fail with redacted `Transport` on contention/poisoning. The caller owns
+snapshot; in-flight requests retain their snapshot. Credential snapshots and replacement use a fair asynchronous lock, yield while
+contended, and have a 3-second wait ceiling (`Timeout` on expiry). RawRecordStore's
+absolute operation deadline also bounds that wait; no async worker is blocked by
+a synchronous lock. The lock guard never crosses signing/network work. The caller owns
 expiry, refresh scheduling and instance-role acquisition; no AWS/environment discovery
 is added. Fixed credentials through `new` remain useful for local tests.
 Signed URLs and credentials

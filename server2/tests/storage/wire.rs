@@ -320,6 +320,7 @@ async fn credential_replacement_preserves_same_store_and_signed_requests() {
             "server2-local-rotated",
             "server2-local-rotated-secret",
         ))
+        .await
         .unwrap();
     assert_eq!(store.publish(r).await, Ok(PublishOutcome::AlreadyPresent));
     assert_eq!(
@@ -358,4 +359,110 @@ async fn sixteen_io_operations_queue_for_two_cpu_workers() {
         assert_eq!(result.unwrap().unwrap(), PublishOutcome::AlreadyPresent);
     }
     assert_eq!(peer.state.lock().unwrap().objects.len(), 16);
+}
+
+#[tokio::test]
+async fn post_put_head_get_403_503_are_ambiguous_but_direct_rejection_is_definite() {
+    let mut observed = Vec::new();
+    for fault in [
+        Fault::Head403AfterPut,
+        Fault::Head503AfterPut,
+        Fault::Get403AfterPut,
+        Fault::Get503AfterPut,
+    ] {
+        let peer = Peer::new();
+        peer.state.lock().unwrap().fault = fault;
+        let result = store(&peer, Limits::default())
+            .publish(record(b"uncertain-stored"))
+            .await;
+        assert_eq!(peer.state.lock().unwrap().objects.len(), 1);
+        observed.push(result);
+    }
+    assert_eq!(observed, vec![Err(Error::Ambiguous); 4]);
+    let peer = Peer::new();
+    peer.state.lock().unwrap().fault = Fault::RejectPut403;
+    assert_eq!(
+        store(&peer, Limits::default())
+            .publish(record(b"rejected"))
+            .await,
+        Err(Error::Status(403))
+    );
+    assert!(peer.state.lock().unwrap().objects.is_empty());
+}
+#[tokio::test]
+async fn delayed_peer_allows_sixteen_downloads_with_two_cpu_workers() {
+    let peer = Peer::new();
+    let store = Arc::new(store(&peer, Limits::default()));
+    let r = record(b"download-budget");
+    let id = r.envelope.identity.clone();
+    store.publish(r).await.unwrap();
+    peer.state.lock().unwrap().fault = Fault::DelayedGet;
+    let mut jobs = tokio::task::JoinSet::new();
+    let start = std::time::Instant::now();
+    for _ in 0..16 {
+        let store = store.clone();
+        let id = id.clone();
+        jobs.spawn(async move { store.load(&id).await });
+    }
+    while let Some(result) = jobs.join_next().await {
+        assert_eq!(&*result.unwrap().unwrap().bytes, b"download-budget");
+    }
+    let state = peer.state.lock().unwrap();
+    assert!(
+        state.max_get_inflight > 2,
+        "network must not be limited by cpu: {}",
+        state.max_get_inflight
+    );
+    assert!(state.max_get_inflight <= 16, "bounded download admission");
+    eprintln!(
+        "16 loads, cpu2, 50ms GET: elapsed={:?} peak_downloads={}",
+        start.elapsed(),
+        state.max_get_inflight
+    );
+}
+
+#[tokio::test]
+async fn ordinary_loads_succeed_during_coherent_credential_rotation() {
+    let peer = Peer::new();
+    let credentials =
+        RefreshableCredentials::new(Credentials::new("server2-local", "server2-local-secret"));
+    let transport = HttpS3Transport::with_credentials(
+        &peer.endpoint,
+        "records",
+        "us-east-1",
+        credentials.clone(),
+    )
+    .unwrap();
+    let store = Arc::new(RawRecordStore::new(transport, Limits::default()).unwrap());
+    let r = record(b"rotating-loads");
+    let id = r.envelope.identity.clone();
+    store.publish(r).await.unwrap();
+    let rotator = tokio::spawn(async move {
+        for i in 0..4000 {
+            credentials
+                .replace(Credentials::new(
+                    if i % 2 == 0 {
+                        "server2-local"
+                    } else {
+                        "server2-local-rotated"
+                    },
+                    "server2-local-secret",
+                ))
+                .await
+                .unwrap();
+        }
+    });
+    for _ in 0..8 {
+        let mut jobs = tokio::task::JoinSet::new();
+        for _ in 0..16 {
+            let s = store.clone();
+            let id = id.clone();
+            jobs.spawn(async move { s.load(&id).await });
+        }
+        while let Some(result) = jobs.join_next().await {
+            assert_eq!(&*result.unwrap().unwrap().bytes, b"rotating-loads");
+        }
+    }
+    rotator.await.unwrap();
+    assert_eq!(peer.state.lock().unwrap().objects.len(), 1);
 }

@@ -1,12 +1,8 @@
 use super::{Error, Object, ObjectTransport, PreparedRecord};
 use reqwest::{Client, Method, redirect::Policy};
 use rusty_s3::{Bucket, Credentials, S3Action, UrlStyle};
-use std::{
-    collections::BTreeMap,
-    net::IpAddr,
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+use std::{collections::BTreeMap, net::IpAddr, sync::Arc, time::Duration};
+use tokio::{sync::RwLock, time::timeout};
 /// Caller-managed credential handle. No discovery, refresh task, Debug or credential diagnostics.
 /// Replace before expiry; each request uses one coherent snapshot. In-flight requests retain it.
 #[derive(Clone)]
@@ -15,12 +11,19 @@ impl RefreshableCredentials {
     pub fn new(credentials: Credentials) -> Self {
         Self(Arc::new(RwLock::new(credentials)))
     }
-    pub fn replace(&self, credentials: Credentials) -> Result<(), Error> {
-        *self.0.try_write().map_err(|_| Error::Transport)? = credentials;
+    /// Async wait is bounded; callers must await replacement before relying on new credentials.
+    pub async fn replace(&self, credentials: Credentials) -> Result<(), Error> {
+        let mut held = timeout(Duration::from_secs(3), self.0.write())
+            .await
+            .map_err(|_| Error::Timeout)?;
+        *held = credentials;
         Ok(())
     }
-    fn snapshot(&self) -> Result<Credentials, Error> {
-        Ok(self.0.try_read().map_err(|_| Error::Transport)?.clone())
+    async fn snapshot(&self) -> Result<Credentials, Error> {
+        let held = timeout(Duration::from_secs(3), self.0.read())
+            .await
+            .map_err(|_| Error::Timeout)?;
+        Ok(held.clone())
     }
 }
 /// SigV4 HTTP adapter. Credentials are supplied/refreshed by the caller; never discovered here.
@@ -141,7 +144,7 @@ impl HttpS3Transport {
         Ok((metadata, length))
     }
     async fn read(&self, key: &str, head: bool, maximum: usize) -> Result<Object, Error> {
-        let credentials = self.credentials.snapshot()?;
+        let credentials = self.credentials.snapshot().await?;
         let url = if head {
             self.bucket
                 .head_object(Some(&credentials), key)
@@ -186,7 +189,7 @@ impl HttpS3Transport {
 }
 impl ObjectTransport for HttpS3Transport {
     async fn put(&self, record: &PreparedRecord) -> Result<u16, Error> {
-        let credentials = self.credentials.snapshot()?;
+        let credentials = self.credentials.snapshot().await?;
         let mut action = self.bucket.put_object(Some(&credentials), &record.key);
         action.headers_mut().insert("if-none-match", "*");
         action
@@ -222,5 +225,60 @@ impl ObjectTransport for HttpS3Transport {
     }
     async fn get(&self, key: &str, maximum: usize) -> Result<Object, Error> {
         self.read(key, false, maximum).await
+    }
+}
+
+#[cfg(test)]
+mod credential_review_regressions {
+    use super::*;
+    #[tokio::test]
+    async fn snapshot_waits_for_coherent_rotation() {
+        let credentials =
+            RefreshableCredentials::new(Credentials::new("server2-local", "server2-local-secret"));
+        let held = credentials.0.clone().write_owned().await;
+        let c = credentials.clone();
+        let task = tokio::spawn(async move { c.snapshot().await });
+        tokio::time::sleep(Duration::from_millis(40)).await;
+        assert!(
+            !task.is_finished(),
+            "snapshot must yield while coherent rotation owns lock"
+        );
+        drop(held);
+        let result = task.await.unwrap();
+        assert!(
+            result.is_ok(),
+            "ordinary snapshot must wait for coherent replacement, not reject contention"
+        );
+    }
+    #[tokio::test]
+    async fn credential_wait_obeys_caller_deadline_without_blocking_worker() {
+        let credentials =
+            RefreshableCredentials::new(Credentials::new("server2-local", "server2-local-secret"));
+        let held = credentials.0.clone().write_owned().await;
+        assert!(
+            timeout(Duration::from_millis(20), credentials.snapshot())
+                .await
+                .is_err()
+        );
+        assert!(
+            timeout(
+                Duration::from_millis(20),
+                credentials.replace(Credentials::new(
+                    "server2-local-rotated",
+                    "server2-local-secret"
+                ))
+            )
+            .await
+            .is_err()
+        );
+        drop(held);
+        assert!(credentials.snapshot().await.is_ok());
+        credentials
+            .replace(Credentials::new(
+                "server2-local-rotated",
+                "server2-local-secret",
+            ))
+            .await
+            .unwrap();
     }
 }

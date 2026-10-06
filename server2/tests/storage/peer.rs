@@ -19,6 +19,12 @@ pub enum Fault {
     DropAfterPut,
     ErrorAfterPut,
     ErrorBeforePut,
+    Head403AfterPut,
+    Head503AfterPut,
+    Get403AfterPut,
+    Get503AfterPut,
+    RejectPut403,
+    DelayedGet,
     ConflictBeforePut,
     ConflictExisting,
     WrongHead,
@@ -30,6 +36,8 @@ pub struct PeerState {
     pub calls: Vec<(String, String)>,
     pub fault: Fault,
     pub credential_ids: Vec<String>,
+    pub get_inflight: usize,
+    pub max_get_inflight: usize,
 }
 pub struct Peer {
     pub endpoint: String,
@@ -173,6 +181,11 @@ fn serve(mut stream: TcpStream, state: Arc<Mutex<PeerState>>) {
             respond(&mut stream, 400, BTreeMap::new(), b"", false);
             return;
         }
+        if matches!(fault, Fault::RejectPut403) {
+            drop(s);
+            respond(&mut stream, 403, BTreeMap::new(), b"", false);
+            return;
+        }
         if s.objects.contains_key(&key) {
             drop(s);
             respond(
@@ -214,7 +227,14 @@ fn serve(mut stream: TcpStream, state: Arc<Mutex<PeerState>>) {
         }
         respond(
             &mut stream,
-            if matches!(fault, Fault::ErrorAfterPut) {
+            if matches!(
+                fault,
+                Fault::ErrorAfterPut
+                    | Fault::Head403AfterPut
+                    | Fault::Head503AfterPut
+                    | Fault::Get403AfterPut
+                    | Fault::Get503AfterPut
+            ) {
                 500
             } else {
                 200
@@ -225,17 +245,38 @@ fn serve(mut stream: TcpStream, state: Arc<Mutex<PeerState>>) {
         );
         return;
     }
+    let failure = match (method.as_str(), fault) {
+        ("HEAD", Fault::Head403AfterPut) | ("GET", Fault::Get403AfterPut) => Some(403),
+        ("HEAD", Fault::Head503AfterPut) | ("GET", Fault::Get503AfterPut) => Some(503),
+        _ => None,
+    };
+    if let Some(status) = failure {
+        drop(s);
+        respond(&mut stream, status, BTreeMap::new(), b"", false);
+        return;
+    }
+    let delayed = method == "GET" && matches!(fault, Fault::DelayedGet);
+    if delayed {
+        s.get_inflight += 1;
+        s.max_get_inflight = s.max_get_inflight.max(s.get_inflight);
+    }
     let Some((mut metadata, body)) = s.objects.get(&key).cloned() else {
         drop(s);
         respond(&mut stream, 404, BTreeMap::new(), b"", false);
         return;
     };
     drop(s);
+    if delayed {
+        thread::sleep(Duration::from_millis(50));
+    }
     if method == "HEAD" && matches!(fault, Fault::WrongHead) {
         metadata.insert("x-amz-meta-s2-record".into(), "corrupt".into());
     }
     metadata.insert("content-type".into(), "application/gzip".into());
     respond(&mut stream, 200, metadata, &body, method == "HEAD");
+    if delayed {
+        state.lock().unwrap().get_inflight -= 1;
+    }
 }
 fn respond(
     stream: &mut TcpStream,

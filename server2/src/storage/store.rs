@@ -1,7 +1,7 @@
 use super::{Error, Limits, Object, PreparedRecord, RawRecord, RecordId, decode};
 use std::{future::Future, sync::Arc};
 use tokio::{
-    sync::{OwnedSemaphorePermit, Semaphore},
+    sync::Semaphore,
     time::{Instant, timeout_at},
 };
 /// Implementations must return bounded bodies, disable hidden retries and redact URLs/errors.
@@ -20,6 +20,7 @@ pub struct RawRecordStore<T> {
     limits: Limits,
     io: Arc<Semaphore>,
     cpu: Arc<Semaphore>,
+    buffers: Arc<Semaphore>,
 }
 impl<T: ObjectTransport> RawRecordStore<T> {
     pub fn new(transport: T, limits: Limits) -> Result<Self, Error> {
@@ -27,6 +28,7 @@ impl<T: ObjectTransport> RawRecordStore<T> {
         Ok(Self {
             transport: Arc::new(transport),
             io: Arc::new(Semaphore::new(limits.io)),
+            buffers: Arc::new(Semaphore::new(limits.io)),
             cpu: Arc::new(Semaphore::new(limits.cpu)),
             limits,
         })
@@ -55,9 +57,9 @@ impl<T: ObjectTransport> RawRecordStore<T> {
         expected: &RecordId,
         head: Option<Object>,
     ) -> Result<RawRecord, Error> {
-        // Wait before fetching: at most `io` admitted operations wait for `cpu` workers.
-        let permit: OwnedSemaphorePermit = self
-            .cpu
+        // A bounded buffer slot spans GET, CPU wait and decode (including cancellation).
+        let buffer = self
+            .buffers
             .clone()
             .acquire_owned()
             .await
@@ -71,12 +73,25 @@ impl<T: ObjectTransport> RawRecordStore<T> {
         let key = key.to_owned();
         let expected = expected.clone();
         let limits = self.limits.clone();
+        let permit = self
+            .cpu
+            .clone()
+            .acquire_owned()
+            .await
+            .map_err(|_| Error::Transport)?;
         tokio::task::spawn_blocking(move || {
+            let _buffer = buffer;
             let _permit = permit;
             decode(&key, object, &expected, &limits)
         })
         .await
         .map_err(|_| Error::Transport)?
+    }
+    fn reconciliation_error(error: Error) -> Error {
+        match error {
+            Error::Corrupt(_) | Error::Invalid(_) => error,
+            _ => Error::Ambiguous,
+        }
     }
     /// Success only acknowledges immutable body durability, never catalog/client publication.
     pub async fn publish(&self, record: RawRecord) -> Result<PublishOutcome, Error> {
@@ -112,13 +127,7 @@ impl<T: ObjectTransport> RawRecordStore<T> {
                             let restored = self
                                 .verified(&prepared.key, &expected.identity, Some(head))
                                 .await
-                                .map_err(|e| match e {
-                                    Error::Timeout
-                                    | Error::Transport
-                                    | Error::Capacity
-                                    | Error::NotFound => Error::Ambiguous,
-                                    other => other,
-                                })?;
+                                .map_err(Self::reconciliation_error)?;
                             if restored.envelope != expected {
                                 return Err(Error::Corrupt("existing envelope"));
                             }
@@ -126,10 +135,7 @@ impl<T: ObjectTransport> RawRecordStore<T> {
                         }
                         Err(Error::NotFound) if attempt == 0 => (),
                         Err(Error::NotFound) => return Err(Error::Ambiguous),
-                        Err(Error::Timeout | Error::Transport | Error::Capacity) => {
-                            return Err(Error::Ambiguous);
-                        }
-                        Err(e) => return Err(e),
+                        Err(e) => return Err(Self::reconciliation_error(e)),
                     },
                     Ok(status) => return Err(Error::Status(status)),
                     Err(e) => return Err(e),
@@ -217,7 +223,7 @@ mod review_regressions {
         .unwrap()
     }
     #[tokio::test]
-    async fn reconciliation_waits_before_get_under_cpu_contention() {
+    async fn reconciliation_waits_for_decode_under_cpu_contention() {
         for status in [412, 500, 0] {
             let store = Arc::new(
                 RawRecordStore::new(
@@ -243,8 +249,13 @@ mod review_regressions {
             tokio::time::sleep(std::time::Duration::from_millis(30)).await;
             assert_eq!(
                 store.transport.gets.load(Ordering::SeqCst),
-                0,
-                "GET must wait for bounded CPU admission"
+                1,
+                "bounded download buffer permits GET while CPU is busy"
+            );
+            assert_eq!(
+                store.buffers.available_permits(),
+                store.limits.io - 1,
+                "buffer remains reserved while waiting for CPU"
             );
             assert!(
                 !task.is_finished(),
@@ -283,7 +294,12 @@ mod review_regressions {
             store.transport.object.lock().unwrap().is_some(),
             "body remains committed"
         );
-        assert_eq!(store.transport.gets.load(Ordering::SeqCst), 0);
+        assert_eq!(store.transport.gets.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            store.buffers.available_permits(),
+            store.limits.io,
+            "timed-out waiter releases downloaded buffer"
+        );
         drop(held);
     }
     #[tokio::test]
