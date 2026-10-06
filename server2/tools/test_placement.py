@@ -110,6 +110,79 @@ class PlacementTests(unittest.TestCase):
         self.assertEqual([], self.errors())
         self.write('server2/tools/test_placement.py', 'open("../client/data.txt")')
         self.assertTrue(self.errors())
+
+    def compiler_fixture_assets(self):
+        self.write('client/data.txt','outside boundary')
+        self.write('server/config.js','outside boundary')
+        self.write('client/module.rs','pub fn outside() -> &\'static str { "outside boundary" }')
+        self.write('server2/config/owned.txt','owned')
+        self.write('server2/config/module.rs','pub fn outside() -> &\'static str { "owned" }')
+        self.commit();self.base=self.git('rev-parse','HEAD').strip()
+    def compile_fixture(self,source,expected='outside boundary'):
+        self.write('server2/src/lib.rs','pub fn fixture() {}')
+        self.write('server2/src/main.rs',source)
+        binary=self.root/'fixture-executable'
+        try:
+            built=subprocess.run(['rustc','+1.99.0','--edition=2024',str(self.root/'server2/src/main.rs'),'-o',str(binary)],capture_output=True,text=True,timeout=20)
+            self.assertEqual(0,built.returncode,built.stderr)
+            ran=subprocess.run([str(binary)],cwd=self.root/'server2',capture_output=True,text=True,timeout=5)
+            self.assertEqual(0,ran.returncode,ran.stderr)
+            self.assertEqual(expected,ran.stdout.strip())
+            print('compiled fixture -> '+ran.stdout.strip())
+        finally:
+            if binary.exists():binary.unlink()
+    def test_compiler_macro_delimiters_and_comment_separators(self):
+        self.compiler_fixture_assets()
+        for name in ['include_str','include_bytes','include']:
+            for left,right in [('(',')'),('[',']'),('{','}')]:
+                for comments in [False,True]:
+                    with self.subTest(name=name,left=left,comments=comments):
+                        prefix=name+(' /* name separator */ ! /* argument separator */ ' if comments else '!')
+                        path='../../client/module.rs' if name=='include' else '../../client/data.txt'
+                        expression=prefix+left+'"'+path+'"'+right
+                        if name=='include':source=expression+('' if left=='{' else ';')+' fn main(){println!("{}",outside());}'
+                        elif name=='include_bytes':source='fn main(){println!("{}",String::from_utf8_lossy('+expression+'));}'
+                        else:source='fn main(){println!("{}",'+expression+');}'
+                        self.compile_fixture(source);self.assertTrue(self.errors(),source)
+    def test_nested_path_attributes_and_owned_compiler_controls(self):
+        self.compiler_fixture_assets()
+        for attr in ['#[path="../../client/module.rs"]',
+                     '#[cfg_attr(all(), path="../../client/module.rs")]',
+                     '#[cfg_attr(all(), cfg_attr(all(), path /* separator */ = "../../client/module.rs"))]']:
+            with self.subTest(attr=attr):
+                self.compile_fixture(attr+' mod outside; fn main(){println!("{}",outside::outside());}')
+                self.assertTrue(self.errors(),attr)
+        for left,right in [('(',')'),('[',']'),('{','}')]:
+            source='fn main(){println!("{}",include_str /* gap */ ! '+left+'r#"../config/owned.txt"#'+right+');}'
+            self.compile_fixture(source,'owned');self.assertEqual([],self.errors(),source)
+        source='#[cfg_attr(all(), cfg_attr(all(), path="../config/module.rs"))] mod owned; fn main(){println!("{}",owned::outside());}'
+        self.compile_fixture(source,'owned');self.assertEqual([],self.errors())
+    def test_path_constructor_and_command_legacy_guard_regressions(self):
+        self.compiler_fixture_assets()
+        for expression in ['std::path::Path::new("../client/data.txt")',
+                           'std::path::PathBuf::from(r#"../client/data.txt"#)']:
+            with self.subTest(expression=expression):
+                source='fn main(){println!("{}",std::fs::read_to_string('+expression+').unwrap());}'
+                self.compile_fixture(source);self.assertTrue(self.errors(),source)
+        source='fn main(){let out=std::process::Command::new("cat").arg("../server/config.js").output().unwrap();println!("{}",String::from_utf8_lossy(&out.stdout));}'
+        with self.subTest(command=True):
+            self.compile_fixture(source);self.assertTrue(self.errors(),source)
+        self.write('server2/src/main.rs','fn main(){let _=std::path::Path::new("config/owned.txt");}')
+        self.assertEqual([],self.errors())
+    def test_inert_compiler_syntax_and_comments_are_not_resource_invocations(self):
+        self.write('server2/src/lib.rs', '// include_str!("../../client/x");\nconst S: &str = r#"include_str!{unknown} cfg_attr(path=unknown)"#;')
+        self.assertEqual([],self.errors())
+    def test_extensionless_executable_shebang_and_shell_extensions(self):
+        for path,body,executable in [('server2/deploy/start','#!/bin/sh\ncat ../server/config.js',False),
+                                     ('server2/deploy/run','cat ../server/config.js',True),
+                                     ('server2/deploy/start.bash','cat ../server/config.js',False),
+                                     ('server2/deploy/start.zsh','cat ../server/config.js',False)]:
+            with self.subTest(path=path):
+                self.write(path,body)
+                if executable:(self.root/path).chmod(0o755);self.git('add',path)
+                self.assertTrue(self.errors());(self.root/path).unlink()
+                if executable:self.git('reset','-q','--',path)
+
     def test_valid_task_declaration_identity_is_not_a_runtime_resource(self):
         path='server2/config/tasks/S02.json'
         self.write(path,json.dumps(self.d));self.assertEqual([],self.errors())

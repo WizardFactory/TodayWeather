@@ -36,3 +36,10 @@ partial-header drain. Regenerate actual usage manual/PDF and re-review new head.
 Root S04-A4 (R3): future S02 declaration metadata naming its allowed legacy recorder
 must pass. Validate every task declaration, exempt only valid outside.path identities,
 and retain failures for invalid/blanket declarations and runtime config resources.
+
+Actual r2 selects R9/R10/R11: compile harmless outside include/path-module/Path/Command
+fixtures, then assert placement rejection; run against exact65ecc5e checker for Red.
+Use comment/string-aware bounded Rust tokens, all macro delimiters/nested path
+attributes and retained Rust-wide legacy guard. Audit executable/shebang scripts.
+Preserve owned controls and all previous fixes; full CI, distinct smoke/manual QA
+and exact new-head review remain required.

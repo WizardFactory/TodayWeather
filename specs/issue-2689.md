@@ -48,3 +48,14 @@
   and exits cleanly within the5s+1s bound. Unexpected startup/serve/runtime errors
   remain failures. Socket cap, elapsed slow-header bounds, forced partial-header
   shutdown and exhausted admission503 are automated regression scenarios.
+
+- Compiler resource checks cover all (), [], {} include macro delimiters and path
+  attributes within nested cfg_attr, including whitespace/comment separators.
+  Unsupported direct compiler resource arguments fail closed. A comment/string-aware
+  token scan keeps inert quoted syntax separate from compiler invocations.
+- All parsed Rust string literals retain the legacy outside-path guard. Direct Path
+  and PathBuf constructors are checked as runtime paths; direct Command arguments
+  carrying legacy/client paths are rejected. Encoded path-like literals are rejected
+  conservatively. Computed/aliased/macro-generated runtime access remains manual.
+- Extensionless executable/shebang scripts and .bash/.zsh assets are also checked;
+  non-text executables are not interpreted as script source.

@@ -36,3 +36,8 @@ parity are deferred to S02; this foundation does not establish client API parity
 The placement gate checks supported direct literals, with conservative rejection of
 encoded Rust resource strings. Computed/aliased access and custom loaders require
 manual review. It is a review aid, not an adversarial filesystem sandbox.
+
+Compiler resource checks use comment/string-aware tokens for all include macro
+delimiters and nested cfg_attr paths. Rust-wide static legacy references and direct
+Path/PathBuf paths remain guarded. Executable/shebang and .bash/.zsh scripts are
+also checked; compiled fixture tests require the pinned Rust toolchain on PATH.

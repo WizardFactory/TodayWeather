@@ -78,28 +78,29 @@ python3 tools/check_placement.py --root .. --declaration config/tasks/S04.json -
 python3 tools/test_placement.py
 ```
 
-The checker audits the full tracked server2 snapshot, Cargo local paths, literal
-Rust compiler resources/path attributes and direct read/read_to_string/read_dir/open/create strings,
-symlinks and both rename endpoints. Plain and matched-hash raw Rust strings are checked;
-borrowed/parenthesized runtime literals are included. Encoded, backslash-containing
-or continued direct resource strings are rejected
-conservatively. Python direct call literals (including decoded escapes), decoded
-JSON/TOML values and literal shell/service/config/deployment paths are also checked.
-Validated config/tasks/*.json outside.path identities and exact test_placement.py
-self.write/fixture_symlink data roles are exempt;
-invalid or blanket declarations, runtime config fields and executable open/subprocess
-calls in the fixture file still undergo checks. Shared workflow
-wiring allows checkout@v4, full history and one owned command, with a 30-minute timeout. It rejects root Cargo and
-undeclared outside implementation. Git/JSON/TOML failures are incomplete checks.
-Computed or aliased filesystem paths, custom loaders, macros and dynamically built
-commands require human review. These supported direct literal checks are a review
-aid, not an adversarial sandbox or proof of arbitrary program behavior. The CI entrypoint runs only on server2-related PRs and invokes
-server2-owned checks. Remote branch protection is not configured by this task.
+The gate scans full tracked server2 files, Cargo paths, symlinks and both rename
+ends. Rust checks cover include*/path/cfg_attr (all delimiters and comment separators)
+and direct read/read_to_string/read_dir/open/create/Path/PathBuf strings. Plain/raw and
+borrowed/parenthesized literals are supported; encoded or unsupported compiler
+arguments reject. Source-relative compiler paths are verified owned separately
+from runtime-CWD paths. Other Rust literals retain the legacy/sibling path guard,
+including Command arguments.
+
+Python executable-call AST, decoded JSON/TOML and shell/deploy paths are checked,
+including executable/shebang and .bash/.zsh scripts. Only validated task outside.path
+identities and exact test_placement.py self.write/fixture_symlink data roles are
+exempt; executable calls, runtime fields and invalid declarations still reject.
+Root Cargo and undeclared outside implementation reject. Git/JSON/TOML failures
+are incomplete checks. Binary executables, computed/aliased paths, custom loaders
+and macro-generated runtime access need human dependency/provenance review. These
+literal checks are a review aid, not an adversarial sandbox. Shared workflow permits checkout@v4/full history and one owned CI command, with a
+30-minute timeout. It runs only on server2-related PRs. Remote branch protection
+is not configured by this task.
 
 ## Actual usage capture
 
-This [usage capture](../evidence/tasks/server2-foundation/usage.png) comes from the
-release-process smoke on 2026-10-06; ports are ephemeral. The
-[manifest](../evidence/tasks/server2-foundation/manifest.json) records command,
-platform and the binary/capture hashes. This is local foundation evidence,
-not a deployed service, live provider result or complete client parity report.
+This [capture](../evidence/tasks/server2-foundation/usage.png) comes from the
+2026-10-06 release smoke on ephemeral ports. Its
+[manifest](../evidence/tasks/server2-foundation/manifest.json) records platform and
+binary/capture hashes. This is local foundation evidence; providers, deployment
+and full client parity were not exercised.

@@ -91,60 +91,112 @@ def audit_manifest(root, path, body):
     return errors
 
 
-def rust_literal(body, start):
-    """Bounded direct string scanner; encoded/continued strings fail conservatively."""
-    start += len(body[start:]) - len(body[start:].lstrip())
-    raw = re.match(r'r(#{0,255})"', body[start:])
-    if raw:
-        content = start + raw.end()
-        end = body.find('"' + raw[1], content)
-        if end < 0: return None
-        finish = end + 1 + len(raw[1])
-        value = body[content:end]
-    elif body[start:start + 1] == '"':
-        content = start + 1
-        end = content
-        while end < len(body):
-            if body[end] == '\\':
-                # Skip compiler escape before detecting closing quote, then reject it.
-                end += 2
-            elif body[end] == '"': break
-            else: end += 1
-        if end >= len(body): return None
-        finish = end + 1
-        value = body[content:end]
-    else: return None
-    if '\\' in value or '\n' in value or '\r' in value: return None
-    # Raw hash delimiter must match exactly; don't silently truncate malformed literals.
-    if body[finish:finish + 1] == '#': return None
-    return value, finish
+def rust_tokens(body):
+    """Small bounded lexer: mask comments/strings, retaining direct string identities.
+
+    This is not a Rust semantic analyzer. Unknown computed/aliased runtime paths
+    need manual review; unsupported direct compiler resource arguments fail closed.
+    """
+    masked = list(body); literals = {}; errors = []; i = 0
+    def hide(start, end, literal=False):
+        for pos in range(start, end): masked[pos] = ' '
+        if literal: masked[start] = '@'
+    while i < len(body):
+        if body.startswith('//', i):
+            end = body.find('\n', i)
+            end = len(body) if end < 0 else end
+            hide(i, end); i = end; continue
+        if body.startswith('/*', i):
+            start = i; i += 2; depth = 1
+            while i < len(body) and depth:
+                if body.startswith('/*', i): depth += 1; i += 2
+                elif body.startswith('*/', i): depth -= 1; i += 2
+                else: i += 1
+            if depth: errors.append('unterminated Rust comment')
+            hide(start, i); continue
+        # Character literals cannot be filesystem paths; leave lifetimes unmasked.
+        char = re.match(r"'(?:\\.|[^'\\\n])'", body[i:]) if body[i] == "'" else None
+        if char:
+            hide(i, i + char.end()); i += char.end(); continue
+        raw = re.match(r'r(#{0,255})"', body[i:])
+        if raw:
+            start = i; content = i + raw.end(); end = body.find('"' + raw[1], content)
+            if end < 0:
+                errors.append('unterminated Rust raw string'); hide(start,len(body)); break
+            finish = end + 1 + len(raw[1]); value = body[content:end]
+            malformed = body[finish:finish + 1] == '#'
+        elif body[i] == '"':
+            start = i; content = i + 1; end = content
+            while end < len(body):
+                if body[end] == '\\': end += 2
+                elif body[end] == '"': break
+                else: end += 1
+            if end >= len(body):
+                errors.append('unterminated Rust string'); hide(start,len(body)); break
+            finish = end + 1; value = body[content:end]; malformed = False
+        else:
+            i += 1; continue
+        literals[start] = dict(value=value, end=finish,
+                               encoded=('\\' in value or '\n' in value or '\r' in value or malformed))
+        hide(start,finish,True); i = finish
+    return ''.join(masked), literals, errors
+
+
+def direct_literal(masked, literals, start, wrappers=False):
+    while start < len(masked) and (masked[start].isspace() or (wrappers and masked[start] in '&(')):
+        start += 1
+    return literals.get(start)
 
 
 def audit_source(root, path, body):
-    errors = []
-    compiler = r'(?:include|include_bytes|include_str)!\s*\(\s*|#\s*\[\s*path\s*=\s*'
-    for m in re.finditer(compiler, body):
-        parsed = rust_literal(body, m.end())
-        if parsed is None:
-            errors.append(f'{path}: unsupported/encoded compiler resource argument')
-        elif not inside(root, root / path, parsed[0]):
-            errors.append(f'{path}: resource/include escape: {parsed[0]}')
-    runtime = r'(?:read|read_to_string|read_dir|open|create)\s*\(\s*'
-    for m in re.finditer(runtime, body):
+    masked, literals, lexical = rust_tokens(body)
+    errors = [f'{path}: incomplete Rust literal check: {error}' for error in lexical]
+    # All valid Rust macro delimiters and comment separators are recognized.
+    for m in re.finditer(r'\b(?:include|include_bytes|include_str)\s*!\s*', masked):
         start = m.end()
-        # Borrowed/parenthesized literals remain static paths, not computed access.
-        while start < len(body) and body[start] in '&( \t\r\n': start += 1
-        arg = body[start:]
-        # Computed/aliased runtime calls need manual review. Direct strings cannot skip.
-        if arg.startswith(('/*', '//')):
-            errors.append(f'{path}: commented runtime filesystem argument requires a direct owned literal')
-            continue
-        if not re.match(r'(?:"|r#*")', arg): continue
-        parsed = rust_literal(body, start)
-        if parsed is None:
+        parsed = direct_literal(masked,literals,start + 1) if masked[start:start + 1] in '([{' and start < len(masked) else None
+        if parsed is None or parsed['encoded']:
+            errors.append(f'{path}: unsupported/encoded compiler resource argument')
+        elif not inside(root, root / path, parsed['value']):
+            errors.append(f'{path}: resource/include escape: {parsed["value"]}')
+        else: parsed['compiler_owned'] = True
+    # Bare path and nested cfg_attr attributes; string contents/comments are masked.
+    for m in re.finditer(r'#\s*!?\s*\[',masked):
+        start=m.end();end=start;depth=1
+        while end<len(masked) and depth:
+            if masked[end]=='[':depth+=1
+            elif masked[end]==']':depth-=1
+            end+=1
+        attribute=masked[start:end-1]
+        if not re.match(r'\s*(?:r#)?(?:path\s*=|cfg_attr\s*\()',attribute):continue
+        for found in re.finditer(r'\bpath\s*=\s*',attribute):
+            parsed=direct_literal(masked,literals,start+found.end())
+            if parsed is None or parsed['encoded']:
+                errors.append(f'{path}: unsupported/encoded compiler resource argument')
+            elif not inside(root,root/path,parsed['value']):
+                errors.append(f'{path}: resource/include escape: {parsed["value"]}')
+            else: parsed['compiler_owned'] = True
+    runtime = r'\b(?:read|read_to_string|read_dir|open|create)\s*\(|\b(?:Path|PathBuf)\s*::\s*(?:new|from)\s*\('
+    for m in re.finditer(runtime,masked):
+        parsed=direct_literal(masked,literals,m.end(),wrappers=True)
+        if parsed is None:continue  # Computed/aliased calls are explicitly manual review.
+        value=parsed['value']
+        if parsed['encoded']:
             errors.append(f'{path}: unsupported/encoded runtime filesystem argument')
-        elif '..' in PurePosixPath(parsed[0]).parts or not inside(root, root / 'server2' / 'runtime', parsed[0]):
-            errors.append(f'{path}: runtime filesystem escape: {parsed[0]}')
+        elif '..' in PurePosixPath(value).parts or not inside(root,root/'server2'/'runtime',value):
+            errors.append(f'{path}: runtime filesystem escape: {value}')
+    # Preserve the previous Rust-wide legacy reference rule, plus sibling assets.
+    # Path constructors and command arguments cannot silently weaken that boundary.
+    for token in literals.values():
+        # Compiler paths are relative to source and already verified owned; e.g.
+        # ../config is valid there and is not a runtime-CWD parent traversal.
+        if token.get('compiler_owned'): continue
+        value=token['value']
+        path_like='/' in value or re.search(r'\\(?:x(?:2[fFeE]|5[cC])|u\{0*(?:2[fFeE]|5[cC])\})',value)
+        if token['encoded'] and path_like:
+            errors.append(f'{path}: encoded path-like Rust literal requires owned plain/raw path')
+        elif external_literal(value) or re.search(r'(?:^|/)server/',value):
+            errors.append(f'{path}: legacy/external resource reference')
     return errors
 
 
@@ -162,7 +214,7 @@ def audit_nonrust(path, body):
     Computed paths, aliases, custom loaders and macros require manual review.
     """
     values = []
-    if path.endswith('.py'):
+    if path.endswith('.py') or (body.startswith('#!') and 'python' in body.splitlines()[0]):
         try: tree = ast.parse(body)
         except SyntaxError as e: return [f'{path}: incomplete Python path check: {e}']
         for node in ast.walk(tree):
@@ -237,8 +289,17 @@ def check(root, declaration, base):
         if file.is_symlink() or modes.get(path) == '120000':
             if not inside(root, file, str(file.readlink())): errors.append(f'{path}: symlink escape')
             continue
-        if file.suffix in ('.rs', '.toml', '.sh', '.py', '.json', '.service', '.conf', '.yaml', '.yml') or file.name in ('Dockerfile', '.env'):
-            body = file.read_text()
+        source = file.suffix in ('.rs', '.toml', '.sh', '.bash', '.zsh', '.py', '.json', '.service', '.conf', '.yaml', '.yml') or file.name in ('Dockerfile', '.env')
+        raw_body = file.read_bytes()
+        executable = modes.get(path) == '100755' or bool(file.stat().st_mode & 0o111) or raw_body.startswith(b'#!')
+        if source or executable:
+            try: body = raw_body.decode('utf-8')
+            except UnicodeDecodeError:
+                if source: errors.append(f'{path}: incomplete non-UTF8 source path check')
+                continue  # Binary executables need human dependency/provenance review.
+            if '\0' in body:
+                if source: errors.append(f'{path}: incomplete binary source path check')
+                continue
             if file.name == 'Cargo.toml' or path.startswith('server2/.cargo/'):
                 errors.extend(audit_manifest(root, path, body))
             if file.suffix == '.rs': errors.extend(audit_source(root, path, body))
