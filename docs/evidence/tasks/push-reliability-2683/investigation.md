@@ -105,12 +105,13 @@ stage was slow on the deployed revision. No blanket weather-timeout increase.
 
 Later S3 readback is recorded in [verification](verification.md#read-only-s3-batch-readback--2026-10-06-utc): two later campaigns contain 47 preparation-reason expiries. The earlier issue observation is not a statement about every October6 campaign.
 
-Live read-only SSH probe could not proceed: the configured key is absent and host
-trust unavailable. No bypass of host validation was used. Current deployed file
-hashes, process start/version, nginx upstream timings and campaign/S3 readback could
-not be refreshed here; supporting unpublished operations records are not in this
-checkout. Existing issue evidence is sufficient for the confirmed code fix, but not
-for origin root cause or current batch completeness.
+During the initial pre-merge investigation on 2026-10-06 UTC, the configured SSH
+key was absent, so the host probe could not proceed. Supporting unpublished
+operations records were not in this checkout. Later S3 reads and authorized SSH
+access refreshed campaign evidence, push file hashes and coordinator status; see
+the dated follow-up below. Origin timings remain unverified. Existing evidence
+supports the confirmed code fix without establishing origin root cause or batch
+completeness.
 
 After separately authorized access, correlate a bounded campaign window using
 sanitized counts: coordinator prepared/transport attempts, nginx499/request_time/
@@ -150,8 +151,8 @@ error log is empty. Invalid S3 job results omit the original FCM reason and capt
 generation. Some deployed file timestamps are epoch values, so they cannot prove
 deployment chronology. These limitations prevent exact historical attribution.
 
-At03:16:45UTC, read-only S3 correlation covered82 registration objects,102
-delivery-state partitions and all719 retained campaign manifests/parts. Eighteen
+At 03:16:45 UTC, read-only S3 correlation covered 82 registration objects, matching
+delivery state and all 719 retained campaign manifests/parts. Eighteen
 non-superseded iOS registrations yield the following device-level observations:
 
 - Five enabled devices have a current-generation fence and at least one retained
