@@ -175,3 +175,25 @@ fn rejects_exact_limit_plus_one_bytes() {
     };
     assert!(decode(&p.key, object(&p), &r.envelope.identity, &limits).is_err());
 }
+#[test]
+fn valid_gzip_with_same_prefix_raw_hash_but_wrong_full_identity_is_rejected() {
+    let a = record(br#"{"value":37626}"#);
+    let b = record(br#"{"value":59662}"#);
+    assert_eq!(
+        &a.envelope.identity.raw_sha256[..8],
+        &b.envelope.identity.raw_sha256[..8]
+    );
+    assert_eq!(a.bytes.len(), b.bytes.len());
+    let pa = a.prepare(&Limits::default()).unwrap();
+    let pb = b.prepare(&Limits::default()).unwrap();
+    let mut tampered = object(&pa);
+    tampered.body = pb.body;
+    tampered.length = tampered.body.len();
+    tampered
+        .metadata
+        .insert("s2-gzip-sha256".into(), sha256(&tampered.body));
+    assert!(matches!(
+        decode(&pa.key, tampered, &a.envelope.identity, &Limits::default()),
+        Err(Error::Corrupt("raw/member limit/hash"))
+    ));
+}
