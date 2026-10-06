@@ -210,7 +210,9 @@ S3 preconditions: [AWS conditional writes](https://docs.aws.amazon.com/AmazonS3/
 ## Transport recovery — #2683
 
 After `transport-timeout-ambiguous` or `transport-ambiguous`, the project's new
-admissions wait 30s. Queued/active warnings take preference for this one recovery admission; normal
+admissions wait 30s. Ready, unexpired, guard-valid warnings for this project take preference when warning
+capacity is available. Unrelated projects, preparation-retry waits and already
+submitted or logically finished warnings cannot reserve this recovery gate; normal
 fairness resumes after recovery. One fresh eligible job can then act as a probe under the same
 rate, lane, cooldown, deadline and registration guards; no synthetic or duplicate
 notification is sent. An accepted probe restores normal admission when no ambiguous
@@ -221,7 +223,15 @@ bounded probe still needs available capacity. Exhaustion reports `recovery-exhau
 and fails new jobs with `project-paused` until all unresolved sends settle or an
 operator performs an approved recovery. Late original outcomes cannot overwrite the
 original ambiguous result. A late 401/403 still pauses authentication and a late 429
-still extends cooldown. Authentication pause never auto-recovers.
+still extends cooldown. Repeated ambiguity of the same original request cannot erase
+a successful probe’s proof. Authentication pause never auto-recovers.
+
+Connection failures, including pre-connect refusal, conservatively enter the same
+ambiguity gate after request close. This can add a 30s pause even when no bytes reached
+FCM. With the default 15s HTTP abort, closed requests no longer count as unresolved
+and the probe counter resets. A sustained settling outage can therefore admit one
+fresh eligible probe every 30s; the two-probe exhaustion limit applies while physical
+requests remain unresolved, not to the total number of probes across an outage.
 
 After separate approval, deploy the reviewed revision to the existing single
 coordinator only: preserve S3 prefix/config and prior source/runtime, stop and verify

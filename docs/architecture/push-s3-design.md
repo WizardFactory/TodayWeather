@@ -290,7 +290,7 @@ The HTTP transport aborts at 15s and rejects abort/error only after request clos
 the dispatcher watchdog defaults to 20s. Ambiguous transport outcomes are terminal
 for the original job and never replayed. Any still-running request stays charged to
 physical and lane concurrency. After 30s, the same project admits one fresh eligible
-job as a probe under existing rate/cooldown/deadline/registration guards. Queued/active warnings take preference for this one recovery admission; normal
+job as a probe under existing rate/cooldown/deadline/registration guards. Only ready, unexpired, guard-valid warnings for this project take preference when warning capacity is available; normal
 fairness resumes after recovery. Successful
 probing restores normal admissions only after unresolved ambiguous requests settle;
 while any remain, at most two probes are admitted. Exhaustion remains an observable

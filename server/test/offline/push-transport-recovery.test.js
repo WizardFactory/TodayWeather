@@ -143,4 +143,58 @@ runner.test('warning owns the recovery probe even on a normal fairness turn', as
         assert.deepEqual(calls, ['normal', 'warning', 'normal']);
     } finally { await f.close(); }
 });
+runner.test('logically finished hung warning does not block a normal recovery probe', async function () {
+    var calls = [], release, f = fixture(function (_, j) {
+        calls.push(j.priority);
+        if (calls.length === 1) return new Promise(function (r) { release = r; });
+        return Promise.resolve();
+    });
+    try {
+        var original = await f.d.enqueue(job('one', {priority: 'warning'}));
+        assert.equal(original.error, 'transport-timeout-ambiguous');
+        f.advance(101);
+        var fresh = f.d.enqueue(job('one', {deadline: 2100}));
+        await wait(40); f.advance(1100);
+        assert.equal((await fresh).status, 'accepted');
+        assert.deepEqual(calls, ['warning', 'normal']);
+        assert.equal(f.d.active.warning, 1); assert.equal(f.d.inflight, 1);
+        release(); await until(function () { return f.d.inflight === 0; });
+        assert(f.d.health().ready);
+    } finally { if (release) release(); await f.close(); }
+});
+runner.test('unrelated cooldown warning cannot reserve another project recovery gate', async function () {
+    var calls = [], f = fixture(function (_, j) {
+        calls.push(j.project);
+        if (calls.length === 1) { var ambiguous = new Error(); ambiguous.code = 'transport-ambiguous'; return Promise.reject(ambiguous); }
+        if (j.project === 'other' && calls.filter(function (x) { return x === 'other'; }).length === 1) {
+            var cooldown = new Error(); cooldown.statusCode = 429; cooldown.retryAfterMs = 5000; return Promise.reject(cooldown);
+        }
+        return Promise.resolve();
+    }, {retryFloorMs: 0});
+    try {
+        await f.d.enqueue(job());
+        await f.d.enqueue(job('other', {priority: 'warning', deadline: 1100}));
+        var warning = f.d.enqueue(job('other', {priority: 'warning'}));
+        f.advance(101); var fresh = f.d.enqueue(job('one', {deadline: 2100}));
+        await wait(40); f.advance(1100);
+        assert.equal((await fresh).status, 'accepted');
+        assert.deepEqual(calls, ['one', 'other', 'one']);
+        f.advance(5000); assert.equal((await warning).status, 'accepted');
+    } finally { await f.close(); }
+});
+runner.test('late duplicate ambiguity preserves successful probe proof', async function () {
+    var calls = 0, reject, f = fixture(function () {
+        calls++;
+        if (calls === 1) return new Promise(function (_, r) { reject = r; });
+        return Promise.resolve();
+    });
+    try {
+        await f.d.enqueue(job()); f.advance(101);
+        assert.equal((await f.d.enqueue(job())).status, 'accepted');
+        assert(!f.d.health().ready); assert.equal(f.d.health().unresolved, 1);
+        var error = new Error(); error.code = 'transport-timeout-ambiguous'; reject(error);
+        await until(function () { return f.d.inflight === 0; });
+        assert(f.d.health().ready); assert.equal(calls, 2);
+    } finally { await f.close(); }
+});
 runner.run().then(function(failed){process.exitCode=failed?1:0;});

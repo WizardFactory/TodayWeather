@@ -42,10 +42,43 @@ permission/first-token paths are present. `copy-firebase-config.mjs` copies igno
 Firebase files from `TW_RELEASE_LOCAL_DIR`; it does not create APNs keys or FCM
 tokens. This worktree and the documented base checkout lack the configured SSH
 key/credentials; the expected local Firebase JSON/plist files are also absent.
-No key/token replacement can be asserted from source or plugin version alone.
-After authorized access, compare old/new Firebase project ID, sender/project
-number, app ID and iOS bundle ID, plus Firebase APNs key ID/team/environment metadata.
-Compare privately; record equality/change and validity, never key/token values.
+AK then requested issue-history and read-only S3 backup inspection. The available
+user AWS profile was verified against the documented account; this does not restore
+SSH access. #2605 records restoration of existing private Firebase build inputs,
+an October 1 credential backup, and separately approved Apple Distribution
+certificate/profile issuance. #2608 records Firebasex migration and a pending
+Firebase APNs-key Console check. Related APNs issue records contain no confirmed
+Firebase project/sender or APNs authentication-key replacement for this release.
+
+On 2026-10-06 UTC, the legacy 2018 TodayWeather Android JSON and iOS plist S3 objects
+were each byte-identical to their October 1 release-backup copies. Both downloaded
+copies match the backup manifest SHA256. Project, sender, app identity and iOS
+bundle identity therefore match these backed-up inputs. This verifies configuration
+continuity in S3, not the exact installed binary, current Console APNs binding or
+device FCM token. A release plugin change alone does not establish token replacement.
+
+The private configuration bucket contains 53 objects, including historical
+Firebase service accounts, an APNs authentication key (2019), older APNs
+certificate/key pairs, product build/signing inputs and two October 1 backup groups.
+Each new group has nine material files plus a manifest and restore guide (11 objects).
+The release group includes two environment files, Android keystore/build settings,
+Firebase JSON/plist, ads configuration, Google store service-account credential
+and Apple store API key. The signing group includes matching distribution private
+key/CSR/certificate formats, encrypted P12/password, provisioning profile and two
+receipts. Store API authentication and Apple Distribution signing are separate
+from APNs authentication. AWS credentials were excluded from the release backup.
+Existing APNs originals were preserved; presence alone does not prove validity or
+Console association. Private key values, IDs and recovery paths are omitted here.
+
+The current push bucket listing contained 1,681 JSON objects (9,532,521 bytes):
+1,422 campaign objects, 102 delivery-state, 82 registrations and 75 warning-feed
+objects. Observed modification range: September 29 through October 6 01:07:05 UTC.
+These are current persisted coordinator records, not a separate historical backup
+or proof of completed delivery. No registration token, position or recipient content
+was read for this inventory. No S3 mutation or credential generation was performed.
+
+Still compare installed build identity and Firebase APNs key/team/environment
+metadata privately. Record equality/change and validity, never key/token values.
 
 AK reports actual scheduled-weather receipt on the older iOS app early last week.
 Exact timestamp/version/token is unknown. The current disabled cohort is not
@@ -69,6 +102,8 @@ Mongo queries, followed by the route's merge, history, air, life-index and rise/
 middleware. This identifies timing boundaries to inspect; it does not show which
 stage was slow on the deployed revision. No blanket weather-timeout increase.
 
+Later S3 readback is recorded in [verification](verification.md#read-only-s3-batch-readback--2026-10-06-utc): two later campaigns contain 47 preparation-reason expiries. The earlier issue observation is not a statement about every October6 campaign.
+
 Live read-only SSH probe could not proceed: the configured key is absent and host
 trust unavailable. No bypass of host validation was used. Current deployed file
 hashes, process start/version, nginx upstream timings and campaign/S3 readback could
@@ -85,3 +120,7 @@ Read campaign parts/manifest summary and share one controlled receipt check betw
 #2626/#2677. FCM acceptance alone does not prove device receipt.
 
 See [operations and rollback](../../../operations/push-s3.md#transport-recovery--2683).
+
+## Independent review findings
+
+F1 reproduces recovery starvation caused by process-wide queued/active warning state: an unrelated cooldown warning or a logically finished hung warning can block fresh normal probes indefinitely. F2 shows late ambiguity resetting already established probe proof. Correct both while retaining physical slots and same-project eligible warning preference. F3 conservative pre-connect classification is retained and documented; F4 clarifies probe exhaustion only while physical requests remain unresolved. Independent Node16/22 regressions/smokes and Node16 broad suite confirm these observations.

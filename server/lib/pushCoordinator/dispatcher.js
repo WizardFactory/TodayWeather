@@ -43,6 +43,7 @@ class Dispatcher {
         this.queues = { warning: new Queue(), normal: new Queue() };
         this.active = { warning: 0, normal: 0 };
         this.items = new Set();
+        this.warningItems = new Set();
         this.projects = new Map();
         this.inflight = 0;
         this.total = 0;
@@ -67,6 +68,7 @@ class Dispatcher {
                 done: false
             };
             self.items.add(item);
+            if (job.priority === 'warning') self.warningItems.add(item);
             self.queues[job.priority === 'warning' ? 'warning' : 'normal'].push(item);
             self.schedule();
         });
@@ -126,8 +128,8 @@ class Dispatcher {
             if (b.pauseReason === 'authentication' || (b.ambiguous && b.probes >= this.recoveryProbes && !b.probing))
                 return 'paused';
             if (b.probing || now < b.recoverAt) return false;
-            // The single recovery gate belongs to a waiting warning before normal fairness.
-            if (lane === 'normal' && (this.queues.warning.length || this.active.warning)) return false;
+            // Only a ready warning for this project can reserve its recovery gate.
+            if (lane === 'normal' && this.recoveryWarning(project, b)) return false;
         }
         if (now < b.cooldownUntil || b.tokens < 1) return false;
         var source = lane;
@@ -146,9 +148,26 @@ class Dispatcher {
         }
         return true;
     }
+    recoveryWarning(project, budget) {
+        if (budget.warning < 1 || this.active.warning >= Math.max(1, Math.floor(this.concurrency * 0.8)))
+            return false;
+        var now = this.now();
+        for (var item of this.warningItems) {
+            var job = item.job;
+            if (item.done || item.sending || item.waiting || (job.prepare && !item.prepared)) continue;
+            if ((item.project || job.project || 'default') !== project) continue;
+            if (job.deadline !== undefined && now >= job.deadline) continue;
+            if (job.guard && !job.guard()) continue;
+            return true;
+        }
+        return false;
+    }
     // Pause admission, never release or replay an ambiguous physical request.
     ambiguous(item, reason) {
         var b = this.projects.get(item.project);
+        // The watchdog already fenced this physical request. A later abort cannot
+        // erase proof from a newer successful probe or restart the recovery gate.
+        if (item.ambiguous) return;
         if (!item.ambiguous) {
             item.ambiguous = true;
             b.ambiguous++;
@@ -216,6 +235,7 @@ class Dispatcher {
         if (item.done) return;
         item.done = true;
         this.items.delete(item);
+        this.warningItems.delete(item);
         this.total--;
         this.metrics[status] = (this.metrics[status] || 0) + 1;
         // Results are persisted by the engine: only a short identifier is kept, never error text.
@@ -341,6 +361,7 @@ class Dispatcher {
                 item.probeEpoch = projectBudget.epoch;
             }
             item.attempt++;
+            item.sending = true;
             phase = 'send';
             // Watchdog never releases a physical send slot or retries an ambiguous send.
             // The SDK promise must settle before this slot is reusable.
@@ -358,6 +379,7 @@ class Dispatcher {
                     throw error;
                 }
             } finally {
+                item.sending = false;
                 clearTimeout(timeout);
                 this.timers.delete(timeout);
             }

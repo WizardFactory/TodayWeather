@@ -9,8 +9,8 @@ No live FCM, mobile build, deployment, restart or device receipt is claimed.
 | --- | --- |
 | Initial new regression, before implementation | 8 intended failures / 1 pass; permanent pause, late status and absent health |
 | Additional recovery warning-priority regression | Intended failure on the normal fairness turn; corrected before commit |
-| Final full offline suite | npm --prefix server run test:offline passed after warning-gate correction |
-| Final transport recovery/generation suite | 13 passed |
+| Final full offline suite | Node22 server/test/offline/run.js passed after F1/F2 correction; same full test list |
+| Final transport recovery/generation suite | 16 passed |
 | Existing S3 coordinator suite | 27 passed |
 | Existing preparation retry suite (#2677) | 32 passed |
 | Store compatibility suite | 12 passed |
@@ -39,7 +39,25 @@ base, review findings/settings and final readiness are published durably on the 
 Maintained docs contain no link to local-only reports. Local artifact hooks are
 available but not installed; staged/outgoing checker and CI remain the actual gates.
 
-Pending: current source-matched origin latency/campaign readback, old/new release
-Firebase/APNs identity and actual older-iOS/Android receipt. The configured SSH key
-and release Firebase files are absent here. See [investigation](investigation.md)
+Pending: current source-matched origin latency, installed-binary/APNs Console
+identity and actual older-iOS/Android receipt. Bounded S3 campaign readback and
+backed-up Firebase identity comparison are now complete. SSH remains unavailable;
+expected release files are absent from this checkout. See [investigation](investigation.md)
 and [operation handoff](../../../operations/push-s3.md#transport-recovery--2683).
+
+Independent review round1 reproduced Required F1 (global warning recovery starvation) and Recommended F2 (late ambiguity erased newer proof). Author added three regressions: all fail as intended on reviewed 56cea09d, then pass after correction, while all prior 13 stay green. F3 conservative pre-connect gate retained/documented; F4 settled-outage probe reset clarified. Affected combined HTTP/IPC smoke is renewed on Node16/22; final independent re-review and current CI remain required. AK-requested private S3 read-only investigation establishes backed-up Firebase input continuity without claiming current Console binding, installed binary identity or actual iOS receipt.
+
+## Read-only S3 batch readback — 2026-10-06 UTC
+
+Inventory selection: six manifests modified October 6, listed through 01:07:05UTC. Manifest summaries match current part status counts in all six; reads are observational, not an atomic snapshot. No production notification or S3 mutation.
+
+| Created UTC | Kind | Jobs | Final status | Preparation reason counts | Transport attempts |
+| --- | --- | --- | --- | --- | --- |
+| 00:00 | alarm | 1 | failed:1 | project-paused:1 | 0 |
+| 00:07 | conditional | 96 | expired:12, not-needed:84 | none recorded | 0 |
+| 00:17 | conditional | 96 | expired:12, not-needed:84 | none recorded | 0 |
+| 00:35 | conditional | 96 | expired:12, not-needed:84 | none recorded | 0 |
+| 00:50 | conditional | 96 | expired:39, not-needed:57 | weather-timeout:16, weather-deadline:11 | 0 |
+| 01:07 | conditional | 96 | expired:32, not-needed:64 | weather-timeout:11, weather-unavailable:4, weather-deadline:5 | 0 |
+
+The 00:50 and 01:07UTC conditional campaigns have27 and 20 expired jobs with preparation weather-timeout/deadline/unavailable reasons, respectively. This extends the earlier issue observation: the #2677 retry code is present and retries are observed, but preparation still fails to finish for this bounded later cohort. Do not report all new campaigns preparation-clean. The five conditional campaigns total 480 jobs, 373 not-needed, 107 expired, 467 preparation attempts and 94 preparation failures; reasoned preparation expiries account for 47, while 60 expiries have no recorded reason. Their zero transport attempts separate these outcomes from #2683. The 00:00UTC alarm failed project-paused with one preparation and zero transport attempts. Origin-stage latency and device receipt remain unverified.

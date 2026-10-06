@@ -1,5 +1,5 @@
 # Transport recovery specification
-Revision 2, consumes intent and investigation at base 182f4fd7.
+Revision 3, consumes intent and investigation at base 182f4fd7.
 
 Separate authentication pause (operator recovery only) from ambiguous transport recovery. A timeout finishes the original job once with transport-timeout-ambiguous and retains its physical slot until settlement. A network interruption is likewise ambiguous and never automatically resent. Default HTTP abort is 15s; dispatcher watchdog is 20s, allowing real transport abort/close to settle first. The transport rejects only after the request closes on abort/error.
 
@@ -13,4 +13,4 @@ AC4: reuse preparation and registration suites and loopback runtime/client smoke
 
 Rejected: clearing pause immediately (storms/race), releasing unresolved slots (unbounded physical sends), replaying timed-out jobs (duplicates), auth auto-recovery (credential failure), increasing weather timeout (different stage, no cause evidence).
 
-Recovery probe preference: when a warning is queued or active, normal work waits for the warning to own the single probe gate. The existing normal fairness turn applies again after recovery; this prevents that turn from letting an alarm occupy the sole recovery admission ahead of a warning.
+Recovery probe preference: only a ready, unexpired, guard-valid warning for this Firebase project that can use available warning capacity takes the gate before a normal fairness turn. Other projects, preparation retry waits and already submitted or logically finished warnings do not block it. Late ambiguity of an already-ambiguous original must not invalidate successful probe proof or restart its gate. Connection errors remain conservatively ambiguous until request close; documentation states the extra gate even for pre-connect refusal. Probe exhaustion bounds unresolved sends; after all close, continued outages may admit one fresh probe every30s.
