@@ -6,6 +6,10 @@ Product status update: AK confirmed on **2026-09-28** that TodayAir is retired. 
 
 ## Reading order
 
+Proposed replacement origin: [server2 memory and S3 design](server2.md), with
+[overview diagram](diagrams/server2.html) and [editable source](diagrams/server2.json).
+This is a 2026-10-06 design amendment to #2614, not deployed behavior.
+
 1. [Service overview](service-overview.md): components, server modes, persistence, platform variants and deployment evidence.
 2. [Weather collection](weather-collection.md): domestic schedules, requesters, parsing, persistence, retries, and on-demand world weather.
 3. [Mobile API flow](mobile-api.md): location selection, exact URL contracts, verified AWS gateway mapping, backend middleware and response handling.
