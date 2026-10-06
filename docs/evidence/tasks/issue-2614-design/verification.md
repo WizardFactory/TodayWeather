@@ -112,3 +112,36 @@ artifacts. New instructions require a fresh independent review; earlier PASS and
 CI refer to their previous heads. The linked task index in the maintained plan
 is the tracker map. S01 reconciles pending choices; issue creation does not
 authorize production changes or imply that pending decisions are accepted.
+
+## S01 decision handoff (2026-10-06)
+
+AK approved demand-limited hourly and 2-minute rainfall capture, immutable raw
+gzip with versioned identity-catalog CAS, raw/group publication before new
+success and valid memory or existing error/fallback during S3 outages. Optional
+packs need measured benefit; no lifecycle deletions are selected now. The
+[actual decision record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640)
+reconciles O-1…O-13 and preserves S18 state, privacy activation, provisioning,
+measurement and cutover prerequisites. Exact remote comment readback passed.
+
+The diagram topology is unchanged. Its decision cards were updated and HTML
+was regenerated through Archify. Validation, delivery and strict artifact
+checks passed; the initial browser check hit a sandbox Chrome pipe failure.
+A browser-only recovery on the same HTML passed. Visual-check captured four
+light/dark endpoint screenshots; the author inspected them for readable labels,
+separation and clipping. This is document evidence, not runtime verification.
+
+| Current artifact | SHA-256 |
+| --- | --- |
+| server2.json | `9f5ed6b6487d8390ce97d7582a50539f2a0e0a9f8c110dd39ed070ac74effbaf` |
+| server2.html | `793a72a3e7246d61b63220c41f5f9a1a708a02992d535ab91e2c781197b8ab91` |
+
+Executed commands used the installed Archify CLI with distinct output folders:
+
+```sh
+archify finalize architecture docs/architecture/diagrams/server2.json docs/architecture/diagrams/server2.html --quality showcase --out-dir .archify/architecture-server2-20261006/s01-decision --json
+archify browser-check docs/architecture/diagrams/server2.html --out-dir .archify/architecture-server2-20261006/s01-browser-recovery --json
+archify visual-check docs/architecture/diagrams/server2.html --out-dir .archify/architecture-server2-20261006/s01-visual --summary --require-provenance
+```
+
+The new foundation has a separate task/branch/PR; no Rust code, live capture or
+production switch is included in this documentation PR.

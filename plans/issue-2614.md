@@ -73,8 +73,9 @@ their recorded decision and dependency gates.
 All 21 required tasks and one conditional optimization were published as native
 sub-issues of #2614 on 2026-10-06. Dependency links in each body are authoritative
 for execution; runtime work also follows the common S01/S04/S02 gates above.
-S01 decision reconciliation and S02 inventory preparation have started; this
-does not claim either issue is complete.
+AK's core S01 decisions are [recorded on the parent](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640).
+S01 documentation reconciliation and isolated S04 foundation are in progress;
+S02 inventory preparation has started. No foundation gate is claimed to pass yet.
 
 | Task | Tracker | Required predecessors |
 | --- | --- | --- |
@@ -113,9 +114,9 @@ and does not become a cutover dependency unless its measured use requires it.
 ## Decision gates beyond issue dependencies
 
 Closing S01 or another predecessor does not approve a pending decision. Each
-issue body names its decision gates. S01 remains open while the core S3 policy
-is pending; explicitly deferred family choices continue to block their named
-work even after core reconciliation.
+issue body names its decision gates. AK approved the core S3 policy and
+demand-limited capture on 2026-10-06. Explicitly deferred family choices continue
+to block their named work after S01 closes.
 
 | Decision | Blocked work until recorded |
 | --- | --- |
@@ -187,3 +188,20 @@ Proof for this PR is recorded in
 [selected verification evidence](../docs/evidence/tasks/issue-2614-design/verification.md).
 Rust/property/provider/latency/shadow checks above are future requirements, not
 tests claimed to have run in the documentation PR.
+
+## S01 approved policy handoff
+
+The [AK decision record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640)
+resolves demand-limited capture and core S3 storage/publication/outage choices.
+S01 can complete after disposition records and documentation verification. S04
+foundation then precedes S02/S03 server2 assets and every later implementation.
+S14 must prove demand expiry, replacement reconstruction and capture ownership
+under durable provider budgets; S15/S17 and affected push behavior wait for its
+history catch-up. S18 exact state design, geocoder privacy/label activation,
+measured costs, key provisioning and every route cutover retain named gates.
+
+Decision-record scenario: AK accepts the options; the implementer opens the
+parent record and follows S04's O-2/O-4/O-12 prerequisites. Expected: foundation
+work is permitted in its own PR; an attempt to start S18 without exact O-3
+decisions or a route switch without goldens/shadow/approval remains blocked.
+This document verification checks the recorded disposition, not runtime capture.

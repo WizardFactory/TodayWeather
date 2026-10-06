@@ -180,7 +180,7 @@
       "dot": "emerald",
       "title": "Durability and lookup",
       "items": [
-        "Publish canonical raw before catalog success",
+        "Raw + complete catalog before new success",
         "Catalogs contain identities, not weather views",
         "Packs reduce GETs; canonical fallback remains",
         "Serve only complete fetch groups across partitions"
@@ -191,7 +191,7 @@
       "title": "Scope and gates",
       "items": [
         "Proposed design; no runtime deployed",
-        "History, outage and state decisions remain open",
+        "Demand capture approved; state details gated",
         "Later scale-out: independent caches and shared S3",
         "Design source: docs/architecture/server2.md"
       ]

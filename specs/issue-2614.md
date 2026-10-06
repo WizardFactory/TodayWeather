@@ -41,5 +41,15 @@ do not silently round coordinates, omit labels or treat S3 failure as a new 200.
 Missing 8-day history cannot be accepted for a used API merely to honor D1.
 
 No schema, new API, alert broadcast, shared cache, purchased capacity or production
-route switch is introduced in this design PR. Remaining issue decisions are
+route switch is introduced in this design PR. Recorded O-1…O-13 dispositions and still-deferred task prerequisites are
 listed in the canonical architecture's reconciliation table.
+
+## Approved S01 policy
+
+AK's [2026-10-06 decision record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640)
+approves demand-limited hourly history and 2-minute rainfall capture, immutable
+raw gzip with versioned identity-catalog CAS, full raw/group publication before
+new success, existing error/fallback or valid memory during S3 outages,
+conditional measured packs and no lifecycle deletions now. Capture demand and
+ownership are implemented in S14; this PR only records the decision. S18's exact
+state design and separate activation/provisioning/cutover gates remain deferred.

@@ -5,7 +5,8 @@ to [#2614](https://github.com/WizardFactory/TodayWeather/issues/2614) replaces t
 SQLite proposal with memory → S3 → provider. The source baseline inspected for
 this PR is `182f4fd745fdfebe95092d186cead8f8a17242ab`; deployment and traffic
 observations keep their own dates. Runtime code will live under `server2/` in
-later PRs, after the remaining decisions are recorded on the issue.
+task-owned PRs after their named decision and dependency gates. AK's core
+S01 decisions are [recorded on #2614](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640).
 
 [Overview diagram](diagrams/server2.html) · [Editable diagram](diagrams/server2.json)
 · [Intent](../../intent/issue-2614.md) · [Specification](../../specs/issue-2614.md)
@@ -23,11 +24,11 @@ identity catalogs plus optional immutable raw packs. Catalog overwrites and pack
 duplication explicitly amend the original blanket write-once/object-count rule;
 raw records remain write-once with no deletes. S3 becomes the serving store,
 not merely backup. Synchronous S3 publication before a successful response is
-the proposed replacement for SQLite commit plus the 60-second uploader.
+the approved replacement for SQLite commit plus the 60-second uploader.
 
-Directions selected in conversation are distinct from operational decisions:
-history capture (O-1/O-11), outage policy, lifecycle costs and state migration
-still need issue decisions before runtime implementation. No approved-difference
+AK approved demand-limited history/rainfall capture and S3 publication/outage
+policy on 2026-10-06. State migration details remain an S18 prerequisite; privacy
+activation, measured lifecycle/pack costs, keys and cutovers keep their named gates. No approved-difference
 list silently relaxes compatibility for an active API.
 
 ### Implementation placement
@@ -486,9 +487,9 @@ separately from the all-records-present cold examples.
 | Cancelled HTTP request | Other waiters survive; owned publication job bounded by shutdown policy |
 | Spot loss without notice | Published data survives in S3; cache starts empty; unacknowledged work may be lost |
 
-Rejecting a new success on S3 failure is a proposed availability/durability tradeoff,
+Rejecting a new success on S3 failure is an AK-approved availability/durability tradeoff,
 not an already measured legacy behavior. If it changes an active contract, the
-family stays on legacy until the decision is recorded and compatibility gates
+family stays on legacy until actual compatibility gates
 are satisfied. No claim of RPO zero is made for an unacknowledged provider reply.
 
 ## 8. Cold-memory latency model
@@ -597,24 +598,37 @@ lease. Select coordination primitives in that phase, before turning it on.
 
 ## 10. Issue decision reconciliation
 
+O-1/O-11 amend request-only acquisition to preserve used APIs: hourly capture is
+limited to cells requested in the last 8 days plus push-subscribed cells, and
+rainfall capture runs every 2 minutes only for cells with demand. There is no
+all-grid timer. S14 must define durable demand discovery, expiry, startup
+reconstruction and single-host ownership under the same provider budgets and
+raw/group publication policy. Later multi-instance capture requires the
+coordination gate in section 9. Capture alone cannot fabricate unavailable
+history; golden parity and history catch-up still precede dependent cutover.
+
+
 | Original item | Amendment / remaining decision |
 | --- | --- |
 | D2/D7/D8, C6–C8 | S3 serving publication, memory reconstruction; no local store/uploader/synced rows |
-| O-1, O-11 | Still open; history/raining-now capture exceptions or proven equivalent acquisition are needed before affected active API cutover |
+| O-1, O-11 | Approved: hourly capture only for cells requested in the last 8 days plus push-subscribed cells; rainfall capture every 2 minutes for cells with demand. S14 specifies demand/expiry/ownership and proves 8-day/20-minute behavior before dependent cutover |
 | O-2 | Rust conditional go; P2 executable checkpoint and post-v000903 time-box remain |
 | O-3 | S3-authoritative state proposal; exact migration/outbox/ownership is a P8 prerequisite |
 | O-4, O-12 | gp3/15-day floor/ENOSPC policy removed; replace with memory admission and S3-failure policy |
-| O-5 | Keep canonical raw data; re-evaluate hot catalogs, pack versions and retrieval costs; no Flexible/Deep Archive objects on synchronous serving paths |
+| O-5 | Approved: immutable canonical raw gzip; versioned identity catalogs with CAS; no lifecycle deletions now. Packs require measured benefit; S09 assesses version growth/retrieval costs before transitions. No Flexible/Deep Archive on synchronous serving paths |
 | O-6 | Coordinate-lookup export is incompatible with privacy policy; optional address-only export requires review |
 | O-7 | No blanket removal of health-index/KAQ behavior that current active API fixtures contain |
 | O-8 | v000705 town is active; exclude only zero-observed in-scope public APIs; /ww evidence gap remains |
-| O-9 | Proposed raw PUT + catalog publication before success; drain assists but is not the durability boundary |
+| O-9 | Approved: raw PUT + complete fetch-group catalog publication before new success. S3 outage uses valid complete memory or existing route error/fallback; no undurable new success. Drain assists but is not the durability boundary; no route switch before actual compatibility gates and approval |
 | O-10 | Separate server2 key set during coexistence remains |
 | O-13 | Store summaries; product exposure remains a separate decision |
 
-Record the chosen catalog/versioning, pack duplication, privacy, outage and state
-policies alongside O-1…O-13 in #2614 before runtime work. This PR documents the
-amendment; it does not rewrite the issue body or claim those decisions completed.
+The [S01 record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640)
+contains actual AK authority and the O-1…O-13 dispositions. Core acquisition and
+storage/publication choices are resolved. O-3 exact state ownership/migration
+still blocks S18; privacy/label activation, measurements, key provisioning and
+cutovers keep their named prerequisites even after S01 closes. This PR records
+the amendment without runtime implementation or production actions.
 
 ## 11. References and limitations
 

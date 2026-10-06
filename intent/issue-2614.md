@@ -44,9 +44,10 @@ start on one Spot instance before scaling up and later out.
 
 ## Risks and open decisions
 
-History capture, S3-outage failure policy, mutable identity indexes, raw-pack
-duplication/lifecycle and state migration still require issue decision records
-before implementation. Exact active-API parity takes precedence over optional
+AK approved demand-limited history/rainfall capture and the S3 publication,
+outage and no-delete policy on 2026-10-06; the [decision record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640) reconciles O-1…O-13.
+State migration details remain an explicit S18 prerequisite. Privacy activation,
+measured lifecycle/pack costs and production cutover retain their named gates. Exact active-API parity takes precedence over optional
 performance improvements. See the [spec](../specs/issue-2614.md) and
 [delivery plan](../plans/issue-2614.md).
 
@@ -59,3 +60,15 @@ S01 decision reconciliation to the current follow-up; future runtime work still
 requires the issue decision gates, task-owned implementation PRs and applicable
 verification. Production cutover/resource actions and merge are not authorized
 by this follow-up. Pending choices are not inferred accepted from issue creation.
+
+## Recorded decisions (2026-10-06)
+
+AK accepted hourly capture only for cells requested in the last 8 days and
+push-subscribed cells, plus 2-minute rainfall capture for cells with demand.
+Canonical raw gzip objects remain immutable; identity catalogs use versioning
+and CAS. New data is acknowledged only after raw and complete catalog
+publication. S3 outage uses valid complete memory or the existing error/fallback.
+Raw packs require measured benefit; no lifecycle deletions are selected now.
+Runtime implementation proceeds in task-owned PRs, starting with S04; this
+design PR contains no runtime code. Full used-API compatibility and separate
+cutover approval remain required. See the parent decision record above.
