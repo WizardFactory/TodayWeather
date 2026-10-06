@@ -1,0 +1,81 @@
+{
+  "task": "S03",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2688",
+  "server2_paths": [
+    "server2/deploy/local/",
+    "server2/deploy/staging/",
+    "server2/config/local-stack.json",
+    "server2/config/fixtures/",
+    "server2/config/tasks/S03.json",
+    "server2/tools/ci.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2688.md",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "specs/issue-2688.md",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "plans/issue-2688.md",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.json",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.html",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "docs/operations/server2-infrastructure.md",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "docs/operations/server2-infrastructure.pdf",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-infrastructure/usage.png",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-infrastructure/manifest.json",
+      "category": "documentation",
+      "reason": "S03 task contract, infrastructure operations evidence or reconciliation of accepted architecture policy"
+    },
+    {
+      "path": "intent/issue-2614.md",
+      "category": "documentation",
+      "reason": "Narrow latest AK D01\u2013D04 and integrated S04 reconciliation; no original acceptance relaxation"
+    },
+    {
+      "path": "specs/issue-2614.md",
+      "category": "documentation",
+      "reason": "Narrow latest AK D01\u2013D04 and integrated S04 reconciliation; no original acceptance relaxation"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2688#issuecomment-6016499375",
+  "ci_authority": "Root granted exact additive local test/smoke CI invocation, preserving existing gates; S02 owns workflow"
+}

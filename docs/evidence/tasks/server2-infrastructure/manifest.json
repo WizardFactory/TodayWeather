@@ -1,0 +1,9 @@
+{
+  "captured_at": "2026-10-06",
+  "kind": "actual-api-cli-usage",
+  "command": "python3.11 server2/deploy/local/smoke.py --binary target/release/server2",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "binary_sha256": "8ca50c9d7a0d8f58d3d2de1797fb7de97f6a398101b618425fe90cdd623b2d61",
+  "capture_sha256": "4f38c25bd60416d381d11cab1e13302e17a32c9f80f637b4c2cf6ca5ffc14b26",
+  "limitations": "isolated foundation plus volatile local test S3/provider peers; no live AWS/provider, SigV4 conformance or weather parity"
+}

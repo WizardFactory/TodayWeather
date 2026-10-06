@@ -1,0 +1,86 @@
+{
+  "status": "approval-ready proposal, not provisioned",
+  "account_id": null,
+  "region": null,
+  "bucket_name": null,
+  "runtime_role_arn": null,
+  "monthly_spend_ceiling_usd": null,
+  "owners": {
+    "infrastructure": null,
+    "provider_keys_and_quotas": null,
+    "operations_and_rollback": null
+  },
+  "bucket": {
+    "versioning": "Enabled",
+    "default_encryption": "AES256",
+    "object_ownership": "BucketOwnerEnforced",
+    "block_public_access": true,
+    "lifecycle_deletes": false,
+    "lifecycle_transitions": "none until S09 cost/retrieval assessment",
+    "same_region_as_origin": true
+  },
+  "host_candidate": {
+    "instance_families": [
+      "c7g.large",
+      "c6i.large"
+    ],
+    "vcpu": 2,
+    "memory_gib": 4,
+    "spot_instances": 1,
+    "api_processes": 1,
+    "ephemeral_root_for_os_and_logs_only": true,
+    "persistent_weather_serving_volume": false,
+    "measured_target": false
+  },
+  "runtime": {
+    "rust": "1.99.0",
+    "targets": [
+      "aarch64-unknown-linux-musl",
+      "x86_64-unknown-linux-musl"
+    ],
+    "minimum_headroom_percent": 25,
+    "measurement_gate": "S09 real host RSS/CPU, musl startup, cold p50/p95/p99, S3 throughput, interruption and budget demand"
+  },
+  "provider_keys": {
+    "required_secret_names": [
+      "SERVER2_DATA_GO_KR_KEYS",
+      "SERVER2_VC_KEY",
+      "SERVER2_WAQI_KEY",
+      "SERVER2_KAKAO_KEY",
+      "SERVER2_GOOGLE_KEY"
+    ],
+    "values_in_git": false,
+    "separate_from_legacy": true,
+    "quota_units": "data.go.kr calls; VC records; geocoder chain calls",
+    "coexistence_legacy_capture_cost_included": true
+  },
+  "network": {
+    "public_ingress": "existing origin routing only after approved family gates",
+    "metrics": "loopback only",
+    "s3": "same-region TLS endpoint; evaluate gateway endpoint cost with network plan",
+    "providers": "explicit provider hosts only; no unrestricted test fallback"
+  },
+  "readiness": {
+    "foundation": "health only, not cold-store/weather readiness",
+    "future_gate": "S3 read/auth test, required config/keys, family switch, budget admission, bounded cold warm-up"
+  },
+  "drain": {
+    "trigger": "IMDSv2 interruption/rebalance or operator signal, monitoring separately authorized",
+    "steps": [
+      "mark unready/remove new routing",
+      "stop new provider reservations/capture jobs",
+      "finish already owned raw/group publication within bounded time",
+      "do not resend failed or unknown push delivery",
+      "send SIGTERM and preserve sanitized outcome logs"
+    ],
+    "unexpected_loss": "acknowledged state/records must already be S3 durable; drain is not durability guarantee"
+  },
+  "rollback": {
+    "legacy_kept_for_cold_cells": true,
+    "weather_geocode_switch_as_unit": true,
+    "cloudfront_cache_rehearsal_required": true,
+    "new_registration_state_preserved": true,
+    "legacy_registration_migration": false
+  },
+  "scale_out": "plan only: independent caches, S3 CAS/reservations/fetch/capture ownership and bounded warm-up; no shared cache"
+}

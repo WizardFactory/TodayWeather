@@ -1,6 +1,8 @@
 # server2: memory and S3 origin design
 
-Status: **proposed design, not implemented or deployed**. This 2026-10-06 amendment
+Status: **design under implementation; not deployed**. S01 decisions and the S04
+Rust/CI/placement foundation are integrated; weather/S3/provider routes remain
+future work. This 2026-10-06 amendment
 to [#2614](https://github.com/WizardFactory/TodayWeather/issues/2614) replaces the
 SQLite proposal with memory → S3 → provider. The source baseline inspected for
 this PR is `182f4fd745fdfebe95092d186cead8f8a17242ab`; deployment and traffic
@@ -27,9 +29,13 @@ not merely backup. Synchronous S3 publication before a successful response is
 the approved replacement for SQLite commit plus the 60-second uploader.
 
 AK approved demand-limited history/rainfall capture and S3 publication/outage
-policy on 2026-10-06. State migration details remain an S18 prerequisite; privacy
-activation, measured lifecycle/pack costs, keys and cutovers keep their named gates. No approved-difference
-list silently relaxes compatibility for an active API.
+policy on 2026-10-06. [Later AK directions](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6015980608)
+resolve push send failures, fresh registrations and useful memory/S3 geocoding
+caches. Storage schema and update ordering are implementation decisions inside
+the initial single-process design, not a separate writer service or AK decision.
+Privacy/label proof, measured costs, keys and cutovers keep their named gates.
+The approved legacy push-registration continuity difference is limited to that
+state; used API contracts and weather-history compatibility still hold.
 
 ### Implementation placement
 
@@ -66,11 +72,12 @@ in `server/`; it is outside server2 work, not a placement exception.
 Every implementation task must declare paths, enumerate necessary outside
 changes with reasons, and include the placement completion criterion from the
 [common task contract](../../plans/issue-2614.md#common-contract-for-every-implementation-task).
-The Rust foundation task must implement a local/CI placement check before later
-implementation tasks proceed. S02 golden assets and S03 configuration/deployment
+S04 [PR #2708](https://github.com/WizardFactory/TodayWeather/pull/2708) introduced
+the local/CI placement check and Rust foundation before later implementation tasks.
+Its literal-path checks supplement dependency review; they are not a sandbox. S02 golden assets and S03 configuration/deployment
 assets depend on S04; only inventory and infrastructure planning may precede it. Until then, task completion requires a recorded
-manual path/dependency review. This design specifies the gate; it does not claim
-that the checker or remote merge enforcement is already installed.
+manual path/dependency review. The checker exists after S04; this does not claim remote branch protection
+or route-porting compatibility has been established.
 
 ## 2. Compatibility inventory
 
@@ -233,15 +240,28 @@ World-provider keys, cache identities, locks and VC request coordinates use
 legacy [DSF's 0.02-degree cell centre](../../server/controllers/worldWeather/dsf.controller.js),
 including integer-microdegree rounding, negative coordinates and pole/dateline
 clamps. Persist that cell's provider body; never substitute the original user
-coordinate in an S3 key, metadata or request body. The exact client label remains
-a separate volatile geocoding result. P1 includes within-cell sharing and boundary
+coordinate in an S3 key, metadata or request body. The exact client label remains a separate geocoding result governed by the
+privacy/label cache contract in section 6. P1 includes within-cell sharing and boundary
 fixtures so privacy coarsening preserves the already deployed weather semantics.
 
 An identity catalog contains schema/generation, source/kind/key/partition,
 coverage and fetch identities, ordered page references, completion and raw
 length/hash. Optional pack references hold key/offset/compressed length.
 It contains **no normalized weather values or stored field-merged view**.
-The actual API result is derived in memory. Partition identities distinguish
+The actual API result is derived in memory. Persisted weather content remains
+raw provider bodies, legacy exports, authorized daily weather summaries and
+identity/index rows. Separate accepted push state follows D01–D03. D04 permits
+a narrowly scoped **geocoding cache** exception: a privacy-safe coarse-identity
+projection containing only necessary response label/location-classification
+fields, locale, source/provenance and bounded validity. No precise user coordinate,
+user/device/IP/token, raw reverse-geocode lookup body or reversible lookup history
+is eligible. S07/S10 must define the projection schema and expiry (at most the
+legacy 30-day geocode validity), prove every reused label/response field against
+legacy across cell/administrative boundaries, and fall back on a miss or failed
+proof. This cache exception is not a normalized weather store or an indefinite
+precise-coordinate archive.
+
+Partition identities distinguish
 requested/covered periods from fetch time; revision selection never relies on
 S3 object arrival or ETag as a raw-content hash.
 
@@ -355,9 +375,13 @@ The [privacy requirement](https://github.com/WizardFactory/TodayWeather/issues/2
 is an explicit exception to permanent raw archiving: precise coordinate-keyed
 reverse-geocode bodies, coordinates and a reversible archive of their lookup
 history must not be stored in S3 catalogs, packs or metadata. A hash alone is
-not anonymization. Keep legacy-key lookup results only in bounded volatile memory
-with at most the legacy 30-day validity. Address-keyed records may persist under
-the issue's policy. Coarsening must not silently change an active API's label.
+not anonymization. [D04](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6015980608)
+authorizes useful memory and S3 geocoding caches within that privacy requirement.
+The implementer selects layout, validity and admission; legacy-key precise results
+may remain in bounded volatile memory with at most the legacy 30-day validity.
+Address-keyed records and privacy-safe persistent cache projections may persist
+under the authorized cache strategy. Do not archive raw precise-coordinate bodies
+or reversible lookup history. Coarsening must not change an active API label.
 
 Consequently an empty-memory reverse-geocode request can need the geocoder
 provider even when all *persistable weather records* are in S3. The two-wave
@@ -369,11 +393,11 @@ IPC and operational logs must not turn volatile coordinate history into a disk l
 
 | Reverse-geocode alternative | Cold behavior and compatibility |
 | --- | --- |
-| Volatile legacy-key cache (selected initial design) | Preserves provider/label semantics and raw-only storage policy; replacement loses the legacy Mongo cache's restart survival and incurs provider cost |
-| Two-decimal/KMA-cell persistent key permitted by the privacy comment | Can reuse coarse identities, but cannot archive raw coordinate-lookup bodies. A stored label projection needs an explicit persisted-data exception; address-record pointers alone do not prove identical labels within a cell |
+| Volatile legacy-key cache (available fallback) | Preserves provider/label semantics and raw-only storage policy; replacement loses the legacy Mongo cache's restart survival and incurs provider cost |
+| Two-decimal/KMA-cell persistent key permitted by the privacy comment | Can reuse coarse identities, but cannot archive raw coordinate-lookup bodies. D04 permits privacy-safe persistent caching; store only the necessary coarse cache projection after exact-label proof, not raw precise-coordinate lookup history. Address-record pointers alone do not prove identical labels within a cell |
 
-Coarse reverse-geocode serving is not selected without that decision and P1
-proof across administrative boundaries, both sides of cell edges, locales,
+The concrete persistent-cache layout is an implementation choice after D04;
+coarse reverse-geocode serving still requires P1 proof across administrative boundaries, both sides of cell edges, locales,
 country/KMA-address and returned-coordinate fields. Same grid weather does not
 imply the same display name. Preserve the volatile alternative and legacy
 forwarding if parity, latency or quota gates fail; do not silently trade label
@@ -408,9 +432,11 @@ peak admission must cover `a_max * U_W / W`, not the monthly average.
 P2b measures aggregate key counts/hit rates and chain attempts without persisting
 precise key histories, tests replacement under peak recorded arrival rates and
 multiple replacements, and limits geocoder concurrency within gateway admission.
-There is no guaranteed safe peak from this CSV. Do not activate volatile-only
-geocoding unless the actual quota, p95 and error gates pass against the legacy
-restart-surviving cache. Warm-up cannot restore its precise-coordinate entries.
+There is no guaranteed safe peak from this CSV. Validate the selected memory/S3
+cache strategy against actual quota, p95, error and exact-label gates before
+activation. A precise-cache miss may still need a provider; warm-up cannot restore
+forbidden precise-coordinate archives. The cold-provider calculations remain
+applicable to that path even when privacy-safe S3 cache entries exist.
 
 Warning type catalogs publish raw bulletin references and announcement identities
 as their authoritative partition: do not add a separately required latest marker
@@ -419,7 +445,8 @@ announcement without age expiry and type 4's legacy +19h actual-instant rule.
 Missing type catalogs repair from bounded announcement/year partitions or seeded
 legacy exports; cold latency is not bounded by one GET during catalog repair.
 
-Summary objects are the authorized derived-data exception. Preserve grid's
+Daily weather summaries are the authorized derived-weather exception; D04
+geocoding cache projections below do not permit normalized weather views. Preserve grid's
 legacy input sources/00:00 rule and >=18 valid hours, ASOS ordered valid min/max
 with optional rain, and VC >=75% of actual local hours. Record the exact input
 catalog generations and revision sets. A fully read catalog is not proof that
@@ -433,11 +460,20 @@ Push/purchase/notice state is separate from weather raw bodies. Follow the
 [S3 notice handoff](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-5882199479)
 and [push coordinator design](push-s3-design.md) rather than porting superseded
 SQLite proposals or resurrecting retired payment routes. Mutable state uses
-conditional revision writes and durable task/attempt identities. An accepted
-mutation must be durable before acknowledgment. External push acceptance and
-S3 checkpoint cannot be one transaction; document the possible duplicate-send
-window. Migration, notification ownership and reverse rollback need their own
-P8 design before activation. Never broadcast on startup recovery.
+conditional revision writes and durable delivery identities. Newly accepted
+state must be S3 durable before acknowledgment. D02 selects **no automatic retry**
+of a failed or unknown push delivery, including recovery after replacement;
+disable hidden adapter send retries. Record sanitized errors/uncertain outcomes
+so operations can fix the next independently scheduled send. Never broadcast or
+resend on startup recovery. Weather-provider retry rules are unchanged.
+
+D03 starts with **new registrations** through existing APIs. Do not export/import
+or reverse-migrate legacy push registrations. This is an approved registration
+continuity difference, not permission to alter payload/status/header/auth behavior
+or discard weather history. Preserve/restore newly accepted S3 state during
+rollback; a route switch alone cannot undo accepted mutations. S18 owns schema,
+ordered concurrent state updates and ownership in the single Rust process,
+subject to S02 contract proofs and publication/deadline gates.
 
 ## 7. Budgets, deadlines and failures
 
@@ -632,7 +668,7 @@ to the same grid identity without copying subscription details. No precise
 coordinate, IP address, device/user/subscriber ID, token or per-request log is
 stored in these records or added to weather archive identities/metadata. Exact
 demand update/reconstruction and capture ownership are S14 acceptance work;
-S18's separate push state design remains gated by O-3.
+S18 follows the accepted D01–D03 push policy and its route/state verification gates.
 
 
 
@@ -641,10 +677,10 @@ S18's separate push state design remains gated by O-3.
 | D2/D7/D8, C6–C8 | S3 serving publication, memory reconstruction; no local store/uploader/synced rows |
 | O-1, O-11 | Approved: hourly capture only for cells requested in the last 8 days plus push-subscribed cells; rainfall capture every 2 minutes for cells with demand. S14 specifies demand/expiry/ownership and proves 8-day/20-minute behavior before dependent cutover |
 | O-2 | Rust conditional go; P2 executable checkpoint and post-v000903 time-box remain |
-| O-3 | S3-authoritative state proposal; exact migration/outbox/ownership is a P8 prerequisite |
+| O-3 | D01–D03 recorded: implementer owns state schema/ordering; new registrations only, no legacy registration migration; no automatic failed/unknown push resend; new accepted state remains S3 durable |
 | O-4, O-12 | gp3/15-day floor/ENOSPC policy removed; replace with memory admission and S3-failure policy |
 | O-5 | Approved: immutable canonical raw gzip; versioned identity catalogs with CAS; no lifecycle deletions now. Packs require measured benefit; S09 assesses version growth/retrieval costs before transitions. No Flexible/Deep Archive on synchronous serving paths |
-| O-6 | Coordinate-lookup export is incompatible with privacy policy; optional address-only export requires review |
+| O-6 | D04 authorizes useful memory/S3 caches; layout/validity/admission are implementation choices under exact-label and coordinate privacy proof. No precise lookup-history export or indefinite archive |
 | O-7 | No blanket removal of health-index/KAQ behavior that current active API fixtures contain |
 | O-8 | v000705 town is active; exclude only zero-observed in-scope public APIs; /ww evidence gap remains |
 | O-9 | Approved: raw PUT + complete fetch-group catalog publication before new success. S3 outage uses valid complete memory or existing route error/fallback; no undurable new success. Drain assists but is not the durability boundary; no route switch before actual compatibility gates and approval |
@@ -653,10 +689,11 @@ S18's separate push state design remains gated by O-3.
 
 The [S01 record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640)
 contains actual AK authority and the O-1…O-13 dispositions. Core acquisition and
-storage/publication choices are resolved. O-3 exact state ownership/migration
-still blocks S18; privacy/label activation, measurements, key provisioning and
-cutovers keep their named prerequisites even after S01 closes. This PR records
-the amendment without runtime implementation or production actions.
+storage/publication choices and D01–D04 are resolved. S18 no longer requires the
+superseded registration-migration/retry decision; its dependencies, state tests
+and durable acceptance still apply. Privacy/label activation, measurements, key
+provisioning and cutovers keep their prerequisites. S03 provides only isolated
+local infrastructure and a staging plan; it does not provision or deploy.
 
 ## 11. References and limitations
 
@@ -673,5 +710,24 @@ the amendment without runtime implementation or production actions.
 - [Spot interruption notices](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-instance-termination-notices.html)
   are best-effort; hibernation does not provide the normal two-minute drain window.
 
-The PR verifies documentation, diagrams and arithmetic. It runs no weather server,
-provider request, S3 integration, live traffic refresh, mobile build or deployment.
+The original design PR verified documentation, diagrams and arithmetic without
+runtime/provider/S3 execution. S04 subsequently added the foundation. S03 checks
+a local test S3/provider peer and foundation only; no live provider, real AWS,
+traffic replay, mobile build or deployment is claimed.
+
+
+## 12. Infrastructure implementation status
+
+S01 and S04 are complete; [S03 operations](../operations/server2-infrastructure.md)
+describe the isolated local test peer and approval-ready infrastructure worksheet.
+The peer is a bounded volatile S3 HTTP subset, not real AWS authentication,
+durability, performance or production deployment evidence. The release foundation
+starts locally and serves health/loopback metrics; it has no weather/provider/S3
+runtime routes yet. S02 goldens and S05 raw storage proceed in separate PRs.
+
+Actual account/region/bucket/role/provider-key owners, spending limits, host
+provisioning and routing remain separately approved resource actions. Proposed
+2-vCPU/4-GiB compute classes are candidates only; S09 chooses a measured target
+from musl compatibility, RSS/CPU, cold latency, throughput and quota headroom.
+One Spot host and one multithreaded API process are the default; future instances
+retain independent caches and require the coordination gate in section 9.

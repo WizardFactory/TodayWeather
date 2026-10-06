@@ -1,0 +1,70 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListServingPrefixes",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::${BucketName}",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "raw/v2/*",
+            "index/v2/*",
+            "packs/v2/*",
+            "summary/v2/*",
+            "state/v2/*",
+            "state/demand/grid/*",
+            "budgets/v2/*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "ReadAndPublishRecords",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::${BucketName}/raw/v2/*",
+        "arn:aws:s3:::${BucketName}/index/v2/*",
+        "arn:aws:s3:::${BucketName}/packs/v2/*",
+        "arn:aws:s3:::${BucketName}/summary/v2/*",
+        "arn:aws:s3:::${BucketName}/state/v2/*",
+        "arn:aws:s3:::${BucketName}/state/demand/grid/*",
+        "arn:aws:s3:::${BucketName}/budgets/v2/*"
+      ]
+    },
+    {
+      "Sid": "ReadCatalogHistory",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObjectVersion"
+      ],
+      "Resource": [
+        "arn:aws:s3:::${BucketName}/index/v2/*",
+        "arn:aws:s3:::${BucketName}/state/v2/*"
+      ]
+    },
+    {
+      "Sid": "ListCatalogVersions",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucketVersions"
+      ],
+      "Resource": "arn:aws:s3:::${BucketName}",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "index/v2/*",
+            "state/v2/*"
+          ]
+        }
+      }
+    }
+  ]
+}
