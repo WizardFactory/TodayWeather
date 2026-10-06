@@ -5419,6 +5419,29 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <li>Campaign records stage, reason and attempt counts only</li>
         </ul>
       </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Bounded transport recovery</h3>
+        </div>
+        <ul>
+          <li>Never replay an ambiguous request; retain its physical slot</li>
+          <li>Wait 30s; at most two fresh-job probes while sends remain unresolved</li>
+          <li>Unsent expiry and registration cleanup continue with full physical slots</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>Observe transport separately</h3>
+        </div>
+        <ul>
+          <li>Registration readiness does not imply transport readiness</li>
+          <li>Authentication or exhausted probes require operator recovery</li>
+        </ul>
+      </div>
     </div>
     <nav class="node-outline no-print" id="node-outline" hidden aria-labelledby="node-outline-title">
       <div class="node-outline-head">

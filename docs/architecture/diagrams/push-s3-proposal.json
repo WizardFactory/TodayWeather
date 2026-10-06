@@ -231,6 +231,23 @@
         "Typed weather error, bounded backoff before FCM",
         "Campaign records stage, reason and attempt counts only"
       ]
+    },
+    {
+      "dot": "amber",
+      "title": "Bounded transport recovery",
+      "items": [
+        "Never replay an ambiguous request; retain its physical slot",
+        "Wait 30s; at most two fresh-job probes while sends remain unresolved",
+        "Unsent expiry and registration cleanup continue with full physical slots"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Observe transport separately",
+      "items": [
+        "Registration readiness does not imply transport readiness",
+        "Authentication or exhausted probes require operator recovery"
+      ]
     }
   ]
 }

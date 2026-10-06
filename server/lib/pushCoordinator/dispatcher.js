@@ -7,17 +7,34 @@ class Queue {
     constructor() {
         this.items = [];
         this.head = 0;
+        this.offset = 0;
+        this.size = 0;
     }
     get length() {
-        return this.items.length - this.head;
+        return this.size;
     }
     push(x) {
+        x.queue = this;
+        x.queueIndex = this.offset + this.items.length;
         this.items.push(x);
+        this.size++;
+    }
+    // Remove terminal unsent work without moving live FIFO entries or scanning the queue.
+    remove(x) {
+        var index = x.queueIndex - this.offset;
+        if (x.queue !== this || this.items[index] !== x) return;
+        this.items[index] = undefined;
+        this.size--;
+        delete x.queue;
+        delete x.queueIndex;
     }
     shift() {
-        var x = this.items[this.head++];
+        while (this.head < this.items.length && !this.items[this.head]) this.head++;
+        var x = this.items[this.head];
+        if (x) { this.remove(x); this.head++; }
         if (this.head > 1024 && this.head * 2 > this.items.length) {
             this.items = this.items.slice(this.head);
+            this.offset += this.head;
             this.head = 0;
         }
         return x;
@@ -31,7 +48,9 @@ class Dispatcher {
         this.rate = o.rate || 1000;
         this.maxQueue = o.maxQueue || 250000;
         this.retryFloor = o.retryFloorMs === undefined ? 10000 : o.retryFloorMs;
-        this.timeout = o.timeoutMs || 15000;
+        this.timeout = o.timeoutMs || 20000;
+        this.recoveryMs = o.recoveryMs === undefined ? 30000 : o.recoveryMs;
+        this.recoveryProbes = o.recoveryProbes || 2;
         // Preparation (weather) retries are counted apart from transport attempts and stop at the deadline.
         this.prepareAttempts =
             Number.isInteger(o.prepareAttempts) && o.prepareAttempts >= 1 ? o.prepareAttempts : 4;
@@ -41,6 +60,8 @@ class Dispatcher {
         this.queues = { warning: new Queue(), normal: new Queue() };
         this.active = { warning: 0, normal: 0 };
         this.items = new Set();
+        this.cleanupIterator = this.items.values();
+        this.warningItems = new Set();
         this.projects = new Map();
         this.inflight = 0;
         this.total = 0;
@@ -65,6 +86,7 @@ class Dispatcher {
                 done: false
             };
             self.items.add(item);
+            if (job.priority === 'warning') self.warningItems.add(item);
             self.queues[job.priority === 'warning' ? 'warning' : 'normal'].push(item);
             self.schedule();
         });
@@ -104,6 +126,13 @@ class Dispatcher {
                 warning: Math.max(1, cap * 0.8),
                 time: now,
                 paused: false,
+                pauseReason: null,
+                recoverAt: 0,
+                ambiguous: 0,
+                probes: 0,
+                probing: false,
+                proven: false,
+                epoch: 0,
                 cooldownUntil: 0
             };
             this.projects.set(project, b);
@@ -113,7 +142,11 @@ class Dispatcher {
         b.normal = Math.min(Math.max(1, cap * 0.2), b.normal + refill * 0.2);
         b.warning = Math.min(Math.max(1, cap * 0.8), b.warning + refill * 0.8);
         b.time = now;
-        if (b.paused) return 'paused';
+        if (b.paused) {
+            if (b.pauseReason === 'authentication' || (b.ambiguous && b.probes >= this.recoveryProbes && !b.probing))
+                return 'paused';
+            if (b.probing || now < b.recoverAt) return false;
+        }
         if (now < b.cooldownUntil || b.tokens < 1) return false;
         var source = lane;
         // Warnings never borrow the normal reservation. Normal traffic can use spare
@@ -121,14 +154,107 @@ class Dispatcher {
         if (lane === 'normal' && b.normal < 1 && !this.queues.warning.length && !this.active.warning)
             source = 'warning';
         if (b[source] < 1) return false;
+        // Inspect warnings only when cooldown and tokens permit this admission.
+        if (b.paused && lane === 'normal' && this.recoveryWarning(project, b)) return false;
         b[source]--;
         b.tokens--;
+        if (b.paused) {
+            b.probing = true;
+            b.probes++;
+            this.metrics.recoveryProbes = (this.metrics.recoveryProbes || 0) + 1;
+            return 'probe';
+        }
         return true;
+    }
+    recoveryWarning(project, budget) {
+        if (budget.warning < 1 || this.active.warning >= Math.max(1, Math.floor(this.concurrency * 0.8)))
+            return false;
+        var now = this.now();
+        for (var item of this.warningItems) {
+            var job = item.job;
+            if (item.done || item.sending || item.waiting || (job.prepare && !item.prepared)) continue;
+            if ((item.project || job.project || 'default') !== project) continue;
+            if (job.deadline !== undefined && now >= job.deadline) continue;
+            if (job.guard && !job.guard()) continue;
+            return true;
+        }
+        return false;
+    }
+    // Pause admission, never release or replay an ambiguous physical request.
+    ambiguous(item, reason) {
+        var b = this.projects.get(item.project);
+        // The watchdog already fenced this physical request. A later abort cannot
+        // erase proof from a newer successful probe or restart the recovery gate.
+        if (item.ambiguous) return;
+        if (!item.ambiguous) {
+            item.ambiguous = true;
+            b.ambiguous++;
+            b.epoch++;
+        }
+        if (b.probing === item) b.probing = false;
+        if (b.pauseReason !== 'authentication') {
+            b.paused = true;
+            b.pauseReason = reason;
+            b.proven = false;
+            b.recoverAt = Math.max(b.recoverAt, this.now() + this.recoveryMs);
+        }
+        this.finish(item, 'failed', reason, 'transport');
+    }
+    // Observe even late outcomes for project safety, but never change the original job's result.
+    settled(item, error) {
+        var b = this.projects.get(item.project),
+            status = error && (error.statusCode || error.status),
+            code = error && (error.code || (error.errorInfo && error.errorInfo.code));
+        if (item.ambiguous) {
+            b.ambiguous--;
+            item.ambiguous = false;
+            if (!b.ambiguous) b.probes = 0;
+        }
+        if (b.probing === item) {
+            b.probing = false;
+            b.recoverAt = Math.max(b.recoverAt, this.now() + this.recoveryMs);
+        }
+        if (status === 429) {
+            var after = Number.isFinite(error.retryAfterMs) && error.retryAfterMs >= 0 ? error.retryAfterMs : 60000;
+            b.cooldownUntil = Math.max(b.cooldownUntil, this.now() + Math.max(this.retryFloor, after));
+        }
+        if (status === 401 || status === 403 || code === 'messaging/authentication-error') {
+            b.paused = true;
+            b.pauseReason = 'authentication';
+        } else if (item.probe && !error && item.probeEpoch === b.epoch) b.proven = true;
+        if (b.paused && b.pauseReason !== 'authentication' && b.proven && !b.ambiguous && !b.probing) {
+            b.paused = false;
+            b.pauseReason = null;
+            b.probes = 0;
+            this.metrics.recoveries = (this.metrics.recoveries || 0) + 1;
+        }
+    }
+    health() {
+        var self = this, result = { ready: !this.stopped, readyProjects: 0, paused: 0, recovering: 0,
+            cooldown: 0, unresolved: 0, reasons: {}, nextRecoveryMs: null };
+        this.projects.forEach(function (b) {
+            result.unresolved += b.ambiguous;
+            if (self.now() < b.cooldownUntil) { result.cooldown++; result.ready = false; }
+            if (!b.paused) { result.readyProjects++; return; }
+            result.ready = false;
+            var exhausted = b.ambiguous && b.probes >= self.recoveryProbes && !b.probing;
+            var reason = b.pauseReason === 'authentication' ? 'authentication' : exhausted ? 'recovery-exhausted' : b.pauseReason;
+            result.reasons[reason] = (result.reasons[reason] || 0) + 1;
+            if (b.probing) result.recovering++;
+            else result.paused++;
+            if (reason !== 'authentication' && !exhausted && !b.probing) {
+                var delay = Math.max(0, Math.max(b.recoverAt, b.cooldownUntil) - self.now());
+                result.nextRecoveryMs = result.nextRecoveryMs === null ? delay : Math.min(result.nextRecoveryMs, delay);
+            }
+        });
+        return result;
     }
     finish(item, status, error, stage) {
         if (item.done) return;
         item.done = true;
+        if (item.queue) item.queue.remove(item);
         this.items.delete(item);
+        this.warningItems.delete(item);
         this.total--;
         this.metrics[status] = (this.metrics[status] || 0) + 1;
         // Results are persisted by the engine: only a short identifier is kept, never error text.
@@ -169,8 +295,37 @@ class Dispatcher {
             }
         }, delay);
     }
+    // Queue terminal checks must not wait for a send slot. Cycle through at most
+    // 1024 live items per pump, including entries behind an eligible FIFO head.
+    cleanupQueued() {
+        var limit = Math.min(this.items.size, 1024);
+        for (var i = 0; i < limit; i++) {
+            var next = this.cleanupIterator.next();
+            if (next.done) {
+                this.cleanupIterator = this.items.values();
+                next = this.cleanupIterator.next();
+            }
+            if (next.done) break;
+            var item = next.value, job = item.job;
+            // In-progress preparation, retry timers and submitted requests have their own lifecycle.
+            if (!item.queue || item.done) continue;
+            if (job.deadline !== undefined && this.now() >= job.deadline) {
+                if (item.waiting) this.finish(item, 'expired', item.waiting.reason, item.waiting.stage);
+                else this.finish(item, 'expired');
+            } else if (job.guard) {
+                try {
+                    if (!job.guard()) this.finish(item, 'superseded');
+                } catch (e) {
+                    // Match the existing run() preparation-error outcome without allocating a slot.
+                    item.queue.remove(item);
+                    this.prepareFailed(item, job.priority === 'warning' ? 'warning' : 'normal', e);
+                }
+            }
+        }
+    }
     pump() {
         if (this.stopped) return;
+        this.cleanupQueued();
         var scanned = 0,
             limit = Math.min(this.total, 1024);
         while (this.inflight < this.concurrency && scanned++ < limit) {
@@ -247,18 +402,32 @@ class Dispatcher {
                 this.queues[lane].push(item);
                 return;
             }
+            item.probe = allowed === 'probe';
+            if (item.probe) {
+                var projectBudget = this.projects.get(item.project);
+                projectBudget.probing = item;
+                item.probeEpoch = projectBudget.epoch;
+            }
             item.attempt++;
+            item.sending = true;
             phase = 'send';
             // Watchdog never releases a physical send slot or retries an ambiguous send.
             // The SDK promise must settle before this slot is reusable.
             var timeout = this.later(function () {
-                var budget = self.projects.get(item.project);
-                if (budget) budget.paused = true;
-                self.finish(item, 'failed', 'transport-timeout-ambiguous', 'transport');
+                self.ambiguous(item, 'transport-timeout-ambiguous');
             }, this.timeout);
             try {
-                await this.send(payload, job);
+                try {
+                    await this.send(payload, job);
+                    this.settled(item);
+                } catch (error) {
+                    if (error.code === 'transport-timeout-ambiguous' || error.code === 'transport-ambiguous')
+                        this.ambiguous(item, error.code);
+                    this.settled(item, error);
+                    throw error;
+                }
             } finally {
+                item.sending = false;
                 clearTimeout(timeout);
                 this.timers.delete(timeout);
             }
@@ -273,22 +442,10 @@ class Dispatcher {
             }
             var code = e.code || (e.errorInfo && e.errorInfo.code),
                 status = e.statusCode || e.status;
-            if (status === 429) {
-                var projectBudget = this.projects.get(item.project || job.project || 'default');
-                var retryAfter =
-                    Number.isFinite(e.retryAfterMs) && e.retryAfterMs >= 0 ? e.retryAfterMs : 60000;
-                if (projectBudget)
-                    projectBudget.cooldownUntil = Math.max(
-                        projectBudget.cooldownUntil,
-                        this.now() + Math.max(this.retryFloor, retryAfter)
-                    );
-            }
             if (code === 'messaging/registration-token-not-registered') {
                 this.onInvalid(job);
                 this.finish(item, 'invalid', undefined, 'transport');
             } else if (status === 401 || status === 403 || code === 'messaging/authentication-error') {
-                var b = this.projects.get(item.project || job.project || 'default');
-                if (b) b.paused = true;
                 this.finish(item, 'failed', 'authentication', 'transport');
             } else if (
                 (status === 429 ||

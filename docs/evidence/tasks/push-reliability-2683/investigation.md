@@ -1,0 +1,190 @@
+# Push reliability investigation — 2026-10-06
+
+Initial evidence is at repository base 182f4fd7, with GitHub issue observations
+fetched on 2026-10-06 UTC. Initial deployment/user reports are attributed
+observations. The dated follow-up below adds authorized host, S3 and physical-device
+checks; distinguish those from the original source investigation.
+
+## #2683 confirmed defect
+
+The old dispatcher watchdog set `budget.paused=true` and never cleared it, even
+when the original request later settled. Both dispatcher and HTTP transport
+started 15s timers; the watchdog starts first. The original regression produced
+an ambiguous result followed by failure of a fresh job after settlement.
+
+[Issue #2683](https://github.com/WizardFactory/TodayWeather/issues/2683) records two
+ambiguous sends then 25 project-paused failures at 07:40 KST and three jobs with zero
+transport attempts at 08:00. These are bounded issue/operations findings. Why those
+FCM requests were slow remains unknown. The corrected flow uses a 20s watchdog,
+15s HTTP abort/close settlement, a 30s fresh-job recovery gate, retained physical
+slots and at most two probes while ambiguous sends remain unresolved. Original
+jobs are never replayed. Late auth/429 and stale-probe races are covered. Integrated smoke additionally
+reproduced a normal-fairness turn taking the single recovery gate before a warning;
+the regression and correction now give pending warnings that gate. Normal fairness
+and reservations resume after recovery.
+
+## #2626 registration and release identity
+
+`service.push.js` updates via PUT old/new token and posts saved lists at startup,
+settings save and first-token arrival. `service.firebase.js` obtains tokens through
+FirebasexMessaging and registers the token refresh callback. Backend IPC forwards
+PUT to `Registry.rotate`, which advances endpoint generation. A changed-token POST
+also advances generation. `Engine.eligible` rejects a delivery-state disabled
+marker only when it matches the current generation.
+
+Verified locally: enabled registration plus disabled matching generation is
+ineligible; reposting the same invalid token stays fenced; new-token PUT and
+changed-token POST restore new-generation eligibility. Revision guards keep stale
+queued work from sending. This validates backend behavior, without matching AK's
+device or explaining why its token became invalid. Do not clear invalid-token fences.
+
+Cordova PR #2608 was merged as 39a3336f; its modular Firebasex configuration and
+permission/first-token paths are present. `copy-firebase-config.mjs` copies ignored
+Firebase files from `TW_RELEASE_LOCAL_DIR`; it does not create APNs keys or FCM
+tokens. This worktree and the documented base checkout lack the configured SSH
+key/credentials; the expected local Firebase JSON/plist files are also absent.
+AK then requested issue-history and read-only S3 backup inspection. The available
+user AWS profile was verified against the documented account; this does not restore
+SSH access. #2605 records restoration of existing private Firebase build inputs,
+an October 1 credential backup, and separately approved Apple Distribution
+certificate/profile issuance. #2608 records Firebasex migration and a pending
+Firebase APNs-key Console check. Related APNs issue records contain no confirmed
+Firebase project/sender or APNs authentication-key replacement for this release.
+
+On 2026-10-06 UTC, the legacy 2018 TodayWeather Android JSON and iOS plist S3 objects
+were each byte-identical to their October 1 release-backup copies. Both downloaded
+copies match the backup manifest SHA256. Project, sender, app identity and iOS
+bundle identity therefore match these backed-up inputs. This verifies configuration
+continuity in S3, not the exact installed binary, current Console APNs binding or
+device FCM token. A release plugin change alone does not establish token replacement.
+
+The private configuration bucket contains 53 objects, including historical
+Firebase service accounts, an APNs authentication key (2019), older APNs
+certificate/key pairs, product build/signing inputs and two October 1 backup groups.
+Each new group has nine material files plus a manifest and restore guide (11 objects).
+The release group includes two environment files, Android keystore/build settings,
+Firebase JSON/plist, ads configuration, Google store service-account credential
+and Apple store API key. The signing group includes matching distribution private
+key/CSR/certificate formats, encrypted P12/password, provisioning profile and two
+receipts. Store API authentication and Apple Distribution signing are separate
+from APNs authentication. AWS credentials were excluded from the release backup.
+Existing APNs originals were preserved; presence alone does not prove validity or
+Console association. Private key values, IDs and recovery paths are omitted here.
+
+The current push bucket listing contained 1,681 JSON objects (9,532,521 bytes):
+1,422 campaign objects, 102 delivery-state, 82 registrations and 75 warning-feed
+objects. Observed modification range: September 29 through October 6 01:07:05 UTC.
+These are current persisted coordinator records, not a separate historical backup
+or proof of completed delivery. No registration token, position or recipient content
+was read for this inventory. No S3 mutation or credential generation was performed.
+
+Still compare installed build identity and Firebase APNs key/team/environment
+metadata privately. Record equality/change and validity, never key/token values.
+
+AK reports actual scheduled-weather receipt on the older iOS app early last week.
+Exact timestamp/version/token is unknown. The current disabled cohort is not
+identified as AK's device. iOS has worked at least once; an app update is not an
+established repair requirement. Native 1.1.0 token/permission/tap/receipt needs a
+separate physical-device acceptance check. No speculative iOS fix or new issue.
+
+## #2677 weather preparation and unresolved origin latency
+
+PR #2680 is already merged/deployed per the issue records. October 6 source-matched
+operations evidence in #2677 confirms preparation retries and no terminal weather
+preparation failure in the inspected new campaigns. The inspected transport failures
+belong to #2683. The original 46 HTTP499 responses at +5s establish cancellation at
+the coordinator's timeout, without identifying the slow origin stage.
+
+Source tracing: the alarm runtime uses `/v000902/kma/addr/...` after town resolution.
+That router invokes `ControllerTown24h`'s inherited `getAllDataFromDb`, whose town
+and mid-weather branches run in parallel but each collection group uses
+`async.mapSeries`. DB_DATA_VERSION 2.0 current/short/shortest readers execute sorted
+Mongo queries, followed by the route's merge, history, air, life-index and rise/set
+middleware. This identifies timing boundaries to inspect; it does not show which
+stage was slow on the deployed revision. No blanket weather-timeout increase.
+
+Later S3 readback is recorded in [verification](verification.md#read-only-s3-batch-readback--2026-10-06-utc): two later campaigns contain 47 preparation-reason expiries. The earlier issue observation is not a statement about every October6 campaign.
+
+During the initial pre-merge investigation on 2026-10-06 UTC, the configured SSH
+key was absent, so the host probe could not proceed. Supporting unpublished
+operations records were not in this checkout. Later S3 reads and authorized SSH
+access refreshed campaign evidence, push file hashes and coordinator status; see
+the dated follow-up below. Origin timings remain unverified. Existing evidence
+supports the confirmed code fix without establishing origin root cause or batch
+completeness.
+
+After separately authorized access, correlate a bounded campaign window using
+sanitized counts: coordinator prepared/transport attempts, nginx499/request_time/
+upstream_response_time, stage completion timings and connection/CPU pressure.
+Inspect configured DB version, selected adapters and source hashes first. Do not
+invoke `/gather/*`, alter runtime or call providers to fabricate latency evidence.
+Read campaign parts/manifest summary and share one controlled receipt check between
+#2626/#2677. FCM acceptance alone does not prove device receipt.
+
+See [operations and rollback](../../../operations/push-s3.md#transport-recovery--2683).
+
+## Independent review findings
+
+F1 reproduces recovery starvation caused by process-wide queued/active warning state: an unrelated cooldown warning or a logically finished hung warning can block fresh normal probes indefinitely. F2 shows late ambiguity resetting already established probe proof. Correct both while retaining physical slots and same-project eligible warning preference. F3 conservative pre-connect classification is retained and documented; F4 clarifies probe exhaustion only while physical requests remain unresolved. Independent Node16/22 regressions/smokes and Node16 broad suite confirm these observations.
+
+## Registration and host follow-up — 2026-10-06 UTC
+
+The earlier SSH limitation was resolved after AK supplied the local key directory.
+Read-only SSH inspection at 03:38–03:43UTC reached the service host at its documented
+address. AWS inventory shows a replacement service instance; the September20
+instance ID is stale. The deployed checkout still reports legacy Git HEAD5bca407
+with substantial overlays, so Git HEAD alone cannot identify the push release.
+The coordinator was online with one PM2 process. No restart or deployment occurred.
+
+Deployed on-disk `engine.js`, `registry.js` and `runtime.js` are byte-identical to
+PR head83dc948d and base182f4fd7. `transport.js` and `dispatcher.js` match the base;
+the #2683 recovery fix is not deployed. The inspected transport classifies only a
+typed FCM `UNREGISTERED` response as `messaging/registration-token-not-registered`.
+Only that code produces `invalid`, after which the engine fences the submitted
+generation if it is still current. This supports normal invalid-token handling in
+the inspected implementation, without recovering each historical raw response or
+proving the historical in-memory source revision.
+
+The retained coordinator logs contain7,381 aggregate metrics records and two
+startup records. They have no per-token response or re-registration audit; the
+error log is empty. Invalid S3 job results omit the original FCM reason and captured
+generation. Some deployed file timestamps are epoch values, so they cannot prove
+deployment chronology. These limitations prevent exact historical attribution.
+
+At 03:16:45 UTC, read-only S3 correlation covered 82 registration objects, matching
+delivery state and all 719 retained campaign manifests/parts. Eighteen
+non-superseded iOS registrations yield the following device-level observations:
+
+- Five enabled devices have a current-generation fence and at least one retained
+  invalid job whose endpoint hash matches the current token.
+- Four devices have fences only on older generations. Those fences do not block
+  their current generation; two have later accepted jobs using the current token.
+- One of the five currently blocked devices updated its registration after an
+  invalid result but retained the same token and generation. A same-token POST
+  intentionally preserves that fence. A changed-token PUT or POST advances the
+  generation; opening the app or saving settings does not force Firebase to issue
+  a new token.
+
+This is an observational correlation, not a historical generation audit. Current
+S3 objects are overwritten and bucket versioning is not enabled. Acceptance is
+not proof of device receipt. Anonymous device labels, token hashes, locations and
+private resource identifiers are omitted from this maintained record.
+
+Decision: no registration/disable code correction is justified by this evidence.
+Preserve fences and generation guards; do not force token rotation or enable blocked
+recipients. Retain the missing historical reason/generation evidence as a limitation
+in #2626. A future naturally changed token can complete the remaining device-specific
+re-registration observation. Findings and this decision are recorded in
+[the #2626 host investigation](https://github.com/WizardFactory/TodayWeather/issues/2626#issuecomment-6008851814), extending
+[the S3 correlation](https://github.com/WizardFactory/TodayWeather/issues/2626#issuecomment-6008770680).
+
+Two earlier separately authorized direct FCM tests reached the connected iPhone12
+Pro Max running iOS26.0.1, TodayWeather1.1.0 build1 (developer-installed). Foreground
+receipt was confirmed by the matching callback/event and visible app popup;
+background receipt was confirmed by native notification delivery/list insertion.
+The current device token matched S3 generation1 with three enabled rows and no
+current-generation fence. This device does not explain the blocked cohort or prove
+new-token rotation. Direct tests bypassed coordinator/weather preparation; see
+[the dated physical verification](verification.md#physical-ios-and-host-follow-up--2026-10-06-utc)
+for limits. PR updates after83dc948d reconcile evidence only; no new behavior change
+is selected.

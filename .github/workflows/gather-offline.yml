@@ -31,7 +31,9 @@ jobs:
       - name: Run synthetic regression and functional smoke
         env:
           NODE_PATH: ${{ runner.temp }}/gather-offline/node_modules
-        run: npm --prefix server run test:offline
+        run: |
+          npm --prefix server run test:offline
+          node server/test/offline/push-transport-recovery-smoke.js
       - name: Run unified data.go.kr key and forecast-cycle HTTP smokes
         env:
           NODE_PATH: ${{ runner.temp }}/gather-offline/node_modules

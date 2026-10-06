@@ -617,3 +617,21 @@ JSON results report actual HTTP/page/retry counts. `finally` closes services,
 connection and Mongo and removes the task-owned temporary DB directory. A nonzero
 exit is failure; a provider/production/mobile check is not claimed. See
 [forecast operations](../../../docs/operations/current-grid-collection.md#forecast-completion-2676).
+
+## Push transport recovery (#2683)
+
+```sh
+node server/test/offline/push-transport-recovery.test.js
+node server/test/offline/push-transport-recovery-smoke.js
+```
+
+The regression covers delayed and never-settling sends, bounded fresh-job probes,
+late auth/429/stale-probe races, physical capacity, health, token-generation fencing
+and warning preference at recovery. Saturated-slot checks cover unsent deadline/guard
+cleanup, retry metadata, bounded scans and surviving FIFO order. The separate smoke uses real loopback HTTP v1,
+weather preparation and Unix IPC: abort an original send once, recover with a fresh
+job, retry weather preparation, rotate an invalid generation and send a warning
+before a fresh alarm. It also holds three HTTP sends open beyond the watchdog and
+verifies unsent expiry/supersession while all warning physical slots remain charged.
+S3 is a memory adapter in this smoke; `push-s3-smoke.js --client`
+provides the actual SDK/HTTP S3 and shared-client path. No real provider or device.

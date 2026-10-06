@@ -283,3 +283,31 @@ These supersede the earlier read-only reconciliation/cold-start cost description
 see the [operational details](../operations/push-s3.md). The revised synthetic10k
 warning run took25.366s, rather than the earlier20.8s without an enforced normal-rate
 reservation. No production deployment or real provider sends are implied.
+
+## Bounded transport recovery (#2683)
+
+The HTTP transport aborts at 15s and rejects abort/error only after request close;
+the dispatcher watchdog defaults to 20s. Ambiguous transport outcomes are terminal
+for the original job and never replayed. Any still-running request stays charged to
+physical and lane concurrency. After 30s, the same project admits one fresh eligible
+job as a probe under existing rate/cooldown/deadline/registration guards. Only ready, unexpired, guard-valid warnings for this project take preference when warning capacity is available; normal
+fairness resumes after recovery. Successful
+probing restores normal admissions only after unresolved ambiguous requests settle;
+while any remain, at most two probes are admitted. Exhaustion remains an observable
+pause until settlement or approved operator recovery. A stale probe cannot release
+a newer probe's gate; late auth/429 retains authentication pause/project cooldown.
+
+Unsent queued work is cleaned independently of physical admission: each pump checks
+at most1024 live items cyclically, expiring queued deadlines and superseding stale
+registration guards even when global or lane slots are full. Terminal entries are
+removed without reordering surviving FIFO work. Cleanup preserves retry reason/stage
+and does not release submitted physical requests, replay originals or interrupt
+in-progress preparation. Large queues receive bounded eventual cleanup across pumps.
+
+The IPC health response preserves registration `ready`/HTTP status and adds safe
+aggregate `transport` status (ready/paused/recovering/cooldown, unresolved counts,
+fixed reasons and recovery delay). Minute metrics include the same state. No project
+IDs, credentials, device tokens or payloads are included. Authentication never
+auto-recovers. S3 persistence, token-generation fences and preparation retries are
+unchanged. These are repository contracts; current runtime verification requires
+source-matched deployment evidence.

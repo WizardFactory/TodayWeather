@@ -38,7 +38,7 @@ function request(socketPath, command) {
         req.end(data);
     });
 }
-function listen(socketPath, registry) {
+function listen(socketPath, registry, dispatcher) {
     if (!socketPath || socketPath[0] !== '/')
         return Promise.reject(new Error('PUSH_SOCKET_PATH must be absolute'));
     var server = http.createServer(function (req, res) {
@@ -47,7 +47,8 @@ function listen(socketPath, registry) {
             res.end(JSON.stringify(obj));
         }
         if (req.method === 'GET' && req.url === '/health')
-            return reply(registry.ready ? 200 : 503, { ready: registry.ready });
+            return reply(registry.ready ? 200 : 503, Object.assign({ ready: registry.ready },
+                dispatcher ? { transport: dispatcher.health() } : {}));
         if (req.method !== 'POST' || req.url !== '/command') return reply(404, { error: 'Not found' });
         var body = '',
             tooLarge = false;
