@@ -24,8 +24,10 @@ Inputs: [intent](../intent/issue-2688.md), [spec](../specs/issue-2688.md),
 Temporary namespace: server2-s03-* with OS-selected ports and owned PIDs. Existing
 Rust fmt/clippy/tests/release smoke reused because runtime source is unchanged.
 New tests reject capability absence as intended Red; missing toolchain is setup
-failure. No S03 shared CI edit: root serializes server2/tools/ci.py wiring after the
-lane passes. Raw runs/state/planning and Archify captures stay ignored; selected
+failure. Root authorized the exact additive server2/tools/ci.py pairing of local
+tests before Cargo checks and stack smoke after release checks in amendment
+[6016603807](https://github.com/WizardFactory/TodayWeather/issues/2688#issuecomment-6016603807).
+S03 owns that declared edit; S02 retains workflow/checker ownership. Raw runs/state/planning and Archify captures stay ignored; selected
 CLI screenshot, manifest/manual and concise verification stay durable. Artifact
 checker runs against the staged snapshot and exact outgoing base..head range.
 

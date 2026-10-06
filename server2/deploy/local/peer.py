@@ -89,8 +89,18 @@ class Peer(ThreadingHTTPServer):
             raise
 
     def process_request_thread(self, request, client_address):
+        # A socket read timeout alone can be prolonged by a dripping sender.
+        # Bound the entire admitted connection, including headers/body/response.
+        def expire():
+            try: request.shutdown(socket.SHUT_RDWR)
+            except OSError: pass
+        deadline = threading.Timer(self.config['socket_timeout_seconds'], expire)
+        deadline.daemon = True
+        deadline.start()
         try: super().process_request_thread(request, client_address)
-        finally: self.slots.release()
+        finally:
+            deadline.cancel()
+            self.slots.release()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -129,7 +139,7 @@ class Handler(BaseHTTPRequestHandler):
         query = parse_qs(split.query, keep_blank_values=True)
         path = unquote(split.path, errors='strict')
         if not self.authorized(query): return self.error(403,'InvalidLocalCredential')
-        if sum(len(k.encode())+len(v.encode()) for k,v in self.headers.items()) > 8192:
+        if sum(len(k.encode())+len(v.encode('latin-1')) for k,v in self.headers.items()) > 8192:
             return self.error(400,'TestRequestHeaderLimit')
         if self.headers.get('Transfer-Encoding'): return self.error(400,'UnsupportedTransferEncoding')
         if self.headers.get('Range') or any(x in query for x in ('uploads','uploadId','partNumber','versions')):
@@ -175,7 +185,7 @@ class Handler(BaseHTTPRequestHandler):
         length = int(lengths[0])
         if length > config['max_object_bytes']: return self.error(413,'TestBodyLimit')
         metadata = {k.lower():v for k,v in self.headers.items() if k.lower().startswith('x-amz-meta-')}
-        if sum(len(k.removeprefix('x-amz-meta-').encode())+len(v.encode()) for k,v in metadata.items()) > config['max_metadata_bytes']:
+        if sum(len(k.removeprefix('x-amz-meta-').encode())+len(v.encode('latin-1')) for k,v in metadata.items()) > config['max_metadata_bytes']:
             return self.error(400,'TestMetadataLimit')
         condition = self.headers.get('If-None-Match'); match = self.headers.get('If-Match')
         if (condition != '*' and not match) or (condition and match): return self.error(400,'ConditionalWriteRequired')
@@ -189,7 +199,7 @@ class Handler(BaseHTTPRequestHandler):
             if condition == '*' and current or match and (current is None or match != current.etag):
                 return self.error(412,'PreconditionFailed')
             revisions = self.server.versions.get(key,[])
-            cost = len(body) + sum(len(k.encode())+len(v.encode()) for k,v in metadata.items()) + len(key.encode()) + 512
+            cost = len(body) + sum(len(k.encode())+len(v.encode('latin-1')) for k,v in metadata.items()) + len(key.encode()) + 512
             if len(revisions) >= config['max_versions'] or self.server.stored_bytes + cost > config['max_store_bytes'] or (current is None and len(self.server.objects) >= config['max_objects']):
                 return self.error(507,'TestStoreLimit')
             obj = Object(body,metadata,self.headers.get('Content-Type','application/octet-stream'), '"'+hashlib.md5(body).hexdigest()+'"',str(len(revisions)+1))
@@ -205,6 +215,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200,headers={'ETag':obj.etag,'x-amz-version-id':obj.version})
 
     def list_objects(self,query):
+        supported = {'list-type','prefix','max-keys','continuation-token',
+                     'X-Amz-Algorithm','X-Amz-Credential','X-Amz-Date',
+                     'X-Amz-Expires','X-Amz-SignedHeaders','X-Amz-Signature','X-Amz-Security-Token'}
+        if set(query) - supported:
+            return self.error(501,'UnsupportedLocalListArguments')
+        if any(len(values) != 1 for values in query.values()):
+            return self.error(400,'InvalidListArguments')
         try:
             maximum = int(query.get('max-keys',['1000'])[0])
             if not 1 <= maximum <= 1000: raise ValueError()

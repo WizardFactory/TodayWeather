@@ -62,7 +62,14 @@
   },
   "readiness": {
     "foundation": "health only, not cold-store/weather readiness",
-    "future_gate": "S3 read/auth test, required config/keys, family switch, budget admission, bounded cold warm-up"
+    "future_gate": "S3 read/auth test, required config/keys, family switch, budget admission, bounded cold warm-up",
+    "missing_key_iam_validation": {
+      "status": "unverified; S09 actual staging gate",
+      "risk": "Prefix-conditioned ListBucket may not establish missing-key 404 semantics for HEAD/GET; local peer 404 is not IAM evidence.",
+      "required_check": "With actual runtime role HEAD and GET known-absent raw/v2 and index/v2 keys: require 404/NoSuchKey; separately require 403 on unauthorized reads.",
+      "evidence": "Sanitized statuses, role/policy revision, region and timestamp; no secrets.",
+      "failure": "Block readiness and review policy/error classification; never infer absence from 403 or automatically widen permissions."
+    }
   },
   "drain": {
     "trigger": "IMDSv2 interruption/rebalance or operator signal, monitoring separately authorized",

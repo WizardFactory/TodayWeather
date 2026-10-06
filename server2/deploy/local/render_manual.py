@@ -32,7 +32,7 @@ def render(source, log, pdf, capture, manifest, binary):
     image.save(capture)
     manifest=Path(manifest)
     manifest.write_text(json.dumps(dict(captured_at='2026-10-06',kind='actual-api-cli-usage',command=lines[1],platform=platform.platform(),binary_sha256=hashlib.sha256(Path(binary).read_bytes()).hexdigest(),capture_sha256=hashlib.sha256(capture.read_bytes()).hexdigest(),limitations='isolated foundation plus volatile local test S3/provider peers; no live AWS/provider, SigV4 conformance or weather parity'),indent=2)+'\n')
-    styles=getSampleStyleSheet();styles.add(ParagraphStyle(name='CodeSmall',fontName='Courier',fontSize=8,leading=11,spaceAfter=10));styles['BodyText'].fontSize=10;styles['BodyText'].leading=14;styles.add(ParagraphStyle(name='BulletSmall',parent=styles['BodyText'],leftIndent=12,bulletIndent=0,spaceAfter=8))
+    styles=getSampleStyleSheet();styles['Heading2'].keepWithNext=True;styles.add(ParagraphStyle(name='CodeSmall',fontName='Courier',fontSize=8,leading=11,spaceAfter=10));styles['BodyText'].fontSize=10;styles['BodyText'].leading=14;styles.add(ParagraphStyle(name='BulletSmall',parent=styles['BodyText'],leftIndent=12,bulletIndent=0,spaceAfter=8))
     story=[];pending=[];code=[];table=[];in_code=False
     def flush():
         if pending:

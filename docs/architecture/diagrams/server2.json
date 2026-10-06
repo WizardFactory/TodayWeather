@@ -173,7 +173,7 @@
       "items": [
         "Preserve the 19 observed API groups",
         "No local persistent serving store",
-        "Geocode caches: privacy-safe memory / S3",
+        "Coarse geocode: memory / S3; precise stays volatile",
         "Demand state: grid identity and times only"
       ]
     },

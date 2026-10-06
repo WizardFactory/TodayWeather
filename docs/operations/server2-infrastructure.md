@@ -42,6 +42,18 @@ temporary directory; the launcher refuses external/non-owned binaries. Bind/star
 failure exits nonzero and cleans owned children; stop does not contact production.
 Never use this test stack as a public server or point it at production credentials.
 
+SIGKILL or a hard launcher crash bypasses cleanup: the Rust child may survive and
+ready.json may remain. A ready file is not proof of a live/current launcher.
+Before recovery, record its launcher/foundation PIDs and endpoints. Use a process
+listing (for example `ps -p <foundation_pid> -o pid,ppid,lstart,command`) to confirm
+the child is the exact owned release binary from this run, with the expected
+start time; never kill a PID solely because it appears in a stale ready file.
+Send SIGTERM only to that confirmed child, wait for exit, and confirm all recorded
+loopback listeners are closed. If identity cannot be established, stop and inspect
+manually. Only after confirming this run is stopped, remove its own stale ready
+file and empty temporary directory, then start with a fresh absent ready path.
+The launcher implements normal-signal cleanup, not parent-death supervision.
+
 ## Local S3 subset
 
 Path-style `/server2-local/key` supports PUT/HEAD/GET; bucket GET with `list-type=2`
@@ -50,7 +62,10 @@ and `If-None-Match: *` or `If-Match: "etag"`. MD5 failure is 400; an existing ra
 key or failed CAS is 412. There is no deletion. HEAD/GET preserve exact compressed
 body length, Content-Type, ETag, version ID and `x-amz-meta-*`; an explicit
 `versionId` retrieves that retained local revision. Range, multipart and version
-listing are unsupported and rejected, rather than simulated. No Content-Encoding
+listing are unsupported and rejected, rather than simulated. LIST accepts only
+list-type, prefix, max-keys and continuation-token (plus dummy signing fields);
+delimiter, start-after, fetch-owner, encoding-type and unknown options return 501.
+Duplicate query fields return 400. No Content-Encoding
 is added. The fixture provider accepts only recorded GET/HEAD paths.
 
 The test header `X-Server2-Test-Key: server2-local`, or a presigned-query shape
@@ -62,9 +77,11 @@ serving store, persistent emulator, MinIO replacement or AWS latency benchmark.
 Real AWS signing/conditional headers and role restrictions require S09 verification.
 
 Default bounds: 1 MiB per body, 32 MiB accounted body/metadata/key/version overhead,
-2 KiB user metadata (UTF-8 key/value, excluding the wire prefix), 8 KiB request-header
-key/value cap, 4,096 object keys, 64 versions/key, 16 handler connections and a
-2-second socket timeout. These bound local test growth; they are not an exact RSS
+2 KiB user metadata (original UTF-8 wire key/value bytes, excluding the wire
+prefix), 8 KiB original request-header key/value bytes, 4,096 object keys,
+64 versions/key and 16 handler connections. Both the per-operation socket timeout
+and absolute admitted-connection lifetime are 2 seconds; dripping header/body
+bytes cannot extend that lifetime. These bound local test growth; they are not an exact RSS
 promise or a claim to support every S3 object size. S05 production body caps are
 separate. The [S3 metadata rules](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMetadata.html)
 define the real service limits.
@@ -96,6 +113,16 @@ start. Do not reuse the local dummy keys outside tests.
   Placeholder substitution and IAM evaluation against real resources remain
   unexecuted. Encryption with customer KMS keys would require a new least-privilege
   review; it is not silently covered by this template.
+  **Unverified IAM risk:** the ListBucket grant has an s3:prefix condition.
+  AWS documents that missing-key reads return 404 when ListBucket is permitted,
+  otherwise 403; whether this conditional grant suffices for HEAD/GET is not
+  established by local tests. S09 must use the actual runtime role to HEAD and
+  GET a known-absent raw key and catalog key and require 404/NoSuchKey, while
+  separately proving that unauthorized reads return 403. Record sanitized status,
+  role/policy revision, region and time; a mismatch blocks readiness and requires
+  reviewed policy/error-classification correction. Do not treat 403 as absence
+  or widen permissions from this plan. See the
+  [GetObject missing-key rule](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html).
 - The [bucket template](../../server2/deploy/staging/bucket-policy.template.json)
   rejects non-TLS and unconditional raw writes, and requires conditional catalog/
   state publication. AWS supports

@@ -4,6 +4,8 @@ import concurrent.futures
 import hashlib
 import http.client
 import json
+import socket
+import time
 from pathlib import Path
 import threading
 import unittest
@@ -111,6 +113,52 @@ class LocalContract(unittest.TestCase):
         self.assertEqual(self.call('GET',path,headers={'X-Server2-Test-Key':''})[0],404)
         self.assertEqual(self.call('GET',path.replace('server2-local%2F','not-local%2F'),headers={'X-Server2-Test-Key':''})[0],403)
 
+    def test_unsupported_list_parameters_are_rejected(self):
+        for argument in ['delimiter=%2F','start-after=d%2Fb','fetch-owner=true','encoding-type=url','unknown=value']:
+            with self.subTest(argument=argument):
+                self.assertEqual(self.call('GET','/server2-local?list-type=2&'+argument)[0],501)
+        self.assertEqual(self.call('GET','/server2-local?list-type=2&prefix=a&prefix=b')[0],400)
+
+    def test_utf8_metadata_counts_original_wire_bytes(self):
+        def raw_put(key,value,extra=b''):
+            body=b'x';md5=base64.b64encode(hashlib.md5(body).digest())
+            request=(b'PUT /server2-local/'+key+b' HTTP/1.0\r\nHost: 127.0.0.1:'+str(self.peer.server_port).encode()+b'\r\nX-Server2-Test-Key: server2-local\r\nContent-Length: 1\r\nContent-MD5: '+md5+b'\r\nIf-None-Match: *\r\nx-amz-meta-k: '+value+b'\r\n'+extra+b'\r\nx')
+            with socket.create_connection(self.peer.server_address,timeout=3) as client:
+                client.sendall(request);reply=b''
+                while True:
+                    chunk=client.recv(4096)
+                    if not chunk:break
+                    reply+=chunk
+            return int(reply.split(b' ')[1]),reply
+        value=('가'*600).encode('utf-8')
+        self.assertEqual(raw_put(b'utf8/valid',value)[0],200)
+        status,_,_=self.call('HEAD','/server2-local/utf8/valid');self.assertEqual(status,200)
+        boundary=('가'*682).encode('utf-8')+b'x' # 2047 value + one user-key byte.
+        self.assertEqual(raw_put(b'utf8/limit',boundary)[0],200)
+        self.assertEqual(raw_put(b'utf8/over',boundary+b'x')[0],400)
+        self.assertEqual(raw_put(b'utf8/header-over',b'x',b'X-Test: '+b'a'*8192+b'\r\n')[0],400)
+
+    def test_dripping_connections_release_all_slots_by_absolute_deadline(self):
+        self.peer.config['socket_timeout_seconds']=1
+        self.peer.slots=threading.BoundedSemaphore(2)
+        stop=threading.Event();closed=[];started=time.monotonic()
+        def drip():
+            with socket.create_connection(self.peer.server_address,timeout=3) as client:
+                client.sendall(b'GET /')
+                while not stop.wait(0.05):
+                    try:client.sendall(b'x')
+                    except OSError:closed.append(time.monotonic()-started);return
+        threads=[threading.Thread(target=drip) for _ in range(2)]
+        for thread in threads:thread.start()
+        try:
+            time.sleep(1.4)
+            self.assertEqual(self.call('GET','/server2-local/missing')[0],404)
+            self.assertEqual(len(closed),2)
+            self.assertTrue(all(0.7 <= elapsed <= 1.35 for elapsed in closed),closed)
+        finally:
+            stop.set()
+            for thread in threads:thread.join(3)
+
     def test_bad_config_never_binds_external(self):
         invalid=dict(self.config,bind='0.0.0.0')
         with self.assertRaises(ValueError):make_peer('s3',invalid)
@@ -138,6 +186,10 @@ class StagingContract(unittest.TestCase):
         self.assertFalse(plan['bucket']['lifecycle_deletes'])
         self.assertTrue(plan['provider_keys']['separate_from_legacy'])
         self.assertFalse(plan['provider_keys']['values_in_git'])
+        gate=plan['readiness']['missing_key_iam_validation']
+        self.assertIn('unverified',gate['status'])
+        self.assertIn('404',gate['required_check']);self.assertIn('403',gate['required_check'])
+        self.assertIn('Block readiness',gate['failure'])
         policy=json.loads((OWNED/'deploy/staging/bucket-policy.template.json').read_text())
         by_id={s['Sid']:s for s in policy['Statement']}
         self.assertEqual(by_id['RequireTLS']['Condition']['Bool']['aws:SecureTransport'],'false')
