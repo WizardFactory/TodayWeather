@@ -30,3 +30,9 @@ maintenance remains allowed; this checker is for server2 tasks.
 
 No local serving persistence, provider calls, S3 implementation, background collection,
 shared-instance cache, container deployment or production changes are introduced.
+
+Private loopback metrics omit CORS. OPTIONS/preflight and complete legacy middleware
+parity are deferred to S02; this foundation does not establish client API parity.
+The placement gate checks supported direct literals, with conservative rejection of
+encoded Rust resource strings. Computed/aliased access and custom loaders require
+manual review. It is a review aid, not an adversarial filesystem sandbox.

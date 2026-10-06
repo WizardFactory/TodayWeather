@@ -30,3 +30,21 @@
   is bounded1s, making shutdown at most6s plus scheduling overhead. A timed-out
   blocking closure may continue until process exit; no future durable work is claimed
   drained. S05/S10/S18 must define their durable interruption contracts separately.
+- Literal placement checks support direct single-line plain and hash-matched raw
+  Rust strings in include*/path-module and direct read/read_to_string/read_dir/open/create
+  calls (including borrowed/parenthesized literals). Encoded,
+  backslash-containing, multiline or unsupported direct include/path spellings
+  fail closed. This is a static review aid, not an adversarial sandbox: computed,
+  aliased, macro-generated runtime filesystem APIs require manual review.
+- Conservative non-Rust text checks reject direct legacy/client path references in
+  tool/deploy/config assets. Validated task-declaration outside.path identities and exact fixture data roles
+  can be exempted;
+  an outside declaration cannot authorize executable legacy imports.
+- Shared workflow accepts only a checkout action and the single owned CI invocation,
+  with a finite30minute job timeout.
+- Private metrics omit CORS; public responses retain Access-Control-Allow-Origin *.
+  OPTIONS/preflight parity is deferred to S02; foundation OPTIONS currently405.
+- A signal-triggered listener-drain timeout logs a forced stop, aborts listener tasks
+  and exits cleanly within the5s+1s bound. Unexpected startup/serve/runtime errors
+  remain failures. Socket cap, elapsed slow-header bounds, forced partial-header
+  shutdown and exhausted admission503 are automated regression scenarios.

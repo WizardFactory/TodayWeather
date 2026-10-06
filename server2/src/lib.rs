@@ -203,7 +203,6 @@ async fn metrics(State(s): State<Arc<SharedState>>) -> Response {
 pub fn metrics_router(state: Arc<SharedState>) -> Router {
     Router::new()
         .route("/internal/metrics", get(metrics))
-        .layer(middleware::from_fn(cors))
         .with_state(state)
 }
 

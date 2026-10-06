@@ -1,11 +1,12 @@
 """Synthetic Git fixture tests; no real repository mutations."""
 import importlib.util
 import json
+import os
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
-spec = importlib.util.spec_from_file_location('placement', Path(__file__).with_name('check_placement.py'))
+spec = importlib.util.spec_from_file_location('placement', Path(os.environ.get('SERVER2_TEST_CHECKER', Path(__file__).with_name('check_placement.py'))))
 placement = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(placement)
 
@@ -20,6 +21,7 @@ class PlacementTests(unittest.TestCase):
     def git(self, *args): return subprocess.check_output(['git','-C',str(self.root),*args],stderr=subprocess.DEVNULL).decode()
     def write(self, path, value):
         p=self.root/path; p.parent.mkdir(parents=True,exist_ok=True); p.write_text(value)
+    def fixture_symlink(self, path, value): (self.root/path).symlink_to(value)
     def commit(self): self.git('add','.'); self.git('commit','-qm','fixture')
     def errors(self): return placement.check(self.root,self.d,self.base)
     def test_declared_docs_and_named_recorder(self):
@@ -46,7 +48,7 @@ class PlacementTests(unittest.TestCase):
         self.write('server2/Cargo.toml','[dependencies]\nlegacy={path="../server"}\n[workspace]\nmembers=["../outside"]\n')
         self.assertEqual(2,len(self.errors()))
     def test_symlink_escape(self):
-        (self.root/'server2/static').symlink_to('../server');self.git('add','server2/static')
+        self.fixture_symlink('server2/static','../server');self.git('add','server2/static')
         self.assertTrue(any('symlink escape' in x for x in self.errors()))
     def test_owned_include_allowed(self):
         self.write('server2/src/lib.rs','include_str!("../config/owned.json");');self.write('server2/config/owned.json','{}');self.assertEqual([],self.errors())
@@ -58,7 +60,70 @@ class PlacementTests(unittest.TestCase):
         self.d['outside'][0]['path']='docs/';self.assertTrue(self.errors())
     def test_shared_workflow_wiring_only(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='shared CI'))
-        self.write('.github/workflows/server2.yml','defaults:\n  run:\n    working-directory: server2\nsteps:\n  - run: bash tools/ci.sh\n');self.assertEqual([],self.errors())
+        self.write('.github/workflows/server2.yml','timeout-minutes: 30\ndefaults:\n  run:\n    working-directory: server2\nsteps:\n  - uses: actions/checkout@v4\n    with:\n      fetch-depth: 0\n  - run: bash tools/ci.sh\n');self.assertEqual([],self.errors())
         self.write('.github/workflows/server2.yml','working-directory: server2\nsteps:\n  - run: |\n      python3 -c "business logic"\n');self.assertTrue(self.errors())
+
+    def test_encoded_compiler_and_runtime_literals_rejected(self):
+        for body in [r'include_str!("\x2e\x2e/\x2e\x2e/\x63lient/data.txt");',
+                     r'include_str!("\u{2e}\u{2e}/\u{2e}\u{2e}/client/data.txt");',
+                     r'#[path="\x2e\x2e/\x2e\x2e/client/data.rs"] mod outside;',
+                     r'std::fs::read("\x2e\x2e/client/data.txt");',
+                     'include_str!("../config/own\\\n ed.json");',
+                     r'include_str!("../config/own\"ed.json");']:
+            with self.subTest(body=body):
+                self.write('server2/src/lib.rs', body)
+                self.assertTrue(self.errors(), body)
+    def test_raw_runtime_literals_and_matching_hash_delimiters(self):
+        for literal in ['r"../../client/data.txt"', 'r#"../../client/data.txt"#', 'r##"../../client/data.txt"##']:
+            with self.subTest(literal=literal):
+                self.write('server2/src/lib.rs', 'std::fs::read('+literal+');')
+                self.assertTrue(self.errors(), literal)
+        for literal in ['r"config/owned.json"', 'r#"config/owned.json"#', 'r##"config/own\"ed.json"##']:
+            self.write('server2/src/lib.rs', 'std::fs::read('+literal+');')
+            self.assertEqual([], self.errors(), literal)
+        self.write('server2/src/lib.rs', 'include_str!(r##"../config/own\"ed.json"##);')
+        self.assertEqual([], self.errors())
+    def test_unsupported_direct_compiler_arguments_fail_closed(self):
+        for body in ['include_str!(asset);', '#[path=asset] mod x;', 'include_str!(r#"../config/x"##);', 'std::fs::read(/*comment*/ r"../../client/x");']:
+            self.write('server2/src/lib.rs', body)
+            self.assertTrue(self.errors(), body)
+    def test_borrowed_and_parenthesized_runtime_literals(self):
+        for literal in ['&r"../../client/x"', '&"../server/x"', '(&r##"../../client/x"##)']:
+            self.write('server2/src/lib.rs', 'std::fs::read('+literal+');')
+            self.assertTrue(self.errors(),literal)
+        for literal in ['&r"config/owned.json"', '(&"config/owned.json")']:
+            self.write('server2/src/lib.rs', 'std::fs::read('+literal+');')
+            self.assertEqual([],self.errors(),literal)
+    def test_nonrust_direct_resource_references(self):
+        for path,body in [('server2/tools/escape.py', 'open("../client/data.txt")'),
+                          ('server2/deploy/run.sh', 'cat ../server/config/config.js'),
+                          ('server2/tools/subprocess_escape.py', 'import subprocess; subprocess.run(["cat","../server/config/config.js"])'),
+                          ('server2/tools/encoded_escape.py', r'open("\x2e\x2e/server/config/config.js")'),
+                          ('server2/config/escape.toml', 'source="../client/data.txt"'),
+                          ('server2/deploy/Dockerfile', 'COPY ../server /runtime'),
+                          ('server2/config/escape.json', '{"source":"../client/data.txt"}'),
+                          ('server2/deploy/server2.service', 'ExecStart=cat ../server/config/config.js')]:
+            with self.subTest(path=path):
+                self.write(path,body);self.assertTrue(self.errors());(self.root/path).unlink()
+    def test_fixture_exemption_is_exact_nonexecutable_write_payload(self):
+        self.write('server2/tools/test_placement.py', 'self.write("server2/src/lib.rs", \'std::fs::read("../client/data.txt");\')')
+        self.assertEqual([], self.errors())
+        self.write('server2/tools/test_placement.py', 'open("../client/data.txt")')
+        self.assertTrue(self.errors())
+    def test_valid_task_declaration_identity_is_not_a_runtime_resource(self):
+        path='server2/config/tasks/S02.json'
+        self.write(path,json.dumps(self.d));self.assertEqual([],self.errors())
+        for bad in [dict(self.d,outside=[dict(path='server/',category='legacy-oracle',reason='blanket')]),
+                    dict(self.d,outside=[dict(path='server/config/config.js',category='legacy-oracle',reason='not named')])]:
+            self.write(path,json.dumps(bad));self.assertTrue(self.errors())
+        self.write(path,json.dumps(dict(self.d,runtime_source='../server/config/config.js')))
+        self.assertTrue(self.errors())
+    def test_extra_workflow_action_and_missing_timeout_rejected(self):
+        self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='shared CI'))
+        good='timeout-minutes: 30\nworking-directory: server2\nsteps:\n  - uses: actions/checkout@v4\n    with:\n      fetch-depth: 0\n  - run: bash tools/ci.sh\n'
+        self.write('.github/workflows/server2.yml',good+'  - uses: third-party/side-effect@main\n')
+        self.assertTrue(self.errors())
+        self.write('.github/workflows/server2.yml',good.replace('timeout-minutes: 30\n',''))
+        self.assertTrue(self.errors())
 
 if __name__ == '__main__': unittest.main()

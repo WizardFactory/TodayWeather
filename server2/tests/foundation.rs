@@ -51,7 +51,11 @@ async fn health_exact_and_metrics_not_public() {
         .await
         .unwrap();
     assert_eq!(metrics.status(), StatusCode::OK);
-    assert_eq!(metrics.headers()["access-control-allow-origin"], "*");
+    assert!(
+        !metrics
+            .headers()
+            .contains_key("access-control-allow-origin")
+    );
 }
 
 #[test]
@@ -156,4 +160,39 @@ fn runtime_shutdown_returns_while_blocking_work_is_still_running() {
     assert_eq!(inspection.cpu_available(), 1);
     assert!(elapsed >= std::time::Duration::from_millis(900));
     assert!(elapsed < std::time::Duration::from_secs(2));
+}
+
+#[tokio::test]
+async fn exhausted_admission_is_503_with_public_cors_and_private_metrics_remain_available() {
+    let state = Arc::new(SharedState::new(&Config {
+        inflight_limit: 1,
+        ..Config::default()
+    }));
+    let permit = state.try_admit().unwrap();
+    let response = public_router(state.clone())
+        .oneshot(Request::get("/health").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(response.headers()["access-control-allow-origin"], "*");
+    let private = metrics_router(state.clone())
+        .oneshot(
+            Request::get("/internal/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(private.status(), StatusCode::OK);
+    assert!(
+        !private
+            .headers()
+            .contains_key("access-control-allow-origin")
+    );
+    drop(permit);
+    let recovered = public_router(state)
+        .oneshot(Request::get("/health").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(recovered.status(), StatusCode::OK);
 }

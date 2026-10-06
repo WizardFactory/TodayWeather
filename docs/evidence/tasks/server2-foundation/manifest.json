@@ -3,7 +3,7 @@
   "kind": "actual-api-cli-usage",
   "command": "python3.11 server2/tools/smoke.py --binary server2/target/release/server2",
   "platform": "macOS-26.6.2-arm64-arm-64bit",
-  "binary_sha256": "40c41cfb16cdbd14ea5b2d6ded5f569255b0bc22eca5fcc2e9d1fb658e5b1bb6",
-  "capture_sha256": "df904aa3e28136e5c912ab90591f48fb735982f955cb139b2dfe7fedb0e12cc3",
+  "binary_sha256": "8ca50c9d7a0d8f58d3d2de1797fb7de97f6a398101b618425fe90cdd623b2d61",
+  "capture_sha256": "69727c377c943b78cb293e7823f5da0808870f5f5e9aeff68a6ea39cd92babba",
   "limitations": "isolated local foundation; no providers, S3 or full legacy parity"
 }

@@ -5,6 +5,7 @@ Static checks complement human review; computed filesystem paths are not proven.
 Task declarations are reviewable contracts, not authority to widen scope.
 """
 import argparse
+import ast
 import json
 import re
 import subprocess
@@ -90,34 +91,126 @@ def audit_manifest(root, path, body):
     return errors
 
 
+def rust_literal(body, start):
+    """Bounded direct string scanner; encoded/continued strings fail conservatively."""
+    start += len(body[start:]) - len(body[start:].lstrip())
+    raw = re.match(r'r(#{0,255})"', body[start:])
+    if raw:
+        content = start + raw.end()
+        end = body.find('"' + raw[1], content)
+        if end < 0: return None
+        finish = end + 1 + len(raw[1])
+        value = body[content:end]
+    elif body[start:start + 1] == '"':
+        content = start + 1
+        end = content
+        while end < len(body):
+            if body[end] == '\\':
+                # Skip compiler escape before detecting closing quote, then reject it.
+                end += 2
+            elif body[end] == '"': break
+            else: end += 1
+        if end >= len(body): return None
+        finish = end + 1
+        value = body[content:end]
+    else: return None
+    if '\\' in value or '\n' in value or '\r' in value: return None
+    # Raw hash delimiter must match exactly; don't silently truncate malformed literals.
+    if body[finish:finish + 1] == '#': return None
+    return value, finish
+
+
 def audit_source(root, path, body):
     errors = []
-    # Literal includes/path modules/resources and filesystem APIs must stay owned.
-    expressions = [r'(?:include|include_bytes|include_str)!\s*\(\s*(r#*"[^"]*"#*|"[^"\n]*")', r'#\s*\[\s*path\s*=\s*("[^"\n]*")']
-    for pattern in expressions:
-        for m in re.finditer(pattern, body):
-            literal = m.group(1).lstrip('r#').strip('"#')
-            if not inside(root, root / path, literal):
-                errors.append(f'{path}: resource/include escape: {literal}')
-    # Runtime paths are CWD-relative, unlike compiler includes. Reject ambiguous
-    # parent traversal; allowed relative paths still need an owned CWD in review.
-    for m in re.finditer(r'(?:read|read_to_string|read_dir|open|create)\s*\(\s*("[^"\n]*")', body):
-        literal = m.group(1).strip('"')
-        if '..' in PurePosixPath(literal).parts or not inside(root, root / 'server2' / 'runtime', literal):
-            errors.append(f'{path}: runtime filesystem escape: {literal}')
-    if re.search(r'(?:include|include_bytes|include_str)!\s*\(\s*(?:concat!|env!|format!)', body):
-        errors.append(f'{path}: computed include requires owned literal asset')
-    if re.search(r'(?:["\'])(?:[^"\']*/)?server/(?:[^"\']*)', body):
-        errors.append(f'{path}: legacy resource reference')
+    compiler = r'(?:include|include_bytes|include_str)!\s*\(\s*|#\s*\[\s*path\s*=\s*'
+    for m in re.finditer(compiler, body):
+        parsed = rust_literal(body, m.end())
+        if parsed is None:
+            errors.append(f'{path}: unsupported/encoded compiler resource argument')
+        elif not inside(root, root / path, parsed[0]):
+            errors.append(f'{path}: resource/include escape: {parsed[0]}')
+    runtime = r'(?:read|read_to_string|read_dir|open|create)\s*\(\s*'
+    for m in re.finditer(runtime, body):
+        start = m.end()
+        # Borrowed/parenthesized literals remain static paths, not computed access.
+        while start < len(body) and body[start] in '&( \t\r\n': start += 1
+        arg = body[start:]
+        # Computed/aliased runtime calls need manual review. Direct strings cannot skip.
+        if arg.startswith(('/*', '//')):
+            errors.append(f'{path}: commented runtime filesystem argument requires a direct owned literal')
+            continue
+        if not re.match(r'(?:"|r#*")', arg): continue
+        parsed = rust_literal(body, start)
+        if parsed is None:
+            errors.append(f'{path}: unsupported/encoded runtime filesystem argument')
+        elif '..' in PurePosixPath(parsed[0]).parts or not inside(root, root / 'server2' / 'runtime', parsed[0]):
+            errors.append(f'{path}: runtime filesystem escape: {parsed[0]}')
     return errors
+
+
+def external_literal(value):
+    # Canonical direct paths to sibling assets, including absolute checkout references.
+    return bool(re.search(r'(?:^|[\s"\'=])(?:[^\s"\']*/)?(?:\.\./)+(?:server|client|packages|config|scripts|deploy)(?:/|$|[\s\"\'])', value) or
+                re.search(r'(?:^|[\s"\'=])(?:/[^\s"\']*)/(?:server|client|packages)/(?:[^\s"\']*)', value) or
+                re.match(r'^(?:server|client|packages)/', value))
+
+
+def audit_nonrust(path, body):
+    """Direct executable Python call arguments, decoded JSON, literal shell/config paths.
+
+    Fixture path/payload exemption is exact file + self.write/fixture_symlink data roles, not a file bypass.
+    Computed paths, aliases, custom loaders and macros require manual review.
+    """
+    values = []
+    if path.endswith('.py'):
+        try: tree = ast.parse(body)
+        except SyntaxError as e: return [f'{path}: incomplete Python path check: {e}']
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call): continue
+            name = node.func.id if isinstance(node.func, ast.Name) else node.func.attr if isinstance(node.func, ast.Attribute) else ''
+            if name not in {'open', 'Path', 'read', 'read_text', 'read_bytes', 'write', 'write_text', 'write_bytes', 'run', 'Popen', 'check_output', 'check_call', 'load', 'symlink_to', 'system', 'popen', 'chdir', 'listdir', 'scandir', 'unlink', 'rename', 'replace', 'remove'}: continue
+            fixture = (path == 'server2/tools/test_placement.py' and isinstance(node.func, ast.Attribute)
+                       and node.func.attr in ('write', 'fixture_symlink') and isinstance(node.func.value, ast.Name)
+                       and node.func.value.id == 'self')
+            for index, arg in enumerate(node.args):
+                if fixture: continue
+                for literal in ast.walk(arg):
+                    if isinstance(literal, ast.Constant) and isinstance(literal.value, str): values.append(literal.value)
+            for keyword in node.keywords:
+                if isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str): values.append(keyword.value.value)
+    elif path.endswith(('.json', '.toml')):
+        try: tree = json.loads(body) if path.endswith('.json') else tomllib.loads(body)
+        except ValueError as e: return [f'{path}: incomplete JSON path check: {e}']
+        if re.fullmatch(r'server2/config/tasks/[^/]+\.json', path):
+            # Declaration identities do not read assets. Only validated outside.path
+            # roles are exempt; arbitrary runtime configuration in this file is scanned.
+            invalid = declaration_errors(tree)
+            if invalid: return [f'{path}: {error}' for error in invalid]
+            tree = dict(tree, outside=[{key: value for key, value in item.items() if key != 'path'}
+                                       for item in tree.get('outside', [])])
+        def walk(x):
+            if isinstance(x, str): values.append(x)
+            elif isinstance(x, list):
+                for v in x: walk(v)
+            elif isinstance(x, dict):
+                for v in x.values(): walk(v)
+        walk(tree)
+    else: values.append(body)
+    return [f'{path}: direct external resource reference' for value in values if external_literal(value)]
 
 
 def audit_workflow(body):
     errors = []
-    # Shared entrypoint is intentionally small; all shell logic is in tools/ci.sh.
     runs = re.findall(r'^[ \t]*-?[ \t]*run:[ \t]*([^\r\n]+)$', body, re.M)
-    if runs != ['bash tools/ci.sh'] or 'working-directory: server2' not in body:
+    uses = re.findall(r'^[ \t]*-?[ \t]*uses:[ \t]*([^\r\n]+)$', body, re.M)
+    dirs = re.findall(r'^[ \t]*working-directory:[ \t]*([^\r\n]+)$', body, re.M)
+    timeouts = re.findall(r'^[ \t]*timeout-minutes:[ \t]*([^\r\n]+)$', body, re.M)
+    if runs != ['bash tools/ci.sh'] or dirs != ['server2']:
         errors.append('server2 workflow must only invoke bash tools/ci.sh from server2')
+    if uses != ['actions/checkout@v4'] or re.findall(r'^[ \t]*fetch-depth:[ \t]*([^\r\n]+)$', body, re.M) != ['0']:
+        errors.append('server2 workflow permits only actions/checkout@v4 with full history')
+    if timeouts != ['30']:
+        errors.append('server2 workflow requires the 30-minute job timeout')
     return errors
 
 
@@ -144,11 +237,12 @@ def check(root, declaration, base):
         if file.is_symlink() or modes.get(path) == '120000':
             if not inside(root, file, str(file.readlink())): errors.append(f'{path}: symlink escape')
             continue
-        if file.suffix in ('.rs', '.toml', '.sh', '.py', '.json'):
+        if file.suffix in ('.rs', '.toml', '.sh', '.py', '.json', '.service', '.conf', '.yaml', '.yml') or file.name in ('Dockerfile', '.env'):
             body = file.read_text()
             if file.name == 'Cargo.toml' or path.startswith('server2/.cargo/'):
                 errors.extend(audit_manifest(root, path, body))
             if file.suffix == '.rs': errors.extend(audit_source(root, path, body))
+            elif file.name != 'Cargo.toml': errors.extend(audit_nonrust(path, body))
     return errors
 
 

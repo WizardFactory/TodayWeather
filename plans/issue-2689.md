@@ -25,3 +25,14 @@ Root findingS04-A2: add an isolated runtime fixture holding a real CPU closure,
 assert shutdown returns within its bound and release/wait for closure cleanup.
 Retain no test CPU HTTP route. Update manual/PDF to distinguish listener5s drain,
 runtime1s wait and the separate foundation connection-age limit.
+Claude findings S04-R1–R8 all selected. Add full-Git escaped/raw/matched-hash/plain
+literal controls, executable non-Rust reference and exact fixture-role exemption
+checks, plus workflow action/timeout tests. Run new cases against checker bytes from
+`git show cf8b8447:server2/tools/check_placement.py` for genuine red before fixing.
+Remove CORS on private metrics; add public503 admission assertion. Real release
+smoke verifies socket-cap rejection/recovery, elapsed slow headers and signal-forced
+partial-header drain. Regenerate actual usage manual/PDF and re-review new head.
+
+Root S04-A4 (R3): future S02 declaration metadata naming its allowed legacy recorder
+must pass. Validate every task declaration, exempt only valid outside.path identities,
+and retain failures for invalid/blanket declarations and runtime config resources.

@@ -60,12 +60,23 @@ async fn serve(config: Config) -> io::Result<()> {
         result = &mut private_task => return result.map_err(io::Error::other)?,
     };
     let _ = tx.send(true);
-    tokio::time::timeout(Duration::from_secs(5), async {
-        public_task.await.map_err(io::Error::other)??;
-        private_task.await.map_err(io::Error::other)??;
+    let drain = tokio::time::timeout(Duration::from_secs(5), async {
+        (&mut public_task).await.map_err(io::Error::other)??;
+        (&mut private_task).await.map_err(io::Error::other)??;
         Ok::<(), io::Error>(())
     })
-    .await
-    .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "shutdown deadline"))??;
+    .await;
+    match drain {
+        Ok(drained) => drained?,
+        Err(_) => {
+            public_task.abort();
+            private_task.abort();
+            // A received operator signal permits a bounded, logged forced stop.
+            // Signal registration and unexpected server failures still return errors.
+            if result.is_ok() {
+                eprintln!("server2 signal drain deadline; forced stop");
+            }
+        }
+    }
     result
 }

@@ -18,9 +18,10 @@ cargo build --locked --release
 python3 tools/smoke.py --binary target/release/server2
 ```
 
-The smoke starts one actual release process on two ephemeral loopback ports. It
+The smoke starts two sequential release processes on ephemeral loopback ports. It
 checks GET/HEAD health, rejects public metrics, reads private counters, tests a
-2-second incomplete-header timeout, and stops with SIGTERM. It also verifies that
+2-second incomplete-header timeout with elapsed bounds, socket-cap rejection/recovery,
+and both idle and partial-header SIGTERM shutdown. It also verifies that
 nonloopback metrics configuration fails startup. No legacy collectors run.
 
 ## Configure and operate
@@ -42,7 +43,8 @@ including IPv6 ::1 if used. Invalid values and listener collisions fail startup.
 
 Metrics connections have a separate fixed limit 16. Socket limits bound slow headers
 and body draining; a connection expires at its maximum age even with keep-alive.
-These conservative foundation limits require S10 gateway assessment before cutover.
+This is an absolute connection lifetime, distinct from the later S10 per-request
+9-second gateway deadline. These foundation limits require S10 assessment before cutover.
 The volatile cache is a single byte-bounded slot; keyed/sharded cache algorithms
 are S07. CPU permits remain reserved until blocking work ends after caller cancellation.
 
@@ -53,10 +55,13 @@ curl -i http://127.0.0.1:3003/internal/metrics
 
 Health returns 200 with exact body OK, text/html; charset=utf-8 and CORS *. HEAD returns 200,
 no body, Content-Length 2. Public /internal/metrics returns 404. Private metrics
-returns 200, CORS * and no-store, with only finite counters and declared limits.
-Full legacy session-cookie and middleware-header parity is not asserted here;
+returns 200 and no-store, without CORS access, with only finite counters and declared limits.
+OPTIONS /health currently returns 405; legacy CORS preflight (204), session-cookie
+and complete middleware-header parity are deferred to S02 and not asserted here;
 S02 freezes the complete legacy oracle before route ports. SIGTERM/SIGINT drain
-both listeners for at most 5 seconds; a drain timeout exits unsuccessfully. Tokio
+both listeners for at most 5 seconds; a signal-triggered timeout logs a forced stop
+and exits successfully. Startup, signal-registration and unexpected serving failures
+remain unsuccessful. Tokio
 runtime shutdown then waits at most 1 second for blocking work, including error
 paths, giving a total shutdown bound of 6 seconds plus scheduling overhead. A CPU
 closure may outlive that wait until process exit; this does not claim a durable S3
@@ -74,10 +79,21 @@ python3 tools/test_placement.py
 ```
 
 The checker audits the full tracked server2 snapshot, Cargo local paths, literal
-Rust resources, symlinks and both rename endpoints. It rejects root Cargo and
+Rust compiler resources/path attributes and direct read/read_to_string/read_dir/open/create strings,
+symlinks and both rename endpoints. Plain and matched-hash raw Rust strings are checked;
+borrowed/parenthesized runtime literals are included. Encoded, backslash-containing
+or continued direct resource strings are rejected
+conservatively. Python direct call literals (including decoded escapes), decoded
+JSON/TOML values and literal shell/service/config/deployment paths are also checked.
+Validated config/tasks/*.json outside.path identities and exact test_placement.py
+self.write/fixture_symlink data roles are exempt;
+invalid or blanket declarations, runtime config fields and executable open/subprocess
+calls in the fixture file still undergo checks. Shared workflow
+wiring allows checkout@v4, full history and one owned command, with a 30-minute timeout. It rejects root Cargo and
 undeclared outside implementation. Git/JSON/TOML failures are incomplete checks.
-Computed filesystem paths still require human review; this gate cannot prove arbitrary
-program behavior. The CI entrypoint runs only on server2-related PRs and invokes
+Computed or aliased filesystem paths, custom loaders, macros and dynamically built
+commands require human review. These supported direct literal checks are a review
+aid, not an adversarial sandbox or proof of arbitrary program behavior. The CI entrypoint runs only on server2-related PRs and invokes
 server2-owned checks. Remote branch protection is not configured by this task.
 
 ## Actual usage capture
