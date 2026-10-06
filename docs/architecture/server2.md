@@ -33,7 +33,7 @@ list silently relaxes compatibility for an active API.
 ### Implementation placement
 
 AK's binding direction is broader than Rust source placement: **all new assets
-equivalent to `server/` responsibilities or assets belong under `server2/`**.
+for server2 equivalent to `server/` responsibilities or assets belong under `server2/`**.
 The new runtime must not depend on files in `server/` through imports, includes,
 symlinks or runtime file reads. Explicit HTTP forwarding to legacy remains the
 coexistence mechanism. Port required assets with provenance/license preserved;
@@ -50,18 +50,24 @@ this does not require copying unused APIs or the legacy directory layout.
 | Intent/spec/plan and canonical agent instructions | Existing `intent/`, `specs/`, `plans/` and root `AGENTS.md` |
 | Shared CI and infrastructure entrypoints | Existing shared paths only for explicitly declared wiring; invoke logic/configuration under `server2/` |
 
-The legacy golden recorder at `server/test/offline/golden-record.js` may remain
-in `server/` because it executes the legacy parity target. A named legacy export
+S02 may create the planned legacy golden recorder at
+`server/test/offline/golden-record.js` solely to execute the legacy parity target;
+this file does not exist at the inspected head/base. Its output fixtures and
+consumer belong under `server2/tests/golden/`. Existing gateway fixtures can be
+used as legacy oracle inputs without relocating their maintained legacy copies. A named legacy export
 or coexistence change is likewise permitted when a task explains why it must run
 in legacy. These exceptions do not permit placing the new runtime, fixtures or
 server2-specific tooling in legacy. Legacy retirement is a separate authorized
-task after cutover. Existing unrelated assets need not be moved by this rule.
+task after cutover. Existing unrelated assets need not be moved by this rule. Ordinary legacy
+maintenance, including new modules/tests for legacy behavior, remains allowed
+in `server/`; it is outside server2 work, not a placement exception.
 
 Every implementation task must declare paths, enumerate necessary outside
 changes with reasons, and include the placement completion criterion from the
 [common task contract](../../plans/issue-2614.md#common-contract-for-every-implementation-task).
 The Rust foundation task must implement a local/CI placement check before later
-implementation tasks proceed. Until then, task completion requires a recorded
+implementation tasks proceed. S02 golden assets and S03 configuration/deployment
+assets depend on S04; only inventory and infrastructure planning may precede it. Until then, task completion requires a recorded
 manual path/dependency review. This design specifies the gate; it does not claim
 that the checker or remote merge enforcement is already installed.
 

@@ -24,7 +24,10 @@ Root `AGENTS.md` carries the execution instruction for both agent hosts. The new
 runtime cannot depend on legacy source/data outside `server2/`; the explicit
 HTTP coexistence path is allowed. Documentation/shared CI wiring and named
 legacy recorder/export changes are bounded exceptions, not alternate locations
-for implementation. No task is complete with an unexplained outside path.
+for implementation. No task is complete with an unexplained outside path. S02/S03 server2 assets
+require S04; pre-gate work is inventory/planning only. Ordinary legacy
+maintenance remains outside this server2 placement rule. Explicit pending
+decisions block the mapped tasks even if S01 or a predecessor issue is closed.
 
 This PR's checks are content/link/schema, browser/visual diagram checks and
 latency arithmetic, not execution of a future Rust implementation. Runtime

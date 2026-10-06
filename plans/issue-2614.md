@@ -79,8 +79,8 @@ does not claim either issue is complete.
 | Task | Tracker | Required predecessors |
 | --- | --- | --- |
 | S01 | [server2 S01: record remaining decisions and implementation gates](https://github.com/WizardFactory/TodayWeather/issues/2686) | None for preparation |
-| S02 | [server2 S02: freeze the used-API inventory and byte parity goldens](https://github.com/WizardFactory/TodayWeather/issues/2687) | None for preparation |
-| S03 | [server2 S03: prepare isolated infrastructure and Spot prerequisites](https://github.com/WizardFactory/TodayWeather/issues/2688) | [S01](https://github.com/WizardFactory/TodayWeather/issues/2686) |
+| S02 | [server2 S02: freeze the used-API inventory and byte parity goldens](https://github.com/WizardFactory/TodayWeather/issues/2687) | [S04](https://github.com/WizardFactory/TodayWeather/issues/2689) |
+| S03 | [server2 S03: prepare isolated infrastructure and Spot prerequisites](https://github.com/WizardFactory/TodayWeather/issues/2688) | [S01](https://github.com/WizardFactory/TodayWeather/issues/2686), [S04](https://github.com/WizardFactory/TodayWeather/issues/2689) |
 | S04 | [server2 S04: establish the Rust workspace, CI and placement gate](https://github.com/WizardFactory/TodayWeather/issues/2689) | [S01](https://github.com/WizardFactory/TodayWeather/issues/2686) |
 | S05 | [server2 S05: implement immutable raw S3 records](https://github.com/WizardFactory/TodayWeather/issues/2690) | [S04](https://github.com/WizardFactory/TodayWeather/issues/2689) |
 | S06 | [server2 S06: publish catalogs and recover complete fetch groups](https://github.com/WizardFactory/TodayWeather/issues/2691) | [S05](https://github.com/WizardFactory/TodayWeather/issues/2690) |
@@ -101,13 +101,40 @@ does not claim either issue is complete.
 | S21 | [server2 S21: retire legacy and MongoDB after all included families migrate](https://github.com/WizardFactory/TodayWeather/issues/2706) | [S20](https://github.com/WizardFactory/TodayWeather/issues/2705) |
 | O01 | [server2 O01: conditionally reduce raw GET fan-out with exact-raw packs](https://github.com/WizardFactory/TodayWeather/issues/2707) | [S06](https://github.com/WizardFactory/TodayWeather/issues/2691), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
 
-Start with S01, then S02/S03/S04 as their gates permit; storage/resolver/budgets
+Start with S01, then S04 foundation; S02 inventory and S03 infrastructure
+planning may start earlier, but their server2 assets wait for S04; storage/resolver/budgets
 lead to S09 feasibility and S10 gateway. World, warnings and domestic acquisition
 can proceed independently when their listed prerequisites hold. S19 verification
 and S20 cutover repeat per ready family; they do not wait for every port before
 starting. S20 cannot be completed until every included family is dispositioned;
 S21 retirement waits for all included families and scope gaps. O01 is optional
 and does not become a cutover dependency unless its measured use requires it.
+
+## Decision gates beyond issue dependencies
+
+Closing S01 or another predecessor does not approve a pending decision. Each
+issue body names its decision gates. S01 remains open while the core S3 policy
+is pending; explicitly deferred family choices continue to block their named
+work even after core reconciliation.
+
+| Decision | Blocked work until recorded |
+| --- | --- |
+| O-1 / O-11 | S14 history/capture, S15/S17 dependent assembly and affected push weather behavior; no history gaps accepted |
+| O-2 | S04 Rust foundation direction, S09 feasibility and S15 time-box checkpoints |
+| O-3 | S18 state ownership/journal/duplicate window/reverse migration before state implementation |
+| O-4 / O-12 | S04/S07 memory-only admission/failure contract; local disk policy superseded |
+| O-5 | S05/S06 catalog/raw lifecycle, S08 reservation retention, S09 cost assessment and O01 pack policy |
+| O-6 | S07/S10 precise-geocode privacy/label strategy |
+| O-7 / O-8 | S02 fixture scope, S15/S17 current active behavior; unknown scope stays on legacy until dispositioned |
+| O-9 | S05–S08 publication/reservation/outage semantics, S10–S13 affected serving and warning behavior, S18 state acceptance and O01 publication |
+| O-10 | S03/S08/S10/S13 separate-key and quota prerequisites |
+| O-13 | S16 authorized summary storage only; new API/UI remains excluded |
+
+Ordinary legacy maintenance remains allowed in `server/`. The S02 planned new
+legacy recorder is an explicit server2 verification exception; its outputs and
+consumer live under `server2/tests/golden/`. S14 exporter and S21 retirement
+outside paths are declared placeholders that must be resolved to exact files
+and decisions at intake before edits; they are not blanket legacy allowances.
 
 ## Later implementation phases
 
