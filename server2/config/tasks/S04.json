@@ -1,0 +1,58 @@
+{
+  "task": "S04",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2689",
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2689#issuecomment-6009173855",
+  "server2_paths": [
+    "server2/Cargo.toml",
+    "server2/Cargo.lock",
+    "server2/rust-toolchain.toml",
+    "server2/.gitignore",
+    "server2/README.md",
+    "server2/src/",
+    "server2/tests/",
+    "server2/tools/",
+    "server2/config/"
+  ],
+  "outside": [
+    {
+      "path": ".github/workflows/server2.yml",
+      "category": "ci-wiring",
+      "reason": "Shared CI entrypoint only; invokes owned tools/ci.sh"
+    },
+    {
+      "path": "intent/issue-2689.md",
+      "category": "documentation",
+      "reason": "S04 task intent"
+    },
+    {
+      "path": "specs/issue-2689.md",
+      "category": "documentation",
+      "reason": "S04 executable contract"
+    },
+    {
+      "path": "plans/issue-2689.md",
+      "category": "documentation",
+      "reason": "S04 implementation plan"
+    },
+    {
+      "path": "docs/operations/server2-foundation.md",
+      "category": "documentation",
+      "reason": "Operator usage manual"
+    },
+    {
+      "path": "docs/operations/server2-foundation.pdf",
+      "category": "documentation",
+      "reason": "Visually checked operator PDF"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-foundation/usage.png",
+      "category": "documentation",
+      "reason": "Actual release-binary API usage capture"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-foundation/manifest.json",
+      "category": "documentation",
+      "reason": "Capture provenance and digest"
+    }
+  ]
+}
