@@ -257,6 +257,46 @@ def external_literal(value):
                 re.match(r'^(?:server|client|packages)/', value))
 
 
+GOLDEN_HANDLERS = {
+    'server/app.js', 'server/routes/gateway.js',
+    'server/routes/v000705/routeTownForecast.js',
+    'server/routes/v000705/routePushNotification.js',
+    'server/routes/v000803/routeTownForecast.js',
+    'server/routes/v000803/route.nation.js',
+    'server/routes/v000901/route.kma.addr.js',
+    'server/routes/v000901/route.dsf.coord.js',
+    'server/routes/v000902/route.kma.v000902.js',
+    'server/routes/v000902/route.dsf.coord.v000902.js',
+    'server/routes/v000902/route.push.update.list.js',
+    'server/routes/v000903/route.kma.v000903.js',
+    'server/routes/v000903/route.dsf.coord.v000903.js',
+}
+
+
+def inert_golden_identities(tree):
+    """Exact test fixture role only; no runtime config/file-wide exemption."""
+    if not isinstance(tree, dict) or tree.get('schema') != 1 or isinstance(tree.get('schema'), bool):
+        raise ValueError('golden provenance schema must be1')
+    source = tree.get('source', {})
+    files = source.get('files') if isinstance(source, dict) else None
+    cases = tree.get('cases')
+    if not isinstance(files, dict) or not files or not isinstance(cases, list) or not cases:
+        raise ValueError('golden provenance needs source hashes and wire cases')
+    for case in cases:
+        if not isinstance(case, dict) or case.get('kind') != 'wire' or not isinstance(case.get('handler'), str):
+            raise ValueError('golden handler identity type mismatch')
+        handler = case['handler']
+        if handler not in GOLDEN_HANDLERS or not isinstance(files.get(handler), str) or not re.fullmatch('[0-9a-f]{64}', files[handler]):
+            raise ValueError('golden handler is not a known source-hashed identity')
+        if not isinstance(case.get('status'), int) or isinstance(case.get('status'), bool) or not 100 <= case['status'] <= 599 or not isinstance(case.get('headers'), list):
+            raise ValueError('golden wire response shape mismatch')
+        if not isinstance(case.get('body_base64'), str) or not isinstance(case.get('body_sha256'), str):
+            raise ValueError('golden raw response shape mismatch')
+    # Only this identity is removed from direct-resource scanning. Every other
+    # string, including any added runtime_source field, remains scanned below.
+    return dict(tree, cases=[{k: v for k, v in c.items() if k != 'handler'} for c in cases])
+
+
 def audit_nonrust(path, body):
     """Direct executable Python call arguments, decoded JSON, literal shell/config paths.
 
@@ -283,6 +323,9 @@ def audit_nonrust(path, body):
     elif path.endswith(('.json', '.toml')):
         try: tree = json.loads(body) if path.endswith('.json') else tomllib.loads(body)
         except ValueError as e: return [f'{path}: incomplete JSON path check: {e}']
+        if path == 'server2/tests/golden/records.json':
+            try: tree = inert_golden_identities(tree)
+            except ValueError as e: return [f'{path}: {e}']
         if re.fullmatch(r'server2/config/tasks/[^/]+\.json', path):
             # Declaration identities do not read assets. Only validated outside.path
             # roles are exempt; arbitrary runtime configuration in this file is scanned.
@@ -303,6 +346,13 @@ def audit_nonrust(path, body):
 
 def audit_workflow(body):
     errors = []
+    if re.search(r'^jobs:\s*$', body, re.M):
+        expected_foundation='name: Server2\non:\n  pull_request:\n    paths:\n      - "server2/**"\n      - ".github/workflows/server2.yml"\npermissions:\n  contents: read\njobs:\n  foundation:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n'
+        expected_goldens="  goldens:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
+        # Exact job/source wiring; no env, expressions, arbitrary actions or run steps.
+        if body.strip() in {expected_foundation.strip(), (expected_foundation+expected_goldens).strip()}:
+            return []
+        return ['server2 workflow differs from exact reviewed foundation/goldens wiring']
     runs = re.findall(r'^[ \t]*-?[ \t]*run:[ \t]*([^\r\n]+)$', body, re.M)
     uses = re.findall(r'^[ \t]*-?[ \t]*uses:[ \t]*([^\r\n]+)$', body, re.M)
     dirs = re.findall(r'^[ \t]*working-directory:[ \t]*([^\r\n]+)$', body, re.M)
