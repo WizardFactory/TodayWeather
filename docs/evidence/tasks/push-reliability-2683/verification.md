@@ -108,3 +108,36 @@ results are not a renewed review of the subsequent documentation commit; AK's
 requested review will assess the updated PR. Missing raw historical responses,
 device-specific changed-token re-registration, lock-screen/tap, origin latency and
 scheduled production receipt remain explicit verification limits.
+
+## Required F9 queue cleanup correction — 2026-10-06 UTC
+
+[Review5426084684](https://github.com/WizardFactory/TodayWeather/pull/2684#pullrequestreview-5426084684)
+identified a coverage gap at24ef769d: three unresolved warning requests fill the
+warning lane at concurrency4, preventing unsent other-project work from expiring
+or observing changed registration. The author independently reproduced this on
+Node16/22, plus full global concurrency starvation, and withdrew pre-merge readiness.
+
+Four new intended regressions failed before the fix while the prior17 passed.
+The dispatcher now checks at most1024 live items cyclically before physical
+admission, removing expired/superseded queued entries without changing surviving
+FIFO order or releasing unfinished physical requests. Retry reason/stage is retained.
+
+| Renewed check | Actual result |
+| --- | --- |
+| Node16.20.2 / Node22.22.2 recovery/generation | 21/21 each, including warning/global saturation, guard invalidation, retry metadata and bounded cleanup/FIFO across batches |
+| Real HTTP/weather/Unix IPC smoke, both runtimes | Passed: prior integrated flow plus three HTTP requests held open beyond watchdog; another project's unsent work ended expired/superseded with zero attempts, queue emptied and all three physical slots remained charged |
+| Full offline suite, Node22 | Passed on corrected dispatcher/test content; legacy provider/DB suites excluded by the existing runner |
+| Node16 S3 / preparation / store | 27/27, 32/32, 12/12 |
+| Node16 warning capacity with100k normal backlog | 10,000 accepted; first58ms, final25.255s, synthetic event-loop p99 lag7ms; zero per-recipient S3 reads |
+| Diagram | Regenerated with Archify: validation, strict artifact and real-browser checks pass; light/dark1440/2048 captures visually inspected |
+
+The first Green run stalled only in the large FIFO test: its frozen-clock fixture
+had too few rate tokens to drain all surviving work. Both task-owned processes were
+stopped; increasing that fixture's rate allowed21/21 to complete on both runtimes.
+This is a fixture correction, not a passed first run. No source correction was
+needed after Green. The smoke now has8 HTTP submissions: the earlier5 plus3
+long-open original/probe requests, with no submission for the cleanup targets.
+
+F9 is author-applied, awaiting reviewer confirmation on the pushed correction.
+Earlier review PASS/CI records remain revision-bound; they do not approve this
+change. No merge, deployment, restart, real FCM call or registration mutation occurred.

@@ -146,7 +146,9 @@ The S3 coordinator distinguishes registration readiness from transport readiness
 Ambiguous original sends are never replayed; their unfinished physical slots remain
 charged. New eligible jobs probe recovery after 30s, with eligible same-project warning preference, at most
 two probes while ambiguous requests remain unresolved. HTTP abort/close at 15s precedes
-the 20s watchdog. Late auth/429 still protects project admission; authentication never
+the 20s watchdog. Bounded queue cleanup expires or supersedes unsent work independently
+of occupied physical slots, preserving live FIFO order and submitted requests.
+Late auth/429 still protects project admission; authentication never
 auto-recovers. See [S3 failure contract](push-s3-design.md#bounded-transport-recovery-2683),
 [operations](../operations/push-s3.md#transport-recovery--2683) and
 [verification](../evidence/tasks/push-reliability-2683/verification.md).

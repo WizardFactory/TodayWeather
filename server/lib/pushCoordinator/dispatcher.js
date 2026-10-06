@@ -7,17 +7,34 @@ class Queue {
     constructor() {
         this.items = [];
         this.head = 0;
+        this.offset = 0;
+        this.size = 0;
     }
     get length() {
-        return this.items.length - this.head;
+        return this.size;
     }
     push(x) {
+        x.queue = this;
+        x.queueIndex = this.offset + this.items.length;
         this.items.push(x);
+        this.size++;
+    }
+    // Remove terminal unsent work without moving live FIFO entries or scanning the queue.
+    remove(x) {
+        var index = x.queueIndex - this.offset;
+        if (x.queue !== this || this.items[index] !== x) return;
+        this.items[index] = undefined;
+        this.size--;
+        delete x.queue;
+        delete x.queueIndex;
     }
     shift() {
-        var x = this.items[this.head++];
+        while (this.head < this.items.length && !this.items[this.head]) this.head++;
+        var x = this.items[this.head];
+        if (x) { this.remove(x); this.head++; }
         if (this.head > 1024 && this.head * 2 > this.items.length) {
             this.items = this.items.slice(this.head);
+            this.offset += this.head;
             this.head = 0;
         }
         return x;
@@ -43,6 +60,7 @@ class Dispatcher {
         this.queues = { warning: new Queue(), normal: new Queue() };
         this.active = { warning: 0, normal: 0 };
         this.items = new Set();
+        this.cleanupIterator = this.items.values();
         this.warningItems = new Set();
         this.projects = new Map();
         this.inflight = 0;
@@ -234,6 +252,7 @@ class Dispatcher {
     finish(item, status, error, stage) {
         if (item.done) return;
         item.done = true;
+        if (item.queue) item.queue.remove(item);
         this.items.delete(item);
         this.warningItems.delete(item);
         this.total--;
@@ -276,8 +295,37 @@ class Dispatcher {
             }
         }, delay);
     }
+    // Queue terminal checks must not wait for a send slot. Cycle through at most
+    // 1024 live items per pump, including entries behind an eligible FIFO head.
+    cleanupQueued() {
+        var limit = Math.min(this.items.size, 1024);
+        for (var i = 0; i < limit; i++) {
+            var next = this.cleanupIterator.next();
+            if (next.done) {
+                this.cleanupIterator = this.items.values();
+                next = this.cleanupIterator.next();
+            }
+            if (next.done) break;
+            var item = next.value, job = item.job;
+            // In-progress preparation, retry timers and submitted requests have their own lifecycle.
+            if (!item.queue || item.done) continue;
+            if (job.deadline !== undefined && this.now() >= job.deadline) {
+                if (item.waiting) this.finish(item, 'expired', item.waiting.reason, item.waiting.stage);
+                else this.finish(item, 'expired');
+            } else if (job.guard) {
+                try {
+                    if (!job.guard()) this.finish(item, 'superseded');
+                } catch (e) {
+                    // Match the existing run() preparation-error outcome without allocating a slot.
+                    item.queue.remove(item);
+                    this.prepareFailed(item, job.priority === 'warning' ? 'warning' : 'normal', e);
+                }
+            }
+        }
+    }
     pump() {
         if (this.stopped) return;
+        this.cleanupQueued();
         var scanned = 0,
             limit = Math.min(this.total, 1024);
         while (this.inflight < this.concurrency && scanned++ < limit) {

@@ -226,6 +226,15 @@ original ambiguous result. A late 401/403 still pauses authentication and a late
 still extends cooldown. Repeated ambiguity of the same original request cannot erase
 a successful probe’s proof. Authentication pause never auto-recovers.
 
+Unsent queue cleanup does not wait for free physical slots. Each pump cyclically
+checks at most1024 live items; queued work past its deadline ends `expired`, and an
+invalid registration guard ends `superseded`, without sending or releasing unfinished
+physical requests. Retry expiries retain their stage/reason. Surviving work keeps FIFO
+order. Large backlogs may require several pump cycles; this is not an exact deadline
+timer. Submitted sends, in-progress preparation and retry timers keep their own
+lifecycle. When monitoring saturated slots, terminal queue outcomes must continue
+and `active`/unresolved counts must remain charged until actual transport settlement.
+
 Connection failures, including pre-connect refusal, conservatively enter the same
 ambiguity gate after request close. This can add a 30s pause even when no bytes reached
 FCM. With the default 15s HTTP abort, closed requests no longer count as unresolved

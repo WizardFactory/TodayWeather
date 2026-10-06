@@ -237,7 +237,8 @@
       "title": "Bounded transport recovery",
       "items": [
         "Never replay an ambiguous request; retain its physical slot",
-        "Wait 30s; at most two fresh-job probes while sends remain unresolved"
+        "Wait 30s; at most two fresh-job probes while sends remain unresolved",
+        "Unsent expiry and registration cleanup continue with full physical slots"
       ]
     },
     {

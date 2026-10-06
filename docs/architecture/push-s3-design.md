@@ -297,6 +297,13 @@ while any remain, at most two probes are admitted. Exhaustion remains an observa
 pause until settlement or approved operator recovery. A stale probe cannot release
 a newer probe's gate; late auth/429 retains authentication pause/project cooldown.
 
+Unsent queued work is cleaned independently of physical admission: each pump checks
+at most1024 live items cyclically, expiring queued deadlines and superseding stale
+registration guards even when global or lane slots are full. Terminal entries are
+removed without reordering surviving FIFO work. Cleanup preserves retry reason/stage
+and does not release submitted physical requests, replay originals or interrupt
+in-progress preparation. Large queues receive bounded eventual cleanup across pumps.
+
 The IPC health response preserves registration `ready`/HTTP status and adds safe
 aggregate `transport` status (ready/paused/recovering/cooldown, unresolved counts,
 fixed reasons and recovery delay). Minute metrics include the same state. No project

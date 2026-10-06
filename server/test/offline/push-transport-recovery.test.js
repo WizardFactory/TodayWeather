@@ -217,4 +217,82 @@ runner.test('blocked project budget does not inspect recovery warning guards', a
         assert.equal(f.d.budget('one', 'warning'), 'probe');
     } finally { await f.close(); }
 });
+async function saturatedWarnings(f) {
+    for (var i = 0; i < 3; i++) {
+        var result = await f.d.enqueue(job('one', {priority: 'warning'}));
+        assert.equal(result.error, 'transport-timeout-ambiguous');
+        f.advance(101);
+    }
+    assert.equal(f.d.inflight, 3); assert.equal(f.d.active.warning, 3);
+}
+runner.test('expired unsent warning leaves a saturated physical warning lane without replay', async function () {
+    var f = fixture(null, {concurrency: 4}), result;
+    try {
+        await saturatedWarnings(f);
+        var pending = f.d.enqueue(job('other', {priority: 'warning', deadline: 1400}));
+        pending.then(function (value) { result = value; });
+        await wait(15); assert.equal(result, undefined);
+        f.advance(1000); await until(function () { return result; });
+        assert.equal((await pending).status, 'expired'); assert.equal(result.attempts, 0);
+        assert.equal(f.d.total, 0); assert.equal(f.d.queues.warning.length, 0);
+        assert.equal(f.d.inflight, 3); assert.equal(f.d.active.warning, 3);
+        assert.equal(f.releases.length, 3); assert.equal(f.d.health().unresolved, 3);
+    } finally { await f.close(); }
+});
+runner.test('changed registration terminates unsent warning while physical lane stays occupied', async function () {
+    var f = fixture(null, {concurrency: 4}), valid = true, result;
+    try {
+        await saturatedWarnings(f);
+        var pending = f.d.enqueue(job('other', {priority: 'warning', guard: function () { return valid; }}));
+        pending.then(function (value) { result = value; });
+        await wait(15); valid = false;
+        await until(function () { return result; });
+        assert.equal((await pending).status, 'superseded'); assert.equal(result.attempts, 0);
+        assert.equal(f.d.total, 0); assert.equal(f.d.queues.warning.length, 0);
+        assert.equal(f.d.inflight, 3); assert.equal(f.releases.length, 3);
+    } finally { await f.close(); }
+});
+runner.test('both queues expire unsent work with every global physical slot occupied', async function () {
+    var f = fixture(null, {concurrency: 1}), results = [];
+    try {
+        await f.d.enqueue(job('one', {priority: 'warning'}));
+        var pending = ['normal', 'warning'].map(function (priority) {
+            return f.d.enqueue(job('other', {priority: priority, deadline: 1050})).then(function (r) { results.push(r); });
+        });
+        f.advance(100); await until(function () { return results.length === 2; });
+        await Promise.all(pending);
+        results.forEach(function (r) { assert.equal(r.status, 'expired'); assert.equal(r.attempts, 0); });
+        assert.equal(f.d.total, 0); assert.equal(f.d.queues.warning.length, 0); assert.equal(f.d.queues.normal.length, 0);
+        assert.equal(f.d.inflight, 1); assert.equal(f.releases.length, 1);
+    } finally { await f.close(); }
+});
+runner.test('saturated cleanup preserves preparation expiry reason and live FIFO across scan batches', async function () {
+    var f = fixture(null, {concurrency: 1, rate: 100000}), checks = 0, finished = 0;
+    try {
+        await f.d.enqueue(job('one', {priority: 'warning'}));
+        var pending = [], live = [];
+        for (var i = 0; i < 2300; i++) {
+            var stale = i % 2 === 1;
+            var p = f.d.enqueue(job('other', {priority: 'warning', id: i,
+                guard: function () { checks++; return true; }, deadline: stale ? 1050 : 100000}));
+            if (stale) p.then(function () { finished++; }); else live.push(i);
+            pending.push(p);
+        }
+        // Use the real queued item to exercise metadata preserved by preparation retry.
+        var retry = Array.from(f.d.items)[1];
+        retry.waiting = {reason: 'weather-timeout', stage: 'preparation'};
+        f.advance(100); checks = 0; f.d.pump();
+        assert(checks <= 1024, 'cleanup must be bounded per pump');
+        await until(function () { return finished === 1150; });
+        var expired = await pending[1];
+        assert.equal(expired.status, 'expired'); assert.equal(expired.error, 'weather-timeout'); assert.equal(expired.stage, 'preparation');
+        assert.equal(f.d.total, 1150); assert.equal(f.d.queues.warning.length, 1150);
+        // Physical send settles, then only surviving FIFO work can use its slot.
+        var sent = [];
+        f.d.send = function (_, j) { sent.push(j.id); return Promise.resolve(); };
+        f.releases[0](); await until(function () { return f.d.inflight === 0; });
+        await Promise.all(pending);
+        assert.deepEqual(sent, live); assert.equal(f.d.total, 0); assert.equal(f.d.queues.warning.length, 0);
+    } finally { await f.close(); }
+});
 runner.run().then(function(failed){process.exitCode=failed?1:0;});
