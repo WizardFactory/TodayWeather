@@ -21,3 +21,7 @@ allow exact docs and named legacy recorder wiring; reject misplaced server-equiv
 assets, rename outside boundary and legacy dependencies even if unchanged.
 Concurrency scenario: exhaust admission/CPU reservations, cancel CPU await while work
 continues, then release; no unbounded queue, permit retained until work finishes.
+Root findingS04-A2: add an isolated runtime fixture holding a real CPU closure,
+assert shutdown returns within its bound and release/wait for closure cleanup.
+Retain no test CPU HTTP route. Update manual/PDF to distinguish listener5s drain,
+runtime1s wait and the separate foundation connection-age limit.

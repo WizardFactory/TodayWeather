@@ -206,3 +206,9 @@ pub fn metrics_router(state: Arc<SharedState>) -> Router {
         .layer(middleware::from_fn(cors))
         .with_state(state)
 }
+
+/// Bound runtime destruction even when a cancelled CPU closure has not finished.
+/// This is not a durable-work drain; future storage/provider tasks must define one.
+pub fn shutdown_runtime(runtime: tokio::runtime::Runtime) {
+    runtime.shutdown_timeout(std::time::Duration::from_secs(1));
+}

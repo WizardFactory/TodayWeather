@@ -107,3 +107,53 @@ async fn cancelled_cpu_work_retains_permit_until_real_completion() {
     .unwrap();
     assert!(state.run_cpu(|| 42).await.is_ok());
 }
+
+#[test]
+fn runtime_shutdown_returns_while_blocking_work_is_still_running() {
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(1)
+        .max_blocking_threads(1)
+        .enable_all()
+        .build()
+        .unwrap();
+    let state = Arc::new(SharedState::new(&Config {
+        cpu_limit: 1,
+        ..Config::default()
+    }));
+    let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    let (finished_tx, finished_rx) = std::sync::mpsc::channel();
+    let inspection = state.clone();
+    runtime.spawn(async move {
+        let _ = state
+            .run_cpu(move || {
+                let _ = entered_tx.send(());
+                let _ = release_rx.recv();
+                let _ = finished_tx.send(());
+            })
+            .await;
+    });
+    if entered_rx
+        .recv_timeout(std::time::Duration::from_secs(2))
+        .is_err()
+    {
+        let _ = release_tx.send(());
+        server2::shutdown_runtime(runtime);
+        panic!("CPU closure did not start");
+    }
+    let start = std::time::Instant::now();
+    server2::shutdown_runtime(runtime);
+    let elapsed = start.elapsed();
+    // Release before assertions so even a timing failure cannot leave the thread blocked.
+    release_tx.send(()).unwrap();
+    finished_rx
+        .recv_timeout(std::time::Duration::from_secs(2))
+        .unwrap();
+    let cleanup_deadline = std::time::Instant::now() + std::time::Duration::from_secs(1);
+    while inspection.cpu_available() == 0 && std::time::Instant::now() < cleanup_deadline {
+        std::thread::yield_now();
+    }
+    assert_eq!(inspection.cpu_available(), 1);
+    assert!(elapsed >= std::time::Duration::from_millis(900));
+    assert!(elapsed < std::time::Duration::from_secs(2));
+}

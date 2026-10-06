@@ -25,3 +25,8 @@
   Shared CI may only wire server2-owned commands. It must run fmt/clippy/tests/checker.
 - Gate is deterministic static enforcement plus task review, not proof against computed
   runtime paths or malicious code; dynamic filesystem access requires explicit review.
+- Shutdown explicitly calls Tokio runtime shutdown_timeout after the HTTP serving
+  result, including errors. Listener drain is bounded5s; runtime blocking-task wait
+  is bounded1s, making shutdown at most6s plus scheduling overhead. A timed-out
+  blocking closure may continue until process exit; no future durable work is claimed
+  drained. S05/S10/S18 must define their durable interruption contracts separately.

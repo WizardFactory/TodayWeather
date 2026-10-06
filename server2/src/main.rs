@@ -10,7 +10,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .thread_name("server2")
         .enable_all()
         .build()?;
-    runtime.block_on(serve(config))?;
+    let result = runtime.block_on(serve(config));
+    server2::shutdown_runtime(runtime);
+    result?;
     Ok(())
 }
 async fn shutdown_signal() -> io::Result<()> {

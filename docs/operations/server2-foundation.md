@@ -56,7 +56,11 @@ no body, Content-Length 2. Public /internal/metrics returns 404. Private metrics
 returns 200, CORS * and no-store, with only finite counters and declared limits.
 Full legacy session-cookie and middleware-header parity is not asserted here;
 S02 freezes the complete legacy oracle before route ports. SIGTERM/SIGINT drain
-both listeners for at most 5 seconds; a drain timeout exits unsuccessfully.
+both listeners for at most 5 seconds; a drain timeout exits unsuccessfully. Tokio
+runtime shutdown then waits at most 1 second for blocking work, including error
+paths, giving a total shutdown bound of 6 seconds plus scheduling overhead. A CPU
+closure may outlive that wait until process exit; this does not claim a durable S3
+or provider drain. Later tasks own their interruption guarantees.
 
 ## Enforce placement before task completion
 
