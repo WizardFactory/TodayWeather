@@ -13,11 +13,20 @@ measured S3 latency is claimed. The maintained design is
   [the accepted historical CSV](../../aws/api-traffic-2026-09-22-routes.csv):
   exactly 19 groups and 220,583 requests. Low-volume and failed-only groups are
   included. `/ww` remains outside that report's scope.
-- Recalculated every cold-latency scenario from its waves, bandwidth and CPU
+- Recalculated the initial cold-latency scenarios from waves, bandwidth and CPU
   allowances. The old 19-wave case is 2.34–4.24s; direct catalogs use 11 waves
   and yield 1.54–2.64s; prepared-pack examples yield 0.84–1.44s. These are
   arithmetic scenarios from server2 receipt to assembly, excluding transit,
   queues, repairs and provider/geocoder acquisition, not measured percentiles.
+- Independent Claude review selected R1–R7 for correction: dominant coordinate
+  geocoder cold cost/burst, fetch-group visibility, failed-only fixtures, world
+  grid privacy, catalog-version growth, prior-wave breakdown and attempt budgets.
+  The amended design adds four illustrative geocoder-inclusive ranges
+  (1.74–3.64, 2.14–5.04, 1.04–2.24 and 1.44–3.64s), a 195,350-request/88.56%
+  coordinate-weather share, a 162,206 non-Hit workload proxy, and explicit
+  average-vs-peak quota limits. The example five-minute average is about 19
+  requests, not a measured replacement burst. Catalog-version sizing and the
+  three/five/nine-second timeout chain are independently recalculated too.
 - Inspected raw/catalog publication, revision folding, cancellation, privacy,
   warning expiry, summary completeness and Spot replacement boundaries against
   the linked issue amendments and current source. Remaining runtime decisions
@@ -33,6 +42,8 @@ measured S3 latency is claimed. The maintained design is
 The [JSON](../../../architecture/diagrams/server2.json) and
 [HTML](../../../architecture/diagrams/server2.html) represent the **proposed**
 system. They do not assert that new server2 components exist in the baseline.
+
+Initial diagram at `e72f01ad` (before review corrections):
 
 | Artifact | SHA-256 |
 | --- | --- |
@@ -59,6 +70,20 @@ Actual light/dark screenshots at both endpoint sizes were inspected: readable
 labels, separated nodes/edges, no clipping or viewer-control collisions. No
 geometry correction was needed after inspection. Browser checks and perceptual
 review are separate evidence, neither proves runtime behavior.
+
+Review-corrected diagram (source and HTML regenerated, not patched):
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Source JSON | `0ce7b6159a4dbca4f98ec6b4da831f99b75bb65bc2d32d24a80e48be95d31150` |
+| Delivered HTML | `75883ee3b639e52805c9cdfa23f82093f206b96a1fef12a1aede88149c058c9c` |
+
+The same finalize command with output directory
+`.archify/architecture-server2-20261006/review-correction` passed all four gates
+(validation, delivery, strict artifact and browser). Visual-check in `visual-2`
+captured the corrected artifact at the same four light/dark endpoint states;
+actual screenshots were inspected and remained readable with no collisions.
+Prior failures remain historical evidence and are not relabeled as passing.
 
 ## Retention and handoff
 

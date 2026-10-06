@@ -182,7 +182,8 @@
       "items": [
         "Publish canonical raw before catalog success",
         "Catalogs contain identities, not weather views",
-        "Packs reduce GETs; canonical fallback remains"
+        "Packs reduce GETs; canonical fallback remains",
+        "Serve only complete fetch groups across partitions"
       ]
     },
     {

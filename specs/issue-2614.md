@@ -10,9 +10,9 @@ traceability without duplicating that contract.
 
 | Criterion | Required specification outcome |
 | --- | --- |
-| AC1 | No local persistence; exact raw/revision storage, atomic per-partition S3 catalog publication, bounded raw packs with canonical fallback, one-process shared-cache concurrency and future multi-host plan |
+| AC1 | No local persistence; exact raw/revision storage, catalog CAS plus complete fetch-group reader eligibility across partitions, bounded raw packs with canonical fallback, one-process shared-cache concurrency and future multi-host plan |
 | AC2 | All 19 accepted traffic groups are included; zero-observed public APIs excluded within evidence scope, internal used behaviors retained; old versions/errors/preflight and precise-geocode privacy reconciled |
-| AC3 | Source JSON and standalone HTML linked from architecture index, checked arithmetic and documentation, independent review; assumptions and pending operational decisions remain explicit |
+| AC3 | Source JSON and standalone HTML linked from architecture index; checked latency, dominant cold-geocoder demand/deadlines and catalog-version cost arithmetic; independent review; assumptions and pending decisions explicit |
 
 ## Verification and implementation constraints
 

@@ -92,9 +92,19 @@ redirects, caching and conditional-request behavior. Include 304/ETag,
 preflight, non-JSON errors, invalid sentinels, missing-vs-present fields,
 publication times, yesterday comparisons and #2620 POP merging.
 
+Failed-only traffic establishes inclusion, not an instruction to reproduce an
+incidental outage forever. P1 captures the current legacy/deployed handler with
+frozen successful dependencies, validation/auth failures and recorded provider,
+database and gateway failures. Compare each corresponding status/body/header
+fixture, including stable 5xx mappings. A source/deployment mismatch or proposed
+repair of a legacy bug requires an explicit contract decision before that family
+moves; do not synthesize a success fixture from CSV status counts alone.
+
 The [gateway](../../server/routes/gateway.js) and its recorded fixtures are
-the public-contract starting point. Preserve its nine-second limit, admission
-limit, version defaults and geographic enrichment. Weather success remains
+the public-contract starting point. Preserve its nine-second limit, three-second
+backend attempt cap (up to three attempts within the overall deadline), admission
+limit, version defaults and geographic enrichment. Preserve the geocoder's
+three-second provider attempt and five-second lookup caps. Weather success remains
 `max-age=300`, geocode success `max-age=2592000`, errors `no-store`, and
 `Access-Control-Allow-Origin: *`. Use deployed behavior and actual client
 fixtures to reconcile the old `1ff466b0` baseline with subsequent changes;
@@ -177,6 +187,13 @@ gzip decoding; data.go.kr uses `dataType=JSON`. Detect gateway XML/quota/auth
 errors even when transport status looks successful, and never index them as data.
 Paginated responses retain page bytes and order, with completeness metadata.
 VC day placement uses the first provider-local date covered, not fetch UTC date.
+World-provider keys, cache identities, locks and VC request coordinates use
+legacy [DSF's 0.02-degree cell centre](../../server/controllers/worldWeather/dsf.controller.js),
+including integer-microdegree rounding, negative coordinates and pole/dateline
+clamps. Persist that cell's provider body; never substitute the original user
+coordinate in an S3 key, metadata or request body. The exact client label remains
+a separate volatile geocoding result. P1 includes within-cell sharing and boundary
+fixtures so privacy coarsening preserves the already deployed weather semantics.
 
 An identity catalog contains schema/generation, source/kind/key/partition,
 coverage and fetch identities, ordered page references, completion and raw
@@ -194,20 +211,54 @@ Standard. Enable bucket Versioning for mutable catalogs and do not delete their
 old versions. Canonical raw data remains `If-None-Match: *`, with content
 integrity checked; an ambiguous/412 result is reconciled by metadata/body verification.
 
+Retained catalog versions also have growing-copy cost. With 512-byte identity
+entries and one append per write, 192 revisions retain about 9.05MiB across
+versions versus 96KiB in the final catalog; 1,000 retain about 244.4MiB versus
+500KiB. Headers, page lists and pack updates add more. In general retained bytes
+are `sum(version_header + entry_size * entries_in_that_version)`, not just final
+catalog size. These are sizing examples, not observed traffic. P2 measures write
+cadence, revision count and serialized size per partition; deterministic finer
+time partitions bound growth but can add root/lookup hops. O-5 must assess these
+costs alongside packs. No noncurrent-version deletion is authorized here.
+
 ### Publication and recovery
 
-1. Validate all pages and PUT their canonical raw objects with immutable IDs.
+1. Validate all pages, compute their group declaration, persist any required
+   identity descriptor and PUT canonical raw objects with immutable IDs.
 2. Read/create the authoritative partition catalog and union the new identities.
 3. Publish it using ETag `If-Match` (or `If-None-Match` on creation). Retry a
    conflict by re-reading and unioning; never overwrite concurrent revisions.
-4. After all required partition publications succeed, expose the new data in
-   memory and send success. There is no all-request cross-object transaction.
+4. After all partitions of each required fetch group are published, verify its
+   completeness, expose it in memory and send success. There is no all-request
+   cross-object transaction across independent provider fetches.
 
-The catalog is the atomic serving-publication boundary **per partition**. A
-crash before it succeeds leaves raw archival objects that are not yet published;
-it does not leave a successfully acknowledged volatile-only record. A crash
-after catalog PUT but before the response is recovered by direct catalog GET.
-An unknown PUT outcome requires reading the actual catalog before retrying.
+One validated provider acquisition, including all its pages, is a **fetch group**.
+Prefer one owning publication partition per acquisition (VC's complete range in
+its first local date; KMA by service/entity/base publication). When identities
+must appear in several catalogs, each carries the immutable group ID, full
+expected partition list, ordered member-identity digest and expected member/page
+counts. The group ID hashes this declaration. Readers pin and obtain *all* sibling
+catalogs, check matching declarations and the complete member union/digest, and
+only then admit that group's revisions. No normalized view is persisted.
+Raw-object metadata retains the bounded identity-only group declaration, or an
+immutable identity-descriptor reference if it exceeds metadata limits, so orphan
+repair can validate the expected set rather than blessing only the pages found.
+Descriptor acquisition adds a measured lookup hop where needed.
+
+Thus A published plus B old/missing is an incomplete group, not an independently
+usable new A revision: retain the preceding complete group, or use the existing
+error/fallback. Packs and summaries apply the same eligibility rule. A concurrent
+write can cause conservative exclusion until a bounded refresh, never acceptance
+of a partial group. Fetches declared independent by their kind remain independent;
+P1 validates this boundary rather than assuming whole-request snapshot semantics.
+
+S3 CAS remains atomic **per catalog**; reader eligibility supplies group-wide
+visibility. A crash before group completion leaves archival/pending identities
+that cannot be served as a complete fetch. A crash after completion but before
+response is restored from the complete catalog set. An unknown PUT outcome
+requires reading the actual catalogs before retrying. Multi-partition discovery
+can require an additional sibling-catalog wave and bytes; single-owner groups
+avoid it, and the latency table explicitly assumes required catalogs fit one wave.
 
 On missing/inconsistent catalogs, reconstruct the relevant identity set by
 bounded, fully paginated prefix LIST plus validated bodies. Group completeness
@@ -262,7 +313,7 @@ The [privacy requirement](https://github.com/WizardFactory/TodayWeather/issues/2
 is an explicit exception to permanent raw archiving: precise coordinate-keyed
 reverse-geocode bodies, coordinates and a reversible archive of their lookup
 history must not be stored in S3 catalogs, packs or metadata. A hash alone is
-not anonymization. Keep exact lookup results only in bounded volatile memory
+not anonymization. Keep legacy-key lookup results only in bounded volatile memory
 with at most the legacy 30-day validity. Address-keyed records may persist under
 the issue's policy. Coarsening must not silently change an active API's label.
 
@@ -273,6 +324,50 @@ Provider-free cold restoration cannot be promised for precise coordinate labels.
 Weather/geocode contracts still require parity: legacy forwarding stays available
 until privacy-safe acquisition and its deadlines are validated. Cross-process
 IPC and operational logs must not turn volatile coordinate history into a disk log.
+
+| Reverse-geocode alternative | Cold behavior and compatibility |
+| --- | --- |
+| Volatile legacy-key cache (selected initial design) | Preserves provider/label semantics and raw-only storage policy; replacement loses the legacy Mongo cache's restart survival and incurs provider cost |
+| Two-decimal/KMA-cell persistent key permitted by the privacy comment | Can reuse coarse identities, but cannot archive raw coordinate-lookup bodies. A stored label projection needs an explicit persisted-data exception; address-record pointers alone do not prove identical labels within a cell |
+
+Coarse reverse-geocode serving is not selected without that decision and P1
+proof across administrative boundaries, both sides of cell edges, locales,
+country/KMA-address and returned-coordinate fields. Same grid weather does not
+imply the same display name. Preserve the volatile alternative and legacy
+forwarding if parity, latency or quota gates fail; do not silently trade label
+accuracy for S3-only restoration. #2619's later client grid protocol is separate.
+
+The four observed `/weather/.../coord` groups total **195,350 requests (88.56%
+of product traffic)**. They geocode before backend dispatch. These counts include
+CloudFront hits, not 195,350 origin/provider calls. Their non-Hit categories sum
+to 162,206 (Miss + RefreshHit + Error), an upper workload proxy rather than proof
+that each reached the origin. Exact distinct lookup keys, peak rate, cache-hit
+rate and retry/fallback multiplicity were not measured in the accepted report.
+
+For a replacement's interval W, let `U_W` be distinct uncached legacy
+coordinate/locale keys that reach server2. Single-flight requires at most one
+lookup operation per such key while alive; reserve the maximum configured
+provider-chain cost `a_max` up front, and charge actual provider HTTP units.
+Successful one-provider acquisitions cost approximately `U_W`; a two-provider
+chain approximately `2 * U_W`; failures/key rotations can use up to
+`a_max * U_W`. Each chain has the legacy five-second lookup cap and the overall
+nine-second request cap. Discarded/ambiguous reservations stay spent.
+
+As arithmetic only, the 30-day non-Hit proxy averages 5,407 coordinate-weather
+requests/day, 0.0626/s or about 19 in five minutes. If a five-minute replacement
+window sees that average and every key is uncached, one/two-provider chains cost
+about 19/38 calls. This is not a peak estimate. An all-unique month costs up to
+162,206/324,412 calls under those assumptions, before direct geocode calls,
+retries and incomplete logging; the broader all-request average is 6,512/day.
+Daily quota headroom must cover `a_max * U_day` plus background/other demand;
+peak admission must cover `a_max * U_W / W`, not the monthly average.
+
+P2b measures aggregate key counts/hit rates and chain attempts without persisting
+precise key histories, tests replacement under peak recorded arrival rates and
+multiple replacements, and limits geocoder concurrency within gateway admission.
+There is no guaranteed safe peak from this CSV. Do not activate volatile-only
+geocoding unless the actual quota, p95 and error gates pass against the legacy
+restart-surviving cache. Warm-up cannot restore its precise-coordinate entries.
 
 Warning type catalogs publish raw bulletin references and announcement identities
 as their authoritative partition: do not add a separately required latest marker
@@ -309,6 +404,34 @@ are conservatively spent, not refunded/reused. Retry/key rotation follows #2604,
 with at most one retry only where permitted and funded inside the request deadline.
 Canonical records, catalog updates and state writes also have bounded retries;
 unbounded AWS SDK retry defaults cannot extend the nine-second gateway deadline.
+
+The three-second gateway backend-attempt cap includes resolution and durable
+publication for an in-process family as well as loopback. Retries share the
+owned resolution/publication and reservations; a new waiter does not blindly
+refetch providers. Keep current error/503 retry classification and at most three
+backend attempts; the provider's own allowed retry count remains separate.
+Do not extend these timeouts to make synchronous S3 publication appear faster.
+
+For a new-data miss, bound the chain explicitly:
+
+```text
+total <= geocode_lookup + backend_attempts + final_response_work <= 9s
+backend_attempt = budget_reservation + weather_provider
+                + raw_PUT_batches + catalog_GET + catalog_CAS_PUT
+                + conflict_reconcile + verification/assembly <= 3s per waiter
+```
+
+For illustration, a single-owner miss with reservation 0.1–0.2s, weather
+provider 0.5–1.5s, three S3 waves 0.3–0.6s and CPU 0.2s needs 1.1–2.5s backend
+work before transfer/queues. One CAS conflict adds GET + PUT (0.2–0.4s).
+Adding a one-provider geocode acquisition/reservation of 0.4–1.4s gives
+1.5–3.9s total before those excluded costs; one backend attempt still caps at
+3s. These inputs are assumptions, not a timeout guarantee. Multiple provider
+dependencies, raw batches, sibling catalogs and geocoder fallbacks add their
+actual waves. Budget remaining time before every stage; if raw/group publication
+cannot finish, the new result is not acknowledged. Work ownership, interruption
+and later waiters do not grant extra HTTP time. P2b measures this miss path
+separately from the all-records-present cold examples.
 
 | Failure | Serving behavior |
 | --- | --- |
@@ -348,6 +471,10 @@ The 240-object case assumes 12MiB and 0.20s CPU/router work, plus two persistabl
 location-lookup waves and one catalog wave (all needed catalogs fit that wave).
 Counts are scenarios, not a deployed inventory: 8x24 hourly grid slots alone
 are 192 identities; sky/station/minute inputs, revisions and pages can add more.
+The superseded 19-wave case is two persistable location waves + one LIST wave
+(all prefixes/pages assumed to fit) + `ceil(240/32)=8` per-record commit-reference
+GET waves + eight body waves. It is a previous model, not the current group
+protocol; paginated LISTs or more prefixes would increase it.
 
 | Scenario | GET bodies/blocks | Parallelism | Waves | Estimated seconds |
 | --- | ---: | ---: | ---: | ---: |
@@ -364,6 +491,34 @@ exist; over-read, decompression and unfinished current-day blocks can worsen
 them. Thread count alone does not increase bandwidth or guarantee this speed.
 Under independent identical GET distributions, p95 of the maximum of 32 GETs
 corresponds to the individual p99.84, not p95. Measure full request percentiles.
+
+### Empty-memory coordinate weather, including the geocoder
+
+For the 88.56% coordinate-weather group, replace the two persistable location
+waves with actual volatile-cache-miss geocoder acquisition. Assume only for
+comparison 0.3–1.2s per successful provider call and 0.1–0.2s per synchronous
+quota-reservation wave. One provider is 0.4–1.4s; a sequential Kakao/Google chain
+is 0.8–2.8s. The per-call/lookup/gateway caps still apply; retries and queues are
+excluded. No geocoder raw body is durably published. These assumptions are not
+provider measurements and cannot establish the cutover p95 gate.
+The two-provider case conservatively counts two sequential provider-specific
+reservation writes, both completed before the first HTTP call as part of maximum
+up-front admission. Parallel reservations or pre-reserved blocks can reduce that
+term; failed admission must prevent unreserved provider calls.
+
+| Coordinate-weather case | Geocoder + weather waves | Estimated seconds |
+| --- | --- | ---: |
+| One provider; 240 individual weather bodies at concurrency 32 | 1 geocode acquisition + 9 weather S3 waves + 0.44s allowance | 1.74–3.64 |
+| Two sequential providers; same individual bodies | 2 geocode acquisitions + 9 weather S3 waves + 0.44s | 2.14–5.04 |
+| One provider; 16 prepared weather blocks | 1 geocode acquisition + 2 weather S3 waves + 0.44s | 1.04–2.24 |
+| Two sequential providers; 16 prepared weather blocks | 2 geocode acquisitions + 2 weather S3 waves + 0.44s | 1.44–3.64 |
+
+An acquisition above includes its reservation wave. The prior table remains
+conditional on usable persistable location lookups; it is not the dominant
+public path's replacement performance. All tables exclude client/CloudFront
+transit and multi-partition sibling discovery. The latter adds waves/bytes when
+needed, with complete-group eligibility retained. Measure actual request tails
+and timeout/error rates before switching this route family.
 
 P2 measures body counts/bytes and catalog sizes from P1 fixtures, concurrency
 8/16/32/64, empty-cache and warm latency, CPU/RSS, actual same-region GET/PUT
