@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Proposed server2: one Spot host, memory and S3",
+    "output": "docs/architecture/diagrams/server2.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    {
+      "id": "clients",
+      "type": "external",
+      "label": "Existing clients",
+      "sublabel": "Cordova / widgets / web",
+      "pos": [
+        40,
+        90
+      ],
+      "size": [
+        155,
+        70
+      ]
+    },
+    {
+      "id": "edge",
+      "type": "cloud",
+      "label": "CloudFront",
+      "sublabel": "Existing public cache",
+      "pos": [
+        330,
+        90
+      ],
+      "size": [
+        170,
+        70
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "Origin routing",
+      "sublabel": "Weather + geocode together",
+      "pos": [
+        630,
+        90
+      ],
+      "size": [
+        185,
+        80
+      ]
+    },
+    {
+      "id": "legacy",
+      "type": "backend",
+      "label": "Legacy Node",
+      "sublabel": "Unmigrated families / rollback",
+      "pos": [
+        970,
+        90
+      ],
+      "size": [
+        190,
+        80
+      ]
+    },
+    {
+      "id": "server2",
+      "type": "backend",
+      "label": "Proposed Rust origin",
+      "sublabel": "Tokio + bounded CPU pool",
+      "pos": [
+        630,
+        360
+      ],
+      "size": [
+        185,
+        90
+      ]
+    },
+    {
+      "id": "memory",
+      "type": "database",
+      "label": "Shared volatile cache",
+      "sublabel": "One cache across threads",
+      "pos": [
+        330,
+        360
+      ],
+      "size": [
+        190,
+        90
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "Provider APIs",
+      "sublabel": "Budget reservation before HTTP",
+      "pos": [
+        970,
+        360
+      ],
+      "size": [
+        195,
+        90
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "cloud",
+      "label": "S3 serving store",
+      "sublabel": "Raw / catalogs / raw packs",
+      "pos": [
+        630,
+        620
+      ],
+      "size": [
+        185,
+        80
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "client-edge",
+      "from": "clients",
+      "to": "edge",
+      "label": "HTTPS"
+    },
+    {
+      "id": "edge-origin",
+      "from": "edge",
+      "to": "gateway",
+      "label": "cache miss"
+    },
+    {
+      "id": "legacy-switch",
+      "from": "gateway",
+      "to": "legacy",
+      "label": "legacy family",
+      "variant": "dashed"
+    },
+    {
+      "id": "rust-switch",
+      "from": "gateway",
+      "to": "server2",
+      "label": "migrated family"
+    },
+    {
+      "id": "memory-lookup",
+      "from": "server2",
+      "to": "memory",
+      "label": "cache lookup"
+    },
+    {
+      "id": "provider-miss",
+      "from": "server2",
+      "to": "provider",
+      "label": "reserved miss"
+    },
+    {
+      "id": "s3-lookup",
+      "from": "server2",
+      "to": "s3",
+      "label": "GET / conditional PUT"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Serving contract",
+      "items": [
+        "Preserve the 19 observed API groups",
+        "No local persistent serving store",
+        "Precise reverse geocoding stays volatile",
+        "Demand state: grid identity and times only"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Durability and lookup",
+      "items": [
+        "Raw + complete catalog before new success",
+        "Catalogs contain identities, not weather views",
+        "Packs reduce GETs; canonical fallback remains",
+        "Serve only complete fetch groups across partitions"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Scope and gates",
+      "items": [
+        "Proposed design; no runtime deployed",
+        "Cold cells keep legacy until parity is proven",
+        "Later scale-out: independent caches and shared S3",
+        "Design source: docs/architecture/server2.md"
+      ]
+    }
+  ]
+}

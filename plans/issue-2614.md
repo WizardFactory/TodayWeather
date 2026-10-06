@@ -1,0 +1,221 @@
+# Plan: document and later implement server2
+
+Source: [intent](../intent/issue-2614.md), [spec](../specs/issue-2614.md).
+Current endpoint: documentation PR, no merge/deployment or runtime implementation.
+
+## This PR
+
+1. Read #2614 and its amendments, inspect current source entrypoints, and reconcile
+   the accepted [traffic baseline](../docs/evidence/aws/api-traffic-2026-09-22.md).
+2. Maintain `docs/architecture/server2.md`, its Archify JSON/HTML and index link;
+   retain intent/spec/plan and selected verification evidence.
+3. Check source claims, route counts, arithmetic, links and diagram artifact,
+   browser and visuals separately. Run staged and outgoing artifact-policy checks.
+4. Commit/push this branch, create PR linked to #2614, obtain independent review,
+   resolve selected findings and report the actual PR/CI state. No merge action.
+
+Generated stage receipts, notebook, screenshots and browser receipts remain in
+ignored reports/.planning/.archify; maintained evidence links only to tracked
+inputs. The initial design PR added no runtime or CI changes. The follow-up adds task
+placement instructions and issue decomposition; no runtime/checker is introduced.
+
+## Common contract for every implementation task
+
+AK authorized publishing the proposed S01–S21 tasks and optional raw-pack task
+on 2026-10-06. Their tracker links are recorded below.
+Each published issue body includes the following required
+change and completion criterion, rather than relying only on a parent link:
+
+> **Required change:** Place all new server-equivalent implementation and
+> supporting assets under `server2/`, including runtime, configuration/static
+> data, build/dependencies, tests/fixtures, tooling, migration and deployment.
+> Declare this task's intended paths and enumerate any outside-path changes with
+> their reason before implementation. Follow the architecture placement contract
+> and root `AGENTS.md`; add no server2 business logic to legacy or shared paths.
+>
+> **Completion criterion:** Every added, modified and renamed path conforms to
+> the declaration; outside changes are limited to the declared documentation,
+> shared wiring, legacy verification/export/coexistence or authorized retirement
+> work. No new runtime dependency, include or symlink reaches legacy source/data
+> outside `server2/`. The placement gate passes, or a recorded manual review is
+> supplied for tasks before that gate exists. Fix unexplained violations before
+> marking the task complete.
+
+Task intake must name its `server2/` subdirectories and exact outside paths;
+generic exceptions such as "shared scripts" or "legacy support" are insufficient.
+New exceptions require a decision before dependent edits. Documentation-only or
+infrastructure-only tasks record implementation placement as not applicable and
+check their actual changed paths against the declared exceptions.
+
+The Rust foundation task (proposed S04, within P2) owns the first placement gate:
+
+- Keep its checker, tests and server2 path declarations under `server2/`; shared
+  `.github/workflows/server2.yml` invokes the checker and Rust commands from there.
+- Check the full PR diff, including rename destinations and all outside changes,
+  against the task's explicit allowed paths. Review the actual runtime dependency
+  and resource layout as well; a changed-file allowlist alone cannot prove that
+  a dependency on legacy data was removed.
+- Reject new server2 source/resources/build files in legacy, root or shared
+  packages, and reject imports/includes/symlinks that escape into legacy runtime
+  assets. Exercise allowed documentation/legacy-recorder changes and rejected
+  misplaced configuration, fixtures, deployment scripts and escaped assets.
+- Later implementation tasks depend on this gate. Reviewer verification includes
+  the task declaration, checker result and dependency/resource review. Preserve
+  existing CI gates; configuring remote required checks is a separate action.
+
+No checker or Rust implementation is introduced by this documentation change.
+Before S04, the same boundary is enforced through agent instructions and a
+recorded manual review. AK has authorized creating the subtask issues; implementation still follows
+their recorded decision and dependency gates.
+
+## Task issue index
+
+All 21 required tasks and one conditional optimization were published as native
+sub-issues of #2614 on 2026-10-06. Dependency links in each body are authoritative
+for execution; runtime work also follows the common S01/S04/S02 gates above.
+AK's core S01 decisions are [recorded on the parent](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640).
+S01 decision recording is [complete](https://github.com/WizardFactory/TodayWeather/issues/2686#issuecomment-6009248131).
+S04 foundation follows that recorded gate in its own implementation PR; S02
+inventory preparation has started. No foundation gate is claimed to pass yet.
+
+| Task | Tracker | Required predecessors |
+| --- | --- | --- |
+| S01 | [server2 S01: record remaining decisions and implementation gates](https://github.com/WizardFactory/TodayWeather/issues/2686) | None for preparation |
+| S02 | [server2 S02: freeze the used-API inventory and byte parity goldens](https://github.com/WizardFactory/TodayWeather/issues/2687) | [S04](https://github.com/WizardFactory/TodayWeather/issues/2689) |
+| S03 | [server2 S03: prepare isolated infrastructure and Spot prerequisites](https://github.com/WizardFactory/TodayWeather/issues/2688) | [S01](https://github.com/WizardFactory/TodayWeather/issues/2686), [S04](https://github.com/WizardFactory/TodayWeather/issues/2689) |
+| S04 | [server2 S04: establish the Rust workspace, CI and placement gate](https://github.com/WizardFactory/TodayWeather/issues/2689) | [S01](https://github.com/WizardFactory/TodayWeather/issues/2686) |
+| S05 | [server2 S05: implement immutable raw S3 records](https://github.com/WizardFactory/TodayWeather/issues/2690) | [S04](https://github.com/WizardFactory/TodayWeather/issues/2689) |
+| S06 | [server2 S06: publish catalogs and recover complete fetch groups](https://github.com/WizardFactory/TodayWeather/issues/2691) | [S05](https://github.com/WizardFactory/TodayWeather/issues/2690) |
+| S07 | [server2 S07: implement bounded memory lookup and the resolver](https://github.com/WizardFactory/TodayWeather/issues/2692) | [S06](https://github.com/WizardFactory/TodayWeather/issues/2691) |
+| S08 | [server2 S08: enforce provider reservations and rejection rules](https://github.com/WizardFactory/TodayWeather/issues/2693) | [S04](https://github.com/WizardFactory/TodayWeather/issues/2689), [S05](https://github.com/WizardFactory/TodayWeather/issues/2690), [S06](https://github.com/WizardFactory/TodayWeather/issues/2691) |
+| S09 | [server2 S09: measure Rust feasibility and cold origin cost](https://github.com/WizardFactory/TodayWeather/issues/2694) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S03](https://github.com/WizardFactory/TodayWeather/issues/2688), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693) |
+| S10 | [server2 S10: port gateway and geocoding with legacy backend switches](https://github.com/WizardFactory/TodayWeather/issues/2695) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
+| S11 | [server2 S11: port world weather and air](https://github.com/WizardFactory/TodayWeather/issues/2696) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
+| S12 | [server2 S12: port warning history and latest bulletin recovery](https://github.com/WizardFactory/TodayWeather/issues/2697) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
+| S13 | [server2 S13: port domestic provider acquisition and raw formats](https://github.com/WizardFactory/TodayWeather/issues/2698) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
+| S14 | [server2 S14: migrate legacy history and close acquisition gaps](https://github.com/WizardFactory/TodayWeather/issues/2699) | [S01](https://github.com/WizardFactory/TodayWeather/issues/2686), [S13](https://github.com/WizardFactory/TodayWeather/issues/2698) |
+| S15 | [server2 S15: port domestic KMA v000903 assembly and Rust checkpoint](https://github.com/WizardFactory/TodayWeather/issues/2700) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S11](https://github.com/WizardFactory/TodayWeather/issues/2696), [S12](https://github.com/WizardFactory/TodayWeather/issues/2697), [S13](https://github.com/WizardFactory/TodayWeather/issues/2698), [S14](https://github.com/WizardFactory/TodayWeather/issues/2699) |
+| S16 | [server2 S16: store daily summaries and last-year lookup](https://github.com/WizardFactory/TodayWeather/issues/2701) | [S11](https://github.com/WizardFactory/TodayWeather/issues/2696), [S14](https://github.com/WizardFactory/TodayWeather/issues/2699), [S15](https://github.com/WizardFactory/TodayWeather/issues/2700) |
+| S17 | [server2 S17: port used older weather versions, nation and town](https://github.com/WizardFactory/TodayWeather/issues/2702) | [S15](https://github.com/WizardFactory/TodayWeather/issues/2700) |
+| S18 | [server2 S18: migrate used push and notice state](https://github.com/WizardFactory/TodayWeather/issues/2703) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S12](https://github.com/WizardFactory/TodayWeather/issues/2697), [S15](https://github.com/WizardFactory/TodayWeather/issues/2700) |
+| S19 | [server2 S19: build integrated smoke, shadow and rollback tooling](https://github.com/WizardFactory/TodayWeather/issues/2704) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
+| S20 | [server2 S20: verify and perform approved family cutovers](https://github.com/WizardFactory/TodayWeather/issues/2705) | [S19](https://github.com/WizardFactory/TodayWeather/issues/2704) |
+| S21 | [server2 S21: retire legacy and MongoDB after all included families migrate](https://github.com/WizardFactory/TodayWeather/issues/2706) | [S20](https://github.com/WizardFactory/TodayWeather/issues/2705) |
+| O01 | [server2 O01: conditionally reduce raw GET fan-out with exact-raw packs](https://github.com/WizardFactory/TodayWeather/issues/2707) | [S06](https://github.com/WizardFactory/TodayWeather/issues/2691), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
+
+Start with S01, then S04 foundation; S02 inventory and S03 infrastructure
+planning may start earlier, but their server2 assets wait for S04; storage/resolver/budgets
+lead to S09 feasibility and S10 gateway. World, warnings and domestic acquisition
+can proceed independently when their listed prerequisites hold. S19 verification
+and S20 cutover repeat per ready family; they do not wait for every port before
+starting. S20 cannot be completed until every included family is dispositioned;
+S21 retirement waits for all included families and scope gaps. O01 is optional
+and does not become a cutover dependency unless its measured use requires it.
+
+## Decision gates beyond issue dependencies
+
+Closing S01 or another predecessor does not approve a pending decision. Each
+issue body names its decision gates. AK approved the core S3 policy and
+demand-limited capture on 2026-10-06. Explicitly deferred family choices continue
+to block their named work after S01 closes.
+
+| Decision | Blocked work until recorded |
+| --- | --- |
+| O-1 / O-11 | S14 history/capture, S15/S17 dependent assembly and affected push weather behavior; no history gaps accepted |
+| O-2 | S04 Rust foundation direction, S09 feasibility and S15 time-box checkpoints |
+| O-3 | S18 state ownership/journal/duplicate window/reverse migration before state implementation |
+| O-4 / O-12 | S04/S07 memory-only admission/failure contract; local disk policy superseded |
+| O-5 | S05/S06 catalog/raw lifecycle, S08 reservation retention, S09 cost assessment and O01 pack policy |
+| O-6 | S07/S10 precise-geocode privacy/label strategy |
+| O-7 / O-8 | S02 fixture scope, S15/S17 current active behavior; unknown scope stays on legacy until dispositioned |
+| O-9 | S05–S08 publication/reservation/outage semantics, S10–S13 affected serving and warning behavior, S18 state acceptance and O01 publication |
+| O-10 | S03/S08/S10/S13 separate-key and quota prerequisites |
+| O-13 | S16 authorized summary storage only; new API/UI remains excluded |
+
+Ordinary legacy maintenance remains allowed in `server/`. The S02 planned new
+legacy recorder is an explicit server2 verification exception; its outputs and
+consumer live under `server2/tests/golden/`. S14 exporter and S21 retirement
+outside paths are declared placeholders that must be resolved to exact files
+and decisions at intake before edits; they are not blanket legacy allowances.
+
+## Later implementation phases
+
+Each route port depends on P1 and recorded issue decisions; one PR per phase.
+
+| Phase | Scope and proof |
+| --- | --- |
+| P0 | Record remaining issue choices; keys/IAM/bucket/versioning/lifecycle, actual runtime/Spot prerequisites and rollback ownership. No persistent gp3 requirement. Use accepted traffic report; supplement only its scope gaps/new paths before their cutover. |
+| P1 | Golden harness for the 19 observed groups and retained internal dependencies; current deployment/source/client contract reconciliation, error/CORS/cache/304/preflight fixtures, #2609/#2620 and acquired-history cases. Freeze clock and raw input; two runs byte-identical. |
+| P2 | First establish the `server2/` Rust workspace/CI and placement gate (S04); later implementation tasks depend on it. Then storage/resolver, synchronous publication, memory/single-flight limits; property/crash tests with recorded providers and local S3-compatible peer. Measure actual host build compatibility, S3 tails/throughput, RSS/CPU and cold request fan-out. Raw packs are a measured optional optimization. |
+| P2b | Gateway/geocoder with backend switches to legacy, exact validation/errors/cache/deadline and privacy-safe coordinate handling. Whole-gateway shadow and rollback rehearsal. |
+| P3/P4 | World providers used by gateway and warning catalogs/restore; no deletion of a backend solely due to unused direct public paths. |
+| P5/P6 | Domestic raw JSON, legacy-history export, summaries and v000903 assembly; close O-1/O-11 acquisition gaps and Rust time-box. Active health/air behavior follows current fixtures. |
+| P7 | Used older versions, nation and town, including v000705 town; exclude only supported zero-observed public paths. |
+| P8 | Used push/state and applicable notice supplement; durable acceptance, send ownership, duplicate window and reversible migration. Do not revive retired purchases. |
+| P9 | Retire legacy/Mongo only after every included family and scope gap is dispositioned, parity/shadow/performance/quota gates pass and AK approves cutover. |
+| Later scale-out | Independent per-host caches, shared S3, durable global provider admission, fetch/background ownership, concurrent catalog CAS, readiness/drain and bounded S3 warm-up. No shared-cache implementation now. |
+
+## Scenarios and acceptance mapping
+
+| ID / user and goal | Prerequisites and ordered actions | Expected result / failure | AC and future proof |
+| --- | --- | --- | --- |
+| S1 / app user refreshes domestic weather | Published S3 fixtures, empty memory, providers disabled; GET an included address weather path, then repeat | Cold output equals legacy frozen-input bytes; warm output unchanged; missing history must not produce invented fields | AC1/2; golden + cold/warm smoke |
+| S2 / coordinate user receives correct label | Legacy-key geocode cache empty after replacement; replay recorded locale/boundary coordinates with one/two-provider replies and peak arrivals | Same legacy label/fields; no precise-geocode archive; world raw requests use legacy 0.02-degree cells; quotas and 3s/5s/9s caps hold, failure preserves error/fallback | AC1/2; privacy/schema, geocoder demand and gateway fixtures |
+| S3 / old client updates push/town/nation | 19-route fixture matrix, including failed-only and OPTIONS groups; replay each method/version | Existing validation, body/status, authentication, CORS and 304 preserved; zero-observed exclusions do not remove used internal functions | AC2; inventory reconciliation and golden harness |
+| S4 / client survives replacement | PUT raw; publish group partition A then fail B while B retains an old healthy catalog; restart empty, request, repair B and retry | Incomplete fetch group excluded in all partitions; previous complete group or error used; after all siblings/member digests match, identical full revision fold restored; no blind provider quota spend | AC1/2; cross-partition kill/fault/property smoke |
+| S5 / concurrent/cancelled callers | Several same-key cold requests; cancel initiator during S3 acquisition | Remaining callers share operation; bounded owner completes publication; no unbounded CPU/I/O or lost acknowledged record | AC1; single-flight and shutdown tests |
+| S6 / client uses historical pack | Build pack from durable fixtures, introduce late revision, corrupt/delete serving pack in test peer | Late fields retained; verified canonical fallback yields same bytes; pack-before-index crash harmless | AC1/2; pack hash/range/fallback smoke |
+| S7 / operator checks outage and warning history | Valid memory, S3 outage; then empty memory; providers disabled with old type 2/3 and type 4 fixtures | Memory within TTL works; new undurable success rejected according to decided contract; warnings equal legacy at +10h/+19h | AC1/2; failure matrix/golden |
+| S8 / reviewer assesses speed and future scale-out | Fixed fixture workload; clear caches; measure 8/16/32/64 concurrency, sibling-catalog hops, provider misses and replacement geocoder bursts | Report full p50/p95/p99, bytes/RSS/CPU, catalog-version cost, geocoder quota and attempt time; no estimate relabeled p95; future coordination remains prerequisite | AC3; P2/P2b benchmarks and later scale-out fault tests |
+
+| S9 / implementer preserves the new runtime boundary | Task declares paths; add server2 configuration, fixture or deployment assets, then review/check the full diff and dependencies | Assets under `server2/` pass; misplaced files or legacy resource dependencies fail; only declared outside wiring/verification changes pass | AC4; manual review before S04, then placement gate plus dependency/resource review |
+
+## Risks, rollback and proof
+
+Riskiest changes are raw/catalog publication after interruption, incomplete
+history acquisition, volatile precise geocoding, and output parity after merging
+revisions. Raw packs can trade fewer GETs for more bytes/CPU/storage; disabling
+packs must fall back to the same canonical raw set. Multi-process API workers
+and inter-instance shared caches are rejected initially because they add cache
+duplication/IPC/coordination before a measured need.
+
+Keep the legacy process and family switches during coexistence. Document reverse
+state migration before P8; switch-back alone does not roll back accepted state
+mutations. Preserve CloudFront policy and rehearse rollback with cached responses.
+Only per-family AK-approved cutover changes deployment. A design-document revert
+has no runtime side effects.
+
+Proof for this PR is recorded in
+[selected verification evidence](../docs/evidence/tasks/issue-2614-design/verification.md).
+Rust/property/provider/latency/shadow checks above are future requirements, not
+tests claimed to have run in the documentation PR.
+
+## S01 approved policy handoff
+
+The [AK decision record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640)
+resolves demand-limited capture and core S3 storage/publication/outage choices.
+S01 can complete after disposition records and documentation verification. S04
+foundation then precedes S02/S03 server2 assets and every later implementation.
+S14 must prove demand expiry, replacement reconstruction and capture ownership
+under durable provider budgets; S15/S17 and affected push behavior wait for its
+history catch-up. S18 exact state design, geocoder privacy/label activation,
+measured costs, key provisioning and every route cutover retain named gates.
+
+Decision-record scenario: AK accepts the options; the implementer opens the
+parent record and follows S04's O-2/O-4/O-12 prerequisites. Expected: foundation
+work is permitted in its own PR; an attempt to start S18 without exact O-3
+decisions or a route switch without goldens/shadow/approval remains blocked.
+This document verification checks the recorded disposition, not runtime capture.
+
+## Cold-cell compatibility gate (R16)
+
+The [parent clarification](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009294236)
+retains the accepted demand-limited policy without approving absent history.
+S14 #2699 tests never-requested, resumed-after-more-than-8-days and partial S3
+history cells. Only verified S3 revisions, legacy exports and legacy-equivalent
+recovery may reproduce history; ASOS does not replace missing grid-hour values.
+S20 #2705 preserves per-family legacy fallback, deadlines/errors and measured
+coexistence quota costs even after nominal cutover. S21 #2706 is blocked while
+cold-cell behavior needs legacy/Mongo; retirement is not promised without proof.
+Demand identity under state/demand/grid/ is grid, last-demand time and expiry
+only, without user coordinates/identifiers, tokens or per-request logs.
