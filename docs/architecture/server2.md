@@ -358,7 +358,8 @@ requests/day, 0.0626/s or about 19 in five minutes. If a five-minute replacement
 window sees that average and every key is uncached, one/two-provider chains cost
 about 19/38 calls. This is not a peak estimate. An all-unique month costs up to
 162,206/324,412 calls under those assumptions, before direct geocode calls,
-retries and incomplete logging; the broader all-request average is 6,512/day.
+retries and incomplete logging; these coordinate-weather paths average 6,512/day
+when CloudFront Hits are included. This is not the average of all product traffic.
 Daily quota headroom must cover `a_max * U_day` plus background/other demand;
 peak admission must cover `a_max * U_W / W`, not the monthly average.
 
