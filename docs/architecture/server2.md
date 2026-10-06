@@ -308,13 +308,14 @@ repair can validate the expected set rather than blessing only the pages found.
 Descriptor acquisition adds a measured lookup hop where needed.
 
 S05's internal raw-record wire contract is documented in its
-[published operator manual](https://github.com/WizardFactory/TodayWeather/blob/cb6a93f07b72c1e96945c80cf2006b5c43e56efa/docs/operations/server2-records.md).
+[published operator manual](https://github.com/WizardFactory/TodayWeather/blob/65b93b68ffab3d16997fa99952dbb5e65cc9eee7/docs/operations/server2-records.md).
 `x-amz-meta-s2-record` carries the base64 canonical identity/envelope JSON, and
 `x-amz-meta-s2-gzip-sha256` identifies the compressed bytes. An optional immutable
 `FetchGroupRef` is prepared before the raw PUT and contains identity-only group,
-member and partition hashes/counts; its descriptor key is
+member and partition hashes plus the `members` count; its descriptor key is
 `index/v2/groups/{group_sha256}.json`. S06 owns descriptor/catalog publication and
-completeness validation. A successful raw PUT acknowledges that body only: it is
+completeness validation, including the expected partition/page sets. A successful
+raw PUT acknowledges that body only: it is
 not a catalog/fetch-group commit or permission to cut over a serving route.
 
 Thus A published plus B old/missing is an incomplete group, not an independently
