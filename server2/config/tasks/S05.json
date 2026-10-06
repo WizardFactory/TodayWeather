@@ -1,0 +1,52 @@
+{
+  "task": "S05",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2690",
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2690#issuecomment-6016490924",
+  "server2_paths": [
+    "server2/src/storage/",
+    "server2/tests/storage/",
+    "server2/tests/raw_records.rs",
+    "server2/examples/raw_records_smoke.rs",
+    "server2/Cargo.toml",
+    "server2/Cargo.lock",
+    "server2/src/lib.rs",
+    "server2/config/tasks/S05.json"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2690.md",
+      "category": "documentation",
+      "reason": "S05 maintained task contract, manual or selected verification evidence"
+    },
+    {
+      "path": "specs/issue-2690.md",
+      "category": "documentation",
+      "reason": "S05 maintained task contract, manual or selected verification evidence"
+    },
+    {
+      "path": "plans/issue-2690.md",
+      "category": "documentation",
+      "reason": "S05 maintained task contract, manual or selected verification evidence"
+    },
+    {
+      "path": "docs/operations/server2-records.md",
+      "category": "documentation",
+      "reason": "S05 maintained task contract, manual or selected verification evidence"
+    },
+    {
+      "path": "docs/operations/server2-records.pdf",
+      "category": "documentation",
+      "reason": "S05 maintained task contract, manual or selected verification evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-records/usage.png",
+      "category": "documentation",
+      "reason": "S05 maintained task contract, manual or selected verification evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-records/manifest.json",
+      "category": "documentation",
+      "reason": "S05 maintained task contract, manual or selected verification evidence"
+    }
+  ]
+}

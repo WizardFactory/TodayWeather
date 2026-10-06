@@ -1,5 +1,6 @@
-//! S04 foundation only: no weather routes, filesystem serving store or providers.
+//! HTTP foundation and immutable raw storage; no provider or weather-route cutover.
 pub mod listener;
+pub mod storage;
 use axum::{
     Router,
     body::Body,
