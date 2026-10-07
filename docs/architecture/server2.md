@@ -706,7 +706,18 @@ configuration. The library does not infer their correctness from a key hash.
 
 Any candidate funding denial stops the chain; quota/auth responses stop retries
 on that key, while only the permitted funded retry or key rotation can consume
-the remaining attempt within the original deadline. Error bodies are not data.
+the remaining attempt within the original deadline. Exhausting the bounded CAS
+conflict attempts is contention, distinct from exhausted quota. Duplicate rotation
+keys or quota-owner identities are rejected before funding or provider HTTP.
+
+A successful data.go.kr response with result code 03 returns a distinct terminal
+no-data outcome and its original body without a second provider call. Deterministic
+request/service codes 10 and 12 are rejected without retry. HTTP quota/auth,
+other 4xx and transient status precedence remains intact. No-data bytes are held
+in memory; they are not weather records or permission to publish an error envelope
+as data. The later provider port owns the compatible empty/no-data response and
+any allowed persistence. Only the data outcome remains subject to complete S06
+raw/group publication before a new data response. Error bodies are not data.
 
 Obtaining a new block requires authority GET, CAS PUT and witness PUT: three
 dependent S3 waves before HTTP, with bounded conflict work added when needed.

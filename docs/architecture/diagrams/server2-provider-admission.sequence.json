@@ -9,7 +9,7 @@
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f1e108e1ecf7162e7388974a2bca3c46e58c504d",
+      "revision": "7901f3a6973e5ea73954a7692bf980652b4070d6",
       "provider": "github",
       "link_mode": "web"
     }
@@ -23,8 +23,8 @@
       "sources": [
         {
           "path": "server2/src/providers/acquisition.rs",
-          "line": 75,
-          "end_line": 106
+          "line": 81,
+          "end_line": 108
         }
       ]
     },
@@ -36,8 +36,18 @@
       "sources": [
         {
           "path": "server2/src/providers/acquisition.rs",
-          "line": 108,
-          "end_line": 180
+          "line": 60,
+          "end_line": 79
+        },
+        {
+          "path": "server2/src/providers/acquisition.rs",
+          "line": 114,
+          "end_line": 205
+        },
+        {
+          "path": "server2/src/providers/rejection.rs",
+          "line": 163,
+          "end_line": 191
         }
       ]
     },
@@ -59,8 +69,8 @@
         },
         {
           "path": "server2/src/budget/model.rs",
-          "line": 115,
-          "end_line": 130
+          "line": 116,
+          "end_line": 131
         }
       ]
     },
@@ -96,7 +106,7 @@
         {
           "path": "server2/tests/budget/peer.py",
           "line": 19,
-          "end_line": 36
+          "end_line": 46
         }
       ]
     }
@@ -126,7 +136,7 @@
       "y": 160,
       "label": "Acquisition plan and deadline",
       "variant": "emphasis",
-      "note": "At most 4 admitted acquisitions; validation CPU=2. Key/window/endpoint mapping is trusted."
+      "note": "At most 4 admitted acquisitions; validation CPU=2. Reject duplicate rotation identities before funding."
     },
     {
       "id": "admit-2",
@@ -160,7 +170,7 @@
       "y": 320,
       "label": "CAS unique range within ceiling",
       "variant": "security",
-      "note": "Checked min(block, remaining); bounded conflicts. No deletion or reset."
+      "note": "Checked min(block, remaining); bounded CAS contention is distinct from exhaustion. No deletion or reset."
     },
     {
       "id": "admit-6",
@@ -212,7 +222,7 @@
       "y": 560,
       "label": "Status and bounded body",
       "variant": "return",
-      "note": "Injected JSON validator; provider-specific semantic ports remain later. XML errors are not data."
+      "note": "Terminal 03: no-data in RAM, no retry. Deterministic 10/12 are rejected. Quota/auth and HTTP status precedence remains."
     },
     {
       "id": "admit-12",
@@ -228,7 +238,7 @@
       "from": "provider",
       "to": "executor",
       "y": 640,
-      "label": "Final data or typed failure",
+      "label": "Final data, no-data or typed failure",
       "variant": "return"
     },
     {
@@ -238,7 +248,7 @@
       "y": 680,
       "label": "Checked acquisition or denial",
       "variant": "return",
-      "note": "Raw body only; caller still owes complete raw/group publication before a new client success."
+      "note": "Data still requires complete raw/group publication. No-data bytes stay in memory; the later port owns compatible wire semantics."
     }
   ],
   "cards": [
