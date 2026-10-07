@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed S08 durable provider admission",
+    "output": "docs/architecture/diagrams/server2-provider-admission.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "94019cf5460a898bdb315ca7a443e879770e79ce",
+      "provider": "github",
+      "link_mode": "web"
+    }
+  },
+  "participants": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Caller",
+      "sublabel": "trusted plan",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 609,
+          "end_line": 618
+        }
+      ]
+    },
+    {
+      "id": "executor",
+      "type": "backend",
+      "label": "Funded executor",
+      "sublabel": "at most 2 HTTP",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 609,
+          "end_line": 618
+        }
+      ]
+    },
+    {
+      "id": "budget",
+      "type": "security",
+      "label": "Budget owner",
+      "sublabel": "private ranges",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 609,
+          "end_line": 618
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "cloud",
+      "label": "S3 budget state",
+      "sublabel": "CAS and witnesses",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 609,
+          "end_line": 618
+        }
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "Provider",
+      "sublabel": "recorded test peer",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 609,
+          "end_line": 618
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 375,
+      "label": "Global ceiling and unique durable range"
+    },
+    {
+      "from": 385,
+      "to": 505,
+      "label": "Witness before volatile request funding"
+    },
+    {
+      "from": 515,
+      "to": 735,
+      "label": "Bounded funded attempts and checked result"
+    }
+  ],
+  "messages": [
+    {
+      "id": "admit-1",
+      "from": "caller",
+      "to": "executor",
+      "y": 160,
+      "label": "Acquisition plan and deadline",
+      "variant": "emphasis"
+    },
+    {
+      "id": "admit-2",
+      "from": "executor",
+      "to": "budget",
+      "y": 200,
+      "label": "Reserve all candidate maxima",
+      "variant": "security",
+      "note": "Initial data.go.kr key: 2 units; optional next key: 1. VC maxima: 98/50/2."
+    },
+    {
+      "id": "admit-3",
+      "from": "budget",
+      "to": "s3",
+      "y": 240,
+      "label": "GET trusted authority and ETag",
+      "variant": "default"
+    },
+    {
+      "id": "admit-4",
+      "from": "s3",
+      "to": "budget",
+      "y": 280,
+      "label": "Validated policy and used floor",
+      "variant": "return"
+    },
+    {
+      "id": "admit-5",
+      "from": "budget",
+      "to": "s3",
+      "y": 320,
+      "label": "CAS unique range within ceiling",
+      "variant": "security",
+      "note": "Checked min(block, remaining); bounded conflicts. No deletion or reset."
+    },
+    {
+      "id": "admit-6",
+      "from": "s3",
+      "to": "budget",
+      "y": 360,
+      "label": "Only 200: owned durable range",
+      "variant": "return",
+      "note": "Unknown outcome grants no HTTP; a committed high-water remains spent."
+    },
+    {
+      "id": "admit-7",
+      "from": "budget",
+      "to": "s3",
+      "y": 400,
+      "label": "Conditional immutable range witness",
+      "variant": "security"
+    },
+    {
+      "id": "admit-8",
+      "from": "s3",
+      "to": "budget",
+      "y": 440,
+      "label": "Witness acknowledged",
+      "variant": "return",
+      "note": "Failure burns the acknowledged range and denies this acquisition."
+    },
+    {
+      "id": "admit-9",
+      "from": "budget",
+      "to": "executor",
+      "y": 480,
+      "label": "Private funded reservation",
+      "variant": "return",
+      "note": "Repeat candidate funding before any provider request; replacement never reuses leftover blocks."
+    },
+    {
+      "id": "admit-10",
+      "from": "executor",
+      "to": "provider",
+      "y": 520,
+      "label": "Consume permit: attempt 1",
+      "variant": "emphasis"
+    },
+    {
+      "id": "admit-11",
+      "from": "provider",
+      "to": "executor",
+      "y": 560,
+      "label": "Status and bounded body",
+      "variant": "return",
+      "note": "Validate provider semantics; gateway XML errors are not successful data."
+    },
+    {
+      "id": "admit-12",
+      "from": "executor",
+      "to": "provider",
+      "y": 600,
+      "label": "Only allowed and funded: attempt 2",
+      "variant": "security",
+      "note": "Quota/auth may rotate key; transient errors may retry. Never a third HTTP."
+    },
+    {
+      "id": "admit-13",
+      "from": "provider",
+      "to": "executor",
+      "y": 640,
+      "label": "Final data or typed failure",
+      "variant": "return"
+    },
+    {
+      "id": "admit-14",
+      "from": "executor",
+      "to": "caller",
+      "y": 680,
+      "label": "Checked acquisition or denial",
+      "variant": "return",
+      "note": "The caller still owes complete raw/group publication before a new client success."
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Ceiling and ownership",
+      "items": [
+        "CAS high-water allocates non-overlapping ranges; a durable witness precedes private subdivision.",
+        "Every configured key maximum is funded before HTTP. Policy/window identity is trusted configuration."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Replacement and uncertainty",
+      "items": [
+        "Unknown writes, abandoned reservations and unused prior-host blocks are never refunded.",
+        "No HTTP without verified admission. An uncommitted write with no durable record cannot be discovered."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Scope and cost",
+      "items": [
+        "New block: GET + CAS PUT + witness PUT. Warm owned block: no extra S3 funding request.",
+        "This proposed internal contract is not live AWS/IAM/quota verification or a deployed provider route."
+      ]
+    }
+  ]
+}

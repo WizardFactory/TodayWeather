@@ -659,6 +659,51 @@ not an already measured legacy behavior. If it changes an active contract, the
 family stays on legacy until actual compatibility gates
 are satisfied. No claim of RPO zero is made for an unacknowledged provider reply.
 
+### S08 provider admission implementation contract
+
+Following S06 merge, [S08 #2693](https://github.com/WizardFactory/TodayWeather/issues/2693)
+implements internal quota admission and rejection primitives. Its proposed
+[sequence](diagrams/server2-provider-admission.html) and
+[editable source](diagrams/server2-provider-admission.sequence.json) show the
+design contract; no provider route, live quota or production policy is activated.
+
+Each trusted provider/quota-owner/window has a separate versioned
+`budgets/v2/{provider}/{opaque_quota_key_id}/{window_id}/authority.json`.
+Its immutable policy contains the provider-local window, limit and block size.
+A conditional creation or opaque-ETag CAS advances the checked high-water by
+`min(block_units, limit-used)` without exceeding the ceiling. Only an acknowledged
+200 grants the writer that unique range. The writer then creates a write-once
+`blocks/{start}-{end}.json` witness before privately issuing request units.
+Neither weather catalogs nor client-supplied IDs control quota arithmetic.
+
+The high-water and witness are two separate writes, not an S3 transaction.
+Unknown authority outcomes grant no provider permission; a committed floor is
+never refunded or reused. Failed witness publication and abandoned issued units
+remain spent. Replacement reads the authority but never recovers leftover blocks.
+A write that never committed and left no durable record cannot be discovered
+after replacement; the guarantee is no HTTP without confirmed durable funding.
+Policy mismatch, overflow, observed floor decrease and invalid/backwards time
+fail closed. Stable window/owner configuration, trusted clocks and no external
+delete/reset/version rollback remain deployment prerequisites.
+
+The funded executor sends at most two actual provider HTTP attempts. VC reserves
+98/50/2 records for two attempts of the 49/25/1-record modes. data.go.kr reserves
+two units on the initial candidate and, if configured, one on the next key before
+any HTTP. Three conservative reserved units never mean three actual attempts.
+Any candidate funding denial stops the chain; quota/auth responses stop retries
+on that key, while only the permitted funded retry or key rotation can consume
+the remaining attempt within the original deadline. Error bodies are not data.
+
+Obtaining a new block requires authority GET, CAS PUT and witness PUT: three
+dependent S3 waves before HTTP, with bounded conflict work added when needed.
+Funding from an already acknowledged live memory block adds no S3 request.
+The reservation timings in section 7 remain illustration assumptions, not a
+measurement of this new-block path. S09 measures block waste, cold latency and
+quota headroom before provisioning or route activation. No lifecycle deletion
+is introduced. [AWS conditional-write semantics](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html)
+support the individual object preconditions; the high-water/witness protocol is
+our design and requires its own crash, cancellation and concurrency proof.
+
 ## 8. Cold-memory latency model
 
 These are arithmetic scenarios, **not measurements, p95 values or a service SLA**.

@@ -1,0 +1,83 @@
+{
+  "task": "S08",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2693",
+  "server2_paths": [
+    "server2/src/budget/mod.rs",
+    "server2/src/budget/model.rs",
+    "server2/src/budget/store.rs",
+    "server2/src/budget/transport.rs",
+    "server2/src/providers/mod.rs",
+    "server2/src/providers/acquisition.rs",
+    "server2/src/providers/rejection.rs",
+    "server2/src/providers/transport.rs",
+    "server2/tests/budget.rs",
+    "server2/tests/budget/model.rs",
+    "server2/tests/budget/wire.rs",
+    "server2/tests/budget/peer.py",
+    "server2/examples/provider_budgets_smoke.rs",
+    "server2/tools/render_provider_budgets_manual.py",
+    "server2/config/tasks/S08.json",
+    "server2/src/lib.rs",
+    "server2/src/storage/transport.rs",
+    "server2/Cargo.toml",
+    "server2/Cargo.lock"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2693.md",
+      "category": "documentation",
+      "reason": "S08 maintained contract, operator manual or selected scenario evidence; runtime stays server2"
+    },
+    {
+      "path": "specs/issue-2693.md",
+      "category": "documentation",
+      "reason": "S08 maintained contract, operator manual or selected scenario evidence; runtime stays server2"
+    },
+    {
+      "path": "plans/issue-2693.md",
+      "category": "documentation",
+      "reason": "S08 maintained contract, operator manual or selected scenario evidence; runtime stays server2"
+    },
+    {
+      "path": "docs/operations/server2-provider-budgets.md",
+      "category": "documentation",
+      "reason": "S08 maintained contract, operator manual or selected scenario evidence; runtime stays server2"
+    },
+    {
+      "path": "docs/operations/server2-provider-budgets.pdf",
+      "category": "documentation",
+      "reason": "S08 maintained contract, operator manual or selected scenario evidence; runtime stays server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-provider-budgets/usage.png",
+      "category": "documentation",
+      "reason": "S08 maintained contract, operator manual or selected scenario evidence; runtime stays server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-provider-budgets/manifest.json",
+      "category": "documentation",
+      "reason": "S08 maintained contract, operator manual or selected scenario evidence; runtime stays server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Root-owned shared design/parent plan handoff; S08 builder consumes without editing"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Root-owned shared design/parent plan handoff; S08 builder consumes without editing"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-provider-admission.sequence.json",
+      "category": "documentation",
+      "reason": "Root-owned shared design/parent plan handoff; S08 builder consumes without editing"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-provider-admission.html",
+      "category": "documentation",
+      "reason": "Root-owned shared design/parent plan handoff; S08 builder consumes without editing"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2693#issuecomment-6046166349"
+}
