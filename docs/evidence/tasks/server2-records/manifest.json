@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "task": "S05",
-  "date": "2026-10-06",
+  "date": "2026-10-07",
   "command": "cargo run --release --example raw_records_smoke -- http://127.0.0.1:PORT",
   "environment": "Rust 1.99.0 / macOS; independent S03 Python loopback peer",
   "scope": "Exact binary/collision publish-repeat-restore only, no AWS SigV4/IAM or latency claim",
@@ -14,9 +14,52 @@
     "RESTORE verified 957650d318e41992856dc73bfedbb122ad8fa0b5343cd1f64e3083bf988e4e33",
     "PASS: exact binary, both collision bodies, conditional repeat and empty-client restore; no catalog/client publication"
   ],
-  "binary_sha256": "4933c5ec607cae4c6a2ce36b9efca1783be967cc21731e775a0e468adc94f79a",
-  "source_sha256": "da548fa369425258d054ec4d1b46e0cae4c6d69ad2c324eb6de7aed2a9b99877",
-  "pdf_sha256": "50f195c0067b668467cc4f2d4fbc135b33ee1596f3fbcb1d08c1fcb1460ce317",
+  "binary_sha256": "dbe86e2609859cec674eec70436eba9beac1d92297c7503c3844d0132ac67d60",
+  "source_sha256": "49da395db0fe23f755c4cb19483a72f05d53bd8eea61703232bd015cecc31f09",
+  "pdf_sha256": "a34825a7c84ba2a6dedac71c8040b3ab7a89b39cdcbc29b709d76b04d67e2c1e",
   "screenshot_sha256": "70ce7fbf040f9e1c0b8bf0326e61ea3e3a1b1934581f0ff837bdd1b24a210865",
-  "pages": 2
+  "pages": 2,
+  "hermes_h1_smoke": {
+    "driver_sha256": "dbe86e2609859cec674eec70436eba9beac1d92297c7503c3844d0132ac67d60",
+    "returncode": 0,
+    "statuses": [
+      401,
+      403,
+      400,
+      202
+    ],
+    "objects": 4,
+    "commits": 4,
+    "calls": [
+      [
+        "PUT",
+        "HEAD",
+        "PUT",
+        "GET"
+      ],
+      [
+        "PUT",
+        "HEAD",
+        "PUT",
+        "GET"
+      ],
+      [
+        "PUT",
+        "HEAD",
+        "PUT",
+        "GET"
+      ],
+      [
+        "PUT",
+        "HEAD",
+        "PUT",
+        "GET"
+      ],
+      [
+        "PUT"
+      ]
+    ],
+    "stdout": "lost first PUT + HEAD404 + retry401: Ambiguous; delayed commit restored exact bytes\nlost first PUT + HEAD404 + retry403: Ambiguous; delayed commit restored exact bytes\nlost first PUT + HEAD404 + retry400: Ambiguous; delayed commit restored exact bytes\nlost first PUT + HEAD404 + retry202: Ambiguous; delayed commit restored exact bytes\ndirect first403: Status403, no prior uncertainty\nPASS: cumulative PUT uncertainty; local scripted HTTP only, no S06 publication\n",
+    "scope": "One-off scripted HTTP release smoke, no SigV4 cryptographic/IAM/live AWS claim"
+  }
 }

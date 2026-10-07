@@ -34,6 +34,88 @@ fn store(peer: &Peer, limits: Limits) -> RawRecordStore<HttpS3Transport> {
     .unwrap()
 }
 #[tokio::test]
+async fn delayed_first_put_commit_survives_retry_rejection() {
+    let peer = Peer::new();
+    peer.state.lock().unwrap().fault = Fault::LateCommitThenReject(403);
+    let store = store(&peer, Limits::default());
+    let r = record(b"late-first-commit");
+    let id = r.envelope.identity.clone();
+    let result = store.publish(r.clone()).await;
+    {
+        let state = peer.state.lock().unwrap();
+        assert!(state.objects.is_empty(), "first PUT has not committed yet");
+        assert_eq!(state.pending.len(), 1);
+        assert_eq!(
+            state
+                .calls
+                .iter()
+                .map(|(m, _)| m.as_str())
+                .collect::<Vec<_>>(),
+            ["PUT", "HEAD", "PUT"]
+        );
+        assert!(
+            state
+                .calls
+                .iter()
+                .all(|(_, key)| key == &id.object_key().unwrap())
+        );
+    }
+    peer.commit_pending();
+    assert_eq!(&*store.load(&id).await.unwrap().bytes, &*r.bytes);
+    assert_eq!(peer.state.lock().unwrap().objects.len(), 1);
+    assert_eq!(
+        result,
+        Err(Error::Ambiguous),
+        "retry rejection cannot resolve first unknown PUT"
+    );
+}
+struct UncertainThenError {
+    calls: std::sync::atomic::AtomicUsize,
+    error: Error,
+}
+impl ObjectTransport for UncertainThenError {
+    async fn put(&self, _: &PreparedRecord) -> Result<u16, Error> {
+        if self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst) == 0 {
+            Err(Error::Transport)
+        } else {
+            Err(self.error.clone())
+        }
+    }
+    async fn head(&self, _: &str) -> Result<Object, Error> {
+        Err(Error::NotFound)
+    }
+    async fn get(&self, _: &str, _: usize) -> Result<Object, Error> {
+        panic!("absent HEAD cannot start GET")
+    }
+}
+#[tokio::test]
+async fn retry_local_error_preserves_prior_unknown_but_not_integrity_failure() {
+    for error in [
+        Error::Status(403),
+        Error::NotFound,
+        Error::Invalid("retry identity"),
+        Error::Corrupt("retry envelope"),
+    ] {
+        let expected = if matches!(error, Error::Invalid(_) | Error::Corrupt(_)) {
+            error.clone()
+        } else {
+            Error::Ambiguous
+        };
+        let store = RawRecordStore::new(
+            UncertainThenError {
+                calls: std::sync::atomic::AtomicUsize::new(0),
+                error,
+            },
+            Limits::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            store.publish(record(b"local-retry-error")).await,
+            Err(expected)
+        );
+    }
+}
+#[tokio::test]
 async fn wire_conditional_put_repeat_restore_and_concurrency() {
     let peer = Peer::new();
     let store = Arc::new(store(&peer, Limits::default()));

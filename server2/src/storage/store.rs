@@ -106,6 +106,7 @@ impl<T: ObjectTransport> RawRecordStore<T> {
             let expected = record.envelope.clone();
             let limits = self.limits.clone();
             let prepared = self.cpu(move || record.prepare(&limits)).await?;
+            let mut uncertain_put = false;
             for attempt in 0..2 {
                 put_started = true;
                 match self.transport.put(&prepared).await {
@@ -116,29 +117,46 @@ impl<T: ObjectTransport> RawRecordStore<T> {
                     | Err(Error::Transport)
                     | Err(Error::Timeout)
                     | Err(Error::Capacity)
-                    | Err(Error::Ambiguous) => match self.transport.head(&prepared.key).await {
-                        Ok(head) => {
-                            if head.length > self.limits.gzip_bytes
-                                || head.metadata.get("s2-record")
-                                    != prepared.metadata.get("s2-record")
-                            {
-                                return Err(Error::Corrupt("existing metadata/length"));
+                    | Err(Error::Ambiguous) => {
+                        // A missing HEAD does not rule out an earlier PUT committing later.
+                        // A subsequent rejection/local error cannot clear this uncertainty.
+                        uncertain_put = true;
+                        match self.transport.head(&prepared.key).await {
+                            Ok(head) => {
+                                if head.length > self.limits.gzip_bytes
+                                    || head.metadata.get("s2-record")
+                                        != prepared.metadata.get("s2-record")
+                                {
+                                    return Err(Error::Corrupt("existing metadata/length"));
+                                }
+                                let restored = self
+                                    .verified(&prepared.key, &expected.identity, Some(head))
+                                    .await
+                                    .map_err(Self::reconciliation_error)?;
+                                if restored.envelope != expected {
+                                    return Err(Error::Corrupt("existing envelope"));
+                                }
+                                return Ok(PublishOutcome::AlreadyPresent);
                             }
-                            let restored = self
-                                .verified(&prepared.key, &expected.identity, Some(head))
-                                .await
-                                .map_err(Self::reconciliation_error)?;
-                            if restored.envelope != expected {
-                                return Err(Error::Corrupt("existing envelope"));
-                            }
-                            return Ok(PublishOutcome::AlreadyPresent);
+                            Err(Error::NotFound) if attempt == 0 => (),
+                            Err(Error::NotFound) => return Err(Error::Ambiguous),
+                            Err(e) => return Err(Self::reconciliation_error(e)),
                         }
-                        Err(Error::NotFound) if attempt == 0 => (),
-                        Err(Error::NotFound) => return Err(Error::Ambiguous),
-                        Err(e) => return Err(Self::reconciliation_error(e)),
-                    },
-                    Ok(status) => return Err(Error::Status(status)),
-                    Err(e) => return Err(e),
+                    }
+                    Ok(status) => {
+                        return Err(if uncertain_put {
+                            Error::Ambiguous
+                        } else {
+                            Error::Status(status)
+                        });
+                    }
+                    Err(e) => {
+                        return Err(if uncertain_put {
+                            Self::reconciliation_error(e)
+                        } else {
+                            e
+                        });
+                    }
                 }
             }
             Err(Error::Transport)

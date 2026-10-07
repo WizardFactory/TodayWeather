@@ -25,6 +25,15 @@ It prints only frozen fixture hashes and lengths. The selected [actual output](.
 is from the independent S03 local peer, not a real AWS measurement.
 See the [PDF manual](server2-records.pdf).
 
+For the controlled delayed-commit HTTP smoke, the same release example supports
+`--uncertainty-smoke` after the endpoint. This requires a scripted loopback peer,
+not the ordinary S03 peer: first PUT accepts but loses its response, HEAD returns
+404, retry rejects with 401/403/400/202, and `POST /__test/commit` releases the
+first commit after publication returns `Ambiguous`. Exact GET then verifies the
+saved body; a separate direct-first403 writes no object and stays `Status(403)`.
+The deterministic automated wire regression controls the same commit ordering
+without sleeps. No S06 catalog or client publication is acknowledged.
+
 ## Format and downstream integration
 
 `RawRecord::new` accepts a typed provider identity and exact `Arc<[u8]>` bytes.
@@ -74,7 +83,11 @@ encoding of the same exact raw bytes/envelope is accepted across compressor buil
 the new writer's gzip length/hash need not equal the stored encoding.
 HEAD alone and ETag never establish the raw identity. If HEAD finds no object,
 one retry uses the identical conditional key and bytes; there is no overwrite,
-new fetch timestamp or hidden retry. Auth/other responses fail immediately.
+new fetch timestamp or hidden retry. A missing HEAD does not rule out a delayed
+first PUT commit. Once any PUT outcome is unknown, later rejection/local failure
+also returns `Ambiguous`, unless exact identity verification resolves it. A first
+PUT directly rejected with 403 keeps `Status(403)`; `Corrupt`/`Invalid` remain
+fail-closed. There are still at most two PUTs within the original deadline.
 
 Default limits are 8 MiB raw, 8 MiB + 64 KiB compressed, 16 I/O operations,
 2 CPU workers and a 3-second monotonic operation deadline. I/O admission fails
@@ -93,7 +106,7 @@ Once PUT has been sent, a verification deadline or transport uncertainty returns
 `Ambiguous`, never `Capacity`: reconcile the same identity, do not infer not-written
 or fetch a new provider response. Reconciliation integrity failures stay `Corrupt`/`Invalid`; every other HEAD/GET
 failure, including 403/503, becomes `Ambiguous`. Direct definitive PUT rejections
-keep their status and are distinct from uncertain reconciliation. Compression is capped while writing; downloads are capped
+keep their status only when no earlier PUT is unresolved, and are distinct from uncertain reconciliation. Compression is capped while writing; downloads are capped
 while reading, even with false Content-Length. Decode validates CRC, full raw hash,
 length, exactly one gzip member and no trailing bytes. CPU permits stay inside
 blocking closures if the caller cancels. Limits are per store/operation, not a

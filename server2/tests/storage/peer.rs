@@ -24,6 +24,7 @@ pub enum Fault {
     Get403AfterPut,
     Get503AfterPut,
     RejectPut403,
+    LateCommitThenReject(u16),
     DelayedGet,
     ConflictBeforePut,
     ConflictExisting,
@@ -33,6 +34,7 @@ pub enum Fault {
 #[derive(Default)]
 pub struct PeerState {
     pub objects: BTreeMap<String, (BTreeMap<String, String>, Vec<u8>)>,
+    pub pending: BTreeMap<String, (BTreeMap<String, String>, Vec<u8>)>,
     pub calls: Vec<(String, String)>,
     pub fault: Fault,
     pub credential_ids: Vec<String>,
@@ -46,6 +48,16 @@ pub struct Peer {
     thread: Option<thread::JoinHandle<()>>,
 }
 impl Peer {
+    /// Test-controlled first PUT commit, deliberately after publication has returned.
+    pub fn commit_pending(&self) {
+        let mut state = self.state.lock().unwrap();
+        let pending = std::mem::take(&mut state.pending);
+        assert_eq!(pending.len(), 1);
+        for (key, object) in pending {
+            assert!(state.objects.insert(key, object).is_none());
+        }
+        state.fault = Fault::None;
+    }
     pub fn new() -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         listener.set_nonblocking(true).unwrap();
@@ -184,6 +196,20 @@ fn serve(mut stream: TcpStream, state: Arc<Mutex<PeerState>>) {
         if matches!(fault, Fault::RejectPut403) {
             drop(s);
             respond(&mut stream, 403, BTreeMap::new(), b"", false);
+            return;
+        }
+        if let Fault::LateCommitThenReject(status) = fault {
+            if let std::collections::btree_map::Entry::Vacant(entry) = s.pending.entry(key) {
+                let metadata = headers
+                    .into_iter()
+                    .filter(|(k, _)| k.starts_with("x-amz-meta-"))
+                    .collect();
+                entry.insert((metadata, body));
+                // Close without a response; HEAD cannot yet see the accepted first body.
+            } else {
+                drop(s);
+                respond(&mut stream, status, BTreeMap::new(), b"", false);
+            }
             return;
         }
         if s.objects.contains_key(&key) {
