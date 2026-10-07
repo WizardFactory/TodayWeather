@@ -91,6 +91,20 @@ impl Peer {
         let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
         value[format!("PUT {key}")].as_u64().unwrap_or(0) as usize
     }
+    async fn responses(&self, key: &str, status: u16) -> usize {
+        let body = reqwest::Client::new()
+            .get(format!("{}__catalog/status", self.endpoint))
+            .send()
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        value[format!("STATUS {status} {key}")]
+            .as_u64()
+            .unwrap_or(0) as usize
+    }
 }
 impl Drop for Peer {
     fn drop(&mut self) {
@@ -496,22 +510,59 @@ async fn cold_lookup_excludes_a_new_with_b_healthy_old_then_healthy_orphan_repai
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn forced_concurrent_cas_union_keeps_every_revision() {
+    // The original timing-dependent fixture failed CI; use ten independent samples.
+    for _ in 0..10 {
+        let peer = Peer::new();
+        let (one, r1) = group(100, 1);
+        let (two, r2) = group(200, 2);
+        let id = one.partitions[0].clone();
+        peer.fault("barrier", &id.key()).await;
+        let a = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+        let b = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+        let (x, y) = tokio::join!(
+            a.publish(one, r1, deadline()),
+            b.publish(two, r2, deadline())
+        );
+        assert!(x.is_ok(), "first: {x:?}");
+        assert!(y.is_ok(), "second: {y:?}");
+        let set = ready(a.lookup(&id, deadline()).await.unwrap());
+        assert_eq!(set.acquisitions().len(), 2);
+        assert!(peer.puts(&id.key()).await >= 3);
+        assert!(peer.responses(&id.key(), 412).await >= 1);
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn r13_barrier_targets_puts_and_timeout_fails_clearly() {
     let peer = Peer::new();
-    let (one, r1) = group(100, 1);
-    let (two, r2) = group(200, 2);
-    let id = one.partitions[0].clone();
-    peer.fault("barrier", &id.key()).await;
-    let a = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
-    let b = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
-    let (x, y) = tokio::join!(
-        a.publish(one, r1, deadline()),
-        b.publish(two, r2, deadline())
+    let (d, _) = group(100, 1);
+    let key = d.partitions[0].key();
+    peer.fault("barrier", &key).await;
+    let transport = peer.transport();
+    let get = tokio::time::timeout(Duration::from_secs(1), transport.get_control(&key, 1024)).await;
+    assert!(
+        matches!(get, Ok(Err(Error::NotFound))),
+        "conditional-PUT barrier must not consume/block a preflight GET: {get:?}"
     );
-    assert!(x.is_ok(), "first: {x:?}");
-    assert!(y.is_ok(), "second: {y:?}");
-    let set = ready(a.lookup(&id, deadline()).await.unwrap());
-    assert_eq!(set.acquisitions().len(), 2);
-    assert!(peer.puts(&id.key()).await >= 3);
+    let other = peer.transport();
+    let (first, second) = tokio::join!(
+        transport.put_control(&key, b"{\"writer\":1}", &WriteCondition::Absent),
+        other.put_control(&key, b"{\"writer\":2}", &WriteCondition::Absent)
+    );
+    let mut statuses = vec![first.unwrap(), second.unwrap()];
+    statuses.sort();
+    assert_eq!(statuses, vec![200, 412]);
+    assert_eq!(peer.responses(&key, 412).await, 1);
+    assert_eq!(peer.puts(&key).await, 2);
+    let absent = d.partitions[1].key();
+    peer.fault("barrier", &absent).await;
+    assert_eq!(
+        transport
+            .put_control(&absent, b"{}", &WriteCondition::Absent)
+            .await
+            .unwrap(),
+        503
+    );
+    assert_eq!(peer.responses(&absent, 503).await, 1);
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn catalog_committed_drop_reconciles_and_late_commit_retry_rejection_stays_unknown() {
@@ -587,34 +638,97 @@ async fn repair_full_scoped_empty_is_distinct_from_incomplete_or_invalid_list() 
     ));
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn deadline_after_partial_publication_never_creates_complete_and_repair_recovers() {
+async fn deadline_bound_resume_of_verified_partial_publication_repairs_complete_group() {
     let peer = Peer::new();
+    let limits = CatalogLimits::default();
     let (d, raw) = group(100, 1);
     let id = d.partitions[0].clone();
-    peer.fault("delay-after-first", &d.partitions[1].key())
-        .await;
-    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let b = d.partitions[1].key();
+    peer.fault("reject", &b).await;
+    let store = CatalogStore::new(peer.transport(), limits.clone()).unwrap();
     assert_eq!(
         store
+            .publish(d.clone(), raw.clone(), deadline())
+            .await
+            .unwrap_err(),
+        Error::Status(403)
+    );
+    // Establish exact durable prerequisites, rather than assume 70ms reached every raw PUT.
+    let transport = peer.transport();
+    let descriptor = transport
+        .get_control(
+            &d.reference(&limits).unwrap().descriptor_key().unwrap(),
+            limits.control_bytes,
+        )
+        .await
+        .unwrap();
+    assert_eq!(descriptor.body, d.bytes(&limits).unwrap());
+    let expected = d.attach(raw.clone(), &limits).unwrap();
+    let raw_store = RawRecordStore::new(peer.transport(), Limits::default()).unwrap();
+    for record in &expected {
+        let restored = raw_store.load(&record.envelope.identity).await.unwrap();
+        assert_eq!(restored.envelope, record.envelope);
+        assert_eq!(restored.bytes, record.bytes);
+    }
+    let a = transport
+        .get_control(&id.key(), limits.control_bytes)
+        .await
+        .unwrap();
+    let a = Catalog::from_bytes(&a.body, &id, &limits).unwrap();
+    assert_eq!(a.entries.len(), expected.len());
+    for record in &expected {
+        assert!(a.entries.contains(&record.envelope));
+    }
+    assert_eq!(
+        transport
+            .get_control(&b, limits.control_bytes)
+            .await
+            .unwrap_err(),
+        Error::NotFound
+    );
+    let fresh = CatalogStore::new(peer.transport(), limits).unwrap();
+    assert!(matches!(
+        fresh.lookup(&id, deadline()).await.unwrap(),
+        LookupOutcome::Incomplete
+    ));
+    let puts = peer.requests("PUT ").await;
+    peer.fault("delay", &b).await;
+    // The resume expires in preflight, before its first PUT: this is Timeout, not sent-write Ambiguous.
+    assert_eq!(
+        fresh
             .publish(d.clone(), raw, Instant::now() + Duration::from_millis(70))
             .await
             .unwrap_err(),
-        Error::Ambiguous
+        Error::Timeout
     );
-    let fresh = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    assert_eq!(
+        peer.requests("PUT ").await,
+        puts,
+        "deadline-bound preflight must not add any PUT"
+    );
     assert!(matches!(
         fresh.lookup(&id, deadline()).await.unwrap(),
         LookupOutcome::Incomplete
     ));
     peer.fault("clear", "unused").await;
     let scope = RepairScope {
-        catalog: id,
+        catalog: id.clone(),
         periods: vec![d.members[0].envelope.identity.period.clone()],
     };
-    assert!(matches!(
-        fresh.repair(&scope, deadline()).await.unwrap(),
-        RepairOutcome::Complete(_)
-    ));
+    let repaired = fresh.repair(&scope, deadline()).await.unwrap();
+    assert!(
+        matches!(repaired, RepairOutcome::Complete(_)),
+        "repair={repaired:?}"
+    );
+    let cold = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let complete = ready(cold.lookup(&id, deadline()).await.unwrap());
+    assert_eq!(complete.coverage(), RevisionCoverage::FullHistory);
+    assert_eq!(complete.acquisitions().len(), 1);
+    assert_eq!(complete.acquisitions()[0].records().len(), expected.len());
+    for (actual, expected) in complete.acquisitions()[0].records().iter().zip(expected) {
+        assert_eq!(actual.envelope, expected.envelope);
+        assert_eq!(actual.bytes, expected.bytes);
+    }
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn absent_sibling_dependency_is_retained_when_old_complete_group_remains() {
@@ -831,9 +945,29 @@ async fn retained_history_must_not_poison_new_publication() {
     }
     let (d, raw) = singleton(1, 1024 * 1024, None);
     let id = &d.partitions[0];
+    // Prove the exact byte boundary before a timed-out default read could leave a late GET.
+    let byte_bound = CatalogStore::new(
+        peer.transport(),
+        CatalogLimits {
+            output_bytes: 1024 * 1024,
+            ..CatalogLimits::default()
+        },
+    )
+    .unwrap();
+    let before = peer.requests("GET raw/").await;
     assert_eq!(
-        store.lookup(id, deadline()).await.unwrap_err(),
+        byte_bound.lookup(id, deadline()).await.unwrap_err(),
         Error::Capacity
+    );
+    assert_eq!(
+        peer.requests("GET raw/").await - before,
+        1,
+        "first equal-size body admitted; next rejected before GET"
+    );
+    let full = store.lookup(id, deadline()).await;
+    assert!(
+        matches!(full, Err(Error::Capacity | Error::Timeout)),
+        "default full-history bound={full:?}"
     );
     let PageOutcome::Ready(old) = store
         .lookup_acquisition(id, &raw[0].envelope.identity, deadline())
@@ -879,9 +1013,29 @@ async fn distinct_historical_siblings_must_not_poison_new_publication() {
         .iter()
         .find(|i| i.partition == "history")
         .unwrap();
+    // Owner plus the first sibling fit; the next sibling must fail before its raw GET.
+    let pin_bound = CatalogStore::new(
+        peer.transport(),
+        CatalogLimits {
+            partitions: 2,
+            ..CatalogLimits::default()
+        },
+    )
+    .unwrap();
+    let before = peer.requests("GET raw/").await;
     assert_eq!(
-        store.lookup(id, deadline()).await.unwrap_err(),
+        pin_bound.lookup(id, deadline()).await.unwrap_err(),
         Error::Capacity
+    );
+    assert_eq!(
+        peer.requests("GET raw/").await - before,
+        1,
+        "third pin rejected before second raw GET"
+    );
+    let full = store.lookup(id, deadline()).await;
+    assert!(
+        matches!(full, Err(Error::Capacity | Error::Timeout)),
+        "default full-history bound={full:?}"
     );
     let PageOutcome::Ready(_) = store
         .lookup_acquisition(id, &raw[0].envelope.identity, deadline())
@@ -978,6 +1132,8 @@ async fn slow_valid_history_must_not_poison_new_publication() {
         panic!("targeted oldest")
     };
     assert!(peer.requests("GET ").await - before <= 3);
+    // Successful ordering/count coverage is separate from the synthetic deadline leg.
+    peer.fault("clear", "unused").await;
     let before = peer.requests("GET ").await;
     let PageOutcome::Ready(page) = store
         .lookup_page(&id, ReadOrder::LatestFirst, None, 1, deadline())
@@ -996,6 +1152,7 @@ async fn slow_valid_history_must_not_poison_new_publication() {
     // One catalog + every group's ordering descriptor + one selected raw body.
     // Correct whole-acquisition chronology cannot infer a representative from raw-member extremes.
     assert_eq!(peer.requests("GET ").await - before, 76 + 2);
+    peer.fault("slow-all", "unused").await;
     let bounded = CatalogStore::new(
         peer.transport(),
         CatalogLimits {

@@ -26,6 +26,12 @@ spec.loader.exec_module(base)
 
 class Handler(base.Handler):
     def send(self, status, body=b'', headers=None):
+        path = unquote(urlsplit(self.path).path)
+        key = path.split('/', 2)[2] if len(path.split('/', 2)) == 3 else ''
+        # The base conditional error may call send while holding the object lock.
+        with self.server.response_lock:
+            counter = f'STATUS {status} {key}'
+            self.server.response_counts[counter] = self.server.response_counts.get(counter, 0) + 1
         if self.server.mode == 'chunked-list' and 'list-type=2' in self.path and status == 200:
             self.protocol_version = 'HTTP/1.1'
             self.send_response(status)
@@ -67,11 +73,16 @@ class Handler(base.Handler):
                 if mode == 'corrupt' and key in self.server.objects:
                     old = self.server.objects[key]
                     self.server.objects[key] = base.Object(b'corrupt', old.metadata, old.content_type, old.etag, old.version)
-                self.server.barrier = threading.Barrier(2, timeout=2)
+                # Leave time to send explicit failure before the inherited socket lifetime ends.
+                wait = min(1.5, self.server.config['socket_timeout_seconds'] * 0.75)
+                self.server.barrier = threading.Barrier(2, timeout=wait)
+                self.server.barrier_puts = 0
             return self.send(204)
         if split.path == '/__catalog/status' and self.command == 'GET':
             with self.server.lock:
                 result = dict(self.server.counts)
+            with self.server.response_lock:
+                result.update(self.server.response_counts)
             return self.send(200, json.dumps(result).encode(), {'Content-Type':'application/json'})
         path = unquote(split.path)
         key = path.split('/', 2)[2] if len(path.split('/',2)) == 3 else ''
@@ -88,15 +99,6 @@ class Handler(base.Handler):
             if mode == 'repeat-token': return self.send(200, b'<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><IsTruncated>true</IsTruncated><NextContinuationToken>repeat</NextContinuationToken></ListBucketResult>', {'Content-Type':'application/xml'})
         if key == fault_key:
             if self.command == 'GET' and (mode == 'delay' or (mode == 'delay-after-first' and self.server.counts[counter] > 1)): time.sleep(0.25)
-            if mode == 'barrier' and self.command == 'GET':
-                with self.server.lock:
-                    first = self.server.barrier_reads < 2
-                    if first: self.server.barrier_reads += 1
-                    snapshot = self.server.objects.get(key)
-                if first:
-                    self.server.barrier.wait()
-                    if snapshot is None: return self.error(404,'NoSuchKey')
-                    return self.send(200,snapshot.body,dict(snapshot.metadata, **{'Content-Type':snapshot.content_type,'ETag':snapshot.etag,'x-amz-version-id':snapshot.version}))
             if mode == 'late-reject' and self.command == 'GET' and pending is not None:
                 return self.error(404, 'NotYetCommitted')
         return super().dispatch()
@@ -105,6 +107,16 @@ class Handler(base.Handler):
         with self.server.lock:
             mode = self.server.mode if key == self.server.fault_key else ''
             pending = self.server.pending
+            synchronize = mode == 'barrier' and self.server.barrier_puts < 2
+            if synchronize:
+                self.server.barrier_puts += 1
+                barrier = self.server.barrier
+        if synchronize:
+            # Preflight GETs stay normal. Neither conditional commit can precede both PUT arrivals.
+            try:
+                barrier.wait()
+            except threading.BrokenBarrierError:
+                return self.error(503, 'TestConditionalPutBarrierTimeout')
         if mode == 'reject': return self.error(403, 'InjectedDirectRejection')
         if mode == 'unexpected202': return self.send(202)
         if mode == 'conflict409':
@@ -144,8 +156,10 @@ def make():
     config = base.load_config(OWNED/'config/local-stack.json')
     peer = base.Peer('s3', config, {})
     peer.RequestHandlerClass = Handler
-    peer.mode, peer.fault_key, peer.pending, peer.barrier_reads = '', '', None, 0
+    peer.mode, peer.fault_key, peer.pending, peer.barrier_puts = '', '', None, 0
     peer.counts = {}
+    peer.response_lock = threading.Lock()
+    peer.response_counts = {}
     return peer
 
 

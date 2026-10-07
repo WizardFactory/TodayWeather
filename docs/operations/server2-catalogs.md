@@ -176,6 +176,27 @@ cold-cell parity/fallback gates remain unchanged.
 
 ## Verification artifacts
 
+The maintained peer's concurrency fault holds the first two conditional catalog PUTs
+before the atomic condition check and commit; preflight GETs remain normal. The
+wire regression checks actual per-key 412 response counts, at least three catalog
+PUTs and both complete acquisition groups over ten fresh peers. A missing second
+participant returns an explicit test 503 before the inherited socket lifetime ends.
+This fault is test infrastructure, not a production retry or admission policy.
+Response counters use a separate lock because conditional errors can be emitted
+while the peer holds its object lock. The workspace still runs with default test
+parallelism; it is not serialized to hide races.
+
+The deadline-resume fixture first proves exact descriptor/raw bytes and envelopes,
+catalog A and absent B after a direct B PUT403. Its 70ms resume expires in preflight
+with Timeout and zero additional PUTs; clearing the fault restores the complete
+whole group. It does not assume a short deadline already committed the raw inputs.
+Sent-write Ambiguous and cancellation regressions remain separate checks.
+History fixtures keep every published acquisition and cursor page. Explicit byte/pin
+reader limits require exact Capacity after one raw GET before a default history read;
+the default read may hit only documented Capacity or Timeout. Successful metadata-page
+ordering/count coverage clears the synthetic delay, which is restored for the deadline
+check. These test settings change no default production limits or stored revisions.
+
 The editable manual and rendered PDF share this content. The selected usage
 capture and hash manifest live under `docs/evidence/tasks/server2-catalogs/`.
 The release scenario checks cold complete pages, A/new+B/old exclusion, healthy

@@ -19,10 +19,10 @@
     "acquisition order: tied fetch/hash groups match FullHistory across latest-first cursor pages",
     "repair membership: undeclared raw claiming an already-seen valid group stays Incomplete",
     "mixed repair: scope stays Incomplete while verified orphan is indexed and cold exact lookup succeeds",
-    "PASS local real HTTP smoke (200.22 ms); not AWS latency/auth or API parity"
+    "PASS local real HTTP smoke (222.67 ms); not AWS latency/auth or API parity"
   ],
   "binary_sha256": "613c29620e97d2436a195ddfb839e6b8e47925e0adabff20e961e704a281ec02",
-  "source_sha256": "f5f4b4d4fa4ddf22613b2917fac4fb00d21b42ce4cc06a5780c4e370a12b2501",
-  "pdf_sha256": "a4b2eb0d632204b62883aa04ffd34ade9b906a69baf15c7fc3380f5ff592cb89",
-  "screenshot_sha256": "9023a75fb74de666d6fc8ffd74e3fec90f6dcefeda2843da85c0c4e197ead4d3"
+  "source_sha256": "3eef135819dfc45c49544ba4d3bd86feed9adebf0a2f7d17eebaf547d4bd80bb",
+  "pdf_sha256": "4f37e3b6d3f264e18cd8d8d6ab4ccae1eeb9ea2bf58f58a84bf7b94eb1c78ed5",
+  "screenshot_sha256": "1d26750454f63bed9c987ca1d215c6c20ca88bd4d3547a702cb8c52dfffa2b12"
 }
