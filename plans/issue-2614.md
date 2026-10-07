@@ -91,6 +91,8 @@ verifies the reviewed tree and records the next scoped work authorized by AK.
 S07 resolver/cache and S08 provider reservations can proceed in parallel after
 their S06 predecessor gate; read-only interface preparation does not complete it.
 Passing local checks do not imply complete route parity or deployed server2.
+S07's geocode AC1 is partial: volatile key/privacy primitives are included;
+geocode value caches and exact-label/boundary parity remain S10 acceptance work.
 
 | Task | Tracker | Required predecessors |
 | --- | --- | --- |

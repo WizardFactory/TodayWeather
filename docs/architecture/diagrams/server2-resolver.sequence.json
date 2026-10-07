@@ -9,7 +9,7 @@
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "e8d1ffddcdf484f4e44920f298697b606a9c4ebc",
+      "revision": "09c2ea22487c47b9163aae7198bab16248774d1c",
       "provider": "github",
       "link_mode": "web"
     }
@@ -36,13 +36,18 @@
       "sources": [
         {
           "path": "server2/src/resolver/flight.rs",
-          "line": 275,
-          "end_line": 340
+          "line": 344,
+          "end_line": 451
         },
         {
           "path": "server2/src/resolver/flight.rs",
-          "line": 585,
-          "end_line": 623
+          "line": 454,
+          "end_line": 579
+        },
+        {
+          "path": "server2/src/resolver/flight.rs",
+          "line": 688,
+          "end_line": 785
         }
       ]
     },
@@ -59,8 +64,13 @@
         },
         {
           "path": "server2/src/resolver/flight.rs",
-          "line": 197,
-          "end_line": 236
+          "line": 164,
+          "end_line": 177
+        },
+        {
+          "path": "server2/src/resolver/flight.rs",
+          "line": 580,
+          "end_line": 687
         }
       ]
     },
@@ -72,18 +82,18 @@
       "sources": [
         {
           "path": "server2/src/resolver/backend.rs",
-          "line": 287,
-          "end_line": 311
+          "line": 334,
+          "end_line": 524
         },
         {
           "path": "server2/src/resolver/backend.rs",
-          "line": 311,
-          "end_line": 404
+          "line": 525,
+          "end_line": 557
         },
         {
-          "path": "server2/src/resolver/backend.rs",
-          "line": 432,
-          "end_line": 464
+          "path": "server2/src/storage/catalog.rs",
+          "line": 977,
+          "end_line": 1196
         }
       ]
     },
@@ -104,17 +114,22 @@
   "segments": [
     {
       "from": 190,
-      "to": 325,
-      "label": "Cold lookup and owned work"
+      "to": 375,
+      "label": "Cold catalog read and owned work"
     },
     {
-      "from": 335,
-      "to": 615,
-      "label": "Optional funded acquisition and durable publication"
+      "from": 385,
+      "to": 455,
+      "label": "Positive read: optional maintenance"
     },
     {
-      "from": 625,
-      "to": 875,
+      "from": 465,
+      "to": 695,
+      "label": "Only proved empty: acquire and publish"
+    },
+    {
+      "from": 705,
+      "to": 955,
       "label": "Assembly, admission and warm response"
     }
   ],
@@ -148,9 +163,9 @@
       "from": "resolver",
       "to": "archive",
       "y": 320,
-      "label": "Read scoped pages or exact group",
+      "label": "Read complete published catalog first",
       "variant": "default",
-      "note": "Resolver owns shared bounded work; cancellation of one waiter does not abort it. Subset is not full history."
+      "note": "Whole pinned acquisitions, scoped pages or exact group. A subset is not full history."
     },
     {
       "id": "step-6",
@@ -159,13 +174,31 @@
       "y": 360,
       "label": "Verified complete records or proved empty",
       "variant": "return",
-      "note": "Incomplete, Capacity and Timeout are never provider misses."
+      "note": "Absent/incomplete reads require finite recovery. Any possible recovery PUT marks mutation before send; cancellation preserves uncertainty. Capacity/Timeout are not misses."
+    },
+    {
+      "id": "maintain-1",
+      "from": "resolver",
+      "to": "archive",
+      "y": 400,
+      "label": "Positive read: bounded background repair",
+      "variant": "default",
+      "note": "At most one repair overall; spare owner and 64 MiB lease, <=3s, no queue/provider. Skips retry only at a later positive cold read."
+    },
+    {
+      "id": "maintain-2",
+      "from": "archive",
+      "to": "resolver",
+      "y": 440,
+      "label": "Index completion or bounded failure",
+      "variant": "return",
+      "note": "Foreground/background possible writes invalidate reuse even on ambiguity; read-only failure does not. Incomplete never proves synced or empty."
     },
     {
       "id": "step-7",
       "from": "resolver",
       "to": "acquire",
-      "y": 400,
+      "y": 480,
       "label": "Only proved empty: funded acquisition",
       "variant": "security",
       "note": "Only complete finite owned scope may acquire; S08 implementation is a separate seam."
@@ -174,7 +207,7 @@
       "id": "step-8",
       "from": "acquire",
       "to": "resolver",
-      "y": 440,
+      "y": 520,
       "label": "Ordered raw pages and declaration",
       "variant": "return"
     },
@@ -182,7 +215,7 @@
       "id": "step-9",
       "from": "resolver",
       "to": "archive",
-      "y": 480,
+      "y": 560,
       "label": "Publish raw and every sibling catalog",
       "variant": "emphasis",
       "note": "The optional new-data branch must be durable before new success."
@@ -191,7 +224,7 @@
       "id": "step-10",
       "from": "archive",
       "to": "resolver",
-      "y": 520,
+      "y": 600,
       "label": "Complete group acknowledged",
       "variant": "return"
     },
@@ -199,24 +232,25 @@
       "id": "step-12",
       "from": "resolver",
       "to": "memory",
-      "y": 600,
+      "y": 680,
       "label": "Admit immutable views and dependencies",
       "variant": "default",
-      "note": "Resolver bounds parsing and assembly before admission. Excluded groups reject response caching; pins retain their charge."
+      "note": "Optional raw/parsed retention cannot starve response admission. Excluded groups or epoch drift bypass response caching."
     },
     {
       "id": "step-13",
       "from": "memory",
       "to": "resolver",
-      "y": 640,
+      "y": 720,
       "label": "Byte leases retained or cache bypass",
-      "variant": "return"
+      "variant": "return",
+      "note": "External pins retain their charge. Epoch drift does not fail an already checked response."
     },
     {
       "id": "step-14",
       "from": "resolver",
       "to": "request",
-      "y": 680,
+      "y": 760,
       "label": "Return checked response bytes",
       "variant": "return"
     },
@@ -224,7 +258,7 @@
       "id": "step-15",
       "from": "request",
       "to": "resolver",
-      "y": 720,
+      "y": 800,
       "label": "Repeat within freshness",
       "variant": "default"
     },
@@ -232,7 +266,7 @@
       "id": "step-16",
       "from": "resolver",
       "to": "memory",
-      "y": 760,
+      "y": 840,
       "label": "Read exact key and dependencies",
       "variant": "default"
     },
@@ -240,7 +274,7 @@
       "id": "step-17",
       "from": "memory",
       "to": "resolver",
-      "y": 800,
+      "y": 880,
       "label": "Fresh complete result",
       "variant": "return"
     },
@@ -248,7 +282,7 @@
       "id": "step-18",
       "from": "resolver",
       "to": "request",
-      "y": 840,
+      "y": 920,
       "label": "Same bytes; no acquisition",
       "variant": "return"
     }
@@ -266,7 +300,7 @@
       "dot": "amber",
       "title": "Memory and cancellation",
       "items": [
-        "Pinned byte leases retain their charge. View CPU pool and storage codec pools have separate bounds.",
+        "Optional raw/parsed maps yield to bounded response admission. External pins retain their byte charge.",
         "Owned waiter-independent tasks drain; reports count owners and view jobs, not every codec worker."
       ]
     },
@@ -274,8 +308,8 @@
       "dot": "rose",
       "title": "Privacy and scope",
       "items": [
-        "Precise geocode history remains volatile; a coarse key cannot silently substitute a different label.",
-        "Warm full responses avoid S3. Raw cache does not yet bypass GETs; cold costs need S09 measurement."
+        "Geocode key/privacy primitives only; value caching and exact-label proof remain S10 work.",
+        "Warm foreground responses start no S3 work; maintenance is counted separately. Cold costs need S09 measurement."
       ]
     }
   ]

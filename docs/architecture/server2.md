@@ -224,9 +224,14 @@ describes finite scopes, cache accounting and the local release example.
 
 Typed request keys retain every output-affecting field. Cache values share byte
 leases whose charge survives eviction until the last pinned value is dropped.
-Network, CPU, queued work and retained results have separate bounded admission;
-cache weights alone do not claim a process RSS limit. No lock remains held across
-I/O or CPU awaits. Exact record/parser identities and monotonic TTLs govern reuse.
+Raw and parsed retention is optional; response admission can reclaim their mapped
+entries across tiers. Parsed inputs used by assembly move into bounded operation-owned
+buffers, so optional cache pressure cannot strand otherwise valid responses.
+External response pins retain their charge; genuine retained-byte exhaustion still
+fails closed. Network, CPU, queued work and retained results have separate bounded
+admission; cache weights alone do not claim a process RSS limit. No lock remains
+held across I/O or CPU awaits. Exact record/parser identities and monotonic TTLs
+govern reuse.
 
 Owned single-flight jobs survive cancellation of one HTTP waiter, share their
 original bounded deadline and drain policy, and never extend a later waiter's
@@ -240,6 +245,11 @@ complete-group publication. Undurable new data cannot enter a successful result
 cache. Excluded groups prevent response-cache admission, including descriptor
 absence that could change without a target catalog ETag. Published local revisions
 invalidate known dependencies; external changes use bounded revalidation.
+Conservative global invalidation affects cache reuse, not the validity of an
+already checked request snapshot. Epoch drift returns that result uncached.
+A brief retention gate coordinates epoch checks with response admission, without
+holding a lock across asynchronous work. Concurrent durable publications on
+unrelated keys remain successful.
 
 Current defaults account for 128 MiB retained cache and four owners reserving
 64 MiB each, separately from 128 waiter admission. Concrete insertions charge
@@ -250,17 +260,37 @@ have separate bounded pools. Started view and dependency jobs retain operation
 leases after owner timeout. Drain reports unfinished owners and view jobs,
 not every storage codec worker.
 
-Cold reads repair only finite caller-owned prefixes, select whole acquisitions
-intersecting the period scope and preserve ordered pages. FullHistory must finish
+Cold reads first select whole complete acquisitions from pinned published
+catalogs, preserving ordered pages and the caller's period scope. An absent,
+incomplete or corrupt read requires finite-scope recovery before any provider
+miss can be proved. Foreground recovery marks a possible mutation before each
+catalog write; dirty cancellation or uncertain completion invalidates response
+reuse, and an owner timeout after a possible send is Ambiguous. Existing typed
+integrity and definitive rejection errors remain fail closed. A read-only failure
+does not invalidate reuse. Capacity and Timeout are not absence. FullHistory must finish
 the private cursor; targeted reads cannot authorize absent-field history folds.
-The current raw cache retains checked identities after S06 network reads and
-does not bypass raw GETs. Parsed views reuse immutable acquisitions; fresh full
-response hits avoid S3 and provider work. Page-size-one full-history traversal
-repeats S06 descriptor normalization. S09/O01 must measure and optimize cold
-requests before claiming a latency improvement.
 
-Exact coordinate and address geocode keys are volatile only and reject archive
-authorization. A funded-acquirer callback and bounded view builder are trusted
+A positive cold read can schedule one bounded owned repair for its scope, with at
+most one repair active overall. This
+maintenance shares operation/temporary admission, the three-second bound and
+drain accounting; it never calls a provider. Admission denial increments a skip counter and retries only on a later positive
+cold-read opportunity, without creating an unbounded queue. The index-only repair entrypoint
+omits a redundant full-history fold only after all owned-scope discovery, group
+verification and identity indexing complete. Incomplete, Timeout or ambiguous
+maintenance never proves prefix synchronization or empty data. Any attempted
+foreground or background catalog write invalidates response reuse, including ambiguous or cancelled work;
+a read-only maintenance failure does not invalidate a healthy result.
+
+The raw cache does not bypass S06 raw GETs. Parsed views reuse immutable
+acquisitions; a warm foreground response starts no S3 or provider work. Background
+maintenance may still be active, so zero-I/O checks explicitly wait for its idle
+milestone and report its counters separately. Page-size-one full-history traversal
+still repeats descriptor normalization; large scopes remain bounded rather than
+guaranteed to finish. S09/O01 must measure remaining cold and recovery costs.
+
+S07 meets the geocode portion of AC1 only for volatile key identities and
+archive rejection. Geocode value caching and exact-label/boundary parity remain
+S10 work; they are not delivered by this resolver. A funded-acquirer callback and bounded view builder are trusted
 integration seams; S08 wiring, concrete provider schemas and public API assembly
 remain later tasks.
 
