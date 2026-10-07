@@ -1389,6 +1389,7 @@ dependencies = [
  "axum",
  "base64 0.22.1",
  "flate2",
+ "instant-xml",
  "md-5 0.10.6",
  "reqwest",
  "rusty-s3",
@@ -1398,6 +1399,7 @@ dependencies = [
  "time",
  "tokio",
  "tower",
+ "xmlparser",
 ]
 
 [[package]]

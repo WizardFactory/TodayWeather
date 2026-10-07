@@ -285,14 +285,22 @@ costs alongside packs. No noncurrent-version deletion is authorized here.
 
 ### Publication and recovery
 
+The [complete-group sequence](diagrams/server2-catalog-publication.html)
+([editable JSON](diagrams/server2-catalog-publication.sequence.json)) explains
+the S06 internal publication, eligibility and repair contract. Its source links
+are pinned to the merged `4864c936` contract, rather than claiming deployed
+weather routes or production S3 verification.
+
 1. Validate all pages, compute their group declaration, persist any required
    identity descriptor and PUT canonical raw objects with immutable IDs.
 2. Read/create the authoritative partition catalog and union the new identities.
 3. Publish it using ETag `If-Match` (or `If-None-Match` on creation). Retry a
    conflict by re-reading and unioning; never overwrite concurrent revisions.
-4. After all partitions of each required fetch group are published, verify its
-   completeness, expose it in memory and send success. There is no all-request
-   cross-object transaction across independent provider fetches.
+4. Before writing, check that the new acquisition fits the operation bounds.
+   After all its partitions are published, verify only that acquisition's
+   declared siblings and exact bodies before acknowledging it. Do not re-read
+   unrelated historical acquisitions to acknowledge a new group. There is no
+   all-request cross-object transaction across independent provider fetches.
 
 One validated provider acquisition, including all its pages, is a **fetch group**.
 Prefer one owning publication partition per acquisition (VC's complete range in
@@ -308,7 +316,7 @@ repair can validate the expected set rather than blessing only the pages found.
 Descriptor acquisition adds a measured lookup hop where needed.
 
 S05's internal raw-record wire contract is documented in its
-[published operator manual](https://github.com/WizardFactory/TodayWeather/blob/65b93b68ffab3d16997fa99952dbb5e65cc9eee7/docs/operations/server2-records.md).
+[operator manual](../operations/server2-records.md).
 `x-amz-meta-s2-record` carries the base64 canonical identity/envelope JSON, and
 `x-amz-meta-s2-gzip-sha256` identifies the compressed bytes. An optional immutable
 `FetchGroupRef` is prepared before the raw PUT and contains identity-only group,
@@ -342,16 +350,128 @@ objects exist. Recovery keeps all valid revisions and cannot invent a complete
 result from a timed-out partial LIST. The hot serving path uses published records;
 it is not a claim to discover every interrupted upload instantly.
 
-A normal catalog hit directly provides all required revisions. Select earliest
-fetch for immutable kinds; use `(fetched_at_ms, sha256)` for revisable kinds;
-fill only absent fields for current-like kinds and replace list kinds. Do not
-skip earlier revisions until parity tests prove they cannot affect the result.
+A normal catalog hit provides the identities of retained revisions. Materialize
+only the requested complete acquisitions within a bounded page, rather than
+downloading every historical body on each lookup. Keep all archival revisions
+and catalog identities. A checked page is not proof that the whole revision
+range has been read. Its continuation pins the target catalog generation and
+ETag and revalidates previously checked sibling dependencies; a changed
+dependency requires a restart, not continuation into another snapshot. Pages preserve whole acquisitions and their complete member/page
+sets. Select earliest fetch for immutable kinds; use `(fetched_at_ms, sha256)`
+for revisable kinds; fill only absent fields for current-like kinds and replace
+list kinds. A full-history merge must consume the required revision range before
+returning its result. Do not skip earlier revisions until parity tests prove
+they cannot affect the result.
 A request pins its catalog generations while assembling. Late inputs invalidate
 dependent memory results on bounded catalog refresh; open periods have short
 refresh intervals. Missing index is not automatically missing provider data:
 attempt bounded repair before deciding whether a quota-funded provider fetch
 is needed. Incomplete repair returns the existing error contract or legacy
 fallback; it must not hide a history gap behind a new successful response.
+
+### S06 boundary for resolver and provider budgets
+
+S06 returns pinned, verified identity sets and catalog dependency tokens to the
+later S07 resolver. A complete fetch group requires the full declared member,
+page and sibling-partition sets; neither a raw PUT acknowledgement nor a stored
+`complete` flag is sufficient. Hashing the descriptor must use the declaration
+before its own group reference is attached, avoiding a circular hash dependency.
+An already published raw identity retains its original group affiliation;
+reconciliation cannot rewrite immutable metadata to join another group.
+
+Repair must distinguish a fully exhausted, validated scan from a pending or
+failed scan. A timeout, continuation failure or missing declared member cannot
+turn partial discovery into a proven empty result. Healthy catalogs can still
+have orphaned bodies and therefore remain eligible for explicit bounded repair.
+Every discovered raw envelope must match its descriptor's exact member, owning
+partition and full immutable group reference, including later envelopes for an
+already seen group. Only verified whole-group reload and catalog publication may
+be deduplicated. A mismatched envelope keeps repair incomplete; it cannot be
+ignored to produce a complete scan. Invalid discoveries do not block indexing
+independently verified complete orphan groups in the same scope. Such indexing
+does not prove complete scope coverage: the mixed scope remains `Incomplete`.
+A group with only invalid claims is not eligible for publication. Keep every
+eligible revision in deterministic order; field merges and list replacement
+remain in-memory operations, not persisted catalog payloads.
+
+A bounded page contains checked complete acquisitions and an explicit continuation;
+it never masquerades as a full-history set. Before choosing a page, resolve unique
+groups through verified identity-only descriptors and validate all target-catalog
+member references. Order acquisitions by the descriptor's first ordered member
+using the same fetch-time/full-hash key as full-history lookup, then apply read
+direction and the private group-offset cursor. Reversing raw members before
+deduplicating groups is not an equivalent latest-acquisition order. Ordered pages
+remain together even when their fetch times differ or full hashes break a tie.
+The private cursor also binds the normalized acquisition cohort. Rebuild and
+compare that cohort before continuing: a formerly missing immutable descriptor
+can appear without changing the target catalog ETag, so target tokens alone
+cannot prove a stable group offset. A changed cohort requires restart.
+This normalization reads unrelated group descriptors but does not materialize
+unselected raw bodies. Its upfront control reads count toward the existing byte
+and whole-operation deadline limits; a small output page need not be a cheap
+S3 read. Targeted exact-member lookup avoids this whole-catalog normalization. Exhausting a healthy read budget is
+a capacity outcome, not evidence of corruption. The full-history convenience
+lookup can report capacity or a deadline failure. A targeted lookup by an
+archived member identity validates only that complete acquisition and its
+siblings, keeping old and new acquisitions accessible without traversing
+unrelated history. Targeted coverage is explicit: no continuation does not
+mean that all historical revisions have been consumed. Cross-page dependency
+revalidation can itself reach capacity or the caller deadline; that blocks the
+full-history snapshot, while a targeted acquisition remains independently
+readable within its own bounds. Publication checks the new group only and
+avoids historical-body materialization; its declared group, catalog and
+operation bounds still apply. Structural catalog/object limits fail closed
+without pruning identities.
+
+Revision coverage distinguishes a full-history set from a newly published
+group, a targeted acquisition and an individual page. Only a full-history set
+can use the whole-history fold helper. Callers must explicitly parse a published
+or targeted group instead of treating it as the complete merge input.
+
+Retained control bytes are bounded within each phase, rather than advertised
+as one cumulative transfer-byte limit across all phases. Preflight drops each
+processed catalog/union before continuing; descriptor/raw/CAS buffers are
+released before final verification starts. The final check reserves room for
+the new group's descriptor and the maximum permitted size of each declared
+sibling catalog, so later index growth does not invalidate that group's read
+admission. This can reject a group before any PUT even when its declaration
+fits the wire format's partition-count bound. Actual request work, conflict
+attempts and the caller's overall deadline remain bounded; a sent write whose
+outcome cannot be confirmed remains uncertain. These are per-operation/phase
+limits, not a global process RSS guarantee or a promise that a full-history
+snapshot fits the serving deadline.
+
+A fully exhausted repair can complete identity indexing without materializing
+all historical bodies at once. This nonempty indexed outcome is distinct from
+a checked serving set and from `CompleteEmpty`; callers must read checked pages
+before using its records. A partial scan, missing member or invalid object cannot
+produce a complete indexing or empty result. Repair retains identity envelopes
+rather than duplicate raw bodies during group validation. Each repair scope must
+map its periods to the declared owning partition; a caller cannot file another
+partition's records into that scope.
+
+The initial S06 lookup/repair utility reads ordering descriptors and selected raw
+members sequentially within one operation. Its `io=16` admission bound permits concurrent
+operations; it does not supply sixteen-way fan-out inside one lookup. The wave
+counts in section 8 describe the proposed bounded-parallel resolver strategy,
+not measured S06 latency. S07/S09 must verify or improve this path before the
+existing feasibility/cutover gates; loopback smoke timings are not AWS estimates.
+
+The caller's monotonic deadline covers the whole operation: descriptor/body
+writes, catalog conflicts, sibling reads, credential waits and repair pages.
+Independent three-second transport calls cannot extend the existing backend
+attempt budget. S07 owns cache admission, single-flight and refresh policy;
+S08 owns `budgets/v2/` reservations and provider admission. Weather catalogs do
+not contain quota arithmetic, and unresolved repair does not authorize an
+unreserved provider request.
+
+Conditional catalog publication uses the returned opaque ETag with `If-Match`,
+or `If-None-Match: *` for creation. Conflicts require a bounded read-and-union
+retry. Prefix repair follows every `ListObjectsV2` continuation page before
+claiming scan completion. These are protocol requirements from the
+[AWS conditional-write documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html)
+and [ListObjectsV2 API](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html);
+loopback verification does not establish actual IAM, SigV4 or AWS latency.
 
 ## 5. Exact-raw packs to reduce fan-out
 

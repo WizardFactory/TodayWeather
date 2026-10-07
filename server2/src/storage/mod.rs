@@ -1,5 +1,18 @@
 //! Immutable exact-byte raw records. A body PUT is not catalog/fetch-group publication.
+mod catalog;
+mod catalog_model;
+mod catalog_transport;
 mod codec;
+pub use catalog::{
+    CatalogStore, CompleteAcquisition, CompletePage, CompleteSet, DependencyToken, LookupOutcome,
+    PageOutcome, ReadCursor, ReadOrder, RepairOutcome, RepairScope, RevisionCoverage,
+};
+pub use catalog_model::{
+    Catalog, CatalogId, CatalogLimits, GroupDeclaration, GroupMember, SelectionPolicy, fold_values,
+};
+pub use catalog_transport::{
+    CatalogTransport, ControlObject, ListPage, WriteCondition, decode_list,
+};
 mod store;
 mod transport;
 pub use codec::{
@@ -13,7 +26,8 @@ pub use transport::{HttpS3Transport, RefreshableCredentials};
 pub enum Error {
     Invalid(&'static str),
     Corrupt(&'static str),
-    /// I/O admission rejected before any request; no PUT attempted.
+    /// Bounded admission/read capacity exhausted. A publication admission failure occurs before PUT;
+    /// possible prior writes are reported as Ambiguous rather than a safe retry signal.
     Capacity,
     /// PUT sent, but durability could not be verified; same identity must be reconciled.
     Ambiguous,

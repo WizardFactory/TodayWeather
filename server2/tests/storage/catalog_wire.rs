@@ -1,0 +1,1364 @@
+use rusty_s3::Credentials;
+use server2::storage::*;
+use std::{
+    io::{BufRead, BufReader},
+    process::{Child, Command, Stdio},
+    sync::Arc,
+    time::Duration,
+};
+use tokio::time::Instant;
+struct Peer {
+    child: Child,
+    endpoint: String,
+}
+impl Peer {
+    fn new() -> Self {
+        let mut child = Command::new("python3")
+            .arg("tests/storage/catalog_peer.py")
+            .current_dir(env!("CARGO_MANIFEST_DIR"))
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .unwrap();
+        let output = child.stdout.take().unwrap();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let mut line = String::new();
+            let result = BufReader::new(output).read_line(&mut line);
+            let _ = tx.send(result.map(|_| line));
+        });
+        match rx.recv_timeout(Duration::from_secs(5)) {
+            Ok(Ok(endpoint)) if endpoint.starts_with("http://127.0.0.1:") => Self {
+                child,
+                endpoint: endpoint.trim().to_owned(),
+            },
+            other => {
+                let _ = child.kill();
+                let _ = child.wait();
+                panic!("peer startup failure: {other:?}");
+            }
+        }
+    }
+    fn transport(&self) -> HttpS3Transport {
+        HttpS3Transport::new(
+            &self.endpoint,
+            "server2-local",
+            "ap-northeast-2",
+            Credentials::new("server2-local", "server2-local-secret"),
+        )
+        .unwrap()
+    }
+    async fn fault(&self, mode: &str, key: &str) {
+        let mut url: reqwest::Url = format!("{}__catalog", self.endpoint).parse().unwrap();
+        url.query_pairs_mut()
+            .append_pair("mode", mode)
+            .append_pair("key", key);
+        let r = reqwest::Client::new()
+            .post(url)
+            .header("X-Server2-Test-Key", "server2-local")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(r.status().as_u16(), 204);
+    }
+    async fn requests(&self, method: &str) -> usize {
+        let bytes = reqwest::Client::new()
+            .get(format!("{}__catalog/status", self.endpoint))
+            .send()
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        value
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter(|(k, _)| k.starts_with(method))
+            .map(|(_, v)| v.as_u64().unwrap() as usize)
+            .sum()
+    }
+    async fn puts(&self, key: &str) -> usize {
+        let body = reqwest::Client::new()
+            .get(format!("{}__catalog/status", self.endpoint))
+            .send()
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        value[format!("PUT {key}")].as_u64().unwrap_or(0) as usize
+    }
+    async fn responses(&self, key: &str, status: u16) -> usize {
+        let body = reqwest::Client::new()
+            .get(format!("{}__catalog/status", self.endpoint))
+            .send()
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        value[format!("STATUS {status} {key}")]
+            .as_u64()
+            .unwrap_or(0) as usize
+    }
+}
+impl Drop for Peer {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+fn deadline() -> Instant {
+    Instant::now() + Duration::from_secs(3)
+}
+fn group(fetch: u64, value: u32) -> (GroupDeclaration, Vec<RawRecord>) {
+    let mut records = Vec::new();
+    let mut members = Vec::new();
+    for page in 1..=2 {
+        let bytes = format!("{{\"value\":{value},\"page\":{page}}}");
+        let r = RawRecord::new(
+            "kma",
+            "current",
+            &ProviderKey::Grid { nx: 60, ny: 127 },
+            Period {
+                local_date: 20261007,
+                slot: "1200".into(),
+            },
+            fetch,
+            200,
+            "application/json",
+            Some(Pagination {
+                page,
+                pages: 2,
+                complete: true,
+            }),
+            bytes.into_bytes().into(),
+            &Limits::default(),
+        )
+        .unwrap();
+        let a = CatalogId::for_record(&r.envelope.identity, "20261007-a").unwrap();
+        let b = CatalogId::for_record(&r.envelope.identity, "20261007-b").unwrap();
+        members.push(GroupMember {
+            envelope: r.envelope.clone(),
+            catalogs: vec![a, b],
+        });
+        records.push(r);
+    }
+    (
+        GroupDeclaration::new(members, &CatalogLimits::default()).unwrap(),
+        records,
+    )
+}
+fn ready(outcome: LookupOutcome) -> CompleteSet {
+    match outcome {
+        LookupOutcome::Ready(set) => set,
+        _ => panic!("expected complete set"),
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn hermes_h1_pages_match_full_history_first_member_order() {
+    for variant in 0..3 {
+        let peer = Peer::new();
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        let mut id = None;
+        for value in [2, 3, 4] {
+            let (mut d, mut raw) = group(100, value);
+            if variant == 1 {
+                // Later-page fetches cross the ordered first-member chronology.
+                let first = if value == 2 { 300 } else { value as u64 * 100 };
+                raw[0].envelope.identity.fetched_at_ms = first;
+                raw[1].envelope.identity.fetched_at_ms = 1000 - first;
+                for (m, r) in d.members.iter_mut().zip(&raw) {
+                    m.envelope = r.envelope.clone();
+                }
+            }
+            if variant == 2 {
+                // The representative first page is not present in the target catalog.
+                let a = d.partitions[0].clone();
+                let b = d.partitions[1].clone();
+                d.members[0].catalogs = vec![b];
+                d.members[1].catalogs = vec![a];
+            }
+            let d = GroupDeclaration::new(d.members, &CatalogLimits::default()).unwrap();
+            id = Some(d.partitions[0].clone());
+            store.publish(d, raw, deadline()).await.unwrap();
+        }
+        let id = id.unwrap();
+        let full = ready(store.lookup(&id, deadline()).await.unwrap());
+        let chronological = full
+            .acquisitions()
+            .iter()
+            .map(|a| a.group().unwrap().to_owned())
+            .collect::<Vec<_>>();
+        for order in [ReadOrder::EarliestFirst, ReadOrder::LatestFirst] {
+            let mut expected = chronological.clone();
+            if order == ReadOrder::LatestFirst {
+                expected.reverse();
+            }
+            let mut cursor = None;
+            let mut actual = Vec::new();
+            loop {
+                let PageOutcome::Ready(page) = store
+                    .lookup_page(&id, order, cursor.as_ref(), 1, deadline())
+                    .await
+                    .unwrap()
+                else {
+                    panic!("complete whole-acquisition page");
+                };
+                assert_eq!(page.acquisitions()[0].records().len(), 2);
+                actual.push(page.acquisitions()[0].group().unwrap().to_owned());
+                cursor = page.next().cloned();
+                if cursor.is_none() {
+                    break;
+                }
+            }
+            assert_eq!(actual, expected, "variant {variant}, order {order:?}");
+        }
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn hermes_h2_every_discovered_envelope_checked_before_group_dedupe() {
+    for wrong_reference in [false, true] {
+        let peer = Peer::new();
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        let (d, raw) = group(100, 2);
+        let scope = RepairScope {
+            catalog: d.partitions[0].clone(),
+            periods: vec![d.members[0].envelope.identity.period.clone()],
+        };
+        let mut reference = d.reference(&CatalogLimits::default()).unwrap();
+        store.publish(d, raw, deadline()).await.unwrap();
+        assert!(matches!(
+            store.repair(&scope, deadline()).await.unwrap(),
+            RepairOutcome::Complete(_)
+        ));
+        if wrong_reference {
+            reference.member_sha256 = "0".repeat(64);
+        }
+        let mut stray = RawRecord::new(
+            "kma",
+            "current",
+            &ProviderKey::Grid { nx: 60, ny: 127 },
+            scope.periods[0].clone(),
+            300,
+            200,
+            "application/json",
+            Some(Pagination {
+                page: 2,
+                pages: 2,
+                complete: true,
+            }),
+            b"{\"undeclared\":true}".to_vec().into(),
+            &Limits::default(),
+        )
+        .unwrap();
+        stray.envelope.fetch_group = Some(reference);
+        RawRecordStore::new(peer.transport(), Limits::default())
+            .unwrap()
+            .publish(stray)
+            .await
+            .unwrap();
+        assert!(
+            matches!(
+                store.repair(&scope, deadline()).await.unwrap(),
+                RepairOutcome::Incomplete
+            ),
+            "already-seen false member, wrong_reference={wrong_reference}"
+        );
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn hermes_h1_cursor_restarts_when_missing_descriptor_changes_ordering_cohort() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let (middle, _) = group(200, 3);
+    let reference = middle.reference(&CatalogLimits::default()).unwrap();
+    let id = middle.partitions[0].clone();
+    for (fetch, value) in [(100, 2), (200, 3), (300, 4)] {
+        let (d, raw) = group(fetch, value);
+        store.publish(d, raw, deadline()).await.unwrap();
+    }
+    peer.fault("forget", &reference.descriptor_key().unwrap())
+        .await;
+    let PageOutcome::Ready(first) = store
+        .lookup_page(&id, ReadOrder::EarliestFirst, None, 1, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("old complete first acquisition remains available");
+    };
+    assert!(first.next().is_some());
+    assert_eq!(
+        peer.transport()
+            .put_control(
+                &reference.descriptor_key().unwrap(),
+                &middle.bytes(&CatalogLimits::default()).unwrap(),
+                &WriteCondition::Absent,
+            )
+            .await
+            .unwrap(),
+        200
+    );
+    assert!(matches!(
+        store
+            .lookup_page(&id, ReadOrder::EarliestFirst, first.next(), 1, deadline())
+            .await
+            .unwrap(),
+        PageOutcome::Incomplete
+    ));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn r11_incomplete_discovery_still_indexes_verified_orphans() {
+    for mode in [
+        "corrupt",
+        "ungrouped-page",
+        "foreign",
+        "undeclared",
+        "modified-ref",
+    ] {
+        let peer = Peer::new();
+        let transport = peer.transport();
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        let raw_store = RawRecordStore::new(peer.transport(), Limits::default()).unwrap();
+        let (d, raw) = group(100, 2);
+        let scope = RepairScope {
+            catalog: d.partitions[0].clone(),
+            periods: vec![d.members[0].envelope.identity.period.clone()],
+        };
+        let member = raw[0].envelope.identity.clone();
+        let reference = d.reference(&CatalogLimits::default()).unwrap();
+        assert_eq!(
+            transport
+                .put_control(
+                    &reference.descriptor_key().unwrap(),
+                    &d.bytes(&CatalogLimits::default()).unwrap(),
+                    &WriteCondition::Absent
+                )
+                .await
+                .unwrap(),
+            200
+        );
+        for mut r in raw {
+            r.envelope.fetch_group = Some(reference.clone());
+            raw_store.publish(r).await.unwrap();
+        }
+        assert_eq!(peer.puts(&scope.catalog.key()).await, 0);
+        let mut foreign_catalogs = Vec::new();
+        if mode == "foreign" {
+            let (mut foreign, raw) = group(400, 7);
+            for m in &mut foreign.members {
+                for id in &mut m.catalogs {
+                    id.partition = format!("foreign-{}", id.partition);
+                }
+            }
+            let foreign =
+                GroupDeclaration::new(foreign.members, &CatalogLimits::default()).unwrap();
+            foreign_catalogs = foreign.partitions.clone();
+            let r = foreign.reference(&CatalogLimits::default()).unwrap();
+            assert_eq!(
+                transport
+                    .put_control(
+                        &r.descriptor_key().unwrap(),
+                        &foreign.bytes(&CatalogLimits::default()).unwrap(),
+                        &WriteCondition::Absent
+                    )
+                    .await
+                    .unwrap(),
+                200
+            );
+            for mut record in raw {
+                record.envelope.fetch_group = Some(r.clone());
+                raw_store.publish(record).await.unwrap();
+            }
+        } else {
+            let mut stray = RawRecord::new(
+                "kma",
+                "current",
+                &ProviderKey::Grid { nx: 60, ny: 127 },
+                scope.periods[0].clone(),
+                300,
+                200,
+                "application/json",
+                (mode != "corrupt").then_some(Pagination {
+                    page: 2,
+                    pages: 2,
+                    complete: true,
+                }),
+                b"{\"undeclared\":true}".to_vec().into(),
+                &Limits::default(),
+            )
+            .unwrap();
+            if mode == "undeclared" || mode == "modified-ref" {
+                let mut claim = reference.clone();
+                if mode == "modified-ref" {
+                    claim.member_sha256 = "0".repeat(64);
+                }
+                stray.envelope.fetch_group = Some(claim);
+            }
+            let key = stray.envelope.identity.object_key().unwrap();
+            raw_store.publish(stray).await.unwrap();
+            if mode == "corrupt" {
+                peer.fault("corrupt", &key).await;
+            }
+        }
+        assert!(
+            matches!(
+                store.repair(&scope, deadline()).await.unwrap(),
+                RepairOutcome::Incomplete
+            ),
+            "unsafe mixed scope {mode}"
+        );
+        assert!(
+            peer.puts(&scope.catalog.key()).await > 0,
+            "verified orphan not indexed in mixed scope {mode}"
+        );
+        let fresh = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        let PageOutcome::Ready(page) = fresh
+            .lookup_acquisition(&scope.catalog, &member, deadline())
+            .await
+            .unwrap()
+        else {
+            panic!("verified orphan missing: {mode}");
+        };
+        assert_eq!(page.coverage(), RevisionCoverage::Targeted);
+        assert_eq!(page.acquisitions().len(), 1);
+        assert_eq!(
+            page.acquisitions()[0].group(),
+            Some(reference.group_sha256.as_str())
+        );
+        assert_eq!(page.acquisitions()[0].records().len(), 2);
+        for (r, expected) in page.acquisitions()[0]
+            .records()
+            .iter()
+            .zip(d.envelopes(&CatalogLimits::default()).unwrap())
+        {
+            assert_eq!(r.envelope, expected, "only expected group members: {mode}");
+        }
+        for id in foreign_catalogs {
+            assert_eq!(
+                peer.puts(&id.key()).await,
+                0,
+                "foreign-only claim cannot authorize group indexing"
+            );
+        }
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cold_lookup_excludes_a_new_with_b_healthy_old_then_healthy_orphan_repair() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let (old, raw) = group(100, 1);
+    let id = old.partitions[0].clone();
+    store.publish(old.clone(), raw, deadline()).await.unwrap();
+    let (new, raw) = group(200, 2);
+    peer.fault("reject", &new.partitions[1].key()).await;
+    assert_eq!(
+        store
+            .publish(new.clone(), raw, deadline())
+            .await
+            .unwrap_err(),
+        Error::Status(403)
+    );
+    let cold = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let set = ready(cold.lookup(&id, deadline()).await.unwrap());
+    assert_eq!(set.acquisitions().len(), 1);
+    assert_eq!(
+        set.acquisitions()[0].records()[0]
+            .envelope
+            .identity
+            .fetched_at_ms,
+        100
+    );
+    assert_eq!(set.excluded_groups(), 1);
+    assert_eq!(set.dependencies().len(), 2);
+    peer.fault("clear", "unused").await;
+    let scope = RepairScope {
+        catalog: id.clone(),
+        periods: vec![new.members[0].envelope.identity.period.clone()],
+    };
+    let l = CatalogLimits {
+        list_keys: 1,
+        ..CatalogLimits::default()
+    };
+    let repair = CatalogStore::new(peer.transport(), l).unwrap();
+    assert!(matches!(
+        repair.repair(&scope, deadline()).await.unwrap(),
+        RepairOutcome::Complete(_)
+    ));
+    let set = ready(cold.lookup(&id, deadline()).await.unwrap());
+    assert_eq!(set.acquisitions().len(), 2);
+    assert_eq!(set.acquisitions()[1].records().len(), 2);
+    assert_eq!(set.excluded_groups(), 0);
+    let result = set
+        .fold(SelectionPolicy::ListReplace, |pages| {
+            Ok(serde_json::Value::Array(
+                pages
+                    .iter()
+                    .map(|p| serde_json::from_slice(&p.bytes).unwrap())
+                    .collect(),
+            ))
+        })
+        .unwrap()
+        .unwrap();
+    assert_eq!(result[0]["value"], 2);
+    assert_eq!(result[1]["page"], 2);
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn forced_concurrent_cas_union_keeps_every_revision() {
+    // The original timing-dependent fixture failed CI; use ten independent samples.
+    for _ in 0..10 {
+        let peer = Peer::new();
+        let (one, r1) = group(100, 1);
+        let (two, r2) = group(200, 2);
+        let id = one.partitions[0].clone();
+        peer.fault("barrier", &id.key()).await;
+        let a = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+        let b = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+        let (x, y) = tokio::join!(
+            a.publish(one, r1, deadline()),
+            b.publish(two, r2, deadline())
+        );
+        assert!(x.is_ok(), "first: {x:?}");
+        assert!(y.is_ok(), "second: {y:?}");
+        let set = ready(a.lookup(&id, deadline()).await.unwrap());
+        assert_eq!(set.acquisitions().len(), 2);
+        assert!(peer.puts(&id.key()).await >= 3);
+        assert!(peer.responses(&id.key(), 412).await >= 1);
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn r13_barrier_targets_puts_and_timeout_fails_clearly() {
+    let peer = Peer::new();
+    let (d, _) = group(100, 1);
+    let key = d.partitions[0].key();
+    peer.fault("barrier", &key).await;
+    let transport = peer.transport();
+    let get = tokio::time::timeout(Duration::from_secs(1), transport.get_control(&key, 1024)).await;
+    assert!(
+        matches!(get, Ok(Err(Error::NotFound))),
+        "conditional-PUT barrier must not consume/block a preflight GET: {get:?}"
+    );
+    let other = peer.transport();
+    let (first, second) = tokio::join!(
+        transport.put_control(&key, b"{\"writer\":1}", &WriteCondition::Absent),
+        other.put_control(&key, b"{\"writer\":2}", &WriteCondition::Absent)
+    );
+    let mut statuses = vec![first.unwrap(), second.unwrap()];
+    statuses.sort();
+    assert_eq!(statuses, vec![200, 412]);
+    assert_eq!(peer.responses(&key, 412).await, 1);
+    assert_eq!(peer.puts(&key).await, 2);
+    let absent = d.partitions[1].key();
+    peer.fault("barrier", &absent).await;
+    assert_eq!(
+        transport
+            .put_control(&absent, b"{}", &WriteCondition::Absent)
+            .await
+            .unwrap(),
+        503
+    );
+    assert_eq!(peer.responses(&absent, 503).await, 1);
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn catalog_committed_drop_reconciles_and_late_commit_retry_rejection_stays_unknown() {
+    for mode in ["drop-commit", "late-reject"] {
+        let peer = Peer::new();
+        let (d, raw) = group(100, 1);
+        let id = d.partitions[0].clone();
+        peer.fault(mode, &id.key()).await;
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        let result = store.publish(d, raw, deadline()).await;
+        if mode == "drop-commit" {
+            assert!(result.is_ok(), "{result:?}");
+            assert_eq!(peer.puts(&id.key()).await, 1);
+        } else {
+            assert_eq!(result.unwrap_err(), Error::Ambiguous);
+            assert_eq!(peer.puts(&id.key()).await, 2);
+            let object = peer
+                .transport()
+                .get_control(&id.key(), 1024 * 1024)
+                .await
+                .unwrap();
+            let catalog =
+                Catalog::from_bytes(&object.body, &id, &CatalogLimits::default()).unwrap();
+            assert_eq!(catalog.entries.len(), 2);
+        }
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn direct_rejection_and_unexpected_accepted_status_do_not_acknowledge() {
+    for (mode, status) in [("reject", 403), ("unexpected202", 202)] {
+        let peer = Peer::new();
+        let (d, raw) = group(100, 1);
+        let id = d.partitions[0].clone();
+        peer.fault(mode, &id.key()).await;
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        assert_eq!(
+            store.publish(d, raw, deadline()).await.unwrap_err(),
+            Error::Status(status)
+        );
+        assert_eq!(peer.puts(&id.key()).await, 1);
+        assert!(matches!(
+            store.lookup(&id, deadline()).await.unwrap(),
+            LookupOutcome::Incomplete
+        ));
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn repair_full_scoped_empty_is_distinct_from_incomplete_or_invalid_list() {
+    let peer = Peer::new();
+    let (d, _) = group(100, 1);
+    let scope = RepairScope {
+        catalog: d.partitions[0].clone(),
+        periods: vec![d.members[0].envelope.identity.period.clone()],
+    };
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    assert!(matches!(
+        store.lookup(&scope.catalog, deadline()).await.unwrap(),
+        LookupOutcome::Incomplete
+    ));
+    assert!(matches!(
+        store.repair(&scope, deadline()).await.unwrap(),
+        RepairOutcome::CompleteEmpty { .. }
+    ));
+    peer.fault("bad-list", "").await;
+    assert!(matches!(
+        store.repair(&scope, deadline()).await,
+        Err(Error::Corrupt(_))
+    ));
+    peer.fault("repeat-token", "").await;
+    assert!(matches!(
+        store.repair(&scope, deadline()).await,
+        Err(Error::Corrupt(_))
+    ));
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn deadline_bound_resume_of_verified_partial_publication_repairs_complete_group() {
+    let peer = Peer::new();
+    let limits = CatalogLimits::default();
+    let (d, raw) = group(100, 1);
+    let id = d.partitions[0].clone();
+    let b = d.partitions[1].key();
+    peer.fault("reject", &b).await;
+    let store = CatalogStore::new(peer.transport(), limits.clone()).unwrap();
+    assert_eq!(
+        store
+            .publish(d.clone(), raw.clone(), deadline())
+            .await
+            .unwrap_err(),
+        Error::Status(403)
+    );
+    // Establish exact durable prerequisites, rather than assume 70ms reached every raw PUT.
+    let transport = peer.transport();
+    let descriptor = transport
+        .get_control(
+            &d.reference(&limits).unwrap().descriptor_key().unwrap(),
+            limits.control_bytes,
+        )
+        .await
+        .unwrap();
+    assert_eq!(descriptor.body, d.bytes(&limits).unwrap());
+    let expected = d.attach(raw.clone(), &limits).unwrap();
+    let raw_store = RawRecordStore::new(peer.transport(), Limits::default()).unwrap();
+    for record in &expected {
+        let restored = raw_store.load(&record.envelope.identity).await.unwrap();
+        assert_eq!(restored.envelope, record.envelope);
+        assert_eq!(restored.bytes, record.bytes);
+    }
+    let a = transport
+        .get_control(&id.key(), limits.control_bytes)
+        .await
+        .unwrap();
+    let a = Catalog::from_bytes(&a.body, &id, &limits).unwrap();
+    assert_eq!(a.entries.len(), expected.len());
+    for record in &expected {
+        assert!(a.entries.contains(&record.envelope));
+    }
+    assert_eq!(
+        transport
+            .get_control(&b, limits.control_bytes)
+            .await
+            .unwrap_err(),
+        Error::NotFound
+    );
+    let fresh = CatalogStore::new(peer.transport(), limits).unwrap();
+    assert!(matches!(
+        fresh.lookup(&id, deadline()).await.unwrap(),
+        LookupOutcome::Incomplete
+    ));
+    let puts = peer.requests("PUT ").await;
+    peer.fault("delay", &b).await;
+    // The resume expires in preflight, before its first PUT: this is Timeout, not sent-write Ambiguous.
+    assert_eq!(
+        fresh
+            .publish(d.clone(), raw, Instant::now() + Duration::from_millis(70))
+            .await
+            .unwrap_err(),
+        Error::Timeout
+    );
+    assert_eq!(
+        peer.requests("PUT ").await,
+        puts,
+        "deadline-bound preflight must not add any PUT"
+    );
+    assert!(matches!(
+        fresh.lookup(&id, deadline()).await.unwrap(),
+        LookupOutcome::Incomplete
+    ));
+    peer.fault("clear", "unused").await;
+    let scope = RepairScope {
+        catalog: id.clone(),
+        periods: vec![d.members[0].envelope.identity.period.clone()],
+    };
+    let repaired = fresh.repair(&scope, deadline()).await.unwrap();
+    assert!(
+        matches!(repaired, RepairOutcome::Complete(_)),
+        "repair={repaired:?}"
+    );
+    let cold = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let complete = ready(cold.lookup(&id, deadline()).await.unwrap());
+    assert_eq!(complete.coverage(), RevisionCoverage::FullHistory);
+    assert_eq!(complete.acquisitions().len(), 1);
+    assert_eq!(complete.acquisitions()[0].records().len(), expected.len());
+    for (actual, expected) in complete.acquisitions()[0].records().iter().zip(expected) {
+        assert_eq!(actual.envelope, expected.envelope);
+        assert_eq!(actual.bytes, expected.bytes);
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn absent_sibling_dependency_is_retained_when_old_complete_group_remains() {
+    let peer = Peer::new();
+    let (mut old, mut raw) = group(100, 1);
+    for m in &mut old.members {
+        m.catalogs.truncate(1);
+    }
+    old = GroupDeclaration::new(old.members, &CatalogLimits::default()).unwrap();
+    let id = old.partitions[0].clone();
+    let s = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    s.publish(old, std::mem::take(&mut raw), deadline())
+        .await
+        .unwrap();
+    let (new, raw) = group(200, 2);
+    let missing = new.partitions[1].clone();
+    peer.fault("reject", &missing.key()).await;
+    assert_eq!(
+        s.publish(new, raw, deadline()).await.unwrap_err(),
+        Error::Status(403)
+    );
+    let set = ready(s.lookup(&id, deadline()).await.unwrap());
+    assert_eq!(set.acquisitions().len(), 1);
+    assert_eq!(set.dependencies().len(), 2);
+    let absent = set
+        .dependencies()
+        .iter()
+        .find(|p| p.identity == missing)
+        .unwrap();
+    assert!(absent.etag.is_none());
+    assert!(absent.generation.is_none());
+    assert_eq!(set.excluded_groups(), 1);
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn bounded_or_corrupt_repair_never_means_empty_and_missing_descriptor_stays_excluded() {
+    let peer = Peer::new();
+    let (d, raw) = group(100, 1);
+    let id = d.partitions[0].clone();
+    let scope = RepairScope {
+        catalog: id.clone(),
+        periods: vec![d.members[0].envelope.identity.period.clone()],
+    };
+    let s = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    s.publish(d.clone(), raw, deadline()).await.unwrap();
+    let limits = CatalogLimits {
+        list_keys: 1,
+        list_pages: 1,
+        ..CatalogLimits::default()
+    };
+    let capped = CatalogStore::new(peer.transport(), limits).unwrap();
+    assert!(matches!(
+        capped.repair(&scope, deadline()).await.unwrap(),
+        RepairOutcome::Incomplete
+    ));
+    peer.fault(
+        "forget",
+        &d.reference(&CatalogLimits::default())
+            .unwrap()
+            .descriptor_key()
+            .unwrap(),
+    )
+    .await;
+    assert!(matches!(
+        s.lookup(&id, deadline()).await.unwrap(),
+        LookupOutcome::Incomplete
+    ));
+    assert!(matches!(
+        s.repair(&scope, deadline()).await.unwrap(),
+        RepairOutcome::Incomplete
+    ));
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cancelled_publisher_leaves_safe_partial_group_then_repair() {
+    let peer = Peer::new();
+    let (d, raw) = group(100, 1);
+    let id = d.partitions[0].clone();
+    peer.fault("delay-after-first", &d.partitions[1].key())
+        .await;
+    let s = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    let owned = s.clone();
+    let declaration = d.clone();
+    let task = tokio::spawn(async move { owned.publish(declaration, raw, deadline()).await });
+    // Wait for actual A publication rather than a fixed scheduling assumption.
+    let transport = peer.transport();
+    let end = Instant::now() + Duration::from_secs(2);
+    loop {
+        if transport.get_control(&id.key(), 1024 * 1024).await.is_ok() {
+            break;
+        }
+        assert!(Instant::now() < end);
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    task.abort();
+    assert!(task.await.unwrap_err().is_cancelled());
+    let fresh = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    assert!(matches!(
+        fresh.lookup(&id, deadline()).await.unwrap(),
+        LookupOutcome::Incomplete
+    ));
+    peer.fault("clear", "unused").await;
+    let scope = RepairScope {
+        catalog: id,
+        periods: vec![d.members[0].envelope.identity.period.clone()],
+    };
+    assert!(matches!(
+        fresh.repair(&scope, deadline()).await.unwrap(),
+        RepairOutcome::Complete(_)
+    ));
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn standalone_exact_euc_kr_bytes_recover_without_normalized_persistence() {
+    let peer = Peer::new();
+    let raw = RawRecord::new(
+        "kma-web",
+        "html",
+        &ProviderKey::Named {
+            id: "weather".into(),
+        },
+        Period {
+            local_date: 20261007,
+            slot: "1200".into(),
+        },
+        100,
+        200,
+        "text/html; charset=EUC-KR",
+        None,
+        vec![0xb0, 0xa1, 0xff, 0x00].into(),
+        &Limits::default(),
+    )
+    .unwrap();
+    let id = CatalogId::for_record(&raw.envelope.identity, "20261007").unwrap();
+    RawRecordStore::new(peer.transport(), Limits::default())
+        .unwrap()
+        .publish(raw)
+        .await
+        .unwrap();
+    let s = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let scope = RepairScope {
+        catalog: id.clone(),
+        periods: vec![Period {
+            local_date: 20261007,
+            slot: "1200".into(),
+        }],
+    };
+    assert!(matches!(
+        s.repair(&scope, deadline()).await.unwrap(),
+        RepairOutcome::Complete(_)
+    ));
+    let set = ready(s.lookup(&id, deadline()).await.unwrap());
+    assert_eq!(
+        &*set.acquisitions()[0].records()[0].bytes,
+        &[0xb0, 0xa1, 0xff, 0x00]
+    );
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn actual_409_retries_bounded_union_and_committed_500_reads_exact_union() {
+    for (mode, puts) in [("conflict409", 2), ("commit500", 1)] {
+        let peer = Peer::new();
+        let (d, raw) = group(100, 1);
+        let id = d.partitions[0].clone();
+        peer.fault(mode, &id.key()).await;
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        store.publish(d, raw, deadline()).await.unwrap();
+        let set = ready(store.lookup(&id, deadline()).await.unwrap());
+        assert_eq!(set.acquisitions().len(), 1);
+        assert_eq!(peer.puts(&id.key()).await, puts);
+    }
+}
+
+fn singleton(
+    fetch: u64,
+    size: usize,
+    sibling: Option<String>,
+) -> (GroupDeclaration, Vec<RawRecord>) {
+    let raw = RawRecord::new(
+        "kma",
+        "current",
+        &ProviderKey::Grid { nx: 60, ny: 127 },
+        Period {
+            local_date: 20261007,
+            slot: "1200".into(),
+        },
+        fetch,
+        200,
+        "application/json",
+        None,
+        vec![b'x'; size].into(),
+        &Limits::default(),
+    )
+    .unwrap();
+    let mut catalogs = vec![CatalogId::for_record(&raw.envelope.identity, "history").unwrap()];
+    if let Some(s) = sibling {
+        catalogs.push(CatalogId::for_record(&raw.envelope.identity, &s).unwrap());
+    }
+    let d = GroupDeclaration::new(
+        vec![GroupMember {
+            envelope: raw.envelope.clone(),
+            catalogs,
+        }],
+        &CatalogLimits::default(),
+    )
+    .unwrap();
+    (d, vec![raw])
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn retained_history_must_not_poison_new_publication() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    for fetch in 1..=33 {
+        let (d, raw) = singleton(fetch, 1024 * 1024, None);
+        store.publish(d, raw, deadline()).await.expect(
+            "valid new acquisition must remain publishable independently of history output budget",
+        );
+    }
+    let (d, raw) = singleton(1, 1024 * 1024, None);
+    let id = &d.partitions[0];
+    // Prove the exact byte boundary before a timed-out default read could leave a late GET.
+    let byte_bound = CatalogStore::new(
+        peer.transport(),
+        CatalogLimits {
+            output_bytes: 1024 * 1024,
+            ..CatalogLimits::default()
+        },
+    )
+    .unwrap();
+    let before = peer.requests("GET raw/").await;
+    assert_eq!(
+        byte_bound.lookup(id, deadline()).await.unwrap_err(),
+        Error::Capacity
+    );
+    assert_eq!(
+        peer.requests("GET raw/").await - before,
+        1,
+        "first equal-size body admitted; next rejected before GET"
+    );
+    let full = store.lookup(id, deadline()).await;
+    assert!(
+        matches!(full, Err(Error::Capacity | Error::Timeout)),
+        "default full-history bound={full:?}"
+    );
+    let PageOutcome::Ready(old) = store
+        .lookup_acquisition(id, &raw[0].envelope.identity, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("old retained acquisition inaccessible")
+    };
+    assert_eq!(old.coverage(), RevisionCoverage::Targeted);
+    assert!(old.next().is_none());
+    let mut cursor = None;
+    let mut count = 0;
+    loop {
+        let PageOutcome::Ready(page) = store
+            .lookup_page(id, ReadOrder::EarliestFirst, cursor.as_ref(), 1, deadline())
+            .await
+            .unwrap()
+        else {
+            panic!("retained page inaccessible")
+        };
+        count += page.acquisitions().len();
+        cursor = page.next().cloned();
+        if cursor.is_none() {
+            break;
+        }
+    }
+    assert_eq!(count, 33);
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn distinct_historical_siblings_must_not_poison_new_publication() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    for fetch in 1..=16 {
+        let (d, raw) = singleton(fetch, 32, Some(format!("q-{fetch}")));
+        store
+            .publish(d, raw, deadline())
+            .await
+            .expect("new acquisition must not pin every old sibling");
+    }
+    let (d, raw) = singleton(1, 32, Some("q-1".into()));
+    let id = d
+        .partitions
+        .iter()
+        .find(|i| i.partition == "history")
+        .unwrap();
+    // Owner plus the first sibling fit; the next sibling must fail before its raw GET.
+    let pin_bound = CatalogStore::new(
+        peer.transport(),
+        CatalogLimits {
+            partitions: 2,
+            ..CatalogLimits::default()
+        },
+    )
+    .unwrap();
+    let before = peer.requests("GET raw/").await;
+    assert_eq!(
+        pin_bound.lookup(id, deadline()).await.unwrap_err(),
+        Error::Capacity
+    );
+    assert_eq!(
+        peer.requests("GET raw/").await - before,
+        1,
+        "third pin rejected before second raw GET"
+    );
+    let full = store.lookup(id, deadline()).await;
+    assert!(
+        matches!(full, Err(Error::Capacity | Error::Timeout)),
+        "default full-history bound={full:?}"
+    );
+    let PageOutcome::Ready(_) = store
+        .lookup_acquisition(id, &raw[0].envelope.identity, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("targetedold")
+    };
+    let mut cursor = None;
+    let mut count = 0;
+    loop {
+        let PageOutcome::Ready(page) = store
+            .lookup_page(id, ReadOrder::EarliestFirst, cursor.as_ref(), 1, deadline())
+            .await
+            .unwrap()
+        else {
+            panic!("siblingpage")
+        };
+        count += page.acquisitions().len();
+        cursor = page.next().cloned();
+        if cursor.is_none() {
+            break;
+        }
+    }
+    assert_eq!(count, 16);
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn slow_valid_history_must_not_poison_new_publication() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let transport = peer.transport();
+    let rawstore = RawRecordStore::new(peer.transport(), Limits::default()).unwrap();
+    let mut catalog = None;
+    for fetch in 1..=75 {
+        let (d, raw) = singleton(fetch, 32, None);
+        let reference = d.reference(&CatalogLimits::default()).unwrap();
+        let raw = d.attach(raw, &CatalogLimits::default()).unwrap();
+        assert_eq!(
+            transport
+                .put_control(
+                    &reference.descriptor_key().unwrap(),
+                    &d.bytes(&CatalogLimits::default()).unwrap(),
+                    &WriteCondition::Absent
+                )
+                .await
+                .unwrap(),
+            200
+        );
+        rawstore.publish(raw[0].clone()).await.unwrap();
+        let current = catalog.unwrap_or_else(|| Catalog::empty(d.partitions[0].clone()));
+        catalog = Some(
+            current
+                .union(&[raw[0].envelope.clone()], &CatalogLimits::default())
+                .unwrap(),
+        );
+    }
+    let catalog = catalog.unwrap();
+    assert_eq!(
+        transport
+            .put_control(
+                &catalog.identity.key(),
+                &catalog.bytes(&CatalogLimits::default()).unwrap(),
+                &WriteCondition::Absent
+            )
+            .await
+            .unwrap(),
+        200
+    );
+    peer.fault("slow-all", "unused").await;
+    let (d, raw) = singleton(76, 32, None);
+    let id = d.partitions[0].clone();
+    let member = raw[0].envelope.identity.clone();
+    store
+        .publish(d, raw, deadline())
+        .await
+        .expect("verify only newly declared group after publication, synthetic20ms notAWS");
+    let before = peer.requests("GET ").await;
+    let PageOutcome::Ready(page) = store
+        .lookup_acquisition(&id, &member, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("targeted newest")
+    };
+    assert_eq!(page.acquisitions().len(), 1);
+    assert!(peer.requests("GET ").await - before <= 3);
+    let (d, raw) = singleton(1, 32, None);
+    let before = peer.requests("GET ").await;
+    let PageOutcome::Ready(_) = store
+        .lookup_acquisition(&d.partitions[0], &raw[0].envelope.identity, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("targeted oldest")
+    };
+    assert!(peer.requests("GET ").await - before <= 3);
+    // Successful ordering/count coverage is separate from the synthetic deadline leg.
+    peer.fault("clear", "unused").await;
+    let before = peer.requests("GET ").await;
+    let PageOutcome::Ready(page) = store
+        .lookup_page(&id, ReadOrder::LatestFirst, None, 1, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("latest page")
+    };
+    assert_eq!(
+        page.acquisitions()[0].records()[0]
+            .envelope
+            .identity
+            .fetched_at_ms,
+        76
+    );
+    // One catalog + every group's ordering descriptor + one selected raw body.
+    // Correct whole-acquisition chronology cannot infer a representative from raw-member extremes.
+    assert_eq!(peer.requests("GET ").await - before, 76 + 2);
+    peer.fault("slow-all", "unused").await;
+    let bounded = CatalogStore::new(
+        peer.transport(),
+        CatalogLimits {
+            deadline: Duration::from_millis(100),
+            ..CatalogLimits::default()
+        },
+    )
+    .unwrap();
+    assert!(matches!(
+        bounded
+            .lookup_page(&id, ReadOrder::LatestFirst, None, 1, deadline())
+            .await,
+        Err(Error::Timeout)
+    ));
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn legal_chunked_list_and_empty_truncated_page_restore_scope() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let (d, _) = singleton(1, 32, None);
+    let scope = RepairScope {
+        catalog: d.partitions[0].clone(),
+        periods: vec![d.members[0].envelope.identity.period.clone()],
+    };
+    for mode in ["chunked-list", "eof-list", "empty-page"] {
+        peer.fault(mode, "unused").await;
+        assert!(
+            matches!(
+                store.repair(&scope, deadline()).await.unwrap(),
+                RepairOutcome::CompleteEmpty { .. }
+            ),
+            "legal bounded LIST must complete {mode}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn private_page_cursor_scope_drift_and_published_fold_guard() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let (d, raw) = singleton(1, 32, None);
+    let id = d.partitions[0].clone();
+    let published = store.publish(d, raw, deadline()).await.unwrap();
+    assert_eq!(published.coverage(), RevisionCoverage::PublishedGroup);
+    assert!(matches!(
+        published.fold(SelectionPolicy::AbsentFields, |_| Ok(serde_json::json!({}))),
+        Err(Error::Invalid(_))
+    ));
+    let (d, raw) = singleton(2, 32, None);
+    store.publish(d, raw, deadline()).await.unwrap();
+    let PageOutcome::Ready(page) = store
+        .lookup_page(&id, ReadOrder::EarliestFirst, None, 1, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("page")
+    };
+    let cursor = page.next().unwrap().clone();
+    let mut foreign = id.clone();
+    foreign.partition = "foreign".into();
+    assert!(
+        matches!(
+            store
+                .lookup_page(
+                    &foreign,
+                    ReadOrder::EarliestFirst,
+                    Some(&cursor),
+                    1,
+                    deadline()
+                )
+                .await,
+            Err(Error::Invalid(_))
+        ),
+        "crossid even missing catalog invalid"
+    );
+    assert!(matches!(
+        store
+            .lookup_page(&id, ReadOrder::LatestFirst, Some(&cursor), 1, deadline())
+            .await,
+        Err(Error::Invalid(_))
+    ));
+    let (d, raw) = singleton(3, 32, None);
+    store.publish(d, raw, deadline()).await.unwrap();
+    assert!(matches!(
+        store
+            .lookup_page(&id, ReadOrder::EarliestFirst, Some(&cursor), 1, deadline())
+            .await
+            .unwrap(),
+        PageOutcome::Incomplete
+    ));
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn oversized_new_group_rejected_before_any_put_and_repair_indexed_not_empty() {
+    let peer = Peer::new();
+    let limits = CatalogLimits {
+        output_bytes: 64,
+        ..CatalogLimits::default()
+    };
+    let store = CatalogStore::new(peer.transport(), limits).unwrap();
+    let (d, raw) = singleton(1, 65, None);
+    assert_eq!(
+        store.publish(d, raw, deadline()).await.unwrap_err(),
+        Error::Capacity
+    );
+    assert_eq!(peer.requests("PUT ").await, 0);
+    let (_, raw) = singleton(9, 32, None);
+    let catalogs = (0..8)
+        .map(|i| CatalogId::for_record(&raw[0].envelope.identity, &format!("p-{i}")).unwrap())
+        .collect();
+    let d = GroupDeclaration::new(
+        vec![GroupMember {
+            envelope: raw[0].envelope.clone(),
+            catalogs,
+        }],
+        &CatalogLimits::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        store.publish(d, raw, deadline()).await.unwrap_err(),
+        Error::Capacity
+    );
+    assert_eq!(
+        peer.requests("PUT ").await,
+        0,
+        "final worst-case metadata capacity is checked before every PUT"
+    );
+
+    for fetch in 1..=3 {
+        let (d, raw) = singleton(fetch, 32, None);
+        store.publish(d, raw, deadline()).await.unwrap();
+    }
+    let (d, _) = singleton(1, 32, None);
+    let scope = RepairScope {
+        catalog: d.partitions[0].clone(),
+        periods: vec![d.members[0].envelope.identity.period.clone()],
+    };
+    assert!(matches!(
+        store.repair(&scope, deadline()).await.unwrap(),
+        RepairOutcome::Indexed { .. }
+    ));
+    let PageOutcome::Ready(page) = store
+        .lookup_page(&scope.catalog, ReadOrder::LatestFirst, None, 1, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("indexed page")
+    };
+    assert_eq!(page.acquisitions().len(), 1);
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn empty_discovery_with_corrupt_or_missing_known_body_never_complete_empty() {
+    for mode in ["corrupt", "wrong-key", "forget"] {
+        let peer = Peer::new();
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        let (d, raw) = singleton(1, 32, None);
+        let key = raw[0].envelope.identity.object_key().unwrap();
+        let scope = RepairScope {
+            catalog: d.partitions[0].clone(),
+            periods: vec![d.members[0].envelope.identity.period.clone()],
+        };
+        store.publish(d, raw, deadline()).await.unwrap();
+        peer.fault(mode, &key).await;
+        assert!(
+            matches!(
+                store.repair(&scope, deadline()).await.unwrap(),
+                RepairOutcome::Incomplete
+            ),
+            "{mode} cannot prove empty"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn streamed_list_cap_and_declared_length_mismatch_fail_closed() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    peer.fault("chunked-list", "unused").await;
+    assert!(
+        transport
+            .list_raw_document("raw/v2/kma/", None, 1, 16)
+            .await
+            .is_err()
+    );
+    peer.fault("short-list", "unused").await;
+    assert!(
+        transport
+            .list_raw_document("raw/v2/kma/", None, 1, 1024)
+            .await
+            .is_err()
+    );
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn repair_scope_foreign_period_partition_cannot_misfile_group() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let (d, raw) = singleton(1, 32, None);
+    let mut foreign = d.partitions[0].clone();
+    foreign.partition = "foreign".into();
+    let scope = RepairScope {
+        catalog: foreign.clone(),
+        periods: vec![d.members[0].envelope.identity.period.clone()],
+    };
+    store.publish(d, raw, deadline()).await.unwrap();
+    assert!(matches!(
+        store.repair(&scope, deadline()).await.unwrap(),
+        RepairOutcome::Incomplete
+    ));
+    assert_eq!(peer.puts(&foreign.key()).await, 0);
+}

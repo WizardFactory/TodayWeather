@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="archify 3.0.1">
   <meta name="archify-reader-contract" content="declared-wide-v1">
-  <title>Proposed server2: one Spot host, memory and S3 Diagram</title>
+  <title>S06: Complete Fetch-Group Publication Contract Diagram</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
     // see a dark flash. The toolbar script below re-applies with UI state.
@@ -4978,18 +4978,18 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
            data-preset-badge-blueprint="BLUEPRINT / REV 01"
            data-preset-badge-editorial="EDITORIAL / FIELD NOTE">
         <div class="pulse-dot"></div>
-        <h1>Proposed server2: one Spot host, memory and S3</h1>
+        <h1>S06: Complete Fetch-Group Publication Contract</h1>
       </div>
     </div>
 
-
+    <script id="archify-source-evidence-data" type="application/json">{"schemaVersion":1,"verified":true,"repository":{"url":"https://github.com/WizardFactory/TodayWeather","revision":"4864c9368e78061fbc65b57ac0abaaa3b9408eff","shortRevision":"4864c93","label":"WizardFactory/TodayWeather","href":"https://github.com/WizardFactory/TodayWeather/tree/4864c9368e78061fbc65b57ac0abaaa3b9408eff"},"referenceCount":5,"nodes":{"caller":[{"path":"docs/architecture/server2.md","line":286,"endLine":320,"href":"https://github.com/WizardFactory/TodayWeather/blob/4864c9368e78061fbc65b57ac0abaaa3b9408eff/docs/architecture/server2.md#L286-L320"}],"group":[{"path":"docs/architecture/server2.md","line":299,"endLine":309,"href":"https://github.com/WizardFactory/TodayWeather/blob/4864c9368e78061fbc65b57ac0abaaa3b9408eff/docs/architecture/server2.md#L299-L309"}],"descriptor":[{"path":"docs/architecture/server2.md","line":303,"endLine":320,"href":"https://github.com/WizardFactory/TodayWeather/blob/4864c9368e78061fbc65b57ac0abaaa3b9408eff/docs/architecture/server2.md#L303-L320"}],"raw":[{"path":"server2/src/storage/store.rs","line":95,"endLine":111,"href":"https://github.com/WizardFactory/TodayWeather/blob/4864c9368e78061fbc65b57ac0abaaa3b9408eff/server2/src/storage/store.rs#L95-L111"}],"catalog":[{"path":"docs/architecture/server2.md","line":288,"endLine":333,"href":"https://github.com/WizardFactory/TodayWeather/blob/4864c9368e78061fbc65b57ac0abaaa3b9408eff/docs/architecture/server2.md#L288-L333"}]}}</script>
     <script id="archify-i18n-data" type="application/json">{"locale":"en","messages":{"viewer.kind.frontend":"Frontend","viewer.kind.backend":"Backend","viewer.kind.database":"Database","viewer.kind.cloud":"Cloud","viewer.kind.security":"Security","viewer.kind.messagebus":"Message bus","viewer.kind.external":"External","viewer.kind.neutral":"Neutral","viewer.kind.node":"Node","viewer.kind.start":"Start","viewer.kind.active":"Active","viewer.kind.waiting":"Waiting","viewer.kind.decision":"Decision","viewer.kind.success":"Success","viewer.kind.failure":"Failure","viewer.toolbar.actions":"Diagram actions","viewer.theme.toggle.title":"Toggle theme (T)","viewer.theme.toggle":"Toggle color theme","viewer.theme.dark":"Dark","viewer.theme.light":"Light","viewer.preset.choose.title":"Choose visual style (S cycles)","viewer.preset.choose":"Choose visual style","viewer.preset.style":"Style","viewer.preset.menu":"Visual style","viewer.preset.identity":"Visual identity","viewer.preset.cycles":"to cycle","viewer.preset.classic":"Classic","viewer.preset.classic.short":"Classic","viewer.preset.classic.hint":"Stable technical default","viewer.preset.flow":"Signal Flow","viewer.preset.flow.short":"Flow","viewer.preset.flow.hint":"Motion-forward presentation","viewer.preset.blueprint":"Blueprint","viewer.preset.blueprint.hint":"Engineering review","viewer.preset.editorial":"Editorial","viewer.preset.editorial.hint":"Publication and launch notes","viewer.preset.badge.signalFlow":"SIGNAL FLOW","viewer.preset.badge.blueprint":"BLUEPRINT / REV 01","viewer.preset.badge.editorial":"EDITORIAL / FIELD NOTE","viewer.preset.badge.editorialPlate":"ARCHIFY / PLATE 04","viewer.preset.current":"Visual style: {style}. Choose visual style","viewer.motion.live":"Live","viewer.motion.still":"Still","viewer.motion.pause":"Pause motion","viewer.motion.resume":"Resume motion","viewer.motion.reduced":"Motion paused by reduced-motion preference","viewer.motion.hidden":"Motion paused while this page is hidden","viewer.motion.yielding":"Pause motion; currently yielding to {owner}","viewer.motion.yielding.title":"Live preview enabled · yielding to {owner}","viewer.owner.route":"Route Probe","viewer.owner.lens":"Semantic Lens","viewer.owner.relationship":"Relationship Preview","viewer.owner.intent":"Intent Trace","viewer.owner.focus":"semantic focus","viewer.owner.legend":"legend preview","viewer.owner.reader":"reader interaction","viewer.present.enter":"Enter presentation stage","viewer.present.enter.title":"Presentation stage (F)","viewer.present.exit":"Exit presentation stage","viewer.present.exit.title":"Exit presentation stage (F or Escape)","viewer.present.present":"Present","viewer.present.exit.label":"Exit","viewer.export.button":"Export","viewer.export.button.title":"Export diagram (E)","viewer.export.diagram":"Export diagram","viewer.export.menu":"Export","viewer.export.subtitle":"Portable, clean outputs","viewer.export.share":"Share","viewer.export.shareCard":"Share Card","viewer.export.routeShareCard":"Route Share Card","viewer.export.reachShareCard":"Reach Share Card","viewer.export.copyDiagram":"Copy diagram","viewer.export.clipboardPng":"PNG to clipboard","viewer.export.raster":"Raster images","viewer.export.image":"Image","viewer.export.lossless":"Lossless image","viewer.export.compact":"Compact image","viewer.export.modern":"Modern image","viewer.export.vectorMotion":"Vector and motion","viewer.export.vectorMotion.heading":"Vector \u0026 motion","viewer.export.editable":"Editable vector","viewer.export.svg.auto":"SVG · Auto","viewer.export.svg.auto.hint":"Matches host theme","viewer.export.svg.light":"SVG · Light","viewer.export.svg.light.hint":"Always light","viewer.export.svg.dark":"SVG · Dark","viewer.export.svg.dark.hint":"Always dark","viewer.export.motion6s":"6s motion","viewer.export.unsupported":"Not supported by this browser","viewer.export.clipboardUnsupported":"Clipboard image write not supported by this browser","viewer.export.clipboardUnsupported.short":"Clipboard image write not supported in this browser.","viewer.export.motionUnavailable":"Motion capture unavailable in this browser","viewer.export.webmUnavailable":"WebM unavailable in this browser","viewer.export.failed":"Export failed: {message}","viewer.export.unknownVariant":"Unknown Share Card variant: {variant}","viewer.export.routeRequired":"Trace a route before exporting a Route Share Card","viewer.export.reachRequired":"Trace authored reach before exporting a Reach Share Card","viewer.export.unknown":"unknown","viewer.export.routeFailed":"Route Share Card export failed: {message}","viewer.export.reachFailed":"Reach Share Card export failed: {message}","viewer.export.copyFailed":"Copy failed: {message}","viewer.export.copiedPng":"Copied PNG to clipboard","viewer.export.downloadedRoute":"Downloaded Route Share Card","viewer.export.downloadedReach":"Downloaded Reach Share Card","viewer.export.downloadedWebm":"Downloaded WebM","viewer.export.recording":"Recording 6 seconds of motion…","viewer.export.card.routeSummary.one":"Path: {source} → {target} · {count} step","viewer.export.card.routeSummary.other":"Path: {source} → {target} · {count} steps","viewer.export.card.reachSummary":"Authored {direction} from {origin} · {nodes} · {links} · max {hops}","viewer.export.card.node.one":"{count} node","viewer.export.card.node.other":"{count} nodes","viewer.export.card.link.one":"{count} link","viewer.export.card.link.other":"{count} links","viewer.export.card.hop.one":"{count} hop","viewer.export.card.hop.other":"{count} hops","viewer.export.card.routeBadge":"ARCHIFY · ROUTE · {hops}","viewer.export.card.reachBadge":"ARCHIFY · {direction} REACH","viewer.export.direction.upstream":"Upstream","viewer.export.direction.downstream":"Downstream","viewer.export.error.canvasUnavailable":"Canvas unavailable for {label}","viewer.export.error.contextUnavailable":"2D canvas context unavailable for {label}","viewer.export.error.toBlobUnavailable":"canvas.toBlob unavailable for {label}","viewer.export.error.toBlobNull":"canvas.toBlob returned no data for {label}","viewer.export.error.variantsCombined":"Share Card variants cannot be combined","viewer.export.error.viewerState":"Share Card export could not remove temporary viewer state","viewer.export.error.routeState":"Route Card export could not preserve the resolved route safely","viewer.export.error.reachState":"Reach Card export could not preserve authored reach safely","viewer.export.error.webmRequirements":"WebM motion export requires a trace animation and browser MediaRecorder support","viewer.export.error.mediaRecorder":"MediaRecorder failed","viewer.export.error.emptyWebm":"MediaRecorder produced an empty WebM","viewer.export.error.webmBackground":"SVG background could not be loaded for WebM export","viewer.guide.title":"Explore this system","viewer.focus.selectedNodes":"{count} selected nodes","viewer.guide.eyebrow":"Diagram guide","viewer.guide.close":"Close diagram guide","viewer.guide.inspecting":"Inspecting compiled semantics","viewer.guide.actions":"Diagram exploration actions","viewer.guide.find":"Find any node","viewer.guide.find.hint":"Search labels, responsibilities, kinds, and stable IDs.","viewer.guide.route":"Trace a route","viewer.guide.route.aria":"Trace a directed route","viewer.guide.route.hint":"Ask how two semantic nodes connect in authored direction.","viewer.guide.map":"See the whole system","viewer.guide.map.hint":"Open Semantic Radar with a live viewport and stable nodes.","viewer.guide.lens":"Compare semantic kinds","viewer.guide.lens.hint":"Count roles, reveal their traffic, and compare direct authored links.","viewer.guide.present":"Enter Presentation Stage","viewer.guide.present.hint":"Give the live diagram the viewport without changing export.","viewer.guide.shortcuts":"Additional keyboard shortcuts","viewer.guide.shortcut.export":"Export","viewer.guide.shortcut.theme":"Theme","viewer.guide.shortcut.style":"Style","viewer.guide.shortcut.reset":"Reset","viewer.guide.shortcut.zoomIn":"Zoom in","viewer.guide.shortcut.zoomOut":"Zoom out","viewer.guide.shortcut.close":"Close","viewer.guide.facts":"{nodes} · {relationships}","viewer.guide.fact.node.one":"{count} semantic node","viewer.guide.fact.node.other":"{count} semantic nodes","viewer.guide.fact.relationship.one":"{count} relationship","viewer.guide.fact.relationship.other":"{count} relationships","viewer.guide.open":"Open diagram guide","viewer.finder.title":"Find a node","viewer.finder.close":"Close node finder","viewer.finder.placeholder":"Search labels or IDs","viewer.finder.search":"Search diagram nodes","viewer.finder.results":"Diagram nodes","viewer.finder.empty":"No matching nodes","viewer.finder.result.focus":"Focus {label}","viewer.finder.result.routeStart":"Choose {label} as route start","viewer.finder.result.routeTarget":"Choose {label} as route destination, {links}","viewer.finder.status.empty":"No matching nodes","viewer.finder.status.count.one":"{count} matching node","viewer.finder.status.count.other":"{count} matching nodes","viewer.finder.noun.nodes":"nodes","viewer.finder.link.one":"{count} link","viewer.finder.link.other":"{count} links","viewer.finder.result.focus.one":"Focus {label}, {count} related connection","viewer.finder.result.focus.other":"Focus {label}, {count} related connections","viewer.finder.status.filtered":"{visible} of {available} {noun}","viewer.finder.status.all":"{available} {noun}","viewer.passport.eyebrow":"Semantic passport","viewer.passport.metadata":"Node metadata","viewer.passport.evidence":"Verified source evidence","viewer.passport.verified":"Verified source","viewer.passport.verificationScope":"Verified against local Git at the pinned revision. Remote access has not been checked.","viewer.passport.reach":"Authored reach","viewer.passport.reach.trace":"Trace authored reachability","viewer.passport.upstream":"Upstream","viewer.passport.downstream":"Downstream","viewer.passport.upstream.trace":"Trace upstream authored reachability","viewer.passport.downstream.trace":"Trace downstream authored reachability","viewer.passport.close":"Close semantic passport","viewer.passport.move":"Move semantic passport. Drag, use arrow keys, or press Home to reset.","viewer.passport.copy":"Copy link","viewer.passport.copy.focus":"Copy link to focused node","viewer.passport.relations":"Relations","viewer.passport.relations.show":"Show connected relationships","viewer.passport.relations.hide":"Hide connected relationships","viewer.passport.relations.list":"Connected relationships","viewer.passport.copyRelation":"Copy relation","viewer.passport.copyNode":"Copy node","viewer.passport.copyPinned":"Copy link to pinned relationship","viewer.passport.copySource":"Copy link to source node","viewer.passport.copy.focused.success":"Focused node link copied","viewer.passport.copy.pinned.success":"Pinned relationship link copied","viewer.passport.copy.focused.failed":"Could not copy focused node link","viewer.passport.copy.pinned.failed":"Could not copy pinned relationship link","viewer.passport.relationship.none":"No connected relationships","viewer.passport.relationship.count.one":"{count} relation","viewer.passport.relationship.count.other":"{count} relations","viewer.passport.relationship.show.one":"Show {count} connected relationship","viewer.passport.relationship.show.other":"Show {count} connected relationships","viewer.passport.relationship.summary":"{out} outgoing · {in} incoming{loops}","viewer.passport.relationship.loops":" · {count} loop","viewer.passport.relationship.explorer":"Direct relationship explorer","viewer.passport.relationship.help":"Use arrow keys to explore relationships. Press Enter or Space to pin details; Escape clears.","viewer.passport.relationship.loopsBack":"loops back","viewer.passport.relationship.connectsTo":"connects to","viewer.passport.relationship.connectsFrom":"connects from","viewer.passport.relationship.pinned":"Pinned relationship · {from} → {to} · {label}","viewer.passport.relationship.inspect":"Inspect relationship {index} of {total}: {from} to {to}, {label}. Press Enter for details.","viewer.passport.relationship.group.out":"Outgoing","viewer.passport.relationship.group.in":"Incoming","viewer.passport.relationship.group.loop":"Self loops","viewer.passport.relationship.row":"{group}: {relationship}, {neighbor}","viewer.passport.relationship.direction.out":"OUT →","viewer.passport.relationship.direction.in":"← IN","viewer.passport.relationship.direction.loop":"LOOP","viewer.passport.sourceCount.one":"{count} verified source reference","viewer.passport.sourceCount.other":"{count} verified source references","viewer.passport.sourceMarker":"SRC","viewer.passport.beacon.one":"{count} verified source; focus this node to inspect","viewer.passport.beacon.other":"{count} verified sources; focus this node to inspect","viewer.passport.repository.open":"Open verified repository revision {revision}","viewer.passport.source.open":"Open verified source {path} at revision {revision}","viewer.passport.source.openLink":"Open ↗","viewer.passport.reach.upstream.one":"Trace {count} upstream authored node","viewer.passport.reach.upstream.other":"Trace {count} upstream authored nodes","viewer.passport.reach.downstream.one":"Trace {count} downstream authored node","viewer.passport.reach.downstream.other":"Trace {count} downstream authored nodes","viewer.passport.reach.noUpstream":"No upstream authored nodes","viewer.passport.reach.noDownstream":"No downstream authored nodes","viewer.passport.reach.status":"{direction} · {nodes} nodes · {links} links · max {hops} hops","viewer.route.eyebrow":"Path","viewer.route.start":"Click where the path starts","viewer.route.start.find":"Find start","viewer.route.start.find.aria":"Find a route start","viewer.route.copy":"Copy link","viewer.route.copy.aria":"Copy link to traced route","viewer.route.clear":"Clear","viewer.route.clear.aria":"Clear route probe","viewer.route.traced":"Path","viewer.route.pickTwo":"Click two nodes on the diagram","viewer.route.pickOne":"Click a node on the diagram","viewer.route.controls":"Route journey controls","viewer.route.previous":"Previous route position","viewer.route.play":"Play route journey","viewer.route.pause":"Pause route journey","viewer.route.replay":"Replay route journey","viewer.route.next":"Next route position","viewer.route.journey":"Journey","viewer.route.pause.label":"Pause","viewer.route.replay.label":"Replay","viewer.route.overview":"Overview","viewer.route.overview.aria":"Show complete route overview","viewer.route.instructions":"Click a start, then an end. Paths follow the arrows.","viewer.route.destination":"Where does the path from {label} end?","viewer.route.destination.find":"Find target","viewer.route.destination.find.aria":"Find a reachable route destination","viewer.route.differentDestination":"Choose a different destination","viewer.route.distinct":"Pick two different nodes.","viewer.route.unreachable":"Cannot reach {label} from here","viewer.route.unreachable.detail":"{target} cannot be reached from {source} along the arrows. Pick a highlighted node.","viewer.route.start.instructions":"Next, pick the end. Only nodes you can reach will light up.","viewer.route.copy.success":"Traced route link copied","viewer.route.copy.failed":"Could not copy traced route link","viewer.route.position":"Route position {index} of {total}: {label}","viewer.route.step":"Step {index} of {total} · {phase} · {label}","viewer.route.motionRequired":"Automatic journey requires Live motion","viewer.route.trigger.clear":"Clear traced route","viewer.route.overview.status":"{nodes} · {hops} · shortest path","viewer.route.overview.node.one":"{count} node","viewer.route.overview.node.other":"{count} nodes","viewer.route.overview.hop.one":"{count} step","viewer.route.overview.hop.other":"{count} steps","viewer.route.phase.playing":"Playing","viewer.route.phase.complete":"Complete","viewer.route.phase.inspecting":"Inspecting","viewer.route.destination.count.one":"{count} reachable node is highlighted. Click it.","viewer.route.destination.count.other":"{count} reachable nodes are highlighted. Click one.","viewer.route.noOutgoing":"No arrows lead out of this node. Clear it and pick another start.","viewer.route.result.title":"{source} to {target}","viewer.route.finder.source.title":"Choose route start","viewer.route.finder.source.placeholder":"Search route sources","viewer.route.finder.source.empty":"No matching route sources","viewer.route.finder.source.results":"Nodes that can start a route","viewer.route.finder.source.noun":"route sources","viewer.route.finder.source.badge":"start","viewer.route.finder.target.title":"Destination from {label}","viewer.route.finder.target.placeholder":"Search reachable destinations","viewer.route.finder.target.empty":"No matching reachable destinations","viewer.route.finder.target.results":"Reachable route destinations","viewer.route.finder.target.noun":"reachable destinations","viewer.route.hop.one":"{count} hop","viewer.route.hop.other":"{count} hops","viewer.lens.eyebrow":"Semantic lens","viewer.lens.title":"Compare system roles","viewer.lens.close":"Close semantic lens","viewer.lens.instruction":"Choose up to two semantic kinds. One reveals its real traffic; two compare only direct authored relationships.","viewer.lens.kinds":"Semantic kinds","viewer.lens.choose":"Choose a kind to inspect its nodes and touching relationships.","viewer.lens.copy":"Copy link to semantic lens","viewer.lens.clear":"Clear semantic lens","viewer.lens.open":"Open semantic lens","viewer.lens.openActive":"Open active semantic lens","viewer.lens.legend":"Semantic legend","viewer.lens.legend.inspect.one":"Inspect {label}, {count} node","viewer.lens.legend.inspect.other":"Inspect {label}, {count} nodes","viewer.lens.kind.count.one":"{label}, {count} node","viewer.lens.kind.count.other":"{label}, {count} nodes","viewer.lens.compare.one":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} direct relationship","viewer.lens.compare.other":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} direct relationships","viewer.lens.single":"{nodes} · {relationships} · connected peers remain visible","viewer.lens.node.one":"{count} {label} node","viewer.lens.node.other":"{count} {label} nodes","viewer.lens.relationship.one":"{count} touching relationship","viewer.lens.relationship.other":"{count} touching relationships","viewer.radar.title":"Semantic radar","viewer.radar.building":"Building overview","viewer.radar.openFull":"Open full semantic radar","viewer.radar.open":"Open radar","viewer.radar.close":"Close semantic radar","viewer.radar.surface":"Diagram overview. Click a node to focus it, or use arrow keys to pan.","viewer.radar.click":"Click node","viewer.radar.drag":"Drag to pan","viewer.radar.space":"Semantic radar needs more MAP space.","viewer.radar.nodes":"Semantic diagram radar nodes","viewer.radar.focus":"Focus {label} from Semantic Radar","viewer.radar.status":"{count} nodes · {viewport}","viewer.radar.fullMap":"{count} nodes · full map","viewer.radar.compacted":"Radar compacted to avoid covering the Semantic Passport or MAP controls.","viewer.radar.cancelWaiting":"Cancel semantic radar waiting for more MAP space","viewer.radar.needsSpace":"Semantic radar needs more visible MAP space","viewer.radar.viewport.full":"full map","viewer.radar.viewport.width":"{percent}% width","viewer.radar.viewport.scale":"{percent}% viewport","viewer.nav.controls":"Diagram view controls","viewer.nav.route":"Trace a directed route","viewer.nav.route.title":"Trace route (R)","viewer.nav.route.short":"PATH","viewer.nav.radar":"Open semantic radar","viewer.nav.radar.title":"Semantic radar (M)","viewer.nav.radar.short":"MAP","viewer.nav.lens":"Open semantic lens","viewer.nav.lens.title":"Semantic lens (L)","viewer.nav.lens.short":"LENS","viewer.nav.find":"Find a node","viewer.nav.find.title":"Find a node (/)","viewer.outline.title":"Node index","viewer.rail.show":"Notes \u0026 index","viewer.rail.controls":"Side panel","viewer.rail.collapse":"Collapse side panel","viewer.rail.bottom":"Move panel below the diagram","viewer.rail.right":"Move panel beside the diagram","viewer.nav.guide":"Open diagram guide","viewer.nav.guide.title":"Diagram guide (?)","viewer.nav.zoomOut":"Zoom out","viewer.nav.zoomOut.title":"Zoom out (-)","viewer.nav.reset":"Reset diagram view","viewer.nav.reset.title":"Reset view (0)","viewer.nav.read":"READ","viewer.nav.zoomIn":"Zoom in","viewer.nav.zoomIn.title":"Zoom in (+)","viewer.nav.camera":"{hint}. Reset diagram view","viewer.nav.camera.title":"{semantic}{hint} · reset view (0)","viewer.nav.camera.semantic":"Semantic camera active · ","viewer.nav.level.map":"MAP","viewer.nav.level.read":"READ","viewer.nav.level.full":"FULL","viewer.nav.level.auto":"AUTO","viewer.nav.detail.map":"Zoom in to reveal relationship labels and node context","viewer.nav.detail.read":"Zoom in again to reveal tags and annotations","viewer.nav.detail.full":"Full diagram detail","viewer.intent.summary":"{label}. {out} outgoing, {in} incoming{loops}. {total} connections. Press Enter for details.","viewer.intent.loops":", {count} self loop","viewer.common.copied":"Copied","viewer.common.copyFailed":"Copy failed","viewer.common.copyLink":"Copy link","viewer.common.clear":"Clear","viewer.common.close":"Close"}}</script>
     <!-- Main Diagram -->
     <div class="diagram-container" data-detail-level="read"
          data-preset-badge-editorial-plate="ARCHIFY / PLATE 04">
-      <svg viewBox="0 0 1205 768" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-preset="classic" data-quality-profile="showcase" data-reader-fit="intrinsic-height" data-reader-min-text="7.5" data-reader-primary-text="14">
-        <title id="archify-diagram-title">Proposed server2: one Spot host, memory and S3</title>
-        <desc id="archify-diagram-description">An architecture diagram generated by Archify.</desc>
+      <svg viewBox="0 0 920 1393" data-sequence-column-fit="spread" data-reader-fit="intrinsic-height" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-preset="classic" data-quality-profile="showcase">
+        <title id="archify-diagram-title">S06: Complete Fetch-Group Publication Contract</title>
+        <desc id="archify-diagram-description">A sequence diagram generated by Archify.</desc>
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -5012,182 +5012,296 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <!-- Background Grid -->
         <rect width="100%" height="100%" fill="url(#grid)" />
 
-        <!-- Boundaries (behind everything) -->
+        <!-- Time Segments -->
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="segment" data-composition-frame-id="0" x="48" y="155" width="824" height="365" rx="10" class="c-lane" stroke-width="1"/>
+
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="segment" data-composition-frame-id="1" x="48" y="545" width="824" height="375" rx="10" class="c-lane" stroke-width="1"/>
+
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="segment" data-composition-frame-id="2" x="48" y="950" width="824" height="345" rx="10" class="c-lane" stroke-width="1"/>
+
+        <!-- Lifelines -->
+        <path d="M 129.5 142 L 129.5 1297" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+        <path d="M 300.25 142 L 300.25 1297" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+        <path d="M 471 142 L 471 1297" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+        <path d="M 641.75 142 L 641.75 1297" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+        <path d="M 812.5 142 L 812.5 1297" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+
+        <!-- Activations -->
 
 
-        <!-- Connection paths (before components for correct z-order) -->
-        <g data-graph-role="automatic-crossover" style="--step:0">
-          <path data-graph-role="automatic-crossover-underlay" d="M 195 125 L 330 125" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="clients" data-edge-to="edge" data-edge-label="HTTPS" data-edge-key="0" data-edge-id="client-edge" data-composition-points="195,125;330,125" data-composition-crossover="halo" data-composition-independent="true" d="M 195 125 L 330 125" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <!-- Messages -->
+        <g data-edge-from="caller" data-edge-to="group" data-edge-label="Complete raw acquisition" data-edge-key="0" data-edge-id="acquire">
+          <path data-composition-edge-from="caller" data-composition-edge-to="group" data-composition-edge-id="acquire" data-composition-points="136.5,175;293.25,175" d="M 136.5 175 L 293.25 175" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="129.675" y="155" width="170.39999999999998" height="18" rx="3" class="c-mask"/>
+          <text x="214.875" y="165" class="t-muted" font-size="11" text-anchor="middle">Complete raw acquisition</text>
         </g>
-        <g data-graph-role="automatic-crossover" style="--step:1">
-          <path data-graph-role="automatic-crossover-underlay" d="M 500 125 L 630 125" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="edge" data-edge-to="gateway" data-edge-label="cache miss" data-edge-key="1" data-edge-id="edge-origin" data-composition-points="500,125;630,125" data-composition-crossover="halo" data-composition-independent="true" d="M 500 125 L 630 125" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        </g>
-        <g data-graph-role="automatic-crossover" style="--step:2">
-          <path data-graph-role="automatic-crossover-underlay" d="M 815 130 L 970 130" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="gateway" data-edge-to="legacy" data-edge-label="legacy family" data-edge-key="2" data-edge-id="legacy-switch" data-composition-points="815,130;970,130" data-composition-crossover="halo" data-composition-independent="true" d="M 815 130 L 970 130" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
-        </g>
-        <g data-graph-role="automatic-crossover" style="--step:3">
-          <path data-graph-role="automatic-crossover-underlay" d="M 722.5 170 L 722.5 360" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="gateway" data-edge-to="server2" data-edge-label="migrated family" data-edge-key="3" data-edge-id="rust-switch" data-composition-points="722.5,170;722.5,360" data-composition-crossover="halo" data-composition-independent="true" d="M 722.5 170 L 722.5 360" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        </g>
-        <g data-graph-role="automatic-crossover" style="--step:4">
-          <path data-graph-role="automatic-crossover-underlay" d="M 630 405 L 520 405" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="server2" data-edge-to="memory" data-edge-label="cache lookup" data-edge-key="4" data-edge-id="memory-lookup" data-composition-points="630,405;520,405" data-composition-crossover="halo" data-composition-independent="true" d="M 630 405 L 520 405" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        </g>
-        <g data-graph-role="automatic-crossover" style="--step:5">
-          <path data-graph-role="automatic-crossover-underlay" d="M 815 405 L 970 405" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="server2" data-edge-to="provider" data-edge-label="reserved miss" data-edge-key="5" data-edge-id="provider-miss" data-composition-points="815,405;970,405" data-composition-crossover="halo" data-composition-independent="true" d="M 815 405 L 970 405" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        </g>
-        <g data-graph-role="automatic-crossover" style="--step:6">
-          <path data-graph-role="automatic-crossover-underlay" d="M 722.5 450 L 722.5 620" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="server2" data-edge-to="s3" data-edge-label="GET / conditional PUT" data-edge-key="6" data-edge-id="s3-lookup" data-composition-points="722.5,450;722.5,620" data-composition-crossover="halo" data-composition-independent="true" d="M 722.5 450 L 722.5 620" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         </g>
 
-        <!-- Components -->
-        <g id="node-clients" data-node-id="clients" data-node-label="Existing clients" tabindex="0" role="button" aria-label="Focus Existing clients, Cordova / widgets / web, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="Cordova / widgets / web" data-node-context="Architecture component">
-          <title>Existing clients · Cordova / widgets / web · Architecture component</title>
-          <rect x="40" y="90" width="155" height="70" rx="6" class="c-mask"/>
-          <rect x="40" y="90" width="155" height="70" rx="6" class="c-external" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(46 96) scale(0.6875)">
-            <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
-            <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
+        <g data-edge-from="group" data-edge-to="descriptor" data-edge-label="PUT declaration" data-edge-key="1" data-edge-id="descriptor-put">
+          <path data-composition-edge-from="group" data-composition-edge-to="descriptor" data-composition-edge-id="descriptor-put" data-composition-points="307.25,225;464,225" d="M 307.25 225 L 464 225" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-detail="context">
+          <rect x="330.125" y="205" width="111" height="18" rx="3" class="c-mask"/>
+          <text x="385.625" y="215" class="t-edge-emphasis" font-size="11" text-anchor="middle">PUT declaration</text>
+        </g>
+        </g>
+
+        <g data-edge-from="descriptor" data-edge-to="group" data-edge-label="Verified identity" data-edge-key="2" data-edge-id="descriptor-ack">
+          <path data-composition-edge-from="descriptor" data-composition-edge-to="group" data-composition-edge-id="descriptor-ack" data-composition-points="464,270;307.25,270" d="M 464 270 L 307.25 270" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="323.525" y="250" width="124.19999999999999" height="18" rx="3" class="c-mask"/>
+          <text x="385.625" y="260" class="t-muted" font-size="11" text-anchor="middle">Verified identity</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="raw" data-edge-label="PUT all canonical bodies" data-edge-key="3" data-edge-id="bodies-put">
+          <path data-composition-edge-from="group" data-composition-edge-to="raw" data-composition-edge-id="bodies-put" data-composition-points="307.25,315;634.75,315" d="M 307.25 315 L 634.75 315" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-detail="context">
+          <rect x="385.8" y="295" width="170.39999999999998" height="18" rx="3" class="c-mask"/>
+          <text x="471" y="305" class="t-edge-emphasis" font-size="11" text-anchor="middle">PUT all canonical bodies</text>
+        </g>
+        </g>
+
+        <g data-edge-from="raw" data-edge-to="group" data-edge-label="All raw identities verified" data-edge-key="4" data-edge-id="bodies-ack">
+          <path data-composition-edge-from="raw" data-composition-edge-to="group" data-composition-edge-id="bodies-ack" data-composition-points="634.75,360;307.25,360" d="M 634.75 360 L 307.25 360" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="375.9" y="340" width="190.2" height="18" rx="3" class="c-mask"/>
+          <text x="471" y="350" class="t-muted" font-size="11" text-anchor="middle">All raw identities verified</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="catalog" data-edge-label="GET + union + conditional PUT" data-edge-key="5" data-edge-id="catalog-publish">
+          <path data-composition-edge-from="group" data-composition-edge-to="catalog" data-composition-edge-id="catalog-publish" data-composition-points="307.25,405;805.5,405" d="M 307.25 405 L 805.5 405" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-detail="context">
+          <rect x="454.675" y="385" width="203.39999999999998" height="18" rx="3" class="c-mask"/>
+          <text x="556.375" y="395" class="t-edge-emphasis" font-size="11" text-anchor="middle">GET + union + conditional PUT</text>
+        </g>
+        </g>
+
+        <g data-edge-from="catalog" data-edge-to="group" data-edge-label="All partitions published" data-edge-key="6" data-edge-id="catalog-ack">
+          <path data-composition-edge-from="catalog" data-composition-edge-to="group" data-composition-edge-id="catalog-ack" data-composition-points="805.5,450;307.25,450" d="M 805.5 450 L 307.25 450" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="471.175" y="430" width="170.39999999999998" height="18" rx="3" class="c-mask"/>
+          <text x="556.375" y="440" class="t-muted" font-size="11" text-anchor="middle">All partitions published</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="caller" data-edge-label="Verify new group; then acknowledge" data-edge-key="7" data-edge-id="publish-gate">
+          <path data-composition-edge-from="group" data-composition-edge-to="caller" data-composition-edge-id="publish-gate" data-composition-points="293.25,505;136.5,505" d="M 293.25 505 L 136.5 505" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+        <g data-detail="context">
+          <rect x="96.67500000000001" y="485" width="236.39999999999998" height="18" rx="3" class="c-mask"/>
+          <text x="214.875" y="495" class="t-edge-security" font-size="11" text-anchor="middle">Verify new group; then acknowledge</text>
+        </g>
+        </g>
+
+        <g data-edge-from="caller" data-edge-to="group" data-edge-label="Page order / exact member lookup" data-edge-key="8" data-edge-id="cold-read">
+          <path data-composition-edge-from="caller" data-composition-edge-to="group" data-composition-edge-id="cold-read" data-composition-points="136.5,565;293.25,565" d="M 136.5 565 L 293.25 565" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="103.275" y="545" width="223.2" height="18" rx="3" class="c-mask"/>
+          <text x="214.875" y="555" class="t-muted" font-size="11" text-anchor="middle">Page order / exact member lookup</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="catalog" data-edge-label="Pin target + prior dependencies" data-edge-key="9" data-edge-id="pin-target">
+          <path data-composition-edge-from="group" data-composition-edge-to="catalog" data-composition-edge-id="pin-target" data-composition-points="307.25,620;805.5,620" d="M 307.25 620 L 805.5 620" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-detail="context">
+          <rect x="448.075" y="600" width="216.6" height="18" rx="3" class="c-mask"/>
+          <text x="556.375" y="610" class="t-edge-emphasis" font-size="11" text-anchor="middle">Pin target + prior dependencies</text>
+        </g>
+        </g>
+
+        <g data-edge-from="catalog" data-edge-to="group" data-edge-label="Generations + member references" data-edge-key="10" data-edge-id="pinned-refs">
+          <path data-composition-edge-from="catalog" data-composition-edge-to="group" data-composition-edge-id="pinned-refs" data-composition-points="805.5,665;307.25,665" d="M 805.5 665 L 307.25 665" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="448.075" y="645" width="216.6" height="18" rx="3" class="c-mask"/>
+          <text x="556.375" y="655" class="t-muted" font-size="11" text-anchor="middle">Generations + member references</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="descriptor" data-edge-label="Page order + cohort / exact group" data-edge-key="11" data-edge-id="descriptor-check">
+          <path data-composition-edge-from="group" data-composition-edge-to="descriptor" data-composition-edge-id="descriptor-check" data-composition-points="307.25,710;464,710" d="M 307.25 710 L 464 710" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="270.725" y="690" width="229.79999999999998" height="18" rx="3" class="c-mask"/>
+          <text x="385.625" y="700" class="t-muted" font-size="11" text-anchor="middle">Page order + cohort / exact group</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="catalog" data-edge-label="Pin selected group&#39;s siblings" data-edge-key="12" data-edge-id="pin-selected-siblings">
+          <path data-composition-edge-from="group" data-composition-edge-to="catalog" data-composition-edge-id="pin-selected-siblings" data-composition-points="307.25,755;805.5,755" d="M 307.25 755 L 805.5 755" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-detail="context">
+          <rect x="454.675" y="735" width="203.39999999999998" height="18" rx="3" class="c-mask"/>
+          <text x="556.375" y="745" class="t-edge-emphasis" font-size="11" text-anchor="middle">Pin selected group&#39;s siblings</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="raw" data-edge-label="GET / verify all selected bodies" data-edge-key="13" data-edge-id="read-selected-bodies">
+          <path data-composition-edge-from="group" data-composition-edge-to="raw" data-composition-edge-id="read-selected-bodies" data-composition-points="307.25,800;634.75,800" d="M 307.25 800 L 634.75 800" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-detail="context">
+          <rect x="359.4" y="780" width="223.2" height="18" rx="3" class="c-mask"/>
+          <text x="471" y="790" class="t-edge-emphasis" font-size="11" text-anchor="middle">GET / verify all selected bodies</text>
+        </g>
+        </g>
+
+        <g data-edge-from="raw" data-edge-to="group" data-edge-label="Complete exact acquisition" data-edge-key="14" data-edge-id="read-selected-result">
+          <path data-composition-edge-from="raw" data-composition-edge-to="group" data-composition-edge-id="read-selected-result" data-composition-points="634.75,845;307.25,845" d="M 634.75 845 L 307.25 845" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="379.2" y="825" width="183.6" height="18" rx="3" class="c-mask"/>
+          <text x="471" y="835" class="t-muted" font-size="11" text-anchor="middle">Complete exact acquisition</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="caller" data-edge-label="Scoped page; no whole-history claim" data-edge-key="15" data-edge-id="group-admit">
+          <path data-composition-edge-from="group" data-composition-edge-to="caller" data-composition-edge-id="group-admit" data-composition-points="293.25,890;136.5,890" d="M 293.25 890 L 136.5 890" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+        <g data-detail="context">
+          <rect x="93.375" y="870" width="243" height="18" rx="3" class="c-mask"/>
+          <text x="214.875" y="880" class="t-edge-security" font-size="11" text-anchor="middle">Scoped page; no whole-history claim</text>
+        </g>
+        </g>
+
+        <g data-edge-from="caller" data-edge-to="group" data-edge-label="Bounded orphan repair" data-edge-key="16" data-edge-id="repair-request">
+          <path data-composition-edge-from="caller" data-composition-edge-to="group" data-composition-edge-id="repair-request" data-composition-points="136.5,970;293.25,970" d="M 136.5 970 L 293.25 970" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="139.575" y="950" width="150.6" height="18" rx="3" class="c-mask"/>
+          <text x="214.875" y="960" class="t-muted" font-size="11" text-anchor="middle">Bounded orphan repair</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="raw" data-edge-label="LIST every page + verify bodies" data-edge-key="17" data-edge-id="raw-list">
+          <path data-composition-edge-from="group" data-composition-edge-to="raw" data-composition-edge-id="raw-list" data-composition-points="307.25,1020;634.75,1020" d="M 307.25 1020 L 634.75 1020" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-detail="context">
+          <rect x="362.7" y="1000" width="216.6" height="18" rx="3" class="c-mask"/>
+          <text x="471" y="1010" class="t-edge-emphasis" font-size="11" text-anchor="middle">LIST every page + verify bodies</text>
+        </g>
+        </g>
+
+        <g data-edge-from="raw" data-edge-to="group" data-edge-label="All pages or incomplete scan" data-edge-key="18" data-edge-id="raw-list-result">
+          <path data-composition-edge-from="raw" data-composition-edge-to="group" data-composition-edge-id="raw-list-result" data-composition-points="634.75,1065;307.25,1065" d="M 634.75 1065 L 307.25 1065" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="372.6" y="1045" width="196.79999999999998" height="18" rx="3" class="c-mask"/>
+          <text x="471" y="1055" class="t-muted" font-size="11" text-anchor="middle">All pages or incomplete scan</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="descriptor" data-edge-label="Check every envelope + ownership" data-edge-key="19" data-edge-id="repair-descriptor">
+          <path data-composition-edge-from="group" data-composition-edge-to="descriptor" data-composition-edge-id="repair-descriptor" data-composition-points="307.25,1110;464,1110" d="M 307.25 1110 L 464 1110" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="274.025" y="1090" width="223.2" height="18" rx="3" class="c-mask"/>
+          <text x="385.625" y="1100" class="t-muted" font-size="11" text-anchor="middle">Check every envelope + ownership</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="catalog" data-edge-label="Verified orphans: dedupe + CAS" data-edge-key="20" data-edge-id="repair-cas">
+          <path data-composition-edge-from="group" data-composition-edge-to="catalog" data-composition-edge-id="repair-cas" data-composition-points="307.25,1160;805.5,1160" d="M 307.25 1160 L 805.5 1160" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-detail="context">
+          <rect x="451.375" y="1140" width="210" height="18" rx="3" class="c-mask"/>
+          <text x="556.375" y="1150" class="t-edge-emphasis" font-size="11" text-anchor="middle">Verified orphans: dedupe + CAS</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="catalog" data-edge-label="Re-pin and check all siblings" data-edge-key="21" data-edge-id="repair-sibling">
+          <path data-composition-edge-from="group" data-composition-edge-to="catalog" data-composition-edge-id="repair-sibling" data-composition-points="307.25,1205;805.5,1205" d="M 307.25 1205 L 805.5 1205" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="454.675" y="1185" width="203.39999999999998" height="18" rx="3" class="c-mask"/>
+          <text x="556.375" y="1195" class="t-muted" font-size="11" text-anchor="middle">Re-pin and check all siblings</text>
+        </g>
+        </g>
+
+        <g data-edge-from="group" data-edge-to="caller" data-edge-label="Checked data / indexed / incomplete" data-edge-key="22" data-edge-id="repair-return">
+          <path data-composition-edge-from="group" data-composition-edge-to="caller" data-composition-edge-id="repair-return" data-composition-points="293.25,1265;136.5,1265" d="M 293.25 1265 L 136.5 1265" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+        <g data-detail="context">
+          <rect x="93.375" y="1245" width="243" height="18" rx="3" class="c-mask"/>
+          <text x="214.875" y="1255" class="t-edge-security" font-size="11" text-anchor="middle">Checked data / indexed / incomplete</text>
+        </g>
+        </g>
+
+        <!-- Segment Labels -->
+        <g data-graph-role="segment-label" data-segment-id="0">
+          <rect x="56" y="133" width="180.4" height="18" rx="3" class="c-mask"/>
+          <text x="62" y="146" class="t-dim" font-size="9" font-weight="600">Publish one complete acquisition</text>
+        </g>
+        <g data-graph-role="segment-label" data-segment-id="1">
+          <rect x="56" y="523" width="201.20000000000002" height="18" rx="3" class="c-mask"/>
+          <text x="62" y="536" class="t-dim" font-size="9" font-weight="600">Read: bounded, complete acquisitions</text>
+        </g>
+        <g data-graph-role="segment-label" data-segment-id="2">
+          <rect x="56" y="928" width="190.8" height="18" rx="3" class="c-mask"/>
+          <text x="62" y="941" class="t-dim" font-size="9" font-weight="600">Repair missing or healthy catalogs</text>
+        </g>
+
+        <!-- Participants -->
+        <g id="node-caller" data-node-id="caller" data-node-label="Caller" tabindex="0" role="button" aria-label="Focus Caller, Internal API, Sequence participant" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Internal API" data-node-context="Sequence participant">
+          <title>Caller · Internal API · Sequence participant</title>
+          <rect x="62" y="72" width="135" height="60" rx="6" class="c-mask"/>
+          <rect x="62" y="72" width="135" height="60" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(68 78) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="117.5" y="123" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Existing clients</text>
-        <text data-detail="context" x="117.5" y="139" class="t-muted" font-size="9" text-anchor="middle">Cordova / widgets / web</text>
+          <text data-node-label="" data-detail-anchor="" x="129.5" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Caller</text>
+          <text data-detail="context" x="129.5" y="122" class="t-muted" font-size="7" text-anchor="middle">Internal API</text>
         </g>
 
-        <g id="node-edge" data-node-id="edge" data-node-label="CloudFront" tabindex="0" role="button" aria-label="Focus CloudFront, Existing public cache, Architecture component" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="Existing public cache" data-node-context="Architecture component">
-          <title>CloudFront · Existing public cache · Architecture component</title>
-          <rect x="330" y="90" width="170" height="70" rx="6" class="c-mask"/>
-          <rect x="330" y="90" width="170" height="70" rx="6" class="c-cloud" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(336 96) scale(0.6875)">
+        <g id="node-group" data-node-id="group" data-node-label="Group Gate" tabindex="0" role="button" aria-label="Focus Group Gate, Validate / pin, Sequence participant" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Validate / pin" data-node-context="Sequence participant">
+          <title>Group Gate · Validate / pin · Sequence participant</title>
+          <rect x="232.75" y="72" width="135" height="60" rx="6" class="c-mask"/>
+          <rect x="232.75" y="72" width="135" height="60" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(238.75 78) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="300.25" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Group Gate</text>
+          <text data-detail="context" x="300.25" y="122" class="t-muted" font-size="7" text-anchor="middle">Validate / pin</text>
+        </g>
+
+        <g id="node-descriptor" data-node-id="descriptor" data-node-label="Descriptor" tabindex="0" role="button" aria-label="Focus Descriptor, Immutable identity, Sequence participant" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="Immutable identity" data-node-context="Sequence participant">
+          <title>Descriptor · Immutable identity · Sequence participant</title>
+          <rect x="403.5" y="72" width="135" height="60" rx="6" class="c-mask"/>
+          <rect x="403.5" y="72" width="135" height="60" rx="6" class="c-cloud" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(409.5 78) scale(0.6875)">
             <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="415" y="123" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">CloudFront</text>
-        <text data-detail="context" x="415" y="139" class="t-muted" font-size="9" text-anchor="middle">Existing public cache</text>
+          <text data-node-label="" data-detail-anchor="" x="471" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Descriptor</text>
+          <text data-detail="context" x="471" y="122" class="t-muted" font-size="7" text-anchor="middle">Immutable identity</text>
         </g>
 
-        <g id="node-gateway" data-node-id="gateway" data-node-label="Origin routing" tabindex="0" role="button" aria-label="Focus Origin routing, Weather + geocode together, Architecture component" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Weather + geocode together" data-node-context="Architecture component">
-          <title>Origin routing · Weather + geocode together · Architecture component</title>
-          <rect x="630" y="90" width="185" height="80" rx="6" class="c-mask"/>
-          <rect x="630" y="90" width="185" height="80" rx="6" class="c-backend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(636 96) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="722.5" y="128" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Origin routing</text>
-        <text data-detail="context" x="722.5" y="144" class="t-muted" font-size="9" text-anchor="middle">Weather + geocode together</text>
-        </g>
-
-        <g id="node-legacy" data-node-id="legacy" data-node-label="Legacy Node" tabindex="0" role="button" aria-label="Focus Legacy Node, Unmigrated families / rollback, Architecture component" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Unmigrated families / rollback" data-node-context="Architecture component">
-          <title>Legacy Node · Unmigrated families / rollback · Architecture component</title>
-          <rect x="970" y="90" width="190" height="80" rx="6" class="c-mask"/>
-          <rect x="970" y="90" width="190" height="80" rx="6" class="c-backend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(976 96) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="1065" y="128" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Legacy Node</text>
-        <text data-detail="context" x="1065" y="144" class="t-muted" font-size="9" text-anchor="middle">Unmigrated families / rollback</text>
-        </g>
-
-        <g id="node-server2" data-node-id="server2" data-node-label="Proposed Rust origin" tabindex="0" role="button" aria-label="Focus Proposed Rust origin, Tokio + bounded CPU pool, Architecture component" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Tokio + bounded CPU pool" data-node-context="Architecture component">
-          <title>Proposed Rust origin · Tokio + bounded CPU pool · Architecture component</title>
-          <rect x="630" y="360" width="185" height="90" rx="6" class="c-mask"/>
-          <rect x="630" y="360" width="185" height="90" rx="6" class="c-backend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(636 366) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="722.5" y="403" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Proposed Rust origin</text>
-        <text data-detail="context" x="722.5" y="419" class="t-muted" font-size="9" text-anchor="middle">Tokio + bounded CPU pool</text>
-        </g>
-
-        <g id="node-memory" data-node-id="memory" data-node-label="Shared volatile cache" tabindex="0" role="button" aria-label="Focus Shared volatile cache, One cache across threads, Architecture component" aria-pressed="false" data-node-kind="database" data-node-sublabel="One cache across threads" data-node-context="Architecture component">
-          <title>Shared volatile cache · One cache across threads · Architecture component</title>
-          <rect x="330" y="360" width="190" height="90" rx="6" class="c-mask"/>
-          <rect x="330" y="360" width="190" height="90" rx="6" class="c-database" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(336 366) scale(0.6875)">
-            <ellipse cx="8" cy="4" rx="5" ry="2"/>
-            <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="425" y="403" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Shared volatile cache</text>
-        <text data-detail="context" x="425" y="419" class="t-muted" font-size="9" text-anchor="middle">One cache across threads</text>
-        </g>
-
-        <g id="node-provider" data-node-id="provider" data-node-label="Provider APIs" tabindex="0" role="button" aria-label="Focus Provider APIs, Budget reservation before HTTP, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="Budget reservation before HTTP" data-node-context="Architecture component">
-          <title>Provider APIs · Budget reservation before HTTP · Architecture component</title>
-          <rect x="970" y="360" width="195" height="90" rx="6" class="c-mask"/>
-          <rect x="970" y="360" width="195" height="90" rx="6" class="c-external" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(976 366) scale(0.6875)">
-            <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
-            <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="1067.5" y="403" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Provider APIs</text>
-        <text data-detail="context" x="1067.5" y="419" class="t-muted" font-size="9" text-anchor="middle">Budget reservation before HTTP</text>
-        </g>
-
-        <g id="node-s3" data-node-id="s3" data-node-label="S3 serving store" tabindex="0" role="button" aria-label="Focus S3 serving store, Raw / catalogs / raw packs, Architecture component" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="Raw / catalogs / raw packs" data-node-context="Architecture component">
-          <title>S3 serving store · Raw / catalogs / raw packs · Architecture component</title>
-          <rect x="630" y="620" width="185" height="80" rx="6" class="c-mask"/>
-          <rect x="630" y="620" width="185" height="80" rx="6" class="c-cloud" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(636 626) scale(0.6875)">
+        <g id="node-raw" data-node-id="raw" data-node-label="Raw Bodies" tabindex="0" role="button" aria-label="Focus Raw Bodies, Exact gzip bytes, Sequence participant" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="Exact gzip bytes" data-node-context="Sequence participant">
+          <title>Raw Bodies · Exact gzip bytes · Sequence participant</title>
+          <rect x="574.25" y="72" width="135" height="60" rx="6" class="c-mask"/>
+          <rect x="574.25" y="72" width="135" height="60" rx="6" class="c-cloud" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(580.25 78) scale(0.6875)">
             <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="722.5" y="658" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">S3 serving store</text>
-        <text data-detail="context" x="722.5" y="674" class="t-muted" font-size="9" text-anchor="middle">Raw / catalogs / raw packs</text>
+          <text data-node-label="" data-detail-anchor="" x="641.75" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Raw Bodies</text>
+          <text data-detail="context" x="641.75" y="122" class="t-muted" font-size="7" text-anchor="middle">Exact gzip bytes</text>
         </g>
 
-        <!-- Connection labels -->
-        <g data-detail="context" data-edge-from="clients" data-edge-to="edge" data-edge-label="HTTPS" data-edge-key="0" data-edge-id="client-edge">
-          <rect x="245.5" y="105" width="34" height="14" rx="3" class="c-mask"/>
-          <text x="262.5" y="115" class="t-edge-default" font-size="8" text-anchor="middle">HTTPS</text>
+        <g id="node-catalog" data-node-id="catalog" data-node-label="Catalogs" tabindex="0" role="button" aria-label="Focus Catalogs, Versioned CAS, Sequence participant" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="Versioned CAS" data-node-context="Sequence participant">
+          <title>Catalogs · Versioned CAS · Sequence participant</title>
+          <rect x="745" y="72" width="135" height="60" rx="6" class="c-mask"/>
+          <rect x="745" y="72" width="135" height="60" rx="6" class="c-cloud" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(751 78) scale(0.6875)">
+            <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="812.5" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Catalogs</text>
+          <text data-detail="context" x="812.5" y="122" class="t-muted" font-size="7" text-anchor="middle">Versioned CAS</text>
         </g>
-        <g data-detail="context" data-edge-from="edge" data-edge-to="gateway" data-edge-label="cache miss" data-edge-key="1" data-edge-id="edge-origin">
-          <rect x="536" y="105" width="58" height="14" rx="3" class="c-mask"/>
-          <text x="565" y="115" class="t-edge-default" font-size="8" text-anchor="middle">cache miss</text>
-        </g>
-        <g data-detail="context" data-edge-from="gateway" data-edge-to="legacy" data-edge-label="legacy family" data-edge-key="2" data-edge-id="legacy-switch">
-          <rect x="856.3" y="110" width="72.4" height="14" rx="3" class="c-mask"/>
-          <text x="892.5" y="120" class="t-edge-dashed" font-size="8" text-anchor="middle">legacy family</text>
-        </g>
-        <g data-detail="context" data-edge-from="gateway" data-edge-to="server2" data-edge-label="migrated family" data-edge-key="3" data-edge-id="rust-switch">
-          <rect x="634.5" y="258" width="82" height="14" rx="3" class="c-mask"/>
-          <text x="675.5" y="268" class="t-edge-default" font-size="8" text-anchor="middle">migrated family</text>
-        </g>
-        <g data-detail="context" data-edge-from="server2" data-edge-to="memory" data-edge-label="cache lookup" data-edge-key="4" data-edge-id="memory-lookup">
-          <rect x="541.2" y="385" width="67.6" height="14" rx="3" class="c-mask"/>
-          <text x="575" y="395" class="t-edge-default" font-size="8" text-anchor="middle">cache lookup</text>
-        </g>
-        <g data-detail="context" data-edge-from="server2" data-edge-to="provider" data-edge-label="reserved miss" data-edge-key="5" data-edge-id="provider-miss">
-          <rect x="856.3" y="385" width="72.4" height="14" rx="3" class="c-mask"/>
-          <text x="892.5" y="395" class="t-edge-default" font-size="8" text-anchor="middle">reserved miss</text>
-        </g>
-        <g data-detail="context" data-edge-from="server2" data-edge-to="s3" data-edge-label="GET / conditional PUT" data-edge-key="6" data-edge-id="s3-lookup">
-          <rect x="605.7" y="528" width="110.8" height="14" rx="3" class="c-mask"/>
-          <text x="661.1" y="538" class="t-edge-default" font-size="8" text-anchor="middle">GET / conditional PUT</text>
-        </g>
-
-        <!-- Boundary labels (foreground masks keep routes out of titles) -->
-
 
         <!-- Legend -->
-        <g data-legend="" data-legend-bridge="">
-          <text x="40" y="732" class="t-primary" font-size="12" font-weight="650">Legend</text>
-          <g data-legend-semantic-kind="backend" data-legend-kind="backend" data-legend-label="Backend" data-legend-x="40" data-legend-baseline="752" data-legend-width="78">
-            <rect x="40" y="743" width="16" height="10" rx="2.5" class="c-backend" stroke-width="1"/>
-            <text x="62" y="752" class="t-muted" font-size="10" font-weight="500">Backend</text>
+        <g data-legend="">
+          <text x="40" y="1319" class="t-primary" font-size="12" font-weight="650">Legend</text>
+          <g data-legend-semantic-kind="emphasis" data-legend-x="40" data-legend-baseline="1339" data-legend-width="103">
+            <path d="M 40 1336 L 74 1336" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+            <text x="83" y="1339" class="t-muted" font-size="10" font-weight="500">main request</text>
           </g>
-          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="Database" data-legend-x="140" data-legend-baseline="752" data-legend-width="83">
-            <rect x="140" y="743" width="16" height="10" rx="2.5" class="c-database" stroke-width="1"/>
-            <text x="162" y="752" class="t-muted" font-size="10" font-weight="500">Database</text>
+          <g data-legend-semantic-kind="return" data-legend-x="165" data-legend-baseline="1339" data-legend-width="73">
+            <path d="M 165 1336 L 199 1336" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
+            <text x="208" y="1339" class="t-muted" font-size="10" font-weight="500">return</text>
           </g>
-          <g data-legend-semantic-kind="cloud" data-legend-kind="cloud" data-legend-label="Cloud" data-legend-x="245" data-legend-baseline="752" data-legend-width="68">
-            <rect x="245" y="743" width="16" height="10" rx="2.5" class="c-cloud" stroke-width="1"/>
-            <text x="267" y="752" class="t-muted" font-size="10" font-weight="500">Cloud</text>
+          <g data-legend-semantic-kind="security" data-legend-x="260" data-legend-baseline="1339" data-legend-width="83">
+            <path d="M 260 1336 L 294 1336" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+            <text x="303" y="1339" class="t-muted" font-size="10" font-weight="500">security</text>
           </g>
-          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="External" data-legend-x="335" data-legend-baseline="752" data-legend-width="83">
-            <rect x="335" y="743" width="16" height="10" rx="2.5" class="c-external" stroke-width="1"/>
-            <text x="357" y="752" class="t-muted" font-size="10" font-weight="500">External</text>
+          <g data-legend-semantic-kind="default" data-legend-x="365" data-legend-baseline="1339" data-legend-width="78">
+            <path d="M 365 1336 L 399 1336" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+            <text x="408" y="1339" class="t-muted" font-size="10" font-weight="500">message</text>
           </g>
         </g>
       </svg>
@@ -5368,40 +5482,49 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <div class="cards">
       <div class="card">
         <div class="card-header">
-          <div class="card-dot cyan"></div>
-          <h3>Serving contract</h3>
+          <div class="card-dot emerald"></div>
+          <h3>Durability gate</h3>
         </div>
         <ul>
-          <li>Preserve the 19 observed API groups</li>
-          <li>No local persistent serving store</li>
-          <li>Coarse geocode: memory / S3; precise stays volatile</li>
-          <li>Demand state: grid identity and times only</li>
+          <li>Descriptor and bodies precede catalog CAS.</li>
+          <li>New success verifies only the new complete group.</li>
+          <li>No cross-object transaction is claimed.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <div class="card-dot emerald"></div>
-          <h3>Durability and lookup</h3>
+          <div class="card-dot rose"></div>
+          <h3>Partial publication</h3>
         </div>
         <ul>
-          <li>Raw + complete catalog before new success</li>
-          <li>Catalogs contain identities, not weather views</li>
-          <li>Packs reduce GETs; canonical fallback remains</li>
-          <li>Serve only complete fetch groups across partitions</li>
+          <li>New A + old B excludes the incomplete group.</li>
+          <li>Keep complete groups accessible through bounded pages.</li>
+          <li>Raw bodies alone do not acknowledge a result.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>Repair and scope</h3>
+        </div>
+        <ul>
+          <li>Only an exhausted, validated scan is complete.</li>
+          <li>Healthy catalogs still need orphan reconciliation.</li>
+          <li>Internal contract; no serving route is switched.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot amber"></div>
-          <h3>Scope and gates</h3>
+          <h3>Read bounds</h3>
         </div>
         <ul>
-          <li>S02 / S03 / S04 / S05 merged; no route cutover</li>
-          <li>Cold cells keep legacy until parity is proven</li>
-          <li>Later scale-out: independent caches and shared S3</li>
-          <li>Design source: docs/architecture/server2.md</li>
+          <li>A checked page is not whole-history coverage.</li>
+          <li>Targeted access avoids unrelated historical groups.</li>
+          <li>Capacity is separate from corrupt data.</li>
         </ul>
       </div>
     </div>
