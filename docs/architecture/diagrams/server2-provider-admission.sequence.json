@@ -2,14 +2,14 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "Proposed S08 durable provider admission",
+    "title": "S08 durable provider admission",
     "output": "docs/architecture/diagrams/server2-provider-admission.html",
     "locale": "en",
     "quality_profile": "showcase",
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "94019cf5460a898bdb315ca7a443e879770e79ce",
+      "revision": "f1e108e1ecf7162e7388974a2bca3c46e58c504d",
       "provider": "github",
       "link_mode": "web"
     }
@@ -22,9 +22,9 @@
       "sublabel": "trusted plan",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 609,
-          "end_line": 618
+          "path": "server2/src/providers/acquisition.rs",
+          "line": 75,
+          "end_line": 106
         }
       ]
     },
@@ -35,9 +35,9 @@
       "sublabel": "at most 2 HTTP",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 609,
-          "end_line": 618
+          "path": "server2/src/providers/acquisition.rs",
+          "line": 108,
+          "end_line": 180
         }
       ]
     },
@@ -48,9 +48,19 @@
       "sublabel": "private ranges",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 609,
-          "end_line": 618
+          "path": "server2/src/budget/store.rs",
+          "line": 57,
+          "end_line": 77
+        },
+        {
+          "path": "server2/src/budget/store.rs",
+          "line": 98,
+          "end_line": 218
+        },
+        {
+          "path": "server2/src/budget/model.rs",
+          "line": 115,
+          "end_line": 130
         }
       ]
     },
@@ -61,9 +71,14 @@
       "sublabel": "CAS and witnesses",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 609,
-          "end_line": 618
+          "path": "server2/src/budget/transport.rs",
+          "line": 40,
+          "end_line": 117
+        },
+        {
+          "path": "server2/src/budget/transport.rs",
+          "line": 143,
+          "end_line": 190
         }
       ]
     },
@@ -71,19 +86,24 @@
       "id": "provider",
       "type": "external",
       "label": "Provider",
-      "sublabel": "recorded test peer",
+      "sublabel": "synthetic test peer",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 609,
-          "end_line": 618
+          "path": "server2/src/providers/transport.rs",
+          "line": 69,
+          "end_line": 112
+        },
+        {
+          "path": "server2/tests/budget/peer.py",
+          "line": 19,
+          "end_line": 36
         }
       ]
     }
   ],
   "segments": [
     {
-      "from": 150,
+      "from": 190,
       "to": 375,
       "label": "Global ceiling and unique durable range"
     },
@@ -105,7 +125,8 @@
       "to": "executor",
       "y": 160,
       "label": "Acquisition plan and deadline",
-      "variant": "emphasis"
+      "variant": "emphasis",
+      "note": "At most 4 admitted acquisitions; validation CPU=2. Key/window/endpoint mapping is trusted."
     },
     {
       "id": "admit-2",
@@ -146,7 +167,7 @@
       "from": "s3",
       "to": "budget",
       "y": 360,
-      "label": "Only 200: owned durable range",
+      "label": "Completed 200: owned range",
       "variant": "return",
       "note": "Unknown outcome grants no HTTP; a committed high-water remains spent."
     },
@@ -191,7 +212,7 @@
       "y": 560,
       "label": "Status and bounded body",
       "variant": "return",
-      "note": "Validate provider semantics; gateway XML errors are not successful data."
+      "note": "Injected JSON validator; provider-specific semantic ports remain later. XML errors are not data."
     },
     {
       "id": "admit-12",
@@ -217,7 +238,7 @@
       "y": 680,
       "label": "Checked acquisition or denial",
       "variant": "return",
-      "note": "The caller still owes complete raw/group publication before a new client success."
+      "note": "Raw body only; caller still owes complete raw/group publication before a new client success."
     }
   ],
   "cards": [
@@ -241,8 +262,8 @@
       "dot": "amber",
       "title": "Scope and cost",
       "items": [
-        "New block: GET + CAS PUT + witness PUT. Warm owned block: no extra S3 funding request.",
-        "This proposed internal contract is not live AWS/IAM/quota verification or a deployed provider route."
+        "New block: 3 S3 waves per key; two cold candidates: 6. Warm owned block: no funding request.",
+        "Internal primitive: no live AWS/IAM/quota conformance, deployed route or integrated S07 adapter."
       ]
     }
   ]

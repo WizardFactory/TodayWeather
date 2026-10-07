@@ -662,10 +662,10 @@ are satisfied. No claim of RPO zero is made for an unacknowledged provider reply
 ### S08 provider admission implementation contract
 
 Following S06 merge, [S08 #2693](https://github.com/WizardFactory/TodayWeather/issues/2693)
-implements internal quota admission and rejection primitives. Its proposed
+implements internal quota admission and rejection primitives. Its
 [sequence](diagrams/server2-provider-admission.html) and
 [editable source](diagrams/server2-provider-admission.sequence.json) show the
-design contract; no provider route, live quota or production policy is activated.
+committed internal execution; no provider route, live quota or production policy is activated.
 
 Each trusted provider/quota-owner/window has a separate versioned
 `budgets/v2/{provider}/{opaque_quota_key_id}/{window_id}/authority.json`.
@@ -675,6 +675,15 @@ A conditional creation or opaque-ETag CAS advances the checked high-water by
 200 grants the writer that unique range. The writer then creates a write-once
 `blocks/{start}-{end}.json` witness before privately issuing request units.
 Neither weather catalogs nor client-supplied IDs control quota arithmetic.
+
+Each funded executor admits at most four concurrent executions and two JSON
+validation jobs. An admitted execution retains its guard while funding,
+downloading and validating; a started blocking validator retains it after caller
+cancellation until completion. HTTP bodies are capped at 8 MiB. These are
+per-executor bounds, not a process RSS measurement or a global worker limit.
+The budget wire adapter fully consumes a bounded 200 acknowledgment before
+granting either authority or witness success. Clock observation and its local
+backwards-time fence are serialized; replacement still requires trusted clocks.
 
 The high-water and witness are two separate writes, not an S3 transaction.
 Unknown authority outcomes grant no provider permission; a committed floor is
@@ -690,13 +699,20 @@ The funded executor sends at most two actual provider HTTP attempts. VC reserves
 98/50/2 records for two attempts of the 49/25/1-record modes. data.go.kr reserves
 two units on the initial candidate and, if configured, one on the next key before
 any HTTP. Three conservative reserved units never mean three actual attempts.
+A trusted injected validator checks JSON in this primitive; concrete provider
+schemas, pagination/group composition and the S07 funding adapter are later
+ports. Credential-to-quota-owner, window and endpoint mappings are operator
+configuration. The library does not infer their correctness from a key hash.
+
 Any candidate funding denial stops the chain; quota/auth responses stop retries
 on that key, while only the permitted funded retry or key rotation can consume
 the remaining attempt within the original deadline. Error bodies are not data.
 
 Obtaining a new block requires authority GET, CAS PUT and witness PUT: three
 dependent S3 waves before HTTP, with bounded conflict work added when needed.
-Funding from an already acknowledged live memory block adds no S3 request.
+Two cold data.go.kr candidates are funded sequentially, so they add six
+dependent funding waves. Funding from an already acknowledged live memory
+block adds no S3 request.
 The reservation timings in section 7 remain illustration assumptions, not a
 measurement of this new-block path. S09 measures block waste, cold latency and
 quota headroom before provisioning or route activation. No lifecycle deletion

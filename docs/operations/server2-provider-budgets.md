@@ -46,7 +46,9 @@ and every candidate is debited before the first provider attempt. Units are neve
 if an attempt is unused, cancelled or fails. Replacement never reads old witnesses to reclaim
 leftovers. Oversized request maxima or insufficient final partial block capacity deny work.
 
-A new block has three dependent S3 waves; warm owner funding has zero. Earlier 0.1–0.2 second
+A new block has three dependent S3 waves; warm owner funding has zero. Two cold key
+candidates are funded sequentially, so that request has six dependent reservation waves.
+Earlier 0.1–0.2 second
 illustrations are not measurements or this implementation's guarantee. Block waste and
 latency must be measured in S09. Up to each live block's capacity can be lost at replacement;
 multiple key blocks contribute separately. No local-peer number predicts real S3 latency.

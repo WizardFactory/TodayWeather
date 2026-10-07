@@ -4,7 +4,7 @@ use axum::{
     Router,
     body::{Body, to_bytes},
     extract::{Request as AxumRequest, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::any,
 };
@@ -31,6 +31,9 @@ struct Data {
     provider_delay: u64,
     active: usize,
     peak: usize,
+    before_apply: Option<Arc<tokio::sync::Notify>>,
+    before_entered: bool,
+    late_status: Option<u16>,
 }
 #[derive(Default)]
 struct Peer {
@@ -158,6 +161,30 @@ async fn handle(State(peer): State<Arc<Peer>>, request: AxumRequest) -> Response
     {
         return StatusCode::BAD_REQUEST.into_response();
     }
+    let gate = {
+        let mut data = peer.data.lock().unwrap();
+        if path.ends_with("authority.json") && data.before_apply.is_some() {
+            data.before_entered = true;
+            data.before_apply.take()
+        } else {
+            None
+        }
+    };
+    if let Some(gate) = gate {
+        // Accepted remote operation outlives the caller connection, like a delayed
+        // S3 write. Evaluate the conditional predicate only after the test barrier.
+        let remote = peer.clone();
+        let task = tokio::spawn(async move {
+            gate.notified().await;
+            let response = apply_put(remote.clone(), path, headers, bytes).await;
+            remote.data.lock().unwrap().late_status = Some(response.status().as_u16());
+            response
+        });
+        return task.await.unwrap();
+    }
+    apply_put(peer, path, headers, bytes).await
+}
+async fn apply_put(peer: Arc<Peer>, path: String, headers: HeaderMap, bytes: Vec<u8>) -> Response {
     let (status, delay) = {
         let mut data = peer.data.lock().unwrap();
         data.events.push(format!("PUT {path}"));
@@ -769,4 +796,64 @@ async fn concurrent_clock_observations_are_serialized() {
         1,
         "a delayed earlier observation must not race a newer fence"
     );
+}
+#[tokio::test]
+async fn delayed_cas_application_before_or_after_replacement_never_overlaps() {
+    for old_wins in [false, true] {
+        let peer = Running::new().await;
+        let p = policy(8, 4);
+        let gate = Arc::new(tokio::sync::Notify::new());
+        peer.peer.data.lock().unwrap().before_apply = Some(gate.clone());
+        let a = store(&peer, p.clone(), clock());
+        let job = tokio::spawn(async move {
+            a.reserve(2, Instant::now() + Duration::from_millis(160))
+                .await
+        });
+        for _ in 0..200 {
+            if peer.peer.data.lock().unwrap().before_entered {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(2)).await;
+        }
+        assert!(peer.peer.data.lock().unwrap().before_entered);
+        assert_eq!(job.await.unwrap().err(), Some(BudgetError::Unknown));
+        assert_eq!(peer.calls(), 0);
+        if old_wins {
+            gate.notify_one();
+            for _ in 0..100 {
+                if peer.peer.data.lock().unwrap().late_status.is_some() {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(2)).await;
+            }
+            assert_eq!(peer.peer.data.lock().unwrap().late_status, Some(200));
+            assert_eq!(peer.used(&p), 4);
+        }
+        let replacement = store(&peer, p.clone(), clock());
+        assert!(replacement.reserve(2, end()).await.is_ok());
+        if !old_wins {
+            gate.notify_one();
+            for _ in 0..100 {
+                if peer.peer.data.lock().unwrap().late_status.is_some() {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(2)).await;
+            }
+        }
+        let data = peer.peer.data.lock().unwrap();
+        assert_eq!(data.late_status, Some(if old_wins { 200 } else { 412 }));
+        let witnesses: Vec<RangeWitness> = data
+            .objects
+            .iter()
+            .filter(|(k, _)| k.contains("/blocks/"))
+            .map(|(_, v)| serde_json::from_slice(&v.0).unwrap())
+            .collect();
+        assert_eq!(witnesses.len(), 1);
+        assert_eq!(
+            (witnesses[0].start, witnesses[0].end),
+            if old_wins { (4, 8) } else { (0, 4) }
+        );
+        drop(data);
+        assert_eq!(peer.used(&p), if old_wins { 8 } else { 4 });
+    }
 }
