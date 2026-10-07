@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "source": "docs/evidence/aws/api-traffic-2026-09-22-routes.csv",
+  "sha256": "769f88fdf3a32961954de4dc8fe8b72727956160471f5011c6ebae5f20fe7c7e",
+  "window": "2026-08-23T19:53:45Z <= time < 2026-09-22T19:53:45Z",
+  "requests": 220583,
+  "groups": [
+    {
+      "method": "GET",
+      "path": "/weather/coord/{location}",
+      "requests": 155998,
+      "status_counts": "000: 3,270; 200: 141,992; 500: 1,544; 501: 9,192"
+    },
+    {
+      "method": "GET",
+      "path": "/weather/v000903/coord/{location}",
+      "requests": 39254,
+      "status_counts": "000: 112; 200: 34,114; 501: 5,028"
+    },
+    {
+      "method": "PUT",
+      "path": "/v000902/push",
+      "requests": 18872,
+      "status_counts": "000: 7; 200: 694; 403: 16,337; 502: 1,834"
+    },
+    {
+      "method": "POST",
+      "path": "/v000902/push-list",
+      "requests": 2525,
+      "status_counts": "000: 2; 200: 2,313; 408: 1; 502: 209"
+    },
+    {
+      "method": "GET",
+      "path": "/v000901/kma/addr/{location}",
+      "requests": 1853,
+      "status_counts": "000: 6; 200: 1,461; 304: 214; 502: 172"
+    },
+    {
+      "method": "GET",
+      "path": "/v000903/kma/addr/{location}",
+      "requests": 1320,
+      "status_counts": "200: 1,320"
+    },
+    {
+      "method": "GET",
+      "path": "/geocode/v000903/coord/{location}",
+      "requests": 209,
+      "status_counts": "000: 1; 200: 204; 501: 4"
+    },
+    {
+      "method": "GET",
+      "path": "/v000803/town/{location}",
+      "requests": 205,
+      "status_counts": "200: 146; 304: 15; 502: 44"
+    },
+    {
+      "method": "GET",
+      "path": "/v000903/nation/KR",
+      "requests": 139,
+      "status_counts": "200: 102; 304: 25; 502: 12"
+    },
+    {
+      "method": "GET",
+      "path": "/weather/v000901/coord/{location}",
+      "requests": 51,
+      "status_counts": "200: 6; 501: 45"
+    },
+    {
+      "method": "GET",
+      "path": "/weather/v000902/coord/{location}",
+      "requests": 47,
+      "status_counts": "200: 41; 501: 6"
+    },
+    {
+      "method": "GET",
+      "path": "/geocode/v000903/addr/{location}",
+      "requests": 39,
+      "status_counts": "200: 28; 501: 1; 502: 10"
+    },
+    {
+      "method": "GET",
+      "path": "/v000903/kma/special",
+      "requests": 36,
+      "status_counts": "200: 27; 304: 2; 502: 7"
+    },
+    {
+      "method": "GET",
+      "path": "/v000705/town/{location}",
+      "requests": 12,
+      "status_counts": "200: 11; 502: 1"
+    },
+    {
+      "method": "POST",
+      "path": "/v000705/push",
+      "requests": 12,
+      "status_counts": "500: 12"
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/v000902/push",
+      "requests": 7,
+      "status_counts": "204: 6; 502: 1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v000902/push",
+      "requests": 2,
+      "status_counts": "200: 2"
+    },
+    {
+      "method": "GET",
+      "path": "/geocode/v000901/addr/{location}",
+      "requests": 1,
+      "status_counts": "200: 1"
+    },
+    {
+      "method": "GET",
+      "path": "/v000901/nation/KR",
+      "requests": 1,
+      "status_counts": "502: 1"
+    }
+  ]
+}

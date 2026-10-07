@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-06",
+  "source_revision": "f568508da68d408a282752f55614407899631c88",
+  "capture": "actual CLI help + successful two-recording result; terminal rendering from retained actual stdout, host prefix labels shortened",
+  "screenshots": [
+    {
+      "path": "usage.png",
+      "sha256": "d341956ed7e8445410445a0ef48fdb2e30026e399482428cfe09a0fca770ab1e",
+      "source": "tools/golden/verify.py --help and verify actual CLI stdout"
+    }
+  ],
+  "record_sha256": "2414d93c46531931d3b09e69cc0ba6dd112172da783c31d1f075f1efe11b6377",
+  "cases": 76,
+  "groups": 19,
+  "backend_families": 11,
+  "limitations": "Frozen dependencies, no live provider/Mongo/geocoder/push, no deployed or new server2 parity claim"
+}

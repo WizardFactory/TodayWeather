@@ -224,4 +224,70 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
         self.write('.github/workflows/server2.yml',good.replace('timeout-minutes: 30\n',''))
         self.assertTrue(self.errors())
 
+    def golden_fixture(self):
+        return {'schema':1,'source':{'files':{'server/routes/gateway.js':'a'*64}},
+                'cases':[{'id':'gateway','kind':'wire','handler':'server/routes/gateway.js','status':200,'headers':[], 'body_base64':'','body_sha256':'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}]}
+    def test_golden_handler_provenance_is_inert_identity(self):
+        self.write('server2/tests/golden/records.json',json.dumps(self.golden_fixture()))
+        self.assertEqual([],self.errors())
+    def test_golden_role_does_not_authorize_runtime_or_unknown_handler(self):
+        for mutate in [lambda d:d.update(runtime_source='../server/config/config.js'),
+                       lambda d:d['cases'][0].update(handler='server/config/config.js'),
+                       lambda d:d.update(schema=2),
+                       lambda d:d['cases'][0].update(handler=['server/routes/gateway.js']),
+                       lambda d:d['source'].update(files={})]:
+            d=self.golden_fixture();mutate(d);self.write('server2/tests/golden/records.json',json.dumps(d));self.assertTrue(self.errors())
+    def golden_workflow(self):
+        return """name: Server2
+on:
+  pull_request:
+    paths:
+      - \"server2/**\"
+      - \".github/workflows/server2.yml\"
+permissions:
+  contents: read
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh
+  goldens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16.20.2'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python tools/golden/ci.py --install
+"""
+    def test_exact_golden_job_preserves_foundation(self):
+        self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='shared CI'))
+        self.write('.github/workflows/server2.yml',self.golden_workflow());self.assertEqual([],self.errors())
+    def test_golden_job_rejects_unknown_action_env_or_changed_foundation(self):
+        self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='shared CI'))
+        good=self.golden_workflow()
+        for bad in [good.replace('actions/setup-node@v4','third-party/deploy@main'),
+                    good.replace('bash tools/ci.sh','echo skip'),
+                    good.replace("node-version: '16.20.2'","node-version: '20'"),
+                    good.replace("python-version: '3.11'","python-version: '3.9'"),
+                    good+"      - run: upload-secret\n",good+"    env:\n      TOKEN: ${{ secrets.TOKEN }}\n",
+                    good.replace('timeout-minutes: 30','timeout-minutes: 300')]:
+            self.write('.github/workflows/server2.yml',bad);self.assertTrue(self.errors())
+
 if __name__ == '__main__': unittest.main()

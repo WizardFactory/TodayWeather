@@ -1,0 +1,62 @@
+{
+  "task": "S02",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2687",
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2687#issuecomment-6016577542",
+  "server2_paths": [
+    "server2/tools/golden/",
+    "server2/tests/golden/",
+    "server2/config/tasks/S02.json",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py"
+  ],
+  "outside": [
+    {
+      "path": "server/test/offline/golden-record.js",
+      "category": "legacy-oracle",
+      "reason": "Canonical offline executor of actual frozen legacy handlers; no app startup or production IO"
+    },
+    {
+      "path": "intent/issue-2687.md",
+      "category": "documentation",
+      "reason": "S02 maintained contract/operator usage and selected capture evidence"
+    },
+    {
+      "path": "specs/issue-2687.md",
+      "category": "documentation",
+      "reason": "S02 maintained contract/operator usage and selected capture evidence"
+    },
+    {
+      "path": "plans/issue-2687.md",
+      "category": "documentation",
+      "reason": "S02 maintained contract/operator usage and selected capture evidence"
+    },
+    {
+      "path": "docs/operations/server2-golden.md",
+      "category": "documentation",
+      "reason": "S02 maintained contract/operator usage and selected capture evidence"
+    },
+    {
+      "path": "docs/operations/server2-golden.pdf",
+      "category": "documentation",
+      "reason": "S02 maintained contract/operator usage and selected capture evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-golden/usage.png",
+      "category": "documentation",
+      "reason": "S02 maintained contract/operator usage and selected capture evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-golden/manifest.json",
+      "category": "documentation",
+      "reason": "S02 maintained contract/operator usage and selected capture evidence"
+    },
+    {
+      "path": ".github/workflows/server2.yml",
+      "category": "ci-wiring",
+      "reason": "Additive golden job invokes owned entrypoint, root serialized grant; foundation unchanged"
+    }
+  ],
+  "declaration_extensions": [
+    "https://github.com/WizardFactory/TodayWeather/issues/2687#issuecomment-6017136605"
+  ]
+}
