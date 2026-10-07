@@ -1057,6 +1057,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
             });
         }
         let mut groups: BTreeMap<String, (GroupDeclaration, Vec<Envelope>)> = BTreeMap::new();
+        let mut eligible = BTreeSet::new();
         let mut singles = Vec::new();
         for envelope in discovered {
             if let Some(reference) = &envelope.fetch_group {
@@ -1073,6 +1074,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
                     groups.insert(reference.group_sha256.clone(), (descriptor, expected));
                 }
                 let (descriptor, expected) = groups.get(&reference.group_sha256).unwrap();
+                let group_sha256 = reference.group_sha256.clone();
                 let members = descriptor.members.clone();
                 let expected = expected.clone();
                 let owner = scope.catalog.clone();
@@ -1084,7 +1086,9 @@ impl<T: CatalogTransport> CatalogStore<T> {
                             .any(|(m, e)| m.catalogs.contains(&owner) && e == &envelope))
                     })
                     .await?;
-                if !valid {
+                if valid {
+                    eligible.insert(group_sha256);
+                } else {
                     incomplete = true;
                 }
             } else if envelope.pagination.is_none() {
@@ -1093,12 +1097,12 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 incomplete = true;
             }
         }
-        // Never declare a fully verified scope after skipping a stray row's immutable affiliation.
-        // Only body materialization and catalog publication are deduplicated by group.
-        if incomplete {
-            return Ok(RepairOutcome::Incomplete);
-        }
-        for (descriptor, _) in groups.into_values() {
+        // Invalid discoveries keep the scope incomplete, but must not block other verified orphans.
+        // Cached descriptors alone do not authorize publication: require a valid target-owned member.
+        for (group_sha256, (descriptor, _)) in groups {
+            if !eligible.contains(&group_sha256) {
+                continue;
+            }
             // Discovery retained only envelopes. Each verified group body is discarded before the next group.
             c.output = 0;
             match self.group_records(&descriptor, c).await {

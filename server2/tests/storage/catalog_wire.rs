@@ -297,6 +297,143 @@ async fn hermes_h1_cursor_restarts_when_missing_descriptor_changes_ordering_coho
         PageOutcome::Incomplete
     ));
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn r11_incomplete_discovery_still_indexes_verified_orphans() {
+    for mode in [
+        "corrupt",
+        "ungrouped-page",
+        "foreign",
+        "undeclared",
+        "modified-ref",
+    ] {
+        let peer = Peer::new();
+        let transport = peer.transport();
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        let raw_store = RawRecordStore::new(peer.transport(), Limits::default()).unwrap();
+        let (d, raw) = group(100, 2);
+        let scope = RepairScope {
+            catalog: d.partitions[0].clone(),
+            periods: vec![d.members[0].envelope.identity.period.clone()],
+        };
+        let member = raw[0].envelope.identity.clone();
+        let reference = d.reference(&CatalogLimits::default()).unwrap();
+        assert_eq!(
+            transport
+                .put_control(
+                    &reference.descriptor_key().unwrap(),
+                    &d.bytes(&CatalogLimits::default()).unwrap(),
+                    &WriteCondition::Absent
+                )
+                .await
+                .unwrap(),
+            200
+        );
+        for mut r in raw {
+            r.envelope.fetch_group = Some(reference.clone());
+            raw_store.publish(r).await.unwrap();
+        }
+        assert_eq!(peer.puts(&scope.catalog.key()).await, 0);
+        let mut foreign_catalogs = Vec::new();
+        if mode == "foreign" {
+            let (mut foreign, raw) = group(400, 7);
+            for m in &mut foreign.members {
+                for id in &mut m.catalogs {
+                    id.partition = format!("foreign-{}", id.partition);
+                }
+            }
+            let foreign =
+                GroupDeclaration::new(foreign.members, &CatalogLimits::default()).unwrap();
+            foreign_catalogs = foreign.partitions.clone();
+            let r = foreign.reference(&CatalogLimits::default()).unwrap();
+            assert_eq!(
+                transport
+                    .put_control(
+                        &r.descriptor_key().unwrap(),
+                        &foreign.bytes(&CatalogLimits::default()).unwrap(),
+                        &WriteCondition::Absent
+                    )
+                    .await
+                    .unwrap(),
+                200
+            );
+            for mut record in raw {
+                record.envelope.fetch_group = Some(r.clone());
+                raw_store.publish(record).await.unwrap();
+            }
+        } else {
+            let mut stray = RawRecord::new(
+                "kma",
+                "current",
+                &ProviderKey::Grid { nx: 60, ny: 127 },
+                scope.periods[0].clone(),
+                300,
+                200,
+                "application/json",
+                (mode != "corrupt").then_some(Pagination {
+                    page: 2,
+                    pages: 2,
+                    complete: true,
+                }),
+                b"{\"undeclared\":true}".to_vec().into(),
+                &Limits::default(),
+            )
+            .unwrap();
+            if mode == "undeclared" || mode == "modified-ref" {
+                let mut claim = reference.clone();
+                if mode == "modified-ref" {
+                    claim.member_sha256 = "0".repeat(64);
+                }
+                stray.envelope.fetch_group = Some(claim);
+            }
+            let key = stray.envelope.identity.object_key().unwrap();
+            raw_store.publish(stray).await.unwrap();
+            if mode == "corrupt" {
+                peer.fault("corrupt", &key).await;
+            }
+        }
+        assert!(
+            matches!(
+                store.repair(&scope, deadline()).await.unwrap(),
+                RepairOutcome::Incomplete
+            ),
+            "unsafe mixed scope {mode}"
+        );
+        assert!(
+            peer.puts(&scope.catalog.key()).await > 0,
+            "verified orphan not indexed in mixed scope {mode}"
+        );
+        let fresh = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        let PageOutcome::Ready(page) = fresh
+            .lookup_acquisition(&scope.catalog, &member, deadline())
+            .await
+            .unwrap()
+        else {
+            panic!("verified orphan missing: {mode}");
+        };
+        assert_eq!(page.coverage(), RevisionCoverage::Targeted);
+        assert_eq!(page.acquisitions().len(), 1);
+        assert_eq!(
+            page.acquisitions()[0].group(),
+            Some(reference.group_sha256.as_str())
+        );
+        assert_eq!(page.acquisitions()[0].records().len(), 2);
+        for (r, expected) in page.acquisitions()[0]
+            .records()
+            .iter()
+            .zip(d.envelopes(&CatalogLimits::default()).unwrap())
+        {
+            assert_eq!(r.envelope, expected, "only expected group members: {mode}");
+        }
+        for id in foreign_catalogs {
+            assert_eq!(
+                peer.puts(&id.key()).await,
+                0,
+                "foreign-only claim cannot authorize group indexing"
+            );
+        }
+    }
+}
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cold_lookup_excludes_a_new_with_b_healthy_old_then_healthy_orphan_repair() {
     let peer = Peer::new();

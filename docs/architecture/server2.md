@@ -387,9 +387,12 @@ Every discovered raw envelope must match its descriptor's exact member, owning
 partition and full immutable group reference, including later envelopes for an
 already seen group. Only verified whole-group reload and catalog publication may
 be deduplicated. A mismatched envelope keeps repair incomplete; it cannot be
-ignored to produce a complete scan. Keep every eligible revision in deterministic
-order; field merges and list replacement remain in-memory operations, not
-persisted catalog payloads.
+ignored to produce a complete scan. Invalid discoveries do not block indexing
+independently verified complete orphan groups in the same scope. Such indexing
+does not prove complete scope coverage: the mixed scope remains `Incomplete`.
+A group with only invalid claims is not eligible for publication. Keep every
+eligible revision in deterministic order; field merges and list replacement
+remain in-memory operations, not persisted catalog payloads.
 
 A bounded page contains checked complete acquisitions and an explicit continuation;
 it never masquerades as a full-history set. Before choosing a page, resolve unique

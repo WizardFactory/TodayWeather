@@ -263,7 +263,7 @@
       "from": "group",
       "to": "catalog",
       "y": 1160,
-      "label": "Verified groups: dedupe + CAS",
+      "label": "Verified orphans: dedupe + CAS",
       "variant": "emphasis"
     },
     {

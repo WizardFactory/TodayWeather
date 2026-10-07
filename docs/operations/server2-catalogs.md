@@ -104,8 +104,14 @@ all required catalogs and
 re-pins siblings. Validated descriptors and expected envelopes are cached under the
 control/deadline limits, but every raw row must match exact membership, ownership
 and its complete immutable group reference before deduplicating full-group reload
-or CAS. A stray row claiming an already-seen valid group is Incomplete, not a
-complete restored scope. A partial LIST, malformed XML/token, missing/corrupt member,
+or CAS. Descriptor caching does not itself authorize indexing: at least one exact
+member owned by the target catalog must be discovered before verifying and repairing
+the complete group. Invalid-only or foreign-only claims receive no group catalog PUT.
+A stray row claiming an already-seen valid group keeps the scope Incomplete. It does
+not prevent independently verified complete orphan groups from being indexed; only
+the descriptor-declared members are recovered. A fresh exact targeted lookup can read
+those safe groups, while the mixed scope never becomes Complete, Indexed or
+CompleteEmpty. Indexing an acquisition does not prove complete scope coverage. A partial LIST, malformed XML/token, missing/corrupt member,
 wrong raw hash, deadline or cap never becomes a complete empty response.
 
 `LookupOutcome::Incomplete` is not provider admission. `RepairOutcome::CompleteEmpty`

@@ -309,6 +309,79 @@ async fn main() {
     println!(
         "repair membership: undeclared raw claiming an already-seen valid group stays Incomplete"
     );
+    // Independently seed an orphan and an ungrouped page in the same bounded raw prefix.
+    let (orphan, raw) = group_at(500, 9, &ProviderKey::Grid { nx: 62, ny: 127 });
+    let scope = RepairScope {
+        catalog: orphan.partitions[0].clone(),
+        periods: vec![orphan.members[0].envelope.identity.period.clone()],
+    };
+    let member = raw[0].envelope.identity.clone();
+    let reference = orphan.reference(&CatalogLimits::default()).unwrap();
+    let transport = HttpS3Transport::new(
+        &endpoint,
+        "server2-local",
+        "ap-northeast-2",
+        Credentials::new("server2-local", "server2-local-secret"),
+    )
+    .unwrap();
+    assert_eq!(
+        transport
+            .put_control(
+                &reference.descriptor_key().unwrap(),
+                &orphan.bytes(&CatalogLimits::default()).unwrap(),
+                &WriteCondition::Absent
+            )
+            .await
+            .unwrap(),
+        200
+    );
+    let raw_store = RawRecordStore::new(transport, Limits::default()).unwrap();
+    for mut record in raw {
+        record.envelope.fetch_group = Some(reference.clone());
+        raw_store.publish(record).await.unwrap();
+    }
+    raw_store
+        .publish(
+            RawRecord::new(
+                "kma",
+                "current",
+                &ProviderKey::Grid { nx: 62, ny: 127 },
+                scope.periods[0].clone(),
+                999,
+                200,
+                "application/json",
+                Some(Pagination {
+                    page: 2,
+                    pages: 2,
+                    complete: true,
+                }),
+                b"{\"ungrouped\":true}".to_vec().into(),
+                &Limits::default(),
+            )
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert!(matches!(
+        fresh.repair(&scope, deadline()).await.unwrap(),
+        RepairOutcome::Incomplete
+    ));
+    let PageOutcome::Ready(page) = store(&endpoint)
+        .lookup_acquisition(&scope.catalog, &member, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("verified orphan not repaired in mixed scope");
+    };
+    assert_eq!(page.acquisitions().len(), 1);
+    assert_eq!(page.acquisitions()[0].records().len(), 2);
+    assert_eq!(
+        page.acquisitions()[0].group(),
+        Some(reference.group_sha256.as_str())
+    );
+    println!(
+        "mixed repair: scope stays Incomplete while verified orphan is indexed and cold exact lookup succeeds"
+    );
     println!(
         "PASS local real HTTP smoke ({:.2} ms); not AWS latency/auth or API parity",
         started.elapsed().as_secs_f64() * 1000.0
