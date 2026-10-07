@@ -16,10 +16,12 @@
     "direct rejection: first PUT403 retained, no group success",
     "bounded read: whole 2-page acquisition, opaque continuation and exact targeted scope; scoped publication fold blocked",
     "streamed repair: chunked LIST and empty truncated continuation exhaust only the explicit empty scope",
-    "PASS local real HTTP smoke (141.31 ms); not AWS latency/auth or API parity"
+    "acquisition order: tied fetch/hash groups match FullHistory across latest-first cursor pages",
+    "repair membership: undeclared raw claiming an already-seen valid group stays Incomplete",
+    "PASS local real HTTP smoke (188.53 ms); not AWS latency/auth or API parity"
   ],
-  "binary_sha256": "3039e17c9bab2afb7d0d53926122aa23ce67c336c1b17ac2c8d37f728edc93d7",
-  "source_sha256": "cb5391cd65053004a1dfba63cae21d11c00cc14e23781461f933d623e4e483b7",
-  "pdf_sha256": "8df3941837e0a4d1727660833cfa0ce90d6ac3c02945703e4c8597f5731b6956",
-  "screenshot_sha256": "1218cea4075f2de1e3e12796193d8f55af76cf199b36bd7a415ac4cfe0fb33a9"
+  "binary_sha256": "8145d750fc9e57b5c7a9e905d27edb41819975815b04abff25b666a01c123922",
+  "source_sha256": "b61714eba18850619212641d358751d87b17cad1aef04f277b1813018d1394bf",
+  "pdf_sha256": "da80fd7a3fa72c80b11c426e83993252968fc9652811cc19119e82a6e261527a",
+  "screenshot_sha256": "9ca1acef606b3d54a677ba831e58249cf9249b3cdf6338152bb31cc2184298d2"
 }

@@ -383,11 +383,30 @@ Repair must distinguish a fully exhausted, validated scan from a pending or
 failed scan. A timeout, continuation failure or missing declared member cannot
 turn partial discovery into a proven empty result. Healthy catalogs can still
 have orphaned bodies and therefore remain eligible for explicit bounded repair.
-Keep every eligible revision in deterministic order; field merges and list
-replacement remain in-memory operations, not persisted catalog payloads.
+Every discovered raw envelope must match its descriptor's exact member, owning
+partition and full immutable group reference, including later envelopes for an
+already seen group. Only verified whole-group reload and catalog publication may
+be deduplicated. A mismatched envelope keeps repair incomplete; it cannot be
+ignored to produce a complete scan. Keep every eligible revision in deterministic
+order; field merges and list replacement remain in-memory operations, not
+persisted catalog payloads.
 
 A bounded page contains checked complete acquisitions and an explicit continuation;
-it never masquerades as a full-history set. Exhausting a healthy read budget is
+it never masquerades as a full-history set. Before choosing a page, resolve unique
+groups through verified identity-only descriptors and validate all target-catalog
+member references. Order acquisitions by the descriptor's first ordered member
+using the same fetch-time/full-hash key as full-history lookup, then apply read
+direction and the private group-offset cursor. Reversing raw members before
+deduplicating groups is not an equivalent latest-acquisition order. Ordered pages
+remain together even when their fetch times differ or full hashes break a tie.
+The private cursor also binds the normalized acquisition cohort. Rebuild and
+compare that cohort before continuing: a formerly missing immutable descriptor
+can appear without changing the target catalog ETag, so target tokens alone
+cannot prove a stable group offset. A changed cohort requires restart.
+This normalization reads unrelated group descriptors but does not materialize
+unselected raw bodies. Its upfront control reads count toward the existing byte
+and whole-operation deadline limits; a small output page need not be a cheap
+S3 read. Targeted exact-member lookup avoids this whole-catalog normalization. Exhausting a healthy read budget is
 a capacity outcome, not evidence of corruption. The full-history convenience
 lookup can report capacity or a deadline failure. A targeted lookup by an
 archived member identity validates only that complete acquisition and its
@@ -428,8 +447,8 @@ rather than duplicate raw bodies during group validation. Each repair scope must
 map its periods to the declared owning partition; a caller cannot file another
 partition's records into that scope.
 
-The initial S06 lookup/repair utility reads selected descriptors and raw members
-sequentially within one operation. Its `io=16` admission bound permits concurrent
+The initial S06 lookup/repair utility reads ordering descriptors and selected raw
+members sequentially within one operation. Its `io=16` admission bound permits concurrent
 operations; it does not supply sixteen-way fan-out inside one lookup. The wave
 counts in section 8 describe the proposed bounded-parallel resolver strategy,
 not measured S06 latency. S07/S09 must verify or improve this path before the

@@ -57,13 +57,24 @@ fold that scoped result as history is rejected. Parse its explicit records direc
 when the desired operation is that single acquisition.
 
 Use `lookup_page(id, order, cursor, maximum_acquisitions, deadline)` for bounded
-whole-acquisition pages in canonical target-catalog entry order. Pages have Paged
+whole-acquisition pages ordered exactly like FullHistory: first normalize each unique
+group using its verified descriptor's ordered first member, even when that member
+belongs only to another partition, then sort by fetched time/full raw hash/canonical
+identity and apply the requested direction. Raw-member extremes do not define the
+acquisition order. Pages have Paged
 coverage and no fold method. Ordered provider pages remain together. The opaque
-private cursor pins target generation/ETag/version and prior sibling dependencies;
+private cursor pins target generation/ETag/version, prior sibling dependencies and
+a digest of the normalized ordering cohort (representative identity plus full group
+reference). If a missing descriptor appears without changing the catalog ETag,
+the cohort change also forces Incomplete/restart;
 cross-ID/order use is invalid and changed tokens yield Incomplete/restart. Consumers
 must not merge one page as all history. Collect every page and revalidate dependencies
 before a cross-page historical result; growing dependency checks may still exceed
-the deadline or cursor metadata cap, requiring safe fallback.
+the deadline or cursor metadata cap, requiring safe fallback. Metadata normalization
+performs upfront bounded descriptor GETs across the target catalog; only selected
+groups load raw bodies/sibling catalogs. This increases page lookup cost and may
+reach Capacity/Timeout; a one-item page does not promise three GETs independent
+of retained history. Exact targeted lookup below avoids that normalization.
 
 `lookup_acquisition(id, exact_member_identity, deadline)` is the independent escape
 hatch: verify target membership and that member's whole immutable group/siblings.
@@ -79,15 +90,22 @@ full-size catalogs plus descriptor; smaller store caps may admit fewer. No archi
 pruning is used. Preflight buffers are dropped before CAS, and completed CAS-phase
 buffers before fresh new-group pinning. Control accounting is bounded per retained
 phase, not cumulative wire bytes across all phases; CAS work and the outer deadline
-still bound retries. Concurrent growth or uncertain sent writes may remain Ambiguous.
+still bound retries. Within the CAS phase, conflict re-reads are charged cumulatively
+even when earlier buffers were released, so sustained contention can safely return
+Ambiguous. Concurrent growth or uncertain sent writes may also remain Ambiguous.
 
 ## Repair and coverage
 
 Call `repair` with an explicit `RepairScope` containing the target catalog and all
 candidate canonical raw periods/slots for that provider resolution. It scans even
 healthy old catalogs, follows every LIST page, verifies raw key/hash/envelope and
-full group descriptor/membership, then CAS repairs all required catalogs and
-re-pins siblings. A partial LIST, malformed XML/token, missing/corrupt member,
+full group descriptor/membership for every discovered envelope, then CAS repairs
+all required catalogs and
+re-pins siblings. Validated descriptors and expected envelopes are cached under the
+control/deadline limits, but every raw row must match exact membership, ownership
+and its complete immutable group reference before deduplicating full-group reload
+or CAS. A stray row claiming an already-seen valid group is Incomplete, not a
+complete restored scope. A partial LIST, malformed XML/token, missing/corrupt member,
 wrong raw hash, deadline or cap never becomes a complete empty response.
 
 `LookupOutcome::Incomplete` is not provider admission. `RepairOutcome::CompleteEmpty`
@@ -96,7 +114,9 @@ scan; it does not prove global archive absence. `Complete` contains verified dat
 `Indexed {scope, dependencies}` records an exhausted, verified nonempty scan and
 successful identity-index repair when full-history materialization exceeds capacity.
 It is neither a serving CompleteSet nor CompleteEmpty and cannot authorize providers;
-read checked pages or targeted acquisitions afterward. Incomplete or errors leave
+read checked pages or targeted acquisitions afterward. A materialization deadline
+can still yield Timeout/Ambiguous rather than a positive Indexed signal. Incomplete
+or errors leave
 valid memory/legacy error fallback. Discovery retains envelopes only; verified body
 buffers are released before reloading each complete group, without double-counting
 discarded bodies as retained output.
@@ -154,5 +174,7 @@ The editable manual and rendered PDF share this content. The selected usage
 capture and hash manifest live under `docs/evidence/tasks/server2-catalogs/`.
 The release scenario checks cold complete pages, A/new+B/old exclusion, healthy
 multi-page repair, committed response loss, delayed first commit with retry403,
-first direct403, bounded ordered pages/targeted scope/fold guard, chunked LIST and empty truncated continuation. See the [architecture publication contract](../architecture/server2.md)
+first direct403, bounded ordered pages/targeted scope/fold guard, chunked LIST,
+empty truncated continuation, same-fetch/hash-tied group chronology across cursor
+pages, and rejection of undeclared raw membership after seeing a valid group. See the [architecture publication contract](../architecture/server2.md)
 and [publication sequence](../architecture/diagrams/server2-catalog-publication.html).

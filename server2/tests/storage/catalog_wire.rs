@@ -146,6 +146,158 @@ fn ready(outcome: LookupOutcome) -> CompleteSet {
     }
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn hermes_h1_pages_match_full_history_first_member_order() {
+    for variant in 0..3 {
+        let peer = Peer::new();
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        let mut id = None;
+        for value in [2, 3, 4] {
+            let (mut d, mut raw) = group(100, value);
+            if variant == 1 {
+                // Later-page fetches cross the ordered first-member chronology.
+                let first = if value == 2 { 300 } else { value as u64 * 100 };
+                raw[0].envelope.identity.fetched_at_ms = first;
+                raw[1].envelope.identity.fetched_at_ms = 1000 - first;
+                for (m, r) in d.members.iter_mut().zip(&raw) {
+                    m.envelope = r.envelope.clone();
+                }
+            }
+            if variant == 2 {
+                // The representative first page is not present in the target catalog.
+                let a = d.partitions[0].clone();
+                let b = d.partitions[1].clone();
+                d.members[0].catalogs = vec![b];
+                d.members[1].catalogs = vec![a];
+            }
+            let d = GroupDeclaration::new(d.members, &CatalogLimits::default()).unwrap();
+            id = Some(d.partitions[0].clone());
+            store.publish(d, raw, deadline()).await.unwrap();
+        }
+        let id = id.unwrap();
+        let full = ready(store.lookup(&id, deadline()).await.unwrap());
+        let chronological = full
+            .acquisitions()
+            .iter()
+            .map(|a| a.group().unwrap().to_owned())
+            .collect::<Vec<_>>();
+        for order in [ReadOrder::EarliestFirst, ReadOrder::LatestFirst] {
+            let mut expected = chronological.clone();
+            if order == ReadOrder::LatestFirst {
+                expected.reverse();
+            }
+            let mut cursor = None;
+            let mut actual = Vec::new();
+            loop {
+                let PageOutcome::Ready(page) = store
+                    .lookup_page(&id, order, cursor.as_ref(), 1, deadline())
+                    .await
+                    .unwrap()
+                else {
+                    panic!("complete whole-acquisition page");
+                };
+                assert_eq!(page.acquisitions()[0].records().len(), 2);
+                actual.push(page.acquisitions()[0].group().unwrap().to_owned());
+                cursor = page.next().cloned();
+                if cursor.is_none() {
+                    break;
+                }
+            }
+            assert_eq!(actual, expected, "variant {variant}, order {order:?}");
+        }
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn hermes_h2_every_discovered_envelope_checked_before_group_dedupe() {
+    for wrong_reference in [false, true] {
+        let peer = Peer::new();
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        let (d, raw) = group(100, 2);
+        let scope = RepairScope {
+            catalog: d.partitions[0].clone(),
+            periods: vec![d.members[0].envelope.identity.period.clone()],
+        };
+        let mut reference = d.reference(&CatalogLimits::default()).unwrap();
+        store.publish(d, raw, deadline()).await.unwrap();
+        assert!(matches!(
+            store.repair(&scope, deadline()).await.unwrap(),
+            RepairOutcome::Complete(_)
+        ));
+        if wrong_reference {
+            reference.member_sha256 = "0".repeat(64);
+        }
+        let mut stray = RawRecord::new(
+            "kma",
+            "current",
+            &ProviderKey::Grid { nx: 60, ny: 127 },
+            scope.periods[0].clone(),
+            300,
+            200,
+            "application/json",
+            Some(Pagination {
+                page: 2,
+                pages: 2,
+                complete: true,
+            }),
+            b"{\"undeclared\":true}".to_vec().into(),
+            &Limits::default(),
+        )
+        .unwrap();
+        stray.envelope.fetch_group = Some(reference);
+        RawRecordStore::new(peer.transport(), Limits::default())
+            .unwrap()
+            .publish(stray)
+            .await
+            .unwrap();
+        assert!(
+            matches!(
+                store.repair(&scope, deadline()).await.unwrap(),
+                RepairOutcome::Incomplete
+            ),
+            "already-seen false member, wrong_reference={wrong_reference}"
+        );
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn hermes_h1_cursor_restarts_when_missing_descriptor_changes_ordering_cohort() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let (middle, _) = group(200, 3);
+    let reference = middle.reference(&CatalogLimits::default()).unwrap();
+    let id = middle.partitions[0].clone();
+    for (fetch, value) in [(100, 2), (200, 3), (300, 4)] {
+        let (d, raw) = group(fetch, value);
+        store.publish(d, raw, deadline()).await.unwrap();
+    }
+    peer.fault("forget", &reference.descriptor_key().unwrap())
+        .await;
+    let PageOutcome::Ready(first) = store
+        .lookup_page(&id, ReadOrder::EarliestFirst, None, 1, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("old complete first acquisition remains available");
+    };
+    assert!(first.next().is_some());
+    assert_eq!(
+        peer.transport()
+            .put_control(
+                &reference.descriptor_key().unwrap(),
+                &middle.bytes(&CatalogLimits::default()).unwrap(),
+                &WriteCondition::Absent,
+            )
+            .await
+            .unwrap(),
+        200
+    );
+    assert!(matches!(
+        store
+            .lookup_page(&id, ReadOrder::EarliestFirst, first.next(), 1, deadline())
+            .await
+            .unwrap(),
+        PageOutcome::Incomplete
+    ));
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cold_lookup_excludes_a_new_with_b_healthy_old_then_healthy_orphan_repair() {
     let peer = Peer::new();
     let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
@@ -704,7 +856,23 @@ async fn slow_valid_history_must_not_poison_new_publication() {
             .fetched_at_ms,
         76
     );
-    assert!(peer.requests("GET ").await - before <= 3);
+    // One catalog + every group's ordering descriptor + one selected raw body.
+    // Correct whole-acquisition chronology cannot infer a representative from raw-member extremes.
+    assert_eq!(peer.requests("GET ").await - before, 76 + 2);
+    let bounded = CatalogStore::new(
+        peer.transport(),
+        CatalogLimits {
+            deadline: Duration::from_millis(100),
+            ..CatalogLimits::default()
+        },
+    )
+    .unwrap();
+    assert!(matches!(
+        bounded
+            .lookup_page(&id, ReadOrder::LatestFirst, None, 1, deadline())
+            .await,
+        Err(Error::Timeout)
+    ));
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn legal_chunked_list_and_empty_truncated_page_restore_scope() {

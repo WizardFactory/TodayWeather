@@ -7,13 +7,16 @@ fn deadline() -> Instant {
     Instant::now() + Duration::from_secs(3)
 }
 fn group(fetch: u64, value: u32) -> (GroupDeclaration, Vec<RawRecord>) {
+    group_at(fetch, value, &ProviderKey::Grid { nx: 60, ny: 127 })
+}
+fn group_at(fetch: u64, value: u32, key: &ProviderKey) -> (GroupDeclaration, Vec<RawRecord>) {
     let mut raw = Vec::new();
     let mut members = Vec::new();
     for page in 1..=2 {
         let record = RawRecord::new(
             "kma",
             "current",
-            &ProviderKey::Grid { nx: 60, ny: 127 },
+            key,
             Period {
                 local_date: 20261007,
                 slot: "1200".into(),
@@ -221,6 +224,90 @@ async fn main() {
     }
     println!(
         "streamed repair: chunked LIST and empty truncated continuation exhaust only the explicit empty scope"
+    );
+    fault(&endpoint, "clear", "unused").await;
+    let key = ProviderKey::Grid { nx: 61, ny: 127 };
+    let (d, _) = group_at(100, 2, &key);
+    let tied_scope = RepairScope {
+        catalog: d.partitions[0].clone(),
+        periods: vec![d.members[0].envelope.identity.period.clone()],
+    };
+    let reference = d.reference(&CatalogLimits::default()).unwrap();
+    for value in [2, 3] {
+        let (d, raw) = group_at(100, value, &key);
+        fresh.publish(d, raw, deadline()).await.unwrap();
+    }
+    let full = ready(fresh.lookup(&tied_scope.catalog, deadline()).await.unwrap());
+    let expected = full
+        .acquisitions()
+        .iter()
+        .rev()
+        .map(|a| a.group().unwrap().to_owned())
+        .collect::<Vec<_>>();
+    let mut cursor = None;
+    let mut actual = Vec::new();
+    loop {
+        let PageOutcome::Ready(page) = fresh
+            .lookup_page(
+                &tied_scope.catalog,
+                ReadOrder::LatestFirst,
+                cursor.as_ref(),
+                1,
+                deadline(),
+            )
+            .await
+            .unwrap()
+        else {
+            panic!("ordered tied-group page");
+        };
+        actual.push(page.acquisitions()[0].group().unwrap().to_owned());
+        cursor = page.next().cloned();
+        if cursor.is_none() {
+            break;
+        }
+    }
+    assert_eq!(actual, expected);
+    println!(
+        "acquisition order: tied fetch/hash groups match FullHistory across latest-first cursor pages"
+    );
+    let mut stray = RawRecord::new(
+        "kma",
+        "current",
+        &key,
+        tied_scope.periods[0].clone(),
+        999,
+        200,
+        "application/json",
+        Some(Pagination {
+            page: 2,
+            pages: 2,
+            complete: true,
+        }),
+        b"{\"undeclared\":true}".to_vec().into(),
+        &Limits::default(),
+    )
+    .unwrap();
+    stray.envelope.fetch_group = Some(reference);
+    RawRecordStore::new(
+        HttpS3Transport::new(
+            &endpoint,
+            "server2-local",
+            "ap-northeast-2",
+            Credentials::new("server2-local", "server2-local-secret"),
+        )
+        .unwrap(),
+        Limits::default(),
+    )
+    .unwrap()
+    .publish(stray)
+    .await
+    .unwrap();
+    assert!(matches!(
+        fresh.repair(&tied_scope, deadline()).await.unwrap(),
+        RepairOutcome::Incomplete
+    ));
+    println!(
+        "repair membership: undeclared raw claiming an already-seen valid group stays Incomplete"
     );
     println!(
         "PASS local real HTTP smoke ({:.2} ms); not AWS latency/auth or API parity",

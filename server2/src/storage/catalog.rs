@@ -95,6 +95,12 @@ pub struct ReadCursor {
     offset: usize,
     seen: BTreeSet<String>,
     dependencies: Vec<DependencyToken>,
+    ordering_sha256: String,
+}
+struct OrderedCandidate {
+    entry: Envelope,
+    representative: Envelope,
+    descriptor: Option<GroupDeclaration>,
 }
 #[derive(Debug, Clone)]
 pub struct CompletePage {
@@ -335,11 +341,23 @@ impl<T: CatalogTransport> CatalogStore<T> {
         e: &Envelope,
         c: &mut Context,
     ) -> Result<Option<CompleteAcquisition>, Error> {
+        self.acquisition_prepared(id, e, None, c).await
+    }
+    async fn acquisition_prepared(
+        &self,
+        id: &CatalogId,
+        e: &Envelope,
+        prepared: Option<&GroupDeclaration>,
+        c: &mut Context,
+    ) -> Result<Option<CompleteAcquisition>, Error> {
         if let Some(r) = &e.fetch_group {
-            let d = match self.descriptor(r, c).await {
-                Ok(d) => d,
-                Err(Error::NotFound) => return Ok(None),
-                Err(e) => return Err(e),
+            let d = match prepared {
+                Some(d) => d.clone(),
+                None => match self.descriptor(r, c).await {
+                    Ok(d) => d,
+                    Err(Error::NotFound) => return Ok(None),
+                    Err(e) => return Err(e),
+                },
             };
             let envelopes = self.envelopes(&d).await?;
             if !d
@@ -369,6 +387,80 @@ impl<T: CatalogTransport> CatalogStore<T> {
         } else {
             Ok(None)
         }
+    }
+    async fn ordered_candidates(
+        &self,
+        id: &CatalogId,
+        entries: Vec<Envelope>,
+        c: &mut Context,
+    ) -> Result<(Vec<OrderedCandidate>, usize, String), Error> {
+        let (groups, mut candidates) = self
+            .cpu(move || {
+                let mut groups: BTreeMap<String, Vec<Envelope>> = BTreeMap::new();
+                let mut candidates = Vec::new();
+                for e in entries {
+                    if let Some(r) = &e.fetch_group {
+                        groups.entry(r.group_sha256.clone()).or_default().push(e);
+                    } else {
+                        candidates.push(OrderedCandidate {
+                            representative: e.clone(),
+                            entry: e,
+                            descriptor: None,
+                        });
+                    }
+                }
+                Ok((groups, candidates))
+            })
+            .await?;
+        let mut excluded = 0;
+        for entries in groups.into_values() {
+            let d = match self
+                .descriptor(entries[0].fetch_group.as_ref().unwrap(), c)
+                .await
+            {
+                Ok(d) => d,
+                Err(Error::NotFound) => {
+                    excluded += 1;
+                    continue;
+                }
+                Err(e) => return Err(e),
+            };
+            let expected = self.envelopes(&d).await?;
+            let owner = id.clone();
+            let candidate = self
+                .cpu(move || {
+                    for e in &entries {
+                        if !d
+                            .members
+                            .iter()
+                            .zip(&expected)
+                            .any(|(m, expected)| m.catalogs.contains(&owner) && e == expected)
+                        {
+                            return Err(Error::Corrupt("undeclared catalog group entry"));
+                        }
+                    }
+                    Ok(OrderedCandidate {
+                        entry: entries[0].clone(),
+                        representative: expected[0].clone(),
+                        descriptor: Some(d),
+                    })
+                })
+                .await?;
+            candidates.push(candidate);
+        }
+        self.cpu(move || {
+            candidates.sort_by(|a, b| {
+                identity_order(&a.representative).cmp(&identity_order(&b.representative))
+            });
+            let cohort = candidates
+                .iter()
+                .map(|a| (&a.representative.identity, &a.representative.fetch_group))
+                .collect::<Vec<_>>();
+            let bytes = serde_json::to_vec(&cohort)
+                .map_err(|_| Error::Invalid("ordering serialization"))?;
+            Ok((candidates, excluded, super::sha256(&bytes)))
+        })
+        .await
     }
     /// Exact immutable member selection, never a proof of complete revision coverage.
     pub async fn lookup_acquisition(
@@ -458,41 +550,38 @@ impl<T: CatalogTransport> CatalogStore<T> {
             let Some(Some(target)) = c.pins.get(id) else {
                 return Ok(PageOutcome::Incomplete);
             };
-            let mut entries = target.catalog.entries.clone();
+            let entries = target.catalog.entries.clone();
+            let (mut candidates, mut excluded, ordering_sha256) =
+                self.ordered_candidates(id, entries, &mut c).await?;
             if order == ReadOrder::LatestFirst {
-                entries.reverse();
+                candidates.reverse();
             }
             let target = Self::dependencies(&c)[0].clone();
             if let Some(cursor) = cursor
-                && !self.validate_cursor(id, order, cursor, &mut c).await?
+                && (cursor.ordering_sha256 != ordering_sha256
+                    || !self.validate_cursor(id, order, cursor, &mut c).await?)
             {
                 return Ok(PageOutcome::Incomplete);
             }
             let mut offset = cursor.map_or(0, |c| c.offset);
             let mut seen = cursor.map_or_else(BTreeSet::new, |c| c.seen.clone());
             let mut acquisitions = Vec::new();
-            let mut excluded = 0;
-            while offset < entries.len() && acquisitions.len() < maximum_acquisitions {
-                let e = &entries[offset];
+            while offset < candidates.len() && acquisitions.len() < maximum_acquisitions {
+                let candidate = &candidates[offset];
+                let e = &candidate.entry;
                 offset += 1;
                 if let Some(r) = &e.fetch_group
                     && !seen.insert(r.group_sha256.clone())
                 {
                     continue;
                 }
-                match self.acquisition(id, e, &mut c).await? {
+                match self
+                    .acquisition_prepared(id, e, candidate.descriptor.as_ref(), &mut c)
+                    .await?
+                {
                     Some(a) => acquisitions.push(a),
                     None => excluded += 1,
                 }
-            }
-            // Consume duplicate members at the page boundary, without splitting a complete group.
-            while offset < entries.len()
-                && entries[offset]
-                    .fetch_group
-                    .as_ref()
-                    .is_some_and(|r| seen.contains(&r.group_sha256))
-            {
-                offset += 1;
             }
             if acquisitions.is_empty() {
                 return Ok(PageOutcome::Incomplete);
@@ -516,11 +605,12 @@ impl<T: CatalogTransport> CatalogStore<T> {
                         + 32
                 })
                 .sum::<usize>()
-                + seen.len() * 64;
+                + seen.len() * 64
+                + ordering_sha256.len();
             if bytes > self.limits.retained_control_bytes {
                 return Err(Error::Capacity);
             }
-            let next = (offset < entries.len()).then(|| {
+            let next = (offset < candidates.len()).then(|| {
                 Box::new(ReadCursor {
                     catalog: id.clone(),
                     target,
@@ -528,6 +618,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
                     offset,
                     seen,
                     dependencies: dependencies.clone(),
+                    ordering_sha256,
                 })
             });
             Ok(PageOutcome::Ready(CompletePage {
@@ -965,44 +1056,57 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 }
             });
         }
-        let mut groups = BTreeSet::new();
+        let mut groups: BTreeMap<String, (GroupDeclaration, Vec<Envelope>)> = BTreeMap::new();
         let mut singles = Vec::new();
         for envelope in discovered {
             if let Some(reference) = &envelope.fetch_group {
-                if !groups.insert(reference.group_sha256.clone()) {
-                    continue;
+                if !groups.contains_key(&reference.group_sha256) {
+                    let descriptor = match self.descriptor(reference, c).await {
+                        Ok(d) => d,
+                        Err(Error::NotFound) | Err(Error::Corrupt(_)) | Err(Error::Invalid(_)) => {
+                            incomplete = true;
+                            continue;
+                        }
+                        Err(e) => return Err(e),
+                    };
+                    let expected = self.envelopes(&descriptor).await?;
+                    groups.insert(reference.group_sha256.clone(), (descriptor, expected));
                 }
-                let descriptor = match self.descriptor(reference, c).await {
-                    Ok(d) => d,
-                    Err(Error::NotFound) | Err(Error::Corrupt(_)) | Err(Error::Invalid(_)) => {
-                        incomplete = true;
-                        continue;
-                    }
-                    Err(e) => return Err(e),
-                };
-                let expected = self.envelopes(&descriptor).await?;
-                if !descriptor
-                    .members
-                    .iter()
-                    .zip(&expected)
-                    .any(|(m, e)| m.catalogs.contains(&scope.catalog) && e == &envelope)
-                {
+                let (descriptor, expected) = groups.get(&reference.group_sha256).unwrap();
+                let members = descriptor.members.clone();
+                let expected = expected.clone();
+                let owner = scope.catalog.clone();
+                let valid = self
+                    .cpu(move || {
+                        Ok(members
+                            .iter()
+                            .zip(&expected)
+                            .any(|(m, e)| m.catalogs.contains(&owner) && e == &envelope))
+                    })
+                    .await?;
+                if !valid {
                     incomplete = true;
-                    continue;
-                }
-                // Discovery retained only envelopes. Each verified group body is discarded before the next group.
-                c.output = 0;
-                match self.group_records(&descriptor, c).await {
-                    Ok(_) => self.publish_catalogs(&descriptor, c, started).await?,
-                    Err(Error::NotFound) | Err(Error::Corrupt(_)) | Err(Error::Invalid(_)) => {
-                        incomplete = true
-                    }
-                    Err(e) => return Err(e),
                 }
             } else if envelope.pagination.is_none() {
                 singles.push(envelope);
             } else {
                 incomplete = true;
+            }
+        }
+        // Never declare a fully verified scope after skipping a stray row's immutable affiliation.
+        // Only body materialization and catalog publication are deduplicated by group.
+        if incomplete {
+            return Ok(RepairOutcome::Incomplete);
+        }
+        for (descriptor, _) in groups.into_values() {
+            // Discovery retained only envelopes. Each verified group body is discarded before the next group.
+            c.output = 0;
+            match self.group_records(&descriptor, c).await {
+                Ok(_) => self.publish_catalogs(&descriptor, c, started).await?,
+                Err(Error::NotFound) | Err(Error::Corrupt(_)) | Err(Error::Invalid(_)) => {
+                    incomplete = true
+                }
+                Err(e) => return Err(e),
             }
         }
         if !singles.is_empty() {

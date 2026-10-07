@@ -167,7 +167,7 @@
       "from": "caller",
       "to": "group",
       "y": 565,
-      "label": "Page / exact acquisition lookup",
+      "label": "Page order / exact member lookup",
       "variant": "default"
     },
     {
@@ -191,7 +191,7 @@
       "from": "group",
       "to": "descriptor",
       "y": 710,
-      "label": "GET / verify selected declaration",
+      "label": "Page order + cohort / exact group",
       "variant": "default"
     },
     {
@@ -255,7 +255,7 @@
       "from": "group",
       "to": "descriptor",
       "y": 1110,
-      "label": "Verify declared members and pages",
+      "label": "Check every envelope + ownership",
       "variant": "default"
     },
     {
@@ -263,7 +263,7 @@
       "from": "group",
       "to": "catalog",
       "y": 1160,
-      "label": "Complete scan: union + CAS",
+      "label": "Verified groups: dedupe + CAS",
       "variant": "emphasis"
     },
     {
