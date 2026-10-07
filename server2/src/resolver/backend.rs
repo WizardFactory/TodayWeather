@@ -6,7 +6,10 @@ use crate::{
 use serde::Serialize;
 use std::{
     collections::{BTreeMap, BTreeSet},
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
     time::Duration,
 };
 use tokio::sync::Semaphore;
@@ -172,21 +175,51 @@ pub(super) enum ColdOutcome {
     Input(CheckedInput),
     Empty,
 }
-struct SharedTransport<T>(Arc<T>);
+#[derive(Default)]
+pub(super) struct IoCounters {
+    pub foreground: AtomicU64,
+    pub background: AtomicU64,
+}
+struct SharedTransport<T> {
+    inner: Arc<T>,
+    counters: Arc<IoCounters>,
+    background: bool,
+    before_write: Option<Arc<dyn Fn() + Send + Sync>>,
+}
+impl<T> SharedTransport<T> {
+    fn count(&self) {
+        let count = if self.background {
+            &self.counters.background
+        } else {
+            &self.counters.foreground
+        };
+        count.fetch_add(1, Ordering::Relaxed);
+    }
+    fn writing(&self) {
+        self.count();
+        if let Some(notify) = &self.before_write {
+            notify();
+        }
+    }
+}
 impl<T: ObjectTransport> ObjectTransport for SharedTransport<T> {
     async fn put(&self, p: &PreparedRecord) -> Result<u16, crate::storage::Error> {
-        self.0.put(p).await
+        self.writing();
+        self.inner.put(p).await
     }
     async fn head(&self, k: &str) -> Result<Object, crate::storage::Error> {
-        self.0.head(k).await
+        self.count();
+        self.inner.head(k).await
     }
     async fn get(&self, k: &str, m: usize) -> Result<Object, crate::storage::Error> {
-        self.0.get(k, m).await
+        self.count();
+        self.inner.get(k, m).await
     }
 }
 impl<T: CatalogTransport> CatalogTransport for SharedTransport<T> {
     async fn get_control(&self, k: &str, m: usize) -> Result<ControlObject, crate::storage::Error> {
-        self.0.get_control(k, m).await
+        self.count();
+        self.inner.get_control(k, m).await
     }
     async fn put_control(
         &self,
@@ -194,7 +227,8 @@ impl<T: CatalogTransport> CatalogTransport for SharedTransport<T> {
         b: &[u8],
         c: &WriteCondition,
     ) -> Result<u16, crate::storage::Error> {
-        self.0.put_control(k, b, c).await
+        self.writing();
+        self.inner.put_control(k, b, c).await
     }
     async fn list_raw_document(
         &self,
@@ -203,13 +237,15 @@ impl<T: CatalogTransport> CatalogTransport for SharedTransport<T> {
         k: usize,
         b: usize,
     ) -> Result<Vec<u8>, crate::storage::Error> {
-        self.0.list_raw_document(p, t, k, b).await
+        self.count();
+        self.inner.list_raw_document(p, t, k, b).await
     }
 }
 pub struct CatalogBackend<T> {
     transport: Arc<T>,
     store: CatalogStore<SharedTransport<T>>,
     limits: CatalogLimits,
+    pub(super) counters: Arc<IoCounters>,
     io: Arc<Semaphore>,
     cpu: Arc<Semaphore>,
 }
@@ -228,8 +264,18 @@ impl<T: CatalogTransport> CatalogBackend<T> {
             return Err(crate::storage::Error::Invalid("backend buffer bounds").into());
         }
         let transport = Arc::new(transport);
+        let counters = Arc::new(IoCounters::default());
         Ok(Self {
-            store: CatalogStore::new(SharedTransport(transport.clone()), limits.clone())?,
+            store: CatalogStore::new(
+                SharedTransport {
+                    inner: transport.clone(),
+                    counters: counters.clone(),
+                    background: false,
+                    before_write: None,
+                },
+                limits.clone(),
+            )?,
+            counters,
             transport,
             io: Arc::new(Semaphore::new(limits.io)),
             cpu: Arc::new(Semaphore::new(limits.cpu)),
@@ -249,6 +295,7 @@ impl<T: CatalogTransport> CatalogBackend<T> {
             .map_err(|_| crate::storage::Error::Capacity)?;
         let id = old.identity.clone();
         let key = id.key();
+        self.counters.foreground.fetch_add(1, Ordering::Relaxed);
         match self
             .transport
             .get_control(&key, self.limits.control_bytes)
@@ -288,10 +335,25 @@ impl<T: CatalogTransport> CatalogBackend<T> {
         &self,
         r: &ResolutionRequest,
         c: &OperationContext,
+        before_write: Arc<dyn Fn() + Send + Sync>,
     ) -> Result<ColdOutcome, Error> {
         c.check()?;
-        // Always discover the owned finite scope on a cold operation, even with a healthy index.
-        let repaired = self.store.repair(&r.scope, c.deadline()).await?;
+        // A pinned complete catalog snapshot is the serving authority. Orphan recovery is
+        // separate owned work; it cannot force a latest read to fold every historical body.
+        match self.read(r, c).await {
+            Ok(input) => return Ok(ColdOutcome::Input(input)),
+            Err(
+                Error::Incomplete
+                | Error::Storage(
+                    crate::storage::Error::NotFound
+                    | crate::storage::Error::Corrupt(_)
+                    | crate::storage::Error::Invalid(_),
+                ),
+            ) => (),
+            Err(e) => return Err(e),
+        }
+        c.check()?;
+        let repaired = self.recover(r, c, false, before_write).await?;
         match repaired {
             RepairOutcome::CompleteEmpty { scope }
                 if scope.catalog == r.scope.catalog && scope.periods == r.scope.periods =>
@@ -307,6 +369,37 @@ impl<T: CatalogTransport> CatalogBackend<T> {
             }
             RepairOutcome::Indexed { .. } => Ok(ColdOutcome::Input(self.read(r, c).await?)),
         }
+    }
+    pub(super) async fn maintenance(
+        &self,
+        r: &ResolutionRequest,
+        c: &OperationContext,
+        before_write: Arc<dyn Fn() + Send + Sync>,
+    ) -> Result<RepairOutcome, Error> {
+        self.recover(r, c, true, before_write).await
+    }
+    async fn recover(
+        &self,
+        r: &ResolutionRequest,
+        c: &OperationContext,
+        background: bool,
+        before_write: Arc<dyn Fn() + Send + Sync>,
+    ) -> Result<RepairOutcome, Error> {
+        c.check()?;
+        // Recovery keeps per-operation observers. Shared owner leases bound recovery admission;
+        // each store retains its own codec/scratch bounds, not a global CPU/RSS limit.
+        let store = CatalogStore::new(
+            SharedTransport {
+                inner: self.transport.clone(),
+                counters: self.counters.clone(),
+                background,
+                before_write: Some(before_write),
+            },
+            self.limits.clone(),
+        )?;
+        let outcome = store.repair_index(&r.scope, c.deadline()).await?;
+        c.check()?;
+        Ok(outcome)
     }
     async fn read(
         &self,

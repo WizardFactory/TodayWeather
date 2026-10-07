@@ -12,10 +12,13 @@
     "singleflight/drain: cancelled initiator detached; one recorded acquisition; complete durable group before response",
     "pressure: evicted pin stays charged; last-owner drop releases capacity",
     "metrics: hits=1, shared=1, acquisitions=1, publications=1, owners=0, cache_bytes=11366",
-    "PASS local real HTTP resolver smoke (81.33 ms); no AWS/provider/route parity claim"
+    "R1: two independent complete publications both return checked bytes",
+    "R2: 17 raw scopes in 1 MiB cache do not strand a valid 200 KiB response",
+    "R3: 30 complete revisions at synthetic 20 ms GET; selected cold read and idle warm zero-I/O pass",
+    "PASS local real HTTP resolver smoke (4821.22 ms); no AWS/provider/route parity claim"
   ],
-  "binary_sha256": "26080b7bf6e2aca78d856f03c593c5a9f8e8d59380c16f677cb24bf9904a5c2c",
-  "source_sha256": "6227707f0948e80bd9c7113a22384d4a6cc4b0b01405e19ed61bd3bf193a7c47",
-  "pdf_sha256": "f0df2a30fed50a922e502ba8e7edf7828d60e3e20efebda167316e0deaf17cd8",
-  "screenshot_sha256": "4b5570544d9d3816ef165a429c47bef275f5b98383b3ad1de4d7dc5d57588372"
+  "binary_sha256": "9a65f54e101aa1fcd0f68345dd6d75592f4132681e530f3810c10169180a46cb",
+  "source_sha256": "5abdbf7d590873b88e13b844310742e39b4b3084da8b13c58ca31bd2e367ad4a",
+  "pdf_sha256": "fc7b04423562e93696eeaac15a36012809cb8896b69cae483b54709ad641f6e2",
+  "screenshot_sha256": "d93268916e67749a777ca834c0ada196fa41a4aa5184d38e20f9a5f27d1416cf"
 }

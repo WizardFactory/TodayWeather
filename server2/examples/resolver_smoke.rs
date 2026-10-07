@@ -183,6 +183,255 @@ async fn until(f: impl Fn() -> bool) {
     .await
     .expect("owned-work milestone");
 }
+async fn idle<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder>(r: &Resolver<T, A, V>) {
+    tokio::time::timeout(Duration::from_secs(4), async {
+        while r.metrics().active_maintenance != 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+}
+struct ConcurrentRecorded {
+    entered: Arc<Semaphore>,
+    release: Arc<Semaphore>,
+    calls: Arc<AtomicUsize>,
+}
+impl FundedAcquirer for ConcurrentRecorded {
+    async fn acquire(
+        &self,
+        r: AcquisitionRequest,
+        c: OperationContext,
+    ) -> Result<Acquisition, server2::resolver::Error> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        self.entered.add_permits(1);
+        tokio::time::timeout_at(c.deadline(), self.release.acquire())
+            .await
+            .map_err(|_| server2::storage::Error::Timeout)?
+            .unwrap()
+            .forget();
+        c.check()?;
+        let nx = [62, 63]
+            .into_iter()
+            .find(|nx| {
+                request(*nx, ReadSelection::Latest, Duration::from_secs(30))
+                    .scope()
+                    .catalog
+                    == r.resolution().scope().catalog
+            })
+            .ok_or(server2::resolver::Error::AcquisitionDenied)?;
+        Ok(acquisition(nx, 1, 42))
+    }
+}
+struct SmallView;
+impl ViewBuilder for SmallView {
+    fn parse(
+        &self,
+        _: &[RawView<'_>],
+        _: &str,
+        out: &mut CappedOutput,
+    ) -> Result<(), server2::resolver::Error> {
+        out.append(b"ok")
+    }
+    fn assemble(
+        &self,
+        r: &ResolutionRequest,
+        _: &CheckedInput,
+        _: &[&[u8]],
+        out: &mut CappedOutput,
+    ) -> Result<(), server2::resolver::Error> {
+        if r.response_key().units() == "F" {
+            out.append(&vec![b'r'; 200 * 1024])
+        } else {
+            out.append(b"small")
+        }
+    }
+}
+fn pressure_request(nx: u16, units: &str) -> ResolutionRequest {
+    let r = request(nx, ReadSelection::Latest, Duration::from_secs(30));
+    ResolutionRequest::new(
+        ResponseKey::new(
+            "weather/coord",
+            "v000903",
+            "fixture",
+            "ko",
+            units,
+            "aqi",
+            "smoke-parser-1",
+            BTreeMap::new(),
+        )
+        .unwrap(),
+        r.scope().clone(),
+        ReadSelection::Latest,
+        64,
+        1024 * 1024,
+        Duration::from_secs(60),
+        Duration::from_secs(30),
+    )
+    .unwrap()
+}
+async fn corrections(endpoint: &str, callback: RecordedAcquirer) {
+    let entered = Arc::new(Semaphore::new(0));
+    let release = Arc::new(Semaphore::new(0));
+    let calls = Arc::new(AtomicUsize::new(0));
+    let resolver = Resolver::new(
+        CatalogBackend::new(transport(endpoint), CatalogLimits::default()).unwrap(),
+        ConcurrentRecorded {
+            entered: entered.clone(),
+            release: release.clone(),
+            calls: calls.clone(),
+        },
+        Builder,
+        ResolverConfig::default(),
+    )
+    .unwrap();
+    let a = {
+        let r = resolver.clone();
+        tokio::spawn(async move {
+            r.resolve(
+                request(62, ReadSelection::Latest, Duration::from_secs(30)),
+                deadline(),
+            )
+            .await
+        })
+    };
+    let b = {
+        let r = resolver.clone();
+        tokio::spawn(async move {
+            r.resolve(
+                request(63, ReadSelection::Latest, Duration::from_secs(30)),
+                deadline(),
+            )
+            .await
+        })
+    };
+    tokio::time::timeout(Duration::from_secs(2), entered.acquire_many(2))
+        .await
+        .unwrap()
+        .unwrap()
+        .forget();
+    release.add_permits(2);
+    assert!(a.await.unwrap().is_ok());
+    assert!(b.await.unwrap().is_ok());
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+    println!("R1: two independent complete publications both return checked bytes");
+    let store = CatalogStore::new(transport(endpoint), CatalogLimits::default()).unwrap();
+    for nx in 70..87 {
+        let a = acquisition(nx, 1, 10);
+        let mut records = vec![];
+        for record in a.records {
+            let mut bytes = vec![b'x'; 60 * 1024];
+            bytes[0] = record.envelope.pagination.as_ref().unwrap().page as u8;
+            records.push(
+                RawRecord::new(
+                    "kma",
+                    "current",
+                    &ProviderKey::Grid { nx, ny: 127 },
+                    record.envelope.identity.period.clone(),
+                    1,
+                    200,
+                    "application/octet-stream",
+                    record.envelope.pagination.clone(),
+                    bytes.into(),
+                    &Limits::default(),
+                )
+                .unwrap(),
+            );
+        }
+        let declaration = GroupDeclaration::new(
+            records
+                .iter()
+                .map(|r| GroupMember {
+                    envelope: r.envelope.clone(),
+                    catalogs: vec![
+                        CatalogId::for_record(&r.envelope.identity, "20261008").unwrap(),
+                    ],
+                })
+                .collect(),
+            &CatalogLimits::default(),
+        )
+        .unwrap();
+        store
+            .publish(declaration, records, deadline())
+            .await
+            .unwrap();
+    }
+    let bounded = Resolver::new(
+        CatalogBackend::new(transport(endpoint), CatalogLimits::default()).unwrap(),
+        callback.clone(),
+        SmallView,
+        ResolverConfig {
+            cache_bytes: 1024 * 1024,
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    for nx in 70..87 {
+        bounded
+            .resolve(pressure_request(nx, "C"), deadline())
+            .await
+            .unwrap();
+    }
+    assert_eq!(
+        bounded
+            .resolve(pressure_request(70, "F"), deadline())
+            .await
+            .unwrap()
+            .bytes()
+            .len(),
+        200 * 1024
+    );
+    idle(&bounded).await;
+    println!("R2: 17 raw scopes in 1 MiB cache do not strand a valid 200 KiB response");
+    for fetch in 1..=30 {
+        let a = acquisition(64, fetch, fetch as u32);
+        store
+            .publish(a.declaration, a.records, deadline())
+            .await
+            .unwrap();
+    }
+    let mut url: reqwest::Url = format!("{endpoint}__catalog").parse().unwrap();
+    url.query_pairs_mut()
+        .append_pair("mode", "slow-all")
+        .append_pair("key", "unused");
+    assert_eq!(
+        reqwest::Client::new()
+            .post(url)
+            .header("X-Server2-Test-Key", "server2-local")
+            .send()
+            .await
+            .unwrap()
+            .status()
+            .as_u16(),
+        204
+    );
+    let latest = Resolver::new(
+        CatalogBackend::new(transport(endpoint), CatalogLimits::default()).unwrap(),
+        callback.clone(),
+        Builder,
+        ResolverConfig::default(),
+    )
+    .unwrap();
+    let r = request(64, ReadSelection::Latest, Duration::from_secs(30));
+    let cold = latest.resolve(r.clone(), deadline()).await.unwrap();
+    assert!(String::from_utf8_lossy(cold.bytes()).contains("30"));
+    assert!(latest.metrics().foreground_io <= 33);
+    idle(&latest).await;
+    let io = requests(endpoint).await;
+    assert_eq!(
+        latest.resolve(r, deadline()).await.unwrap().bytes(),
+        cold.bytes()
+    );
+    assert_eq!(requests(endpoint).await, io);
+    assert_eq!(
+        callback.calls.load(Ordering::SeqCst),
+        1,
+        "no new recorded acquisition on corrected S3 reads"
+    );
+    println!(
+        "R3: 30 complete revisions at synthetic 20 ms GET; selected cold read and idle warm zero-I/O pass"
+    );
+}
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() {
     let endpoint = std::env::args()
@@ -214,6 +463,7 @@ async fn main() {
     .unwrap();
     let req = request(60, ReadSelection::Latest, Duration::from_secs(30));
     let cold = resolver.resolve(req.clone(), deadline()).await.unwrap();
+    idle(&resolver).await;
     let count = requests(&endpoint).await;
     let warm = resolver.resolve(req, deadline()).await.unwrap();
     assert_eq!(cold.bytes(), warm.bytes());
@@ -299,6 +549,7 @@ async fn main() {
         metrics.active_owners,
         metrics.cache_bytes
     );
+    corrections(&endpoint, callback).await;
     println!(
         "PASS local real HTTP resolver smoke ({:.2} ms); no AWS/provider/route parity claim",
         started.elapsed().as_secs_f64() * 1000.0

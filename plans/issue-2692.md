@@ -17,7 +17,7 @@ Owner: `/root/s05_raw_records`. [Issue #2692](https://github.com/WizardFactory/T
 
 | Scenario | Observable outcome | Criteria | Coverage |
 | --- | --- | --- | --- |
-| Exact locale and boundary geocode labels | Separate volatile exact keys, invalid precise archival projection rejected | AC1/4 | Key/privacy tests and manual |
+| Exact volatile geocode identity; values/label parity deferred to S10 | Separate volatile exact keys, invalid precise archival projection rejected | AC1/4 | Key/privacy tests and manual |
 | Cold S3 and warm memory | Identical frozen bytes; warm S3/provider work is zero | AC2 | Actual HTTP wire and distinct release smoke |
 | Cancelled initiator and concurrent request | One owned operation; remaining waiter receives checked result | AC3 | Milestone-controlled async tests and wire fixture |
 | Cache pressure and pinned values | Evicted values remain charged until the last reference drops | AC3 | Byte/admission tests and smoke |
@@ -37,3 +37,11 @@ This can break future assembler integrations if they omit an output parameter fr
 Rollback is removal of the internal modules/call sites on this branch. No route or deployment switch is introduced, and S3 records are not deleted or rewritten. Root owns shared architecture and diagram changes; this builder consumes their validated hashes. Every stage has at most ten total attempts; no counter reset.
 
 The initial actual suite covers 19 cache/index/HTTP cases. Scoped selection skips unrelated periods but preserves whole acquisitions; excluded descriptors never enter the response map. Raw retention does not avoid GETs, and history page-size-one normalization remains a measured-feasibility limitation. Root will pin final diagrams to the first committed implementation before PR freeze.
+
+## Selected actual review1 correction
+
+R1/R2/R3 are Required, R4 scope wording selected. Supplement exact paths with [6047803555](https://github.com/WizardFactory/TodayWeather/issues/2692#issuecomment-6047803555), adding only server2/src/storage/catalog.rs. Test-first public-API wire regressions cover two different successful publishers and unrelated checked work under invalidation; a small retained budget filled by optional tiers followed by a valid larger response; and mature30/60-revision cold Latest under synthetic20 ms GET, then warm reuse.
+
+Implement a brief no-await retention/epoch gate, operation-owned parsed copies, best-effort optional caches and charged response priority. Read complete catalog snapshots first. Add repair_index without changing existing repair: complete discovery/group validation/indexing, then Indexed rather than full fold. Failed/empty reads still require exact finite proof before provider. One background maintenance job uses spare shared admission/temporary lease and original deadline; skipped scheduling has no queue and retries only a later positive cold opportunity. Tag foreground/background I/O; dirty-before-PUT guard invalidates reuse even on cancelled/ambiguous writes.
+
+Additional checks cover complete orphan repair, invalid orphan exclusions, maintenance skip/drain/cancellation, genuine response pins and existing S05/S06 regressions. Maintain full-history all-page coverage and explicit finite scope, no shortened merge. Establish maintenance-idle before warm-zero total-I/O assertions. Root accepted blueprint precedes build; root corrected committed-source diagram and actual visuals follow source commit. Renew manual/PDF/capture and full CI, then PUSH existing PR and actual independent review2. No Required is marked resolved by author before reviewer confirmation.

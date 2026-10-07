@@ -111,6 +111,14 @@ pub struct Metrics {
     pub active_cpu_jobs: usize,
     pub active_owners: usize,
     pub active_waiters: usize,
+    pub active_maintenance: usize,
+    pub maintenance_started: u64,
+    pub maintenance_finished: u64,
+    pub maintenance_failed: u64,
+    pub maintenance_skipped: u64,
+    /// Actual transport calls, including retries, not object/byte or latency estimates.
+    pub foreground_io: u64,
+    pub background_io: u64,
 }
 #[derive(Default)]
 struct Counters {
@@ -122,6 +130,10 @@ struct Counters {
     acquisitions: AtomicU64,
     publications: AtomicU64,
     cancelled: AtomicU64,
+    maintenance_started: AtomicU64,
+    maintenance_finished: AtomicU64,
+    maintenance_failed: AtomicU64,
+    maintenance_skipped: AtomicU64,
 }
 type Terminal = Option<Result<Response, Error>>;
 struct Flight {
@@ -144,7 +156,42 @@ struct Core<T, A, V> {
     draining: AtomicBool,
     cancelled: Arc<AtomicBool>,
     epoch: AtomicU64,
+    retention_gate: Arc<Mutex<()>>,
+    maintenance: Arc<Semaphore>,
     counters: Counters,
+}
+impl<T, A, V> Core<T, A, V> {
+    fn invalidate(&self) {
+        // Lock poisoning cannot allow stale reuse: still advance epoch, but fail admissions.
+        let _gate = self.retention_gate.lock();
+        self.epoch.fetch_add(1, Ordering::AcqRel);
+        self.responses.clear();
+    }
+    /// Called only under retention_gate. No optional cache pins may escape that gate.
+    fn make_response_room(&self, weight: usize) {
+        if self.budget.used().saturating_add(weight) > self.budget.limit() {
+            self.raw.clear();
+            self.parsed.clear();
+        }
+    }
+}
+struct MaintenanceGuard<T, A, V> {
+    core: Arc<Core<T, A, V>>,
+    dirty: Arc<AtomicBool>,
+    _maintenance: OwnedSemaphorePermit,
+    _owner: OwnedSemaphorePermit,
+    _lease: Arc<ByteLease>,
+}
+impl<T, A, V> Drop for MaintenanceGuard<T, A, V> {
+    fn drop(&mut self) {
+        if self.dirty.load(Ordering::Acquire) {
+            self.core.invalidate();
+        }
+        self.core
+            .counters
+            .maintenance_finished
+            .fetch_add(1, Ordering::Relaxed);
+    }
 }
 pub struct Resolver<T, A, V> {
     core: Arc<Core<T, A, V>>,
@@ -162,9 +209,13 @@ struct OwnerGuard<T, A, V> {
     flight: Arc<Flight>,
     _owner: OwnedSemaphorePermit,
     _lease: Arc<ByteLease>,
+    dirty: Arc<AtomicBool>,
 }
 impl<T, A, V> Drop for OwnerGuard<T, A, V> {
     fn drop(&mut self) {
+        if self.dirty.load(Ordering::Acquire) {
+            self.core.invalidate();
+        }
         if self.flight.sender.borrow().is_none() {
             self.flight
                 .sender
@@ -233,6 +284,8 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                 draining: AtomicBool::new(false),
                 cancelled: Arc::new(AtomicBool::new(false)),
                 epoch: AtomicU64::new(0),
+                retention_gate: Arc::new(Mutex::new(())),
+                maintenance: Arc::new(Semaphore::new(1)),
                 counters: Counters::default(),
                 config,
             }),
@@ -241,8 +294,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
     /// Notify any known local publication. Conservative global invalidation is bounded, immediate,
     /// and includes absence dependencies. External changes are discovered at the refresh interval.
     pub fn invalidate(&self) {
-        self.core.epoch.fetch_add(1, Ordering::AcqRel);
-        self.core.responses.clear();
+        self.core.invalidate();
     }
     pub fn is_draining(&self) -> bool {
         self.core.draining.load(Ordering::Acquire)
@@ -270,6 +322,23 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
             active_cpu_jobs: self.core.config.cpu - self.core.cpu.available_permits(),
             active_owners: self.core.config.operations - self.core.owners.available_permits(),
             active_waiters: self.core.config.waiters - self.core.waiters.available_permits(),
+            active_maintenance: 1 - self.core.maintenance.available_permits(),
+            maintenance_started: c.maintenance_started.load(Ordering::Relaxed),
+            maintenance_finished: c.maintenance_finished.load(Ordering::Relaxed),
+            maintenance_failed: c.maintenance_failed.load(Ordering::Relaxed),
+            maintenance_skipped: c.maintenance_skipped.load(Ordering::Relaxed),
+            foreground_io: self
+                .core
+                .backend
+                .counters
+                .foreground
+                .load(Ordering::Relaxed),
+            background_io: self
+                .core
+                .backend
+                .counters
+                .background
+                .load(Ordering::Relaxed),
         }
     }
     pub async fn resolve(
@@ -331,19 +400,20 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                 map.insert(key.clone(), flight.clone());
                 let deadline = Instant::now() + self.core.config.deadline;
                 let core = self.core.clone();
+                let publishing = Arc::new(AtomicBool::new(false));
                 let guard = OwnerGuard {
                     core: core.clone(),
                     key: key.clone(),
                     flight,
                     _owner: owner,
                     _lease: lease.clone(),
+                    dirty: publishing.clone(),
                 };
                 tokio::spawn(async move {
                     let context = OperationContext {
                         deadline,
                         cancelled: core.cancelled.clone(),
                     };
-                    let publishing = Arc::new(AtomicBool::new(false));
                     let result = match timeout_at(
                         context.deadline(),
                         Self::execute(core, key, request, context, lease, publishing.clone()),
@@ -358,6 +428,9 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                         }
                         .into()),
                     };
+                    if result.is_ok() {
+                        publishing.store(false, Ordering::Release);
+                    }
                     guard.flight.sender.send_replace(Some(result));
                     drop(guard);
                 });
@@ -427,16 +500,31 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                     dependencies: old.value.dependencies.clone(),
                     epoch,
                 };
-                return Ok(Response {
-                    inner: core.responses.insert(key, cached, weight)?,
-                });
+                let _gate = core.retention_gate.lock().map_err(|_| Error::TaskFailed)?;
+                core.make_response_room(weight);
+                let inner = if core.epoch.load(Ordering::Acquire) == epoch {
+                    core.responses.insert(key, cached, weight)?
+                } else {
+                    core.responses.clear();
+                    WeightedValue::charged(cached, &core.budget, weight)?
+                };
+                return Ok(Response { inner });
             }
             core.responses.remove(&key);
         }
         core.counters.misses.fetch_add(1, Ordering::Relaxed);
         let mut published = false;
-        let input = match core.backend.cold(&request, &context).await? {
-            ColdOutcome::Input(i) => i,
+        let notify_core = core.clone();
+        let notify_dirty = publishing.clone();
+        let before_write: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
+            notify_dirty.store(true, Ordering::Release);
+            notify_core.invalidate();
+        });
+        let input = match core.backend.cold(&request, &context, before_write).await? {
+            ColdOutcome::Input(i) => {
+                Self::schedule_maintenance(core.clone(), request.clone());
+                i
+            }
             ColdOutcome::Empty => {
                 context.check()?;
                 core.counters.acquisitions.fetch_add(1, Ordering::Relaxed);
@@ -451,24 +539,18 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                     .await?;
                 context.check()?;
                 publishing.store(true, Ordering::Release);
+                // Invalidate before a possibly sent write, including cancellation/ambiguous results.
+                core.invalidate();
                 let i = core
                     .backend
                     .publish(&request, acquisition, &context)
                     .await?;
-                let previous = core.epoch.fetch_add(1, Ordering::AcqRel);
-                core.responses.clear();
-                if previous != epoch {
-                    return Err(Error::Incomplete);
-                }
                 published = true;
                 core.counters.publications.fetch_add(1, Ordering::Relaxed);
                 i
             }
         };
         let expected_epoch = epoch + u64::from(published);
-        if core.epoch.load(Ordering::Acquire) != expected_epoch {
-            return Err(Error::Incomplete);
-        }
         let epoch = expected_epoch;
         let permit = timeout_at(context.deadline(), core.cpu.clone().acquire_owned())
             .await
@@ -478,6 +560,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
         let parsed_cache = core.parsed.clone();
         let raw_cache = core.raw.clone();
         let config = core.config.clone();
+        let retention_gate = core.retention_gate.clone();
         let req = request.clone();
         let (bytes, dependencies, excluded) = tokio::task::spawn_blocking(move || {
             let _permit = permit;
@@ -495,6 +578,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                             .len()
                         + 128;
                     // Raw identity validation happened in S05/S06. Pins are charged even if evicted.
+                    let _gate = retention_gate.lock().map_err(|_| Error::TaskFailed)?;
                     if let Some(old) = raw_cache.get(&object_key) {
                         if old.value.record.envelope != record.envelope
                             || old.value.record.bytes != record.bytes
@@ -508,7 +592,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                                 record: record.clone(),
                             },
                             weight,
-                        )?;
+                        );
                     }
                     ids.push(object_key);
                 }
@@ -516,8 +600,16 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                     &serde_json::to_vec(&(&ids, req.response.parser_revision()))
                         .map_err(|_| StorageError::Invalid("parsed key"))?,
                 );
-                let value = if let Some(hit) = parsed_cache.get(&cache_key) {
-                    hit
+                // Optional pins cannot survive this brief no-await gate. A hit is copied into
+                // the owner's bounded parse buffer, so response admission can evict every tier.
+                let hit = {
+                    let _gate = retention_gate.lock().map_err(|_| Error::TaskFailed)?;
+                    parsed_cache
+                        .get(&cache_key)
+                        .map(|hit| hit.value.bytes.clone())
+                };
+                let value = if let Some(bytes) = hit {
+                    bytes
                 } else {
                     let views = acquisition
                         .iter()
@@ -534,20 +626,27 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                         + ids.iter().map(String::len).sum::<usize>()
                         + req.response.parser_revision().len()
                         + 128;
-                    parsed_cache.insert(cache_key, Parsed { bytes }, weight)?
+                    {
+                        let _gate = retention_gate.lock().map_err(|_| Error::TaskFailed)?;
+                        let _ = parsed_cache.insert(
+                            cache_key,
+                            Parsed {
+                                bytes: bytes.clone(),
+                            },
+                            weight,
+                        );
+                    }
+                    bytes
                 };
                 retained = retained
-                    .checked_add(value.value.bytes.len())
+                    .checked_add(value.len())
                     .ok_or(StorageError::Capacity)?;
                 if retained > config.parsed_bytes {
                     return Err(StorageError::Capacity.into());
                 }
                 parsed.push(value);
             }
-            let views = parsed
-                .iter()
-                .map(|v| v.value.bytes.as_ref())
-                .collect::<Vec<_>>();
+            let views = parsed.iter().map(|v| v.as_ref()).collect::<Vec<_>>();
             let mut output = CappedOutput::new(config.response_bytes);
             builder.assemble(&req, &input, &views, &mut output)?;
             Ok::<_, Error>((output.finish(), input.dependencies, input.excluded))
@@ -555,9 +654,6 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
         .await
         .map_err(|_| Error::TaskFailed)??;
         context.check()?;
-        if core.epoch.load(Ordering::Acquire) != epoch {
-            return Err(Error::Incomplete);
-        }
         let now = Instant::now();
         let metadata = serde_json::to_vec(
             &dependencies
@@ -575,12 +671,78 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
             dependencies,
             epoch,
         };
-        let cached = if excluded > 0 {
+        let _gate = core.retention_gate.lock().map_err(|_| Error::TaskFailed)?;
+        core.make_response_room(weight);
+        let cached = if excluded > 0 || core.epoch.load(Ordering::Acquire) != epoch {
+            // A complete checked snapshot remains a valid uncached response. Epoch changes
+            // invalidate reuse, not the independent read/publication that already completed.
+            if core.budget.used().saturating_add(weight) > core.budget.limit() {
+                core.responses.clear();
+            }
             WeightedValue::charged(value, &core.budget, weight)?
         } else {
             core.responses.insert(key, value, weight)?
         }; // Missing descriptor arrival is not detectable by target ETag alone.
         Ok(Response { inner: cached })
+    }
+    fn schedule_maintenance(core: Arc<Core<T, A, V>>, request: ResolutionRequest) {
+        // No queue and no await: admission is the same bounded owner pool as foreground work.
+        let admission = (|| {
+            let _map = core.flights.lock().ok()?;
+            if core.draining.load(Ordering::Acquire) {
+                return None;
+            }
+            let maintenance = core.maintenance.clone().try_acquire_owned().ok()?;
+            let owner = core.owners.clone().try_acquire_owned().ok()?;
+            let lease = Arc::new(core.temporary.reserve(core.config.operation_bytes).ok()?);
+            Some((maintenance, owner, lease))
+        })();
+        let Some((maintenance, owner, lease)) = admission else {
+            core.counters
+                .maintenance_skipped
+                .fetch_add(1, Ordering::Relaxed);
+            return;
+        };
+        let deadline = Instant::now() + core.config.deadline;
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify_core = core.clone();
+        let notify_dirty = dirty.clone();
+        let notify: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
+            notify_dirty.store(true, Ordering::Release);
+            notify_core.invalidate();
+        });
+        core.counters
+            .maintenance_started
+            .fetch_add(1, Ordering::Relaxed);
+        tokio::spawn(async move {
+            let guard = MaintenanceGuard {
+                core: core.clone(),
+                dirty,
+                _maintenance: maintenance,
+                _owner: owner,
+                _lease: lease,
+            };
+            let context = OperationContext {
+                deadline,
+                cancelled: core.cancelled.clone(),
+            };
+            let outcome = timeout_at(
+                deadline,
+                core.backend.maintenance(&request, &context, notify),
+            )
+            .await;
+            let successful = matches!(
+                outcome,
+                Ok(Ok(crate::storage::RepairOutcome::Indexed { .. }
+                    | crate::storage::RepairOutcome::CompleteEmpty { .. }))
+            );
+            if !successful {
+                core.counters
+                    .maintenance_failed
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+            drop(guard);
+        });
     }
     pub async fn drain(&self, deadline: Instant) -> Result<DrainReport, Error> {
         {

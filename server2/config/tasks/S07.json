@@ -17,7 +17,8 @@
     "server2/tests/resolver/cache.rs",
     "server2/tests/resolver/wire.rs",
     "server2/examples/resolver_smoke.rs",
-    "server2/tools/render_resolver_manual.py"
+    "server2/tools/render_resolver_manual.py",
+    "server2/src/storage/catalog.rs"
   ],
   "outside": [
     {
@@ -76,5 +77,6 @@
       "reason": "Root-owned shared design handoff"
     }
   ],
-  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2692#issuecomment-6046142667"
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2692#issuecomment-6046142667",
+  "correction_declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2692#issuecomment-6047803555"
 }

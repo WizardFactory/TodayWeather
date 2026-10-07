@@ -97,6 +97,720 @@ impl Drop for Peer {
         let _ = self.child.wait();
     }
 }
+fn grid_acquisition(nx: u16, fetch: u64, size: usize) -> Acquisition {
+    let mut a = acquisition(fetch, fetch as u32);
+    for (page, record) in a.records.iter_mut().enumerate() {
+        let mut body = if size == 0 {
+            record.bytes.to_vec()
+        } else {
+            vec![b'x'; size]
+        };
+        if size > 0 {
+            body[size - 1] = page as u8;
+        }
+        *record = RawRecord::new(
+            "kma",
+            "current",
+            &ProviderKey::Grid { nx, ny: 127 },
+            record.envelope.identity.period.clone(),
+            fetch,
+            200,
+            "application/json",
+            record.envelope.pagination.clone(),
+            body.into(),
+            &Limits::default(),
+        )
+        .unwrap();
+    }
+    a.declaration = GroupDeclaration::new(
+        a.records
+            .iter()
+            .map(|r| GroupMember {
+                envelope: r.envelope.clone(),
+                catalogs: vec![CatalogId::for_record(&r.envelope.identity, "20261007").unwrap()],
+            })
+            .collect(),
+        &CatalogLimits::default(),
+    )
+    .unwrap();
+    a
+}
+fn grid_request(nx: u16, units: &str) -> ResolutionRequest {
+    let a = grid_acquisition(nx, 1, 0);
+    ResolutionRequest::new(
+        ResponseKey::new(
+            "weather/coord",
+            "v000903",
+            &format!("grid:{nx}"),
+            "ko",
+            units,
+            "aqi",
+            "parser-1",
+            BTreeMap::new(),
+        )
+        .unwrap(),
+        RepairScope {
+            catalog: CatalogId::for_record(&a.records[0].envelope.identity, "20261007").unwrap(),
+            periods: vec![a.records[0].envelope.identity.period.clone()],
+        },
+        ReadSelection::Latest,
+        64,
+        1024 * 1024,
+        Duration::from_secs(60),
+        Duration::from_secs(30),
+    )
+    .unwrap()
+}
+#[derive(Clone)]
+struct GridGate(Gate);
+impl FundedAcquirer for GridGate {
+    async fn acquire(
+        &self,
+        r: AcquisitionRequest,
+        c: OperationContext,
+    ) -> Result<Acquisition, server2::resolver::Error> {
+        self.0.calls.fetch_add(1, Ordering::SeqCst);
+        self.0.entered.add_permits(1);
+        let permit = tokio::time::timeout_at(c.deadline(), self.0.release.acquire())
+            .await
+            .map_err(|_| server2::storage::Error::Timeout)?
+            .unwrap();
+        permit.forget();
+        c.check()?;
+        let nx = r
+            .resolution()
+            .response_key()
+            .location()
+            .strip_prefix("grid:")
+            .unwrap()
+            .parse()
+            .unwrap();
+        Ok(grid_acquisition(nx, 1, 0))
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn correction_r1_different_durable_publications_both_return_checked_bytes() {
+    let peer = Peer::new();
+    let gate = Gate::new(true, false);
+    let resolver = Resolver::new(
+        CatalogBackend::new(peer.transport(), CatalogLimits::default()).unwrap(),
+        GridGate(gate.clone()),
+        Builder,
+        ResolverConfig::default(),
+    )
+    .unwrap();
+    let one = {
+        let r = resolver.clone();
+        tokio::spawn(async move { r.resolve(grid_request(60, "C"), deadline()).await })
+    };
+    let two = {
+        let r = resolver.clone();
+        tokio::spawn(async move { r.resolve(grid_request(61, "C"), deadline()).await })
+    };
+    gate.entered().await;
+    gate.entered().await;
+    gate.release.add_permits(2);
+    let a = one.await.unwrap();
+    let b = two.await.unwrap();
+    assert!(
+        a.is_ok() && b.is_ok(),
+        "independent durable publications: {:?} / {:?}",
+        a.as_ref().err(),
+        b.as_ref().err()
+    );
+    for nx in [60, 61] {
+        assert!(matches!(
+            CatalogStore::new(peer.transport(), CatalogLimits::default())
+                .unwrap()
+                .lookup(&grid_request(nx, "C").scope().catalog, deadline())
+                .await
+                .unwrap(),
+            LookupOutcome::Ready(_)
+        ));
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn correction_r1_epoch_drift_returns_checked_uncached_response() {
+    let peer = Peer::new();
+    seed(&peer, 1, 10).await;
+    let started = Arc::new(Semaphore::new(0));
+    let gate = Arc::new((std::sync::Mutex::new(false), std::sync::Condvar::new()));
+    let _cleanup = ReleaseOnDrop(gate.clone());
+    let resolver = Resolver::new(
+        CatalogBackend::new(peer.transport(), CatalogLimits::default()).unwrap(),
+        Gate::new(false, true),
+        BlockingBuilder {
+            started: started.clone(),
+            gate: gate.clone(),
+        },
+        ResolverConfig {
+            operations: 1,
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    let job = {
+        let r = resolver.clone();
+        tokio::spawn(async move {
+            r.resolve(
+                request("ko", ReadSelection::Latest, Duration::from_secs(30)),
+                deadline(),
+            )
+            .await
+        })
+    };
+    tokio::time::timeout(Duration::from_secs(2), started.acquire())
+        .await
+        .unwrap()
+        .unwrap()
+        .forget();
+    resolver.invalidate();
+    *gate.0.lock().unwrap() = true;
+    gate.1.notify_all();
+    assert!(
+        job.await.unwrap().is_ok(),
+        "checked snapshot is not invalidated as a response"
+    );
+    let hits = resolver.metrics().hits;
+    resolver
+        .resolve(
+            request("ko", ReadSelection::Latest, Duration::from_secs(30)),
+            deadline(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        resolver.metrics().hits,
+        hits,
+        "drifted snapshot was never admitted for reuse"
+    );
+}
+struct SmallParsedLargeResponse;
+impl ViewBuilder for SmallParsedLargeResponse {
+    fn parse(
+        &self,
+        _: &[RawView<'_>],
+        _: &str,
+        out: &mut CappedOutput,
+    ) -> Result<(), server2::resolver::Error> {
+        out.append(b"ok")
+    }
+    fn assemble(
+        &self,
+        r: &ResolutionRequest,
+        _: &CheckedInput,
+        _: &[&[u8]],
+        out: &mut CappedOutput,
+    ) -> Result<(), server2::resolver::Error> {
+        if r.response_key().units() == "F" {
+            out.append(&vec![b'r'; 200 * 1024])
+        } else {
+            out.append(b"small")
+        }
+    }
+}
+#[tokio::test]
+async fn correction_r2_optional_tiers_cannot_starve_valid_response() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    for nx in 60..77 {
+        let a = grid_acquisition(nx, 1, 60 * 1024);
+        store
+            .publish(a.declaration, a.records, deadline())
+            .await
+            .unwrap();
+    }
+    let resolver = Resolver::new(
+        CatalogBackend::new(peer.transport(), CatalogLimits::default()).unwrap(),
+        Gate::new(false, true),
+        SmallParsedLargeResponse,
+        ResolverConfig {
+            cache_bytes: 1024 * 1024,
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    for nx in 60..77 {
+        resolver
+            .resolve(grid_request(nx, "C"), deadline())
+            .await
+            .unwrap();
+    }
+    let result = resolver.resolve(grid_request(60, "F"), deadline()).await;
+    assert!(
+        result.is_ok(),
+        "optional retention must yield to a valid response: {:?}",
+        result.as_ref().err()
+    );
+    assert_eq!(result.unwrap().bytes().len(), 200 * 1024);
+}
+#[tokio::test]
+async fn correction_r3_mature_complete_catalog_latest_avoids_full_repair_fold() {
+    for revisions in [30u64, 60] {
+        let peer = Peer::new();
+        for n in 1..=revisions {
+            seed(&peer, n, n as u32).await;
+        }
+        peer.fault("slow-all", "unused").await;
+        let gate = Gate::new(false, true);
+        let resolver = make_resolver(&peer, gate.clone(), ResolverConfig::default());
+        let result = resolver
+            .resolve(
+                request("ko", ReadSelection::Latest, Duration::from_secs(30)),
+                deadline(),
+            )
+            .await;
+        assert!(
+            result.is_ok(),
+            "{revisions} complete revisions at synthetic 20 ms GET: {:?}",
+            result.as_ref().err()
+        );
+        assert!(
+            std::str::from_utf8(result.unwrap().bytes())
+                .unwrap()
+                .contains(&format!("\"value\":{revisions}"))
+        );
+        assert_eq!(gate.calls.load(Ordering::SeqCst), 0);
+        assert!(
+            resolver.metrics().foreground_io <= revisions + 3,
+            "selected read does not fetch every historical body"
+        );
+        maintenance_idle(&resolver).await;
+        let io = peer.requests().await;
+        let foreground = resolver.metrics().foreground_io;
+        resolver
+            .resolve(
+                request("ko", ReadSelection::Latest, Duration::from_secs(30)),
+                deadline(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resolver.metrics().foreground_io, foreground);
+        assert_eq!(
+            peer.requests().await,
+            io,
+            "idle warm request performs no background or foreground I/O"
+        );
+        assert_eq!(gate.calls.load(Ordering::SeqCst), 0);
+    }
+}
+async fn orphan(peer: &Peer, a: Acquisition) {
+    let limits = CatalogLimits::default();
+    let reference = a.declaration.reference(&limits).unwrap();
+    let key = reference.descriptor_key().unwrap();
+    let body = a.declaration.bytes(&limits).unwrap();
+    let records = a.declaration.attach(a.records, &limits).unwrap();
+    let raw = RawRecordStore::new(peer.transport(), limits.raw).unwrap();
+    for record in records {
+        raw.publish(record).await.unwrap();
+    }
+    assert_eq!(
+        peer.transport()
+            .put_control(&key, &body, &WriteCondition::Absent)
+            .await
+            .unwrap(),
+        200
+    );
+}
+#[tokio::test]
+async fn correction_r3_index_only_restores_every_revision_and_preserves_full_repair() {
+    let peer = Peer::new();
+    orphan(&peer, acquisition(1, 10)).await;
+    orphan(&peer, acquisition(2, 20)).await;
+    let r = request("ko", ReadSelection::FullHistory, Duration::from_secs(30));
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    match store.repair_index(r.scope(), deadline()).await.unwrap() {
+        RepairOutcome::Indexed {
+            scope,
+            dependencies,
+        } => {
+            assert_eq!(scope.periods, r.scope().periods);
+            assert!(!dependencies.is_empty());
+        }
+        other => panic!("index-only repair cannot promise a serving set: {other:?}"),
+    }
+    match store.repair(r.scope(), deadline()).await.unwrap() {
+        RepairOutcome::Complete(set) => {
+            assert_eq!(set.coverage(), RevisionCoverage::FullHistory);
+            assert_eq!(set.acquisitions().len(), 2);
+            assert!(set.acquisitions().iter().all(|a| a.records().len() == 2));
+        }
+        other => panic!("existing repair retains full materialization: {other:?}"),
+    }
+    // A complete descriptor does not legitimize a stray paginated envelope.
+    let stray = acquisition(3, 30).records.remove(0);
+    RawRecordStore::new(peer.transport(), Limits::default())
+        .unwrap()
+        .publish(stray)
+        .await
+        .unwrap();
+    assert!(matches!(
+        store.repair_index(r.scope(), deadline()).await.unwrap(),
+        RepairOutcome::Incomplete
+    ));
+    assert!(matches!(
+        store.lookup(&r.scope().catalog, deadline()).await.unwrap(),
+        LookupOutcome::Ready(_)
+    ));
+}
+#[tokio::test]
+async fn correction_r3_background_orphan_publication_invalidates_reuse() {
+    let peer = Peer::new();
+    seed(&peer, 1, 10).await;
+    orphan(&peer, acquisition(2, 20)).await;
+    let gate = Gate::new(false, true);
+    let resolver = make_resolver(&peer, gate.clone(), ResolverConfig::default());
+    let old = resolver
+        .resolve(
+            request("ko", ReadSelection::Latest, Duration::from_secs(30)),
+            deadline(),
+        )
+        .await
+        .unwrap();
+    assert!(
+        String::from_utf8_lossy(old.bytes()).contains("10"),
+        "only complete catalog publications serve"
+    );
+    maintenance_idle(&resolver).await;
+    assert_eq!(resolver.metrics().maintenance_started, 1);
+    assert_eq!(resolver.metrics().maintenance_failed, 0);
+    let current = resolver
+        .resolve(
+            request("ko", ReadSelection::Latest, Duration::from_secs(30)),
+            deadline(),
+        )
+        .await
+        .unwrap();
+    assert!(String::from_utf8_lossy(current.bytes()).contains("20"));
+    assert_eq!(
+        resolver.metrics().hits,
+        0,
+        "dirty maintenance removed old reuse"
+    );
+    maintenance_idle(&resolver).await;
+    assert_eq!(gate.calls.load(Ordering::SeqCst), 0);
+}
+#[tokio::test]
+async fn correction_r3_read_only_background_failure_keeps_healthy_warm_cache() {
+    let peer = Peer::new();
+    seed(&peer, 1, 10).await;
+    peer.fault("bad-list", "raw/v2/kma/current/").await;
+    let resolver = make_resolver(&peer, Gate::new(false, true), ResolverConfig::default());
+    let r = request("ko", ReadSelection::Latest, Duration::from_secs(30));
+    let first = resolver.resolve(r.clone(), deadline()).await.unwrap();
+    maintenance_idle(&resolver).await;
+    assert_eq!(resolver.metrics().maintenance_failed, 1);
+    let io = peer.requests().await;
+    let second = resolver.resolve(r, deadline()).await.unwrap();
+    assert_eq!(first.bytes(), second.bytes());
+    assert_eq!(resolver.metrics().hits, 1);
+    assert_eq!(peer.requests().await, io);
+}
+#[tokio::test]
+async fn correction_r2_external_response_pin_remains_a_genuine_hard_bound() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    for nx in [60, 61] {
+        let a = grid_acquisition(nx, 1, 0);
+        store
+            .publish(a.declaration, a.records, deadline())
+            .await
+            .unwrap();
+    }
+    let resolver = Resolver::new(
+        CatalogBackend::new(peer.transport(), CatalogLimits::default()).unwrap(),
+        Gate::new(false, true),
+        SmallParsedLargeResponse,
+        ResolverConfig {
+            cache_bytes: 256 * 1024,
+            operations: 1,
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    let held = resolver
+        .resolve(grid_request(60, "F"), deadline())
+        .await
+        .unwrap();
+    assert!(matches!(
+        resolver.resolve(grid_request(61, "F"), deadline()).await,
+        Err(server2::resolver::Error::Storage(
+            server2::storage::Error::Capacity
+        ))
+    ));
+    assert!(resolver.metrics().retired_or_pending_bytes >= 200 * 1024);
+    drop(held);
+    until(|| resolver.metrics().active_owners == 0).await;
+    assert_eq!(
+        resolver
+            .resolve(grid_request(61, "F"), deadline())
+            .await
+            .unwrap()
+            .bytes()
+            .len(),
+        200 * 1024
+    );
+    assert!(resolver.metrics().maintenance_skipped >= 1);
+}
+struct HoldCommittedWrite {
+    inner: HttpS3Transport,
+    key: String,
+    entered: Arc<Semaphore>,
+    release: Arc<Semaphore>,
+}
+impl ObjectTransport for HoldCommittedWrite {
+    async fn put(&self, p: &PreparedRecord) -> Result<u16, server2::storage::Error> {
+        self.inner.put(p).await
+    }
+    async fn head(&self, k: &str) -> Result<Object, server2::storage::Error> {
+        self.inner.head(k).await
+    }
+    async fn get(&self, k: &str, m: usize) -> Result<Object, server2::storage::Error> {
+        self.inner.get(k, m).await
+    }
+}
+impl CatalogTransport for HoldCommittedWrite {
+    async fn get_control(
+        &self,
+        k: &str,
+        m: usize,
+    ) -> Result<ControlObject, server2::storage::Error> {
+        self.inner.get_control(k, m).await
+    }
+    async fn put_control(
+        &self,
+        k: &str,
+        b: &[u8],
+        c: &WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        let result = self.inner.put_control(k, b, c).await;
+        if k == self.key && result == Ok(200) {
+            self.entered.add_permits(1);
+            self.release.acquire().await.unwrap().forget();
+        }
+        result
+    }
+    async fn list_raw_document(
+        &self,
+        p: &str,
+        t: Option<&str>,
+        k: usize,
+        b: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.inner.list_raw_document(p, t, k, b).await
+    }
+}
+#[tokio::test]
+async fn correction_r3_ambiguous_background_commit_never_leaves_stale_reuse() {
+    let peer = Peer::new();
+    seed(&peer, 1, 10).await;
+    let entered = Arc::new(Semaphore::new(0));
+    let release = Arc::new(Semaphore::new(0));
+    let gate = Gate::new(false, true);
+    let resolver = Resolver::new(
+        CatalogBackend::new(
+            HoldCommittedWrite {
+                inner: peer.transport(),
+                key: request("ko", ReadSelection::Latest, Duration::from_secs(30))
+                    .scope()
+                    .catalog
+                    .key(),
+                entered: entered.clone(),
+                release: release.clone(),
+            },
+            CatalogLimits::default(),
+        )
+        .unwrap(),
+        gate.clone(),
+        Builder,
+        ResolverConfig {
+            deadline: Duration::from_secs(1),
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    let ko = request("ko", ReadSelection::Latest, Duration::from_secs(30));
+    let old = resolver.resolve(ko.clone(), deadline()).await.unwrap();
+    maintenance_idle(&resolver).await;
+    orphan(&peer, acquisition(2, 20)).await;
+    resolver
+        .resolve(
+            request("en", ReadSelection::Latest, Duration::from_secs(30)),
+            deadline(),
+        )
+        .await
+        .unwrap();
+    tokio::time::timeout(Duration::from_secs(2), entered.acquire())
+        .await
+        .unwrap()
+        .unwrap()
+        .forget();
+    assert_eq!(resolver.metrics().active_maintenance, 1);
+    assert_eq!(resolver.metrics().operation_bytes, 64 * 1024 * 1024);
+    let new = resolver.resolve(ko.clone(), deadline()).await.unwrap();
+    assert_ne!(old.bytes(), new.bytes());
+    assert!(String::from_utf8_lossy(new.bytes()).contains("20"));
+    maintenance_idle(&resolver).await;
+    assert_eq!(
+        resolver.metrics().maintenance_failed,
+        1,
+        "lost post-commit acknowledgment is not synced/empty proof"
+    );
+    let hits = resolver.metrics().hits;
+    resolver.resolve(ko, deadline()).await.unwrap();
+    assert_eq!(
+        resolver.metrics().hits,
+        hits,
+        "dirty guard invalidates admissions made before uncertain operation ended"
+    );
+    maintenance_idle(&resolver).await;
+    assert_eq!(gate.calls.load(Ordering::SeqCst), 0);
+}
+#[tokio::test]
+async fn correction_r3_drain_accounts_for_owned_maintenance_and_stops_new_work() {
+    let peer = Peer::new();
+    seed(&peer, 1, 10).await;
+    orphan(&peer, acquisition(2, 20)).await;
+    let entered = Arc::new(Semaphore::new(0));
+    let release = Arc::new(Semaphore::new(0));
+    let resolver = Resolver::new(
+        CatalogBackend::new(
+            HoldCommittedWrite {
+                inner: peer.transport(),
+                key: request("ko", ReadSelection::Latest, Duration::from_secs(30))
+                    .scope()
+                    .catalog
+                    .key(),
+                entered: entered.clone(),
+                release: release.clone(),
+            },
+            CatalogLimits::default(),
+        )
+        .unwrap(),
+        Gate::new(false, true),
+        Builder,
+        ResolverConfig::default(),
+    )
+    .unwrap();
+    resolver
+        .resolve(
+            request("ko", ReadSelection::Latest, Duration::from_secs(30)),
+            deadline(),
+        )
+        .await
+        .unwrap();
+    tokio::time::timeout(Duration::from_secs(2), entered.acquire())
+        .await
+        .unwrap()
+        .unwrap()
+        .forget();
+    let report = resolver
+        .drain(Instant::now() + Duration::from_millis(40))
+        .await
+        .unwrap();
+    assert_eq!(report.unfinished_owners, 1);
+    assert_eq!(resolver.metrics().active_maintenance, 1);
+    assert!(matches!(
+        resolver
+            .resolve(
+                request("en", ReadSelection::Latest, Duration::from_secs(30)),
+                deadline()
+            )
+            .await,
+        Err(server2::resolver::Error::Draining)
+    ));
+    release.add_permits(1);
+    maintenance_idle(&resolver).await;
+    assert_eq!(resolver.metrics().maintenance_failed, 1);
+    assert_eq!(resolver.metrics().operation_bytes, 0);
+    assert_eq!(
+        resolver.drain(deadline()).await.unwrap().unfinished_owners,
+        0
+    );
+}
+#[tokio::test]
+async fn correction_a1_foreground_recovery_sent_commit_is_ambiguous_and_invalidates_reuse() {
+    let peer = Peer::new();
+    seed(&peer, 1, 10).await;
+    let entered = Arc::new(Semaphore::new(0));
+    let release = Arc::new(Semaphore::new(0));
+    let ko = request("ko", ReadSelection::Latest, Duration::from_secs(30));
+    let resolver = Resolver::new(
+        CatalogBackend::new(
+            HoldCommittedWrite {
+                inner: peer.transport(),
+                key: ko.scope().catalog.key(),
+                entered: entered.clone(),
+                release: release.clone(),
+            },
+            CatalogLimits::default(),
+        )
+        .unwrap(),
+        Gate::new(false, true),
+        Builder,
+        ResolverConfig {
+            deadline: Duration::from_secs(1),
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    let old = resolver.resolve(ko.clone(), deadline()).await.unwrap();
+    maintenance_idle(&resolver).await;
+    peer.fault("forget", &ko.scope().catalog.key()).await;
+    orphan(&peer, acquisition(2, 20)).await;
+    let foreground = {
+        let r = resolver.clone();
+        tokio::spawn(async move {
+            r.resolve(
+                request("en", ReadSelection::Latest, Duration::from_secs(30)),
+                deadline(),
+            )
+            .await
+        })
+    };
+    tokio::time::timeout(Duration::from_secs(2), entered.acquire())
+        .await
+        .unwrap()
+        .unwrap()
+        .forget();
+    let hits = resolver.metrics().hits;
+    let foreground_io = resolver.metrics().foreground_io;
+    let current = resolver.resolve(ko.clone(), deadline()).await.unwrap();
+    assert_eq!(
+        resolver.metrics().hits,
+        hits,
+        "possibly sent foreground recovery invalidates old locale reuse before PUT"
+    );
+    assert!(
+        resolver.metrics().foreground_io > foreground_io,
+        "returned bytes must be newly checked, not the old map entry"
+    );
+    // The first union restored group 1; group 2 may still be orphaned. Equal old bytes are a
+    // legitimate checked snapshot and do not prove the cache was wrongly reused.
+    assert!(
+        String::from_utf8_lossy(current.bytes()).contains("10")
+            || String::from_utf8_lossy(current.bytes()).contains("20")
+    );
+    assert!(String::from_utf8_lossy(old.bytes()).contains("10"));
+    assert!(
+        matches!(
+            foreground.await.unwrap(),
+            Err(server2::resolver::Error::Storage(
+                server2::storage::Error::Ambiguous
+            ))
+        ),
+        "post-commit response loss is not a plain prewrite Timeout"
+    );
+    until(|| resolver.metrics().active_owners == 0).await;
+    let hits = resolver.metrics().hits;
+    resolver.resolve(ko, deadline()).await.unwrap();
+    assert_eq!(
+        resolver.metrics().hits,
+        hits,
+        "uncertain owner completion invalidates intervening admissions"
+    );
+    maintenance_idle(&resolver).await;
+}
 fn deadline() -> Instant {
     Instant::now() + Duration::from_secs(3)
 }
@@ -279,6 +993,7 @@ async fn real_http_cold_restore_warm_and_exact_labels_use_no_provider() {
     let resolver = make_resolver(&peer, gate.clone(), ResolverConfig::default());
     let r = request("ko", ReadSelection::Latest, Duration::from_secs(30));
     let cold = resolver.resolve(r.clone(), deadline()).await.unwrap();
+    maintenance_idle(&resolver).await;
     let count = peer.requests().await;
     let warm = resolver.resolve(r, deadline()).await.unwrap();
     assert_eq!(cold.bytes(), warm.bytes());
@@ -432,6 +1147,17 @@ async fn until(condition: impl Fn() -> bool) {
     })
     .await
     .expect("milestone did not occur");
+}
+async fn maintenance_idle<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder>(
+    r: &Resolver<T, A, V>,
+) {
+    tokio::time::timeout(Duration::from_secs(4), async {
+        while r.metrics().active_maintenance != 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("bounded maintenance did not finish");
 }
 #[tokio::test]
 async fn unrelated_periods_in_one_catalog_neither_poison_selection_nor_create_a_global_empty_claim()
@@ -752,7 +1478,7 @@ impl CatalogTransport for MissingDescriptor {
         k: &str,
         m: usize,
     ) -> Result<ControlObject, server2::storage::Error> {
-        if k == self.key && self.reads.fetch_add(1, Ordering::SeqCst) == 2 {
+        if k == self.key && self.reads.fetch_add(1, Ordering::SeqCst) == 0 {
             return Err(server2::storage::Error::NotFound);
         }
         self.inner.get_control(k, m).await

@@ -10,7 +10,7 @@ S06 reconstructs checked raw acquisitions but does not supply response caching, 
 
 Future assemblers consume exact response identities: route, API version, location, locale, units, output parameters and parser revision. Operators can inspect cache, admission, shared-flight and drain metrics. All implementation assets belong under `server2/`; no SQLite, disk serving store, MongoDB, shared-instance cache or persisted normalized weather is introduced.
 
-Exact geocode coordinate and address queries are volatile only, with an explicit validity policy capped at 30 days. They do not authorize archival projections. Persistent coarse projections and actual geocoder label/privacy proof remain S10 responsibilities.
+S07 delivers geocode key identity/privacy only; a geocode value cache and actual boundary-sensitive label parity remain explicitly deferred to S10. Exact geocode coordinate and address queries are volatile only, with an explicit validity policy capped at 30 days. They do not authorize archival projections. Persistent coarse projections and actual geocoder label/privacy proof remain S10 responsibilities.
 
 Owned work survives the initiating waiter's cancellation, while every waiter keeps its own deadline. New data must complete raw, descriptor and catalog publication before response assembly. Incomplete, corrupt, capacity-exhausted and timed-out recovery never permits a provider call. The S08 funding seam is abstract; recorded callbacks do not prove real funding integration.
 
@@ -32,3 +32,9 @@ No new accounts, settings, permission changes, secrets, live AWS/provider/Mongo/
 Byte accounting is logical, not a hard RSS bound; assembler allocation and existing S05/S06 scratch remain separately bounded contracts. The response cache serves memory hits. The raw tier currently retains validated identities after S06 reads; it does not bypass S3 GETs. The parsed tier reuses checked acquisition parsing.
 
 History coverage applies to the caller's finite period scope. Selected acquisitions keep all ordered pages; they cannot be folded as complete history. Page-size-one traversal re-normalizes S06 metadata and may exhaust bounds on mature catalogs. No cold latency improvement, AWS performance, actual geocoder labels or used-route parity is claimed. S08/S09/S10 keep their later integration gates. No additional AK decision is needed for this internal scope.
+
+## Selected independent review corrections
+
+Actual Claude review1 on7f8c1cf2 requires: checked concurrent work must survive unrelated global invalidation; optional raw/parsed retention must not strand valid bounded responses; healthy complete-catalog cold reads must avoid mandatory full-history repair. S07-R1/R2/R3 are selected, plus S07-R4 scope wording. Read-first serving authority is the confirmed complete publication catalog, not unindexed orphan bodies. A separate bounded owned maintenance lane verifies/indexes orphans without calling providers; incomplete recovery is never a synced-prefix/empty proof.
+
+The existing exact declaration is supplemented by [6047803555](https://github.com/WizardFactory/TodayWeather/issues/2692#issuecomment-6047803555), adding only server2/src/storage/catalog.rs for index-only repair while preserving existing full repair behavior. All other authority/route gates remain unchanged.
