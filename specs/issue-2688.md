@@ -20,7 +20,13 @@ The provider listener serves copied repository fixtures byte-for-byte after
 checking their pinned SHA-256. Copy is one-time with provenance; runtime reads
 only server2-owned data. No provider key appears in Git except obvious local dummy
 credentials. The launcher gives child Rust only approved local configuration,
-starts no legacy process, and writes ready endpoints/PIDs to a task-owned temp file.
+starts no legacy process, and publishes complete ready endpoints/PIDs atomically
+to an absent file in a private task-owned temporary directory. A reader opening
+the file as soon as it appears must receive complete JSON without decode retries.
+Write the JSON to a same-directory temporary file first, then use no-replace
+publication; existing regular files, symlinks and dangling symlinks must remain
+untouched. Failure cleans owned temporary files and child/listeners; normal stop
+removes the ready path only while it still identifies the owned inode.
 Shutdown signals only owned children and bounds the wait/kill fallback. Foundation
 only serves health/metrics; it does not query these peers until later route ports.
 

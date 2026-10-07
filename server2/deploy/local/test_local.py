@@ -4,10 +4,15 @@ import concurrent.futures
 import hashlib
 import http.client
 import json
+import io
+import os
 import socket
 import time
 from pathlib import Path
 import threading
+import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -162,6 +167,103 @@ class LocalContract(unittest.TestCase):
     def test_bad_config_never_binds_external(self):
         invalid=dict(self.config,bind='0.0.0.0')
         with self.assertRaises(ValueError):make_peer('s3',invalid)
+
+
+class ReadyPublication(unittest.TestCase):
+    def run_launcher(self, directory, dump_hook, link_hook=None):
+        import stack
+        child=SimpleNamespace(pid=424242,stdout=io.StringIO('server2 public=127.0.0.1:12345 metrics=127.0.0.1:12346\n'),returncode=None)
+        child.poll=lambda:child.returncode
+        child.terminate=lambda:setattr(child,'returncode',0)
+        child.kill=child.terminate
+        child.wait=lambda **_:child.returncode
+        callbacks={}; peers=[];original_peer=stack.make_peer
+        def make(*args):
+            peer=original_peer(*args);peers.append(peer);return peer
+        def dump(data,stream,**kwargs):
+            dump_hook(data,stream,**kwargs)
+            callbacks[stack.signal.SIGTERM]()
+        try:
+            with patch.object(stack,'binary_path',return_value=OWNED/'target/release/server2'),patch.object(stack.subprocess,'Popen',return_value=child),patch.object(stack.signal,'signal',side_effect=lambda kind,fn:callbacks.update({kind:lambda:fn(None,None)})),patch.object(stack,'probe',side_effect=lambda _,path:b'OK' if path=='/health' else b'metrics'),patch.object(stack,'make_peer',side_effect=make),patch.object(stack.json,'dump',side_effect=dump):
+                if link_hook:
+                    with patch.object(stack.os,'link',side_effect=link_hook):result=stack.run(SimpleNamespace(binary='ignored',ready=str(Path(directory)/'ready.json')))
+                else:result=stack.run(SimpleNamespace(binary='ignored',ready=str(Path(directory)/'ready.json')))
+        finally:
+            self.assertEqual(child.returncode,0)
+            for peer in peers:
+                with socket.socket() as client:
+                    client.settimeout(.3);self.assertNotEqual(client.connect_ex(peer.server_address),0)
+        return result
+
+    def test_ready_is_complete_at_first_visible_open(self):
+        original_dump=json.dump;original_link=os.link;observed=[]
+        with tempfile.TemporaryDirectory(prefix='server2-s03-') as directory:
+            ready=Path(directory)/'ready.json'
+            def dump(data,stream,**kwargs):
+                # An immediate consumer must never see a partially written ready.
+                if ready.exists():observed.append(json.loads(ready.read_text()))
+                original_dump(data,stream,**kwargs)
+            def link(source,target,**kwargs):
+                original_link(source,target,**kwargs)
+                observed.append(json.loads(ready.read_text()))
+            self.assertEqual(self.run_launcher(directory,dump,link),0)
+            self.assertEqual(len(observed),1)
+            self.assertEqual(observed[0]['foundation_pid'],424242)
+            self.assertFalse(ready.exists());self.assertEqual(list(Path(directory).iterdir()),[])
+
+
+    def test_racing_existing_ready_entries_are_preserved(self):
+        original_dump=json.dump
+        for kind in ['regular','symlink','dangling-symlink']:
+            with self.subTest(kind=kind),tempfile.TemporaryDirectory(prefix='server2-s03-') as directory:
+                ready=Path(directory)/'ready.json';sentinel=Path(directory)/'sentinel'
+                if kind!='dangling-symlink':sentinel.write_text('foreign sentinel')
+                def dump(data,stream,**kwargs):
+                    original_dump(data,stream,**kwargs)
+                    if kind=='regular':ready.write_text('foreign ready')
+                    else:ready.symlink_to(sentinel)
+                with self.assertRaises(FileExistsError):self.run_launcher(directory,dump)
+                self.assertEqual(list(Path(directory).glob('.ready-*')),[])
+                if kind=='regular':self.assertEqual(ready.read_text(),'foreign ready')
+                else:self.assertTrue(ready.is_symlink());self.assertEqual(os.readlink(ready),str(sentinel))
+                if sentinel.exists():self.assertEqual(sentinel.read_text(),'foreign sentinel')
+
+    def test_failed_writes_links_and_post_link_cleanup_retire_owned_artifacts(self):
+        import stack
+        original_dump=json.dump;original_remove=stack.remove_owned
+        for kind in ['serialization','link','post-link-cleanup']:
+            with self.subTest(kind=kind),tempfile.TemporaryDirectory(prefix='server2-s03-') as directory:
+                ready=Path(directory)/'ready.json';failed=[False]
+                def dump(data,stream,**kwargs):
+                    if kind=='serialization':
+                        stream.write('{partial')
+                        raise OSError('injected serialization failure')
+                    original_dump(data,stream,**kwargs)
+                def link(*_,**__):raise OSError('unsupported/injected hardlink failure')
+                def remove(path,identity):
+                    if kind=='post-link-cleanup' and path.name.startswith('.ready-') and not failed[0]:
+                        failed[0]=True
+                        raise OSError('injected temporary cleanup failure')
+                    return original_remove(path,identity)
+                with patch.object(stack,'remove_owned',side_effect=remove),self.assertRaises(OSError):
+                    self.run_launcher(directory,dump,link if kind=='link' else None)
+                self.assertFalse(ready.exists());self.assertEqual(list(Path(directory).iterdir()),[])
+
+    def test_shutdown_preserves_a_replaced_or_symlink_ready(self):
+        original_dump=json.dump;original_link=os.link
+        for kind in ['regular','symlink']:
+            with self.subTest(kind=kind),tempfile.TemporaryDirectory(prefix='server2-s03-') as directory:
+                ready=Path(directory)/'ready.json';sentinel=Path(directory)/'sentinel';sentinel.write_text('foreign sentinel')
+                def link(source,target,**kwargs):
+                    original_link(source,target,**kwargs)
+                    ready.unlink()
+                    if kind=='regular':ready.write_text('replacement ready')
+                    else:ready.symlink_to(sentinel)
+                self.assertEqual(self.run_launcher(directory,original_dump,link),0)
+                self.assertEqual(list(Path(directory).glob('.ready-*')),[])
+                self.assertEqual(ready.read_text(),'replacement ready' if kind=='regular' else 'foreign sentinel')
+                self.assertEqual(sentinel.read_text(),'foreign sentinel')
+                if kind=='symlink':self.assertTrue(ready.is_symlink())
 
 
 class StagingContract(unittest.TestCase):

@@ -8,6 +8,7 @@ from pathlib import Path
 import queue
 import re
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -31,6 +32,41 @@ def ready_path(value):
     if parent.stat().st_mode & 0o077 or path.exists() or path.is_symlink():
         raise ValueError('ready directory must be private and ready file absent')
     return path
+
+
+def remove_owned(path, identity):
+    """Remove only the regular file with the owned (device, inode) identity."""
+    try: info = path.lstat()
+    except FileNotFoundError: return False
+    if stat.S_ISREG(info.st_mode) and (info.st_dev, info.st_ino) == identity:
+        path.unlink()
+        return True
+    return False
+
+
+def publish_ready(ready, data):
+    """Expose complete JSON atomically without replacing an existing target."""
+    fd, name = tempfile.mkstemp(prefix='.ready-', suffix='.json', dir=ready.parent)
+    temporary = Path(name)
+    info = os.fstat(fd); identity = (info.st_dev, info.st_ino)
+    linked = False
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            json.dump(data, stream, indent=2)
+            stream.write('\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Same directory/filesystem; link fails if any target entry exists,
+        # including a symlink. No overwrite/replace fallback is permitted.
+        os.link(temporary, ready, follow_symlinks=False)
+        linked = True
+        remove_owned(temporary, identity)
+        return identity
+    except BaseException:
+        if linked: remove_owned(ready, identity)
+        raise
+    finally:
+        remove_owned(temporary, identity)
 
 
 def probe(addr,path):
@@ -71,8 +107,7 @@ def run(args):
         data=dict(endpoints,public_endpoint='http://127.0.0.1:'+match[1],metrics_endpoint='http://127.0.0.1:'+match[2],
                   bucket=config['bucket'],test_access_key=config['test_access_key'],test_secret_key=config['test_secret_key'],
                   region='us-east-1',stack_pid=os.getpid(),foundation_pid=child.pid,capability='test-subset; no SigV4 crypto, IAM, TLS, disk durability or AWS latency')
-        with ready.open('x') as stream:json.dump(data,stream,indent=2);stream.write('\n')
-        identity=ready.stat().st_ino
+        identity=publish_ready(ready,data)
         print(json.dumps({'ready':str(ready),'endpoints':endpoints,'foundation_pid':child.pid}),flush=True)
         while not stopped.wait(.2):
             if child.poll() is not None:raise RuntimeError('foundation stopped unexpectedly')
@@ -86,7 +121,7 @@ def run(args):
             child.stdout.close()
         for peer in peers:peer.shutdown();peer.server_close()
         for thread in threads:thread.join(timeout=3)
-        if identity is not None and ready.exists() and not ready.is_symlink() and ready.stat().st_ino==identity:ready.unlink()
+        if identity is not None:remove_owned(ready,identity)
 
 
 def main():

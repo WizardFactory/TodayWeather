@@ -36,6 +36,22 @@ python3 deploy/local/stack.py --binary target/release/server2 --ready "$S03_DIR/
 ```
 
 Read `ready.json` from a second terminal for the local endpoints and dummy keys.
+It becomes visible only after a complete JSON file is written and flushed in the
+same private directory, then atomically hard-linked with no replacement. The first
+open must parse complete JSON; do not retry JSON decode failures to hide a race.
+An existing file, symlink or dangling symlink is preserved and startup fails.
+Unsupported hard links fail closed; there is no overwrite/replace fallback.
+Ordinary write/publication failure cleans owned temporary files and processes.
+Normal stop removes the ready file only if its regular-file device/inode still
+matches this launch; a replacement entry is preserved.
+
+The additional release-launcher observation check opens readiness immediately
+when available for 12 independent starts, without decode retries, and verifies
+health plus owned process, port, ready and temporary-file cleanup for each start:
+
+```sh
+python3 deploy/local/smoke.py --binary target/release/server2 --ready-observations 12
+```
 Ctrl-C/SIGTERM stops only the owned foundation child and peers. Remove the now
 empty task directory after stop. Ready paths must be absent, under a private task
 temporary directory; the launcher refuses external/non-owned binaries. Bind/startup
@@ -43,7 +59,8 @@ failure exits nonzero and cleans owned children; stop does not contact productio
 Never use this test stack as a public server or point it at production credentials.
 
 SIGKILL or a hard launcher crash bypasses cleanup: the Rust child may survive and
-ready.json may remain. A ready file is not proof of a live/current launcher.
+ready.json or a private `.ready-*` temporary file may remain. A ready file is not
+proof of a live/current launcher.
 Before recovery, record its launcher/foundation PIDs and endpoints. Use a process
 listing (for example `ps -p <foundation_pid> -o pid,ppid,lstart,command`) to confirm
 the child is the exact owned release binary from this run, with the expected
@@ -51,7 +68,8 @@ start time; never kill a PID solely because it appears in a stale ready file.
 Send SIGTERM only to that confirmed child, wait for exit, and confirm all recorded
 loopback listeners are closed. If identity cannot be established, stop and inspect
 manually. Only after confirming this run is stopped, remove its own stale ready
-file and empty temporary directory, then start with a fresh absent ready path.
+file and this run's private temporary files/directory, then start with a fresh
+absent ready path.
 The launcher implements normal-signal cleanup, not parent-death supervision.
 
 ## Local S3 subset

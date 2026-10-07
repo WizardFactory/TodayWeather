@@ -6,6 +6,7 @@ import gzip
 import hashlib
 import http.client
 import json
+import os
 from pathlib import Path
 import socket
 import subprocess
@@ -28,20 +29,65 @@ def call(endpoint,method,path,body=None,headers=None):
     finally:client.close()
 
 
+def read_ready_once(ready, process, log):
+    deadline=time.monotonic()+8
+    while time.monotonic()<deadline:
+        try:
+            # Retry absence only: a visible but invalid JSON is a real failure.
+            with ready.open() as stream:return json.load(stream)
+        except FileNotFoundError:
+            if process.poll() is not None:raise RuntimeError(log.read_text())
+            time.sleep(.0005)
+    raise RuntimeError('local stack readiness timeout')
+
+
+def assert_stopped(process, data, ready):
+    assert process.wait(timeout=9)==0
+    assert not ready.exists() and not ready.is_symlink()
+    assert not list(ready.parent.glob('.ready-*'))
+    try:os.kill(data['foundation_pid'],0)
+    except ProcessLookupError:pass
+    else:raise AssertionError('foundation survived stack shutdown')
+    for name in ['s3_endpoint','provider_endpoint','public_endpoint','metrics_endpoint']:
+        target=urlsplit(data[name])
+        with socket.socket() as client:
+            client.settimeout(1);assert client.connect_ex((target.hostname,target.port))!=0
+
+
+def observe_ready(binary, iterations):
+    lengths=[];elapsed=[]
+    for _ in range(iterations):
+        with tempfile.TemporaryDirectory(prefix='server2-s03-') as directory:
+            ready=Path(directory)/'ready.json';log=Path(directory)/'stack.log'
+            with log.open('w') as output:
+                process=subprocess.Popen([sys.executable,str(OWNED/'deploy/local/stack.py'),'--binary',binary,'--ready',str(ready)],stdout=output,stderr=subprocess.STDOUT)
+                try:
+                    data=read_ready_once(ready,process,log)
+                    assert data['stack_pid']==process.pid
+                    assert call(data['public_endpoint'],'GET','/health')[0]==200
+                    lengths.append(ready.stat().st_size)
+                    started=time.monotonic();process.terminate();assert_stopped(process,data,ready)
+                    elapsed.append(round(time.monotonic()-started,3))
+                finally:
+                    if process.poll() is None:
+                        process.terminate()
+                        try:process.wait(timeout=9)
+                        except subprocess.TimeoutExpired:process.kill();process.wait(timeout=2)
+    print(json.dumps({'result':'PASS','scenario':'actual release launcher first-visible-open observations','iterations':iterations,'complete_json_on_first_open':True,'decode_retries':0,'ready_bytes':lengths,'drain_seconds':elapsed,'owned_processes_ports_tempfiles_retired':True,'aws_measurement':False},indent=2))
+    return 0
+
+
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--binary',default='target/release/server2');args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--binary',default='target/release/server2');parser.add_argument('--ready-observations',type=int,default=0);args=parser.parse_args()
+    if not 0 <= args.ready_observations <= 32:parser.error('--ready-observations must be 0..32')
+    if args.ready_observations:return observe_ready(args.binary,args.ready_observations)
     with tempfile.TemporaryDirectory(prefix='server2-s03-') as directory:
         ready=Path(directory)/'ready.json';log=Path(directory)/'stack.log'
         with log.open('w') as output:
             process=subprocess.Popen([sys.executable,str(OWNED/'deploy/local/stack.py'),'--binary',args.binary,'--ready',str(ready)],stdout=output,stderr=subprocess.STDOUT)
             data=None
             try:
-                deadline=time.monotonic()+8
-                while not ready.exists() and time.monotonic()<deadline:
-                    if process.poll() is not None:raise RuntimeError(log.read_text())
-                    time.sleep(.05)
-                if not ready.exists():raise RuntimeError('local stack readiness timeout')
-                data=json.loads(ready.read_text());auth={'X-Server2-Test-Key':data['test_access_key']}
+                data=read_ready_once(ready,process,log);auth={'X-Server2-Test-Key':data['test_access_key']}
                 status,headers,body=call(data['public_endpoint'],'GET','/health');assert status==200 and body==b'OK' and headers['access-control-allow-origin']=='*'
                 assert call(data['public_endpoint'],'GET','/internal/metrics')[0]==404
                 status,headers,_=call(data['metrics_endpoint'],'GET','/internal/metrics');assert status==200 and 'access-control-allow-origin' not in headers
@@ -68,16 +114,8 @@ def main():
                 else:raise AssertionError('injected response loss not observed')
                 assert call(data['s3_endpoint'],'GET','/'+data['bucket']+'/raw/v2/kma/drop',headers=auth)[2]==compressed
                 started=time.monotonic();process.terminate();assert process.wait(timeout=9)==0
-                elapsed=time.monotonic()-started;assert not ready.exists()
-                # Foundation child and both peer ports must be gone after stop.
-                try:__import__('os').kill(data['foundation_pid'],0)
-                except ProcessLookupError:pass
-                else:raise AssertionError('foundation survived stack shutdown')
-                for endpoint in [data[x] for x in ['s3_endpoint','provider_endpoint','public_endpoint','metrics_endpoint']]:
-                    target=urlsplit(endpoint)
-                    with socket.socket() as client:
-                        client.settimeout(1);assert client.connect_ex((target.hostname,target.port))!=0
-                print(json.dumps({'result':'PASS','scenarios':['health/metrics isolation','recorded provider exact bytes','conditional raw PUT and HEAD/GET','unknown endpoint/credential rejection','committed500/drop reconciliation','owned SIGTERM cleanup'],'raw_sha256':hashlib.sha256(raw).hexdigest(),'gzip_bytes':len(compressed),'drain_seconds':round(elapsed,3),'outbound_proxy':'absent','aws_measurement':False},indent=2))
+                elapsed=time.monotonic()-started;assert_stopped(process,data,ready)
+                print(json.dumps({'result':'PASS','scenarios':['complete ready JSON on first visible open','health/metrics isolation','recorded provider exact bytes','conditional raw PUT and HEAD/GET','unknown endpoint/credential rejection','committed500/drop reconciliation','owned SIGTERM cleanup'],'raw_sha256':hashlib.sha256(raw).hexdigest(),'gzip_bytes':len(compressed),'drain_seconds':round(elapsed,3),'outbound_proxy':'absent','aws_measurement':False},indent=2))
                 return 0
             finally:
                 if process.poll() is None:
