@@ -1,0 +1,21 @@
+{
+  "pages": 3,
+  "schema": 1,
+  "task": "S07",
+  "date": "2026-10-08",
+  "command": "python3 tests/storage/catalog_peer.py --smoke target/release/examples/resolver_smoke",
+  "environment": "Rust1.99/macOS, public Python loopback peer",
+  "scope": "Checked cold/warm/owned flight/drain HTTP, not AWS/auth/performance/API parity",
+  "captured_stdout": [
+    "cold/warm: checked fixture bytes identical; warm S3/provider calls = 0",
+    "history: all scoped revisions retained; whole ordered pages preserved",
+    "singleflight/drain: cancelled initiator detached; one recorded acquisition; complete durable group before response",
+    "pressure: evicted pin stays charged; last-owner drop releases capacity",
+    "metrics: hits=1, shared=1, acquisitions=1, publications=1, owners=0, cache_bytes=11366",
+    "PASS local real HTTP resolver smoke (81.33 ms); no AWS/provider/route parity claim"
+  ],
+  "binary_sha256": "26080b7bf6e2aca78d856f03c593c5a9f8e8d59380c16f677cb24bf9904a5c2c",
+  "source_sha256": "6227707f0948e80bd9c7113a22384d4a6cc4b0b01405e19ed61bd3bf193a7c47",
+  "pdf_sha256": "f0df2a30fed50a922e502ba8e7edf7828d60e3e20efebda167316e0deaf17cd8",
+  "screenshot_sha256": "4b5570544d9d3816ef165a429c47bef275f5b98383b3ad1de4d7dc5d57588372"
+}

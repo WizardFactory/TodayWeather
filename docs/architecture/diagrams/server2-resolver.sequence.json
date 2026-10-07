@@ -1,0 +1,262 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed S07 bounded resolver contract",
+    "output": "docs/architecture/diagrams/server2-resolver.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "94019cf5460a898bdb315ca7a443e879770e79ce",
+      "provider": "github",
+      "link_mode": "web"
+    }
+  },
+  "participants": [
+    {
+      "id": "request",
+      "type": "external",
+      "label": "Caller",
+      "sublabel": "exact typed key",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 185,
+          "end_line": 193
+        }
+      ]
+    },
+    {
+      "id": "resolver",
+      "type": "backend",
+      "label": "Resolver",
+      "sublabel": "owned bounded job",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 205,
+          "end_line": 213
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "type": "database",
+      "label": "Memory",
+      "sublabel": "leased Arc values",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 180,
+          "end_line": 188
+        }
+      ]
+    },
+    {
+      "id": "archive",
+      "type": "cloud",
+      "label": "S3 records",
+      "sublabel": "complete fetch groups",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 286,
+          "end_line": 294
+        }
+      ]
+    },
+    {
+      "id": "acquire",
+      "type": "backend",
+      "label": "Acquirer",
+      "sublabel": "funded callback",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 609,
+          "end_line": 617
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 325,
+      "label": "Cold lookup and owned work"
+    },
+    {
+      "from": 335,
+      "to": 615,
+      "label": "Optional funded acquisition and durable publication"
+    },
+    {
+      "from": 625,
+      "to": 875,
+      "label": "Assembly, admission and warm response"
+    }
+  ],
+  "messages": [
+    {
+      "id": "step-1",
+      "from": "request",
+      "to": "resolver",
+      "y": 160,
+      "label": "Resolve exact request",
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-2",
+      "from": "resolver",
+      "to": "memory",
+      "y": 200,
+      "label": "Read fresh full-key result",
+      "variant": "default"
+    },
+    {
+      "id": "step-3",
+      "from": "memory",
+      "to": "resolver",
+      "y": 240,
+      "label": "Cold miss",
+      "variant": "return"
+    },
+    {
+      "id": "step-5",
+      "from": "resolver",
+      "to": "archive",
+      "y": 320,
+      "label": "Read scoped pages or exact group",
+      "variant": "default",
+      "note": "Resolver owns shared bounded work; cancellation of one waiter does not abort it. Subset is not full history."
+    },
+    {
+      "id": "step-6",
+      "from": "archive",
+      "to": "resolver",
+      "y": 360,
+      "label": "Verified complete records or proved empty",
+      "variant": "return",
+      "note": "Incomplete, Capacity and Timeout are never provider misses."
+    },
+    {
+      "id": "step-7",
+      "from": "resolver",
+      "to": "acquire",
+      "y": 400,
+      "label": "Only proved empty: funded acquisition",
+      "variant": "security",
+      "note": "S08 funds the full provider-attempt chain before HTTP."
+    },
+    {
+      "id": "step-8",
+      "from": "acquire",
+      "to": "resolver",
+      "y": 440,
+      "label": "Ordered raw pages and declaration",
+      "variant": "return"
+    },
+    {
+      "id": "step-9",
+      "from": "resolver",
+      "to": "archive",
+      "y": 480,
+      "label": "Publish raw and every sibling catalog",
+      "variant": "emphasis",
+      "note": "The optional new-data branch must be durable before new success."
+    },
+    {
+      "id": "step-10",
+      "from": "archive",
+      "to": "resolver",
+      "y": 520,
+      "label": "Complete group acknowledged",
+      "variant": "return"
+    },
+    {
+      "id": "step-12",
+      "from": "resolver",
+      "to": "memory",
+      "y": 600,
+      "label": "Admit immutable views and dependencies",
+      "variant": "default",
+      "note": "Resolver bounds parsing and assembly before admission. Excluded groups reject response caching; pins retain their charge."
+    },
+    {
+      "id": "step-13",
+      "from": "memory",
+      "to": "resolver",
+      "y": 640,
+      "label": "Byte leases retained or cache bypass",
+      "variant": "return"
+    },
+    {
+      "id": "step-14",
+      "from": "resolver",
+      "to": "request",
+      "y": 680,
+      "label": "Return checked response bytes",
+      "variant": "return"
+    },
+    {
+      "id": "step-15",
+      "from": "request",
+      "to": "resolver",
+      "y": 720,
+      "label": "Repeat within freshness",
+      "variant": "default"
+    },
+    {
+      "id": "step-16",
+      "from": "resolver",
+      "to": "memory",
+      "y": 760,
+      "label": "Read exact key and dependencies",
+      "variant": "default"
+    },
+    {
+      "id": "step-17",
+      "from": "memory",
+      "to": "resolver",
+      "y": 800,
+      "label": "Fresh complete result",
+      "variant": "return"
+    },
+    {
+      "id": "step-18",
+      "from": "resolver",
+      "to": "request",
+      "y": 840,
+      "label": "Same bytes; no acquisition",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Serving correctness",
+      "items": [
+        "Memory, then bounded S3 lookup, then only a proved-empty funded provider branch.",
+        "No new success before complete raw/group publication; active route parity remains a later gate."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Memory and cancellation",
+      "items": [
+        "Byte leases remain charged while any Arc is pinned; CPU and I/O work are separately bounded.",
+        "Shutdown rejects new work and drains owned jobs; no shared-instance cache or disk serving cache."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Privacy and scope",
+      "items": [
+        "Precise geocode history remains volatile; a coarse key cannot silently substitute a different label.",
+        "This is the design contract at S07 intake, not a deployed route or measured AWS latency."
+      ]
+    }
+  ]
+}

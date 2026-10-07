@@ -212,6 +212,39 @@ offset addressing and reclamation; normal Rust `Arc`/heap pointers cannot be
 used as interprocess pointers. This is an alternative, not initial implementation.
 Pack builders or push jobs may be isolated without splitting all API workers.
 
+### S07 resolver implementation contract
+
+After S06 merge [PR #2719](https://github.com/WizardFactory/TodayWeather/pull/2719),
+[S07 #2692](https://github.com/WizardFactory/TodayWeather/issues/2692) implements
+the internal resolver and bounded volatile cache; no public route is migrated.
+Its [request sequence](diagrams/server2-resolver.html) and
+[editable source](diagrams/server2-resolver.sequence.json) describe the proposed
+contract at intake, rather than deployed behavior or measured AWS latency.
+
+Typed request keys retain every output-affecting field. Cache values share byte
+leases whose charge survives eviction until the last pinned value is dropped.
+Network, CPU, queued work and retained results have separate bounded admission;
+cache weights alone do not claim a process RSS limit. No lock remains held across
+I/O or CPU awaits. Exact record/parser identities and monotonic TTLs govern reuse.
+
+Owned single-flight jobs survive cancellation of one HTTP waiter, share their
+original bounded deadline and drain policy, and never extend a later waiter's
+HTTP deadline. Resolver reads retain S06 coverage: a page or targeted acquisition
+is not full history. Only a complete finite caller-owned repair scope can prove
+a provider miss; Incomplete, Capacity and Timeout cannot authorize acquisition.
+
+An acquisition callback must obtain S08 funding before provider HTTP and return
+ordered raw pages plus their declaration. New response assembly follows S06
+complete-group publication. Undurable new data cannot enter a successful result
+cache. Excluded groups prevent response-cache admission, including descriptor
+absence that could change without a target catalog ETag. Published local revisions
+invalidate known dependencies; external changes use bounded revalidation.
+
+The geocode cache remains within section 6 privacy and exact-label constraints.
+A coarsened key alone does not prove label equivalence or provider-free precise
+reverse-geocode restoration. Cold/warm fixtures and owned-task failure scenarios
+are internal checks; used-API parity and activation remain later route gates.
+
 ## 4. S3 layout and catalog publication
 
 Use a private bucket, TLS, encryption and prefix-scoped least privilege. Never

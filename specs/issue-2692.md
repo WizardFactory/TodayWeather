@@ -1,0 +1,55 @@
+# S07 bounded resolver and memory cache contract
+
+Baseline `94019cf5`, [issue #2692](https://github.com/WizardFactory/TodayWeather/issues/2692). This is an internal library and verification example, not a weather/gateway port. The [placement declaration](https://github.com/WizardFactory/TodayWeather/issues/2692#issuecomment-6046142667) fixes 27 exact paths. Root owns the four shared architecture/plan paths.
+
+## Identity, privacy and indexes
+
+`ResponseKey` validates route, version, exact location semantics, locale, weather/air units, output parameters and parser revision. `ResolutionRequest` adds source/kind/entity/catalog, caller-owned finite periods, selection, page/byte limits and TTL/refresh policy. Its canonical fingerprint includes every field; later route adapters must reject unknown parameters rather than omit them. Precise request fingerprints remain volatile; hashing does not authorize archival storage.
+
+`GeocodeMemoryKey` keeps exact coordinate or address queries and locale in memory. Both coordinate and address keys reject archival projection authorization. No persistent geocode layout or actual provider label proof is implemented; those remain S10 gates, including cross-month validity. Request TTL is explicit, monotonic and capped at 30 days; route-specific shorter weather policies remain caller responsibilities.
+
+`RevisionIndex` preserves all revisions in fetch/full-hash order and uses binary `partition_point` ranges. `DomesticDay` provides 24 fixed KST slots, assigning the next date's 00:00 to the previous day. `WorldHours` orders UTC instants with explicit local dates/offsets, preserving 23/24/25-hour days and repeated fall-back wall hours. These are reusable in-memory helpers, not persisted views or claims of final route integration.
+
+## Memory accounting and cache behavior
+
+Sharded hash lookup is average O(1), with O(log n) local LRU updates/eviction. Cache values own byte leases until the final Arc drops, including pins retired by eviction. The trusted generic cache caller supplies the total retained key/value/metadata weight and separately bounds mutable allocations; concrete resolver insertions charge canonical identity, envelope/dependency metadata, payload and conservative overhead. Admission failure returns Capacity, without an unbounded fallback allocation.
+
+The default shared retained cache budget is 128 MiB, across raw, parsed and response tiers. The response tier serves warm responses without S3 or provider work. The raw tier currently retains checked records after S06 network reads for identity validation; it does not bypass raw GETs. Parsed acquisition entries reuse ordered raw identities plus parser revision, entirely in memory.
+
+Each admitted owner reserves 64 MiB by default, at most four owners; started S07 view/dependency blocking jobs retain that lease until completion even after owner/waiter timeout. The view pool defaults to two CPU permits. Dependency parsing, S06 catalog processing and S05 raw codec processing have separate bounded pools; two is not a global CPU limit. Network and storage decode retain their existing stream/object limits.
+
+Backend construction accepts only S06 default-or-smaller document, metadata, record and member bounds: 1 MiB control documents, 8 MiB retained controls, 32 MiB output, 8 MiB raw bodies, gzip up to 8 MiB plus 65,536 bytes, 128 members, 16 partitions and 2,048 catalog entries. Request materialization is at most 32 MiB across at most 64 pages; envelope metadata is counted too. Retained parsed output totals at most 8 MiB by default, response output at most 1 MiB. Trusted acquisition/view adapters must honor declared bounds without allocating unbounded scratch. These are logical limits, not a hard RSS guarantee; allocator overhead, copies and existing storage-layer scratch are explicitly separate.
+
+## Checked finite-scope backend
+
+`CatalogBackend` uses a shared transport and S06 checked publication/repair. Cold work repairs every prefix in the caller's finite period scope even when an index exists: a healthy catalog alone cannot prove no orphan. Only S06 `CompleteEmpty` for the exact owned catalog and period set permits acquisition. Indexed nonempty scopes proceed to bounded reads. Incomplete, corrupt, Capacity and Timeout never become provider-empty misses.
+
+Earliest/latest selection walks whole-acquisition pages until an acquisition intersects the requested periods. Exact targeted selection uses `lookup_acquisition`. FullHistory traverses to `next=None`, with stable target/dependency cohort, within the request's page/byte/deadline limits. It selects every acquisition intersecting the finite scope and retains every ordered page in each acquisition, including related pages outside that scope. Assemblers must extract the requested view. Unrelated periods are skipped; they do not silently turn a selected page into an empty proof.
+
+Private `CheckedInput` exposes borrowed raw views and scoped coverage. `require_full_history` rejects selected data. Full history means all checked revisions in the caller's finite period scope, not all records globally. Exhausted traversal returns a typed failure, never a shortened full-history merge. Page-size-one traversal re-normalizes S06 metadata on each page; no cold performance or asymptotic improvement is claimed. Exact targeted access remains available. S09/O01 retain measurement and optimization gates.
+
+## Cache freshness and publication
+
+Warm responses serve until the earlier of their TTL and refresh boundary, with zero S3/provider work. Refresh checks dependency generation, opaque ETag, version and explicit absent tokens. A change invalidates the response; known local publication uses immediate conservative global invalidation. External revisions become visible through bounded refresh, not instantaneous coherence.
+
+Known exclusions prevent response-map admission entirely. An excluded descriptor can appear without changing the target ETag; returning a separately charged uncached response avoids hiding that change. A transport/5xx refresh failure may use a previously complete unexpired memory result without extending its original TTL. Corruption is never this fallback. An overall deadline may still terminate refresh with Timeout.
+
+`FundedAcquirer` receives an opaque `AcquisitionRequest` and an owned `OperationContext` with absolute deadline and cooperative drain signal. It returns an ordered raw acquisition and complete group declaration, or a terminal typed error. The trusted S08 adapter must reserve maximum provider-unit funding before HTTP; S07 supplies no unfunded fallback and knows no quota/key arithmetic. Recorded callback tests do not prove real S08 funding composition.
+
+S07 validates namespace, owned period intersection and group membership, then S06 publishes all raw bodies, descriptor and sibling catalogs before checked reading/assembly. A publication error/uncertain outcome cannot create a successful new response. Full-history selection rereads bounded complete history after publication; `PublishedGroup` is never promoted to full history. No retroactive raw affiliation or S06 format change is introduced.
+
+## Ownership, deadlines and drain
+
+Each full resolution key has one owned Tokio operation, including repair, acquisition, publication and assembly. Default owner admission is four, waiter admission 128. No mutex is held across await. The fixed owner deadline, at most three seconds, starts at admission before spawning. Initiator cancellation or its shorter deadline detaches only that waiter; independent waiters cannot extend the owner deadline. Panic/task failure sets a terminal error and removes the flight.
+
+Drain stops new admission under the flight-map lock. Existing owners may finish within their original deadlines; expired drain signals cooperative cancellation and reports unfinished owners and view-builder jobs. The view-job count does not claim all backend/S05/S06 codec workers are drained. Started blocking work keeps its own permits/leases until actual completion; it cannot be forcibly aborted by Tokio. No migration or cache sharing with another host occurs.
+
+## Metrics, verification and exclusions
+
+Metrics expose response hits/misses/refreshes, shared flights, admission rejections, callback acquisitions, publications, cancelled waiters, total retained cache bytes, retired/pending bytes, operation reservations, active owners/waiters and view CPU jobs. Byte snapshots are observational and may be conservative during concurrent changes.
+
+Required evidence includes actual lease Red→Green, default-parallel cache/index/HTTP tests, an additional maintained release HTTP smoke, fmt/clippy/workspace/release/placement/artifact checks, editable manual/PDF/actual usage capture and actual root-dispatched eligible review. Setup failures are retained separately from intended regression failures.
+
+No live AWS authentication/performance, real provider request, production deployment, used-route parity, actual geocoder labels or provider quota proof is claimed. Existing S05/S06 regressions remain intact. The internal example changes no middleware, route or API contract.
+
+Primary sources checked 2026-10-08: [Tokio semaphore](https://docs.rs/tokio/latest/tokio/sync/struct.Semaphore.html), [spawn_blocking](https://docs.rs/tokio/latest/tokio/task/fn.spawn_blocking.html), [Rust Arc](https://doc.rust-lang.org/std/sync/struct.Arc.html), [partition_point](https://doc.rust-lang.org/std/primitive.slice.html#method.partition_point). Existing locked dependencies are retained.
