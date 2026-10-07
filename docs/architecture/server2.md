@@ -218,8 +218,9 @@ After S06 merge [PR #2719](https://github.com/WizardFactory/TodayWeather/pull/27
 [S07 #2692](https://github.com/WizardFactory/TodayWeather/issues/2692) implements
 the internal resolver and bounded volatile cache; no public route is migrated.
 Its [request sequence](diagrams/server2-resolver.html) and
-[editable source](diagrams/server2-resolver.sequence.json) describe the proposed
-contract at intake, rather than deployed behavior or measured AWS latency.
+[editable source](diagrams/server2-resolver.sequence.json) describe the internal implementation; they do not establish deployed route
+behavior or measured AWS latency. The [operations manual](../operations/server2-resolver.md)
+describes finite scopes, cache accounting and the local release example.
 
 Typed request keys retain every output-affecting field. Cache values share byte
 leases whose charge survives eviction until the last pinned value is dropped.
@@ -239,6 +240,29 @@ complete-group publication. Undurable new data cannot enter a successful result
 cache. Excluded groups prevent response-cache admission, including descriptor
 absence that could change without a target catalog ETag. Published local revisions
 invalidate known dependencies; external changes use bounded revalidation.
+
+Current defaults account for 128 MiB retained cache and four owners reserving
+64 MiB each, separately from 128 waiter admission. Concrete insertions charge
+keys, envelopes, dependency metadata and payload; generic cache callers must
+supply truthful total weights. These are logical leases, not hard RSS limits.
+The two-permit pool covers view builders; dependency parsing and S05/S06 codecs
+have separate bounded pools. Started view and dependency jobs retain operation
+leases after owner timeout. Drain reports unfinished owners and view jobs,
+not every storage codec worker.
+
+Cold reads repair only finite caller-owned prefixes, select whole acquisitions
+intersecting the period scope and preserve ordered pages. FullHistory must finish
+the private cursor; targeted reads cannot authorize absent-field history folds.
+The current raw cache retains checked identities after S06 network reads and
+does not bypass raw GETs. Parsed views reuse immutable acquisitions; fresh full
+response hits avoid S3 and provider work. Page-size-one full-history traversal
+repeats S06 descriptor normalization. S09/O01 must measure and optimize cold
+requests before claiming a latency improvement.
+
+Exact coordinate and address geocode keys are volatile only and reject archive
+authorization. A funded-acquirer callback and bounded view builder are trusted
+integration seams; S08 wiring, concrete provider schemas and public API assembly
+remain later tasks.
 
 The geocode cache remains within section 6 privacy and exact-label constraints.
 A coarsened key alone does not prove label equivalence or provider-free precise

@@ -2,14 +2,14 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "Proposed S07 bounded resolver contract",
+    "title": "S07 bounded memory resolver",
     "output": "docs/architecture/diagrams/server2-resolver.html",
     "locale": "en",
     "quality_profile": "showcase",
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "94019cf5460a898bdb315ca7a443e879770e79ce",
+      "revision": "e8d1ffddcdf484f4e44920f298697b606a9c4ebc",
       "provider": "github",
       "link_mode": "web"
     }
@@ -22,9 +22,9 @@
       "sublabel": "exact typed key",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 185,
-          "end_line": 193
+          "path": "server2/src/cache/keys.rs",
+          "line": 7,
+          "end_line": 95
         }
       ]
     },
@@ -35,9 +35,14 @@
       "sublabel": "owned bounded job",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 205,
-          "end_line": 213
+          "path": "server2/src/resolver/flight.rs",
+          "line": 275,
+          "end_line": 340
+        },
+        {
+          "path": "server2/src/resolver/flight.rs",
+          "line": 585,
+          "end_line": 623
         }
       ]
     },
@@ -48,9 +53,14 @@
       "sublabel": "leased Arc values",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 180,
-          "end_line": 188
+          "path": "server2/src/cache/memory.rs",
+          "line": 12,
+          "end_line": 79
+        },
+        {
+          "path": "server2/src/resolver/flight.rs",
+          "line": 197,
+          "end_line": 236
         }
       ]
     },
@@ -61,9 +71,19 @@
       "sublabel": "complete fetch groups",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 286,
-          "end_line": 294
+          "path": "server2/src/resolver/backend.rs",
+          "line": 287,
+          "end_line": 311
+        },
+        {
+          "path": "server2/src/resolver/backend.rs",
+          "line": 311,
+          "end_line": 404
+        },
+        {
+          "path": "server2/src/resolver/backend.rs",
+          "line": 432,
+          "end_line": 464
         }
       ]
     },
@@ -71,19 +91,19 @@
       "id": "acquire",
       "type": "backend",
       "label": "Acquirer",
-      "sublabel": "funded callback",
+      "sublabel": "trusted funded seam",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 609,
-          "end_line": 617
+          "path": "server2/src/resolver/mod.rs",
+          "line": 63,
+          "end_line": 103
         }
       ]
     }
   ],
   "segments": [
     {
-      "from": 150,
+      "from": 190,
       "to": 325,
       "label": "Cold lookup and owned work"
     },
@@ -148,7 +168,7 @@
       "y": 400,
       "label": "Only proved empty: funded acquisition",
       "variant": "security",
-      "note": "S08 funds the full provider-attempt chain before HTTP."
+      "note": "Only complete finite owned scope may acquire; S08 implementation is a separate seam."
     },
     {
       "id": "step-8",
@@ -246,8 +266,8 @@
       "dot": "amber",
       "title": "Memory and cancellation",
       "items": [
-        "Byte leases remain charged while any Arc is pinned; CPU and I/O work are separately bounded.",
-        "Shutdown rejects new work and drains owned jobs; no shared-instance cache or disk serving cache."
+        "Pinned byte leases retain their charge. View CPU pool and storage codec pools have separate bounds.",
+        "Owned waiter-independent tasks drain; reports count owners and view jobs, not every codec worker."
       ]
     },
     {
@@ -255,7 +275,7 @@
       "title": "Privacy and scope",
       "items": [
         "Precise geocode history remains volatile; a coarse key cannot silently substitute a different label.",
-        "This is the design contract at S07 intake, not a deployed route or measured AWS latency."
+        "Warm full responses avoid S3. Raw cache does not yet bypass GETs; cold costs need S09 measurement."
       ]
     }
   ]

@@ -87,7 +87,7 @@ and S05 raw-record storage ([PR #2712](https://github.com/WizardFactory/TodayWea
 are merged; the [integration record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6031101668)
 records the reviewed heads and resulting master tree. S06 is merged; its
 [integration record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6046074764)
-verifies the reviewed tree and authorizes the next scoped work.
+verifies the reviewed tree and records the next scoped work authorized by AK.
 S07 resolver/cache and S08 provider reservations can proceed in parallel after
 their S06 predecessor gate; read-only interface preparation does not complete it.
 Passing local checks do not imply complete route parity or deployed server2.
