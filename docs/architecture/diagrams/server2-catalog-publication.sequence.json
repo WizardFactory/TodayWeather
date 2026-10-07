@@ -88,12 +88,12 @@
     },
     {
       "from": 545,
-      "to": 815,
-      "label": "Read: admit complete groups only"
+      "to": 920,
+      "label": "Read: bounded, complete acquisitions"
     },
     {
-      "from": 845,
-      "to": 1190,
+      "from": 950,
+      "to": 1295,
       "label": "Repair missing or healthy catalogs"
     }
   ],
@@ -159,7 +159,7 @@
       "from": "group",
       "to": "caller",
       "y": 505,
-      "label": "Complete only after sibling validation",
+      "label": "Verify new group; then acknowledge",
       "variant": "security"
     },
     {
@@ -167,15 +167,15 @@
       "from": "caller",
       "to": "group",
       "y": 565,
-      "label": "Cold identity lookup",
+      "label": "Page / exact acquisition lookup",
       "variant": "default"
     },
     {
-      "id": "pin-siblings",
+      "id": "pin-target",
       "from": "group",
       "to": "catalog",
       "y": 620,
-      "label": "Pin all sibling snapshots",
+      "label": "Pin target + prior dependencies",
       "variant": "emphasis"
     },
     {
@@ -191,22 +191,46 @@
       "from": "group",
       "to": "descriptor",
       "y": 710,
-      "label": "GET / verify declaration",
+      "label": "GET / verify selected declaration",
       "variant": "default"
+    },
+    {
+      "id": "pin-selected-siblings",
+      "from": "group",
+      "to": "catalog",
+      "y": 755,
+      "label": "Pin selected group's siblings",
+      "variant": "emphasis"
+    },
+    {
+      "id": "read-selected-bodies",
+      "from": "group",
+      "to": "raw",
+      "y": 800,
+      "label": "GET / verify all selected bodies",
+      "variant": "emphasis"
+    },
+    {
+      "id": "read-selected-result",
+      "from": "raw",
+      "to": "group",
+      "y": 845,
+      "label": "Complete exact acquisition",
+      "variant": "return"
     },
     {
       "id": "group-admit",
       "from": "group",
       "to": "caller",
-      "y": 775,
-      "label": "Complete group or conservative exclusion",
+      "y": 890,
+      "label": "Scoped page; no whole-history claim",
       "variant": "security"
     },
     {
       "id": "repair-request",
       "from": "caller",
       "to": "group",
-      "y": 865,
+      "y": 970,
       "label": "Bounded orphan repair",
       "variant": "default"
     },
@@ -214,7 +238,7 @@
       "id": "raw-list",
       "from": "group",
       "to": "raw",
-      "y": 915,
+      "y": 1020,
       "label": "LIST every page + verify bodies",
       "variant": "emphasis"
     },
@@ -222,7 +246,7 @@
       "id": "raw-list-result",
       "from": "raw",
       "to": "group",
-      "y": 960,
+      "y": 1065,
       "label": "All pages or incomplete scan",
       "variant": "return"
     },
@@ -230,7 +254,7 @@
       "id": "repair-descriptor",
       "from": "group",
       "to": "descriptor",
-      "y": 1005,
+      "y": 1110,
       "label": "Verify declared members and pages",
       "variant": "default"
     },
@@ -238,7 +262,7 @@
       "id": "repair-cas",
       "from": "group",
       "to": "catalog",
-      "y": 1055,
+      "y": 1160,
       "label": "Complete scan: union + CAS",
       "variant": "emphasis"
     },
@@ -246,7 +270,7 @@
       "id": "repair-sibling",
       "from": "group",
       "to": "catalog",
-      "y": 1100,
+      "y": 1205,
       "label": "Re-pin and check all siblings",
       "variant": "default"
     },
@@ -254,8 +278,8 @@
       "id": "repair-return",
       "from": "group",
       "to": "caller",
-      "y": 1160,
-      "label": "Complete repair or incomplete outcome",
+      "y": 1265,
+      "label": "Checked data / indexed / incomplete",
       "variant": "security"
     }
   ],
@@ -265,7 +289,7 @@
       "title": "Durability gate",
       "items": [
         "Descriptor and bodies precede catalog CAS.",
-        "New success requires every declared partition.",
+        "New success verifies only the new complete group.",
         "No cross-object transaction is claimed."
       ]
     },
@@ -274,7 +298,7 @@
       "title": "Partial publication",
       "items": [
         "New A + old B excludes the incomplete group.",
-        "Keep preceding complete data or existing error.",
+        "Keep complete groups accessible through bounded pages.",
         "Raw bodies alone do not acknowledge a result."
       ]
     },
@@ -285,6 +309,15 @@
         "Only an exhausted, validated scan is complete.",
         "Healthy catalogs still need orphan reconciliation.",
         "Internal contract; no serving route is switched."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Read bounds",
+      "items": [
+        "A checked page is not whole-history coverage.",
+        "Targeted access avoids unrelated historical groups.",
+        "Capacity is separate from corrupt data."
       ]
     }
   ]

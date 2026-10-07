@@ -100,7 +100,7 @@ fn header<'a>(response: &'a Response, name: &str) -> Result<Option<&'a HeaderVal
     Ok(first)
 }
 
-fn response_length(response: &Response, kind: &str, cap: usize) -> Result<usize, Error> {
+fn response_length(response: &Response, kind: &str, cap: usize) -> Result<Option<usize>, Error> {
     let header_bytes: usize = response
         .headers()
         .iter()
@@ -116,24 +116,32 @@ fn response_length(response: &Response, kind: &str, cap: usize) -> Result<usize,
         return Err(Error::Corrupt("control content type"));
     }
     let length = header(response, "content-length")?
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.parse::<usize>().ok())
-        .ok_or(Error::Corrupt("control content length"))?;
-    if length > cap {
+        .map(|v| {
+            v.to_str()
+                .ok()
+                .and_then(|s| s.parse::<usize>().ok())
+                .ok_or(Error::Corrupt("control content length"))
+        })
+        .transpose()?;
+    if length.is_some_and(|length| length > cap) {
         return Err(Error::Corrupt("control document size"));
     }
     Ok(length)
 }
 
-async fn read_body(mut response: Response, length: usize, cap: usize) -> Result<Vec<u8>, Error> {
-    let mut body = Vec::new();
+async fn read_body(
+    mut response: Response,
+    length: Option<usize>,
+    cap: usize,
+) -> Result<Vec<u8>, Error> {
+    let mut body = Vec::with_capacity(length.unwrap_or(0));
     while let Some(chunk) = response.chunk().await.map_err(|_| Error::Transport)? {
         if chunk.len() > cap.saturating_sub(body.len()) {
             return Err(Error::Corrupt("control stream size"));
         }
         body.extend_from_slice(&chunk);
     }
-    if body.len() != length {
+    if length.is_some_and(|length| body.len() != length) {
         return Err(Error::Corrupt("control stream length"));
     }
     Ok(body)
@@ -351,7 +359,6 @@ pub fn decode_list(bytes: &[u8], maximum_keys: usize) -> Result<ListPage, Error>
     }
     if list.truncated != list.next.is_some()
         || list.next.as_deref().is_some_and(|v| !valid_token(v))
-        || (list.truncated && list.count == 0)
     {
         return Err(Error::Corrupt("raw list continuation"));
     }

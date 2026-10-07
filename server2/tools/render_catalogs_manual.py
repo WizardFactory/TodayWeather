@@ -65,8 +65,9 @@ def main():
     flush();story.append(Spacer(1,8));story.append(Paragraph('Actual local CLI usage',styles['Heading2']));story.append(PdfImage(str(capture),width=6.5*inch,height=image.height/image.width*6.5*inch))
     def footer(canvas,doc):
         canvas.setFont('Helvetica',8);canvas.setFillColor(colors.HexColor('#475569'));canvas.drawString(48,28,'S06 internal storage | local HTTP evidence; no AWS or route verification');canvas.drawRightString(564,28,str(doc.page))
-    SimpleDocTemplate(str(PDF),pagesize=(612,792),leftMargin=48,rightMargin=48,topMargin=42,bottomMargin=48,title='S06 catalog publication and recovery',author='TodayWeather',invariant=1).build(story,onFirstPage=footer,onLaterPages=footer)
-    manifest={'schema':1,'task':'S06','date':'2026-10-07','command':'python3 tests/storage/catalog_peer.py --smoke target/release/examples/catalogs_smoke','environment':'Rust1.99/macOS, public Python loopback peer','scope':'Complete group/cold/repair/unknown HTTP, not AWS/auth/performance/API parity','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(ROOT/'server2/target/release/examples/catalogs_smoke'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
+    document=SimpleDocTemplate(str(PDF),pagesize=(612,792),leftMargin=48,rightMargin=48,topMargin=42,bottomMargin=48,title='S06 catalog publication and recovery',author='TodayWeather',invariant=1)
+    document.build(story,onFirstPage=footer,onLaterPages=footer)
+    manifest={'pages':document.page,'schema':1,'task':'S06','date':'2026-10-07','command':'python3 tests/storage/catalog_peer.py --smoke target/release/examples/catalogs_smoke','environment':'Rust1.99/macOS, public Python loopback peer','scope':'Complete group/cold/repair/unknown HTTP, not AWS/auth/performance/API parity','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(ROOT/'server2/target/release/examples/catalogs_smoke'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
     (EVIDENCE/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('Manual PDF, actual stdout capture and hash manifest generated')
 

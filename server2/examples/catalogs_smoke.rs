@@ -102,7 +102,12 @@ async fn main() {
         catalog: id.clone(),
         periods: vec![d.members[0].envelope.identity.period.clone()],
     };
-    s.publish(d, raw, deadline()).await.unwrap();
+    let published = s.publish(d, raw, deadline()).await.unwrap();
+    assert_eq!(published.coverage(), RevisionCoverage::PublishedGroup);
+    assert!(matches!(
+        published.fold(SelectionPolicy::AbsentFields, |_| Ok(serde_json::json!({}))),
+        Err(Error::Invalid(_))
+    ));
     println!("publish: complete group, 2 ordered raw pages, 2 catalog partitions");
     let fresh = store(&endpoint);
     let set = ready(fresh.lookup(&id, deadline()).await.unwrap());
@@ -171,6 +176,52 @@ async fn main() {
         Error::Status(403)
     );
     println!("direct rejection: first PUT403 retained, no group success");
+    fault(&endpoint, "clear", "unused").await;
+    let PageOutcome::Ready(page) = fresh
+        .lookup_page(&id, ReadOrder::EarliestFirst, None, 1, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("bounded first page")
+    };
+    assert_eq!(page.coverage(), RevisionCoverage::Paged);
+    assert_eq!(page.acquisitions()[0].records().len(), 2);
+    assert!(page.next().is_some());
+    let identity = page.acquisitions()[0].records()[0]
+        .envelope
+        .identity
+        .clone();
+    let PageOutcome::Ready(target) = fresh
+        .lookup_acquisition(&id, &identity, deadline())
+        .await
+        .unwrap()
+    else {
+        panic!("targeted acquisition")
+    };
+    assert_eq!(target.coverage(), RevisionCoverage::Targeted);
+    assert!(target.next().is_none());
+    println!(
+        "bounded read: whole 2-page acquisition, opaque continuation and exact targeted scope; scoped publication fold blocked"
+    );
+    let mut empty_id = id.clone();
+    empty_id.partition = "empty".into();
+    let empty = RepairScope {
+        catalog: empty_id,
+        periods: vec![Period {
+            local_date: 20260101,
+            slot: "0000".into(),
+        }],
+    };
+    for mode in ["chunked-list", "empty-page"] {
+        fault(&endpoint, mode, "unused").await;
+        assert!(matches!(
+            fresh.repair(&empty, deadline()).await.unwrap(),
+            RepairOutcome::CompleteEmpty { .. }
+        ));
+    }
+    println!(
+        "streamed repair: chunked LIST and empty truncated continuation exhaust only the explicit empty scope"
+    );
     println!(
         "PASS local real HTTP smoke ({:.2} ms); not AWS latency/auth or API parity",
         started.elapsed().as_secs_f64() * 1000.0

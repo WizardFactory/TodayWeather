@@ -296,9 +296,11 @@ weather routes or production S3 verification.
 2. Read/create the authoritative partition catalog and union the new identities.
 3. Publish it using ETag `If-Match` (or `If-None-Match` on creation). Retry a
    conflict by re-reading and unioning; never overwrite concurrent revisions.
-4. After all partitions of each required fetch group are published, verify its
-   completeness, expose it in memory and send success. There is no all-request
-   cross-object transaction across independent provider fetches.
+4. Before writing, check that the new acquisition fits the operation bounds.
+   After all its partitions are published, verify only that acquisition's
+   declared siblings and exact bodies before acknowledging it. Do not re-read
+   unrelated historical acquisitions to acknowledge a new group. There is no
+   all-request cross-object transaction across independent provider fetches.
 
 One validated provider acquisition, including all its pages, is a **fetch group**.
 Prefer one owning publication partition per acquisition (VC's complete range in
@@ -348,10 +350,18 @@ objects exist. Recovery keeps all valid revisions and cannot invent a complete
 result from a timed-out partial LIST. The hot serving path uses published records;
 it is not a claim to discover every interrupted upload instantly.
 
-A normal catalog hit directly provides all required revisions. Select earliest
-fetch for immutable kinds; use `(fetched_at_ms, sha256)` for revisable kinds;
-fill only absent fields for current-like kinds and replace list kinds. Do not
-skip earlier revisions until parity tests prove they cannot affect the result.
+A normal catalog hit provides the identities of retained revisions. Materialize
+only the requested complete acquisitions within a bounded page, rather than
+downloading every historical body on each lookup. Keep all archival revisions
+and catalog identities. A checked page is not proof that the whole revision
+range has been read. Its continuation pins the target catalog generation and
+ETag and revalidates previously checked sibling dependencies; a changed
+dependency requires a restart, not continuation into another snapshot. Pages preserve whole acquisitions and their complete member/page
+sets. Select earliest fetch for immutable kinds; use `(fetched_at_ms, sha256)`
+for revisable kinds; fill only absent fields for current-like kinds and replace
+list kinds. A full-history merge must consume the required revision range before
+returning its result. Do not skip earlier revisions until parity tests prove
+they cannot affect the result.
 A request pins its catalog generations while assembling. Late inputs invalidate
 dependent memory results on bounded catalog refresh; open periods have short
 refresh intervals. Missing index is not automatically missing provider data:
@@ -376,7 +386,49 @@ have orphaned bodies and therefore remain eligible for explicit bounded repair.
 Keep every eligible revision in deterministic order; field merges and list
 replacement remain in-memory operations, not persisted catalog payloads.
 
-The initial S06 lookup/repair utility reads descriptors and raw members
+A bounded page contains checked complete acquisitions and an explicit continuation;
+it never masquerades as a full-history set. Exhausting a healthy read budget is
+a capacity outcome, not evidence of corruption. The full-history convenience
+lookup can report capacity or a deadline failure. A targeted lookup by an
+archived member identity validates only that complete acquisition and its
+siblings, keeping old and new acquisitions accessible without traversing
+unrelated history. Targeted coverage is explicit: no continuation does not
+mean that all historical revisions have been consumed. Cross-page dependency
+revalidation can itself reach capacity or the caller deadline; that blocks the
+full-history snapshot, while a targeted acquisition remains independently
+readable within its own bounds. Publication checks the new group only and
+avoids historical-body materialization; its declared group, catalog and
+operation bounds still apply. Structural catalog/object limits fail closed
+without pruning identities.
+
+Revision coverage distinguishes a full-history set from a newly published
+group, a targeted acquisition and an individual page. Only a full-history set
+can use the whole-history fold helper. Callers must explicitly parse a published
+or targeted group instead of treating it as the complete merge input.
+
+Retained control bytes are bounded within each phase, rather than advertised
+as one cumulative transfer-byte limit across all phases. Preflight drops each
+processed catalog/union before continuing; descriptor/raw/CAS buffers are
+released before final verification starts. The final check reserves room for
+the new group's descriptor and the maximum permitted size of each declared
+sibling catalog, so later index growth does not invalidate that group's read
+admission. This can reject a group before any PUT even when its declaration
+fits the wire format's partition-count bound. Actual request work, conflict
+attempts and the caller's overall deadline remain bounded; a sent write whose
+outcome cannot be confirmed remains uncertain. These are per-operation/phase
+limits, not a global process RSS guarantee or a promise that a full-history
+snapshot fits the serving deadline.
+
+A fully exhausted repair can complete identity indexing without materializing
+all historical bodies at once. This nonempty indexed outcome is distinct from
+a checked serving set and from `CompleteEmpty`; callers must read checked pages
+before using its records. A partial scan, missing member or invalid object cannot
+produce a complete indexing or empty result. Repair retains identity envelopes
+rather than duplicate raw bodies during group validation. Each repair scope must
+map its periods to the declared owning partition; a caller cannot file another
+partition's records into that scope.
+
+The initial S06 lookup/repair utility reads selected descriptors and raw members
 sequentially within one operation. Its `io=16` admission bound permits concurrent
 operations; it does not supply sixteen-way fan-out inside one lookup. The wave
 counts in section 8 describe the proposed bounded-parallel resolver strategy,

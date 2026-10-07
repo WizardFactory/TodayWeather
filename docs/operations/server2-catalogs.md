@@ -37,7 +37,7 @@ by typed schemas. Group SHA has no self-reference because declared envelopes
 exclude group refs. Pages 1..N must be complete, unique and ordered. Previously
 ungrouped/differently grouped raw identities cannot be retroactively affiliated.
 
-Cold `lookup` pins each involved catalog once. `CompleteSet` exposes complete
+Whole-history `lookup` pins each involved catalog once. `CompleteSet` exposes complete
 acquisitions and every dependency identity, including absent siblings through
 optional generation/ETag tokens. A/new plus B/healthy-old excludes the new group.
 Old complete acquisitions may remain usable with `excluded_groups()>0`; consumers
@@ -46,6 +46,40 @@ without assuming unchanged target ETag proves complete coverage. S07 owns this
 cache refresh/invalidation policy. Earliest/latest, absent-only top-level field
 merge and whole-list replacement are derived in memory from ordered complete
 acquisitions; present null/zero/false fields are never overwritten by absent merge.
+
+## Bounded history reads and publication scope
+
+Archival catalogs retain every revision. Normal read-budget exhaustion is Capacity
+or Timeout, not corruption and not a provider miss. Full `lookup` is the only
+FullHistory `CompleteSet`; only that coverage permits `fold`. Publication verifies
+only the newly declared group and returns PublishedGroup coverage; attempting to
+fold that scoped result as history is rejected. Parse its explicit records directly
+when the desired operation is that single acquisition.
+
+Use `lookup_page(id, order, cursor, maximum_acquisitions, deadline)` for bounded
+whole-acquisition pages in canonical target-catalog entry order. Pages have Paged
+coverage and no fold method. Ordered provider pages remain together. The opaque
+private cursor pins target generation/ETag/version and prior sibling dependencies;
+cross-ID/order use is invalid and changed tokens yield Incomplete/restart. Consumers
+must not merge one page as all history. Collect every page and revalidate dependencies
+before a cross-page historical result; growing dependency checks may still exceed
+the deadline or cursor metadata cap, requiring safe fallback.
+
+`lookup_acquisition(id, exact_member_identity, deadline)` is the independent escape
+hatch: verify target membership and that member's whole immutable group/siblings.
+It returns Targeted coverage with no continuation, which does not mean exhausted
+history. Old/new acquisitions remain accessible within their own group/catalog bounds
+without reading unrelated historical bodies. Sequential reads and S07/S09 gates remain.
+
+Preflight rejects an oversized new group with Capacity before any PUT. It checks
+raw total, descriptor, projected catalog union and conservative final metadata:
+descriptor bytes + partition count × control-document limit must fit the retained
+control cap. Format allows 16 partitions, but default admission permits at most 7
+full-size catalogs plus descriptor; smaller store caps may admit fewer. No archive
+pruning is used. Preflight buffers are dropped before CAS, and completed CAS-phase
+buffers before fresh new-group pinning. Control accounting is bounded per retained
+phase, not cumulative wire bytes across all phases; CAS work and the outer deadline
+still bound retries. Concurrent growth or uncertain sent writes may remain Ambiguous.
 
 ## Repair and coverage
 
@@ -59,9 +93,18 @@ wrong raw hash, deadline or cap never becomes a complete empty response.
 `LookupOutcome::Incomplete` is not provider admission. `RepairOutcome::CompleteEmpty`
 proves absence only in the caller-supplied finite scope after an exhausted clean
 scan; it does not prove global archive absence. `Complete` contains verified data;
-`Incomplete` or an error leaves the caller to valid memory/legacy error fallback.
+`Indexed {scope, dependencies}` records an exhausted, verified nonempty scan and
+successful identity-index repair when full-history materialization exceeds capacity.
+It is neither a serving CompleteSet nor CompleteEmpty and cannot authorize providers;
+read checked pages or targeted acquisitions afterward. Incomplete or errors leave
+valid memory/legacy error fallback. Discovery retains envelopes only; verified body
+buffers are released before reloading each complete group, without double-counting
+discarded bodies as retained output.
 No provider calls or budget reservations occur in this utility.
 
+The caller must map every supplied period to the target partition deterministically.
+Foreign-owned grouped records are Incomplete; ungrouped singletons rely on this
+caller ownership assertion. This utility cannot infer a geocode/calendar layout.
 Default scope has up to 16 exact canonical periods/slots. Later geocode integration
 must supply its approved month-based/projection identities and prove 30-day
 validity plus multi-month restore (including January 31 to March 1); S06 has not executed
@@ -82,7 +125,11 @@ No hidden SDK retry or third provider acquisition is used.
 
 Defaults: JSON/XML 1 MiB, catalog 2,048 entries, group 128 members, 16 partitions,
 8 LIST pages per prefix, 2,048 raw candidates, 1,000 keys/page, 4 CAS attempts,
-8 MiB cumulative control reads and 32 MiB cumulative decoded output. The caller's
+8 MiB serialized control budget per retained phase and 32 MiB decoded serving output.
+Repair discovery discards raw bodies, and each group reload/output is bounded separately.
+Legal chunked or close-delimited control responses may omit Content-Length; streaming
+caps remain enforced and any declared length must match. Empty truncated LIST pages
+follow valid opaque tokens under existing page and repeated-token bounds. The caller's
 absolute monotonic deadline is capped by the store's 3 s default; all credential
 waits, siblings, raw reads, CPU work and CAS/LIST count toward it. Hard setter
 ceilings fail safely. Bounded I/O operation admission and CPU workers remain held
@@ -107,5 +154,5 @@ The editable manual and rendered PDF share this content. The selected usage
 capture and hash manifest live under `docs/evidence/tasks/server2-catalogs/`.
 The release scenario checks cold complete pages, A/new+B/old exclusion, healthy
 multi-page repair, committed response loss, delayed first commit with retry403,
-and first direct403. See the [architecture publication contract](../architecture/server2.md)
+first direct403, bounded ordered pages/targeted scope/fold guard, chunked LIST and empty truncated continuation. See the [architecture publication contract](../architecture/server2.md)
 and [publication sequence](../architecture/diagrams/server2-catalog-publication.html).

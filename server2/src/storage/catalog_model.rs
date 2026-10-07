@@ -162,8 +162,11 @@ impl Catalog {
     }
     pub fn validate(&self, l: &CatalogLimits) -> Result<(), Error> {
         self.identity.validate()?;
-        if self.schema != 1 || self.entries.len() > l.entries {
-            return Err(Error::Corrupt("catalog schema/entries"));
+        if self.schema != 1 {
+            return Err(Error::Corrupt("catalog schema"));
+        }
+        if self.entries.len() > l.entries {
+            return Err(Error::Capacity);
         }
         let mut seen = BTreeSet::new();
         let mut previous = None;
@@ -328,8 +331,11 @@ impl GroupDeclaration {
                 _ => return Err(Error::Invalid("complete ordered pages")),
             }
         }
-        if bytes > l.output_bytes || union.into_iter().collect::<Vec<_>>() != self.partitions {
-            return Err(Error::Invalid("group bytes/partition union"));
+        if bytes > l.output_bytes {
+            return Err(Error::Capacity);
+        }
+        if union.into_iter().collect::<Vec<_>>() != self.partitions {
+            return Err(Error::Invalid("group partition union"));
         }
         Ok(())
     }

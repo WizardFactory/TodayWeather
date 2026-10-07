@@ -1,4 +1,5 @@
 {
+  "pages": 3,
   "schema": 1,
   "task": "S06",
   "date": "2026-10-07",
@@ -13,11 +14,12 @@
     "response loss: committed CAS reconciled from exact union",
     "late commit: lost first PUT + read404 + retry403 remains Ambiguous; exact catalog exists",
     "direct rejection: first PUT403 retained, no group success",
-    "PASS local real HTTP smoke (85.06 ms); not AWS latency/auth or API parity"
+    "bounded read: whole 2-page acquisition, opaque continuation and exact targeted scope; scoped publication fold blocked",
+    "streamed repair: chunked LIST and empty truncated continuation exhaust only the explicit empty scope",
+    "PASS local real HTTP smoke (141.31 ms); not AWS latency/auth or API parity"
   ],
-  "binary_sha256": "01785512b99a3d41f25c553d9957f19f67aad0fd05a082c37f31d575e536a5e1",
-  "source_sha256": "82b471a87e56b5e3e5b37d0722968411fe5f705eab9c7b2a9a9594dee53fb816",
-  "pdf_sha256": "34f9bdac98eee1e1283b78158d8bea56814e47a158c647e6f07ffbf35483cba7",
-  "screenshot_sha256": "fb386a1143e97fdead8fecd3959f77c5360371fac5512dc790cc4fbcd96c9af6",
-  "pages": 2
+  "binary_sha256": "3039e17c9bab2afb7d0d53926122aa23ce67c336c1b17ac2c8d37f728edc93d7",
+  "source_sha256": "cb5391cd65053004a1dfba63cae21d11c00cc14e23781461f933d623e4e483b7",
+  "pdf_sha256": "8df3941837e0a4d1727660833cfa0ce90d6ac3c02945703e4c8597f5731b6956",
+  "screenshot_sha256": "1218cea4075f2de1e3e12796193d8f55af76cf199b36bd7a415ac4cfe0fb33a9"
 }

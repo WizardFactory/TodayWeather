@@ -13,7 +13,7 @@ use tokio::{
     time::{Instant, timeout_at},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DependencyToken {
     pub identity: CatalogId,
     pub generation: Option<u64>,
@@ -36,11 +36,15 @@ impl CompleteAcquisition {
 /// Constructed only after descriptor, all pinned siblings and exact raw metadata agree.
 #[derive(Debug, Clone)]
 pub struct CompleteSet {
+    coverage: RevisionCoverage,
     acquisitions: Vec<CompleteAcquisition>,
     dependencies: Vec<DependencyToken>,
     excluded: usize,
 }
 impl CompleteSet {
+    pub fn coverage(&self) -> RevisionCoverage {
+        self.coverage
+    }
     pub fn acquisitions(&self) -> &[CompleteAcquisition] {
         &self.acquisitions
     }
@@ -59,6 +63,9 @@ impl CompleteSet {
     where
         F: FnMut(&[RawRecord]) -> Result<serde_json::Value, Error>,
     {
+        if self.coverage != RevisionCoverage::FullHistory {
+            return Err(Error::Invalid("fold requires full revision coverage"));
+        }
         let values = self
             .acquisitions
             .iter()
@@ -66,6 +73,58 @@ impl CompleteSet {
             .collect::<Result<Vec<_>, _>>()?;
         fold_values(&values, policy)
     }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RevisionCoverage {
+    FullHistory,
+    PublishedGroup,
+    Targeted,
+    Paged,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReadOrder {
+    EarliestFirst,
+    LatestFirst,
+}
+/// Opaque in-memory continuation; never a provider-miss proof or persisted weather view.
+#[derive(Debug, Clone)]
+pub struct ReadCursor {
+    catalog: CatalogId,
+    target: DependencyToken,
+    order: ReadOrder,
+    offset: usize,
+    seen: BTreeSet<String>,
+    dependencies: Vec<DependencyToken>,
+}
+#[derive(Debug, Clone)]
+pub struct CompletePage {
+    coverage: RevisionCoverage,
+    acquisitions: Vec<CompleteAcquisition>,
+    dependencies: Vec<DependencyToken>,
+    excluded: usize,
+    next: Option<Box<ReadCursor>>,
+}
+impl CompletePage {
+    pub fn coverage(&self) -> RevisionCoverage {
+        self.coverage
+    }
+    pub fn acquisitions(&self) -> &[CompleteAcquisition] {
+        &self.acquisitions
+    }
+    pub fn dependencies(&self) -> &[DependencyToken] {
+        &self.dependencies
+    }
+    pub fn excluded_groups(&self) -> usize {
+        self.excluded
+    }
+    pub fn next(&self) -> Option<&ReadCursor> {
+        self.next.as_deref()
+    }
+}
+#[derive(Debug, Clone)]
+pub enum PageOutcome {
+    Ready(CompletePage),
+    Incomplete,
 }
 #[derive(Debug, Clone)]
 pub enum LookupOutcome {
@@ -80,7 +139,14 @@ pub struct RepairScope {
 #[derive(Debug, Clone)]
 pub enum RepairOutcome {
     Complete(CompleteSet),
-    CompleteEmpty { scope: RepairScope },
+    CompleteEmpty {
+        scope: RepairScope,
+    },
+    /// Fully scanned/indexed nonempty scope, but no whole-history serving view materialized.
+    Indexed {
+        scope: RepairScope,
+        dependencies: Vec<DependencyToken>,
+    },
     Incomplete,
 }
 struct Pinned {
@@ -150,12 +216,9 @@ impl<T: CatalogTransport> CatalogStore<T> {
             .map_err(|_| Error::Transport)
     }
     fn count_control(&self, c: &mut Context, n: usize) -> Result<(), Error> {
-        c.controls = c
-            .controls
-            .checked_add(n)
-            .ok_or(Error::Corrupt("control budget"))?;
+        c.controls = c.controls.checked_add(n).ok_or(Error::Capacity)?;
         if c.controls > self.limits.retained_control_bytes {
-            return Err(Error::Corrupt("control budget"));
+            return Err(Error::Capacity);
         }
         Ok(())
     }
@@ -190,7 +253,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
     async fn pin(&self, id: &CatalogId, c: &mut Context) -> Result<(), Error> {
         if !c.pins.contains_key(id) {
             if c.pins.len() >= self.limits.partitions {
-                return Err(Error::Corrupt("pinned partition bound"));
+                return Err(Error::Capacity);
             }
             let p = self.catalog(id, c).await?;
             c.pins.insert(id.clone(), p);
@@ -209,12 +272,9 @@ impl<T: CatalogTransport> CatalogStore<T> {
             .await
     }
     async fn raw_checked(&self, e: &Envelope, c: &mut Context) -> Result<RawRecord, Error> {
-        c.output = c
-            .output
-            .checked_add(e.raw_length)
-            .ok_or(Error::Corrupt("output budget"))?;
+        c.output = c.output.checked_add(e.raw_length).ok_or(Error::Capacity)?;
         if c.output > self.limits.output_bytes {
-            return Err(Error::Corrupt("output budget"));
+            return Err(Error::Capacity);
         }
         let record = self.raw.load(&e.identity).await?;
         if &record.envelope != e {
@@ -258,6 +318,229 @@ impl<T: CatalogTransport> CatalogStore<T> {
         }
         Ok(true)
     }
+    fn dependencies(c: &Context) -> Vec<DependencyToken> {
+        c.pins
+            .iter()
+            .map(|(id, p)| DependencyToken {
+                identity: id.clone(),
+                generation: p.as_ref().map(|p| p.catalog.generation),
+                etag: p.as_ref().map(|p| p.etag.clone()),
+                version: p.as_ref().and_then(|p| p.version.clone()),
+            })
+            .collect()
+    }
+    async fn acquisition(
+        &self,
+        id: &CatalogId,
+        e: &Envelope,
+        c: &mut Context,
+    ) -> Result<Option<CompleteAcquisition>, Error> {
+        if let Some(r) = &e.fetch_group {
+            let d = match self.descriptor(r, c).await {
+                Ok(d) => d,
+                Err(Error::NotFound) => return Ok(None),
+                Err(e) => return Err(e),
+            };
+            let envelopes = self.envelopes(&d).await?;
+            if !d
+                .members
+                .iter()
+                .zip(&envelopes)
+                .any(|(m, expected)| m.catalogs.contains(id) && expected == e)
+            {
+                return Err(Error::Corrupt("undeclared catalog group entry"));
+            }
+            if !self.eligible(&d, c).await? {
+                return Ok(None);
+            }
+            match self.group_records(&d, c).await {
+                Ok(records) => Ok(Some(CompleteAcquisition {
+                    records,
+                    group: Some(r.group_sha256.clone()),
+                })),
+                Err(Error::NotFound) => Ok(None),
+                Err(e) => Err(e),
+            }
+        } else if e.pagination.is_none() {
+            Ok(Some(CompleteAcquisition {
+                records: vec![self.raw_checked(e, c).await?],
+                group: None,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+    /// Exact immutable member selection, never a proof of complete revision coverage.
+    pub async fn lookup_acquisition(
+        &self,
+        id: &CatalogId,
+        member: &RecordId,
+        deadline: Instant,
+    ) -> Result<PageOutcome, Error> {
+        id.validate()?;
+        member.validate()?;
+        if !id.matches(member) {
+            return Err(Error::Invalid("targeted member namespace"));
+        }
+        timeout_at(self.deadline(deadline), async {
+            let _admission = self.admit().await?;
+            let mut c = Context::new();
+            self.pin(id, &mut c).await?;
+            let Some(Some(p)) = c.pins.get(id) else {
+                return Ok(PageOutcome::Incomplete);
+            };
+            let Some(e) = p
+                .catalog
+                .entries
+                .iter()
+                .find(|e| &e.identity == member)
+                .cloned()
+            else {
+                return Ok(PageOutcome::Incomplete);
+            };
+            let Some(a) = self.acquisition(id, &e, &mut c).await? else {
+                return Ok(PageOutcome::Incomplete);
+            };
+            Ok(PageOutcome::Ready(CompletePage {
+                coverage: RevisionCoverage::Targeted,
+                acquisitions: vec![a],
+                dependencies: Self::dependencies(&c),
+                excluded: 0,
+                next: None,
+            }))
+        })
+        .await
+        .map_err(|_| Error::Timeout)?
+    }
+    async fn validate_cursor(
+        &self,
+        id: &CatalogId,
+        order: ReadOrder,
+        cursor: &ReadCursor,
+        c: &mut Context,
+    ) -> Result<bool, Error> {
+        if &cursor.catalog != id || cursor.order != order {
+            return Err(Error::Invalid("cursor scope/order"));
+        }
+        for old in &cursor.dependencies {
+            // Revalidate previous cohorts without retaining their catalogs as current-page pins.
+            let mut ephemeral = Context::new();
+            self.pin(&old.identity, &mut ephemeral).await?;
+            if Self::dependencies(&ephemeral).first() != Some(old) {
+                return Ok(false);
+            }
+            self.count_control(c, ephemeral.controls)?;
+        }
+        Ok(Self::dependencies(c).iter().any(|d| d == &cursor.target))
+    }
+    /// A bounded whole-acquisition page has no fold method. Cross-page coherence may exhaust its deadline.
+    pub async fn lookup_page(
+        &self,
+        id: &CatalogId,
+        order: ReadOrder,
+        cursor: Option<&ReadCursor>,
+        maximum_acquisitions: usize,
+        deadline: Instant,
+    ) -> Result<PageOutcome, Error> {
+        id.validate()?;
+        if let Some(cursor) = cursor
+            && (&cursor.catalog != id || cursor.order != order)
+        {
+            return Err(Error::Invalid("cursor scope/order"));
+        }
+        if maximum_acquisitions == 0 || maximum_acquisitions > self.limits.entries {
+            return Err(Error::Invalid("page acquisition limit"));
+        }
+        timeout_at(self.deadline(deadline), async {
+            let _admission = self.admit().await?;
+            let mut c = Context::new();
+            self.pin(id, &mut c).await?;
+            let Some(Some(target)) = c.pins.get(id) else {
+                return Ok(PageOutcome::Incomplete);
+            };
+            let mut entries = target.catalog.entries.clone();
+            if order == ReadOrder::LatestFirst {
+                entries.reverse();
+            }
+            let target = Self::dependencies(&c)[0].clone();
+            if let Some(cursor) = cursor
+                && !self.validate_cursor(id, order, cursor, &mut c).await?
+            {
+                return Ok(PageOutcome::Incomplete);
+            }
+            let mut offset = cursor.map_or(0, |c| c.offset);
+            let mut seen = cursor.map_or_else(BTreeSet::new, |c| c.seen.clone());
+            let mut acquisitions = Vec::new();
+            let mut excluded = 0;
+            while offset < entries.len() && acquisitions.len() < maximum_acquisitions {
+                let e = &entries[offset];
+                offset += 1;
+                if let Some(r) = &e.fetch_group
+                    && !seen.insert(r.group_sha256.clone())
+                {
+                    continue;
+                }
+                match self.acquisition(id, e, &mut c).await? {
+                    Some(a) => acquisitions.push(a),
+                    None => excluded += 1,
+                }
+            }
+            // Consume duplicate members at the page boundary, without splitting a complete group.
+            while offset < entries.len()
+                && entries[offset]
+                    .fetch_group
+                    .as_ref()
+                    .is_some_and(|r| seen.contains(&r.group_sha256))
+            {
+                offset += 1;
+            }
+            if acquisitions.is_empty() {
+                return Ok(PageOutcome::Incomplete);
+            }
+            let mut dependencies = cursor.map_or_else(Vec::new, |c| c.dependencies.clone());
+            for token in Self::dependencies(&c) {
+                if let Some(old) = dependencies.iter().find(|t| t.identity == token.identity) {
+                    if old != &token {
+                        return Ok(PageOutcome::Incomplete);
+                    }
+                } else {
+                    dependencies.push(token);
+                }
+            }
+            let bytes = dependencies
+                .iter()
+                .map(|t| {
+                    t.identity.key().len()
+                        + t.etag.as_ref().map_or(0, String::len)
+                        + t.version.as_ref().map_or(0, String::len)
+                        + 32
+                })
+                .sum::<usize>()
+                + seen.len() * 64;
+            if bytes > self.limits.retained_control_bytes {
+                return Err(Error::Capacity);
+            }
+            let next = (offset < entries.len()).then(|| {
+                Box::new(ReadCursor {
+                    catalog: id.clone(),
+                    target,
+                    order,
+                    offset,
+                    seen,
+                    dependencies: dependencies.clone(),
+                })
+            });
+            Ok(PageOutcome::Ready(CompletePage {
+                coverage: RevisionCoverage::Paged,
+                acquisitions,
+                dependencies,
+                excluded,
+                next,
+            }))
+        })
+        .await
+        .map_err(|_| Error::Timeout)?
+    }
     async fn lookup_inner(&self, id: &CatalogId, c: &mut Context) -> Result<LookupOutcome, Error> {
         self.pin(id, c).await?;
         let Some(Some(target)) = c.pins.get(id) else {
@@ -268,49 +551,14 @@ impl<T: CatalogTransport> CatalogStore<T> {
         let mut acquisitions = Vec::new();
         let mut excluded = 0;
         for e in entries {
-            if let Some(r) = &e.fetch_group {
-                if !groups.insert(r.group_sha256.clone()) {
-                    continue;
-                }
-                let d = match self.descriptor(r, c).await {
-                    Ok(d) => d,
-                    Err(Error::NotFound) => {
-                        excluded += 1;
-                        continue;
-                    }
-                    Err(err) => return Err(err),
-                };
-                // The target entry must itself be a declared owner; sibling-only stray entry cannot expose a group.
-                let envelopes = self.envelopes(&d).await?;
-                if !d
-                    .members
-                    .iter()
-                    .zip(&envelopes)
-                    .any(|(m, expected)| m.catalogs.contains(id) && expected == &e)
-                {
-                    return Err(Error::Corrupt("undeclared catalog group entry"));
-                }
-                if !self.eligible(&d, c).await? {
-                    excluded += 1;
-                    continue;
-                }
-                match self.group_records(&d, c).await {
-                    Ok(records) => acquisitions.push(CompleteAcquisition {
-                        records,
-                        group: Some(r.group_sha256.clone()),
-                    }),
-                    Err(Error::NotFound) => {
-                        excluded += 1;
-                    }
-                    Err(err) => return Err(err),
-                }
-            } else if e.pagination.is_none() {
-                acquisitions.push(CompleteAcquisition {
-                    records: vec![self.raw_checked(&e, c).await?],
-                    group: None,
-                });
-            } else {
-                excluded += 1;
+            if let Some(r) = &e.fetch_group
+                && !groups.insert(r.group_sha256.clone())
+            {
+                continue;
+            }
+            match self.acquisition(id, &e, c).await? {
+                Some(a) => acquisitions.push(a),
+                None => excluded += 1,
             }
         }
         let acquisitions = self
@@ -336,6 +584,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
             })
             .collect();
         Ok(LookupOutcome::Ready(CompleteSet {
+            coverage: RevisionCoverage::FullHistory,
             acquisitions,
             dependencies,
             excluded,
@@ -499,6 +748,51 @@ impl<T: CatalogTransport> CatalogStore<T> {
             let (reference, body, records) = self
                 .cpu(move || Ok((d.reference(&l)?, d.bytes(&l)?, d.attach(records, &l)?)))
                 .await?;
+            let total = records.iter().try_fold(0usize, |n, r| {
+                n.checked_add(r.bytes.len()).ok_or(Error::Capacity)
+            })?;
+            if total > self.limits.output_bytes {
+                return Err(Error::Capacity);
+            }
+            let worst = declaration
+                .partitions
+                .len()
+                .checked_mul(self.limits.control_bytes)
+                .and_then(|n| n.checked_add(body.len()))
+                .ok_or(Error::Capacity)?;
+            if worst > self.limits.retained_control_bytes {
+                return Err(Error::Capacity);
+            }
+            let mut preflight = Context::new();
+            let mut required = body.len();
+            let all = self.envelopes(&declaration).await?;
+            for id in &declaration.partitions {
+                let current = self
+                    .catalog(id, &mut preflight)
+                    .await?
+                    .map(|p| p.catalog)
+                    .unwrap_or_else(|| Catalog::empty(id.clone()));
+                let incoming = declaration
+                    .members
+                    .iter()
+                    .zip(&all)
+                    .filter(|(m, _)| m.catalogs.contains(id))
+                    .map(|(_, e)| e.clone())
+                    .collect::<Vec<_>>();
+                let l = self.limits.clone();
+                let n = self
+                    .cpu(move || current.union(&incoming, &l)?.bytes(&l).map(|b| b.len()))
+                    .await
+                    .map_err(|e| match e {
+                        Error::Invalid("catalog bytes")
+                        | Error::Corrupt("catalog schema/entries") => Error::Capacity,
+                        _ => e,
+                    })?;
+                required = required.checked_add(n).ok_or(Error::Capacity)?;
+            }
+            if required > self.limits.retained_control_bytes {
+                return Err(Error::Capacity);
+            }
             let mut context = Context::new();
             self.immutable(
                 &reference.descriptor_key()?,
@@ -513,24 +807,28 @@ impl<T: CatalogTransport> CatalogStore<T> {
             }
             self.publish_catalogs(&declaration, &mut context, &mut started)
                 .await?;
-            context.pins.clear();
-            match self
-                .lookup_inner(&declaration.partitions[0], &mut context)
-                .await?
-            {
-                LookupOutcome::Ready(set)
-                    if set
-                        .acquisitions
-                        .iter()
-                        .any(|a| a.group.as_deref() == Some(reference.group_sha256.as_str())) =>
-                {
-                    Ok(set)
-                }
-                _ => Err(Error::Ambiguous),
+            // Publication checks the new group only; unrelated retained history must not poison success.
+            let mut context = Context::new();
+            if !self.eligible(&declaration, &mut context).await? {
+                return Err(Error::Ambiguous);
             }
+            let records = self
+                .group_records(&declaration, &mut context)
+                .await
+                .map_err(Self::uncertain)?;
+            Ok(CompleteSet {
+                coverage: RevisionCoverage::PublishedGroup,
+                acquisitions: vec![CompleteAcquisition {
+                    records,
+                    group: Some(reference.group_sha256),
+                }],
+                dependencies: Self::dependencies(&context),
+                excluded: 0,
+            })
         })
         .await;
         match result {
+            Ok(Err(Error::Capacity)) if started => Err(Error::Ambiguous),
             Ok(r) => r,
             Err(_) => Err(if started {
                 Error::Ambiguous
@@ -622,14 +920,10 @@ impl<T: CatalogTransport> CatalogStore<T> {
                     match Self::identity(&key, &prefix, &scope.catalog, period) {
                         Ok(identity) => match self.raw.load(&identity).await {
                             Ok(record) => {
-                                c.output = c
-                                    .output
-                                    .checked_add(record.bytes.len())
-                                    .ok_or(Error::Corrupt("repair output"))?;
-                                if c.output > self.limits.output_bytes {
+                                if record.bytes.len() > self.limits.output_bytes {
                                     return Ok(RepairOutcome::Incomplete);
                                 }
-                                discovered.push(record);
+                                discovered.push(record.envelope);
                             }
                             Err(Error::Corrupt(_))
                             | Err(Error::NotFound)
@@ -673,8 +967,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
         }
         let mut groups = BTreeSet::new();
         let mut singles = Vec::new();
-        for record in discovered {
-            if let Some(reference) = &record.envelope.fetch_group {
+        for envelope in discovered {
+            if let Some(reference) = &envelope.fetch_group {
                 if !groups.insert(reference.group_sha256.clone()) {
                     continue;
                 }
@@ -691,12 +985,13 @@ impl<T: CatalogTransport> CatalogStore<T> {
                     .members
                     .iter()
                     .zip(&expected)
-                    .any(|(m, e)| m.catalogs.contains(&scope.catalog) && e == &record.envelope)
+                    .any(|(m, e)| m.catalogs.contains(&scope.catalog) && e == &envelope)
                 {
                     incomplete = true;
                     continue;
                 }
-                // The same bodies were just scanned; verification is a fresh bounded read. Drop previous bodies before loading all members.
+                // Discovery retained only envelopes. Each verified group body is discarded before the next group.
+                c.output = 0;
                 match self.group_records(&descriptor, c).await {
                     Ok(_) => self.publish_catalogs(&descriptor, c, started).await?,
                     Err(Error::NotFound) | Err(Error::Corrupt(_)) | Err(Error::Invalid(_)) => {
@@ -704,8 +999,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
                     }
                     Err(e) => return Err(e),
                 }
-            } else if record.envelope.pagination.is_none() {
-                singles.push(record.envelope);
+            } else if envelope.pagination.is_none() {
+                singles.push(envelope);
             } else {
                 incomplete = true;
             }
@@ -716,10 +1011,20 @@ impl<T: CatalogTransport> CatalogStore<T> {
         if incomplete {
             return Ok(RepairOutcome::Incomplete);
         }
-        c.pins.clear();
-        match self.lookup_inner(&scope.catalog, c).await? {
-            LookupOutcome::Ready(set) => Ok(RepairOutcome::Complete(set)),
-            LookupOutcome::Incomplete => Ok(RepairOutcome::Incomplete),
+        *c = Context::new();
+        let materialized = self.lookup_inner(&scope.catalog, c).await;
+        match materialized {
+            Err(Error::Capacity) => {
+                let mut context = Context::new();
+                self.pin(&scope.catalog, &mut context).await?;
+                Ok(RepairOutcome::Indexed {
+                    scope: scope.clone(),
+                    dependencies: Self::dependencies(&context),
+                })
+            }
+            Err(e) => Err(e),
+            Ok(LookupOutcome::Ready(set)) => Ok(RepairOutcome::Complete(set)),
+            Ok(LookupOutcome::Incomplete) => Ok(RepairOutcome::Incomplete),
         }
     }
     pub async fn repair(
