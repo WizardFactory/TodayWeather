@@ -81,7 +81,7 @@ increase it. Tests use small limits/blocks to prove exact ceiling and waste beha
 Rejection rules port server/lib/dataGoKrRejection.js (#2604), with provenance and no runtime
 legacy reads: HTTP 429 or code 22 => quota; HTTP 401/403 or 20/30/31/32 => auth. Either stops
 retrying that key and may use the already-funded next key within the same two-attempt bound.
-Other 4xx stops. Transport, 5xx, 3xx, empty/invalid bodies permit one funded subsequent attempt
+Other 4xx stops. In a 2xx response, data.go.kr03 is a terminal `AcquisitionOutcome::NoData(AcquiredBody)` with unchanged raw bytes in memory, including XML and a false data validator. It is not weather data and the generic primitive must not archive it or invent rows. Future provider ports own legacy-compatible wire/empty semantics and any separately authorized persistence. Deterministic10/12 are terminal Rejected; quota/auth and HTTP4xx retain precedence. Transport, 5xx, 3xx, empty/invalid bodies permit one funded subsequent attempt
 inside the deadline. Gateway XML error bodies are never successful data. data.go.kr uses
 `dataType=JSON`; body/schema validation precedes any successful acquisition return. Provider
 ports supply their kind-specific semantic validator; the generic executor never claims full
@@ -106,3 +106,5 @@ required. AWS SigV4/IAM/quota ownership/latency and live route/mobile parity rem
 
 Protocol basis: [AWS conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html).
 The high-water/witness algorithm is our inference/design; AWS offers no multi-object transaction.
+
+Selected QA1 corrections: after eight 412 conflicts return `BudgetError::Contention`, distinct from real `Exhausted`. Reject duplicate rotation secret, shared store, or provider/quota owner identity (even another window for the same quota owner) before funding or HTTP; typed Invalid contains no secret. Both candidates remain trusted operator mappings. PDF renders inline code and linked labels without literal Markdown.

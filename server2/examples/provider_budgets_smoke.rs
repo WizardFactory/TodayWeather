@@ -2,7 +2,7 @@
 use server2::{
     budget::*,
     providers::{
-        AcquisitionError, Candidate, FundedExecutor, HttpProviderTransport,
+        AcquisitionError, AcquisitionOutcome, Candidate, FundedExecutor, HttpProviderTransport,
         ProviderKey as SecretKey,
     },
     storage::{
@@ -79,6 +79,9 @@ async fn main() {
         )
         .await
         .unwrap();
+    let AcquisitionOutcome::Data(raw) = raw else {
+        panic!("expected published weather data");
+    };
     assert_eq!(raw.attempts, 2);
     println!("cold: both candidates pre-funded; quota XML rotated key; 2 HTTP total");
     let record = RawRecord::new(
@@ -172,6 +175,45 @@ async fn main() {
         .await
         .unwrap();
     println!("unknown committed CAS: no HTTP; replacement reserves disjoint next range");
+    for (id, mode) in [
+        ("d", "nodata-json"),
+        ("e", "nodata-xml"),
+        ("f", "param10"),
+        ("0", "param12"),
+    ] {
+        let mut url = provider.clone();
+        url.query_pairs_mut().append_pair("mode", mode);
+        let result = executor
+            .execute(
+                url,
+                vec![candidate(store(endpoint, policy(id)), "first")],
+                deadline(),
+            )
+            .await;
+        if mode.starts_with("nodata") {
+            let Ok(AcquisitionOutcome::NoData(raw)) = result else {
+                panic!("terminal no-data");
+            };
+            assert_eq!(raw.attempts, 1);
+            let expected = if mode == "nodata-json" {
+                br#"{"response":{"header":{"resultCode":"03"}}}"#.as_slice()
+            } else {
+                b"<response><header><resultCode>03</resultCode></header></response>".as_slice()
+            };
+            assert_eq!(raw.body, expected);
+            // No RawRecord, descriptor or catalog is constructed for no-data.
+        } else {
+            assert!(matches!(
+                result,
+                Err(AcquisitionError::Provider(
+                    server2::providers::Disposition::Rejected
+                ))
+            ));
+        }
+    }
+    println!(
+        "terminal JSON/XML03: one HTTP each, exact bytes RAM-only;10/12 rejected without retry"
+    );
     println!(
         "PASS synthetic local release smoke; no AWS signature/IAM/latency or API parity claim"
     );

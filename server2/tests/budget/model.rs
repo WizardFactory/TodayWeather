@@ -87,3 +87,35 @@ fn status_and_body_matrix() {
         Disposition::Data
     );
 }
+
+#[test]
+fn terminal_codes_and_status_priority() {
+    use server2::providers::*;
+    for code in ["10", "12"] {
+        for body in [
+            format!(r#"{{"response":{{"header":{{"resultCode":"{code}"}}}}}}"#),
+            format!("<response><header><resultCode>{code}</resultCode></header></response>"),
+        ] {
+            assert_eq!(
+                classify(200, body.as_bytes(), true, false),
+                Disposition::Rejected
+            );
+        }
+    }
+}
+
+#[test]
+fn no_data_requires_complete_provider_envelope_and_preserves_status_priority() {
+    use server2::providers::*;
+    for body in [br#"{"response":{"header":{"resultCode":"03"}}}"#.as_slice(), b"<response><header><resultCode>03</resultCode></header></response>".as_slice(), b"<OpenAPI_ServiceResponse><cmmMsgHeader><returnReasonCode>03</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>".as_slice()] {
+        for valid in [true,false] {
+            assert_eq!(classify(200,body,true,valid),Disposition::NoData);
+            for (status,outcome) in [(401,Disposition::Auth),(403,Disposition::Auth),(429,Disposition::Quota),(404,Disposition::Rejected),(302,Disposition::Retryable),(500,Disposition::Retryable)] {
+                assert_eq!(classify(status,body,true,valid),outcome);
+            }
+        }
+    }
+    for body in [b"<response><header><resultCode>03</resultCode></header>".as_slice(),b"<html><resultCode>03</resultCode></html>".as_slice(), b"<response><header><resultCode>03</resultCode><resultCode>03</resultCode></header></response>".as_slice(),br#"{"response":{"header":{"resultCode":"03"}}}garbage"#.as_slice(),b"<response><header><resultCode>03</resultCode></header></response><extra/>".as_slice(),b"<response><header><resultCode>03</resultCode></header></response>garbage".as_slice(),b"<resultCode>03</resultCode>".as_slice()] {
+        assert_eq!(classify(200,body,true,false),Disposition::Retryable);
+    }
+}

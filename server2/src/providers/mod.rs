@@ -3,7 +3,8 @@ mod acquisition;
 mod rejection;
 mod transport;
 pub use acquisition::{
-    AcquiredBody, AcquisitionError, Candidate, FundedExecutor, ProviderKey, Validator,
+    AcquiredBody, AcquisitionError, AcquisitionOutcome, Candidate, FundedExecutor, ProviderKey,
+    Validator,
 };
 pub use rejection::{Disposition, classify};
 pub use transport::{

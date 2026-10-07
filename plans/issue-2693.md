@@ -50,3 +50,5 @@ prerequisites. No precision coordinates or secrets belong in budget identities o
 
 Only declared paths may change. Root exclusively reconciles the common architecture and
 sequence diagram. S07 owns its resolver API. Preserve existing S05/S06 tests and CI behavior.
+
+QA1 selected S08-R1–R4: compiled Red tests for JSON/XML03 and10/12, quota/auth precedence; real loopback terminal no-data/no retry and duplicate pre-funding rejection; 412 contention separate from exhaustion. Extend release smoke with JSON/XML03,10/12 terminal outcomes and zero raw publication for these bodies. Render PDF inline links/code and inspect all pages. Runtime changes require root committed-source diagram handoff and fresh full CI plus independent release smoke, then actual cross-provider rereview. No live calls or route/S07 glue.

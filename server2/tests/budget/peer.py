@@ -26,10 +26,20 @@ class Handler(local.Handler):
             return self.error(400, 'InvalidTarget')
         if split.path == '/__budget/status':
             return self.send(200, json.dumps({'calls': self.server.calls}).encode(), {'Content-Type': 'application/json'})
-        if fields.get('serviceKey') not in (['first'], ['second']) or fields.get('dataType') != ['JSON'] or len(fields) != 2:
+        if fields.get('serviceKey') not in (['first'], ['second']) or fields.get('dataType') != ['JSON'] or set(fields) not in ({'serviceKey', 'dataType'}, {'serviceKey', 'dataType', 'mode'}):
             return self.error(403, 'OnlySyntheticKeys')
         with self.server.lock:
             self.server.calls += 1
+            mode = fields.get('mode', [None])
+            if mode == ['nodata-json']:
+                return self.send(200, b'{"response":{"header":{"resultCode":"03"}}}', {'Content-Type': 'application/json'})
+            if mode == ['nodata-xml']:
+                return self.send(200, b'<response><header><resultCode>03</resultCode></header></response>', {'Content-Type': 'application/xml'})
+            if mode in (['param10'], ['param12']):
+                code = mode[0][-2:]
+                return self.send(200, json.dumps({'response':{'header':{'resultCode':code}}}).encode(), {'Content-Type':'application/json'})
+            if mode != [None]:
+                return self.error(403, 'OnlySyntheticMode')
             # First response rotates a key; subsequent synthetic raw JSON is accepted.
             if self.server.calls == 1:
                 return self.send(200, b'<OpenAPI_ServiceResponse><returnReasonCode>22</returnReasonCode></OpenAPI_ServiceResponse>', {'Content-Type': 'application/xml'})
@@ -63,11 +73,12 @@ def main():
         with s3.lock:
             authorities = [json.loads(o.body) for k, o in s3.objects.items() if k.endswith('/authority.json')]
             witnesses = [json.loads(o.body) for k, o in s3.objects.items() if '/blocks/' in k]
-            assert len(authorities) == 3 and sum(a['used'] for a in authorities) == 10
-            assert len(witnesses) == 4  # the unknown CAS has no witness
+            assert len(authorities) == 7 and sum(a['used'] for a in authorities) == 18
+            assert len(witnesses) == 8  # the unknown CAS has no witness
+            assert len([k for k in s3.objects if k.startswith('raw/v2/')]) == 1
             assert all(a['used'] <= a['policy']['limit'] for a in authorities)
-        assert provider.calls == 4
-        print('observed peer counters: 4 provider requests, 10 charged units, 4 witnesses; PASS')
+        assert provider.calls == 8
+        print('observed peer counters: 8 provider requests, 18 charged units, 8 witnesses; PASS')
     finally:
         for peer in (s3, provider):
             peer.shutdown()

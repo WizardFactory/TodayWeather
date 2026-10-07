@@ -34,6 +34,7 @@ struct Data {
     before_apply: Option<Arc<tokio::sync::Notify>>,
     before_entered: bool,
     late_status: Option<u16>,
+    conflict: bool,
 }
 #[derive(Default)]
 struct Peer {
@@ -188,6 +189,9 @@ async fn apply_put(peer: Arc<Peer>, path: String, headers: HeaderMap, bytes: Vec
     let (status, delay) = {
         let mut data = peer.data.lock().unwrap();
         data.events.push(format!("PUT {path}"));
+        if data.conflict && path.ends_with("authority.json") {
+            return StatusCode::PRECONDITION_FAILED.into_response();
+        }
         let old = data.objects.get(&path);
         if (headers.get("if-none-match").is_some() && old.is_some())
             || headers
@@ -256,6 +260,10 @@ async fn acquire(
         end(),
     )
     .await
+    .map(|outcome| match outcome {
+        AcquisitionOutcome::Data(raw) => raw,
+        AcquisitionOutcome::NoData(_) => panic!("expected data in generic existing fixture"),
+    })
 }
 #[tokio::test]
 async fn cold_warm_and_replacement_burn_leftovers() {
@@ -519,6 +527,9 @@ async fn vc_record_costs_fund_maximum_before_attempt() {
             )
             .await
             .unwrap();
+        let AcquisitionOutcome::Data(result) = result else {
+            panic!("VC data");
+        };
         assert_eq!(result.attempts, 1);
         assert_eq!(peer.used(&p), 120);
         assert_eq!(
@@ -856,4 +867,104 @@ async fn delayed_cas_application_before_or_after_replacement_never_overlaps() {
         drop(data);
         assert_eq!(peer.used(&p), if old_wins { 8 } else { 4 });
     }
+}
+
+#[tokio::test]
+async fn terminal_no_data_and_parameter_errors_send_one_http() {
+    for body in [
+        br#"{"response":{"header":{"resultCode":"03"}}}"#.as_slice(),
+        b"<response><header><resultCode>03</resultCode></header></response>".as_slice(),
+        br#"{"response":{"header":{"resultCode":"10"}}}"#.as_slice(),
+        b"<response><header><resultCode>12</resultCode></header></response>".as_slice(),
+    ] {
+        let peer = Running::new().await;
+        peer.responses(&[(200, body)]);
+        let result = FundedExecutor::new(
+            Provider::DataGoKr,
+            1,
+            Arc::new(HttpProviderTransport::new(4096).unwrap()),
+            Arc::new(validator as fn(&serde_json::Value) -> bool),
+        )
+        .unwrap()
+        .execute(
+            format!("{}/provider", peer.endpoint).parse().unwrap(),
+            vec![candidate(store(&peer, policy(8, 4), clock()), "first")],
+            end(),
+        )
+        .await;
+        if body.windows(2).any(|b| b == b"03") {
+            let Ok(AcquisitionOutcome::NoData(raw)) = result else {
+                panic!("typed no-data");
+            };
+            assert_eq!(raw.body, body);
+            assert_eq!(raw.attempts, 1);
+            assert!(
+                peer.peer
+                    .data
+                    .lock()
+                    .unwrap()
+                    .objects
+                    .keys()
+                    .all(|key| key.contains("/budgets/v2/"))
+            );
+        } else {
+            assert!(matches!(
+                result,
+                Err(AcquisitionError::Provider(Disposition::Rejected))
+            ));
+        }
+        assert_eq!(peer.calls(), 1, "terminal provider outcome must not retry");
+    }
+}
+
+#[tokio::test]
+async fn duplicate_rotation_candidates_rejected_before_funding() {
+    for duplicate in ["store", "key", "quota", "quota-other-window"] {
+        let peer = Running::new().await;
+        let p = policy(8, 4);
+        let a = store(&peer, p.clone(), clock());
+        let mut q = p.clone();
+        if duplicate == "key" {
+            q.quota_id = "b".repeat(64);
+        }
+        if duplicate == "quota-other-window" {
+            q.window_id = "another_valid_window".into();
+        }
+        let b = if duplicate == "store" {
+            a.clone()
+        } else {
+            store(&peer, q, clock())
+        };
+        let second_key = if duplicate == "key" {
+            "first"
+        } else {
+            "second"
+        };
+        let result = acquire(&peer, vec![candidate(a, "first"), candidate(b, second_key)]).await;
+        assert!(matches!(result, Err(AcquisitionError::Invalid)));
+        assert_eq!(peer.calls(), 0);
+        assert!(peer.peer.data.lock().unwrap().events.is_empty());
+    }
+}
+
+#[tokio::test]
+async fn persistent_cas_contention_is_not_exhaustion() {
+    let peer = Running::new().await;
+    peer.peer.data.lock().unwrap().conflict = true;
+    let result = store(&peer, policy(100, 4), clock())
+        .reserve(2, end())
+        .await;
+    assert!(matches!(result, Err(BudgetError::Contention)));
+    assert_eq!(peer.calls(), 0);
+    assert_eq!(
+        peer.peer
+            .data
+            .lock()
+            .unwrap()
+            .events
+            .iter()
+            .filter(|e| e.starts_with("PUT "))
+            .count(),
+        8
+    );
 }

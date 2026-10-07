@@ -39,7 +39,8 @@ The global ceiling lives at
 Witnesses live in `blocks/{start}-{end}.json` below that prefix. JSON contains only immutable
 policy and range identities/capacity. It contains no raw/normalized weather or request data.
 CAS enforces non-overlap under trusted conformant object semantics; it is not a multi-object
-transaction. At most eight CAS conflicts are attempted inside the original deadline.
+transaction. At most eight CAS conflicts are attempted inside the original deadline. Their
+bounded exhaustion returns Contention; a real insufficient quota returns Exhausted.
 
 Existing live owners reuse only their own unissued block remainder. Every request maximum
 and every candidate is debited before the first provider attempt. Units are never refunded
@@ -62,18 +63,27 @@ units burn even when rotation is unused. VC per-attempt costs of 49/25/1 give ma
 
 `execute(endpoint, candidates, deadline)` rejects cheap invalid targets before funding,
 including insecure non-loopback HTTP, embedded credentials and duplicate key/dataType query
-parameters. `ProviderKey::new` expects the caller's decoded secret, which is encoded once
+parameters. Duplicate rotation secret, shared BudgetStore or provider/quota owner is rejected
+before any funding or HTTP, including another window for the same owner. Errors omit secrets.
+`ProviderKey::new` expects the caller's decoded secret, which is encoded once
 by the query builder. Endpoint/kind/page parameters and key normalization compatibility
 remain provider-adapter responsibilities. The HTTP client has no redirects, proxy discovery
 or implicit retries. Data.go.kr appends `dataType=JSON`, but XML error bodies are recognized.
 
 HTTP 429/code 22 means quota; HTTP 401/403 or codes 20/30/31/32 means auth. Those stop same-key
-retry and may rotate to the pre-funded next key. Other 4xx stops. Transport, 5xx, 3xx and empty
+retry and may rotate to the pre-funded next key. Other 4xx stops. A complete recognized 2xx
+JSON/XML 03 envelope returns terminal NoData without retry even if the data validator rejects
+it; 10/12 are terminal Rejected. HTTP 3xx/5xx +03 remains transient, auth/quota/other4xx has
+priority, and malformed/HTML 03 bodies are not no-data. Transport, 5xx, 3xx and empty
 or invalid bodies allow one funded subsequent attempt within the original deadline. JSON
 and XML code/status combinations are tested. The kind-specific `Validator` must validate
 semantic data; generic JSON syntax alone does not establish provider parity.
 
-An `AcquiredBody` holds exact raw bytes/status/content type/attempt count in memory only.
+`AcquisitionOutcome::Data(AcquiredBody)` or `NoData(AcquiredBody)` holds exact raw bytes/status/
+content type/attempt count in memory. NoData is not weather data: do not construct archive
+records or invented rows from it. Future provider ports choose legacy-compatible wire/empty
+semantics and any separately authorized persistence; the generic primitive stores none.
+For Data only:
 Caller S07 glue (not implemented here) must construct ordered raw records/declaration and
 complete S06 publication before new client success. Funding or raw HTTP is not group commit.
 The release example demonstrates this caller publication explicitly.
@@ -117,7 +127,8 @@ The test runner accepts only an owned release binary, binds ephemeral IPv4 loopb
 uses obvious dummy credentials, and shuts down both peers. Fixtures are synthetic protocol
 examples, not recordings from live providers. It asserts quota XML rotation, complete S06
 raw group publication/cold lookup, replacement exhaustion, committed unknown CAS and observed
-peer counters (four provider requests, ten charged units, four witnesses). S3 peer state is
+JSON/XML 03 exact RAM-only outcomes and 10/12 terminal rejection, each one HTTP and no raw
+publication. It observes eight provider requests, eighteen charged units and eight witnesses. S3 peer state is
 volatile. Tests validate protocol ordering and arithmetic, not IAM, signature crypto, actual
 provider quota, latency, public API/mobile parity or production durability after host loss.
 

@@ -201,7 +201,7 @@ impl<T: BudgetTransport> BudgetStore<T> {
                 break;
             }
             if !granted {
-                return Err(BudgetError::Exhausted);
+                return Err(BudgetError::Contention);
             }
         }
         owned.next = owned

@@ -27,12 +27,18 @@ impl<F: Fn(&serde_json::Value) -> bool + Send + Sync + 'static> Validator for F 
         self(json)
     }
 }
-/// Raw bytes only. Caller must perform S06 group publication before client success.
+/// Raw bytes only. Data requires caller S06 publication; NoData is RAM-only.
 pub struct AcquiredBody {
     pub body: Vec<u8>,
     pub status: u16,
     pub content_type: String,
     pub attempts: u8,
+}
+/// Callers must explicitly distinguish weather data from terminal no-data.
+/// NoData preserves the provider bytes in memory and is never a weather archive record.
+pub enum AcquisitionOutcome {
+    Data(AcquiredBody),
+    NoData(AcquiredBody),
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AcquisitionError {
@@ -77,7 +83,7 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
         endpoint: reqwest::Url,
         candidates: Vec<Candidate<T>>,
         deadline: Instant,
-    ) -> Result<AcquiredBody, AcquisitionError> {
+    ) -> Result<AcquisitionOutcome, AcquisitionError> {
         if candidates.is_empty()
             || candidates.len() > 2
             || (self.provider == Provider::VisualCrossing && candidates.len() != 1)
@@ -86,6 +92,17 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                 .any(|c| c.budget.policy().provider != self.provider)
         {
             return Err(AcquisitionError::Invalid);
+        }
+        if candidates.len() == 2 {
+            let (a, b) = (&candidates[0], &candidates[1]);
+            // Quota owner identity is provider + quota_id. A different window for
+            // that owner does not make a second rotation key/quota.
+            if Arc::ptr_eq(&a.budget, &b.budget)
+                || a.key.0 == b.key.0
+                || a.budget.policy().quota_id == b.budget.policy().quota_id
+            {
+                return Err(AcquisitionError::Invalid);
+            }
         }
         if !super::transport::valid_endpoint(&endpoint) {
             return Err(AcquisitionError::Invalid);
@@ -160,12 +177,17 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
             if Instant::now() >= deadline {
                 return Err(AcquisitionError::Deadline);
             }
-            if disposition == Disposition::Data {
-                return Ok(AcquiredBody {
+            if matches!(disposition, Disposition::Data | Disposition::NoData) {
+                let raw = AcquiredBody {
                     body,
                     status,
                     content_type,
                     attempts: attempt,
+                };
+                return Ok(if disposition == Disposition::NoData {
+                    AcquisitionOutcome::NoData(raw)
+                } else {
+                    AcquisitionOutcome::Data(raw)
                 });
             }
             if attempt == 2 || disposition == Disposition::Rejected {

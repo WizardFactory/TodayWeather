@@ -99,6 +99,7 @@ pub enum BudgetError {
     Invalid(&'static str),
     Corrupt(&'static str),
     Exhausted,
+    Contention,
     Unknown,
     Deadline,
     Clock,
