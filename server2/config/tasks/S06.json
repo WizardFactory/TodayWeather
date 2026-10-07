@@ -1,0 +1,90 @@
+{
+  "task": "S06",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2691",
+  "server2_paths": [
+    "server2/src/storage/catalog.rs",
+    "server2/src/storage/catalog_model.rs",
+    "server2/src/storage/catalog_transport.rs",
+    "server2/src/storage/mod.rs",
+    "server2/src/storage/transport.rs",
+    "server2/src/storage/store.rs",
+    "server2/tests/storage/catalog_model.rs",
+    "server2/tests/storage/catalog_wire.rs",
+    "server2/tests/storage/catalog_peer.py",
+    "server2/tests/catalogs.rs",
+    "server2/examples/catalogs_smoke.rs",
+    "server2/config/tasks/S06.json",
+    "server2/Cargo.toml",
+    "server2/Cargo.lock",
+    "server2/src/lib.rs",
+    "server2/tools/render_catalogs_manual.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2691.md",
+      "category": "documentation",
+      "reason": "S06 maintained task contract, operator manual or selected scenario evidence; runtime assets remain under server2"
+    },
+    {
+      "path": "specs/issue-2691.md",
+      "category": "documentation",
+      "reason": "S06 maintained task contract, operator manual or selected scenario evidence; runtime assets remain under server2"
+    },
+    {
+      "path": "plans/issue-2691.md",
+      "category": "documentation",
+      "reason": "S06 maintained task contract, operator manual or selected scenario evidence; runtime assets remain under server2"
+    },
+    {
+      "path": "docs/operations/server2-catalogs.md",
+      "category": "documentation",
+      "reason": "S06 maintained task contract, operator manual or selected scenario evidence; runtime assets remain under server2"
+    },
+    {
+      "path": "docs/operations/server2-catalogs.pdf",
+      "category": "documentation",
+      "reason": "S06 maintained task contract, operator manual or selected scenario evidence; runtime assets remain under server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-catalogs/usage.png",
+      "category": "documentation",
+      "reason": "S06 maintained task contract, operator manual or selected scenario evidence; runtime assets remain under server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-catalogs/manifest.json",
+      "category": "documentation",
+      "reason": "S06 maintained task contract, operator manual or selected scenario evidence; runtime assets remain under server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Root-owned shared architecture/design and parent plan; S06 builder consumes validated artifacts without editing these paths"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.json",
+      "category": "documentation",
+      "reason": "Root-owned shared architecture/design and parent plan; S06 builder consumes validated artifacts without editing these paths"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.html",
+      "category": "documentation",
+      "reason": "Root-owned shared architecture/design and parent plan; S06 builder consumes validated artifacts without editing these paths"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-catalog-publication.sequence.json",
+      "category": "documentation",
+      "reason": "Root-owned shared architecture/design and parent plan; S06 builder consumes validated artifacts without editing these paths"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-catalog-publication.html",
+      "category": "documentation",
+      "reason": "Root-owned shared architecture/design and parent plan; S06 builder consumes validated artifacts without editing these paths"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Root-owned shared architecture/design and parent plan; S06 builder consumes validated artifacts without editing these paths"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2691#issuecomment-6031233006"
+}

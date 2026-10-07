@@ -191,7 +191,7 @@
       "dot": "amber",
       "title": "Scope and gates",
       "items": [
-        "S04 foundation integrated; no runtime deployed",
+        "S02 / S03 / S04 / S05 merged; no route cutover",
         "Cold cells keep legacy until parity is proven",
         "Later scale-out: independent caches and shared S3",
         "Design source: docs/architecture/server2.md"

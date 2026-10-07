@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "task": "S06",
+  "date": "2026-10-07",
+  "command": "python3 tests/storage/catalog_peer.py --smoke target/release/examples/catalogs_smoke",
+  "environment": "Rust1.99/macOS, public Python loopback peer",
+  "scope": "Complete group/cold/repair/unknown HTTP, not AWS/auth/performance/API parity",
+  "captured_stdout": [
+    "publish: complete group, 2 ordered raw pages, 2 catalog partitions",
+    "cold: 1 checked acquisition, 2 pinned dependencies, providers disabled",
+    "partial: A/new + B/healthy-old excluded; preceding complete group retained",
+    "repair: healthy catalog + paginated LIST restored every revision",
+    "response loss: committed CAS reconciled from exact union",
+    "late commit: lost first PUT + read404 + retry403 remains Ambiguous; exact catalog exists",
+    "direct rejection: first PUT403 retained, no group success",
+    "PASS local real HTTP smoke (85.06 ms); not AWS latency/auth or API parity"
+  ],
+  "binary_sha256": "01785512b99a3d41f25c553d9957f19f67aad0fd05a082c37f31d575e536a5e1",
+  "source_sha256": "82b471a87e56b5e3e5b37d0722968411fe5f705eab9c7b2a9a9594dee53fb816",
+  "pdf_sha256": "34f9bdac98eee1e1283b78158d8bea56814e47a158c647e6f07ffbf35483cba7",
+  "screenshot_sha256": "fb386a1143e97fdead8fecd3959f77c5360371fac5512dc790cc4fbcd96c9af6",
+  "pages": 2
+}

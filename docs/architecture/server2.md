@@ -285,6 +285,12 @@ costs alongside packs. No noncurrent-version deletion is authorized here.
 
 ### Publication and recovery
 
+The [complete-group sequence](diagrams/server2-catalog-publication.html)
+([editable JSON](diagrams/server2-catalog-publication.sequence.json)) explains
+the S06 internal publication, eligibility and repair contract. Its source links
+are pinned to the merged `4864c936` contract, rather than claiming deployed
+weather routes or production S3 verification.
+
 1. Validate all pages, compute their group declaration, persist any required
    identity descriptor and PUT canonical raw objects with immutable IDs.
 2. Read/create the authoritative partition catalog and union the new identities.
@@ -308,7 +314,7 @@ repair can validate the expected set rather than blessing only the pages found.
 Descriptor acquisition adds a measured lookup hop where needed.
 
 S05's internal raw-record wire contract is documented in its
-[published operator manual](https://github.com/WizardFactory/TodayWeather/blob/65b93b68ffab3d16997fa99952dbb5e65cc9eee7/docs/operations/server2-records.md).
+[operator manual](../operations/server2-records.md).
 `x-amz-meta-s2-record` carries the base64 canonical identity/envelope JSON, and
 `x-amz-meta-s2-gzip-sha256` identifies the compressed bytes. An optional immutable
 `FetchGroupRef` is prepared before the raw PUT and contains identity-only group,
@@ -352,6 +358,46 @@ refresh intervals. Missing index is not automatically missing provider data:
 attempt bounded repair before deciding whether a quota-funded provider fetch
 is needed. Incomplete repair returns the existing error contract or legacy
 fallback; it must not hide a history gap behind a new successful response.
+
+### S06 boundary for resolver and provider budgets
+
+S06 returns pinned, verified identity sets and catalog dependency tokens to the
+later S07 resolver. A complete fetch group requires the full declared member,
+page and sibling-partition sets; neither a raw PUT acknowledgement nor a stored
+`complete` flag is sufficient. Hashing the descriptor must use the declaration
+before its own group reference is attached, avoiding a circular hash dependency.
+An already published raw identity retains its original group affiliation;
+reconciliation cannot rewrite immutable metadata to join another group.
+
+Repair must distinguish a fully exhausted, validated scan from a pending or
+failed scan. A timeout, continuation failure or missing declared member cannot
+turn partial discovery into a proven empty result. Healthy catalogs can still
+have orphaned bodies and therefore remain eligible for explicit bounded repair.
+Keep every eligible revision in deterministic order; field merges and list
+replacement remain in-memory operations, not persisted catalog payloads.
+
+The initial S06 lookup/repair utility reads descriptors and raw members
+sequentially within one operation. Its `io=16` admission bound permits concurrent
+operations; it does not supply sixteen-way fan-out inside one lookup. The wave
+counts in section 8 describe the proposed bounded-parallel resolver strategy,
+not measured S06 latency. S07/S09 must verify or improve this path before the
+existing feasibility/cutover gates; loopback smoke timings are not AWS estimates.
+
+The caller's monotonic deadline covers the whole operation: descriptor/body
+writes, catalog conflicts, sibling reads, credential waits and repair pages.
+Independent three-second transport calls cannot extend the existing backend
+attempt budget. S07 owns cache admission, single-flight and refresh policy;
+S08 owns `budgets/v2/` reservations and provider admission. Weather catalogs do
+not contain quota arithmetic, and unresolved repair does not authorize an
+unreserved provider request.
+
+Conditional catalog publication uses the returned opaque ETag with `If-Match`,
+or `If-None-Match: *` for creation. Conflicts require a bounded read-and-union
+retry. Prefix repair follows every `ListObjectsV2` continuation page before
+claiming scan completion. These are protocol requirements from the
+[AWS conditional-write documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html)
+and [ListObjectsV2 API](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html);
+loopback verification does not establish actual IAM, SigV4 or AWS latency.
 
 ## 5. Exact-raw packs to reduce fan-out
 

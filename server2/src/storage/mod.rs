@@ -1,5 +1,18 @@
 //! Immutable exact-byte raw records. A body PUT is not catalog/fetch-group publication.
+mod catalog;
+mod catalog_model;
+mod catalog_transport;
 mod codec;
+pub use catalog::{
+    CatalogStore, CompleteAcquisition, CompleteSet, DependencyToken, LookupOutcome, RepairOutcome,
+    RepairScope,
+};
+pub use catalog_model::{
+    Catalog, CatalogId, CatalogLimits, GroupDeclaration, GroupMember, SelectionPolicy, fold_values,
+};
+pub use catalog_transport::{
+    CatalogTransport, ControlObject, ListPage, WriteCondition, decode_list,
+};
 mod store;
 mod transport;
 pub use codec::{

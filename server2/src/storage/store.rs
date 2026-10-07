@@ -24,9 +24,13 @@ pub struct RawRecordStore<T> {
 }
 impl<T: ObjectTransport> RawRecordStore<T> {
     pub fn new(transport: T, limits: Limits) -> Result<Self, Error> {
+        Self::new_shared(Arc::new(transport), limits)
+    }
+    /// Shared transport only; this does not share caches or permit pools with other stores.
+    pub fn new_shared(transport: Arc<T>, limits: Limits) -> Result<Self, Error> {
         limits.validate()?;
         Ok(Self {
-            transport: Arc::new(transport),
+            transport,
             io: Arc::new(Semaphore::new(limits.io)),
             buffers: Arc::new(Semaphore::new(limits.io)),
             cpu: Arc::new(Semaphore::new(limits.cpu)),

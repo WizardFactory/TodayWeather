@@ -1,8 +1,9 @@
 # Plan: document and later implement server2
 
 Source: [intent](../intent/issue-2614.md), [spec](../specs/issue-2614.md).
-Current status: design PR #2685 and foundation PR #2708 merged; parallel S02,
-S03 and S05 implementation proceeds in task-owned reviewed, unmerged PRs.
+Current status: design PR #2685, foundation PR #2708 and S02/S03/S05 PRs
+#2713/#2711/#2712 are merged. S06 catalogs and complete fetch-group recovery
+proceed in a separate task-owned PR from master `4864c936`.
 No production/resource actions or route cutover are authorized by that work.
 
 ## This PR
@@ -78,9 +79,14 @@ for execution; runtime work also follows the common S01/S04/S02 gates above.
 AK's core S01 decisions are [recorded on the parent](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640).
 S01 decision recording is [complete](https://github.com/WizardFactory/TodayWeather/issues/2686#issuecomment-6009248131).
 S04 foundation [PR #2708](https://github.com/WizardFactory/TodayWeather/pull/2708)
-is merged and #2689 is complete. S02 goldens, S03 local infrastructure and S05
-raw-record storage now proceed independently from the integrated baseline.
-Their passing checks do not imply complete route parity or deployed server2.
+is merged and #2689 is complete. S02 goldens ([PR #2713](https://github.com/WizardFactory/TodayWeather/pull/2713)),
+S03 local infrastructure ([PR #2711](https://github.com/WizardFactory/TodayWeather/pull/2711))
+and S05 raw-record storage ([PR #2712](https://github.com/WizardFactory/TodayWeather/pull/2712))
+are merged; the [integration record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6031101668)
+records the reviewed heads and resulting master tree. S06 follows that baseline.
+S07 resolver/cache and S08 provider reservations can proceed in parallel after
+their S06 predecessor gate; read-only interface preparation does not complete it.
+Passing local checks do not imply complete route parity or deployed server2.
 
 | Task | Tracker | Required predecessors |
 | --- | --- | --- |

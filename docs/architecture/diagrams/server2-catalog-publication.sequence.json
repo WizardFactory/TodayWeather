@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "S06: Complete Fetch-Group Publication Contract",
+    "output": "docs/architecture/diagrams/server2-catalog-publication.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather.git",
+      "provider": "github",
+      "revision": "4864c9368e78061fbc65b57ac0abaaa3b9408eff"
+    }
+  },
+  "participants": [
+    {
+      "id": "caller",
+      "type": "backend",
+      "label": "Caller",
+      "sublabel": "Internal API",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 286,
+          "end_line": 320
+        }
+      ]
+    },
+    {
+      "id": "group",
+      "type": "backend",
+      "label": "Group Gate",
+      "sublabel": "Validate / pin",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 299,
+          "end_line": 309
+        }
+      ]
+    },
+    {
+      "id": "descriptor",
+      "type": "cloud",
+      "label": "Descriptor",
+      "sublabel": "Immutable identity",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 303,
+          "end_line": 320
+        }
+      ]
+    },
+    {
+      "id": "raw",
+      "type": "cloud",
+      "label": "Raw Bodies",
+      "sublabel": "Exact gzip bytes",
+      "sources": [
+        {
+          "path": "server2/src/storage/store.rs",
+          "line": 95,
+          "end_line": 111
+        }
+      ]
+    },
+    {
+      "id": "catalog",
+      "type": "cloud",
+      "label": "Catalogs",
+      "sublabel": "Versioned CAS",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 288,
+          "end_line": 333
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 155,
+      "to": 520,
+      "label": "Publish one complete acquisition"
+    },
+    {
+      "from": 545,
+      "to": 815,
+      "label": "Read: admit complete groups only"
+    },
+    {
+      "from": 845,
+      "to": 1190,
+      "label": "Repair missing or healthy catalogs"
+    }
+  ],
+  "messages": [
+    {
+      "id": "acquire",
+      "from": "caller",
+      "to": "group",
+      "y": 175,
+      "label": "Complete raw acquisition",
+      "variant": "default"
+    },
+    {
+      "id": "descriptor-put",
+      "from": "group",
+      "to": "descriptor",
+      "y": 225,
+      "label": "PUT declaration",
+      "variant": "emphasis"
+    },
+    {
+      "id": "descriptor-ack",
+      "from": "descriptor",
+      "to": "group",
+      "y": 270,
+      "label": "Verified identity",
+      "variant": "return"
+    },
+    {
+      "id": "bodies-put",
+      "from": "group",
+      "to": "raw",
+      "y": 315,
+      "label": "PUT all canonical bodies",
+      "variant": "emphasis"
+    },
+    {
+      "id": "bodies-ack",
+      "from": "raw",
+      "to": "group",
+      "y": 360,
+      "label": "All raw identities verified",
+      "variant": "return"
+    },
+    {
+      "id": "catalog-publish",
+      "from": "group",
+      "to": "catalog",
+      "y": 405,
+      "label": "GET + union + conditional PUT",
+      "variant": "emphasis"
+    },
+    {
+      "id": "catalog-ack",
+      "from": "catalog",
+      "to": "group",
+      "y": 450,
+      "label": "All partitions published",
+      "variant": "return"
+    },
+    {
+      "id": "publish-gate",
+      "from": "group",
+      "to": "caller",
+      "y": 505,
+      "label": "Complete only after sibling validation",
+      "variant": "security"
+    },
+    {
+      "id": "cold-read",
+      "from": "caller",
+      "to": "group",
+      "y": 565,
+      "label": "Cold identity lookup",
+      "variant": "default"
+    },
+    {
+      "id": "pin-siblings",
+      "from": "group",
+      "to": "catalog",
+      "y": 620,
+      "label": "Pin all sibling snapshots",
+      "variant": "emphasis"
+    },
+    {
+      "id": "pinned-refs",
+      "from": "catalog",
+      "to": "group",
+      "y": 665,
+      "label": "Generations + member references",
+      "variant": "return"
+    },
+    {
+      "id": "descriptor-check",
+      "from": "group",
+      "to": "descriptor",
+      "y": 710,
+      "label": "GET / verify declaration",
+      "variant": "default"
+    },
+    {
+      "id": "group-admit",
+      "from": "group",
+      "to": "caller",
+      "y": 775,
+      "label": "Complete group or conservative exclusion",
+      "variant": "security"
+    },
+    {
+      "id": "repair-request",
+      "from": "caller",
+      "to": "group",
+      "y": 865,
+      "label": "Bounded orphan repair",
+      "variant": "default"
+    },
+    {
+      "id": "raw-list",
+      "from": "group",
+      "to": "raw",
+      "y": 915,
+      "label": "LIST every page + verify bodies",
+      "variant": "emphasis"
+    },
+    {
+      "id": "raw-list-result",
+      "from": "raw",
+      "to": "group",
+      "y": 960,
+      "label": "All pages or incomplete scan",
+      "variant": "return"
+    },
+    {
+      "id": "repair-descriptor",
+      "from": "group",
+      "to": "descriptor",
+      "y": 1005,
+      "label": "Verify declared members and pages",
+      "variant": "default"
+    },
+    {
+      "id": "repair-cas",
+      "from": "group",
+      "to": "catalog",
+      "y": 1055,
+      "label": "Complete scan: union + CAS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "repair-sibling",
+      "from": "group",
+      "to": "catalog",
+      "y": 1100,
+      "label": "Re-pin and check all siblings",
+      "variant": "default"
+    },
+    {
+      "id": "repair-return",
+      "from": "group",
+      "to": "caller",
+      "y": 1160,
+      "label": "Complete repair or incomplete outcome",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Durability gate",
+      "items": [
+        "Descriptor and bodies precede catalog CAS.",
+        "New success requires every declared partition.",
+        "No cross-object transaction is claimed."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Partial publication",
+      "items": [
+        "New A + old B excludes the incomplete group.",
+        "Keep preceding complete data or existing error.",
+        "Raw bodies alone do not acknowledge a result."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Repair and scope",
+      "items": [
+        "Only an exhausted, validated scan is complete.",
+        "Healthy catalogs still need orphan reconciliation.",
+        "Internal contract; no serving route is switched."
+      ]
+    }
+  ]
+}
