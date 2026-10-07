@@ -1,6 +1,8 @@
 # Specification: server2 design amendment
 
-Status: proposed design; no runtime code. Source: [intent](../intent/issue-2614.md).
+Status: design contract under implementation; S04 Rust/CI/placement foundation
+is integrated, while weather/storage/provider routes remain task-owned future
+work. No deployed server2 is claimed. Source: [intent](../intent/issue-2614.md).
 
 ## Required changes
 
@@ -29,14 +31,16 @@ require S04; pre-gate work is inventory/planning only. Ordinary legacy
 maintenance remains outside this server2 placement rule. Explicit pending
 decisions block the mapped tasks even if S01 or a predecessor issue is closed.
 
-This PR's checks are content/link/schema, browser/visual diagram checks and
+The original design PR's checks were content/link/schema, browser/visual diagram checks and
 latency arithmetic, not execution of a future Rust implementation. Runtime
 acceptance in the [plan](../plans/issue-2614.md) requires byte-equivalent golden
 responses from frozen raw inputs/clock and current contracts, crash/concurrency
 tests and measured latency. No declared performance estimate is a cutover gate.
 
-Precise reverse-geocoding cannot be both volatile-only for privacy and guaranteed
-provider-free after replacement. Preserve the provider/legacy acquisition path;
+D04 permits useful memory/S3 geocoding caches within the original privacy and
+label contract. A forbidden precise-coordinate archive cannot guarantee
+provider-free restoration after replacement; privacy-safe persistent cache
+projections still require schema/expiry/source and exact-label proof. Preserve the provider/legacy acquisition path;
 do not silently round coordinates, omit labels or treat S3 failure as a new 200.
 Missing 8-day history cannot be accepted for a used API merely to honor D1.
 
@@ -51,8 +55,11 @@ approves demand-limited hourly history and 2-minute rainfall capture, immutable
 raw gzip with versioned identity-catalog CAS, full raw/group publication before
 new success, existing error/fallback or valid memory during S3 outages,
 conditional measured packs and no lifecycle deletions now. Capture demand and
-ownership are implemented in S14; this PR only records the decision. S18's exact
-state design and separate activation/provisioning/cutover gates remain deferred.
+ownership are implemented in S14. D01–D03 resolve the prior push retry/migration
+policy gate: S18 designs state ordering and durable new acceptance, performs no
+automatic failed/unknown resend and no legacy registration import. D04 authorizes
+privacy-safe memory/S3 caching; exact labels, bounded validity and privacy tests
+still gate reuse. Provisioning/cutover remain separate authorized actions.
 
 ## Cold-cell compatibility and demand privacy (R16/R18)
 
@@ -65,3 +72,16 @@ legacy capture retains quota/cost and must be measured in coexistence budgets.
 S14 fixtures cover all three cold-cell cases. Durable demand records under
 `state/demand/grid/` contain grid identity, last-demand time and expiry only,
 without coordinates, IPs, device/user/subscriber IDs, tokens or request logs.
+
+
+## D01–D04 implementation constraints
+
+The [latest AK record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6015980608)
+is authority for the narrow push-registration continuity difference. Payload,
+status, headers and auth remain compatible. Recovery restores new durable state
+without sending again; operations use sanitized error/uncertain-outcome logs to
+fix the next distinct send. No separate writer organization/process is required.
+Geocoding cache projections are the narrowly named D04 cache exception, with
+coarse identities/source/expiry and legacy response proof; they do not allow
+normalized weather views or indefinite precise lookup history. None of these
+choices relax the weather-history, cold-cell fallback or retirement criteria.

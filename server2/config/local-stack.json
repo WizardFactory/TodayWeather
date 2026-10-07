@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "bind": "127.0.0.1",
+  "bucket": "server2-local",
+  "test_access_key": "server2-local",
+  "test_secret_key": "server2-local-secret",
+  "max_object_bytes": 1048576,
+  "max_store_bytes": 33554432,
+  "max_metadata_bytes": 2048,
+  "max_versions": 64,
+  "max_connections": 16,
+  "socket_timeout_seconds": 2,
+  "fixtures": "config/fixtures/providers.json",
+  "max_objects": 4096
+}

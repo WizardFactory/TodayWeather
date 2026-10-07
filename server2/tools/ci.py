@@ -31,6 +31,13 @@ def main():
         declared=[Path(provided)]
     if len(declared)!=1: raise SystemExit('one reviewed task declaration is required per PR')
     commands=[[sys.executable,'tools/check_placement.py','--root','..','--declaration',str(declared[0]),'--base',base],[sys.executable,'tools/test_placement.py'],['cargo','fmt','--check'],['cargo','clippy','--locked','--workspace','--all-targets','--','-D','warnings'],['cargo','test','--locked','--workspace'],['cargo','build','--locked','--release'],[sys.executable,'tools/smoke.py','--binary','target/release/server2']]
+    local_tests = Path('deploy/local/test_local.py')
+    local_smoke = Path('deploy/local/smoke.py')
+    if local_tests.exists() != local_smoke.exists():
+        raise SystemExit('S03 requires paired local tests and integrated smoke')
+    if local_tests.exists():
+        commands.insert(2, [sys.executable, str(local_tests)])
+        commands.append([sys.executable, str(local_smoke), '--binary', 'target/release/server2'])
     for command in commands:
         print('+',' '.join(command),flush=True);subprocess.run(command,check=True)
 

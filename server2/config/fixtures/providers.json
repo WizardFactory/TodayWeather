@@ -1,0 +1,24 @@
+{
+  "fixtures": [
+    {
+      "path": "pwn-status.json",
+      "sha256": "7a272f41ac1a805851a8d6014f4450904ec8b2fb3228b1146c7ea1948f351a27",
+      "source_revision": "f568508da68d408a282752f55614407899631c88",
+      "source_kind": "existing repository provider fixture; no new live fetch",
+      "route": "/kma/pwn-status",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "source_url": "https://github.com/WizardFactory/TodayWeather/blob/f568508da68d408a282752f55614407899631c88/server/test/offline/fixtures/kma-warning/pwn-status.json"
+    },
+    {
+      "path": "err-30.json",
+      "sha256": "b604c42861bd3f7fadd0a1fe4a4e9c0d18ebca873bc801d36fa02849409700c4",
+      "source_revision": "f568508da68d408a282752f55614407899631c88",
+      "source_kind": "existing repository provider fixture; no new live fetch",
+      "route": "/kma/err-30",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "source_url": "https://github.com/WizardFactory/TodayWeather/blob/f568508da68d408a282752f55614407899631c88/server/test/offline/fixtures/kma-warning/err-30.json"
+    }
+  ]
+}

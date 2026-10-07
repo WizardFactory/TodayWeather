@@ -1,6 +1,8 @@
 # Intent: server2 memory and S3 design amendment
 
-Status: design PR; runtime implementation and cutover are not authorized here.
+Status: original design PR #2685 merged; S04 foundation #2708 integrated.
+The original design scope below is preserved. Later task-owned implementation
+follows the recorded follow-up authority; production cutover remains separate.
 Source: [#2614](https://github.com/WizardFactory/TodayWeather/issues/2614)
 and AK's task instructions on 2026-10-05/06.
 
@@ -46,7 +48,10 @@ start on one Spot instance before scaling up and later out.
 
 AK approved demand-limited history/rainfall capture and the S3 publication,
 outage and no-delete policy on 2026-10-06; the [decision record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640) reconciles O-1…O-13.
-State migration details remain an explicit S18 prerequisite. Privacy activation,
+Latest [AK D01–D04](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6015980608)
+resolve the superseded push-registration migration/retry and cache-policy
+questions. State schema/ordering are implementation choices under durable new-state
+acceptance; S18 dependencies and tests still apply. Privacy/label proof,
 measured lifecycle/pack costs and production cutover retain their named gates. Exact active-API parity takes precedence over optional
 performance improvements. See the [spec](../specs/issue-2614.md) and
 [delivery plan](../plans/issue-2614.md).
@@ -72,3 +77,22 @@ Raw packs require measured benefit; no lifecycle deletions are selected now.
 Runtime implementation proceeds in task-owned PRs, starting with S04; this
 design PR contains no runtime code. Full used-API compatibility and separate
 cutover approval remain required. See the parent decision record above.
+
+
+## Implementation and D01–D04 amendment (2026-10-06)
+
+AK authorized useful parallel implementation after S01/S04. S02 goldens, S03 local
+infrastructure and S05 raw records proceed in separate reviewed unmerged PRs.
+This adds no merge, live resource/routing, provider-call or notification authority.
+D01's writer is the component ordering updates inside the initial Rust process;
+its schema/synchronization are normal design/review choices. D02 prohibits
+automatic failed/unknown push-delivery retries (including recovery and hidden
+adapter retries), with sanitized logs to fix subsequent distinct sends. Weather
+provider retries remain unchanged. D03 imports no legacy push registrations;
+users register through existing APIs. This is solely a registration-continuity
+difference, not a weather-history or API payload/status/header/auth exception.
+D04 permits useful memory/S3 geocoding caches under exact-label and coordinate
+privacy proof. Privacy-safe coarse cache projections are a narrowly named cache
+exception, with source and bounded validity; normalized weather views and precise
+lookup-history archives remain forbidden. These decisions do not approve a
+cutover or remove cold-cell fallback/retirement gates.

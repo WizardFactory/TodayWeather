@@ -173,7 +173,7 @@
       "items": [
         "Preserve the 19 observed API groups",
         "No local persistent serving store",
-        "Precise reverse geocoding stays volatile",
+        "Coarse geocode: memory / S3; precise stays volatile",
         "Demand state: grid identity and times only"
       ]
     },
@@ -191,7 +191,7 @@
       "dot": "amber",
       "title": "Scope and gates",
       "items": [
-        "Proposed design; no runtime deployed",
+        "S04 foundation integrated; no runtime deployed",
         "Cold cells keep legacy until parity is proven",
         "Later scale-out: independent caches and shared S3",
         "Design source: docs/architecture/server2.md"
