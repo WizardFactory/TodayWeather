@@ -8,7 +8,7 @@
     "output": "docs/architecture/diagrams/server2-feasibility.html",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "025e5a2b8e7e190e59cd92dd3a509f3008836a91",
+      "revision": "32b11e525d73aadfff91bcf59402bf550565ded5",
       "provider": "github",
       "link_mode": "web"
     }
@@ -118,8 +118,8 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 325,
-          "end_line": 344
+          "line": 329,
+          "end_line": 349
         }
       ]
     },
@@ -135,13 +135,18 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 735,
-          "end_line": 756
+          "line": 751,
+          "end_line": 770
         },
         {
           "path": "server2/deploy/benchmark/cloud-init.yml",
           "line": 1,
           "end_line": 40
+        },
+        {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 725,
+          "end_line": 750
         }
       ]
     },
@@ -157,8 +162,8 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 446,
-          "end_line": 452
+          "line": 608,
+          "end_line": 620
         },
         {
           "path": "server2/deploy/benchmark/cloud-init.yml",
@@ -184,8 +189,8 @@
         },
         {
           "path": "server2/tools/benchmark/aws.rs",
-          "line": 2331,
-          "end_line": 2358
+          "line": 2335,
+          "end_line": 2360
         }
       ]
     },
@@ -218,12 +223,12 @@
       "sources": [
         {
           "path": "server2/tools/benchmark/aws.rs",
-          "line": 2224,
-          "end_line": 2239
+          "line": 2228,
+          "end_line": 2242
         },
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 471,
+          "line": 475,
           "end_line": 510
         }
       ]
@@ -240,8 +245,8 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 643,
-          "end_line": 683
+          "line": 650,
+          "end_line": 687
         }
       ]
     },
@@ -392,7 +397,8 @@
       "items": [
         "One host <=2h; synthetic load <=60min; USD5 operator stop.",
         "400k reads / 20k PUT-LIST / 30GiB download / 64MiB version charge.",
-        "Every PUT reserves body +16KiB, even denied or uncertain attempts."
+        "Every PUT reserves body +16KiB, even denied or uncertain attempts.",
+        "59.5min max; 15min tail includes 30s completion grace; <5min is refused."
       ]
     },
     {
@@ -404,7 +410,8 @@
         "Physical NIC/billing caps are not guaranteed; uncertainty stops the run.",
         "Failure reports remain non-compliant; no restart or replacement grant.",
         "Local eight-day batch 14.054s is a risk, not an AWS or API percentile.",
-        "S09 stays open and S10/S13 blocked until required evidence and decisions."
+        "S09 stays open and S10/S13 blocked until required evidence and decisions.",
+        "Uncertainty blocks the next case before seeding; export remains bounded best effort."
       ]
     }
   ]

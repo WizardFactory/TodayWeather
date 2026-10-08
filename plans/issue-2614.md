@@ -106,7 +106,13 @@ legacy/sibling boundaries or expand the resource approval. The
 enumerates manifest/claim/provenance/config/report operations separately from
 literal checker exemptions. Failed or uncertain worker evidence must be exported
 and retained before rejection and owned cleanup; no failed run may become a PASS or
-receive a replacement allocation. No AWS run has yet
+receive a replacement allocation. The next case must check uncertainty before
+seeding. The operator must reserve a 15-minute export/cleanup tail before host or
+approval expiry and refuse a worker window below five minutes. The effective
+benchmark maximum is 59 minutes 30 seconds, with at most 30 seconds for report
+completion inside the reserved tail and at least 14 minutes 30 seconds left for
+export/cleanup. The SSM command cap remains 60 minutes. Export remains bounded
+best effort. No AWS run has yet
 occurred at this checkpoint. Local protocol measurements do not complete S09: actual same-region observations and O-2/O-5
 disposition remain gates for S10 and S13. No route work is released by the merges.
 Passing local checks do not imply complete route parity or deployed server2.

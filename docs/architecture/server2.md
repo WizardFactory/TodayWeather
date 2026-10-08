@@ -978,10 +978,21 @@ operator preserves the worker report and bounded error diagnostics before reject
 the result and cleaning up the owned resources. A missing report is recorded as
 missing evidence, never as an empty successful run. Preservation does not permit
 further measurement, a second host or reuse of the allocation.
+Before entering a new case, uncertainty must be checked before estimates,
+fixture seeding or resolver creation. Existing bounded reconciliation within the
+owned operation may finish; an uncertain preceding case cannot admit the next one.
 
 Actual execution follows independent review of the frozen tooling/configuration,
 a private one-use manifest, a separate watchdog, an absolute host expiry and
-pre-bootstrap network metering. Missing guards, ownership uncertainty or budget
+pre-bootstrap network metering. The worker deadline must leave 15 minutes before
+the earlier host or approval expiry for bounded export and cleanup. It is the
+minimum of that fence and 59 minutes 30 seconds from the worker start; a remaining
+worker window below five minutes is refused. Recheck the window before dispatch.
+Command timeouts include at most 30 seconds for report completion within the
+reserved tail, leaving at least 14 minutes 30 seconds for export and cleanup;
+the SSM command cap remains 60 minutes. This reserve provides finite headroom,
+not a guarantee that every SSM export or cleanup will finish.
+Missing guards, ownership uncertainty or budget
 exhaustion stop work; restart permits cleanup only and never refreshes a grant.
 Kernel delivery quotas and application reservations do not mathematically cap
 physical NIC arrivals or retransmissions. Use stricter thresholds, measured
