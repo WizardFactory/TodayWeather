@@ -112,9 +112,25 @@ approval expiry and refuse a worker window below five minutes. The effective
 benchmark maximum is 59 minutes 30 seconds, with at most 30 seconds for report
 completion inside the reserved tail and at least 14 minutes 30 seconds left for
 export/cleanup. The SSM command cap remains 60 minutes. Export remains bounded
-best effort. No AWS run has yet
-occurred at this checkpoint. Local protocol measurements do not complete S09: actual same-region observations and O-2/O-5
-disposition remain gates for S10 and S13. No route work is released by the merges.
+best effort. The first approved creation attempt left task-owned infrastructure
+but no worker measurement. QA4 found invalid EC2 CLI options; `--count 1` and an
+installed-CLI check of the complete launch arguments are required. The metered
+2026-10-08T12:40:57Z inventory found no current instance, tagged volume or S3
+version, while IAM/profile/security-group resources remained. This does not settle
+the historical launch outcome.
+
+AK's [explicit recovery amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6060200508)
+permits one reviewed pre-worker recovery using the same state, token, nonce and
+owned resources. Preserve the original snapshot, deadlines and all charged usage;
+never replace an issued worker allocation. Reserve a new watchdog from remaining
+aggregate limits. A unique owned instance suppresses creation; unknown/multiple
+matches block it. Current absence permits only one same-token launch, with no
+replacement token after an idempotency mismatch. The recovery deadline is bounded
+by two hours and the original approval expiry. Cleanup verifies current ownership,
+retains S3 versions, and records unresolved evidence separately from live results.
+
+Local protocol measurements do not complete S09: actual same-region observations
+and O-2/O-5 disposition remain gates for S10 and S13. No route work is released by the merges.
 Passing local checks do not imply complete route parity or deployed server2.
 S07's geocode AC1 is partial: volatile key/privacy primitives are included;
 geocode value caches and exact-label/boundary parity remain S10 acceptance work.

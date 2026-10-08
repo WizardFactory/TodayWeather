@@ -2,13 +2,13 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "Server2 S09 approved run: proposed workflow",
+    "title": "Server2 S09: one approved recovery",
     "locale": "en",
     "quality_profile": "showcase",
     "output": "docs/architecture/diagrams/server2-feasibility.html",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "32b11e525d73aadfff91bcf59402bf550565ded5",
+      "revision": "f8c7a1d8716c728596281ada0f1a8b2c6fde3b3b",
       "provider": "github",
       "link_mode": "web"
     }
@@ -17,6 +17,10 @@
     {
       "id": "local",
       "label": "Review tooling"
+    },
+    {
+      "id": "recovery",
+      "label": "Reconcile original run"
     },
     {
       "id": "host",
@@ -91,11 +95,11 @@
     },
     {
       "id": "scope",
-      "lane": "host",
+      "lane": "recovery",
       "col": 1,
       "type": "security",
       "label": "AK scope",
-      "sublabel": "48h / one host",
+      "sublabel": "explicit one-use retry",
       "width": 150,
       "tag": "planned",
       "sources": [
@@ -103,6 +107,11 @@
           "path": "server2/deploy/benchmark/aws-run.json",
           "line": 1,
           "end_line": 24
+        },
+        {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 452,
+          "end_line": 483
         }
       ]
     },
@@ -118,8 +127,8 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 329,
-          "end_line": 349
+          "line": 408,
+          "end_line": 443
         }
       ]
     },
@@ -135,18 +144,18 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 751,
-          "end_line": 770
+          "line": 897,
+          "end_line": 934
+        },
+        {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 639,
+          "end_line": 672
         },
         {
           "path": "server2/deploy/benchmark/cloud-init.yml",
           "line": 1,
           "end_line": 40
-        },
-        {
-          "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 725,
-          "end_line": 750
         }
       ]
     },
@@ -162,8 +171,8 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 608,
-          "end_line": 620
+          "line": 727,
+          "end_line": 748
         },
         {
           "path": "server2/deploy/benchmark/cloud-init.yml",
@@ -228,8 +237,8 @@
         },
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 475,
-          "end_line": 510
+          "line": 603,
+          "end_line": 637
         }
       ]
     },
@@ -245,8 +254,8 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 650,
-          "end_line": 687
+          "line": 778,
+          "end_line": 868
         }
       ]
     },
@@ -300,6 +309,45 @@
           "end_line": 37
         }
       ]
+    },
+    {
+      "id": "reconcile",
+      "lane": "recovery",
+      "col": 2,
+      "type": "security",
+      "label": "Reconcile owned state",
+      "sublabel": "token + run tag",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 452,
+          "end_line": 525
+        }
+      ]
+    },
+    {
+      "id": "stop",
+      "lane": "recovery",
+      "col": 4,
+      "type": "security",
+      "label": "Reconcile cleanup",
+      "sublabel": "uncertain dispatch blocks cleanup",
+      "width": 185,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 415,
+          "end_line": 437
+        },
+        {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 789,
+          "end_line": 815
+        }
+      ]
     }
   ],
   "edges": [
@@ -316,13 +364,13 @@
     {
       "id": "edge2",
       "from": "qa",
-      "to": "host",
+      "to": "reconcile",
       "label": "PASS"
     },
     {
       "id": "edge3",
       "from": "scope",
-      "to": "host",
+      "to": "reconcile",
       "label": "approved"
     },
     {
@@ -345,26 +393,60 @@
       "id": "edge7",
       "from": "protocol",
       "to": "sweep",
-      "label": "conformant"
+      "label": "conformant",
+      "labelAt": [
+        1170,
+        450
+      ]
     },
     {
       "id": "edge8",
       "from": "sweep",
       "to": "evidence",
-      "label": "done / aborted"
+      "label": "done / aborted",
+      "route": "straight",
+      "fromSide": "left",
+      "toSide": "right"
     },
     {
       "id": "edge9",
       "from": "evidence",
       "to": "cleanup",
-      "label": "export before cleanup"
+      "label": "export before cleanup",
+      "route": "drop",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "bias": 0.65
     },
     {
       "id": "edge10",
       "from": "guards",
       "to": "cleanup",
       "label": "guard failure",
-      "toSide": "right"
+      "fromSide": "bottom",
+      "toSide": "bottom",
+      "via": [
+        [
+          728.2,
+          425
+        ],
+        [
+          390,
+          425
+        ],
+        [
+          390,
+          680
+        ],
+        [
+          1122.2,
+          680
+        ]
+      ],
+      "labelAt": [
+        390,
+        565
+      ]
     },
     {
       "id": "edge11",
@@ -375,7 +457,11 @@
       "id": "edge12",
       "from": "evidence",
       "to": "decision",
-      "label": "qualified proof"
+      "label": "qualified proof",
+      "labelAt": [
+        678.2,
+        561
+      ]
     },
     {
       "id": "edge13",
@@ -388,12 +474,58 @@
       "from": "decision",
       "to": "proceed",
       "label": "disposition"
+    },
+    {
+      "id": "recovery-empty",
+      "from": "reconcile",
+      "to": "host",
+      "label": "0: one replay"
+    },
+    {
+      "id": "recovery-unknown",
+      "from": "reconcile",
+      "to": "stop",
+      "label": "not proven empty",
+      "route": "straight",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "recovery-mismatch",
+      "from": "host",
+      "to": "stop",
+      "label": "token mismatch",
+      "fromSide": "right",
+      "toSide": "bottom",
+      "via": [
+        [
+          598.4,
+          372
+        ],
+        [
+          598.4,
+          310
+        ],
+        [
+          944.2,
+          310
+        ]
+      ]
+    },
+    {
+      "id": "recovery-failed-cleanup",
+      "from": "stop",
+      "to": "cleanup",
+      "label": "verified scope",
+      "route": "outside-right",
+      "fromSide": "right",
+      "toSide": "right"
     }
   ],
   "cards": [
     {
       "dot": "amber",
-      "title": "Approved limits; live run pending",
+      "title": "Original aggregate limits",
       "items": [
         "One host <=2h; synthetic load <=60min; USD5 operator stop.",
         "400k reads / 20k PUT-LIST / 30GiB download / 64MiB version charge.",
@@ -403,15 +535,17 @@
     },
     {
       "dot": "rose",
-      "title": "Evidence and authority",
+      "title": "Preserve evidence and authority",
       "items": [
-        "Approval: #2694 comment 6052596161; expires 2026-10-10T04:49:59Z.",
-        "Tooling is locally tested; independent QA and actual host proof remain.",
-        "Physical NIC/billing caps are not guaranteed; uncertainty stops the run.",
-        "Failure reports remain non-compliant; no restart or replacement grant.",
-        "Local eight-day batch 14.054s is a risk, not an AWS or API percentile.",
-        "S09 stays open and S10/S13 blocked until required evidence and decisions.",
-        "Uncertainty blocks the next case before seeding; export remains bounded best effort."
+        "Original approval expires 2026-10-10T04:49:59Z; explicit recovery amendment 6060200508.",
+        "Prior run produced no measurement; current absence does not resolve historical uncertainty.",
+        "Preserve predecessor, token, nonce, spent usage and one worker grant; reserve another watchdog.",
+        "Review source and test the complete CLI arguments offline before this one-use recovery.",
+        "Unknown or multiple hosts block dispatch; a token mismatch never permits a replacement token.",
+        "One owned host means cleanup only; unknown or multiple hosts require proof before cleanup.",
+        "Failure reports remain non-compliant. An issued worker allocation cannot be restarted.",
+        "Physical NIC/billing caps are not guaranteed; uncertainty stops the next case before seeding.",
+        "S09 stays open and S10/S13 blocked until required live evidence and O-2/O-5 decisions."
       ]
     }
   ]

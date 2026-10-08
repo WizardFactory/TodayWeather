@@ -91,6 +91,10 @@ frozen source/lock and current-executable hash reads, and caller-owned config an
 report/state I/O. These benchmark provenance and evidence operations require manual
 containment/ownership review; computed and aliased paths are outside the static
 checker's complete coverage. They do not permit legacy serving-data access.
+The one-use recovery additionally reads the caller-owned original configuration and
+explicit recovery authority, and writes an exclusive predecessor snapshot, recovery
+claim and attempt-specific watchdog receipts beside the original private state.
+These are declared controller evidence operations, not new literal-path exemptions.
 Later whole-tree audits retain the four validated literal roles without a new waiver.
 
 ## 2. Compatibility inventory
@@ -957,7 +961,22 @@ remain required evidence. AK [approved the bounded measurement scope](https://gi
 on 2026-10-08, valid until 2026-10-10T04:49:59Z. The [31-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6053018487)
 and [33-path host-read amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695)
 keep the worker, operator, configuration, tests and placement checks under `server2/`.
-No live resource or measurement has been executed at this design checkpoint.
+The first approved execution created the task's bucket, IAM role/profile and
+security group, but produced no worker measurement. QA4 identified unsupported
+EC2 CLI options (`--min-count`/`--max-count`); the corrected invocation uses
+`--count 1`. Current offline rejection does not reconstruct discarded stderr
+from the original attempt. A metered 2026-10-08T12:40:57Z inventory found no
+instance for either the original client token or run tag, no tagged root volume,
+and no S3 versions. The task-owned IAM and security-group resources remained.
+This is a timestamped current-state observation, not proof that an earlier AWS
+request was never sent.
+
+AK subsequently authorized code correction, result reconciliation, one recovery
+execution if needed, and owned cleanup. The [recovery amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6060200508)
+keeps this exception within the original task and aggregate limits. Before any
+recovery launch, verify the frozen source/configuration with independent QA and
+validate the complete launch argument list through the installed CLI's offline
+output-skeleton path. A fake CLI that accepts arbitrary flags is insufficient.
 
 The proposed run uses one dedicated nonproduction Seoul `c6i.large` for at most
 two hours and at most 60 minutes of synthetic load. Worker and controller share
@@ -993,7 +1012,27 @@ reserved tail, leaving at least 14 minutes 30 seconds for export and cleanup;
 the SSM command cap remains 60 minutes. This reserve provides finite headroom,
 not a guarantee that every SSM export or cleanup will finish.
 Missing guards, ownership uncertainty or budget
-exhaustion stop work; restart permits cleanup only and never refreshes a grant.
+exhaustion stop work. An ordinary restart permits cleanup only and never refreshes
+a grant. The explicitly approved pre-worker recovery is a narrow exception:
+retain the original state, client token, nonce, resource ownership, counters and
+approval expiry; preserve the predecessor snapshot and deadline before activating
+one recorded recovery attempt. No previously issued worker allocation can be
+reused or replaced. The recovery host deadline is at most two hours from recovery
+and never later than the original approval expiry. Reserve its watchdog from the
+remaining aggregate controller allowance.
+
+Recovery reconciles current instances by both token and run tag before dispatch.
+A unique existing owned instance suppresses creation; unresolved or multiple
+matches stop execution. If both inventories prove current absence, at most one
+corrected launch may reuse the original token, subnet and region. An idempotency
+parameter mismatch must not trigger a new token or another launch. Recheck actual
+ownership and dependent resources before cleanup. Keep historical uncertainty
+separate from a newly observed local CLI rejection or current absence; neither
+rewrites the original record. Explicit recovery authority may also permit cleanup
+of the acknowledged IAM/profile/security-group resources after fresh token, run-tag
+and volume inventories all prove current absence. This branch is unavailable after
+a newly uncertain dispatched recovery; it does not settle historical uncertainty.
+
 Kernel delivery quotas and application reservations do not mathematically cap
 physical NIC arrivals or retransmissions. Use stricter thresholds, measured
 headroom and a USD 5 operator stop; no absolute billing guarantee is claimed.
