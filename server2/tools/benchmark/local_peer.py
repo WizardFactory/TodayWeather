@@ -5,6 +5,7 @@ only; never log signed URLs, query strings, provider keys or raw provider bodies
 """
 import importlib.util
 import json
+import socket
 from pathlib import Path
 import sys
 import threading
@@ -20,6 +21,17 @@ spec.loader.exec_module(base)
 
 class Handler(base.Handler):
     def send(self, status, body=b'', headers=None):
+        # Explicit local-only failure fixture: commit one provider raw body, lose
+        # its reply and reconciliation. Normal benchmark mode is unchanged.
+        if (self.server.fault_mode == 'uncertain-provider-publication'
+                and getattr(self, 'method_kind', '') == 'PUT:raw'
+                and status == 200 and self.server.provider_fault_armed):
+            self.server.provider_fault_armed = False
+            self.server.drop_raw_reconciliation = True
+            self.close_connection = True
+            try: self.connection.shutdown(socket.SHUT_RDWR)
+            except OSError: pass
+            return
         if getattr(self, 'measured', False):
             with self.server.metrics_lock:
                 self.server.metrics['response_bytes'] += 0 if self.command == 'HEAD' else len(body)
@@ -65,13 +77,20 @@ class Handler(base.Handler):
             m['active']+=1
             m['peak_inflight']=max(m['peak_inflight'],m['active'])
         try:
+            if self.method_kind == 'HEAD:raw' and self.server.drop_raw_reconciliation:
+                self.close_connection = True
+                try: self.connection.shutdown(socket.SHUT_RDWR)
+                except OSError: pass
+                return
             if split.path == '/provider':
                 if self.command != 'GET' or query.get('serviceKey') != ['benchmark-only'] or query.get('dataType') != ['JSON']:
                     return self.error(403,'OnlySyntheticRequest')
                 mode=query.get('mode',['data'])[0]
                 if mode=='nodata': body=b'{"response":{"header":{"resultCode":"03"}}}'
                 elif mode=='error': body=b'{"response":{"header":{"resultCode":"10"}}}'
-                elif mode=='data': body=b'{"ok":true,"value":42}'
+                elif mode=='data':
+                    body=b'{"ok":true,"value":42}'
+                    self.server.provider_fault_armed = True
                 else: return self.error(400,'OnlySyntheticMode')
                 return self.send(200,body,{'Content-Type':'application/json'})
             return super().dispatch()
@@ -88,7 +107,7 @@ class Handler(base.Handler):
     do_GET = do_HEAD = do_PUT = do_POST = do_OPTIONS = dispatch
 
 
-def make():
+def make(fault_mode=None):
     config=base.load_config(OWNED/'config/local-stack.json')
     # Test-only resource cap, independent of production admission/transport pools.
     config.update(max_store_bytes=256*1024*1024,max_versions=256,max_connections=128,max_objects=8192,socket_timeout_seconds=3)
@@ -96,12 +115,20 @@ def make():
     peer.RequestHandlerClass=Handler
     peer.metrics_lock=threading.Lock()
     peer.latencies={}
+    peer.fault_mode=fault_mode
+    peer.provider_fault_armed=False
+    peer.drop_raw_reconciliation=False
     peer.metrics={'requests':{},'statuses':{},'duration_us':{},'request_bytes':0,'response_bytes':0,'active':0,'peak_inflight':0}
     return peer
 
 
 if __name__ == '__main__':
-    peer=make()
+    fault_mode = None
+    if sys.argv[1:]:
+        if sys.argv[1:] != ['--fault', 'uncertain-provider-publication']:
+            raise SystemExit('only explicit local failure fixture is supported')
+        fault_mode = sys.argv[2]
+    peer=make(fault_mode)
     print(f'http://127.0.0.1:{peer.server_port}/',flush=True)
     try: peer.serve_forever()
     finally: peer.server_close()

@@ -112,5 +112,37 @@
       "category": "read-only-system",
       "reason": "Read only this benchmark process CPU ticks; no serving data"
     }
-  ]
+  ],
+  "manual_review_host_io_inventory": {
+    "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6055549129",
+    "machine_waiver_changed": false,
+    "review_requirement": "Nonliteral/computed/aliased host I/O is manually reviewed; these records do not authorize checker bypass or arbitrary filesystem access.",
+    "roles": [
+      {
+        "source": "server2/tools/benchmark/aws.rs",
+        "operation": "private_manifest: symlink_metadata/File::open/bounded read",
+        "scope": "approved /opt/server2-s09/run/{run_id}/manifest.json; private ancestry/ownership validated; local seam uses owned test temp only"
+      },
+      {
+        "source": "server2/tools/benchmark/aws.rs",
+        "operation": "claim: OpenOptions::create_new/write_all/sync_all",
+        "scope": "worker.claim adjacent to validated private run manifest, exclusive one-use allocation; local seam owned temp"
+      },
+      {
+        "source": "server2/tools/benchmark/aws.rs",
+        "operation": "source_check/hash_file: File::open/bounded read",
+        "scope": "frozen declared 33 source paths and Cargo.lock beneath compile-time CARGO_MANIFEST_DIR checkout"
+      },
+      {
+        "source": "server2/tools/benchmark/aws.rs",
+        "operation": "current_exe/hash_file",
+        "scope": "bounded hash of this running benchmark binary"
+      },
+      {
+        "source": "server2/tools/benchmark/aws.rs; server2/tools/benchmark/run.py; server2/deploy/benchmark/aws_operator.py",
+        "operation": "caller config and result/error/state reads/writes",
+        "scope": "bounded configuration and exclusively created private run/result/error/state files; local outputs under caller-owned ignored reports"
+      }
+    ]
+  }
 }

@@ -333,6 +333,7 @@ struct Used {
     observed_body_bytes: u64,
     stored_version_charge_bytes: u64,
     uncertain_calls: u64,
+    dispatch_stopped: bool,
     confirmed_statuses: BTreeMap<u16, u64>,
     phase_attempts: BTreeMap<String, (u64, u64)>,
     active: u64,
@@ -378,6 +379,9 @@ impl Ledger {
         if Instant::now() >= self.expires {
             return Err(Error::Timeout);
         }
+        if s.dispatch_stopped {
+            return Err(Error::Invalid("run admission stopped"));
+        }
         let read = matches!(kind, Kind::Read);
         let rd = u64::from(read);
         let wr = u64::from(!read);
@@ -418,6 +422,11 @@ impl Ledger {
             started: Instant::now(),
             phase: phase.to_owned(),
         })
+    }
+    fn stop(&self) {
+        if let Ok(mut state) = self.state.lock() {
+            state.dispatch_stopped = true;
+        }
     }
     pub fn checkpoint(&self) -> Value {
         let mut r = self.report();
@@ -725,6 +734,8 @@ struct MetadataUsed {
     reserved_bytes: u64,
     observed_body_bytes: u64,
     unknown_calls: u64,
+    failed_known: u64,
+    confirmed_statuses: BTreeMap<u16, u64>,
 }
 pub struct Metadata {
     endpoint: String,
@@ -803,7 +814,15 @@ impl Metadata {
             request = request.header("X-aws-ec2-metadata-token", token)
         }
         let mut response = request.send().await.map_err(|_| Error::Transport)?;
-        if response.status().as_u16() != 200
+        let status = response.status().as_u16();
+        {
+            let mut state = self
+                .used
+                .lock()
+                .map_err(|_| Error::Invalid("metadata ledger"))?;
+            *state.confirmed_statuses.entry(status).or_default() += 1;
+        }
+        if status != 200
             || response
                 .headers()
                 .iter()
@@ -812,6 +831,7 @@ impl Metadata {
                 > 8192
             || response.headers().contains_key("content-encoding")
         {
+            self.known_failure()?;
             return Err(Error::Invalid("metadata response"));
         }
         if response.headers().get("content-length").is_some_and(|v| {
@@ -820,11 +840,13 @@ impl Metadata {
                 .and_then(|s| s.parse::<u64>().ok())
                 .is_none_or(|n| n > maximum)
         }) {
+            self.known_failure()?;
             return Err(Error::Invalid("metadata length"));
         }
         let mut bytes = Vec::new();
         while let Some(chunk) = response.chunk().await.map_err(|_| Error::Transport)? {
             if chunk.len() > maximum as usize - bytes.len() {
+                self.known_failure()?;
                 return Err(Error::Invalid("metadata stream"));
             }
             bytes.extend_from_slice(&chunk)
@@ -839,6 +861,15 @@ impl Metadata {
             s.observed_body_bytes += bytes.len() as u64;
         }
         Ok(bytes)
+    }
+    fn known_failure(&self) -> Result<(), Error> {
+        let mut state = self
+            .used
+            .lock()
+            .map_err(|_| Error::Invalid("metadata ledger"))?;
+        state.unknown_calls -= 1;
+        state.failed_known += 1;
+        Ok(())
     }
     #[cfg(test)]
     fn test_metadata(endpoint: String, expires: Instant) -> Self {
@@ -1418,6 +1449,60 @@ async fn resolve_batch<T: CatalogTransport + 'static>(
         components,
     }
 }
+fn execution_compliant(ledger: &Ledger) -> bool {
+    ledger.report()["uncertainty_compliance_pass"] == true
+}
+fn abort_run(report: &mut Value, ledger: &Ledger, reason: &'static str) {
+    ledger.stop();
+    report["run_status"] = "ABORTED".into();
+    if report["abort_reason"].is_null() {
+        report["abort_reason"] = reason.into();
+    }
+    report["requested_case_coverage_complete"] = false.into();
+    report["overall_accounting_compliance_pass"] = false.into();
+}
+fn empty_aborted_report(reason: &'static str, ledger: &Ledger) -> Value {
+    let mut report = json!({"schema":1,"cases":[],"protocol":null,"policy_checks":null,"intended_host_gate_pass":false,"gate_status":"requires_original_measurement_headroom_and_AK_decisions","rust_decision":"pending_O2","lifecycle_decision":"pending_O5","api_parity_verified":false,"production_cutover_authorized":false});
+    abort_run(&mut report, ledger, reason);
+    report
+}
+fn bounded_export(mut report: Value, ledger: &Ledger) -> Result<Value, String> {
+    if serde_json::to_vec(&report)
+        .map_err(|_| "report JSON")?
+        .len()
+        > 2 * 1024 * 1024
+    {
+        fn omit_details(value: &mut Value) {
+            match value {
+                Value::Object(o) => {
+                    for k in ["operation_samples", "trials", "retained_samples"] {
+                        o.remove(k);
+                    }
+                    for v in o.values_mut() {
+                        omit_details(v);
+                    }
+                }
+                Value::Array(a) => {
+                    for v in a {
+                        omit_details(v);
+                    }
+                }
+                _ => {}
+            }
+        }
+        omit_details(&mut report);
+        report["export_details_omitted"] = true.into();
+        abort_run(&mut report, ledger, "bounded export detail insufficient");
+    }
+    if serde_json::to_vec(&report)
+        .map_err(|_| "report JSON")?
+        .len()
+        > 2 * 1024 * 1024
+    {
+        return Err("bounded summary export insufficient".into());
+    }
+    Ok(report)
+}
 pub async fn execute(
     config_path: &std::path::Path,
     manifest_path: &std::path::Path,
@@ -1442,33 +1527,40 @@ pub async fn execute(
         return Err("compiled source/provider identity".into());
     }
     source_check(&m).map_err(str::to_owned)?;
-    claim(&manifest_path.with_file_name("worker.claim"), &m).map_err(str::to_owned)?;
     let end = Instant::now() + Duration::from_millis(m.benchmark_expires_at_ms - now);
+    // Local client construction performs no I/O and must fail before the one-use claim.
     let credentials = Arc::new(Metadata::new(&m, end).map_err(str::to_owned)?);
-    credentials
-        .fresh()
-        .await
-        .map_err(|_| "private metadata preflight")?;
-    let inner = Arc::new(
-        HttpS3Transport::with_credentials(ENDPOINT, BUCKET, REGION, credentials.handle.clone())
-            .map_err(|_| "live S3 transport")?,
-    );
+    claim(&manifest_path.with_file_name("worker.claim"), &m).map_err(str::to_owned)?;
     let ledger = Arc::new(Ledger::new(m.allocations.clone(), m.phases.clone(), end));
-    let mut report = run_live(
-        &c,
-        &m,
-        inner,
-        Some(credentials.clone()),
-        ledger.clone(),
-        end,
-    )
-    .await?;
-    if hash_file(config_path, 65536).map_err(str::to_owned)? != config_hash
-        || hash_file(&executable, 128 * 1024 * 1024).map_err(str::to_owned)? != binary
-    {
-        return Err("execution input drift".into());
+    let outcome: Result<Value, String> = async {
+        credentials
+            .fresh()
+            .await
+            .map_err(|_| "private metadata preflight")?;
+        let inner = Arc::new(
+            HttpS3Transport::with_credentials(ENDPOINT, BUCKET, REGION, credentials.handle.clone())
+                .map_err(|_| "live S3 transport")?,
+        );
+        run_live(
+            &c,
+            &m,
+            inner,
+            Some(credentials.clone()),
+            ledger.clone(),
+            end,
+        )
+        .await
     }
-    source_check(&m).map_err(str::to_owned)?;
+    .await;
+    let mut report = outcome.unwrap_or_else(|_| {
+        empty_aborted_report("private preflight or run prerequisite failed", &ledger)
+    });
+    if hash_file(config_path, 65536).ok().as_deref() != Some(config_hash.as_str())
+        || hash_file(&executable, 128 * 1024 * 1024).ok().as_deref() != Some(binary.as_str())
+        || source_check(&m).is_err()
+    {
+        abort_run(&mut report, &ledger, "execution input drift");
+    }
     report["run_id"] = m.run_id.into();
     report["allocation_id"] = m.allocation_id.into();
     report["source_revision"] = m.source_revision.into();
@@ -1481,18 +1573,12 @@ pub async fn execute(
     report["metadata_accounting"] = credentials.report();
     let metadata_known = report["metadata_accounting"]["used"]["unknown_calls"] == 0;
     let s3_known = report["S3_accounting"]["uncertainty_compliance_pass"] == true;
-    report["overall_accounting_compliance_pass"] = (metadata_known && s3_known).into();
     if !metadata_known || !s3_known {
-        return Err("uncertain S3/metadata accounting; measurement compliance failed".into());
+        abort_run(&mut report, &ledger, "uncertain S3 or metadata accounting");
     }
-    if serde_json::to_vec(&report)
-        .map_err(|_| "report JSON")?
-        .len()
-        > 2 * 1024 * 1024
-    {
-        return Err("bounded export insufficient".into());
-    }
-    Ok(report)
+    report["overall_accounting_compliance_pass"] =
+        (metadata_known && s3_known && report["run_status"] != "ABORTED").into();
+    bounded_export(report, &ledger)
 }
 async fn protocol(t: Arc<LiveTransport>, end: Instant) -> Result<Value, String> {
     let a = super::acquisition(
@@ -1754,6 +1840,11 @@ async fn run_live(
 ) -> Result<Value, String> {
     use server2::resolver::*;
     use std::sync::atomic::{AtomicU64, Ordering};
+    let mut reports = vec![];
+    let mut partial = Value::Null;
+    let mut protocol_value = Value::Null;
+    let mut policy_checks = Value::Null;
+    let execution: Result<(),String> = async {
     let setup = measured_transport(
         inner.clone(),
         credentials.clone(),
@@ -1761,17 +1852,18 @@ async fn run_live(
         "protocol",
         65536,
     );
-    let protocol = protocol(setup.clone(), end).await?;
-    let policy_checks = if let Some(credentials) = credentials.clone() {
+    protocol_value = protocol(setup.clone(), end).await?;
+    policy_checks = if let Some(credentials) = credentials.clone() {
         negative_policy_probes(credentials, ledger.clone(), end).await?
     } else {
         json!({"scope":"local worker, no real IAM policy assertions","sweeps_allowed_only_local":true})
     };
     let mut profiles = BTreeMap::<String, Profile>::new();
-    let mut reports = vec![];
     let mut next_key = 1usize;
     let mut provider_key = 64usize;
     for cse in &c.cases {
+        partial = json!({"configuration":cse,"status":"ABORTED","summary":super::model::summarize(&[]),"retained_samples":[],"trials":[]});
+        if Instant::now()>=end { return Err("benchmark deadline reached".into()); }
         let began = Instant::now();
         let n = if cse.workload == "history8" {
             192
@@ -1889,6 +1981,7 @@ async fn run_live(
             || sweep_writes > phase_cap.write_attempts.saturating_sub(phase_writes_used)
         {
             reports.push(json!({"configuration":cse,"status":"INSUFFICIENT","reason":"pre-sweep cap estimate","estimate":estimate}));
+            partial = Value::Null;
             continue;
         }
         let profile = if cse.mode.starts_with("provider_") {
@@ -1902,8 +1995,8 @@ async fn run_live(
                         profiles.insert(profile_key.clone(), p);
                     }
                     Err(e) => {
-                        reports.push(json!({"configuration":cse,"status":"FAILED","reason":e,"estimate":estimate}));
-                        break;
+                        partial = json!({"configuration":cse,"status":"ABORTED","reason":e,"estimate":estimate});
+                        return Err("fixture publication failed".into());
                     }
                 }
             }
@@ -1923,7 +2016,7 @@ async fn run_live(
                     .unwrap_or(1)
                     > 0
             {
-                break;
+                return Err("uncertain completion or benchmark deadline".into());
             }
             let phase = if cse.mode.starts_with("provider_") {
                 "funding"
@@ -2086,6 +2179,8 @@ async fn run_live(
                 "provider_nodata" | "provider_denied" | "provider_error"
             );
             let terminal_archive_zero = archive_delta.values().all(|v| *v == 0);
+            trials.push(json!({"trial":trial,"warmup_summary":super::model::summarize(&warmup),"maintenance_idle_before":idle_before,"warm_available":warm_ok&&idle_before,"ledger_before":baseline["used"],"ledger_foreground_end":foreground["used"],"drain_performed_this_wave":drain_performed,"ledger_after_owned_work":ledger.checkpoint()["used"],"resolver_metric_scope":"case-cumulative for warm; trial-owned for cold","foreground_io":metrics.foreground_io,"background_io":metrics.background_io,"maintenance_failed":metrics.maintenance_failed,"owner_rejections":metrics.admission_rejections,"parse_elapsed_us":timing.parse_us.load(Ordering::Relaxed)-parse_before,"assembly_elapsed_us":timing.assembly_us.load(Ordering::Relaxed)-assembly_before,"archive_PUT_deltas":archive_delta,"terminal_archive_zero":terminal_archive_zero,"provider_http_calls":provider_calls.load(Ordering::Relaxed),"provider_data":data.load(Ordering::Relaxed),"provider_NoData":nodata.load(Ordering::Relaxed),"funding_denied":denied.load(Ordering::Relaxed),"provider_terminal":terminal.load(Ordering::Relaxed)}));
+            partial = json!({"configuration":cse,"status":"ABORTED","summary":super::model::summarize(&samples),"measured_samples":samples.len(),"retained_samples":samples.iter().take(4).collect::<Vec<_>>(),"detail_samples_complete":samples.len()<=4,"trials":trials.iter().take(2).collect::<Vec<_>>(),"trial_details_complete":trials.len()<=2});
             if terminal_mode
                 && (!terminal_archive_zero
                     || (cse.mode == "provider_denied"
@@ -2093,7 +2188,6 @@ async fn run_live(
             {
                 return Err("terminal provider archive/denial fence failed".into());
             }
-            trials.push(json!({"trial":trial,"warmup_summary":super::model::summarize(&warmup),"maintenance_idle_before":idle_before,"warm_available":warm_ok&&idle_before,"ledger_before":baseline["used"],"ledger_foreground_end":foreground["used"],"drain_performed_this_wave":drain_performed,"ledger_after_owned_work":ledger.checkpoint()["used"],"resolver_metric_scope":"case-cumulative for warm; trial-owned for cold","foreground_io":metrics.foreground_io,"background_io":metrics.background_io,"maintenance_failed":metrics.maintenance_failed,"owner_rejections":metrics.admission_rejections,"parse_elapsed_us":timing.parse_us.load(Ordering::Relaxed)-parse_before,"assembly_elapsed_us":timing.assembly_us.load(Ordering::Relaxed)-assembly_before,"archive_PUT_deltas":archive_delta,"terminal_archive_zero":terminal_archive_zero,"provider_http_calls":provider_calls.load(Ordering::Relaxed),"provider_data":data.load(Ordering::Relaxed),"provider_NoData":nodata.load(Ordering::Relaxed),"funding_denied":denied.load(Ordering::Relaxed),"provider_terminal":terminal.load(Ordering::Relaxed)}));
         }
         if let Some((r, _)) = &warm_resolver {
             let _ = r
@@ -2125,11 +2219,22 @@ async fn run_live(
             "MEASURED"
         };
         reports.push(json!({"configuration":cse,"status":status,"estimate":estimate,"summary":summary,"expected_outcome":expected,"expected_outcomes":expected_outcomes,"retained_samples":samples.iter().take(4).collect::<Vec<_>>(),"detail_samples_complete":samples.len()<=4,"measured_samples":samples.len(),"target_samples_are_offered_client_observations":true,"independent_RAM_empty_resolver_trials":trials.len(),"independent_cold_trial_target":300,"independent_cold_trial_target_met":cse.mode!="cold"||trials.len()>=300,"independent_trial_tail_insufficient":trials.len()<100,"trials":trials.iter().take(2).collect::<Vec<_>>(),"trial_details_complete":trials.len()<=2,"seed_reused_across_cold_trials":profile.is_some(),"repair_samples_are_first_shared_flight_only":cse.mode=="repair","repair_tail_latency_claim":false,"physical_keys":if profile.is_some(){1}else{if cse.load_model=="hot_key"{cse.target_samples.div_ceil(cse.clients)}else{cse.target_samples.div_ceil(cse.clients)*cse.clients}},"physical_groups_per_key":profile.as_ref().map(|p|p.groups),"day_catalogs_per_key":if cse.workload=="history8"{8}else{1},"resolutions_per_client":if cse.workload=="history8"{16}else{1},"case_elapsed_us":began.elapsed().as_micros()as u64}));
+        partial = Value::Null;
     }
-    let complete =
-        reports.len() == c.cases.len() && reports.iter().all(|r| r["status"] == "MEASURED");
+    Ok(())
+    }.await;
+    let abort = execution.err();
+    if abort.is_some() {
+        ledger.stop();
+        if !partial.is_null() {
+            reports.push(partial);
+        }
+    }
+    let complete = abort.is_none()
+        && reports.len() == c.cases.len()
+        && reports.iter().all(|r| r["status"] == "MEASURED");
     Ok(
-        json!({"schema":1,"measurement_scope":"approved_intended_host_same_region_synthetic_library","protocol":protocol,"policy_checks":policy_checks,"cases":reports,"requested_case_coverage_complete":complete,"coverage":"configured subset only; full Cartesian matrix not required or inferred","transport_pool_state":"shared_after_protocol_and_seeding","first_network_context":"first protocol adapter completion; separately retained phase-tagged samples, not fresh Spot GET timing","original_cold_trial_coverage_proven":false,"local_history8_baseline_us":14054289,"process_resources":process_resources(),"warm_resolver_lifecycle":"one case-owned resolver after complete prewarm and maintenance idle","cold_RAM_empty":"new resolver per cold trial; fixture identities retained but no rawresponsecache","native_host_abi":std::env::consts::ARCH,"musl":cfg!(target_env="musl"),"cost_prices":null,"api_parity_verified":false,"cloudfront_client_transport_measured":false,"production_cutover_authorized":false,"rust_decision":"pending_O2","lifecycle_decision":"pending_O5","gate_status":"requires_original_measurement_headroom_and_AK_decisions"}),
+        json!({"schema":1,"measurement_scope":"approved_intended_host_same_region_synthetic_library","protocol":protocol_value,"policy_checks":policy_checks,"run_status":if abort.is_some(){"ABORTED"}else{"COMPLETED"},"abort_reason":abort,"overall_accounting_compliance_pass":execution_compliant(&ledger)&&abort.is_none(),"cases":reports,"requested_case_coverage_complete":complete,"coverage":"configured subset only; full Cartesian matrix not required or inferred","transport_pool_state":"shared_after_protocol_and_seeding","first_network_context":"first protocol adapter completion; separately retained phase-tagged samples, not fresh Spot GET timing","original_cold_trial_coverage_proven":false,"local_history8_baseline_us":14054289,"process_resources":process_resources(),"warm_resolver_lifecycle":"one case-owned resolver after complete prewarm and maintenance idle","cold_RAM_empty":"new resolver per cold trial; fixture identities retained but no rawresponsecache","native_host_abi":std::env::consts::ARCH,"musl":cfg!(target_env="musl"),"cost_prices":null,"api_parity_verified":false,"cloudfront_client_transport_measured":false,"production_cutover_authorized":false,"rust_decision":"pending_O2","lifecycle_decision":"pending_O5","gate_status":"requires_original_measurement_headroom_and_AK_decisions"}),
     )
 }
 
@@ -2164,7 +2269,6 @@ pub async fn local_worker(
         return Err("local provider endpoint".into());
     }
     source_check(&m).map_err(str::to_owned)?;
-    claim(&manifest_path.with_file_name("worker.claim"), &m).map_err(str::to_owned)?;
     let end = Instant::now() + Duration::from_millis(m.benchmark_expires_at_ms - now);
     let inner = Arc::new(
         HttpS3Transport::new(
@@ -2175,14 +2279,15 @@ pub async fn local_worker(
         )
         .map_err(|_| "local S3")?,
     );
+    claim(&manifest_path.with_file_name("worker.claim"), &m).map_err(str::to_owned)?;
     let ledger = Arc::new(Ledger::new(m.allocations.clone(), m.phases.clone(), end));
     let mut report = run_live(&c, &m, inner, None, ledger.clone(), end).await?;
-    if hash_file(config_path, 65536).map_err(str::to_owned)? != config_hash
-        || hash_file(&executable, 128 * 1024 * 1024).map_err(str::to_owned)? != binary
+    if hash_file(config_path, 65536).ok().as_deref() != Some(config_hash.as_str())
+        || hash_file(&executable, 128 * 1024 * 1024).ok().as_deref() != Some(binary.as_str())
+        || source_check(&m).is_err()
     {
-        return Err("local input drift".into());
+        abort_run(&mut report, &ledger, "local input drift");
     }
-    source_check(&m).map_err(str::to_owned)?;
     report["measurement_scope"] = "local_worker_handshake".into();
     report["intended_host_gate_pass"] = false.into();
     report["AWS_requests"] = 0.into();
@@ -2196,14 +2301,12 @@ pub async fn local_worker(
     report["requested_config_sha256"] = config_hash.into();
     report["guard_proof_sha256"] = m.guard_proof.proof_sha256.into();
     report["S3_accounting"] = ledger.report();
-    if serde_json::to_vec(&report)
-        .map_err(|_| "local report JSON")?
-        .len()
-        > 2 * 1024 * 1024
-    {
-        return Err("local export cap".into());
+    if !execution_compliant(&ledger) {
+        abort_run(&mut report, &ledger, "uncertain local accounting");
     }
-    Ok(report)
+    report["overall_accounting_compliance_pass"] =
+        (execution_compliant(&ledger) && report["run_status"] != "ABORTED").into();
+    bounded_export(report, &ledger)
 }
 
 fn process_resources() -> Value {
@@ -2339,8 +2442,15 @@ mod wire_tests {
     }
     impl Peer {
         fn start() -> Self {
-            let mut child = Command::new("python3")
-                .arg("tools/benchmark/local_peer.py")
+            Self::start_with_fault(false)
+        }
+        fn start_with_fault(fault: bool) -> Self {
+            let mut command = Command::new("python3");
+            command.arg("tools/benchmark/local_peer.py");
+            if fault {
+                command.args(["--fault", "uncertain-provider-publication"]);
+            }
+            let mut child = command
                 .stdout(Stdio::piped())
                 .stderr(Stdio::inherit())
                 .spawn()
@@ -2467,6 +2577,153 @@ mod wire_tests {
     }
     fn manifest(provider: &str) -> Manifest {
         serde_json::from_value(json!({"schema":1,"run_id":RUN,"allocation_id":format!("{RUN}-worker1"),"source_map":{},"account":ACCOUNT,"region":REGION,"bucket":BUCKET,"role":ROLE,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"source_map_sha256":"0".repeat(64),"binary_sha256":"0".repeat(64),"lock_sha256":"0".repeat(64),"requested_config_sha256":"0".repeat(64),"approval_expires_at_ms":1791607799000u64,"host_expires_at_ms":1791607799000u64,"benchmark_expires_at_ms":1791607799000u64,"provider_endpoint":provider,"allocations":{"read_attempts":390000,"write_attempts":18000,"download_bytes":26*GIB,"stored_version_charge_bytes":63*1024*1024,"metadata_download_bytes":0},"operator_reservation_summary":{"read_attempts":10000,"write_attempts":2000,"bootstrap_download_bytes":3*GIB,"administrative_download_bytes":GIB,"stored_version_charge_bytes":1048576},"phases":{"protocol":{"read_attempts":5000,"write_attempts":3500},"cold":{"read_attempts":280000,"write_attempts":0},"repair":{"read_attempts":60000,"write_attempts":4000},"warm":{"read_attempts":10000,"write_attempts":0},"funding":{"read_attempts":10000,"write_attempts":5500},"failure":{"read_attempts":25000,"write_attempts":5000}},"guard_proof":{"status":"verified","run_id":RUN,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"observed_at_ms":0,"proof_sha256":"0".repeat(64)}})).unwrap()
+    }
+    #[tokio::test]
+    async fn late_uncertain_publication_retains_completed_and_partial_report() {
+        let peer = Peer::start_with_fault(true);
+        let m = manifest(&peer.endpoint);
+        let end = Instant::now() + Duration::from_secs(10);
+        let ledger = Arc::new(Ledger::new(m.allocations.clone(), m.phases.clone(), end));
+        let t = transport(&peer, 1000, 1000, 10 * 1024 * 1024);
+        let (mut c, _) = read_config(std::path::Path::new("config/benchmarks/aws.json")).unwrap();
+        c.cases = ["cold", "provider_data", "provider_data"]
+            .into_iter()
+            .enumerate()
+            .map(|(index, mode)| LiveCase {
+                name: format!("case-{index}"),
+                workload: "revisions".into(),
+                mode: mode.into(),
+                selection: "targeted".into(),
+                clients: 1,
+                owners: 1,
+                target_samples: 1,
+                revisions: 1,
+                record_bytes: 128,
+                load_model: "hot_key".into(),
+            })
+            .collect();
+        let outcome = run_live(&c, &m, t.inner, None, ledger.clone(), end).await;
+        assert!(
+            outcome.is_ok(),
+            "must retain a bounded report after the one-use run started: {outcome:?}"
+        );
+        let report = outcome.unwrap();
+        assert_eq!(report["run_status"], "ABORTED");
+        assert_eq!(report["overall_accounting_compliance_pass"], false);
+        assert_eq!(report["requested_case_coverage_complete"], false);
+        assert_eq!(
+            report["cases"][0]["summary"]["outcomes"]["success"], 1,
+            "{report}"
+        );
+        assert_eq!(
+            report["cases"][1]["summary"]["outcomes"]["ambiguous"], 1,
+            "{report}"
+        );
+        assert_eq!(
+            report["cases"].as_array().unwrap().len(),
+            2,
+            "no following case dispatch"
+        );
+        assert!(
+            report["abort_reason"]
+                .as_str()
+                .unwrap()
+                .contains("uncertain")
+        );
+        let used = ledger.report();
+        assert!(used["used"]["uncertain_calls"].as_u64().unwrap() > 0);
+        assert!(
+            ledger.reserve("cold", Kind::Read, 1, None).is_err(),
+            "abort must close admission"
+        );
+    }
+    #[tokio::test]
+    async fn definitive_metadata_rejections_are_known_failures_not_unknown() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        for status in [401, 404] {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let endpoint = format!("http://{}/", listener.local_addr().unwrap());
+            let task = tokio::spawn(async move {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut input = [0; 4096];
+                let _ = stream.read(&mut input).await.unwrap();
+                stream.write_all(format!("HTTP/1.1 {status} Rejected{crlf}Content-Length: 0{crlf}Connection: close{crlf}{crlf}",crlf="\r\n").as_bytes()).await.unwrap();
+            });
+            let metadata =
+                Metadata::test_metadata(endpoint, Instant::now() + Duration::from_secs(3));
+            assert!(
+                metadata
+                    .document("/latest/api/token", None, true)
+                    .await
+                    .is_err()
+            );
+            task.await.unwrap();
+            let report = metadata.report();
+            assert_eq!(
+                report["used"]["unknown_calls"], 0,
+                "definitive status is known"
+            );
+            assert_eq!(report["used"]["failed_known"], 1);
+            assert_eq!(report["used"]["confirmed_statuses"][status.to_string()], 1);
+            assert!(report["used"]["reserved_bytes"].as_u64().unwrap() > 0);
+        }
+    }
+    #[tokio::test]
+    async fn known_metadata_headers_and_incomplete_transport_remain_distinct() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        for (headers, body, unknown) in [
+            ("Content-Length: 16385", "", false),
+            ("Content-Length: 0\r\nContent-Encoding: gzip", "", false),
+            ("Content-Length: 5", "x", true),
+        ] {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let endpoint = format!("http://{}/", listener.local_addr().unwrap());
+            let task = tokio::spawn(async move {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut input = [0; 4096];
+                let _ = stream.read(&mut input).await.unwrap();
+                stream
+                    .write_all(
+                        format!("{protocol} 200 OK{crlf}{headers}{crlf}Connection: close{crlf}{crlf}{body}", protocol="HTTP/1.1", crlf="\r\n")
+                            .as_bytes(),
+                    )
+                    .await
+                    .unwrap();
+            });
+            let metadata =
+                Metadata::test_metadata(endpoint, Instant::now() + Duration::from_secs(3));
+            assert!(
+                metadata
+                    .document("/latest/api/token", None, true)
+                    .await
+                    .is_err()
+            );
+            task.await.unwrap();
+            let report = metadata.report();
+            assert_eq!(report["used"]["unknown_calls"], u64::from(unknown));
+            assert_eq!(report["used"]["failed_known"], u64::from(!unknown));
+            assert_eq!(report["used"]["confirmed_statuses"]["200"], 1);
+            assert!(report["used"]["reserved_bytes"].as_u64().unwrap() >= 16384);
+        }
+    }
+    #[test]
+    fn oversized_details_export_retains_summary_and_false_compliance() {
+        let m = manifest("http://127.0.0.1:1/");
+        let ledger = Ledger::new(
+            m.allocations,
+            m.phases,
+            Instant::now() + Duration::from_secs(3),
+        );
+        let report = json!({"run_id":"bounded-run", "run_status":"COMPLETED", "overall_accounting_compliance_pass":true, "requested_case_coverage_complete":true, "cases":[{"summary":{"samples":123,"outcomes":{"success":122,"ambiguous":1}},"retained_samples":["x".repeat(2*1024*1024)]}], "S3_accounting":{"used":{"write_attempts":7,"operation_samples":["x".repeat(100)]}}});
+        let report = bounded_export(report, &ledger).unwrap();
+        assert!(serde_json::to_vec(&report).unwrap().len() <= 2 * 1024 * 1024);
+        assert_eq!(report["run_id"], "bounded-run");
+        assert_eq!(report["cases"][0]["summary"]["samples"], 123);
+        assert_eq!(report["S3_accounting"]["used"]["write_attempts"], 7);
+        assert_eq!(report["run_status"], "ABORTED");
+        assert_eq!(report["overall_accounting_compliance_pass"], false);
+        assert_eq!(report["requested_case_coverage_complete"], false);
+        assert_eq!(ledger.report()["used"]["dispatch_stopped"], true);
     }
     #[tokio::test]
     async fn warm_multiple_waves_reuse_verified_case_resolver_without_new_wire() {

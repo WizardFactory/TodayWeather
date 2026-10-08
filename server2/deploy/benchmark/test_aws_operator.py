@@ -87,6 +87,105 @@ class MetadataAccountingTests(unittest.TestCase):
             with self.assertRaises(op.OperatorError): op.validate_worker_accounting(report)
 
 
+class WorkerEvidenceTests(unittest.TestCase):
+    def controller(self, root):
+        config=json.loads((HERE/"aws-run.json").read_text())
+        state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":op.EXPIRY,"resources":{"instance":"i-0123456789abcdef0"}})
+        return op.Operator(config,state,None)
+
+    def export_fixture(self, controller, report, errors=b"sanitized abort\n"):
+        import base64
+        artifacts={"result.json":report,"result-errors.log":errors}
+        def ssm(commands,seconds=30):
+            script=commands[0]
+            path=next(name for name in artifacts if name in script)
+            body=artifacts[path]
+            if "stat().st_size" in script:
+                return json.dumps({"exists":body is not None,"size":len(body) if body is not None else 0})
+            offset=int(op.re.search(r"f.seek\(([0-9]+)\)",script).group(1))
+            return base64.b64encode(body[offset:offset+12288]).decode()
+        controller.ssm=ssm
+
+    def test_failed_noncompliant_report_persisted_before_rejection(self):
+        with tempfile.TemporaryDirectory(prefix="s09-abort-export-") as temp:
+            root=Path(temp);controller=self.controller(root)
+            manifest={"run_id":controller.config["run_id"]}
+            body=op.canonical(dict(manifest,run_status="ABORTED",abort_reason="uncertain publication",overall_accounting_compliance_pass=False))
+            self.export_fixture(controller,body)
+            with self.assertRaises(op.OperatorError):
+                controller.export_worker_result("/opt/server2-s09/run/fixture",manifest,{"Status":"Failed","ResponseCode":2})
+            self.assertEqual((root/"state.result.json").read_bytes(),body)
+            self.assertEqual((root/"state.worker-errors.log").read_bytes(),b"sanitized abort\n")
+            saved=json.loads((root/"state.json").read_text())
+            self.assertIs(saved["worker_accounting_compliance"],False)
+            self.assertEqual(saved["worker_report_sha256"],op.digest(body))
+            self.assertEqual(saved["worker_terminal"]["Status"],"Failed")
+
+    def test_missing_report_preserves_errors_and_diagnostic(self):
+        with tempfile.TemporaryDirectory(prefix="s09-preclaim-export-") as temp:
+            root=Path(temp);controller=self.controller(root)
+            self.export_fixture(controller,None,b"setup rejected\n")
+            with self.assertRaises(op.OperatorError): controller.export_worker_result("/opt/server2-s09/run/fixture",{}, {"Status":"Failed","ResponseCode":1})
+            self.assertEqual((root/"state.worker-errors.log").read_bytes(),b"setup rejected\n")
+            self.assertFalse((root/"state.result.json").exists())
+            self.assertEqual(controller.state.data["worker_artifacts"]["result"]["status"],"missing")
+            self.assertIs(controller.state.data["worker_accounting_compliance"],False)
+
+    def test_invalid_or_oversize_report_never_compliant(self):
+        for body in (b"invalid JSON", b"x"*(2*op.MiB+1)):
+            with tempfile.TemporaryDirectory(prefix="s09-invalid-export-") as temp:
+                root=Path(temp);controller=self.controller(root);self.export_fixture(controller,body)
+                with self.assertRaises(op.OperatorError):controller.export_worker_result("/opt/server2-s09/run/fixture",{}, {"Status":"Success","ResponseCode":0})
+                self.assertIs(controller.state.data["worker_accounting_compliance"],False)
+                self.assertEqual((root/"state.worker-errors.log").read_bytes(),b"sanitized abort\n")
+                self.assertEqual((root/"state.result.json").exists(),len(body)<=2*op.MiB)
+
+    def test_failed_ssm_terminal_capture_keeps_default_rejection(self):
+        class Runner:
+            def call(self,service,action,args):
+                if action=="send-command": return {"Command":{"CommandId":"01234567-0123-0123-0123-012345678901"}}
+                return {"Status":"Failed","ResponseCode":2,"StandardErrorContent":"not copied as terminal metadata"}
+        with tempfile.TemporaryDirectory(prefix="s09-ssm-failure-") as temp:
+            controller=self.controller(Path(temp));controller.runner=Runner()
+            self.assertEqual(controller.ssm(["worker"],capture_terminal=True),{"Status":"Failed","ResponseCode":2})
+            with self.assertRaises(op.OperatorError): controller.ssm(["ordinary command"])
+
+    def test_stock_ssm_version_gate_has_no_permission_fallback(self):
+        with tempfile.TemporaryDirectory(prefix="s09-agent-version-") as temp:
+            controller=self.controller(Path(temp))
+            for version in (None,"3.3.39.0","3.3.40","3.3.40.0-extra","9"*100):
+                with self.subTest(version=version),self.assertRaises(op.OperatorError):controller.verify_ssm_agent({"AgentVersion":version})
+            for version in ("3.3.40.0","3.3.2299.0","4.0.0.0"):
+                controller.verify_ssm_agent({"AgentVersion":version})
+                self.assertEqual(controller.state.data["stock_SSM_agent_version"],version)
+
+    def test_old_online_agent_blocks_runcommand_and_allocation(self):
+        import base64
+        with tempfile.TemporaryDirectory(prefix="s09-online-agent-") as temp:
+            controller=self.controller(Path(temp));actions=[]
+            controller.verify_host_root=lambda:None
+            controller.open_https_after_guard=lambda _:None
+            def call(service,action,args):
+                actions.append(action)
+                if action=="get-console-output":return {"Output":base64.b64encode(b"S09_GUARD_V1 fixture").decode()}
+                if action=="describe-instance-information":return {"InstanceInformationList":[{"PingStatus":"Online","AgentVersion":"3.3.39.0"}]}
+                raise AssertionError("RunCommand before supported stock agent")
+            controller.call=call
+            with self.assertRaises(op.OperatorError):controller.run_host()
+            self.assertEqual(actions,["get-console-output","describe-instance-information"])
+            self.assertNotIn("worker_allocation_issued",controller.state.data)
+
+    def test_existing_evidence_and_symlink_never_overwritten(self):
+        with tempfile.TemporaryDirectory(prefix="s09-preserve-artifact-") as temp:
+            root=Path(temp);controller=self.controller(root);self.export_fixture(controller,b"invalid JSON")
+            target=root/"original";target.write_bytes(b"original")
+            (root/"state.result.json").symlink_to(target)
+            with self.assertRaises(op.OperatorError):controller.export_worker_result("/opt/server2-s09/run/fixture",{}, {"Status":"Failed","ResponseCode":2})
+            self.assertEqual(target.read_bytes(),b"original")
+            self.assertTrue((root/"state.result.json").is_symlink())
+            self.assertEqual(controller.state.data["worker_artifacts"]["result"]["status"],"export_failed")
+            self.assertIs(controller.state.data["worker_accounting_compliance"],False)
+
 class ConfigAndOwnershipTests(unittest.TestCase):
     def config(self):
         return json.loads((HERE / "aws-run.json").read_text())
@@ -377,7 +476,54 @@ def functional_smoke():
                 return {"status":"PASS_fake_only","calls":len(calls),"decoded_userdata_bytes":len(decoded),"guard_denied_dispatch":0,"S3_deletes":0,"new_hosts":sum("run-instances" in c for c in calls),"ledger":state.data["ledger"],"kernel_SSM_AWS_proven":False}
         finally: server.shutdown();server.server_close();thread.join(timeout=2)
 
-def compiled_worker_handshake(binary):
+def failure_functional_smoke():
+    """Distinct failed-command export/cleanup through an actual fake CLI process."""
+    import base64,http.server,os,sys
+    from unittest.mock import patch
+    with tempfile.TemporaryDirectory(prefix="s09-failed-cli-") as temporary:
+        root=Path(temporary);config=json.loads((HERE/"aws-run.json").read_text())
+        manifest={"run_id":config["run_id"]}
+        body=op.canonical(dict(manifest,run_status="ABORTED",abort_reason="uncertain publication",overall_accounting_compliance_pass=False))
+        errors=b"sanitized worker abort\n";calls=[];reply=[None]
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self,*args):pass
+            def do_POST(self):
+                args=json.loads(self.rfile.read(int(self.headers["Content-Length"])));calls.append(args)
+                service=next(x for x in ("ssm","ec2") if x in args);action=args[args.index(service)+1]
+                if action=="send-command":
+                    script=json.loads(args[args.index("--parameters")+1])["commands"][0]
+                    if script=="run failed worker":reply[0]={"Status":"Failed","ResponseCode":2}
+                    else:
+                        data=errors if "result-errors.log" in script else body
+                        if "stat().st_size" in script:output=json.dumps({"exists":True,"size":len(data)})
+                        else:
+                            offset=int(op.re.search(r"f.seek\(([0-9]+)\)",script).group(1))
+                            output=base64.b64encode(data[offset:offset+12288]).decode()
+                        reply[0]={"Status":"Success","ResponseCode":0,"StandardOutputContent":output}
+                    result={"Command":{"CommandId":"01234567-0123-0123-0123-012345678901"}}
+                elif action=="get-command-invocation":result=reply[0]
+                elif action=="describe-instances":result={"Reservations":[{"Instances":[{"InstanceId":"i-0123456789abcdef0","State":{"Name":"terminated"},"Tags":[{"Key":"RunId","Value":config["run_id"]},{"Key":"Purpose","Value":"synthetic-benchmark-only"}]}]}]}
+                elif action=="describe-volumes":result={"Volumes":[]}
+                else:raise AssertionError("unexpected fake action")
+                payload=op.canonical(result);self.send_response(200);self.send_header("Content-Length",str(len(payload)));self.end_headers();self.wfile.write(payload)
+        server=http.server.ThreadingHTTPServer(("127.0.0.1",0),Handler);thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        fake=root/"fake-aws";fake.write_text("#!/usr/bin/env python3\nimport urllib.request,json,sys,os\nr=urllib.request.urlopen(urllib.request.Request(os.environ['S09_FAKE_CLI_ENDPOINT'],json.dumps(sys.argv[1:]).encode(),method='POST'),timeout=2)\nprint(r.read().decode())\n");fake.chmod(0o700)
+        try:
+            with patch.dict(os.environ,{"S09_FAKE_CLI_ENDPOINT":"http://127.0.0.1:"+str(server.server_port)+"/"}):
+                state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":op.EXPIRY,"resources":{"instance":"i-0123456789abcdef0","root_volume":"vol-0123456789abcdef0"}})
+                controller=op.Operator(config,state,op.Cli(config,str(fake)))
+                terminal=controller.ssm(["run failed worker"],capture_terminal=True)
+                try:controller.export_worker_result("/opt/server2-s09/run/fixture",manifest,terminal);raise AssertionError("failed worker admitted")
+                except op.OperatorError:pass
+                assert (root/"state.result.json").read_bytes()==body
+                assert (root/"state.worker-errors.log").read_bytes()==errors
+                assert state.data["worker_accounting_compliance"] is False
+                assert controller.cleanup()["status"]=="cleaned_host_resources_S3_retained"
+                assert state.data["root_volume_absence_verified"] is True
+                return {"status":"PASS_failed_fake_cli_only","calls":len(calls),"failed_report_preserved":True,"error_bytes":len(errors),"compliance":False,"cleanup_observed":True,"AWS_IMDS_actual_host":False}
+        finally:server.shutdown();server.server_close();thread.join(timeout=2)
+
+def compiled_worker_handshake(binary, fault=False):
     """Actual controller Cli/SSM envelope -> compiled local-only worker; no AWS/IMDS."""
     import base64, hashlib, http.server, os, subprocess, sys, urllib.request
     from unittest.mock import patch
@@ -386,7 +532,7 @@ def compiled_worker_handshake(binary):
     declaration=json.loads((repo/"server2/config/tasks/S09.json").read_text())
     paths=declaration["server2_paths"]+[v["path"] for v in declaration["outside"]]
     if len(paths)!=33: raise AssertionError("source paths")
-    peer=subprocess.Popen([sys.executable,str(repo/"server2/tools/benchmark/local_peer.py")],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    peer=subprocess.Popen([sys.executable,str(repo/"server2/tools/benchmark/local_peer.py")]+(["--fault","uncertain-provider-publication"] if fault else []),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     endpoint=peer.stdout.readline().strip()
     if not op.re.fullmatch(r"http://127\.0\.0\.1:[0-9]+/",endpoint): raise AssertionError("test peer endpoint")
     try:
@@ -404,7 +550,7 @@ def compiled_worker_handshake(binary):
         manifest=op.make_manifest(config,state.data,"i-0123456789abcdef0",op.digest(binary.read_bytes()),now,endpoint)
         manifest_path=root/"manifest.json";manifest_path.write_bytes(op.canonical(manifest));manifest_path.chmod(0o600)
         invocation=[str(binary),"--local-approved-worker",str(config_path),"--run-manifest",str(manifest_path),"--loopback-s3",endpoint]
-        calls=[];output=[];worker_outputs=[];reply=[""]
+        calls=[];output=[];worker_outputs=[];worker_errors=[];reply=[""]
         class Handler(http.server.BaseHTTPRequestHandler):
           def log_message(self,*args): pass
           def do_POST(self):
@@ -414,7 +560,16 @@ def compiled_worker_handshake(binary):
             i=args.index("ssm");action=args[i+1]
             if action=="send-command":
               params=json.loads(args[args.index("--parameters")+1])
-              command=json.loads(params["commands"][0])
+              raw_command=params["commands"][0]
+              if raw_command.startswith("python3 -c "):
+                assert fault
+                data=worker_errors[0] if "result-errors.log" in raw_command else worker_outputs[0]
+                if "stat().st_size" in raw_command: reply[0]=json.dumps({"exists":True,"size":len(data)})
+                else:
+                    offset=int(op.re.search(r"f.seek\(([0-9]+)\)",raw_command).group(1));reply[0]=base64.b64encode(data[offset:offset+12288]).decode()
+                result={"Command":{"CommandId":"01234567-0123-0123-0123-012345678901"}}
+                data=op.canonical(result);self.send_response(200);self.send_header("Content-Length",str(len(data)));self.end_headers();self.wfile.write(data);return
+              command=json.loads(raw_command)
               if isinstance(command,dict):
                 assert set(command)=={"export_offset"} and type(command["export_offset"]) is int
                 offset=command["export_offset"];assert 0<=offset<len(worker_outputs[0])
@@ -424,10 +579,10 @@ def compiled_worker_handshake(binary):
               assert command==invocation
               def execute_worker():
                 run=subprocess.run(invocation,cwd=repo/"server2",capture_output=True,timeout=60)
-                if run.returncode or len(run.stdout)>2*op.MiB: output.append({"Status":"Failed","StandardOutputContent":run.stdout.decode()[:512]+run.stderr.decode()[:512]})
+                worker_outputs.append(run.stdout);worker_errors.append(run.stderr)
+                if run.returncode or len(run.stdout)>2*op.MiB: output.append({"Status":"Failed","ResponseCode":run.returncode,"StandardOutputContent":run.stdout.decode()[:512]+run.stderr.decode()[:512]})
                 else:
-                  worker_outputs.append(run.stdout)
-                  output.append({"Status":"Success","StandardOutputContent":op.canonical({"size":len(run.stdout),"sha256":op.digest(run.stdout)}).decode()})
+                  output.append({"Status":"Success","ResponseCode":0,"StandardOutputContent":op.canonical({"size":len(run.stdout),"sha256":op.digest(run.stdout)}).decode()})
               worker=threading.Thread(target=execute_worker,daemon=True);worker.start()
               result={"Command":{"CommandId":"01234567-0123-0123-0123-012345678901"}}
             elif action=="get-command-invocation": result={"Status":"Success","StandardOutputContent":reply[0]} if reply[0] else output[0] if output else {"Status":"InProgress"}
@@ -439,6 +594,21 @@ def compiled_worker_handshake(binary):
         try:
           with patch.dict(os.environ,{"S09_FAKE_CLI_ENDPOINT":"http://127.0.0.1:"+str(server.server_port)+"/"}):
             controller=op.Operator(config,state,op.Cli(config,str(fake)))
+            if fault:
+              terminal=controller.ssm([op.canonical(invocation).decode()],seconds=60,capture_terminal=True)
+              assert terminal=={"Status":"Failed","ResponseCode":2}
+              try:controller.export_worker_result("/opt/server2-s09/run/fixture",manifest,terminal);raise AssertionError("uncertain result admitted")
+              except op.OperatorError:pass
+              report=json.loads((root/"state.result.json").read_bytes())
+              assert report["run_status"]=="ABORTED" and report["overall_accounting_compliance_pass"] is False
+              assert report["requested_case_coverage_complete"] is False and report["abort_reason"]
+              assert state.data["worker_accounting_compliance"] is False
+              assert (root/"state.worker-errors.log").read_bytes()==worker_errors[0]
+              before=json.load(urllib.request.urlopen(endpoint+"__benchmark/status",timeout=2))["requests"]
+              repeat=subprocess.run(invocation,cwd=repo/"server2",capture_output=True,timeout=60)
+              after=json.load(urllib.request.urlopen(endpoint+"__benchmark/status",timeout=2))["requests"]
+              assert repeat.returncode!=0 and before==after
+              return {"status":"PASS_aborted_local_worker_evidence","controller_calls":len(calls),"same_allocation_replay_denied_before_IO":True,"worker_report":report,"fake_controller_ledger":state.data["ledger"],"actual_AWS_IMDS_kernel_host_proof":False}
             response=controller.ssm([op.canonical(invocation).decode()],seconds=60)
             receipt=json.loads(response);assert 0<receipt["size"]<=2*op.MiB
             exported=bytearray()
@@ -471,5 +641,7 @@ def compiled_worker_handshake(binary):
 if __name__ == "__main__":
     import sys
     if sys.argv[1:]==["--functional-smoke"]: print(json.dumps(functional_smoke(),sort_keys=True))
+    elif sys.argv[1:]==["--failure-functional-smoke"]: print(json.dumps(failure_functional_smoke(),sort_keys=True))
     elif len(sys.argv)==3 and sys.argv[1]=="--compiled-worker": print(json.dumps(compiled_worker_handshake(sys.argv[2]),sort_keys=True))
+    elif len(sys.argv)==3 and sys.argv[1]=="--compiled-worker-abort": print(json.dumps(compiled_worker_handshake(sys.argv[2],fault=True),sort_keys=True))
     else: unittest.main()

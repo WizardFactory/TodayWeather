@@ -419,7 +419,7 @@ class Operator:
         s["guard_proof"] = proof; s["guard_proof_sha256"] = digest(canonical(proof)); self.state.save()
         return proof
 
-    def ssm(self, commands, seconds=60):
+    def ssm(self, commands, seconds=60, capture_terminal=False):
         instance=self.state.data["resources"]["instance"]
         sent=self.call("ssm","send-command",["--instance-ids",instance,"--document-name","AWS-RunShellScript","--timeout-seconds",str(max(30,min(seconds,3600))),"--parameters",json.dumps({"commands":commands,"executionTimeout":[str(min(seconds,3600))]})])
         command=sent["Command"]["CommandId"]
@@ -431,13 +431,78 @@ class Operator:
                 if str(error)!="AWS status InvocationDoesNotExist": raise
                 time.sleep(2); continue
             status=result.get("Status")
+            if capture_terminal and status not in {"Pending","InProgress","Delayed"}:
+                code=result.get("ResponseCode")
+                return {"Status":status if isinstance(status,str) and status in {"Success","Failed","Cancelled","TimedOut","Cancelling"} else "Unknown","ResponseCode":code if type(code) is int else None}
             if status=="Success":
                 output=result.get("StandardOutputContent","")
                 if len(output.encode())>24000: raise OperatorError("SSM output incomplete/bound")
                 return output
             if status not in {"Pending","InProgress","Delayed"}: raise OperatorError("SSM task failed")
             time.sleep(2)
+        if capture_terminal: return {"Status":"ControllerDeadline","ResponseCode":None}
         raise OperatorError("SSM command deadline")
+
+    def verify_ssm_agent(self, row):
+        version=row.get("AgentVersion")
+        if not isinstance(version,str) or not re.fullmatch(r"[0-9]{1,6}(?:\.[0-9]{1,6}){3}",version) or tuple(map(int,version.split("."))) < (3,3,40,0):
+            raise OperatorError("stock SSM agent unsupported or unknown; no fallback")
+        self.state.data["stock_SSM_agent_version"]=version
+        self.state.save()
+
+    def export_worker_file(self, remote, maximum):
+        # Both queries are bounded SSM calls; never read a remote unbounded log.
+        script="import pathlib,json;p=pathlib.Path("+repr(remote)+");print(json.dumps({'exists':p.is_file(),'size':p.stat().st_size if p.is_file() else 0}))"
+        size=json.loads(self.ssm(["python3 -c "+json.dumps(script)],seconds=30))
+        if size.get("exists") is False: return None
+        count=size.get("size")
+        if size.get("exists") is not True or type(count) is not int or not 0<=count<=maximum:
+            raise OperatorError("worker artifact size bound")
+        data=bytearray()
+        for offset in range(0,count,12288):
+            script="import pathlib,base64;p=pathlib.Path("+repr(remote)+");f=p.open('rb');f.seek("+str(offset)+");print(base64.b64encode(f.read(12288)).decode())"
+            chunk=self.ssm(["python3 -c "+json.dumps(script)],seconds=30).strip()
+            try: raw=base64.b64decode(chunk,validate=True)
+            except ValueError: raise OperatorError("worker artifact encoding") from None
+            if len(raw)!=min(12288,count-offset): raise OperatorError("worker artifact incomplete")
+            data.extend(raw)
+        return bytes(data)
+
+    def export_worker_result(self, run_directory, manifest, terminal):
+        self.state.data.update(worker_accounting_compliance=False,worker_terminal=terminal,worker_artifacts={})
+        self.state.save()
+        report_bytes=None
+        for name,remote,maximum,suffix in [("result","result.json",2*MiB,".result.json"),("errors","result-errors.log",65536,".worker-errors.log")]:
+            evidence={"status":"export_failed"}
+            try:
+                body=self.export_worker_file(run_directory+"/"+remote,maximum)
+                if body is None: evidence={"status":"missing"}
+                else:
+                    path=self.state.path.with_suffix(suffix)
+                    fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+                    with os.fdopen(fd,"wb") as out: out.write(body);out.flush();os.fsync(out.fileno())
+                    evidence={"status":"exported","bytes":len(body),"sha256":digest(body)}
+                    if name=="result":
+                        report_bytes=body
+                        self.state.data.update(worker_report_sha256=digest(body),result_sha256=digest(body))
+            except (OperatorError,OSError,ValueError,TypeError,KeyError):
+                # Do not expose remote content, credentials or arbitrary exception text.
+                evidence={"status":"export_failed","reason":"bounded artifact export failed"}
+            self.state.data["worker_artifacts"][name]=evidence
+            self.state.save()
+        if report_bytes is None: raise OperatorError("worker report missing or export failed; evidence preserved")
+        try: report=json.loads(report_bytes)
+        except ValueError: raise OperatorError("worker report invalid JSON; evidence preserved") from None
+        if not isinstance(report,dict): raise OperatorError("worker report schema; evidence preserved")
+        for field in ("run_id","allocation_id","source_revision","source_map_sha256","binary_sha256","lock_sha256","requested_config_sha256"):
+            if report.get(field)!=manifest.get(field): raise OperatorError("result identity/hash mismatch; evidence preserved")
+        validate_worker_accounting(report)
+        if terminal.get("Status")!="Success" or terminal.get("ResponseCode")!=0 or report.get("run_status")=="ABORTED":
+            raise OperatorError("worker did not complete successfully; evidence preserved")
+        if self.state.data["worker_artifacts"]["errors"]["status"]!="exported": raise OperatorError("worker error evidence unavailable")
+        self.state.data["worker_accounting_compliance"]=True
+        self.state.save()
+        return report
 
     def phase_guard(self, transition=False):
         # Stock-only script checks fresh kernel state; only the declared phase rule may change.
@@ -532,7 +597,8 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
         while self.clock()<ssm_deadline:
             result=self.call("ssm","describe-instance-information",["--filters",json.dumps([{"Key":"InstanceIds","Values":[instance]}])])
             rows=result.get("InstanceInformationList",[])
-            if len(rows)==1 and rows[0].get("PingStatus")=="Online": break
+            if len(rows)==1 and rows[0].get("PingStatus")=="Online":
+                self.verify_ssm_agent(rows[0]); break
             time.sleep(5)
         else: raise OperatorError("SSM Online unavailable; no widening")
         # Wait for cloud-init write_files. Background package/snap services stay masked.
@@ -563,33 +629,16 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
         # Worker config is reviewed, source-pinned and inert until this private copy is armed.
         config_script="import pathlib,json,os;src=pathlib.Path('/opt/server2-s09/source/server2/config/benchmarks/aws.json');c=json.loads(src.read_text());c['execution_enabled']=True;c['source_revision']='"+self.config["source_revision"]+"';c['source_map_sha256']='"+self.config["source_map_sha256"]+"';c['lock_sha256']='"+self.config["lock_sha256"]+"';c['review_candidate_sha256']='"+self.config["review_candidate_sha256"]+"';p=pathlib.Path('"+run_directory+"/aws-config.json');fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.write(fd,json.dumps(c,separators=(',',':'),sort_keys=True).encode());os.close(fd)"
         self.ssm(["python3 -c "+json.dumps(config_script)],seconds=30)
-        self.ssm(["set -eu; timeout 3600 "+binary+" --aws-config "+run_directory+"/aws-config.json --run-manifest "+run_directory+"/manifest.json --execute-approved-run >"+run_directory+"/result.json 2>"+run_directory+"/result-errors.log"],seconds=3600)
-        size_output=self.ssm(["wc -c <"+run_directory+"/result.json"],seconds=30).strip()
-        if not size_output.isdigit() or int(size_output)>2*MiB: raise OperatorError("result export insufficient: size bound")
-        data=bytearray()
-        for offset in range(0,int(size_output),12288):
-            script="import pathlib,base64;p=pathlib.Path('"+run_directory+"/result.json');f=p.open('rb');f.seek("+str(offset)+");print(base64.b64encode(f.read(12288)).decode())"
-            chunk=self.ssm(["python3 -c "+json.dumps(script)],seconds=30).strip()
-            try: raw=base64.b64decode(chunk,validate=True)
-            except ValueError: raise OperatorError("result encoding") from None
-            if len(raw)>12288: raise OperatorError("result chunk bound")
-            data.extend(raw)
-        if len(data)!=int(size_output): raise OperatorError("result incomplete")
-        try: report=json.loads(data)
-        except ValueError: raise OperatorError("result invalid JSON") from None
-        for field in ("run_id","allocation_id","source_revision","source_map_sha256","binary_sha256","lock_sha256","requested_config_sha256"):
-            if report.get(field)!=manifest[field]: raise OperatorError("result identity/hash mismatch")
-        # Persist false before validation; exceptions cannot leave a compliant state.
         self.state.data["worker_accounting_compliance"]=False
-        self.state.data["worker_report_sha256"]=digest(data);self.state.save()
-        validate_worker_accounting(report)
-        self.state.data["worker_accounting_compliance"]=True;self.state.save()
+        self.state.save()
+        try:
+            terminal=self.ssm(["set -eu; timeout 3600 "+binary+" --aws-config "+run_directory+"/aws-config.json --run-manifest "+run_directory+"/manifest.json --execute-approved-run >"+run_directory+"/result.json 2>"+run_directory+"/result-errors.log"],seconds=3600,capture_terminal=True)
+        except OperatorError:
+            terminal={"Status":"Unknown","ResponseCode":None}
+        self.export_worker_result(run_directory,manifest,terminal)
         self.phase_guard()
         self.inventory_versions()
         self.ssm(["python3 - <<'PY'\nimport pathlib,os\np=pathlib.Path('/opt/server2-s09/private/provider-pid');pid=int(p.read_text());cmd=pathlib.Path('/proc/'+str(pid)+'/cmdline').read_bytes();assert b'tools/benchmark/local_peer.py' in cmd;os.kill(pid,15)\nPY"],seconds=15)
-        fd=os.open(self.state.path.with_suffix(".result.json"),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
-        with os.fdopen(fd,"wb") as out: out.write(data);out.flush();os.fsync(out.fileno())
-        self.state.data["result_sha256"]=digest(data);self.state.save()
 
     def cleanup(self):
         # Only exact run-tagged new resources are eligible; S3 data remains untouched.

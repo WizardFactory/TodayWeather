@@ -926,7 +926,13 @@ async fn main() {
     }
     .await;
     match result {
-        Ok(r) => println!("{}", serde_json::to_string(&r).expect("measurement report")),
+        Ok(r) => {
+            println!("{}", serde_json::to_string(&r).expect("measurement report"));
+            if r["run_status"] == "ABORTED" || r["overall_accounting_compliance_pass"] == false {
+                eprintln!("benchmark aborted; bounded noncompliant report emitted");
+                std::process::exit(2);
+            }
+        }
         Err(e) => {
             eprintln!("benchmark failed: {e}");
             std::process::exit(1)
