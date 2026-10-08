@@ -9,7 +9,7 @@
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "09c2ea22487c47b9163aae7198bab16248774d1c",
+      "revision": "2fdcf3155bd15e634d0537a8335a5a3c3ba9b13c",
       "provider": "github",
       "link_mode": "web"
     }
@@ -36,18 +36,18 @@
       "sources": [
         {
           "path": "server2/src/resolver/flight.rs",
-          "line": 344,
-          "end_line": 451
+          "line": 349,
+          "end_line": 460
         },
         {
           "path": "server2/src/resolver/flight.rs",
-          "line": 454,
-          "end_line": 579
+          "line": 463,
+          "end_line": 585
         },
         {
           "path": "server2/src/resolver/flight.rs",
-          "line": 688,
-          "end_line": 785
+          "line": 694,
+          "end_line": 791
         }
       ]
     },
@@ -64,13 +64,13 @@
         },
         {
           "path": "server2/src/resolver/flight.rs",
-          "line": 164,
-          "end_line": 177
+          "line": 169,
+          "end_line": 182
         },
         {
           "path": "server2/src/resolver/flight.rs",
-          "line": 580,
-          "end_line": 687
+          "line": 586,
+          "end_line": 693
         }
       ]
     },
@@ -301,7 +301,8 @@
       "title": "Memory and cancellation",
       "items": [
         "Optional raw/parsed maps yield to bounded response admission. External pins retain their byte charge.",
-        "Owned waiter-independent tasks drain; reports count owners and view jobs, not every codec worker."
+        "Owned waiter-independent tasks drain; reports count owners and view jobs, not every codec worker.",
+        "Unchanged refresh reuses its payload/lease. TTL is rechecked after dependency I/O and is never extended."
       ]
     },
     {

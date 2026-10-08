@@ -233,6 +233,15 @@ admission; cache weights alone do not claim a process RSS limit. No lock remains
 held across I/O or CPU awaits. Exact record/parser identities and monotonic TTLs
 govern reuse.
 
+An unchanged dependency refresh reuses the same immutable response payload and
+byte lease; only its next refresh time is rearmed under the retention gate.
+It never extends the original creation time or expiry. Reusing that payload
+does not create a second charge, while external pins on displaced or distinct
+payloads remain charged. After dependency I/O, refresh rechecks expiry and epoch
+under the brief gate. If the response expired, it drops the internal old pin and
+re-enters checked cold resolution within the original deadline, or returns a
+typed timeout; it cannot return the expired response as success.
+
 Owned single-flight jobs survive cancellation of one HTTP waiter, share their
 original bounded deadline and drain policy, and never extend a later waiter's
 HTTP deadline. Resolver reads retain S06 coverage: a page or targeted acquisition
