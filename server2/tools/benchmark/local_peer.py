@@ -44,6 +44,7 @@ class Handler(base.Handler):
         if split.path == '/__benchmark/status' and self.command == 'GET':
             with self.server.metrics_lock:
                 result = json.loads(json.dumps(self.server.metrics))
+                result['fault_checkpoint'] = self.server.fault_checkpoint
                 result['operation_latency_us']={}
                 for k,values in self.server.latencies.items():
                     ordered=sorted(values)
@@ -52,6 +53,8 @@ class Handler(base.Handler):
                 result['objects'] = len(self.server.objects)
                 result['current_body_bytes'] = sum(len(o.body) for o in self.server.objects.values())
                 result['version_body_bytes'] = sum(len(o.body) for v in self.server.versions.values() for o in v)
+                result['version_count'] = sum(len(v) for v in self.server.versions.values())
+                result['stored_version_charge_bytes'] = result['version_body_bytes'] + 16384 * result['version_count']
                 result['catalog_current_bytes'] = sum(len(o.body) for k,o in self.server.objects.items() if k.startswith('index/v2/') and not k.startswith('index/v2/groups/'))
                 result['catalog_version_bytes'] = sum(len(o.body) for k,v in self.server.versions.items() if k.startswith('index/v2/') and not k.startswith('index/v2/groups/') for o in v)
             return self.send(200,json.dumps(result).encode(),{'Content-Type':'application/json'})
@@ -77,6 +80,28 @@ class Handler(base.Handler):
             m['active']+=1
             m['peak_inflight']=max(m['peak_inflight'],m['active'])
         try:
+            if self.server.fault_mode == 'uncertain-cold-final-trial':
+                if self.method_kind == 'PUT:budget':
+                    self.server.protocol_budget_seen = True
+                if (self.method_kind == 'PUT:raw' and self.server.protocol_budget_seen
+                        and self.server.cold_fault_key is None):
+                    self.server.cold_fault_key = key
+                if self.method_kind == 'GET:raw' and key == self.server.cold_fault_key:
+                    self.server.cold_fault_reads += 1
+                    if self.server.cold_fault_reads == 3:
+                        # Seed verification, first cold trial, then final trial.
+                        with self.server.metrics_lock:
+                            checkpoint = {'requests': dict(m['requests']),
+                                          'request_bytes': m['request_bytes']}
+                        with self.server.lock:
+                            versions = [o for v in self.server.versions.values() for o in v]
+                            checkpoint['version_count'] = len(versions)
+                            checkpoint['stored_version_charge_bytes'] = sum(len(o.body) + 16384 for o in versions)
+                        self.server.fault_checkpoint = checkpoint
+                        self.close_connection = True
+                        try: self.connection.shutdown(socket.SHUT_RDWR)
+                        except OSError: pass
+                        return
             if self.method_kind == 'HEAD:raw' and self.server.drop_raw_reconciliation:
                 self.close_connection = True
                 try: self.connection.shutdown(socket.SHUT_RDWR)
@@ -118,6 +143,10 @@ def make(fault_mode=None):
     peer.fault_mode=fault_mode
     peer.provider_fault_armed=False
     peer.drop_raw_reconciliation=False
+    peer.protocol_budget_seen=False
+    peer.cold_fault_key=None
+    peer.cold_fault_reads=0
+    peer.fault_checkpoint=None
     peer.metrics={'requests':{},'statuses':{},'duration_us':{},'request_bytes':0,'response_bytes':0,'active':0,'peak_inflight':0}
     return peer
 
@@ -125,7 +154,8 @@ def make(fault_mode=None):
 if __name__ == '__main__':
     fault_mode = None
     if sys.argv[1:]:
-        if sys.argv[1:] != ['--fault', 'uncertain-provider-publication']:
+        if sys.argv[1:] not in (['--fault', 'uncertain-provider-publication'],
+                               ['--fault', 'uncertain-cold-final-trial']):
             raise SystemExit('only explicit local failure fixture is supported')
         fault_mode = sys.argv[2]
     peer=make(fault_mode)

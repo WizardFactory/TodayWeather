@@ -23,6 +23,10 @@ HERE = Path(__file__).resolve().parent
 GiB = 1024 ** 3
 MiB = 1024 ** 2
 EXPIRY = 1791607799000
+EXPORT_CLEANUP_RESERVE_MS = 15 * 60000
+MINIMUM_WORKER_WINDOW_MS = 5 * 60000
+COMPLETION_GRACE_SECONDS = 30
+MAXIMUM_WORKER_WINDOW_MS = (3600 - COMPLETION_GRACE_SECONDS) * 1000
 FIXED = {
     "schema": 1, "run_id": "s09-20261008-approval044959", "account": "141248341265",
     "region": "ap-northeast-2", "bucket": "server2-s09-141248341265-apne2-20261008",
@@ -631,8 +635,11 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
         self.ssm(["python3 -c "+json.dumps(config_script)],seconds=30)
         self.state.data["worker_accounting_compliance"]=False
         self.state.save()
+        # Recheck after private manifest/config transfers. The grace consumes
+        # part of the existing tail; it never extends the original host deadline.
+        worker_seconds=worker_timeout_seconds(manifest,self.clock())
         try:
-            terminal=self.ssm(["set -eu; timeout 3600 "+binary+" --aws-config "+run_directory+"/aws-config.json --run-manifest "+run_directory+"/manifest.json --execute-approved-run >"+run_directory+"/result.json 2>"+run_directory+"/result-errors.log"],seconds=3600,capture_terminal=True)
+            terminal=self.ssm(["set -eu; timeout "+str(worker_seconds)+" "+binary+" --aws-config "+run_directory+"/aws-config.json --run-manifest "+run_directory+"/manifest.json --execute-approved-run >"+run_directory+"/result.json 2>"+run_directory+"/result-errors.log"],seconds=worker_seconds,capture_terminal=True)
         except OperatorError:
             terminal={"Status":"Unknown","ResponseCode":None}
         self.export_worker_result(run_directory,manifest,terminal)
@@ -715,13 +722,22 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
         return {"status":self.state.data["status"]}
 
 
+def worker_timeout_seconds(manifest, current_ms):
+    remaining=manifest["benchmark_expires_at_ms"]-current_ms
+    tail=min(manifest["host_expires_at_ms"],EXPIRY)-manifest["benchmark_expires_at_ms"]
+    if not MINIMUM_WORKER_WINDOW_MS<=remaining<=MAXIMUM_WORKER_WINDOW_MS or tail<EXPORT_CLEANUP_RESERVE_MS:
+        raise OperatorError("insufficient worker/export window; no allocation renewal")
+    return remaining//1000+COMPLETION_GRACE_SECONDS
+
+
 def make_manifest(config, state, instance_id, binary_sha256, current_ms, provider_endpoint):
     if not re.fullmatch(r"http://127\.0\.0\.1:[0-9]{1,5}/",provider_endpoint) or not 1 <= int(provider_endpoint.split(":")[-1].rstrip("/")) <= 65535: raise OperatorError("provider loopback endpoint")
     if "guard_proof_sha256" not in state or not re.fullmatch("[a-f0-9]{64}", binary_sha256):
         raise OperatorError("unverified host build/guard")
-    deadline = min(state["deadline_ms"], EXPIRY, current_ms + 3600000)
-    if current_ms >= deadline:
-        raise OperatorError("benchmark expiry")
+    deadline = min(state["deadline_ms"], EXPIRY)-EXPORT_CLEANUP_RESERVE_MS
+    deadline = min(deadline,current_ms+MAXIMUM_WORKER_WINDOW_MS)
+    if deadline-current_ms<MINIMUM_WORKER_WINDOW_MS:
+        raise OperatorError("insufficient benchmark/export window")
     manifest = {"schema":1,"run_id":config["run_id"],"allocation_id":config["run_id"]+"-worker1","instance_id":instance_id,
                 **{k:config[k] for k in ("account","region","bucket","role","source_revision","source_map_sha256","lock_sha256","requested_config_sha256")},
                 "source_map":dict(config["source_files"]),"provider_endpoint":provider_endpoint,"binary_sha256":binary_sha256,"approval_expires_at_ms":EXPIRY,"host_expires_at_ms":state["deadline_ms"],"benchmark_expires_at_ms":deadline,

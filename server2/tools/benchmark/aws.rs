@@ -1862,6 +1862,10 @@ async fn run_live(
     let mut next_key = 1usize;
     let mut provider_key = 64usize;
     for cse in &c.cases {
+        if ledger.report()["used"]["uncertain_calls"].as_u64().unwrap_or(1) > 0 {
+            ledger.stop();
+            return Err("uncertain completion before next case admission".into());
+        }
         partial = json!({"configuration":cse,"status":"ABORTED","summary":super::model::summarize(&[]),"retained_samples":[],"trials":[]});
         if Instant::now()>=end { return Err("benchmark deadline reached".into()); }
         let began = Instant::now();
@@ -2445,10 +2449,13 @@ mod wire_tests {
             Self::start_with_fault(false)
         }
         fn start_with_fault(fault: bool) -> Self {
+            Self::start_fault(fault.then_some("uncertain-provider-publication"))
+        }
+        fn start_fault(fault: Option<&str>) -> Self {
             let mut command = Command::new("python3");
             command.arg("tools/benchmark/local_peer.py");
-            if fault {
-                command.args(["--fault", "uncertain-provider-publication"]);
+            if let Some(fault) = fault {
+                command.args(["--fault", fault]);
             }
             let mut child = command
                 .stdout(Stdio::piped())
@@ -2577,6 +2584,79 @@ mod wire_tests {
     }
     fn manifest(provider: &str) -> Manifest {
         serde_json::from_value(json!({"schema":1,"run_id":RUN,"allocation_id":format!("{RUN}-worker1"),"source_map":{},"account":ACCOUNT,"region":REGION,"bucket":BUCKET,"role":ROLE,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"source_map_sha256":"0".repeat(64),"binary_sha256":"0".repeat(64),"lock_sha256":"0".repeat(64),"requested_config_sha256":"0".repeat(64),"approval_expires_at_ms":1791607799000u64,"host_expires_at_ms":1791607799000u64,"benchmark_expires_at_ms":1791607799000u64,"provider_endpoint":provider,"allocations":{"read_attempts":390000,"write_attempts":18000,"download_bytes":26*GIB,"stored_version_charge_bytes":63*1024*1024,"metadata_download_bytes":0},"operator_reservation_summary":{"read_attempts":10000,"write_attempts":2000,"bootstrap_download_bytes":3*GIB,"administrative_download_bytes":GIB,"stored_version_charge_bytes":1048576},"phases":{"protocol":{"read_attempts":5000,"write_attempts":3500},"cold":{"read_attempts":280000,"write_attempts":0},"repair":{"read_attempts":60000,"write_attempts":4000},"warm":{"read_attempts":10000,"write_attempts":0},"funding":{"read_attempts":10000,"write_attempts":5500},"failure":{"read_attempts":25000,"write_attempts":5000}},"guard_proof":{"status":"verified","run_id":RUN,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"observed_at_ms":0,"proof_sha256":"0".repeat(64)}})).unwrap()
+    }
+    #[tokio::test]
+    async fn prior_uncertain_cold_trial_prevents_next_profile_seed_and_charge() {
+        let peer = Peer::start_fault(Some("uncertain-cold-final-trial"));
+        let m = manifest(&peer.endpoint);
+        let end = Instant::now() + Duration::from_secs(10);
+        let ledger = Arc::new(Ledger::new(m.allocations.clone(), m.phases.clone(), end));
+        let t = transport(&peer, 1000, 1000, 10 * 1024 * 1024);
+        let (mut c, _) = read_config(std::path::Path::new("config/benchmarks/aws.json")).unwrap();
+        c.cases = (1..=2)
+            .map(|revisions| LiveCase {
+                name: format!("cold-{revisions}"),
+                workload: "revisions".into(),
+                mode: "cold".into(),
+                selection: "targeted".into(),
+                clients: 1,
+                owners: 1,
+                target_samples: 2,
+                revisions,
+                record_bytes: 128,
+                load_model: "hot_key".into(),
+            })
+            .collect();
+        let report = run_live(&c, &m, t.inner, None, ledger.clone(), end)
+            .await
+            .unwrap();
+        let body = reqwest::get(format!("{}__benchmark/status", peer.endpoint))
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap();
+        let peer_report: Value = serde_json::from_slice(&body).unwrap();
+        let checkpoint = &peer_report["fault_checkpoint"];
+        assert!(
+            checkpoint.is_object(),
+            "final cold trial fault must be reached"
+        );
+        assert_eq!(
+            peer_report["requests"], checkpoint["requests"],
+            "no next-case peer requests: {peer_report}"
+        );
+        assert_eq!(peer_report["request_bytes"], checkpoint["request_bytes"]);
+        assert_eq!(
+            peer_report["stored_version_charge_bytes"],
+            checkpoint["stored_version_charge_bytes"]
+        );
+        let puts: u64 = checkpoint["requests"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter(|(k, _)| k.starts_with("PUT:"))
+            .map(|(_, v)| v.as_u64().unwrap())
+            .sum();
+        let lists: u64 = checkpoint["requests"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter(|(k, _)| k.starts_with("LIST:"))
+            .map(|(_, v)| v.as_u64().unwrap())
+            .sum();
+        let used = ledger.report();
+        assert_eq!(used["used"]["write_attempts"], puts + lists);
+        assert_eq!(
+            used["used"]["stored_version_charge_bytes"],
+            checkpoint["request_bytes"].as_u64().unwrap() + puts * OVERHEAD
+        );
+        assert_eq!(report["run_status"], "ABORTED");
+        assert_eq!(report["overall_accounting_compliance_pass"], false);
+        assert_eq!(report["cases"].as_array().unwrap().len(), 1);
+        assert_eq!(report["cases"][0]["summary"]["outcomes"]["success"], 1);
+        assert_eq!(report["cases"][0]["summary"]["outcomes"]["other_error"], 1);
+        assert!(ledger.reserve("cold", Kind::Read, 1, None).is_err());
     }
     #[tokio::test]
     async fn late_uncertain_publication_retains_completed_and_partial_report() {

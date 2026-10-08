@@ -87,6 +87,40 @@ class MetadataAccountingTests(unittest.TestCase):
             with self.assertRaises(op.OperatorError): op.validate_worker_accounting(report)
 
 
+class ExportWindowTests(unittest.TestCase):
+    def manifest(self, minutes, now=None):
+        current=op.EXPIRY-120*60000 if now is None else now
+        config=json.loads((HERE/"aws-run.json").read_text())
+        config.update(source_revision="a"*40,source_map_sha256="b"*64,source_files={},lock_sha256="c"*64,requested_config_sha256="d"*64)
+        state={"deadline_ms":current+int(minutes*60000),"guard_proof_sha256":"e"*64}
+        return op.make_manifest(config,state,"i-0123456789abcdef0","f"*64,current,"http://127.0.0.1:1/"),current
+
+    def test_short_host_windows_keep_export_reserve(self):
+        for minutes,expected_ms in [(90,3570000),(61,2760000),(45,1800000),(20,300000)]:
+            with self.subTest(minutes=minutes):
+                manifest,now=self.manifest(minutes)
+                self.assertEqual(manifest["benchmark_expires_at_ms"]-now,expected_ms)
+                self.assertGreaterEqual(min(manifest["host_expires_at_ms"],op.EXPIRY)-manifest["benchmark_expires_at_ms"],900000)
+        for minutes in (5,19.999):
+            with self.subTest(minutes=minutes),self.assertRaises(op.OperatorError):self.manifest(minutes)
+
+    def test_approval_boundary_and_dispatch_recheck(self):
+        manifest,now=self.manifest(45,now=op.EXPIRY-25*60000)
+        self.assertEqual(manifest["benchmark_expires_at_ms"],op.EXPIRY-900000)
+        self.assertEqual(op.worker_timeout_seconds(manifest,now),630)
+        self.assertEqual(op.worker_timeout_seconds(manifest,now+5*60000),330)
+        with self.assertRaises(op.OperatorError):op.worker_timeout_seconds(manifest,now+5*60000+1)
+        altered=dict(manifest,host_expires_at_ms=manifest["benchmark_expires_at_ms"]+899999)
+        with self.assertRaises(op.OperatorError):op.worker_timeout_seconds(altered,now)
+        with self.assertRaises(op.OperatorError):self.manifest(60,now=op.EXPIRY-5*60000)
+
+    def test_grace_fits_existing_plugin_cap_and_reserved_tail(self):
+        manifest,now=self.manifest(90)
+        seconds=op.worker_timeout_seconds(manifest,now)
+        self.assertEqual(seconds,3600)
+        self.assertGreaterEqual(min(manifest["host_expires_at_ms"],op.EXPIRY)-(now+seconds*1000),870000)
+        self.assertNotIn("worker_allocation_issued",manifest)
+
 class WorkerEvidenceTests(unittest.TestCase):
     def controller(self, root):
         config=json.loads((HERE/"aws-run.json").read_text())
@@ -512,7 +546,14 @@ def failure_functional_smoke():
             with patch.dict(os.environ,{"S09_FAKE_CLI_ENDPOINT":"http://127.0.0.1:"+str(server.server_port)+"/"}):
                 state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":op.EXPIRY,"resources":{"instance":"i-0123456789abcdef0","root_volume":"vol-0123456789abcdef0"}})
                 controller=op.Operator(config,state,op.Cli(config,str(fake)))
-                terminal=controller.ssm(["run failed worker"],capture_terminal=True)
+                current=op.now_ms()
+                window={"host_expires_at_ms":current+61*60000,"benchmark_expires_at_ms":current+46*60000}
+                worker_seconds=op.worker_timeout_seconds(window,current)
+                terminal=controller.ssm(["run failed worker"],seconds=worker_seconds,capture_terminal=True)
+                dispatch=next(v for v in calls if "send-command" in v)
+                parameters=json.loads(dispatch[dispatch.index("--parameters")+1])
+                assert parameters["executionTimeout"]==[str(worker_seconds)] and worker_seconds==2790
+                assert int(dispatch[dispatch.index("--timeout-seconds")+1])==worker_seconds<=3600
                 try:controller.export_worker_result("/opt/server2-s09/run/fixture",manifest,terminal);raise AssertionError("failed worker admitted")
                 except op.OperatorError:pass
                 assert (root/"state.result.json").read_bytes()==body
@@ -520,10 +561,10 @@ def failure_functional_smoke():
                 assert state.data["worker_accounting_compliance"] is False
                 assert controller.cleanup()["status"]=="cleaned_host_resources_S3_retained"
                 assert state.data["root_volume_absence_verified"] is True
-                return {"status":"PASS_failed_fake_cli_only","calls":len(calls),"failed_report_preserved":True,"error_bytes":len(errors),"compliance":False,"cleanup_observed":True,"AWS_IMDS_actual_host":False}
+                return {"status":"PASS_failed_fake_cli_only","calls":len(calls),"failed_report_preserved":True,"error_bytes":len(errors),"compliance":False,"cleanup_observed":True,"worker_timeout_seconds":worker_seconds,"minimum_tail_after_grace_seconds":870,"AWS_IMDS_actual_host":False}
         finally:server.shutdown();server.server_close();thread.join(timeout=2)
 
-def compiled_worker_handshake(binary, fault=False):
+def compiled_worker_handshake(binary, fault=False, case_fault=False):
     """Actual controller Cli/SSM envelope -> compiled local-only worker; no AWS/IMDS."""
     import base64, hashlib, http.server, os, subprocess, sys, urllib.request
     from unittest.mock import patch
@@ -532,7 +573,8 @@ def compiled_worker_handshake(binary, fault=False):
     declaration=json.loads((repo/"server2/config/tasks/S09.json").read_text())
     paths=declaration["server2_paths"]+[v["path"] for v in declaration["outside"]]
     if len(paths)!=33: raise AssertionError("source paths")
-    peer=subprocess.Popen([sys.executable,str(repo/"server2/tools/benchmark/local_peer.py")]+(["--fault","uncertain-provider-publication"] if fault else []),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    peer_fault="uncertain-cold-final-trial" if case_fault else "uncertain-provider-publication"
+    peer=subprocess.Popen([sys.executable,str(repo/"server2/tools/benchmark/local_peer.py")]+(["--fault",peer_fault] if fault else []),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     endpoint=peer.stdout.readline().strip()
     if not op.re.fullmatch(r"http://127\.0\.0\.1:[0-9]+/",endpoint): raise AssertionError("test peer endpoint")
     try:
@@ -541,12 +583,15 @@ def compiled_worker_handshake(binary, fault=False):
         files={str(p):op.digest((repo/p).read_bytes()) for p in sorted(paths)}
         cfg=json.loads((repo/"server2/config/benchmarks/aws.json").read_text())
         cfg["cases"]=[dict(next(v for v in cfg["cases"] if v["mode"]==mode),target_samples=2,revisions=1) for mode in ("cold","warm","provider_data","provider_nodata")]
+        if case_fault:
+            cold=cfg["cases"][0]
+            cfg["cases"]=[dict(cold,name="cold-A",clients=8,owners=1,target_samples=16,revisions=1,record_bytes=128),dict(cold,name="cold-B",clients=8,owners=1,target_samples=16,revisions=2,record_bytes=128)]
         revision=subprocess.check_output(["git","rev-parse","HEAD"],cwd=repo,text=True).strip()
         cfg.update(execution_enabled=True,source_revision=revision,source_map_sha256=op.digest(op.canonical(files)),lock_sha256=op.digest((repo/"server2/Cargo.lock").read_bytes()),review_candidate_sha256="a"*64)
         config_path=root/"aws-config.json";config_path.write_bytes(op.canonical(cfg));config_path.chmod(0o600)
         config=json.loads((HERE/"aws-run.json").read_text());config.update(source_revision=revision,source_files=files,source_map_sha256=cfg["source_map_sha256"],lock_sha256=cfg["lock_sha256"],requested_config_sha256=op.digest(config_path.read_bytes()))
         now=op.now_ms()
-        state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":min(op.EXPIRY,now+600000),"guard_proof_sha256":"b"*64,"resources":{"instance":"i-0123456789abcdef0"}})
+        state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":min(op.EXPIRY,now+1800000),"guard_proof_sha256":"b"*64,"resources":{"instance":"i-0123456789abcdef0"}})
         manifest=op.make_manifest(config,state.data,"i-0123456789abcdef0",op.digest(binary.read_bytes()),now,endpoint)
         manifest_path=root/"manifest.json";manifest_path.write_bytes(op.canonical(manifest));manifest_path.chmod(0o600)
         invocation=[str(binary),"--local-approved-worker",str(config_path),"--run-manifest",str(manifest_path),"--loopback-s3",endpoint]
@@ -604,11 +649,18 @@ def compiled_worker_handshake(binary, fault=False):
               assert report["requested_case_coverage_complete"] is False and report["abort_reason"]
               assert state.data["worker_accounting_compliance"] is False
               assert (root/"state.worker-errors.log").read_bytes()==worker_errors[0]
-              before=json.load(urllib.request.urlopen(endpoint+"__benchmark/status",timeout=2))["requests"]
+              peer_status=json.load(urllib.request.urlopen(endpoint+"__benchmark/status",timeout=2))
+              fault_assertions=None
+              if case_fault:
+                checkpoint=peer_status["fault_checkpoint"]
+                for field in ("requests","request_bytes","version_count","stored_version_charge_bytes"):
+                    assert peer_status[field]==checkpoint[field],"dispatch/store grew after case fault"
+                fault_assertions={field:checkpoint[field] for field in ("requests","request_bytes","version_count","stored_version_charge_bytes")}
+              before=peer_status["requests"]
               repeat=subprocess.run(invocation,cwd=repo/"server2",capture_output=True,timeout=60)
               after=json.load(urllib.request.urlopen(endpoint+"__benchmark/status",timeout=2))["requests"]
               assert repeat.returncode!=0 and before==after
-              return {"status":"PASS_aborted_local_worker_evidence","controller_calls":len(calls),"same_allocation_replay_denied_before_IO":True,"worker_report":report,"fake_controller_ledger":state.data["ledger"],"actual_AWS_IMDS_kernel_host_proof":False}
+              return {"status":"PASS_aborted_local_worker_evidence","controller_calls":len(calls),"same_allocation_replay_denied_before_IO":True,"worker_report":report,"fake_controller_ledger":state.data["ledger"],"zero_after_fault_dispatch":fault_assertions,"actual_AWS_IMDS_kernel_host_proof":False}
             response=controller.ssm([op.canonical(invocation).decode()],seconds=60)
             receipt=json.loads(response);assert 0<receipt["size"]<=2*op.MiB
             exported=bytearray()
@@ -644,4 +696,5 @@ if __name__ == "__main__":
     elif sys.argv[1:]==["--failure-functional-smoke"]: print(json.dumps(failure_functional_smoke(),sort_keys=True))
     elif len(sys.argv)==3 and sys.argv[1]=="--compiled-worker": print(json.dumps(compiled_worker_handshake(sys.argv[2]),sort_keys=True))
     elif len(sys.argv)==3 and sys.argv[1]=="--compiled-worker-abort": print(json.dumps(compiled_worker_handshake(sys.argv[2],fault=True),sort_keys=True))
+    elif len(sys.argv)==3 and sys.argv[1]=="--compiled-worker-case-abort": print(json.dumps(compiled_worker_handshake(sys.argv[2],fault=True,case_fault=True),sort_keys=True))
     else: unittest.main()

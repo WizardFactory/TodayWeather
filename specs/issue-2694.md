@@ -115,3 +115,11 @@ After the verified guard, the SG permits IPv4 0.0.0.0/0 TCP443 throughout the ru
 USD5 is an operator stop decision, not a dynamic billing admission API. Known cap components use Seoul c6i.large USD0.096/h, public IPv4 USD0.005/h,16GiB gp3 USD0.0912/GiB-month,400k reads USD0.00000035 each,20k writes/LIST USD0.0000045 each and64MiB standard storage USD0.025/GiB-month for48h: approximately USD0.43610055 under730h/month. Taxes, unknown bootstrap/log transfer, billing granularity/delayed cleanup and indefinite retained storage are excluded;64MiB retained costs about USD0.0015625/month. Primary sources: AWS regional S3 offer, EC2/EBS GetProducts SKUs23MGE6DFM4A5NZ7M/MTK7D9SGKGYR3JD6 and official VPC pricing. The operator/root must assess current prices/transfer assumptions before arming; uncertain fit to USD5 blocks execution.
 
 The operator requires an Online stock SSM AgentVersion with four integer components at least3.3.40.0 before the first RunCommand; missing/old/malformed version fails and cleanup runs, without widening ec2messages permissions or installing a fallback agent. Actual host/SSM/IAM/kernel/musl/S3 proof remains pending.
+
+## QA2 corrective boundary (S09-R8/R9)
+
+Before a new case's estimates, fixture seeding or resolver work, any prior unresolved S3 uncertainty stops admission and returns the bounded non-compliant report. Completed and partial earlier results/counters remain. Bounded reconciliation inside the current operation remains allowed; the guard must not turn all uncertain tickets into an immediate transport-wide refusal.
+
+The controller reserves 15 minutes inside the earlier host/approval deadline for bounded best-effort report export and owned cleanup. The benchmark deadline is the earlier of now plus 60 minutes and that fence minus 15 minutes. Arming rejects a benchmark window below 5 minutes, and rechecks before actual worker dispatch after source/config transfers. Command waits use the remaining benchmark window. The margin is not a guarantee of SSM availability/export completion and does not extend host life, approval or grants.
+
+An aborted result remains non-compliant and triggers conservative cleanup; post-abort guard/version inventory may be unavailable (unselected S09-R10, no tracking). Actual intended-host, independent-trial sufficiency and O-2/O-5 acceptance remain outstanding.
