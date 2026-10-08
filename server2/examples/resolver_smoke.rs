@@ -432,6 +432,169 @@ async fn corrections(endpoint: &str, callback: RecordedAcquirer) {
         "R3: 30 complete revisions at synthetic 20 ms GET; selected cold read and idle warm zero-I/O pass"
     );
 }
+struct SlowRefreshControl {
+    inner: HttpS3Transport,
+    key: String,
+    remaining: Arc<AtomicUsize>,
+}
+impl ObjectTransport for SlowRefreshControl {
+    async fn put(&self, p: &PreparedRecord) -> Result<u16, server2::storage::Error> {
+        self.inner.put(p).await
+    }
+    async fn head(&self, k: &str) -> Result<Object, server2::storage::Error> {
+        self.inner.head(k).await
+    }
+    async fn get(&self, k: &str, m: usize) -> Result<Object, server2::storage::Error> {
+        self.inner.get(k, m).await
+    }
+}
+impl CatalogTransport for SlowRefreshControl {
+    async fn get_control(
+        &self,
+        k: &str,
+        m: usize,
+    ) -> Result<ControlObject, server2::storage::Error> {
+        if k == self.key
+            && self
+                .remaining
+                .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+                .is_ok()
+        {
+            tokio::time::sleep(Duration::from_millis(180)).await;
+        }
+        self.inner.get_control(k, m).await
+    }
+    async fn put_control(
+        &self,
+        k: &str,
+        b: &[u8],
+        c: &WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put_control(k, b, c).await
+    }
+    async fn list_raw_document(
+        &self,
+        p: &str,
+        t: Option<&str>,
+        k: usize,
+        b: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.inner.list_raw_document(p, t, k, b).await
+    }
+}
+
+fn refresh_policy(r: &ResolutionRequest, ttl: Duration, refresh: Duration) -> ResolutionRequest {
+    ResolutionRequest::new(
+        r.response_key().clone(),
+        r.scope().clone(),
+        r.selection().clone(),
+        64,
+        r.maximum_input_bytes(),
+        ttl,
+        refresh,
+    )
+    .unwrap()
+}
+async fn refresh_corrections(endpoint: &str, callback: RecordedAcquirer) {
+    let store = CatalogStore::new(transport(endpoint), CatalogLimits::default()).unwrap();
+    for nx in [90, 91] {
+        let a = acquisition(nx, 1, 10);
+        store
+            .publish(a.declaration, a.records, deadline())
+            .await
+            .unwrap();
+    }
+    let resolver = Resolver::new(
+        CatalogBackend::new(transport(endpoint), CatalogLimits::default()).unwrap(),
+        callback.clone(),
+        SmallView,
+        ResolverConfig {
+            cache_bytes: 300 * 1024,
+            operations: 1,
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    let r = refresh_policy(
+        &pressure_request(90, "F"),
+        Duration::from_secs(60),
+        Duration::from_millis(50),
+    );
+    let first = resolver.resolve(r.clone(), deadline()).await.unwrap();
+    let pointer = first.bytes().as_ptr() as usize;
+    drop(first);
+    until(|| resolver.metrics().active_owners == 0).await;
+    let bytes = resolver.metrics().cache_bytes;
+    for _ in 0..3 {
+        tokio::time::sleep(Duration::from_millis(60)).await;
+        let checked = resolver.resolve(r.clone(), deadline()).await.unwrap();
+        assert_eq!(checked.bytes().as_ptr() as usize, pointer);
+        assert_eq!(checked.bytes().len(), 200 * 1024);
+        assert_eq!(resolver.metrics().cache_bytes, bytes);
+        until(|| resolver.metrics().active_owners == 0).await;
+    }
+    println!("H1: three unchanged refreshes share the 200 KiB payload/lease in a 300 KiB cache");
+    let r = refresh_policy(
+        &request(91, ReadSelection::Latest, Duration::from_millis(5)),
+        Duration::from_millis(100),
+        Duration::from_millis(5),
+    );
+    let remaining = Arc::new(AtomicUsize::new(0));
+    let resolver = Resolver::new(
+        CatalogBackend::new(
+            SlowRefreshControl {
+                inner: transport(endpoint),
+                key: r.scope().catalog.key(),
+                remaining: remaining.clone(),
+            },
+            CatalogLimits::default(),
+        )
+        .unwrap(),
+        callback.clone(),
+        Builder,
+        ResolverConfig {
+            operations: 1,
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    let first = resolver.resolve(r.clone(), deadline()).await.unwrap();
+    until(|| resolver.metrics().active_owners == 0).await;
+    let misses = resolver.metrics().misses;
+    tokio::time::sleep(Duration::from_millis(10)).await;
+    remaining.store(1, Ordering::SeqCst);
+    let checked = resolver.resolve(r.clone(), deadline()).await.unwrap();
+    assert_eq!(first.bytes(), checked.bytes());
+    assert!(!std::ptr::eq(
+        first.bytes().as_ptr(),
+        checked.bytes().as_ptr()
+    ));
+    assert_eq!(resolver.metrics().misses, misses + 1);
+    until(|| resolver.metrics().active_owners == 0).await;
+    tokio::time::sleep(Duration::from_millis(10)).await;
+    remaining.store(1, Ordering::SeqCst);
+    assert!(matches!(
+        resolver
+            .resolve(r, Instant::now() + Duration::from_millis(80))
+            .await,
+        Err(server2::resolver::Error::Storage(
+            server2::storage::Error::Timeout
+        ))
+    ));
+    assert_eq!(
+        resolver.drain(deadline()).await.unwrap().unfinished_owners,
+        0
+    );
+    assert_eq!(
+        callback.calls.load(Ordering::SeqCst),
+        1,
+        "refresh never creates provider permission"
+    );
+    println!(
+        "H2: a 180 ms dependency check cannot serve the old 100 ms TTL; checked cold/typed timeout pass"
+    );
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() {
     let endpoint = std::env::args()
@@ -549,6 +712,7 @@ async fn main() {
         metrics.active_owners,
         metrics.cache_bytes
     );
+    refresh_corrections(&endpoint, callback.clone()).await;
     corrections(&endpoint, callback).await;
     println!(
         "PASS local real HTTP resolver smoke ({:.2} ms); no AWS/provider/route parity claim",

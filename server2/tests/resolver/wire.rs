@@ -188,6 +188,243 @@ impl FundedAcquirer for GridGate {
         Ok(grid_acquisition(nx, 1, 0))
     }
 }
+fn refresh_request(r: &ResolutionRequest, ttl: Duration, refresh: Duration) -> ResolutionRequest {
+    ResolutionRequest::new(
+        r.response_key().clone(),
+        r.scope().clone(),
+        r.selection().clone(),
+        64,
+        r.maximum_input_bytes(),
+        ttl,
+        refresh,
+    )
+    .unwrap()
+}
+#[tokio::test]
+async fn hermes_h1_unchanged_refresh_reuses_payload_and_charge() {
+    let peer = Peer::new();
+    seed(&peer, 1, 10).await;
+    let gate = Gate::new(false, true);
+    let resolver = Resolver::new(
+        CatalogBackend::new(peer.transport(), CatalogLimits::default()).unwrap(),
+        gate.clone(),
+        SmallParsedLargeResponse,
+        ResolverConfig {
+            cache_bytes: 300 * 1024,
+            operations: 1,
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    let r = refresh_request(
+        &grid_request(60, "F"),
+        Duration::from_secs(60),
+        Duration::from_millis(50),
+    );
+    let first = resolver.resolve(r.clone(), deadline()).await.unwrap();
+    assert_eq!(first.bytes().len(), 200 * 1024);
+    let pointer = first.bytes().as_ptr() as usize;
+    drop(first);
+    until(|| resolver.metrics().active_owners == 0).await;
+    let weight = resolver.metrics().cache_bytes;
+    tokio::time::sleep(Duration::from_millis(60)).await;
+    let refreshed = resolver.resolve(r.clone(), deadline()).await;
+    assert!(
+        refreshed.is_ok(),
+        "unchanged refresh must not reserve a second payload: {:?}",
+        refreshed.as_ref().err()
+    );
+    let refreshed = refreshed.unwrap();
+    assert_eq!(
+        refreshed.bytes().as_ptr() as usize,
+        pointer,
+        "share the original immutable payload"
+    );
+    assert_eq!(resolver.metrics().cache_bytes, weight);
+    tokio::time::sleep(Duration::from_millis(60)).await;
+    let pinned = resolver.resolve(r.clone(), deadline()).await.unwrap();
+    assert!(std::ptr::eq(
+        refreshed.bytes().as_ptr(),
+        pinned.bytes().as_ptr()
+    ));
+    assert_eq!(
+        resolver.metrics().cache_bytes,
+        weight,
+        "external references share one payload lease"
+    );
+    let io = resolver.metrics().foreground_io;
+    resolver.resolve(r, deadline()).await.unwrap();
+    assert_eq!(
+        resolver.metrics().foreground_io,
+        io,
+        "rearmed refresh immediately uses memory"
+    );
+    assert_eq!(gate.calls.load(Ordering::SeqCst), 0);
+}
+struct SlowRefreshControl {
+    inner: HttpS3Transport,
+    key: String,
+    remaining: Arc<AtomicUsize>,
+}
+impl ObjectTransport for SlowRefreshControl {
+    async fn put(&self, p: &PreparedRecord) -> Result<u16, server2::storage::Error> {
+        self.inner.put(p).await
+    }
+    async fn head(&self, k: &str) -> Result<Object, server2::storage::Error> {
+        self.inner.head(k).await
+    }
+    async fn get(&self, k: &str, m: usize) -> Result<Object, server2::storage::Error> {
+        self.inner.get(k, m).await
+    }
+}
+impl CatalogTransport for SlowRefreshControl {
+    async fn get_control(
+        &self,
+        k: &str,
+        m: usize,
+    ) -> Result<ControlObject, server2::storage::Error> {
+        if k == self.key
+            && self
+                .remaining
+                .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+                .is_ok()
+        {
+            tokio::time::sleep(Duration::from_millis(180)).await;
+        }
+        self.inner.get_control(k, m).await
+    }
+    async fn put_control(
+        &self,
+        k: &str,
+        b: &[u8],
+        c: &WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put_control(k, b, c).await
+    }
+    async fn list_raw_document(
+        &self,
+        p: &str,
+        t: Option<&str>,
+        k: usize,
+        b: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.inner.list_raw_document(p, t, k, b).await
+    }
+}
+#[tokio::test]
+async fn hermes_h1_refresh_epoch_drift_returns_same_checked_uncached_payload() {
+    let peer = Peer::new();
+    seed(&peer, 1, 10).await;
+    let r = request("ko", ReadSelection::Latest, Duration::from_millis(5));
+    let remaining = Arc::new(AtomicUsize::new(0));
+    let resolver = Resolver::new(
+        CatalogBackend::new(
+            SlowRefreshControl {
+                inner: peer.transport(),
+                key: r.scope().catalog.key(),
+                remaining: remaining.clone(),
+            },
+            CatalogLimits::default(),
+        )
+        .unwrap(),
+        Gate::new(false, true),
+        Builder,
+        ResolverConfig {
+            operations: 1,
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    let old = resolver.resolve(r.clone(), deadline()).await.unwrap();
+    until(|| resolver.metrics().active_owners == 0).await;
+    tokio::time::sleep(Duration::from_millis(10)).await;
+    remaining.store(1, Ordering::SeqCst);
+    let task = tokio::spawn({
+        let resolver = resolver.clone();
+        let r = r.clone();
+        async move { resolver.resolve(r, deadline()).await }
+    });
+    until(|| remaining.load(Ordering::SeqCst) == 0).await;
+    resolver.invalidate();
+    let checked = task.await.unwrap().unwrap();
+    assert!(std::ptr::eq(old.bytes().as_ptr(), checked.bytes().as_ptr()));
+    let misses = resolver.metrics().misses;
+    until(|| resolver.metrics().active_owners == 0).await;
+    resolver.resolve(r, deadline()).await.unwrap();
+    assert_eq!(
+        resolver.metrics().misses,
+        misses + 1,
+        "invalidated unchanged response was not readmitted"
+    );
+}
+#[tokio::test]
+async fn hermes_h2_refresh_crossing_original_ttl_uses_checked_cold_read() {
+    let peer = Peer::new();
+    seed(&peer, 1, 10).await;
+    let r = refresh_request(
+        &request("ko", ReadSelection::Latest, Duration::from_millis(5)),
+        Duration::from_millis(100),
+        Duration::from_millis(5),
+    );
+    let remaining = Arc::new(AtomicUsize::new(0));
+    let gate = Gate::new(false, true);
+    let resolver = Resolver::new(
+        CatalogBackend::new(
+            SlowRefreshControl {
+                inner: peer.transport(),
+                key: r.scope().catalog.key(),
+                remaining: remaining.clone(),
+            },
+            CatalogLimits::default(),
+        )
+        .unwrap(),
+        gate.clone(),
+        Builder,
+        ResolverConfig {
+            operations: 1,
+            ..ResolverConfig::default()
+        },
+    )
+    .unwrap();
+    let old = resolver.resolve(r.clone(), deadline()).await.unwrap();
+    until(|| resolver.metrics().active_owners == 0).await;
+    let misses = resolver.metrics().misses;
+    let io = resolver.metrics().foreground_io;
+    tokio::time::sleep(Duration::from_millis(10)).await;
+    remaining.store(1, Ordering::SeqCst);
+    let refreshed = resolver.resolve(r.clone(), deadline()).await.unwrap();
+    assert_eq!(
+        resolver.metrics().misses,
+        misses + 1,
+        "expiry during dependency verification requires a fresh checked cold snapshot"
+    );
+    assert!(
+        resolver.metrics().foreground_io > io + 1,
+        "dependency validation alone is not an unexpired result"
+    );
+    assert!(!std::ptr::eq(
+        old.bytes().as_ptr(),
+        refreshed.bytes().as_ptr()
+    ));
+    assert_eq!(refreshed.bytes(), old.bytes());
+    assert_eq!(gate.calls.load(Ordering::SeqCst), 0);
+    until(|| resolver.metrics().active_owners == 0).await;
+    tokio::time::sleep(Duration::from_millis(10)).await;
+    remaining.store(1, Ordering::SeqCst);
+    assert!(matches!(
+        resolver
+            .resolve(r, Instant::now() + Duration::from_millis(80))
+            .await,
+        Err(server2::resolver::Error::Storage(
+            server2::storage::Error::Timeout
+        ))
+    ));
+    assert_eq!(
+        resolver.drain(deadline()).await.unwrap().unfinished_owners,
+        0
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn correction_r1_different_durable_publications_both_return_checked_bytes() {
     let peer = Peer::new();

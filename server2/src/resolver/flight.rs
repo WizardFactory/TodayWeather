@@ -81,10 +81,15 @@ struct CachedRaw {
 struct CachedResponse {
     bytes: Box<[u8]>,
     created: Instant,
-    refresh_due: Instant,
+    refresh_due: Mutex<Instant>,
     expires: Instant,
     dependencies: Vec<DependencyToken>,
     epoch: u64,
+}
+impl CachedResponse {
+    fn unexpired(&self, now: Instant) -> bool {
+        self.created <= now && now < self.expires
+    }
 }
 #[derive(Clone)]
 pub struct Response {
@@ -364,11 +369,15 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
             return Err(StorageError::Timeout.into());
         }
         let key = request.fingerprint()?;
-        let now = Instant::now();
         if let Some(hit) = self.core.responses.get(&key)
             && hit.value.epoch == self.core.epoch.load(Ordering::Acquire)
-            && now < hit.value.refresh_due
-            && now < hit.value.expires
+            && Instant::now()
+                < *hit
+                    .value
+                    .refresh_due
+                    .lock()
+                    .map_err(|_| Error::TaskFailed)?
+            && hit.value.unexpired(Instant::now())
         {
             self.core.counters.hits.fetch_add(1, Ordering::Relaxed);
             waiter_guard.finished = true;
@@ -463,7 +472,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
         let epoch = core.epoch.load(Ordering::Acquire);
         if let Some(old) = old
             && old.value.epoch == epoch
-            && Instant::now() < old.value.expires
+            && old.value.unexpired(Instant::now())
         {
             core.counters.refreshes.fetch_add(1, Ordering::Relaxed);
             let mut unchanged = true;
@@ -482,7 +491,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                         StorageError::Transport
                         | StorageError::Timeout
                         | StorageError::Status(500..=599),
-                    )) if Instant::now() < old.value.expires
+                    )) if old.value.unexpired(Instant::now())
                         && core.epoch.load(Ordering::Acquire) == epoch =>
                     {
                         return Ok(Response { inner: old });
@@ -490,25 +499,22 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                     Err(e) => return Err(e),
                 }
             }
-            if unchanged && core.epoch.load(Ordering::Acquire) == epoch {
-                let weight = old.weight();
-                let cached = CachedResponse {
-                    bytes: old.value.bytes.clone(),
-                    created: old.value.created,
-                    refresh_due: (Instant::now() + request.refresh).min(old.value.expires),
-                    expires: old.value.expires,
-                    dependencies: old.value.dependencies.clone(),
-                    epoch,
-                };
+            if unchanged {
+                // Revalidation shares the same immutable payload and byte lease, including
+                // external pins. Only the fixed-size refresh marker changes; TTL never extends.
                 let _gate = core.retention_gate.lock().map_err(|_| Error::TaskFailed)?;
-                core.make_response_room(weight);
-                let inner = if core.epoch.load(Ordering::Acquire) == epoch {
-                    core.responses.insert(key, cached, weight)?
-                } else {
-                    core.responses.clear();
-                    WeightedValue::charged(cached, &core.budget, weight)?
-                };
-                return Ok(Response { inner });
+                let now = Instant::now();
+                if old.value.unexpired(now) {
+                    if core.epoch.load(Ordering::Acquire) == epoch {
+                        *old.value
+                            .refresh_due
+                            .lock()
+                            .map_err(|_| Error::TaskFailed)? =
+                            (now + request.refresh).min(old.value.expires);
+                    }
+                    // Epoch drift prevents cache rearming, not this independently checked result.
+                    return Ok(Response { inner: old });
+                }
             }
             core.responses.remove(&key);
         }
@@ -666,7 +672,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
         let value = CachedResponse {
             bytes,
             created: now,
-            refresh_due: now + request.refresh,
+            refresh_due: Mutex::new(now + request.refresh),
             expires: now + request.ttl,
             dependencies,
             epoch,
