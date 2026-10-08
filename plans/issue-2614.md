@@ -91,8 +91,19 @@ are merged; the [integration record](https://github.com/WizardFactory/TodayWeath
 records the reviewed heads and resulting master tree. S06 is merged; its
 [integration record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6046074764)
 verifies the reviewed tree and records the next scoped work authorized by AK.
-S07 resolver/cache and S08 provider reservations can proceed in parallel after
-their S06 predecessor gate; read-only interface preparation does not complete it.
+S07 resolver/cache ([PR #2721](https://github.com/WizardFactory/TodayWeather/pull/2721))
+and S08 provider reservations ([PR #2720](https://github.com/WizardFactory/TodayWeather/pull/2720))
+are merged. The [integration record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6051933388)
+verifies final master against the tested combined tree. S09 now prepares reproducible
+measurement tooling and the [approved bounded intended-host/S3 run](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052596161).
+The [pre-edit live amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6053018487)
+requires reviewed, source-bound one-use tools, aggregate request/byte/version limits,
+watchdog and pre-bootstrap metering before resource creation. The
+[33-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695)
+adds placement-check regressions for four exact host-read roles; it does not waive
+legacy/sibling boundaries or expand the resource approval. No AWS run has yet
+occurred at this checkpoint. Local protocol measurements do not complete S09: actual same-region observations and O-2/O-5
+disposition remain gates for S10 and S13. No route work is released by the merges.
 Passing local checks do not imply complete route parity or deployed server2.
 S07's geocode AC1 is partial: volatile key/privacy primitives are included;
 geocode value caches and exact-label/boundary parity remain S10 acceptance work.

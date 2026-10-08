@@ -1,0 +1,399 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Server2 S09 approved run: proposed workflow",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-feasibility.html",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "8dced81a4e9d36026f73c8bf2eb05ad8a2a5494b",
+      "provider": "github",
+      "link_mode": "web"
+    }
+  },
+  "lanes": [
+    {
+      "id": "local",
+      "label": "Review tooling"
+    },
+    {
+      "id": "host",
+      "label": "Approved host"
+    },
+    {
+      "id": "measure",
+      "label": "Bounded load"
+    },
+    {
+      "id": "closure",
+      "label": "Stop and assess",
+      "variant": "exception"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "workload",
+      "lane": "local",
+      "col": 0,
+      "type": "database",
+      "label": "Reusable fixtures",
+      "sublabel": "counts + source hashes",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/benches/feasibility.rs",
+          "line": 396,
+          "end_line": 420
+        },
+        {
+          "path": "server2/tools/benchmark/aws.rs",
+          "line": 1674,
+          "end_line": 1710
+        }
+      ]
+    },
+    {
+      "id": "local_run",
+      "lane": "local",
+      "col": 1,
+      "type": "backend",
+      "label": "Local release proof",
+      "sublabel": "all outcomes + tests",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "specs/issue-2694.md",
+          "line": 35,
+          "end_line": 41
+        }
+      ]
+    },
+    {
+      "id": "qa",
+      "lane": "local",
+      "col": 2,
+      "type": "security",
+      "label": "Independent QA",
+      "sublabel": "before AWS writes",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "specs/issue-2694.md",
+          "line": 80,
+          "end_line": 84
+        }
+      ]
+    },
+    {
+      "id": "scope",
+      "lane": "host",
+      "col": 1,
+      "type": "security",
+      "label": "AK scope",
+      "sublabel": "48h / one host",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/deploy/benchmark/aws-run.json",
+          "line": 1,
+          "end_line": 24
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "lane": "host",
+      "col": 2,
+      "type": "backend",
+      "label": "Owned Linux host",
+      "sublabel": "c6i.large / 2h",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 325,
+          "end_line": 344
+        }
+      ]
+    },
+    {
+      "id": "guards",
+      "lane": "host",
+      "col": 3,
+      "type": "security",
+      "label": "Watchdog + meter",
+      "sublabel": "no fresh grant",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 686,
+          "end_line": 718
+        },
+        {
+          "path": "server2/deploy/benchmark/cloud-init.yml",
+          "line": 1,
+          "end_line": 40
+        }
+      ]
+    },
+    {
+      "id": "musl",
+      "lane": "host",
+      "col": 4,
+      "type": "backend",
+      "label": "Musl preflight",
+      "sublabel": "source / ELF / CA",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/deploy/benchmark/cloud-init.yml",
+          "line": 169,
+          "end_line": 220
+        }
+      ]
+    },
+    {
+      "id": "protocol",
+      "lane": "host",
+      "col": 5,
+      "type": "cloud",
+      "label": "Same-region S3",
+      "sublabel": "tiny conformance first",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/tools/benchmark/aws.rs",
+          "line": 1498,
+          "end_line": 1535
+        },
+        {
+          "path": "server2/tools/benchmark/aws.rs",
+          "line": 2235,
+          "end_line": 2265
+        }
+      ]
+    },
+    {
+      "id": "sweep",
+      "lane": "measure",
+      "col": 5,
+      "type": "backend",
+      "label": "Synthetic sweeps",
+      "sublabel": "cold / warm / miss",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/tools/benchmark/aws.rs",
+          "line": 1747,
+          "end_line": 1785
+        }
+      ]
+    },
+    {
+      "id": "evidence",
+      "lane": "measure",
+      "col": 3,
+      "type": "database",
+      "label": "Measured report",
+      "sublabel": "errors / tails / cost",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/tools/benchmark/aws.rs",
+          "line": 2100,
+          "end_line": 2135
+        }
+      ]
+    },
+    {
+      "id": "cleanup",
+      "lane": "closure",
+      "col": 5,
+      "type": "backend",
+      "label": "Owned cleanup",
+      "sublabel": "stop / terminate",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 594,
+          "end_line": 625
+        }
+      ]
+    },
+    {
+      "id": "retain",
+      "lane": "closure",
+      "col": 4,
+      "type": "database",
+      "label": "Retain S3 versions",
+      "sublabel": "no deletes / lifecycle",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "server2/deploy/benchmark/bucket-policy.json",
+          "line": 1,
+          "end_line": 27
+        }
+      ]
+    },
+    {
+      "id": "decision",
+      "lane": "closure",
+      "col": 3,
+      "type": "security",
+      "label": "O-2 / O-5 decision",
+      "sublabel": "required live proof",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "specs/issue-2694.md",
+          "line": 80,
+          "end_line": 84
+        }
+      ]
+    },
+    {
+      "id": "proceed",
+      "lane": "closure",
+      "col": 2,
+      "type": "backend",
+      "label": "S10 / S13 gate",
+      "sublabel": "otherwise stay blocked",
+      "width": 150,
+      "tag": "planned",
+      "sources": [
+        {
+          "path": "plans/issue-2694.md",
+          "line": 32,
+          "end_line": 33
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge0",
+      "from": "workload",
+      "to": "local_run"
+    },
+    {
+      "id": "edge1",
+      "from": "local_run",
+      "to": "qa"
+    },
+    {
+      "id": "edge2",
+      "from": "qa",
+      "to": "host",
+      "label": "PASS"
+    },
+    {
+      "id": "edge3",
+      "from": "scope",
+      "to": "host",
+      "label": "approved"
+    },
+    {
+      "id": "edge4",
+      "from": "host",
+      "to": "guards"
+    },
+    {
+      "id": "edge5",
+      "from": "guards",
+      "to": "musl",
+      "label": "verified"
+    },
+    {
+      "id": "edge6",
+      "from": "musl",
+      "to": "protocol"
+    },
+    {
+      "id": "edge7",
+      "from": "protocol",
+      "to": "sweep",
+      "label": "conformant"
+    },
+    {
+      "id": "edge8",
+      "from": "sweep",
+      "to": "evidence"
+    },
+    {
+      "id": "edge9",
+      "from": "sweep",
+      "to": "cleanup",
+      "label": "done / stop"
+    },
+    {
+      "id": "edge10",
+      "from": "guards",
+      "to": "cleanup",
+      "label": "guard failure",
+      "toSide": "right"
+    },
+    {
+      "id": "edge11",
+      "from": "cleanup",
+      "to": "retain"
+    },
+    {
+      "id": "edge12",
+      "from": "evidence",
+      "to": "decision",
+      "label": "proof"
+    },
+    {
+      "id": "edge13",
+      "from": "retain",
+      "to": "decision",
+      "label": "reconciled"
+    },
+    {
+      "id": "edge14",
+      "from": "decision",
+      "to": "proceed",
+      "label": "disposition"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Approved limits; live run pending",
+      "items": [
+        "One host <=2h; synthetic load <=60min; USD5 operator stop.",
+        "400k reads / 20k PUT-LIST / 30GiB download / 64MiB version charge.",
+        "Every PUT reserves body +16KiB, even denied or uncertain attempts."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Evidence and authority",
+      "items": [
+        "Approval: #2694 comment 6052596161; expires 2026-10-10T04:49:59Z.",
+        "Tooling is locally tested; independent QA and actual host proof remain.",
+        "Physical NIC/billing caps are not guaranteed; uncertainty stops the run.",
+        "Local eight-day batch 14.054s is a risk, not an AWS or API percentile.",
+        "S09 stays open and S10/S13 blocked until required evidence and decisions."
+      ]
+    }
+  ]
+}

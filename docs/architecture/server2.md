@@ -57,10 +57,9 @@ this does not require copying unused APIs or the legacy directory layout.
 | Intent/spec/plan and canonical agent instructions | Existing `intent/`, `specs/`, `plans/` and root `AGENTS.md` |
 | Shared CI and infrastructure entrypoints | Existing shared paths only for explicitly declared wiring; invoke logic/configuration under `server2/` |
 
-S02 may create the planned legacy golden recorder at
-`server/test/offline/golden-record.js` solely to execute the legacy parity target;
-this file does not exist at the inspected head/base. Its output fixtures and
-consumer belong under `server2/tests/golden/`. Existing gateway fixtures can be
+S02 [PR #2713](https://github.com/WizardFactory/TodayWeather/pull/2713) created
+`server/test/offline/golden-record.js` solely to execute the pinned legacy parity target.
+Its output fixtures and consumer belong under `server2/tests/golden/`. Existing gateway fixtures can be
 used as legacy oracle inputs without relocating their maintained legacy copies. A named legacy export
 or coexistence change is likewise permitted when a task explains why it must run
 in legacy. These exceptions do not permit placing the new runtime, fixtures or
@@ -78,6 +77,15 @@ Its literal-path checks supplement dependency review; they are not a sandbox. S0
 assets depend on S04; only inventory and infrastructure planning may precede it. Until then, task completion requires a recorded
 manual path/dependency review. The checker exists after S04; this does not claim remote branch protection
 or route-porting compatibility has been established.
+
+S09's [named host-read amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695)
+restricts host observations to four exact source/operation/path pairs in
+`server2/tools/benchmark/aws.rs`: `Path::new` for `/opt/server2-s09` and
+`/opt/server2-s09/run`, and `read_to_string` for `/proc/self/status` and
+`/proc/self/stat`. These support private-manifest ownership checks and process
+metrics. They do not exempt a file or permit compiler includes, encoded paths,
+writes, additional host paths, or legacy/sibling resource access. Later whole-tree
+audits retain this validated policy without creating a new waiver.
 
 ## 2. Compatibility inventory
 
@@ -911,6 +919,79 @@ tails, cancellation, Spot replacement and catalog/pack repair. Measure public
 coordinate requests including geocoder time separately. Report origin transit
 and CloudFront hit/miss cases separately from assembly and provider time.
 
+### S09 measurement scope and decision gate
+
+[S09 #2694](https://github.com/WizardFactory/TodayWeather/issues/2694) prepares a
+release benchmark under `server2/`, as declared before edits in its
+[path contract](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052017682).
+The [measurement workflow](diagrams/server2-feasibility.html) separates isolated
+protocol evidence from a separately approved intended-host/same-region run.
+
+Measure cold requests with a new resolver for each trial; warm requests begin
+with a verified assembled response. A benchmark-only miss adapter exercises local
+S08 funding/execution and complete S06 publication. NoData remains RAM-only and
+cannot count as an archived weather success. Synthetic assembly is not a legacy
+weather response or geocoder measurement. An eight-day hourly workload must use
+actual synthetic day/slot identities and valid group/catalog ownership; retained
+revisions of one slot are a different stress case.
+
+Offered clients at 8/16/32/64 are distinct from admitted owners, actual I/O and CPU
+limits. Existing runtime bounds and deadlines stay in force. Report every outcome,
+including Capacity, Timeout and rejected work, in request counts and elapsed-time
+quantiles; success-only quantiles are labeled separately. Targeted, Latest and
+FullHistory measurements must expose sequential descriptor/page costs rather than
+claim the parallel-wave model is implemented. Record foreground and background
+work, body/group/catalog counts and bytes, assembly elapsed time, whole-process CPU/RSS and catalog
+rewrite bytes; logical cache charges are not RSS. Local rewrite-byte totals are
+cost inputs, not observed versioned S3 storage.
+
+Actual Linux release/musl execution, same-region GET/PUT/LIST tails and throughput,
+real authentication/conditional-write behavior and version-storage/cost inputs
+remain required evidence. AK [approved the bounded measurement scope](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052596161)
+on 2026-10-08, valid until 2026-10-10T04:49:59Z. The [31-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6053018487)
+and [33-path host-read amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695)
+keep the worker, operator, configuration, tests and placement checks under `server2/`.
+No live resource or measurement has been executed at this design checkpoint.
+
+The proposed run uses one dedicated nonproduction Seoul `c6i.large` for at most
+two hours and at most 60 minutes of synthetic load. Worker and controller share
+one aggregate limit: 400,000 GET/HEAD attempts, 20,000 PUT/LIST attempts,
+30 GiB download and 64 MiB all-version stored charge. Worker allocation is
+390,000/18,000/26 GiB/63 MiB; controller allocation is 10,000/2,000,
+3 GiB bootstrap plus 1 GiB administration/SSM/IMDS/log traffic, and 1 MiB storage.
+Each potential PUT permanently charges body length plus 16 KiB conservative
+metadata/system/bookkeeping allowance, including retries, denied and uncertain
+writes. This is a safety margin, not measured physical storage or an invoice.
+Requests, bytes and stored versions require end-of-run reconciliation; partial
+or uncertain evidence cannot be labeled compliant.
+
+Actual execution follows independent review of the frozen tooling/configuration,
+a private one-use manifest, a separate watchdog, an absolute host expiry and
+pre-bootstrap network metering. Missing guards, ownership uncertainty or budget
+exhaustion stop work; restart permits cleanup only and never refreshes a grant.
+Kernel delivery quotas and application reservations do not mathematically cap
+physical NIC arrivals or retransmissions. Use stricter thresholds, measured
+headroom and a USD 5 operator stop; no absolute billing guarantee is claimed.
+Only the newly owned host/root volume, IAM and necessary network artifacts are
+cleaned up; synthetic S3 objects and versions are retained without deletes or
+lifecycle. Existing production hosts and real weather/geocoding providers are
+excluded.
+
+Reusable fixtures distinguish Targeted/Latest/FullHistory and hot versus distinct
+response keys over explicitly counted physical data. The local synthetic eight-day,
+16-scope sequential batch took 14.054289 s; it is a preserved feasibility risk,
+not a CloudFront/API result or an AWS percentile. Warm trials require a verified
+successful cold result and idle maintenance; insufficient capacity/sample counts
+stay visible rather than implying successful feasibility. Warm observation waves
+reuse one case-owned resolver after prewarming. Offered client observations are
+reported separately from independent RAM-empty trials. Shared HTTP/TLS pools
+remain warm after protocol and seeding; these trials do not measure the entire
+fresh-Spot network path. The bounded template does not establish 300 independent
+cold trials per offered level.
+O-2 conditional Rust feasibility and O-5/optional-pack disposition are made from
+those results. Until the required evidence and decisions exist, S09 stays open
+and S10/S13 remain blocked. No benchmark alone grants route cutover or retirement.
+
 ## 9. Spot scale-up and future scale-out
 
 Initially one Spot host runs the shared-cache API process. Increase resources
@@ -1029,7 +1110,9 @@ describe the isolated local test peer and approval-ready infrastructure workshee
 The peer is a bounded volatile S3 HTTP subset, not real AWS authentication,
 durability, performance or production deployment evidence. The release foundation
 starts locally and serves health/loopback metrics; it has no weather/provider/S3
-runtime routes yet. S02 goldens and S05 raw storage proceed in separate PRs.
+runtime routes yet. S02 goldens, S05 raw storage, S06 catalogs, S07 memory resolution and S08 budget
+reservation are merged. Their isolated verification and independent reviews do not
+establish live AWS conformance, used-route parity or the S09 feasibility gate.
 
 Actual account/region/bucket/role/provider-key owners, spending limits, host
 provisioning and routing remain separately approved resource actions. Proposed
