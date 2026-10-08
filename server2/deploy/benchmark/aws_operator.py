@@ -53,6 +53,10 @@ class LocalCliParsingRejected(OperatorError):
     """
 
 
+class LaunchIdempotencyMismatch(OperatorError):
+    """Observed EC2 rejection: no replacement token or automatic relaunch."""
+
+
 def now_ms():
     return int(time.time() * 1000)
 
@@ -280,6 +284,8 @@ class Cli:
                 text = bytes(errors)
                 if code == 252 and re.search(rb"(?m)^Unknown options: [^\r\n]+\r?$", text):
                     raise LocalCliParsingRejected("local CLI parsing rejected; request not dispatched")
+                if re.search(rb"An error occurred \(IdempotentParameterMismatch\)",text):
+                    raise LaunchIdempotencyMismatch("launch idempotency mismatch; no replacement token")
                 for token in (b"NotFound", b"NoSuchEntity", b"InvalidGroup.NotFound", b"404", b"403", b"AccessDenied", b"PreconditionFailed", b"412", b"InvocationDoesNotExist"):
                     if token in text:
                         raise OperatorError("AWS status " + token.decode())
@@ -299,10 +305,15 @@ class Operator:
     def __init__(self, config, state, runner, clock=now_ms):
         self.config, self.state, self.runner, self.clock = config, state, runner, clock
         self.floor = self.clock()
-        self.ledger = Ledger({"reads": 9950, "writes": 2000, "download": 512 * MiB - 50*131072, "store": MiB})
+        watchdog_reads=state.data.get("watchdog_reserved_reads",50)
+        if type(watchdog_reads) is not int or watchdog_reads not in {50,100}: raise OperatorError("watchdog reservation identity")
+        self.ledger = Ledger({"reads": 10000-watchdog_reads, "writes": 2000, "download": 512 * MiB - watchdog_reads*131072, "store": MiB})
         if "ledger" in state.data:
-            self.ledger.used = dict(state.data["ledger"])
-        self.calls = int(state.data.get("operator_calls", 0))
+            used=state.data["ledger"]
+            if not isinstance(used,dict) or set(used)!=set(self.ledger.caps) or any(type(v) is not int or not 0<=v<=self.ledger.caps[k] for k,v in used.items()): raise OperatorError("preserved ledger invalid or exhausted")
+            self.ledger.used = dict(used)
+        self.calls = state.data.get("operator_calls", 0)
+        if type(self.calls) is not int or not 0<=self.calls<=3500: raise OperatorError("preserved control-call count")
 
     def call(self, service, action, args, put_bytes=None, cleanup=False):
         current = self.clock()
@@ -392,18 +403,126 @@ class Operator:
             time.sleep(1)
         else: raise OperatorError("new profile role propagation not ready; zero launch attempts")
         userdata = self.render_bootstrap()
-        args = ["--image-id", c["ami"], "--instance-type", "c6i.large", "--min-count", "1", "--max-count", "1", "--client-token", s["client_token"], "--iam-instance-profile", "Name="+c["role"], "--instance-initiated-shutdown-behavior", "terminate", "--metadata-options", "HttpEndpoint=enabled,HttpTokens=required,HttpPutResponseHopLimit=1", "--network-interfaces", json.dumps([{"DeviceIndex":0,"SubnetId":c["subnet"],"AssociatePublicIpAddress":True,"Groups":[group],"DeleteOnTermination":True}]), "--block-device-mappings", json.dumps([{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":16,"VolumeType":"gp3","Iops":3000,"Throughput":125,"Encrypted":True,"DeleteOnTermination":True}}]), "--tag-specifications", self.tags("instance", "volume"), "--user-data", base64.b64encode(userdata).decode()]
-        self.state.data["launch_attempted"] = True; self.state.save()
+        return self.launch_once(group, userdata)
+
+    def launch_arguments(self, group, userdata):
+        """One source-bound argument builder, also used by the offline CLI oracle."""
+        c,s=self.config,self.state.data
+        if not re.fullmatch("sg-[a-f0-9]+",group) or not isinstance(userdata,bytes) or len(userdata)>16384:
+            raise OperatorError("launch payload boundary")
+        return ["--image-id", c["ami"], "--instance-type", "c6i.large", "--count", "1", "--client-token", s["client_token"], "--iam-instance-profile", "Name="+c["role"], "--instance-initiated-shutdown-behavior", "terminate", "--metadata-options", "HttpEndpoint=enabled,HttpTokens=required,HttpPutResponseHopLimit=1", "--network-interfaces", json.dumps([{"DeviceIndex":0,"SubnetId":c["subnet"],"AssociatePublicIpAddress":True,"Groups":[group],"DeleteOnTermination":True}]), "--block-device-mappings", json.dumps([{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":16,"VolumeType":"gp3","Iops":3000,"Throughput":125,"Encrypted":True,"DeleteOnTermination":True}}]), "--tag-specifications", self.tags("instance", "volume"), "--user-data", base64.b64encode(userdata).decode()]
+
+    def launch_once(self, group, userdata):
+        s=self.state.data
+        recovery=s.get("recovery1")
+        if recovery is not None:
+            if recovery.get("dispatch_attempted") is not False: raise OperatorError("recovery dispatch already attempted")
+            recovery["dispatch_attempted"]=True
+        prior_unknown=s.get("launch_attempted",False)
+        s["launch_attempted"]=True
+        s["current_launch_outcome"]="unknown"
+        self.state.save()
         try:
-            instances = self.call("ec2", "run-instances", args)["Instances"]
+            instances=self.call("ec2","run-instances",self.launch_arguments(group,userdata))["Instances"]
+        except LocalCliParsingRejected:
+            # This observed invocation did not dispatch. It cannot clear the
+            # predecessor's historical uncertainty or authorize another launch.
+            s["current_launch_outcome"]="local_cli_rejected"
+            if not prior_unknown: s["launch_attempted"]=False
+            self.state.save()
+            raise
+        except LaunchIdempotencyMismatch:
+            s["current_launch_outcome"]="idempotency_mismatch";self.state.save()
+            raise
         except OperatorError:
-            # Client-token reconciliation only; do not dispatch a second RunInstances.
-            instances = self.call("ec2", "describe-instances", ["--filters", "Name=client-token,Values="+s["client_token"]]).get("Reservations", [])
-            instances = [i for reservation in instances for i in reservation.get("Instances", [])]
-        if len(instances) != 1 or not re.fullmatch("i-[a-f0-9]+", instances[0].get("InstanceId", "")):
+            instances=self.token_instances()
+        if len(instances)!=1 or not re.fullmatch("i-[a-f0-9]+",instances[0].get("InstanceId","")):
             raise OperatorError("launch outcome unresolved; no second host")
-        self.own("instance", instances[0]["InstanceId"])
+        self.own("instance",instances[0]["InstanceId"])
+        s["current_launch_outcome"]="acknowledged_or_reconciled";self.state.save()
         return instances[0]["InstanceId"]
+
+    def token_instances(self):
+        response=self.call("ec2","describe-instances",["--filters","Name=client-token,Values="+self.state.data["client_token"]])
+        reservations=response.get("Reservations")
+        if not isinstance(reservations,list) or any(not isinstance(r,dict) or not isinstance(r.get("Instances"),list) for r in reservations):
+            raise OperatorError("host inventory unknown")
+        return [item for reservation in reservations for item in reservation["Instances"]]
+
+    def prepare_recovery(self, original_config, authority):
+        """One root-attested recovery of this failed pre-worker creation only.
+
+        Authorization is an explicit operator input, not proof synthesized from
+        local CLI diagnostics or a zero-result historical inventory.
+        """
+        s,c=self.state.data,self.config;current=self.clock()
+        fields={"schema","scope","run_id","original_state_sha256","original_config_sha256","reviewed_config_sha256","source_revision","native_review_receipt_sha256","AK_retry_authorized","owned_absent_host_cleanup_authorized","retry_authority_sha256","original_operator_and_watchdog_quiescent","retry_ordinal","retry_started_at_ms","retry_deadline_ms"}
+        if not isinstance(authority,dict) or set(authority)!=fields: raise OperatorError("recovery authority schema")
+        expected={"schema":1,"scope":"resume-failed-creation-once","run_id":c["run_id"],"original_state_sha256":digest(canonical(s)),"original_config_sha256":digest(canonical(original_config)),"reviewed_config_sha256":digest(canonical(c)),"source_revision":c["source_revision"],"native_review_receipt_sha256":c["native_review_receipt_sha256"],"AK_retry_authorized":True,"owned_absent_host_cleanup_authorized":True,"original_operator_and_watchdog_quiescent":True,"retry_ordinal":1}
+        if any(type(authority[k]) is not type(v) or authority[k]!=v for k,v in expected.items()) or not isinstance(authority["retry_authority_sha256"],str) or not re.fullmatch("[a-f0-9]{64}",authority["retry_authority_sha256"]):
+            raise OperatorError("recovery authority binding")
+        start,end=authority["retry_started_at_ms"],authority["retry_deadline_ms"]
+        if type(start) is not int or type(end) is not int or not current-60000<=start<=current or not current+1200000<=end<=min(EXPIRY,start+7200000): raise OperatorError("recovery deadline")
+        if any(c[k]!=original_config[k] for k in FIXED) or any(c[k]!=original_config[k] for k in ("bucket_policy_sha256","instance_policy_sha256","rustup_url","rustup_sha256")):
+            raise OperatorError("recovery original resource/install scope")
+        if s.get("run_id")!=c["run_id"] or s.get("config_sha256")!=authority["original_config_sha256"] or s.get("worker_allocation_issued") is not False or s.get("launch_attempted") is not True or "recovery1" in s:
+            raise OperatorError("recovery predecessor/replay/worker fence")
+        if not isinstance(s.get("client_token"),str) or not re.fullmatch("s09-[A-Za-z0-9-]{1,60}",s["client_token"]) or not isinstance(s.get("nonce"),str) or not re.fullmatch("[a-f0-9]{64}",s["nonce"]): raise OperatorError("recovery original identity")
+        expected_resources={"bucket":c["bucket"],"role":"arn:aws:iam::"+c["account"]+":role/"+c["role"],"profile":c["role"]}
+        resources=s.get("resources",{})
+        if set(resources)!=set(expected_resources)|{"sg"} or any(resources[k]!=v for k,v in expected_resources.items()) or not re.fullmatch("sg-[a-f0-9]+",resources.get("sg","")) or s.get("creation_intents")!={k:"acknowledged" for k in resources}: raise OperatorError("recovery requires original acknowledged resources")
+        if s.get("bootstrap_reserved_bytes")!=3*GiB or type(s.get("deadline_ms")) is not int or s.get("watchdog_reserved_reads")!=50 or s.get("watchdog_reserved_download_bytes")!=50*131072: raise OperatorError("recovery original reservations")
+        caps={"reads":9900,"writes":2000,"download":512*MiB-100*131072,"store":MiB}
+        if set(self.ledger.used)!=set(caps) or any(type(v) is not int or not 0<=v<=caps[k] for k,v in self.ledger.used.items()) or self.calls>=3500: raise OperatorError("recovery remaining aggregate budget")
+        # Exclusive immutable predecessor and claim fence competing invocations.
+        # A partial publication is a stop condition, never a retry opportunity.
+        State.create(self.state.path.with_suffix(".recovery1.predecessor.json"),s)
+        State.create(self.state.path.with_suffix(".recovery1.claim.json"),{"authority_sha256":digest(canonical(authority)),"original_state_sha256":authority["original_state_sha256"]})
+        s["recovery1"]={"authority":dict(authority),"historical_launch_unknown":True,"entry_attempted":False,"dispatch_attempted":False,"original_deadline_ms":s["deadline_ms"],"original_config_sha256":s["config_sha256"]}
+        s.update(config_sha256=digest(canonical(c)),deadline_ms=end,watchdog_reserved_reads=100,watchdog_reserved_download_bytes=100*131072,watchdog_parent=os.getpid(),status="recovery_creation")
+        self.ledger.caps=caps;self.state.save()
+
+    def resume_failed_creation(self):
+        s,c=self.state.data,self.config
+        if "recovery1" not in s or s["recovery1"].get("entry_attempted") is not False: raise OperatorError("recovery not prepared or already entered")
+        s["recovery1"]["entry_attempted"]=True;self.state.save()
+        if self.call("sts","get-caller-identity",[]).get("Account")!=c["account"]: raise OperatorError("configured account mismatch")
+        token=self.token_instances()
+        by_tag=self.call("ec2","describe-instances",["--filters","Name=tag:RunId,Values="+c["run_id"]]).get("Reservations")
+        if not isinstance(by_tag,list) or any(not isinstance(r,dict) or not isinstance(r.get("Instances"),list) for r in by_tag): raise OperatorError("host inventory unknown")
+        tagged_instances=[i for r in by_tag for i in r["Instances"]]
+        ids=lambda rows:[r.get("InstanceId") for r in rows]
+        if len(token)>1 or len(tagged_instances)>1 or ids(token)!=ids(tagged_instances): raise OperatorError("recovery host inventory ambiguous")
+        if token:
+            host=token[0];tags={t.get("Key"):t.get("Value") for t in host.get("Tags",[])}
+            if not re.fullmatch("i-[a-f0-9]+",host.get("InstanceId","")) or host.get("ClientToken")!=s["client_token"] or tags.get("RunId")!=c["run_id"] or tags.get("Purpose")!="synthetic-benchmark-only": raise OperatorError("recovery existing host ownership")
+            self.own("instance",host["InstanceId"])
+            return {"status":"existing_owned_host_cleanup_required","instance_id":host["InstanceId"]}
+        volumes=self.call("ec2","describe-volumes",["--filters","Name=tag:RunId,Values="+c["run_id"]]).get("Volumes")
+        if volumes!=[]: raise OperatorError("recovery volume inventory not empty or unknown")
+        images=self.call("ec2","describe-images",["--image-ids",c["ami"]]).get("Images",[])
+        if len(images)!=1 or any(images[0].get(k)!=v for k,v in {"ImageId":c["ami"],"OwnerId":"099720109477","Public":True,"State":"available","Architecture":"x86_64","RootDeviceName":"/dev/sda1","VirtualizationType":"hvm"}.items()): raise OperatorError("AMI identity changed")
+        subnets=self.call("ec2","describe-subnets",["--subnet-ids",c["subnet"]]).get("Subnets",[])
+        if len(subnets)!=1 or any(subnets[0].get(k)!=v for k,v in {"SubnetId":c["subnet"],"VpcId":c["vpc"],"State":"available","MapPublicIpOnLaunch":True}.items()): raise OperatorError("subnet identity changed")
+        group=s["resources"]["sg"]
+        groups=self.call("ec2","describe-security-groups",["--group-ids",group]).get("SecurityGroups",[])
+        if len(groups)!=1 or groups[0].get("GroupId")!=group or groups[0].get("VpcId")!=c["vpc"] or groups[0].get("GroupName")!=c["security_group"] or groups[0].get("IpPermissions")!=[] or groups[0].get("IpPermissionsEgress")!=[]: raise OperatorError("recovery owned SG closed identity")
+        def owned(item):
+            tags={t.get("Key"):t.get("Value") for t in item.get("Tags",[])}
+            if tags.get("RunId")!=c["run_id"] or tags.get("Purpose")!="synthetic-benchmark-only": raise OperatorError("recovery resource ownership")
+        owned(groups[0])
+        role=self.call("iam","get-role",["--role-name",c["role"]]).get("Role",{})
+        profile=self.call("iam","get-instance-profile",["--instance-profile-name",c["role"]]).get("InstanceProfile",{})
+        owned(role);owned(profile)
+        roles=profile.get("Roles",[])
+        if role.get("Arn")!=s["resources"]["role"] or profile.get("Arn")!="arn:aws:iam::"+c["account"]+":instance-profile/"+c["role"] or len(roles)!=1 or roles[0].get("RoleName")!=c["role"] or roles[0].get("Arn")!=role.get("Arn"): raise OperatorError("recovery owned IAM identity/membership")
+        if self.call("s3api","get-bucket-location",["--bucket",c["bucket"]]).get("LocationConstraint")!=c["region"] or self.call("s3api","get-bucket-versioning",["--bucket",c["bucket"]]).get("Status")!="Enabled": raise OperatorError("recovery bucket region/versioning")
+        public=self.call("s3api","get-public-access-block",["--bucket",c["bucket"]]).get("PublicAccessBlockConfiguration",{})
+        if public!={k:True for k in ("BlockPublicAcls","IgnorePublicAcls","BlockPublicPolicy","RestrictPublicBuckets")}: raise OperatorError("recovery bucket privacy")
+        encryption=self.call("s3api","get-bucket-encryption",["--bucket",c["bucket"]]).get("ServerSideEncryptionConfiguration",{}).get("Rules",[])
+        if not encryption or any(r.get("ApplyServerSideEncryptionByDefault",{}).get("SSEAlgorithm")!="AES256" for r in encryption): raise OperatorError("recovery bucket encryption")
+        instance=self.launch_once(group,self.render_bootstrap())
+        return {"status":"recovery_host_acknowledged","instance_id":instance}
 
     def tag_values(self):
         return [{"Key":k,"Value":v} for k,v in {"Task":"issue-2694-s09","Purpose":"synthetic-benchmark-only","RunId":self.config["run_id"],"ExpiresAt":str(self.state.data["deadline_ms"])}.items()]
@@ -670,7 +789,25 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
                 if str(error) in {"AWS status NoSuchEntity","AWS status InvalidGroup.NotFound","AWS status NotFound"}: return None
                 raise
         instance=resources.get("instance")
-        if not instance and self.state.data.get("launch_attempted"):
+        recovery=self.state.data.get("recovery1")
+        current_absence_cleanup=False
+        if not instance and recovery is not None and recovery.get("authority",{}).get("owned_absent_host_cleanup_authorized") is True:
+            # A new explicit cleanup authorization and current inventories do
+            # not retrospectively prove the predecessor request was unsent.
+            # A newly uncertain sent retry cannot use this path.
+            outcome=self.state.data.get("current_launch_outcome")
+            if recovery.get("dispatch_attempted") is False or outcome in {"local_cli_rejected","idempotency_mismatch"}:
+                token=self.call("ec2","describe-instances",["--filters","Name=client-token,Values="+self.state.data["client_token"]],cleanup=True)
+                tags=self.call("ec2","describe-instances",["--filters","Name=tag:RunId,Values="+self.config["run_id"]],cleanup=True)
+                for inventory in (token,tags):
+                    rows=inventory.get("Reservations")
+                    if not isinstance(rows,list) or any(not isinstance(r,dict) or not isinstance(r.get("Instances"),list) for r in rows) or any(r["Instances"] for r in rows): raise OperatorError("current absence cleanup host inventory unknown or nonempty")
+                volumes=self.call("ec2","describe-volumes",["--filters","Name=tag:RunId,Values="+self.config["run_id"]],cleanup=True).get("Volumes")
+                if volumes!=[]: raise OperatorError("current absence cleanup volume inventory unknown or nonempty")
+                current_absence_cleanup=True
+                recovery["current_absence_cleanup"]={"authorized":True,"operator_calls":self.calls,"historical_launch_unknown_preserved":True}
+                self.state.save()
+        if not instance and self.state.data.get("launch_attempted") and not current_absence_cleanup:
             actual=self.call("ec2","describe-instances",["--filters","Name=client-token,Values="+self.state.data["client_token"]],cleanup=True)
             rows=[i for r in actual.get("Reservations",[]) for i in r.get("Instances",[])]
             if len(rows)!=1: raise OperatorError("unknown launched host; keep reconciliation armed")
@@ -728,7 +865,7 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
                 self.call("ec2","delete-security-group",["--group-id",rows[0]["GroupId"]],cleanup=True)
             resources.pop("sg",None);intents.pop("sg",None);self.state.save()
         self.state.data["status"]="cleaned_host_resources_S3_retained";self.state.save()
-        return {"status":self.state.data["status"]}
+        return {"status":self.state.data["status"],"current_absence_cleanup":current_absence_cleanup,"historical_launch_unknown_preserved":bool(recovery and recovery.get("historical_launch_unknown"))}
 
 
 def worker_timeout_seconds(manifest, current_ms):
@@ -760,7 +897,8 @@ def make_manifest(config, state, instance_id, binary_sha256, current_ms, provide
 def watchdog(config, path, runner):
     state=bounded_json(path)
     if state.get("run_id")!=config["run_id"] or state.get("config_sha256")!=digest(canonical(config)): raise OperatorError("watchdog scope")
-    ready=Path(path).with_suffix(".watchdog-ready")
+    suffix=".recovery1.watchdog-ready" if "recovery1" in state else ".watchdog-ready"
+    ready=Path(path).with_suffix(suffix)
     fd=os.open(ready,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
     os.close(fd)
     # This child never replenishes the reserved 50 control calls or writes parent state.
@@ -791,7 +929,8 @@ def watchdog(config, path, runner):
         runner.call("ec2","terminate-instances",["--instance-ids",instance]);calls+=1
         termination_requested=True
     outcome="owned_termination_requested" if termination_requested else "original_launch_unresolved" if current.get("launch_attempted") else "no_launch_recorded"
-    fd=os.open(Path(path).with_suffix(".watchdog-finish.json"),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    finish=".recovery1.watchdog-finish.json" if "recovery1" in state else ".watchdog-finish.json"
+    fd=os.open(Path(path).with_suffix(finish),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
     with os.fdopen(fd,"w") as out: json.dump({"status":outcome,"reserved_calls":50,"actual_calls":calls,"host_absence_verified":False},out)
 
 
@@ -800,15 +939,18 @@ def main():
     parser.add_argument("--config", type=Path, default=HERE / "aws-run.json")
     parser.add_argument("--execute-reviewed-run", action="store_true")
     parser.add_argument("--cleanup-only", action="store_true")
+    parser.add_argument("--resume-failed-creation",action="store_true",help="One reviewed recovery of the original pre-worker failure")
+    parser.add_argument("--original-config",type=Path)
+    parser.add_argument("--recovery-authority",type=Path)
     parser.add_argument("--watchdog", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--state", type=Path)
     parser.add_argument("--authorization", type=Path)
     args = parser.parse_args()
-    config = validate_config(bounded_json(args.config), armed=args.execute_reviewed_run or args.cleanup_only or args.watchdog, cleanup_only=args.cleanup_only or args.watchdog)
-    if not args.execute_reviewed_run and not args.cleanup_only and not args.watchdog:
+    config = validate_config(bounded_json(args.config), armed=args.execute_reviewed_run or args.resume_failed_creation or args.cleanup_only or args.watchdog, cleanup_only=args.cleanup_only or args.watchdog)
+    if not args.execute_reviewed_run and not args.resume_failed_creation and not args.cleanup_only and not args.watchdog:
         print(json.dumps({"status":"dry_plan_no_network","run_id":config["run_id"],"instance_type":"c6i.large","initial_egress":[],"S3_delete":False,"execution_pins_complete":all(config[k] for k in PIN_FIELDS)}))
         return
-    if args.state is None or args.authorization is None or sum([args.execute_reviewed_run,args.cleanup_only,args.watchdog]) != 1:
+    if args.state is None or args.authorization is None or sum([args.execute_reviewed_run,args.resume_failed_creation,args.cleanup_only,args.watchdog]) != 1:
         raise OperatorError("explicit authority/state required")
     authorization = bounded_json(args.authorization)
     if authorization != {"run_id":config["run_id"],"source_revision":config["source_revision"],"native_review_receipt_sha256":config["native_review_receipt_sha256"],"AWS_execution_authorized":True,"expires_at_ms":EXPIRY}:
@@ -824,21 +966,38 @@ def main():
         print(json.dumps(Operator(config,state,runner).cleanup()))
         return
     current = now_ms()
-    state = State.create(args.state,{"run_id":config["run_id"],"config_sha256":digest(canonical(config)),"client_token":"s09-"+secrets.token_hex(24),"nonce":secrets.token_hex(32),"deadline_ms":min(EXPIRY,current+7200000),"bootstrap_reserved_bytes":3*GiB,"worker_allocation_issued":False,"resources":{},"status":"creation","watchdog_parent":os.getpid()})
-    # Child holds its separate pre-reserved control allocation; no worker renewal.
-    state.data["watchdog_reserved_reads"]=50
-    state.data["watchdog_reserved_download_bytes"]=50*131072
-    state.save()
+    if args.resume_failed_creation:
+        if args.original_config is None or args.recovery_authority is None: raise OperatorError("original configuration and recovery authority required")
+        info=args.state.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or stat.S_IMODE(info.st_mode)!=0o600 or args.state.parent.is_symlink() or args.state.parent.stat().st_uid!=os.getuid() or stat.S_IMODE(args.state.parent.stat().st_mode)!=0o700: raise OperatorError("recovery private state ownership")
+        original=validate_config(bounded_json(args.original_config),armed=False,cleanup_only=True)
+        state=State(args.state,bounded_json(args.state))
+        operator=Operator(config,state,runner)
+        operator.prepare_recovery(original,bounded_json(args.recovery_authority))
+    else:
+        if args.original_config is not None or args.recovery_authority is not None: raise OperatorError("recovery input on another mode")
+        state = State.create(args.state,{"run_id":config["run_id"],"config_sha256":digest(canonical(config)),"client_token":"s09-"+secrets.token_hex(24),"nonce":secrets.token_hex(32),"deadline_ms":min(EXPIRY,current+7200000),"bootstrap_reserved_bytes":3*GiB,"worker_allocation_issued":False,"resources":{},"status":"creation","watchdog_parent":os.getpid()})
+        # Child holds its separate pre-reserved control allocation; no worker renewal.
+        state.data["watchdog_reserved_reads"]=50
+        state.data["watchdog_reserved_download_bytes"]=50*131072
+        state.save()
     monitor=subprocess.Popen([os.sys.executable,str(HERE/"aws_operator.py"),"--config",str(args.config.resolve()),"--state",str(args.state.resolve()),"--authorization",str(args.authorization.resolve()),"--watchdog"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
     operator=Operator(config,state,runner)
+    measurement_attempted=False
     try:
         for _ in range(50):
-            if state.path.with_suffix(".watchdog-ready").is_file(): break
+            ready=".recovery1.watchdog-ready" if args.resume_failed_creation else ".watchdog-ready"
+            if state.path.with_suffix(ready).is_file(): break
             if monitor.poll() is not None: raise OperatorError("watchdog did not arm")
             time.sleep(.1)
         else: raise OperatorError("watchdog readiness deadline")
-        operator.provision()
-        operator.run_host()
+        if args.resume_failed_creation:
+            result=operator.resume_failed_creation()
+            if result["status"]=="recovery_host_acknowledged":
+                measurement_attempted=True;operator.run_host()
+        else:
+            operator.provision()
+            measurement_attempted=True;operator.run_host()
     finally:
         # Watchdog stays armed until it observes termination. Never kill it on parent exit.
         for _ in range(60):
@@ -846,7 +1005,8 @@ def main():
             if status["status"]=="cleaned_host_resources_S3_retained": break
             time.sleep(5)
         else: raise OperatorError("cleanup pending; watchdog remains armed")
-    print(json.dumps({"status":"measurement_result_exported_cleanup_requested","state":str(args.state),"S3_retained":True}))
+    status="measurement_result_exported_cleanup_requested" if measurement_attempted else "existing_owned_host_cleaned_no_measurement"
+    print(json.dumps({"status":status,"measurement_attempted":measurement_attempted,"state":str(args.state),"S3_retained":True}))
 
 if __name__ == "__main__":
     try:

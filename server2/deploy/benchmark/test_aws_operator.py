@@ -436,7 +436,7 @@ class WireAndFunctionalTests(unittest.TestCase):
             with self.assertRaises(op.OperatorError): controller.render_bootstrap()
 
 
-def functional_smoke():
+def functional_smoke(recovery=False,recovery_fault=None):
     """Distinct loopback fake-CLI orchestration; never an AWS/kernel/SSM proof."""
     import base64
     import http.server
@@ -448,6 +448,8 @@ def functional_smoke():
         config=json.loads((HERE/"aws-run.json").read_text())
         config.update(source_revision="a"*40,rustup_sha256="b"*64,rustup_url="https://static.rust-lang.org/rustup/archive/1.29.1/x86_64-unknown-linux-gnu/rustup-init",source_files={"server2/Cargo.toml":"c"*64})
         instance="i-0123456789abcdef0"
+        if recovery:
+            original,config,recovery_state,authority,current=RecoveryTests().fixture(root)
         class Handler(http.server.BaseHTTPRequestHandler):
             def log_message(self,*args): pass
             def do_POST(self):
@@ -461,16 +463,24 @@ def functional_smoke():
                 elif action=="describe-subnets": out={"Subnets":[{"SubnetId":config["subnet"],"VpcId":config["vpc"],"State":"available","MapPublicIpOnLaunch":True}]}
                 elif action=="head-bucket": code=255;error="404"
                 elif action in {"get-role","get-instance-profile"}:
-                    if any("create-role" in c for c in calls):
+                    if recovery or any("create-role" in c for c in calls):
                         field="Role" if action=="get-role" else "InstanceProfile"
                         out={field:{"Arn":"arn:aws:iam::"+config["account"]+(":role/" if field=="Role" else ":instance-profile/")+config["role"],"Tags":[{"Key":"RunId","Value":config["run_id"]},{"Key":"Purpose","Value":"synthetic-benchmark-only"}],"Roles":[{"RoleName":config["role"],"Arn":"arn:aws:iam::"+config["account"]+":role/"+config["role"]}]}}
                     else: code=255;error="NoSuchEntity"
                 elif action=="describe-security-groups":
-                    out={"SecurityGroups":[]} if "--filters" in args else {"SecurityGroups":[{"GroupId":"sg-0123456789abcdef0","GroupName":config["security_group"],"VpcId":config["vpc"],"Tags":[{"Key":"RunId","Value":config["run_id"]},{"Key":"Purpose","Value":"synthetic-benchmark-only"}],"IpPermissions":[],"IpPermissionsEgress":[] if any("revoke-security-group-egress" in c for c in calls) else [{"IpProtocol":"-1","IpRanges":[{"CidrIp":"0.0.0.0/0"}]}]}]}
+                    out={"SecurityGroups":[]} if "--filters" in args else {"SecurityGroups":[{"GroupId":"sg-0123456789abcdef0","GroupName":config["security_group"],"VpcId":config["vpc"],"Tags":[{"Key":"RunId","Value":config["run_id"]},{"Key":"Purpose","Value":"synthetic-benchmark-only"}],"IpPermissions":[],"IpPermissionsEgress":[] if recovery or any("revoke-security-group-egress" in c for c in calls) else [{"IpProtocol":"-1","IpRanges":[{"CidrIp":"0.0.0.0/0"}]}]}]}
                 elif action=="create-security-group": out={"GroupId":"sg-0123456789abcdef0"}
                 elif action=="create-role": out={"Role":{"Arn":"arn:aws:iam::"+config["account"]+":role/"+config["role"]}}
-                elif action=="run-instances": out={"Instances":[{"InstanceId":instance}]}
-                elif action=="describe-instances": out={"Reservations":[{"Instances":[{"InstanceId":instance,"Tags":[{"Key":"RunId","Value":config["run_id"]},{"Key":"Purpose","Value":"synthetic-benchmark-only"}],"State":{"Name":"terminated" if terminated[0] else "running"}}]}]}
+                elif action=="run-instances":
+                    if recovery_fault=='local':code=252;error='Unknown options: --synthetic-invalid-option'
+                    elif recovery_fault=='mismatch':code=255;error='An error occurred (IdempotentParameterMismatch) when calling RunInstances'
+                    else:out={"Instances":[{"InstanceId":instance}]}
+                elif action in {"get-bucket-location","get-bucket-versioning","get-public-access-block","get-bucket-encryption"}:
+                    out=RecoveryRunner(config,recovery_state.data).call(service,action,args)
+                    if recovery_fault=='prelaunch' and action=='get-bucket-versioning':out={'Status':'Suspended'}
+                elif recovery and action=="describe-instances" and (recovery_fault in {'local','mismatch','prelaunch'} or not any("run-instances" in c for c in calls)):out={"Reservations":[]}
+                elif action=="describe-instances": out={"Reservations":[{"Instances":[{"InstanceId":instance,"Tags":[{"Key":"RunId","Value":config["run_id"]},{"Key":"Purpose","Value":"synthetic-benchmark-only"}],"ClientToken":recovery_state.data["client_token"] if recovery else "s09-functional","BlockDeviceMappings":[{"DeviceName":"/dev/sda1","Ebs":{"VolumeId":"vol-0123456789abcdef0"}}],"State":{"Name":"terminated" if terminated[0] else "running"}}]}]}
+                elif recovery and action=="describe-volumes" and (recovery_fault in {'local','mismatch','prelaunch'} or not any("run-instances" in c for c in calls)):out={"Volumes":[]}
                 elif action=="describe-volumes":
                     out={"Volumes":[{"VolumeId":"vol-0123456789abcdef0"}]} if root_pending[0] else {"Volumes":[]}
                     root_pending[0]=False
@@ -484,9 +494,33 @@ def functional_smoke():
         fake.chmod(0o700)
         try:
             with patch.dict(os.environ,{"S09_FAKE_CLI_ENDPOINT":"http://127.0.0.1:"+str(server.server_port)+"/"}):
-                state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":op.now_ms()+7200000,"client_token":"s09-functional","nonce":"d"*64,"resources":{"root_volume":"vol-0123456789abcdef0"}})
-                controller=op.Operator(config,state,op.Cli(config,str(fake)))
-                self_id=controller.provision();assert self_id==instance
+                if recovery:
+                    state=recovery_state;controller=op.Operator(config,state,op.Cli(config,str(fake)),clock=lambda:current)
+                    controller.prepare_recovery(original,authority)
+                    if recovery_fault:
+                        try:controller.resume_failed_creation();raise AssertionError("fault did not stop recovery")
+                        except op.OperatorError:pass
+                        before=len(calls)
+                        try:controller.resume_failed_creation();raise AssertionError("faulted recovery replay")
+                        except op.OperatorError:pass
+                        assert len(calls)==before
+                        result=controller.cleanup()
+                        assert result['status']=='cleaned_host_resources_S3_retained' and result['current_absence_cleanup'] is True and result['historical_launch_unknown_preserved'] is True
+                        predecessor=op.bounded_json(state.path.with_suffix('.recovery1.predecessor.json'))
+                        assert predecessor['launch_attempted'] is True and state.data['launch_attempted'] is True
+                        assert state.data['resources']=={'bucket':config['bucket']} and not state.data['worker_allocation_issued']
+                        assert not any('create-' in value or value in {'send-command','delete-object','delete-bucket','authorize-security-group-egress'} for call in calls for value in call)
+                        return {'status':'PASS_failed_recovery_current_owned_cleanup','fault':recovery_fault,'calls':len(calls),'launch_dispatch_attempts':sum('run-instances' in c for c in calls),'original_usage_preserved':state.data['operator_calls']==36+len(calls),'historical_launch_unknown_preserved':True,'S3_retained':True,'actual_AWS_IMDS_calls':0}
+                    result=controller.resume_failed_creation();assert result=={"status":"recovery_host_acknowledged","instance_id":instance}
+                    assert not any(any(a.startswith("create-") or a in {"put-role-policy","add-role-to-instance-profile","send-command"} for a in call) for call in calls)
+                    before=len(calls)
+                    try:controller.resume_failed_creation();raise AssertionError("replayed recovery")
+                    except op.OperatorError:pass
+                    assert len(calls)==before and not state.data['worker_allocation_issued']
+                else:
+                    state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":op.now_ms()+7200000,"client_token":"s09-functional","nonce":"d"*64,"resources":{"root_volume":"vol-0123456789abcdef0"}})
+                    controller=op.Operator(config,state,op.Cli(config,str(fake)))
+                    self_id=controller.provision();assert self_id==instance
                 assert not any("authorize-security-group-egress" in c for c in calls)
                 payload=next(c[c.index("--user-data")+1] for c in calls if "run-instances" in c)
                 import gzip
@@ -507,7 +541,7 @@ def functional_smoke():
                 assert controller.cleanup()["status"]=="cleaned_host_resources_S3_retained"
                 assert state.data["root_volume_absence_verified"] is True
                 assert not any(any(a.startswith("delete-object") or a in {"delete-bucket","put-bucket-lifecycle-configuration"} for a in c) for c in calls)
-                return {"status":"PASS_fake_only","calls":len(calls),"decoded_userdata_bytes":len(decoded),"guard_denied_dispatch":0,"S3_deletes":0,"new_hosts":sum("run-instances" in c for c in calls),"ledger":state.data["ledger"],"kernel_SSM_AWS_proven":False}
+                return {"status":"PASS_fake_only","calls":len(calls),"decoded_userdata_bytes":len(decoded),"guard_denied_dispatch":0,"S3_deletes":0,"new_hosts":sum("run-instances" in c for c in calls),"ledger":state.data["ledger"],"kernel_SSM_AWS_proven":False,"recovery":recovery,"original_usage_preserved":state.data["operator_calls"]==36+len(calls) if recovery else None}
         finally: server.shutdown();server.server_close();thread.join(timeout=2)
 
 def failure_functional_smoke():
@@ -769,11 +803,210 @@ def cleanup_functional_smoke():
         return {"status":"PASS_cleanup_only_local_functional","actual_subprocess_calls":len(calls),"watchdog_outcomes":summaries,"unknown_cleanup_blocked":True,"no_ancillary_deletion":True,"original_allocation_renewed":False,"actual_AWS_IMDS":False}
 
 
+class RecoveryTests(unittest.TestCase):
+    def fixture(self, directory, runner=None):
+        current=op.EXPIRY-4*3600000
+        old=json.loads((HERE/"aws-run.json").read_text())
+        old.update(source_revision="a"*40,native_review_receipt_sha256="a"*64,rustup_sha256="c"*64,rustup_url="https://static.rust-lang.org/rustup/archive/1.29.1/x86_64-unknown-linux-gnu/rustup-init",source_files={"server2/Cargo.toml":"d"*64})
+        new=dict(old,source_revision="b"*40,native_review_receipt_sha256="b"*64)
+        resources={"bucket":old["bucket"],"role":"arn:aws:iam::"+old["account"]+":role/"+old["role"],"profile":old["role"],"sg":"sg-0123456789abcdef0"}
+        data={"run_id":old["run_id"],"config_sha256":op.digest(op.canonical(old)),"client_token":"s09-synthetic-recovery", "nonce":"d"*64,"deadline_ms":current-1000,"launch_attempted":True,"status":"creation","bootstrap_reserved_bytes":3*op.GiB,"worker_allocation_issued":False,"watchdog_reserved_reads":50,"watchdog_reserved_download_bytes":50*131072,"resources":resources,"creation_intents":{k:"acknowledged" for k in resources},"operator_calls":36,"ledger":{"reads":30,"writes":6,"download":4718592,"store":0}}
+        state=op.State.create(Path(directory)/"state.json",data)
+        authority={"schema":1,"scope":"resume-failed-creation-once","run_id":old["run_id"],"original_state_sha256":op.digest(op.canonical(data)),"original_config_sha256":op.digest(op.canonical(old)),"reviewed_config_sha256":op.digest(op.canonical(new)),"source_revision":new["source_revision"],"native_review_receipt_sha256":new["native_review_receipt_sha256"],"AK_retry_authorized":True,"owned_absent_host_cleanup_authorized":True,"retry_authority_sha256":"e"*64,"original_operator_and_watchdog_quiescent":True,"retry_ordinal":1,"retry_started_at_ms":current,"retry_deadline_ms":current+7200000}
+        return old,new,state,authority,current
+
+    def test_recovery_preserves_history_usage_and_one_use(self):
+        with tempfile.TemporaryDirectory() as directory:
+            old,new,state,a,current=self.fixture(directory)
+            controller=op.Operator(new,state,None,clock=lambda:current)
+            controller.prepare_recovery(old,a)
+            history=op.bounded_json(state.path.with_suffix(".recovery1.predecessor.json"))
+            self.assertEqual(op.digest(op.canonical(history)),a["original_state_sha256"])
+            self.assertEqual(state.data["ledger"],history["ledger"])
+            self.assertEqual(state.data["operator_calls"],36)
+            self.assertEqual(state.data["client_token"],history["client_token"])
+            self.assertEqual(state.data["nonce"],history["nonce"])
+            self.assertTrue(history["launch_attempted"])
+            self.assertEqual(state.data["watchdog_reserved_reads"],100)
+            self.assertEqual(controller.ledger.caps["reads"],9900)
+            self.assertFalse(state.data["worker_allocation_issued"])
+            with self.assertRaises(op.OperatorError):controller.prepare_recovery(old,a)
+
+    def test_competing_recovery_publications_have_one_winner_and_no_dispatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            old,new,state,a,current=self.fixture(directory)
+            controllers=[op.Operator(new,op.State(state.path,op.bounded_json(state.path)),None,clock=lambda:current) for _ in range(8)]
+            def prepare(controller):
+                try:controller.prepare_recovery(old,a);return True
+                except op.OperatorError:return False
+            with ThreadPoolExecutor(max_workers=8) as pool:results=list(pool.map(prepare,controllers))
+            self.assertEqual(sum(results),1)
+            saved=op.bounded_json(state.path)
+            self.assertFalse(saved['recovery1']['dispatch_attempted'])
+            self.assertEqual(saved['operator_calls'],36)
+            self.assertEqual(saved['ledger']['reads'],30)
+            self.assertEqual(state.path.with_suffix('.recovery1.predecessor.json').stat().st_mode&0o777,0o600)
+
+    def test_invalid_recovery_binding_worker_or_budget_never_mutates(self):
+        for mutation in ("state","config","review","quiescence","worker","used","time","scope"):
+            with self.subTest(mutation=mutation),tempfile.TemporaryDirectory() as directory:
+                old,new,state,a,current=self.fixture(directory)
+                if mutation=="state":a["original_state_sha256"]="f"*64
+                if mutation=="config":a["reviewed_config_sha256"]="f"*64
+                if mutation=="review":a["native_review_receipt_sha256"]="f"*64
+                if mutation=="quiescence":a["original_operator_and_watchdog_quiescent"]=False
+                if mutation=="worker":state.data["worker_allocation_issued"]=True
+                if mutation=="used":state.data["ledger"]["reads"]=9901
+                if mutation=="time":a["retry_deadline_ms"]=current+7200001
+                if mutation=="scope":a["extra"]=True
+                before=op.canonical(state.data)
+                with self.assertRaises(op.OperatorError):op.Operator(new,state,None,clock=lambda:current).prepare_recovery(old,a)
+                self.assertEqual(op.canonical(state.data),before)
+                self.assertFalse(state.path.with_suffix(".recovery1.claim.json").exists())
+
+class RecoveryRunner:
+    """Offline owned resource peer. No credential lookup or external connection."""
+    def __init__(self, config, state, mode="zero"):
+        self.config,self.state,self.mode=config,state,mode
+        self.calls=[];self.launches=0
+    def call(self,service,action,args):
+        self.calls.append((service,action,list(args)))
+        c,s=self.config,self.state
+        tags=[{"Key":"RunId","Value":c["run_id"]},{"Key":"Purpose","Value":"synthetic-benchmark-only"}]
+        role={"RoleName":c["role"],"Arn":s["resources"]["role"],"Tags":tags}
+        host={"InstanceId":"i-0123456789abcdef0","ClientToken":s["client_token"],"Tags":tags}
+        if action=="get-caller-identity":return {"Account":c["account"]}
+        if action=="describe-instances":
+            if self.mode=="unknown":raise op.OperatorError("AWS action failed; outcome unknown")
+            rows=[] if self.mode in {'local','mismatch'} else [host] if self.mode in {"one","foreign","different"} or self.launches else [host,dict(host,InstanceId="i-11111111111111111")] if self.mode=="multiple" else []
+            if self.mode=="foreign":rows=[dict(host,Tags=[])]
+            if self.mode=="different" and any('tag:RunId' in arg for arg in args):rows=[]
+            return {"Reservations":[{"Instances":rows}]} if rows else {"Reservations":[]}
+        if action=="describe-volumes":return {"Volumes":[]}
+        if action=="describe-images":return {"Images":[{"ImageId":c["ami"],"OwnerId":"099720109477","Public":True,"State":"available","Architecture":"x86_64","RootDeviceName":"/dev/sda1","VirtualizationType":"hvm"}]}
+        if action=="describe-subnets":return {"Subnets":[{"SubnetId":c["subnet"],"VpcId":c["vpc"],"State":"available","MapPublicIpOnLaunch":True}]}
+        if action=="describe-security-groups":return {"SecurityGroups":[{"GroupId":s["resources"]["sg"],"GroupName":c["security_group"],"VpcId":c["vpc"],"IpPermissions":[],"IpPermissionsEgress":[],"Tags":[] if self.mode=="bad-sg" else tags}]}
+        if action=="get-role":return {"Role":role}
+        if action=="get-instance-profile":return {"InstanceProfile":{"Arn":"arn:aws:iam::"+c["account"]+":instance-profile/"+c["role"],"Tags":tags,"Roles":[role]}}
+        if action=="get-bucket-location":return {"LocationConstraint":c["region"]}
+        if action=="get-bucket-versioning":return {"Status":"Enabled"}
+        if action=="get-public-access-block":return {"PublicAccessBlockConfiguration":{k:True for k in ("BlockPublicAcls","IgnorePublicAcls","BlockPublicPolicy","RestrictPublicBuckets")}}
+        if action=="get-bucket-encryption":return {"ServerSideEncryptionConfiguration":{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}}
+        if action=="run-instances":
+            assert args.count('--count')==1 and args[args.index('--count')+1]=='1'
+            assert args[args.index('--client-token')+1]==s['client_token']
+            self.launches+=1
+            if self.mode=="mismatch":raise op.LaunchIdempotencyMismatch("launch idempotency mismatch; no replacement token")
+            if self.mode=="local":raise op.LocalCliParsingRejected("local CLI parsing rejected; request not dispatched")
+            if self.mode=="lost":raise op.OperatorError("AWS action failed; outcome unknown")
+            return {"Instances":[host]}
+        raise AssertionError("unexpected peer action "+action)
+
+
+class RecoveryDispatchTests(RecoveryTests):
+    def test_zero_owned_inventory_permits_one_original_token_launch_without_new_resources(self):
+        with tempfile.TemporaryDirectory() as directory:
+            old,new,state,a,current=self.fixture(directory);runner=RecoveryRunner(new,state.data)
+            controller=op.Operator(new,state,runner,clock=lambda:current);controller.prepare_recovery(old,a)
+            result=controller.resume_failed_creation()
+            self.assertEqual(result['status'],'recovery_host_acknowledged')
+            self.assertEqual(runner.launches,1)
+            self.assertEqual(state.data['operator_calls'],36+len(runner.calls))
+            self.assertEqual(state.data['ledger']['download'],4718592+131072*len(runner.calls))
+            self.assertEqual(state.data['ledger']['store'],0)
+            self.assertFalse(state.data['worker_allocation_issued'])
+            self.assertFalse(any(action.startswith('create-') or action=='send-command' for _,action,_ in runner.calls))
+            before=len(runner.calls)
+            with self.assertRaises(op.OperatorError):controller.resume_failed_creation()
+            self.assertEqual(len(runner.calls),before)
+
+    def test_existing_unknown_multiple_foreign_or_disagreeing_inventory_never_launches(self):
+        for mode in ('one','unknown','multiple','foreign','different','bad-sg'):
+            with self.subTest(mode=mode),tempfile.TemporaryDirectory() as directory:
+                old,new,state,a,current=self.fixture(directory);runner=RecoveryRunner(new,state.data,mode)
+                controller=op.Operator(new,state,runner,clock=lambda:current);controller.prepare_recovery(old,a)
+                if mode=='one':self.assertEqual(controller.resume_failed_creation()['status'],'existing_owned_host_cleanup_required')
+                else:
+                    with self.assertRaises(op.OperatorError):controller.resume_failed_creation()
+                self.assertEqual(runner.launches,0)
+                self.assertFalse(any(action.startswith(('create-','delete-')) for _,action,_ in runner.calls))
+
+    def test_mismatch_and_local_rejection_preserve_old_unknown_and_never_relaunch(self):
+        for mode,expected in [('mismatch','idempotency_mismatch'),('local','local_cli_rejected')]:
+            with self.subTest(mode=mode),tempfile.TemporaryDirectory() as directory:
+                old,new,state,a,current=self.fixture(directory);runner=RecoveryRunner(new,state.data,mode)
+                controller=op.Operator(new,state,runner,clock=lambda:current);controller.prepare_recovery(old,a)
+                with self.assertRaises(op.OperatorError):controller.resume_failed_creation()
+                self.assertTrue(state.data['launch_attempted'])
+                self.assertEqual(state.data['current_launch_outcome'],expected)
+                self.assertTrue(op.bounded_json(state.path.with_suffix('.recovery1.predecessor.json'))['launch_attempted'])
+                with self.assertRaises(op.OperatorError):controller.resume_failed_creation()
+                self.assertEqual(runner.launches,1)
+
+    def test_lost_launch_response_reconciles_only_and_keeps_same_charge(self):
+        with tempfile.TemporaryDirectory() as directory:
+            old,new,state,a,current=self.fixture(directory);runner=RecoveryRunner(new,state.data,'lost')
+            controller=op.Operator(new,state,runner,clock=lambda:current);controller.prepare_recovery(old,a)
+            self.assertEqual(controller.resume_failed_creation()['status'],'recovery_host_acknowledged')
+            self.assertEqual(runner.launches,1)
+            self.assertEqual(sum(action=='describe-instances' for _,action,_ in runner.calls),3)
+
+    def test_current_absence_cleanup_does_not_override_new_uncertain_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            old,new,state,a,current=self.fixture(directory);runner=RecoveryRunner(new,state.data,'unknown')
+            controller=op.Operator(new,state,runner,clock=lambda:current);controller.prepare_recovery(old,a)
+            state.data['recovery1']['dispatch_attempted']=True;state.data['current_launch_outcome']='unknown'
+            with self.assertRaises(op.OperatorError):controller.cleanup()
+            self.assertFalse(any(action.startswith('delete-') for _,action,_ in runner.calls))
+            self.assertNotIn('current_absence_cleanup',state.data['recovery1'])
+
+    def test_fresh_local_parse_rejection_cannot_become_unknown_dispatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            old,new,state,a,current=self.fixture(directory);state.data['launch_attempted']=False
+            runner=RecoveryRunner(new,state.data,'local');controller=op.Operator(new,state,runner,clock=lambda:current)
+            state.data['deadline_ms']=current+7200000
+            with self.assertRaises(op.LocalCliParsingRejected):controller.launch_once(state.data['resources']['sg'],b'fake')
+            self.assertFalse(state.data['launch_attempted'])
+            self.assertEqual(state.data['current_launch_outcome'],'local_cli_rejected')
+
+
+def offline_launch_oracle(binary):
+    """Validate actual source arguments with the installed CLI, never an API."""
+    import base64,gzip,os,subprocess
+    with tempfile.TemporaryDirectory(prefix='s09-offline-launch-') as directory:
+        old,config,state,a,current=RecoveryTests().fixture(directory)
+        controller=op.Operator(config,state,None,clock=lambda:current)
+        userdata=controller.render_bootstrap()
+        assert len(userdata)<=16384 and len(gzip.decompress(userdata))<=65536
+        args=controller.launch_arguments(state.data['resources']['sg'],userdata)
+        assert '--min-count' not in args and '--max-count' not in args and args.count('--count')==1
+        assert base64.b64decode(args[args.index('--user-data')+1],validate=True)==userdata
+        root=Path(directory);(root/'config').write_text('[profile s09-offline]\nregion=ap-northeast-2\n');(root/'credentials').write_text('[s09-offline]\naws_access_key_id=dummy\naws_secret_access_key=dummy\n')
+        env={k:v for k,v in os.environ.items() if not k.startswith('AWS_')}
+        env.update(AWS_CONFIG_FILE=str(root/'config'),AWS_SHARED_CREDENTIALS_FILE=str(root/'credentials'),AWS_EC2_METADATA_DISABLED='true',AWS_MAX_ATTEMPTS='1',AWS_PAGER='',AWS_CLI_AUTO_PROMPT='off',AWS_ENDPOINT_URL_EC2='http://127.0.0.1:9')
+        version=subprocess.run([binary,'--version'],env=env,capture_output=True,timeout=8)
+        assert version.returncode==0 and len(version.stdout)+len(version.stderr)<=131072
+        base=[binary,'--profile','s09-offline','--region','ap-northeast-2','--no-cli-pager','--no-paginate','--cli-connect-timeout','1','--cli-read-timeout','4','--cli-binary-format','base64','ec2','run-instances']
+        malformed=list(args);position=malformed.index('--network-interfaces')+1;interfaces=json.loads(malformed[position]);interfaces[0]['UnexpectedS09Field']=True;malformed[position]=json.dumps(interfaces)
+        obsolete=list(args);position=obsolete.index('--count');obsolete[position:position+2]=['--min-count','1','--max-count','1']
+        results=[]
+        for name,candidate in [('current',args),('obsolete',obsolete),('malformed-nested',malformed)]:
+            result=subprocess.run(base+candidate+['--generate-cli-skeleton','output','--output','json'],env=env,capture_output=True,timeout=8)
+            assert len(result.stdout)+len(result.stderr)<=131072
+            if name=='current':assert result.returncode==0 and isinstance(json.loads(result.stdout),dict)
+            elif name=='obsolete':assert result.returncode==252 and b'Unknown options:' in result.stderr
+            else:assert result.returncode!=0 and b'Unknown parameter' in result.stderr
+            results.append({'case':name,'exit':result.returncode,'stdout_bytes':len(result.stdout),'stderr_bytes':len(result.stderr)})
+        return {'status':'PASS_offline_source_launch_oracle','version':version.stdout.decode().strip(),'cases':results,'payload_sha256':op.digest(userdata),'payload_bytes':len(userdata),'actual_AWS_IMDS_calls':0,'live_semantics_verified':False}
+
 # Unit invocation above must occur after all definitions.
 
 if __name__ == "__main__":
     import sys
-    if sys.argv[1:]==["--functional-smoke"]: print(json.dumps(functional_smoke(),sort_keys=True))
+    if len(sys.argv)==3 and sys.argv[1]=="--recovery-failure-functional-smoke": print(json.dumps(functional_smoke(recovery=True,recovery_fault=sys.argv[2]),sort_keys=True))
+    elif sys.argv[1:]==["--recovery-functional-smoke"]: print(json.dumps(functional_smoke(recovery=True),sort_keys=True))
+    elif sys.argv[1:]==["--functional-smoke"]: print(json.dumps(functional_smoke(),sort_keys=True))
+    elif len(sys.argv)==3 and sys.argv[1]=="--offline-launch-oracle": print(json.dumps(offline_launch_oracle(sys.argv[2]),sort_keys=True))
     elif sys.argv[1:]==["--cleanup-functional-smoke"]: print(json.dumps(cleanup_functional_smoke(),sort_keys=True))
     elif sys.argv[1:]==["--failure-functional-smoke"]: print(json.dumps(failure_functional_smoke(),sort_keys=True))
     elif len(sys.argv)==3 and sys.argv[1]=="--compiled-worker": print(json.dumps(compiled_worker_handshake(sys.argv[2]),sort_keys=True))
