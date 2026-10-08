@@ -1,5 +1,5 @@
 {
-  "pages": 6,
+  "pages": 7,
   "schema": 1,
   "task": "S09",
   "date": "2026-10-08",
@@ -22,8 +22,18 @@
   "effective_config_sha256": "3191efbfb008435b121aaa0e250609887f27af04aeb8f8fa12ef1c116bc32d31",
   "report_sha256": "5bb9ed3f502a8311ab8af32ea20d6f251454a4b8eea56ce59f92d8d970132a74",
   "live_driver_sha256": "2dfdba96eb00bde2834b34e7c29bbb5ca2de88dbf33a84c195100092851bfd8b",
-  "operator_sha256": "d234d8ecaec688c478572cfe81277ee3dc2c6f39e399a46374400ed7a8c86d75",
-  "source_sha256": "c543da616292fd7980408084a001d0fdaa561ad10fafda69adc0728480a7e0b4",
-  "pdf_sha256": "02ea02b421c69779b55b2be9a9196f3ceaafacf33b91c1b69a295f7bc5cbefb3",
-  "screenshot_sha256": "b71e07ed6bce725f7ea34f81d60dc59f345ad2562a709a3db16edc2c0ef4f886"
+  "operator_sha256": "0cc378ce12f0e4659940c68e44c445b2777db60e3aacaf7588c28a536223adfc",
+  "source_sha256": "33e52e143fd987a554405b901e9e090d198408ceebb1533f279f46b5a8d06acc",
+  "pdf_sha256": "58b6ec32c9b6f9fa41ea9ce19fad673e064a7cf8262797e70e123b7e0fb454d5",
+  "screenshot_sha256": "b71e07ed6bce725f7ea34f81d60dc59f345ad2562a709a3db16edc2c0ef4f886",
+  "operator_console_boundary_check": {
+    "command": "python3 server2/deploy/benchmark/test_aws_operator.py --cli-console-functional-smoke /opt/homebrew/bin/aws",
+    "version": "aws-cli/2.36.31 Python/3.14.7 Darwin/25.6.0 source/arm64",
+    "scope": "actual installed CLI against loopback EC2 XML; no live AWS/IMDS",
+    "result": "PASS",
+    "loopback_requests": 1,
+    "API_base64_to_CLI_decoded_text": true,
+    "live_guard_verified": false,
+    "workload_capture_reused": true
+  }
 }

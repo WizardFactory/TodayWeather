@@ -2,7 +2,7 @@
 
 ## What this delivery measures
 
-This tool exercises the actual Rust raw store, catalog, resolver and funded-acquisition libraries against fresh volatile HTTP peers. It measures synthetic origin work, not a deployed weather route. The local runner calls no real AWS/providers. A separately armed approved driver can use one dedicated same-region test bucket after eligible review. This delivery has not executed that mode and proves no API parity, CloudFront latency, actual IAM/TLS or intended-host musl feasibility. S09 remains open: same-region intended-host measurements and O-2/O-5 decisions still block S10/S13.
+This tool exercises the actual Rust raw store, catalog, resolver and funded-acquisition libraries against fresh volatile HTTP peers. It measures synthetic origin work, not a deployed weather route. The local runner calls no real AWS/providers. A separately armed approved driver can use one dedicated same-region test bucket after eligible review. The approved recovery attempted host creation once but stopped on the console-output boundary before any worker allocation or measurement. Root subsequently verified owned cleanup. This proves no API parity, CloudFront latency, measurement-path IAM/TLS or intended-host musl feasibility. S09 remains open: same-region intended-host measurements and O-2/O-5 decisions still block S10/S13.
 
 ## Run an isolated release measurement
 
@@ -44,13 +44,13 @@ Warmup view timings are separate from foreground parse/assembly totals. Process-
 
 Provider modes run real local S08 reservation/executor code through a benchmark-only adapter. Data receives raw+descriptor+catalog publication before client success, followed by a fresh S3-only lookup that checks exact bytes. NoData/code 03 remains RAM-only and terminal. Funding denial and provider errors cannot archive weather raw/group/catalog objects; their zero PUT fence is validated independently of allowed budget writes. Denial makes zero provider calls. This fixture seam does not deliver a production S07/S08 provider adapter or weather semantics.
 
-Every report retains requires_intended_host_and_same_region_measurements, pending_O2, pending_O5, api_parity_verified=false and production_cutover_authorized=false. A fast local result cannot change these gates. The fixed resource scope is approved, but creation and live measurement wait for frozen tooling and an eligible review. The local CLI has no live fallback.
+Every report retains requires_intended_host_and_same_region_measurements, pending_O2, pending_O5, api_parity_verified=false and production_cutover_authorized=false. A fast local result cannot change these gates. The fixed resource scope is approved; any separately authorized execution still requires frozen tooling and an eligible review. The local CLI has no live fallback.
 
 ## Verification and references
 
 Regression tests cover failure-inclusive quantiles, null/unavailable denominators, RSS units, target/budget bounds, cold/idle-warm HTTP, orphan siblings, actual eight-day identities, admission pressure and funded Data/NoData/denial/error fences. The distinct release runner supplies the usage capture below. Its low-sample results demonstrate tool behavior only. Existing S05-S08 tests and placement/artifact checks remain required.
 
-See the [architecture](../architecture/server2.md), [task specification](../../specs/issue-2694.md). No live host or AWS run is asserted by this manual.
+See the [architecture](../architecture/server2.md), [task specification](../../specs/issue-2694.md). The separately linked root execution/cleanup observation below is an actual control-plane attempt, not a successful benchmark.
 
 ## Approved driver and operator boundary
 
@@ -134,11 +134,11 @@ The cleanup-only total 15 permission, later ordinal 11 stop and ordinal 12 PR-on
 
 Use --resume-failed-creation with --config, --original-config, --state, --authorization and --recovery-authority. Root prepares private inputs after exact-head CI and eligible review. Do not use --execute-reviewed-run or a fresh state to retry: they would create a new run. The original run/token/nonce and acknowledged bucket/role/profile/SG are retained. The exact recovery authority binds canonical original state/config hashes, reviewed new config/source/review, user approval receipt and root-attested quiescence of the original operator/watchdog. Wrong pins, changed resources, an issued worker allocation, exhausted usage or replay are refused.
 
-Exclusive predecessor files with mode 0600 and and recovery claim files preserve original deadline/config and UNKNOWN. The new deadline is at most two hours from retry start and the unchanged approval expiry. One additional 50-call watchdog reservation comes from the same global controller caps; original calls/download/version charges and the3 GiB bootstrap reservation are not reset. Recovery watchdog files use distinct attempt 1 names.
+Exclusive predecessor files with mode 0600 and recovery claim files preserve original deadline/config and UNKNOWN. The new deadline is at most two hours from retry start and the unchanged approval expiry. One additional 50-call watchdog reservation comes from the same global controller caps; original calls/download/version charges and the3 GiB bootstrap reservation are not reset. Recovery watchdog files use distinct attempt 1 names.
 
 Current token/RunId host inventories must agree. One owned host receives cleanup only and emits an explicit no-measurement result; it never adopts an old/expired guard for new measurement. Zero hosts plus zero tagged volumes and verified original closed SG/IAM/profile/private-versioned-encrypted bucket permit exactly one --count 1 launch with the original token. Multiple, foreign, mismatched or unknown inventories stop. IdempotentParameterMismatch never permits a replacement token or another launch. A lost response is reconciled only against the original token.
 
-New local exit 252/mismatch or prelaunch failure does not erase historical UNKNOWN. Explicit current-absence cleanup authority permits deletion of only acknowledged IAM/profile/SG after fresh zero token/tag/volume inventories and exact ownership/dependency checks. A newly uncertain sent retry cannot use that cleanup path. S3 and every version remain retained; current cleanup is not retrospective proof that the discarded original CLI result was unsent. Until actual root execution reconciles the live outcome, no cleanup or feasibility success is claimed.
+New local exit 252/mismatch or prelaunch failure does not erase historical UNKNOWN. Explicit current-absence cleanup authority permits deletion of only acknowledged IAM/profile/SG after fresh zero token/tag/volume inventories and exact ownership/dependency checks. A newly uncertain sent retry cannot use that cleanup path. S3 and every version remain retained; current cleanup is not retrospective proof that the discarded original CLI result was unsent. Root reconciled the recovery13 cleanup as described below; that timestamped observation does not establish feasibility or authorize another launch.
 
 Local verification commands:
 
@@ -151,3 +151,18 @@ python3 server2/deploy/benchmark/test_aws_operator.py --recovery-failure-functio
 ```
 
 The offline oracle uses temporary dummy credentials and disabled IMDS to validate complete source-generated args and bounded gzip through the installed CLI's skeleton. It proves parsing/SDK shape only, not EC2/idempotency/IAM acceptance. Functional checks use actual fake CLI subprocesses and isolated loopback peers. They verify retained usage, one launch, replay rejection and current owned cleanup while preserving original UNKNOWN, with actual AWS/IMDS0. The existing release workload image below remains a separate local workload demonstration; it is not a screenshot of real AWS recovery. S09 and intended-host/O2/O5 gates remain open.
+
+
+## Console-output response contract and recovery13 outcome
+
+[AWS CLI get-console-output](https://docs.aws.amazon.com/cli/latest/reference/ec2/get-console-output.html) decodes the API's base64 Output before returning its JSON string. The operator accepts that string directly, never decodes it again and never guesses an encoding. A response must be an object; absent Output means an empty console still awaiting proof, while non-string Output, invalid Unicode or text exceeding 65,536 UTF-8 bytes fails closed. The existing stock guard identity, unique proof, status, deadline and readiness checks still precede egress and SSM. Decoded ordinary boot text alone is not guard proof.
+
+[Root's actual recovery13 record](https://github.com/WizardFactory/TodayWeather/pull/2722#issuecomment-6061548444): one original-state launch began at 2026-10-08T13:48:27Z. The first nonempty CLI output contained ordinary Linux boot text, 65,535 UTF-8 bytes, with neither guard-success nor guard-failure marker. The obsolete second decode raised console encoding before any worker grant; this was not a verified stock-guard failure. Root completed cleanup at 13:54:50Z and the 13:56:40Z readback found the instance terminated, no tagged volumes, and the owned SG/role/profile absent. The retained bucket had zero versions. Measurements and O-2/O-5 remain outstanding. This code-only correction14 authorizes no further AWS dispatch.
+
+The earlier 42-command offline skeleton check validated input options and SDK shapes but did not exercise response customizations. The additional maintained check uses the installed CLI against a literal loopback EC2 XML peer, temporary dummy credentials and disabled IMDS:
+
+```text
+python3 server2/deploy/benchmark/test_aws_operator.py --cli-console-functional-smoke /opt/homebrew/bin/aws
+```
+
+It verifies one API-base64 response becomes plain CLI text, then checks a valid guard proof and rejects duplicate, wrong-status and wrong-identity proofs. Unit regressions include exact text/UTF-8 limits and a run_host check proving decoded boot output reaches the existing SSM version refusal. These local checks do not verify a live guard, host-musl build or S3 measurement. The workload capture below is retained historical local release evidence, not a screenshot of recovery13.

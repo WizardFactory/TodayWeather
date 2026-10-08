@@ -216,6 +216,26 @@ class State:
                 os.close(fd)
 
 
+def cli_console_text(result):
+    """AWS CLI get-console-output already decodes the API's base64 Output."""
+    if not isinstance(result, dict):
+        raise OperatorError("console response schema")
+    output = result.get("Output", "")
+    if not isinstance(output, str):
+        raise OperatorError("console output type")
+    # Match the guard parser's exact UTF-8 byte cap, before looking for markers.
+    # Never decode heuristically: encoded-looking text remains ordinary text.
+    if len(output) > 65536:
+        raise OperatorError("console output bound")
+    try:
+        length = len(output.encode("utf-8"))
+    except UnicodeError:
+        raise OperatorError("console output encoding") from None
+    if length > 65536:
+        raise OperatorError("console output bound")
+    return output
+
+
 def verify_guard(output, expected, now_ms=None):
     if not isinstance(output, str) or len(output.encode()) > 65536:
         raise OperatorError("console output bound")
@@ -716,10 +736,7 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
         guard_deadline=min(self.clock()+300000,self.state.data["deadline_ms"])
         while self.clock()<guard_deadline:
             result=self.call("ec2","get-console-output",["--instance-id",instance,"--latest"])
-            encoded=result.get("Output","")
-            if len(encoded)>90000: raise OperatorError("console bound")
-            try: console=base64.b64decode(encoded,validate=True).decode("utf-8")
-            except (ValueError,UnicodeError): raise OperatorError("console encoding") from None
+            console=cli_console_text(result)
             if "S09_GUARD_FAILED" in console: raise OperatorError("stock guard failed")
             if "S09_GUARD_V1 " in console:
                 self.open_https_after_guard(console); break

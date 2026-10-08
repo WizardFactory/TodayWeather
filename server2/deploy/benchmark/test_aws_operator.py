@@ -14,6 +14,32 @@ spec.loader.exec_module(op)
 
 CAPS = {"reads": 4, "writes": 3, "download": 200000, "store": 40000}
 
+class ConsoleOutputTests(unittest.TestCase):
+    def test_decoded_text_and_missing_output_are_not_decoded_again(self):
+        text = "Linux boot text\nS09_GUARD_V1 fixture\n\uac00"
+        self.assertEqual(op.cli_console_text({"Output":text}),text)
+        self.assertEqual(op.cli_console_text({}),"")
+        self.assertEqual(op.cli_console_text({"Output":""}),"")
+        self.assertEqual(op.cli_console_text({"Output":"U09fR1VBUkRfVjEgZml4dHVyZQ=="}),"U09fR1VBUkRfVjEgZml4dHVyZQ==")
+
+    def test_schema_and_exact_utf8_byte_bound_fail_closed(self):
+        self.assertEqual(len(op.cli_console_text({"Output":"x"*65536})),65536)
+        self.assertEqual(op.cli_console_text({"Output":"\uac00"*21845+"x"}),"\uac00"*21845+"x")
+        for value in (None,[],"text",{"Output":None},{"Output":False},{"Output":1},{"Output":{}},{"Output":"x"*65537},{"Output":"\uac00"*21845+"xx"},{"Output":"\ud800"}):
+            with self.subTest(value_type=type(value).__name__),self.assertRaises(op.OperatorError):op.cli_console_text(value)
+
+    def test_invalid_console_never_reaches_guard_opening_or_ssm(self):
+        for response in ({"Output":None},{"Output":"x"*65537},{"Output":"S09_GUARD_FAILED fixture"}):
+            with tempfile.TemporaryDirectory(prefix="s09-console-reject-") as directory:
+                controller=WorkerEvidenceTests().controller(Path(directory));actions=[]
+                controller.verify_host_root=lambda:None
+                controller.call=lambda service,action,args:actions.append(action) or response
+                controller.open_https_after_guard=lambda _:self.fail("invalid console opened egress")
+                with self.assertRaises(op.OperatorError):controller.run_host()
+                self.assertEqual(actions,["get-console-output"])
+                self.assertNotIn("worker_allocation_issued",controller.state.data)
+
+
 class LedgerTests(unittest.TestCase):
     def test_read_plus_one_denied_without_charge_or_dispatch(self):
         ledger = op.Ledger(CAPS)
@@ -194,14 +220,13 @@ class WorkerEvidenceTests(unittest.TestCase):
                 self.assertEqual(controller.state.data["stock_SSM_agent_version"],version)
 
     def test_old_online_agent_blocks_runcommand_and_allocation(self):
-        import base64
         with tempfile.TemporaryDirectory(prefix="s09-online-agent-") as temp:
             controller=self.controller(Path(temp));actions=[]
             controller.verify_host_root=lambda:None
             controller.open_https_after_guard=lambda _:None
             def call(service,action,args):
                 actions.append(action)
-                if action=="get-console-output":return {"Output":base64.b64encode(b"S09_GUARD_V1 fixture").decode()}
+                if action=="get-console-output":return {"Output":"Linux boot text\nS09_GUARD_V1 fixture"}
                 if action=="describe-instance-information":return {"InstanceInformationList":[{"PingStatus":"Online","AgentVersion":"3.3.39.0"}]}
                 raise AssertionError("RunCommand before supported stock agent")
             controller.call=call
@@ -999,6 +1024,49 @@ def offline_launch_oracle(binary):
             results.append({'case':name,'exit':result.returncode,'stdout_bytes':len(result.stdout),'stderr_bytes':len(result.stderr)})
         return {'status':'PASS_offline_source_launch_oracle','version':version.stdout.decode().strip(),'cases':results,'payload_sha256':op.digest(userdata),'payload_bytes':len(userdata),'actual_AWS_IMDS_calls':0,'live_semantics_verified':False}
 
+def cli_console_functional_smoke(binary):
+    """Actual CLI response customization on loopback only; no live credentials."""
+    import base64, http.server, os, subprocess
+    current=op.now_ms()
+    proof={"run_id":"s09-console-local","instance_id":"i-0123456789abcdef0","source_revision":"a"*40,"deadline_ms":current+60000,"status":"guarded","timer_active":True,"nft_active":True,"ssm_present":True,"observed_before_guard_bytes":0}
+    text="[    0.0] Linux boot text\nS09_GUARD_V1 "+json.dumps(proof,separators=(',',':'))+"\n"
+    wire=base64.b64encode(text.encode()).decode()
+    requests=[]
+    class Peer(http.server.BaseHTTPRequestHandler):
+        def log_message(self,*_):pass
+        def do_POST(self):
+            length=int(self.headers.get('Content-Length','0'));assert 0<length<=8192
+            body=self.rfile.read(length)
+            from urllib.parse import parse_qs
+            query=parse_qs(body.decode());assert query['Action']==['GetConsoleOutput'] and query['InstanceId']==['i-0123456789abcdef0']
+            requests.append({'action':'GetConsoleOutput','bytes':length})
+            xml=('<GetConsoleOutputResponse xmlns="http://ec2.amazonaws.com/doc/2016-11-15/"><requestId>fixture</requestId><instanceId>i-0123456789abcdef0</instanceId><timestamp>2026-10-08T00:00:00Z</timestamp><output>'+wire+'</output></GetConsoleOutputResponse>').encode()
+            self.send_response(200);self.send_header('Content-Type','text/xml');self.send_header('Content-Length',str(len(xml)));self.end_headers();self.wfile.write(xml)
+    peer=http.server.ThreadingHTTPServer(('127.0.0.1',0),Peer);thread=threading.Thread(target=peer.serve_forever,daemon=True);thread.start()
+    try:
+        with tempfile.TemporaryDirectory(prefix='s09-console-cli-') as directory:
+            root=Path(directory);(root/'config').write_text('[profile s09-console]\nregion=ap-northeast-2\n');(root/'credentials').write_text('[s09-console]\naws_access_key_id=dummy\naws_secret_access_key=dummy\n')
+            env={k:v for k,v in os.environ.items() if not k.startswith('AWS_')}
+            env.update(AWS_CONFIG_FILE=str(root/'config'),AWS_SHARED_CREDENTIALS_FILE=str(root/'credentials'),AWS_EC2_METADATA_DISABLED='true',AWS_MAX_ATTEMPTS='1',AWS_PAGER='',AWS_CLI_AUTO_PROMPT='off',AWS_IGNORE_CONFIGURED_ENDPOINT_URLS='true')
+            version=subprocess.run([binary,'--version'],env=env,capture_output=True,timeout=8)
+            assert version.returncode==0 and len(version.stdout)+len(version.stderr)<=131072
+            command=[binary,'--profile','s09-console','--region','ap-northeast-2','--no-cli-pager','--no-paginate','--cli-connect-timeout','1','--cli-read-timeout','4','--cli-binary-format','base64','ec2','get-console-output','--instance-id','i-0123456789abcdef0','--latest','--endpoint-url',f'http://127.0.0.1:{peer.server_port}','--output','json']
+            result=subprocess.run(command,env=env,capture_output=True,timeout=8)
+            assert result.returncode==0 and len(result.stdout)+len(result.stderr)<=131072
+            reply=json.loads(result.stdout);assert reply['Output']==text and reply['Output']!=wire
+            console=op.cli_console_text(reply)
+            expected={key:proof[key] for key in ('run_id','instance_id','source_revision','deadline_ms')}
+            assert op.verify_guard(console,expected,current)==proof
+            for invalid in (console+console,console.replace('"status":"guarded"','"status":"failed"'),console.replace('s09-console-local','other-run')):
+                try:op.verify_guard(invalid,expected,current)
+                except op.OperatorError:pass
+                else:raise AssertionError('invalid proof accepted')
+            assert len(requests)==1
+            return {'status':'PASS_actual_CLI_console_response_transform','version':version.stdout.decode().strip(),'CLI_exit':result.returncode,'wire_encoding':'base64 XML API output','CLI_Output':'decoded UTF8 text, no second decode','console_bytes':len(console.encode()),'valid_guard_verified':True,'invalid_duplicate_status_identity_rejected':True,'loopback_requests':len(requests),'actual_AWS_IMDS_calls':0,'live_host_gate':False}
+    finally:
+        peer.shutdown();peer.server_close();thread.join(timeout=2)
+
+
 # Unit invocation above must occur after all definitions.
 
 if __name__ == "__main__":
@@ -1006,6 +1074,7 @@ if __name__ == "__main__":
     if len(sys.argv)==3 and sys.argv[1]=="--recovery-failure-functional-smoke": print(json.dumps(functional_smoke(recovery=True,recovery_fault=sys.argv[2]),sort_keys=True))
     elif sys.argv[1:]==["--recovery-functional-smoke"]: print(json.dumps(functional_smoke(recovery=True),sort_keys=True))
     elif sys.argv[1:]==["--functional-smoke"]: print(json.dumps(functional_smoke(),sort_keys=True))
+    elif len(sys.argv)==3 and sys.argv[1]=="--cli-console-functional-smoke": print(json.dumps(cli_console_functional_smoke(sys.argv[2]),sort_keys=True))
     elif len(sys.argv)==3 and sys.argv[1]=="--offline-launch-oracle": print(json.dumps(offline_launch_oracle(sys.argv[2]),sort_keys=True))
     elif sys.argv[1:]==["--cleanup-functional-smoke"]: print(json.dumps(cleanup_functional_smoke(),sort_keys=True))
     elif sys.argv[1:]==["--failure-functional-smoke"]: print(json.dumps(failure_functional_smoke(),sort_keys=True))

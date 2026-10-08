@@ -129,6 +129,15 @@ replacement token after an idempotency mismatch. The recovery deadline is bounde
 by two hours and the original approval expiry. Cleanup verifies current ownership,
 retains S3 versions, and records unresolved evidence separately from live results.
 
+That [one recovery was executed](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6061547104)
+on 2026-10-08 at 13:48:27Z. Host creation succeeded, but the operator decoded
+already-decoded CLI console text as Base64 and stopped before worker admission.
+Automatic cleanup completed at 13:54:50Z; separate AWS readback confirmed the
+terminated host, no root volume or IAM/profile/security-group resources, and
+the preserved empty S3 bucket. Correct the bounded CLI text boundary and verify
+actual CLI response transformation offline. The recovery allowance is used; no
+further launch or measurement is authorized by this completed attempt.
+
 Local protocol measurements do not complete S09: actual same-region observations
 and O-2/O-5 disposition remain gates for S10 and S13. No route work is released by the merges.
 Passing local checks do not imply complete route parity or deployed server2.

@@ -978,6 +978,21 @@ recovery launch, verify the frozen source/configuration with independent QA and
 validate the complete launch argument list through the installed CLI's offline
 output-skeleton path. A fake CLI that accepts arbitrary flags is insufficient.
 
+The [one authorized recovery](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6061547104)
+launched an EC2 host at 2026-10-08T13:48:27Z using reviewed revision `87148f36`,
+but stopped before guard proof or worker admission with `console encoding`.
+AWS CLI already decodes `get-console-output.Output`; treating that text as
+Base64 again was an operator defect. The CLI boundary must accept only bounded
+UTF-8 text, without guessing an alternate encoding, and preserve the existing
+guard identity and readiness checks. Native CLI response transformation needs
+a separate regression check; an output-skeleton input check cannot prove it.
+Automatic cleanup completed at 13:54:50Z. A metered readback beginning 13:56:40Z
+confirmed the instance terminated, its root volume and IAM/profile/security-group
+resources absent, and the retained S3 bucket empty. No measurement ran. The
+recovery allowance is consumed; further launch or measurement requires a new
+explicit execution decision. The workflow's pinned source checkpoint describes
+the unchanged recovery lifecycle, not successful AWS measurement.
+
 The proposed run uses one dedicated nonproduction Seoul `c6i.large` for at most
 two hours and at most 60 minutes of synthetic load. Worker and controller share
 one aggregate limit: 400,000 GET/HEAD attempts, 20,000 PUT/LIST attempts,
