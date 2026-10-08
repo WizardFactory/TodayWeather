@@ -688,11 +688,93 @@ def compiled_worker_handshake(binary, fault=False, case_fault=False):
       peer.stdout.close();peer.stderr.close()
 
 
+
+class CleanupExceptionTests(unittest.TestCase):
+    def config(self):
+        return json.loads((HERE / "aws-run.json").read_text())
+
+    def test_local_parser_rejection_is_typed_and_sanitized(self):
+        with tempfile.TemporaryDirectory(prefix="s09-local-parser-") as temp:
+            fake=Path(temp)/"fake-aws"
+            fake.write_text("#!/usr/bin/env python3\nimport sys\nsys.stderr.write('usage: aws [options]\\nUnknown options: --min-count, PRIVATE_SENTINEL_403\\n')\nsys.exit(252)\n")
+            fake.chmod(0o700)
+            with self.assertRaises(op.OperatorError) as caught:
+                op.Cli(self.config(),str(fake)).call("ec2","describe-images",[])
+            self.assertEqual(str(caught.exception),"local CLI parsing rejected; request not dispatched")
+            self.assertEqual(type(caught.exception).__name__,"LocalCliParsingRejected")
+            for code,message in [(1,"Unknown options: PRIVATE_SENTINEL"),(252,"PRIVATE_SENTINEL transport disconnected")]:
+                fake.write_text("#!/usr/bin/env python3\nimport sys\nsys.stderr.write("+repr(message)+")\nsys.exit("+str(code)+")\n")
+                with self.assertRaises(op.OperatorError) as negative:
+                    op.Cli(self.config(),str(fake)).call("ec2","describe-images",[])
+                self.assertEqual(str(negative.exception),"AWS action failed; outcome unknown")
+                self.assertNotIn("PRIVATE_SENTINEL",str(negative.exception))
+
+    def test_unknown_launch_watchdog_never_claims_termination(self):
+        for rows in ([],[{"InstanceId":"i-00000000000000001"},{"InstanceId":"i-00000000000000002"}]):
+            config=self.config();actions=[]
+            class Runner:
+                def call(self,service,action,args):
+                    actions.append(action)
+                    return {"Reservations":[{"Instances":rows}]}
+            with tempfile.TemporaryDirectory(prefix="s09-watchdog-unknown-") as temp:
+                path=Path(temp)/"state.json"
+                path.write_text(json.dumps({"run_id":config["run_id"],"config_sha256":op.digest(op.canonical(config)),"deadline_ms":0,"launch_attempted":True,"client_token":"synthetic-only","resources":{}}))
+                op.watchdog(config,path,Runner())
+                report=json.loads(path.with_suffix(".watchdog-finish.json").read_text())
+                self.assertEqual(report["status"],"original_launch_unresolved")
+                self.assertEqual(report["actual_calls"],1)
+                self.assertEqual(actions,["describe-instances"])
+                self.assertFalse(report["host_absence_verified"])
+
+    def test_zero_multiple_unknown_cleanup_cannot_delete(self):
+        for rows in ([],[{"InstanceId":"i-00000000000000001"},{"InstanceId":"i-00000000000000002"}],None):
+            config=self.config();actions=[]
+            class Runner:
+                def call(self,service,action,args):
+                    actions.append(action)
+                    if rows is None: raise op.OperatorError("AWS action failed; outcome unknown")
+                    return {"Reservations":[{"Instances":rows}]}
+            with tempfile.TemporaryDirectory(prefix="s09-cleanup-fence-") as temp:
+                state=op.State.create(Path(temp)/"state.json",{"run_id":config["run_id"],"deadline_ms":op.EXPIRY,"launch_attempted":True,"client_token":"synthetic-only","resources":{"role":config["role"],"profile":config["role"],"sg":"sg-00000000000000001"},"worker_allocation_issued":False})
+                with self.assertRaises(op.OperatorError): op.Operator(config,state,Runner()).cleanup()
+                self.assertEqual(actions,["describe-instances"])
+                self.assertEqual(len(state.data["resources"]),3)
+                self.assertFalse(state.data["worker_allocation_issued"])
+                self.assertEqual(state.data["operator_calls"],1)
+
+
+def cleanup_functional_smoke():
+    """Actual fake CLI subprocess/watchdog cleanup path; no AWS or metadata."""
+    config=json.loads((HERE/"aws-run.json").read_text())
+    summaries=[]
+    with tempfile.TemporaryDirectory(prefix="s09-cleanup-functional-") as temp:
+        root=Path(temp);fake=root/"fake-aws";trace=root/"calls.jsonl"
+        fake.write_text("#!/usr/bin/env python3\nimport json,sys\nfrom pathlib import Path\na=sys.argv[1:];p=Path("+repr(str(trace))+ ")\nwith p.open('a') as f: f.write(json.dumps(a)+'\\n')\nif 'describe-images' in a:\n sys.stderr.write('Unknown options: PRIVATE_SENTINEL_403\\n');sys.exit(252)\nif 'describe-instances' in a:\n if '--instance-ids' in a: print(json.dumps({'Reservations':[{'Instances':[{'InstanceId':a[a.index('--instance-ids')+1],'Tags':[{'Key':'RunId','Value':"+repr(config['run_id'])+"}]}]}]}))\n else: print(json.dumps({'Reservations':[]}))\nelif 'terminate-instances' in a: print('{}')\nelse: raise RuntimeError('unexpected action')\n")
+        fake.chmod(0o700);runner=op.Cli(config,str(fake))
+        try: runner.call("ec2","describe-images",[])
+        except op.LocalCliParsingRejected as error:
+            assert str(error)=="local CLI parsing rejected; request not dispatched"
+        else: raise AssertionError("local parse not classified")
+        for mode,resources,attempted,expected in [("unknown",{},True,"original_launch_unresolved"),("known",{"instance":"i-00000000000000001"},True,"owned_termination_requested"),("none",{},False,"no_launch_recorded")]:
+            path=root/(mode+".json");state={"run_id":config["run_id"],"config_sha256":op.digest(op.canonical(config)),"deadline_ms":0,"launch_attempted":attempted,"client_token":"synthetic-only","resources":resources}
+            path.write_text(json.dumps(state));op.watchdog(config,path,runner)
+            report=json.loads(path.with_suffix(".watchdog-finish.json").read_text());assert report['status']==expected and report['host_absence_verified'] is False;summaries.append(report)
+        state=op.State.create(root/'cleanup.json',{"run_id":config['run_id'],"deadline_ms":0,"launch_attempted":True,"client_token":"synthetic-only","resources":{"role":config['role'],"profile":config['role'],"sg":"sg-00000000000000001"},"worker_allocation_issued":False})
+        try:op.Operator(config,state,runner).cleanup()
+        except op.OperatorError as error:assert str(error)=="unknown launched host; keep reconciliation armed"
+        else:raise AssertionError("unknown cleanup passed")
+        calls=[json.loads(line) for line in trace.read_text().splitlines()];assert len(calls)==5 and sum('terminate-instances' in a for a in calls)==1
+        assert len(state.data['resources'])==3 and state.data['operator_calls']==1 and not state.data['worker_allocation_issued']
+        assert not any(action in a for a in calls for action in ['run-instances','delete-role','delete-instance-profile','delete-security-group','delete-object','send-command'])
+        return {"status":"PASS_cleanup_only_local_functional","actual_subprocess_calls":len(calls),"watchdog_outcomes":summaries,"unknown_cleanup_blocked":True,"no_ancillary_deletion":True,"original_allocation_renewed":False,"actual_AWS_IMDS":False}
+
+
 # Unit invocation above must occur after all definitions.
 
 if __name__ == "__main__":
     import sys
     if sys.argv[1:]==["--functional-smoke"]: print(json.dumps(functional_smoke(),sort_keys=True))
+    elif sys.argv[1:]==["--cleanup-functional-smoke"]: print(json.dumps(cleanup_functional_smoke(),sort_keys=True))
     elif sys.argv[1:]==["--failure-functional-smoke"]: print(json.dumps(failure_functional_smoke(),sort_keys=True))
     elif len(sys.argv)==3 and sys.argv[1]=="--compiled-worker": print(json.dumps(compiled_worker_handshake(sys.argv[2]),sort_keys=True))
     elif len(sys.argv)==3 and sys.argv[1]=="--compiled-worker-abort": print(json.dumps(compiled_worker_handshake(sys.argv[2],fault=True),sort_keys=True))

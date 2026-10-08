@@ -46,6 +46,13 @@ class OperatorError(Exception):
     """Sanitized terminal operator error; never stores subprocess stderr/credentials."""
 
 
+class LocalCliParsingRejected(OperatorError):
+    """Newly observed AWS CLI exit 252 with its exact local unknown-options marker.
+
+    This type is not retrospective proof about a previously unknown invocation.
+    """
+
+
 def now_ms():
     return int(time.time() * 1000)
 
@@ -271,6 +278,8 @@ class Cli:
             if code:
                 # Never emit raw AWS stderr; only expose whitelisted non-secret classifications.
                 text = bytes(errors)
+                if code == 252 and re.search(rb"(?m)^Unknown options: [^\r\n]+\r?$", text):
+                    raise LocalCliParsingRejected("local CLI parsing rejected; request not dispatched")
                 for token in (b"NotFound", b"NoSuchEntity", b"InvalidGroup.NotFound", b"404", b"403", b"AccessDenied", b"PreconditionFailed", b"412", b"InvocationDoesNotExist"):
                     if token in text:
                         raise OperatorError("AWS status " + token.decode())
@@ -774,13 +783,16 @@ def watchdog(config, path, runner):
         response=runner.call("ec2","describe-instances",["--filters","Name=client-token,Values="+state["client_token"]])
         rows=[i for r in response.get("Reservations",[]) for i in r.get("Instances",[])]
         if len(rows)==1: instance=rows[0].get("InstanceId")
+    termination_requested=False
     if instance:
         response=runner.call("ec2","describe-instances",["--instance-ids",instance]);calls+=1
         rows=[i for r in response.get("Reservations",[]) for i in r.get("Instances",[])]
         if len(rows)!=1 or {t["Key"]:t["Value"] for t in rows[0].get("Tags",[])}.get("RunId")!=config["run_id"]: raise OperatorError("watchdog ownership mismatch")
         runner.call("ec2","terminate-instances",["--instance-ids",instance]);calls+=1
+        termination_requested=True
+    outcome="owned_termination_requested" if termination_requested else "original_launch_unresolved" if current.get("launch_attempted") else "no_launch_recorded"
     fd=os.open(Path(path).with_suffix(".watchdog-finish.json"),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
-    with os.fdopen(fd,"w") as out: json.dump({"status":"owned_termination_requested","reserved_calls":50,"actual_calls":calls},out)
+    with os.fdopen(fd,"w") as out: json.dump({"status":outcome,"reserved_calls":50,"actual_calls":calls,"host_absence_verified":False},out)
 
 
 def main():
