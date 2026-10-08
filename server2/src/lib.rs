@@ -1,5 +1,7 @@
 //! HTTP foundation and immutable raw storage; no provider or weather-route cutover.
+pub mod cache;
 pub mod listener;
+pub mod resolver;
 pub mod storage;
 use axum::{
     Router,

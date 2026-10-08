@@ -1,0 +1,82 @@
+{
+  "task": "S07",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2692",
+  "server2_paths": [
+    "server2/src/cache/mod.rs",
+    "server2/src/cache/keys.rs",
+    "server2/src/cache/index.rs",
+    "server2/src/cache/memory.rs",
+    "server2/src/resolver/mod.rs",
+    "server2/src/resolver/backend.rs",
+    "server2/src/resolver/flight.rs",
+    "server2/src/lib.rs",
+    "server2/Cargo.toml",
+    "server2/Cargo.lock",
+    "server2/config/tasks/S07.json",
+    "server2/tests/resolver.rs",
+    "server2/tests/resolver/cache.rs",
+    "server2/tests/resolver/wire.rs",
+    "server2/examples/resolver_smoke.rs",
+    "server2/tools/render_resolver_manual.py",
+    "server2/src/storage/catalog.rs"
+  ],
+  "outside": [
+    {
+      "path": "docs/operations/server2-resolver.md",
+      "category": "documentation",
+      "reason": "S07 maintained contract, operations manual or selected actual usage evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-resolver.pdf",
+      "category": "documentation",
+      "reason": "S07 maintained contract, operations manual or selected actual usage evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-resolver/usage.png",
+      "category": "documentation",
+      "reason": "S07 maintained contract, operations manual or selected actual usage evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-resolver/manifest.json",
+      "category": "documentation",
+      "reason": "S07 maintained contract, operations manual or selected actual usage evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "intent/issue-2692.md",
+      "category": "documentation",
+      "reason": "S07 maintained contract, operations manual or selected actual usage evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2692.md",
+      "category": "documentation",
+      "reason": "S07 maintained contract, operations manual or selected actual usage evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2692.md",
+      "category": "documentation",
+      "reason": "S07 maintained contract, operations manual or selected actual usage evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Root-owned shared design handoff"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Root-owned shared design handoff"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-resolver.sequence.json",
+      "category": "documentation",
+      "reason": "Root-owned shared design handoff"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-resolver.html",
+      "category": "documentation",
+      "reason": "Root-owned shared design handoff"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2692#issuecomment-6046142667",
+  "correction_declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2692#issuecomment-6047803555"
+}

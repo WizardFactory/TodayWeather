@@ -1,0 +1,26 @@
+{
+  "pages": 3,
+  "schema": 1,
+  "task": "S07",
+  "date": "2026-10-08",
+  "command": "python3 tests/storage/catalog_peer.py --smoke target/release/examples/resolver_smoke",
+  "environment": "Rust1.99/macOS, public Python loopback peer",
+  "scope": "Checked cold/warm/owned flight/drain HTTP, not AWS/auth/performance/API parity",
+  "captured_stdout": [
+    "cold/warm: checked fixture bytes identical; warm S3/provider calls = 0",
+    "history: all scoped revisions retained; whole ordered pages preserved",
+    "singleflight/drain: cancelled initiator detached; one recorded acquisition; complete durable group before response",
+    "pressure: evicted pin stays charged; last-owner drop releases capacity",
+    "metrics: hits=1, shared=1, acquisitions=1, publications=1, owners=0, cache_bytes=11366",
+    "H1: three unchanged refreshes share the 200 KiB payload/lease in a 300 KiB cache",
+    "H2: a 180 ms dependency check cannot serve the old 100 ms TTL; checked cold/typed timeout pass",
+    "R1: two independent complete publications both return checked bytes",
+    "R2: 17 raw scopes in 1 MiB cache do not strand a valid 200 KiB response",
+    "R3: 30 complete revisions at synthetic 20 ms GET; selected cold read and idle warm zero-I/O pass",
+    "PASS local real HTTP resolver smoke (5442.77 ms); no AWS/provider/route parity claim"
+  ],
+  "binary_sha256": "fd68b1aa3f495d1a8b0dd99d0d778483a59d1ff0408389145b34556a8a79938b",
+  "source_sha256": "1b914726d4df724e968832862f01771e89ca15a1174954cd7306ab20a7e8e8b2",
+  "pdf_sha256": "ae59d48a929ebb1455524f20306a6d31690994bcd8a3d5eedeb244e64af4537d",
+  "screenshot_sha256": "1279798f7dc252be4d5ffdf6dc4960e25080f6c5f4e8addb5a264170360d20d5"
+}

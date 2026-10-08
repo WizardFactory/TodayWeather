@@ -1,0 +1,317 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "S07 bounded memory resolver",
+    "output": "docs/architecture/diagrams/server2-resolver.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "2fdcf3155bd15e634d0537a8335a5a3c3ba9b13c",
+      "provider": "github",
+      "link_mode": "web"
+    }
+  },
+  "participants": [
+    {
+      "id": "request",
+      "type": "external",
+      "label": "Caller",
+      "sublabel": "exact typed key",
+      "sources": [
+        {
+          "path": "server2/src/cache/keys.rs",
+          "line": 7,
+          "end_line": 95
+        }
+      ]
+    },
+    {
+      "id": "resolver",
+      "type": "backend",
+      "label": "Resolver",
+      "sublabel": "owned bounded job",
+      "sources": [
+        {
+          "path": "server2/src/resolver/flight.rs",
+          "line": 349,
+          "end_line": 460
+        },
+        {
+          "path": "server2/src/resolver/flight.rs",
+          "line": 463,
+          "end_line": 585
+        },
+        {
+          "path": "server2/src/resolver/flight.rs",
+          "line": 694,
+          "end_line": 791
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "type": "database",
+      "label": "Memory",
+      "sublabel": "leased Arc values",
+      "sources": [
+        {
+          "path": "server2/src/cache/memory.rs",
+          "line": 12,
+          "end_line": 79
+        },
+        {
+          "path": "server2/src/resolver/flight.rs",
+          "line": 169,
+          "end_line": 182
+        },
+        {
+          "path": "server2/src/resolver/flight.rs",
+          "line": 586,
+          "end_line": 693
+        }
+      ]
+    },
+    {
+      "id": "archive",
+      "type": "cloud",
+      "label": "S3 records",
+      "sublabel": "complete fetch groups",
+      "sources": [
+        {
+          "path": "server2/src/resolver/backend.rs",
+          "line": 334,
+          "end_line": 524
+        },
+        {
+          "path": "server2/src/resolver/backend.rs",
+          "line": 525,
+          "end_line": 557
+        },
+        {
+          "path": "server2/src/storage/catalog.rs",
+          "line": 977,
+          "end_line": 1196
+        }
+      ]
+    },
+    {
+      "id": "acquire",
+      "type": "backend",
+      "label": "Acquirer",
+      "sublabel": "trusted funded seam",
+      "sources": [
+        {
+          "path": "server2/src/resolver/mod.rs",
+          "line": 63,
+          "end_line": 103
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 190,
+      "to": 375,
+      "label": "Cold catalog read and owned work"
+    },
+    {
+      "from": 385,
+      "to": 455,
+      "label": "Positive read: optional maintenance"
+    },
+    {
+      "from": 465,
+      "to": 695,
+      "label": "Only proved empty: acquire and publish"
+    },
+    {
+      "from": 705,
+      "to": 955,
+      "label": "Assembly, admission and warm response"
+    }
+  ],
+  "messages": [
+    {
+      "id": "step-1",
+      "from": "request",
+      "to": "resolver",
+      "y": 160,
+      "label": "Resolve exact request",
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-2",
+      "from": "resolver",
+      "to": "memory",
+      "y": 200,
+      "label": "Read fresh full-key result",
+      "variant": "default"
+    },
+    {
+      "id": "step-3",
+      "from": "memory",
+      "to": "resolver",
+      "y": 240,
+      "label": "Cold miss",
+      "variant": "return"
+    },
+    {
+      "id": "step-5",
+      "from": "resolver",
+      "to": "archive",
+      "y": 320,
+      "label": "Read complete published catalog first",
+      "variant": "default",
+      "note": "Whole pinned acquisitions, scoped pages or exact group. A subset is not full history."
+    },
+    {
+      "id": "step-6",
+      "from": "archive",
+      "to": "resolver",
+      "y": 360,
+      "label": "Verified complete records or proved empty",
+      "variant": "return",
+      "note": "Absent/incomplete reads require finite recovery. Any possible recovery PUT marks mutation before send; cancellation preserves uncertainty. Capacity/Timeout are not misses."
+    },
+    {
+      "id": "maintain-1",
+      "from": "resolver",
+      "to": "archive",
+      "y": 400,
+      "label": "Positive read: bounded background repair",
+      "variant": "default",
+      "note": "At most one repair overall; spare owner and 64 MiB lease, <=3s, no queue/provider. Skips retry only at a later positive cold read."
+    },
+    {
+      "id": "maintain-2",
+      "from": "archive",
+      "to": "resolver",
+      "y": 440,
+      "label": "Index completion or bounded failure",
+      "variant": "return",
+      "note": "Foreground/background possible writes invalidate reuse even on ambiguity; read-only failure does not. Incomplete never proves synced or empty."
+    },
+    {
+      "id": "step-7",
+      "from": "resolver",
+      "to": "acquire",
+      "y": 480,
+      "label": "Only proved empty: funded acquisition",
+      "variant": "security",
+      "note": "Only complete finite owned scope may acquire; S08 implementation is a separate seam."
+    },
+    {
+      "id": "step-8",
+      "from": "acquire",
+      "to": "resolver",
+      "y": 520,
+      "label": "Ordered raw pages and declaration",
+      "variant": "return"
+    },
+    {
+      "id": "step-9",
+      "from": "resolver",
+      "to": "archive",
+      "y": 560,
+      "label": "Publish raw and every sibling catalog",
+      "variant": "emphasis",
+      "note": "The optional new-data branch must be durable before new success."
+    },
+    {
+      "id": "step-10",
+      "from": "archive",
+      "to": "resolver",
+      "y": 600,
+      "label": "Complete group acknowledged",
+      "variant": "return"
+    },
+    {
+      "id": "step-12",
+      "from": "resolver",
+      "to": "memory",
+      "y": 680,
+      "label": "Admit immutable views and dependencies",
+      "variant": "default",
+      "note": "Optional raw/parsed retention cannot starve response admission. Excluded groups or epoch drift bypass response caching."
+    },
+    {
+      "id": "step-13",
+      "from": "memory",
+      "to": "resolver",
+      "y": 720,
+      "label": "Byte leases retained or cache bypass",
+      "variant": "return",
+      "note": "External pins retain their charge. Epoch drift does not fail an already checked response."
+    },
+    {
+      "id": "step-14",
+      "from": "resolver",
+      "to": "request",
+      "y": 760,
+      "label": "Return checked response bytes",
+      "variant": "return"
+    },
+    {
+      "id": "step-15",
+      "from": "request",
+      "to": "resolver",
+      "y": 800,
+      "label": "Repeat within freshness",
+      "variant": "default"
+    },
+    {
+      "id": "step-16",
+      "from": "resolver",
+      "to": "memory",
+      "y": 840,
+      "label": "Read exact key and dependencies",
+      "variant": "default"
+    },
+    {
+      "id": "step-17",
+      "from": "memory",
+      "to": "resolver",
+      "y": 880,
+      "label": "Fresh complete result",
+      "variant": "return"
+    },
+    {
+      "id": "step-18",
+      "from": "resolver",
+      "to": "request",
+      "y": 920,
+      "label": "Same bytes; no acquisition",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Serving correctness",
+      "items": [
+        "Memory, then bounded S3 lookup, then only a proved-empty funded provider branch.",
+        "No new success before complete raw/group publication; active route parity remains a later gate."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Memory and cancellation",
+      "items": [
+        "Optional raw/parsed maps yield to bounded response admission. External pins retain their byte charge.",
+        "Owned waiter-independent tasks drain; reports count owners and view jobs, not every codec worker.",
+        "Unchanged refresh reuses its payload/lease. TTL is rechecked after dependency I/O and is never extended."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Privacy and scope",
+      "items": [
+        "Geocode key/privacy primitives only; value caching and exact-label proof remain S10 work.",
+        "Warm foreground responses start no S3 work; maintenance is counted separately. Cold costs need S09 measurement."
+      ]
+    }
+  ]
+}

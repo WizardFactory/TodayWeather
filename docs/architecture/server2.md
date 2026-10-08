@@ -212,6 +212,102 @@ offset addressing and reclamation; normal Rust `Arc`/heap pointers cannot be
 used as interprocess pointers. This is an alternative, not initial implementation.
 Pack builders or push jobs may be isolated without splitting all API workers.
 
+### S07 resolver implementation contract
+
+After S06 merge [PR #2719](https://github.com/WizardFactory/TodayWeather/pull/2719),
+[S07 #2692](https://github.com/WizardFactory/TodayWeather/issues/2692) implements
+the internal resolver and bounded volatile cache; no public route is migrated.
+Its [request sequence](diagrams/server2-resolver.html) and
+[editable source](diagrams/server2-resolver.sequence.json) describe the internal implementation; they do not establish deployed route
+behavior or measured AWS latency. The [operations manual](../operations/server2-resolver.md)
+describes finite scopes, cache accounting and the local release example.
+
+Typed request keys retain every output-affecting field. Cache values share byte
+leases whose charge survives eviction until the last pinned value is dropped.
+Raw and parsed retention is optional; response admission can reclaim their mapped
+entries across tiers. Parsed inputs used by assembly move into bounded operation-owned
+buffers, so optional cache pressure cannot strand otherwise valid responses.
+External response pins retain their charge; genuine retained-byte exhaustion still
+fails closed. Network, CPU, queued work and retained results have separate bounded
+admission; cache weights alone do not claim a process RSS limit. No lock remains
+held across I/O or CPU awaits. Exact record/parser identities and monotonic TTLs
+govern reuse.
+
+An unchanged dependency refresh reuses the same immutable response payload and
+byte lease; only its next refresh time is rearmed under the retention gate.
+It never extends the original creation time or expiry. Reusing that payload
+does not create a second charge, while external pins on displaced or distinct
+payloads remain charged. After dependency I/O, refresh rechecks expiry and epoch
+under the brief gate. If the response expired, it drops the internal old pin and
+re-enters checked cold resolution within the original deadline, or returns a
+typed timeout; it cannot return the expired response as success.
+
+Owned single-flight jobs survive cancellation of one HTTP waiter, share their
+original bounded deadline and drain policy, and never extend a later waiter's
+HTTP deadline. Resolver reads retain S06 coverage: a page or targeted acquisition
+is not full history. Only a complete finite caller-owned repair scope can prove
+a provider miss; Incomplete, Capacity and Timeout cannot authorize acquisition.
+
+An acquisition callback must obtain S08 funding before provider HTTP and return
+ordered raw pages plus their declaration. New response assembly follows S06
+complete-group publication. Undurable new data cannot enter a successful result
+cache. Excluded groups prevent response-cache admission, including descriptor
+absence that could change without a target catalog ETag. Published local revisions
+invalidate known dependencies; external changes use bounded revalidation.
+Conservative global invalidation affects cache reuse, not the validity of an
+already checked request snapshot. Epoch drift returns that result uncached.
+A brief retention gate coordinates epoch checks with response admission, without
+holding a lock across asynchronous work. Concurrent durable publications on
+unrelated keys remain successful.
+
+Current defaults account for 128 MiB retained cache and four owners reserving
+64 MiB each, separately from 128 waiter admission. Concrete insertions charge
+keys, envelopes, dependency metadata and payload; generic cache callers must
+supply truthful total weights. These are logical leases, not hard RSS limits.
+The two-permit pool covers view builders; dependency parsing and S05/S06 codecs
+have separate bounded pools. Started view and dependency jobs retain operation
+leases after owner timeout. Drain reports unfinished owners and view jobs,
+not every storage codec worker.
+
+Cold reads first select whole complete acquisitions from pinned published
+catalogs, preserving ordered pages and the caller's period scope. An absent,
+incomplete or corrupt read requires finite-scope recovery before any provider
+miss can be proved. Foreground recovery marks a possible mutation before each
+catalog write; dirty cancellation or uncertain completion invalidates response
+reuse, and an owner timeout after a possible send is Ambiguous. Existing typed
+integrity and definitive rejection errors remain fail closed. A read-only failure
+does not invalidate reuse. Capacity and Timeout are not absence. FullHistory must finish
+the private cursor; targeted reads cannot authorize absent-field history folds.
+
+A positive cold read can schedule one bounded owned repair for its scope, with at
+most one repair active overall. This
+maintenance shares operation/temporary admission, the three-second bound and
+drain accounting; it never calls a provider. Admission denial increments a skip counter and retries only on a later positive
+cold-read opportunity, without creating an unbounded queue. The index-only repair entrypoint
+omits a redundant full-history fold only after all owned-scope discovery, group
+verification and identity indexing complete. Incomplete, Timeout or ambiguous
+maintenance never proves prefix synchronization or empty data. Any attempted
+foreground or background catalog write invalidates response reuse, including ambiguous or cancelled work;
+a read-only maintenance failure does not invalidate a healthy result.
+
+The raw cache does not bypass S06 raw GETs. Parsed views reuse immutable
+acquisitions; a warm foreground response starts no S3 or provider work. Background
+maintenance may still be active, so zero-I/O checks explicitly wait for its idle
+milestone and report its counters separately. Page-size-one full-history traversal
+still repeats descriptor normalization; large scopes remain bounded rather than
+guaranteed to finish. S09/O01 must measure remaining cold and recovery costs.
+
+S07 meets the geocode portion of AC1 only for volatile key identities and
+archive rejection. Geocode value caching and exact-label/boundary parity remain
+S10 work; they are not delivered by this resolver. A funded-acquirer callback and bounded view builder are trusted
+integration seams; S08 wiring, concrete provider schemas and public API assembly
+remain later tasks.
+
+The geocode cache remains within section 6 privacy and exact-label constraints.
+A coarsened key alone does not prove label equivalence or provider-free precise
+reverse-geocode restoration. Cold/warm fixtures and owned-task failure scenarios
+are internal checks; used-API parity and activation remain later route gates.
+
 ## 4. S3 layout and catalog publication
 
 Use a private bucket, TLS, encryption and prefix-scoped least privilege. Never

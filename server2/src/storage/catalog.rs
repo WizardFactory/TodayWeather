@@ -979,6 +979,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
         scope: &RepairScope,
         c: &mut Context,
         started: &mut bool,
+        materialize: bool,
     ) -> Result<RepairOutcome, Error> {
         let mut keys = BTreeSet::new();
         let mut discovered = Vec::new();
@@ -1120,6 +1121,13 @@ impl<T: CatalogTransport> CatalogStore<T> {
             return Ok(RepairOutcome::Incomplete);
         }
         *c = Context::new();
+        if !materialize {
+            self.pin(&scope.catalog, c).await?;
+            return Ok(RepairOutcome::Indexed {
+                scope: scope.clone(),
+                dependencies: Self::dependencies(c),
+            });
+        }
         let materialized = self.lookup_inner(&scope.catalog, c).await;
         match materialized {
             Err(Error::Capacity) => {
@@ -1140,6 +1148,24 @@ impl<T: CatalogTransport> CatalogStore<T> {
         scope: &RepairScope,
         deadline: Instant,
     ) -> Result<RepairOutcome, Error> {
+        self.repair_mode(scope, deadline, true).await
+    }
+    /// Verifies and indexes every discovery in the finite caller-owned scope, without a final
+    /// all-history body fold. Indexed proves scoped index recovery, not a serving CompleteSet.
+    /// Empty, incomplete, cancellation, bounds and ambiguous writes retain repair's semantics.
+    pub async fn repair_index(
+        &self,
+        scope: &RepairScope,
+        deadline: Instant,
+    ) -> Result<RepairOutcome, Error> {
+        self.repair_mode(scope, deadline, false).await
+    }
+    async fn repair_mode(
+        &self,
+        scope: &RepairScope,
+        deadline: Instant,
+        materialize: bool,
+    ) -> Result<RepairOutcome, Error> {
         scope.catalog.validate()?;
         if scope.periods.is_empty() || scope.periods.len() > self.limits.partitions {
             return Err(Error::Invalid("repair scope periods"));
@@ -1154,7 +1180,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
         let mut started = false;
         match timeout_at(self.deadline(deadline), async {
             let _admission = self.admit().await?;
-            self.repair_inner(scope, &mut Context::new(), &mut started)
+            self.repair_inner(scope, &mut Context::new(), &mut started, materialize)
                 .await
         })
         .await
