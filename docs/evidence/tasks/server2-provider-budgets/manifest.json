@@ -1,19 +1,19 @@
 {
   "schema": 1,
-  "captured_at_utc": "2026-10-07T22:03:42+00:00",
+  "captured_at_utc": "2026-10-08T01:52:41+00:00",
   "capture_kind": "terminal result rendered from actual isolated release execution",
   "environment": "macOS, release binary, synthetic loopback S3/provider peers",
   "command": "python3.11 server2/tests/budget/peer.py --binary server2/target/release/examples/provider_budgets_smoke",
   "observed": {
-    "provider_requests": 8,
-    "charged_units": 18,
-    "witnesses": 8
+    "provider_requests": 22,
+    "charged_units": 48,
+    "witnesses": 23
   },
-  "execution_log_sha256": "ecefa0be581f200a458bd8d6e173b7d47b7cebdf3c1ef8fe22b9255008e46d20",
-  "binary_sha256": "f87a4dde689ca57002b2069b985136922573d951ee3ff585322a4fc9e5c3dc98",
-  "pdf_link_revision": "e17cab08313368833c2fb5bfaab718cc94877b19",
-  "source_sha256": "8a6deeab1c6b0aad01f695b613b7f0e36354dbc320d35cff5fc1893a211c01e5",
-  "pdf_sha256": "430dfc7a6c2a3096215688987c47fd33cbc057aa0f534006688a3de509cd7675",
-  "screenshot_sha256": "aaba0c57f9a5b00e331c00ed1162c8797741b1f3c371ea03e3a457a4b5dbb796",
+  "execution_log_sha256": "66284d5d1bcae6d89c18db32ec442fde6973112088b9c94372457efeb8bf1294",
+  "binary_sha256": "b6c0886684d056eaec4368a1d9bc512acf6f79fb9b66ad950ed41ed687e73ddd",
+  "pdf_link_revision": "e9c107164719234497f04876af738a459a3f70ee",
+  "source_sha256": "5a6f41264177a81c1785dfa4f52936d5792baa9ab8490b60bd3a02a65fe27dea",
+  "pdf_sha256": "3befaee5dac4fe23b59bff7a493268364691aea1c0edcc24854994795aa7b8c5",
+  "screenshot_sha256": "1ad8c4336ce3d887f99ead8a68d74a4e0a0b835b8e6e2eb9e4dc6a2011988431",
   "limitations": "No live AWS/signature/IAM/provider quota/latency/API parity proof"
 }

@@ -27,7 +27,7 @@ def receipt(log, stamp):
         raise ValueError('capture timestamp must be explicit UTC')
     if not log.startswith('execution started UTC ' + stamp + '\n'):
         raise ValueError('timestamp does not match actual execution receipt')
-    if 'observed peer counters: 8 provider requests, 18 charged units, 8 witnesses; PASS' not in log:
+    if 'observed peer counters: 22 provider requests, 48 charged units, 23 witnesses; PASS' not in log:
         raise ValueError('required actual peer observation missing')
     return when.astimezone(timezone.utc)
 
@@ -135,7 +135,7 @@ def main():
                 'capture_kind':'terminal result rendered from actual isolated release execution',
                 'environment':'macOS, release binary, synthetic loopback S3/provider peers',
                 'command':'python3.11 server2/tests/budget/peer.py --binary server2/target/release/examples/provider_budgets_smoke',
-                'observed':{'provider_requests':8,'charged_units':18,'witnesses':8},
+                'observed':{'provider_requests':22,'charged_units':48,'witnesses':23},
                 'execution_log_sha256':hashlib.sha256(raw).hexdigest(),
                 'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),
                 'pdf_link_revision':revision,

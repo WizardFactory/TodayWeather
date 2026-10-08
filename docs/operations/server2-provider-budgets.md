@@ -73,8 +73,8 @@ or implicit retries. Data.go.kr appends `dataType=JSON`, but XML error bodies ar
 HTTP 429/code 22 means quota; HTTP 401/403 or codes 20/30/31/32 means auth. Those stop same-key
 retry and may rotate to the pre-funded next key. Other 4xx stops. A complete recognized 2xx
 JSON/XML 03 envelope returns terminal NoData without retry even if the data validator rejects
-it; 10/12 are terminal Rejected. HTTP 3xx/5xx +03 remains transient, auth/quota/other4xx has
-priority, and malformed/HTML 03 bodies are not no-data. Transport, 5xx, 3xx and empty
+it; 10/12 are terminal Rejected. HTTP 3xx/5xx +03 remains transient, auth/quota/other 4xx has
+priority, and malformed/HTML 03 bodies are not no-data. Once status is received, header/encoding rejection, excessive declared/streamed body or download truncation returns `ProviderTransportError::Response { status }`. Only HTTP status is classified with no body/validator: 429 and 401/403 retain funded distinct-key rotation, other 4xx stops. Partial bytes never reach semantic validation, Data/NoData or archive. Status-less transport errors remain distinct. Transport, 5xx, 3xx and empty
 or invalid bodies allow one funded subsequent attempt within the original deadline. JSON
 and XML code/status combinations are tested. The kind-specific `Validator` must validate
 semantic data; generic JSON syntax alone does not establish provider parity.
@@ -128,7 +128,7 @@ uses obvious dummy credentials, and shuts down both peers. Fixtures are syntheti
 examples, not recordings from live providers. It asserts quota XML rotation, complete S06
 raw group publication/cold lookup, replacement exhaustion, committed unknown CAS and observed
 JSON/XML 03 exact RAM-only outcomes and 10/12 terminal rejection, each one HTTP and no raw
-publication. It observes eight provider requests, eighteen charged units and eight witnesses. S3 peer state is
+publication. It also asserts encoding/size failures for 429/401/400, an actual truncated 403 response and persistent incomplete 200: received quota/auth rotates first/second, 400 stops at first, incomplete 200 tries first at most twice and never publishes. The full expanded scenario observes 22 provider requests, 48 charged units and 23 witnesses. S3 peer state is
 volatile. Tests validate protocol ordering and arithmetic, not IAM, signature crypto, actual
 provider quota, latency, public API/mobile parity or production durability after host loss.
 

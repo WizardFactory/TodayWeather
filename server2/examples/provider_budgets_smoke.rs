@@ -36,6 +36,11 @@ fn policy(id: &str) -> BudgetPolicy {
         block_units: 2,
     }
 }
+fn failure_policy(id: &str) -> BudgetPolicy {
+    let mut p = policy("1");
+    p.quota_id = format!("{id:0>64}");
+    p
+}
 fn store(endpoint: &str, p: BudgetPolicy) -> Arc<BudgetStore<HttpS3Transport>> {
     Arc::new(BudgetStore::new(Arc::new(transport(endpoint)), p, Arc::new(SystemClock)).unwrap())
 }
@@ -214,6 +219,59 @@ async fn main() {
     println!(
         "terminal JSON/XML03: one HTTP each, exact bytes RAM-only;10/12 rejected without retry"
     );
+    for (first, second, mode) in [
+        ("10", "11", "http429-encoding"),
+        ("12", "13", "http401-encoding"),
+        ("14", "15", "http400-encoding"),
+        ("16", "17", "http429-size"),
+        ("18", "19", "http401-size"),
+        ("1a", "1b", "http400-size"),
+        ("1c", "1d", "http403-truncated"),
+    ] {
+        let mut url = provider.clone();
+        url.query_pairs_mut().append_pair("mode", mode);
+        let result = executor
+            .execute(
+                url,
+                vec![
+                    candidate(store(endpoint, failure_policy(first)), "first"),
+                    candidate(store(endpoint, failure_policy(second)), "second"),
+                ],
+                deadline(),
+            )
+            .await;
+        if mode.starts_with("http400") {
+            assert!(matches!(
+                result,
+                Err(AcquisitionError::Provider(
+                    server2::providers::Disposition::Rejected
+                ))
+            ));
+        } else {
+            let Ok(AcquisitionOutcome::Data(raw)) = result else {
+                panic!("received quota/auth rotates funded key");
+            };
+            assert_eq!(raw.attempts, 2);
+            assert_eq!(raw.body, br#"{"ok":true}"#);
+        }
+        println!("received {mode}: HTTP classification preserved; partial body never published");
+    }
+    let mut url = provider.clone();
+    url.query_pairs_mut()
+        .append_pair("mode", "http200-truncated");
+    assert!(matches!(
+        executor
+            .execute(
+                url,
+                vec![candidate(store(endpoint, failure_policy("1e")), "first")],
+                deadline()
+            )
+            .await,
+        Err(AcquisitionError::Provider(
+            server2::providers::Disposition::Retryable
+        ))
+    ));
+    println!("incomplete HTTP200: two funded attempts, no Data/NoData or archive");
     println!(
         "PASS synthetic local release smoke; no AWS signature/IAM/latency or API parity claim"
     );

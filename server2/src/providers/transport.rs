@@ -16,6 +16,11 @@ pub struct ProviderResponse {
 pub enum ProviderTransportError {
     Invalid,
     Transport,
+    /// Status received, but headers/body were rejected or not completely downloaded.
+    /// Carries no partial body, URL or credential; never a successful provider response.
+    Response {
+        status: u16,
+    },
 }
 pub trait ProviderTransport: Send + Sync {
     fn send(
@@ -81,27 +86,30 @@ impl ProviderTransport for HttpProviderTransport {
             > 8192
             || headers.contains_key("content-encoding")
         {
-            return Err(ProviderTransportError::Invalid);
+            return Err(ProviderTransportError::Response { status });
         }
         let content_type = headers
             .get("content-type")
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
             .to_owned();
+        if content_type.len() > 512 {
+            return Err(ProviderTransportError::Response { status });
+        }
         if response
             .content_length()
             .is_some_and(|n| n > self.maximum as u64)
         {
-            return Err(ProviderTransportError::Invalid);
+            return Err(ProviderTransportError::Response { status });
         }
         let mut body = Vec::new();
         while let Some(chunk) = response
             .chunk()
             .await
-            .map_err(|_| ProviderTransportError::Transport)?
+            .map_err(|_| ProviderTransportError::Response { status })?
         {
             if chunk.len() > self.maximum.saturating_sub(body.len()) {
-                return Err(ProviderTransportError::Invalid);
+                return Err(ProviderTransportError::Response { status });
             }
             body.extend_from_slice(&chunk);
         }

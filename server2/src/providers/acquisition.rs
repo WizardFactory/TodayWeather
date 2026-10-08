@@ -1,4 +1,6 @@
-use super::{Disposition, ProviderResponse, ProviderTransport, Request, classify};
+use super::{
+    Disposition, ProviderResponse, ProviderTransport, ProviderTransportError, Request, classify,
+};
 use crate::budget::{BudgetError, BudgetStore, BudgetTransport, Provider, Reservation};
 use std::sync::Arc;
 use tokio::{
@@ -137,6 +139,22 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                 .map_err(|_| AcquisitionError::Deadline)?;
             let response = match response {
                 Ok(r) => r,
+                Err(ProviderTransportError::Response { status }) => {
+                    // Incomplete bytes never reach JSON validation or Data/NoData.
+                    // Preserve only received HTTP priority, not any partial provider code.
+                    let disposition =
+                        classify(status, &[], self.provider == Provider::DataGoKr, false);
+                    if attempt == 2 || disposition == Disposition::Rejected {
+                        return Err(AcquisitionError::Provider(disposition));
+                    }
+                    if matches!(disposition, Disposition::Quota | Disposition::Auth) {
+                        if candidates.len() < 2 {
+                            return Err(AcquisitionError::Provider(disposition));
+                        }
+                        key = 1;
+                    }
+                    continue;
+                }
                 Err(_) => {
                     if attempt == 1 {
                         continue;

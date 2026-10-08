@@ -968,3 +968,253 @@ async fn persistent_cas_contention_is_not_exhaustion() {
         8
     );
 }
+
+/// Real HTTP failures after the status line, distinct from the budget/S3 peer.
+struct BrokenProvider {
+    endpoint: reqwest::Url,
+    calls: Arc<Mutex<Vec<String>>>,
+    task: tokio::task::JoinHandle<()>,
+}
+impl Drop for BrokenProvider {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
+}
+impl BrokenProvider {
+    async fn new(status: u16, fault: &str, persistent: bool) -> Self {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/provider", listener.local_addr().unwrap())
+            .parse()
+            .unwrap();
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let observed = calls.clone();
+        let fault = fault.to_owned();
+        let task = tokio::spawn(async move {
+            loop {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut request = Vec::new();
+                let mut buffer = [0; 1024];
+                while !request.windows(4).any(|b| b == b"\r\n\r\n") {
+                    let n = socket.read(&mut buffer).await.unwrap();
+                    assert!(n > 0 && request.len() + n <= 8192);
+                    request.extend_from_slice(&buffer[..n]);
+                }
+                let request = std::str::from_utf8(&request).unwrap();
+                let path = request.split_whitespace().nth(1).unwrap();
+                let url: reqwest::Url = format!("http://127.0.0.1{path}").parse().unwrap();
+                assert!(
+                    url.query_pairs()
+                        .any(|(k, v)| k == "dataType" && v == "JSON")
+                );
+                let key = url
+                    .query_pairs()
+                    .find(|(k, _)| k == "serviceKey")
+                    .unwrap()
+                    .1
+                    .into_owned();
+                let call = {
+                    let mut keys = observed.lock().unwrap();
+                    keys.push(key);
+                    keys.len()
+                };
+                let response = if call > 1 && !persistent {
+                    [
+                        r"HTTP/1.1 200 OK",
+                        r"Content-Type: application/json",
+                        r"Content-Length: 11",
+                        r"Connection: close",
+                        "",
+                        r#"{"ok":true}"#,
+                    ]
+                    .join("\r\n")
+                    .into_bytes()
+                } else {
+                    let (header, body) = match fault.as_str() {
+                        "encoding" => (
+                            "Content-Encoding: gzip\r\nContent-Length: 11\r\n".to_owned(),
+                            b"{\"ok\":true}".to_vec(),
+                        ),
+                        "declared-size" => ("Content-Length: 128\r\n".to_owned(), vec![b'x'; 128]),
+                        "streamed-size" => (String::new(), vec![b'x'; 128]),
+                        "truncated" => (
+                            "Content-Length: 32\r\n".to_owned(),
+                            b"{\"ok\":true}".to_vec(),
+                        ),
+                        "headers" => (
+                            format!("X-Large: {}\r\nContent-Length: 11\r\n", "x".repeat(8200)),
+                            b"{\"ok\":true}".to_vec(),
+                        ),
+                        "content-type" => (
+                            format!(
+                                "Content-Type: {}\r\nContent-Length: 11\r\n",
+                                "x".repeat(600)
+                            ),
+                            b"{\"ok\":true}".to_vec(),
+                        ),
+                        "no-status" => (String::new(), Vec::new()),
+                        _ => panic!("unknown owned fault"),
+                    };
+                    let content_type = if fault == "content-type" {
+                        ""
+                    } else {
+                        r"Content-Type: application/json"
+                    };
+                    let crlf = "\r\n";
+                    let content_type = if content_type.is_empty() {
+                        String::new()
+                    } else {
+                        format!("{content_type}{crlf}")
+                    };
+                    let mut response = format!(r"HTTP/1.1 {status} Synthetic{crlf}{content_type}{header}Connection: close{crlf}{crlf}").into_bytes();
+                    response.extend_from_slice(&body);
+                    if fault == "no-status" {
+                        Vec::new()
+                    } else {
+                        response
+                    }
+                };
+                // The bounded client can close without consuming our excessive body.
+                let _ = socket.write_all(&response).await;
+                let _ = socket.shutdown().await;
+            }
+        });
+        Self {
+            endpoint,
+            calls,
+            task,
+        }
+    }
+}
+
+#[tokio::test]
+async fn received_http_error_status_survives_body_failures() {
+    let mut mismatches = Vec::new();
+    for status in [400, 401, 403, 429] {
+        for fault in [
+            "encoding",
+            "declared-size",
+            "streamed-size",
+            "truncated",
+            "headers",
+            "content-type",
+        ] {
+            let provider = BrokenProvider::new(status, fault, false).await;
+            let budget = Running::new().await;
+            let a = policy(8, 4);
+            let mut b = a.clone();
+            b.quota_id = "b".repeat(64);
+            let executor = FundedExecutor::new(
+                Provider::DataGoKr,
+                1,
+                Arc::new(HttpProviderTransport::new(64).unwrap()),
+                Arc::new(validator as fn(&serde_json::Value) -> bool),
+            )
+            .unwrap();
+            let result = executor
+                .execute(
+                    provider.endpoint.clone(),
+                    vec![
+                        candidate(store(&budget, a.clone(), clock()), "first"),
+                        candidate(store(&budget, b.clone(), clock()), "second"),
+                    ],
+                    end(),
+                )
+                .await;
+            let keys = provider.calls.lock().unwrap().clone();
+            let correct = if status == 400 {
+                keys == ["first"]
+                    && matches!(
+                        result,
+                        Err(AcquisitionError::Provider(Disposition::Rejected))
+                    )
+            } else {
+                keys == ["first", "second"]
+                    && matches!(result, Ok(AcquisitionOutcome::Data(ref raw)) if raw.attempts == 2 && raw.body == br#"{"ok":true}"#)
+            };
+            // Both candidates were reserved before the first HTTP, even terminal 400.
+            assert_eq!(budget.used(&a), 4);
+            assert_eq!(budget.used(&b), 4);
+            println!("received status={status} fault={fault} keys={keys:?} correct={correct}");
+            if !correct {
+                mismatches.push(format!("{status}/{fault}: {keys:?}"));
+            }
+        }
+    }
+    assert!(
+        mismatches.is_empty(),
+        "received HTTP classification lost: {mismatches:?}"
+    );
+}
+
+#[tokio::test]
+async fn incomplete_success_and_transient_body_never_approved() {
+    for status in [200, 302, 500] {
+        for fault in ["encoding", "declared-size", "streamed-size", "truncated"] {
+            let provider = BrokenProvider::new(status, fault, true).await;
+            let budget = Running::new().await;
+            let executor = FundedExecutor::new(
+                Provider::DataGoKr,
+                1,
+                Arc::new(HttpProviderTransport::new(64).unwrap()),
+                Arc::new(|_: &serde_json::Value| true),
+            )
+            .unwrap();
+            assert!(
+                executor
+                    .execute(
+                        provider.endpoint.clone(),
+                        vec![candidate(store(&budget, policy(8, 4), clock()), "first")],
+                        end()
+                    )
+                    .await
+                    .is_err(),
+                "incomplete {status}/{fault} must not become Data/NoData even with a permissive validator"
+            );
+            assert_eq!(*provider.calls.lock().unwrap(), ["first", "first"]);
+        }
+    }
+}
+
+#[tokio::test]
+async fn incomplete_auth_quota_without_rotation_stops_and_no_status_is_transport() {
+    for (status, expected) in [
+        (429, Disposition::Quota),
+        (401, Disposition::Auth),
+        (403, Disposition::Auth),
+    ] {
+        let provider = BrokenProvider::new(status, "truncated", true).await;
+        let budget = Running::new().await;
+        let executor = FundedExecutor::new(
+            Provider::DataGoKr,
+            1,
+            Arc::new(HttpProviderTransport::new(64).unwrap()),
+            Arc::new(validator as fn(&serde_json::Value) -> bool),
+        )
+        .unwrap();
+        assert!(matches!(executor.execute(provider.endpoint.clone(),
+            vec![candidate(store(&budget, policy(8,4), clock()), "first")], end()).await,
+            Err(AcquisitionError::Provider(actual)) if actual == expected));
+        assert_eq!(*provider.calls.lock().unwrap(), ["first"]);
+    }
+    let provider = BrokenProvider::new(200, "no-status", true).await;
+    let budget = Running::new().await;
+    let executor = FundedExecutor::new(
+        Provider::DataGoKr,
+        1,
+        Arc::new(HttpProviderTransport::new(64).unwrap()),
+        Arc::new(validator as fn(&serde_json::Value) -> bool),
+    )
+    .unwrap();
+    assert!(matches!(
+        executor
+            .execute(
+                provider.endpoint.clone(),
+                vec![candidate(store(&budget, policy(8, 4), clock()), "first")],
+                end()
+            )
+            .await,
+        Err(AcquisitionError::Transport)
+    ));
+    assert_eq!(*provider.calls.lock().unwrap(), ["first", "first"]);
+}

@@ -31,6 +31,30 @@ class Handler(local.Handler):
         with self.server.lock:
             self.server.calls += 1
             mode = fields.get('mode', [None])
+            if mode[0] and mode[0].startswith('http'):
+                sequence = self.server.keys_by_mode.setdefault(mode[0], [])
+                sequence.append(fields['serviceKey'][0])
+                status, fault = mode[0][4:].split('-')
+                if mode[0] not in {
+                    'http429-encoding', 'http401-encoding', 'http400-encoding',
+                    'http429-size', 'http401-size', 'http400-size',
+                    'http403-truncated', 'http200-truncated',
+                }:
+                    return self.error(403, 'OnlySyntheticMode')
+                if len(sequence) > 1 and mode != ['http200-truncated']:
+                    return self.send(200, b'{"ok":true}', {'Content-Type': 'application/json'})
+                if fault == 'encoding':
+                    return self.send(int(status), b'{"ok":true}', {'Content-Type': 'application/json', 'Content-Encoding': 'gzip'})
+                if fault == 'size':
+                    return self.send(int(status), b'x' * 5000, {'Content-Type': 'application/json'})
+                self.send_response(int(status))
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', '100')
+                self.send_header('Connection', 'close')
+                self.end_headers()
+                self.wfile.write(b'{"ok":true}')
+                self.close_connection = True
+                return
             if mode == ['nodata-json']:
                 return self.send(200, b'{"response":{"header":{"resultCode":"03"}}}', {'Content-Type': 'application/json'})
             if mode == ['nodata-xml']:
@@ -61,6 +85,7 @@ def main():
     provider = local.make_peer('provider', config)
     provider.RequestHandlerClass = Handler
     provider.calls = 0
+    provider.keys_by_mode = {}
     threads = [threading.Thread(target=p.serve_forever, daemon=True) for p in (s3, provider)]
     for thread in threads:
         thread.start()
@@ -73,12 +98,16 @@ def main():
         with s3.lock:
             authorities = [json.loads(o.body) for k, o in s3.objects.items() if k.endswith('/authority.json')]
             witnesses = [json.loads(o.body) for k, o in s3.objects.items() if '/blocks/' in k]
-            assert len(authorities) == 7 and sum(a['used'] for a in authorities) == 18
-            assert len(witnesses) == 8  # the unknown CAS has no witness
+            assert len(authorities) == 22 and sum(a['used'] for a in authorities) == 48
+            assert len(witnesses) == 23  # the unknown CAS has no witness
             assert len([k for k in s3.objects if k.startswith('raw/v2/')]) == 1
             assert all(a['used'] <= a['policy']['limit'] for a in authorities)
-        assert provider.calls == 8
-        print('observed peer counters: 8 provider requests, 18 charged units, 8 witnesses; PASS')
+        assert provider.calls == 22
+        assert len(provider.keys_by_mode) == 8
+        for mode, keys in provider.keys_by_mode.items():
+            expected = ['first'] if mode.startswith('http400') else (['first', 'first'] if mode == 'http200-truncated' else ['first', 'second'])
+            assert keys == expected, (mode, keys, expected)
+        print('observed peer counters: 22 provider requests, 48 charged units, 23 witnesses; PASS')
     finally:
         for peer in (s3, provider):
             peer.shutdown()

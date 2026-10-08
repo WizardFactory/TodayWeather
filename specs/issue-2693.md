@@ -108,3 +108,9 @@ Protocol basis: [AWS conditional writes](https://docs.aws.amazon.com/AmazonS3/la
 The high-water/witness algorithm is our inference/design; AWS offers no multi-object transaction.
 
 Selected QA1 corrections: after eight 412 conflicts return `BudgetError::Contention`, distinct from real `Exhausted`. Reject duplicate rotation secret, shared store, or provider/quota owner identity (even another window for the same quota owner) before funding or HTTP; typed Invalid contains no secret. Both candidates remain trusted operator mappings. PDF renders inline code and linked labels without literal Markdown.
+
+## External S08-H1 received-status correction (AC2/AC3)
+
+Once the provider HTTP status is received, header/encoding rejection, body cap violation or chunk/download failure returns a typed incomplete-response failure carrying only that status. It cannot yield Data/NoData or supply partial bytes to the semantic validator. HTTP429 remains Quota, HTTP401/403 remains Auth; either may rotate only to the distinct pre-funded next candidate. Other4xx remains terminal Rejected. Status-less transport failure is distinct and retains one funded retry. Incomplete2xx/3xx/5xx may use at most one funded retry but never approve the incomplete bytes. Original absolute deadline, per-executor admission, body/header limits, no decompression and secret-safe diagnostics remain unchanged.
+
+Use actual loopback HTTP fixtures for forbidden encoding, declared/streamed oversize and truncated download, with statuses400/401/403/429 and incomplete2xx/5xx. Assert actual requested key sequence, total attempts/funding and no invalid-body success. Renew a separate release scenario with observed HTTP classification/rotation/terminal counters, manual/PDF/capture and source-pinned root diagram before final review. Original QA1/QA2 and readiness stay revision-bound historical evidence.
