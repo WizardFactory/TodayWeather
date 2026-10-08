@@ -101,7 +101,12 @@ requires reviewed, source-bound one-use tools, aggregate request/byte/version li
 watchdog and pre-bootstrap metering before resource creation. The
 [33-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695)
 adds placement-check regressions for four exact host-read roles; it does not waive
-legacy/sibling boundaries or expand the resource approval. No AWS run has yet
+legacy/sibling boundaries or expand the resource approval. The
+[dynamic-I/O clarification](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6055549129)
+enumerates manifest/claim/provenance/config/report operations separately from
+literal checker exemptions. Failed or uncertain worker evidence must be exported
+and retained before rejection and owned cleanup; no failed run may become a PASS or
+receive a replacement allocation. No AWS run has yet
 occurred at this checkpoint. Local protocol measurements do not complete S09: actual same-region observations and O-2/O-5
 disposition remain gates for S10 and S13. No route work is released by the merges.
 Passing local checks do not imply complete route parity or deployed server2.

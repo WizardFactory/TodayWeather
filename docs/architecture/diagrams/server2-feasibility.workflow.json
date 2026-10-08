@@ -8,7 +8,7 @@
     "output": "docs/architecture/diagrams/server2-feasibility.html",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "8dced81a4e9d36026f73c8bf2eb05ad8a2a5494b",
+      "revision": "025e5a2b8e7e190e59cd92dd3a509f3008836a91",
       "provider": "github",
       "link_mode": "web"
     }
@@ -50,8 +50,8 @@
         },
         {
           "path": "server2/tools/benchmark/aws.rs",
-          "line": 1674,
-          "end_line": 1710
+          "line": 1760,
+          "end_line": 1785
         }
       ]
     },
@@ -129,14 +129,14 @@
       "col": 3,
       "type": "security",
       "label": "Watchdog + meter",
-      "sublabel": "no fresh grant",
+      "sublabel": "scope / expiry / meter",
       "width": 150,
       "tag": "planned",
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 686,
-          "end_line": 718
+          "line": 735,
+          "end_line": 756
         },
         {
           "path": "server2/deploy/benchmark/cloud-init.yml",
@@ -156,6 +156,11 @@
       "tag": "planned",
       "sources": [
         {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 446,
+          "end_line": 452
+        },
+        {
           "path": "server2/deploy/benchmark/cloud-init.yml",
           "line": 169,
           "end_line": 220
@@ -174,13 +179,13 @@
       "sources": [
         {
           "path": "server2/tools/benchmark/aws.rs",
-          "line": 1498,
-          "end_line": 1535
+          "line": 1583,
+          "end_line": 1613
         },
         {
           "path": "server2/tools/benchmark/aws.rs",
-          "line": 2235,
-          "end_line": 2265
+          "line": 2331,
+          "end_line": 2358
         }
       ]
     },
@@ -196,8 +201,8 @@
       "sources": [
         {
           "path": "server2/tools/benchmark/aws.rs",
-          "line": 1747,
-          "end_line": 1785
+          "line": 1833,
+          "end_line": 1888
         }
       ]
     },
@@ -206,15 +211,20 @@
       "lane": "measure",
       "col": 3,
       "type": "database",
-      "label": "Measured report",
-      "sublabel": "errors / tails / cost",
+      "label": "Preserved report",
+      "sublabel": "partial + abort reasons",
       "width": 150,
       "tag": "planned",
       "sources": [
         {
           "path": "server2/tools/benchmark/aws.rs",
-          "line": 2100,
-          "end_line": 2135
+          "line": 2224,
+          "end_line": 2239
+        },
+        {
+          "path": "server2/deploy/benchmark/aws_operator.py",
+          "line": 471,
+          "end_line": 510
         }
       ]
     },
@@ -230,8 +240,8 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 594,
-          "end_line": 625
+          "line": 643,
+          "end_line": 683
         }
       ]
     },
@@ -281,8 +291,8 @@
       "sources": [
         {
           "path": "plans/issue-2694.md",
-          "line": 32,
-          "end_line": 33
+          "line": 29,
+          "end_line": 37
         }
       ]
     }
@@ -335,13 +345,14 @@
     {
       "id": "edge8",
       "from": "sweep",
-      "to": "evidence"
+      "to": "evidence",
+      "label": "done / aborted"
     },
     {
       "id": "edge9",
-      "from": "sweep",
+      "from": "evidence",
       "to": "cleanup",
-      "label": "done / stop"
+      "label": "export before cleanup"
     },
     {
       "id": "edge10",
@@ -359,7 +370,7 @@
       "id": "edge12",
       "from": "evidence",
       "to": "decision",
-      "label": "proof"
+      "label": "qualified proof"
     },
     {
       "id": "edge13",
@@ -391,6 +402,7 @@
         "Approval: #2694 comment 6052596161; expires 2026-10-10T04:49:59Z.",
         "Tooling is locally tested; independent QA and actual host proof remain.",
         "Physical NIC/billing caps are not guaranteed; uncertainty stops the run.",
+        "Failure reports remain non-compliant; no restart or replacement grant.",
         "Local eight-day batch 14.054s is a risk, not an AWS or API percentile.",
         "S09 stays open and S10/S13 blocked until required evidence and decisions."
       ]

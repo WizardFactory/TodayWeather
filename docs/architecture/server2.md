@@ -79,13 +79,19 @@ manual path/dependency review. The checker exists after S04; this does not claim
 or route-porting compatibility has been established.
 
 S09's [named host-read amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695)
-restricts host observations to four exact source/operation/path pairs in
+admits four exact literal source/operation/path pairs in
 `server2/tools/benchmark/aws.rs`: `Path::new` for `/opt/server2-s09` and
 `/opt/server2-s09/run`, and `read_to_string` for `/proc/self/status` and
 `/proc/self/stat`. These support private-manifest ownership checks and process
-metrics. They do not exempt a file or permit compiler includes, encoded paths,
-writes, additional host paths, or legacy/sibling resource access. Later whole-tree
-audits retain this validated policy without creating a new waiver.
+metrics. They do not exempt a file or widen the literal checker to accept compiler
+includes, encoded paths, writes or other literal host paths. The
+[dynamic-I/O clarification](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6055549129)
+separately declares the private manifest read, exclusive `worker.claim` write,
+frozen source/lock and current-executable hash reads, and caller-owned config and
+report/state I/O. These benchmark provenance and evidence operations require manual
+containment/ownership review; computed and aliased paths are outside the static
+checker's complete coverage. They do not permit legacy serving-data access.
+Later whole-tree audits retain the four validated literal roles without a new waiver.
 
 ## 2. Compatibility inventory
 
@@ -965,6 +971,14 @@ writes. This is a safety margin, not measured physical storage or an invoice.
 Requests, bytes and stored versions require end-of-run reconciliation; partial
 or uncertain evidence cannot be labeled compliant.
 
+After the worker claims its allocation, a failed or uncertain run must still emit a
+bounded report containing completed cases, partial-case observations, consumed and
+reserved counters, a sanitized abort reason and explicit non-compliance. The
+operator preserves the worker report and bounded error diagnostics before rejecting
+the result and cleaning up the owned resources. A missing report is recorded as
+missing evidence, never as an empty successful run. Preservation does not permit
+further measurement, a second host or reuse of the allocation.
+
 Actual execution follows independent review of the frozen tooling/configuration,
 a private one-use manifest, a separate watchdog, an absolute host expiry and
 pre-bootstrap network metering. Missing guards, ownership uncertainty or budget
@@ -972,6 +986,20 @@ exhaustion stop work; restart permits cleanup only and never refreshes a grant.
 Kernel delivery quotas and application reservations do not mathematically cap
 physical NIC arrivals or retransmissions. Use stricter thresholds, measured
 headroom and a USD 5 operator stop; no absolute billing guarantee is claimed.
+The kernel's 2 GiB bootstrap and 24 GiB measurement receive quotas intentionally
+stop below the 3 GiB bootstrap and 26 GiB worker reservation grants. The different
+accounting layers cannot be equated; hitting a kernel backstop can interrupt a
+request and leaves uncertain counters and a failed report for review. Outbound
+security-group access is TCP/443 to `0.0.0.0/0` after guard verification, not an HTTPS
+destination allowlist. Reviewed worker/bootstrap inputs and IAM restrictions carry
+the endpoint scope. The live gate requires stock SSM Agent version `3.3.40.0` or later
+before the first Run Command under the `ssmmessages`-only policy. Missing, older or
+malformed version metadata stops work without installing an agent or widening IAM.
+At the checked Seoul prices, the fixed compute, IPv4, root, request and 48-hour
+storage caps total about USD 0.436101 before taxes and unknown bootstrap/log-transfer
+charges. This static operator admission estimate is not a live billing monitor;
+permanent retained storage continues after the run. Price provenance and the
+component arithmetic belong in the operations record.
 Only the newly owned host/root volume, IAM and necessary network artifacts are
 cleaned up; synthetic S3 objects and versions are retained without deletes or
 lifecycle. Existing production hosts and real weather/geocoding providers are
