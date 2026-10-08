@@ -710,6 +710,13 @@ the remaining attempt within the original deadline. Exhausting the bounded CAS
 conflict attempts is contention, distinct from exhausted quota. Duplicate rotation
 keys or quota-owner identities are rejected before funding or provider HTTP.
 
+If response headers have arrived but encoding, header/body size or download
+validation fails, a typed body failure preserves the received HTTP status.
+HTTP 429 and 401/403 still stop that key and allow only a distinct pre-funded
+rotation; other 4xx terminate without retry. An incomplete body is never Data
+or NoData. Status-less transport failures and incomplete transient responses
+retain the original bounded retry and absolute deadline.
+
 A successful data.go.kr response with result code 03 returns a distinct terminal
 no-data outcome and its original body without a second provider call. Deterministic
 request/service codes 10 and 12 are rejected without retry. HTTP quota/auth,

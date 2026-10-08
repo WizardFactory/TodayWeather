@@ -7,6 +7,9 @@ is merged at master `94019cf5`; S07 cache/resolver and S08 provider budgets
 proceed in parallel isolated tasks from that revision under AK's 2026-10-08
 authorization. Their implementation endpoints remain reviewed pre-merge PRs.
 No production/resource actions or route cutover are authorized by that work.
+S08 rejection tests must preserve received HTTP status even when a bounded body
+cannot be accepted: quota/auth rotate only to funded distinct keys, other 4xx
+terminate, and incomplete bodies never enter the weather archive.
 
 ## This PR
 

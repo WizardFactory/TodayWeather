@@ -9,7 +9,7 @@
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "7901f3a6973e5ea73954a7692bf980652b4070d6",
+      "revision": "ef9f3a7835ee16502b396630a347b1567b6d38f3",
       "provider": "github",
       "link_mode": "web"
     }
@@ -23,8 +23,8 @@
       "sources": [
         {
           "path": "server2/src/providers/acquisition.rs",
-          "line": 81,
-          "end_line": 108
+          "line": 83,
+          "end_line": 110
         }
       ]
     },
@@ -36,13 +36,13 @@
       "sources": [
         {
           "path": "server2/src/providers/acquisition.rs",
-          "line": 60,
-          "end_line": 79
+          "line": 62,
+          "end_line": 81
         },
         {
           "path": "server2/src/providers/acquisition.rs",
-          "line": 114,
-          "end_line": 205
+          "line": 116,
+          "end_line": 222
         },
         {
           "path": "server2/src/providers/rejection.rs",
@@ -100,13 +100,18 @@
       "sources": [
         {
           "path": "server2/src/providers/transport.rs",
-          "line": 69,
-          "end_line": 112
+          "line": 15,
+          "end_line": 24
+        },
+        {
+          "path": "server2/src/providers/transport.rs",
+          "line": 57,
+          "end_line": 121
         },
         {
           "path": "server2/tests/budget/peer.py",
           "line": 19,
-          "end_line": 46
+          "end_line": 64
         }
       ]
     }
@@ -222,7 +227,7 @@
       "y": 560,
       "label": "Status and bounded body",
       "variant": "return",
-      "note": "Terminal 03: no-data in RAM, no retry. Deterministic 10/12 are rejected. Quota/auth and HTTP status precedence remains."
+      "note": "Received status survives rejected encoding, bounds or download. Incomplete bodies are never Data/NoData. Complete 03 is RAM-only; 10/12 is terminal."
     },
     {
       "id": "admit-12",
