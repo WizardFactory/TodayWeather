@@ -1,8 +1,8 @@
-# S09 local feasibility benchmark
+# S09 feasibility benchmark operations
 
 ## What this delivery measures
 
-This tool exercises the actual Rust raw store, catalog, resolver and funded-acquisition libraries against fresh volatile HTTP peers. It measures synthetic origin work, not a deployed weather route. It neither calls live AWS/providers nor proves API parity, CloudFront latency, TLS/SigV4/IAM or the intended Linux host's musl feasibility. S09 remains open: same-region intended-host measurements and O-2/O-5 decisions still block S10/S13.
+This tool exercises the actual Rust raw store, catalog, resolver and funded-acquisition libraries against fresh volatile HTTP peers. It measures synthetic origin work, not a deployed weather route. The local runner calls no real AWS/providers. A separately armed approved driver can use one dedicated same-region test bucket after eligible review. This delivery has not executed that mode and proves no API parity, CloudFront latency, actual IAM/TLS or intended-host musl feasibility. S09 remains open: same-region intended-host measurements and O-2/O-5 decisions still block S10/S13.
 
 ## Run an isolated release measurement
 
@@ -32,7 +32,7 @@ Aggregate limits are 32 cases, 128 trials, 4096 offered samples, 2048 groups, 32
 
 Principal all-request p50/p95/p99 uses nearest-rank integer microseconds for every attempted success or failure. A separate success-only distribution has its own denominator. Warm-unavailable entries have null duration, never zero; both distributions flag fewer than 100 measured samples as insufficient. The small default smoke has two clients per case and cannot establish a latency tail.
 
-Each trial uses a fresh resolver. Warm prerequisites must all succeed, then maintenance reaches idle before counters are sampled. A warm report with idle baseline must have zero wire I/O. Foreground and background maintenance counts are separate. Capacity, Timeout and other typed outcomes remain visible; they cannot become a partial success or provider miss.
+Local runner trials use fresh resolvers. The approved-driver warm case instead reuses one resolver across observation waves, with one complete prewarm and maintenance idle; cold trials still start with empty resolver memory. Warm prerequisites must all succeed before counters are sampled. A warm report with idle baseline must have zero wire I/O. Foreground and background maintenance counts are separate. Capacity, Timeout and other typed outcomes remain visible; they cannot become a partial success or provider miss.
 
 Offered clients are distinct keys, not parallel raw reads. The owner deadline remains 3 s, logical cache 128 MiB and owner reservation 64 MiB. View CPU=2; catalog/raw libraries each have their own bounded I/O=16 and CPU=2 pools. These are not a process RSS limit. S06 descriptor normalization is sequential; FullHistory page-size 1 repeats normalization and can hit page/deadline bounds. No optimization or old parallel-wave latency claim is made.
 
@@ -44,10 +44,49 @@ Warmup view timings are separate from foreground parse/assembly totals. Process-
 
 Provider modes run real local S08 reservation/executor code through a benchmark-only adapter. Data receives raw+descriptor+catalog publication before client success, followed by a fresh S3-only lookup that checks exact bytes. NoData/code 03 remains RAM-only and terminal. Funding denial and provider errors cannot archive weather raw/group/catalog objects; their zero PUT fence is validated independently of allowed budget writes. Denial makes zero provider calls. This fixture seam does not deliver a production S07/S08 provider adapter or weather semantics.
 
-Every report retains requires_intended_host_and_same_region_measurements, pending_O2, pending_O5, api_parity_verified=false and production_cutover_authorized=false. A fast local result cannot change these gates. Actual host/bucket/role creation or measurement requires separately approved scope; the CLI intentionally has no live fallback.
+Every report retains requires_intended_host_and_same_region_measurements, pending_O2, pending_O5, api_parity_verified=false and production_cutover_authorized=false. A fast local result cannot change these gates. The fixed resource scope is approved, but creation and live measurement wait for frozen tooling and an eligible review. The local CLI has no live fallback.
 
 ## Verification and references
 
 Regression tests cover failure-inclusive quantiles, null/unavailable denominators, RSS units, target/budget bounds, cold/idle-warm HTTP, orphan siblings, actual eight-day identities, admission pressure and funded Data/NoData/denial/error fences. The distinct release runner supplies the usage capture below. Its low-sample results demonstrate tool behavior only. Existing S05-S08 tests and placement/artifact checks remain required.
 
 See the [architecture](../architecture/server2.md), [task specification](../../specs/issue-2694.md). No live host or AWS run is asserted by this manual.
+
+## Approved driver and operator boundary
+
+The [resource approval](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052596161) expires 2026-10-10T04:49:59Z. It permits one dedicated Seoul c6i.large host for at most two hours, one hour of benchmark work and an operator stop at USD 5. No production hosts, actual weather/geocoder providers, MongoDB or notification state are used. The fixed account is 141248341265; the bucket and temporary role names are fixed by the inert templates. Synthetic S3 objects and all their versions remain after cleanup. Owned host/root storage, temporary IAM and security-group cleanup never delete bucket objects.
+
+These validation commands perform no network I/O:
+
+```sh
+server2/target/release/server2-feasibility \
+  --validate-aws-config server2/config/benchmarks/aws.json
+python3 server2/deploy/benchmark/aws_operator.py
+```
+
+The operator template is inert. Actual execution requires reviewed source/config/lock hashes, actual host-musl binary hash, an eligible native review receipt, explicit authorization and a fresh private state file. The operator first creates a host with no egress, proves the stock timer/kernel guard, then opens only the approved HTTPS scope. It verifies SSM, build hashes and the actual getconf CLK_TCK value. A private source-bound manifest grants one allocation; worker.claim is exclusive and cannot be resumed. A lost worker has cleanup authority only. Operator calls, IMDS, SSM/log export and bootstrap traffic have separate bounded grants.
+
+The live binary entry requires --aws-config, --run-manifest and --execute-approved-run together. It refuses arbitrary endpoints and requires the fixed private manifest location, Linux x86_64 musl, source/binary/config hashes and the actual role identity. IMDSv2 credentials stay in RAM and refresh coherently; no profile discovery, secret output or URL logging is allowed. Protocol preflight uses actual HTTPS adapters, hash/MD5/gzip checks, 404, conditional 200/412 and CAS/version checks. Signed missing-condition and forbidden-namespace probes must return 403 before any measured sweep. None of those real-host proofs is asserted by local tests.
+
+## Attempt, byte and version accounting
+
+Worker limits are 390,000 GET/HEAD, 18,000 PUT/LIST, 26 GiB reserved download and 63 MiB stored-version charge. Controller limits are 10,000 GET/HEAD, 2,000 PUT/LIST, 3 GiB bootstrap plus 1 GiB administration and 1 MiB store. IMDS uses at most 512 MiB of controller administration, not an additional grant. Every potential PUT permanently charges body length plus 16 KiB, including failed, denied, duplicate and ambiguous attempts. This allowance is conservative bookkeeping, not exact billing. No refund or object inventory renews it.
+
+Read phase caps are protocol 5k, cold 280k, repair 60k, warm 10k, funding 10k and failure 25k. Every delegated retry/CAS/LIST/repair/budget operation receives a ticket before dispatch. Credential waits and local validation may make admitted attempts an upper bound rather than exact received requests. Confirmed status/body sizes, reserved bytes and unknown completion are separate. Unknown S3 or metadata work fails overall compliance. The controller independently checks metadata requests at most 1,024, bytes at most 512 MiB, unknown_calls=0 and worker overall compliance.
+
+Canonical fixture estimates include gzip, descriptor and every intermediate catalog version. Read limits use the largest generated raw/control body plus 1,024 bytes of margin, within existing runtime bounds. The estimate can refuse a case; actual tickets remain authoritative. A read one byte above its cap cannot certify accounting. Real NIC arrivals/retransmissions are not physically bounded by application counters; stock guards and operator observations provide separate backstops.
+
+## Interpret the approved-driver report
+
+The bounded 32-case template covers cold/warm/targeted/latest/full-history, a synthetic eight-day batch, one first-flight orphan repair and local funded Data/NoData/denial/error behavior at selected offered levels. It is not a full Cartesian matrix. Reuse immutable physical fixtures across fresh cold trials; report groups, revisions, day catalogs, resolution count, response keys and offered/admitted clients separately. Repair samples describe one initial orphan wave, not later healthy-catalog requests as repair p95.
+
+The target_samples field counts offered client observations. independent_RAM_empty_resolver_trials counts actual fresh trials, approximately ceil(samples / clients). Shared waiters are not independent backend samples. The current template does not prove the original 300 independent cold trials per level; omitted/refused or underpowered coverage is INSUFFICIENT. Warm resolver metrics are case-cumulative; ledger before/foreground/owned-work deltas isolate each wave. A verified second warm wave must add no S3/provider I/O.
+
+Network clients are shared after protocol and seeding. RAM-empty measurements therefore include warmed TCP/TLS/DNS pools and do not model a fully fresh Spot process. Phase-tagged first protocol samples are separate. Process RSS/CPU includes protocol and seeding; Linux tick conversion needs the actual host getconf receipt. The local history8 batch took 14.054289 s in a historical fixture: this is a feasibility risk, not an existing weather API or CloudFront latency claim.
+
+The maintained operator test can drive the compiled worker through a fake CLI/SSM controller and real loopback S3/provider peers. This functional proof uses the same source-bound manifest, claim, ledger and workload code; it asserts real AWS=0, metadata=0 and host gate=false. It cannot substitute for the approved intended-host measurement or AK O-2/O-5 decisions. S09 stays open and S10/S13 stay blocked until those original gates hold.
+
+
+## Fixed host reads and placement guard
+
+The [exact33-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695) permits four source/operation/path roles only: Path::new on /opt/server2-s09 and /opt/server2-s09/run for private ownership checks, and read_to_string on /proc/self/status and /proc/self/stat for this process's diagnostics. The gate validates the canonical S09 declaration on later whole-tree audits too. Declarations cannot add source files, other operations, prefixes/globs or compiler/encoded/legacy exceptions. Static checks remain an aid to human review, not a filesystem sandbox.

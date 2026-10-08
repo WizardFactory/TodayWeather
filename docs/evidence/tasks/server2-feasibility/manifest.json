@@ -1,5 +1,5 @@
 {
-  "pages": 2,
+  "pages": 4,
   "schema": 1,
   "task": "S09",
   "date": "2026-10-08",
@@ -8,20 +8,22 @@
   "scope": "Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or host go",
   "captured_stdout": [
     "LOCAL ONLY; intended-host/same-region/O2/O5 gates pending",
-    "cold: outcomes={'success': 2} all-p95=5035us success-p95=5035us",
-    "warm: outcomes={'success': 2} all-p95=13us success-p95=13us",
-    "provider_data: outcomes={'success': 2} all-p95=21496us success-p95=21496us",
-    "provider_nodata: outcomes={'acquisition_denied': 2} all-p95=13523us success-p95=Noneus",
-    "provider_denied: outcomes={'acquisition_denied': 2} all-p95=11927us success-p95=Noneus",
-    "provider_error: outcomes={'acquisition_denied': 2} all-p95=10921us success-p95=Noneus",
-    "Process peak RSS: 22413312 bytes; CPU includes startup/seed",
+    "cold: outcomes={'success': 2} all-p95=4751us success-p95=4751us",
+    "warm: outcomes={'success': 2} all-p95=14us success-p95=14us",
+    "provider_data: outcomes={'success': 2} all-p95=20746us success-p95=20746us",
+    "provider_nodata: outcomes={'acquisition_denied': 2} all-p95=9907us success-p95=Noneus",
+    "provider_denied: outcomes={'acquisition_denied': 2} all-p95=10472us success-p95=Noneus",
+    "provider_error: outcomes={'acquisition_denied': 2} all-p95=8497us success-p95=Noneus",
+    "Process peak RSS: 24526848 bytes; CPU includes startup/seed",
     "PASS: bounded report, all outcome denominators and terminal archive fences"
   ],
-  "binary_sha256": "2859836b84f298858a09724143e4b27a6e4c54dfdfb8f9de356b9a1b32f2a9cd",
+  "binary_sha256": "4450b391b4c58de87ad2a363ef398cefa2705868004311f71a1b84d943bade88",
   "requested_config_sha256": "b3a3857ba82851954da321448a4f8a128d58b4321df77adba785adc993630661",
-  "effective_config_sha256": "80720c5929cdb0555699cabbd9832e43283c2272d9d394c4f3a2e7edc6ae5a57",
-  "report_sha256": "9e12491de080136ca73f2623f27dccf8dcf9522db651cf87ae985e8ced115b44",
-  "source_sha256": "d434519248fad1586f8c70d6795c80da73087b5975b63bd82daaea1dac577018",
-  "pdf_sha256": "663ab8f056b85fb2b5380147eb7efd2691e4b5d2581f4a2666cf703618dd67d0",
-  "screenshot_sha256": "f65d966efec28cce74105dc3f7fd0096b7a3b62b62bb172bc4ee8fcaf9f16acd"
+  "effective_config_sha256": "b5f53c4263c17e9bebc2d790377ec524f9bf0ef8716617a298cbcccd9b685bf9",
+  "report_sha256": "cbb3301b5707745b40c6bf9385df4b0edd6c9c0bb2ad088a1ec70a82164c8d69",
+  "live_driver_sha256": "dc9d3f80539658bc117b0b6127e670a0ebee9ed41e1f4e517c0b330e1baa0f70",
+  "operator_sha256": "3434d141361e1f41419c1976e989b59c89647a3486754842f50bb0a614dce1d9",
+  "source_sha256": "1a119a2719acdb92976343b570ade5e382c34ae9f07fca6056eed88fd515a4b5",
+  "pdf_sha256": "1015e0360e9a10a9960d88cfad681df7b3f545335e88223dc56c6a42be5859a8",
+  "screenshot_sha256": "bfb2f0c495bd9ede02480f0c983a05ed547abed8b7f035e143534b5575a81521"
 }

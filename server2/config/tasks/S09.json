@@ -12,7 +12,18 @@
     "server2/config/benchmarks/local.json",
     "server2/config/tasks/S09.json",
     "server2/Cargo.toml",
-    "server2/tools/render_feasibility_manual.py"
+    "server2/tools/render_feasibility_manual.py",
+    "server2/tools/benchmark/aws.rs",
+    "server2/config/benchmarks/aws.json",
+    "server2/tests/performance/aws.rs",
+    "server2/deploy/benchmark/aws_operator.py",
+    "server2/deploy/benchmark/aws-run.json",
+    "server2/deploy/benchmark/cloud-init.yml",
+    "server2/deploy/benchmark/instance-policy.json",
+    "server2/deploy/benchmark/bucket-policy.json",
+    "server2/deploy/benchmark/test_aws_operator.py",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py"
   ],
   "outside": [
     {
@@ -71,5 +82,35 @@
       "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
     }
   ],
-  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052017682"
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695",
+  "runtime_host_reads": [
+    {
+      "source": "server2/tools/benchmark/aws.rs",
+      "operation": "Path::new",
+      "path": "/opt/server2-s09",
+      "category": "private-owned-manifest",
+      "reason": "Validate root ownership and private permissions of the dedicated run root"
+    },
+    {
+      "source": "server2/tools/benchmark/aws.rs",
+      "operation": "Path::new",
+      "path": "/opt/server2-s09/run",
+      "category": "private-owned-manifest",
+      "reason": "Validate root ownership and private permissions of the fixed manifest parent"
+    },
+    {
+      "source": "server2/tools/benchmark/aws.rs",
+      "operation": "read_to_string",
+      "path": "/proc/self/status",
+      "category": "read-only-system",
+      "reason": "Read only this benchmark process peak RSS; no serving data"
+    },
+    {
+      "source": "server2/tools/benchmark/aws.rs",
+      "operation": "read_to_string",
+      "path": "/proc/self/stat",
+      "category": "read-only-system",
+      "reason": "Read only this benchmark process CPU ticks; no serving data"
+    }
+  ]
 }

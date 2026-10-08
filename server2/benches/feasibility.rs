@@ -1,4 +1,6 @@
-//! Local-only synthetic measurement tool. No public routes or AWS performance claims.
+//! Scoped synthetic feasibility tool. No public routes or inferred AWS performance claims.
+#[path = "../tools/benchmark/aws.rs"]
+mod aws;
 #[path = "../tools/benchmark/model.rs"]
 mod model;
 use model::{Case, Component, Config, Sample, summarize};
@@ -877,12 +879,28 @@ async fn main() {
     let a: Vec<_> = std::env::args().collect();
     if a.len() == 2 && a[1] == "--help" {
         println!("server2-feasibility --config PATH | --validate-config PATH");
-        println!("Bounded local-only measurements; intended host/S3/O2/O5 gates remain pending.");
+        println!(
+            "--validate-aws-config PATH | --aws-config PATH --run-manifest PATH --execute-approved-run"
+        );
+        println!("--local-approved-worker PATH --run-manifest PATH --loopback-s3 URL");
+        println!(
+            "Local modes are local-only. Live execution requires the pinned private approved allocation; O2/O5 and route gates remain pending."
+        );
         return;
     }
     let result = async {
-        if a.len() != 3 || !matches!(a[1].as_str(), "--config" | "--validate-config") {
+        if a.len() == 7 && a[1] == "--local-approved-worker" && a[3] == "--run-manifest" && a[5] == "--loopback-s3" {
+            return aws::local_worker(std::path::Path::new(&a[2]),std::path::Path::new(&a[4]),&a[6]).await;
+        }
+        if a.len() == 6 && a[1] == "--aws-config" && a[3] == "--run-manifest" && a[5] == "--execute-approved-run" {
+            return aws::execute(std::path::Path::new(&a[2]),std::path::Path::new(&a[4])).await;
+        }
+        if a.len() != 3 || !matches!(a[1].as_str(), "--config" | "--validate-config" | "--validate-aws-config") {
             return Err("usage: --config PATH".into());
+        }
+        if a.len() == 3 && a[1] == "--validate-aws-config" {
+            let _ = aws::read_config(std::path::Path::new(&a[2])).map_err(str::to_owned)?;
+            return Ok(json!({"schema":1,"configuration_valid":true,"execution":false,"metadata_requests":0,"S3_requests":0}));
         }
         let p = std::path::Path::new(&a[2]);
         if std::fs::metadata(p).map_err(|_| "config metadata")?.len() > 65536 {
@@ -910,7 +928,7 @@ async fn main() {
     match result {
         Ok(r) => println!("{}", serde_json::to_string(&r).expect("measurement report")),
         Err(e) => {
-            eprintln!("local benchmark failed: {e}");
+            eprintln!("benchmark failed: {e}");
             std::process::exit(1)
         }
     }

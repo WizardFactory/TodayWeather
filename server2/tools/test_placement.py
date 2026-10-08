@@ -290,4 +290,70 @@ jobs:
                     good.replace('timeout-minutes: 30','timeout-minutes: 300')]:
             self.write('.github/workflows/server2.yml',bad);self.assertTrue(self.errors())
 
+
+    def host_policy(self):
+        roles=[('Path::new','/opt/server2-s09','private-owned-manifest'),
+               ('Path::new','/opt/server2-s09/run','private-owned-manifest'),
+               ('read_to_string','/proc/self/status','read-only-system'),
+               ('read_to_string','/proc/self/stat','read-only-system')]
+        return dict(task='S09',issue='https://github.com/WizardFactory/TodayWeather/issues/2694',
+                    server2_paths=['server2/tools/benchmark/aws.rs'],outside=[],
+                    runtime_host_reads=[dict(source='server2/tools/benchmark/aws.rs',operation=op,path=p,category=c,reason='Fixed privately owned host or process-only read') for op,p,c in roles])
+    def write_host_policy(self, policy=None):
+        self.write('server2/config/tasks/S09.json',json.dumps(policy or self.host_policy()))
+    def test_exact_host_read_roles_and_later_task_audit(self):
+        self.write_host_policy()
+        self.write('server2/tools/benchmark/aws.rs','fn main(){ let _=Path::new("/opt/server2-s09");let _=Path::new("/opt/server2-s09/run");let _=std::fs::read_to_string("/proc/self/status");let _=std::fs::read_to_string("/proc/self/stat");}')
+        self.assertEqual([],self.errors())
+        self.commit();self.base=self.git('rev-parse','HEAD').strip()
+        self.write('server2/src/lib.rs','pub fn later_task(){}')
+        self.assertEqual([],self.errors(),'unchanged S09 approved reads remain audited for later task')
+    def test_host_roles_do_not_allow_other_operations_or_sources(self):
+        self.write_host_policy()
+        for body in ['std::fs::read("/proc/self/status");','std::fs::File::open("/proc/self/stat");',
+                     'std::fs::File::create("/opt/server2-s09");','PathBuf::from("/opt/server2-s09");',
+                     'Path::new("/proc/self/status");']:
+            self.write('server2/tools/benchmark/aws.rs',body);self.assertTrue(self.errors(),body)
+        self.write('server2/tools/benchmark/aws.rs','fn valid(){}')
+        self.write('server2/src/lib.rs','std::fs::read_to_string("/proc/self/status");')
+        self.assertTrue(self.errors())
+    def test_host_roles_do_not_allow_encoded_compiler_or_changed_paths(self):
+        self.write_host_policy()
+        for body in [r'std::fs::read_to_string("\x2fproc/self/status");',
+                     'include_str!("/proc/self/status");',
+                     '#[path="/opt/server2-s09"] mod host;',
+                     'std::fs::read_to_string("/proc/self/../status");',
+                     'std::fs::read_to_string("/proc/self/other");',
+                     'Path::new("/opt/server2-s09/run-other");']:
+            self.write('server2/tools/benchmark/aws.rs',body);self.assertTrue(self.errors(),body)
+    def test_host_policy_records_cannot_widen_reviewed_allowlist(self):
+        good=self.host_policy()
+        for field,value in [('source','server2/src/lib.rs'),('operation','open'),('path','/proc/self/*'),('category','documentation'),('reason','')]:
+            bad=json.loads(json.dumps(good));bad['runtime_host_reads'][0][field]=value
+            self.write_host_policy(bad);self.assertTrue(self.errors(),field)
+        for mutate in ['unknown','duplicate','missing','nonlist','nonrecord','missingfield','wrongtask','wrongissue']:
+            bad=json.loads(json.dumps(good))
+            if mutate=='unknown':bad['runtime_host_reads'][0]['extra']='allow'
+            elif mutate=='duplicate':bad['runtime_host_reads'][0]=bad['runtime_host_reads'][1]
+            elif mutate=='missing':bad['runtime_host_reads'].pop()
+            elif mutate=='nonlist':bad['runtime_host_reads']={}
+            elif mutate=='nonrecord':bad['runtime_host_reads'][0]='bad'
+            elif mutate=='missingfield':bad['runtime_host_reads'][0].pop('operation')
+            elif mutate=='wrongtask':bad['task']='S10'
+            else:bad['issue']='#wrong'
+            self.write_host_policy(bad);self.assertTrue(self.errors(),mutate)
+    def test_active_declaration_cannot_self_grant_host_reads(self):
+        self.d['runtime_host_reads']=self.host_policy()['runtime_host_reads']
+        self.assertTrue(self.errors())
+    def test_host_rules_absent_are_not_implicitly_granted(self):
+        self.write('server2/tools/benchmark/aws.rs','std::fs::read_to_string("/proc/self/status");')
+        self.assertTrue(self.errors())
+    def test_malformed_canonical_host_policy_fails_later_audit(self):
+        self.write('server2/config/tasks/S09.json','{broken')
+        self.assertTrue(self.errors())
+        self.write_host_policy();self.commit();self.base=self.git('rev-parse','HEAD').strip()
+        bad=self.host_policy();bad['runtime_host_reads'][0]['path']='/opt/server2-s09/*'
+        self.write_host_policy(bad);self.commit();self.base=self.git('rev-parse','HEAD').strip()
+        self.assertTrue(self.errors())
+
 if __name__ == '__main__': unittest.main()
