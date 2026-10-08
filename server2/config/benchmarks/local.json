@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "run_id": "s09-local",
+  "s3_endpoint": "http://127.0.0.1:1/",
+  "provider_endpoint": "http://127.0.0.1:1/",
+  "cases": [
+    {
+      "name": "cold",
+      "workload": "revisions",
+      "mode": "cold",
+      "selection": "latest",
+      "clients": 2,
+      "owners": 4,
+      "trials": 1,
+      "revisions": 2,
+      "record_bytes": 128,
+      "siblings": 1,
+      "layout": "complete"
+    },
+    {
+      "name": "warm",
+      "workload": "revisions",
+      "mode": "warm",
+      "selection": "latest",
+      "clients": 2,
+      "owners": 4,
+      "trials": 1,
+      "revisions": 2,
+      "record_bytes": 128,
+      "siblings": 1,
+      "layout": "complete"
+    },
+    {
+      "name": "provider_data",
+      "workload": "revisions",
+      "mode": "provider_data",
+      "selection": "latest",
+      "clients": 2,
+      "owners": 4,
+      "trials": 1,
+      "revisions": 1,
+      "record_bytes": 128,
+      "siblings": 1,
+      "layout": "complete"
+    },
+    {
+      "name": "provider_nodata",
+      "workload": "revisions",
+      "mode": "provider_nodata",
+      "selection": "latest",
+      "clients": 2,
+      "owners": 4,
+      "trials": 1,
+      "revisions": 1,
+      "record_bytes": 128,
+      "siblings": 1,
+      "layout": "complete"
+    },
+    {
+      "name": "provider_denied",
+      "workload": "revisions",
+      "mode": "provider_denied",
+      "selection": "latest",
+      "clients": 2,
+      "owners": 4,
+      "trials": 1,
+      "revisions": 1,
+      "record_bytes": 128,
+      "siblings": 1,
+      "layout": "complete"
+    },
+    {
+      "name": "provider_error",
+      "workload": "revisions",
+      "mode": "provider_error",
+      "selection": "latest",
+      "clients": 2,
+      "owners": 4,
+      "trials": 1,
+      "revisions": 1,
+      "record_bytes": 128,
+      "siblings": 1,
+      "layout": "complete"
+    }
+  ]
+}

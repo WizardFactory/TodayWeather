@@ -1,0 +1,27 @@
+{
+  "pages": 2,
+  "schema": 1,
+  "task": "S09",
+  "date": "2026-10-08",
+  "command": "python3 server2/tools/benchmark/run.py --output reports/s09-local.json",
+  "environment": "Rust1.99/macOS, public Python loopback peer",
+  "scope": "Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or host go",
+  "captured_stdout": [
+    "LOCAL ONLY; intended-host/same-region/O2/O5 gates pending",
+    "cold: outcomes={'success': 2} all-p95=5035us success-p95=5035us",
+    "warm: outcomes={'success': 2} all-p95=13us success-p95=13us",
+    "provider_data: outcomes={'success': 2} all-p95=21496us success-p95=21496us",
+    "provider_nodata: outcomes={'acquisition_denied': 2} all-p95=13523us success-p95=Noneus",
+    "provider_denied: outcomes={'acquisition_denied': 2} all-p95=11927us success-p95=Noneus",
+    "provider_error: outcomes={'acquisition_denied': 2} all-p95=10921us success-p95=Noneus",
+    "Process peak RSS: 22413312 bytes; CPU includes startup/seed",
+    "PASS: bounded report, all outcome denominators and terminal archive fences"
+  ],
+  "binary_sha256": "2859836b84f298858a09724143e4b27a6e4c54dfdfb8f9de356b9a1b32f2a9cd",
+  "requested_config_sha256": "b3a3857ba82851954da321448a4f8a128d58b4321df77adba785adc993630661",
+  "effective_config_sha256": "80720c5929cdb0555699cabbd9832e43283c2272d9d394c4f3a2e7edc6ae5a57",
+  "report_sha256": "9e12491de080136ca73f2623f27dccf8dcf9522db651cf87ae985e8ced115b44",
+  "source_sha256": "d434519248fad1586f8c70d6795c80da73087b5975b63bd82daaea1dac577018",
+  "pdf_sha256": "663ab8f056b85fb2b5380147eb7efd2691e4b5d2581f4a2666cf703618dd67d0",
+  "screenshot_sha256": "f65d966efec28cce74105dc3f7fd0096b7a3b62b62bb172bc4ee8fcaf9f16acd"
+}

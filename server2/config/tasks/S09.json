@@ -1,0 +1,75 @@
+{
+  "task": "S09",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2694",
+  "server2_paths": [
+    "server2/benches/feasibility.rs",
+    "server2/tools/benchmark/model.rs",
+    "server2/tools/benchmark/run.py",
+    "server2/tools/benchmark/local_peer.py",
+    "server2/tests/performance.rs",
+    "server2/tests/performance/report.rs",
+    "server2/tests/performance/wire.rs",
+    "server2/config/benchmarks/local.json",
+    "server2/config/tasks/S09.json",
+    "server2/Cargo.toml",
+    "server2/tools/render_feasibility_manual.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2694.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "specs/issue-2694.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "plans/issue-2694.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/operations/server2-feasibility.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/operations/server2-feasibility.pdf",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-feasibility/usage.png",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-feasibility/manifest.json",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-feasibility.workflow.json",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-feasibility.html",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052017682"
+}
