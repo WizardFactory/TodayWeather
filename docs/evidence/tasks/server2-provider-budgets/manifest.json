@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "captured_at_utc": "2026-10-08T01:52:41+00:00",
+  "capture_kind": "terminal result rendered from actual isolated release execution",
+  "environment": "macOS, release binary, synthetic loopback S3/provider peers",
+  "command": "python3.11 server2/tests/budget/peer.py --binary server2/target/release/examples/provider_budgets_smoke",
+  "observed": {
+    "provider_requests": 22,
+    "charged_units": 48,
+    "witnesses": 23
+  },
+  "execution_log_sha256": "66284d5d1bcae6d89c18db32ec442fde6973112088b9c94372457efeb8bf1294",
+  "binary_sha256": "b6c0886684d056eaec4368a1d9bc512acf6f79fb9b66ad950ed41ed687e73ddd",
+  "pdf_link_revision": "e9c107164719234497f04876af738a459a3f70ee",
+  "source_sha256": "5a6f41264177a81c1785dfa4f52936d5792baa9ab8490b60bd3a02a65fe27dea",
+  "pdf_sha256": "3befaee5dac4fe23b59bff7a493268364691aea1c0edcc24854994795aa7b8c5",
+  "screenshot_sha256": "1ad8c4336ce3d887f99ead8a68d74a4e0a0b835b8e6e2eb9e4dc6a2011988431",
+  "limitations": "No live AWS/signature/IAM/provider quota/latency/API parity proof"
+}

@@ -2,9 +2,14 @@
 
 Source: [intent](../intent/issue-2614.md), [spec](../specs/issue-2614.md).
 Current status: design PR #2685, foundation PR #2708 and S02/S03/S05 PRs
-#2713/#2711/#2712 are merged. S06 catalogs and complete fetch-group recovery
-proceed in a separate task-owned PR from master `4864c936`.
+#2713/#2711/#2712 are merged. S06 [PR #2719](https://github.com/WizardFactory/TodayWeather/pull/2719)
+is merged at master `94019cf5`; S07 cache/resolver and S08 provider budgets
+proceed in parallel isolated tasks from that revision under AK's 2026-10-08
+authorization. Their implementation endpoints remain reviewed pre-merge PRs.
 No production/resource actions or route cutover are authorized by that work.
+S08 rejection tests must preserve received HTTP status even when a bounded body
+cannot be accepted: quota/auth rotate only to funded distinct keys, other 4xx
+terminate, and incomplete bodies never enter the weather archive.
 
 ## This PR
 
@@ -83,7 +88,9 @@ is merged and #2689 is complete. S02 goldens ([PR #2713](https://github.com/Wiza
 S03 local infrastructure ([PR #2711](https://github.com/WizardFactory/TodayWeather/pull/2711))
 and S05 raw-record storage ([PR #2712](https://github.com/WizardFactory/TodayWeather/pull/2712))
 are merged; the [integration record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6031101668)
-records the reviewed heads and resulting master tree. S06 follows that baseline.
+records the reviewed heads and resulting master tree. S06 is merged; its
+[integration record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6046074764)
+verifies the reviewed tree and records the next scoped work authorized by AK.
 S07 resolver/cache and S08 provider reservations can proceed in parallel after
 their S06 predecessor gate; read-only interface preparation does not complete it.
 Passing local checks do not imply complete route parity or deployed server2.

@@ -1,0 +1,285 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "S08 durable provider admission",
+    "output": "docs/architecture/diagrams/server2-provider-admission.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "ef9f3a7835ee16502b396630a347b1567b6d38f3",
+      "provider": "github",
+      "link_mode": "web"
+    }
+  },
+  "participants": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Caller",
+      "sublabel": "trusted plan",
+      "sources": [
+        {
+          "path": "server2/src/providers/acquisition.rs",
+          "line": 83,
+          "end_line": 110
+        }
+      ]
+    },
+    {
+      "id": "executor",
+      "type": "backend",
+      "label": "Funded executor",
+      "sublabel": "at most 2 HTTP",
+      "sources": [
+        {
+          "path": "server2/src/providers/acquisition.rs",
+          "line": 62,
+          "end_line": 81
+        },
+        {
+          "path": "server2/src/providers/acquisition.rs",
+          "line": 116,
+          "end_line": 222
+        },
+        {
+          "path": "server2/src/providers/rejection.rs",
+          "line": 163,
+          "end_line": 191
+        }
+      ]
+    },
+    {
+      "id": "budget",
+      "type": "security",
+      "label": "Budget owner",
+      "sublabel": "private ranges",
+      "sources": [
+        {
+          "path": "server2/src/budget/store.rs",
+          "line": 57,
+          "end_line": 77
+        },
+        {
+          "path": "server2/src/budget/store.rs",
+          "line": 98,
+          "end_line": 218
+        },
+        {
+          "path": "server2/src/budget/model.rs",
+          "line": 116,
+          "end_line": 131
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "cloud",
+      "label": "S3 budget state",
+      "sublabel": "CAS and witnesses",
+      "sources": [
+        {
+          "path": "server2/src/budget/transport.rs",
+          "line": 40,
+          "end_line": 117
+        },
+        {
+          "path": "server2/src/budget/transport.rs",
+          "line": 143,
+          "end_line": 190
+        }
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "Provider",
+      "sublabel": "synthetic test peer",
+      "sources": [
+        {
+          "path": "server2/src/providers/transport.rs",
+          "line": 15,
+          "end_line": 24
+        },
+        {
+          "path": "server2/src/providers/transport.rs",
+          "line": 57,
+          "end_line": 121
+        },
+        {
+          "path": "server2/tests/budget/peer.py",
+          "line": 19,
+          "end_line": 64
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 190,
+      "to": 375,
+      "label": "Global ceiling and unique durable range"
+    },
+    {
+      "from": 385,
+      "to": 505,
+      "label": "Witness before volatile request funding"
+    },
+    {
+      "from": 515,
+      "to": 735,
+      "label": "Bounded funded attempts and checked result"
+    }
+  ],
+  "messages": [
+    {
+      "id": "admit-1",
+      "from": "caller",
+      "to": "executor",
+      "y": 160,
+      "label": "Acquisition plan and deadline",
+      "variant": "emphasis",
+      "note": "At most 4 admitted acquisitions; validation CPU=2. Reject duplicate rotation identities before funding."
+    },
+    {
+      "id": "admit-2",
+      "from": "executor",
+      "to": "budget",
+      "y": 200,
+      "label": "Reserve all candidate maxima",
+      "variant": "security",
+      "note": "Initial data.go.kr key: 2 units; optional next key: 1. VC maxima: 98/50/2."
+    },
+    {
+      "id": "admit-3",
+      "from": "budget",
+      "to": "s3",
+      "y": 240,
+      "label": "GET trusted authority and ETag",
+      "variant": "default"
+    },
+    {
+      "id": "admit-4",
+      "from": "s3",
+      "to": "budget",
+      "y": 280,
+      "label": "Validated policy and used floor",
+      "variant": "return"
+    },
+    {
+      "id": "admit-5",
+      "from": "budget",
+      "to": "s3",
+      "y": 320,
+      "label": "CAS unique range within ceiling",
+      "variant": "security",
+      "note": "Checked min(block, remaining); bounded CAS contention is distinct from exhaustion. No deletion or reset."
+    },
+    {
+      "id": "admit-6",
+      "from": "s3",
+      "to": "budget",
+      "y": 360,
+      "label": "Completed 200: owned range",
+      "variant": "return",
+      "note": "Unknown outcome grants no HTTP; a committed high-water remains spent."
+    },
+    {
+      "id": "admit-7",
+      "from": "budget",
+      "to": "s3",
+      "y": 400,
+      "label": "Conditional immutable range witness",
+      "variant": "security"
+    },
+    {
+      "id": "admit-8",
+      "from": "s3",
+      "to": "budget",
+      "y": 440,
+      "label": "Witness acknowledged",
+      "variant": "return",
+      "note": "Failure burns the acknowledged range and denies this acquisition."
+    },
+    {
+      "id": "admit-9",
+      "from": "budget",
+      "to": "executor",
+      "y": 480,
+      "label": "Private funded reservation",
+      "variant": "return",
+      "note": "Repeat candidate funding before any provider request; replacement never reuses leftover blocks."
+    },
+    {
+      "id": "admit-10",
+      "from": "executor",
+      "to": "provider",
+      "y": 520,
+      "label": "Consume permit: attempt 1",
+      "variant": "emphasis"
+    },
+    {
+      "id": "admit-11",
+      "from": "provider",
+      "to": "executor",
+      "y": 560,
+      "label": "Status and bounded body",
+      "variant": "return",
+      "note": "Received status survives rejected encoding, bounds or download. Incomplete bodies are never Data/NoData. Complete 03 is RAM-only; 10/12 is terminal."
+    },
+    {
+      "id": "admit-12",
+      "from": "executor",
+      "to": "provider",
+      "y": 600,
+      "label": "Only allowed and funded: attempt 2",
+      "variant": "security",
+      "note": "Quota/auth may rotate key; transient errors may retry. Never a third HTTP."
+    },
+    {
+      "id": "admit-13",
+      "from": "provider",
+      "to": "executor",
+      "y": 640,
+      "label": "Final data, no-data or typed failure",
+      "variant": "return"
+    },
+    {
+      "id": "admit-14",
+      "from": "executor",
+      "to": "caller",
+      "y": 680,
+      "label": "Checked acquisition or denial",
+      "variant": "return",
+      "note": "Data still requires complete raw/group publication. No-data bytes stay in memory; the later port owns compatible wire semantics."
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Ceiling and ownership",
+      "items": [
+        "CAS high-water allocates non-overlapping ranges; a durable witness precedes private subdivision.",
+        "Every configured key maximum is funded before HTTP. Policy/window identity is trusted configuration."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Replacement and uncertainty",
+      "items": [
+        "Unknown writes, abandoned reservations and unused prior-host blocks are never refunded.",
+        "No HTTP without verified admission. An uncommitted write with no durable record cannot be discovered."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Scope and cost",
+      "items": [
+        "New block: 3 S3 waves per key; two cold candidates: 6. Warm owned block: no funding request.",
+        "Internal primitive: no live AWS/IAM/quota conformance, deployed route or integrated S07 adapter."
+      ]
+    }
+  ]
+}

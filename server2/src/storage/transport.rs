@@ -19,7 +19,7 @@ impl RefreshableCredentials {
         *held = credentials;
         Ok(())
     }
-    pub(super) async fn snapshot(&self) -> Result<Credentials, Error> {
+    pub(crate) async fn snapshot(&self) -> Result<Credentials, Error> {
         let held = timeout(Duration::from_secs(3), self.0.read())
             .await
             .map_err(|_| Error::Timeout)?;
@@ -29,9 +29,9 @@ impl RefreshableCredentials {
 /// SigV4 HTTP adapter. Credentials are supplied/refreshed by the caller; never discovered here.
 /// No Debug implementation: neither credentials nor signed URLs belong in diagnostics.
 pub struct HttpS3Transport {
-    pub(super) client: Client,
-    pub(super) bucket: Bucket,
-    pub(super) credentials: RefreshableCredentials,
+    pub(crate) client: Client,
+    pub(crate) bucket: Bucket,
+    pub(crate) credentials: RefreshableCredentials,
 }
 impl HttpS3Transport {
     pub fn new(
