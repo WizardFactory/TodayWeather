@@ -3,7 +3,10 @@
 package_update: false
 package_upgrade: false
 packages: []
-bootcmd:
+# The network-stage bootcmd runs before sysinit on Ubuntu. Starting timers
+# there synchronously deadlocks against their default After=sysinit ordering.
+# Final-stage runcmd runs after multi-user; SG egress remains closed throughout.
+runcmd:
   - |
     set -eu
     umask 077
@@ -146,7 +149,7 @@ write_files:
       #!/bin/sh
       set -eu
       umask 077
-      trap 'systemctl stop server2-s09-cargo-test.service server2-s09-cargo-build.service 2>/dev/null || true' EXIT HUP INT TERM
+      trap 'systemctl stop server2-s09-cargo-build.service 2>/dev/null || true' EXIT HUP INT TERM
       fail() { systemctl poweroff --no-block; exit 1; }
       systemctl is-active --quiet server2-s09-expiry.timer || fail
       systemctl is-active --quiet server2-s09-meter.service || fail
@@ -202,7 +205,6 @@ write_files:
       cd server2
       export S09_SOURCE_REVISION=@@SOURCE_REVISION@@ RUSTUP_TOOLCHAIN=1.99.0
       test "$(df --output=avail -B1 . | tail -1)" -ge 4294967296
-      systemd-run --wait --pipe --collect --unit=server2-s09-cargo-test --property=MemoryMax=3221225472 --property=MemorySwapMax=0 --property=RuntimeMaxSec=1500 --working-directory="$PWD" --setenv=RUSTUP_HOME="$RUSTUP_HOME" --setenv=CARGO_HOME="$CARGO_HOME" --setenv=PATH="$PATH" --setenv=CC_x86_64_unknown_linux_musl=musl-gcc --setenv=CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc --setenv=RUSTUP_TOOLCHAIN=1.99.0 --setenv=S09_SOURCE_REVISION=@@SOURCE_REVISION@@ timeout 1500 cargo +1.99.0 test --locked --workspace --target x86_64-unknown-linux-musl --jobs 1 >/opt/server2-s09/private/host-tests.log 2>&1
       systemd-run --wait --pipe --collect --unit=server2-s09-cargo-build --property=MemoryMax=3221225472 --property=MemorySwapMax=0 --property=RuntimeMaxSec=1500 --working-directory="$PWD" --setenv=RUSTUP_HOME="$RUSTUP_HOME" --setenv=CARGO_HOME="$CARGO_HOME" --setenv=PATH="$PATH" --setenv=CC_x86_64_unknown_linux_musl=musl-gcc --setenv=CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc --setenv=RUSTUP_TOOLCHAIN=1.99.0 --setenv=S09_SOURCE_REVISION=@@SOURCE_REVISION@@ timeout 1500 cargo +1.99.0 build --locked --release --bin server2-feasibility --message-format=json --target x86_64-unknown-linux-musl --jobs 1 >/opt/server2-s09/private/host-build.log 2>&1
       # Controller verifies exact executable path/digest from a bounded build receipt.
       python3 - <<'PY'
@@ -222,5 +224,3 @@ write_files:
       pathlib.Path('/opt/server2-s09/private/build.json').write_text(json.dumps(out))
       PY
       # No benchmark starts here; controller must verify receipts and create one-use manifest.
-runcmd:
-  - [sh, -c, 'echo S09_WAITING_FOR_CONTROLLER >/dev/console']

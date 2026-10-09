@@ -223,7 +223,9 @@ def cli_console_text(result):
     output = result.get("Output", "")
     if not isinstance(output, str):
         raise OperatorError("console output type")
-    # Match the guard parser's exact UTF-8 byte cap, before looking for markers.
+    # Bound characters and UTF-8 bytes separately: a 64K-character EC2
+    # console can exceed 64KiB after the CLI decodes multibyte text.
+    # Keep the complete response; never truncate away failure/proof lines.
     # Never decode heuristically: encoded-looking text remains ordinary text.
     if len(output) > 65536:
         raise OperatorError("console output bound")
@@ -231,14 +233,15 @@ def cli_console_text(result):
         length = len(output.encode("utf-8"))
     except UnicodeError:
         raise OperatorError("console output encoding") from None
-    if length > 65536:
+    if length > 131072:
         raise OperatorError("console output bound")
     return output
 
 
 def verify_guard(output, expected, now_ms=None):
-    if not isinstance(output, str) or len(output.encode()) > 65536:
-        raise OperatorError("console output bound")
+    output = cli_console_text({"Output": output})
+    if "S09_GUARD_FAILED" in output:
+        raise OperatorError("stock guard failed")
     proofs = []
     for line in output.splitlines():
         if line.startswith("S09_GUARD_V1 "):
