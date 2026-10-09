@@ -30,6 +30,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--log', required=True)
     parser.add_argument('--report', required=True)
+    parser.add_argument('--command', default='python3 server2/tools/benchmark/run.py --output reports/s09-local.json')
+    parser.add_argument('--capture-date', default='2026-10-08')
     args = parser.parse_args()
     log = Path(args.log).resolve()
     if not log.is_relative_to(ROOT/'reports') or log.stat().st_size > 16384:
@@ -47,7 +49,7 @@ def main():
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     font_paths = ['/System/Library/Fonts/Menlo.ttc','/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf']
     font = next((ImageFont.truetype(p, 19) for p in font_paths if Path(p).exists()),ImageFont.load_default())
-    lines=['$ python3 server2/tools/benchmark/run.py --output reports/s09-local.json','']
+    lines=textwrap.wrap('$ '+args.command, width=105)+['']
     for line in output.strip().splitlines(): lines.extend(textwrap.wrap(line, width=105) or [''])
     image = Image.new('RGB',(1400,90+len(lines)*29),'#111827')
     draw = ImageDraw.Draw(image)
@@ -75,7 +77,7 @@ def main():
         canvas.setFont('Helvetica',8);canvas.setFillColor(colors.HexColor('#475569'));canvas.drawString(48,28,'S09 tooling | actual host/AWS/O2/O5 gates pending');canvas.drawRightString(564,28,str(doc.page))
     document=SimpleDocTemplate(str(PDF),pagesize=(612,792),leftMargin=48,rightMargin=48,topMargin=42,bottomMargin=48,title='S09 bounded feasibility operations',author='TodayWeather',invariant=1)
     document.build(story,onFirstPage=footer,onLaterPages=footer)
-    manifest={'pages':document.page,'schema':1,'task':'S09','date':'2026-10-08','command':'python3 server2/tools/benchmark/run.py --output reports/s09-local.json','environment':'Rust1.99/macOS, public Python loopback peer','scope':'Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or host go','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(binary),'requested_config_sha256':report['requested_config_sha256'],'effective_config_sha256':report['runner_provenance']['effective_config_sha256'],'report_sha256':digest(report_path),'live_driver_sha256':digest(ROOT/'server2/tools/benchmark/aws.rs'),'operator_sha256':digest(ROOT/'server2/deploy/benchmark/aws_operator.py'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
+    manifest={'pages':document.page,'schema':1,'task':'S09','date':args.capture_date,'command':args.command,'environment':'Rust1.99/macOS, public Python loopback peer','scope':'Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or host go','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(binary),'requested_config_sha256':report['requested_config_sha256'],'effective_config_sha256':report['runner_provenance']['effective_config_sha256'],'report_sha256':digest(report_path),'live_driver_sha256':digest(ROOT/'server2/tools/benchmark/aws.rs'),'operator_sha256':digest(ROOT/'server2/deploy/benchmark/aws_operator.py'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
     (EVIDENCE/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('Manual PDF, actual stdout capture and hash manifest generated')
 

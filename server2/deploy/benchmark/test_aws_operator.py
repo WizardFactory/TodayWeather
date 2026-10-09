@@ -24,8 +24,8 @@ class ConsoleOutputTests(unittest.TestCase):
 
     def test_schema_and_exact_utf8_byte_bound_fail_closed(self):
         self.assertEqual(len(op.cli_console_text({"Output":"x"*65536})),65536)
-        self.assertEqual(op.cli_console_text({"Output":"\uac00"*21845+"x"}),"\uac00"*21845+"x")
-        for value in (None,[],"text",{"Output":None},{"Output":False},{"Output":1},{"Output":{}},{"Output":"x"*65537},{"Output":"\uac00"*21845+"xx"},{"Output":"\ud800"}):
+        self.assertEqual(op.cli_console_text({"Output":"\uac00"*43690+"xx"}),"\uac00"*43690+"xx")
+        for value in (None,[],"text",{"Output":None},{"Output":False},{"Output":1},{"Output":{}},{"Output":"x"*65537},{"Output":"\uac00"*43691},{"Output":"\ud800"}):
             with self.subTest(value_type=type(value).__name__),self.assertRaises(op.OperatorError):op.cli_console_text(value)
 
     def test_invalid_console_never_reaches_guard_opening_or_ssm(self):
@@ -362,7 +362,8 @@ class ConfigAndOwnershipTests(unittest.TestCase):
 
     def test_bootstrap_starts_guards_before_network(self):
         text = (HERE / "cloud-init.yml").read_text()
-        self.assertIn("bootcmd:", text)
+        self.assertIn("\nruncmd:", text)
+        self.assertNotIn("\nbootcmd:", text)
         self.assertLess(text.index("nft -c"), text.index("apt-get update"))
         self.assertLess(text.index("S09_GUARD_V1"), text.index("apt-get update"))
         self.assertNotIn("flush ruleset", text)
@@ -383,8 +384,9 @@ class ConfigAndOwnershipTests(unittest.TestCase):
         self.assertIn("--bin "+bins[0]["name"],text)
         self.assertIn("get('name')=='server2-feasibility'",text)
         self.assertNotIn("--bench feasibility",text)
-        self.assertEqual(text.count("--property=MemoryMax=3221225472 --property=MemorySwapMax=0"),2)
-        self.assertEqual(text.count("--setenv=RUSTUP_TOOLCHAIN=1.99.0"),2)
+        self.assertEqual(text.count("--property=MemoryMax=3221225472 --property=MemorySwapMax=0"),1)
+        self.assertEqual(text.count("--setenv=RUSTUP_TOOLCHAIN=1.99.0"),1)
+        self.assertNotIn("cargo test",text)
 
     def test_expired_execute_rejects_but_cleanup_config_is_allowed(self):
         with self.assertRaises(op.OperatorError):

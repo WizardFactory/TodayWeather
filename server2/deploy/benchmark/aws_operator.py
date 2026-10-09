@@ -916,42 +916,76 @@ def make_manifest(config, state, instance_id, binary_sha256, current_ms, provide
 
 def watchdog(config, path, runner):
     state=bounded_json(path)
-    if state.get("run_id")!=config["run_id"] or state.get("config_sha256")!=digest(canonical(config)): raise OperatorError("watchdog scope")
+    if not isinstance(state,dict) or not isinstance(state.get("resources",{}),dict) or state.get("run_id")!=config["run_id"] or state.get("config_sha256")!=digest(canonical(config)): raise OperatorError("watchdog scope")
     suffix=".recovery1.watchdog-ready" if "recovery1" in state else ".watchdog-ready"
     ready=Path(path).with_suffix(suffix)
     fd=os.open(ready,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
     os.close(fd)
-    # This child never replenishes the reserved 50 control calls or writes parent state.
-    calls=0
-    initial=now_ms();floor=initial;end=time.monotonic()+max(0,(min(state["deadline_ms"],EXPIRY)-initial)/1000)
-    while now_ms()<min(state["deadline_ms"],EXPIRY) and time.monotonic()<end:
-        current_clock=now_ms()
-        if current_clock<floor: break
-        floor=current_clock
-        current=bounded_json(path)
-        if current.get("status")=="cleaned_host_resources_S3_retained": return
-        parent=current.get("watchdog_parent",0)
-        try: os.kill(parent,0)
-        except ProcessLookupError: break
-        time.sleep(1)
-    current=bounded_json(path)
-    instance=current.get("resources",{}).get("instance")
-    if not instance and current.get("launch_attempted"):
+    # Charge every attempt before dispatch, including failed calls. Never replenish the
+    # 50-call reservation or write the parent's mutable state.
+    calls=0; failures=0; diagnostic=None; termination_requested=False
+    current=state
+    def read_current():
+        value=bounded_json(path)
+        if not isinstance(value,dict) or not isinstance(value.get("resources",{}),dict) or value.get("run_id")!=state["run_id"] or value.get("config_sha256")!=state["config_sha256"]:
+            raise OperatorError("watchdog state scope")
+        return value
+    def call(action,args):
+        nonlocal calls,failures
+        if calls>=50: raise OperatorError("watchdog reservation exhausted")
         calls+=1
-        response=runner.call("ec2","describe-instances",["--filters","Name=client-token,Values="+state["client_token"]])
-        rows=[i for r in response.get("Reservations",[]) for i in r.get("Instances",[])]
-        if len(rows)==1: instance=rows[0].get("InstanceId")
-    termination_requested=False
-    if instance:
-        response=runner.call("ec2","describe-instances",["--instance-ids",instance]);calls+=1
-        rows=[i for r in response.get("Reservations",[]) for i in r.get("Instances",[])]
-        if len(rows)!=1 or {t["Key"]:t["Value"] for t in rows[0].get("Tags",[])}.get("RunId")!=config["run_id"]: raise OperatorError("watchdog ownership mismatch")
-        runner.call("ec2","terminate-instances",["--instance-ids",instance]);calls+=1
-        termination_requested=True
-    outcome="owned_termination_requested" if termination_requested else "original_launch_unresolved" if current.get("launch_attempted") else "no_launch_recorded"
+        try: return runner.call("ec2",action,args)
+        except (OperatorError,OSError,subprocess.SubprocessError):
+            failures+=1
+            raise
+    try:
+        initial=now_ms();floor=initial;end=time.monotonic()+max(0,(min(state["deadline_ms"],EXPIRY)-initial)/1000)
+        while now_ms()<min(state["deadline_ms"],EXPIRY) and time.monotonic()<end:
+            current_clock=now_ms()
+            if current_clock<floor: break
+            floor=current_clock
+            current=read_current()
+            if current.get("status")=="cleaned_host_resources_S3_retained": return
+            parent=current.get("watchdog_parent",0)
+            try: os.kill(parent,0)
+            except ProcessLookupError: break
+            time.sleep(1)
+        current=read_current()
+        instance=current.get("resources",{}).get("instance")
+        while calls<50 and (instance or current.get("launch_attempted")):
+            try:
+                if not instance:
+                    response=call("describe-instances",["--filters","Name=client-token,Values="+state["client_token"]])
+                    rows=[i for r in response.get("Reservations",[]) for i in r.get("Instances",[])]
+                    if len(rows)!=1 or not rows[0].get("InstanceId"):
+                        diagnostic="no_unique_host"
+                        break
+                    instance=rows[0]["InstanceId"]
+                # Revalidate ownership before every termination attempt, even after
+                # a lost acknowledgment. Empty/foreign/multiple results authorize none.
+                response=call("describe-instances",["--instance-ids",instance])
+                rows=[i for r in response.get("Reservations",[]) for i in r.get("Instances",[])]
+                if len(rows)!=1 or rows[0].get("InstanceId")!=instance or {t["Key"]:t["Value"] for t in rows[0].get("Tags",[])}.get("RunId")!=config["run_id"]:
+                    diagnostic="ownership_unverified"
+                    break
+                call("terminate-instances",["--instance-ids",instance])
+                termination_requested=True
+                diagnostic=None
+                break
+            except (OperatorError,OSError,subprocess.SubprocessError):
+                diagnostic="call_failed_or_unconfirmed"
+                if calls<50: time.sleep(1)
+        if not termination_requested and calls>=50: diagnostic="reservation_exhausted"
+    except (OperatorError,OSError,ValueError,KeyError,TypeError,AttributeError):
+        # State/schema failures also leave a bounded receipt; never publish raw errors.
+        diagnostic="state_or_response_unverified"
+    outcome="owned_termination_requested" if termination_requested else "original_launch_unresolved" if current.get("launch_attempted") or current.get("resources",{}).get("instance") else "no_launch_recorded"
     finish=".recovery1.watchdog-finish.json" if "recovery1" in state else ".watchdog-finish.json"
     fd=os.open(Path(path).with_suffix(finish),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
-    with os.fdopen(fd,"w") as out: json.dump({"status":outcome,"reserved_calls":50,"actual_calls":calls,"host_absence_verified":False},out)
+    with os.fdopen(fd,"w") as out:
+        json.dump({"status":outcome,"reserved_calls":50,"actual_calls":calls,"failed_calls":failures,"diagnostic":diagnostic,"host_absence_verified":False},out)
+        out.flush();os.fsync(out.fileno())
+
 
 
 def main():

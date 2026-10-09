@@ -808,13 +808,33 @@ async fn run(c: &Config) -> Result<Value, String> {
             let ma = metrics(&r);
             let drain = r.drain(Instant::now() + Duration::from_secs(4)).await;
             let mut durable_checks = 0usize;
+            let mut non_success_storage = vec![];
             if k.mode == "provider_data" {
                 let store = CatalogStore::new(
                     transport(&c.s3_endpoint, observed.clone()).map_err(|_| "durable transport")?,
                     CatalogLimits::default(),
                 )
                 .map_err(|_| "durable store")?;
-                for f in &fixtures {
+                for (client, f) in fixtures.iter().enumerate() {
+                    let sample = samples
+                        .iter()
+                        .find(|s| s.trial == trial && s.client == client)
+                        .ok_or("missing offered client outcome")?;
+                    if sample.outcome != "success" {
+                        // Capacity can occur before admission or after work began. Keep
+                        // the outcome and inspect its finite scope; never require a
+                        // successful publication from a rejected/failed client.
+                        let verification =
+                            match store.repair(f.requests[0].scope(), deadline()).await {
+                                Ok(RepairOutcome::CompleteEmpty { .. }) => "verified_empty",
+                                Ok(RepairOutcome::Complete(_)) => "verified_present",
+                                Ok(RepairOutcome::Indexed { .. }) => "indexed_not_folded",
+                                Ok(RepairOutcome::Incomplete) => "incomplete",
+                                Err(_) => "verification_failed",
+                            };
+                        non_success_storage.push(json!({"client":client,"outcome":sample.outcome,"storage":verification}));
+                        continue;
+                    }
                     let LookupOutcome::Ready(set) = store
                         .lookup(&f.requests[0].scope().catalog, deadline())
                         .await
@@ -834,7 +854,7 @@ async fn run(c: &Config) -> Result<Value, String> {
             }
             let after_verification = snapshot(&c.s3_endpoint).await?;
 
-            trials.push(json!({"trial":trial,"warmup":warmup,"warm_available":ready,"seed_wall_us":seed_wall_us,"wire_before_seed":before_seed,"wire_after_seed":after_seed,"wire_before":before,"wire_foreground_end":foreground,"wire_after_maintenance":after,"resolver_before":mbefore,"resolver_foreground_end":mf,"resolver_after_maintenance":ma,"foreground_wall_us":wall,"parse_elapsed_us":t.parse_us.load(Ordering::Relaxed)-timing_before[0],"assembly_elapsed_us":t.assembly_us.load(Ordering::Relaxed)-timing_before[1],"parsed_bytes":t.parsed_bytes.load(Ordering::Relaxed)-timing_before[2],"parse_calls":t.parse_calls.load(Ordering::Relaxed)-timing_before[3],"assembly_calls":t.assembly_calls.load(Ordering::Relaxed)-timing_before[4],"warmup_view_timings":{"parse_elapsed_us":timing_before[0],"assembly_elapsed_us":timing_before[1],"parsed_bytes":timing_before[2],"parse_calls":timing_before[3],"assembly_calls":timing_before[4]},"acquirer_data":data.load(Ordering::Relaxed),"acquirer_nodata":nodata.load(Ordering::Relaxed),"acquirer_denied":denied.load(Ordering::Relaxed),"acquirer_terminal":terminal.load(Ordering::Relaxed),"fixture_catalogs":fixtures.iter().map(|f|f.catalog_keys.len()).sum::<usize>(),"drain":format!("{drain:?}"),"fresh_s3_only_checks":durable_checks,"wire_after_verification":after_verification}));
+            trials.push(json!({"trial":trial,"warmup":warmup,"warm_available":ready,"seed_wall_us":seed_wall_us,"wire_before_seed":before_seed,"wire_after_seed":after_seed,"wire_before":before,"wire_foreground_end":foreground,"wire_after_maintenance":after,"resolver_before":mbefore,"resolver_foreground_end":mf,"resolver_after_maintenance":ma,"foreground_wall_us":wall,"parse_elapsed_us":t.parse_us.load(Ordering::Relaxed)-timing_before[0],"assembly_elapsed_us":t.assembly_us.load(Ordering::Relaxed)-timing_before[1],"parsed_bytes":t.parsed_bytes.load(Ordering::Relaxed)-timing_before[2],"parse_calls":t.parse_calls.load(Ordering::Relaxed)-timing_before[3],"assembly_calls":t.assembly_calls.load(Ordering::Relaxed)-timing_before[4],"warmup_view_timings":{"parse_elapsed_us":timing_before[0],"assembly_elapsed_us":timing_before[1],"parsed_bytes":timing_before[2],"parse_calls":timing_before[3],"assembly_calls":timing_before[4]},"acquirer_data":data.load(Ordering::Relaxed),"acquirer_nodata":nodata.load(Ordering::Relaxed),"acquirer_denied":denied.load(Ordering::Relaxed),"acquirer_terminal":terminal.load(Ordering::Relaxed),"fixture_catalogs":fixtures.iter().map(|f|f.catalog_keys.len()).sum::<usize>(),"drain":format!("{drain:?}"),"fresh_s3_only_checks":durable_checks,"non_success_storage_checks":non_success_storage,"wire_after_verification":after_verification}));
         }
         samples.sort_by_key(|s| (s.trial, s.client));
         let n = if k.workload == "history8" {
