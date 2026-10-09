@@ -8,7 +8,7 @@
     "output": "docs/architecture/diagrams/server2-feasibility.html",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "a1f88ac639315408d7c1b60f99d1e3f1546a27f7",
+      "revision": "22ede822ec88d703a851b1dd260dcf278ba0ff7e",
       "provider": "github",
       "link_mode": "web"
     }
@@ -65,7 +65,7 @@
       "col": 1,
       "type": "backend",
       "label": "Local release proof",
-      "sublabel": "historical local evidence",
+      "sublabel": "bounded overload outcomes",
       "width": 150,
       "tag": "planned",
       "sources": [
@@ -145,7 +145,7 @@
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
           "line": 917,
-          "end_line": 954
+          "end_line": 988
         },
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
@@ -232,13 +232,18 @@
       "sources": [
         {
           "path": "server2/tools/benchmark/aws.rs",
-          "line": 2228,
+          "line": 2225,
           "end_line": 2242
         },
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
           "line": 626,
           "end_line": 660
+        },
+        {
+          "path": "server2/benches/feasibility.rs",
+          "line": 810,
+          "end_line": 861
         }
       ]
     },
@@ -530,7 +535,8 @@
         "One host <=2h; synthetic load <=60min; USD5 operator stop.",
         "400k reads / 20k PUT-LIST / 30GiB download / 64MiB version charge.",
         "Every PUT reserves body +16KiB, even denied or uncertain attempts.",
-        "59.5min max; 15min tail includes 30s completion grace; <5min is refused."
+        "59.5min max; 15min tail includes 30s completion grace; <5min is refused.",
+        "Watchdog retries use the same 50 calls; failures count before dispatch."
       ]
     },
     {
@@ -555,8 +561,8 @@
         "Host created; guard never ready; no egress, SSM, build or measurement.",
         "13:06:08Z readback: host/root/SG/IAM removed; retained bucket empty.",
         "Move synchronous guard starts after sysinit; preserve watchdog and closed SG.",
-        "CLI text: <=65536 characters and <=131072 UTF-8 bytes; no truncation.",
-        "This correction has no new live run or test suite; QA6 covers the old head only."
+        "Console body limits remain subject to stricter 131072-byte CLI JSON cap.",
+        "Review correction: per-client storage observations; warm waves are not cold trials."
       ]
     }
   ]

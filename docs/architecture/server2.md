@@ -953,7 +953,11 @@ FullHistory measurements must expose sequential descriptor/page costs rather tha
 claim the parallel-wave model is implemented. Record foreground and background
 work, body/group/catalog counts and bytes, assembly elapsed time, whole-process CPU/RSS and catalog
 rewrite bytes; logical cache charges are not RSS. Local rewrite-byte totals are
-cost inputs, not observed versioned S3 storage.
+cost inputs, not observed versioned S3 storage. Local provider-data verification
+requires exact durable bytes for successful clients and separately records finite-scope
+storage observations for every failed or rejected client. A Capacity outcome alone
+does not prove that no durable write occurred. Warm waves through one retained
+resolver are not independent empty-memory trials and are counted separately.
 
 Actual Linux release/musl execution, same-region GET/PUT/LIST tails and throughput,
 real authentication/conditional-write behavior and version-storage/cost inputs
@@ -991,7 +995,10 @@ confirmed the instance terminated, its root volume and IAM/profile/security-grou
 resources absent, and the retained S3 bucket empty. No measurement ran. The
 recovery allowance is consumed; further launch or measurement requires a new
 explicit execution decision. The workflow's pinned source checkpoint describes
-the unchanged recovery lifecycle, not successful AWS measurement.
+the reviewed tooling lifecycle, not successful AWS measurement. The external watchdog
+charges every call before dispatch and retries call failures within its existing
+50-call reservation. Each termination attempt requires a fresh ownership read;
+exhausted or unverifiable work leaves an unresolved diagnostic, never proof of absence.
 
 The proposed run uses one dedicated nonproduction Seoul `c6i.large` for at most
 two hours and at most 60 minutes of synthetic load. Worker and controller share
