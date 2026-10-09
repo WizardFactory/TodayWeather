@@ -303,3 +303,9 @@ proposal, not provisioning. See [S03 plan](issue-2688.md) and its operations man
 [AK D01–D04](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6015980608)
 remove the superseded registration-migration/retry policy gate. They do not remove
 weather-history acquisition, cold-cell legacy fallback, quota or cutover gates.
+
+## 2026-10-09 focused PR correction after actual AWS execution
+
+One separately authorized host attempt failed before guard readiness and measurement. At 13:06:08Z, AWS readback confirmed host termination, owned root/SG/IAM/profile removal and zero retained S3 versions. Egress stayed closed; no SSM/bootstrap/worker/provider work ran. The live console exposed both a multibyte console bound mismatch and a bootcmd timer/sysinit ordering cycle inferred from logs plus upstream unit definitions.
+
+The focused correction moves all stock guard setup to final-stage runcmd, retains closed egress/watchdog/expiry, accepts complete CLI text within 65,536 characters and 131,072 UTF-8 bytes, and removes the host workspace test invocation per AK. The [operations manual](../docs/operations/server2-feasibility.md#2026-10-09-actual-execution-and-focused-correction) records direct evidence, cleanup and limitations. The eight unfinished preparation15 files are preserved separately, not shipped. No further AWS launch, merge or budget reset is part of this correction. QA6 remains historical; new live readiness and independent review are not claimed. Tests are not added or run under AK's instruction. S09/O-2/O-5 and downstream S10/S13 remain pending.

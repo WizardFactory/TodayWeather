@@ -2,13 +2,13 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "Server2 S09: one approved recovery",
+    "title": "Server2 S09: guarded measurement flow",
     "locale": "en",
     "quality_profile": "showcase",
     "output": "docs/architecture/diagrams/server2-feasibility.html",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f8c7a1d8716c728596281ada0f1a8b2c6fde3b3b",
+      "revision": "a1f88ac639315408d7c1b60f99d1e3f1546a27f7",
       "provider": "github",
       "link_mode": "web"
     }
@@ -65,7 +65,7 @@
       "col": 1,
       "type": "backend",
       "label": "Local release proof",
-      "sublabel": "all outcomes + tests",
+      "sublabel": "historical local evidence",
       "width": 150,
       "tag": "planned",
       "sources": [
@@ -110,8 +110,8 @@
         },
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 452,
-          "end_line": 483
+          "line": 475,
+          "end_line": 506
         }
       ]
     },
@@ -127,8 +127,8 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 408,
-          "end_line": 443
+          "line": 431,
+          "end_line": 466
         }
       ]
     },
@@ -137,25 +137,25 @@
       "lane": "host",
       "col": 3,
       "type": "security",
-      "label": "Watchdog + meter",
-      "sublabel": "scope / expiry / meter",
+      "label": "Final-stage guard",
+      "sublabel": "runcmd / closed SG",
       "width": 150,
       "tag": "planned",
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 897,
-          "end_line": 934
+          "line": 917,
+          "end_line": 954
         },
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 639,
-          "end_line": 672
+          "line": 662,
+          "end_line": 695
         },
         {
           "path": "server2/deploy/benchmark/cloud-init.yml",
           "line": 1,
-          "end_line": 40
+          "end_line": 43
         }
       ]
     },
@@ -171,13 +171,13 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 727,
-          "end_line": 748
+          "line": 747,
+          "end_line": 768
         },
         {
           "path": "server2/deploy/benchmark/cloud-init.yml",
-          "line": 169,
-          "end_line": 220
+          "line": 172,
+          "end_line": 222
         }
       ]
     },
@@ -237,8 +237,8 @@
         },
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 603,
-          "end_line": 637
+          "line": 626,
+          "end_line": 660
         }
       ]
     },
@@ -254,8 +254,8 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 778,
-          "end_line": 868
+          "line": 798,
+          "end_line": 888
         }
       ]
     },
@@ -322,8 +322,8 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 452,
-          "end_line": 525
+          "line": 475,
+          "end_line": 548
         }
       ]
     },
@@ -339,13 +339,13 @@
       "sources": [
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 415,
-          "end_line": 437
+          "line": 438,
+          "end_line": 460
         },
         {
           "path": "server2/deploy/benchmark/aws_operator.py",
-          "line": 789,
-          "end_line": 815
+          "line": 809,
+          "end_line": 835
         }
       ]
     }
@@ -546,6 +546,17 @@
         "Failure reports remain non-compliant. An issued worker allocation cannot be restarted.",
         "Physical NIC/billing caps are not guaranteed; uncertainty stops the next case before seeding.",
         "S09 stays open and S10/S13 blocked until required live evidence and O-2/O-5 decisions."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "2026-10-09 actual attempt",
+      "items": [
+        "Host created; guard never ready; no egress, SSM, build or measurement.",
+        "13:06:08Z readback: host/root/SG/IAM removed; retained bucket empty.",
+        "Move synchronous guard starts after sysinit; preserve watchdog and closed SG.",
+        "CLI text: <=65536 characters and <=131072 UTF-8 bytes; no truncation.",
+        "This correction has no new live run or test suite; QA6 covers the old head only."
       ]
     }
   ]
