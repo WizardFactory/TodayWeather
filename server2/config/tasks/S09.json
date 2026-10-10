@@ -37,7 +37,9 @@
     "server2/deploy/benchmark/test_online_fences.py",
     "server2/deploy/benchmark/imds_functional.py",
     "server2/deploy/benchmark/online_functional.py",
-    "server2/tools/ci.py"
+    "server2/tools/ci.py",
+    "server2/tools/prepare-ci.sh",
+    "server2/tools/ci.sh"
   ],
   "outside": [
     {
