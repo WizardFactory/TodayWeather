@@ -6,6 +6,30 @@ Latest status: the maintained successor integrates offline startup/lifecycle cor
 
 This tool exercises the actual Rust raw store, catalog, resolver and funded-acquisition libraries against fresh volatile HTTP peers. It measures synthetic origin work, not a deployed weather route. The local runner calls no real AWS/providers. A separately armed approved driver can use one dedicated same-region test bucket after eligible review. The approved recovery attempted host creation once but stopped on the console-output boundary before any worker allocation or measurement. Root subsequently verified owned cleanup. This proves no API parity, CloudFront latency, measurement-path IAM/TLS or intended-host musl feasibility. S09 remains open: same-region intended-host measurements and O-2/O-5 decisions still block S10/S13.
 
+## Fifth dispatch authorization (2026-10-10)
+
+After the bootstrap diagnostics correction, AK authorized commit/push and one
+additional AWS execution. Explicit confirmation grants one additional attempt with
+USD5 maximum, cumulative five attempts/USD25, expiring at **2026-10-10 14:30 UTC
+(23:30 KST), epoch1791642600000**. No automatic retry or merge is authorized.
+The prior four consumed reservations remain consumed; these are ceilings, not
+claims about invoiced spend. This is a new authorization, not a rewrite of the
+11:18 UTC fourth-attempt receipt. Per-host7200s, benchmark3600s, API/byte/storage
+caps and export/cleanup reserves remain unchanged.
+
+The fifth controller requires the immutable fourth cleaned pre-worker cumulative
+state and a hash-bound cleanup attestation in addition to the original two states
+and third-state reconciliation. Carry the fourth cumulative ledger once, verify
+its predecessor pins and non-regressing counters, and charge its watchdog plus
+conservative external verification reservations. Missing, changed, worker-issued,
+unverified-cleanup or exhausted inputs fail before state/watchdog creation.
+
+Build and execute the exact published PR head, not local overlays. Newly renewed
+Python/Rust/host/config expiry bytes and source pins require fresh verification.
+Final-config user-data must pass the installed CLI wire check before the single
+launch reservation. Preserve bounded failure evidence before ordinary cleanup;
+retain S3 versions. Authorization alone is not an execution or measurement result.
+
 ## Bootstrap failure diagnosis and retained evidence (2026-10-10)
 
 The fourth dispatch created its host and passed guard, SSM Online and monotonic

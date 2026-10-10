@@ -24,7 +24,7 @@ import bootstrap_diagnostics
 HERE = Path(__file__).resolve().parent
 GiB = 1024 ** 3
 MiB = 1024 ** 2
-EXPIRY = 1791631080000
+EXPIRY = 1791642600000
 EXPORT_CLEANUP_RESERVE_MS = 15 * 60000
 MINIMUM_WORKER_WINDOW_MS = 5 * 60000
 COMPLETION_GRACE_SECONDS = 30
@@ -1016,7 +1016,7 @@ p=pathlib.Path('/opt/server2-s09/private')
 r=json.loads((p/'readiness.json').read_text());v=r['proof']
 assert r['mac']==MAC
 age=int(time.monotonic()*1000)-v['ready_monotonic_ms'];wall=int(time.time()*1000)
-assert 0<=age<300000 and wall<min(v['deadline_ms'],1791631080000)
+assert 0<=age<300000 and wall<min(v['deadline_ms'],1791642600000)
 assert abs(wall-v['ready_at_ms']-age)<=1000
 fd=os.open(p/'controller-start',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
 with os.fdopen(fd,'w') as f: f.write(r['mac']);f.flush();os.fsync(f.fileno())
@@ -1466,6 +1466,58 @@ def carry_reconciled_usage(previous, state_path, receipt_path):
         'prior_reconciliation_sha256':digest(canonical(proof))}
 
 
+def carry_cleaned_usage(previous, state_path, receipt_path):
+    """Carry fourth cumulative pre-worker usage once, plus 50 watchdog/100 external.
+
+    Exact cleanup attestation schema is encoded below. JSON state/proof pins use
+    canonical(), evidence_sha256 entries hash retained evidence file bytes.
+    Attestation is not fresh live absence or additional execution authority.
+    """
+    prior = bounded_json(state_path)
+    proof = bounded_json(receipt_path)
+    if (not isinstance(prior, dict) or prior.get('run_id') != FIXED['run_id'] or
+        prior.get('status') != 'cleaned_host_resources_S3_retained' or
+        prior.get('worker_allocation_issued') is not False or prior.get('launch_attempted') is not True or
+        prior.get('root_volume_absence_verified') is not True or 'recovery1' in prior or
+        'prior_cleanup_sha256' in prior or
+        prior.get('prior_state_sha256') != previous['prior_state_sha256'] or
+        prior.get('prior_reconciliation_sha256') != previous['prior_reconciliation_sha256'] or
+        not isinstance(prior.get('client_token'), str) or not prior['client_token'] or
+        not isinstance(prior.get('config_sha256'), str) or not re.fullmatch('[a-f0-9]{64}',prior['config_sha256'])):
+        raise OperatorError('cleaned prior state identity')
+    pin = digest(canonical(prior))
+    expected = {'schema':1, 'run_id':FIXED['run_id'], 'state_sha256':pin,
+        'config_sha256':prior['config_sha256'], 'client_token_sha256':digest(prior['client_token'].encode()),
+        'prior_reconciliation_sha256':previous['prior_reconciliation_sha256'],
+        'host_absent':True, 'volumes_absent':True, 'role_absent':True, 'profile_absent':True,
+        'security_group_absent':True, 'bucket_retained':True, 'worker_dispatched':False,
+        'external_call_reservation':100}
+    if (not isinstance(proof, dict) or set(proof) != set(expected) | {'evidence_sha256'} or
+        any(type(proof[k]) is not type(v) or proof[k] != v for k,v in expected.items()) or
+        not isinstance(proof['evidence_sha256'],list) or not 1 <= len(proof['evidence_sha256']) <= 16 or
+        any(not isinstance(v,str) or not re.fullmatch('[a-f0-9]{64}',v) for v in proof['evidence_sha256'])):
+        raise OperatorError('cleaned prior evidence identity')
+    usage = prior.get('ledger')
+    if (not isinstance(usage,dict) or set(usage) != set(previous['ledger']) or
+        any(type(v) is not int or v < previous['ledger'][k] for k,v in usage.items()) or
+        type(prior.get('operator_calls')) is not int or prior['operator_calls'] < previous['operator_calls'] or
+        type(prior.get('watchdog_reserved_reads')) is not int or prior['watchdog_reserved_reads'] != 50 or
+        type(prior.get('watchdog_reserved_download_bytes')) is not int or prior['watchdog_reserved_download_bytes'] != 50*131072):
+        raise OperatorError('cleaned prior usage regressed')
+    total = dict(usage)
+    total['reads'] += 150
+    total['writes'] += 100
+    total['download'] += 150*131072
+    calls = prior['operator_calls'] + 150
+    caps = {'reads':9950, 'writes':2000, 'download':512*MiB-50*131072, 'store':MiB}
+    if calls >= 3500 or any(total[k] >= caps[k] for k in total):
+        raise OperatorError('prior usage exhausted')
+    return {'ledger':total, 'operator_calls':calls,
+        'prior_state_sha256':previous['prior_state_sha256']+[pin],
+        'prior_reconciliation_sha256':previous['prior_reconciliation_sha256'],
+        'prior_cleanup_sha256':digest(canonical(proof))}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=HERE / "aws-run.json")
@@ -1480,6 +1532,8 @@ def main():
     parser.add_argument("--authorization", type=Path)
     parser.add_argument("--reconciled-prior-state", type=Path, help="Immutable third cumulative pre-worker state")
     parser.add_argument("--prior-reconciliation", type=Path, help="Bound definitive rejection and owned cleanup evidence")
+    parser.add_argument("--cleaned-prior-state", type=Path, help="Immutable fourth cumulative cleaned pre-worker state")
+    parser.add_argument("--prior-cleanup-proof", type=Path, help="Bound fourth cleanup and external accounting attestation")
     args = parser.parse_args()
     config = validate_config(bounded_json(args.config), armed=args.execute_reviewed_run or args.resume_failed_creation or args.cleanup_only or args.watchdog, cleanup_only=args.cleanup_only or args.watchdog)
     if not args.execute_reviewed_run and not args.resume_failed_creation and not args.cleanup_only and not args.watchdog:
@@ -1506,9 +1560,13 @@ def main():
         raise OperatorError("two prior states required for final attempt")
     if (args.execute_reviewed_run and not (args.reconciled_prior_state and args.prior_reconciliation)) or bool(args.reconciled_prior_state) != bool(args.prior_reconciliation) or (args.reconciled_prior_state and not args.execute_reviewed_run):
         raise OperatorError("paired reconciliation inputs require new attempt")
+    if (args.execute_reviewed_run and not (args.cleaned_prior_state and args.prior_cleanup_proof)) or bool(args.cleaned_prior_state) != bool(args.prior_cleanup_proof) or (args.cleaned_prior_state and not args.execute_reviewed_run):
+        raise OperatorError("paired fourth cleanup inputs require new attempt")
     carried = carry_prior_usage(args.prior_state) if args.prior_state else {}
     if args.reconciled_prior_state:
         carried = carry_reconciled_usage(carried, args.reconciled_prior_state, args.prior_reconciliation)
+    if args.cleaned_prior_state:
+        carried = carry_cleaned_usage(carried, args.cleaned_prior_state, args.prior_cleanup_proof)
     current = now_ms()
     if args.resume_failed_creation:
         if args.original_config is None or args.recovery_authority is None: raise OperatorError("original configuration and recovery authority required")

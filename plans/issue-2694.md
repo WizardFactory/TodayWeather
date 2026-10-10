@@ -169,3 +169,18 @@ raw content is withheld. Missing/malformed/timeout/emergency/export failures are
 explicit and do not mask the original error, retry work or delay safety cleanup.
 Keep the original 2100s bound and user-data size cap. Use isolated TDD plus actual
 harmless-shell functional smoke and installed-CLI wire check; no real host test.
+
+
+## Separately authorized fifth attempt (2026-10-10)
+
+AK approved commit/push and one additional AWS run: extra one attempt/USD5,
+cumulative five/USD25, fixed expiry1791642600000 (14:30 UTC / 23:30 KST).
+Prior consumed grants and receipts remain unchanged. No auto-retry or merge.
+Renew fixed expiry consistently in controller/host recovery/Rust/config/tests;
+keep per-host, benchmark, control, byte, storage and cleanup bounds unchanged.
+Require the fourth cleaned pre-worker cumulative state and bound cleanup proof,
+verify predecessor pins, then debit cumulative usage once with full watchdog and
+conservative external evidence reservations. No fresh state/watchdog before all
+required inputs pass. Verify final source/config pins and actual CLI transport,
+then dispatch the published PR head once, collect results or sanitized diagnostics,
+and perform one controller-owned ordinary cleanup with readback. S3 retained.

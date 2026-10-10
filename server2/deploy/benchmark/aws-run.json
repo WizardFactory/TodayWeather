@@ -15,7 +15,7 @@
   "root_gib": 16,
   "host_seconds": 7200,
   "benchmark_seconds": 3600,
-  "approval_expires_at_ms": 1791631080000,
+  "approval_expires_at_ms": 1791642600000,
   "read_attempts": 10000,
   "write_attempts": 2000,
   "download_bytes": 1073741824,
