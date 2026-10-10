@@ -19,6 +19,7 @@ import subprocess
 import tempfile
 import threading
 import time
+import bootstrap_diagnostics
 
 HERE = Path(__file__).resolve().parent
 GiB = 1024 ** 3
@@ -680,18 +681,58 @@ class Operator:
         self.state.save()
         return proof
 
-    def ssm(self, commands, seconds=60, capture_terminal=False):
+    def bootstrap_command(self):
+        # Same reviewed source bytes as validate_config, checked again before use.
+        path = HERE / 'bootstrap_diagnostics.py'
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 12000:
+            raise OperatorError('bootstrap diagnostics source boundary')
+        source = path.read_bytes()
+        if self.config['source_files'].get('server2/deploy/benchmark/bootstrap_diagnostics.py') != digest(source):
+            raise OperatorError('bootstrap diagnostics source pin')
+        # 2070 + kill grace 2 + diagnostics 20 + kill grace 2 < existing 2100.
+        return ("set -eu; umask 077; rc=0\n"
+            "timeout -k 2 2070 /opt/server2-s09/private/bootstrap.sh >/opt/server2-s09/private/bootstrap.log 2>&1 || rc=$?\n"
+            "timeout -k 2 20 python3 - <<'S09_DIAGNOSTICS' 2>/dev/null || printf '%s\\n' 'S09_BOOTSTRAP_DIAGNOSTICS_V1 {\"status\":\"unavailable\"}'\n"
+            + source.decode() + "\nS09_DIAGNOSTICS\nexit \"$rc\"\n")
+
+    def preserve_bootstrap_diagnostics(self, command, result):
+        # Never retain AWS stdout/stderr. Missing/preempted export is not a log.
+        status = result.get('Status')
+        code = result.get('ResponseCode')
+        record = {'command_id': command, 'Status': status if status in
+            ('Success', 'Failed', 'Cancelled', 'TimedOut', 'Cancelling', 'ControllerDeadline', 'Unavailable') else 'Unknown',
+            'ResponseCode': code if type(code) is int and -1 <= code <= 255 else None,
+            'diagnostics': bootstrap_diagnostics.decode(result.get('StandardOutputContent'))}
+        self.state.data['bootstrap_diagnostics'] = record
+        try:
+            self.state.save()
+        except Exception:
+            # Best-effort safe fallback must not replace the primary error/cleanup.
+            try:
+                print(json.dumps({'bootstrap_diagnostics_persisted': False, **record}))
+            except Exception:
+                pass
+
+    def ssm(self, commands, seconds=60, capture_terminal=False, bootstrap=False):
         instance=self.state.data["resources"]["instance"]
-        sent=self.call("ssm","send-command",["--instance-ids",instance,"--document-name","AWS-RunShellScript","--timeout-seconds",str(max(30,min(seconds,3600))),"--parameters",json.dumps({"commands":commands,"executionTimeout":[str(min(seconds,3600))]})])
+        try:
+            sent=self.call("ssm","send-command",["--instance-ids",instance,"--document-name","AWS-RunShellScript","--timeout-seconds",str(max(30,min(seconds,3600))),"--parameters",json.dumps({"commands":commands,"executionTimeout":[str(min(seconds,3600))]})])
+        except Exception:
+            if bootstrap: self.preserve_bootstrap_diagnostics(None, {'Status': 'Unavailable'})
+            raise
         command=sent["Command"]["CommandId"]
         if not re.fullmatch(r"[a-f0-9-]{36}",command): raise OperatorError("SSM command identity")
         deadline=min(self.clock()+seconds*1000,self.state.data["deadline_ms"],EXPIRY)
         while self.clock()<deadline:
             try: result=self.call("ssm","get-command-invocation",["--command-id",command,"--instance-id",instance])
             except OperatorError as error:
-                if str(error)!="AWS status InvocationDoesNotExist": raise
+                if str(error)!="AWS status InvocationDoesNotExist":
+                    if bootstrap: self.preserve_bootstrap_diagnostics(command, {'Status': 'Unavailable'})
+                    raise
                 time.sleep(2); continue
             status=result.get("Status")
+            if bootstrap and status not in {"Pending", "InProgress", "Delayed"}:
+                self.preserve_bootstrap_diagnostics(command, result)
             if capture_terminal and status not in {"Pending","InProgress","Delayed"}:
                 code=result.get("ResponseCode")
                 return {"Status":status if isinstance(status,str) and status in {"Success","Failed","Cancelled","TimedOut","Cancelling"} else "Unknown","ResponseCode":code if type(code) is int else None}
@@ -701,6 +742,7 @@ class Operator:
                 return output
             if status not in {"Pending","InProgress","Delayed"}: raise OperatorError("SSM task failed")
             time.sleep(2)
+        if bootstrap: self.preserve_bootstrap_diagnostics(command, {'Status': 'ControllerDeadline'})
         if capture_terminal: return {"Status":"ControllerDeadline","ResponseCode":None}
         raise OperatorError("SSM command deadline")
 
@@ -1019,7 +1061,7 @@ print(json.dumps({'host_age_ms':age,'host_wall_ms':wall}))
         mac = self.state.data['ssm_readiness_mac']
         self.ssm(["set -eu; timeout 25 sh -c 'until test -f /opt/server2-s09/private/bootstrap.sh && test -f /opt/server2-s09/private/controller-admitted; do sleep 1; done'; test \"$(cat /opt/server2-s09/private/controller-admitted)\" = '"+mac+"'",
                   "systemctl is-active --quiet server2-s09-expiry.timer", "systemctl is-active --quiet server2-s09-meter.service"],seconds=30)
-        self.ssm(["set -eu; timeout 2100 /opt/server2-s09/private/bootstrap.sh >/opt/server2-s09/private/bootstrap.log 2>&1"],seconds=2100)
+        self.ssm([self.bootstrap_command()], seconds=2100, bootstrap=True)
         receipt=json.loads(self.ssm(["cat /opt/server2-s09/private/build.json"],seconds=30))
         if receipt.get("status")!="built" or receipt.get("source_revision")!=self.config["source_revision"]: raise OperatorError("host source build receipt")
         clock_ticks=receipt.get("clock_ticks_per_second")

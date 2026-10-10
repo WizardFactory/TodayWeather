@@ -6,6 +6,43 @@ Latest status: the maintained successor integrates offline startup/lifecycle cor
 
 This tool exercises the actual Rust raw store, catalog, resolver and funded-acquisition libraries against fresh volatile HTTP peers. It measures synthetic origin work, not a deployed weather route. The local runner calls no real AWS/providers. A separately armed approved driver can use one dedicated same-region test bucket after eligible review. The approved recovery attempted host creation once but stopped on the console-output boundary before any worker allocation or measurement. Root subsequently verified owned cleanup. This proves no API parity, CloudFront latency, measurement-path IAM/TLS or intended-host musl feasibility. S09 remains open: same-region intended-host measurements and O-2/O-5 decisions still block S10/S13.
 
+## Bootstrap failure diagnosis and retained evidence (2026-10-10)
+
+The fourth dispatch created its host and passed guard, SSM Online and monotonic
+admission, but the bootstrap SSM command returned exit 1. The retained invocation
+reports `PT0.118S`; retained console identifies Ubuntu 26.04.1 and contains
+`S09_BOOTSTRAP_FAILED`. The private bootstrap log was not exported before ordinary
+termination. This is not evidence of a Rust compiler failure or successful
+measurement. Host, root volume and owned IAM/profile/SG cleanup were verified;
+S3 remains retained. No further dispatch is authorized by this diagnosis.
+
+The baseline APT rewrite rejected `http://` anywhere in `ubuntu.sources`, including
+documentation comments. The [cloud-init 26.1 upstream template](https://github.com/canonical/cloud-init/blob/26.1/templates/sources.list.ubuntu.deb822.tmpl)
+contains `# See http://help.ubuntu.com/community/UpgradeNotes`. The exact baseline
+fragment fails on an upstream-derived fixture; removing that comment alone makes
+it pass. This is a **reproduced source defect and the strongest explanation**, not
+proof of the lost host file or traceback. Other early file/signing/marker errors
+remain possible. Current template/image manifests are not the historical AMI's
+package attestation.
+
+The rewrite now distinguishes active deb822 fields from comments, selects the
+security endpoint from the `Suites` field, requires the fixed HTTPS URI allowlist
+including continuation lines, and requires the Ubuntu signing key per active
+stanza before writing. Documentation comments are preserved; unsupported active
+URIs or missing signing fields fail closed without partially changing the file.
+
+Bootstrap evidence must be returned within the original SSM command before its
+terminal error triggers ordinary cleanup. The command retains its original exit
+code and reserves diagnostic time inside, not beyond, the existing 2100-second
+bound. Explicit stage markers separate guards, APT source preparation/update/install,
+Rust installation, source verification, build and binary verification. Bounded
+reads of only the fixed private bootstrap/build logs produce allowlisted error
+signals and counts/digests of withheld content—not full raw log copies. Controller
+records retain command identity/status/code and the sanitized diagnostic artifact
+before termination. Malformed/missing output or a failed local evidence write is
+reported unavailable; it must not replace the original failure or prevent cleanup.
+Emergency expiry/quota shutdown can still preempt reporting and is never delayed.
+
 ## User-data correction and separately approved fourth attempt (2026-10-10)
 
 The third dispatch was rejected by EC2 at 09:33:07Z with

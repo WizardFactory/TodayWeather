@@ -15,8 +15,11 @@ assert 'CapEff:\t0000000000000000' in Path('/proc/self/status').read_text()
 def audit(event, args):
     if event == 'subprocess.Popen':
         exe = Path(args[0]).resolve()
-        if exe.name != 'fake-aws' or not exe.is_relative_to(Path('/scratch')):
-            raise PermissionError('offline subprocess policy: fake-aws only')
+        fake = exe.name == 'fake-aws' and exe.is_relative_to(Path('/scratch'))
+        wrapper = (sys.argv[1] == 'functional' and args[0] == '/usr/bin/dash' and
+                   args[1] == ['/usr/bin/dash', '/scratch/bootstrap-wrapper'])
+        if not (fake or wrapper):
+            raise PermissionError('offline subprocess policy: reviewed adapters only')
     if event in ('os.system', 'os.exec', 'os.posix_spawn'):
         raise PermissionError('offline process escape denied')
 
@@ -44,9 +47,11 @@ if selection in ('imds-functional', 'online-functional'):
 if selection == 'functional':
     import test_aws_operator as tests
     import test_lifecycle as lifecycle
+    import bootstrap_functional
     results = [tests.functional_smoke(), tests.failure_functional_smoke(),
         tests.cleanup_functional_smoke(), tests.functional_smoke(retained_bucket=True),
-        tests.functional_smoke(recovery=True), lifecycle.lifecycle_functional_smoke()]
+        tests.functional_smoke(recovery=True), lifecycle.lifecycle_functional_smoke(),
+        bootstrap_functional.smoke()]
     print(json.dumps(results, indent=2))
     sys.exit(0)
 loader = unittest.TestLoader()

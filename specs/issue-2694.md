@@ -106,7 +106,7 @@ Whole-tree audit loads canonical server2/config/tasks/S09.json and validates the
 
 The [dynamic host-I/O clarification](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6055549129) records existing operations, not broader static exemptions. Four machine-validated literal roles remain unchanged. S09.json separately inventories private manifest ancestry/metadata and bounded read, exclusive worker.claim create/write/fsync, the exact declared checkout source/Cargo.lock provenance reads, current_exe bounded binary hash, caller-owned config and bounded private report/error/state outputs. Dynamic paths require source review for exact approved run, ownership, containment, size and exclusive claims; this static scanner is not a filesystem sandbox.
 
-After a valid one-use claim, a measured-run failure must retain protocol state, completed cases, partial current case/trials/samples and S3/metadata accounting in a bounded report. An uncertain call, ambiguous publication, terminal archive fence, input drift or failed prerequisite stops later dispatch and produces run_status=ABORTED, a sanitized abort_reason, requested_case_coverage_complete=false and overall_accounting_compliance_pass=false. The CLI writes JSON stdout before exit2. Invalid preclaim configuration may still exit1 without a report; the operator retains bounded stderr and missing-report diagnostics. The controller exports/persists result/error evidence as noncompliant before validating worker exit, identity or accounting, and cleanup still runs. No failed report certifies measurement PASS or permits another allocation.
+After a valid one-use claim, a measured-run failure must retain protocol state, completed cases, partial current case/trials/samples and S3/metadata accounting in a bounded report. An uncertain call, ambiguous publication, terminal archive fence, input drift or failed prerequisite stops later dispatch and produces run_status=ABORTED, a sanitized abort_reason, requested_case_coverage_complete=false and overall_accounting_compliance_pass=false. The CLI writes JSON stdout before exit2. Invalid preclaim configuration may still exit 1 without a report; the operator retains bounded stderr and missing-report diagnostics. The controller exports/persists result/error evidence as noncompliant before validating worker exit, identity or accounting, and cleanup still runs. No failed report certifies measurement PASS or permits another allocation.
 
 Metadata accounting separately records confirmed status and failed_known for definitive rejections/header/size failures. Incomplete transport or cancellation remains unknown; unused reservations are not reclaimed from uncompleted reads. A known401/404 does not become an unknown completion; it still denies credentials/run readiness.
 
@@ -194,3 +194,22 @@ inputs fail before state/watchdog creation. Source membership is the exact
 unique set in S09.json; historical counts above belong to their named revisions.
 See the operations manual for inputs and the failed third-dispatch evidence.
 Offline transport success is not intended-host readiness or S09/O-2/O-5 acceptance.
+
+
+## Bootstrap diagnostics correction (2026-10-10)
+
+AK requested pre-termination failure evidence and diagnosis of attempt 4; no new
+AWS/SSM dispatch, budget/expiry renewal or merge. Preserve all prior receipts.
+The early APT whole-file HTTP assertion is reproduced against an upstream-derived
+cloud-init 26.1 deb822 fixture, whose documentation comment contains an HTTP URL.
+Fix active-field-only validation/routing with fixed HTTPS endpoints and per-stanza
+signing, preserving comments and rejecting insecure/foreign URI continuations.
+Retained 0.118-second exit 1/console evidence favors this explanation, but the lost
+host file/traceback prevents claiming the exact historical cause as proven.
+
+Acceptance: a bounded same-command diagnostic report is preserved before ordinary
+cleanup with stage, original exit code and sanitized fixed-log signals. Untrusted
+raw content is withheld. Missing/malformed/timeout/emergency/export failures are
+explicit and do not mask the original error, retry work or delay safety cleanup.
+Keep the original 2100s bound and user-data size cap. Use isolated TDD plus actual
+harmless-shell functional smoke and installed-CLI wire check; no real host test.

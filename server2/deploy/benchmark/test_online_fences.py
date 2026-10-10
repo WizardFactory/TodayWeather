@@ -180,6 +180,7 @@ class HandshakeFences(unittest.TestCase):
             with self.subTest(acknowledged=acknowledged):
                 c,now,calls,sleep=fixtures.ControllerWindowTests().make()
                 c.verify_host_root=lambda:None;c.open_https_after_guard=lambda _:None
+                c.config['source_files'] = {'server2/deploy/benchmark/bootstrap_diagnostics.py': op.digest((op.HERE/'bootstrap_diagnostics.py').read_bytes())}
                 original=c.call;first=[True];dispatch=[]
                 def call(service,action,args):
                     if first[0]:
@@ -198,7 +199,8 @@ class HandshakeFences(unittest.TestCase):
                         self.assertNotIn('timeout 2100',text)
                         if not acknowledged: raise op.OperatorError('fake missing host acknowledgement')
                         return ''
-                    self.assertIn('timeout 2100',text)
+                    self.assertIn('timeout -k 2 2070',text)
+                    self.assertEqual(kwargs, {'seconds': 2100, 'bootstrap': True})
                     self.assertNotIn(': >',text)
                     raise RuntimeError('offline stop before build execution')
                 c.ssm=ssm

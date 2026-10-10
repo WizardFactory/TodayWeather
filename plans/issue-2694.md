@@ -150,3 +150,22 @@ inputs fail before state/watchdog creation. Source membership is the exact
 unique set in S09.json; historical counts above belong to their named revisions.
 See the operations manual for inputs and the failed third-dispatch evidence.
 Offline transport success is not intended-host readiness or S09/O-2/O-5 acceptance.
+
+
+## Bootstrap diagnostics correction (2026-10-10)
+
+AK requested pre-termination failure evidence and diagnosis of attempt 4; no new
+AWS/SSM dispatch, budget/expiry renewal or merge. Preserve all prior receipts.
+The early APT whole-file HTTP assertion is reproduced against an upstream-derived
+cloud-init 26.1 deb822 fixture, whose documentation comment contains an HTTP URL.
+Fix active-field-only validation/routing with fixed HTTPS endpoints and per-stanza
+signing, preserving comments and rejecting insecure/foreign URI continuations.
+Retained 0.118-second exit 1/console evidence favors this explanation, but the lost
+host file/traceback prevents claiming the exact historical cause as proven.
+
+Acceptance: a bounded same-command diagnostic report is preserved before ordinary
+cleanup with stage, original exit code and sanitized fixed-log signals. Untrusted
+raw content is withheld. Missing/malformed/timeout/emergency/export failures are
+explicit and do not mask the original error, retry work or delay safety cleanup.
+Keep the original 2100s bound and user-data size cap. Use isolated TDD plus actual
+harmless-shell functional smoke and installed-CLI wire check; no real host test.
