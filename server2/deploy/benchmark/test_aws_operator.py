@@ -15,6 +15,9 @@ spec = importlib.util.spec_from_file_location("aws_operator", HERE / "aws_operat
 op = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(op)
 
+# Offline fixture time only: never extend the operator approval or real worker clocks.
+FIXTURE_NOW = op.EXPIRY-4*3600000
+
 CAPS = {"reads": 4, "writes": 3, "download": 200000, "store": 40000}
 
 class ConsoleOutputTests(unittest.TestCase):
@@ -60,6 +63,16 @@ class ConsoleOutputTests(unittest.TestCase):
                     controller.run_host()
                 self.assertEqual(actions,['get-console-output'])
                 self.assertNotIn('worker_allocation_issued',controller.state.data)
+
+    def test_guard_rejections_remain_reproducible_after_approval_expiry(self):
+        from unittest.mock import patch
+        with patch.object(op.time,'time',return_value=(op.EXPIRY+86400000)/1000):
+            with tempfile.TemporaryDirectory(prefix='s09-after-expiry-fixture-') as directory:
+                controller=WorkerEvidenceTests().controller(Path(directory))
+                self.assertEqual(controller.clock(),FIXTURE_NOW)
+                self.assertGreater(op.now_ms(),op.EXPIRY)
+            self.test_invalid_console_never_reaches_guard_opening_or_ssm()
+            self.test_guard_failure_and_console_host_mismatch_have_distinct_rejections()
 
 
 class LedgerTests(unittest.TestCase):
@@ -173,7 +186,7 @@ class WorkerEvidenceTests(unittest.TestCase):
     def controller(self, root):
         config=json.loads((HERE/"aws-run.json").read_text())
         state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":op.EXPIRY,"resources":{"instance":"i-0123456789abcdef0"}})
-        return op.Operator(config,state,None)
+        return op.Operator(config,state,None,clock=lambda:FIXTURE_NOW)
 
     def export_fixture(self, controller, report, errors=b"sanitized abort\n"):
         import base64
@@ -360,7 +373,7 @@ class ConfigAndOwnershipTests(unittest.TestCase):
                 raise AssertionError("unexpected cleanup call")
         with tempfile.TemporaryDirectory(prefix="s09-root-pending-") as temp:
             state=op.State.create(Path(temp)/"state.json",{"deadline_ms":op.EXPIRY,"resources":{"root_volume":"vol-0123456789abcdef0"}})
-            runner=Runner();controller=op.Operator(config,state,runner)
+            runner=Runner();controller=op.Operator(config,state,runner,clock=lambda:FIXTURE_NOW)
             self.assertEqual(controller.cleanup()["status"],"termination_requested_cleanup_pending")
             self.assertNotIn("root_volume_absence_verified",state.data)
             runner.present=False
@@ -375,7 +388,7 @@ class ConfigAndOwnershipTests(unittest.TestCase):
                 return {"Reservations":[{"Instances":[{"InstanceId":"i-0123456789abcdef0","ImageId":config["ami"],"InstanceType":"c6i.large","BlockDeviceMappings":[{"DeviceName":"/dev/sda1","Ebs":{"VolumeId":"vol-0123456789abcdef0","DeleteOnTermination":False}}]}]}]}
         with tempfile.TemporaryDirectory(prefix="s09-root-invalid-") as temp:
             state=op.State.create(Path(temp)/"state.json",{"deadline_ms":op.EXPIRY,"resources":{"instance":"i-0123456789abcdef0"}})
-            with self.assertRaises(op.OperatorError): op.Operator(config,state,Runner()).verify_host_root()
+            with self.assertRaises(op.OperatorError): op.Operator(config,state,Runner(),clock=lambda:FIXTURE_NOW).verify_host_root()
             self.assertNotIn("root_volume",state.data["resources"])
 
     def test_unknown_creation_absence_is_not_cleanup_success(self):
@@ -383,7 +396,7 @@ class ConfigAndOwnershipTests(unittest.TestCase):
             def call(self,*args): raise op.OperatorError("AWS status NoSuchEntity")
         with tempfile.TemporaryDirectory(prefix="s09-cleanup-unknown-") as temp:
             state=op.State.create(Path(temp)/"state.json",{"deadline_ms":op.EXPIRY,"creation_intents":{"role":"unknown"},"resources":{}})
-            with self.assertRaises(op.OperatorError): op.Operator(self.config(),state,Runner()).cleanup()
+            with self.assertRaises(op.OperatorError): op.Operator(self.config(),state,Runner(),clock=lambda:FIXTURE_NOW).cleanup()
             self.assertNotEqual(state.data.get("status"),"cleaned_host_resources_S3_retained")
 
     def test_guard_nonce_deadline_and_bytes_fail_closed(self):
@@ -468,20 +481,20 @@ class WireAndFunctionalTests(unittest.TestCase):
                 return {"Status":"Success","StandardOutputContent":"done"}
         with tempfile.TemporaryDirectory(prefix="s09-ssm-timeout-") as temp:
             state=op.State.create(Path(temp)/"state.json",{"deadline_ms":op.EXPIRY,"resources":{"instance":"i-0123456789abcdef0"}})
-            self.assertEqual(op.Operator(config,state,Runner()).ssm(["fixture"],seconds=15),"done")
+            self.assertEqual(op.Operator(config,state,Runner(),clock=lambda:FIXTURE_NOW).ssm(["fixture"],seconds=15),"done")
         self.assertEqual(len(calls),2)
 
     def test_phase_guard_generated_python_compiles_and_does_not_reset(self):
         with tempfile.TemporaryDirectory(prefix="s09-phase-script-") as temp:
             config=json.loads((HERE/"aws-run.json").read_text())
-            state=op.State.create(Path(temp)/"state.json",{"run_id":config["run_id"],"deadline_ms":op.now_ms()+7200000})
-            controller=op.Operator(config,state,None)
+            state=op.State.create(Path(temp)/"state.json",{"run_id":config["run_id"],"deadline_ms":FIXTURE_NOW+7200000})
+            controller=op.Operator(config,state,None,clock=lambda:FIXTURE_NOW)
             observed=[]
             def fake_ssm(commands,seconds):
                 script=commands[0].split("\n",1)[1].rsplit("PY",1)[0]
                 compile(script,"phase-guard-script","exec")
                 observed.append(script)
-                return json.dumps({"status":"guarded","observed_at_ms":op.now_ms(),"host_rx_bytes":100})
+                return json.dumps({"status":"guarded","observed_at_ms":FIXTURE_NOW,"host_rx_bytes":100})
             controller.ssm=fake_ssm
             controller.phase_guard(transition=True)
             controller.phase_guard()
@@ -493,8 +506,8 @@ class WireAndFunctionalTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="s09-render-") as temp:
             config=json.loads((HERE/"aws-run.json").read_text())
             config.update(source_revision="a"*40,rustup_sha256="b"*64,rustup_url="https://static.rust-lang.org/rustup/archive/1.29.1/x86_64-unknown-linux-gnu/rustup-init",source_files={"server2/"+"x"*200+str(n):"c"*64 for n in range(100)})
-            state=op.State.create(Path(temp)/"state.json",{"run_id":config["run_id"],"nonce":"d"*64,"deadline_ms":op.now_ms()+7200000})
-            controller=op.Operator(config,state,None)
+            state=op.State.create(Path(temp)/"state.json",{"run_id":config["run_id"],"nonce":"d"*64,"deadline_ms":FIXTURE_NOW+7200000})
+            controller=op.Operator(config,state,None,clock=lambda:FIXTURE_NOW)
             with self.assertRaises(op.OperatorError): controller.render_bootstrap()
 
 
@@ -582,8 +595,8 @@ def functional_smoke(recovery=False,recovery_fault=None,retained_bucket=False):
                     except op.OperatorError:pass
                     assert len(calls)==before and not state.data['worker_allocation_issued']
                 else:
-                    state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":op.now_ms()+7200000,"client_token":"s09-functional","nonce":"d"*64,"resources":{"root_volume":"vol-0123456789abcdef0"}})
-                    controller=op.Operator(config,state,op.Cli(config,str(fake)))
+                    state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":FIXTURE_NOW+7200000,"client_token":"s09-functional","nonce":"d"*64,"resources":{"root_volume":"vol-0123456789abcdef0"}})
+                    controller=op.Operator(config,state,op.Cli(config,str(fake)),clock=lambda:FIXTURE_NOW)
                     virtual_profile_clock(controller)
                     self_id=controller.provision();assert self_id==instance
                 assert not any("authorize-security-group-egress" in c for c in calls)
@@ -647,8 +660,8 @@ def failure_functional_smoke():
         try:
             with patch.dict(os.environ,{"S09_FAKE_CLI_ENDPOINT":"http://127.0.0.1:"+str(server.server_port)+"/"}):
                 state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":op.EXPIRY,"resources":{"instance":"i-0123456789abcdef0","root_volume":"vol-0123456789abcdef0"}})
-                controller=op.Operator(config,state,op.Cli(config,str(fake)))
-                current=op.now_ms()
+                controller=op.Operator(config,state,op.Cli(config,str(fake)),clock=lambda:FIXTURE_NOW)
+                current=FIXTURE_NOW
                 window={"host_expires_at_ms":current+61*60000,"benchmark_expires_at_ms":current+46*60000}
                 worker_seconds=op.worker_timeout_seconds(window,current)
                 terminal=controller.ssm(["run failed worker"],seconds=worker_seconds,capture_terminal=True)
@@ -838,7 +851,7 @@ class CleanupExceptionTests(unittest.TestCase):
                     return {"Reservations":[{"Instances":rows}]}
             with tempfile.TemporaryDirectory(prefix="s09-cleanup-fence-") as temp:
                 state=op.State.create(Path(temp)/"state.json",{"run_id":config["run_id"],"deadline_ms":op.EXPIRY,"launch_attempted":True,"client_token":"synthetic-only","resources":{"role":config["role"],"profile":config["role"],"sg":"sg-00000000000000001"},"worker_allocation_issued":False})
-                with self.assertRaises(op.OperatorError): op.Operator(config,state,Runner()).cleanup()
+                with self.assertRaises(op.OperatorError): op.Operator(config,state,Runner(),clock=lambda:FIXTURE_NOW).cleanup()
                 self.assertEqual(actions,["describe-instances"])
                 self.assertEqual(len(state.data["resources"]),3)
                 self.assertFalse(state.data["worker_allocation_issued"])
@@ -862,7 +875,7 @@ def cleanup_functional_smoke():
             path.write_text(json.dumps(state));op.watchdog(config,path,runner)
             report=json.loads(path.with_suffix(".watchdog-finish.json").read_text());assert report['status']==expected and report['host_absence_verified'] is False;summaries.append(report)
         state=op.State.create(root/'cleanup.json',{"run_id":config['run_id'],"deadline_ms":0,"launch_attempted":True,"client_token":"synthetic-only","resources":{"role":config['role'],"profile":config['role'],"sg":"sg-00000000000000001"},"worker_allocation_issued":False})
-        try:op.Operator(config,state,runner).cleanup()
+        try:op.Operator(config,state,runner,clock=lambda:FIXTURE_NOW).cleanup()
         except op.OperatorError as error:assert str(error)=="unknown launched host; keep reconciliation armed"
         else:raise AssertionError("unknown cleanup passed")
         calls=[json.loads(line) for line in trace.read_text().splitlines()];assert len(calls)==5 and sum('terminate-instances' in a for a in calls)==1
