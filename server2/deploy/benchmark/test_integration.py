@@ -29,7 +29,8 @@ def manifest_functional_smoke():
     root.mkdir(mode=0o700)
     config=dict(op.FIXED,source_revision='a'*40,source_map_sha256='b'*64,
         lock_sha256='c'*64,requested_config_sha256='d'*64,source_files={})
-    manifest=op.make_manifest(config,{'deadline_ms':op.EXPIRY,'guard_proof_sha256':'e'*64},
+    from test_aws_operator import worker2_authority_fixture
+    manifest=op.make_manifest(config,{**worker2_authority_fixture(),'deadline_ms':op.EXPIRY,'guard_proof_sha256':'e'*64},
         'i-0123456789abcdef0','f'*64,op.EXPIRY-3600000,'http://127.0.0.1:1/')
     previous=os.umask(0o022)
     try:exec(compile(manifest_publication_program(manifest),'<maintained-manifest-publication>','exec'),{})
@@ -148,18 +149,20 @@ class AuthorityIntegrationTests(unittest.TestCase):
     def test_fixed_renewed_expiry_without_grant_expansion(self):
         import json
         from pathlib import Path
-        self.assertEqual(op.EXPIRY,1791642600000)
+        self.assertEqual(op.EXPIRY,1791648000000)
         config=json.loads((Path(op.__file__).parent/'aws-run.json').read_text())
         self.assertEqual(config['approval_expires_at_ms'],op.EXPIRY)
-        self.assertEqual(op.validate_config(config,now_ms=1791642599999),config)
+        self.assertEqual(op.validate_config(config,now_ms=1791647999999),config)
         for file in ('aws_operator.py','ssm_startup_recovery.py'):
             source=(Path(op.__file__).parent/file).read_text()
-            self.assertIn('1791642600000',source)
-            self.assertNotIn('1791631080000',source)
+            self.assertIn('1791648000000',source)
+            self.assertNotIn('EXPIRY = 1791642600000',source)
+            self.assertNotIn("min(v['deadline_ms'],1791642600000)",source)
+            self.assertNotIn('min(args.deadline_ms, 1791642600000)',source)
         with self.assertRaisesRegex(op.OperatorError,'configuration scope'):
-            op.validate_config(dict(config,approval_expires_at_ms=1791631080000),now_ms=1791630000000)
+            op.validate_config(dict(config,approval_expires_at_ms=1791642600000),now_ms=1791630000000)
         with self.assertRaisesRegex(op.OperatorError,'approval expired'):
-            op.validate_config(config,now_ms=1791642600000)
+            op.validate_config(config,now_ms=1791648000000)
         self.assertEqual((config['host_seconds'],config['max_instances'],config['usd_operator_stop']), (7200,1,5))
         self.assertEqual((config['read_attempts'],config['write_attempts'],config['download_bytes']), (10000,2000,op.GiB))
 
@@ -188,10 +191,11 @@ class ReconciledUsageTests(unittest.TestCase):
                     op.main()
                 create.assert_not_called()
         carried={'ledger':{},'operator_calls':453}
-        with patch.object(sys,'argv',base+['--reconciled-prior-state','/scratch/p3','--prior-reconciliation','/scratch/proof','--cleaned-prior-state','/scratch/p4','--prior-cleanup-proof','/scratch/cleanup']), \
+        with patch.object(sys,'argv',base+['--reconciled-prior-state','/scratch/p3','--prior-reconciliation','/scratch/proof','--cleaned-prior-state','/scratch/p4','--prior-cleanup-proof','/scratch/cleanup','--fifth-prior-state','/scratch/fifth','--prior-worker-proof','/scratch/worker-proof']), \
              patch.object(op,'validate_config',return_value=config), patch.object(op,'bounded_json',side_effect=[config,auth]), \
              patch.object(op,'carry_prior_usage',return_value={}), patch.object(op,'carry_reconciled_usage',return_value=carried) as carry, \
              patch.object(op,'carry_cleaned_usage',return_value=carried), \
+             patch.object(op,'carry_failed_worker_usage',return_value=carried), \
              patch.object(op.State,'create',side_effect=op.OperatorError('stop before launch')) as create:
             with self.assertRaisesRegex(op.OperatorError,'stop before launch'):op.main()
             self.assertEqual(create.call_args.args[1]['operator_calls'],453)
@@ -299,7 +303,8 @@ class CleanedUsageTests(unittest.TestCase):
                      patch.object(op.subprocess,'Popen',side_effect=AssertionError('watchdog reached')) as popen:
                     with self.assertRaisesRegex(op.OperatorError,'paired fourth cleanup inputs'):op.main()
                     create.assert_not_called();popen.assert_not_called()
-            with patch.object(sys,'argv',base+pair), patch.object(op,'validate_config',return_value=config), \
+            with patch.object(sys,'argv',base+pair+['--fifth-prior-state','/scratch/fifth','--prior-worker-proof','/scratch/worker-proof']), patch.object(op,'validate_config',return_value=config), \
+                 patch.object(op,'carry_failed_worker_usage',side_effect=lambda previous,*args:previous), \
                  patch.object(op,'Cli',return_value=Mock()), \
                  patch.object(op.State,'create',side_effect=op.OperatorError('stop before launch')) as create, \
                  patch.object(op.subprocess,'Popen',side_effect=AssertionError('watchdog reached')) as popen:
@@ -359,6 +364,226 @@ class CleanedUsageTests(unittest.TestCase):
                 missing.unlink()
                 with self.assertRaises(op.OperatorError):op.carry_cleaned_usage(previous,state,proof)
                 missing.write_bytes(originals[missing])
+            self.assertEqual({p:p.read_bytes() for p in inputs},originals)
+
+class FailedWorkerUsageTests(unittest.TestCase):
+    def fixture(self, directory):
+        import json
+        root=Path(directory)
+        previous,fourth,cleanup,inputs=CleanedUsageTests().fixture(directory)
+        previous=op.carry_cleaned_usage(previous,fourth,cleanup)
+        def write(name,value):
+            path=root/name;path.write_text(json.dumps(value));return path
+        config=dict(op.FIXED,approval_expires_at_ms=1791642600000)
+        config_path=write('config.json',config)
+        error=b'benchmark failed: private directory ownership\n'
+        errors=root/'fifth.worker-errors.log';errors.write_bytes(error)
+        result=root/'fifth.result.json';result.write_bytes(b'')
+        artifacts={k:dict(status='exported',bytes=len(v),sha256=op.digest(v))
+                   for k,v in [('errors',error),('result',b'')]}
+        fifth=dict(previous,run_id=op.FIXED['run_id'],status='cleaned_host_resources_S3_retained',
+            worker_allocation_issued=True,launch_attempted=True,client_token='s09-fifth',
+            config_sha256=op.digest(op.canonical(config)),root_volume_absence_verified=True,
+            watchdog_reserved_reads=50,watchdog_reserved_download_bytes=50*131072,
+            ledger=dict(reads=857,writes=205,download=112984064,store=0),operator_calls=862,
+            worker_accounting_compliance=False,worker_terminal=dict(Status='Failed',ResponseCode=1),
+            worker_artifacts=artifacts,worker_report_sha256=op.digest(b''),result_sha256=op.digest(b''),
+            current_launch_outcome='acknowledged_or_reconciled',
+            resources=dict(instance='i-0123456789abcdef0',root_volume='vol-0123456789abcdef0',bucket=op.FIXED['bucket']))
+        state=write('fifth.json',fifth)
+        absence=write('final-exact-absence.json',dict(instance_id=fifth['resources']['instance'],
+            instance_state='terminated',root_volume_id=fifth['resources']['root_volume'],
+            active_RunId_instances=[],root_volume_absent=True,tagged_volumes_absent=True,
+            role_absent=True,profile_absent=True,security_group_absent=True,bucket_retained=True,
+            worker_allocation_issued=True))
+        external=write('external-accounting.json',dict(carried_conservative_reservation=100,
+            total_external_calls_covered=47,no_refund=True))
+        evidence={'config':config_path,'errors':errors,'result':result,'absence':absence,'external':external}
+        proof=write('worker-proof',dict(schema=1,run_id=op.FIXED['run_id'],
+            state_sha256=op.digest(op.canonical(fifth)),config_sha256=fifth['config_sha256'],
+            client_token_sha256=op.digest(fifth['client_token'].encode()),
+            prior_reconciliation_sha256=previous['prior_reconciliation_sha256'],
+            prior_cleanup_sha256=previous['prior_cleanup_sha256'],
+            prior_allocation_id=op.FIXED['run_id']+'-worker1',
+            successor_allocation_id=op.FIXED['run_id']+'-worker2',
+            successor_attempt=6,successor_expires_at_ms=1791648000000,
+            worker_outcome='private_directory_ownership_rejected',worker_dispatched=True,
+            worker_accounting_compliance=False,prior_worker_reservation_burned=True,
+            host_absent=True,volumes_absent=True,role_absent=True,profile_absent=True,
+            security_group_absent=True,bucket_retained=True,external_call_reservation=100,
+            evidence_sha256={k:op.digest(v.read_bytes()) for k,v in evidence.items()}))
+        return previous,state,proof,inputs+list(evidence.values())+[state,proof]
+
+    def test_distinct_worker2_manifest_and_full_second_reservation_before_dispatch(self):
+        import tempfile,json,copy
+        with tempfile.TemporaryDirectory() as directory:
+            previous,path,proof,inputs=self.fixture(directory)
+            carried=op.carry_failed_worker_usage(previous,path,proof)
+            config=dict(op.FIXED,source_revision='a'*40,source_map_sha256='b'*64,source_files={},
+                lock_sha256='c'*64,requested_config_sha256='d'*64)
+            data=dict(carried,deadline_ms=op.EXPIRY,guard_proof_sha256='e'*64,worker_allocation_issued=False)
+            state=op.State.create(Path(directory)/'new',data)
+            args=(config,state.data,'i-0123456789abcdef0','f'*64,op.EXPIRY-3600000,'http://127.0.0.1:1/')
+            manifest=op.make_manifest(*args)
+            self.assertEqual(manifest['allocation_id'],op.FIXED['run_id']+'-worker2')
+            self.assertEqual(manifest['allocations'],carried['cumulative_worker_reservations'])
+            history=copy.deepcopy(state.data['worker_allocation_history'])
+            self.assertTrue(hasattr(op,'reserve_worker_allocation'),'second worker reservation missing')
+            op.reserve_worker_allocation(state,manifest)
+            saved=json.loads(state.path.read_text())
+            self.assertTrue(saved['worker_allocation_issued'])
+            self.assertEqual(saved['worker_allocation_history'][:1],history)
+            self.assertEqual(saved['worker_allocation_history'][1],dict(allocation_id=manifest['allocation_id'],
+                reservation=manifest['allocations'],disposition='issued_nonrefundable'))
+            self.assertEqual(saved['cumulative_worker_reservations'],
+                {k:2*v for k,v in manifest['allocations'].items()})
+            with self.assertRaises(op.OperatorError):op.reserve_worker_allocation(state,manifest)
+            self.assertEqual(json.loads(state.path.read_text()),saved)
+            with self.assertRaises(op.OperatorError):op.make_manifest(*args)
+            for field in ('additional_worker_authority','worker_allocation_history','prior_worker_proof_sha256'):
+                bad=dict(data);bad.pop(field)
+                with self.assertRaises(op.OperatorError):
+                    op.make_manifest(config,bad,*args[2:])
+
+    def test_rejects_rebound_uncertain_noncleaned_regressed_or_exhausted_fifth(self):
+        import tempfile,json,copy
+        with tempfile.TemporaryDirectory() as directory:
+            previous,state,proof,inputs=self.fixture(directory)
+            originals={p:p.read_bytes() for p in inputs}
+            fifth=json.loads(originals[state]);receipt=json.loads(originals[proof])
+            mutations=[('worker_allocation_issued',False),('status','creation'),('run_id','foreign'),
+                ('root_volume_absence_verified',False),('launch_attempted',False),
+                ('current_launch_outcome','unknown'),('worker_accounting_compliance',True),
+                ('worker_terminal',dict(Status='Unknown',ResponseCode=None)),
+                ('worker_terminal',dict(Status='Failed',ResponseCode=True)),
+                ('worker_terminal',dict(Status='Failed',ResponseCode=2)),('worker_artifacts',{}),
+                ('worker_report_sha256','0'*64),('result_sha256','0'*64),
+                ('prior_state_sha256',[]),('prior_state_sha256',list(reversed(previous['prior_state_sha256']))),
+                ('prior_reconciliation_sha256','0'*64),('prior_cleanup_sha256','0'*64),
+                ('operator_calls',2),('operator_calls',True),('operator_calls',3350),
+                ('watchdog_reserved_reads',49),('watchdog_reserved_download_bytes',0),
+                ('recovery1',{}),('worker_allocation_history',[]),('cumulative_worker_reservations',{}),
+                ('prior_worker_proof_sha256','a'*64),('additional_worker_authority',{}),('client_token',None)]
+            for key in previous['ledger']:
+                for value in (previous['ledger'][key]-1,True):
+                    ledger=dict(fifth['ledger']);ledger[key]=value;mutations.append(('ledger',ledger))
+            for key,cap in dict(reads=9800,writes=1900,download=512*op.MiB-200*131072,store=op.MiB).items():
+                ledger=dict(fifth['ledger']);ledger[key]=cap;mutations.append(('ledger',ledger))
+            for field,value in mutations:
+                with self.subTest(field=field):
+                    bad=copy.deepcopy(fifth);bad[field]=value;state.write_text(json.dumps(bad))
+                    rebound=dict(receipt,state_sha256=op.digest(op.canonical(bad)));proof.write_text(json.dumps(rebound))
+                    with self.assertRaises(op.OperatorError):op.carry_failed_worker_usage(previous,state,proof)
+            state.write_bytes(originals[state])
+            for field,value in [('state_sha256','0'*64),('config_sha256','0'*64),('client_token_sha256','0'*64),
+                ('prior_reconciliation_sha256','0'*64),('prior_cleanup_sha256','0'*64),
+                ('schema',True),('extra',True),('external_call_reservation',99),('successor_attempt',5),
+                ('successor_expires_at_ms',1791642600000),('successor_allocation_id',op.FIXED['run_id']+'-worker1'),
+                ('worker_dispatched',False),('prior_worker_reservation_burned',False),('evidence_sha256',{})]+[
+                    (k,False) for k in ('host_absent','volumes_absent','role_absent','profile_absent',
+                        'security_group_absent','bucket_retained')]:
+                with self.subTest(proof_field=field):
+                    bad=copy.deepcopy(receipt);bad[field]=value;proof.write_text(json.dumps(bad))
+                    with self.assertRaises(op.OperatorError):op.carry_failed_worker_usage(previous,state,proof)
+            proof.write_bytes(originals[proof])
+            for path in inputs[6:]:
+                with self.subTest(missing=path.name):
+                    path.unlink()
+                    with self.assertRaises(op.OperatorError):op.carry_failed_worker_usage(previous,state,proof)
+                    path.write_bytes(originals[path])
+            self.assertEqual({p:p.read_bytes() for p in inputs},originals)
+
+    def test_rebound_artifacts_absence_and_external_evidence_cannot_widen_exception(self):
+        import tempfile,json,copy
+        with tempfile.TemporaryDirectory() as directory:
+            previous,state,proof,inputs=self.fixture(directory)
+            originals={p:p.read_bytes() for p in inputs}
+            fifth=json.loads(originals[state]);receipt=json.loads(originals[proof])
+            root=Path(directory)
+            cases=[('errors',state.with_suffix('.worker-errors.log'),b'benchmark failed: uncertain publication\n'),
+                ('result',state.with_suffix('.result.json'),b'{}'),
+                ('config',root/'config.json',dict(op.FIXED)),
+                ('absence',root/'final-exact-absence.json',dict(instance_state='running')),
+                ('external',root/'external-accounting.json',dict(total_external_calls_covered=101)),
+                ('external',root/'external-accounting.json',dict(total_external_calls_covered=True)),
+                ('external',root/'external-accounting.json',dict(no_refund=False))]
+            for name,path,change in cases:
+                with self.subTest(evidence=name,change_type=type(change).__name__):
+                    if isinstance(change,dict):
+                        value=json.loads(originals[path]);value.update(change);raw=json.dumps(value).encode()
+                    else:raw=change
+                    path.write_bytes(raw)
+                    bad=copy.deepcopy(fifth);rebound=copy.deepcopy(receipt)
+                    rebound['evidence_sha256'][name]=op.digest(raw)
+                    if name in ('errors','result'):
+                        bad['worker_artifacts'][name]=dict(status='exported',bytes=len(raw),sha256=op.digest(raw))
+                        if name=='result':bad.update(result_sha256=op.digest(raw),worker_report_sha256=op.digest(raw))
+                    if name=='config':
+                        bad['config_sha256']=op.digest(op.canonical(json.loads(raw)))
+                        rebound['config_sha256']=bad['config_sha256']
+                    rebound['state_sha256']=op.digest(op.canonical(bad))
+                    state.write_text(json.dumps(bad));proof.write_text(json.dumps(rebound))
+                    with self.assertRaises(op.OperatorError):op.carry_failed_worker_usage(previous,state,proof)
+                    for p,raw in originals.items():p.write_bytes(raw)
+
+    def test_cli_requires_fifth_pair_before_state_or_watchdog(self):
+        import tempfile,json,sys
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            previous,state,proof,inputs=self.fixture(directory)
+            config=dict(op.FIXED,source_revision='a'*40,native_review_receipt_sha256='b'*64)
+            auth={k:config[k] for k in ('run_id','source_revision','native_review_receipt_sha256')}
+            auth.update(AWS_execution_authorized=True,expires_at_ms=op.EXPIRY)
+            cp=Path(directory)/'current-config';cp.write_text(json.dumps(config))
+            ap=Path(directory)/'authority';ap.write_text(json.dumps(auth))
+            argv=['operator','--execute-reviewed-run','--config',str(cp),'--authorization',str(ap),
+                '--state',directory+'/new','--prior-state',str(inputs[0]),'--prior-state',str(inputs[1]),
+                '--reconciled-prior-state',str(inputs[2]),'--prior-reconciliation',str(inputs[3]),
+                '--cleaned-prior-state',str(inputs[4]),'--prior-cleanup-proof',str(inputs[5])]
+            pair=['--fifth-prior-state',str(state),'--prior-worker-proof',str(proof)]
+            for extra in ([],pair[:2],pair[2:]):
+                with patch.object(sys,'argv',argv+extra),patch.object(op,'validate_config',return_value=config), \
+                     patch.object(op,'Cli',return_value=Mock()), \
+                     patch.object(op.State,'create',side_effect=AssertionError('unfunded state')) as create, \
+                     patch.object(op.subprocess,'Popen',side_effect=AssertionError('unfunded watchdog')) as popen:
+                    with self.assertRaisesRegex(op.OperatorError,'paired fifth worker inputs'):op.main()
+                    create.assert_not_called();popen.assert_not_called()
+            with patch.object(sys,'argv',argv+pair),patch.object(op,'validate_config',return_value=config), \
+                 patch.object(op,'Cli',return_value=Mock()), \
+                 patch.object(op.State,'create',side_effect=op.OperatorError('stop before launch')) as create, \
+                 patch.object(op.subprocess,'Popen',side_effect=AssertionError('watchdog reached')) as popen:
+                with self.assertRaisesRegex(op.OperatorError,'stop before launch'):op.main()
+                carried=create.call_args.args[1]
+                self.assertEqual(carried['operator_calls'],1012)
+                self.assertEqual(len(carried['prior_state_sha256']),5)
+                self.assertEqual(carried['worker_allocation_history'][0]['disposition'],'burned_nonrefundable')
+                self.assertFalse(carried['worker_allocation_issued']) # new worker2 only
+                popen.assert_not_called()
+                create.reset_mock();proof.write_text('{}')
+                with self.assertRaisesRegex(op.OperatorError,'fifth prior evidence identity'):op.main()
+                create.assert_not_called();popen.assert_not_called()
+
+    def test_fifth_cumulative_usage_once_and_prior_worker_full_reservation_burned(self):
+        import tempfile,json
+        with tempfile.TemporaryDirectory() as directory:
+            previous,state,proof,inputs=self.fixture(directory)
+            originals={p:p.read_bytes() for p in inputs}
+            self.assertTrue(hasattr(op,'carry_failed_worker_usage'),'fifth worker successor accounting missing')
+            carried=op.carry_failed_worker_usage(previous,state,proof)
+            self.assertEqual(carried['ledger'],dict(reads=1007,writes=305,download=132644864,store=0))
+            self.assertEqual(carried['operator_calls'],1012)
+            self.assertEqual(carried['prior_state_sha256'],previous['prior_state_sha256']+
+                [op.digest(op.canonical(json.loads(originals[state])))])
+            self.assertEqual(carried['prior_cleanup_sha256'],previous['prior_cleanup_sha256'])
+            self.assertEqual(carried['prior_worker_proof_sha256'],op.digest(op.canonical(json.loads(originals[proof]))))
+            reservation=dict(read_attempts=390000,write_attempts=18000,download_bytes=26*op.GiB,
+                stored_version_charge_bytes=63*op.MiB,metadata_download_bytes=512*op.MiB)
+            self.assertEqual(carried['worker_allocation_history'],[dict(allocation_id=op.FIXED['run_id']+'-worker1',
+                state_sha256=carried['prior_state_sha256'][-1],reservation=reservation,
+                disposition='burned_nonrefundable')])
+            self.assertEqual(carried['cumulative_worker_reservations'],reservation)
+            self.assertEqual(carried['additional_worker_authority'],dict(attempt=6,
+                allocation_id=op.FIXED['run_id']+'-worker2',expires_at_ms=op.EXPIRY))
             self.assertEqual({p:p.read_bytes() for p in inputs},originals)
 
 class CarryPriorUsageTests(unittest.TestCase):

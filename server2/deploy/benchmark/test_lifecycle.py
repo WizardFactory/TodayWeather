@@ -158,12 +158,13 @@ class MainLifecycleTests(unittest.TestCase):
                 controller.cleanup = lambda: events.append('cleanup') or {'status':'cleaned_host_resources_S3_retained'}
                 monitor = Mock()
                 popen = Mock(return_value=monitor, side_effect=OSError('monitor unavailable') if fault == 'monitor' else None)
-                with patch.object(sys, 'argv', ['operator','--execute-reviewed-run','--state','/scratch/state','--authorization','/scratch/authorization','--prior-state','/scratch/one','--prior-state','/scratch/two','--reconciled-prior-state','/scratch/three','--prior-reconciliation','/scratch/proof','--cleaned-prior-state','/scratch/four','--prior-cleanup-proof','/scratch/cleanup']), \
+                with patch.object(sys, 'argv', ['operator','--execute-reviewed-run','--state','/scratch/state','--authorization','/scratch/authorization','--prior-state','/scratch/one','--prior-state','/scratch/two','--reconciled-prior-state','/scratch/three','--prior-reconciliation','/scratch/proof','--cleaned-prior-state','/scratch/four','--prior-cleanup-proof','/scratch/cleanup','--fifth-prior-state','/scratch/fifth','--prior-worker-proof','/scratch/worker-proof']), \
                      patch.object(op, 'validate_config', return_value=config), \
                      patch.object(op, 'bounded_json', side_effect=[config, authority]), \
                      patch.object(op, 'carry_prior_usage', return_value={}), \
                      patch.object(op, 'carry_reconciled_usage', return_value={}), \
                      patch.object(op, 'carry_cleaned_usage', return_value={}), \
+                     patch.object(op, 'carry_failed_worker_usage', return_value={}), \
                      patch.object(op, 'Cli', return_value=Mock()), \
                      patch.object(op.State, 'create', return_value=controller.state), \
                      patch.object(op, 'Operator', return_value=controller), \

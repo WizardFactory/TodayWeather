@@ -104,3 +104,28 @@ conservative external evidence reservations. No fresh state/watchdog before all
 required inputs pass. Verify final source/config pins and actual CLI transport,
 then dispatch the published PR head once, collect results or sanitized diagnostics,
 and perform one controller-owned ordinary cleanup with readback. S3 retained.
+
+## Separately authorized sixth attempt (2026-10-10)
+
+After the private-manifest ancestor repair, AK explicitly approved one additional
+AWS attempt, at most USD5, cumulative six attempts/USD30, with fixed expiry
+**1791648000000 (2026-10-10 16:00 UTC / 2026-10-11 01:00 KST)**. Publish the
+minimum successor, then execute it once; no automatic retry or merge. Earlier
+approvals and failed states remain historical, unchanged and non-refundable.
+
+The fifth host built successfully but the worker rejected its private manifest
+before a valid report. Its issued worker1 allocation stays consumed in retained
+history; this new approval funds a distinct worker2, not a resumed/refunded worker1.
+Keep per-worker request/byte/storage limits, per-host7200s, benchmark window,
+export/cleanup tail and controller caps unchanged. The new worker allowance is
+separate from the predecessor's retained full reservation, not a reset of usage.
+
+Before creating state/watchdog, require the immutable cleaned fifth cumulative
+state and exact bound cleanup/failure attestation, including predecessor1-4,
+reconciliation and fourth-cleanup pins. Debit fifth cumulative controller usage
+once plus its full watchdog50 and conservative external100 reservations. Reject
+missing/mismatched/regressed/exhausted inputs and arbitrary or uncertain worker
+outcomes. Preserve original state and artifacts. Fresh resource absence, final
+published source pins and actual CLI wire limits remain launch prerequisites.
+Collect bounded evidence before ordinary cleanup; preserve S3 versions. This
+approval is not a measurement-success claim.

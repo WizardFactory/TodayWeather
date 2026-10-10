@@ -239,7 +239,7 @@ impl Manifest {
         if !c.execution_enabled
             || self.schema != 1
             || self.run_id != RUN
-            || self.allocation_id != format!("{RUN}-worker1")
+            || self.allocation_id != format!("{RUN}-worker2")
             || self.account != ACCOUNT
             || self.region != REGION
             || self.bucket != BUCKET
@@ -263,7 +263,7 @@ impl Manifest {
         {
             return Err("manifest identity/hash");
         }
-        if self.approval_expires_at_ms != 1791642600000
+        if self.approval_expires_at_ms != 1791648000000
             || now >= self.approval_expires_at_ms
             || now >= self.host_expires_at_ms
             || now >= self.benchmark_expires_at_ms
@@ -2632,7 +2632,7 @@ mod wire_tests {
         c.source_map_sha256 = Some(m.source_map_sha256.clone());
         c.lock_sha256 = Some(m.lock_sha256.clone());
         c.review_candidate_sha256 = Some("0".repeat(64));
-        m.approval_expires_at_ms = 1791642600000;
+        m.approval_expires_at_ms = 1791648000000;
         m.host_expires_at_ms = now + 3600000;
         m.benchmark_expires_at_ms = now + 1800000;
         m.guard_proof.observed_at_ms = now;
@@ -2640,23 +2640,45 @@ mod wire_tests {
         assert_eq!(validate(&m, now), Ok(()));
         m.approval_expires_at_ms += 1;
         assert_eq!(validate(&m, now), Err("manifest expiry"));
-        m.approval_expires_at_ms = 1791642600000;
+        m.approval_expires_at_ms = 1791648000000;
         m.host_expires_at_ms = now + 7200001;
         assert_eq!(validate(&m, now), Err("manifest expiry"));
-        m.host_expires_at_ms = 1791642600000;
-        m.benchmark_expires_at_ms = 1791642600000;
-        m.guard_proof.observed_at_ms = 1791642599999;
-        assert_eq!(validate(&m, 1791642599999), Ok(()));
-        assert_eq!(validate(&m, 1791642600000), Err("manifest expiry"));
+        m.host_expires_at_ms = 1791648000000;
+        m.benchmark_expires_at_ms = 1791648000000;
+        m.guard_proof.observed_at_ms = 1791647999999;
+        assert_eq!(validate(&m, 1791647999999), Ok(()));
+        assert_eq!(validate(&m, 1791648000000), Err("manifest expiry"));
         let old_now = 1791630000000;
-        m.approval_expires_at_ms = 1791631080000; // reject even before old expiry
+        m.approval_expires_at_ms = 1791642600000; // reject even before old expiry
         m.host_expires_at_ms = old_now + 600000;
         m.benchmark_expires_at_ms = old_now + 300000;
         m.guard_proof.observed_at_ms = old_now;
         assert_eq!(validate(&m, old_now), Err("manifest expiry"));
     }
+    #[test]
+    fn sixth_authority_accepts_only_distinct_worker2_with_unchanged_caps() {
+        let now = 1791644400000u64;
+        let mut m = manifest("http://127.0.0.1:1");
+        let (mut c, _) = read_config(std::path::Path::new("config/benchmarks/aws.json")).unwrap();
+        c.execution_enabled = true;
+        c.source_revision = Some(m.source_revision.clone());
+        c.source_map_sha256 = Some(m.source_map_sha256.clone());
+        c.lock_sha256 = Some(m.lock_sha256.clone());
+        c.review_candidate_sha256 = Some("0".repeat(64));
+        m.guard_proof.observed_at_ms = now;
+        m.allocation_id = format!("{RUN}-worker2");
+        let validate = |m: &Manifest| m.validate(&c, &"0".repeat(64), &"0".repeat(64), now);
+        assert_eq!(validate(&m), Ok(()));
+        m.allocation_id = format!("{RUN}-worker1");
+        assert_eq!(validate(&m), Err("manifest identity/hash"));
+        m.allocation_id = format!("{RUN}-worker3");
+        assert_eq!(validate(&m), Err("manifest identity/hash"));
+        m.allocation_id = format!("{RUN}-worker2");
+        m.allocations.read_attempts += 1;
+        assert_eq!(validate(&m), Err("manifest allocation"));
+    }
     fn manifest(provider: &str) -> Manifest {
-        serde_json::from_value(json!({"schema":1,"run_id":RUN,"allocation_id":format!("{RUN}-worker1"),"source_map":{},"account":ACCOUNT,"region":REGION,"bucket":BUCKET,"role":ROLE,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"source_map_sha256":"0".repeat(64),"binary_sha256":"0".repeat(64),"lock_sha256":"0".repeat(64),"requested_config_sha256":"0".repeat(64),"approval_expires_at_ms":1791642600000u64,"host_expires_at_ms":1791642600000u64,"benchmark_expires_at_ms":1791642600000u64,"provider_endpoint":provider,"allocations":{"read_attempts":390000,"write_attempts":18000,"download_bytes":26*GIB,"stored_version_charge_bytes":63*1024*1024,"metadata_download_bytes":0},"operator_reservation_summary":{"read_attempts":10000,"write_attempts":2000,"bootstrap_download_bytes":3*GIB,"administrative_download_bytes":GIB,"stored_version_charge_bytes":1048576},"phases":{"protocol":{"read_attempts":5000,"write_attempts":3500},"cold":{"read_attempts":280000,"write_attempts":0},"repair":{"read_attempts":60000,"write_attempts":4000},"warm":{"read_attempts":10000,"write_attempts":0},"funding":{"read_attempts":10000,"write_attempts":5500},"failure":{"read_attempts":25000,"write_attempts":5000}},"guard_proof":{"status":"verified","run_id":RUN,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"observed_at_ms":0,"proof_sha256":"0".repeat(64)}})).unwrap()
+        serde_json::from_value(json!({"schema":1,"run_id":RUN,"allocation_id":format!("{RUN}-worker2"),"source_map":{},"account":ACCOUNT,"region":REGION,"bucket":BUCKET,"role":ROLE,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"source_map_sha256":"0".repeat(64),"binary_sha256":"0".repeat(64),"lock_sha256":"0".repeat(64),"requested_config_sha256":"0".repeat(64),"approval_expires_at_ms":1791648000000u64,"host_expires_at_ms":1791648000000u64,"benchmark_expires_at_ms":1791648000000u64,"provider_endpoint":provider,"allocations":{"read_attempts":390000,"write_attempts":18000,"download_bytes":26*GIB,"stored_version_charge_bytes":63*1024*1024,"metadata_download_bytes":0},"operator_reservation_summary":{"read_attempts":10000,"write_attempts":2000,"bootstrap_download_bytes":3*GIB,"administrative_download_bytes":GIB,"stored_version_charge_bytes":1048576},"phases":{"protocol":{"read_attempts":5000,"write_attempts":3500},"cold":{"read_attempts":280000,"write_attempts":0},"repair":{"read_attempts":60000,"write_attempts":4000},"warm":{"read_attempts":10000,"write_attempts":0},"funding":{"read_attempts":10000,"write_attempts":5500},"failure":{"read_attempts":25000,"write_attempts":5000}},"guard_proof":{"status":"verified","run_id":RUN,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"observed_at_ms":0,"proof_sha256":"0".repeat(64)}})).unwrap()
     }
     #[tokio::test]
     async fn prior_uncertain_cold_trial_prevents_next_profile_seed_and_charge() {

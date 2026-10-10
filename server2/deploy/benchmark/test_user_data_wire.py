@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import secrets
 import subprocess
 import sys
 import tempfile
@@ -54,11 +55,11 @@ def controller(directory, runner):
     paths = declaration['server2_paths'] + [item['path'] for item in declaration['outside']]
     assert len(paths) == len(set(paths)), 'source declaration must be unique'
     paths = sorted(paths)
-    config = dict(op.FIXED, source_revision='a'*40, rustup_sha256='b'*64,
+    config = dict(op.FIXED, source_revision=secrets.token_hex(20), rustup_sha256=secrets.token_hex(32),
         rustup_url='https://static.rust-lang.org/rustup/archive/1.29.1/x86_64-unknown-linux-gnu/rustup-init',
         source_files={p: op.digest((root/p).read_bytes()) for p in paths})
-    state = op.State.create(Path(directory)/'state.json', {'nonce':'d'*64,
-        'readiness_key':'e'*64, 'client_token':'s09-wire-offline', 'deadline_ms':op.EXPIRY})
+    state = op.State.create(Path(directory)/'state.json', {'nonce':secrets.token_hex(32),
+        'readiness_key':secrets.token_hex(32), 'client_token':'s09-wire-offline', 'deadline_ms':op.EXPIRY})
     return op.Operator(config, state, runner, clock=lambda:op.EXPIRY-7200000)
 
 
@@ -129,7 +130,8 @@ class InstalledWireTests(unittest.TestCase):
                     'wire_bytes':len(wire), 'decoded_once_bytes':len(decoded),
                     'plain_bytes':len(plain), 'payload_sha256':op.digest(payload),
                     'wire_sha256':op.digest(wire.encode()), 'exact_once':decoded == payload,
-                    'requests':len(captured), 'actual_AWS_calls':0}), flush=True)
+                    'requests':len(captured), 'actual_AWS_calls':0,
+                    'representative_randomized_identity_not_execution_config':True}), flush=True)
                 self.assertEqual(decoded, payload, 'one base64 decode must recover exact gzip bytes')
                 self.assertLessEqual(len(decoded), 16384)
                 self.assertLessEqual(len(wire), 25600)
@@ -141,6 +143,15 @@ class InstalledWireTests(unittest.TestCase):
 
 
 class PayloadBoundaryTests(unittest.TestCase):
+    def test_wire_fixture_uses_production_shaped_nonrepeating_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            instance=controller(directory,None)
+            for value,size in ((instance.config['source_revision'],40),(instance.config['rustup_sha256'],64),
+                (instance.state.data['nonce'],64),(instance.state.data['readiness_key'],64)):
+                self.assertEqual(len(value),size)
+                self.assertGreater(len(set(value)),1,'repeated fixture overstates gzip headroom')
+
+
     def test_oversize_and_nonbytes_never_dispatch_or_mark_launch(self):
         for payload in (b'x'*16385, 'text', bytearray(b'x'), None):
             with self.subTest(kind=type(payload).__name__), tempfile.TemporaryDirectory() as directory:

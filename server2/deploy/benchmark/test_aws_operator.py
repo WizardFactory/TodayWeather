@@ -20,6 +20,17 @@ FIXTURE_NOW = op.EXPIRY-4*3600000
 
 CAPS = {"reads": 4, "writes": 3, "download": 200000, "store": 40000}
 
+def worker2_authority_fixture():
+    """Synthetic already-validated carry for tests below the main input boundary."""
+    reservation=dict(read_attempts=390000,write_attempts=18000,download_bytes=26*op.GiB,
+        stored_version_charge_bytes=63*op.MiB,metadata_download_bytes=512*op.MiB)
+    return dict(worker_allocation_issued=False,prior_state_sha256=['a'*64]*5,
+        prior_worker_proof_sha256='b'*64,additional_worker_authority=dict(attempt=6,
+            allocation_id=op.FIXED['run_id']+'-worker2',expires_at_ms=op.EXPIRY),
+        worker_allocation_history=[dict(allocation_id=op.FIXED['run_id']+'-worker1',state_sha256='a'*64,
+            reservation=dict(reservation),disposition='burned_nonrefundable')],
+        cumulative_worker_reservations=dict(reservation))
+
 class ConsoleOutputTests(unittest.TestCase):
     def test_decoded_text_and_missing_output_are_not_decoded_again(self):
         text = "Linux boot text\nS09_GUARD_V1 fixture\n\uac00"
@@ -153,7 +164,7 @@ class ExportWindowTests(unittest.TestCase):
         current=op.EXPIRY-120*60000 if now is None else now
         config=json.loads((HERE/"aws-run.json").read_text())
         config.update(source_revision="a"*40,source_map_sha256="b"*64,source_files={},lock_sha256="c"*64,requested_config_sha256="d"*64)
-        state={"deadline_ms":current+int(minutes*60000),"guard_proof_sha256":"e"*64}
+        state={**worker2_authority_fixture(),"deadline_ms":current+int(minutes*60000),"guard_proof_sha256":"e"*64}
         return op.make_manifest(config,state,"i-0123456789abcdef0","f"*64,current,"http://127.0.0.1:1/"),current
 
     def test_short_host_windows_keep_export_reserve(self):
@@ -711,6 +722,7 @@ def compiled_worker_handshake(binary, fault=False, case_fault=False):
         config=json.loads((HERE/"aws-run.json").read_text());config.update(source_revision=revision,source_files=files,source_map_sha256=cfg["source_map_sha256"],lock_sha256=cfg["lock_sha256"],requested_config_sha256=op.digest(config_path.read_bytes()))
         now=op.now_ms()
         state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":min(op.EXPIRY,now+1800000),"guard_proof_sha256":"b"*64,"resources":{"instance":"i-0123456789abcdef0"}})
+        state.data.update(worker2_authority_fixture())
         manifest=op.make_manifest(config,state.data,"i-0123456789abcdef0",op.digest(binary.read_bytes()),now,endpoint)
         manifest_path=root/"manifest.json";manifest_path.write_bytes(op.canonical(manifest));manifest_path.chmod(0o600)
         invocation=[str(binary),"--local-approved-worker",str(config_path),"--run-manifest",str(manifest_path),"--loopback-s3",endpoint]

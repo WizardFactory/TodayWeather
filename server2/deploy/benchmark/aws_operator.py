@@ -24,7 +24,7 @@ import bootstrap_diagnostics
 HERE = Path(__file__).resolve().parent
 GiB = 1024 ** 3
 MiB = 1024 ** 2
-EXPIRY = 1791642600000
+EXPIRY = 1791648000000
 EXPORT_CLEANUP_RESERVE_MS = 15 * 60000
 MINIMUM_WORKER_WINDOW_MS = 5 * 60000
 COMPLETION_GRACE_SECONDS = 30
@@ -1016,7 +1016,7 @@ p=pathlib.Path('/opt/server2-s09/private')
 r=json.loads((p/'readiness.json').read_text());v=r['proof']
 assert r['mac']==MAC
 age=int(time.monotonic()*1000)-v['ready_monotonic_ms'];wall=int(time.time()*1000)
-assert 0<=age<300000 and wall<min(v['deadline_ms'],1791642600000)
+assert 0<=age<300000 and wall<min(v['deadline_ms'],1791648000000)
 assert abs(wall-v['ready_at_ms']-age)<=1000
 fd=os.open(p/'controller-start',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
 with os.fdopen(fd,'w') as f: f.write(r['mac']);f.flush();os.fsync(f.fileno())
@@ -1086,7 +1086,7 @@ print(json.dumps({'host_age_ms':age,'host_wall_ms':wall}))
             " assert stat.S_ISDIR(s.st_mode) and s.st_uid==0 and stat.S_IMODE(s.st_mode)==0o700",
             "fd=os.open(p/'manifest.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)",
             "with os.fdopen(fd,'wb') as f: f.write(base64.b64decode('"+encoded+"'));f.flush();os.fsync(f.fileno())", "PY"]
-        self.state.data["worker_allocation_issued"]=True;self.state.save()
+        reserve_worker_allocation(self.state,manifest)
         self.ssm(["\n".join(commands)],seconds=30)
         # Worker config is reviewed, source-pinned and inert until this private copy is armed.
         config_script="import pathlib,json,os;src=pathlib.Path('/opt/server2-s09/source/server2/config/benchmarks/aws.json');c=json.loads(src.read_text());c['execution_enabled']=True;c['source_revision']='"+self.config["source_revision"]+"';c['source_map_sha256']='"+self.config["source_map_sha256"]+"';c['lock_sha256']='"+self.config["lock_sha256"]+"';c['review_candidate_sha256']='"+self.config["review_candidate_sha256"]+"';p=pathlib.Path('"+run_directory+"/aws-config.json');fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.write(fd,json.dumps(c,separators=(',',':'),sort_keys=True).encode());os.close(fd)"
@@ -1289,7 +1289,39 @@ def worker_timeout_seconds(manifest, current_ms):
     return remaining//1000+COMPLETION_GRACE_SECONDS
 
 
+def validate_worker_successor(state):
+    authority = {'attempt':6,'allocation_id':FIXED['run_id']+'-worker2','expires_at_ms':EXPIRY}
+    pins = state.get('prior_state_sha256')
+    if (state.get('worker_allocation_issued') is not False or
+        canonical(state.get('additional_worker_authority')) != canonical(authority) or
+        not isinstance(pins,list) or len(pins) != 5 or
+        any(not isinstance(p,str) or not re.fullmatch('[a-f0-9]{64}',p) for p in pins) or
+        not isinstance(state.get('prior_worker_proof_sha256'),str) or
+        not re.fullmatch('[a-f0-9]{64}',state['prior_worker_proof_sha256'])):
+        raise OperatorError('distinct sixth worker authority required')
+    history = [{'allocation_id':FIXED['run_id']+'-worker1','state_sha256':pins[-1],
+        'reservation':WORKER_RESERVATION,'disposition':'burned_nonrefundable'}]
+    if (canonical(state.get('worker_allocation_history')) != canonical(history) or
+        canonical(state.get('cumulative_worker_reservations')) != canonical(WORKER_RESERVATION)):
+        raise OperatorError('prior worker reservation must remain burned')
+
+
+def reserve_worker_allocation(state, manifest):
+    """Persist full worker2 before the first manifest transfer; never replenish."""
+    validate_worker_successor(state.data)
+    if (manifest.get('allocation_id') != FIXED['run_id']+'-worker2' or
+        canonical(manifest.get('allocations')) != canonical(WORKER_RESERVATION)):
+        raise OperatorError('worker reservation identity')
+    state.data['worker_allocation_history'] = state.data['worker_allocation_history'] + [
+        {'allocation_id':manifest['allocation_id'],'reservation':dict(WORKER_RESERVATION),
+         'disposition':'issued_nonrefundable'}]
+    state.data['cumulative_worker_reservations'] = {k:2*v for k,v in WORKER_RESERVATION.items()}
+    state.data['worker_allocation_issued'] = True
+    state.save()
+
+
 def make_manifest(config, state, instance_id, binary_sha256, current_ms, provider_endpoint):
+    validate_worker_successor(state)
     if not re.fullmatch(r"http://127\.0\.0\.1:[0-9]{1,5}/",provider_endpoint) or not 1 <= int(provider_endpoint.split(":")[-1].rstrip("/")) <= 65535: raise OperatorError("provider loopback endpoint")
     if "guard_proof_sha256" not in state or not re.fullmatch("[a-f0-9]{64}", binary_sha256):
         raise OperatorError("unverified host build/guard")
@@ -1297,7 +1329,7 @@ def make_manifest(config, state, instance_id, binary_sha256, current_ms, provide
     deadline = min(deadline,current_ms+MAXIMUM_WORKER_WINDOW_MS)
     if deadline-current_ms<MINIMUM_WORKER_WINDOW_MS:
         raise OperatorError("insufficient benchmark/export window")
-    manifest = {"schema":1,"run_id":config["run_id"],"allocation_id":config["run_id"]+"-worker1","instance_id":instance_id,
+    manifest = {"schema":1,"run_id":config["run_id"],"allocation_id":config["run_id"]+"-worker2","instance_id":instance_id,
                 **{k:config[k] for k in ("account","region","bucket","role","source_revision","source_map_sha256","lock_sha256","requested_config_sha256")},
                 "source_map":dict(config["source_files"]),"provider_endpoint":provider_endpoint,"binary_sha256":binary_sha256,"approval_expires_at_ms":EXPIRY,"host_expires_at_ms":state["deadline_ms"],"benchmark_expires_at_ms":deadline,
                 "allocations":{"read_attempts":390000,"write_attempts":18000,"download_bytes":26*GiB,"stored_version_charge_bytes":63*MiB,"metadata_download_bytes":512*MiB},
@@ -1522,6 +1554,112 @@ def carry_cleaned_usage(previous, state_path, receipt_path):
         'prior_cleanup_sha256':digest(canonical(proof))}
 
 
+# Each worker is a separate full, non-refundable allocation. Never debit this
+# record against, or refund it into, the cumulative operator control ledger.
+WORKER_RESERVATION = {"read_attempts":390000,"write_attempts":18000,
+    "download_bytes":26*GiB,"stored_version_charge_bytes":63*MiB,"metadata_download_bytes":512*MiB}
+
+
+def carry_failed_worker_usage(previous, state_path, receipt_path):
+    """Sixth authority only: preserve the fifth ownership-rejected worker1.
+
+    State/proof pins hash canonical JSON. Named evidence pins hash raw bytes.
+    All five evidence files are mandatory siblings of the immutable fifth state;
+    error/result names use its suffix, other names are fixed below. This narrow
+    attestation is neither fresh live absence nor permission to retry uncertainty.
+    """
+    prior = bounded_json(state_path)
+    proof = bounded_json(receipt_path)
+    if (not isinstance(prior,dict) or prior.get('run_id') != FIXED['run_id'] or
+        prior.get('status') != 'cleaned_host_resources_S3_retained' or
+        prior.get('worker_allocation_issued') is not True or prior.get('launch_attempted') is not True or
+        prior.get('root_volume_absence_verified') is not True or
+        prior.get('current_launch_outcome') != 'acknowledged_or_reconciled' or
+        any(k in prior for k in ('recovery1','prior_worker_proof_sha256','worker_allocation_history',
+            'cumulative_worker_reservations','additional_worker_authority')) or
+        len(previous.get('prior_state_sha256',[])) != 4 or
+        any(prior.get(k) != previous[k] for k in ('prior_state_sha256','prior_reconciliation_sha256','prior_cleanup_sha256')) or
+        not isinstance(prior.get('client_token'),str) or not prior['client_token']):
+        raise OperatorError('fifth prior state identity')
+    paths = {'config':Path(state_path).parent/'config.json',
+        'errors':Path(state_path).with_suffix('.worker-errors.log'),
+        'result':Path(state_path).with_suffix('.result.json'),
+        'absence':Path(state_path).parent/'final-exact-absence.json',
+        'external':Path(state_path).parent/'external-accounting.json'}
+    raw = {}
+    for name,path in paths.items():
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 65536:
+            raise OperatorError('fifth evidence file')
+        raw[name] = path.read_bytes()
+    config = bounded_json(paths['config'])
+    if (not isinstance(config,dict) or prior.get('config_sha256') != digest(canonical(config)) or
+        any(config.get(k) != FIXED[k] for k in ('run_id','account','region','bucket','role')) or
+        config.get('approval_expires_at_ms') != 1791642600000):
+        raise OperatorError('fifth config binding')
+    artifacts = {k:{'status':'exported','bytes':len(raw[k]),'sha256':digest(raw[k])} for k in ('errors','result')}
+    if (raw['errors'] != b'benchmark failed: private directory ownership\n' or raw['result'] != b'' or
+        canonical(prior.get('worker_terminal')) != canonical({'Status':'Failed','ResponseCode':1}) or
+        prior.get('worker_accounting_compliance') is not False or
+        canonical(prior.get('worker_artifacts')) != canonical(artifacts) or
+        prior.get('worker_report_sha256') != digest(b'') or prior.get('result_sha256') != digest(b'')):
+        raise OperatorError('fifth worker outcome not eligible')
+    absence = bounded_json(paths['absence'])
+    resources = prior.get('resources',{})
+    if (not isinstance(resources,dict) or not isinstance(absence,dict) or
+        not re.fullmatch(r'i-[a-f0-9]{17}',str(resources.get('instance',''))) or
+        not re.fullmatch(r'vol-[a-f0-9]{17}',str(resources.get('root_volume',''))) or
+        resources.get('bucket') != FIXED['bucket'] or
+        absence.get('instance_id') != resources['instance'] or absence.get('instance_state') != 'terminated' or
+        absence.get('root_volume_id') != resources['root_volume'] or absence.get('active_RunId_instances') != [] or
+        any(absence.get(k) is not True for k in ('root_volume_absent','tagged_volumes_absent',
+            'role_absent','profile_absent','security_group_absent','bucket_retained','worker_allocation_issued'))):
+        raise OperatorError('fifth exact absence binding')
+    external = bounded_json(paths['external'])
+    if (not isinstance(external,dict) or type(external.get('total_external_calls_covered')) is not int or
+        not 0 <= external['total_external_calls_covered'] <= 100 or
+        type(external.get('carried_conservative_reservation')) is not int or
+        external['carried_conservative_reservation'] != 100 or external.get('no_refund') is not True):
+        raise OperatorError('fifth external reservation')
+    pin = digest(canonical(prior))
+    expected = {'schema':1,'run_id':FIXED['run_id'],'state_sha256':pin,
+        'config_sha256':prior['config_sha256'],'client_token_sha256':digest(prior['client_token'].encode()),
+        'prior_reconciliation_sha256':previous['prior_reconciliation_sha256'],
+        'prior_cleanup_sha256':previous['prior_cleanup_sha256'],
+        'prior_allocation_id':FIXED['run_id']+'-worker1','successor_allocation_id':FIXED['run_id']+'-worker2',
+        'successor_attempt':6,'successor_expires_at_ms':EXPIRY,
+        'worker_outcome':'private_directory_ownership_rejected','worker_dispatched':True,
+        'worker_accounting_compliance':False,'prior_worker_reservation_burned':True,
+        'host_absent':True,'volumes_absent':True,'role_absent':True,'profile_absent':True,
+        'security_group_absent':True,'bucket_retained':True,'external_call_reservation':100,
+        'evidence_sha256':{k:digest(v) for k,v in raw.items()}}
+    if canonical(proof) != canonical(expected):
+        raise OperatorError('fifth prior evidence identity')
+    usage = prior.get('ledger')
+    if (not isinstance(usage,dict) or set(usage) != set(previous['ledger']) or
+        any(type(v) is not int or v < previous['ledger'][k] for k,v in usage.items()) or
+        type(prior.get('operator_calls')) is not int or prior['operator_calls'] < previous['operator_calls'] or
+        type(prior.get('watchdog_reserved_reads')) is not int or prior['watchdog_reserved_reads'] != 50 or
+        type(prior.get('watchdog_reserved_download_bytes')) is not int or prior['watchdog_reserved_download_bytes'] != 50*131072):
+        raise OperatorError('fifth prior usage regressed')
+    total = dict(usage)
+    total['reads'] += 150
+    total['writes'] += 100
+    total['download'] += 150*131072
+    calls = prior['operator_calls'] + 150
+    caps = {'reads':9950,'writes':2000,'download':512*MiB-50*131072,'store':MiB}
+    if calls >= 3500 or any(total[k] >= caps[k] for k in total):
+        raise OperatorError('prior usage exhausted')
+    return {'ledger':total,'operator_calls':calls,
+        'prior_state_sha256':previous['prior_state_sha256']+[pin],
+        'prior_reconciliation_sha256':previous['prior_reconciliation_sha256'],
+        'prior_cleanup_sha256':previous['prior_cleanup_sha256'],
+        'prior_worker_proof_sha256':digest(canonical(proof)),
+        'worker_allocation_history':[{'allocation_id':FIXED['run_id']+'-worker1','state_sha256':pin,
+            'reservation':dict(WORKER_RESERVATION),'disposition':'burned_nonrefundable'}],
+        'cumulative_worker_reservations':dict(WORKER_RESERVATION),
+        'additional_worker_authority':{'attempt':6,'allocation_id':FIXED['run_id']+'-worker2','expires_at_ms':EXPIRY}}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=HERE / "aws-run.json")
@@ -1538,6 +1676,8 @@ def main():
     parser.add_argument("--prior-reconciliation", type=Path, help="Bound definitive rejection and owned cleanup evidence")
     parser.add_argument("--cleaned-prior-state", type=Path, help="Immutable fourth cumulative cleaned pre-worker state")
     parser.add_argument("--prior-cleanup-proof", type=Path, help="Bound fourth cleanup and external accounting attestation")
+    parser.add_argument("--fifth-prior-state", type=Path, help="Immutable fifth cleaned ownership-rejected worker state")
+    parser.add_argument("--prior-worker-proof", type=Path, help="Bound fifth artifacts/cleanup and separate sixth worker authority")
     args = parser.parse_args()
     config = validate_config(bounded_json(args.config), armed=args.execute_reviewed_run or args.resume_failed_creation or args.cleanup_only or args.watchdog, cleanup_only=args.cleanup_only or args.watchdog)
     if not args.execute_reviewed_run and not args.resume_failed_creation and not args.cleanup_only and not args.watchdog:
@@ -1566,11 +1706,15 @@ def main():
         raise OperatorError("paired reconciliation inputs require new attempt")
     if (args.execute_reviewed_run and not (args.cleaned_prior_state and args.prior_cleanup_proof)) or bool(args.cleaned_prior_state) != bool(args.prior_cleanup_proof) or (args.cleaned_prior_state and not args.execute_reviewed_run):
         raise OperatorError("paired fourth cleanup inputs require new attempt")
+    if (args.execute_reviewed_run and not (args.fifth_prior_state and args.prior_worker_proof)) or bool(args.fifth_prior_state) != bool(args.prior_worker_proof) or (args.fifth_prior_state and not args.execute_reviewed_run):
+        raise OperatorError("paired fifth worker inputs require new attempt")
     carried = carry_prior_usage(args.prior_state) if args.prior_state else {}
     if args.reconciled_prior_state:
         carried = carry_reconciled_usage(carried, args.reconciled_prior_state, args.prior_reconciliation)
     if args.cleaned_prior_state:
         carried = carry_cleaned_usage(carried, args.cleaned_prior_state, args.prior_cleanup_proof)
+    if args.fifth_prior_state:
+        carried = carry_failed_worker_usage(carried, args.fifth_prior_state, args.prior_worker_proof)
     current = now_ms()
     if args.resume_failed_creation:
         if args.original_config is None or args.recovery_authority is None: raise OperatorError("original configuration and recovery authority required")
