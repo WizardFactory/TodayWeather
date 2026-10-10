@@ -7,6 +7,7 @@ import sys
 import unittest
 
 assert os.environ.get('S09_ISOLATED') == '1'
+assert os.getuid() == 0 and os.getgid() == 0
 assert not Path('/run/systemd').exists() and not Path('/sys').exists()
 assert not Path('/root/.aws').exists()
 assert 'CapEff:\t0000000000000000' in Path('/proc/self/status').read_text()
@@ -18,7 +19,11 @@ def audit(event, args):
         fake = exe.name == 'fake-aws' and exe.is_relative_to(Path('/scratch'))
         wrapper = (sys.argv[1] == 'functional' and args[0] == '/usr/bin/dash' and
                    args[1] == ['/usr/bin/dash', '/scratch/bootstrap-wrapper'])
-        if not (fake or wrapper):
+        manifest = (sys.argv[1] == 'manifest-functional' and args[0] == '/worker' and
+            args[1] == ['/worker', '--aws-config', '/candidate/server2/config/benchmarks/aws.json',
+                '--run-manifest', '/opt/server2-s09/run/s09-20261008-approval044959/manifest.json',
+                '--execute-approved-run'])
+        if not (fake or wrapper or manifest):
             raise PermissionError('offline subprocess policy: reviewed adapters only')
     if event in ('os.system', 'os.exec', 'os.posix_spawn'):
         raise PermissionError('offline process escape denied')
@@ -43,6 +48,10 @@ if selection == 'safety':
 if selection in ('imds-functional', 'online-functional'):
     from importlib import import_module
     print(json.dumps(import_module(selection.replace('-', '_')).smoke(), indent=2))
+    sys.exit(0)
+if selection == 'manifest-functional':
+    from test_integration import manifest_functional_smoke
+    print(json.dumps(manifest_functional_smoke(), indent=2))
     sys.exit(0)
 if selection == 'functional':
     import test_aws_operator as tests

@@ -6,6 +6,98 @@ import unittest
 from unittest.mock import Mock
 import aws_operator as op
 
+def manifest_publication_program(manifest):
+    """Extract only the maintained manifest transfer, never execute run_host."""
+    import ast,base64,inspect,textwrap
+    tree=ast.parse(textwrap.dedent(inspect.getsource(op.Operator.run_host)))
+    function=tree.body[0]
+    assert isinstance(function,ast.FunctionDef)
+    statement=next(node for node in function.body if isinstance(node,ast.Assign)
+        and any(isinstance(target,ast.Name) and target.id=='commands' for target in node.targets))
+    namespace={'run_directory':'/opt/server2-s09/run/'+op.FIXED['run_id'],
+        'encoded':base64.b64encode(op.canonical(manifest)).decode()}
+    exec(compile(ast.Module(body=[statement],type_ignores=[]),'<manifest-command>','exec'),namespace)
+    lines=namespace['commands']
+    assert lines[0]=="python3 - <<'PY'" and lines[-1]=='PY'
+    return '\n'.join(lines[1:-1])
+
+def manifest_functional_smoke():
+    """Actual Python publication -> compiled Rust private_manifest, no AWS/IMDS."""
+    import subprocess
+    root=Path('/opt/server2-s09')
+    assert os.environ.get('S09_MANIFEST_BINARY')=='/worker' and not root.exists()
+    root.mkdir(mode=0o700)
+    config=dict(op.FIXED,source_revision='a'*40,source_map_sha256='b'*64,
+        lock_sha256='c'*64,requested_config_sha256='d'*64,source_files={})
+    manifest=op.make_manifest(config,{'deadline_ms':op.EXPIRY,'guard_proof_sha256':'e'*64},
+        'i-0123456789abcdef0','f'*64,op.EXPIRY-3600000,'http://127.0.0.1:1/')
+    previous=os.umask(0o022)
+    try:exec(compile(manifest_publication_program(manifest),'<maintained-manifest-publication>','exec'),{})
+    finally:os.umask(previous)
+    result=subprocess.run(['/worker','--aws-config','/candidate/server2/config/benchmarks/aws.json',
+        '--run-manifest',str(root/'run'/op.FIXED['run_id']/'manifest.json'),'--execute-approved-run'],
+        capture_output=True,text=True,timeout=5)
+    # GNU fixture binary must reach the architecture fence AFTER the real private
+    # path/schema checks, and BEFORE claims, IMDS or AWS transport construction.
+    assert result.returncode==1 and result.stderr.strip()=='benchmark failed: intended Linux x86_64 musl required',result.stderr
+    assert not result.stdout and not (root/'run'/op.FIXED['run_id']/'worker.claim').exists()
+    return {'actual_private_manifest_accepted':True,'stopped_at_non_musl_fence':True,
+        'actual_AWS_calls':0,'worker_claim_created':False,'manifest_ancestor_modes':
+        [oct(path.stat().st_mode & 0o777) for path in (root,root/'run',root/'run'/op.FIXED['run_id'])]}
+
+class PrivateManifestPublicationTests(unittest.TestCase):
+    def test_unsafe_ancestor_is_rejected_before_manifest_publication(self):
+        import tempfile,stat
+        for index in range(3):
+            for unsafe in ('mode','symlink','foreign_owner'):
+                with self.subTest(index=index,unsafe=unsafe),tempfile.TemporaryDirectory() as directory:
+                    root=Path(directory)/'server2-s09'
+                    directories=(root,root/'run',root/'run'/op.FIXED['run_id'])
+                    for path in directories:path.mkdir(mode=0o700)
+                    path=directories[index]
+                    if unsafe=='mode':path.chmod(0o755)
+                    if unsafe=='symlink':
+                        moved=Path(directory)/'redirected';path.rename(moved);path.symlink_to(moved,target_is_directory=True)
+                    program=manifest_publication_program({'fixture':True}).replace('/opt/server2-s09',str(root))
+                    from unittest.mock import patch
+                    original=Path.lstat
+                    def metadata(item):
+                        value=original(item)
+                        if unsafe=='foreign_owner' and item==path:
+                            fields=list(value);fields[4]=1;value=os.stat_result(fields)
+                        return value
+                    with patch.object(Path,'lstat',metadata),self.assertRaises((AssertionError,OSError)):
+                        exec(compile(program,'<maintained-manifest-publication>','exec'),{})
+                    self.assertFalse((directories[-1]/'manifest.json').exists())
+                    if unsafe=='mode':self.assertEqual(stat.S_IMODE(path.stat().st_mode),0o755)
+                    if unsafe=='symlink':self.assertTrue(path.is_symlink())
+
+    def test_existing_manifest_is_never_overwritten(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)/'server2-s09';root.mkdir(mode=0o700)
+            program=manifest_publication_program({'fixture':True}).replace('/opt/server2-s09',str(root))
+            exec(compile(program,'<maintained-manifest-publication>','exec'),{})
+            path=root/'run'/op.FIXED['run_id']/'manifest.json';original=path.read_bytes()
+            with self.assertRaises(FileExistsError):exec(compile(program,'<maintained-manifest-publication>','exec'),{})
+            self.assertEqual(path.read_bytes(),original)
+
+    def test_all_ancestors_are_private_under_permissive_ssm_umask(self):
+        import tempfile,json,stat
+        for mask in (0o022,0o000,0o077):
+            with self.subTest(mask=oct(mask)),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory)/'server2-s09';root.mkdir(mode=0o700)
+                program=manifest_publication_program({'fixture':True}).replace('/opt/server2-s09',str(root))
+                previous=os.umask(mask)
+                try:exec(compile(program,'<maintained-manifest-publication>','exec'),{})
+                finally:os.umask(previous)
+                for path in (root,root/'run',root/'run'/op.FIXED['run_id']):
+                    self.assertEqual(stat.S_IMODE(path.stat().st_mode),0o700,str(path))
+                    self.assertEqual(path.stat().st_uid,0)
+                manifest=root/'run'/op.FIXED['run_id']/'manifest.json'
+                self.assertEqual(stat.S_IMODE(manifest.stat().st_mode),0o600)
+                self.assertEqual(json.loads(manifest.read_bytes()),{'fixture':True})
+
 class ProfileIntegrationTests(unittest.TestCase):
     def test_profile_readback_waits_full_sixty_seconds_without_launch(self):
         self.assertTrue(hasattr(op.Operator, 'wait_profile_ready'), 'bounded profile settling missing')

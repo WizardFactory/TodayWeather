@@ -1081,7 +1081,11 @@ print(json.dumps({'host_age_ms':age,'host_wall_ms':wall}))
         run_directory="/opt/server2-s09/run/"+self.config["run_id"]
         encoded=base64.b64encode(canonical(manifest)).decode()
         if len(encoded)>90000: raise OperatorError("manifest bound")
-        commands=["python3 - <<'PY'", "import base64,os,pathlib", "p=pathlib.Path('"+run_directory+"');p.mkdir(parents=True,mode=0o700,exist_ok=True)", "assert not p.is_symlink() and p.stat().st_uid==0", "os.chmod(p,0o700)", "fd=os.open(p/'manifest.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)", "with os.fdopen(fd,'wb') as f: f.write(base64.b64decode('"+encoded+"'));f.flush();os.fsync(f.fileno())", "PY"]
+        commands=["python3 - <<'PY'", "import base64,os,pathlib,stat", "p=pathlib.Path('"+run_directory+"')",
+            "for d in (p.parent.parent,p.parent,p):", " d.mkdir(mode=0o700,exist_ok=True);s=d.lstat()",
+            " assert stat.S_ISDIR(s.st_mode) and s.st_uid==0 and stat.S_IMODE(s.st_mode)==0o700",
+            "fd=os.open(p/'manifest.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)",
+            "with os.fdopen(fd,'wb') as f: f.write(base64.b64decode('"+encoded+"'));f.flush();os.fsync(f.fileno())", "PY"]
         self.state.data["worker_allocation_issued"]=True;self.state.save()
         self.ssm(["\n".join(commands)],seconds=30)
         # Worker config is reviewed, source-pinned and inert until this private copy is armed.
