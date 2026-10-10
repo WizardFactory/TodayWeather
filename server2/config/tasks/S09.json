@@ -39,7 +39,9 @@
     "server2/deploy/benchmark/online_functional.py",
     "server2/tools/ci.py",
     "server2/tools/prepare-ci.sh",
-    "server2/tools/ci.sh"
+    "server2/tools/ci.sh",
+    "server2/config/ci/bwrap-userns-restrict",
+    "server2/config/ci/LICENSE.apparmor"
   ],
   "outside": [
     {
