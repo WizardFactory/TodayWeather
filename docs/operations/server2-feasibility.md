@@ -212,11 +212,13 @@ A newly observed AWS CLI exit 252 with its exact Unknown options marker is class
 
 Watchdog writes owned_termination_requested only after verifying an owned host and successfully requesting termination. An attempted launch with no resolved unique host is original_launch_unresolved; no recorded launch is no_launch_recorded. Every dispatched call, including an error or lost acknowledgment, is charged before dispatch against the unchanged 50-call reservation. Call failures retry with one-second backoff; ownership is re-read before each termination attempt. Empty/multiple/foreign discovery stops without termination. Exhaustion or invalid state/response leaves a sanitized diagnostic and actual/failed call counts in the exclusive finish receipt. No exception text is copied. All three diagnostics set host_absence_verified=false. A requested termination is not root-volume disappearance or completed cleanup. Outside the newly authorized recovery path below, UNKNOWN zero/multiple discovery still blocks destructive cleanup; an empty list alone is not cleanup authority.
 
-The maintained local check is `python3 server2/deploy/benchmark/test_aws_operator.py --cleanup-functional-smoke`. It exercises actual isolated fake CLI subprocesses, truthful watchdog states and the unchanged UNKNOWN cleanup fence. It calls no AWS/IMDS and reads no configured account profile or original private run state. Existing synthetic release workload capture remains a separate local benchmark demonstration.
+The historical local check was `python3 server2/deploy/benchmark/test_aws_operator.py --cleanup-functional-smoke`. That direct command is retained as a record only; use the current Linux namespace/audit runner above for operational verification. It exercises actual isolated fake CLI subprocesses, truthful watchdog states and the unchanged UNKNOWN cleanup fence. It calls no AWS/IMDS and reads no configured account profile or original private run state. Existing synthetic release workload capture remains a separate local benchmark demonstration.
 
 The cleanup-only total 15 permission, later ordinal 11 stop and ordinal 12 PR-only resumption are historical instructions and remain recorded. AK subsequently authorized correction 13 to fix source, reconcile the original execution, recover once if necessary and clean up owned resources. The installed ten-attempt helper and original counters remain untouched; the separate same-task journal documents the explicit exception. No merge or budget reset is authorized.
 
-## Recover the original failed creation once
+## Recover the original failed creation once (historical procedure)
+
+The direct test-module and installed-CLI command lines in this historical recovery procedure and the following console section record earlier verification. **Do not rerun those commands from the current checkout.** Current operational verification uses the maintained Linux namespace/audit runner above. Actual installed-CLI or compiled-worker observation helpers require a separately reviewed isolation setup; they are outside ordinary CI and this correction.
 
 Use --resume-failed-creation with --config, --original-config, --state, --authorization and --recovery-authority. Root prepares private inputs after exact-head CI and eligible review. Do not use --execute-reviewed-run or a fresh state to retry: they would create a new run. The original run/token/nonce and acknowledged bucket/role/profile/SG are retained. The exact recovery authority binds canonical original state/config hashes, reviewed new config/source/review, user approval receipt and root-attested quiescence of the original operator/watchdog. Wrong pins, changed resources, an issued worker allocation, exhausted usage or replay are refused.
 
@@ -226,7 +228,7 @@ Current token/RunId host inventories must agree. One owned host receives cleanup
 
 New local exit 252/mismatch or prelaunch failure does not erase historical UNKNOWN. Explicit current-absence cleanup authority permits deletion of only acknowledged IAM/profile/SG after fresh zero token/tag/volume inventories and exact ownership/dependency checks. A newly uncertain sent retry cannot use that cleanup path. S3 and every version remain retained; current cleanup is not retrospective proof that the discarded original CLI result was unsent. Root reconciled the recovery13 cleanup as described below; that timestamped observation does not establish feasibility or authorize another launch.
 
-Local verification commands:
+Historical verification commands (record only; do not rerun directly):
 
 ```text
 python3 server2/deploy/benchmark/test_aws_operator.py
@@ -239,7 +241,7 @@ python3 server2/deploy/benchmark/test_aws_operator.py --recovery-failure-functio
 The offline oracle uses temporary dummy credentials and disabled IMDS to validate complete source-generated args and bounded gzip through the installed CLI's skeleton. It proves parsing/SDK shape only, not EC2/idempotency/IAM acceptance. Functional checks use actual fake CLI subprocesses and isolated loopback peers. They verify retained usage, one launch, replay rejection and current owned cleanup while preserving original UNKNOWN, with actual AWS/IMDS0. The existing release workload image below remains a separate local workload demonstration; it is not a screenshot of real AWS recovery. S09 and intended-host/O2/O5 gates remain open.
 
 
-## Console-output response contract and recovery13 outcome
+## Console-output response contract and recovery13 outcome (historical)
 
 [AWS CLI get-console-output](https://docs.aws.amazon.com/cli/latest/reference/ec2/get-console-output.html) decodes the API's base64 Output before returning its JSON string. The operator accepts that string directly, never decodes it again and never guesses an encoding. A response must be an object; absent Output means an empty console still awaiting proof, while non-string Output, lone surrogates, more than 65,536 characters or more than 131,072 UTF-8 bytes fails closed. The installed CLI can already have replaced invalid input bytes with U+FFFD; the operator cannot recover that lost distinction. These body limits are additional ceilings, not a guarantee that the CLI envelope will fit. Cli.call also caps complete serialized JSON plus stderr at 131,072 bytes. JSON escaping and metadata count toward that stricter envelope cap: even 65,536 quote characters can exceed it and be rejected before body parsing. No truncation, reservation increase or proof bypass is allowed. The existing stock guard identity, unique proof, status, deadline and readiness checks still precede egress and SSM. Decoded ordinary boot text alone is not guard proof.
 
