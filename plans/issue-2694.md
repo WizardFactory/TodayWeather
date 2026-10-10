@@ -1,5 +1,77 @@
 # S09 implementation plan
 
+## Current local-first contract (2026-10-11)
+
+AK fixed Rust adoption and requested maximum local verification with minimal EC2
+work; [issue #2694](https://github.com/WizardFactory/TodayWeather/issues/2694)
+is the governing scope. Rust go/fallback/time-box reconsideration is removed.
+S09 completes on the scoped local/Linux-CI checks and resolution of Required PR
+findings. S09 live measurements no longer block S10/S13 implementation. Other
+S01 decisions, S02 route goldens, placement, API parity and cutover gates remain.
+
+Build the intended Linux x86_64 musl release artifact in isolated Linux CI and
+run its startup smoke and synthetic loopback matrix there. The portable local
+runner also works with a native release artifact. Cover cold, warm and simulated
+provider Data/NoData/denied/error outcomes at 8/16/32/64 offered clients without
+raising the existing owner/I/O/CPU or fixture limits. Retain overload and timeout
+outcomes, sample limitations, whole-process RSS/CPU, foreground throughput and
+operation/version-byte cost inputs. Local timings and byte counts do not establish
+AWS latency, physical S3 storage or invoiced cost. Unit prices remain explicitly
+unset until a dated price assumption is supplied; no dollar estimate is inferred.
+
+Before production, use a separately authorized minimal EC2 smoke: transfer the
+prebuilt artifact, verify startup/health/runtime resources/TLS/credentials, then
+a tiny isolated same-region S3 GET/HEAD/PUT/LIST and exact readback. No on-host
+build, full concurrency sweep or provider traffic is required by S09. Actual API
+performance/cost acceptance belongs to pre-cutover work. Raw packs remain disabled
+until actual route measurements demonstrate a need against an agreed target.
+Existing AWS campaign tools/grants and their failure/cleanup records are retained
+as historical evidence. They are not the minimal smoke procedure or renewed
+execution authority. No AWS execution, retry, budget renewal, merge or deployment
+is authorized by this amendment.
+
+## Local-first amendment: exact paths and scenarios
+
+Declared before dependent edits. Use existing S09.json placement membership; no
+new runtime dependency, shared workflow or live executor is introduced.
+
+Server2 changes: `server2/benches/feasibility.rs`,
+`server2/tools/benchmark/run.py`, `server2/tools/benchmark/aws.rs`,
+`server2/config/benchmarks/local.json`, `server2/tests/performance/report.rs`,
+`server2/tests/performance/wire.rs`, `server2/tools/ci.py`,
+`server2/tools/prepare-ci.sh`, `server2/tools/render_feasibility_manual.py`.
+
+Outside exceptions: `intent/issue-2694.md`, `specs/issue-2694.md`,
+`plans/issue-2694.md` for governing scope/scenarios; `docs/architecture/server2.md`
+and `plans/issue-2614.md` for downstream gates; `docs/operations/server2-feasibility.md`
+and `docs/operations/server2-feasibility.pdf` for the runbook;
+`docs/evidence/tasks/server2-feasibility/usage.png` and
+`docs/evidence/tasks/server2-feasibility/manifest.json` for actual CLI evidence;
+`docs/architecture/diagrams/server2-feasibility.workflow.json` and
+`docs/architecture/diagrams/server2-feasibility.html` for the generated workflow.
+All implementation stays under server2. No legacy import/read/symlink is added.
+
+1. Capture regression Red for revised decision fields and matrix coverage.
+2. Update report/runner/config and existing Linux CI musl build/startup/matrix.
+3. Run targeted/workspace regressions, release build and distinct loopback CLI smoke.
+4. Renew manual/PDF/capture, architecture/parent plan and generated workflow.
+5. Review exact changed paths/dependencies, stage/artifact/outgoing checks, push
+   the existing PR, inspect current CI and obtain independent review. Stop before merge.
+
+| Scenario | Prerequisites and actions | Expected / failure behavior | Evidence |
+| --- | --- | --- | --- |
+| Maintainer verifies locally | Native release binary; run default loopback CLI | Six modes at each 8/16/32/64; failures retained; remote endpoints rejected | Performance regressions + release CLI |
+| Linux artifact validation | Existing isolated Ubuntu CI; build musl target, run health smoke and loopback CLI | Intended ELF actually executes; missing tool/build/startup fails CI | Server2 foundation job |
+| Implementer reads readiness | Read report and governing docs after local checks | Rust adopted; live measurements do not block S10/S13; parity/cutover remain separate | Report fence regressions + document checks |
+| Operator validates EC2 | Separate authority and prebuilt artifact | Minimal startup/S3 readback only; failure recorded without automatic relaunch | Pending preproduction smoke, not claimed run |
+
+## Historical contracts and execution records
+
+The remaining sections preserve revision-bound prior scopes, counters, failures and
+authorizations. Their former Rust/live-measurement blockers and continuation limits
+are superseded by the current contract above. AK explicitly restarted this
+local-first amendment at zero; original accounting is archived unchanged.
+
 The current contract is the Q9 correction section below. Earlier numbered rounds are historical and do not describe the current declaration or verification scope.
 
 Use root-owned named execution plan; own stable task issue-2694-s09 records and preserve its counters. Exact paths were declared before edits. Local tooling alone does not close S09. The separately armed live driver and six-path operator lane follow the [temporary resource approval](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052596161) and [31-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6053018487).

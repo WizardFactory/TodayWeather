@@ -1,5 +1,42 @@
 # S09: reproducible feasibility measurement tooling
 
+## Current local-first contract (2026-10-11)
+
+AK fixed Rust adoption and requested maximum local verification with minimal EC2
+work; [issue #2694](https://github.com/WizardFactory/TodayWeather/issues/2694)
+is the governing scope. Rust go/fallback/time-box reconsideration is removed.
+S09 completes on the scoped local/Linux-CI checks and resolution of Required PR
+findings. S09 live measurements no longer block S10/S13 implementation. Other
+S01 decisions, S02 route goldens, placement, API parity and cutover gates remain.
+
+Build the intended Linux x86_64 musl release artifact in isolated Linux CI and
+run its startup smoke and synthetic loopback matrix there. The portable local
+runner also works with a native release artifact. Cover cold, warm and simulated
+provider Data/NoData/denied/error outcomes at 8/16/32/64 offered clients without
+raising the existing owner/I/O/CPU or fixture limits. Retain overload and timeout
+outcomes, sample limitations, whole-process RSS/CPU, foreground throughput and
+operation/version-byte cost inputs. Local timings and byte counts do not establish
+AWS latency, physical S3 storage or invoiced cost. Unit prices remain explicitly
+unset until a dated price assumption is supplied; no dollar estimate is inferred.
+
+Before production, use a separately authorized minimal EC2 smoke: transfer the
+prebuilt artifact, verify startup/health/runtime resources/TLS/credentials, then
+a tiny isolated same-region S3 GET/HEAD/PUT/LIST and exact readback. No on-host
+build, full concurrency sweep or provider traffic is required by S09. Actual API
+performance/cost acceptance belongs to pre-cutover work. Raw packs remain disabled
+until actual route measurements demonstrate a need against an agreed target.
+Existing AWS campaign tools/grants and their failure/cleanup records are retained
+as historical evidence. They are not the minimal smoke procedure or renewed
+execution authority. No AWS execution, retry, budget renewal, merge or deployment
+is authorized by this amendment.
+
+## Historical contracts and execution records
+
+The remaining sections preserve revision-bound prior scopes, counters, failures and
+authorizations. Their former Rust/live-measurement blockers and continuation limits
+are superseded by the current contract above. AK explicitly restarted this
+local-first amendment at zero; original accounting is archived unchanged.
+
 Build reproducible benchmark tooling for the merged raw store, catalog, resolver and funded acquisition primitives. Preserve the existing explicit local-only CLI and add a separately armed intended-host/S3 driver under the [temporary resource approval](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052596161). Record cold/warm/synthetic-provider-miss costs without claiming weather-route parity, CloudFront timing or production readiness. This same S09 task ends at a reviewed pre-merge PR; it has no merge authority.
 
 The original [S09 issue](https://github.com/WizardFactory/TodayWeather/issues/2694) remains open until intended-host musl execution, same-region S3 measurements and O-2/O-5 decisions are recorded. Local TOOL1–TOOL4 outcomes support those measurements; they do not replace the issue acceptance criteria or unblock route ports.

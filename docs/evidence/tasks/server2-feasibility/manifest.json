@@ -1,34 +1,1186 @@
 {
-  "pages": 10,
+  "pages": 12,
   "schema": 1,
   "task": "S09",
-  "date": "2026-10-10",
-  "command": "python3 server2/tools/benchmark/run.py --output reports/s09-successor-local.json",
-  "environment": "Rust1.99/Linux, public Python loopback peer",
+  "date": "2026-10-11",
+  "command": "python3 server2/tools/benchmark/run.py --output reports/sdlc/issue-2694-s09/local-matrix.json --timeout 600",
+  "environment": "Rust1.99/Darwin, public Python loopback peer",
   "scope": "Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or host go",
   "captured_stdout": [
-    "LOCAL ONLY; intended-host/same-region/O2/O5 gates pending",
-    "cold: outcomes={'success': 2} all-p95=18306us success-p95=18306us",
-    "warm: outcomes={'success': 2} all-p95=51us success-p95=51us",
-    "provider_data: outcomes={'success': 2} all-p95=101037us success-p95=101037us",
-    "provider_nodata: outcomes={'acquisition_denied': 2} all-p95=66588us success-p95=Noneus",
-    "provider_denied: outcomes={'acquisition_denied': 2} all-p95=60712us success-p95=Noneus",
-    "provider_error: outcomes={'acquisition_denied': 2} all-p95=48542us success-p95=Noneus",
-    "Process peak RSS: 27922432 bytes; CPU includes startup/seed",
+    "LOCAL ONLY; Rust adopted; preproduction host smoke and API cost/performance pending",
+    "cold_8: outcomes={'success': 8} all-p95=40952us success-p95=40952us",
+    "warm_8: outcomes={'success': 8} all-p95=10us success-p95=10us",
+    "provider_data_8: outcomes={'success': 8} all-p95=486800us success-p95=486800us",
+    "provider_nodata_8: outcomes={'acquisition_denied': 8} all-p95=156083us success-p95=Noneus",
+    "provider_denied_8: outcomes={'acquisition_denied': 8} all-p95=219648us success-p95=Noneus",
+    "provider_error_8: outcomes={'acquisition_denied': 8} all-p95=209210us success-p95=Noneus",
+    "cold_16: outcomes={'success': 16} all-p95=195920us success-p95=195920us",
+    "warm_16: outcomes={'success': 16} all-p95=15us success-p95=15us",
+    "provider_data_16: outcomes={'other_error': 2, 'success': 14} all-p95=1001589us success-p95=758926us",
+    "provider_nodata_16: outcomes={'acquisition_denied': 16} all-p95=263561us success-p95=Noneus",
+    "provider_denied_16: outcomes={'acquisition_denied': 16} all-p95=329840us success-p95=Noneus",
+    "provider_error_16: outcomes={'acquisition_denied': 16} all-p95=205578us success-p95=Noneus",
+    "cold_32: outcomes={'capacity': 16, 'success': 16} all-p95=176145us success-p95=176735us",
+    "warm_32: outcomes={'success': 32} all-p95=23us success-p95=23us",
+    "provider_data_32: outcomes={'capacity': 16, 'success': 16} all-p95=713603us success-p95=716200us",
+    "provider_nodata_32: outcomes={'acquisition_denied': 16, 'capacity': 16} all-p95=417484us success-p95=Noneus",
+    "provider_denied_32: outcomes={'acquisition_denied': 16, 'capacity': 16} all-p95=286429us success-p95=Noneus",
+    "provider_error_32: outcomes={'acquisition_denied': 16, 'capacity': 16} all-p95=362364us success-p95=Noneus",
+    "cold_64: outcomes={'capacity': 48, 'success': 16} all-p95=160757us success-p95=242923us",
+    "warm_64: outcomes={'success': 64} all-p95=22us success-p95=22us",
+    "provider_data_64: outcomes={'capacity': 48, 'success': 16} all-p95=526503us success-p95=763632us",
+    "provider_nodata_64: outcomes={'acquisition_denied': 16, 'capacity': 48} all-p95=208948us success-p95=Noneus",
+    "provider_denied_64: outcomes={'acquisition_denied': 16, 'capacity': 48} all-p95=240006us success-p95=Noneus",
+    "provider_error_64: outcomes={'acquisition_denied': 16, 'capacity': 48} all-p95=250023us success-p95=Noneus",
+    "Process peak RSS: 51707904 bytes; CPU includes startup/seed",
     "PASS: bounded report, all outcome denominators and terminal archive fences"
   ],
-  "binary_sha256": "e3cd526003cbcada262f9e4a9af1ad02dd37a3c1ee23619e6ef9f05cf556c48f",
-  "requested_config_sha256": "b3a3857ba82851954da321448a4f8a128d58b4321df77adba785adc993630661",
-  "effective_config_sha256": "fa2ce38a854237608fb1bb53c1ce33f3995398a15237c5f2d1c1b5c9707a2d00",
-  "report_sha256": "8b683088014f92a47d8703fe2ef4eb87e99bd232c90a4e29864604e8a0e23214",
-  "live_driver_sha256": "dbd902ec893e411760fb99c49e2d492ef52563aab1375ede6638377fc343f8fb",
-  "operator_sha256": "4bc53c4ed810965f9669eb0e91d19a686305967998fca43f101ac2799e808990",
-  "source_sha256": "1246731fda1f573731dde66a480aa1766ee8ee9fa063d05a9564a035c26a8641",
-  "pdf_sha256": "54b60c96e4de67840d77c246c6ca10adb9faadc83147e2e2c1ccff86113e61b2",
-  "screenshot_sha256": "36c72b48340702a3159bf40a07ca3c23fb1656f8df494501b146125481fb8478",
-  "documentation_refresh": {
-    "date": "2026-10-10",
-    "scope": "Bootstrap diagnostics and APT active-field correction; historical actual CLI capture and measurement provenance unchanged",
-    "operator_sha256": "73376e4b8af7696d6c6a764603ddaee33d504a642f8490c03dd16ce43772c9f8"
+  "binary_sha256": "2176d59413800938c876d9203a371d7ca869a9998dff7c34628256bfef4ef0f6",
+  "requested_config_sha256": "20452f51a203a4f1b3be927b605874fb46e6591c6d10dcfe277e71ce41a2b164",
+  "effective_config_sha256": "d92048a7a0fdc1b75e37a6d98eaa0aa6493028d97c1ba4ad52cfa27882d4f43d",
+  "report_sha256": "ec264d0a0884c31e9e639548b18ad89efd28d2c7dc0631efb5230ef786a33fb0",
+  "live_driver_sha256": "49d8879a06fa716de6aa83cacfb4594243cb68cf76a5f57a368720647fae9bf4",
+  "operator_sha256": "410d5815b848f6e1e5c96a5c97a6786e127506cc83f889d6a1eee19f896ba5e2",
+  "source_sha256": "892c83091d6a99370da255e7a371c7277a57ade74dd14c6483846b869d806ff8",
+  "pdf_sha256": "ce16634abd969bf0536cea826391c81ad312ef246e9031f5da5b9b52cacc0ebc",
+  "screenshot_sha256": "1462376a14ccfb58bff758be8ca84dca1db376859ab419a9faab12df9719c54b",
+  "measurement_summary": {
+    "local_environment": {
+      "os": "macOS-26.6.2-arm64-arm-64bit",
+      "architecture": "arm64",
+      "cpu_model": "arm",
+      "logical_cpu_count": 10,
+      "python": "3.9.6"
+    },
+    "process": {
+      "user_cpu_seconds": 1.933703,
+      "system_cpu_seconds": 1.836314,
+      "peak_rss_bytes": 51707904,
+      "rss_native_unit": "bytes",
+      "scope": "whole child process including startup and fixture seeding",
+      "elapsed_seconds": 31.360274250000003,
+      "exit_code": 0
+    },
+    "cost_inputs": {
+      "scope": "whole local run including seeding, warmup, maintenance and readback; not AWS storage/billing",
+      "s3_requests": {
+        "GET:budget": 278,
+        "GET:catalog": 4272,
+        "GET:group": 564,
+        "GET:raw": 1026,
+        "LIST:catalog": 340,
+        "PUT:budget": 444,
+        "PUT:catalog": 1014,
+        "PUT:group": 534,
+        "PUT:raw": 534
+      },
+      "catalog_version_body_bytes": 1191030,
+      "version_body_bytes": 1922645,
+      "version_count": 2526,
+      "unit_prices": null
+    },
+    "decisions": {
+      "gate_status": "local_evidence_only_preproduction_checks_pending",
+      "rust_decision": "adopted_by_AK",
+      "lifecycle_decision": "approved_contract_cost_validation_pre_cutover",
+      "ec2_smoke_status": "pending_preproduction",
+      "raw_pack_decision": "disabled_pending_measured_route_benefit",
+      "route_implementation_requires_live_measurements": false,
+      "api_parity_verified": false,
+      "production_cutover_authorized": false
+    },
+    "cases": [
+      {
+        "configuration": {
+          "clients": 8,
+          "layout": "complete",
+          "mode": "cold",
+          "name": "cold_8",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 2,
+          "selection": "latest",
+          "siblings": 2,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 8,
+            "p50_us": 18261,
+            "p95_us": 40952,
+            "p99_us": 40952
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "success": 8
+          },
+          "samples": 8,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 8,
+            "p50_us": 18261,
+            "p95_us": 40952,
+            "p99_us": 40952
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 41390,
+          "measured_attempts_per_second": 193.28340178787147,
+          "successful_attempts_per_second": 193.28340178787147,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 2,
+        "groups_per_key": 2,
+        "catalogs_per_key": 2
+      },
+      {
+        "configuration": {
+          "clients": 8,
+          "layout": "complete",
+          "mode": "warm",
+          "name": "warm_8",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 2,
+          "selection": "latest",
+          "siblings": 2,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 8,
+            "p50_us": 2,
+            "p95_us": 10,
+            "p99_us": 10
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "success": 8
+          },
+          "samples": 8,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 8,
+            "p50_us": 2,
+            "p95_us": 10,
+            "p99_us": 10
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 56,
+          "measured_attempts_per_second": 142857.14285714287,
+          "successful_attempts_per_second": 142857.14285714287,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 2,
+        "groups_per_key": 2,
+        "catalogs_per_key": 2
+      },
+      {
+        "configuration": {
+          "clients": 8,
+          "layout": "complete",
+          "mode": "provider_data",
+          "name": "provider_data_8",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 8,
+            "p50_us": 371511,
+            "p95_us": 486800,
+            "p99_us": 486800
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "success": 8
+          },
+          "samples": 8,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 8,
+            "p50_us": 371511,
+            "p95_us": 486800,
+            "p99_us": 486800
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 486913,
+          "measured_attempts_per_second": 16.43003986338422,
+          "successful_attempts_per_second": 16.43003986338422,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 8,
+          "layout": "complete",
+          "mode": "provider_nodata",
+          "name": "provider_nodata_8",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 8,
+            "p50_us": 141235,
+            "p95_us": 156083,
+            "p99_us": 156083
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 8
+          },
+          "samples": 8,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 156318,
+          "measured_attempts_per_second": 51.17772745301245,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 8,
+          "layout": "complete",
+          "mode": "provider_denied",
+          "name": "provider_denied_8",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 8,
+            "p50_us": 189490,
+            "p95_us": 219648,
+            "p99_us": 219648
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 8
+          },
+          "samples": 8,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 220485,
+          "measured_attempts_per_second": 36.283647413656254,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 8,
+          "layout": "complete",
+          "mode": "provider_error",
+          "name": "provider_error_8",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 8,
+            "p50_us": 185062,
+            "p95_us": 209210,
+            "p99_us": 209210
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 8
+          },
+          "samples": 8,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 209808,
+          "measured_attempts_per_second": 38.13009990086174,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 16,
+          "layout": "complete",
+          "mode": "cold",
+          "name": "cold_16",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 2,
+          "selection": "latest",
+          "siblings": 2,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 16,
+            "p50_us": 58126,
+            "p95_us": 195920,
+            "p99_us": 195920
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "success": 16
+          },
+          "samples": 16,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 16,
+            "p50_us": 58126,
+            "p95_us": 195920,
+            "p99_us": 195920
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 196364,
+          "measured_attempts_per_second": 81.48133059012854,
+          "successful_attempts_per_second": 81.48133059012854,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 2,
+        "groups_per_key": 2,
+        "catalogs_per_key": 2
+      },
+      {
+        "configuration": {
+          "clients": 16,
+          "layout": "complete",
+          "mode": "warm",
+          "name": "warm_16",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 2,
+          "selection": "latest",
+          "siblings": 2,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 16,
+            "p50_us": 5,
+            "p95_us": 15,
+            "p99_us": 15
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "success": 16
+          },
+          "samples": 16,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 16,
+            "p50_us": 5,
+            "p95_us": 15,
+            "p99_us": 15
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 93,
+          "measured_attempts_per_second": 172043.01075268816,
+          "successful_attempts_per_second": 172043.01075268816,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 2,
+        "groups_per_key": 2,
+        "catalogs_per_key": 2
+      },
+      {
+        "configuration": {
+          "clients": 16,
+          "layout": "complete",
+          "mode": "provider_data",
+          "name": "provider_data_16",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 16,
+            "p50_us": 417362,
+            "p95_us": 1001589,
+            "p99_us": 1001589
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "other_error": 2,
+            "success": 14
+          },
+          "samples": 16,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 14,
+            "p50_us": 411791,
+            "p95_us": 758926,
+            "p99_us": 758926
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 1004363,
+          "measured_attempts_per_second": 15.93049524922762,
+          "successful_attempts_per_second": 13.939183343074168,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 16,
+          "layout": "complete",
+          "mode": "provider_nodata",
+          "name": "provider_nodata_16",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 16,
+            "p50_us": 122425,
+            "p95_us": 263561,
+            "p99_us": 263561
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 16
+          },
+          "samples": 16,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 263948,
+          "measured_attempts_per_second": 60.618000515253,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 16,
+          "layout": "complete",
+          "mode": "provider_denied",
+          "name": "provider_denied_16",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 16,
+            "p50_us": 85002,
+            "p95_us": 329840,
+            "p99_us": 329840
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 16
+          },
+          "samples": 16,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 330311,
+          "measured_attempts_per_second": 48.439198210171625,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 16,
+          "layout": "complete",
+          "mode": "provider_error",
+          "name": "provider_error_16",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 16,
+            "p50_us": 146176,
+            "p95_us": 205578,
+            "p99_us": 205578
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 16
+          },
+          "samples": 16,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 206911,
+          "measured_attempts_per_second": 77.3279332659936,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 32,
+          "layout": "complete",
+          "mode": "cold",
+          "name": "cold_32",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 2,
+          "selection": "latest",
+          "siblings": 2,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 32,
+            "p50_us": 7,
+            "p95_us": 176145,
+            "p99_us": 176735
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "capacity": 16,
+            "success": 16
+          },
+          "samples": 32,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 16,
+            "p50_us": 63673,
+            "p95_us": 176735,
+            "p99_us": 176735
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 177199,
+          "measured_attempts_per_second": 180.58792656843437,
+          "successful_attempts_per_second": 90.29396328421718,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 2,
+        "groups_per_key": 2,
+        "catalogs_per_key": 2
+      },
+      {
+        "configuration": {
+          "clients": 32,
+          "layout": "complete",
+          "mode": "warm",
+          "name": "warm_32",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 2,
+          "selection": "latest",
+          "siblings": 2,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 32,
+            "p50_us": 4,
+            "p95_us": 23,
+            "p99_us": 24
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "success": 32
+          },
+          "samples": 32,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 32,
+            "p50_us": 4,
+            "p95_us": 23,
+            "p99_us": 24
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 191,
+          "measured_attempts_per_second": 167539.2670157068,
+          "successful_attempts_per_second": 167539.2670157068,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 2,
+        "groups_per_key": 2,
+        "catalogs_per_key": 2
+      },
+      {
+        "configuration": {
+          "clients": 32,
+          "layout": "complete",
+          "mode": "provider_data",
+          "name": "provider_data_32",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 32,
+            "p50_us": 29,
+            "p95_us": 713603,
+            "p99_us": 716200
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "capacity": 16,
+            "success": 16
+          },
+          "samples": 32,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 16,
+            "p50_us": 405560,
+            "p95_us": 716200,
+            "p99_us": 716200
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 716526,
+          "measured_attempts_per_second": 44.65992859993915,
+          "successful_attempts_per_second": 22.329964299969575,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 32,
+          "layout": "complete",
+          "mode": "provider_nodata",
+          "name": "provider_nodata_32",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 32,
+            "p50_us": 31,
+            "p95_us": 417484,
+            "p99_us": 417554
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 16,
+            "capacity": 16
+          },
+          "samples": 32,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 417797,
+          "measured_attempts_per_second": 76.5922206238915,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 32,
+          "layout": "complete",
+          "mode": "provider_denied",
+          "name": "provider_denied_32",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 32,
+            "p50_us": 11,
+            "p95_us": 286429,
+            "p99_us": 388593
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 16,
+            "capacity": 16
+          },
+          "samples": 32,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 388921,
+          "measured_attempts_per_second": 82.27892039771574,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 32,
+          "layout": "complete",
+          "mode": "provider_error",
+          "name": "provider_error_32",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 32,
+            "p50_us": 15,
+            "p95_us": 362364,
+            "p99_us": 363175
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 16,
+            "capacity": 16
+          },
+          "samples": 32,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 363401,
+          "measured_attempts_per_second": 88.05699488994252,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 64,
+          "layout": "complete",
+          "mode": "cold",
+          "name": "cold_64",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 2,
+          "selection": "latest",
+          "siblings": 2,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 64,
+            "p50_us": 4,
+            "p95_us": 160757,
+            "p99_us": 242923
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "capacity": 48,
+            "success": 16
+          },
+          "samples": 64,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 16,
+            "p50_us": 60721,
+            "p95_us": 242923,
+            "p99_us": 242923
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 243334,
+          "measured_attempts_per_second": 263.0129780466355,
+          "successful_attempts_per_second": 65.75324451165888,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 2,
+        "groups_per_key": 2,
+        "catalogs_per_key": 2
+      },
+      {
+        "configuration": {
+          "clients": 64,
+          "layout": "complete",
+          "mode": "warm",
+          "name": "warm_64",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 2,
+          "selection": "latest",
+          "siblings": 2,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 64,
+            "p50_us": 5,
+            "p95_us": 22,
+            "p99_us": 211
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "success": 64
+          },
+          "samples": 64,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 64,
+            "p50_us": 5,
+            "p95_us": 22,
+            "p99_us": 211
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 1740,
+          "measured_attempts_per_second": 36781.6091954023,
+          "successful_attempts_per_second": 36781.6091954023,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 2,
+        "groups_per_key": 2,
+        "catalogs_per_key": 2
+      },
+      {
+        "configuration": {
+          "clients": 64,
+          "layout": "complete",
+          "mode": "provider_data",
+          "name": "provider_data_64",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 64,
+            "p50_us": 5,
+            "p95_us": 526503,
+            "p99_us": 763632
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "capacity": 48,
+            "success": 16
+          },
+          "samples": 64,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 16,
+            "p50_us": 417238,
+            "p95_us": 763632,
+            "p99_us": 763632
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 764253,
+          "measured_attempts_per_second": 83.74190222347835,
+          "successful_attempts_per_second": 20.935475555869587,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 64,
+          "layout": "complete",
+          "mode": "provider_nodata",
+          "name": "provider_nodata_64",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 64,
+            "p50_us": 5,
+            "p95_us": 208948,
+            "p99_us": 234120
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 16,
+            "capacity": 48
+          },
+          "samples": 64,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 238332,
+          "measured_attempts_per_second": 268.5329708138227,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 64,
+          "layout": "complete",
+          "mode": "provider_denied",
+          "name": "provider_denied_64",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 64,
+            "p50_us": 5,
+            "p95_us": 240006,
+            "p99_us": 367956
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 16,
+            "capacity": 48
+          },
+          "samples": 64,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 368181,
+          "measured_attempts_per_second": 173.82754677726444,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      },
+      {
+        "configuration": {
+          "clients": 64,
+          "layout": "complete",
+          "mode": "provider_error",
+          "name": "provider_error_64",
+          "owners": 16,
+          "record_bytes": 128,
+          "revisions": 1,
+          "selection": "latest",
+          "siblings": 1,
+          "trials": 1,
+          "workload": "revisions"
+        },
+        "summary": {
+          "all_requests": {
+            "count": 64,
+            "p50_us": 5,
+            "p95_us": 250023,
+            "p99_us": 250813
+          },
+          "insufficient_for_tail_claim": true,
+          "outcomes": {
+            "acquisition_denied": 16,
+            "capacity": 48
+          },
+          "samples": 64,
+          "success_subset_insufficient_for_tail_claim": true,
+          "successful_requests": {
+            "count": 0,
+            "p50_us": null,
+            "p95_us": null,
+            "p99_us": null
+          },
+          "unmeasured_samples": 0
+        },
+        "foreground_throughput": {
+          "wall_us": 251044,
+          "measured_attempts_per_second": 254.93538981214448,
+          "successful_attempts_per_second": 0.0,
+          "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
+        },
+        "record_revisions_per_key": 1,
+        "groups_per_key": 1,
+        "catalogs_per_key": 1
+      }
+    ]
   }
 }

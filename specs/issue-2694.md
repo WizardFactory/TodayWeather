@@ -1,8 +1,39 @@
 # S09 feasibility tooling specification
 
+## Current local-first contract (2026-10-11)
+
+AK fixed Rust adoption and requested maximum local verification with minimal EC2
+work; [issue #2694](https://github.com/WizardFactory/TodayWeather/issues/2694)
+is the governing scope. Rust go/fallback/time-box reconsideration is removed.
+S09 completes on the scoped local/Linux-CI checks and resolution of Required PR
+findings. S09 live measurements no longer block S10/S13 implementation. Other
+S01 decisions, S02 route goldens, placement, API parity and cutover gates remain.
+
+Build the intended Linux x86_64 musl release artifact in isolated Linux CI and
+run its startup smoke and synthetic loopback matrix there. The portable local
+runner also works with a native release artifact. Cover cold, warm and simulated
+provider Data/NoData/denied/error outcomes at 8/16/32/64 offered clients without
+raising the existing owner/I/O/CPU or fixture limits. Retain overload and timeout
+outcomes, sample limitations, whole-process RSS/CPU, foreground throughput and
+operation/version-byte cost inputs. Local timings and byte counts do not establish
+AWS latency, physical S3 storage or invoiced cost. Unit prices remain explicitly
+unset until a dated price assumption is supplied; no dollar estimate is inferred.
+
+Before production, use a separately authorized minimal EC2 smoke: transfer the
+prebuilt artifact, verify startup/health/runtime resources/TLS/credentials, then
+a tiny isolated same-region S3 GET/HEAD/PUT/LIST and exact readback. No on-host
+build, full concurrency sweep or provider traffic is required by S09. Actual API
+performance/cost acceptance belongs to pre-cutover work. Raw packs remain disabled
+until actual route measurements demonstrate a need against an agreed target.
+Existing AWS campaign tools/grants and their failure/cleanup records are retained
+as historical evidence. They are not the minimal smoke procedure or renewed
+execution authority. No AWS execution, retry, budget renewal, merge or deployment
+is authorized by this amendment.
+
+
 ## Scope and evidence boundary
 
-[Intent](../intent/issue-2694.md) and [architecture](../docs/architecture/server2.md) govern this measurement delivery. The existing local CLI operates exclusively on literal HTTP loopback peers with fixed dummy credentials and has no live fallback. The separately armed driver below uses only the approved intended host and exact S3 bucket. Existing runtime bounds/deadlines stay unchanged. Local results cannot pass intended-host musl/TLS/SigV4/IAM, same-region S3, O-2/O-5, route parity or cutover gates. The original issue remains open until its actual measurement and decision criteria hold.
+The local CLI uses literal loopback peers and dummy credentials with no live fallback. Local reports retain API parity and production cutover as false. The report decision fields must distinguish settled Rust adoption, local measurement evidence and pending preproduction checks; neither a completed report nor the downstream implementation release is a production-readiness claim.
 
 ## Interfaces and validation
 
@@ -32,7 +63,7 @@ The loopback peer records sanitized method/prefix/status request counts, body by
 
 Runner executes the release binary with fresh volatile peers, captures process-specific wait4 user/system CPU and max RSS with platform-unit conversion, records binary/config/lock hashes and exit status, and bounds execution/output. Process metrics include startup/seeding; request quantiles do not. Unsupported metrics are unavailable, never zero placeholders. Cost estimates are operator-supplied prices with explicit provenance or null. Catalog-version body bytes and request counts are cost inputs, not an actual AWS bill; no lifecycle decision is automatic.
 
-Every report ends `gate_status: requires_intended_host_and_same_region_measurements`, `rust_decision: pending_O2`, `lifecycle_decision: pending_O5`, `api_parity_verified: false` and `production_cutover_authorized: false` regardless of local speed.
+Local reports end `gate_status: local_evidence_only_preproduction_checks_pending`, `rust_decision: adopted_by_AK`, `lifecycle_decision: approved_contract_cost_validation_pre_cutover`, `route_implementation_requires_live_measurements: false`, `ec2_smoke_status: pending_preproduction` and `raw_pack_decision: disabled_pending_measured_route_benefit`. API parity and production cutover remain false regardless of local speed. Historical campaign report status is labeled separately and grants no readiness.
 
 ## Tests and delivery
 
@@ -40,6 +71,12 @@ TOOL1: invalid remote/query/auth URLs, excessive cases/clients/trials/records an
 TOOL2: known quantiles include slow failed samples; empty success subset is null, report completeness/counts/hash provenance and RSS units are checked.
 TOOL3: Data publication completes and fresh S3-only lookup matches; NoData/denial/error archive PUTs remain zero; budget/provider calls are accounted.
 TOOL4: intended Red → Green → post-refactor, distinct release HTTP smoke, fmt/clippy/test/release, placement/artifact checks, actual screenshot and inspected PDF, CI and root-dispatched independent review. Existing S05/S06/S07/S08 regressions remain unchanged.
+
+## Historical AWS campaign contracts
+
+The following live-campaign sections preserve previous scopes and implementation
+guards. Previous S09 completion/Rust-selection blockers are superseded above.
+No retained example or expiry renews execution authority.
 
 ## Approved live mode: separate arming and immutable manifest
 

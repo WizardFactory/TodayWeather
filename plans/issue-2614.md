@@ -76,6 +76,41 @@ Rust/CI and the local placement gate. The checker supplements human dependency
 review and does not establish remote branch protection. Every implementation
 task still follows its named dependencies and decisions.
 
+## S09 local-first scope amendment (2026-10-11)
+
+## Current local-first contract (2026-10-11)
+
+AK fixed Rust adoption and requested maximum local verification with minimal EC2
+work; [issue #2694](https://github.com/WizardFactory/TodayWeather/issues/2694)
+is the governing scope. Rust go/fallback/time-box reconsideration is removed.
+S09 completes on the scoped local/Linux-CI checks and resolution of Required PR
+findings. S09 live measurements no longer block S10/S13 implementation. Other
+S01 decisions, S02 route goldens, placement, API parity and cutover gates remain.
+
+Build the intended Linux x86_64 musl release artifact in isolated Linux CI and
+run its startup smoke and synthetic loopback matrix there. The portable local
+runner also works with a native release artifact. Cover cold, warm and simulated
+provider Data/NoData/denied/error outcomes at 8/16/32/64 offered clients without
+raising the existing owner/I/O/CPU or fixture limits. Retain overload and timeout
+outcomes, sample limitations, whole-process RSS/CPU, foreground throughput and
+operation/version-byte cost inputs. Local timings and byte counts do not establish
+AWS latency, physical S3 storage or invoiced cost. Unit prices remain explicitly
+unset until a dated price assumption is supplied; no dollar estimate is inferred.
+
+Before production, use a separately authorized minimal EC2 smoke: transfer the
+prebuilt artifact, verify startup/health/runtime resources/TLS/credentials, then
+a tiny isolated same-region S3 GET/HEAD/PUT/LIST and exact readback. No on-host
+build, full concurrency sweep or provider traffic is required by S09. Actual API
+performance/cost acceptance belongs to pre-cutover work. Raw packs remain disabled
+until actual route measurements demonstrate a need against an agreed target.
+Existing AWS campaign tools/grants and their failure/cleanup records are retained
+as historical evidence. They are not the minimal smoke procedure or renewed
+execution authority. No AWS execution, retry, budget renewal, merge or deployment
+is authorized by this amendment.
+
+Earlier S09 campaign paragraphs below are historical; their live-measurement
+and Rust-feasibility blockers are superseded by this amendment.
+
 ## Task issue index
 
 All 21 required tasks and one conditional optimization were published as native
@@ -138,8 +173,9 @@ the preserved empty S3 bucket. Correct the bounded CLI text boundary and verify
 actual CLI response transformation offline. The recovery allowance is used; no
 further launch or measurement is authorized by this completed attempt.
 
-Local protocol measurements do not complete S09: actual same-region observations
-and O-2/O-5 disposition remain gates for S10 and S13. No route work is released by the merges.
+The historical S09 live-evidence blocker is superseded: scoped local/Linux-CI
+verification and Required finding resolution release S10/S13 implementation.
+Minimal EC2 smoke and actual API performance/cost checks remain preproduction/pre-cutover work.
 Passing local checks do not imply complete route parity or deployed server2.
 S07's geocode AC1 is partial: volatile key/privacy primitives are included;
 geocode value caches and exact-label/boundary parity remain S10 acceptance work.
@@ -157,7 +193,7 @@ the operation deadline or returning expired data.
 | S06 | [server2 S06: publish catalogs and recover complete fetch groups](https://github.com/WizardFactory/TodayWeather/issues/2691) | [S05](https://github.com/WizardFactory/TodayWeather/issues/2690) |
 | S07 | [server2 S07: implement bounded memory lookup and the resolver](https://github.com/WizardFactory/TodayWeather/issues/2692) | [S06](https://github.com/WizardFactory/TodayWeather/issues/2691) |
 | S08 | [server2 S08: enforce provider reservations and rejection rules](https://github.com/WizardFactory/TodayWeather/issues/2693) | [S04](https://github.com/WizardFactory/TodayWeather/issues/2689), [S05](https://github.com/WizardFactory/TodayWeather/issues/2690), [S06](https://github.com/WizardFactory/TodayWeather/issues/2691) |
-| S09 | [server2 S09: measure Rust feasibility and cold origin cost](https://github.com/WizardFactory/TodayWeather/issues/2694) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S03](https://github.com/WizardFactory/TodayWeather/issues/2688), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693) |
+| S09 | [server2 S09: verify locally and minimize EC2 validation](https://github.com/WizardFactory/TodayWeather/issues/2694) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S03](https://github.com/WizardFactory/TodayWeather/issues/2688), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693) |
 | S10 | [server2 S10: port gateway and geocoding with legacy backend switches](https://github.com/WizardFactory/TodayWeather/issues/2695) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
 | S11 | [server2 S11: port world weather and air](https://github.com/WizardFactory/TodayWeather/issues/2696) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
 | S12 | [server2 S12: port warning history and latest bulletin recovery](https://github.com/WizardFactory/TodayWeather/issues/2697) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
@@ -191,7 +227,7 @@ to block their named work after S01 closes.
 | Decision | Blocked work until recorded |
 | --- | --- |
 | O-1 / O-11 | S14 history/capture, S15/S17 dependent assembly and affected push weather behavior; no history gaps accepted |
-| O-2 | S04 Rust foundation direction, S09 feasibility and S15 time-box checkpoints |
+| O-2 | Rust adoption settled; S09 local/Linux artifact checks. S15 correctness checkpoint remains; language go/fallback/time-box review removed |
 | O-3 | D01–D03 resolved: S18 owns schema/ordering, uses new registrations without legacy migration, and does not automatically retry failed/unknown deliveries; verification and durable acceptance still gate activation |
 | O-4 / O-12 | S04/S07 memory-only admission/failure contract; local disk policy superseded |
 | O-5 | S05/S06 catalog/raw lifecycle, S08 reservation retention, S09 cost assessment and O01 pack policy |
@@ -218,7 +254,7 @@ Each route port depends on P1 and recorded issue decisions; one PR per phase.
 | P2 | First establish the `server2/` Rust workspace/CI and placement gate (S04); later implementation tasks depend on it. Then storage/resolver, synchronous publication, memory/single-flight limits; property/crash tests with recorded providers and local S3-compatible peer. Measure actual host build compatibility, S3 tails/throughput, RSS/CPU and cold request fan-out. Raw packs are a measured optional optimization. |
 | P2b | Gateway/geocoder with backend switches to legacy, exact validation/errors/cache/deadline and privacy-safe coordinate handling. Whole-gateway shadow and rollback rehearsal. |
 | P3/P4 | World providers used by gateway and warning catalogs/restore; no deletion of a backend solely due to unused direct public paths. |
-| P5/P6 | Domestic raw JSON, legacy-history export, summaries and v000903 assembly; close O-1/O-11 acquisition gaps and Rust time-box. Active health/air behavior follows current fixtures. |
+| P5/P6 | Domestic raw JSON, legacy-history export, summaries and v000903 assembly; close O-1/O-11 acquisition gaps and runtime correctness checkpoint. Active health/air behavior follows current fixtures. |
 | P7 | Used older versions, nation and town, including v000705 town; exclude only supported zero-observed public paths. |
 | P8 | Used push/state and applicable notice supplement; durable new-state acceptance, send ownership, sanitized failure logs, no automatic resend and new registrations without legacy migration. Do not revive retired purchases. |
 | P9 | Retire legacy/Mongo only after every included family and scope gap is dispositioned, parity/shadow/performance/quota gates pass and AK approves cutover. |

@@ -16,7 +16,7 @@ S01 decisions are [recorded on #2614](https://github.com/WizardFactory/TodayWeat
 
 ## 1. Scope and authority
 
-AK selected removal of local SQLite, raw provider storage, a Rust evaluation,
+AK selected removal of local SQLite, raw provider storage, Rust (adoption subsequently confirmed by AK),
 Spot scale-up first, investigation of raw-object fan-out, and a plan for later
 multi-instance operation. No MongoDB, SQLite, persistent disk cache, Redis,
 shared instance cache or distributed runtime is introduced by this PR.
@@ -931,6 +931,43 @@ and CloudFront hit/miss cases separately from assembly and provider time.
 
 ### S09 measurement scope and decision gate
 
+#### Current contract (2026-10-11)
+
+AK fixed Rust adoption and requested maximum local verification with minimal EC2
+work; [issue #2694](https://github.com/WizardFactory/TodayWeather/issues/2694)
+is the governing scope. Rust go/fallback/time-box reconsideration is removed.
+S09 completes on the scoped local/Linux-CI checks and resolution of Required PR
+findings. S09 live measurements no longer block S10/S13 implementation. Other
+S01 decisions, S02 route goldens, placement, API parity and cutover gates remain.
+
+Build the intended Linux x86_64 musl release artifact in isolated Linux CI and
+run its startup smoke and synthetic loopback matrix there. The portable local
+runner also works with a native release artifact. Cover cold, warm and simulated
+provider Data/NoData/denied/error outcomes at 8/16/32/64 offered clients without
+raising the existing owner/I/O/CPU or fixture limits. Retain overload and timeout
+outcomes, sample limitations, whole-process RSS/CPU, foreground throughput and
+operation/version-byte cost inputs. Local timings and byte counts do not establish
+AWS latency, physical S3 storage or invoiced cost. Unit prices remain explicitly
+unset until a dated price assumption is supplied; no dollar estimate is inferred.
+
+Before production, use a separately authorized minimal EC2 smoke: transfer the
+prebuilt artifact, verify startup/health/runtime resources/TLS/credentials, then
+a tiny isolated same-region S3 GET/HEAD/PUT/LIST and exact readback. No on-host
+build, full concurrency sweep or provider traffic is required by S09. Actual API
+performance/cost acceptance belongs to pre-cutover work. Raw packs remain disabled
+until actual route measurements demonstrate a need against an agreed target.
+Existing AWS campaign tools/grants and their failure/cleanup records are retained
+as historical evidence. They are not the minimal smoke procedure or renewed
+execution authority. No AWS execution, retry, budget renewal, merge or deployment
+is authorized by this amendment.
+
+#### Historical benchmark campaign and evidence
+
+The prior campaign requirements and decisions below are historical. The current
+contract above controls S09 completion and downstream implementation; resource
+authority and historical outcomes are not renewed or rewritten.
+
+
 [S09 #2694](https://github.com/WizardFactory/TodayWeather/issues/2694) prepares a
 release benchmark under `server2/`, as declared before edits in its
 [path contract](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052017682).
@@ -1163,7 +1200,7 @@ S18 follows the accepted D01–D03 push policy and its route/state verification 
 | --- | --- |
 | D2/D7/D8, C6–C8 | S3 serving publication, memory reconstruction; no local store/uploader/synced rows |
 | O-1, O-11 | Approved: hourly capture only for cells requested in the last 8 days plus push-subscribed cells; rainfall capture every 2 minutes for cells with demand. S14 specifies demand/expiry/ownership and proves 8-day/20-minute behavior before dependent cutover |
-| O-2 | Rust conditional go; P2 executable checkpoint and post-v000903 time-box remain |
+| O-2 | Rust adoption settled by AK; S09 validates locally/Linux CI. No Rust go/fallback/time-box reconsideration; runtime correctness and pre-cutover performance checks remain |
 | O-3 | D01–D03 recorded: implementer owns state schema/ordering; new registrations only, no legacy registration migration; no automatic failed/unknown push resend; new accepted state remains S3 durable |
 | O-4, O-12 | gp3/15-day floor/ENOSPC policy removed; replace with memory admission and S3-failure policy |
 | O-5 | Approved: immutable canonical raw gzip; versioned identity catalogs with CAS; no lifecycle deletions now. Packs require measured benefit; S09 assesses version growth/retrieval costs before transitions. No Flexible/Deep Archive on synchronous serving paths |
@@ -1216,8 +1253,9 @@ establish live AWS conformance, used-route parity or the S09 feasibility gate.
 
 Actual account/region/bucket/role/provider-key owners, spending limits, host
 provisioning and routing remain separately approved resource actions. Proposed
-2-vCPU/4-GiB compute classes are candidates only; S09 chooses a measured target
-from musl compatibility, RSS/CPU, cold latency, throughput and quota headroom.
+2-vCPU/4-GiB compute classes remain candidates. Local/Linux CI verifies musl
+compatibility and bounded resources; actual route performance and quota headroom
+are assessed before cutover without reopening Rust adoption.
 One Spot host and one multithreaded API process are the default; future instances
 retain independent caches and require the coordination gate in section 9.
 
