@@ -123,19 +123,36 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(c.state.data['ssm_online_deadline_ms'],BASE+450000)
 
     def test_scrollout_never_accepts_missing_foreign_or_tampered_guard_cache(self):
-        for fault in ('missing','instance','hash','nonce','source','deadline','time'):
+        for fault in ('missing','instance','hash','nonce','source','deadline','time','after-readiness'):
             with self.subTest(fault=fault):
                 c,now,calls,sleep=self.cached_controller()
                 if fault=='missing': c.state.data.pop('guard_proof')
                 elif fault=='instance': c.state.data['guard_proof_instance_id']='i-foreign'
                 elif fault=='hash': c.state.data['guard_proof_sha256']='0'*64
                 elif fault=='time': c.state.data['guard_verified_at_ms']=BASE+500000
+                elif fault=='after-readiness': c.state.data['guard_verified_at_ms']=BASE+200000
                 else:
                     field={'source':'source_revision','deadline':'deadline_ms'}.get(fault,fault)
                     c.state.data['guard_proof'][field]='foreign'
                     c.state.data['guard_proof_sha256']=op.digest(op.canonical(c.state.data['guard_proof']))
                 with self.assertRaises(op.OperatorError): c.wait_online('i-ab',BASE,sleep=sleep)
                 self.assertFalse(any(action=='describe-instance-information' for action,_ in calls))
+
+    def test_guard_cache_is_saved_only_after_successful_egress(self):
+        c,now,calls,sleep=self.cached_controller()
+        c.state.data['resources']['sg']='sg-ab'
+        for key in ('guard_proof','guard_proof_sha256','guard_proof_instance_id','guard_verified_at_ms'):
+            c.state.data.pop(key)
+        proof=json.loads(console(envelope()).splitlines()[0].split(' ',1)[1])
+        c.call=lambda *a: (_ for _ in ()).throw(op.OperatorError('egress failed'))
+        with self.assertRaisesRegex(op.OperatorError,'egress failed'):
+            c.open_https_after_guard('S09_GUARD_V1 '+json.dumps(proof))
+        self.assertNotIn('guard_proof',c.state.data)
+        c.call=lambda *a: {}
+        c.open_https_after_guard('S09_GUARD_V1 '+json.dumps(proof))
+        self.assertEqual(c.state.data['guard_proof_instance_id'],'i-ab')
+        self.assertEqual(c.state.data['guard_verified_at_ms'],BASE)
+        self.assertEqual(c.state.data['guard_proof_sha256'],op.digest(op.canonical(proof)))
 
     def test_latest_failure_or_invalid_guard_cannot_use_cached_success(self):
         for marker in ('S09_GUARD_FAILED','S09_GUARD_V1 {bad json}'):

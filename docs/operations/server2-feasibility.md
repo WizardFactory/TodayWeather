@@ -2,7 +2,7 @@
 
 ## What this delivery measures
 
-Latest status: the maintained successor integrates the reviewed offline startup/lifecycle corrections. This is not a new live measurement or an execution receipt. The historical attempts and reviews below apply only to their original bytes; actual intended-host measurements remain incomplete.
+Latest status: the maintained successor integrates offline startup/lifecycle corrections; the Q9 contract below covers selected guard retention, cleanup diagnostics and Linux verification corrections. Review and test evidence always applies to its recorded revision. This is not a new live measurement or an execution receipt. The historical attempts and reviews below apply only to their original bytes; actual intended-host measurements remain incomplete.
 
 This tool exercises the actual Rust raw store, catalog, resolver and funded-acquisition libraries against fresh volatile HTTP peers. It measures synthetic origin work, not a deployed weather route. The local runner calls no real AWS/providers. A separately armed approved driver can use one dedicated same-region test bucket after eligible review. The approved recovery attempted host creation once but stopped on the console-output boundary before any worker allocation or measurement. Root subsequently verified owned cleanup. This proves no API parity, CloudFront latency, measurement-path IAM/TLS or intended-host musl feasibility. S09 remains open: same-region intended-host measurements and O-2/O-5 decisions still block S10/S13.
 
@@ -73,10 +73,22 @@ python3 server2/deploy/benchmark/run_isolated.py online-functional
 ```
 
 The existing architecture diagram remains a revision-bound historical
-measurement/recovery overview, not evidence for these uncommitted successor
+measurement/recovery overview, not evidence for the maintained successor
 bytes. No route, collector, response, storage or deployed topology changes in
 this correction. The detailed admission/cleanup contract is maintained here;
 no newly validated diagram, live readiness or host-musl proof is claimed.
+
+## Q9 guard evidence, cleanup failures and local verification
+
+The current declaration contains 40 server2 paths plus 11 outside documentation paths (51 total). The source map follows that exact set, not an old 33-path count. Intent/spec/plan distinguish historical corrections from current requirements. The current Q9 plan declares its exact paths before dependent edits; no independently retained d95 pre-edit declaration was available in this worktree, so that historical evidence gap remains explicit.
+
+After the controller validates the initial guard and opens HTTPS, it retains the proof and digest with the instance and verification time. A later signed readiness record does not need the old guard line to remain in the latest console snapshot: the controller revalidates the preserved proof and current run/nonce/source/deadline/instance/time binding. A guard still present in the latest snapshot must validate and precede readiness. Latest failure markers and malformed/conflicting guards always reject, even with a good stored proof. Missing or invalid stored evidence cannot authorize admission. Existing HMAC, readiness/Online clocks, monotonic handshake and subsequent stock-guard checks still apply; no extra dispatch or time grant is added.
+
+If work and final cleanup both fail, the operator preserves the original work exception as the primary failure. State separately records `lifecycle_cleanup_failure` with `work_failed`, `cleanup_outcome=unverified` and `watchdog_remains_armed=true`; the chained cleanup diagnostic is sanitized. State persistence is best effort if the state write itself fails; the in-memory diagnostic and original exception remain, and no durable write is claimed. Successful work with cleanup failure still fails. Check the retained state for cleanup outcome rather than treating a worker error or termination request as verified host absence. One final cleanup phase, bounded polls, once-only ordinary termination and independent emergency protection remain unchanged.
+
+Full `cd server2 && bash tools/ci.sh` verification is Linux-only. It requires Python3.11+ for the placement checker, /usr/bin/python3 for the sandbox, bubblewrap, working user namespaces and the declared Rust toolchain. GitHub Actions prepares bubblewrap/AppArmor and loads the pinned upstream bwrap profile when the host restricts user namespaces. On macOS, syntax/source/JSON/placement checks remain useful but do not exercise operational isolation; run the full harness in Linux CI. Never execute the operational unittest files directly, install a host fallback, or disable global namespace restrictions to obtain a pass.
+
+The c44e9e1a baseline CI passed 124 isolated operational tests and fake-only functional checks; that count is a dated baseline, not a fixed suite size or proof of later bytes. Q9 adds regression cases for guard scroll-out, invalid cache/latest failure refusal and work/cleanup failure precedence. Its final test results must be tied to the final PR head. The existing local workload screenshot remains historical and is reused unchanged when this manual's PDF is refreshed. No new benchmark capture, AWS/SSM/provider call or live readiness is implied. R5 is outside this correction.
 
 ## Run an isolated release measurement
 
@@ -163,7 +175,7 @@ The maintained operator test can drive the compiled worker through a fake CLI/SS
 
 ## Fixed host reads and placement guard
 
-The [exact33-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695) permits four source/operation/path roles only: Path::new on /opt/server2-s09 and /opt/server2-s09/run for private ownership checks, and read_to_string on /proc/self/status and /proc/self/stat for this process's diagnostics. The gate validates the canonical S09 declaration on later whole-tree audits too. Declarations cannot add source files, other operations, prefixes/globs or compiler/encoded/legacy exceptions. Static checks remain an aid to human review, not a filesystem sandbox.
+The historical [33-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695) permits four source/operation/path roles only: Path::new on /opt/server2-s09 and /opt/server2-s09/run for private ownership checks, and read_to_string on /proc/self/status and /proc/self/stat for this process's diagnostics. The gate validates the canonical S09 declaration on later whole-tree audits too. Declarations cannot add source files, other operations, prefixes/globs or compiler/encoded/legacy exceptions. Static checks remain an aid to human review, not a filesystem sandbox.
 
 
 ## Failure reports and uncertain work
@@ -251,7 +263,7 @@ The live log stopped after enabling the expiry timer and repeatedly showed cloud
 
 All stock guard setup, including timer, SSM and meter service starts, now runs through runcmd in the [cloud-init final stage](https://raw.githubusercontent.com/canonical/cloud-init/26.1/systemd/cloud-final.service), after multi-user.target. The SG remains closed until the controller reads and validates the guard. The independent controller watchdog, absolute expiry and 110-minute uptime limit remain. A host that never reaches final stage still relies on that external watchdog and owned cleanup. Bootstrap builds the measurement binary but no longer invokes the workspace test suite, as requested by AK. Existing stock kernel guard capability checks remain part of admission.
 
-This correction is based on reviewed commit 7ec054b9. Eight incomplete preparation15 files remain preserved in a separate worktree and are excluded: retained-bucket successor creation, periodic proof re-emission and deadline refinements are not shipped here. The actual attempt used those manually inspected controller helpers separately from its pinned measurement source; QA6 did not review them. The one-use recovery allowance remains consumed. No new run, worker allocation, budget refund or additional host is authorized by this PR update.
+At that historical correction, based on reviewed commit 7ec054b9, eight incomplete preparation15 files were preserved in a separate worktree and excluded. Retained-bucket successor creation, periodic proof re-emission and deadline refinements were not shipped in that correction. The later maintained successor above implements its own retained-bucket validation and readiness changes; this historical exclusion does not describe the current feature set. The actual attempt used those manually inspected controller helpers separately from its pinned measurement source; QA6 did not review them. The one-use recovery allowance remains consumed. No new run, worker allocation, budget refund or additional host is authorized by this PR update.
 
 Verification for this correction uses the installed AWS CLI help, the retained real console response, YAML/Python/shell syntax and command-order inspection, plus document/placement/artifact checks. No test suite is added or run for this correction. At correction16 the old console byte-bound assertions still described the superseded contract; the subsequent external-review correction updates them as recorded below. Historical QA6 remains a tool/configuration review of 7ec054b9 only. The corrected bootstrap has not run on Linux or AWS; current review and live-readiness gates remain incomplete. S09, O-2/O-5 and S10/S13 remain blocked on actual measurement and decisions.
 

@@ -657,9 +657,13 @@ class Operator:
 
     def open_https_after_guard(self, output):
         s, c = self.state.data, self.config
-        proof = verify_guard(output, {"run_id":c["run_id"],"nonce":s["nonce"],"deadline_ms":s["deadline_ms"],"source_revision":c["source_revision"]}, now_ms=self.clock())
+        verified_at = self.clock()
+        proof = verify_guard(output, {"run_id":c["run_id"],"nonce":s["nonce"],"deadline_ms":s["deadline_ms"],"source_revision":c["source_revision"]}, now_ms=verified_at)
         self.call("ec2", "authorize-security-group-egress", ["--group-id", s["resources"]["sg"], "--ip-permissions", json.dumps([{"IpProtocol":"tcp","FromPort":443,"ToPort":443,"IpRanges":[{"CidrIp":"0.0.0.0/0"}]}])])
-        s["guard_proof"] = proof; s["guard_proof_sha256"] = digest(canonical(proof)); self.state.save()
+        s["guard_proof"] = proof; s["guard_proof_sha256"] = digest(canonical(proof))
+        s["guard_proof_instance_id"] = s["resources"]["instance"]
+        s["guard_verified_at_ms"] = verified_at
+        self.state.save()
         return proof
 
     def ssm(self, commands, seconds=60, capture_terminal=False):
@@ -855,16 +859,33 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
                 break
             if response.get('InstanceId') != instance:
                 raise OperatorError('readiness console host mismatch')
+            if 'S09_GUARD_FAILED' in text:
+                raise OperatorError('stock guard failed')
             lines = text.splitlines()
+            expected = {'run_id': c['run_id'], 'nonce': s['nonce'],
+                        'source_revision': c['source_revision'], 'deadline_ms': s['deadline_ms']}
+            guard_lines = [line for line in lines if line.startswith('S09_GUARD_V1 ')]
+            if guard_lines:
+                verify_guard(text, expected, now_ms=current())
             records = [line for line in lines if line.startswith('S09_SSM_READY_V1 ')]
             if records:
                 if len(records) != 1:
                     raise OperatorError('duplicate readiness records')
-                expected = {'run_id': c['run_id'], 'nonce': s['nonce'],
-                            'source_revision': c['source_revision'], 'deadline_ms': s['deadline_ms']}
-                verify_guard(text, expected, now_ms=current())
-                if lines.index(records[0]) < next(i for i, line in enumerate(lines) if line.startswith('S09_GUARD_V1 ')):
-                    raise OperatorError('out-of-order readiness')
+                verified_at = None
+                if guard_lines:
+                    # A present invalid/conflicting guard must never use the cache.
+                    if lines.index(records[0]) < lines.index(guard_lines[0]):
+                        raise OperatorError('out-of-order readiness')
+                else:
+                    cached = s.get('guard_proof')
+                    verified_at = s.get('guard_verified_at_ms')
+                    if (not isinstance(cached, dict) or
+                            s.get('guard_proof_sha256') != digest(canonical(cached)) or
+                            s.get('guard_proof_instance_id') != instance or
+                            s.get('resources', {}).get('instance') != instance or
+                            type(verified_at) is not int or not opened_ms <= verified_at <= current()):
+                        raise OperatorError('missing or invalid previously verified guard')
+                    verify_guard('S09_GUARD_V1 '+json.dumps(cached), expected, now_ms=current())
                 try:
                     record = json.loads(records[0].split(' ', 1)[1])
                     proof = record['proof']
@@ -888,6 +909,8 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
                         raise ValueError('readiness bound')
                     if abs(ready - proof['started_at_ms'] - elapsed) > 1000:
                         raise ValueError('host clock changed')
+                    if verified_at is not None and verified_at > ready:
+                        raise ValueError('guard verified after readiness')
                     if not opened_ms <= ready <= current() or ready > opened_ms + SSM_READINESS_SECONDS*1000:
                         raise ValueError('stale or future clock')
                 except (ValueError, TypeError, KeyError, AttributeError):
@@ -965,6 +988,8 @@ print(json.dumps({'host_age_ms':age,'host_wall_ms':wall}))
         while self.clock()<guard_deadline:
             result=self.call("ec2","get-console-output",["--instance-id",instance,"--latest"])
             console=cli_console_text(result)
+            if result.get("InstanceId") != instance:
+                raise OperatorError("guard console host mismatch")
             if "S09_GUARD_FAILED" in console: raise OperatorError("stock guard failed")
             if "S09_GUARD_V1 " in console:
                 opened_ms = self.clock()
@@ -1026,9 +1051,11 @@ print(json.dumps({'host_age_ms':age,'host_wall_ms':wall}))
         Reconciliation polls are not new cleanup phases. The separately armed
         expiry/quota/orphan watchdogs are emergency protection, not normal exits.
         """
+        work_error = None
         try:
             return work()
-        except BaseException:
+        except BaseException as error:
+            work_error = error
             if (self.state.data.get('resources', {}).get('instance') and
                     'ssm_admission_diagnostics' not in self.state.data):
                 try:
@@ -1038,13 +1065,25 @@ print(json.dumps({'host_age_ms':age,'host_wall_ms':wall}))
             raise
         finally:
             # Watchdog remains armed until verified termination/owned absence.
-            for _ in range(60):
-                status = self.cleanup()
-                if status['status'] == 'cleaned_host_resources_S3_retained':
-                    break
-                sleep(5)
-            else:
-                raise OperatorError('cleanup pending; watchdog remains armed')
+            try:
+                for _ in range(60):
+                    status = self.cleanup()
+                    if status['status'] == 'cleaned_host_resources_S3_retained':
+                        break
+                    sleep(5)
+                else:
+                    raise OperatorError('cleanup pending; watchdog remains armed')
+            except BaseException:
+                self.state.data['lifecycle_cleanup_failure'] = {
+                    'work_failed': work_error is not None,
+                    'cleanup_outcome': 'unverified', 'watchdog_remains_armed': True}
+                try:
+                    self.state.save()
+                except Exception:
+                    pass  # Persistence failure must not replace the original error.
+                if work_error is not None:
+                    raise work_error from OperatorError('final cleanup failed; watchdog remains armed')
+                raise
 
 
     def capture_admission_diagnostics(self, admission='online_unavailable'):

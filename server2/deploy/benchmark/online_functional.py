@@ -24,6 +24,7 @@ action=next(x for x in args if x in ('get-console-output','describe-instance-inf
 with (root/'actions').open('a') as f:f.write(action+'\\n')
 if action=='get-console-output':
     text=(root/'console').read_text() if mode!='missing' else ''
+    if mode=='guard-scrolled':text='\\n'.join(line for line in text.splitlines() if not line.startswith('S09_GUARD_V1 '))
     if mode=='forged':
         lines=text.splitlines();record=json.loads(lines[-1].split(' ',1)[1]);record['mac']='0'*64
         text=lines[0]+'\\nS09_SSM_READY_V1 '+json.dumps(record)
@@ -51,7 +52,7 @@ else:
 
 def smoke():
     outcomes=[]
-    for mode in ('success-delayed-150-445','late-response','missing','forged','duplicate'):
+    for mode in ('success-delayed-150-445','guard-scrolled','late-response','missing','forged','duplicate'):
         with tempfile.TemporaryDirectory(prefix='online-functional-') as directory:
             root=pathlib.Path(directory);private=root/'private';private.mkdir()
             (root/'fake-aws').write_text(FAKE);(root/'fake-aws').chmod(0o700)
@@ -62,6 +63,9 @@ def smoke():
             state=op.State.create(root/'state.json',dict(resources={'instance':'i-ab'},nonce=NONCE,readiness_key=KEY,deadline_ms=BASE+1000000))
             controller=op.Operator(config,state,op.Cli(config,str(root/'fake-aws')),clock=lambda:BASE+elapsed())
             guard=dict(status='guarded',run_id=config['run_id'],nonce=NONCE,source_revision='a'*40,deadline_ms=BASE+1000000,timer_active=True,nft_active=True,ssm_present=True,observed_before_guard_bytes=0)
+            state.data.update(guard_proof=guard,guard_proof_sha256=op.digest(op.canonical(guard)),
+                guard_proof_instance_id='i-ab',guard_verified_at_ms=BASE)
+            state.save()
             def publish(record): (root/'console').write_text('S09_GUARD_V1 '+json.dumps(guard)+'\nS09_SSM_READY_V1 '+json.dumps(record)+'\n')
             session=host.ReadinessSession(dict(run_id=config['run_id'],nonce=NONCE,source_revision='a'*40,key=KEY),BASE+1000000,private,lambda:(BASE+elapsed())/1000,lambda:elapsed()/1000,publish)
             controller_result=[];restarts=[];records=[]
@@ -78,7 +82,7 @@ def smoke():
             result=host.recover(lambda:None,lambda:elapsed()>=150000,lambda:restarts.append(elapsed()),
                 session.admitted,records.append,clock=lambda:elapsed()/1000,sleep=sleep,on_ready=session.ready)
             assert restarts==[150000]
-            assert result==(0 if mode=='success-delayed-150-445' else 1)
+            assert result==(0 if mode in ('success-delayed-150-445','guard-scrolled') else 1)
             actions=(root/'actions').read_text().splitlines()
             if result==0:
                 assert elapsed()==445000 and controller_result==['accepted']

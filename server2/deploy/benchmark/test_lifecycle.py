@@ -82,6 +82,16 @@ class ControllerLifecycleTests(unittest.TestCase):
         self.assertNotIn('PRIVATE_CLEANUP_DETAIL',str(controller.state.data))
         controller.cleanup.assert_called_once()
 
+    def test_state_write_failure_cannot_mask_original_or_cleanup_failure(self):
+        controller=self.controller()
+        controller.state.save=Mock(side_effect=OSError('private state error'))
+        controller.cleanup=Mock(side_effect=op.OperatorError('cleanup failed'))
+        controller.capture_admission_diagnostics=Mock()
+        with self.assertRaisesRegex(op.OperatorError,'^original$') as caught:
+            controller.run_lifecycle(lambda: (_ for _ in ()).throw(op.OperatorError('original')))
+        self.assertEqual(str(caught.exception.__cause__),'final cleanup failed; watchdog remains armed')
+        self.assertTrue(controller.state.data['lifecycle_cleanup_failure']['work_failed'])
+
     def test_successful_work_does_not_hide_cleanup_failure(self):
         controller=self.controller()
         controller.cleanup=Mock(side_effect=op.OperatorError('cleanup failed'))
@@ -167,11 +177,12 @@ def lifecycle_functional_smoke():
     """Exercise final cleanup using actual isolated fake-CLI subprocesses."""
     import tempfile, json, contextlib, io
     outcomes = []
-    for failed in (False, True):
+    for failed, cleanup_failed in ((False,False),(True,False),(True,True)):
         with tempfile.TemporaryDirectory(prefix='s09-final-lifecycle-') as directory:
             root = Path(directory); trace = root/'trace.jsonl'
             config = dict(op.FIXED)
             fake = root/'fake-aws'
+            if cleanup_failed: (root/'cleanup-fault').touch()
             script = r'''#!/usr/bin/env python3
 import json,sys,pathlib
 root=pathlib.Path(__file__).parent
@@ -182,6 +193,7 @@ with trace.open('a') as out: out.write(json.dumps(action)+'\n')
 if action=='get-console-output':
  print(json.dumps({'Output':'PRIVATE_RAW_MUST_NOT_EXPORT\nS09_SSM_RECOVERY_V1 {"status":"failed","reason":"admission_unconfirmed","probes":2,"restarts":1}'}))
 elif action=='terminate-instances':
+ if (root/'cleanup-fault').exists(): sys.stderr.write('PRIVATE_CLEANUP_DETAIL');sys.exit(255)
  (root/'terminated').write_text('intent');print('{}')
 elif action=='describe-instances':
  nfile=root/'reads'; n=int(nfile.read_text())+1 if nfile.exists() else 1;nfile.write_text(str(n))
@@ -203,13 +215,20 @@ else: print(json.dumps({'Volumes':[]}))
                     assert not failed and result == 'synthetic result'
                 except op.OperatorError as error:
                     assert failed and str(error) == 'synthetic worker failure'
+                    if cleanup_failed: assert str(error.__cause__) == 'final cleanup failed; watchdog remains armed'
             calls = [json.loads(x) for x in trace.read_text().splitlines()]
-            assert calls == ['result-export'] + (['get-console-output'] if failed else []) + ['describe-instances','terminate-instances','describe-instances','describe-instances','describe-volumes']
-            assert state.data['status'] == 'cleaned_host_resources_S3_retained'
+            expected_cleanup=['describe-instances','terminate-instances'] if cleanup_failed else ['describe-instances','terminate-instances','describe-instances','describe-instances','describe-volumes']
+            assert calls == ['result-export'] + (['get-console-output'] if failed else []) + expected_cleanup
+            if cleanup_failed:
+                assert state.data['lifecycle_cleanup_failure'] == {'work_failed':True,'cleanup_outcome':'unverified','watchdog_remains_armed':True}
+                assert state.data.get('status') != 'cleaned_host_resources_S3_retained'
+            else:
+                assert state.data['status'] == 'cleaned_host_resources_S3_retained'
             assert 'PRIVATE_RAW_MUST_NOT_EXPORT' not in state.path.read_text()+output.getvalue()
-            assert state.data['root_volume_absence_verified'] is True
+            assert 'PRIVATE_CLEANUP_DETAIL' not in state.path.read_text()+output.getvalue()
+            if not cleanup_failed: assert state.data['root_volume_absence_verified'] is True
             assert (root/'synthetic-result.json').is_file()
-            outcomes.append({'scenario':'failure' if failed else 'success','status':'PASS_fake_subprocess_only','events':calls,'termination_requests':calls.count('terminate-instances'),'S3_deletes':0})
+            outcomes.append({'scenario':'work_and_cleanup_failure' if cleanup_failed else 'failure' if failed else 'success','status':'PASS_fake_subprocess_only','events':calls,'termination_requests':calls.count('terminate-instances'),'S3_deletes':0})
     return outcomes
 
 if __name__ == '__main__': unittest.main()

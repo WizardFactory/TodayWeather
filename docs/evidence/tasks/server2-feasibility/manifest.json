@@ -23,7 +23,12 @@
   "report_sha256": "8b683088014f92a47d8703fe2ef4eb87e99bd232c90a4e29864604e8a0e23214",
   "live_driver_sha256": "dbd902ec893e411760fb99c49e2d492ef52563aab1375ede6638377fc343f8fb",
   "operator_sha256": "4bc53c4ed810965f9669eb0e91d19a686305967998fca43f101ac2799e808990",
-  "source_sha256": "70b30e3c3a6dbe3af5228afe12b1c220806a3dcc7d6a665a9465b25bb6028183",
-  "pdf_sha256": "f1be7f3b097a44276caa4768e9871ff8b6bd9642d2fde4d9e943c13b0e32fd2f",
-  "screenshot_sha256": "36c72b48340702a3159bf40a07ca3c23fb1656f8df494501b146125481fb8478"
+  "source_sha256": "c79b75c770e1c550554c70c4a09cb47908693e7dc190d816d27da1e872109a57",
+  "pdf_sha256": "9874a788b8c98ff2ca4c7bb0012fbc2a3d669dfb8453dce8ce8817b7ac079218",
+  "screenshot_sha256": "36c72b48340702a3159bf40a07ca3c23fb1656f8df494501b146125481fb8478",
+  "documentation_refresh": {
+    "date": "2026-10-10",
+    "scope": "Q9 R1/R2/R3/R4 documentation; historical actual CLI capture and measurement provenance unchanged",
+    "operator_sha256": "faeaabf3d2c40e152511b6e30898616c4339b720db5327650ae7896be5b6c2a7"
+  }
 }
