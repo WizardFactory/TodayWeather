@@ -8,14 +8,22 @@ This tool exercises the actual Rust raw store, catalog, resolver and funded-acqu
 
 ## Maintained startup successor (2026-10-10)
 
-AK's task-scoped renewal fixes expiry at **2026-10-10T09:18:00Z
-(1791623880000)**. The original 04:49:59Z / 1791607799000 approval remains
-historical reference, not a second grant. Supplied authority records two of
+AK explicitly renewed the remaining single PR-branch attempt to fixed expiry
+**2026-10-10T11:18:00Z (1791631080000)**. The preceding 09:18:00Z /
+1791623880000 renewal and original 04:49:59Z / 1791607799000 approval remain
+historical references, not additional grants. Supplied authority records two of
 three host attempts consumed and USD 5 remaining of USD 15 cumulative; this
 code update neither rechecks live inventory nor resets attempts, spent usage,
 S3 versions, recovery allowance or worker claims. The per-host 7200-second cap,
 worker windows, export reserve and all request/byte grants are unchanged.
 An expiry renewal alone never authorizes a new launch or a replacement worker.
+For the explicitly approved final attempt, supply both original cleaned
+pre-worker files using repeated `--prior-state PATH`. The operator pins their
+canonical bytes and debits their spent ledgers/control calls plus full prior
+watchdog reservations before dispatch. Inputs are never modified; exhausted,
+claimed, uncleaned, recovery or already-carried states fail closed. This input
+is accounting only, not live absence or campaign authority. The campaign still
+reserves exactly one final host and USD 5 without resetting its earlier totals.
 
 The controller read-validates any retained bucket's fixed owner, region,
 versioning, public-access block, AES256 policy and exact bucket policy, then

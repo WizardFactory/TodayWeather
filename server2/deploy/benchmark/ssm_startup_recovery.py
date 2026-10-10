@@ -198,7 +198,7 @@ def main(argv=None, run=subprocess.run, wall=time.time, private=Path('/opt/serve
     parser.add_argument('--role', required=True, choices=(ROLE,))
     parser.add_argument('--deadline-ms', required=True, type=int)
     args = parser.parse_args(argv)
-    deadline = min(args.deadline_ms, 1791623880000) / 1000
+    deadline = min(args.deadline_ms, 1791631080000) / 1000
     session = None
     def emit(record):
         print('S09_SSM_RECOVERY_V1 ' + json.dumps(record, separators=(',', ':')), flush=True)

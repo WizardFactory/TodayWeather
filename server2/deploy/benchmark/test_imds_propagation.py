@@ -38,7 +38,7 @@ class ImdsReadinessTests(unittest.TestCase):
     def test_main_requires_role_argument(self):
         with self.assertRaises(SystemExit):
             # Never use the production runner, even for parser-negative tests.
-            recovery.main(['--unit', 'amazon-ssm-agent.service', '--deadline-ms', '1791623880000'],
+            recovery.main(['--unit', 'amazon-ssm-agent.service', '--deadline-ms', '1791631080000'],
                           run=self.fake_run(b'', code=1), wall=lambda: 1791623881)
 
 class ControllerPropagationTests(unittest.TestCase):

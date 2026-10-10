@@ -23,7 +23,7 @@ import time
 HERE = Path(__file__).resolve().parent
 GiB = 1024 ** 3
 MiB = 1024 ** 2
-EXPIRY = 1791623880000
+EXPIRY = 1791631080000
 EXPORT_CLEANUP_RESERVE_MS = 15 * 60000
 MINIMUM_WORKER_WINDOW_MS = 5 * 60000
 COMPLETION_GRACE_SECONDS = 30
@@ -960,7 +960,7 @@ p=pathlib.Path('/opt/server2-s09/private')
 r=json.loads((p/'readiness.json').read_text());v=r['proof']
 assert r['mac']==MAC
 age=int(time.monotonic()*1000)-v['ready_monotonic_ms'];wall=int(time.time()*1000)
-assert 0<=age<300000 and wall<min(v['deadline_ms'],1791623880000)
+assert 0<=age<300000 and wall<min(v['deadline_ms'],1791631080000)
 assert abs(wall-v['ready_at_ms']-age)<=1000
 fd=os.open(p/'controller-start',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
 with os.fdopen(fd,'w') as f: f.write(r['mac']);f.flush();os.fsync(f.fileno())
@@ -1321,6 +1321,44 @@ def watchdog(config, path, runner):
 
 
 
+def carry_prior_usage(paths):
+    """Debit cleaned pre-worker attempts, never renew their spent reservations.
+
+    This is only accounting input, not live absence/launch authority. Caller must
+    separately verify campaign headroom and exact owned-resource cleanup.
+    Previous watchdog reservations stay fully charged when no finish exists.
+    """
+    if len(paths) != 2 or len({str(Path(p).resolve()) for p in paths}) != len(paths):
+        raise OperatorError('prior state count or duplicate')
+    total = {'reads':0, 'writes':0, 'download':0, 'store':0}
+    calls = 0
+    pins = []
+    for path in paths:
+        prior = bounded_json(path)
+        if (not isinstance(prior,dict) or prior.get('run_id') != FIXED['run_id'] or
+            prior.get('status') != 'cleaned_host_resources_S3_retained' or
+            prior.get('worker_allocation_issued') is not False or
+            'prior_state_sha256' in prior or 'recovery1' in prior):
+            raise OperatorError('prior state not eligible for cumulative accounting')
+        usage = prior.get('ledger')
+        if not isinstance(usage,dict) or set(usage) != set(total) or any(type(v) is not int or v < 0 for v in usage.values()):
+            raise OperatorError('prior ledger schema')
+        watchdog = prior.get('watchdog_reserved_reads')
+        watchdog_bytes = prior.get('watchdog_reserved_download_bytes')
+        used_calls = prior.get('operator_calls')
+        if type(watchdog) is not int or watchdog != 50 or type(watchdog_bytes) is not int or watchdog_bytes != watchdog*131072 or type(used_calls) is not int or used_calls < 0:
+            raise OperatorError('prior control reservation')
+        for key in total: total[key] += usage[key]
+        total['reads'] += watchdog
+        total['download'] += watchdog_bytes
+        calls += used_calls + watchdog
+        pins.append(digest(canonical(prior)))
+    caps = {'reads':9950, 'writes':2000, 'download':512*MiB-50*131072, 'store':MiB}
+    if calls >= 3500 or any(total[k] >= caps[k] for k in total):
+        raise OperatorError('prior usage exhausted')
+    return {'ledger':total, 'operator_calls':calls, 'prior_state_sha256':pins}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=HERE / "aws-run.json")
@@ -1331,6 +1369,7 @@ def main():
     parser.add_argument("--recovery-authority",type=Path)
     parser.add_argument("--watchdog", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--state", type=Path)
+    parser.add_argument("--prior-state", type=Path, action="append", default=[], help="Debit both original cleaned pre-worker attempts without changing them")
     parser.add_argument("--authorization", type=Path)
     args = parser.parse_args()
     config = validate_config(bounded_json(args.config), armed=args.execute_reviewed_run or args.resume_failed_creation or args.cleanup_only or args.watchdog, cleanup_only=args.cleanup_only or args.watchdog)
@@ -1352,6 +1391,11 @@ def main():
             raise OperatorError("cleanup manifest identity")
         print(json.dumps(Operator(config,state,runner).cleanup()))
         return
+    if args.prior_state and not args.execute_reviewed_run:
+        raise OperatorError("prior accounting requires explicit new attempt")
+    if args.execute_reviewed_run and len(args.prior_state) != 2:
+        raise OperatorError("two prior states required for final attempt")
+    carried = carry_prior_usage(args.prior_state) if args.prior_state else {}
     current = now_ms()
     if args.resume_failed_creation:
         if args.original_config is None or args.recovery_authority is None: raise OperatorError("original configuration and recovery authority required")
@@ -1363,7 +1407,7 @@ def main():
         operator.prepare_recovery(original,bounded_json(args.recovery_authority))
     else:
         if args.original_config is not None or args.recovery_authority is not None: raise OperatorError("recovery input on another mode")
-        state = State.create(args.state,{"run_id":config["run_id"],"config_sha256":digest(canonical(config)),"client_token":"s09-"+secrets.token_hex(24),"nonce":secrets.token_hex(32),"deadline_ms":min(EXPIRY,current+7200000),"bootstrap_reserved_bytes":3*GiB,"worker_allocation_issued":False,"resources":{},"status":"creation","watchdog_parent":os.getpid()})
+        state = State.create(args.state,{"run_id":config["run_id"],"config_sha256":digest(canonical(config)),"client_token":"s09-"+secrets.token_hex(24),"nonce":secrets.token_hex(32),"deadline_ms":min(EXPIRY,current+7200000),"bootstrap_reserved_bytes":3*GiB,"worker_allocation_issued":False,"resources":{},"status":"creation","watchdog_parent":os.getpid(),**carried})
         # Child holds its separate pre-reserved control allocation; no worker renewal.
         state.data["watchdog_reserved_reads"]=50
         state.data["watchdog_reserved_download_bytes"]=50*131072
