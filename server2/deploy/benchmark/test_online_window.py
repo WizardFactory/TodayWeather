@@ -100,6 +100,56 @@ class ControllerWindowTests(unittest.TestCase):
         self.assertTrue(all(at>=250000 for action,at in calls if action=='describe-instance-information'))
 
 class ProtocolTests(unittest.TestCase):
+    def cached_controller(self):
+        c,now,calls,sleep=ControllerWindowTests().make(delivered_at=250000)
+        proof=json.loads(console(envelope()).splitlines()[0].split(' ',1)[1])
+        c.state.data.update(guard_proof=proof,guard_proof_sha256=op.digest(op.canonical(proof)),
+            guard_proof_instance_id='i-ab',guard_verified_at_ms=BASE)
+        original=c.call
+        def call(service,action,args):
+            result=original(service,action,args)
+            if action=='get-console-output':
+                result['Output']='\n'.join(line for line in result['Output'].splitlines()
+                    if not line.startswith('S09_GUARD_V1 '))
+            return result
+        c.call=call
+        return c,now,calls,sleep
+
+    def test_verified_guard_scrollout_preserves_signed_readiness_window(self):
+        c,now,calls,sleep=self.cached_controller()
+        proof=c.wait_online('i-ab',BASE,sleep=sleep)
+        self.assertEqual(proof['ready_at_ms'],BASE+150000)
+        self.assertEqual(now[0],BASE+445000)
+        self.assertEqual(c.state.data['ssm_online_deadline_ms'],BASE+450000)
+
+    def test_scrollout_never_accepts_missing_foreign_or_tampered_guard_cache(self):
+        for fault in ('missing','instance','hash','nonce','source','deadline','time'):
+            with self.subTest(fault=fault):
+                c,now,calls,sleep=self.cached_controller()
+                if fault=='missing': c.state.data.pop('guard_proof')
+                elif fault=='instance': c.state.data['guard_proof_instance_id']='i-foreign'
+                elif fault=='hash': c.state.data['guard_proof_sha256']='0'*64
+                elif fault=='time': c.state.data['guard_verified_at_ms']=BASE+500000
+                else:
+                    field={'source':'source_revision','deadline':'deadline_ms'}.get(fault,fault)
+                    c.state.data['guard_proof'][field]='foreign'
+                    c.state.data['guard_proof_sha256']=op.digest(op.canonical(c.state.data['guard_proof']))
+                with self.assertRaises(op.OperatorError): c.wait_online('i-ab',BASE,sleep=sleep)
+                self.assertFalse(any(action=='describe-instance-information' for action,_ in calls))
+
+    def test_latest_failure_or_invalid_guard_cannot_use_cached_success(self):
+        for marker in ('S09_GUARD_FAILED','S09_GUARD_V1 {bad json}'):
+            with self.subTest(marker=marker):
+                c,now,calls,sleep=self.cached_controller(); original=c.call
+                def call(service,action,args):
+                    result=original(service,action,args)
+                    if action=='get-console-output' and result['Output']:
+                        result['Output']=marker+'\n'+result['Output']
+                    return result
+                c.call=call
+                with self.assertRaises(op.OperatorError): c.wait_online('i-ab',BASE,sleep=sleep)
+                self.assertFalse(any(action=='describe-instance-information' for action,_ in calls))
+
     def test_host_publication_signs_exact_completion_and_private_record(self):
         import tempfile
         from pathlib import Path

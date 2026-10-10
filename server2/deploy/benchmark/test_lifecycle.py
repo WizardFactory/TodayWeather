@@ -61,10 +61,33 @@ class ControllerLifecycleTests(unittest.TestCase):
         controller.state.data['ssm_admission_diagnostics'] = {'already':'captured'}
         controller.capture_admission_diagnostics = Mock(side_effect=AssertionError('duplicate diagnostic'))
         controller.cleanup = Mock(return_value={'status':'termination_requested_cleanup_pending'})
-        with self.assertRaisesRegex(op.OperatorError, 'cleanup pending'):
+        with self.assertRaisesRegex(op.OperatorError, '^failure$') as caught:
             controller.run_lifecycle(lambda: (_ for _ in ()).throw(op.OperatorError('failure')), sleep=lambda _: None)
+        self.assertIn('cleanup',str(caught.exception.__cause__))
+        self.assertTrue(controller.state.data['lifecycle_cleanup_failure']['work_failed'])
         self.assertEqual(controller.cleanup.call_count, 60)
         controller.capture_admission_diagnostics.assert_not_called()
+
+    def test_cleanup_exception_preserves_original_failure_and_sanitized_state(self):
+        controller=self.controller()
+        original=op.OperatorError('original worker failure')
+        controller.capture_admission_diagnostics=Mock()
+        controller.cleanup=Mock(side_effect=op.OperatorError('PRIVATE_CLEANUP_DETAIL'))
+        with self.assertRaises(op.OperatorError) as caught:
+            controller.run_lifecycle(lambda: (_ for _ in ()).throw(original),sleep=lambda _:None)
+        self.assertIs(caught.exception,original)
+        self.assertEqual(str(caught.exception.__cause__),'final cleanup failed; watchdog remains armed')
+        self.assertEqual(controller.state.data['lifecycle_cleanup_failure'],
+            {'work_failed':True,'cleanup_outcome':'unverified','watchdog_remains_armed':True})
+        self.assertNotIn('PRIVATE_CLEANUP_DETAIL',str(controller.state.data))
+        controller.cleanup.assert_called_once()
+
+    def test_successful_work_does_not_hide_cleanup_failure(self):
+        controller=self.controller()
+        controller.cleanup=Mock(side_effect=op.OperatorError('cleanup failed'))
+        with self.assertRaisesRegex(op.OperatorError,'^cleanup failed$'):
+            controller.run_lifecycle(lambda:'result',sleep=lambda _:None)
+        self.assertFalse(controller.state.data['lifecycle_cleanup_failure']['work_failed'])
 
     def test_diagnostic_exception_cannot_prevent_cleanup(self):
         self.assertTrue(hasattr(op.Operator, 'run_lifecycle'), 'single final lifecycle missing')

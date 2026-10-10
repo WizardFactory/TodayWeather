@@ -1,5 +1,7 @@
 # S09 implementation plan
 
+The current contract is the Q9 correction section below. Earlier numbered rounds are historical and do not describe the current declaration or verification scope.
+
 Use root-owned named execution plan; own stable task issue-2694-s09 records and preserve its counters. Exact paths were declared before edits. Local tooling alone does not close S09. The separately armed live driver and six-path operator lane follow the [temporary resource approval](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052596161) and [31-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6053018487).
 
 1. Validate schema/workload size, literal loopback targets and immutable report provenance. Implement nearest-rank all-outcome quantiles without filtering failed samples.
@@ -100,3 +102,24 @@ The focused correction moves all stock guard setup to final-stage runcmd, retain
 ## Correction17: explicit external-review update
 
 AK requested assessment, necessary fixes and push for review5471241898. Selected all three required findings plus warm-population reporting and explicit stricter console-envelope documentation. Existing test assertions may be corrected as review fixes; no new tests or test execution. Verify through source/syntax, actual release build and the maintained local benchmark CLI, refreshed manual/diagram, placement/artifact checks, remote CI observation and independent source/document review. Preserve previous failed attempts and excluded prep15 files. Actual AWS measurement, O-2/O-5, S10/S13, launch and merge authority remain unchanged.
+
+
+## Q9 correction: current path declaration and selected findings
+
+AK authorized Required S09-Q9-R1 and Recommended R2/R3/R4 after the Claude review of `c44e9e1a`. R5 is excluded from this correction. This section is recorded before its dependent edits; the full existing declaration remains 40 server2 paths plus 11 documentation paths (51 total), with no new paths or broad exceptions.
+
+Intended implementation/test changes: `server2/deploy/benchmark/aws_operator.py`, `test_online_window.py`, `test_lifecycle.py`, `online_functional.py`, and `server2/tools/render_feasibility_manual.py`. Exact outside changes: `intent/issue-2694.md`, `specs/issue-2694.md`, this plan (current contracts and declaration evidence), `docs/operations/server2-feasibility.md`, its PDF and `docs/evidence/tasks/server2-feasibility/manifest.json` (procedure/PDF parity with the existing dated workload screenshot preserved). All are already declared in `server2/config/tasks/S09.json`; implementation remains under server2 with no legacy dependency.
+
+No independently retained pre-edit declaration for the `d95b53e8` successor was available in this worktree at Q9 review. Its committed JSON establishes the resulting path set, not evidence of an earlier declaration. This is an explicit historical evidence gap, not a retroactive authorization claim. The CI-preparation edits after d95 were declared in the task's local planning record before edits. This current maintained section establishes the selected Q9 paths before their edits.
+
+1. Add failing isolated regressions for guard scroll-out and simultaneous work/cleanup failure. This macOS environment has no Linux runtime: run operational tests only through the Linux bubblewrap/audit CI harness; retain actual remote Red separately from local syntax/placement checks.
+2. R2: reuse only the previously verified guard bound to the current instance/run/nonce/source/deadline when the latest console has no guard. Never ignore latest failure, malformed/conflicting guard, invalid cache, signed-readiness failure or the existing clocks. No new provider/AWS dispatch, time or budget is introduced.
+3. R3: retain the original work failure as primary and record final cleanup failure separately using finite sanitized states. Preserve one cleanup phase, bounded reconciliation, once-only ordinary termination and emergency protection. Successful work with failed cleanup must still fail.
+4. R1/R4: reconcile current contracts with successor behavior and the 51-path declaration; label earlier 33-path/no-test rounds historical. Document Linux-only full verification and retain existing actual CI evidence as a dated baseline, not proof of this untested correction. Renew the PDF using the existing screenshot without inventing a new benchmark run.
+5. Verify final Green in the same namespace/audit harness and separate fake-process functional smoke, then exact-head CI and scoped Claude rereview. Record actual limitations. No AWS run, live readiness, source/approval repinning, merge or deployment is authorized. The historical architecture diagram remains explicitly revision-bound; no serving route, mode, storage or deployed topology changes.
+
+Scenario Q9A: an operator has already verified a guard and opened egress; the line scrolls out before signed readiness arrives. Admit only with a same-instance validated cache and the unchanged readiness/deadline checks. Missing/foreign/expired cache, latest failure or malformed proof must refuse before SSM/build.
+Scenario Q9B: a worker fails and cleanup fails too. Preserve the worker exception and a sanitized unverified-cleanup record; keep emergency protection armed. Work success plus cleanup failure reports failure. Reconciliation never repeats normal termination.
+Scenario Q9C: a contributor follows the manual. Full operational checks require Linux, bubblewrap, working user namespaces and the maintained runner; macOS source checks are not a full CI pass. The current declaration and historical evidence are distinguishable in intent/spec/plan/manual.
+
+Completion requires all modified paths to match this declaration, the placement gate and dependency review to pass, final evidence to bind the committed bytes, and no selected review change to remain. The original intended-host/S3/O-2/O-5 and S10/S13 gates remain open.
