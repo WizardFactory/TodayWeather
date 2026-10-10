@@ -34,6 +34,8 @@
     "server2/deploy/benchmark/test_imds_safety.py",
     "server2/deploy/benchmark/test_lifecycle.py",
     "server2/deploy/benchmark/test_online_window.py",
+    "server2/deploy/benchmark/test_user_data_wire.py",
+    "server2/deploy/benchmark/run_user_data_wire.py",
     "server2/deploy/benchmark/test_online_fences.py",
     "server2/deploy/benchmark/imds_functional.py",
     "server2/deploy/benchmark/online_functional.py",

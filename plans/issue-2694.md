@@ -129,3 +129,24 @@ Q9 rereview selected coverage correction R7 (before dependent edits): also modif
 Q9 R8 selected before edits, within the same declared `test_aws_operator.py` path: inject fixed pre-expiry clocks into offline unit/fake-CLI controller fixtures and add a guard-rejection regression under a post-expiry wall clock. Keep actual compiled-worker/installed-CLI observation helpers on their real-time contracts; no live expiry or operator policy change. The other operational test modules already inject their expiry-relative clocks. This makes ordinary isolated CI independent of the approval date without extending operational authority.
 
 Q9 R9 selected before edits, within the already declared manual/PDF/manifest paths: explicitly mark the older direct test-module/installed-CLI command blocks as historical evidence that must not be rerun from the current checkout. Current operational verification uses the maintained Linux namespace/audit runner above; no direct-host fallback or new installed-CLI runner is authorized. Preserve the dated historical outcomes. Renew PDF/manifest parity and inspect affected pages; runtime/test bytes remain unchanged.
+
+
+## User-data transport correction and fourth dispatch authority (2026-10-10)
+
+AK requested the user-data encoding fix, isolated installed-AWS-CLI wire
+verification and one additional AWS attempt. Explicit confirmation grants
+one extra attempt/USD5 (cumulative4/USD20), retaining the fixed1791631080000
+expiry, no automatic retry, unchanged per-host/worker/request/byte limits and
+no merge. The previous three dispatches and reservations remain consumed.
+
+The maintained transport supplies private binary fileb input rather than
+pre-base64 text. Acceptance is one wire decode equals the exact gzip payload,
+decoded<=16384 and encoded<=25600, and oversize fails before dispatch. The fourth
+controller requires two original prior-state files plus the unchanged cumulative
+third state and its bound same-token rejection/owned-cleanup attestation. Carry
+that cumulative total once plus watchdog/external reservations; never rewrite
+UNKNOWN, refund usage or infer new authority from cleanup. Missing or inconsistent
+inputs fail before state/watchdog creation. Source membership is the exact
+unique set in S09.json; historical counts above belong to their named revisions.
+See the operations manual for inputs and the failed third-dispatch evidence.
+Offline transport success is not intended-host readiness or S09/O-2/O-5 acceptance.

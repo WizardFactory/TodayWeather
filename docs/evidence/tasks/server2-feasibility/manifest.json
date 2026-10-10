@@ -23,12 +23,12 @@
   "report_sha256": "8b683088014f92a47d8703fe2ef4eb87e99bd232c90a4e29864604e8a0e23214",
   "live_driver_sha256": "dbd902ec893e411760fb99c49e2d492ef52563aab1375ede6638377fc343f8fb",
   "operator_sha256": "4bc53c4ed810965f9669eb0e91d19a686305967998fca43f101ac2799e808990",
-  "source_sha256": "593ae9f138ee1669d11da0fbc23cccb5107c014bbd3dab608ec0c1259d9b0300",
-  "pdf_sha256": "d7adaae84e98298fa223fef6d34491057832e8488437491467ea306e1d3c8dbc",
+  "source_sha256": "e90128180db3c7b75ecfc1ecfa5d3c41f7a3838dc2fe1ffa5cb0d43f9be1b0c6",
+  "pdf_sha256": "8893e83b21589f02231f9f2f31886456629e6552c08f12ddaaf4f90768f88771",
   "screenshot_sha256": "36c72b48340702a3159bf40a07ca3c23fb1656f8df494501b146125481fb8478",
   "documentation_refresh": {
     "date": "2026-10-10",
-    "scope": "Fixed 11:18 UTC renewal and cumulative accounting; historical actual CLI capture and measurement provenance unchanged",
-    "operator_sha256": "001c47b45ca0af9d648e669fa59c71bf919a13edca69129e265d3d123443aba7"
+    "scope": "User-data transport and separately approved fourth-attempt accounting; historical CLI measurement capture unchanged",
+    "operator_sha256": "7d5d215b3ee4f4a37fc8dfe60fa8b22454705b45bdeae9b84900fecb67f9ddaa"
   }
 }

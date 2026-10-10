@@ -519,7 +519,7 @@ def functional_smoke(recovery=False,recovery_fault=None,retained_bucket=False):
     import sys
     from unittest.mock import patch
     with tempfile.TemporaryDirectory(prefix="s09-operator-functional-") as temp:
-        root=Path(temp);calls=[];terminated=[False];root_pending=[True]
+        root=Path(temp);calls=[];user_data_payloads=[];terminated=[False];root_pending=[True]
         config=json.loads((HERE/"aws-run.json").read_text())
         config.update(source_revision="a"*40,rustup_sha256="b"*64,rustup_url="https://static.rust-lang.org/rustup/archive/1.29.1/x86_64-unknown-linux-gnu/rustup-init",source_files={"server2/Cargo.toml":"c"*64})
         config["source_files"]["server2/deploy/benchmark/ssm_startup_recovery.py"] = op.digest((HERE/"ssm_startup_recovery.py").read_bytes())
@@ -549,6 +549,9 @@ def functional_smoke(recovery=False,recovery_fault=None,retained_bucket=False):
                 elif action=="create-security-group": out={"GroupId":"sg-0123456789abcdef0"}
                 elif action=="create-role": out={"Role":{"Arn":"arn:aws:iam::"+config["account"]+":role/"+config["role"]}}
                 elif action=="run-instances":
+                    value=args[args.index('--user-data')+1]
+                    assert value.startswith('fileb://')
+                    user_data_payloads.append(Path(value[8:]).read_bytes())
                     if recovery_fault=='local':code=252;error='Unknown options: --synthetic-invalid-option'
                     elif recovery_fault=='mismatch':code=255;error='An error occurred (IdempotentParameterMismatch) when calling RunInstances'
                     else:out={"Instances":[{"InstanceId":instance}]}
@@ -602,7 +605,8 @@ def functional_smoke(recovery=False,recovery_fault=None,retained_bucket=False):
                 assert not any("authorize-security-group-egress" in c for c in calls)
                 payload=next(c[c.index("--user-data")+1] for c in calls if "run-instances" in c)
                 import gzip
-                decoded=base64.b64decode(payload);assert len(decoded)<=16384
+                assert payload.startswith('fileb://') and not Path(payload[8:]).exists()
+                decoded=user_data_payloads[0];assert len(decoded)<=16384
                 plain=gzip.decompress(decoded)
                 assert b"nft -c" in plain and b"apt-get update" in plain
                 expected={"run_id":config["run_id"],"nonce":state.data["nonce"],"deadline_ms":state.data["deadline_ms"],"source_revision":config["source_revision"]}
@@ -1054,15 +1058,16 @@ class RecoveryDispatchTests(RecoveryTests):
 
 def offline_launch_oracle(binary):
     """Validate actual source arguments with the installed CLI, never an API."""
-    import base64,gzip,os,subprocess
-    with tempfile.TemporaryDirectory(prefix='s09-offline-launch-') as directory:
+    import base64,gzip,os,subprocess,contextlib
+    with tempfile.TemporaryDirectory(prefix='s09-offline-launch-') as directory, contextlib.ExitStack() as stack:
         old,config,state,a,current=RecoveryTests().fixture(directory)
         controller=op.Operator(config,state,None,clock=lambda:current)
         userdata=controller.render_bootstrap()
         assert len(userdata)<=16384 and len(gzip.decompress(userdata))<=65536
-        args=controller.launch_arguments(state.data['resources']['sg'],userdata)
+        args=stack.enter_context(controller.launch_arguments(state.data['resources']['sg'],userdata))
         assert '--min-count' not in args and '--max-count' not in args and args.count('--count')==1
-        assert base64.b64decode(args[args.index('--user-data')+1],validate=True)==userdata
+        value=args[args.index('--user-data')+1]
+        assert value.startswith('fileb://') and Path(value[8:]).read_bytes()==userdata
         root=Path(directory);(root/'config').write_text('[profile s09-offline]\nregion=ap-northeast-2\n');(root/'credentials').write_text('[s09-offline]\naws_access_key_id=dummy\naws_secret_access_key=dummy\n')
         env={k:v for k,v in os.environ.items() if not k.startswith('AWS_')}
         env.update(AWS_CONFIG_FILE=str(root/'config'),AWS_SHARED_CREDENTIALS_FILE=str(root/'credentials'),AWS_EC2_METADATA_DISABLED='true',AWS_MAX_ATTEMPTS='1',AWS_PAGER='',AWS_CLI_AUTO_PROMPT='off',AWS_ENDPOINT_URL_EC2='http://127.0.0.1:9')

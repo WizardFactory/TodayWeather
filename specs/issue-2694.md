@@ -173,3 +173,24 @@ Q9-R3: ordinary failures preserve result/diagnostic evidence before one final cl
 Q9-R4: full operational verification requires Linux, bubblewrap, working user namespaces and /usr/bin/python3. The maintained namespace/audit runner is mandatory; missing isolation fails closed before operational imports. GitHub-only preparation installs bubblewrap/AppArmor and conditionally loads the pinned upstream AppArmor4.0.2 bwrap profile, preserving global restrictions and zero child capabilities. macOS syntax/source/placement checks are partial evidence, not a full CI pass.
 
 The `c44e9e1a` Linux CI baseline executed 124 isolated operational tests plus fake-process functional smoke, placement/local suites, Rust checks/release/smoke. Q9 adds selected regressions; final counts and Red/Green evidence belong to its exact-head PR verification record, not a claim that baseline evidence covers modified bytes. R5 retained-bucket budget changes are excluded by AK. No source/authority repinning, resource action, merge or actual intended-host/S3/O-2/O-5 acceptance is part of Q9.
+
+
+## User-data transport correction and fourth dispatch authority (2026-10-10)
+
+AK requested the user-data encoding fix, isolated installed-AWS-CLI wire
+verification and one additional AWS attempt. Explicit confirmation grants
+one extra attempt/USD5 (cumulative4/USD20), retaining the fixed1791631080000
+expiry, no automatic retry, unchanged per-host/worker/request/byte limits and
+no merge. The previous three dispatches and reservations remain consumed.
+
+The maintained transport supplies private binary fileb input rather than
+pre-base64 text. Acceptance is one wire decode equals the exact gzip payload,
+decoded<=16384 and encoded<=25600, and oversize fails before dispatch. The fourth
+controller requires two original prior-state files plus the unchanged cumulative
+third state and its bound same-token rejection/owned-cleanup attestation. Carry
+that cumulative total once plus watchdog/external reservations; never rewrite
+UNKNOWN, refund usage or infer new authority from cleanup. Missing or inconsistent
+inputs fail before state/watchdog creation. Source membership is the exact
+unique set in S09.json; historical counts above belong to their named revisions.
+See the operations manual for inputs and the failed third-dispatch evidence.
+Offline transport success is not intended-host readiness or S09/O-2/O-5 acceptance.

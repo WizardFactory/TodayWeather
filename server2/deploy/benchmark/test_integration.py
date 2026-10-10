@@ -77,6 +77,75 @@ class ManualProvenanceTests(unittest.TestCase):
         self.assertNotIn("'Rust1.99/macOS, public Python loopback peer'",source)
         self.assertIn('platform.system()',source)
 
+
+
+class ReconciledUsageTests(unittest.TestCase):
+    def test_reconciled_cli_requires_pair_and_debits_before_state(self):
+        import sys
+        from unittest.mock import patch
+        config=dict(op.FIXED,source_revision='a'*40,native_review_receipt_sha256='b'*64)
+        auth={k:config[k] for k in ('run_id','source_revision','native_review_receipt_sha256')}
+        auth.update(AWS_execution_authorized=True,expires_at_ms=op.EXPIRY)
+        base=['operator','--execute-reviewed-run','--state','/scratch/new','--authorization','/scratch/auth',
+            '--prior-state','/scratch/p1','--prior-state','/scratch/p2']
+        for extra in ([],['--reconciled-prior-state','/scratch/p3'],['--prior-reconciliation','/scratch/proof']):
+            with patch.object(sys,'argv',base+extra), patch.object(op,'validate_config',return_value=config), \
+                 patch.object(op,'bounded_json',side_effect=[config,auth]), patch.object(op,'carry_prior_usage',side_effect=AssertionError('prior accounting reached without required reconciliation')), patch.object(op.State,'create') as create:
+                with self.assertRaisesRegex(op.OperatorError,'paired reconciliation inputs'):
+                    op.main()
+                create.assert_not_called()
+        carried={'ledger':{},'operator_calls':453}
+        with patch.object(sys,'argv',base+['--reconciled-prior-state','/scratch/p3','--prior-reconciliation','/scratch/proof']), \
+             patch.object(op,'validate_config',return_value=config), patch.object(op,'bounded_json',side_effect=[config,auth]), \
+             patch.object(op,'carry_prior_usage',return_value={}), patch.object(op,'carry_reconciled_usage',return_value=carried) as carry, \
+             patch.object(op.State,'create',side_effect=op.OperatorError('stop before launch')) as create:
+            with self.assertRaisesRegex(op.OperatorError,'stop before launch'):op.main()
+            self.assertEqual(create.call_args.args[1]['operator_calls'],453)
+            carry.assert_called_once_with({},Path('/scratch/p3'),Path('/scratch/proof'))
+
+    def test_third_cumulative_attempt_is_carried_once_without_mutation(self):
+        import tempfile, json
+        with tempfile.TemporaryDirectory() as directory:
+            paths=[]
+            for index in range(2):
+                path=Path(directory)/str(index)
+                path.write_text(json.dumps({'run_id':op.FIXED['run_id'],
+                    'status':'cleaned_host_resources_S3_retained','worker_allocation_issued':False,
+                    'operator_calls':90,'watchdog_reserved_reads':50,
+                    'watchdog_reserved_download_bytes':50*131072,
+                    'ledger':{'reads':90,'writes':1,'download':90*131072,'store':0}}))
+                paths.append(path)
+            previous=op.carry_prior_usage(paths)
+            third=dict(previous,run_id=op.FIXED['run_id'],status='creation',worker_allocation_issued=False,
+                launch_attempted=True,client_token='s09-fixture',config_sha256='b'*64,
+                watchdog_reserved_reads=50,watchdog_reserved_download_bytes=50*131072)
+            third['ledger']=dict(reads=300,writes=3,download=303*131072,store=0)
+            third['operator_calls']=303
+            state=Path(directory)/'third';state.write_text(json.dumps(third))
+            receipt={'schema':1,'run_id':op.FIXED['run_id'],'state_sha256':op.digest(op.canonical(third)),
+                'config_sha256':third['config_sha256'],'client_token_sha256':op.digest(third['client_token'].encode()),
+                'cloudtrail_event_id':'93fea912-2f69-40e5-a387-96b0b8c9a602',
+                'launch_error':'Client.InvalidParameterValue: Encoded User data is limited to 25600 bytes',
+                'host_absent':True,'volumes_absent':True,'role_absent':True,'profile_absent':True,
+                'security_group_absent':True,'bucket_retained':True,'worker_dispatched':False,
+                'external_call_reservation':100,'evidence_sha256':['c'*64]}
+            proof=Path(directory)/'proof';proof.write_text(json.dumps(receipt))
+            original=state.read_bytes()
+            self.assertTrue(hasattr(op,'carry_reconciled_usage'),'reconciled cumulative carry missing')
+            result=op.carry_reconciled_usage(previous,state,proof)
+            self.assertEqual(result['ledger'],dict(reads=450,writes=103,download=453*131072,store=0))
+            self.assertEqual(result['operator_calls'],453)
+            self.assertEqual(result['prior_state_sha256'],previous['prior_state_sha256']+[op.digest(op.canonical(third))])
+            self.assertEqual(state.read_bytes(),original)
+            for field,value in [('worker_dispatched',True),('state_sha256','d'*64),('host_absent',False),('external_call_reservation',True)]:
+                bad=dict(receipt);bad[field]=value;proof.write_text(json.dumps(bad))
+                with self.assertRaises(op.OperatorError):op.carry_reconciled_usage(previous,state,proof)
+            proof.write_text(json.dumps(receipt))
+            for field,value in [('worker_allocation_issued',True),('prior_state_sha256',[]),('operator_calls',2),('recovery1',{})]:
+                bad=dict(third);bad[field]=value;state.write_text(json.dumps(bad))
+                rebound=dict(receipt,state_sha256=op.digest(op.canonical(bad)));proof.write_text(json.dumps(rebound))
+                with self.assertRaises(op.OperatorError):op.carry_reconciled_usage(previous,state,proof)
+
 class CarryPriorUsageTests(unittest.TestCase):
     def test_carries_two_cleaned_preworker_states_and_watchdog_reservations(self):
         import tempfile, json

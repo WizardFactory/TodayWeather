@@ -49,3 +49,24 @@ The focused correction moves all stock guard setup to final-stage runcmd, retain
 AK selected Required S09-Q9-R1 and Recommended R2/R3/R4 after the source/document review of `c44e9e1a`; R5 is excluded. Reconcile current intent/spec/plan/manual with the existing 51-path declaration, retained-bucket validation, bounded IAM/IMDS/SSM readiness and single final cleanup. Preserve previously verified guard evidence when its console line scrolls out without accepting failed, foreign, expired or invalid proof; preserve the original work failure alongside a separately recorded cleanup failure. Document Linux-only operational verification without a host fallback. The [current plan](../plans/issue-2694.md#q9-correction-current-path-declaration-and-selected-findings) declares exact paths before Q9 edits and records the missing historical d95 pre-edit evidence rather than inventing it.
 
 Q9 permits scoped edits, isolated regression/functional verification, document/PDF renewal, push and review of this existing PR. Existing resource grants, source/config arming, live measurements, S09/O-2/O-5 and S10/S13 gates remain unchanged; no AWS, launch, allocation, budget renewal, merge or deployment is authorized. Historical 33-path/no-test correction records do not describe the current declaration or test scope.
+
+
+## User-data transport correction and fourth dispatch authority (2026-10-10)
+
+AK requested the user-data encoding fix, isolated installed-AWS-CLI wire
+verification and one additional AWS attempt. Explicit confirmation grants
+one extra attempt/USD5 (cumulative4/USD20), retaining the fixed1791631080000
+expiry, no automatic retry, unchanged per-host/worker/request/byte limits and
+no merge. The previous three dispatches and reservations remain consumed.
+
+The maintained transport supplies private binary fileb input rather than
+pre-base64 text. Acceptance is one wire decode equals the exact gzip payload,
+decoded<=16384 and encoded<=25600, and oversize fails before dispatch. The fourth
+controller requires two original prior-state files plus the unchanged cumulative
+third state and its bound same-token rejection/owned-cleanup attestation. Carry
+that cumulative total once plus watchdog/external reservations; never rewrite
+UNKNOWN, refund usage or infer new authority from cleanup. Missing or inconsistent
+inputs fail before state/watchdog creation. Source membership is the exact
+unique set in S09.json; historical counts above belong to their named revisions.
+See the operations manual for inputs and the failed third-dispatch evidence.
+Offline transport success is not intended-host readiness or S09/O-2/O-5 acceptance.

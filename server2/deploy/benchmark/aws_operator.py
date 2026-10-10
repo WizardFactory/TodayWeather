@@ -504,14 +504,27 @@ class Operator:
             sleep(min(5, (limit-current)/1000))
         raise OperatorError("new profile role propagation not ready; zero launch attempts")
 
-    def launch_arguments(self, group, userdata):
-        """One source-bound argument builder, also used by the offline CLI oracle."""
-        c,s=self.config,self.state.data
-        if not re.fullmatch("sg-[a-f0-9]+",group) or not isinstance(userdata,bytes) or len(userdata)>16384:
+    @staticmethod
+    def validate_launch_payload(group, userdata):
+        # fileb:// makes the EC2 customization perform exactly one base64 encoding.
+        if (not isinstance(group, str) or not re.fullmatch("sg-[a-f0-9]+", group) or
+                not isinstance(userdata, bytes) or len(userdata) > 16384 or
+                4 * ((len(userdata) + 2) // 3) > 25600):
             raise OperatorError("launch payload boundary")
-        return ["--image-id", c["ami"], "--instance-type", "c6i.large", "--count", "1", "--client-token", s["client_token"], "--iam-instance-profile", "Name="+c["role"], "--instance-initiated-shutdown-behavior", "terminate", "--metadata-options", "HttpEndpoint=enabled,HttpTokens=required,HttpPutResponseHopLimit=1", "--network-interfaces", json.dumps([{"DeviceIndex":0,"SubnetId":c["subnet"],"AssociatePublicIpAddress":True,"Groups":[group],"DeleteOnTermination":True}]), "--block-device-mappings", json.dumps([{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":16,"VolumeType":"gp3","Iops":3000,"Throughput":125,"Encrypted":True,"DeleteOnTermination":True}}]), "--tag-specifications", self.tags("instance", "volume"), "--user-data", base64.b64encode(userdata).decode()]
+
+    @contextlib.contextmanager
+    def launch_arguments(self, group, userdata):
+        """Keep private raw bytes alive until the CLI has encoded them exactly once."""
+        c,s=self.config,self.state.data
+        self.validate_launch_payload(group, userdata)
+        with tempfile.NamedTemporaryFile(prefix="s09-user-data-", suffix=".gz") as payload:
+            payload.write(userdata)
+            payload.flush()
+            yield ["--image-id", c["ami"], "--instance-type", "c6i.large", "--count", "1", "--client-token", s["client_token"], "--iam-instance-profile", "Name="+c["role"], "--instance-initiated-shutdown-behavior", "terminate", "--metadata-options", "HttpEndpoint=enabled,HttpTokens=required,HttpPutResponseHopLimit=1", "--network-interfaces", json.dumps([{"DeviceIndex":0,"SubnetId":c["subnet"],"AssociatePublicIpAddress":True,"Groups":[group],"DeleteOnTermination":True}]), "--block-device-mappings", json.dumps([{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":16,"VolumeType":"gp3","Iops":3000,"Throughput":125,"Encrypted":True,"DeleteOnTermination":True}}]), "--tag-specifications", self.tags("instance", "volume"), "--user-data", "fileb://" + payload.name]
 
     def launch_once(self, group, userdata):
+        # Reject locally before any intent, budget charge or reconciliation call.
+        self.validate_launch_payload(group, userdata)
         s=self.state.data
         recovery=s.get("recovery1")
         if recovery is not None:
@@ -522,7 +535,8 @@ class Operator:
         s["current_launch_outcome"]="unknown"
         self.state.save()
         try:
-            instances=self.call("ec2","run-instances",self.launch_arguments(group,userdata))["Instances"]
+            with self.launch_arguments(group, userdata) as arguments:
+                instances=self.call("ec2","run-instances",arguments)["Instances"]
         except LocalCliParsingRejected:
             # This observed invocation did not dispatch. It cannot clear the
             # predecessor's historical uncertainty or authorize another launch.
@@ -1359,6 +1373,57 @@ def carry_prior_usage(paths):
     return {'ledger':total, 'operator_calls':calls, 'prior_state_sha256':pins}
 
 
+def carry_reconciled_usage(previous, state_path, receipt_path):
+    """Carry the third cumulative attempt once; preserve its original UNKNOWN.
+
+    Receipt is an operator attestation bound to immutable state and service/cleanup
+    evidence, not a substitute for fresh live absence or new campaign authority.
+    Reserve 100 extra calls/reads/writes and their maximum responses for external
+    reconciliation; this intentionally overcharges rather than refunds usage.
+    """
+    prior = bounded_json(state_path)
+    proof = bounded_json(receipt_path)
+    if (not isinstance(prior, dict) or prior.get('run_id') != FIXED['run_id'] or
+        prior.get('status') != 'creation' or prior.get('worker_allocation_issued') is not False or
+        prior.get('launch_attempted') is not True or 'recovery1' in prior or
+        prior.get('prior_state_sha256') != previous['prior_state_sha256'] or
+        not isinstance(prior.get('client_token'), str)):
+        raise OperatorError('reconciled prior state identity')
+    pin = digest(canonical(prior))
+    expected = {'schema':1, 'run_id':FIXED['run_id'], 'state_sha256':pin,
+        'config_sha256':prior.get('config_sha256'),
+        'client_token_sha256':digest(prior['client_token'].encode()),
+        'launch_error':'Client.InvalidParameterValue: Encoded User data is limited to 25600 bytes',
+        'host_absent':True, 'volumes_absent':True, 'role_absent':True,
+        'profile_absent':True, 'security_group_absent':True, 'bucket_retained':True,
+        'worker_dispatched':False, 'external_call_reservation':100}
+    if (not isinstance(proof, dict) or set(proof) != set(expected) | {'cloudtrail_event_id','evidence_sha256'} or
+        any(type(proof[k]) is not type(v) or proof[k] != v for k,v in expected.items()) or
+        not isinstance(proof['cloudtrail_event_id'],str) or
+        not re.fullmatch(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}',proof['cloudtrail_event_id']) or
+        not isinstance(proof['evidence_sha256'],list) or not 1 <= len(proof['evidence_sha256']) <= 16 or
+        any(not isinstance(v,str) or not re.fullmatch('[a-f0-9]{64}',v) for v in proof['evidence_sha256'])):
+        raise OperatorError('reconciled prior evidence identity')
+    usage = prior.get('ledger')
+    if (not isinstance(usage,dict) or set(usage) != set(previous['ledger']) or
+        any(type(v) is not int or v < previous['ledger'][k] for k,v in usage.items()) or
+        type(prior.get('operator_calls')) is not int or prior['operator_calls'] < previous['operator_calls'] or
+        type(prior.get('watchdog_reserved_reads')) is not int or prior['watchdog_reserved_reads'] != 50 or
+        type(prior.get('watchdog_reserved_download_bytes')) is not int or prior['watchdog_reserved_download_bytes'] != 50*131072):
+        raise OperatorError('reconciled prior usage regressed')
+    total = dict(usage)
+    total['reads'] += 150
+    total['writes'] += 100
+    total['download'] += 150*131072
+    calls = prior['operator_calls'] + 150
+    caps = {'reads':9950, 'writes':2000, 'download':512*MiB-50*131072, 'store':MiB}
+    if calls >= 3500 or any(total[k] >= caps[k] for k in total):
+        raise OperatorError('prior usage exhausted')
+    return {'ledger':total, 'operator_calls':calls,
+        'prior_state_sha256':previous['prior_state_sha256']+[pin],
+        'prior_reconciliation_sha256':digest(canonical(proof))}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=HERE / "aws-run.json")
@@ -1371,6 +1436,8 @@ def main():
     parser.add_argument("--state", type=Path)
     parser.add_argument("--prior-state", type=Path, action="append", default=[], help="Debit both original cleaned pre-worker attempts without changing them")
     parser.add_argument("--authorization", type=Path)
+    parser.add_argument("--reconciled-prior-state", type=Path, help="Immutable third cumulative pre-worker state")
+    parser.add_argument("--prior-reconciliation", type=Path, help="Bound definitive rejection and owned cleanup evidence")
     args = parser.parse_args()
     config = validate_config(bounded_json(args.config), armed=args.execute_reviewed_run or args.resume_failed_creation or args.cleanup_only or args.watchdog, cleanup_only=args.cleanup_only or args.watchdog)
     if not args.execute_reviewed_run and not args.resume_failed_creation and not args.cleanup_only and not args.watchdog:
@@ -1395,7 +1462,11 @@ def main():
         raise OperatorError("prior accounting requires explicit new attempt")
     if args.execute_reviewed_run and len(args.prior_state) != 2:
         raise OperatorError("two prior states required for final attempt")
+    if (args.execute_reviewed_run and not (args.reconciled_prior_state and args.prior_reconciliation)) or bool(args.reconciled_prior_state) != bool(args.prior_reconciliation) or (args.reconciled_prior_state and not args.execute_reviewed_run):
+        raise OperatorError("paired reconciliation inputs require new attempt")
     carried = carry_prior_usage(args.prior_state) if args.prior_state else {}
+    if args.reconciled_prior_state:
+        carried = carry_reconciled_usage(carried, args.reconciled_prior_state, args.prior_reconciliation)
     current = now_ms()
     if args.resume_failed_creation:
         if args.original_config is None or args.recovery_authority is None: raise OperatorError("original configuration and recovery authority required")

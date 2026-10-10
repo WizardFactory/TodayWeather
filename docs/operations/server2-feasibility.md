@@ -6,7 +6,42 @@ Latest status: the maintained successor integrates offline startup/lifecycle cor
 
 This tool exercises the actual Rust raw store, catalog, resolver and funded-acquisition libraries against fresh volatile HTTP peers. It measures synthetic origin work, not a deployed weather route. The local runner calls no real AWS/providers. A separately armed approved driver can use one dedicated same-region test bucket after eligible review. The approved recovery attempted host creation once but stopped on the console-output boundary before any worker allocation or measurement. Root subsequently verified owned cleanup. This proves no API parity, CloudFront latency, measurement-path IAM/TLS or intended-host musl feasibility. S09 remains open: same-region intended-host measurements and O-2/O-5 decisions still block S10/S13.
 
-## Maintained startup successor (2026-10-10)
+## User-data correction and separately approved fourth attempt (2026-10-10)
+
+The third dispatch was rejected by EC2 at 09:33:07Z with
+`Client.InvalidParameterValue: Encoded User data is limited to 25600 bytes`.
+Its same-client-token CloudTrail event is `93fea912-2f69-40e5-a387-96b0b8c9a602`.
+No host or worker was created; exact owned temporary IAM/profile/security-group
+cleanup and empty instance/volume inventories were read back. The retained S3
+bucket had no versions. The controller's original unresolved state is preserved;
+service rejection and subsequent cleanup are separate evidence, not rewritten
+controller success.
+
+AK separately approved **one additional attempt, at most USD5**, for cumulative
+limits of **4 attempts/USD20**, with the unchanged **11:18:00Z** cutoff. This is
+not a refund of the third dispatch or a reset of prior request/byte reservations.
+No automatic retry, replacement worker, production mutation or merge is allowed.
+
+For this fourth attempt the operator requires both original `--prior-state PATH`
+inputs plus `--reconciled-prior-state PATH` (the immutable third cumulative state)
+and `--prior-reconciliation PATH` (the state/token/config-bound service rejection
+and owned-cleanup attestation with evidence hashes). It checks that the third
+state already includes the first two, then carries that total **once**, adds its
+full 50-call watchdog reservation and conservatively reserves 100 external
+reconciliation calls, reads, writes and bounded responses. Missing/mismatched
+proof, claimed worker, regressed/exhausted accounting or recovery state fails
+before creating new state. Original UNKNOWN and all input bytes remain unchanged.
+The receipt does not replace fresh AWS absence checks or campaign authorization.
+
+The gzip payload is supplied to AWS CLI as a private binary `fileb://` input,
+not as an already base64-encoded argument. The EC2 CLI customization performs the
+one required encoding. Both decoded (16,384 bytes) and encoded (25,600 bytes)
+limits must hold before dispatch. Installed-CLI verification uses an isolated
+loopback EC2 stub with no credentials or external network; one base64 decode of
+its captured wire value must equal the exact gzip bytes. This proves transport,
+not cloud-init execution, IAM readiness or completed AWS measurement.
+
+## Maintained startup successor (2026-10-10; historical three-attempt authority)
 
 AK explicitly renewed the remaining single PR-branch attempt to fixed expiry
 **2026-10-10T11:18:00Z (1791631080000)**. The preceding 09:18:00Z /
