@@ -3,6 +3,7 @@ members = ["."]
 resolver = "3"
 
 [package]
+autobenches = false
 name = "server2"
 version = "0.1.0"
 edition = "2024"
@@ -28,3 +29,7 @@ time = { version = "0.3", features = ["formatting", "macros"] }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
+
+[[bin]]
+name = "server2-feasibility"
+path = "benches/feasibility.rs"

@@ -1,0 +1,172 @@
+{
+  "task": "S09",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2694",
+  "server2_paths": [
+    "server2/benches/feasibility.rs",
+    "server2/tools/benchmark/model.rs",
+    "server2/tools/benchmark/run.py",
+    "server2/tools/benchmark/local_peer.py",
+    "server2/tests/performance.rs",
+    "server2/tests/performance/report.rs",
+    "server2/tests/performance/wire.rs",
+    "server2/config/benchmarks/local.json",
+    "server2/config/tasks/S09.json",
+    "server2/Cargo.toml",
+    "server2/tools/render_feasibility_manual.py",
+    "server2/tools/benchmark/aws.rs",
+    "server2/config/benchmarks/aws.json",
+    "server2/tests/performance/aws.rs",
+    "server2/deploy/benchmark/aws_operator.py",
+    "server2/deploy/benchmark/aws-run.json",
+    "server2/deploy/benchmark/cloud-init.yml",
+    "server2/deploy/benchmark/instance-policy.json",
+    "server2/deploy/benchmark/bucket-policy.json",
+    "server2/deploy/benchmark/test_aws_operator.py",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py",
+    "server2/deploy/benchmark/ssm_startup_recovery.py",
+    "server2/deploy/benchmark/bootstrap_diagnostics.py",
+    "server2/deploy/benchmark/bootstrap_functional.py",
+    "server2/deploy/benchmark/test_bootstrap_diagnostics.py",
+    "server2/deploy/benchmark/test_bootstrap_apt.py",
+    "server2/deploy/benchmark/run_isolated.py",
+    "server2/deploy/benchmark/isolated_tests.py",
+    "server2/deploy/benchmark/test_sandbox.py",
+    "server2/deploy/benchmark/test_integration.py",
+    "server2/deploy/benchmark/test_ssm_startup_recovery.py",
+    "server2/deploy/benchmark/test_imds_propagation.py",
+    "server2/deploy/benchmark/test_imds_safety.py",
+    "server2/deploy/benchmark/test_lifecycle.py",
+    "server2/deploy/benchmark/test_online_window.py",
+    "server2/deploy/benchmark/test_user_data_wire.py",
+    "server2/deploy/benchmark/run_user_data_wire.py",
+    "server2/deploy/benchmark/test_online_fences.py",
+    "server2/deploy/benchmark/imds_functional.py",
+    "server2/deploy/benchmark/online_functional.py",
+    "server2/tools/ci.py",
+    "server2/tools/prepare-ci.sh",
+    "server2/tools/ci.sh",
+    "server2/config/ci/bwrap-userns-restrict",
+    "server2/config/ci/LICENSE.apparmor"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2694.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "specs/issue-2694.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "plans/issue-2694.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/operations/server2-feasibility.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/operations/server2-feasibility.pdf",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-feasibility/usage.png",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-feasibility/manifest.json",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-feasibility.workflow.json",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-feasibility.html",
+      "category": "documentation",
+      "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695",
+  "runtime_host_reads": [
+    {
+      "source": "server2/tools/benchmark/aws.rs",
+      "operation": "Path::new",
+      "path": "/opt/server2-s09",
+      "category": "private-owned-manifest",
+      "reason": "Validate root ownership and private permissions of the dedicated run root"
+    },
+    {
+      "source": "server2/tools/benchmark/aws.rs",
+      "operation": "Path::new",
+      "path": "/opt/server2-s09/run",
+      "category": "private-owned-manifest",
+      "reason": "Validate root ownership and private permissions of the fixed manifest parent"
+    },
+    {
+      "source": "server2/tools/benchmark/aws.rs",
+      "operation": "read_to_string",
+      "path": "/proc/self/status",
+      "category": "read-only-system",
+      "reason": "Read only this benchmark process peak RSS; no serving data"
+    },
+    {
+      "source": "server2/tools/benchmark/aws.rs",
+      "operation": "read_to_string",
+      "path": "/proc/self/stat",
+      "category": "read-only-system",
+      "reason": "Read only this benchmark process CPU ticks; no serving data"
+    }
+  ],
+  "manual_review_host_io_inventory": {
+    "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6055549129",
+    "machine_waiver_changed": false,
+    "review_requirement": "Nonliteral/computed/aliased host I/O is manually reviewed; these records do not authorize checker bypass or arbitrary filesystem access.",
+    "roles": [
+      {
+        "source": "server2/tools/benchmark/aws.rs",
+        "operation": "private_manifest: symlink_metadata/File::open/bounded read",
+        "scope": "approved /opt/server2-s09/run/{run_id}/manifest.json; private ancestry/ownership validated; local seam uses owned test temp only"
+      },
+      {
+        "source": "server2/tools/benchmark/aws.rs",
+        "operation": "claim: OpenOptions::create_new/write_all/sync_all",
+        "scope": "worker.claim adjacent to validated private run manifest, exclusive one-use allocation; local seam owned temp"
+      },
+      {
+        "source": "server2/tools/benchmark/aws.rs",
+        "operation": "source_check/hash_file: File::open/bounded read",
+        "scope": "exact task-declared source paths and Cargo.lock beneath compile-time CARGO_MANIFEST_DIR checkout"
+      },
+      {
+        "source": "server2/tools/benchmark/aws.rs",
+        "operation": "current_exe/hash_file",
+        "scope": "bounded hash of this running benchmark binary"
+      },
+      {
+        "source": "server2/tools/benchmark/aws.rs; server2/tools/benchmark/run.py; server2/deploy/benchmark/aws_operator.py",
+        "operation": "caller config and result/error/state reads/writes",
+        "scope": "bounded configuration and exclusively created private run/result/error/state files; local outputs under caller-owned ignored reports"
+      }
+    ]
+  }
+}

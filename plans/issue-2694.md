@@ -1,0 +1,283 @@
+# S09 implementation plan
+
+## Current local-first contract (2026-10-11)
+
+AK fixed Rust adoption and requested maximum local verification with minimal EC2
+work; [issue #2694](https://github.com/WizardFactory/TodayWeather/issues/2694)
+is the governing scope. Rust go/fallback/time-box reconsideration is removed.
+S09 completes on the scoped local/Linux-CI checks and resolution of Required PR
+findings. S09 live measurements no longer block S10/S13 implementation. Other
+S01 decisions, S02 route goldens, placement, API parity and cutover gates remain.
+
+Build the intended Linux x86_64 musl release artifact in isolated Linux CI and
+run its startup smoke and synthetic loopback matrix there. The portable local
+runner also works with a native release artifact. Cover cold, warm and simulated
+provider Data/NoData/denied/error outcomes at 8/16/32/64 offered clients without
+raising the existing owner/I/O/CPU or fixture limits. Retain overload and timeout
+outcomes, sample limitations, whole-process RSS/CPU, foreground throughput and
+operation/version-byte cost inputs. Local timings and byte counts do not establish
+AWS latency, physical S3 storage or invoiced cost. Unit prices remain explicitly
+unset until a dated price assumption is supplied; no dollar estimate is inferred.
+
+Before production, use a separately authorized minimal EC2 smoke: transfer the
+prebuilt artifact, verify startup/health/runtime resources/TLS/credentials, then
+a tiny isolated same-region S3 GET/HEAD/PUT/LIST and exact readback. No on-host
+build, full concurrency sweep or provider traffic is required by S09. Actual API
+performance/cost acceptance belongs to pre-cutover work. Raw packs remain disabled
+until actual route measurements demonstrate a need against an agreed target.
+Existing AWS campaign tools/grants and their failure/cleanup records are retained
+as historical evidence. They are not the minimal smoke procedure or renewed
+execution authority. No AWS execution, retry, budget renewal, merge or deployment
+is authorized by this amendment.
+
+## Local-first amendment: exact paths and scenarios
+
+Declared before dependent edits. Use existing S09.json placement membership; no
+new runtime dependency, shared workflow or live executor is introduced.
+
+Server2 changes: `server2/benches/feasibility.rs`,
+`server2/tools/benchmark/run.py`, `server2/tools/benchmark/aws.rs`,
+`server2/config/benchmarks/local.json`, `server2/tests/performance/report.rs`,
+`server2/tests/performance/wire.rs`, `server2/tools/ci.py`,
+`server2/tools/prepare-ci.sh`, `server2/tools/render_feasibility_manual.py`.
+
+Outside exceptions: `intent/issue-2694.md`, `specs/issue-2694.md`,
+`plans/issue-2694.md` for governing scope/scenarios; `docs/architecture/server2.md`
+and `plans/issue-2614.md` for downstream gates; `docs/operations/server2-feasibility.md`
+and `docs/operations/server2-feasibility.pdf` for the runbook;
+`docs/evidence/tasks/server2-feasibility/usage.png` and
+`docs/evidence/tasks/server2-feasibility/manifest.json` for actual CLI evidence;
+`docs/architecture/diagrams/server2-feasibility.workflow.json` and
+`docs/architecture/diagrams/server2-feasibility.html` for the generated workflow.
+All implementation stays under server2. No legacy import/read/symlink is added.
+
+1. Capture regression Red for revised decision fields and matrix coverage.
+2. Update report/runner/config and existing Linux CI musl build/startup/matrix.
+3. Run targeted/workspace regressions, release build and distinct loopback CLI smoke.
+4. Renew manual/PDF/capture, architecture/parent plan and generated workflow.
+5. Review exact changed paths/dependencies, stage/artifact/outgoing checks, push
+   the existing PR, inspect current CI and obtain independent review. Stop before merge.
+
+| Scenario | Prerequisites and actions | Expected / failure behavior | Evidence |
+| --- | --- | --- | --- |
+| Maintainer verifies locally | Native release binary; run default loopback CLI | Six modes at each 8/16/32/64; failures retained; remote endpoints rejected | Performance regressions + release CLI |
+| Linux artifact validation | Existing isolated Ubuntu CI; build musl target, run health smoke and loopback CLI | Intended ELF actually executes; missing tool/build/startup fails CI | Server2 foundation job |
+| Implementer reads readiness | Read report and governing docs after local checks | Rust adopted; live measurements do not block S10/S13; parity/cutover remain separate | Report fence regressions + document checks |
+| Operator validates EC2 | Separate authority and prebuilt artifact | Minimal startup/S3 readback only; failure recorded without automatic relaunch | Pending preproduction smoke, not claimed run |
+
+## Historical contracts and execution records
+
+The remaining sections preserve revision-bound prior scopes, counters, failures and
+authorizations. Their former Rust/live-measurement blockers and continuation limits
+are superseded by the current contract above. AK explicitly restarted this
+local-first amendment at zero; original accounting is archived unchanged.
+
+The current contract is the Q9 correction section below. Earlier numbered rounds are historical and do not describe the current declaration or verification scope.
+
+Use root-owned named execution plan; own stable task issue-2694-s09 records and preserve its counters. Exact paths were declared before edits. Local tooling alone does not close S09. The separately armed live driver and six-path operator lane follow the [temporary resource approval](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052596161) and [31-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6053018487).
+
+1. Validate schema/workload size, literal loopback targets and immutable report provenance. Implement nearest-rank all-outcome quantiles without filtering failed samples.
+2. Build bounded fresh local peer instrumentation and CLI workload generator using existing public library APIs. Fresh resolver per trial; distinct response keys; seed/warmup/foreground/maintenance metrics separate. Preserve default production bounds.
+3. Implement benchmark-only real local funded acquisition seam. Only Data receives complete S06 publication; NoData, denial and terminal failure cannot archive weather bodies.
+4. Exercise valid revisions, eight-day/16-scope synthetic batches, sibling/orphan recovery and pressure. Capture regression Red before minimal behavior, Green and post-refactor, then distinct release HTTP smoke.
+5. Run required format/clippy/workspace/release/placement/artifact checks. Produce inspected editable/PDF operator manual and actual usage screenshot/manifest.
+6. Preserve the tested local checkpoint; integrate the live extension below, obtain root source-pinned architecture/diagram handoff, verify document-only changes, commit/PUSH and public exact candidate map. Request eligible real independent QA before resource creation; preserve all findings/iterations. End pre-merge, with actual host/decision gates incomplete until the approved run and AK decisions are recorded.
+
+Scenario S1: operator supplies invalid remote target or excessive workload → fail before wire I/O.
+Scenario S2: operator measures cold versus idle warm with distinct clients → all outcomes and actual counts retained; warm unavailable when prerequisite read fails.
+Scenario S3: operator compares latest/targeted/full-history and multi-resolution history8 → valid group identities/coverage preserved, bounded failures explicit.
+Scenario S4: operator exercises funded misses → Data becomes durable complete group, NoData/error/denied have zero weather archive PUTs.
+Scenario S5: reviewer reproduces statistics/report/runtime boundary and separate release smoke → local evidence cannot masquerade as host/cutover go.
+
+Measurement clarification: unavailable warm samples have null duration; measured/all-attempt and success-subset insufficiency are separate. View parse/assembly elapsed is not process CPU. Bounded client adapter sampling and peer service sampling explicitly mark truncation. Local aggregate 2048-group/128-trial limits reject history8 at clients16/32/64; these combinations are not claimed measured. Cargo autobenches=false keeps the single intended bin from implicit duplicate bench discovery.
+
+
+## Same-task approved live extension
+
+Upstream renewal uses intent2/investigation2/spec3/design3/plan3/test-design3/build3; no counter reset. Root validated the proposed live workflow with four automated gates and four inspected captures. Final diagram must cite a later committed source revision; initial approval/design is not runtime or AWS proof. The existing local history8 sixteen-scope batch14.054289 s remains a feasibility risk.
+
+1. Wire the inert aws.json and separate live CLI arming, exact private source/config/instance manifest, one-use non-resumable worker claim and controller-granted budget. Keep local run.py and production libraries unchanged. Add every31 path to the S09 declaration without blanket prefixes.
+2. Implement the benchmark-only aggregate ticket ledger and wrapper around all three existing S3 traits. Admit attempts/download/store before delegation; retain unknown/cancelled errors and body+16 KiB version charge forever. Worker390k/18k/26 GiB/63 MiB and controller10k/2k/3+1 GiB/1 MiB stay disjoint. Metadata512 MiB maximum is a subgrant of controller1 GiB, not new capacity. Fixed IMDSv2 client privately verifies identity and refreshes coherent credentials; no secrets in diagnostics.
+3. Implement reusable prepublished valid fixtures and conservative per-sweep/version estimates. Separate hot-key shared-owner from distinct response-key independent work against shared physical data; do not seed240 x64 raw histories. Protocol/repair/warm/provider-miss phases have explicit counters. A failed complete scope is never a provider miss. Warm follows verified cold and maintenance idle; NoData/denied/terminal error archive fences remain.
+4. S03 implements only its six deploy/benchmark files after owner build3 starts: fake-cli-tested operator, pinned inert resource config, timer/meter-first bootstrap and fixed bucket/role policies. Reconcile its private execution manifest/result with the Rust driver. No AWS execution during implementation/CI. A failed/unknown create is reconciled, never a second host or new allocation; cleanup retains S3.
+5. Intended Red -> minimal Green -> post-refactor passing tests -> separate actual release HTTP functional smoke, including zero-dispatch over-budget, uncertain-write charge, coherent refresh and reused cold/warm scenarios. Renew default-parallel/workspace/fullCI/placement/artifact, manual/PDF/actual capture and root final source-pinned documents. Commit a clean source checkpoint first; root diagram follows in a documentation commit.
+6. Publish reviewed tooling PR before resources. After actual native QA and source/config/operator checks, root coordinates only the explicitly approved new host/S3 run. Verify actual stock meter/SSM/musl/TLS/IAM/404/403/CAS first; stop without measured load if any prerequisite is unsupported. Record counters/status/uncertainty and preserve underpowered results. Desired300 cold/1,000 warm/100 local-provider misses per offered8/16/32/64 are budget-conditional targets, not promised coverage.
+7. Final intended-host/same-region report and eligible review precede AK O-2/O-5 dispositions. Missing measurement/headroom/decisions keeps S09 open and S10/S13 blocked. No PR merge, route parity or production cutover is inferred.
+
+Scenario S6 (TOOL1/TOOL2/TOOL4): authorized operator loads inert/wrong-source/expired manifest -> validation fails before metadata/S3; valid once-only manifest -> private role identity and every dispatch reservation verified; interruption -> cleanup-only, no reallocation.
+Scenario S7 (TOOL1/TOOL2): operator has exact remaining request/download/version allowance -> exact limit admitted, plus-one or concurrent excess denied before wire; uncertain PUT retains body+16 KiB and unknown download charge; resulting counts do not masquerade as precise billed/physical bytes.
+Scenario S8 (TOOL1/TOOL2): operator compares hot-key and distinct-key offered loads on published fixtures -> source/identity/counts and real owner peaks differ honestly; cold RAM-zero setup and scoped history correctness hold; exhausted matrix is visibly INSUFFICIENT, not fabricated PASS.
+Scenario S9 (TOOL3): operator uses recorded loopback synthetic provider with real owned-bucket funding -> Data is durable complete group; NoData/funding denial/error archivezero, no actual provider or permission inferred from cold errors.
+Scenario S10 (TOOL4/original S09 gate): reviewer validates tooling first; operator attempts approved dedicated-host run -> guard/protocol failures stop load and preserve receipts; successful measured report still requires headroom and AK Rust/lifecycle decisions before issue completion.
+
+## Reconciled final tooling checkpoint
+
+Same-task spec4/design4/plan4/test-design4/build4 preserve all historical iterations and actual Red/Green/setup failures. Design4 explicitly reuses the unchanged proposed design3; root supplies the final committed-source workflow after the clean source checkpoint.
+
+The accepted read phase split is protocol 5k, cold 280k, repair 60k, warm 10k, funding 10k and failure 25k. The aggregate remains 390k. Warm live cases reuse one resolver across waves, with one complete prewarm and maintenance-idle prerequisite. Cold cases remain fresh per trial. Verify zero S3/provider delta on a second warm wave and canonical all-version forecast equality against actual wire charges, including a mutation that omits intermediate catalog bodies. Exact read-size success and plus-one refusal retain incomplete accounting.
+
+Client target_samples and independent cold trials are separate denominators. Current bounded template does not establish 300 independent cold trials per offered level. Shared network pools after protocol/seeding, synthetic library assembly and process-wide CPU/RSS remain explicit limits. S09 stays open regardless of local tooling status.
+
+Final checkpoint verification uses the default parallel Rust suite/full CI, operator offline tests, the distinct release local runner and controller-to-compiled-worker loopback handshake. It preserves initial handshake/export/setup failures and requires source/config/binary hashes to match the actual final bytes. Metadata unknown completion fails both worker overall compliance and controller live acceptance. No actual AWS or host proof is inferred.
+
+
+## Explicit host-read gate repair
+
+The historical root pre-edit declaration6054300695 added only the two server2 placement checker files, total33 at that revision; the current51-path contract is recorded in the Q9 section. Intent3/investigation3/spec5/design5/plan5/test-design5/build5 retain original counters. Design reuse is justified because this changes static verification/source-map shape, not the production request flow. First record positive approved-role fixtures failing on the original checker; negative operation/source/path/encoded/compiler and malformed-policy fixtures remain meaningful. Implement independently fixed exact roles, strict declaration validation and canonical policy loading on every whole-tree audit. Preserve all previous33 fixtures. Update worker/operator source-map cardinality only, then renew required full CI and final compiled-worker handshake. No hidden paths, filesystem-prefix exemption or actual AWS execution.
+
+
+## Actual QA1 correction plan
+
+Preserve actual review1 CHANGES_REQUIRED and stable S09-R1..R7. R1 worker preserves bounded partial/completed reports and ledgers after valid claim, stops new dispatch and exits2 with JSON stdout; operator exports/persists report and bounded diagnostics as noncompliant before status/identity/compliance rejection and cleanup. R2 public clarification6055549129 separates computed-host manual inventory from literal4 machine exceptions; no waiver broadening. R3 known metadata rejection versus incomplete transport is tested over loopback. R4 actual allinternet443, R5 static known-cost estimate/operatorUSD5decision limitations and R6 stricter backstop margins are documented. R7 operator stock-agent minimum fails before RunCommand without new policy/service.
+
+Consume proposed rootdesign7 then testdesign7/build7. Actual completed cold case plus late provider rawPUT/HEAD response loss must produce ABORTED evidence and stop subsequentcase; old implementation must fail. Metadata401/404 must be failed_known/confirmed, transport loss stays unknown. Additional compiledcontroller/release worker functional validates export/persistfalse/cleanup, distinct from units. Root4 and infra6 have exclusive writers; mainfullCI serialized after infrareturn. Manual/PDF/capture and sourcepin renew on finalcode; finalrereview resolves mandatory IDs. Original actualhost/O2/O5 and API gates remain outstanding; no new resource/cap/deadline/sourcepath/merge authority.
+
+## QA2 execution correction (R8/R9)
+
+Before any next-case estimate, profile seeding or resolver construction, stop if the prior owned work left unresolved S3 uncertainty. Retain A's measured/partial outcomes and charges; forbid B's fixture requests. Do not block bounded reconciliation inside A's current operation. The real two-cold-profile final-trial response-loss regression must fail before the fix and pass afterward, including unchanged requests/PUT charges at the fault boundary.
+
+The approved60minute benchmark ceiling is conservatively implemented as at most59minutes30seconds. Reserve15minutes before the earlier host/approval fence; permit up to30seconds of command-completion grace within this reserve, leaving at least14minutes30seconds for bounded best-effort export/cleanup. Require at least5minutes of worker time before manifest arming and again before dispatch. Existing SSM command cap3600seconds and all resource/byte/request/version grants stay unchanged. This is no availability or invoice guarantee.
+
+The original actual-host/O2/O5 gates remain unmet. R10 is unselected: failed-run cleanup is conservative; post-abort guard/version inventory may be unavailable, with no new tracking. Final source checkpoint29 precedes root source-pin update4 and docs-only build10; preserve every priorcounter and actualQA1/QA2 output.
+
+## Cleanup-only correction, total ordinal 11
+
+Use the explicit total-15 user exception on the original stable S09 task. Preserve all original failures, state/counters, configuration, ledger, deadline and reviewed head as historical evidence. The installed helper does not accept begin11; do not modify it or forge structural validation. The exception journal records each additional ordinal, historical maximum five, with authority and manual gates. The latest AK amendment supersedes that allowance: continue current ordinal11 only, and stop/RCA immediately on any actual final-verification, commit, push or QA failure; no automatic retry, further fix or ordinal12. Preserve earlier setup failures and distinguish intended Red.
+
+Scenario CE1: a local parser rejects an unknown flag before a request; expect a typed sanitized error, never a false 403 from an argument or private stderr disclosure. Incorrect code/marker combinations stay unknown. Scenario CE3: original launch lookup returns zero/multiple/unknown; expect cleanup to stop before deletion and retain original resources/charges. Scenario CE4: an owned host is verified and termination is acknowledged; expect requested only, not absence. Empty attempted launch records unresolved; no launch records no_launch_recorded. All scenarios use isolated fake CLI subprocesses with synthetic identities; no real AWS/profile/IMDS or private live state.
+
+Meaningful new Red precedes the minimal operator correction. Green retains all existing operator tests and cleanup fences. Separate maintained --cleanup-functional-smoke executes real fake CLI subprocesses across watchdog and cleanup, with no creation, ancillary deletion, allocation renewal or measurement. Verify only affected Python code, placement/artifact gates and editable/PDF documentation; reuse unchanged Rust/provider/worker checks explicitly. Root supplies any shared-diagram delta and performs actual independent native QA on the frozen public candidate. Until the original outcome is reconciled, report reviewed correction separately from blocked live cleanup; no final cleanup success or issue closure.
+
+
+## Correction13 original-run recovery scenarios
+
+Preserve ordinals11/12, source-bound QA history, discarded-stderr uncertainty and all ledger reservations. Use the [public existing-path declaration](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6060200508) before edits. Root exclusively updates shared4 docs/diagram against a committed source checkpoint.
+
+Scenario R12: operator generates complete launch args; installed CLI offline skeleton accepts --count 1 and rejects obsolete flags/malformed nested input. No actual account/profile/IMDS/API is used. Scenario R13-A: root supplies exact original/new pins and authority; exclusive predecessor/claim preserves token/nonce/counters, second watchdog reduces remaining grant, and one verified zero inventory permits one launch. Replay, wrong pins/ownership, prior worker claim and insufficient budget fail before dispatch. Scenario R13-B: current unique owned host goes directly to cleanup, not measurement; unknown/multiple/disagreeing/foreign rows never launch. Scenario R13-C: local252/mismatch/prelaunch failure plus explicit current-absence authority permits verified owned cleanup without clearing historical UNKNOWN; newly uncertain sent retry and unknown/nonempty inventories keep cleanup blocked.
+
+Test-first actual full-argv CLI Red is retained separately from an initial synthetic renderer setup error. Green includes existing operator tests, new authority/replay/ledger/inventory regressions, three-case native offline oracle and distinct actual subprocess/loopback recovery and failed-recovery cleanup smoke. Regenerate/inspect the editable/PDF manual and preserve actual local release capture as historical workload evidence. Placement/artifact and exact-head CI are required; reuse unchanged Rust/worker/budget checks with byte evidence. Freeze owned source before root shared-source pin, then publish exact33 map and request genuine native QA5. No child live actions or source changes to avoid unknown remote outcomes.
+
+## Same-task correction14 (console response boundary)
+
+Preserve original helper hard10/state/counters and the explicit manual exception history. Before source edits, declare exact existing paths in comment6061509553. Scenario: operator receives CLI-decoded Linux boot text; preserve the exact text, enforce schema/65,536 UTF-8 byte bound and require the original guard proof before egress/SSM. Expected failure paths: malformed response, invalid Unicode or limit+1 stops before guard opening; absent/empty Output keeps readiness polling; valid text reaches the existing stock-SSM version gate; duplicate/foreign/failed proofs reject.
+
+Actual intended Red: change the existing run_host agent-gate fixture to native CLI plain text; old doubledecode stops before SSM, so the expected action sequence fails. Green: remove only the redundant decode via a strict bounded helper and renew affected Python regressions. Separate functional check: installed aws-cli2.36.31 + temporary dummy profile + disabled IMDS + literal127.0.0.1 EC2 XML base64 response, proving real CLI response transformation and guard rejection. No live AWS/provider/resource action.
+
+Reuse unchanged Rust/worker/dependencies and earlier local workload screenshot by byte identity; render and inspect updated manual/PDF/manifest, run placement/staged/outgoing checks, commit/push, bind exact33 committed map and request actual QA6. Root architecture/parent-plan observations are included only after root verification; the unchanged diagram remains explicitly pinned to f8c7a1d8 and records no live proof. Unexpected verification failure is reported before more fixes. No broad unchanged Rust suite repetition or new measurement is selected.
+
+## 2026-10-09 focused PR correction after actual AWS execution
+
+One separately authorized host attempt failed before guard readiness and measurement. At 13:06:08Z, AWS readback confirmed host termination, owned root/SG/IAM/profile removal and zero retained S3 versions. Egress stayed closed; no SSM/bootstrap/worker/provider work ran. The live console exposed both a multibyte console bound mismatch and a bootcmd timer/sysinit ordering cycle inferred from logs plus upstream unit definitions.
+
+The focused correction moves all stock guard setup to final-stage runcmd, retains closed egress/watchdog/expiry, accepts complete CLI text within 65,536 characters and 131,072 UTF-8 bytes, and removes the host workspace test invocation per AK. The [operations manual](../docs/operations/server2-feasibility.md#2026-10-09-actual-execution-and-focused-correction) records direct evidence, cleanup and limitations. The eight unfinished preparation15 files are preserved separately, not shipped. No further AWS launch, merge or budget reset is part of this correction. QA6 remains historical; new live readiness and independent review are not claimed. Tests were not added or run for that historical focused correction under AK's instruction; this does not restrict the later explicitly selected Q9 regression tests. S09/O-2/O-5 and downstream S10/S13 remain pending.
+
+## Correction17: explicit external-review update
+
+AK requested assessment, necessary fixes and push for review5471241898. Selected all three required findings plus warm-population reporting and explicit stricter console-envelope documentation. Existing test assertions may be corrected as review fixes; no new tests or test execution. Verify through source/syntax, actual release build and the maintained local benchmark CLI, refreshed manual/diagram, placement/artifact checks, remote CI observation and independent source/document review. Preserve previous failed attempts and excluded prep15 files. Actual AWS measurement, O-2/O-5, S10/S13, launch and merge authority remain unchanged.
+
+
+## Q9 correction: current path declaration and selected findings
+
+AK authorized Required S09-Q9-R1 and Recommended R2/R3/R4 after the Claude review of `c44e9e1a`. R5 is excluded from this correction. This section is recorded before its dependent edits; the full existing declaration remains 40 server2 paths plus 11 documentation paths (51 total), with no new paths or broad exceptions.
+
+Intended implementation/test changes: `server2/deploy/benchmark/aws_operator.py`, `test_online_window.py`, `test_lifecycle.py`, `online_functional.py`, and `server2/tools/render_feasibility_manual.py`. Exact outside changes: `intent/issue-2694.md`, `specs/issue-2694.md`, this plan (current contracts and declaration evidence), `docs/operations/server2-feasibility.md`, its PDF and `docs/evidence/tasks/server2-feasibility/manifest.json` (procedure/PDF parity with the existing dated workload screenshot preserved). All are already declared in `server2/config/tasks/S09.json`; implementation remains under server2 with no legacy dependency.
+
+No independently retained pre-edit declaration for the `d95b53e8` successor was available in this worktree at Q9 review. Its committed JSON establishes the resulting path set, not evidence of an earlier declaration. This is an explicit historical evidence gap, not a retroactive authorization claim. The CI-preparation edits after d95 were declared in the task's local planning record before edits. This current maintained section establishes the selected Q9 paths before their edits.
+
+1. Add failing isolated regressions for guard scroll-out and simultaneous work/cleanup failure. This macOS environment has no Linux runtime: run operational tests only through the Linux bubblewrap/audit CI harness; retain actual remote Red separately from local syntax/placement checks.
+2. R2: reuse only the previously verified guard bound to the current instance/run/nonce/source/deadline when the latest console has no guard. Never ignore latest failure, malformed/conflicting guard, invalid cache, signed-readiness failure or the existing clocks. No new provider/AWS dispatch, time or budget is introduced.
+3. R3: retain the original work failure as primary and record final cleanup failure separately using finite sanitized states. Preserve one cleanup phase, bounded reconciliation, once-only ordinary termination and emergency protection. Successful work with failed cleanup must still fail.
+4. R1/R4: reconcile current contracts with successor behavior and the 51-path declaration; label earlier 33-path/no-test rounds historical. Document Linux-only full verification and retain existing actual CI evidence as a dated baseline, not proof of this untested correction. Renew the PDF using the existing screenshot without inventing a new benchmark run.
+5. Verify final Green in the same namespace/audit harness and separate fake-process functional smoke, then exact-head CI and scoped Claude rereview. Record actual limitations. No AWS run, live readiness, source/approval repinning, merge or deployment is authorized. The historical architecture diagram remains explicitly revision-bound; no serving route, mode, storage or deployed topology changes.
+
+Scenario Q9A: an operator has already verified a guard and opened egress; the line scrolls out before signed readiness arrives. Admit only with a same-instance validated cache and the unchanged readiness/deadline checks. Missing/foreign/expired cache, latest failure or malformed proof must refuse before SSM/build.
+Scenario Q9B: a worker fails and cleanup fails too. Preserve the worker exception and a sanitized unverified-cleanup record; keep emergency protection armed. Work success plus cleanup failure reports failure. Reconciliation never repeats normal termination.
+Scenario Q9C: a contributor follows the manual. Full operational checks require Linux, bubblewrap, working user namespaces and the maintained runner; macOS source checks are not a full CI pass. The current declaration and historical evidence are distinguishable in intent/spec/plan/manual.
+
+Completion requires all modified paths to match this declaration, the placement gate and dependency review to pass, final evidence to bind the committed bytes, and no selected review change to remain. The original intended-host/S3/O-2/O-5 and S10/S13 gates remain open.
+
+Q9 rereview selected coverage correction R7 (before dependent edits): also modify the already declared `server2/deploy/benchmark/test_aws_operator.py` to distinguish invalid console schema, explicit guard failure and missing/foreign console InstanceId refusal before egress/SSM. No operator behavior or path count changes. R6 is unselected: `lifecycle_cleanup_failure` preserves a historical failure observation; current `status` and verified cleanup fields describe later reconciliation. This correction does not clear or relabel historical diagnostics. Final CI/review binds the coverage correction as well.
+
+Q9 R8 selected before edits, within the same declared `test_aws_operator.py` path: inject fixed pre-expiry clocks into offline unit/fake-CLI controller fixtures and add a guard-rejection regression under a post-expiry wall clock. Keep actual compiled-worker/installed-CLI observation helpers on their real-time contracts; no live expiry or operator policy change. The other operational test modules already inject their expiry-relative clocks. This makes ordinary isolated CI independent of the approval date without extending operational authority.
+
+Q9 R9 selected before edits, within the already declared manual/PDF/manifest paths: explicitly mark the older direct test-module/installed-CLI command blocks as historical evidence that must not be rerun from the current checkout. Current operational verification uses the maintained Linux namespace/audit runner above; no direct-host fallback or new installed-CLI runner is authorized. Preserve the dated historical outcomes. Renew PDF/manifest parity and inspect affected pages; runtime/test bytes remain unchanged.
+
+
+## User-data transport correction and fourth dispatch authority (2026-10-10)
+
+AK requested the user-data encoding fix, isolated installed-AWS-CLI wire
+verification and one additional AWS attempt. Explicit confirmation grants
+one extra attempt/USD5 (cumulative4/USD20), retaining the fixed1791631080000
+expiry, no automatic retry, unchanged per-host/worker/request/byte limits and
+no merge. The previous three dispatches and reservations remain consumed.
+
+The maintained transport supplies private binary fileb input rather than
+pre-base64 text. Acceptance is one wire decode equals the exact gzip payload,
+decoded<=16384 and encoded<=25600, and oversize fails before dispatch. The fourth
+controller requires two original prior-state files plus the unchanged cumulative
+third state and its bound same-token rejection/owned-cleanup attestation. Carry
+that cumulative total once plus watchdog/external reservations; never rewrite
+UNKNOWN, refund usage or infer new authority from cleanup. Missing or inconsistent
+inputs fail before state/watchdog creation. Source membership is the exact
+unique set in S09.json; historical counts above belong to their named revisions.
+See the operations manual for inputs and the failed third-dispatch evidence.
+Offline transport success is not intended-host readiness or S09/O-2/O-5 acceptance.
+
+
+## Bootstrap diagnostics correction (2026-10-10)
+
+AK requested pre-termination failure evidence and diagnosis of attempt 4; no new
+AWS/SSM dispatch, budget/expiry renewal or merge. Preserve all prior receipts.
+The early APT whole-file HTTP assertion is reproduced against an upstream-derived
+cloud-init 26.1 deb822 fixture, whose documentation comment contains an HTTP URL.
+Fix active-field-only validation/routing with fixed HTTPS endpoints and per-stanza
+signing, preserving comments and rejecting insecure/foreign URI continuations.
+Retained 0.118-second exit 1/console evidence favors this explanation, but the lost
+host file/traceback prevents claiming the exact historical cause as proven.
+
+Acceptance: a bounded same-command diagnostic report is preserved before ordinary
+cleanup with stage, original exit code and sanitized fixed-log signals. Untrusted
+raw content is withheld. Missing/malformed/timeout/emergency/export failures are
+explicit and do not mask the original error, retry work or delay safety cleanup.
+Keep the original 2100s bound and user-data size cap. Use isolated TDD plus actual
+harmless-shell functional smoke and installed-CLI wire check; no real host test.
+
+
+## Separately authorized fifth attempt (2026-10-10)
+
+AK approved commit/push and one additional AWS run: extra one attempt/USD5,
+cumulative five/USD25, fixed expiry1791642600000 (14:30 UTC / 23:30 KST).
+Prior consumed grants and receipts remain unchanged. No auto-retry or merge.
+Renew fixed expiry consistently in controller/host recovery/Rust/config/tests;
+keep per-host, benchmark, control, byte, storage and cleanup bounds unchanged.
+Require the fourth cleaned pre-worker cumulative state and bound cleanup proof,
+verify predecessor pins, then debit cumulative usage once with full watchdog and
+conservative external evidence reservations. No fresh state/watchdog before all
+required inputs pass. Verify final source/config pins and actual CLI transport,
+then dispatch the published PR head once, collect results or sanitized diagnostics,
+and perform one controller-owned ordinary cleanup with readback. S3 retained.
+
+## Separately authorized sixth attempt (2026-10-10)
+
+After the private-manifest ancestor repair, AK explicitly approved one additional
+AWS attempt, at most USD5, cumulative six attempts/USD30, with fixed expiry
+**1791648000000 (2026-10-10 16:00 UTC / 2026-10-11 01:00 KST)**. Publish the
+minimum successor, then execute it once; no automatic retry or merge. Earlier
+approvals and failed states remain historical, unchanged and non-refundable.
+
+The fifth host built successfully but the worker rejected its private manifest
+before a valid report. Its issued worker1 allocation stays consumed in retained
+history; this new approval funds a distinct worker2, not a resumed/refunded worker1.
+Keep per-worker request/byte/storage limits, per-host7200s, benchmark window,
+export/cleanup tail and controller caps unchanged. The new worker allowance is
+separate from the predecessor's retained full reservation, not a reset of usage.
+
+Before creating state/watchdog, require the immutable cleaned fifth cumulative
+state and exact bound cleanup/failure attestation, including predecessor1-4,
+reconciliation and fourth-cleanup pins. Debit fifth cumulative controller usage
+once plus its full watchdog50 and conservative external100 reservations. Reject
+missing/mismatched/regressed/exhausted inputs and arbitrary or uncertain worker
+outcomes. Preserve original state and artifacts. Fresh resource absence, final
+published source pins and actual CLI wire limits remain launch prerequisites.
+Collect bounded evidence before ordinary cleanup; preserve S3 versions. This
+approval is not a measurement-success claim.

@@ -16,7 +16,7 @@ S01 decisions are [recorded on #2614](https://github.com/WizardFactory/TodayWeat
 
 ## 1. Scope and authority
 
-AK selected removal of local SQLite, raw provider storage, a Rust evaluation,
+AK selected removal of local SQLite, raw provider storage, Rust (adoption subsequently confirmed by AK),
 Spot scale-up first, investigation of raw-object fan-out, and a plan for later
 multi-instance operation. No MongoDB, SQLite, persistent disk cache, Redis,
 shared instance cache or distributed runtime is introduced by this PR.
@@ -57,10 +57,9 @@ this does not require copying unused APIs or the legacy directory layout.
 | Intent/spec/plan and canonical agent instructions | Existing `intent/`, `specs/`, `plans/` and root `AGENTS.md` |
 | Shared CI and infrastructure entrypoints | Existing shared paths only for explicitly declared wiring; invoke logic/configuration under `server2/` |
 
-S02 may create the planned legacy golden recorder at
-`server/test/offline/golden-record.js` solely to execute the legacy parity target;
-this file does not exist at the inspected head/base. Its output fixtures and
-consumer belong under `server2/tests/golden/`. Existing gateway fixtures can be
+S02 [PR #2713](https://github.com/WizardFactory/TodayWeather/pull/2713) created
+`server/test/offline/golden-record.js` solely to execute the pinned legacy parity target.
+Its output fixtures and consumer belong under `server2/tests/golden/`. Existing gateway fixtures can be
 used as legacy oracle inputs without relocating their maintained legacy copies. A named legacy export
 or coexistence change is likewise permitted when a task explains why it must run
 in legacy. These exceptions do not permit placing the new runtime, fixtures or
@@ -78,6 +77,25 @@ Its literal-path checks supplement dependency review; they are not a sandbox. S0
 assets depend on S04; only inventory and infrastructure planning may precede it. Until then, task completion requires a recorded
 manual path/dependency review. The checker exists after S04; this does not claim remote branch protection
 or route-porting compatibility has been established.
+
+S09's [named host-read amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695)
+admits four exact literal source/operation/path pairs in
+`server2/tools/benchmark/aws.rs`: `Path::new` for `/opt/server2-s09` and
+`/opt/server2-s09/run`, and `read_to_string` for `/proc/self/status` and
+`/proc/self/stat`. These support private-manifest ownership checks and process
+metrics. They do not exempt a file or widen the literal checker to accept compiler
+includes, encoded paths, writes or other literal host paths. The
+[dynamic-I/O clarification](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6055549129)
+separately declares the private manifest read, exclusive `worker.claim` write,
+frozen source/lock and current-executable hash reads, and caller-owned config and
+report/state I/O. These benchmark provenance and evidence operations require manual
+containment/ownership review; computed and aliased paths are outside the static
+checker's complete coverage. They do not permit legacy serving-data access.
+The one-use recovery additionally reads the caller-owned original configuration and
+explicit recovery authority, and writes an exclusive predecessor snapshot, recovery
+claim and attempt-specific watchdog receipts beside the original private state.
+These are declared controller evidence operations, not new literal-path exemptions.
+Later whole-tree audits retain the four validated literal roles without a new waiver.
 
 ## 2. Compatibility inventory
 
@@ -911,6 +929,206 @@ tails, cancellation, Spot replacement and catalog/pack repair. Measure public
 coordinate requests including geocoder time separately. Report origin transit
 and CloudFront hit/miss cases separately from assembly and provider time.
 
+### S09 measurement scope and decision gate
+
+#### Current contract (2026-10-11)
+
+AK fixed Rust adoption and requested maximum local verification with minimal EC2
+work; [issue #2694](https://github.com/WizardFactory/TodayWeather/issues/2694)
+is the governing scope. Rust go/fallback/time-box reconsideration is removed.
+S09 completes on the scoped local/Linux-CI checks and resolution of Required PR
+findings. S09 live measurements no longer block S10/S13 implementation. Other
+S01 decisions, S02 route goldens, placement, API parity and cutover gates remain.
+
+Build the intended Linux x86_64 musl release artifact in isolated Linux CI and
+run its startup smoke and synthetic loopback matrix there. The portable local
+runner also works with a native release artifact. Cover cold, warm and simulated
+provider Data/NoData/denied/error outcomes at 8/16/32/64 offered clients without
+raising the existing owner/I/O/CPU or fixture limits. Retain overload and timeout
+outcomes, sample limitations, whole-process RSS/CPU, foreground throughput and
+operation/version-byte cost inputs. Local timings and byte counts do not establish
+AWS latency, physical S3 storage or invoiced cost. Unit prices remain explicitly
+unset until a dated price assumption is supplied; no dollar estimate is inferred.
+
+Before production, use a separately authorized minimal EC2 smoke: transfer the
+prebuilt artifact, verify startup/health/runtime resources/TLS/credentials, then
+a tiny isolated same-region S3 GET/HEAD/PUT/LIST and exact readback. No on-host
+build, full concurrency sweep or provider traffic is required by S09. Actual API
+performance/cost acceptance belongs to pre-cutover work. Raw packs remain disabled
+until actual route measurements demonstrate a need against an agreed target.
+Existing AWS campaign tools/grants and their failure/cleanup records are retained
+as historical evidence. They are not the minimal smoke procedure or renewed
+execution authority. No AWS execution, retry, budget renewal, merge or deployment
+is authorized by this amendment.
+
+#### Historical benchmark campaign and evidence
+
+The prior campaign requirements and decisions below are historical. The current
+contract above controls S09 completion and downstream implementation; resource
+authority and historical outcomes are not renewed or rewritten.
+
+
+[S09 #2694](https://github.com/WizardFactory/TodayWeather/issues/2694) prepares a
+release benchmark under `server2/`, as declared before edits in its
+[path contract](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052017682).
+The [measurement workflow](diagrams/server2-feasibility.html) separates isolated
+protocol evidence from a separately approved intended-host/same-region run.
+
+Measure cold requests with a new resolver for each trial; warm requests begin
+with a verified assembled response. A benchmark-only miss adapter exercises local
+S08 funding/execution and complete S06 publication. NoData remains RAM-only and
+cannot count as an archived weather success. Synthetic assembly is not a legacy
+weather response or geocoder measurement. An eight-day hourly workload must use
+actual synthetic day/slot identities and valid group/catalog ownership; retained
+revisions of one slot are a different stress case.
+
+Offered clients at 8/16/32/64 are distinct from admitted owners, actual I/O and CPU
+limits. Existing runtime bounds and deadlines stay in force. Report every outcome,
+including Capacity, Timeout and rejected work, in request counts and elapsed-time
+quantiles; success-only quantiles are labeled separately. Targeted, Latest and
+FullHistory measurements must expose sequential descriptor/page costs rather than
+claim the parallel-wave model is implemented. Record foreground and background
+work, body/group/catalog counts and bytes, assembly elapsed time, whole-process CPU/RSS and catalog
+rewrite bytes; logical cache charges are not RSS. Local rewrite-byte totals are
+cost inputs, not observed versioned S3 storage. Local provider-data verification
+requires exact durable bytes for successful clients and separately records finite-scope
+storage observations for every failed or rejected client. A Capacity outcome alone
+does not prove that no durable write occurred. Warm waves through one retained
+resolver are not independent empty-memory trials and are counted separately.
+
+Actual Linux release/musl execution, same-region GET/PUT/LIST tails and throughput,
+real authentication/conditional-write behavior and version-storage/cost inputs
+remain required evidence. AK [approved the bounded measurement scope](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052596161)
+on 2026-10-08, valid until 2026-10-10T04:49:59Z. The [31-path amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6053018487)
+and [33-path host-read amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695)
+keep the worker, operator, configuration, tests and placement checks under `server2/`.
+The first approved execution created the task's bucket, IAM role/profile and
+security group, but produced no worker measurement. QA4 identified unsupported
+EC2 CLI options (`--min-count`/`--max-count`); the corrected invocation uses
+`--count 1`. Current offline rejection does not reconstruct discarded stderr
+from the original attempt. A metered 2026-10-08T12:40:57Z inventory found no
+instance for either the original client token or run tag, no tagged root volume,
+and no S3 versions. The task-owned IAM and security-group resources remained.
+This is a timestamped current-state observation, not proof that an earlier AWS
+request was never sent.
+
+AK subsequently authorized code correction, result reconciliation, one recovery
+execution if needed, and owned cleanup. The [recovery amendment](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6060200508)
+keeps this exception within the original task and aggregate limits. Before any
+recovery launch, verify the frozen source/configuration with independent QA and
+validate the complete launch argument list through the installed CLI's offline
+output-skeleton path. A fake CLI that accepts arbitrary flags is insufficient.
+
+The [one authorized recovery](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6061547104)
+launched an EC2 host at 2026-10-08T13:48:27Z using reviewed revision `87148f36`,
+but stopped before guard proof or worker admission with `console encoding`.
+AWS CLI already decodes `get-console-output.Output`; treating that text as
+Base64 again was an operator defect. The CLI boundary must accept only bounded
+UTF-8 text, without guessing an alternate encoding, and preserve the existing
+guard identity and readiness checks. Native CLI response transformation needs
+a separate regression check; an output-skeleton input check cannot prove it.
+Automatic cleanup completed at 13:54:50Z. A metered readback beginning 13:56:40Z
+confirmed the instance terminated, its root volume and IAM/profile/security-group
+resources absent, and the retained S3 bucket empty. No measurement ran. The
+recovery allowance is consumed; further launch or measurement requires a new
+explicit execution decision. The workflow's pinned source checkpoint describes
+the reviewed tooling lifecycle, not successful AWS measurement. The external watchdog
+charges every call before dispatch and retries call failures within its existing
+50-call reservation. Each termination attempt requires a fresh ownership read;
+exhausted or unverifiable work leaves an unresolved diagnostic, never proof of absence.
+
+The proposed run uses one dedicated nonproduction Seoul `c6i.large` for at most
+two hours and at most 60 minutes of synthetic load. Worker and controller share
+one aggregate limit: 400,000 GET/HEAD attempts, 20,000 PUT/LIST attempts,
+30 GiB download and 64 MiB all-version stored charge. Worker allocation is
+390,000/18,000/26 GiB/63 MiB; controller allocation is 10,000/2,000,
+3 GiB bootstrap plus 1 GiB administration/SSM/IMDS/log traffic, and 1 MiB storage.
+Each potential PUT permanently charges body length plus 16 KiB conservative
+metadata/system/bookkeeping allowance, including retries, denied and uncertain
+writes. This is a safety margin, not measured physical storage or an invoice.
+Requests, bytes and stored versions require end-of-run reconciliation; partial
+or uncertain evidence cannot be labeled compliant.
+
+After the worker claims its allocation, a failed or uncertain run must still emit a
+bounded report containing completed cases, partial-case observations, consumed and
+reserved counters, a sanitized abort reason and explicit non-compliance. The
+operator preserves the worker report and bounded error diagnostics before rejecting
+the result and cleaning up the owned resources. A missing report is recorded as
+missing evidence, never as an empty successful run. Preservation does not permit
+further measurement, a second host or reuse of the allocation.
+Before entering a new case, uncertainty must be checked before estimates,
+fixture seeding or resolver creation. Existing bounded reconciliation within the
+owned operation may finish; an uncertain preceding case cannot admit the next one.
+
+Actual execution follows independent review of the frozen tooling/configuration,
+a private one-use manifest, a separate watchdog, an absolute host expiry and
+pre-bootstrap network metering. The worker deadline must leave 15 minutes before
+the earlier host or approval expiry for bounded export and cleanup. It is the
+minimum of that fence and 59 minutes 30 seconds from the worker start; a remaining
+worker window below five minutes is refused. Recheck the window before dispatch.
+Command timeouts include at most 30 seconds for report completion within the
+reserved tail, leaving at least 14 minutes 30 seconds for export and cleanup;
+the SSM command cap remains 60 minutes. This reserve provides finite headroom,
+not a guarantee that every SSM export or cleanup will finish.
+Missing guards, ownership uncertainty or budget
+exhaustion stop work. An ordinary restart permits cleanup only and never refreshes
+a grant. The explicitly approved pre-worker recovery is a narrow exception:
+retain the original state, client token, nonce, resource ownership, counters and
+approval expiry; preserve the predecessor snapshot and deadline before activating
+one recorded recovery attempt. No previously issued worker allocation can be
+reused or replaced. The recovery host deadline is at most two hours from recovery
+and never later than the original approval expiry. Reserve its watchdog from the
+remaining aggregate controller allowance.
+
+Recovery reconciles current instances by both token and run tag before dispatch.
+A unique existing owned instance suppresses creation; unresolved or multiple
+matches stop execution. If both inventories prove current absence, at most one
+corrected launch may reuse the original token, subnet and region. An idempotency
+parameter mismatch must not trigger a new token or another launch. Recheck actual
+ownership and dependent resources before cleanup. Keep historical uncertainty
+separate from a newly observed local CLI rejection or current absence; neither
+rewrites the original record. Explicit recovery authority may also permit cleanup
+of the acknowledged IAM/profile/security-group resources after fresh token, run-tag
+and volume inventories all prove current absence. This branch is unavailable after
+a newly uncertain dispatched recovery; it does not settle historical uncertainty.
+
+Kernel delivery quotas and application reservations do not mathematically cap
+physical NIC arrivals or retransmissions. Use stricter thresholds, measured
+headroom and a USD 5 operator stop; no absolute billing guarantee is claimed.
+The kernel's 2 GiB bootstrap and 24 GiB measurement receive quotas intentionally
+stop below the 3 GiB bootstrap and 26 GiB worker reservation grants. The different
+accounting layers cannot be equated; hitting a kernel backstop can interrupt a
+request and leaves uncertain counters and a failed report for review. Outbound
+security-group access is TCP/443 to `0.0.0.0/0` after guard verification, not an HTTPS
+destination allowlist. Reviewed worker/bootstrap inputs and IAM restrictions carry
+the endpoint scope. The live gate requires stock SSM Agent version `3.3.40.0` or later
+before the first Run Command under the `ssmmessages`-only policy. Missing, older or
+malformed version metadata stops work without installing an agent or widening IAM.
+At the checked Seoul prices, the fixed compute, IPv4, root, request and 48-hour
+storage caps total about USD 0.436101 before taxes and unknown bootstrap/log-transfer
+charges. This static operator admission estimate is not a live billing monitor;
+permanent retained storage continues after the run. Price provenance and the
+component arithmetic belong in the operations record.
+Only the newly owned host/root volume, IAM and necessary network artifacts are
+cleaned up; synthetic S3 objects and versions are retained without deletes or
+lifecycle. Existing production hosts and real weather/geocoding providers are
+excluded.
+
+Reusable fixtures distinguish Targeted/Latest/FullHistory and hot versus distinct
+response keys over explicitly counted physical data. The local synthetic eight-day,
+16-scope sequential batch took 14.054289 s; it is a preserved feasibility risk,
+not a CloudFront/API result or an AWS percentile. Warm trials require a verified
+successful cold result and idle maintenance; insufficient capacity/sample counts
+stay visible rather than implying successful feasibility. Warm observation waves
+reuse one case-owned resolver after prewarming. Offered client observations are
+reported separately from independent RAM-empty trials. Shared HTTP/TLS pools
+remain warm after protocol and seeding; these trials do not measure the entire
+fresh-Spot network path. The bounded template does not establish 300 independent
+cold trials per offered level.
+O-2 conditional Rust feasibility and O-5/optional-pack disposition are made from
+those results. Until the required evidence and decisions exist, S09 stays open
+and S10/S13 remain blocked. No benchmark alone grants route cutover or retirement.
+
 ## 9. Spot scale-up and future scale-out
 
 Initially one Spot host runs the shared-cache API process. Increase resources
@@ -982,10 +1200,10 @@ S18 follows the accepted D01–D03 push policy and its route/state verification 
 | --- | --- |
 | D2/D7/D8, C6–C8 | S3 serving publication, memory reconstruction; no local store/uploader/synced rows |
 | O-1, O-11 | Approved: hourly capture only for cells requested in the last 8 days plus push-subscribed cells; rainfall capture every 2 minutes for cells with demand. S14 specifies demand/expiry/ownership and proves 8-day/20-minute behavior before dependent cutover |
-| O-2 | Rust conditional go; P2 executable checkpoint and post-v000903 time-box remain |
+| O-2 | Rust adoption settled by AK; S09 validates locally/Linux CI. No Rust go/fallback/time-box reconsideration; runtime correctness and pre-cutover performance checks remain |
 | O-3 | D01–D03 recorded: implementer owns state schema/ordering; new registrations only, no legacy registration migration; no automatic failed/unknown push resend; new accepted state remains S3 durable |
 | O-4, O-12 | gp3/15-day floor/ENOSPC policy removed; replace with memory admission and S3-failure policy |
-| O-5 | Approved: immutable canonical raw gzip; versioned identity catalogs with CAS; no lifecycle deletions now. Packs require measured benefit; S09 assesses version growth/retrieval costs before transitions. No Flexible/Deep Archive on synchronous serving paths |
+| O-5 | Approved: immutable canonical raw gzip; versioned identity catalogs with CAS; no lifecycle deletions now. Packs require measured route benefit; S09 records local operation/version-byte inputs, with actual API serving/lifecycle cost validation before cutover. No Flexible/Deep Archive on synchronous serving paths |
 | O-6 | D04 authorizes useful memory/S3 caches; layout/validity/admission are implementation choices under exact-label and coordinate privacy proof. No precise lookup-history export or indefinite archive |
 | O-7 | No blanket removal of health-index/KAQ behavior that current active API fixtures contain |
 | O-8 | v000705 town is active; exclude only zero-observed in-scope public APIs; /ww evidence gap remains |
@@ -1029,11 +1247,20 @@ describe the isolated local test peer and approval-ready infrastructure workshee
 The peer is a bounded volatile S3 HTTP subset, not real AWS authentication,
 durability, performance or production deployment evidence. The release foundation
 starts locally and serves health/loopback metrics; it has no weather/provider/S3
-runtime routes yet. S02 goldens and S05 raw storage proceed in separate PRs.
+runtime routes yet. S02 goldens, S05 raw storage, S06 catalogs, S07 memory resolution and S08 budget
+reservation are merged. Their isolated verification and independent reviews do not
+establish live AWS conformance, used-route parity or the S09 feasibility gate.
 
 Actual account/region/bucket/role/provider-key owners, spending limits, host
 provisioning and routing remain separately approved resource actions. Proposed
-2-vCPU/4-GiB compute classes are candidates only; S09 chooses a measured target
-from musl compatibility, RSS/CPU, cold latency, throughput and quota headroom.
+2-vCPU/4-GiB compute classes remain candidates. Local/Linux CI verifies musl
+compatibility and bounded resources; actual route performance and quota headroom
+are assessed before cutover without reopening Rust adoption.
 One Spot host and one multithreaded API process are the default; future instances
 retain independent caches and require the coordination gate in section 9.
+
+## 2026-10-09 focused PR correction after actual AWS execution
+
+One separately authorized host attempt failed before guard readiness and measurement. At 13:06:08Z, AWS readback confirmed host termination, owned root/SG/IAM/profile removal and zero retained S3 versions. Egress stayed closed; no SSM/bootstrap/worker/provider work ran. The live console exposed both a multibyte console bound mismatch and a bootcmd timer/sysinit ordering cycle inferred from logs plus upstream unit definitions.
+
+The focused correction moves all stock guard setup to final-stage runcmd, retains closed egress/watchdog/expiry, accepts complete CLI text within 65,536 characters and 131,072 UTF-8 bytes, and removes the host workspace test invocation per AK. The [operations manual](../operations/server2-feasibility.md#2026-10-09-actual-execution-and-focused-correction) records direct evidence, cleanup and limitations. The eight unfinished preparation15 files are preserved separately, not shipped. No further AWS launch, merge or budget reset is part of this correction. QA6 remains historical; new live readiness and independent review are not claimed. Tests are not added or run under AK's instruction. S09/O-2/O-5 and downstream S10/S13 remain pending.

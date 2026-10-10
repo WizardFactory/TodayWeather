@@ -1,0 +1,41 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListOwnedBucketForAbsent404",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::server2-s09-141248341265-apne2-20261008"
+    },
+    {
+      "Sid": "ReadWriteOnlyCanonicalTestObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::server2-s09-141248341265-apne2-20261008/raw/v2/*",
+        "arn:aws:s3:::server2-s09-141248341265-apne2-20261008/index/v2/*",
+        "arn:aws:s3:::server2-s09-141248341265-apne2-20261008/budgets/v2/*"
+      ]
+    },
+    {
+      "Sid": "ManagedInstanceRegistration",
+      "Effect": "Allow",
+      "Action": "ssm:UpdateInstanceInformation",
+      "Resource": "*"
+    },
+    {
+      "Sid": "SSMMessageChannels",
+      "Effect": "Allow",
+      "Action": [
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

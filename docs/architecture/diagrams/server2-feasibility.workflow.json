@@ -1,0 +1,231 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Server2 S09: local verification first",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-feasibility.html",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "05cdb44f988464e8fd70f0a1f22b3d1ac2d23222",
+      "provider": "github",
+      "link_mode": "web"
+    }
+  },
+  "lanes": [
+    {
+      "id": "local",
+      "label": "Local and Linux CI"
+    },
+    {
+      "id": "host",
+      "label": "Before production"
+    },
+    {
+      "id": "cutover",
+      "label": "Before cutover"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "build",
+      "lane": "local",
+      "col": 0,
+      "type": "backend",
+      "label": "Build + startup",
+      "sublabel": "native and Linux musl",
+      "sources": [
+        {
+          "path": "server2/tools/ci.py",
+          "line": 51,
+          "end_line": 56
+        }
+      ],
+      "width": 160
+    },
+    {
+      "id": "matrix",
+      "lane": "local",
+      "col": 1,
+      "type": "database",
+      "label": "Loopback matrix",
+      "sublabel": "cold / warm / misses",
+      "sources": [
+        {
+          "path": "server2/config/benchmarks/local.json",
+          "line": 6,
+          "end_line": 11
+        }
+      ],
+      "width": 160
+    },
+    {
+      "id": "review",
+      "lane": "local",
+      "col": 2,
+      "type": "security",
+      "label": "Local checks + review",
+      "sublabel": "required defects resolved",
+      "sources": [
+        {
+          "path": "plans/issue-2694.md",
+          "line": 8,
+          "end_line": 13
+        }
+      ],
+      "width": 160
+    },
+    {
+      "id": "routes",
+      "lane": "local",
+      "col": 3,
+      "type": "backend",
+      "label": "S10 / S13 proceed",
+      "sublabel": "other contracts retained",
+      "sources": [
+        {
+          "path": "plans/issue-2694.md",
+          "line": 9,
+          "end_line": 14
+        }
+      ],
+      "width": 160
+    },
+    {
+      "id": "authority",
+      "lane": "host",
+      "col": 3,
+      "type": "security",
+      "label": "Separate authority",
+      "sublabel": "before production",
+      "tag": "pending",
+      "sources": [
+        {
+          "path": "docs/operations/server2-feasibility.md",
+          "line": 32,
+          "end_line": 37
+        }
+      ],
+      "width": 160
+    },
+    {
+      "id": "smoke",
+      "lane": "host",
+      "col": 4,
+      "type": "cloud",
+      "label": "Minimal EC2 smoke",
+      "sublabel": "prebuilt + tiny S3 scope",
+      "tag": "pending",
+      "sources": [
+        {
+          "path": "docs/operations/server2-feasibility.md",
+          "line": 33,
+          "end_line": 38
+        }
+      ],
+      "width": 160
+    },
+    {
+      "id": "api",
+      "lane": "cutover",
+      "col": 4,
+      "type": "backend",
+      "label": "Actual API checks",
+      "sublabel": "latency / costs / parity",
+      "tag": "pre-cutover",
+      "sources": [
+        {
+          "path": "docs/operations/server2-feasibility.md",
+          "line": 41,
+          "end_line": 46
+        }
+      ],
+      "width": 160
+    },
+    {
+      "id": "production",
+      "lane": "cutover",
+      "col": 5,
+      "type": "security",
+      "label": "Cutover approval",
+      "sublabel": "separate release gate",
+      "tag": "pending",
+      "sources": [
+        {
+          "path": "plans/issue-2694.md",
+          "line": 10,
+          "end_line": 15
+        }
+      ],
+      "width": 160
+    }
+  ],
+  "edges": [
+    {
+      "id": "build_matrix",
+      "from": "build",
+      "to": "matrix"
+    },
+    {
+      "id": "matrix_review",
+      "from": "matrix",
+      "to": "review"
+    },
+    {
+      "id": "review_routes",
+      "from": "review",
+      "to": "routes"
+    },
+    {
+      "id": "routes_authority",
+      "from": "routes",
+      "to": "authority"
+    },
+    {
+      "id": "authority_smoke",
+      "from": "authority",
+      "to": "smoke"
+    },
+    {
+      "id": "smoke_api",
+      "from": "smoke",
+      "to": "api"
+    },
+    {
+      "id": "api_production",
+      "from": "api",
+      "to": "production"
+    }
+  ],
+  "mainPath": [
+    "build",
+    "matrix",
+    "review",
+    "routes",
+    "authority",
+    "smoke",
+    "api",
+    "production"
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Current scope",
+      "items": [
+        "Rust adoption is settled; packs stay disabled.",
+        "Offered clients: 8 / 16 / 32 / 64; all outcomes retained.",
+        "Local evidence does not authorize production."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Minimal host work",
+      "items": [
+        "No on-host build or full concurrency sweep.",
+        "Verify startup, TLS, credentials and tiny S3 readback.",
+        "Historical AWS grants and usage are not renewed."
+      ]
+    }
+  ]
+}
