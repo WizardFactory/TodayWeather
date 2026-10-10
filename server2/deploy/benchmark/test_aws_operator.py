@@ -32,7 +32,7 @@ class ConsoleOutputTests(unittest.TestCase):
             with self.subTest(value_type=type(value).__name__),self.assertRaises(op.OperatorError):op.cli_console_text(value)
 
     def test_invalid_console_never_reaches_guard_opening_or_ssm(self):
-        for response in ({"Output":None},{"Output":"x"*65537},{"Output":"S09_GUARD_FAILED fixture"}):
+        for response in ({"Output":None},{"Output":"x"*65537}):
             with tempfile.TemporaryDirectory(prefix="s09-console-reject-") as directory:
                 controller=WorkerEvidenceTests().controller(Path(directory));actions=[]
                 controller.verify_host_root=lambda:None
@@ -41,6 +41,25 @@ class ConsoleOutputTests(unittest.TestCase):
                 with self.assertRaises(op.OperatorError):controller.run_host()
                 self.assertEqual(actions,["get-console-output"])
                 self.assertNotIn("worker_allocation_issued",controller.state.data)
+
+    def test_guard_failure_and_console_host_mismatch_have_distinct_rejections(self):
+        for identity, marker, reason in (
+                ('owned','S09_GUARD_FAILED fixture','stock guard failed'),
+                ('foreign','S09_GUARD_V1 fixture','guard console host mismatch'),
+                ('missing','S09_GUARD_V1 fixture','guard console host mismatch')):
+            with self.subTest(identity=identity), tempfile.TemporaryDirectory(prefix='s09-console-host-') as directory:
+                controller=WorkerEvidenceTests().controller(Path(directory)); actions=[]
+                response={'Output':marker}
+                if identity!='missing':
+                    response['InstanceId']=controller.state.data['resources']['instance'] if identity=='owned' else 'i-foreign'
+                controller.verify_host_root=lambda:None
+                controller.call=lambda service,action,args:actions.append(action) or response
+                controller.open_https_after_guard=lambda _:self.fail('rejected console opened egress')
+                controller.wait_online=lambda *a,**kw:self.fail('rejected console polled SSM')
+                with self.assertRaisesRegex(op.OperatorError,'^'+reason+'$'):
+                    controller.run_host()
+                self.assertEqual(actions,['get-console-output'])
+                self.assertNotIn('worker_allocation_issued',controller.state.data)
 
 
 class LedgerTests(unittest.TestCase):
