@@ -6,6 +6,7 @@ import contextlib
 import datetime
 import fcntl
 import hashlib
+import hmac
 import gzip
 import json
 import os
@@ -22,10 +23,14 @@ import time
 HERE = Path(__file__).resolve().parent
 GiB = 1024 ** 3
 MiB = 1024 ** 2
-EXPIRY = 1791607799000
+EXPIRY = 1791623880000
 EXPORT_CLEANUP_RESERVE_MS = 15 * 60000
 MINIMUM_WORKER_WINDOW_MS = 5 * 60000
 COMPLETION_GRACE_SECONDS = 30
+PROFILE_PROPAGATION_SECONDS = 60
+PROFILE_PROPAGATION_CAP_SECONDS = 120
+SSM_ONLINE_SECONDS = 300
+SSM_READINESS_SECONDS = 180
 MAXIMUM_WORKER_WINDOW_MS = (3600 - COMPLETION_GRACE_SECONDS) * 1000
 FIXED = {
     "schema": 1, "run_id": "s09-20261008-approval044959", "account": "141248341265",
@@ -110,7 +115,10 @@ def validate_config(config, armed=False, now_ms=None, cleanup_only=False):
     for path, value in files.items():
         if not path.startswith(("server2/", "docs/", "intent/", "specs/", "plans/")) or not re.fullmatch(r"[A-Za-z0-9_./-]+", path) or ".." in path.split("/") or not re.fullmatch("[a-f0-9]{64}", value):
             raise OperatorError("source map boundary")
-    if len(files)!=33: raise OperatorError("source map requires exact33declaredpaths")
+    declaration = bounded_json(HERE.parents[1] / 'config/tasks/S09.json')
+    declared = declaration['server2_paths'] + [item['path'] for item in declaration['outside']]
+    if len(declared) != len(set(declared)) or set(files) != set(declared):
+        raise OperatorError('source map requires exact declared paths')
     if digest(canonical(files)) != config["source_map_sha256"]:
         raise OperatorError("source map digest")
     for file, key in [("bucket-policy.json", "bucket_policy_sha256"), ("instance-policy.json", "instance_policy_sha256"), ("cloud-init.yml", "bootstrap_sha256")]:
@@ -269,7 +277,7 @@ ALLOWED = {
     "sts": {"get-caller-identity"},
     "ec2": {"describe-instances", "describe-security-groups", "describe-images", "describe-subnets", "get-console-output", "create-security-group", "create-tags", "revoke-security-group-egress", "authorize-security-group-egress", "run-instances", "terminate-instances", "delete-security-group", "describe-volumes"},
     "iam": {"get-role", "get-instance-profile", "create-role", "put-role-policy", "create-instance-profile", "add-role-to-instance-profile", "remove-role-from-instance-profile", "delete-instance-profile", "delete-role-policy", "delete-role"},
-    "s3api": {"head-bucket", "create-bucket", "put-bucket-versioning", "put-public-access-block", "put-bucket-encryption", "put-bucket-policy", "get-bucket-location", "get-bucket-versioning", "get-public-access-block", "get-bucket-encryption", "head-object", "put-object", "list-object-versions"},
+    "s3api": {"head-bucket", "create-bucket", "put-bucket-versioning", "put-public-access-block", "put-bucket-encryption", "put-bucket-policy", "get-bucket-location", "get-bucket-versioning", "get-public-access-block", "get-bucket-encryption", "get-bucket-policy", "head-object", "put-object", "list-object-versions"},
     "ssm": {"describe-instance-information", "send-command", "get-command-invocation"},
 }
 
@@ -369,6 +377,51 @@ class Operator:
             raise
         raise OperatorError("existing name collision; no adoption")
 
+    def retained_bucket(self):
+        """Only the fixed account's unchanged, reviewed bucket may be reused."""
+        args = ["--bucket", self.config["bucket"], "--expected-bucket-owner", FIXED["account"]]
+        try:
+            self.call("s3api", "head-bucket", args)
+        except OperatorError as exc:
+            if str(exc) in {"AWS status NotFound", "AWS status 404"}:
+                return False
+            raise
+        def read(action):
+            result = self.call("s3api", action, args)
+            if not isinstance(result, dict):
+                raise OperatorError("retained bucket response schema")
+            return result
+        if read("get-bucket-location").get("LocationConstraint") != self.config["region"]:
+            raise OperatorError("retained bucket region")
+        if read("get-bucket-versioning").get("Status") != "Enabled":
+            raise OperatorError("retained bucket versioning")
+        public = read("get-public-access-block").get("PublicAccessBlockConfiguration")
+        if not isinstance(public, dict) or set(public) != {"BlockPublicAcls", "IgnorePublicAcls", "BlockPublicPolicy", "RestrictPublicBuckets"} or any(value is not True for value in public.values()):
+            raise OperatorError("retained bucket privacy")
+        encryption = read("get-bucket-encryption").get("ServerSideEncryptionConfiguration")
+        aes256 = {"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}
+        allowed_rules = [aes256, dict(aes256, BucketKeyEnabled=False)]
+        # Current S3 responses can report the stronger SSE-C blocking setting.
+        allowed_rules += [dict(rule, BlockedEncryptionTypes={"EncryptionType":["SSE-C"]}) for rule in list(allowed_rules)]
+        if not isinstance(encryption, dict) or canonical(encryption.get("Rules")) not in [canonical([rule]) for rule in allowed_rules]:
+            raise OperatorError("retained bucket encryption")
+        policy = read("get-bucket-policy").get("Policy")
+        def pairs(items):
+            result = {}
+            for key, value in items:
+                if key in result:
+                    raise OperatorError("duplicate bucket policy field")
+                result[key] = value
+            return result
+        try:
+            if not isinstance(policy, str) or canonical(json.loads(policy, object_pairs_hook=pairs)) != canonical(bounded_json(HERE / "bucket-policy.json")):
+                raise OperatorError("retained bucket policy mismatch")
+        except ValueError:
+            raise OperatorError("retained bucket policy invalid") from None
+        self.inventory_versions()
+        return True
+
+
     def provision(self):
         c, s = self.config, self.state.data
         identity = self.call("sts", "get-caller-identity", [])
@@ -378,19 +431,24 @@ class Operator:
         if len(images)!=1 or any(images[0].get(k)!=v for k,v in {"ImageId":c["ami"],"OwnerId":"099720109477","Public":True,"State":"available","Architecture":"x86_64","RootDeviceName":"/dev/sda1","VirtualizationType":"hvm"}.items()): raise OperatorError("AMI identity changed")
         subnets=self.call("ec2","describe-subnets",["--subnet-ids",c["subnet"]]).get("Subnets",[])
         if len(subnets)!=1 or any(subnets[0].get(k)!=v for k,v in {"SubnetId":c["subnet"],"VpcId":c["vpc"],"State":"available","MapPublicIpOnLaunch":True}.items()): raise OperatorError("subnet identity changed")
-        self.absent("s3api", "head-bucket", ["--bucket", c["bucket"]])
+        reuse_bucket = self.retained_bucket()
         self.absent("iam", "get-role", ["--role-name", c["role"]])
         self.absent("iam", "get-instance-profile", ["--instance-profile-name", c["role"]])
         groups = self.call("ec2", "describe-security-groups", ["--filters", "Name=group-name,Values=" + c["security_group"], "Name=vpc-id,Values=" + c["vpc"]])
         if groups.get("SecurityGroups"):
             raise OperatorError("existing SG collision")
-        s["creation_intents"]={"bucket":"unknown"};self.state.save()
-        self.call("s3api", "create-bucket", ["--bucket", c["bucket"], "--create-bucket-configuration", "LocationConstraint="+c["region"], "--object-ownership", "BucketOwnerEnforced"])
-        self.own("bucket", c["bucket"])
-        self.call("s3api", "put-public-access-block", ["--bucket", c["bucket"], "--public-access-block-configuration", "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"])
-        self.call("s3api", "put-bucket-versioning", ["--bucket", c["bucket"], "--versioning-configuration", "Status=Enabled"])
-        self.call("s3api", "put-bucket-encryption", ["--bucket", c["bucket"], "--server-side-encryption-configuration", json.dumps({"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]})])
-        self.call("s3api", "put-bucket-policy", ["--bucket", c["bucket"], "--policy", (HERE / "bucket-policy.json").read_text()])
+        s["creation_intents"] = {}; self.state.save()
+        if not reuse_bucket:
+            s["creation_intents"]["bucket"] = "unknown"; self.state.save()
+            self.call("s3api", "create-bucket", ["--bucket", c["bucket"], "--create-bucket-configuration", "LocationConstraint="+c["region"], "--object-ownership", "BucketOwnerEnforced"])
+            self.own("bucket", c["bucket"])
+            self.call("s3api", "put-public-access-block", ["--bucket", c["bucket"], "--public-access-block-configuration", "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"])
+            self.call("s3api", "put-bucket-versioning", ["--bucket", c["bucket"], "--versioning-configuration", "Status=Enabled"])
+            self.call("s3api", "put-bucket-encryption", ["--bucket", c["bucket"], "--server-side-encryption-configuration", json.dumps({"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]})])
+            self.call("s3api", "put-bucket-policy", ["--bucket", c["bucket"], "--policy", (HERE / "bucket-policy.json").read_text()])
+        else:
+            # Retained data is not a new creation or eligible for deletion.
+            self.own("bucket", c["bucket"])
         s["creation_intents"]["sg"]="unknown";self.state.save()
         group = self.call("ec2", "create-security-group", ["--group-name", c["security_group"], "--description", "Owned S09 synthetic measurement", "--vpc-id", c["vpc"], "--tag-specifications", self.tags("security-group")])["GroupId"]
         if not re.fullmatch("sg-[a-f0-9]+", group):
@@ -415,18 +473,36 @@ class Operator:
         self.call("iam", "create-instance-profile", ["--instance-profile-name", c["role"], "--tags", json.dumps(self.tag_values())])
         self.own("profile", c["role"])
         self.call("iam", "add-role-to-instance-profile", ["--instance-profile-name", c["role"], "--role-name", c["role"]])
-        # Read back the newly owned profile before the only permitted launch attempt.
-        for attempt in range(10):
+        self.wait_profile_ready(role)
+        userdata = self.render_bootstrap()
+        return self.launch_once(group, userdata)
+
+
+    def wait_profile_ready(self, role, sleep=time.sleep):
+        """Bounded settling/readback; IAM visibility is not EC2 credential delivery."""
+        c = self.config
+        start = previous = self.clock()
+        limit = min(start + PROFILE_PROPAGATION_CAP_SECONDS * 1000, EXPIRY,
+                    self.state.data['deadline_ms'] - EXPORT_CLEANUP_RESERVE_MS - MINIMUM_WORKER_WINDOW_MS)
+        for attempt in range(PROFILE_PROPAGATION_CAP_SECONDS // 5 + 1):
+            current = self.clock()
+            if current < previous or current >= limit:
+                raise OperatorError('profile propagation clock/deadline; zero launch attempts')
+            previous = current
             profile=self.call("iam","get-instance-profile",["--instance-profile-name",c["role"]]).get("InstanceProfile",{})
             tags={t.get("Key"):t.get("Value") for t in profile.get("Tags",[])}
             if profile.get("Arn")!="arn:aws:iam::"+c["account"]+":instance-profile/"+c["role"] or tags.get("RunId")!=c["run_id"] or tags.get("Purpose")!="synthetic-benchmark-only": raise OperatorError("new profile ownership/readiness")
             roles=profile.get("Roles",[])
-            if len(roles)==1 and roles[0].get("RoleName")==c["role"] and roles[0].get("Arn")==role: break
-            if roles: raise OperatorError("new profile unexpected role")
-            time.sleep(1)
-        else: raise OperatorError("new profile role propagation not ready; zero launch attempts")
-        userdata = self.render_bootstrap()
-        return self.launch_once(group, userdata)
+            ready = len(roles)==1 and roles[0].get("RoleName")==c["role"] and roles[0].get("Arn")==role
+            if roles and not ready: raise OperatorError("new profile unexpected role")
+            current = self.clock()
+            if current < previous or current >= limit:
+                raise OperatorError('profile propagation clock/deadline; zero launch attempts')
+            previous = current
+            if ready and current - start >= PROFILE_PROPAGATION_SECONDS * 1000:
+                return
+            sleep(min(5, (limit-current)/1000))
+        raise OperatorError("new profile role propagation not ready; zero launch attempts")
 
     def launch_arguments(self, group, userdata):
         """One source-bound argument builder, also used by the offline CLI oracle."""
@@ -555,6 +631,18 @@ class Operator:
     def render_bootstrap(self):
         values = {"RUN_ID":self.config["run_id"],"NONCE":self.state.data["nonce"],"SOURCE_REVISION":self.config["source_revision"],"DEADLINE_MS":str(self.state.data["deadline_ms"]),"DEADLINE_UTC":datetime.datetime.fromtimestamp(self.state.data["deadline_ms"]/1000,datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),"RUSTUP_SHA256":self.config["rustup_sha256"],"RUSTUP_URL":self.config["rustup_url"],"SOURCE_MAP_B64":base64.b64encode(canonical(self.config["source_files"])).decode()}
         text = (HERE / "cloud-init.yml").read_text()
+        script_path = HERE / 'ssm_startup_recovery.py'
+        if script_path.is_symlink() or not script_path.is_file() or script_path.stat().st_size > 16384:
+            raise OperatorError('recovery source boundary')
+        script = script_path.read_bytes()
+        if self.config['source_files'].get('server2/deploy/benchmark/ssm_startup_recovery.py') != digest(script):
+            raise OperatorError('recovery source pin')
+        key = self.state.data.setdefault('readiness_key', secrets.token_hex(32))
+        if not isinstance(key, str) or not re.fullmatch('[a-f0-9]{64}', key):
+            raise OperatorError('readiness key identity')
+        values['READINESS_KEY'] = key
+        values['RECOVERY_SCRIPT_B64'] = base64.b64encode(script).decode()
+        self.state.save()
         for k,v in values.items():
             text = text.replace("@@"+k+"@@", v)
         if "@@" in text or len(text.encode()) > 65536:
@@ -700,8 +788,11 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
             args=["--bucket",self.config["bucket"],"--max-keys","32"]
             if key_marker is not None: args += ["--key-marker",key_marker,"--version-id-marker",version_marker]
             page=self.call("s3api","list-object-versions",args)
+            if not isinstance(page, dict) or not isinstance(page.get("Versions", []), list) or len(page.get("Versions", [])) > 32 or not isinstance(page.get("DeleteMarkers", []), list):
+                raise OperatorError("invalid version inventory schema/bound")
             if page.get("DeleteMarkers"): raise OperatorError("unexpected S3 delete markers")
             for item in page.get("Versions",[]):
+                if not isinstance(item, dict): raise OperatorError("invalid version inventory")
                 size=item.get("Size")
                 if type(size) is not int or size<0: raise OperatorError("invalid version inventory")
                 total+=size+16384;versions+=1
@@ -712,6 +803,9 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
             if not all(isinstance(x,str) and 0<len(x)<=1024 and not any(ord(c)<32 for c in x) for x in (key_marker,version_marker)) or (key_marker,version_marker) in seen:
                 raise OperatorError("version inventory pagination")
             seen.add((key_marker,version_marker))
+        previous = self.state.data.get("version_inventory")
+        if previous is not None:
+            self.state.data.setdefault("version_inventory_history", []).append(dict(previous))
         self.state.data["version_inventory"]={"potential_version_charge_bytes":total,"versions":versions,"body_plus16384_inventory_does_not_refund_ledger":True};self.state.save()
         return total
 
@@ -733,6 +827,137 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
         self.own("root_volume",volume)
         self.state.data["root_mapping_proof_sha256"]=digest(canonical({"mapping":mappings[0],"volume":root}));self.state.save()
 
+    def wait_online(self, instance, opened_ms, sleep=time.sleep):
+        """Console transport delay consumes, never restarts, the host window.
+
+        Host wall time is used only for this conservative controller cutoff;
+        the host monotonic gate independently rejects late admission. No marker,
+        unknown clock, or old bootstrap has a guard-relative Online fallback.
+        """
+        s, c = self.state.data, self.config
+        hard = min(s['deadline_ms'], EXPIRY)
+        delivery_deadline = min(opened_ms + (SSM_READINESS_SECONDS + SSM_ONLINE_SECONDS)*1000, hard)
+        previous = opened_ms
+        def current():
+            nonlocal previous
+            value = self.clock()
+            if value < previous:
+                raise OperatorError('readiness controller clock reversed')
+            previous = value
+            return value
+        proof = None
+        for _ in range(97):
+            if current() >= delivery_deadline:
+                break
+            response = self.call('ec2', 'get-console-output', ['--instance-id', instance, '--latest'])
+            text = cli_console_text(response)
+            if current() >= delivery_deadline:
+                break
+            if response.get('InstanceId') != instance:
+                raise OperatorError('readiness console host mismatch')
+            lines = text.splitlines()
+            records = [line for line in lines if line.startswith('S09_SSM_READY_V1 ')]
+            if records:
+                if len(records) != 1:
+                    raise OperatorError('duplicate readiness records')
+                expected = {'run_id': c['run_id'], 'nonce': s['nonce'],
+                            'source_revision': c['source_revision'], 'deadline_ms': s['deadline_ms']}
+                verify_guard(text, expected, now_ms=current())
+                if lines.index(records[0]) < next(i for i, line in enumerate(lines) if line.startswith('S09_GUARD_V1 ')):
+                    raise OperatorError('out-of-order readiness')
+                try:
+                    record = json.loads(records[0].split(' ', 1)[1])
+                    proof = record['proof']
+                    key = s['readiness_key']
+                    if set(record) != {'proof', 'mac'} or not re.fullmatch('[a-f0-9]{64}', key):
+                        raise ValueError('schema')
+                    signature = hmac.new(bytes.fromhex(key), canonical(proof), hashlib.sha256).hexdigest()
+                    if not isinstance(record['mac'], str) or not hmac.compare_digest(signature, record['mac']):
+                        raise ValueError('signature')
+                    fields = set(expected) | {'schema','role','status','started_at_ms','ready_at_ms','readiness_elapsed_ms','ready_monotonic_ms'}
+                    if set(proof) != fields or type(proof['schema']) is not int or proof['schema'] != 1:
+                        raise ValueError('schema')
+                    if any(proof.get(k) != v for k, v in expected.items()) or proof['role'] != c['role'] or proof['status'] != 'transport_and_role_ready':
+                        raise ValueError('identity')
+                    for field in ('started_at_ms','ready_at_ms','readiness_elapsed_ms','ready_monotonic_ms','deadline_ms'):
+                        if type(proof[field]) is not int or proof[field] < 0:
+                            raise ValueError('clock type')
+                    elapsed = proof['readiness_elapsed_ms']
+                    ready = proof['ready_at_ms']
+                    if not 0 <= elapsed < SSM_READINESS_SECONDS*1000 or proof['ready_monotonic_ms'] < elapsed:
+                        raise ValueError('readiness bound')
+                    if abs(ready - proof['started_at_ms'] - elapsed) > 1000:
+                        raise ValueError('host clock changed')
+                    if not opened_ms <= ready <= current() or ready > opened_ms + SSM_READINESS_SECONDS*1000:
+                        raise ValueError('stale or future clock')
+                except (ValueError, TypeError, KeyError, AttributeError):
+                    raise OperatorError('invalid readiness proof') from None
+                break
+            sleep(min(5, max(0, (delivery_deadline-current())/1000)))
+        if proof is None:
+            raise OperatorError('SSM readiness unavailable; no fallback')
+        deadline = min(proof['ready_at_ms'] + SSM_ONLINE_SECONDS*1000, hard)
+        s['ssm_readiness_proof'] = proof
+        s['ssm_readiness_mac'] = record['mac']
+        s['ssm_online_deadline_ms'] = deadline
+        self.state.save()
+        for _ in range(61):
+            if current() >= deadline:
+                break
+            response = self.call('ssm', 'describe-instance-information', ['--filters', json.dumps([{'Key':'InstanceIds','Values':[instance]}])])
+            rows = response.get('InstanceInformationList', [])
+            if current() >= deadline:
+                break
+            if len(rows) == 1 and rows[0].get('InstanceId') == instance and rows[0].get('PingStatus') == 'Online':
+                self.verify_ssm_agent(rows[0])
+                if current() < deadline:
+                    return proof
+                break
+            sleep(min(5, max(0, (deadline-current())/1000)))
+        self.capture_admission_diagnostics()
+        raise OperatorError('SSM Online unavailable; no widening')
+
+
+    def admit_online(self):
+        """Request host admission only after Online; never start a build here.
+
+        The host monotonic clock is authoritative despite cross-machine wall
+        skew. Command delivery and response time consume the original interval.
+        The request is not success: recovery must accept it and acknowledge first.
+        """
+        s = self.state.data
+        sent = self.clock()
+        if sent >= min(s['ssm_online_deadline_ms'], s['deadline_ms'], EXPIRY):
+            raise OperatorError('SSM admission expired')
+        mac = s['ssm_readiness_mac']
+        if not re.fullmatch('[a-f0-9]{64}', mac):
+            raise OperatorError('SSM admission identity')
+        script = """import json,os,pathlib,time
+p=pathlib.Path('/opt/server2-s09/private')
+r=json.loads((p/'readiness.json').read_text());v=r['proof']
+assert r['mac']==MAC
+age=int(time.monotonic()*1000)-v['ready_monotonic_ms'];wall=int(time.time()*1000)
+assert 0<=age<300000 and wall<min(v['deadline_ms'],1791623880000)
+assert abs(wall-v['ready_at_ms']-age)<=1000
+fd=os.open(p/'controller-start',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+with os.fdopen(fd,'w') as f: f.write(r['mac']);f.flush();os.fsync(f.fileno())
+print(json.dumps({'host_age_ms':age,'host_wall_ms':wall}))
+""".replace('MAC', repr(mac))
+        result = json.loads(self.ssm(["python3 - <<'PY'\n"+script+"PY"], seconds=30))
+        returned = self.clock()
+        age, wall = result.get('host_age_ms'), result.get('host_wall_ms')
+        if (type(age) is not int or not 0 <= age < SSM_ONLINE_SECONDS*1000
+                or type(wall) is not int or not sent <= wall <= returned
+                or returned < sent):
+            raise OperatorError('SSM admission clock mismatch')
+        # Conservative remote monotonic mapping: measurement is AFTER sent,
+        # so sent+remaining can only shorten, never extend the host interval.
+        s['ssm_online_deadline_ms'] = min(s['ssm_online_deadline_ms'], sent+SSM_ONLINE_SECONDS*1000-age)
+        self.state.save()
+        if returned >= min(s['ssm_online_deadline_ms'], s['deadline_ms'], EXPIRY):
+            raise OperatorError('SSM admission expired')
+
+
     def run_host(self):
         self.verify_host_root()
         instance=self.state.data["resources"]["instance"]
@@ -742,20 +967,20 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
             console=cli_console_text(result)
             if "S09_GUARD_FAILED" in console: raise OperatorError("stock guard failed")
             if "S09_GUARD_V1 " in console:
+                opened_ms = self.clock()
+                if opened_ms >= guard_deadline:
+                    raise OperatorError('console guard readiness timed out')
                 self.open_https_after_guard(console); break
             time.sleep(5)
         else: raise OperatorError("console guard readiness timed out")
-        ssm_deadline=min(self.clock()+300000,self.state.data["deadline_ms"])
-        while self.clock()<ssm_deadline:
-            result=self.call("ssm","describe-instance-information",["--filters",json.dumps([{"Key":"InstanceIds","Values":[instance]}])])
-            rows=result.get("InstanceInformationList",[])
-            if len(rows)==1 and rows[0].get("PingStatus")=="Online":
-                self.verify_ssm_agent(rows[0]); break
-            time.sleep(5)
-        else: raise OperatorError("SSM Online unavailable; no widening")
-        # Wait for cloud-init write_files. Background package/snap services stay masked.
-        self.ssm(["test -f /opt/server2-s09/private/bootstrap.sh", "systemctl is-active --quiet server2-s09-expiry.timer", "systemctl is-active --quiet server2-s09-meter.service"],seconds=30)
-        self.ssm(["set -eu; : >/opt/server2-s09/private/controller-start; timeout 2100 /opt/server2-s09/private/bootstrap.sh >/opt/server2-s09/private/bootstrap.log 2>&1"],seconds=2100)
+        self.wait_online(instance, opened_ms, sleep=time.sleep)
+        self.admit_online()
+        # Recovery runs in final-stage runcmd, after write_files. File existence
+        # alone is NOT admission: wait for the bound host acknowledgement too.
+        mac = self.state.data['ssm_readiness_mac']
+        self.ssm(["set -eu; timeout 25 sh -c 'until test -f /opt/server2-s09/private/bootstrap.sh && test -f /opt/server2-s09/private/controller-admitted; do sleep 1; done'; test \"$(cat /opt/server2-s09/private/controller-admitted)\" = '"+mac+"'",
+                  "systemctl is-active --quiet server2-s09-expiry.timer", "systemctl is-active --quiet server2-s09-meter.service"],seconds=30)
+        self.ssm(["set -eu; timeout 2100 /opt/server2-s09/private/bootstrap.sh >/opt/server2-s09/private/bootstrap.log 2>&1"],seconds=2100)
         receipt=json.loads(self.ssm(["cat /opt/server2-s09/private/build.json"],seconds=30))
         if receipt.get("status")!="built" or receipt.get("source_revision")!=self.config["source_revision"]: raise OperatorError("host source build receipt")
         clock_ticks=receipt.get("clock_ticks_per_second")
@@ -793,7 +1018,68 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
         self.export_worker_result(run_directory,manifest,terminal)
         self.phase_guard()
         self.inventory_versions()
-        self.ssm(["python3 - <<'PY'\nimport pathlib,os\np=pathlib.Path('/opt/server2-s09/private/provider-pid');pid=int(p.read_text());cmd=pathlib.Path('/proc/'+str(pid)+'/cmdline').read_bytes();assert b'tools/benchmark/local_peer.py' in cmd;os.kill(pid,15)\nPY"],seconds=15)
+        # Provider process is reclaimed with the owned host in final cleanup.
+
+    def run_lifecycle(self, work, sleep=time.sleep):
+        """One final cleanup phase, only after work/result or bounded diagnostics.
+
+        Reconciliation polls are not new cleanup phases. The separately armed
+        expiry/quota/orphan watchdogs are emergency protection, not normal exits.
+        """
+        try:
+            return work()
+        except BaseException:
+            if (self.state.data.get('resources', {}).get('instance') and
+                    'ssm_admission_diagnostics' not in self.state.data):
+                try:
+                    self.capture_admission_diagnostics(admission='controller_failure')
+                except Exception:
+                    pass  # Diagnostic failure must never bypass final cleanup.
+            raise
+        finally:
+            # Watchdog remains armed until verified termination/owned absence.
+            for _ in range(60):
+                status = self.cleanup()
+                if status['status'] == 'cleaned_host_resources_S3_retained':
+                    break
+                sleep(5)
+            else:
+                raise OperatorError('cleanup pending; watchdog remains armed')
+
+
+    def capture_admission_diagnostics(self, admission='online_unavailable'):
+        """One pre-reserved console read, never persist or emit raw console/logs."""
+        diagnostic = {'admission': admission, 'console_available': False, 'recovery': []}
+        allowed = {'restarted': {'transport_and_role_ready'}, 'admitted': {'controller_marker'},
+                   'failed': {'transport_or_role_unavailable', 'admission_unconfirmed',
+                              'guard_or_local_failure', 'supervisor_timeout_or_failure'}}
+        try:
+            output = cli_console_text(self.call('ec2', 'get-console-output',
+                ['--instance-id', self.state.data['resources']['instance'], '--latest']))
+            diagnostic['console_available'] = True
+            for line in output.splitlines():
+                if not line.startswith('S09_SSM_RECOVERY_V1 ') or len(line) > 512:
+                    continue
+                try:
+                    row = json.loads(line.split(' ', 1)[1])
+                except ValueError:
+                    continue
+                if not isinstance(row, dict) or set(row) != {'status', 'reason', 'probes', 'restarts'}:
+                    continue
+                if not isinstance(row['status'], str) or not isinstance(row['reason'], str) or row['reason'] not in allowed.get(row['status'], set()):
+                    continue
+                counts = type(row['probes']) is int and 0 <= row['probes'] <= 36 and type(row['restarts']) is int and 0 <= row['restarts'] <= 1
+                supervisor = row['reason'] == 'supervisor_timeout_or_failure' and row['probes'] is None and row['restarts'] is None
+                if counts or supervisor:
+                    diagnostic['recovery'].append(row)
+                if len(diagnostic['recovery']) == 3:
+                    break
+        except (OperatorError, OSError, ValueError, KeyError, TypeError):
+            pass
+        self.state.data['ssm_admission_diagnostics'] = diagnostic
+        self.state.save()
+        print(json.dumps({'status': 'ssm_admission_failed' if admission == 'online_unavailable' else 'controller_failed', 'diagnostics': diagnostic}))
+
 
     def cleanup(self):
         # Only exact run-tagged new resources are eligible; S3 data remains untouched.
@@ -843,7 +1129,15 @@ print(json.dumps({'status':'guarded','observed_at_ms':int(time.time()*1000),'hos
                     self.own("root_volume",roots[0]["Ebs"]["VolumeId"])
                     self.state.data["cleanup_root_mapping_sha256"]=digest(canonical(roots[0]));self.state.save()
             if rows[0].get("State",{}).get("Name")!="terminated":
-                self.call("ec2","terminate-instances",["--instance-ids",instance],cleanup=True)
+                dispatched = self.state.data.get('cleanup_termination_instance')
+                if dispatched not in (None, instance):
+                    raise OperatorError('cleanup termination identity mismatch')
+                if dispatched is None:
+                    # Persist intent before dispatch; unknown outcomes never cause
+                    # a second ordinary termination. The emergency watchdog stays armed.
+                    self.state.data['cleanup_termination_instance'] = instance
+                    self.state.save()
+                    self.call("ec2","terminate-instances",["--instance-ids",instance],cleanup=True)
                 return {"status":"termination_requested_cleanup_pending"}
         volume=resources.get("root_volume")
         if instance and not volume:
@@ -1035,10 +1329,11 @@ def main():
         state.data["watchdog_reserved_reads"]=50
         state.data["watchdog_reserved_download_bytes"]=50*131072
         state.save()
-    monitor=subprocess.Popen([os.sys.executable,str(HERE/"aws_operator.py"),"--config",str(args.config.resolve()),"--state",str(args.state.resolve()),"--authorization",str(args.authorization.resolve()),"--watchdog"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
     operator=Operator(config,state,runner)
     measurement_attempted=False
-    try:
+    def work():
+        nonlocal measurement_attempted
+        monitor=subprocess.Popen([os.sys.executable,str(HERE/"aws_operator.py"),"--config",str(args.config.resolve()),"--state",str(args.state.resolve()),"--authorization",str(args.authorization.resolve()),"--watchdog"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
         for _ in range(50):
             ready=".recovery1.watchdog-ready" if args.resume_failed_creation else ".watchdog-ready"
             if state.path.with_suffix(ready).is_file(): break
@@ -1052,13 +1347,7 @@ def main():
         else:
             operator.provision()
             measurement_attempted=True;operator.run_host()
-    finally:
-        # Watchdog stays armed until it observes termination. Never kill it on parent exit.
-        for _ in range(60):
-            status=operator.cleanup()
-            if status["status"]=="cleaned_host_resources_S3_retained": break
-            time.sleep(5)
-        else: raise OperatorError("cleanup pending; watchdog remains armed")
+    operator.run_lifecycle(work)
     status="measurement_result_exported_cleanup_requested" if measurement_attempted else "existing_owned_host_cleaned_no_measurement"
     print(json.dumps({"status":status,"measurement_attempted":measurement_attempted,"state":str(args.state),"S3_retained":True}))
 

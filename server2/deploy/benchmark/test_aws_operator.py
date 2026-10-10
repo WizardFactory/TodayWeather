@@ -1,4 +1,7 @@
 """Offline S09 controller regressions; no AWS connection or credential discovery."""
+import os
+from pathlib import Path
+assert os.environ.get('S09_ISOLATED') == '1' and not Path('/sys').exists(), 'use run_isolated.py; no host execution'
 import importlib.util
 import json
 from pathlib import Path
@@ -224,14 +227,19 @@ class WorkerEvidenceTests(unittest.TestCase):
             controller=self.controller(Path(temp));actions=[]
             controller.verify_host_root=lambda:None
             controller.open_https_after_guard=lambda _:None
+            from test_online_window import install_ready_fixture
+            # Deterministic guard/readiness clocks; elapsed wall milliseconds
+            # between fixture creation and guard opening are not host evidence.
+            controller.clock=lambda:op.EXPIRY-600000
+            ready=install_ready_fixture(controller)
             def call(service,action,args):
                 actions.append(action)
-                if action=="get-console-output":return {"Output":"Linux boot text\nS09_GUARD_V1 fixture"}
-                if action=="describe-instance-information":return {"InstanceInformationList":[{"PingStatus":"Online","AgentVersion":"3.3.39.0"}]}
+                if action=="get-console-output":return ready
+                if action=="describe-instance-information":return {"InstanceInformationList":[{"InstanceId":controller.state.data["resources"]["instance"],"PingStatus":"Online","AgentVersion":"3.3.39.0"}]}
                 raise AssertionError("RunCommand before supported stock agent")
             controller.call=call
             with self.assertRaises(op.OperatorError):controller.run_host()
-            self.assertEqual(actions,["get-console-output","describe-instance-information"])
+            self.assertEqual(actions,["get-console-output","get-console-output","describe-instance-information"])
             self.assertNotIn("worker_allocation_issued",controller.state.data)
 
     def test_existing_evidence_and_symlink_never_overwritten(self):
@@ -264,12 +272,20 @@ class ConfigAndOwnershipTests(unittest.TestCase):
         config["requested_config_sha256"]=op.digest(op.canonical(runtime))
         return config
 
-    def test_declared33_source_map_accepts_and_old31_rejects(self):
-        current=self.pinned_config();self.assertEqual(len(current["source_files"]),33)
+    def test_exact_declared_source_map_accepts_and_missing_files_reject(self):
+        current=self.pinned_config()
+        declaration=json.loads((HERE.parents[1]/"config/tasks/S09.json").read_text())
+        expected=declaration['server2_paths']+[v['path'] for v in declaration['outside']]
+        self.assertEqual(set(current['source_files']),set(expected))
+        self.assertIn('server2/deploy/benchmark/ssm_startup_recovery.py',current['source_files'])
         self.assertEqual(op.validate_config(current,armed=True,now_ms=1791435000000),current)
-        old=self.pinned_config(include_checker=False);self.assertEqual(len(old["source_files"]),31)
-        with self.assertRaises(op.OperatorError): op.validate_config(old,armed=True,now_ms=1791435000000)
-
+        for missing in ('server2/deploy/benchmark/run_isolated.py','server2/deploy/benchmark/ssm_startup_recovery.py'):
+            bad=dict(current,source_files={k:v for k,v in current['source_files'].items() if k!=missing})
+            bad['source_map_sha256']=op.digest(op.canonical(bad['source_files']))
+            with self.assertRaises(op.OperatorError):op.validate_config(bad,armed=True,now_ms=1791435000000)
+        extra=dict(current,source_files=dict(current['source_files'],**{'server2/unreviewed.py':'a'*64}))
+        extra['source_map_sha256']=op.digest(op.canonical(extra['source_files']))
+        with self.assertRaises(op.OperatorError):op.validate_config(extra,armed=True,now_ms=1791435000000)
     def test_old31_source_map_rejected_before_execution(self):
         old=self.pinned_config(include_checker=False)
         with self.assertRaises(op.OperatorError): op.validate_config(old,armed=True,now_ms=1791435000000)
@@ -463,7 +479,7 @@ class WireAndFunctionalTests(unittest.TestCase):
             with self.assertRaises(op.OperatorError): controller.render_bootstrap()
 
 
-def functional_smoke(recovery=False,recovery_fault=None):
+def functional_smoke(recovery=False,recovery_fault=None,retained_bucket=False):
     """Distinct loopback fake-CLI orchestration; never an AWS/kernel/SSM proof."""
     import base64
     import http.server
@@ -474,6 +490,7 @@ def functional_smoke(recovery=False,recovery_fault=None):
         root=Path(temp);calls=[];terminated=[False];root_pending=[True]
         config=json.loads((HERE/"aws-run.json").read_text())
         config.update(source_revision="a"*40,rustup_sha256="b"*64,rustup_url="https://static.rust-lang.org/rustup/archive/1.29.1/x86_64-unknown-linux-gnu/rustup-init",source_files={"server2/Cargo.toml":"c"*64})
+        config["source_files"]["server2/deploy/benchmark/ssm_startup_recovery.py"] = op.digest((HERE/"ssm_startup_recovery.py").read_bytes())
         instance="i-0123456789abcdef0"
         if recovery:
             original,config,recovery_state,authority,current=RecoveryTests().fixture(root)
@@ -488,6 +505,7 @@ def functional_smoke(recovery=False,recovery_fault=None):
                 if (service,action)==("sts","get-caller-identity"): out={"Account":config["account"]}
                 elif action=="describe-images": out={"Images":[{"ImageId":config["ami"],"OwnerId":"099720109477","Public":True,"State":"available","Architecture":"x86_64","RootDeviceName":"/dev/sda1","VirtualizationType":"hvm"}]}
                 elif action=="describe-subnets": out={"Subnets":[{"SubnetId":config["subnet"],"VpcId":config["vpc"],"State":"available","MapPublicIpOnLaunch":True}]}
+                elif retained_bucket and service == "s3api": out=RetainedBucketRunner(config).call(service,action,args[pos+2:-2])
                 elif action=="head-bucket": code=255;error="404"
                 elif action in {"get-role","get-instance-profile"}:
                     if recovery or any("create-role" in c for c in calls):
@@ -547,6 +565,7 @@ def functional_smoke(recovery=False,recovery_fault=None):
                 else:
                     state=op.State.create(root/"state.json",{"run_id":config["run_id"],"deadline_ms":op.now_ms()+7200000,"client_token":"s09-functional","nonce":"d"*64,"resources":{"root_volume":"vol-0123456789abcdef0"}})
                     controller=op.Operator(config,state,op.Cli(config,str(fake)))
+                    virtual_profile_clock(controller)
                     self_id=controller.provision();assert self_id==instance
                 assert not any("authorize-security-group-egress" in c for c in calls)
                 payload=next(c[c.index("--user-data")+1] for c in calls if "run-instances" in c)
@@ -568,7 +587,10 @@ def functional_smoke(recovery=False,recovery_fault=None):
                 assert controller.cleanup()["status"]=="cleaned_host_resources_S3_retained"
                 assert state.data["root_volume_absence_verified"] is True
                 assert not any(any(a.startswith("delete-object") or a in {"delete-bucket","put-bucket-lifecycle-configuration"} for a in c) for c in calls)
-                return {"status":"PASS_fake_only","calls":len(calls),"decoded_userdata_bytes":len(decoded),"guard_denied_dispatch":0,"S3_deletes":0,"new_hosts":sum("run-instances" in c for c in calls),"ledger":state.data["ledger"],"kernel_SSM_AWS_proven":False,"recovery":recovery,"original_usage_preserved":state.data["operator_calls"]==36+len(calls) if recovery else None}
+                if retained_bucket:
+                    assert not any(a in call for call in calls for a in {"create-bucket","put-bucket-policy","put-bucket-versioning","put-bucket-encryption","put-public-access-block"})
+                    assert state.data["version_inventory"]["versions"] == 0
+                return {"status":"PASS_fake_only","retained_bucket":retained_bucket,"calls":len(calls),"decoded_userdata_bytes":len(decoded),"guard_denied_dispatch":0,"S3_deletes":0,"new_hosts":sum("run-instances" in c for c in calls),"ledger":state.data["ledger"],"kernel_SSM_AWS_proven":False,"recovery":recovery,"original_usage_preserved":state.data["operator_calls"]==36+len(calls) if recovery else None}
         finally: server.shutdown();server.server_close();thread.join(timeout=2)
 
 def failure_functional_smoke():
@@ -633,7 +655,7 @@ def compiled_worker_handshake(binary, fault=False, case_fault=False):
     if not binary.is_file(): raise AssertionError("compiled worker missing")
     declaration=json.loads((repo/"server2/config/tasks/S09.json").read_text())
     paths=declaration["server2_paths"]+[v["path"] for v in declaration["outside"]]
-    if len(paths)!=33: raise AssertionError("source paths")
+    if not paths or len(paths) != len(set(paths)): raise AssertionError("source paths")
     peer_fault="uncertain-cold-final-trial" if case_fault else "uncertain-provider-publication"
     peer=subprocess.Popen([sys.executable,str(repo/"server2/tools/benchmark/local_peer.py")]+(["--fault",peer_fault] if fault else []),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     endpoint=peer.stdout.readline().strip()
@@ -835,6 +857,7 @@ class RecoveryTests(unittest.TestCase):
         current=op.EXPIRY-4*3600000
         old=json.loads((HERE/"aws-run.json").read_text())
         old.update(source_revision="a"*40,native_review_receipt_sha256="a"*64,rustup_sha256="c"*64,rustup_url="https://static.rust-lang.org/rustup/archive/1.29.1/x86_64-unknown-linux-gnu/rustup-init",source_files={"server2/Cargo.toml":"d"*64})
+        old["source_files"]["server2/deploy/benchmark/ssm_startup_recovery.py"] = op.digest((HERE/"ssm_startup_recovery.py").read_bytes())
         new=dict(old,source_revision="b"*40,native_review_receipt_sha256="b"*64)
         resources={"bucket":old["bucket"],"role":"arn:aws:iam::"+old["account"]+":role/"+old["role"],"profile":old["role"],"sg":"sg-0123456789abcdef0"}
         data={"run_id":old["run_id"],"config_sha256":op.digest(op.canonical(old)),"client_token":"s09-synthetic-recovery", "nonce":"d"*64,"deadline_ms":current-1000,"launch_attempted":True,"status":"creation","bootstrap_reserved_bytes":3*op.GiB,"worker_allocation_issued":False,"watchdog_reserved_reads":50,"watchdog_reserved_download_bytes":50*131072,"resources":resources,"creation_intents":{k:"acknowledged" for k in resources},"operator_calls":36,"ledger":{"reads":30,"writes":6,"download":4718592,"store":0}}
@@ -1069,12 +1092,217 @@ def cli_console_functional_smoke(binary):
         peer.shutdown();peer.server_close();thread.join(timeout=2)
 
 
+def virtual_profile_clock(controller):
+    """Advance only fixture time; retain real bounded wait/readback/ledger code."""
+    original = controller.clock
+    offset = [0]
+    controller.clock = lambda: original() + offset[0]
+    wait = controller.wait_profile_ready
+    def sleep(seconds): offset[0] += int(seconds*1000)
+    controller.wait_profile_ready = lambda role: wait(role, sleep=sleep)
+    return controller
+
+
+class RetainedBucketRunner:
+    """Bounded offline peer for real Operator.provision/call/inventory methods."""
+    def __init__(self, config, missing=False, overrides=None, pages=None):
+        self.config, self.missing = config, missing
+        self.overrides, self.pages = overrides or {}, list(pages or [{"Versions":[], "IsTruncated":False}])
+        self.calls = []
+
+    def call(self, service, action, args):
+        if len(self.calls) >= 100:
+            raise AssertionError("offline peer call bound")
+        self.calls.append((service, action, list(args)))
+        if action in self.overrides:
+            value = self.overrides[action]
+            if isinstance(value, Exception):
+                raise value
+            return value
+        c = self.config
+        if action == "head-bucket":
+            if args != ["--bucket", c["bucket"], "--expected-bucket-owner", op.FIXED["account"]]:
+                raise AssertionError("bucket ownership must be fixed before creation")
+            if self.missing:
+                raise op.OperatorError("AWS status 404")
+            return {}
+        if action == "get-caller-identity": return {"Account":c["account"]}
+        if action == "describe-images": return {"Images":[{"ImageId":c["ami"], "OwnerId":"099720109477", "Public":True, "State":"available", "Architecture":"x86_64", "RootDeviceName":"/dev/sda1", "VirtualizationType":"hvm"}]}
+        if action == "describe-subnets": return {"Subnets":[{"SubnetId":c["subnet"], "VpcId":c["vpc"], "State":"available", "MapPublicIpOnLaunch":True}]}
+        if action == "get-bucket-location": return {"LocationConstraint":c["region"]}
+        if action == "get-bucket-versioning": return {"Status":"Enabled"}
+        if action == "get-public-access-block": return {"PublicAccessBlockConfiguration":{k:True for k in ("BlockPublicAcls", "IgnorePublicAcls", "BlockPublicPolicy", "RestrictPublicBuckets")}}
+        if action == "get-bucket-encryption": return {"ServerSideEncryptionConfiguration":{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}}
+        if action == "get-bucket-policy": return {"Policy":json.dumps(json.loads((HERE/"bucket-policy.json").read_text()), indent=3)}
+        if action == "list-object-versions":
+            if not self.pages: raise AssertionError("inventory exceeded fixture pages")
+            return self.pages.pop(0)
+        tags=[{"Key":"RunId", "Value":c["run_id"]}, {"Key":"Purpose", "Value":"synthetic-benchmark-only"}]
+        role="arn:aws:iam::"+c["account"]+":role/"+c["role"]
+        if action == "get-role": raise op.OperatorError("AWS status NoSuchEntity")
+        if action == "get-instance-profile":
+            if not any(a == "create-instance-profile" for _, a, _ in self.calls): raise op.OperatorError("AWS status NoSuchEntity")
+            return {"InstanceProfile":{"Arn":"arn:aws:iam::"+c["account"]+":instance-profile/"+c["role"], "Tags":tags, "Roles":[{"RoleName":c["role"], "Arn":role}]}}
+        if action == "describe-security-groups": return {"SecurityGroups":[] if "--filters" in args else [{"IpPermissions":[], "IpPermissionsEgress":[]}]}
+        if action == "create-security-group": return {"GroupId":"sg-0123456789abcdef0"}
+        if action == "create-role": return {"Role":{"Arn":role}}
+        if action == "run-instances": return {"Instances":[{"InstanceId":"i-0123456789abcdef0"}]}
+        if action in {"create-bucket", "put-public-access-block", "put-bucket-versioning", "put-bucket-encryption", "put-bucket-policy", "put-role-policy", "create-instance-profile", "add-role-to-instance-profile"}: return {}
+        raise AssertionError("unexpected offline action "+action)
+
+
+class RetainedBucketTests(unittest.TestCase):
+    def controller(self, directory, **runner_options):
+        config = ConfigAndOwnershipTests().pinned_config()
+        config["source_revision"] = "b"*40
+        current = op.EXPIRY-4*3600000
+        state = op.State.create(Path(directory)/"state.json", {"run_id":config["run_id"], "deadline_ms":current+7200000, "client_token":"s09-offline-retained", "nonce":"d"*64, "resources":{}, "worker_allocation_issued":False})
+        runner = RetainedBucketRunner(config, **runner_options)
+        return virtual_profile_clock(op.Operator(config, state, runner, clock=lambda:current)), runner
+
+    def test_aes256_with_aws_sse_c_blocking_metadata_is_valid(self):
+        encryption = {"ServerSideEncryptionConfiguration":{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}, "BucketKeyEnabled":False, "BlockedEncryptionTypes":{"EncryptionType":["SSE-C"]}}]}}
+        with tempfile.TemporaryDirectory(prefix="s09-retained-block-ssec-") as directory:
+            controller, runner = self.controller(directory, overrides={"get-bucket-encryption":encryption})
+            self.assertTrue(controller.retained_bucket())
+            self.assertFalse(any(a.startswith(("create-", "put-", "delete-")) for _, a, _ in runner.calls))
+
+    def test_reuse_inventory_preserves_prior_observations_without_ledger_refund(self):
+        with tempfile.TemporaryDirectory(prefix="s09-retained-history-") as directory:
+            pages = [{"Versions":[{"Size":7}], "IsTruncated":True, "NextKeyMarker":"old", "NextVersionIdMarker":"v1"}, {"Versions":[{"Size":11}], "IsTruncated":False}, {"Versions":[], "IsTruncated":False}]
+            controller, runner = self.controller(directory, pages=pages)
+            old = {"potential_version_charge_bytes":99, "versions":1, "body_plus16384_inventory_does_not_refund_ledger":True}
+            controller.state.data["version_inventory"] = dict(old)
+            controller.ledger.reserve("PUT", put_bytes=123)
+            charged = controller.ledger.used["store"]
+            controller.provision()
+            observation = dict(controller.state.data["version_inventory"])
+            self.assertEqual(observation["versions"], 2)
+            self.assertEqual(observation["potential_version_charge_bytes"], 2*16384+18)
+            self.assertEqual(controller.state.data.get("version_inventory_history"), [old])
+            self.assertEqual(controller.inventory_versions(), 0)
+            self.assertEqual(controller.state.data.get("version_inventory_history"), [old, observation])
+            self.assertEqual(controller.state.data["ledger"]["store"], charged)
+            lists = [args for _, action, args in runner.calls if action == "list-object-versions"]
+            self.assertIn("--key-marker", lists[1])
+            self.assertEqual(lists[1][lists[1].index("--version-id-marker")+1], "v1")
+
+    def test_ambiguous_duplicate_bucket_policy_rejected_before_mutations(self):
+        policy = (HERE/"bucket-policy.json").read_text()
+        duplicate = '{"Version":"unreviewed",'+policy.lstrip()[1:]
+        with tempfile.TemporaryDirectory(prefix="s09-retained-policy-") as directory:
+            controller, runner = self.controller(directory, overrides={"get-bucket-policy":{"Policy":duplicate}})
+            with self.assertRaises(op.OperatorError): controller.provision()
+            self.assertFalse(any(a.startswith(("create-", "put-", "delete-")) for _, a, _ in runner.calls))
+
+    def test_inventory_schema_must_be_complete_and_bounded_before_creation(self):
+        invalid = [
+            {"Versions":{}, "IsTruncated":False},
+            {"Versions":None, "IsTruncated":False},
+            {"Versions":[{"Size":0}]*33, "IsTruncated":False},
+            {"Versions":[None], "IsTruncated":False},
+            {"Versions":[], "DeleteMarkers":{}, "IsTruncated":False},
+            {"Versions":[{"Size":True}], "IsTruncated":False},
+            {"Versions":[], "IsTruncated":None},
+            {"Versions":[], "IsTruncated":True},
+            {"Versions":[{"Size":64*op.MiB}], "IsTruncated":False},
+            {"DeleteMarkers":[{"Key":"old"}], "IsTruncated":False},
+        ]
+        for page in invalid:
+            with self.subTest(page=page), tempfile.TemporaryDirectory(prefix="s09-retained-inventory-") as directory:
+                controller, runner = self.controller(directory, pages=[page])
+                with self.assertRaises(op.OperatorError): controller.provision()
+                self.assertFalse(any(a.startswith(("create-", "put-", "delete-")) for _, a, _ in runner.calls))
+                self.assertNotIn("version_inventory", controller.state.data)
+
+    def test_aes256_default_with_disabled_bucket_key_can_be_reused(self):
+        encryption = {"ServerSideEncryptionConfiguration":{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}, "BucketKeyEnabled":False}]}}
+        with tempfile.TemporaryDirectory(prefix="s09-retained-aes256-") as directory:
+            controller, runner = self.controller(directory, overrides={"get-bucket-encryption":encryption})
+            self.assertEqual(controller.provision(), "i-0123456789abcdef0")
+            self.assertFalse(any(a == "put-bucket-encryption" for _, a, _ in runner.calls))
+
+    def test_missing_bucket_keeps_original_creation_path(self):
+        with tempfile.TemporaryDirectory(prefix="s09-retained-missing-") as directory:
+            controller, runner = self.controller(directory, missing=True)
+            self.assertEqual(controller.provision(), "i-0123456789abcdef0")
+            s3_actions = [a for service, a, _ in runner.calls if service == "s3api"]
+            self.assertEqual(s3_actions, ["head-bucket", "create-bucket", "put-public-access-block", "put-bucket-versioning", "put-bucket-encryption", "put-bucket-policy"])
+            self.assertEqual(controller.state.data["creation_intents"]["bucket"], "acknowledged")
+
+    def test_foreign_or_unknown_bucket_head_rejects_without_mutations(self):
+        for error in ("AWS status 403", "AWS status AccessDenied", "AWS action failed; outcome unknown", "operator subprocess deadline"):
+            with self.subTest(error=error), tempfile.TemporaryDirectory(prefix="s09-retained-owner-") as directory:
+                controller, runner = self.controller(directory, overrides={"head-bucket":op.OperatorError(error)})
+                with self.assertRaises(op.OperatorError): controller.provision()
+                self.assertEqual(runner.calls[-1][2], ["--bucket", op.FIXED["bucket"], "--expected-bucket-owner", op.FIXED["account"]])
+                self.assertFalse(any(a.startswith(("create-", "put-", "delete-")) for _, a, _ in runner.calls))
+                self.assertEqual(controller.state.data["resources"], {})
+
+    def test_wrong_or_unknown_retained_bucket_settings_reject_without_mutations(self):
+        public = {k:True for k in ("BlockPublicAcls", "IgnorePublicAcls", "BlockPublicPolicy", "RestrictPublicBuckets")}
+        cases = [
+            ("get-bucket-location", {"LocationConstraint":"us-east-1"}),
+            ("get-bucket-versioning", {"Status":"Suspended"}),
+            ("get-bucket-versioning", {}),
+            ("get-bucket-encryption", {"ServerSideEncryptionConfiguration":{"Rules":[]}}),
+            ("get-bucket-encryption", {"ServerSideEncryptionConfiguration":{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"aws:kms"}}]}}),
+            ("get-bucket-policy", {"Policy":"{}"}),
+            ("get-bucket-policy", {"Policy":"not JSON"}),
+            ("get-bucket-policy", {}),
+        ]
+        for key in public:
+            for value in (False, 1): cases.append(("get-public-access-block", {"PublicAccessBlockConfiguration":dict(public, **{key:value})}))
+        cases += [(action, None) for action in ("get-bucket-location", "get-bucket-versioning", "get-public-access-block", "get-bucket-encryption", "get-bucket-policy")]
+        for action, response in cases:
+            with self.subTest(action=action, response=response), tempfile.TemporaryDirectory(prefix="s09-retained-invalid-") as directory:
+                controller, runner = self.controller(directory, overrides={action:response})
+                with self.assertRaises(op.OperatorError): controller.provision()
+                self.assertFalse(any(a.startswith(("create-", "put-", "delete-")) for _, a, _ in runner.calls))
+                self.assertEqual(controller.state.data["resources"], {})
+
+    def test_repeated_inventory_marker_rejects_and_keeps_prior_observation(self):
+        page = {"Versions":[], "IsTruncated":True, "NextKeyMarker":"old", "NextVersionIdMarker":"v1"}
+        with tempfile.TemporaryDirectory(prefix="s09-retained-pagination-") as directory:
+            controller, runner = self.controller(directory, pages=[page, page])
+            old = {"potential_version_charge_bytes":55, "versions":1}
+            controller.state.data["version_inventory"] = dict(old)
+            with self.assertRaises(op.OperatorError): controller.provision()
+            self.assertEqual(controller.state.data["version_inventory"], old)
+            self.assertEqual(sum(a == "list-object-versions" for _, a, _ in runner.calls), 2)
+            self.assertEqual(controller.state.data["ledger"]["writes"], 2)
+            self.assertFalse(any(a.startswith(("create-", "put-", "delete-")) for _, a, _ in runner.calls))
+
+    def test_nonboolean_bucket_key_setting_rejected_before_mutations(self):
+        encryption = {"ServerSideEncryptionConfiguration":{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}, "BucketKeyEnabled":0}]}}
+        with tempfile.TemporaryDirectory(prefix="s09-retained-schema-") as directory:
+            controller, runner = self.controller(directory, overrides={"get-bucket-encryption":encryption})
+            with self.assertRaises(op.OperatorError): controller.provision()
+            self.assertFalse(any(a.startswith(("create-", "put-", "delete-")) for _, a, _ in runner.calls))
+
+    def test_valid_retained_bucket_is_read_only_validated_before_new_resources(self):
+        with tempfile.TemporaryDirectory(prefix="s09-retained-") as directory:
+            controller, runner = self.controller(directory)
+            self.assertEqual(controller.provision(), "i-0123456789abcdef0")
+            actions = [a for _, a, _ in runner.calls]
+            reads = ["head-bucket", "get-bucket-location", "get-bucket-versioning", "get-public-access-block", "get-bucket-encryption", "get-bucket-policy", "list-object-versions"]
+            first_create = actions.index("create-security-group")
+            for action in reads: self.assertLess(actions.index(action), first_create)
+            self.assertFalse(any(a in {"create-bucket", "put-public-access-block", "put-bucket-versioning", "put-bucket-encryption", "put-bucket-policy"} or a.startswith("delete-") for a in actions))
+            self.assertEqual(controller.state.data["resources"]["bucket"], op.FIXED["bucket"])
+            self.assertNotIn("bucket", controller.state.data["creation_intents"])
+            self.assertEqual(controller.state.data["version_inventory"]["versions"], 0)
+            self.assertFalse(controller.state.data["worker_allocation_issued"])
+            self.assertEqual(controller.config["source_revision"], "b"*40)
+
+
 # Unit invocation above must occur after all definitions.
 
 if __name__ == "__main__":
     import sys
     if len(sys.argv)==3 and sys.argv[1]=="--recovery-failure-functional-smoke": print(json.dumps(functional_smoke(recovery=True,recovery_fault=sys.argv[2]),sort_keys=True))
     elif sys.argv[1:]==["--recovery-functional-smoke"]: print(json.dumps(functional_smoke(recovery=True),sort_keys=True))
+    elif sys.argv[1:]==["--retained-bucket-functional-smoke"]: print(json.dumps(functional_smoke(retained_bucket=True),sort_keys=True))
     elif sys.argv[1:]==["--functional-smoke"]: print(json.dumps(functional_smoke(),sort_keys=True))
     elif len(sys.argv)==3 and sys.argv[1]=="--cli-console-functional-smoke": print(json.dumps(cli_console_functional_smoke(sys.argv[2]),sort_keys=True))
     elif len(sys.argv)==3 and sys.argv[1]=="--offline-launch-oracle": print(json.dumps(offline_launch_oracle(sys.argv[2]),sort_keys=True))

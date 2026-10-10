@@ -2,9 +2,81 @@
 
 ## What this delivery measures
 
-Latest status: the 2026-10-09 host attempt stopped before measurement and was fully cleaned up. The external-review correction below improves watchdog retries and local overload reporting; actual intended-host measurements remain incomplete.
+Latest status: the maintained successor integrates the reviewed offline startup/lifecycle corrections. This is not a new live measurement or an execution receipt. The historical attempts and reviews below apply only to their original bytes; actual intended-host measurements remain incomplete.
 
 This tool exercises the actual Rust raw store, catalog, resolver and funded-acquisition libraries against fresh volatile HTTP peers. It measures synthetic origin work, not a deployed weather route. The local runner calls no real AWS/providers. A separately armed approved driver can use one dedicated same-region test bucket after eligible review. The approved recovery attempted host creation once but stopped on the console-output boundary before any worker allocation or measurement. Root subsequently verified owned cleanup. This proves no API parity, CloudFront latency, measurement-path IAM/TLS or intended-host musl feasibility. S09 remains open: same-region intended-host measurements and O-2/O-5 decisions still block S10/S13.
+
+## Maintained startup successor (2026-10-10)
+
+AK's task-scoped renewal fixes expiry at **2026-10-10T09:18:00Z
+(1791623880000)**. The original 04:49:59Z / 1791607799000 approval remains
+historical reference, not a second grant. Supplied authority records two of
+three host attempts consumed and USD 5 remaining of USD 15 cumulative; this
+code update neither rechecks live inventory nor resets attempts, spent usage,
+S3 versions, recovery allowance or worker claims. The per-host 7200-second cap,
+worker windows, export reserve and all request/byte grants are unchanged.
+An expiry renewal alone never authorizes a new launch or a replacement worker.
+
+The controller read-validates any retained bucket's fixed owner, region,
+versioning, public-access block, AES256 policy and exact bucket policy, then
+inventories all versions without refunding usage. It never rewrites settings
+on reuse. New instance-profile membership receives at least 60 seconds of
+settling/readback within a 120-second bound before the single launch attempt.
+Neither IAM visibility nor the following readiness probe proves credential
+issuance or SSM authentication.
+
+Final-stage cloud-init keeps SSM stopped until both fixed-endpoint TLS probes
+and IMDSv2 iam/info Success plus the expected role listing are ready. Recovery
+never requests a credential body. Fresh expiry/quota guards fence restart.
+Within the 180-second readiness cap the host captures readiness wall/monotonic
+time before publication or restart. A private per-launch HMAC binds the proof
+to the nonce, run, source, role and deadline. **Online admission is strictly
+[readiness, readiness + 300 seconds)**, clipped by absolute expiry; delivery,
+restart, polling and handshake latency consume that same window. Missing,
+forged, replayed, future or out-of-order proof fails closed. A control-only SSM
+handshake independently checks host monotonic age and clock consistency. Only
+its bound host acknowledgement permits the separate build command; an existing
+bootstrap.sh is not admission. The supervisor is 510 seconds plus a 2-second
+kill grace, never an extension of absolute expiry.
+
+Ordinary recovery/bootstrap/worker failures return bounded diagnostics or
+preserve results before one controller-owned final cleanup phase. Normal
+termination dispatch is persisted once, with bounded reconciliation polls.
+Independent expiry/quota/orphan-watchdog emergency protection stays armed and
+can preempt collection. S3 objects/versions are always retained.
+
+The recovery script is maintained beside cloud-init, not a runtime overlay of
+old source bytes. Its exact bytes are included in the task source map and
+embedded before network admission. Python and Rust require the exact unique
+path set in server2/config/tasks/S09.json, rather than a historical count.
+Cloud-init still checks out the exact reviewed revision, checks every mapped
+hash and builds that head. Regenerate source/config/review pins for the final
+committed tree and obtain a fresh independent review. No prior receipt or
+scratch override manifest validates this successor; checked-in pins stay inert.
+Do not repin or rewrite the original measurement snapshots and receipts.
+
+Linux Python operational tests **must** use the maintained runner below.
+Bubblewrap, working user namespaces and /usr/bin/python3 are prerequisites.
+The runner clears environment, drops capabilities, isolates PID/network/mount
+namespaces, hides host services/sysfs/credentials, mounts source read-only and
+permits only reviewed fake-aws children beneath private temporary scratch.
+It verifies denial of an inert command before imports. Missing isolation is a
+hard failure, including in CI; never run the operational tests directly or
+substitute a host-side fallback. All functional outcomes are fake-only.
+
+```sh
+python3 server2/deploy/benchmark/run_isolated.py safety
+python3 server2/deploy/benchmark/run_isolated.py 'test_*.py'
+python3 server2/deploy/benchmark/run_isolated.py functional
+python3 server2/deploy/benchmark/run_isolated.py imds-functional
+python3 server2/deploy/benchmark/run_isolated.py online-functional
+```
+
+The existing architecture diagram remains a revision-bound historical
+measurement/recovery overview, not evidence for these uncommitted successor
+bytes. No route, collector, response, storage or deployed topology changes in
+this correction. The detailed admission/cleanup contract is maintained here;
+no newly validated diagram, live readiness or host-musl proof is claimed.
 
 ## Run an isolated release measurement
 
@@ -56,7 +128,7 @@ See the [architecture](../architecture/server2.md), [task specification](../../s
 
 ## Approved driver and operator boundary
 
-The [resource approval](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052596161) expires 2026-10-10T04:49:59Z. It permits one dedicated Seoul c6i.large host for at most two hours, one hour of benchmark work and an operator stop at USD 5. No production hosts, actual weather/geocoder providers, MongoDB or notification state are used. The fixed account is 141248341265; the bucket and temporary role names are fixed by the inert templates. Synthetic S3 objects and all their versions remain after cleanup. Owned host/root storage, temporary IAM and security-group cleanup never delete bucket objects.
+The original [resource approval](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6052596161) specified the historical 2026-10-10T04:49:59Z cutoff (superseded only by the fixed renewal above). That historical grant permitted one dedicated Seoul c6i.large host for at most two hours, one hour of benchmark work and an operator stop at USD 5. No production hosts, actual weather/geocoder providers, MongoDB or notification state are used. The fixed account is 141248341265; the bucket and temporary role names are fixed by the inert templates. Synthetic S3 objects and all their versions remain after cleanup. Owned host/root storage, temporary IAM and security-group cleanup never delete bucket objects.
 
 These validation commands perform no network I/O:
 
@@ -104,7 +176,7 @@ IMDS accounting distinguishes confirmed non-200 status and response-header/lengt
 
 ## Host I/O inventory and guard limitations
 
-The [nonliteral inventory clarification](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6055549129) is recorded in S09.json for manual source review. It is distinct from the unchanged four literal machine waivers. Review covers the bounded private manifest read and validated ancestry; adjacent exclusive worker.claim create/write/fsync; hashes of the frozen 33 source paths and Cargo.lock under the build checkout; bounded current_exe hash; and caller-owned configuration plus bounded private result/error/state files. The local seam uses its owned temporary inputs and ignored reports. Computed paths, concatenations and aliases are not a complete static security boundary; every nonliteral access requires manual ownership and source review. This inventory grants no arbitrary create/open/include exemption.
+The [nonliteral inventory clarification](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6055549129) is recorded in S09.json for manual source review. It is distinct from the unchanged four literal machine waivers. Review covers the bounded private manifest read and validated ancestry; adjacent exclusive worker.claim create/write/fsync; hashes of the exact task-declared source paths and Cargo.lock under the build checkout; bounded current_exe hash; and caller-owned configuration plus bounded private result/error/state files. The local seam uses its owned temporary inputs and ignored reports. Computed paths, concatenations and aliases are not a complete static security boundary; every nonliteral access requires manual ownership and source review. This inventory grants no arbitrary create/open/include exemption.
 
 The stock kernel thresholds are intentionally stricter than the accounting grants: 2 GiB bootstrap, 24 GiB benchmark and 28 GiB global, compared with 3/26/30 GiB application grants. They reserve headroom for uncontrolled traffic and may drop traffic and abort a run earlier. A grant is a ceiling, not an entitlement to consume the full amount. Independent host/guard/version proof remains unexecuted until the approved live preflight succeeds.
 

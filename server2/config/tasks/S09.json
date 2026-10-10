@@ -23,7 +23,21 @@
     "server2/deploy/benchmark/bucket-policy.json",
     "server2/deploy/benchmark/test_aws_operator.py",
     "server2/tools/check_placement.py",
-    "server2/tools/test_placement.py"
+    "server2/tools/test_placement.py",
+    "server2/deploy/benchmark/ssm_startup_recovery.py",
+    "server2/deploy/benchmark/run_isolated.py",
+    "server2/deploy/benchmark/isolated_tests.py",
+    "server2/deploy/benchmark/test_sandbox.py",
+    "server2/deploy/benchmark/test_integration.py",
+    "server2/deploy/benchmark/test_ssm_startup_recovery.py",
+    "server2/deploy/benchmark/test_imds_propagation.py",
+    "server2/deploy/benchmark/test_imds_safety.py",
+    "server2/deploy/benchmark/test_lifecycle.py",
+    "server2/deploy/benchmark/test_online_window.py",
+    "server2/deploy/benchmark/test_online_fences.py",
+    "server2/deploy/benchmark/imds_functional.py",
+    "server2/deploy/benchmark/online_functional.py",
+    "server2/tools/ci.py"
   ],
   "outside": [
     {
@@ -131,7 +145,7 @@
       {
         "source": "server2/tools/benchmark/aws.rs",
         "operation": "source_check/hash_file: File::open/bounded read",
-        "scope": "frozen declared 33 source paths and Cargo.lock beneath compile-time CARGO_MANIFEST_DIR checkout"
+        "scope": "exact task-declared source paths and Cargo.lock beneath compile-time CARGO_MANIFEST_DIR checkout"
       },
       {
         "source": "server2/tools/benchmark/aws.rs",

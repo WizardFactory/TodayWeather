@@ -7,6 +7,7 @@ import argparse
 import hashlib
 from html import escape
 import json
+import platform
 from pathlib import Path
 import re
 import textwrap
@@ -77,7 +78,7 @@ def main():
         canvas.setFont('Helvetica',8);canvas.setFillColor(colors.HexColor('#475569'));canvas.drawString(48,28,'S09 tooling | actual host/AWS/O2/O5 gates pending');canvas.drawRightString(564,28,str(doc.page))
     document=SimpleDocTemplate(str(PDF),pagesize=(612,792),leftMargin=48,rightMargin=48,topMargin=42,bottomMargin=48,title='S09 bounded feasibility operations',author='TodayWeather',invariant=1)
     document.build(story,onFirstPage=footer,onLaterPages=footer)
-    manifest={'pages':document.page,'schema':1,'task':'S09','date':args.capture_date,'command':args.command,'environment':'Rust1.99/macOS, public Python loopback peer','scope':'Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or host go','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(binary),'requested_config_sha256':report['requested_config_sha256'],'effective_config_sha256':report['runner_provenance']['effective_config_sha256'],'report_sha256':digest(report_path),'live_driver_sha256':digest(ROOT/'server2/tools/benchmark/aws.rs'),'operator_sha256':digest(ROOT/'server2/deploy/benchmark/aws_operator.py'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
+    manifest={'pages':document.page,'schema':1,'task':'S09','date':args.capture_date,'command':args.command,'environment':'Rust1.99/'+platform.system()+', public Python loopback peer','scope':'Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or host go','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(binary),'requested_config_sha256':report['requested_config_sha256'],'effective_config_sha256':report['runner_provenance']['effective_config_sha256'],'report_sha256':digest(report_path),'live_driver_sha256':digest(ROOT/'server2/tools/benchmark/aws.rs'),'operator_sha256':digest(ROOT/'server2/deploy/benchmark/aws_operator.py'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
     (EVIDENCE/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('Manual PDF, actual stdout capture and hash manifest generated')
 

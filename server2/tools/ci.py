@@ -31,6 +31,11 @@ def main():
         declared=[Path(provided)]
     if len(declared)!=1: raise SystemExit('one reviewed task declaration is required per PR')
     commands=[[sys.executable,'tools/check_placement.py','--root','..','--declaration',str(declared[0]),'--base',base],[sys.executable,'tools/test_placement.py'],['cargo','fmt','--check'],['cargo','clippy','--locked','--workspace','--all-targets','--','-D','warnings'],['cargo','test','--locked','--workspace'],['cargo','build','--locked','--release'],[sys.executable,'tools/smoke.py','--binary','target/release/server2']]
+    # Operational tests must never run on the CI host. Missing bubblewrap or
+    # namespaces fail closed; no direct unittest fallback is permitted.
+    sandbox = 'deploy/benchmark/run_isolated.py'
+    commands[2:2] = [[sys.executable, sandbox, selection] for selection in
+        ('safety', 'test_*.py', 'functional', 'imds-functional', 'online-functional')]
     local_tests = Path('deploy/local/test_local.py')
     local_smoke = Path('deploy/local/smoke.py')
     if local_tests.exists() != local_smoke.exists():

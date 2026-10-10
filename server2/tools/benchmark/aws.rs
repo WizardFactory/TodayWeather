@@ -263,7 +263,7 @@ impl Manifest {
         {
             return Err("manifest identity/hash");
         }
-        if self.approval_expires_at_ms != 1791607799000
+        if self.approval_expires_at_ms != 1791623880000
             || now >= self.approval_expires_at_ms
             || now >= self.host_expires_at_ms
             || now >= self.benchmark_expires_at_ms
@@ -1004,8 +1004,14 @@ fn source_check(m: &Manifest) -> Result<(), &'static str> {
     for v in declaration["outside"].as_array().ok_or("source outside")? {
         paths.push(v["path"].as_str().ok_or("source path")?)
     }
-    if paths.len() != 33
-        || m.source_map.len() != 33
+    if paths.is_empty()
+        || paths.len() > 128
+        || paths
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            != paths.len()
+        || m.source_map.len() != paths.len()
         || paths.iter().any(|p| !m.source_map.contains_key(*p))
     {
         return Err("source map paths");
@@ -2582,8 +2588,68 @@ mod wire_tests {
         ));
         assert_eq!(denied.ledger.report()["used"]["read_attempts"], 0);
     }
+    #[test]
+    fn successor_source_map_matches_exact_compiled_declaration() {
+        let mut m = manifest("http://127.0.0.1:1");
+        let declaration: Value =
+            serde_json::from_str(include_str!("../../config/tasks/S09.json")).unwrap();
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap();
+        for path in declaration["server2_paths"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .chain(
+                declaration["outside"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| v["path"].as_str().unwrap()),
+            )
+        {
+            m.source_map.insert(
+                path.into(),
+                hash_file(&root.join(path), 8 * 1024 * 1024).unwrap(),
+            );
+        }
+        m.source_map_sha256 = sha256(&serde_json::to_vec(&m.source_map).unwrap());
+        m.lock_sha256 = hash_file(&root.join("server2/Cargo.lock"), 1024 * 1024).unwrap();
+        assert_eq!(source_check(&m), Ok(()));
+        m.source_map
+            .remove("server2/deploy/benchmark/ssm_startup_recovery.py");
+        m.source_map_sha256 = sha256(&serde_json::to_vec(&m.source_map).unwrap());
+        assert_eq!(source_check(&m), Err("source map paths"));
+    }
+    #[test]
+    fn successor_expiry_is_fixed_and_durations_remain_bounded() {
+        let now = 1791620000000u64;
+        let mut m = manifest("http://127.0.0.1:1");
+        let (mut c, _) = read_config(std::path::Path::new("config/benchmarks/aws.json")).unwrap();
+        c.execution_enabled = true;
+        c.source_revision = Some(m.source_revision.clone());
+        c.source_map_sha256 = Some(m.source_map_sha256.clone());
+        c.lock_sha256 = Some(m.lock_sha256.clone());
+        c.review_candidate_sha256 = Some("0".repeat(64));
+        m.approval_expires_at_ms = 1791623880000;
+        m.host_expires_at_ms = now + 3600000;
+        m.benchmark_expires_at_ms = now + 1800000;
+        m.guard_proof.observed_at_ms = now;
+        let validate = |m: &Manifest, now| m.validate(&c, &"0".repeat(64), &"0".repeat(64), now);
+        assert_eq!(validate(&m, now), Ok(()));
+        m.approval_expires_at_ms += 1;
+        assert_eq!(validate(&m, now), Err("manifest expiry"));
+        m.approval_expires_at_ms = 1791623880000;
+        m.host_expires_at_ms = now + 7200001;
+        assert_eq!(validate(&m, now), Err("manifest expiry"));
+        m.host_expires_at_ms = now + 3600000;
+        assert_eq!(validate(&m, 1791623880000), Err("manifest expiry"));
+        m.approval_expires_at_ms = 1791607799000; // historical authority is not the successor
+        assert_eq!(validate(&m, now), Err("manifest expiry"));
+    }
     fn manifest(provider: &str) -> Manifest {
-        serde_json::from_value(json!({"schema":1,"run_id":RUN,"allocation_id":format!("{RUN}-worker1"),"source_map":{},"account":ACCOUNT,"region":REGION,"bucket":BUCKET,"role":ROLE,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"source_map_sha256":"0".repeat(64),"binary_sha256":"0".repeat(64),"lock_sha256":"0".repeat(64),"requested_config_sha256":"0".repeat(64),"approval_expires_at_ms":1791607799000u64,"host_expires_at_ms":1791607799000u64,"benchmark_expires_at_ms":1791607799000u64,"provider_endpoint":provider,"allocations":{"read_attempts":390000,"write_attempts":18000,"download_bytes":26*GIB,"stored_version_charge_bytes":63*1024*1024,"metadata_download_bytes":0},"operator_reservation_summary":{"read_attempts":10000,"write_attempts":2000,"bootstrap_download_bytes":3*GIB,"administrative_download_bytes":GIB,"stored_version_charge_bytes":1048576},"phases":{"protocol":{"read_attempts":5000,"write_attempts":3500},"cold":{"read_attempts":280000,"write_attempts":0},"repair":{"read_attempts":60000,"write_attempts":4000},"warm":{"read_attempts":10000,"write_attempts":0},"funding":{"read_attempts":10000,"write_attempts":5500},"failure":{"read_attempts":25000,"write_attempts":5000}},"guard_proof":{"status":"verified","run_id":RUN,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"observed_at_ms":0,"proof_sha256":"0".repeat(64)}})).unwrap()
+        serde_json::from_value(json!({"schema":1,"run_id":RUN,"allocation_id":format!("{RUN}-worker1"),"source_map":{},"account":ACCOUNT,"region":REGION,"bucket":BUCKET,"role":ROLE,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"source_map_sha256":"0".repeat(64),"binary_sha256":"0".repeat(64),"lock_sha256":"0".repeat(64),"requested_config_sha256":"0".repeat(64),"approval_expires_at_ms":1791623880000u64,"host_expires_at_ms":1791623880000u64,"benchmark_expires_at_ms":1791623880000u64,"provider_endpoint":provider,"allocations":{"read_attempts":390000,"write_attempts":18000,"download_bytes":26*GIB,"stored_version_charge_bytes":63*1024*1024,"metadata_download_bytes":0},"operator_reservation_summary":{"read_attempts":10000,"write_attempts":2000,"bootstrap_download_bytes":3*GIB,"administrative_download_bytes":GIB,"stored_version_charge_bytes":1048576},"phases":{"protocol":{"read_attempts":5000,"write_attempts":3500},"cold":{"read_attempts":280000,"write_attempts":0},"repair":{"read_attempts":60000,"write_attempts":4000},"warm":{"read_attempts":10000,"write_attempts":0},"funding":{"read_attempts":10000,"write_attempts":5500},"failure":{"read_attempts":25000,"write_attempts":5000}},"guard_proof":{"status":"verified","run_id":RUN,"instance_id":"i-0123456789abcdef0","source_revision":"0".repeat(40),"observed_at_ms":0,"proof_sha256":"0".repeat(64)}})).unwrap()
     }
     #[tokio::test]
     async fn prior_uncertain_cold_trial_prevents_next_profile_seed_and_charge() {

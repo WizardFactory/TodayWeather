@@ -46,9 +46,10 @@ runcmd:
     for unit in amazon-ssm-agent.service snap.amazon-ssm-agent.amazon-ssm-agent.service; do
       if systemctl list-unit-files "$unit" --no-legend | grep -q "$unit"; then agent="$unit"; break; fi
     done
-    test -n "$agent" || fail
-    systemctl start "$agent" || fail
-    systemctl is-active --quiet "$agent" || fail
+    ordinary_fail() { echo 'S09_BOOTSTRAP_FAILED' >/dev/console; exit 1; }
+    test -n "$agent" || ordinary_fail
+    systemctl stop "$agent" || ordinary_fail
+    if systemctl is-active --quiet "$agent"; then ordinary_fail; fi
     test ! -e /opt/server2-s09/private/guard-started || fail
     : >/opt/server2-s09/private/guard-started
     cat >/opt/server2-s09/private/guard.nft <<'EOF'
@@ -142,6 +143,17 @@ runcmd:
     assert rx<=1048576
     print('S09_GUARD_V1 '+json.dumps({'status':'guarded','run_id':'@@RUN_ID@@','nonce':'@@NONCE@@','source_revision':'@@SOURCE_REVISION@@','deadline_ms':@@DEADLINE_MS@@,'timer_active':True,'nft_active':True,'ssm_present':True,'observed_before_guard_bytes':rx}))
     PY
+    # Maintained recovery bytes are bound by the same exact-head source map.
+    python3 - <<'PY' || ordinary_fail
+    import base64,pathlib
+    pathlib.Path('/opt/server2-s09/private/ssm-recovery.py').write_bytes(base64.b64decode('@@RECOVERY_SCRIPT_B64@@'))
+    PY
+    python3 - <<'PY' || ordinary_fail
+    import json,os
+    fd=os.open('/opt/server2-s09/private/readiness-context.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    with os.fdopen(fd,'w') as f: json.dump({'run_id':'@@RUN_ID@@','nonce':'@@NONCE@@','source_revision':'@@SOURCE_REVISION@@','key':'@@READINESS_KEY@@'},f)
+    PY
+    timeout -k 2 510 python3 /opt/server2-s09/private/ssm-recovery.py --unit "$agent" --role server2-s09-benchmark-20261008 --deadline-ms @@DEADLINE_MS@@ >/dev/console 2>/dev/null || { echo 'S09_SSM_RECOVERY_V1 {"status":"failed","reason":"supervisor_timeout_or_failure","probes":null,"restarts":null}' >/dev/console; exit 1; }
 write_files:
   - path: /opt/server2-s09/private/bootstrap.sh
     permissions: '0700'
@@ -150,10 +162,11 @@ write_files:
       set -eu
       umask 077
       trap 'systemctl stop server2-s09-cargo-build.service 2>/dev/null || true' EXIT HUP INT TERM
-      fail() { systemctl poweroff --no-block; exit 1; }
-      systemctl is-active --quiet server2-s09-expiry.timer || fail
-      systemctl is-active --quiet server2-s09-meter.service || fail
-      nft -j list table inet server2_s09 >/opt/server2-s09/private/before-download.json || fail
+      emergency_fail() { systemctl poweroff --no-block; exit 1; }
+      fail() { echo 'S09_BOOTSTRAP_FAILED' >/dev/console; exit 1; }
+      systemctl is-active --quiet server2-s09-expiry.timer || emergency_fail
+      systemctl is-active --quiet server2-s09-meter.service || emergency_fail
+      nft -j list table inet server2_s09 >/opt/server2-s09/private/before-download.json || emergency_fail
       # Wait for controller guard readback/owned SG443 opening; no retrying downloads.
       test -e /opt/server2-s09/private/controller-start || fail
       python3 - <<'PY' || fail
