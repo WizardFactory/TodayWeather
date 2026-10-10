@@ -1203,7 +1203,7 @@ S18 follows the accepted D01–D03 push policy and its route/state verification 
 | O-2 | Rust adoption settled by AK; S09 validates locally/Linux CI. No Rust go/fallback/time-box reconsideration; runtime correctness and pre-cutover performance checks remain |
 | O-3 | D01–D03 recorded: implementer owns state schema/ordering; new registrations only, no legacy registration migration; no automatic failed/unknown push resend; new accepted state remains S3 durable |
 | O-4, O-12 | gp3/15-day floor/ENOSPC policy removed; replace with memory admission and S3-failure policy |
-| O-5 | Approved: immutable canonical raw gzip; versioned identity catalogs with CAS; no lifecycle deletions now. Packs require measured benefit; S09 assesses version growth/retrieval costs before transitions. No Flexible/Deep Archive on synchronous serving paths |
+| O-5 | Approved: immutable canonical raw gzip; versioned identity catalogs with CAS; no lifecycle deletions now. Packs require measured route benefit; S09 records local operation/version-byte inputs, with actual API serving/lifecycle cost validation before cutover. No Flexible/Deep Archive on synchronous serving paths |
 | O-6 | D04 authorizes useful memory/S3 caches; layout/validity/admission are implementation choices under exact-label and coordinate privacy proof. No precise lookup-history export or indefinite archive |
 | O-7 | No blanket removal of health-index/KAQ behavior that current active API fixtures contain |
 | O-8 | v000705 town is active; exclude only zero-observed in-scope public APIs; /ww evidence gap remains |

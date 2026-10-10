@@ -41,8 +41,8 @@
   "report_sha256": "ec264d0a0884c31e9e639548b18ad89efd28d2c7dc0631efb5230ef786a33fb0",
   "live_driver_sha256": "49d8879a06fa716de6aa83cacfb4594243cb68cf76a5f57a368720647fae9bf4",
   "operator_sha256": "410d5815b848f6e1e5c96a5c97a6786e127506cc83f889d6a1eee19f896ba5e2",
-  "source_sha256": "892c83091d6a99370da255e7a371c7277a57ade74dd14c6483846b869d806ff8",
-  "pdf_sha256": "ce16634abd969bf0536cea826391c81ad312ef246e9031f5da5b9b52cacc0ebc",
+  "source_sha256": "70fb79dc201823ab3a7ab1e1712910a961d98c82dd57f16072ac47505ba5651a",
+  "pdf_sha256": "aeb221fb6edf4ddc14d530400b637639e7b19ab6b4f4d18c48fba4ffc6bbcacb",
   "screenshot_sha256": "1462376a14ccfb58bff758be8ca84dca1db376859ab419a9faab12df9719c54b",
   "measurement_summary": {
     "local_environment": {

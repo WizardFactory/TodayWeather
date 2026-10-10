@@ -78,11 +78,9 @@ task still follows its named dependencies and decisions.
 
 ## S09 local-first scope amendment (2026-10-11)
 
-## Current local-first contract (2026-10-11)
-
 AK fixed Rust adoption and requested maximum local verification with minimal EC2
 work; [issue #2694](https://github.com/WizardFactory/TodayWeather/issues/2694)
-is the governing scope. Rust go/fallback/time-box reconsideration is removed.
+is the governing scope; [the recorded task direction](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6099330068) provides the decision trace. Rust go/fallback/time-box reconsideration is removed.
 S09 completes on the scoped local/Linux-CI checks and resolution of Required PR
 findings. S09 live measurements no longer block S10/S13 implementation. Other
 S01 decisions, S02 route goldens, placement, API parity and cutover gates remain.
@@ -230,7 +228,7 @@ to block their named work after S01 closes.
 | O-2 | Rust adoption settled; S09 local/Linux artifact checks. S15 correctness checkpoint remains; language go/fallback/time-box review removed |
 | O-3 | D01–D03 resolved: S18 owns schema/ordering, uses new registrations without legacy migration, and does not automatically retry failed/unknown deliveries; verification and durable acceptance still gate activation |
 | O-4 / O-12 | S04/S07 memory-only admission/failure contract; local disk policy superseded |
-| O-5 | S05/S06 catalog/raw lifecycle, S08 reservation retention, S09 cost assessment and O01 pack policy |
+| O-5 | S05/S06 catalog/raw lifecycle, S08 reservation retention, S09 local operation/version-byte cost inputs, pre-cutover actual API cost validation and O01 pack policy |
 | O-6 | D04 authorizes memory/S3 caches; S07/S10 select layout/validity and prove exact labels, privacy, quota/deadline behavior |
 | O-7 / O-8 | S02 fixture scope, S15/S17 current active behavior; unknown scope stays on legacy until dispositioned |
 | O-9 | S05–S08 publication/reservation/outage semantics, S10–S13 affected serving and warning behavior, S18 state acceptance and O01 publication |
@@ -251,7 +249,7 @@ Each route port depends on P1 and recorded issue decisions; one PR per phase.
 | --- | --- |
 | P0 | Record remaining issue choices; keys/IAM/bucket/versioning/lifecycle, actual runtime/Spot prerequisites and rollback ownership. No persistent gp3 requirement. Use accepted traffic report; supplement only its scope gaps/new paths before their cutover. |
 | P1 | Golden harness for the 19 observed groups and retained internal dependencies; current deployment/source/client contract reconciliation, error/CORS/cache/304/preflight fixtures, #2609/#2620 and acquired-history cases. Freeze clock and raw input; two runs byte-identical. |
-| P2 | First establish the `server2/` Rust workspace/CI and placement gate (S04); later implementation tasks depend on it. Then storage/resolver, synchronous publication, memory/single-flight limits; property/crash tests with recorded providers and local S3-compatible peer. Measure actual host build compatibility, S3 tails/throughput, RSS/CPU and cold request fan-out. Raw packs are a measured optional optimization. |
+| P2 | First establish the `server2/` Rust workspace/CI and placement gate (S04); later implementation tasks depend on it. Then storage/resolver, synchronous publication, memory/single-flight limits; property/crash tests with recorded providers and local S3-compatible peer. Verify local/Linux-musl build compatibility, synthetic origin throughput, RSS/CPU and cold request fan-out. Use only a separately authorized minimal preproduction host smoke; validate actual API latency/costs before cutover. Raw packs remain disabled pending measured route benefit. |
 | P2b | Gateway/geocoder with backend switches to legacy, exact validation/errors/cache/deadline and privacy-safe coordinate handling. Whole-gateway shadow and rollback rehearsal. |
 | P3/P4 | World providers used by gateway and warning catalogs/restore; no deletion of a backend solely due to unused direct public paths. |
 | P5/P6 | Domestic raw JSON, legacy-history export, summaries and v000903 assembly; close O-1/O-11 acquisition gaps and runtime correctness checkpoint. Active health/air behavior follows current fixtures. |

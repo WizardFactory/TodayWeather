@@ -2,7 +2,7 @@
 
 ## Current completion and evidence boundary (2026-10-11)
 
-Rust adoption is settled by AK. Complete the scoped local/Linux-CI checks and
+Rust adoption is settled by AK; the [recorded task direction](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6099330068) also documents the local-first scope and zero-based amendment restart. Complete the scoped local/Linux-CI checks and
 resolve Required PR findings; S09 live measurements do not block S10/S13
 implementation. Existing route goldens, correctness, placement and cutover gates
 remain in force. The [governing issue](https://github.com/WizardFactory/TodayWeather/issues/2694)
@@ -16,6 +16,15 @@ process CPU/RSS, fixture counts/bytes and S3-operation/catalog-version cost inpu
 Prices are unset: counts/bytes are inputs for a later dated cost calculation,
 not invoiced cost or actual S3 physical storage. Local peers do not prove AWS
 latency, authentication, production durability or weather-route parity.
+
+In the native reference, `provider_data_16` had 14 successes and two
+`other_error` outcomes at about one second despite 16 owner slots. Their precise
+cause is unclassified; neither is treated as admission overload or discarded.
+Both failed clients had `non_success_storage_checks: verified_empty`, while
+successful clients had fresh-S3-only readback checks. This is a retained local
+failure observation, not an all-success or latency acceptance claim. S09 releases
+implementation work based on checked behavior and truthful limits; actual route
+performance acceptance remains pre-cutover.
 
 ## Linux artifact checks before EC2
 
@@ -55,6 +64,17 @@ python3 server2/tools/benchmark/run.py \
   --output reports/s09-local.json
 ```
 
+The 2026-10-11 native reference used macOS 26.6.2 arm64, Apple M4,
+10 logical CPUs and 16 GiB physical RAM (17,179,869,184 bytes), Python 3.9.6,
+and rustc 1.99.0 (b940084d7, LLVM 23.1.1, aarch64-apple-darwin).
+CPU/RAM were observed with `sysctl -n hw.memsize machdep.cpu.brand_string`;
+compiler identity with `rustc --version --verbose`. The actual command in the
+capture used `--timeout 600`. Its 24 cases retained 720 offered-request outcomes,
+completed in 31.36 seconds, and reached 51,707,904 bytes peak process RSS.
+These single-trial observations are local reference evidence, with the actual
+binary/configuration/source hashes and measured summaries in the maintained
+[evidence manifest](../evidence/tasks/server2-feasibility/manifest.json).
+
 The maintained runner creates a fresh literal 127.0.0.1 peer and rewrites both endpoints in an effective configuration. The template's port 1 is a placeholder; the direct CLI does not discover or start peers. `--validate-config PATH` checks the complete schema before I/O. Remote/DNS/auth/query/fragment endpoints and unknown fields fail closed. Only fixed dummy local credentials are used; profiles and environment keys are not loaded. The peer checks protocol shape, not AWS authentication.
 
 The runner validates the requested configuration from one byte snapshot. It records that hash and the rewritten effective-config hash separately. Binary, lock, driver, model, runner and peer hashes are captured before execution and checked afterward; changed files invalidate the run. A dirty checkout revision does not assert that current source bytes belong to HEAD. The runner limits process duration to 1..600 seconds (default 300), kills only its owned process group on timeout and rejects output above 8 MiB. Keep output under ignored reports; it is an observation, not source.
@@ -69,7 +89,7 @@ Aggregate limits are 32 cases, 128 trials, 4096 offered samples, 2048 groups, 32
 
 ## Read durations and failures correctly
 
-Principal all-request p50/p95/p99 uses nearest-rank integer microseconds for every attempted success or failure. A separate success-only distribution has its own denominator. Warm-unavailable entries have null duration, never zero; both distributions flag fewer than 100 measured samples as insufficient. The small default smoke has two clients per case and cannot establish a latency tail.
+Principal all-request p50/p95/p99 uses nearest-rank integer microseconds for every attempted success or failure. A separate success-only distribution has its own denominator. Warm-unavailable entries have null duration, never zero; both distributions flag fewer than 100 measured samples as insufficient. Each default case has 8, 16, 32 or 64 offered clients in one trial and cannot establish a statistically supported latency tail.
 
 Local runner trials use fresh resolvers. The approved-driver warm case instead reuses one resolver across observation waves, with one complete prewarm and maintenance idle; cold trials still start with empty resolver memory. Warm prerequisites must all succeed before counters are sampled. A warm report with idle baseline must have zero wire I/O. Foreground and background maintenance counts are separate. Capacity, Timeout and other typed outcomes remain visible; they cannot become a partial success or provider miss.
 
