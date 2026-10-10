@@ -2,13 +2,14 @@
 """Run a release benchmark against fresh owned loopback peers; no live fallback.
 
 Process CPU/RSS include startup and fixture seeding. Request quantiles exclude
-that work. Actual intended-host/same-region S3 and O-2/O-5 gates remain pending.
+that work. Rust adoption is settled. Host smoke and actual API performance/cost checks remain preproduction work.
 """
 import argparse
 import hashlib
 import importlib.util
 import json
 import os
+import platform
 from pathlib import Path
 import signal
 import subprocess
@@ -32,12 +33,16 @@ def resource_result(usage,platform):
 
 
 def validate_report(report):
-    if report.get('schema')!=1 or report.get('gate_status')!='requires_intended_host_and_same_region_measurements':
-        raise ValueError('report cannot claim host gate completion')
+    if report.get('schema')!=1 or report.get('gate_status')!='local_evidence_only_preproduction_checks_pending':
+        raise ValueError('local report must retain the preproduction evidence boundary')
     if report.get('api_parity_verified') is not False or report.get('production_cutover_authorized') is not False:
         raise ValueError('local tooling cannot authorize parity/cutover')
-    if report.get('rust_decision')!='pending_O2' or report.get('lifecycle_decision')!='pending_O5':
-        raise ValueError('O2/O5 decision remains pending')
+    if (report.get('rust_decision')!='adopted_by_AK'
+            or report.get('lifecycle_decision')!='approved_contract_cost_validation_pre_cutover'
+            or report.get('route_implementation_requires_live_measurements') is not False
+            or report.get('ec2_smoke_status')!='pending_preproduction'
+            or report.get('raw_pack_decision')!='disabled_pending_measured_route_benefit'):
+        raise ValueError('local evidence cannot reopen Rust adoption or claim host readiness')
     for c in report['cases']:
         k=c['configuration'];samples=c['samples']
         if len(samples)!=k['clients']*k['trials'] or c['summary']['samples']!=len(samples):
@@ -89,6 +94,12 @@ def run(binary,config,timeout):
             if child.returncode:raise RuntimeError('benchmark child failed: '+(root/'stderr').read_text()[:2048])
             if (root/'stdout').stat().st_size>8*1024*1024:raise RuntimeError('benchmark output cap')
             report=validate_report(json.loads((root/'stdout').read_bytes()))
+            report['local_environment']={'os':platform.platform(),'architecture':platform.machine(),'cpu_model':platform.processor() or None,'logical_cpu_count':os.cpu_count(),'python':platform.python_version()}
+            for case in report['cases']:
+                wall=sum(t['foreground_wall_us'] for t in case['trials'])
+                case['foreground_throughput']={'wall_us':wall,'measured_attempts_per_second':case['summary']['all_requests']['count']*1_000_000/wall if wall else None,'successful_attempts_per_second':case['summary']['successful_requests']['count']*1_000_000/wall if wall else None,'scope':'offered-client batch observations; excludes seeding, warmup, maintenance and verification'}
+            final=report['cases'][-1]['trials'][-1]['wire_after_verification']
+            report['cost_inputs']={'scope':'whole local run including seeding, warmup, maintenance and readback; not AWS storage/billing','s3_requests':{k:v for k,v in final['requests'].items() if not k.startswith('PROVIDER:')},'catalog_version_body_bytes':final['catalog_version_bytes'],'version_body_bytes':final['version_body_bytes'],'version_count':final['version_count'],'unit_prices':None}
             report['process']=dict(resource_result(usage,sys.platform),elapsed_seconds=time.monotonic()-started,exit_code=child.returncode)
             after={k:digest(v) for k,v in provenance_paths.items()}
             if before!=after:raise RuntimeError('benchmark provenance changed during execution')
@@ -124,7 +135,7 @@ def main():
     if report['runner_provenance']['binary_sha256']!=binary_preflight_hash:raise ValueError('binary changed before execution')
     report['requested_config_sha256']=requested_hash
     Path(args.output).write_text(json.dumps(report,indent=2)+'\n')
-    print('LOCAL ONLY; intended-host/same-region/O2/O5 gates pending')
+    print('LOCAL ONLY; Rust adopted; preproduction host smoke and API cost/performance pending')
     for c in report['cases']:
         s=c['summary'];print(f"{c['configuration']['name']}: outcomes={s['outcomes']} all-p95={s['all_requests']['p95_us']}us success-p95={s['successful_requests']['p95_us']}us")
     print('Process peak RSS:',report['process']['peak_rss_bytes'],'bytes; CPU includes startup/seed')

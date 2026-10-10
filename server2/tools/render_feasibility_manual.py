@@ -28,7 +28,7 @@ def digest(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def render_pdf(capture):
-    styles=getSampleStyleSheet();styles["Heading2"].keepWithNext=1;styles.add(ParagraphStyle(name='S09Body',fontName='Helvetica',fontSize=9,leading=12,spaceAfter=7));styles.add(ParagraphStyle(name='S09Code',fontName='Courier',fontSize=7.2,leading=10,spaceAfter=8))
+    styles=getSampleStyleSheet();styles["Heading2"].keepWithNext=1;styles.add(ParagraphStyle(name='S09Body',fontName='Helvetica',fontSize=9,leading=12,spaceAfter=7,allowWidows=0,allowOrphans=0));styles.add(ParagraphStyle(name='S09Code',fontName='Courier',fontSize=7.2,leading=10,spaceAfter=8))
     story=[];in_code=False;code=[];paragraph=[]
     def flush():
         if paragraph:
@@ -48,8 +48,8 @@ def render_pdf(capture):
         aspect = capture_image.height/capture_image.width
     flush();story.append(Spacer(1,8));story.append(Paragraph('Actual local CLI usage',styles['Heading2']));story.append(PdfImage(str(capture),width=6.5*inch,height=aspect*6.5*inch))
     def footer(canvas,doc):
-        canvas.setFont('Helvetica',8);canvas.setFillColor(colors.HexColor('#475569'));canvas.drawString(48,28,'S09 tooling | actual host/AWS/O2/O5 gates pending');canvas.drawRightString(564,28,str(doc.page))
-    document=SimpleDocTemplate(str(PDF),pagesize=(612,792),leftMargin=48,rightMargin=48,topMargin=42,bottomMargin=48,title='S09 bounded feasibility operations',author='TodayWeather',invariant=1)
+        canvas.setFont('Helvetica',8);canvas.setFillColor(colors.HexColor('#475569'));canvas.drawString(48,28,'S09 local verification | preproduction host smoke pending');canvas.drawRightString(564,28,str(doc.page))
+    document=SimpleDocTemplate(str(PDF),pagesize=(612,792),leftMargin=48,rightMargin=48,topMargin=42,bottomMargin=48,title='S09 local-first verification operations',author='TodayWeather',invariant=1)
     document.build(story,onFirstPage=footer,onLaterPages=footer)
     return document.page
 
@@ -105,6 +105,13 @@ def main():
     capture=EVIDENCE/'usage.png';image.save(capture)
     pages = render_pdf(capture)
     manifest={'pages':pages,'schema':1,'task':'S09','date':args.capture_date,'command':args.command,'environment':'Rust1.99/'+platform.system()+', public Python loopback peer','scope':'Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or host go','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(binary),'requested_config_sha256':report['requested_config_sha256'],'effective_config_sha256':report['runner_provenance']['effective_config_sha256'],'report_sha256':digest(report_path),'live_driver_sha256':digest(ROOT/'server2/tools/benchmark/aws.rs'),'operator_sha256':digest(ROOT/'server2/deploy/benchmark/aws_operator.py'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
+    manifest['measurement_summary'] = {
+        'local_environment': report['local_environment'],
+        'process': report['process'],
+        'cost_inputs': report['cost_inputs'],
+        'decisions': {k: report[k] for k in ('gate_status', 'rust_decision', 'lifecycle_decision', 'ec2_smoke_status', 'raw_pack_decision', 'route_implementation_requires_live_measurements', 'api_parity_verified', 'production_cutover_authorized')},
+        'cases': [{k: c[k] for k in ('configuration', 'summary', 'foreground_throughput', 'record_revisions_per_key', 'groups_per_key', 'catalogs_per_key')} for c in report['cases']],
+    }
     (EVIDENCE/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('Manual PDF, actual stdout capture and hash manifest generated')
 

@@ -46,6 +46,17 @@ def main():
     # Uses the just-built GNU binary: real private_manifest, then the non-musl
     # fence, without worker claims or any AWS/IMDS network path.
     commands.append([sys.executable, sandbox, 'manifest-functional'])
+    if sys.platform.startswith('linux'):
+        # Intended c6i host artifact is verified here, rather than built on EC2.
+        target = 'x86_64-unknown-linux-musl'
+        reports = root/'reports/verification/server2-local-first'
+        reports.mkdir(parents=True, exist_ok=True)
+        commands.extend([
+            ['cargo', 'build', '--locked', '--release', '--target', target],
+            ['readelf', '-h', f'target/{target}/release/server2'],
+            [sys.executable, 'tools/smoke.py', '--binary', f'target/{target}/release/server2'],
+            [sys.executable, 'tools/benchmark/run.py', '--binary', f'target/{target}/release/server2-feasibility', '--output', str(reports/'local-matrix.json')],
+        ])
     for command in commands:
         print('+',' '.join(command),flush=True);subprocess.run(command,check=True)
 

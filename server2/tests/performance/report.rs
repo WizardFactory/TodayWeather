@@ -107,3 +107,59 @@ fn runner_resource_units_and_gate_rejection() {
         String::from_utf8_lossy(&out.stderr)
     );
 }
+
+#[test]
+fn default_matrix_covers_modes_without_raising_fixture_bounds() {
+    let config: model::Config =
+        serde_json::from_str(include_str!("../../config/benchmarks/local.json")).unwrap();
+    assert!(config.validate().is_ok());
+    for mode in [
+        "cold",
+        "warm",
+        "provider_data",
+        "provider_nodata",
+        "provider_denied",
+        "provider_error",
+    ] {
+        for clients in [8, 16, 32, 64] {
+            assert!(
+                config
+                    .cases
+                    .iter()
+                    .any(|c| c.mode == mode && c.clients == clients),
+                "missing {mode}/{clients}"
+            );
+        }
+    }
+}
+
+#[test]
+fn local_decisions_do_not_grant_host_parity_or_cutover() {
+    let script = [
+        r#"import importlib.util"#,
+        r#"spec=importlib.util.spec_from_file_location('benchmark_runner','tools/benchmark/run.py')"#,
+        r#"runner=importlib.util.module_from_spec(spec);spec.loader.exec_module(runner)"#,
+        r#"report={'schema':1,'gate_status':'local_evidence_only_preproduction_checks_pending',"#,
+        r#"'rust_decision':'adopted_by_AK','lifecycle_decision':'approved_contract_cost_validation_pre_cutover',"#,
+        r#"'route_implementation_requires_live_measurements':False,'ec2_smoke_status':'pending_preproduction',"#,
+        r#"'raw_pack_decision':'disabled_pending_measured_route_benefit',"#,
+        r#"'api_parity_verified':False,'production_cutover_authorized':False,'cases':[]}"#,
+        r#"assert runner.validate_report(report) is report"#,
+        r#"for key,value in [('rust_decision','pending_O2'),('gate_status','PASS'),"#,
+        r#"('api_parity_verified',True),('production_cutover_authorized',True),"#,
+        r#"('ec2_smoke_status','passed'),('route_implementation_requires_live_measurements',True)]:"#,
+        r#"    try: runner.validate_report(dict(report,**{key:value}))"#,
+        r#"    except ValueError: pass"#,
+        r#"    else: raise AssertionError('accepted forged decision '+key)"#,
+    ].join("\n");
+    let out = std::process::Command::new("python3")
+        .args(["-c", script.as_str()])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}

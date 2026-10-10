@@ -865,7 +865,7 @@ async fn run(c: &Config) -> Result<Value, String> {
         cases.push(json!({"configuration":k,"workload_label":if k.workload=="history8"{"synthetic_16_resolution_8_day_batch"}else{"synthetic_single_resolution"},"identity_counts_scope":"requested synthetic fixture; terminal provider modes archive zero","record_revisions_per_key":n,"distinct_period_identities_per_key":if k.workload=="history8"{192}else{1},"groups_per_key":n,"catalogs_per_key":if k.workload=="history8"{8*k.siblings}else{k.siblings},"resolutions_per_client":if k.workload=="history8"{16}else{1},"summary":summarize(&samples),"samples":samples,"trials":trials}));
     }
     Ok(
-        json!({"schema":1,"measurement_scope":"loopback_protocol_and_synthetic_origin_library","client_http_measurements":observed.report(),"source_provenance":provenance(),"configuration":c,"bounds":{"offered_clients_max":64,"owner_admission_max":16,"owner_deadline_ms":3000,"view_cpu":2,"catalog_io":16,"catalog_cpu":2,"raw_io":16,"raw_cpu":2,"cache_bytes":128*1024*1024,"owner_reservation_bytes":64*1024*1024,"cpu_pools_shared":false},"cases":cases,"cost_prices":null,"cloudfront_client_transport_measured":false,"api_parity_verified":false,"production_cutover_authorized":false,"gate_status":"requires_intended_host_and_same_region_measurements","rust_decision":"pending_O2","lifecycle_decision":"pending_O5"}),
+        json!({"schema":1,"measurement_scope":"loopback_protocol_and_synthetic_origin_library","client_http_measurements":observed.report(),"source_provenance":provenance(),"configuration":c,"bounds":{"offered_clients_max":64,"owner_admission_max":16,"owner_deadline_ms":3000,"view_cpu":2,"catalog_io":16,"catalog_cpu":2,"raw_io":16,"raw_cpu":2,"cache_bytes":128*1024*1024,"owner_reservation_bytes":64*1024*1024,"cpu_pools_shared":false},"cases":cases,"cost_prices":null,"cloudfront_client_transport_measured":false,"api_parity_verified":false,"production_cutover_authorized":false,"gate_status":"local_evidence_only_preproduction_checks_pending","rust_decision":"adopted_by_AK","lifecycle_decision":"approved_contract_cost_validation_pre_cutover","route_implementation_requires_live_measurements":false,"ec2_smoke_status":"pending_preproduction","raw_pack_decision":"disabled_pending_measured_route_benefit"}),
     )
 }
 fn provenance() -> Value {
@@ -904,7 +904,7 @@ async fn main() {
         );
         println!("--local-approved-worker PATH --run-manifest PATH --loopback-s3 URL");
         println!(
-            "Local modes are local-only. Live execution requires the pinned private approved allocation; O2/O5 and route gates remain pending."
+            "Local modes are local-only. Rust adoption is settled. Host smoke and API performance/cost checks are preproduction work; local reports do not authorize cutover. Live execution still requires separate authority."
         );
         return;
     }

@@ -86,9 +86,13 @@ fn actual_http_cold_and_idle_warm() {
     let r = run(serde_json::json!([cold, case("warm", "warm")]));
     assert_eq!(
         r["gate_status"],
-        "requires_intended_host_and_same_region_measurements"
+        "local_evidence_only_preproduction_checks_pending"
     );
     assert_eq!(r["api_parity_verified"], false);
+    assert_eq!(r["rust_decision"], "adopted_by_AK");
+    assert_eq!(r["route_implementation_requires_live_measurements"], false);
+    assert_eq!(r["ec2_smoke_status"], "pending_preproduction");
+    assert_eq!(r["production_cutover_authorized"], false);
     for c in r["cases"].as_array().unwrap() {
         assert_eq!(c["summary"]["outcomes"]["success"], 1);
     }
