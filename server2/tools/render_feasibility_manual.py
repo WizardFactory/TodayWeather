@@ -71,6 +71,9 @@ def main():
     parser.add_argument('--binary', default='server2/target/release/server2-feasibility', help='Actual captured artifact under server2/target')
     parser.add_argument('--command', default='python3 server2/tools/benchmark/run.py --output reports/s09-local.json')
     parser.add_argument('--capture-date', default='2026-10-08')
+    parser.add_argument('--capture-revision', default='unrecorded historical build')
+    parser.add_argument('--bundle-origin', default='unrecorded historical bundle')
+    parser.add_argument('--execution-context', default='unrecorded historical execution environment')
     args = parser.parse_args()
     if args.pdf_only:
         manifest_path = EVIDENCE/'manifest.json'
@@ -116,9 +119,10 @@ def main():
     for i,line in enumerate(lines): draw.text((35,70+i*29),line,font=font,fill='#d1fae5' if line.startswith('PASS') else '#e5e7eb')
     capture=EVIDENCE/'usage.png';image.save(capture)
     pages = render_pdf(capture)
-    manifest={'pages':pages,'schema':1,'task':'S09','date':args.capture_date,'command':args.command,'environment':report['local_environment']['os']+', isolated Python loopback peer','scope':'Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or EC2 performance','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(binary),'requested_config_sha256':report['requested_config_sha256'],'effective_config_sha256':report['runner_provenance']['effective_config_sha256'],'report_sha256':digest(report_path),'live_driver_sha256':digest(ROOT/'server2/tools/benchmark/aws.rs'),'operator_sha256':digest(ROOT/'server2/deploy/benchmark/aws_operator.py'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
+    manifest={'pages':pages,'schema':1,'task':'S09','date':args.capture_date,'command':args.command,'environment':args.execution_context+'; '+report['local_environment']['os']+', isolated Python loopback peer','scope':'Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or EC2 performance','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(binary),'requested_config_sha256':report['requested_config_sha256'],'effective_config_sha256':report['runner_provenance']['effective_config_sha256'],'report_sha256':digest(report_path),'live_driver_sha256':digest(ROOT/'server2/tools/benchmark/aws.rs'),'operator_sha256':digest(ROOT/'server2/deploy/benchmark/aws_operator.py'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
+    manifest['capture_context'] = {'source_revision': args.capture_revision, 'bundle_origin': args.bundle_origin, 'execution_environment': args.execution_context}
     manifest['measurement_summary'] = {
-        'local_environment': report['local_environment'],
+        'local_environment': dict(report['local_environment'], execution_context=args.execution_context),
         'process': report['process'],
         'cost_inputs': report['cost_inputs'],
         'decisions': {k: report[k] for k in ('gate_status', 'rust_decision', 'lifecycle_decision', 'ec2_smoke_status', 'raw_pack_decision', 'route_implementation_requires_live_measurements', 'api_parity_verified', 'production_cutover_authorized')},

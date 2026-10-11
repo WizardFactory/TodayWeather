@@ -51,10 +51,11 @@ def main():
         target = 'x86_64-unknown-linux-musl'
         reports = root/'reports/verification/server2-local-first'
         reports.mkdir(parents=True, exist_ok=True)
+        revision = event.get('pull_request', {}).get('head', {}).get('sha') or output('git', 'rev-parse', 'HEAD')
         commands.extend([
             ['cargo', 'build', '--locked', '--release', '--target', target],
             ['readelf', '-h', f'target/{target}/release/server2'],
-            [sys.executable, 'tools/verify_artifact.py', '--binary-dir', f'target/{target}/release', '--output', str(reports/'artifact-native')],
+            [sys.executable, 'tools/verify_artifact.py', '--binary-dir', f'target/{target}/release', '--output', str(reports/'artifact-native'), '--source-revision', revision],
         ])
     for command in commands:
         print('+',' '.join(command),flush=True);subprocess.run(command,check=True)

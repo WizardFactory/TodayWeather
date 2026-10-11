@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import struct
 import subprocess
@@ -45,10 +46,31 @@ def check_elf(path):
                 raise ValueError('dynamic interpreter is not permitted')
 
 
-def snapshot(root, binaries):
+def source_identity(root, revision=None):
+    """Bind all tracked server2 build inputs, including compile-time includes.
+
+    CI may build GitHub's merge checkout only when its server2 tree exactly
+    matches the recorded PR head. Uncommitted tracked changes fail closed.
+    """
+    repo = root.resolve().parent
+    def git(*args):
+        return subprocess.check_output(['git', '-C', str(repo), *args], text=True).strip()
+    revision = revision or git('rev-parse', 'HEAD')
+    if not re.fullmatch(r'[a-f0-9]{40}', revision):
+        raise ValueError('expected exact source revision')
+    tree = git('rev-parse', revision+':server2')
+    if not re.fullmatch(r'[a-f0-9]{40}', tree):
+        raise ValueError('expected tracked server2 tree')
+    if subprocess.run(['git', '-C', str(repo), 'diff', '--quiet', revision, '--', 'server2']).returncode:
+        raise ValueError('tracked server2 source differs from recorded revision')
+    return {'revision': revision, 'server2_tree': tree}
+
+
+def snapshot(root, binaries, source=None):
     for name in BINARIES:
         check_elf(binaries/name)
-    return {'schema': 1, 'status': 'passed', 'target': 'x86_64-unknown-linux-musl',
+    return {'schema': 2, 'status': 'passed', 'target': 'x86_64-unknown-linux-musl',
+            'source': source if source is not None else source_identity(root),
             'binaries': {name: digest(binaries/name) for name in BINARIES},
             'sources': {name: digest(root/name) for name in SOURCES}}
 
@@ -63,11 +85,17 @@ def main():
     parser.add_argument('--binary-dir', required=True)
     parser.add_argument('--output', required=True, help='Fresh output directory')
     parser.add_argument('--manifest', help='Expected successful CI manifest; checked before execution')
+    parser.add_argument('--source-revision', help='Exact PR revision for a matching-tree CI merge checkout')
+    parser.add_argument('--staged-source', help='Read-only source identity already validated by the Docker host')
     args = parser.parse_args()
+    if args.staged_source and (not args.manifest or args.source_revision):
+        parser.error('--staged-source requires --manifest and excludes --source-revision')
+    source = (json.loads(Path(args.staged_source).read_text()) if args.staged_source
+              else source_identity(ROOT, args.source_revision))
     binaries = Path(args.binary_dir).resolve()
     if not binaries.is_relative_to(ROOT/'target'):
         raise ValueError('artifacts must be under server2/target')
-    before = snapshot(ROOT, binaries)
+    before = snapshot(ROOT, binaries, source)
     if args.manifest:
         validate_manifest(json.loads(Path(args.manifest).read_text()), before)
     if sys.platform != 'linux':
@@ -97,7 +125,9 @@ def main():
             result['checks'].append({'stage': name, 'exit_code': run.returncode})
             if run.returncode:
                 raise RuntimeError(name+' check failed; see retained log')
-        validate_manifest(before, snapshot(ROOT, binaries))
+        if not args.staged_source:
+            validate_manifest(source, source_identity(ROOT, args.source_revision))
+        validate_manifest(before, snapshot(ROOT, binaries, source))
         for name in BINARIES:
             shutil.copy2(binaries/name, output/name)
             if digest(output/name) != before['binaries'][name]:

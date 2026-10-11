@@ -17,7 +17,7 @@ Prices are unset: counts/bytes are inputs for a later dated cost calculation,
 not invoiced cost or actual S3 physical storage. Local peers do not prove AWS
 latency, authentication, production durability or weather-route parity.
 
-In the native reference, `provider_data_16` had 14 successes and two
+In the native macOS reference recorded for `c04a4ddc`, `provider_data_16` had 14 successes and two
 `other_error` outcomes at about one second despite 16 owner slots. Their precise
 cause is unclassified; neither is treated as admission overload or discarded.
 Both failed clients had `non_success_storage_checks: verified_empty`, while
@@ -25,6 +25,8 @@ successful clients had fresh-S3-only readback checks. This is a retained local
 failure observation, not an all-success or latency acceptance claim. S09 releases
 implementation work based on checked behavior and truthful limits; actual route
 performance acceptance remains pre-cutover.
+
+The maintained Docker capture runs on Colima with VZ/Rosetta emulation on Apple Silicon. Its manifest identifies the source revision and bundle origin; historical captures lacking those fields are not EC2 handoff evidence. Near-one-second `other_error` outcomes occur in non-warm workloads and remain unclassified. They also appear in the native x86 Linux CI baseline `c04a4ddc` and inventory-correction `d4092fd2`: both report cold_16 as 8 success/8 other_error and provider_data_16 as 6 success/10 other_error. This is a retained pre-existing observation, not a newly attributed emulation defect or an all-success claim. Emulation and container limits affect timings; they do not establish a cause.
 
 ## Linux artifact checks before EC2
 
@@ -40,7 +42,7 @@ the Linux-only isolated operational or musl execution results.
 
 Run the existing Linux foundation CI first, then download the successful run's
 `server2-linux-musl-verified` artifact. Check out the corresponding PR source:
-verification scripts, fixtures and binaries must match its manifest. The native
+the exact `source.revision`, full tracked `server2/` Git tree, verification scripts, fixtures and binaries must match its manifest. Dirty tracked sources reject before Docker. CI records the PR head and rejects a merge checkout with different server2 inputs. The native
 Linux checks and Docker use the same `tools/verify_artifact.py` entrypoint. No
 local rebuild is required when the CI bundle is available.
 
@@ -84,8 +86,7 @@ Future EC2 smoke consumes the same verified binary hashes.
 
 ## Minimal preproduction EC2 smoke (pending)
 
-Under separate scoped resource authority, transfer the already verified musl
-artifact to the intended host. Verify artifact hash, runtime resources, startup,
+Under separate scoped resource authority, transfer the already verified serving `server2` musl artifact to the intended host. The tiny S3 checks need their separately reviewed CLI/route procedure. This smoke does not invoke historical `server2-feasibility --execute-approved-run`: its build-checkout source checks are not relocatable, and its old authority has expired. Verify artifact hash, runtime resources, startup,
 health, TLS and credentials. In a tiny isolated synthetic S3 scope, perform the
 required GET/HEAD/PUT/LIST operations and exact body readback. Preserve results
 and verify cleanup of only task-owned temporary compute/IAM resources; follow

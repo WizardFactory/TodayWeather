@@ -43,7 +43,8 @@ def main():
         for name in artifact.BINARIES:
             shutil.copyfile(bundle/name, binaries/name)
             (binaries/name).chmod(0o755)
-        artifact.validate_manifest(expected, artifact.snapshot(root, binaries))
+        artifact.validate_manifest(expected, artifact.snapshot(root, binaries, expected['source']))
+        (root/'source.json').write_text(json.dumps(expected['source'])+'\n')
         (root/'expected.json').write_text(json.dumps(expected)+'\n')
         results = stage/'results'
         results.mkdir(mode=0o777)
@@ -59,7 +60,7 @@ def main():
             '--workdir', '/work/server2', '--env', 'PYTHONDONTWRITEBYTECODE=1',
             IMAGE, 'python3', 'tools/verify_artifact.py',
             '--binary-dir', 'target/x86_64-unknown-linux-musl/release',
-            '--manifest', 'expected.json', '--output', '/results/run']
+            '--manifest', 'expected.json', '--staged-source', 'source.json', '--output', '/results/run']
         print('Offline Docker preflight; fixed linux/amd64 image; no credentials forwarded', flush=True)
         cleanup_ok = False
         try:

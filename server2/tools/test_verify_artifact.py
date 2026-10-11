@@ -5,6 +5,8 @@ import struct
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
+import subprocess
 
 spec = importlib.util.spec_from_file_location('artifact', Path(__file__).with_name('verify_artifact.py'))
 artifact = importlib.util.module_from_spec(spec)
@@ -23,6 +25,36 @@ def elf(machine=62, interpreter=False):
 
 
 class Preflight(unittest.TestCase):
+    def test_revision_tree_and_dirty_compile_input_reject_before_execution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            root = repo/'server2'
+            root.mkdir()
+            source = root/'runtime.rs'
+            source.write_text('fn main() {}')
+            def git(*args):
+                return subprocess.check_output(['git', '-C', str(repo), *args], stderr=subprocess.DEVNULL).decode().strip()
+            git('init', '-q')
+            git('add', 'server2')
+            git('-c', 'user.name=Offline fixture', '-c', 'user.email=offline@example.invalid', 'commit', '-qm', 'fixture')
+            initial = artifact.source_identity(root)
+            self.assertEqual(initial['revision'], git('rev-parse', 'HEAD'))
+            for key in ('revision', 'server2_tree'):
+                with patch('subprocess.run') as run:
+                    with self.assertRaises(ValueError):
+                        artifact.validate_manifest({'source': initial}, {'source': dict(initial, **{key: '0'*40})})
+                    run.assert_not_called()
+            source.write_text('fn main() { panic!("changed compile input") }')
+            with self.assertRaises(ValueError):
+                artifact.source_identity(root)
+            git('add', 'server2')
+            git('-c', 'user.name=Offline fixture', '-c', 'user.email=offline@example.invalid', 'commit', '-qm', 'different tree')
+            changed = artifact.source_identity(root)
+            self.assertNotEqual(initial['revision'], changed['revision'])
+            self.assertNotEqual(initial['server2_tree'], changed['server2_tree'])
+            with self.assertRaises(ValueError):
+                artifact.source_identity(root, initial['revision'])
+
     def test_curated_sources_include_transitive_peer_dependencies(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -57,14 +89,15 @@ class Preflight(unittest.TestCase):
                 p = root/name
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text('fixture')
-            manifest = artifact.snapshot(root, bins)
+            identity = {'revision': 'a'*40, 'server2_tree': 'b'*40}
+            manifest = artifact.snapshot(root, bins, identity)
             artifact.validate_manifest(manifest, manifest)
             for name in (*artifact.BINARIES, *artifact.SOURCES):
                 p = bins/name if name in artifact.BINARIES else root/name
                 original = p.read_bytes()
                 p.write_bytes(original+b'changed')
                 with self.assertRaises(ValueError):
-                    artifact.validate_manifest(manifest, artifact.snapshot(root, bins))
+                    artifact.validate_manifest(manifest, artifact.snapshot(root, bins, identity))
                 p.write_bytes(original)
             for invalid in ({}, dict(manifest, status='failed'), dict(manifest, schema=99)):
                 with self.assertRaises(ValueError):
