@@ -171,7 +171,8 @@ class ManualProvenanceTests(unittest.TestCase):
         from pathlib import Path
         source=(Path(op.__file__).parents[2]/'tools/render_feasibility_manual.py').read_text()
         self.assertNotIn("'Rust1.99/macOS, public Python loopback peer'",source)
-        self.assertIn('platform.system()',source)
+        self.assertIn("report['local_environment']['os']",source)
+        self.assertNotIn('platform.system()',source)
 
 
 

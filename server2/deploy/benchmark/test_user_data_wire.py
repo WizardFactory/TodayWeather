@@ -51,7 +51,7 @@ import aws_operator as op
 
 def controller(directory, runner):
     root = Path(__file__).resolve().parents[3]
-    declaration = json.loads((root/'server2/config/tasks/S09.json').read_text())
+    declaration = json.loads((root/'server2/config/benchmarks/aws-declaration.json').read_text())
     paths = declaration['server2_paths'] + [item['path'] for item in declaration['outside']]
     assert len(paths) == len(set(paths)), 'source declaration must be unique'
     paths = sorted(paths)

@@ -82,8 +82,8 @@ def main():
         manifest['source_sha256'] = digest(DOC)
         manifest['pdf_sha256'] = digest(PDF)
         manifest['documentation_refresh'] = {
-            'date': '2026-10-10',
-            'scope': 'Q9 R1/R2/R3/R4 documentation; historical actual CLI capture and measurement provenance unchanged',
+            'date': args.capture_date,
+            'scope': 'Maintained operations documentation refreshed; historical actual CLI capture and measurement provenance unchanged',
             'operator_sha256': digest(ROOT/'server2/deploy/benchmark/aws_operator.py')}
         manifest_path.write_text(json.dumps(manifest, indent=2)+'\n')
         print('Manual PDF and documentation hashes refreshed; historical CLI capture preserved')

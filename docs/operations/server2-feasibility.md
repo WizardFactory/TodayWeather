@@ -340,7 +340,7 @@ can preempt collection. S3 objects/versions are always retained.
 The recovery script is maintained beside cloud-init, not a runtime overlay of
 old source bytes. Its exact bytes are included in the task source map and
 embedded before network admission. Python and Rust require the exact unique
-path set in server2/config/tasks/S09.json, rather than a historical count.
+historical campaign path set in server2/config/benchmarks/aws-declaration.json, rather than a historical count. The current placement declaration remains server2/config/tasks/S09.json; Docker tools and CI wiring are excluded from historical EC2 boot inputs. Source/hash checks, expiry and the 16KiB payload cap are unchanged.
 Cloud-init still checks out the exact reviewed revision, checks every mapped
 hash and builds that head. Regenerate source/config/review pins for the final
 committed tree and obtain a fresh independent review. No prior receipt or
@@ -372,7 +372,7 @@ no newly validated diagram, live readiness or host-musl proof is claimed.
 
 ## Q9 guard evidence, cleanup failures and local verification
 
-The current declaration contains 40 server2 paths plus 11 outside documentation paths (51 total). The source map follows that exact set, not an old 33-path count. Intent/spec/plan distinguish historical corrections from current requirements. The current Q9 plan declares its exact paths before dependent edits; no independently retained d95 pre-edit declaration was available in this worktree, so that historical evidence gap remains explicit.
+At the Q9 revision, the declaration contained 40 server2 paths plus 11 outside documentation paths (51 total). The current historical campaign source map follows server2/config/benchmarks/aws-declaration.json; the current placement declaration follows S09.json. Intent/spec/plan distinguish historical corrections from current requirements. The current Q9 plan declares its exact paths before dependent edits; no independently retained d95 pre-edit declaration was available in this worktree, so that historical evidence gap remains explicit.
 
 After the controller validates the initial guard and opens HTTPS, it retains the proof and digest with the instance and verification time. A later signed readiness record does not need the old guard line to remain in the latest console snapshot: the controller revalidates the preserved proof and current run/nonce/source/deadline/instance/time binding. A guard still present in the latest snapshot must validate and precede readiness. Latest failure markers and malformed/conflicting guards always reject, even with a good stored proof. Missing or invalid stored evidence cannot authorize admission. Existing HMAC, readiness/Online clocks, monotonic handshake and subsequent stock-guard checks still apply; no extra dispatch or time grant is added.
 
@@ -432,7 +432,7 @@ IMDS accounting distinguishes confirmed non-200 status and response-header/lengt
 
 ## Host I/O inventory and guard limitations
 
-The [nonliteral inventory clarification](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6055549129) is recorded in S09.json for manual source review. It is distinct from the unchanged four literal machine waivers. Review covers the bounded private manifest read and validated ancestry; adjacent exclusive worker.claim create/write/fsync; hashes of the exact task-declared source paths and Cargo.lock under the build checkout; bounded current_exe hash; and caller-owned configuration plus bounded private result/error/state files. The local seam uses its owned temporary inputs and ignored reports. Computed paths, concatenations and aliases are not a complete static security boundary; every nonliteral access requires manual ownership and source review. This inventory grants no arbitrary create/open/include exemption.
+The [nonliteral inventory clarification](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6055549129) is recorded in S09.json for manual source review. It is distinct from the unchanged four literal machine waivers. Review covers the bounded private manifest read and validated ancestry; adjacent exclusive worker.claim create/write/fsync; hashes of the exact historical campaign source inventory and Cargo.lock under the build checkout; bounded current_exe hash; and caller-owned configuration plus bounded private result/error/state files. The local seam uses its owned temporary inputs and ignored reports. Computed paths, concatenations and aliases are not a complete static security boundary; every nonliteral access requires manual ownership and source review. This inventory grants no arbitrary create/open/include exemption.
 
 The stock kernel thresholds are intentionally stricter than the accounting grants: 2 GiB bootstrap, 24 GiB benchmark and 28 GiB global, compared with 3/26/30 GiB application grants. They reserve headroom for uncontrolled traffic and may drop traffic and abort a run earlier. A grant is a ceiling, not an entitlement to consume the full amount. Independent host/guard/version proof remains unexecuted until the approved live preflight succeeds.
 

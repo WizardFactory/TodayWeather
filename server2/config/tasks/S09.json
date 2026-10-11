@@ -50,7 +50,8 @@
     "server2/config/ci/LICENSE.apparmor",
     "server2/tools/verify_artifact.py",
     "server2/tools/test_verify_artifact.py",
-    "server2/tools/verify_docker.py"
+    "server2/tools/verify_docker.py",
+    "server2/config/benchmarks/aws-declaration.json"
   ],
   "outside": [
     {

@@ -993,8 +993,9 @@ impl Metadata {
     }
 }
 fn source_check(m: &Manifest) -> Result<(), &'static str> {
-    let declaration: Value = serde_json::from_str(include_str!("../../config/tasks/S09.json"))
-        .map_err(|_| "source declaration")?;
+    let declaration: Value =
+        serde_json::from_str(include_str!("../../config/benchmarks/aws-declaration.json"))
+            .map_err(|_| "source declaration")?;
     let mut paths = declaration["server2_paths"]
         .as_array()
         .ok_or("source paths")?
@@ -2592,7 +2593,8 @@ mod wire_tests {
     fn successor_source_map_matches_exact_compiled_declaration() {
         let mut m = manifest("http://127.0.0.1:1");
         let declaration: Value =
-            serde_json::from_str(include_str!("../../config/tasks/S09.json")).unwrap();
+            serde_json::from_str(include_str!("../../config/benchmarks/aws-declaration.json"))
+                .unwrap();
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap();

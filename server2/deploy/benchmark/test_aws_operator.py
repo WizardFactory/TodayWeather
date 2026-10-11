@@ -302,7 +302,7 @@ class ConfigAndOwnershipTests(unittest.TestCase):
 
     def pinned_config(self, include_checker=True):
         config=self.config()
-        declaration=json.loads((HERE.parents[1]/"config/tasks/S09.json").read_text())
+        declaration=json.loads((HERE.parents[1]/"config/benchmarks/aws-declaration.json").read_text())
         paths=declaration["server2_paths"]+[v["path"] for v in declaration["outside"]]
         if not include_checker: paths=[p for p in paths if p not in {"server2/tools/check_placement.py","server2/tools/test_placement.py"}]
         files={name:op.digest((HERE.parents[2]/name).read_bytes()) for name in paths}
@@ -317,9 +317,12 @@ class ConfigAndOwnershipTests(unittest.TestCase):
 
     def test_exact_declared_source_map_accepts_and_missing_files_reject(self):
         current=self.pinned_config()
-        declaration=json.loads((HERE.parents[1]/"config/tasks/S09.json").read_text())
+        declaration=json.loads((HERE.parents[1]/"config/benchmarks/aws-declaration.json").read_text())
         expected=declaration['server2_paths']+[v['path'] for v in declaration['outside']]
         self.assertEqual(set(current['source_files']),set(expected))
+        self.assertIn('server2/config/benchmarks/aws-declaration.json',current['source_files'])
+        for local_only in ('server2/tools/verify_docker.py','.github/workflows/server2.yml'):
+            self.assertNotIn(local_only,current['source_files'])
         self.assertIn('server2/deploy/benchmark/ssm_startup_recovery.py',current['source_files'])
         self.assertEqual(op.validate_config(current,armed=True,now_ms=1791435000000),current)
         for missing in ('server2/deploy/benchmark/run_isolated.py','server2/deploy/benchmark/ssm_startup_recovery.py'):
@@ -700,7 +703,7 @@ def compiled_worker_handshake(binary, fault=False, case_fault=False):
     from unittest.mock import patch
     repo=HERE.parents[2];binary=Path(binary).resolve()
     if not binary.is_file(): raise AssertionError("compiled worker missing")
-    declaration=json.loads((repo/"server2/config/tasks/S09.json").read_text())
+    declaration=json.loads((repo/"server2/config/benchmarks/aws-declaration.json").read_text())
     paths=declaration["server2_paths"]+[v["path"] for v in declaration["outside"]]
     if not paths or len(paths) != len(set(paths)): raise AssertionError("source paths")
     peer_fault="uncertain-cold-final-trial" if case_fault else "uncertain-provider-publication"

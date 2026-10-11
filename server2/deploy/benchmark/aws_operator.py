@@ -116,7 +116,7 @@ def validate_config(config, armed=False, now_ms=None, cleanup_only=False):
     for path, value in files.items():
         if not path.startswith(("server2/", "docs/", "intent/", "specs/", "plans/")) or not re.fullmatch(r"[A-Za-z0-9_./-]+", path) or ".." in path.split("/") or not re.fullmatch("[a-f0-9]{64}", value):
             raise OperatorError("source map boundary")
-    declaration = bounded_json(HERE.parents[1] / 'config/tasks/S09.json')
+    declaration = bounded_json(HERE.parents[1] / 'config/benchmarks/aws-declaration.json')
     declared = declaration['server2_paths'] + [item['path'] for item in declaration['outside']]
     if len(declared) != len(set(declared)) or set(files) != set(declared):
         raise OperatorError('source map requires exact declared paths')
