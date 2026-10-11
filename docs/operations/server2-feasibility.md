@@ -26,7 +26,7 @@ failure observation, not an all-success or latency acceptance claim. S09 release
 implementation work based on checked behavior and truthful limits; actual route
 performance acceptance remains pre-cutover.
 
-The maintained Docker capture runs on Colima with VZ/Rosetta emulation on Apple Silicon. Its manifest identifies the source revision and bundle origin; historical captures lacking those fields are not EC2 handoff evidence. Near-one-second `other_error` outcomes occur in non-warm workloads and remain unclassified. They also appear in the native x86 Linux CI baseline `c04a4ddc` and inventory-correction `d4092fd2`: both report cold_16 as 8 success/8 other_error and provider_data_16 as 6 success/10 other_error. This is a retained pre-existing observation, not a newly attributed emulation defect or an all-success claim. Emulation and container limits affect timings; they do not establish a cause.
+The maintained Docker capture is a historical illustration: its bundle was built locally before the `d4092fd2` inventory correction, its original build revision was not recorded, and it ran on Colima with VZ/Rosetta emulation on Apple Silicon. Its binary hash is not a current-head build and it is not EC2 handoff evidence; current-head CI bundle hashes and Docker outcomes are recorded in the PR. Near-one-second `other_error` outcomes occur in non-warm workloads and remain unclassified. They also appear in the native x86 Linux CI baseline `c04a4ddc` and inventory-correction `d4092fd2`: both report cold_16 as 8 success/8 other_error and provider_data_16 as 6 success/10 other_error. This is a retained pre-existing observation, not a newly attributed emulation defect or an all-success claim. Emulation and container limits affect timings; they do not establish a cause.
 
 ## Linux artifact checks before EC2
 
@@ -101,7 +101,7 @@ This document grants no AWS execution, budget reset, deployment or merge.
 
 ## Run an isolated release measurement
 
-From the repository root, build the single benchmark binary. Rust workspace files and benchmark implementation stay under server2. Python 3.9 or newer is required; the actual interpreter and host are recorded in the maintained evidence manifest.
+From the repository root, build the single benchmark binary. Rust workspace files and benchmark implementation stay under server2. Python 3.9 or newer is required; the actual interpreter and host are recorded in each capture's evidence manifest.
 
 ```sh
 cargo build --locked --manifest-path server2/Cargo.toml \
@@ -118,9 +118,7 @@ CPU/RAM were observed with `sysctl -n hw.memsize machdep.cpu.brand_string`;
 compiler identity with `rustc --version --verbose`. The actual command in the
 capture used `--timeout 600`. Its 24 cases retained 720 offered-request outcomes,
 completed in 31.36 seconds, and reached 51,707,904 bytes peak process RSS.
-These single-trial observations are local reference evidence, with the actual
-binary/configuration/source hashes and measured summaries in the maintained
-[evidence manifest](../evidence/tasks/server2-feasibility/manifest.json).
+These single-trial observations are local reference evidence; their binary/configuration/source hashes and measured summaries are in the [`c04a4ddc` evidence manifest](https://github.com/WizardFactory/TodayWeather/blob/c04a4ddcee06ab97931fabd41b366e0f79d76f3e/docs/evidence/tasks/server2-feasibility/manifest.json). The current maintained manifest instead records the historical Docker capture described above.
 
 The maintained runner creates a fresh literal 127.0.0.1 peer and rewrites both endpoints in an effective configuration. The template's port 1 is a placeholder; the direct CLI does not discover or start peers. `--validate-config PATH` checks the complete schema before I/O. Remote/DNS/auth/query/fragment endpoints and unknown fields fail closed. Only fixed dummy local credentials are used; profiles and environment keys are not loaded. The peer checks protocol shape, not AWS authentication.
 
