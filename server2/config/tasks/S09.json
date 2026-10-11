@@ -47,7 +47,10 @@
     "server2/tools/prepare-ci.sh",
     "server2/tools/ci.sh",
     "server2/config/ci/bwrap-userns-restrict",
-    "server2/config/ci/LICENSE.apparmor"
+    "server2/config/ci/LICENSE.apparmor",
+    "server2/tools/verify_artifact.py",
+    "server2/tools/test_verify_artifact.py",
+    "server2/tools/verify_docker.py"
   ],
   "outside": [
     {
@@ -104,6 +107,11 @@
       "path": "docs/architecture/diagrams/server2-feasibility.html",
       "category": "documentation",
       "reason": "S09 maintained task documentation/evidence or root-owned shared handoff; no runtime outside server2"
+    },
+    {
+      "path": ".github/workflows/server2.yml",
+      "category": "ci-wiring",
+      "reason": "Upload the verified musl binaries and native reports for seven days; verification logic stays under server2/tools"
     }
   ],
   "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6054300695",

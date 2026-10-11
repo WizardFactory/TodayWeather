@@ -166,3 +166,8 @@ outcomes. Preserve original state and artifacts. Fresh resource absence, final
 published source pins and actual CLI wire limits remain launch prerequisites.
 Collect bounded evidence before ordinary cleanup; preserve S3 versions. This
 approval is not a measurement-success claim.
+
+
+## Docker preflight amendment (2026-10-11)
+
+AK requested the recommended Docker local -> Linux CI -> identical-artifact minimal EC2 flow. Preserve Rust adoption and local-first scope. Provide credential-free, external-network-free Docker verification of the prebuilt static x86_64 Linux binaries; reject altered artifacts/sources before execution. No AWS execution, merge, on-host build or new performance acceptance gate.

@@ -1,82 +1,98 @@
 {
-  "pages": 12,
+  "pages": 14,
   "schema": 1,
   "task": "S09",
-  "date": "2026-10-11",
-  "command": "python3 server2/tools/benchmark/run.py --output reports/sdlc/issue-2694-s09/local-matrix.json --timeout 600",
-  "environment": "Rust1.99/Darwin, public Python loopback peer",
-  "scope": "Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or host go",
+  "date": "2026-10-12",
+  "command": "python3 server2/tools/verify_docker.py --bundle reports/sdlc/issue-2694-s09/docker/local-linux-bundle-final --output reports/sdlc/issue-2694-s09/docker/local-container-final --docker-context colima-s09-preflight --staging-root /private/tmp/server2-s09-docker",
+  "environment": "Linux-6.8.0-117-generic-x86_64-with-glibc2.36, isolated Python loopback peer",
+  "scope": "Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or EC2 performance",
   "captured_stdout": [
+    "linux",
+    "Offline Docker preflight; fixed linux/amd64 image; no credentials forwarded",
+    "+ /usr/local/bin/python3 /work/server2/tools/smoke.py --binary /work/server2/target/x86_64-unknown-linux-musl/release/server2",
+    "PASS invalid nonloopback metrics startup rejected",
+    "server2 public=127.0.0.1:38255 metrics=127.0.0.1:42587",
+    "GET public /health -> 200 OK; text/html; CORS *",
+    "HEAD public /health -> 200; empty body; Content-Length 2",
+    "GET public /internal/metrics -> 404",
+    "GET loopback metrics -> 200 no-store; counters: {\"server2_cache_bytes\": \"0\", \"server2_cache_limit_bytes\": \"16777216\", \"server2_cpu_inflight\": \"0\", \"server2_cpu_limit\": \"2\", \"server2_health_requests_total\": \"2\", \"server2_inflight\": \"0\", \"server2_inflight_limit\": \"40\", \"server2_rejected_total\": \"0\"}",
+    "PASS public socket cap 2 rejects excess and recovers after release",
+    "PASS unfinished HTTP headers closed within 1.5..3.5s at 2-second lifetime",
+    "PASS SIGTERM drained both listeners; no provider calls",
+    "PASS SIGTERM with partial headers: logged clean forced stop within 4.5..7s",
+    "+ /usr/local/bin/python3 /work/server2/tools/benchmark/run.py --binary /work/server2/target/x86_64-unknown-linux-musl/release/server2-feasibility --output /results/run/local-matrix.json",
     "LOCAL ONLY; Rust adopted; preproduction host smoke and API cost/performance pending",
-    "cold_8: outcomes={'success': 8} all-p95=40952us success-p95=40952us",
-    "warm_8: outcomes={'success': 8} all-p95=10us success-p95=10us",
-    "provider_data_8: outcomes={'success': 8} all-p95=486800us success-p95=486800us",
-    "provider_nodata_8: outcomes={'acquisition_denied': 8} all-p95=156083us success-p95=Noneus",
-    "provider_denied_8: outcomes={'acquisition_denied': 8} all-p95=219648us success-p95=Noneus",
-    "provider_error_8: outcomes={'acquisition_denied': 8} all-p95=209210us success-p95=Noneus",
-    "cold_16: outcomes={'success': 16} all-p95=195920us success-p95=195920us",
-    "warm_16: outcomes={'success': 16} all-p95=15us success-p95=15us",
-    "provider_data_16: outcomes={'other_error': 2, 'success': 14} all-p95=1001589us success-p95=758926us",
-    "provider_nodata_16: outcomes={'acquisition_denied': 16} all-p95=263561us success-p95=Noneus",
-    "provider_denied_16: outcomes={'acquisition_denied': 16} all-p95=329840us success-p95=Noneus",
-    "provider_error_16: outcomes={'acquisition_denied': 16} all-p95=205578us success-p95=Noneus",
-    "cold_32: outcomes={'capacity': 16, 'success': 16} all-p95=176145us success-p95=176735us",
-    "warm_32: outcomes={'success': 32} all-p95=23us success-p95=23us",
-    "provider_data_32: outcomes={'capacity': 16, 'success': 16} all-p95=713603us success-p95=716200us",
-    "provider_nodata_32: outcomes={'acquisition_denied': 16, 'capacity': 16} all-p95=417484us success-p95=Noneus",
-    "provider_denied_32: outcomes={'acquisition_denied': 16, 'capacity': 16} all-p95=286429us success-p95=Noneus",
-    "provider_error_32: outcomes={'acquisition_denied': 16, 'capacity': 16} all-p95=362364us success-p95=Noneus",
-    "cold_64: outcomes={'capacity': 48, 'success': 16} all-p95=160757us success-p95=242923us",
-    "warm_64: outcomes={'success': 64} all-p95=22us success-p95=22us",
-    "provider_data_64: outcomes={'capacity': 48, 'success': 16} all-p95=526503us success-p95=763632us",
-    "provider_nodata_64: outcomes={'acquisition_denied': 16, 'capacity': 48} all-p95=208948us success-p95=Noneus",
-    "provider_denied_64: outcomes={'acquisition_denied': 16, 'capacity': 48} all-p95=240006us success-p95=Noneus",
-    "provider_error_64: outcomes={'acquisition_denied': 16, 'capacity': 48} all-p95=250023us success-p95=Noneus",
-    "Process peak RSS: 51707904 bytes; CPU includes startup/seed",
-    "PASS: bounded report, all outcome denominators and terminal archive fences"
+    "cold_8: outcomes={'success': 8} all-p95=34984us success-p95=34984us",
+    "warm_8: outcomes={'success': 8} all-p95=519us success-p95=519us",
+    "provider_data_8: outcomes={'other_error': 2, 'success': 6} all-p95=1015654us success-p95=73315us",
+    "provider_nodata_8: outcomes={'acquisition_denied': 7, 'other_error': 1} all-p95=1007519us success-p95=Noneus",
+    "provider_denied_8: outcomes={'acquisition_denied': 7, 'other_error': 1} all-p95=1007497us success-p95=Noneus",
+    "provider_error_8: outcomes={'acquisition_denied': 7, 'other_error': 1} all-p95=1005941us success-p95=Noneus",
+    "cold_16: outcomes={'other_error': 9, 'success': 7} all-p95=1014582us success-p95=14197us",
+    "warm_16: outcomes={'success': 16} all-p95=10us success-p95=10us",
+    "provider_data_16: outcomes={'other_error': 9, 'success': 7} all-p95=1005207us success-p95=78330us",
+    "provider_nodata_16: outcomes={'acquisition_denied': 7, 'other_error': 9} all-p95=1005043us success-p95=Noneus",
+    "provider_denied_16: outcomes={'acquisition_denied': 7, 'other_error': 9} all-p95=1007419us success-p95=Noneus",
+    "provider_error_16: outcomes={'acquisition_denied': 7, 'other_error': 9} all-p95=1012115us success-p95=Noneus",
+    "cold_32: outcomes={'capacity': 16, 'other_error': 9, 'success': 7} all-p95=1013377us success-p95=14363us",
+    "warm_32: outcomes={'success': 32} all-p95=56us success-p95=56us",
+    "provider_data_32: outcomes={'capacity': 16, 'other_error': 10, 'success': 6} all-p95=1008395us success-p95=68102us",
+    "provider_nodata_32: outcomes={'acquisition_denied': 7, 'capacity': 16, 'other_error': 9} all-p95=1011259us success-p95=Noneus",
+    "provider_denied_32: outcomes={'acquisition_denied': 7, 'capacity': 16, 'other_error': 9} all-p95=1006995us success-p95=Noneus",
+    "provider_error_32: outcomes={'acquisition_denied': 7, 'capacity': 16, 'other_error': 9} all-p95=1003560us success-p95=Noneus",
+    "cold_64: outcomes={'capacity': 48, 'other_error': 10, 'success': 6} all-p95=1007740us success-p95=15410us",
+    "warm_64: outcomes={'success': 64} all-p95=12us success-p95=12us",
+    "provider_data_64: outcomes={'capacity': 48, 'other_error': 10, 'success': 6} all-p95=1009635us success-p95=75232us",
+    "provider_nodata_64: outcomes={'acquisition_denied': 7, 'capacity': 48, 'other_error': 9} all-p95=1009865us success-p95=Noneus",
+    "provider_denied_64: outcomes={'acquisition_denied': 7, 'capacity': 48, 'other_error': 9} all-p95=1003485us success-p95=Noneus",
+    "provider_error_64: outcomes={'acquisition_denied': 12, 'capacity': 48, 'other_error': 4} all-p95=1062643us success-p95=Noneus",
+    "Process peak RSS: 42176512 bytes; CPU includes startup/seed",
+    "PASS: bounded report, all outcome denominators and terminal archive fences",
+    "PASS static Linux artifacts; hashes unchanged; AWS/EC2 remains unverified",
+    "PASS Docker artifact preflight; EC2/AWS checks remain pending"
   ],
-  "binary_sha256": "2176d59413800938c876d9203a371d7ca869a9998dff7c34628256bfef4ef0f6",
+  "binary_sha256": "7cdd0b1f826d0ac60a9fad163a063a5b0e6787241e51dfacdd7a6fe68097c361",
   "requested_config_sha256": "20452f51a203a4f1b3be927b605874fb46e6591c6d10dcfe277e71ce41a2b164",
-  "effective_config_sha256": "d92048a7a0fdc1b75e37a6d98eaa0aa6493028d97c1ba4ad52cfa27882d4f43d",
-  "report_sha256": "ec264d0a0884c31e9e639548b18ad89efd28d2c7dc0631efb5230ef786a33fb0",
+  "effective_config_sha256": "c4c8f31386cb2c50682a0b2eed29211f8be143b9ed73352285cd4167dcb55236",
+  "report_sha256": "b0e1af592de3722fe13cf5fccc58f152d2e56af4a17247c67561c662c096b656",
   "live_driver_sha256": "49d8879a06fa716de6aa83cacfb4594243cb68cf76a5f57a368720647fae9bf4",
   "operator_sha256": "410d5815b848f6e1e5c96a5c97a6786e127506cc83f889d6a1eee19f896ba5e2",
-  "source_sha256": "70fb79dc201823ab3a7ab1e1712910a961d98c82dd57f16072ac47505ba5651a",
-  "pdf_sha256": "aeb221fb6edf4ddc14d530400b637639e7b19ab6b4f4d18c48fba4ffc6bbcacb",
-  "screenshot_sha256": "1462376a14ccfb58bff758be8ca84dca1db376859ab419a9faab12df9719c54b",
+  "source_sha256": "78a02fa872ab70d4319f1fbe6c5308f33c0afc2a317b3739ee7a4575969a140f",
+  "pdf_sha256": "d4e3d20a11d63dec41526f2f71abe8a32c86ea6c624cabe9231e7a6e65a31bbf",
+  "screenshot_sha256": "5f67b6ace76cd61facff785703f2500bdd69dbece4b0bbed6e5c925b4f170720",
   "measurement_summary": {
     "local_environment": {
-      "os": "macOS-26.6.2-arm64-arm-64bit",
-      "architecture": "arm64",
-      "cpu_model": "arm",
-      "logical_cpu_count": 10,
-      "python": "3.9.6"
+      "os": "Linux-6.8.0-117-generic-x86_64-with-glibc2.36",
+      "architecture": "x86_64",
+      "cpu_model": null,
+      "logical_cpu_count": 2,
+      "python": "3.14.8"
     },
     "process": {
-      "user_cpu_seconds": 1.933703,
-      "system_cpu_seconds": 1.836314,
-      "peak_rss_bytes": 51707904,
-      "rss_native_unit": "bytes",
+      "user_cpu_seconds": 4.171693,
+      "system_cpu_seconds": 3.022055,
+      "peak_rss_bytes": 42176512,
+      "rss_native_unit": "KiB",
       "scope": "whole child process including startup and fixture seeding",
-      "elapsed_seconds": 31.360274250000003,
+      "elapsed_seconds": 27.159529422999867,
       "exit_code": 0
     },
     "cost_inputs": {
       "scope": "whole local run including seeding, warmup, maintenance and readback; not AWS storage/billing",
       "s3_requests": {
-        "GET:budget": 278,
-        "GET:catalog": 4272,
-        "GET:group": 564,
-        "GET:raw": 1026,
-        "LIST:catalog": 340,
-        "PUT:budget": 444,
-        "PUT:catalog": 1014,
-        "PUT:group": 534,
-        "PUT:raw": 534
+        "GET:budget": 142,
+        "GET:catalog": 3890,
+        "GET:group": 442,
+        "GET:raw": 895,
+        "LIST:catalog": 259,
+        "PUT:budget": 228,
+        "PUT:catalog": 985,
+        "PUT:group": 505,
+        "PUT:raw": 505
       },
-      "catalog_version_body_bytes": 1191030,
-      "version_body_bytes": 1922645,
-      "version_count": 2526,
+      "catalog_version_body_bytes": 1165945,
+      "version_body_bytes": 1820004,
+      "version_count": 2223,
       "unit_prices": null
     },
     "decisions": {
@@ -107,9 +123,9 @@
         "summary": {
           "all_requests": {
             "count": 8,
-            "p50_us": 18261,
-            "p95_us": 40952,
-            "p99_us": 40952
+            "p50_us": 28612,
+            "p95_us": 34984,
+            "p99_us": 34984
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
@@ -119,16 +135,16 @@
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
             "count": 8,
-            "p50_us": 18261,
-            "p95_us": 40952,
-            "p99_us": 40952
+            "p50_us": 28612,
+            "p95_us": 34984,
+            "p99_us": 34984
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 41390,
-          "measured_attempts_per_second": 193.28340178787147,
-          "successful_attempts_per_second": 193.28340178787147,
+          "wall_us": 35882,
+          "measured_attempts_per_second": 222.95301265258348,
+          "successful_attempts_per_second": 222.95301265258348,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 2,
@@ -152,9 +168,9 @@
         "summary": {
           "all_requests": {
             "count": 8,
-            "p50_us": 2,
-            "p95_us": 10,
-            "p99_us": 10
+            "p50_us": 3,
+            "p95_us": 519,
+            "p99_us": 519
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
@@ -164,16 +180,16 @@
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
             "count": 8,
-            "p50_us": 2,
-            "p95_us": 10,
-            "p99_us": 10
+            "p50_us": 3,
+            "p95_us": 519,
+            "p99_us": 519
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 56,
-          "measured_attempts_per_second": 142857.14285714287,
-          "successful_attempts_per_second": 142857.14285714287,
+          "wall_us": 569,
+          "measured_attempts_per_second": 14059.7539543058,
+          "successful_attempts_per_second": 14059.7539543058,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 2,
@@ -197,28 +213,29 @@
         "summary": {
           "all_requests": {
             "count": 8,
-            "p50_us": 371511,
-            "p95_us": 486800,
-            "p99_us": 486800
+            "p50_us": 72016,
+            "p95_us": 1015654,
+            "p99_us": 1015654
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "success": 8
+            "other_error": 2,
+            "success": 6
           },
           "samples": 8,
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
-            "count": 8,
-            "p50_us": 371511,
-            "p95_us": 486800,
-            "p99_us": 486800
+            "count": 6,
+            "p50_us": 71393,
+            "p95_us": 73315,
+            "p99_us": 73315
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 486913,
-          "measured_attempts_per_second": 16.43003986338422,
-          "successful_attempts_per_second": 16.43003986338422,
+          "wall_us": 1015844,
+          "measured_attempts_per_second": 7.875224936112238,
+          "successful_attempts_per_second": 5.906418702084178,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 1,
@@ -242,13 +259,14 @@
         "summary": {
           "all_requests": {
             "count": 8,
-            "p50_us": 141235,
-            "p95_us": 156083,
-            "p99_us": 156083
+            "p50_us": 48202,
+            "p95_us": 1007519,
+            "p99_us": 1007519
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 8
+            "acquisition_denied": 7,
+            "other_error": 1
           },
           "samples": 8,
           "success_subset_insufficient_for_tail_claim": true,
@@ -261,8 +279,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 156318,
-          "measured_attempts_per_second": 51.17772745301245,
+          "wall_us": 1007720,
+          "measured_attempts_per_second": 7.9387131346008815,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -287,13 +305,14 @@
         "summary": {
           "all_requests": {
             "count": 8,
-            "p50_us": 189490,
-            "p95_us": 219648,
-            "p99_us": 219648
+            "p50_us": 47626,
+            "p95_us": 1007497,
+            "p99_us": 1007497
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 8
+            "acquisition_denied": 7,
+            "other_error": 1
           },
           "samples": 8,
           "success_subset_insufficient_for_tail_claim": true,
@@ -306,8 +325,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 220485,
-          "measured_attempts_per_second": 36.283647413656254,
+          "wall_us": 1007653,
+          "measured_attempts_per_second": 7.939240988713377,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -332,13 +351,14 @@
         "summary": {
           "all_requests": {
             "count": 8,
-            "p50_us": 185062,
-            "p95_us": 209210,
-            "p99_us": 209210
+            "p50_us": 46192,
+            "p95_us": 1005941,
+            "p99_us": 1005941
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 8
+            "acquisition_denied": 7,
+            "other_error": 1
           },
           "samples": 8,
           "success_subset_insufficient_for_tail_claim": true,
@@ -351,8 +371,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 209808,
-          "measured_attempts_per_second": 38.13009990086174,
+          "wall_us": 1006105,
+          "measured_attempts_per_second": 7.95145635892874,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -377,28 +397,29 @@
         "summary": {
           "all_requests": {
             "count": 16,
-            "p50_us": 58126,
-            "p95_us": 195920,
-            "p99_us": 195920
+            "p50_us": 1013232,
+            "p95_us": 1014582,
+            "p99_us": 1014582
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "success": 16
+            "other_error": 9,
+            "success": 7
           },
           "samples": 16,
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
-            "count": 16,
-            "p50_us": 58126,
-            "p95_us": 195920,
-            "p99_us": 195920
+            "count": 7,
+            "p50_us": 12802,
+            "p95_us": 14197,
+            "p99_us": 14197
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 196364,
-          "measured_attempts_per_second": 81.48133059012854,
-          "successful_attempts_per_second": 81.48133059012854,
+          "wall_us": 1015300,
+          "measured_attempts_per_second": 15.758888998325618,
+          "successful_attempts_per_second": 6.894513936767458,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 2,
@@ -422,9 +443,9 @@
         "summary": {
           "all_requests": {
             "count": 16,
-            "p50_us": 5,
-            "p95_us": 15,
-            "p99_us": 15
+            "p50_us": 3,
+            "p95_us": 10,
+            "p99_us": 10
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
@@ -434,16 +455,16 @@
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
             "count": 16,
-            "p50_us": 5,
-            "p95_us": 15,
-            "p99_us": 15
+            "p50_us": 3,
+            "p95_us": 10,
+            "p99_us": 10
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 93,
-          "measured_attempts_per_second": 172043.01075268816,
-          "successful_attempts_per_second": 172043.01075268816,
+          "wall_us": 112,
+          "measured_attempts_per_second": 142857.14285714287,
+          "successful_attempts_per_second": 142857.14285714287,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 2,
@@ -467,29 +488,29 @@
         "summary": {
           "all_requests": {
             "count": 16,
-            "p50_us": 417362,
-            "p95_us": 1001589,
-            "p99_us": 1001589
+            "p50_us": 1004054,
+            "p95_us": 1005207,
+            "p99_us": 1005207
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "other_error": 2,
-            "success": 14
+            "other_error": 9,
+            "success": 7
           },
           "samples": 16,
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
-            "count": 14,
-            "p50_us": 411791,
-            "p95_us": 758926,
-            "p99_us": 758926
+            "count": 7,
+            "p50_us": 73136,
+            "p95_us": 78330,
+            "p99_us": 78330
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 1004363,
-          "measured_attempts_per_second": 15.93049524922762,
-          "successful_attempts_per_second": 13.939183343074168,
+          "wall_us": 1005340,
+          "measured_attempts_per_second": 15.915013826168261,
+          "successful_attempts_per_second": 6.962818548948614,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 1,
@@ -513,13 +534,14 @@
         "summary": {
           "all_requests": {
             "count": 16,
-            "p50_us": 122425,
-            "p95_us": 263561,
-            "p99_us": 263561
+            "p50_us": 1004418,
+            "p95_us": 1005043,
+            "p99_us": 1005043
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 16
+            "acquisition_denied": 7,
+            "other_error": 9
           },
           "samples": 16,
           "success_subset_insufficient_for_tail_claim": true,
@@ -532,8 +554,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 263948,
-          "measured_attempts_per_second": 60.618000515253,
+          "wall_us": 1005625,
+          "measured_attempts_per_second": 15.910503418272219,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -558,13 +580,14 @@
         "summary": {
           "all_requests": {
             "count": 16,
-            "p50_us": 85002,
-            "p95_us": 329840,
-            "p99_us": 329840
+            "p50_us": 1005927,
+            "p95_us": 1007419,
+            "p99_us": 1007419
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 16
+            "acquisition_denied": 7,
+            "other_error": 9
           },
           "samples": 16,
           "success_subset_insufficient_for_tail_claim": true,
@@ -577,8 +600,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 330311,
-          "measured_attempts_per_second": 48.439198210171625,
+          "wall_us": 1007495,
+          "measured_attempts_per_second": 15.880972114005528,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -603,13 +626,14 @@
         "summary": {
           "all_requests": {
             "count": 16,
-            "p50_us": 146176,
-            "p95_us": 205578,
-            "p99_us": 205578
+            "p50_us": 1011671,
+            "p95_us": 1012115,
+            "p99_us": 1012115
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 16
+            "acquisition_denied": 7,
+            "other_error": 9
           },
           "samples": 16,
           "success_subset_insufficient_for_tail_claim": true,
@@ -622,8 +646,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 206911,
-          "measured_attempts_per_second": 77.3279332659936,
+          "wall_us": 1012620,
+          "measured_attempts_per_second": 15.800596472516837,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -648,29 +672,30 @@
         "summary": {
           "all_requests": {
             "count": 32,
-            "p50_us": 7,
-            "p95_us": 176145,
-            "p99_us": 176735
+            "p50_us": 1042,
+            "p95_us": 1013377,
+            "p99_us": 1013893
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
             "capacity": 16,
-            "success": 16
+            "other_error": 9,
+            "success": 7
           },
           "samples": 32,
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
-            "count": 16,
-            "p50_us": 63673,
-            "p95_us": 176735,
-            "p99_us": 176735
+            "count": 7,
+            "p50_us": 12825,
+            "p95_us": 14363,
+            "p99_us": 14363
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 177199,
-          "measured_attempts_per_second": 180.58792656843437,
-          "successful_attempts_per_second": 90.29396328421718,
+          "wall_us": 1014105,
+          "measured_attempts_per_second": 31.554917883256664,
+          "successful_attempts_per_second": 6.902638286962396,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 2,
@@ -695,8 +720,8 @@
           "all_requests": {
             "count": 32,
             "p50_us": 4,
-            "p95_us": 23,
-            "p99_us": 24
+            "p95_us": 56,
+            "p99_us": 70
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
@@ -707,15 +732,15 @@
           "successful_requests": {
             "count": 32,
             "p50_us": 4,
-            "p95_us": 23,
-            "p99_us": 24
+            "p95_us": 56,
+            "p99_us": 70
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 191,
-          "measured_attempts_per_second": 167539.2670157068,
-          "successful_attempts_per_second": 167539.2670157068,
+          "wall_us": 205,
+          "measured_attempts_per_second": 156097.56097560975,
+          "successful_attempts_per_second": 156097.56097560975,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 2,
@@ -739,29 +764,30 @@
         "summary": {
           "all_requests": {
             "count": 32,
-            "p50_us": 29,
-            "p95_us": 713603,
-            "p99_us": 716200
+            "p50_us": 141,
+            "p95_us": 1008395,
+            "p99_us": 1008419
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
             "capacity": 16,
-            "success": 16
+            "other_error": 10,
+            "success": 6
           },
           "samples": 32,
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
-            "count": 16,
-            "p50_us": 405560,
-            "p95_us": 716200,
-            "p99_us": 716200
+            "count": 6,
+            "p50_us": 66939,
+            "p95_us": 68102,
+            "p99_us": 68102
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 716526,
-          "measured_attempts_per_second": 44.65992859993915,
-          "successful_attempts_per_second": 22.329964299969575,
+          "wall_us": 1008835,
+          "measured_attempts_per_second": 31.719755956127614,
+          "successful_attempts_per_second": 5.947454241773928,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 1,
@@ -785,14 +811,15 @@
         "summary": {
           "all_requests": {
             "count": 32,
-            "p50_us": 31,
-            "p95_us": 417484,
-            "p99_us": 417554
+            "p50_us": 1253,
+            "p95_us": 1011259,
+            "p99_us": 1011618
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 16,
-            "capacity": 16
+            "acquisition_denied": 7,
+            "capacity": 16,
+            "other_error": 9
           },
           "samples": 32,
           "success_subset_insufficient_for_tail_claim": true,
@@ -805,8 +832,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 417797,
-          "measured_attempts_per_second": 76.5922206238915,
+          "wall_us": 1011805,
+          "measured_attempts_per_second": 31.626647427122816,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -831,14 +858,15 @@
         "summary": {
           "all_requests": {
             "count": 32,
-            "p50_us": 11,
-            "p95_us": 286429,
-            "p99_us": 388593
+            "p50_us": 510,
+            "p95_us": 1006995,
+            "p99_us": 1007312
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 16,
-            "capacity": 16
+            "acquisition_denied": 7,
+            "capacity": 16,
+            "other_error": 9
           },
           "samples": 32,
           "success_subset_insufficient_for_tail_claim": true,
@@ -851,8 +879,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 388921,
-          "measured_attempts_per_second": 82.27892039771574,
+          "wall_us": 1007867,
+          "measured_attempts_per_second": 31.75022101130407,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -877,14 +905,15 @@
         "summary": {
           "all_requests": {
             "count": 32,
-            "p50_us": 15,
-            "p95_us": 362364,
-            "p99_us": 363175
+            "p50_us": 429,
+            "p95_us": 1003560,
+            "p99_us": 1004004
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 16,
-            "capacity": 16
+            "acquisition_denied": 7,
+            "capacity": 16,
+            "other_error": 9
           },
           "samples": 32,
           "success_subset_insufficient_for_tail_claim": true,
@@ -897,8 +926,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 363401,
-          "measured_attempts_per_second": 88.05699488994252,
+          "wall_us": 1004219,
+          "measured_attempts_per_second": 31.865559205711104,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -923,29 +952,30 @@
         "summary": {
           "all_requests": {
             "count": 64,
-            "p50_us": 4,
-            "p95_us": 160757,
-            "p99_us": 242923
+            "p50_us": 5,
+            "p95_us": 1007740,
+            "p99_us": 1008268
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
             "capacity": 48,
-            "success": 16
+            "other_error": 10,
+            "success": 6
           },
           "samples": 64,
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
-            "count": 16,
-            "p50_us": 60721,
-            "p95_us": 242923,
-            "p99_us": 242923
+            "count": 6,
+            "p50_us": 14137,
+            "p95_us": 15410,
+            "p99_us": 15410
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 243334,
-          "measured_attempts_per_second": 263.0129780466355,
-          "successful_attempts_per_second": 65.75324451165888,
+          "wall_us": 1008523,
+          "measured_attempts_per_second": 63.459137768796545,
+          "successful_attempts_per_second": 5.949294165824676,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 2,
@@ -969,9 +999,9 @@
         "summary": {
           "all_requests": {
             "count": 64,
-            "p50_us": 5,
-            "p95_us": 22,
-            "p99_us": 211
+            "p50_us": 3,
+            "p95_us": 12,
+            "p99_us": 136
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
@@ -981,16 +1011,16 @@
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
             "count": 64,
-            "p50_us": 5,
-            "p95_us": 22,
-            "p99_us": 211
+            "p50_us": 3,
+            "p95_us": 12,
+            "p99_us": 136
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 1740,
-          "measured_attempts_per_second": 36781.6091954023,
-          "successful_attempts_per_second": 36781.6091954023,
+          "wall_us": 414,
+          "measured_attempts_per_second": 154589.37198067634,
+          "successful_attempts_per_second": 154589.37198067634,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 2,
@@ -1015,28 +1045,29 @@
           "all_requests": {
             "count": 64,
             "p50_us": 5,
-            "p95_us": 526503,
-            "p99_us": 763632
+            "p95_us": 1009635,
+            "p99_us": 1009809
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
             "capacity": 48,
-            "success": 16
+            "other_error": 10,
+            "success": 6
           },
           "samples": 64,
           "success_subset_insufficient_for_tail_claim": true,
           "successful_requests": {
-            "count": 16,
-            "p50_us": 417238,
-            "p95_us": 763632,
-            "p99_us": 763632
+            "count": 6,
+            "p50_us": 70957,
+            "p95_us": 75232,
+            "p99_us": 75232
           },
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 764253,
-          "measured_attempts_per_second": 83.74190222347835,
-          "successful_attempts_per_second": 20.935475555869587,
+          "wall_us": 1010636,
+          "measured_attempts_per_second": 63.32645977384538,
+          "successful_attempts_per_second": 5.936855603798004,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
         "record_revisions_per_key": 1,
@@ -1060,14 +1091,15 @@
         "summary": {
           "all_requests": {
             "count": 64,
-            "p50_us": 5,
-            "p95_us": 208948,
-            "p99_us": 234120
+            "p50_us": 9,
+            "p95_us": 1009865,
+            "p99_us": 1010222
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 16,
-            "capacity": 48
+            "acquisition_denied": 7,
+            "capacity": 48,
+            "other_error": 9
           },
           "samples": 64,
           "success_subset_insufficient_for_tail_claim": true,
@@ -1080,8 +1112,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 238332,
-          "measured_attempts_per_second": 268.5329708138227,
+          "wall_us": 1011263,
+          "measured_attempts_per_second": 63.28719630798319,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -1107,13 +1139,14 @@
           "all_requests": {
             "count": 64,
             "p50_us": 5,
-            "p95_us": 240006,
-            "p99_us": 367956
+            "p95_us": 1003485,
+            "p99_us": 1004348
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 16,
-            "capacity": 48
+            "acquisition_denied": 7,
+            "capacity": 48,
+            "other_error": 9
           },
           "samples": 64,
           "success_subset_insufficient_for_tail_claim": true,
@@ -1126,8 +1159,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 368181,
-          "measured_attempts_per_second": 173.82754677726444,
+          "wall_us": 1004514,
+          "measured_attempts_per_second": 63.71240221639519,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },
@@ -1153,13 +1186,14 @@
           "all_requests": {
             "count": 64,
             "p50_us": 5,
-            "p95_us": 250023,
-            "p99_us": 250813
+            "p95_us": 1062643,
+            "p99_us": 1069303
           },
           "insufficient_for_tail_claim": true,
           "outcomes": {
-            "acquisition_denied": 16,
-            "capacity": 48
+            "acquisition_denied": 12,
+            "capacity": 48,
+            "other_error": 4
           },
           "samples": 64,
           "success_subset_insufficient_for_tail_claim": true,
@@ -1172,8 +1206,8 @@
           "unmeasured_samples": 0
         },
         "foreground_throughput": {
-          "wall_us": 251044,
-          "measured_attempts_per_second": 254.93538981214448,
+          "wall_us": 1070211,
+          "measured_attempts_per_second": 59.801291521017816,
           "successful_attempts_per_second": 0.0,
           "scope": "offered-client batch observations; excludes seeding, warmup, maintenance and verification"
         },

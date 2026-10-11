@@ -290,3 +290,8 @@ outcomes. Preserve original state and artifacts. Fresh resource absence, final
 published source pins and actual CLI wire limits remain launch prerequisites.
 Collect bounded evidence before ordinary cleanup; preserve S3 versions. This
 approval is not a measurement-success claim.
+
+
+## Docker artifact verification (2026-10-11)
+
+Reuse existing startup/health/shutdown and bounded synthetic matrix via one shared artifact verifier. Require ELF64 little-endian x86_64 with no dynamic interpreter; compare binary and verification-source SHA-256 against the CI manifest before Docker execution and again after checks. The Docker launcher stages only allowlisted task files, uses nonroot/read-only/capability-free execution, no external network or forwarded credentials, and fresh output. Preserve failed samples and stage diagnostics; a failed verifier never emits a success manifest. Native Linux CI retains existing operational namespace tests. CI publishes disposable binaries/manifest/reports for seven days; durable revision/hash/outcome summaries belong in the PR. Docker cannot establish EC2 boot/IAM/SSM or actual AWS performance.

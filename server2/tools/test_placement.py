@@ -279,6 +279,15 @@ jobs:
     def test_exact_golden_job_preserves_foundation(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='shared CI'))
         self.write('.github/workflows/server2.yml',self.golden_workflow());self.assertEqual([],self.errors())
+    def test_verified_artifact_upload_is_exact_wiring(self):
+        self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='reviewed artifact upload'))
+        upload = '      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 7\n'
+        good = self.golden_workflow().replace('  goldens:\n', upload+'  goldens:\n')
+        self.write('.github/workflows/server2.yml',good);self.assertEqual([],self.errors())
+        for bad in (good.replace('retention-days: 7','retention-days: 90'),
+                    good.replace('artifact-native/','../../.aws/'),
+                    good.replace('actions/upload-artifact@v4','unknown/upload@main')):
+            self.write('.github/workflows/server2.yml',bad);self.assertTrue(self.errors())
     def test_golden_job_rejects_unknown_action_env_or_changed_foundation(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='shared CI'))
         good=self.golden_workflow()

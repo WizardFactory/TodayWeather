@@ -281,3 +281,8 @@ outcomes. Preserve original state and artifacts. Fresh resource absence, final
 published source pins and actual CLI wire limits remain launch prerequisites.
 Collect bounded evidence before ordinary cleanup; preserve S3 versions. This
 approval is not a measurement-success claim.
+
+
+## Docker preflight follow-up (2026-10-11)
+
+Exact added paths: server2/tools/verify_artifact.py, server2/tools/test_verify_artifact.py, server2/tools/verify_docker.py. Modify server2/tools/ci.py and server2/config/tasks/S09.json. Additional outside exception: .github/workflows/server2.yml only for artifact upload wiring. Existing intent/spec/plan, operations Markdown/PDF, usage.png/manifest.json and workflow JSON/HTML paths remain the documentation exceptions. D1: maintainer downloads the CI bundle and executes matching binaries in offline Docker; expects startup/health/shutdown plus bounded matrix with all failures retained. D2: altered source/binary, wrong ELF architecture or dynamic interpreter rejects before execution; absent Docker is not PASS. D3: future separately authorized EC2 smoke consumes identical hashes without build/install/sweep. Reuse existing checks; add targeted fail-before-execution regressions and actual container functional smoke. Riskiest part is artifact/source mismatch; reject it. Rejected alternative: reproducing the full historical EC2 bootstrap inside a privileged container. Rollback removes this optional local runner/upload while preserving Linux CI gates. Manual and current workflow diagram must be renewed. No dependency/runtime/AWS-operator edits.

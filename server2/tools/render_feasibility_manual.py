@@ -5,9 +5,9 @@ The supplied log is verification input, not an executable command.
 """
 import argparse
 import hashlib
+import io
 from html import escape
 import json
-import platform
 from pathlib import Path
 import re
 import textwrap
@@ -16,7 +16,7 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, Image as PdfImage
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, Image as PdfImage, KeepTogether, PageBreak
 
 ROOT = Path(__file__).resolve().parents[2]
 DOC = ROOT/'docs/operations/server2-feasibility.md'
@@ -44,9 +44,18 @@ def render_pdf(capture):
         elif line.startswith('## '):flush();story.append(Paragraph(escape(line[3:]),styles['Heading2']))
         elif not line.strip():flush()
         else:paragraph.append(line.strip())
+    flush()
+    # Long actual stdout captures span pages without an orphaned title or tiny
+    # whole-image scaling. Preserve the full maintained PNG unchanged.
     with Image.open(capture) as capture_image:
-        aspect = capture_image.height/capture_image.width
-    flush();story.append(Spacer(1,8));story.append(Paragraph('Actual local CLI usage',styles['Heading2']));story.append(PdfImage(str(capture),width=6.5*inch,height=aspect*6.5*inch))
+        cuts = [0]+list(range(70+29*56, capture_image.height, 29*56))+[capture_image.height]
+        for top, bottom in zip(cuts, cuts[1:]):
+            chunk = capture_image.crop((0, top, capture_image.width, bottom))
+            data = io.BytesIO();chunk.save(data, format='PNG');data.seek(0)
+            if top: story.append(PageBreak())
+            title = 'Actual local CLI usage'+(' (continued)' if top else '')
+            story.append(KeepTogether([Paragraph(title,styles['Heading2']),
+                PdfImage(data,width=6.5*inch,height=chunk.height/chunk.width*6.5*inch)]))
     def footer(canvas,doc):
         canvas.setFont('Helvetica',8);canvas.setFillColor(colors.HexColor('#475569'));canvas.drawString(48,28,'S09 local verification | preproduction host smoke pending');canvas.drawRightString(564,28,str(doc.page))
     document=SimpleDocTemplate(str(PDF),pagesize=(612,792),leftMargin=48,rightMargin=48,topMargin=42,bottomMargin=48,title='S09 local-first verification operations',author='TodayWeather',invariant=1)
@@ -59,6 +68,7 @@ def main():
     parser.add_argument('--log')
     parser.add_argument('--pdf-only', action='store_true', help='Refresh documentation using the unchanged historical actual CLI capture')
     parser.add_argument('--report')
+    parser.add_argument('--binary', default='server2/target/release/server2-feasibility', help='Actual captured artifact under server2/target')
     parser.add_argument('--command', default='python3 server2/tools/benchmark/run.py --output reports/s09-local.json')
     parser.add_argument('--capture-date', default='2026-10-08')
     args = parser.parse_args()
@@ -88,7 +98,9 @@ def main():
     if not report_path.is_relative_to(ROOT/'reports') or report_path.stat().st_size>8*1024*1024:
         raise ValueError('only bounded task report JSON accepted')
     report=json.loads(report_path.read_bytes())
-    binary=ROOT/'server2/target/release/server2-feasibility'
+    binary=(ROOT/args.binary).resolve()
+    if not binary.is_relative_to(ROOT/'server2/target'):
+        raise ValueError('capture binary must be under server2/target')
     if report['runner_provenance']['binary_sha256']!=digest(binary) or not report['runner_provenance']['files_unchanged_during_execution']:
         raise ValueError('smoke report binary provenance mismatch')
     if 'PASS: bounded report, all outcome denominators and terminal archive fences' not in output or any(x in output for x in ('X-Amz-', 'Authorization:', 'secret=')):
@@ -104,7 +116,7 @@ def main():
     for i,line in enumerate(lines): draw.text((35,70+i*29),line,font=font,fill='#d1fae5' if line.startswith('PASS') else '#e5e7eb')
     capture=EVIDENCE/'usage.png';image.save(capture)
     pages = render_pdf(capture)
-    manifest={'pages':pages,'schema':1,'task':'S09','date':args.capture_date,'command':args.command,'environment':'Rust1.99/'+platform.system()+', public Python loopback peer','scope':'Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or host go','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(binary),'requested_config_sha256':report['requested_config_sha256'],'effective_config_sha256':report['runner_provenance']['effective_config_sha256'],'report_sha256':digest(report_path),'live_driver_sha256':digest(ROOT/'server2/tools/benchmark/aws.rs'),'operator_sha256':digest(ROOT/'server2/deploy/benchmark/aws_operator.py'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
+    manifest={'pages':pages,'schema':1,'task':'S09','date':args.capture_date,'command':args.command,'environment':report['local_environment']['os']+', isolated Python loopback peer','scope':'Actual local release cold/warm/funded HTTP report, low sample count; not AWS/auth/API parity or EC2 performance','captured_stdout':output.strip().splitlines(),'binary_sha256':digest(binary),'requested_config_sha256':report['requested_config_sha256'],'effective_config_sha256':report['runner_provenance']['effective_config_sha256'],'report_sha256':digest(report_path),'live_driver_sha256':digest(ROOT/'server2/tools/benchmark/aws.rs'),'operator_sha256':digest(ROOT/'server2/deploy/benchmark/aws_operator.py'),'source_sha256':digest(DOC),'pdf_sha256':digest(PDF),'screenshot_sha256':digest(capture)}
     manifest['measurement_summary'] = {
         'local_environment': report['local_environment'],
         'process': report['process'],

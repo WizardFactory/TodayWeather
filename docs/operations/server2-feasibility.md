@@ -36,6 +36,52 @@ checks remain. Missing isolation fails closed; never run operational unittest
 modules directly on the host. macOS can run Rust/loopback checks but cannot claim
 the Linux-only isolated operational or musl execution results.
 
+## Docker preflight using the CI artifact
+
+Run the existing Linux foundation CI first, then download the successful run's
+`server2-linux-musl-verified` artifact. Check out the corresponding PR source:
+verification scripts, fixtures and binaries must match its manifest. The native
+Linux checks and Docker use the same `tools/verify_artifact.py` entrypoint. No
+local rebuild is required when the CI bundle is available.
+
+```sh
+gh run download RUN_ID --repo WizardFactory/TodayWeather \
+  --name server2-linux-musl-verified --dir reports/s09-ci-bundle
+python3 server2/tools/verify_docker.py \
+  --bundle reports/s09-ci-bundle --output reports/s09-docker-check
+```
+
+Use a fresh download/output directory for each run. Missing Docker, incompatible
+ELF, changed source/binary hashes or failed checks stop verification. The runner
+retains startup/matrix logs and a result receipt; only complete success exports
+a new successful manifest and both unchanged binaries. Inspect matrix outcomes:
+a completed verification does not mean every offered request succeeded.
+
+On this Apple Silicon workstation, Docker29.9.0 and Colima0.10.3 are installed;
+the dedicated `s09-preflight` profile uses 2 CPUs/4 GiB and VZ/Rosetta, without a
+login service or changing the default Docker context. Its shared staging root is
+`/private/tmp/server2-s09-docker`. To reuse that existing profile, add
+`--docker-context colima-s09-preflight --staging-root /private/tmp/server2-s09-docker`
+to the verification command; start/stop it with `colima start s09-preflight --activate=false` and `colima stop s09-preflight`. Other hosts can use their
+existing Docker runtime and a Docker-visible staging root.
+
+The launcher copies only the allowlisted verification sources and prebuilt
+binaries into temporary staging. The runtime container uses a digest-pinned
+Python image, linux/amd64, a nonroot UID, read-only sources/root filesystem,
+dropped capabilities, no external network and no forwarded account credentials.
+Only temporary/output directories are writable. An interrupted/timed-out launch
+attempts removal of its unique task-owned container; cleanup uncertainty cannot
+produce PASS. Image download and Linux build dependency acquisition need network;
+the verification container itself does not. Existing operational namespace/audit
+tests remain native Linux CI, with no privileged-container fallback.
+
+Docker confirms executable compatibility and bounded synthetic behavior. It does
+not reproduce EC2 cloud-init/systemd, SSM, IAM or real S3. Apple Silicon emulation
+and container limits affect timings; these observations are not EC2 performance
+acceptance. CI bundles expire after seven days and are disposable; maintainers
+retain required revision/hash/outcome summaries in the PR for durable handoff.
+Future EC2 smoke consumes the same verified binary hashes.
+
 ## Minimal preproduction EC2 smoke (pending)
 
 Under separate scoped resource authority, transfer the already verified musl

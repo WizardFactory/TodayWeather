@@ -18,6 +18,12 @@ jobs:
         with:
           fetch-depth: 0
       - run: bash tools/ci.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server2-linux-musl-verified
+          path: reports/verification/server2-local-first/artifact-native/
+          if-no-files-found: error
+          retention-days: 7
   goldens:
     runs-on: ubuntu-latest
     timeout-minutes: 30
