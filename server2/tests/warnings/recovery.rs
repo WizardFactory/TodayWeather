@@ -18,13 +18,13 @@ fn member(op: Operation, body: &[u8], fetched: &str) -> Member {
         fetched_at_ms: ms(fetched) as u64,
     }
 }
-fn store_with(peer: &Peer, lookback_days: i64) -> Arc<WarningStore<HttpS3Transport>> {
+fn store_with(peer: &Peer, min_year: i64) -> Arc<WarningStore<HttpS3Transport>> {
     let limits = CatalogLimits {
         deadline: Duration::from_secs(9),
         ..CatalogLimits::default()
     };
     let config = StoreConfig {
-        lookback_days,
+        min_year,
         ..StoreConfig::default()
     };
     Arc::new(WarningStore::new(peer.transport(), limits, config).unwrap())
@@ -294,9 +294,9 @@ async fn s3_outage_uses_valid_memory_or_legacy_error() {
     publish_recorded(&peer.store()).await;
     let clock = FixedClock::at("2026-10-04T00:10:00.000Z");
     // Refresh on every request; stale memory (300 s) is the outage fallback.
-    let warm = service_on(store_with(&peer, 400), clock.clone(), Duration::ZERO);
+    let warm = service_on(store_with(&peer, 2010), clock.clone(), Duration::ZERO);
     assert_eq!(types(&warm.special(true).await.unwrap()).len(), 3);
-    let cold = service_on(store_with(&peer, 400), clock.clone(), Duration::ZERO);
+    let cold = service_on(store_with(&peer, 2010), clock.clone(), Duration::ZERO);
     peer.kill();
     assert_eq!(types(&warm.special(true).await.unwrap()).len(), 3);
     let response = get(&cold, &[("accept-language", "ko")]).await;
@@ -311,7 +311,7 @@ async fn s3_outage_uses_valid_memory_or_legacy_error() {
 #[tokio::test]
 async fn missing_type_returns_legacy_data_is_empty() {
     let peer = Peer::new();
-    let store = store_with(&peer, 5);
+    let store = store_with(&peer, 2026);
     store
         .publish(
             "bulletin-2",
@@ -376,4 +376,146 @@ async fn zone_state_recovers_from_published_days() {
             .unwrap();
     assert_eq!(got, o["partialInfo"][1]);
     assert!(!list.is_empty());
+}
+fn seed_doc(kind: u8, announcement: &str) -> OrderedJson {
+    OrderedJson::parse(
+        format!(
+            r#"{{"type":{kind},"announcement":"{announcement}","situationList":[],"comment":"seed {kind}"}}"#
+        )
+        .as_bytes(),
+    )
+    .unwrap()
+}
+async fn import(store: &WarningStore<HttpS3Transport>, file: &[u8]) {
+    let parsed = server2::warnings::seed::parse(file).unwrap();
+    server2::warnings::seed::import(store, &parsed, deadline())
+        .await
+        .unwrap();
+}
+#[tokio::test]
+async fn years_old_bulletins_have_no_age_expiry() {
+    // S12-R1-01: no lookback bound; older days are discovered from complete raw LISTs.
+    let peer = Peer::new();
+    let store = peer.store();
+    let docs = (1..=3)
+        .map(|k| seed_doc(k, "2024-03-01T09:10:00.000Z"))
+        .collect();
+    import(&store, &seed_file(docs, None, "2024-03-02T00:00:00.000Z")).await;
+    let service = peer.service(FixedClock::at("2026-10-04T00:10:00.000Z"));
+    let list = service.special(true).await.unwrap();
+    assert_eq!(
+        types(&list),
+        vec![
+            (1., "2024-03-01T00:10:00.000Z".into()),
+            (2., "2024-03-01T00:10:00.000Z".into()),
+            (3., "2024-03-01T00:10:00.000Z".into()),
+        ]
+    );
+    let c = &service.store().counters;
+    assert!(c.list_pages.load(std::sync::atomic::Ordering::Relaxed) >= 3);
+}
+fn zone_row(area: &str, warn_var: u8, stress: u8, command: &str, tm_fc: i64) -> serde_json::Value {
+    serde_json::json!({"areaCode": area, "areaName": "x", "warnVar": warn_var, "warnStress": stress,
+        "command": command, "cancel": "0", "tmFc": tm_fc, "tmSeq": 1, "endTime": 0, "allEndTime": 0,
+        "startTime": 0, "stnId": "108"})
+}
+#[tokio::test]
+async fn zone_changes_older_than_sixty_days_after_the_seed_are_kept() {
+    // S12-R1-02: a release and a new issue beyond the 60-day window still apply.
+    let peer = Peer::new();
+    let store = peer.store();
+    let zone = serde_json::json!([
+        {"areaCode": "L1100100", "areaName": "seed", "warnVar": 3, "warnStress": 1, "active": true,
+         "command": "1", "eventTmFc": 202601010900_i64, "eventTmSeq": 1, "eventRank": 1}
+    ]);
+    let zone = OrderedJson::parse(&serde_json::to_vec(&zone).unwrap()).unwrap();
+    import(
+        &store,
+        &seed_file(vec![], Some(zone), "2026-01-02T00:00:00.000Z"),
+    )
+    .await;
+    for (date, row) in [
+        (20260105, zone_row("L1100100", 3, 1, "2", 202601050900)),
+        (20260301, zone_row("L1100200", 12, 0, "1", 202603010900)),
+    ] {
+        store
+            .publish(
+                records::ZONE_KIND,
+                date,
+                vec![Member {
+                    role: Operation::PwnCd.role().into(),
+                    bytes: provider_body(&[row]).into(),
+                    fetched_at_ms: ms("2026-03-01T01:00:00.000Z") as u64,
+                }],
+                deadline(),
+            )
+            .await
+            .unwrap();
+    }
+    let service = peer.service(FixedClock::at("2026-10-04T00:10:00.000Z"));
+    let town = Town {
+        first: "서울특별시".into(),
+        second: "종로구".into(),
+        third: "청운효자동".into(),
+    };
+    let got =
+        server2::warnings::service::special_info_json(&service.special_info(&town).await.unwrap());
+    assert_eq!(
+        String::from_utf8(got.to_bytes()).unwrap(),
+        r#"[{"weather":12,"weatherStr":"폭염","level":1,"levelStr":"주의보","locationName":"서울동북권"}]"#
+    );
+}
+#[tokio::test]
+async fn a_day_larger_than_one_read_is_paged_whole_acquisitions() {
+    // S12-R1-03: each publication fits, the day's history does not; reads page down to one.
+    let peer = Peer::new();
+    let limits = CatalogLimits {
+        output_bytes: 6000,
+        deadline: Duration::from_secs(9),
+        ..CatalogLimits::default()
+    };
+    let store =
+        Arc::new(WarningStore::new(peer.transport(), limits, StoreConfig::default()).unwrap());
+    let padding = "가".repeat(1200);
+    for (tm_fc, fetched) in [
+        (202609281000_i64, "2026-09-28T01:01:00.000Z"),
+        (202609280900, "2026-09-28T02:01:00.000Z"),
+    ] {
+        store
+            .publish(
+                "bulletin-2",
+                20260928,
+                vec![Member {
+                    role: Operation::WthrPwn.role().into(),
+                    bytes: type2_body(tm_fc, &padding).into(),
+                    fetched_at_ms: ms(fetched) as u64,
+                }],
+                deadline(),
+            )
+            .await
+            .unwrap();
+    }
+    let now = ms("2026-09-30T00:00:00.000Z");
+    let latest = store
+        .latest(2, now, None, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        server2::warnings::js::iso(latest.stored_ms),
+        "2026-09-28T10:00:00.000Z"
+    );
+    assert!(
+        store
+            .exists(2, ms("2026-09-28T09:00:00.000Z"), deadline())
+            .await
+            .unwrap()
+    );
+    assert!(
+        store
+            .counters
+            .paged_days
+            .load(std::sync::atomic::Ordering::Relaxed)
+            >= 1
+    );
 }

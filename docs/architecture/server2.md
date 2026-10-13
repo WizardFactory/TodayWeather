@@ -697,14 +697,16 @@ wired into the server2 process or any route switch. Source `kma-warning` uses ki
 getWthrPwn, getWthrInfo and getWthrBrkNews for types 2–4), `pwn-cd` and `zone-seed`.
 Each provider acquisition or exported legacy document is one single-owner fetch group in
 the partition of its announcement KST date (`pwn-cd`: requested day). The latest bulletin is
-derived in memory by walking day partitions newest first (types 1–3 bounded by a
-configurable 400-day lookback; type 4 only partitions on or after the KST date of
-now − 19 h, then omitted when stored KST time + 10 h < now). Equal announcements keep
+derived in memory by walking day partitions newest first: types 1–3 have no age
+expiry (recent days probed, older days discovered from complete per-year raw LISTs);
+type 4 reads only partitions on or after the KST date of now − 19 h and is omitted when
+stored KST time + 10 h < now. Days larger than one read are paged by whole acquisition. Equal announcements keep
 the earliest fetch. A missing day catalog is repaired from that exact period's raw
 prefix; an incomplete or failed repair skips the day because an acknowledged group
 always has its catalog and catalogs are never deleted. Catalog read errors fail with
 the legacy 501. Zone state for `specialInfo` is the newest zone seed plus every
-`pwn-cd` revision of the last 60 KST days, replayed in memory. Seeds come from the
+`pwn-cd` revision published since that snapshot, replayed in memory by an owned refresh
+task; cold replay cost grows with time since the seed. Seeds come from the
 offline `server2/tools/migration/` converter and a loopback-only importer. Newly
 collected documents use the S02 seed key order, which S19 shadow comparison must
 confirm against production bytes; the Express session cookie and the shared S08

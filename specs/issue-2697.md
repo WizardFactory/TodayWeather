@@ -51,9 +51,15 @@ published.
   published catalog, and catalogs are never deleted, so none of them can hide an
   acknowledged bulletin. Catalog lookup errors (transport, timeout, capacity or
   corruption) fail the request (no invented success).
-- Types 1-3 have no age expiry; the walk is bounded by configuration
-  (`lookback_days`, default 400, maximum 3660) and returns legacy 501
-  `data is empty` when nothing is found. Seed import is a precondition.
+- Types 1-3 have no age expiry. After the recent wave (KST tomorrow back seven
+  days, probed directly so orphans are repaired), older published days are
+  discovered year by year from complete `raw/v2/kma-warning/<kind>/<YYYY>/` LISTs
+  back to `min_year` (2010); an unfinished LIST fails closed. Nothing found gives
+  legacy 501 `data is empty`. Seed import is a precondition.
+- A day is read with one full lookup; if its accumulated history exceeds the
+  per-operation output bound, whole acquisitions are paged (halving the page down
+  to one acquisition, which always fits because its publication fit), restarting
+  on a concurrent catalog change.
 - Type 4 uses the latest announcement whose partition lies in the walk window;
   it is omitted when `stored_ms + 10 h < now_ms` (stored = KST wall clock as UTC),
   i.e. strictly after actual + 19 h. Only partitions on or after the KST date of
@@ -88,9 +94,14 @@ checked by S19 shadow comparison.
 
 `special_info(town{first,second,third})` returns the legacy list
 (`weather`, `weatherStr`, `level`, `levelStr`, `locationName`) or an empty list.
-Zone state is derived in memory: newest `zone-seed` acquisition, then all
-`pwn-cd` revisions from max(seed day - 2, today - 59) to today replayed through
-`prepareEvents/applyEvents`. Rebuilt at most every 300 s; a failed rebuild serves memory younger than 600 s. S15 attaches it to
+Zone state is derived in memory: newest `zone-seed` acquisition, then every
+published `pwn-cd` revision since the seed export day - 2 (all published days
+without a seed; older days discovered by LIST, recent 60 days probed directly)
+replayed through `prepareEvents/applyEvents`, so releases and issues older than
+60 days persist as in the legacy collection. One owned task refreshes it (the
+request may time out; the task still fills memory): every 300 s it re-applies the
+last 60 days the collector can still publish; every 24 h it replays fully. A failed
+refresh serves memory younger than 600 s. S15 attaches it to
 `current.specialInfo` only when nonempty; errors leave the field absent, as legacy.
 
 ## Collector

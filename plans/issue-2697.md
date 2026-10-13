@@ -41,8 +41,9 @@ Task: issue-2697-s12; sources: [intent](../intent/issue-2697.md), [spec](../spec
 
 The route stays on legacy until S20 cutover; this PR adds no process wiring, so revert
 has no runtime effect. Risks: provider-derived document key order is unverified against
-production (S19 shadow); cold walk-back cost grows with gap length (bounded by
-`lookback_days`); zone rebuild reads up to 60 day catalogs on a cold request.
+production (S19 shadow); cold discovery cost grows with history (one LIST page per
+1000 raw objects per year scanned); a full zone replay reads every day since the seed,
+so its cold cost grows with time since the seed (owned background task, 30 s budget).
 Rejected: a separate latest marker object (can disagree with the serving commit);
 monthly partitions (type 1 member counts can exceed the 2048-entry catalog bound);
 persisting derived zone state (normalized view, not permitted).
