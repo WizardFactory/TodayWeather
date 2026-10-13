@@ -236,7 +236,18 @@ pub fn string_to_number(s: &str) -> f64 {
     let lower = t.to_ascii_lowercase();
     for (prefix, radix) in [("0x", 16), ("0o", 8), ("0b", 2)] {
         if let Some(rest) = lower.strip_prefix(prefix) {
-            return u64::from_str_radix(rest, radix).map_or(f64::NAN, |n| n as f64);
+            // Unsigned digits only: `from_str_radix` would also accept a leading `+`.
+            if rest.is_empty() || !rest.chars().all(|c| c.is_digit(radix)) {
+                return f64::NAN;
+            }
+            return u128::from_str_radix(rest, radix).map_or_else(
+                |_| {
+                    rest.chars().fold(0., |a, c| {
+                        a * f64::from(radix) + f64::from(c.to_digit(radix).unwrap_or(0))
+                    })
+                },
+                |n| n as f64,
+            );
         }
     }
     let valid = t.bytes().enumerate().all(|(i, b)| {

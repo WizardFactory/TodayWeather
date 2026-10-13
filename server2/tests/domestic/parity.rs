@@ -73,7 +73,7 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
 }
 
 /// The pinned recording, in order (unique ids); change deliberately with the recording.
-const SCENARIOS: [&str; 73] = [
+const SCENARIOS: [&str; 75] = [
     "domestic-v000903",
     "domestic-locale-en",
     "domestic-locale-ko",
@@ -146,6 +146,8 @@ const SCENARIOS: [&str; 73] = [
     "stn-boolean-datetime-true",
     "life-index-hex-area",
     "query-malformed-escape",
+    "current-interpolated-strings",
+    "stn-cloud-radix-sign",
     "stn-small-year-datetime",
 ];
 

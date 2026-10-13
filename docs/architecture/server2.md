@@ -1660,12 +1660,12 @@ and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by def
   store answers.
 
 Parity uses a pinned Node 16.20.2 oracle recording ([provenance](../../server2/tests/domestic/fixtures/PROVENANCE.md)):
-73 requests through the real router and harness, with every store answer and its arguments recorded in order. They
+75 requests through the real router and harness, with every store answer and its arguments recorded in order. They
 include the 15 S02 direct-route v000903 goldens (bodies and Express ETags), the 5 gateway domestic
 v000903 backend inputs, and supplementary DB 1.0, RSS, station, rain-category, air-list, KAQ
 forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error, clock-boundary and invalid
-DB 1.0 RSS/current publication, Boolean station-time, hexadecimal area-number and malformed-escape
-cases. 71 recordings match byte for byte, with the dependency calls in legacy order. Two are declared
+DB 1.0 RSS/current publication, Boolean station-time, hexadecimal area-number, malformed-escape,
+interpolated string current and signed radix cases. 73 recordings match byte for byte, with the dependency calls in legacy order. Two are declared
 forwards: a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2026-01-09, and a query
 with a malformed escape, for which legacy `decodeURI(req.originalUrl)` throws before its `try` (500). `Date.parse` is reproduced for the strict ISO, space and dotted forms (years from
 100 for the legacy forms) and digit-only strings, checked against the pinned V8; any other date
@@ -1688,9 +1688,9 @@ request-time RSS/mid/life acquisitions form the proposed follow-up S15b.
 
 O-2 checkpoint (Rust adoption is settled; this records correctness and cost). `kma_checkpoint`
 assembles every recorded request from memory, and `tools/kma_checkpoint.py` reads process rusage.
-On an Apple M4 release build (2,920 assemblies) the mean per assembly is 3.51 ms (p50 3.72, p95 4.00,
-p99 4.44, max 4.57 ms, including JSON encoding and store-answer conversion), CPU is 3.5 ms per request
-and peak RSS is 159 MiB, 158 MiB of which is the decoded fixture (both test views). The server2 CI entrypoint records
+On an Apple M4 release build (3,000 assemblies) the mean per assembly is 3.44 ms (p50 3.64, p95 3.90,
+p99 4.34, max 4.54 ms, including JSON encoding and store-answer conversion), CPU is 3.4 ms per request
+and peak RSS is 163 MiB, 162 MiB of which is the decoded fixture (both test views). The server2 CI entrypoint records
 the Linux values. The legacy oracle took about 7 ms per request on the same host, including loopback
 HTTP and Express. These are local fixture measurements, not production latency, concurrency or
 memory evidence. The S10 3-second native attempt and the 9-second gateway deadline are unchanged.

@@ -1,6 +1,6 @@
 # S15 KMA v000903 oracle fixtures
 
-`oracle.json.gz` (sha256 `b45b4deabe0eedc8a791d83f6a738ac096db4b32e443c56c432270450de71d7a`) holds pinned legacy-oracle recordings
+`oracle.json.gz` (sha256 `0d6a19aa2fdbe8f2e482b86711521234a733ce308370074003e017db76e7ae77`) holds pinned legacy-oracle recordings
 for the native KMA v000903 assembly tests. It is test data only; the server2 runtime never reads
 it or any legacy file.
 
@@ -17,7 +17,7 @@ it or any legacy file.
   as the S02 recorder loads it, with the real `/v000903/kma` router (`route.kma.v000903.js`) and i18n.
   The harness stubs `manager.MAX_CURRENT_COUNT` as 200 (the deployed manager uses 192); tests use
   the recorded value.
-- Driver: the script below (sha256 `4a5c85bb13d351f503850e22bb77eadfb19a59fc2ad07b41c0b5f4543f9d92db`), run as
+- Driver: the script below (sha256 `22d0351d075a8c31a0e556e2d74edd29544955488f146d84f76f3417e318a05e`), run as
   `TZ=UTC NODE_ENV=production NODE_PATH=<deps>/node_modules node record-kma.js <repo> <out.json.gz>`.
   It is retained here as documentation rather than as an executable repository tool, because a new
   server2-located script reading legacy source would be a new placement exception; the S02 recorder
@@ -35,7 +35,7 @@ the store-read boundary, named by the server2 `KmaStore` methods: model reads (`
 `special_zones`) and controller dependencies (`region_code`, `forecast_zone`,
 `stn_hourly_and_min_rns`, `city_hourly`, `arpltn`, `dust_forecast`, `air_fallback`, `air_forecast`,
 `rise_set`). Dates are `{"$date": ms}`, undefined values `{"$undefined": true}`; object key
-order is preserved. 1419 answers in total; 1 are flagged `after_response` because legacy
+order is preserved. 1459 answers in total; 1 are flagged `after_response` because legacy
 `async.map` keeps calling after an error has already ended the chain and the reply was sent.
 Each call also records its complete arguments, copied when legacy made the call. The replay store
 (`server2/tests/domestic/recorded.rs`, a test double) checks the method, order and arguments of every call and that
@@ -54,8 +54,8 @@ dependency answer through the driver's `overrides`.
 
 ## Content
 
-73 scenarios: 15 S02 direct-route equivalents (domestic-v000903, domestic-locale-en, domestic-locale-ko, domestic-locale-ja, domestic-locale-zh-CN, domestic-locale-de, domestic-locale-zh-TW, domestic-v000903-db1, domestic-null-units, domestic-pop-covered, domestic-pop-missing-hour, domestic-old-no-pop, domestic-never-requested-history, domestic-partial-history, domestic-special-info); 5 gateway backend
-requests (gateway-v000903-domestic, gateway-query-normalization, gateway-history-never-requested, gateway-history-resumed-after-eight-days, gateway-history-partial-eight-day-history); and 53 supplementary scenarios (rss-older, rss-equal, busan, jeju, station-first-rain, station-first-snow-cloud, rain-categories, air-stations, air-stations-airnow, air-stale, air-kaq-forecast, air-dust-forecast, air-fallback, life-food-kasi, life-index-near-area, warning-two-zones, winter-cold-wind, hot-humid, missing-short, model-errors, unknown-air-unit, db1-history, stn-error, station-hourly-fill, db1-daily-source, short-publications, current-error, mid-forecast-error, yesterday-warmer, yesterday-colder, rss-unusable-values, current-sky-from-shortest, stn-invalid-zero, stn-fog-thunder, region-guard, clock-night-2340, clock-kst-0030, clock-kst-1010, clock-kst-1110, clock-kst-0605, clock-kst-1535, rss-pub-invalid-offset, rss-pub-hour24-fraction, rss-pub-non-ascii-offset, rss-pub-non-ascii, rss-pub-iso-offset, rss-pub-hour24-submillisecond, current-pub-small-year, stn-boolean-datetime-false, stn-boolean-datetime-true, life-index-hex-area, query-malformed-escape, stn-small-year-datetime).
+75 scenarios: 15 S02 direct-route equivalents (domestic-v000903, domestic-locale-en, domestic-locale-ko, domestic-locale-ja, domestic-locale-zh-CN, domestic-locale-de, domestic-locale-zh-TW, domestic-v000903-db1, domestic-null-units, domestic-pop-covered, domestic-pop-missing-hour, domestic-old-no-pop, domestic-never-requested-history, domestic-partial-history, domestic-special-info); 5 gateway backend
+requests (gateway-v000903-domestic, gateway-query-normalization, gateway-history-never-requested, gateway-history-resumed-after-eight-days, gateway-history-partial-eight-day-history); and 55 supplementary scenarios (rss-older, rss-equal, busan, jeju, station-first-rain, station-first-snow-cloud, rain-categories, air-stations, air-stations-airnow, air-stale, air-kaq-forecast, air-dust-forecast, air-fallback, life-food-kasi, life-index-near-area, warning-two-zones, winter-cold-wind, hot-humid, missing-short, model-errors, unknown-air-unit, db1-history, stn-error, station-hourly-fill, db1-daily-source, short-publications, current-error, mid-forecast-error, yesterday-warmer, yesterday-colder, rss-unusable-values, current-sky-from-shortest, stn-invalid-zero, stn-fog-thunder, region-guard, clock-night-2340, clock-kst-0030, clock-kst-1010, clock-kst-1110, clock-kst-0605, clock-kst-1535, rss-pub-invalid-offset, rss-pub-hour24-fraction, rss-pub-non-ascii-offset, rss-pub-non-ascii, rss-pub-iso-offset, rss-pub-hour24-submillisecond, current-pub-small-year, stn-boolean-datetime-false, stn-boolean-datetime-true, life-index-hex-area, query-malformed-escape, current-interpolated-strings, stn-cloud-radix-sign, stn-small-year-datetime).
 
 ## Driver source
 
@@ -446,6 +446,13 @@ add('life-index-hex-area', {path: SEOUL, lang: 'ko'}, f => {
 });
 // S15-R16: qs keeps the original text (plus signs included) when decodeURIComponent fails.
 add('query-malformed-escape', {path: SEOUL, query: 'temperatureUnit=F+%ZZ&windSpeedUnit=m%2Fs+%E0%A4%A&airUnit=airkorea+%C3%28', lang: 'en'});
+// S15-R18: a stale current observation is rebuilt from short rows; string humidity/wind concatenate.
+add('current-interpolated-strings', {path: SEOUL, lang: 'ko'}, f => {
+    f.current = f.current.filter(r => r.date + r.time <= '202609240600');
+    f.short.forEach(r => { r.reh = String(r.reh); r.wsd = String(r.wsd); });
+}, {clock: '2026-09-24T01:10:00.000Z'});
+// S15-R19: Number('0x+1') is NaN, so the station cloud amount is unusable.
+add('stn-cloud-radix-sign', {path: SEOUL, lang: 'en'}, f => { f.stnWeather = {stnDateTime: '2026-09-24 09:07', t1h: 21.2, weather: '눈', cloud: '0x+1', rs1h: 0, wsd: 3.1, vec: 22.5, stnId: 108}; });
 // S15-R12: V8's legacy parser reads `0001-09-24 09:03` as 2026-01-09 09:03 (the native port forwards).
 add('stn-small-year-datetime', {path: SEOUL, lang: 'zh-CN'}, f => { f.stnWeather = {stnDateTime: '0001-09-24 09:03', weather: '뇌우끝,비', weatherType: 53, rns: false, localMinAws: true, rs1h: 12.36, stnId: 108}; });
 

@@ -671,8 +671,10 @@ pub fn get_shortest(cx: &mut Cx) -> Flow {
     });
     Flow::Next
 }
-fn calc_3h_to_1h(t: f64, prv: &V, next: &V) -> f64 {
-    to_number(next) + (to_number(next) - to_number(prv)) / 3. * t
+/// `_calcValue3hTo1h(time, prvValue, nextValue)`: `nextValue + (nextValue - prvValue)/3*time`, a
+/// string `nextValue` concatenates (then `toFixed` throws and `Math.round` gives NaN, as in legacy).
+fn calc_3h_to_1h(t: f64, prv: &V, next: &V) -> V {
+    add(next, &V::Num((to_number(next) - to_number(prv)) / 3. * t))
 }
 /// `_makeCurrent(shortList, shortestList, date, time)`.
 fn make_current(short: &V, shortest: &V, date: &str, tm: &str) -> V {
@@ -718,18 +720,22 @@ fn make_current(short: &V, shortest: &V, date: &str, tm: &str) -> V {
             item.set(
                 "t1h",
                 V::Num(fixed(
-                    &V::Num(calc_3h_to_1h(t, &row.get("t3h"), &prv.get("t3h"))),
+                    &calc_3h_to_1h(t, &row.get("t3h"), &prv.get("t3h")),
                     1,
                 )),
             );
             item.set(
                 "reh",
-                V::Num(round(calc_3h_to_1h(t, &row.get("reh"), &prv.get("reh")))),
+                V::Num(round(to_number(&calc_3h_to_1h(
+                    t,
+                    &row.get("reh"),
+                    &prv.get("reh"),
+                )))),
             );
             item.set(
                 "wsd",
                 V::Num(fixed(
-                    &V::Num(calc_3h_to_1h(t, &row.get("wsd"), &prv.get("wsd"))),
+                    &calc_3h_to_1h(t, &row.get("wsd"), &prv.get("wsd")),
                     1,
                 )),
             );

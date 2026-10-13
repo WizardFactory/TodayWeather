@@ -985,6 +985,21 @@ mod tests {
         ] {
             assert_eq!(decode_uri_ok(s), ok, "{s}");
         }
+        // `Number` radix prefixes take unsigned digits only (S15-R19, pinned Node 16.20.2).
+        for (s, want) in [
+            ("0x+1", f64::NAN),
+            ("0o+1", f64::NAN),
+            ("0b+1", f64::NAN),
+            ("0x-1", f64::NAN),
+            ("0x", f64::NAN),
+            ("0x1F", 31.),
+            ("0B101", 5.),
+            ("0o17", 15.),
+            ("0x1ffffffffffffffff", 36893488147419103000.),
+        ] {
+            let got = wjs::string_to_number(s);
+            assert!(got == want || got.is_nan() && want.is_nan(), "{s:?}: {got}");
+        }
         // `Number`/`parseFloat` skip JavaScript whitespace only (U+0085 is not; pinned V8).
         assert!(wjs::string_to_number("\u{85}12").is_nan());
         assert!(wjs::parse_float("\u{85}12").is_nan());
