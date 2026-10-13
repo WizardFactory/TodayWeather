@@ -2,8 +2,10 @@
 use super::support::*;
 use server2::history::Grid;
 use server2::history::demand::{
-    DEMAND_WINDOW_MS, DemandChange, DemandConfig, DemandError, DemandStore, PUSH_KEY, request_key,
+    DEMAND_WINDOW_MS, DemandChange, DemandConfig, DemandError, DemandStore, PUSH_KEY, PushOutcome,
+    request_key,
 };
+use std::collections::BTreeSet;
 use std::sync::{Arc, atomic::Ordering};
 
 const T0: i64 = 1_790_000_000_000;
@@ -209,7 +211,7 @@ async fn demand_push_aggregate_holds_only_grid_cells() {
     assert_eq!(
         body,
         format!(
-            r#"{{"schema":1,"cells":[{{"grid":{{"nx":60,"ny":127}},"lastDemandMs":{T0},"expiresMs":{e}}},{{"grid":{{"nx":98,"ny":76}},"lastDemandMs":{T0},"expiresMs":{e}}}]}}"#
+            r#"{{"schema":1,"lastDemandMs":{T0},"cells":[{{"grid":{{"nx":60,"ny":127}},"lastDemandMs":{T0},"expiresMs":{e}}},{{"grid":{{"nx":98,"ny":76}},"lastDemandMs":{T0},"expiresMs":{e}}}]}}"#
         )
     );
     assert_eq!(
@@ -233,11 +235,58 @@ async fn demand_push_aggregate_holds_only_grid_cells() {
     // A push aggregate with subscriber details is rejected as a whole.
     t.plant(
         PUSH_KEY,
-        format!(r#"{{"schema":1,"cells":[{{"grid":{{"nx":60,"ny":127}},"lastDemandMs":{T0},"expiresMs":{e},"subscribers":2}}]}}"#).as_bytes(),
+        format!(r#"{{"schema":1,"lastDemandMs":{T0},"cells":[{{"grid":{{"nx":60,"ny":127}},"lastDemandMs":{T0},"expiresMs":{e},"subscribers":2}}]}}"#).as_bytes(),
     );
     let fresh = store(&t);
     assert_eq!(fresh.rebuild().await.unwrap().invalid, 1);
     assert!(fresh.active(T0).is_empty());
+}
+
+#[tokio::test]
+async fn demand_push_snapshots_never_move_backwards() {
+    let t = Arc::new(MemoryDemand::default());
+    let newer = store(&t);
+    let older = store(&t);
+    assert_eq!(
+        newer
+            .replace_push(&[g(98, 76)], T0 + HOUR, 25 * HOUR)
+            .await
+            .unwrap(),
+        PushOutcome::Replaced
+    );
+    // A reconciler holding an older snapshot (or retrying after a conflict) does not overwrite.
+    assert_eq!(
+        older
+            .replace_push(&[g(60, 127)], T0, 25 * HOUR)
+            .await
+            .unwrap(),
+        PushOutcome::Superseded
+    );
+    assert!(
+        String::from_utf8(t.raw(PUSH_KEY).unwrap())
+            .unwrap()
+            .contains(r#""nx":98"#)
+    );
+    assert_eq!(older.active(T0 + 2 * HOUR), BTreeSet::from([g(98, 76)]));
+    // Memory keeps the newest snapshot regardless of completion order.
+    assert_eq!(
+        newer
+            .replace_push(&[g(60, 127)], T0, 25 * HOUR)
+            .await
+            .unwrap(),
+        PushOutcome::Superseded
+    );
+    assert_eq!(newer.active(T0 + 2 * HOUR), BTreeSet::from([g(98, 76)]));
+    // A conflict retry re-reads and still refuses to go backwards.
+    t.conflicts.store(1, Ordering::SeqCst);
+    assert_eq!(
+        older
+            .replace_push(&[g(61, 127)], T0 + 2 * HOUR, 25 * HOUR)
+            .await
+            .unwrap(),
+        PushOutcome::Replaced
+    );
+    assert_eq!(older.active(T0 + 3 * HOUR), BTreeSet::from([g(61, 127)]));
 }
 
 #[tokio::test]

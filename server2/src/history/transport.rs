@@ -1,13 +1,15 @@
 //! Bounded demand-only JSON wire adapter for `state/demand/grid/`. No other prefix, no SDK
 //! retries; the caller reconciles conditional-write conflicts.
 use super::demand::{DemandError, DemandObject, DemandPage, DemandTransport, PREFIX, PUSH_BYTES};
-use crate::storage::{HttpS3Transport, WriteCondition};
+use crate::storage::{
+    CatalogTransport, Error as StorageError, HttpS3Transport, ListPage, WriteCondition,
+};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use instant_xml::FromXml;
 use md5::{Digest, Md5};
 use reqwest::Response;
 use rusty_s3::S3Action;
-use std::{collections::BTreeSet, time::Duration};
+use std::{collections::BTreeSet, future::Future, time::Duration};
 
 const HEADER_BYTES: usize = 8192;
 const LIST_BYTES: usize = 2 * 1024 * 1024;
@@ -148,32 +150,105 @@ fn well_formed(text: &str) -> bool {
     }
     root && stack.is_empty()
 }
-pub(crate) fn decode_page(bytes: &[u8], prefix: &str) -> Result<DemandPage, DemandError> {
-    let corrupt = DemandError::Corrupt("demand list");
-    let text = std::str::from_utf8(bytes).map_err(|_| corrupt.clone())?;
+/// Keys of one bounded LIST page; every key must start with `prefix` and pass `valid`.
+fn decode_keys(
+    bytes: &[u8],
+    prefix: &str,
+    valid: impl Fn(&str) -> bool,
+) -> Option<(Vec<String>, Option<String>)> {
+    let text = std::str::from_utf8(bytes).ok()?;
     if !well_formed(text) {
-        return Err(corrupt);
+        return None;
     }
-    let list: WireList = instant_xml::from_str(text).map_err(|_| corrupt.clone())?;
+    let list: WireList = instant_xml::from_str(text).ok()?;
     if list.count != list.contents.len()
         || list.count > 1000
         || list.truncated != list.next.is_some()
         || list.next.as_deref().is_some_and(|t| !token_ok(t))
     {
-        return Err(corrupt);
+        return None;
     }
     let mut seen = BTreeSet::new();
     let mut keys = Vec::with_capacity(list.count);
     for c in list.contents {
-        if !c.key.starts_with(prefix) || !key_ok(&c.key) || !seen.insert(c.key.clone()) {
-            return Err(corrupt);
+        if !c.key.starts_with(prefix) || !valid(&c.key) || !seen.insert(c.key.clone()) {
+            return None;
         }
         keys.push(c.key);
     }
-    Ok(DemandPage {
-        keys,
-        next: list.next,
-    })
+    Some((keys, list.next))
+}
+pub(crate) fn decode_page(bytes: &[u8], prefix: &str) -> Result<DemandPage, DemandError> {
+    decode_keys(bytes, prefix, key_ok)
+        .map(|(keys, next)| DemandPage { keys, next })
+        .ok_or(DemandError::Corrupt("demand list"))
+}
+/// One bounded ListObjectsV2 page body; the caller validates the prefix and decodes.
+async fn list_page(
+    t: &HttpS3Transport,
+    prefix: &str,
+    token: Option<&str>,
+) -> Result<Vec<u8>, DemandError> {
+    let credentials = t
+        .credentials
+        .snapshot()
+        .await
+        .map_err(|_| DemandError::Transport)?;
+    let mut action = t.bucket.list_objects_v2(Some(&credentials));
+    action.query_mut().remove("encoding-type");
+    action.with_prefix(prefix);
+    action.with_max_keys(1000);
+    if let Some(token) = token {
+        action.with_continuation_token(token);
+    }
+    let url = action.sign(Duration::from_secs(30));
+    let response = t
+        .client
+        .get(url)
+        .send()
+        .await
+        .map_err(|_| DemandError::Transport)?;
+    if response.status().as_u16() != 200 {
+        return Err(DemandError::Status(response.status().as_u16()));
+    }
+    let length = headers(&response, LIST_BYTES)?;
+    body(response, length, LIST_BYTES).await
+}
+
+/// Bounded listing of published catalog keys (`index/v2/...`). Catalog objects are written only
+/// by S06 publication or repair, so a listed catalog names a published identity set.
+pub trait IndexListing: CatalogTransport {
+    fn list_index(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+    ) -> impl Future<Output = Result<ListPage, StorageError>> + Send;
+}
+fn index_key_ok(key: &str) -> bool {
+    key.starts_with("index/v2/") && key.len() <= 1024 && key.ends_with(".json") && segment_ok(key)
+}
+impl IndexListing for HttpS3Transport {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+    ) -> Result<ListPage, StorageError> {
+        if !prefix.starts_with("index/v2/")
+            || prefix.len() > 1024
+            || !segment_ok(prefix.trim_end_matches('/'))
+            || token.is_some_and(|t| !token_ok(t))
+        {
+            return Err(StorageError::Invalid("index list arguments"));
+        }
+        let bytes = list_page(self, prefix, token).await.map_err(|e| match e {
+            DemandError::Status(s) => StorageError::Status(s),
+            DemandError::Transport => StorageError::Transport,
+            _ => StorageError::Corrupt("index list"),
+        })?;
+        decode_keys(&bytes, prefix, index_key_ok)
+            .map(|(keys, next)| ListPage { keys, next })
+            .ok_or(StorageError::Corrupt("index list"))
+    }
 }
 
 impl DemandTransport for HttpS3Transport {
@@ -268,30 +343,7 @@ impl DemandTransport for HttpS3Transport {
         if !prefix_ok(prefix) || token.is_some_and(|t| !token_ok(t)) {
             return Err(DemandError::Invalid("demand list arguments"));
         }
-        let credentials = self
-            .credentials
-            .snapshot()
-            .await
-            .map_err(|_| DemandError::Transport)?;
-        let mut action = self.bucket.list_objects_v2(Some(&credentials));
-        action.query_mut().remove("encoding-type");
-        action.with_prefix(prefix);
-        action.with_max_keys(1000);
-        if let Some(token) = token {
-            action.with_continuation_token(token);
-        }
-        let url = action.sign(Duration::from_secs(30));
-        let response = self
-            .client
-            .get(url)
-            .send()
-            .await
-            .map_err(|_| DemandError::Transport)?;
-        if response.status().as_u16() != 200 {
-            return Err(DemandError::Status(response.status().as_u16()));
-        }
-        let length = headers(&response, LIST_BYTES)?;
-        let bytes = body(response, length, LIST_BYTES).await?;
+        let bytes = list_page(self, prefix, token).await?;
         decode_page(&bytes, prefix)
     }
 }

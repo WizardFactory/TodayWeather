@@ -15,7 +15,7 @@ Durable demand lives only under `state/demand/grid/`:
 | Object | Body (exact keys, `deny_unknown_fields`) |
 | --- | --- |
 | `state/demand/grid/request/{nx:03}-{ny:03}.json` | `{"schema":1,"grid":{"nx":N,"ny":N},"lastDemandMs":T,"expiresMs":T+691200000}` |
-| `state/demand/grid/push.json` | `{"schema":1,"cells":[{"grid":{...},"lastDemandMs":T,"expiresMs":E}, ...]}` |
+| `state/demand/grid/push.json` | `{"schema":1,"lastDemandMs":S,"cells":[{"grid":{...},"lastDemandMs":S,"expiresMs":E}, ...]}` |
 
 - Grid: `1 <= nx <= 149`, `1 <= ny <= 253`. The object key must name the body grid.
   Request expiry is exactly `lastDemandMs + 8 days`. Push cells are unique, sorted by grid,
@@ -31,8 +31,9 @@ Durable demand lives only under `state/demand/grid/`:
   `Refreshed` or `Unchanged`. After a replacement the durable `lastDemandMs` can trail the true
   last request by at most the refresh interval; coverage (below), not demand, decides whether
   history is complete.
-- `replace_push(cells, snapshot_ms, ttl)` replaces the push aggregate (CAS). The S18 push
-  reconciler supplies grid identities only; S14 implements no subscription reader.
+- `replace_push(cells, snapshot_ms, ttl)` replaces the push aggregate (CAS). An older snapshot
+  never replaces a newer durable one (also after a conflict retry); memory keeps the newest. The
+  S18 push reconciler supplies grid identities only; S14 implements no subscription reader.
 - `rebuild()` lists `state/demand/grid/request/` (bounded pages) and reads every record plus
   `push.json`. The active set at `now` is every valid request record and push cell with
   `expiresMs > now`.
@@ -59,14 +60,16 @@ is not already present, then backfill: up to 23 earlier `current` slots (legacy
 `PastConditionGather` slots), 23 `shortest` and 7 `short` publications (data.go.kr serves about
 one day). Per-cell backfill runs once per KST hour (like the hourly legacy past-condition pass)
 and at once for a cell that became active since the previous pass, so a persistent provider gap
-is not retried every tick. While at least one cell is active it also emits
+is not retried every tick. Backfill left unattempted by a cap or funding stop carries over to
+the next tick; national page backfill follows the same once-per-hour rule. While at least one cell is active it also emits
 the latest national hourly pages and backfills missing national pages for 192 hours (the KMA
 pages accept a past hour). The minute page is requested every 2 minutes only while at least one
 cell is active, with `not_before` set to the last captured minute. No timer covers all grids and
 no cell without demand is requested.
 
 The runner skips publications already present (captured or found by the index rebuild),
-executes at most `max_funded` data.go.kr and `max_web` KMA page calls per tick (defaults 64/8),
+charges each acquisition its worst-case HTTP attempts (two per page up to the family page cap)
+against per-tick caps of 2,560 funded and 64 keyless attempts, runs four acquisitions at a time,
 stops further data.go.kr calls in the tick after any S08 funding error, publishes every
 `Acquired::Complete` through S06 before marking it captured, and records NotPublished, NoData,
 Stale and failures without marking. One runner per scope: `CaptureOwner::claim(scope)` returns
@@ -78,10 +81,11 @@ spending after a replacement.
 
 `CaptureIndex` records `(family, key, publication)` for captured groups, captured minute
 observation instants, and legacy export snapshots `(legacy kind, key, exportedAt)`. It is
-updated after each publish and rebuilt after a replacement from bounded raw LIST pages
-(`raw/v2/{source}/{kind}/{YYYY}/{MM}/{DD}/`) for the lookback dates. A LIST that exceeds its
-page bound marks that kind/date incomplete. Raw presence is optimistic only for an interrupted
-multi-page publication; the S06 catalog read remains the authority when inputs are read.
+updated after each publish and rebuilt after a replacement from published S06 catalogs only:
+per-key monthly listings of `index/v2/{source}/{kind}/{key}/{YYYYMM}` for per-cell and legacy
+kinds (legacy catalogs are read for exact export instants) and the national KST-day catalogs.
+A raw object without a catalog entry never counts. A listing beyond its page bound or an
+unreadable catalog marks the kind incomplete.
 
 `coverage(request, index)` for `{grid, station, at}`:
 
@@ -91,9 +95,10 @@ multi-page publication; the S06 catalog read remains the authority when inputs a
    current/shortest/short 191 h, station hourly 10 days, station minute 1 day). A legacy export
    reproduces the legacy store at `E`, including its gaps; publications after `E` must be
    captured. Station exports count only for the requested station; ASOS or station data never
-   covers a grid family.
-3. Minute window `(anchor - 20 min, anchor]`: covered when exported station-minute rows reach
-   `anchor` or when captured minutes start at or before `anchor - 20 min`, consecutive captured
+   covers a grid family. Incomplete listings of the family, its export kinds, the minute page or
+   station-minute exports yield `Legacy(IndexIncomplete)`.
+3. Minute window `(anchor - 20 min, anchor]`: covered when a station-minute export was taken at
+   or after `anchor` and no more than one day after the window start, or when captured minutes start at or before `anchor - 20 min`, consecutive captured
    minutes differ by at most 3 minutes and the newest is at least `anchor - 3 min`.
 4. Result: `Complete(plan)`; `NeedsLatest(plan, missing)` when only the newest per-cell
    publications are missing (S15 may fetch them on request); otherwise `Legacy(gaps)` naming each
@@ -118,7 +123,9 @@ separately authorized operator action.
   `current`, `shortest`, `short` (`1.0`); `KmaStnHourly2`, `KmaStnMinute2` (either). Others are
   rejected. Arrays (`--jsonArray`) are rejected because exact document bytes cannot be retained.
 - Each document must match its legacy schema: top-level and data-row keys are allowlisted
-  (plus `_id`/`__v`), grid or station identity is required. Unknown keys reject the file.
+  (plus `_id`/`__v`), grid or station identity (32-bit `stnId`) is required. Unknown keys and
+  repeated member names at any depth reject the file in both the converter and the importer;
+  groups hold at most 20,000 documents and 8 MiB, seeds at most 64 MiB.
 - Seed (JSON Lines): line 1 manifest
   `{"schema":1,"tool":"export_history_seeds","collection":C,"dbVersion":V,"exportedAt":ISO,"sourceSha256":H,"documents":N,"groups":G}`;
   then one line per key in first-seen order

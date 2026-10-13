@@ -106,6 +106,13 @@ fn legacy_converter_rejects_arrays_foreign_collections_and_personal_fields() {
             "db version",
         ),
         ("current", "1.0", "kma.town.current.v2.jsonl", "fcsDate"),
+        (
+            "kma.town.current",
+            "2.0",
+            "bad-duplicate-key.jsonl",
+            "duplicate member name",
+        ),
+        ("KmaStnMinute2", "2.0", "bad-station-id.jsonl", "32-bit"),
     ] {
         let out = temp_path(&format!("reject-{collection}-{input}"));
         let _ = std::fs::remove_file(&out);
@@ -156,6 +163,12 @@ fn legacy_seed_parser_rejects_tampered_seeds() {
         ),
         good.replacen(r#""dbVersion":"2.0""#, r#""dbVersion":"1.0""#, 1),
         good.replacen("\n", "\r\n", 1),
+        // A repeated member name could hide a personal field behind the value kept by a parser.
+        good.replacen(
+            r#""t1h":21.3"#,
+            r#""t1h":{"deviceId":"PRIVATE"},"t1h":21.3"#,
+            1,
+        ),
     ] {
         assert!(tampered != good);
         assert!(

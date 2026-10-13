@@ -285,6 +285,17 @@ fn coverage_minute_window_requires_continuous_fresh_pages() {
         coverage(&request(), &old, &CoverageConfig::default()),
         Coverage::Legacy { .. }
     ));
+    // A snapshot two days after the anchor no longer holds the window (one-day retention).
+    let mut late_export = without_minutes(&base);
+    late_export.add_export(
+        LegacyKind::StnMinute2,
+        ExportKey::Station(STATION),
+        schedule::to_ms(p(20261013, 1425)) + 2 * DAY,
+    );
+    assert!(matches!(
+        coverage(&request(), &late_export, &CoverageConfig::default()),
+        Coverage::Legacy { .. }
+    ));
     // An exported station-minute snapshot at the anchor covers the window.
     let mut exported = without_minutes(&base);
     exported.add_export(
@@ -305,4 +316,17 @@ fn coverage_incomplete_index_forwards_to_legacy() {
     index.mark_incomplete("ultra-srt-ncst", 20261009);
     let (reason, _, _) = legacy(coverage(&request(), &index, &CoverageConfig::default()));
     assert_eq!(reason, LegacyReason::IndexIncomplete);
+    // Minute pages, station-minute exports and grid export listings count as well.
+    for (kind, date) in [
+        ("aws-minute", 20261013),
+        ("kma-stn-minute2", 20261013),
+        ("kma-town-current", server2::history::index::ALL_DATES),
+        ("kma-stn-hourly2", server2::history::index::ALL_DATES),
+    ] {
+        let mut index = CaptureIndex::default();
+        full(&mut index, 0);
+        index.mark_incomplete(kind, date);
+        let (reason, _, _) = legacy(coverage(&request(), &index, &CoverageConfig::default()));
+        assert_eq!(reason, LegacyReason::IndexIncomplete, "{kind}");
+    }
 }

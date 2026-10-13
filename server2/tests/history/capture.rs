@@ -79,9 +79,10 @@ async fn capture_requests_only_active_cells_and_publishes_before_marking() {
     // 3 latest + 23 current + 23 shortest + 7 short backfill under the 64-call default cap.
     assert_eq!(f.len(), 56);
     assert!(f.iter().all(|(_, nx, ny)| (*nx, *ny) == (60, 127)));
-    assert_eq!(web(&calls), 8, "web cap per tick");
-    assert_eq!(report.published, 64);
-    assert_eq!(e.publisher.published.lock().unwrap().len(), 64);
+    // 64 keyless attempts per tick at two worst-case attempts per page.
+    assert_eq!(web(&calls), 32, "web cap per tick");
+    assert_eq!(report.published, 88);
+    assert_eq!(e.publisher.published.lock().unwrap().len(), 88);
     {
         let shared = e.runner.index();
         let index = shared.lock().unwrap();
@@ -98,7 +99,7 @@ async fn capture_requests_only_active_cells_and_publishes_before_marking() {
     let again = e.runner.tick(at()).await;
     let calls = e.source.calls();
     assert!(funded(&calls).is_empty());
-    assert_eq!(web(&calls), 8);
+    assert_eq!(web(&calls), 32, "capped national backfill carries over");
     assert_eq!(
         again.present_skipped, 0,
         "present publications are not planned at all"
@@ -138,14 +139,14 @@ async fn capture_stops_funded_calls_after_a_funding_error_and_honours_caps() {
     assert_eq!(funded(&e.source.calls()).len(), 3);
     assert_eq!(
         web(&e.source.calls()),
-        8,
+        32,
         "keyless pages are not data.go.kr budget"
     );
     let e = env(
         "capture-cap",
         CaptureConfig {
-            max_funded: 5,
-            max_web: 0,
+            max_funded_attempts: 50,
+            max_web_attempts: 0,
             ..CaptureConfig::default()
         },
     );
@@ -154,6 +155,19 @@ async fn capture_stops_funded_calls_after_a_funding_error_and_honours_caps() {
     assert_eq!(funded(&e.source.calls()).len(), 5);
     assert_eq!(web(&e.source.calls()), 0);
     assert!(report.capped > 0);
+    // Each acquisition is charged its worst case (5 pages x 2 attempts): 19 attempts fund one.
+    let e = env(
+        "capture-charge",
+        CaptureConfig {
+            max_funded_attempts: 19,
+            max_web_attempts: 3,
+            ..CaptureConfig::default()
+        },
+    );
+    e.demand.touch(g(60, 127), at()).await.unwrap();
+    e.runner.tick(at()).await;
+    assert_eq!(funded(&e.source.calls()).len(), 1);
+    assert_eq!(web(&e.source.calls()), 1);
 }
 
 #[tokio::test]
@@ -161,8 +175,8 @@ async fn capture_retries_unpublished_or_failed_publications_on_the_next_tick() {
     let e = env(
         "capture-retry",
         CaptureConfig {
-            max_funded: 3,
-            max_web: 0,
+            max_funded_attempts: 30,
+            max_web_attempts: 0,
             ..CaptureConfig::default()
         },
     );
@@ -193,7 +207,7 @@ async fn capture_backfills_once_per_hour_and_at_once_for_new_cells() {
     let e = env(
         "capture-backfill-hourly",
         CaptureConfig {
-            max_web: 0,
+            max_web_attempts: 0,
             ..CaptureConfig::default()
         },
     );
@@ -233,6 +247,37 @@ async fn capture_backfills_once_per_hour_and_at_once_for_new_cells() {
             .filter(|(_, nx, _)| *nx == 60)
             .count()
             > 50
+    );
+}
+
+#[tokio::test]
+async fn capture_carries_capped_backfill_over_within_the_hour() {
+    let e = env(
+        "capture-carry",
+        CaptureConfig {
+            max_funded_attempts: 100,
+            max_web_attempts: 0,
+            ..CaptureConfig::default()
+        },
+    );
+    e.demand.touch(g(60, 127), at()).await.unwrap();
+    let first = e.runner.tick(at()).await;
+    assert_eq!(first.attempted, 10);
+    assert!(first.capped > 0);
+    let before: Vec<_> = e.source.calls();
+    e.source.clear();
+    // Ten minutes later, same hour: the next ten unattempted backfill publications run.
+    let second = e.runner.tick(at() + 10 * 60_000).await;
+    assert_eq!(second.attempted, 10);
+    let after = e.source.calls();
+    assert!(
+        after.iter().all(|c| !before.contains(c)),
+        "nothing repeated"
+    );
+    assert!(
+        after
+            .iter()
+            .all(|c| matches!(c, Requested::Funded { nx: 60, .. }))
     );
 }
 
@@ -311,7 +356,7 @@ async fn capture_metrics_render_counts() {
     e.runner.tick(at()).await;
     let text = e.runner.metrics().render();
     assert!(
-        text.contains("server2_history_captures_published_total 64"),
+        text.contains("server2_history_captures_published_total 88"),
         "{text}"
     );
     assert!(text.contains("server2_history_ticks_total 1"));

@@ -195,17 +195,6 @@ pub struct Planned {
 /// Order: latest per-cell, latest national, per-cell backfill (newest first), national backfill.
 /// Without demand the plan is empty: no all-grid timer and no national pages.
 pub fn plan(now_ms: i64, active: &BTreeSet<Grid>, index: &CaptureIndex) -> Vec<Planned> {
-    plan_with(now_ms, active, index, active)
-}
-/// As [`plan`], with per-cell backfill limited to `backfill_cells` (the runner backfills every
-/// active cell once per KST hour, like legacy `PastConditionGather`, and new cells at once).
-/// National page backfill is keyless and bounded by the runner's per-tick cap.
-pub fn plan_with(
-    now_ms: i64,
-    active: &BTreeSet<Grid>,
-    index: &CaptureIndex,
-    backfill_cells: &BTreeSet<Grid>,
-) -> Vec<Planned> {
     let mut out = Vec::new();
     if active.is_empty() {
         return out;
@@ -243,7 +232,7 @@ pub fn plan_with(
             push(family, target, p, true);
         }
     };
-    for cell in active.intersection(backfill_cells) {
+    for cell in active {
         for family in Family::PER_CELL {
             backfill(family, Target::Cell(*cell), &mut push);
         }

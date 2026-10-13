@@ -95,7 +95,7 @@ impl LegacyKind {
             Self::StnHourly2 | Self::StnMinute2 => matches!(version, "1.0" | "2.0"),
         }
     }
-    fn station(self) -> bool {
+    pub fn is_station(self) -> bool {
         matches!(self, Self::StnHourly2 | Self::StnMinute2)
     }
     fn v1(self) -> bool {
@@ -332,10 +332,10 @@ fn group(kind: LegacyKind, line: &[u8]) -> Result<ParsedGroup<'_>, LegacyError> 
     let key = match serde_json::from_slice::<WireKey>(&line[members[0].1.clone()])
         .map_err(|_| invalid.clone())?
     {
-        WireKey::Grid { nx, ny } if !kind.station() => {
+        WireKey::Grid { nx, ny } if !kind.is_station() => {
             ExportKey::Grid(Grid::new(nx, ny).ok_or(invalid.clone())?)
         }
-        WireKey::Station { id } if kind.station() && id > 0 => ExportKey::Station(id),
+        WireKey::Station { id } if kind.is_station() && id > 0 => ExportKey::Station(id),
         _ => return Err(invalid),
     };
     let lines: Vec<u64> =
@@ -493,8 +493,62 @@ fn row_ok(row: &Value, fields: &[&str]) -> bool {
             })
     })
 }
+/// Any JSON value whose objects, at every depth, have unique member names. A repeated name
+/// could hide data behind the value a JSON parser keeps.
+struct UniqueKeys;
+impl<'de> serde::Deserialize<'de> for UniqueKeys {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct V;
+        impl<'de> serde::de::Visitor<'de> for V {
+            type Value = UniqueKeys;
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("JSON without duplicate member names")
+            }
+            fn visit_bool<E>(self, _: bool) -> Result<UniqueKeys, E> {
+                Ok(UniqueKeys)
+            }
+            fn visit_i64<E>(self, _: i64) -> Result<UniqueKeys, E> {
+                Ok(UniqueKeys)
+            }
+            fn visit_u64<E>(self, _: u64) -> Result<UniqueKeys, E> {
+                Ok(UniqueKeys)
+            }
+            fn visit_f64<E>(self, _: f64) -> Result<UniqueKeys, E> {
+                Ok(UniqueKeys)
+            }
+            fn visit_str<E>(self, _: &str) -> Result<UniqueKeys, E> {
+                Ok(UniqueKeys)
+            }
+            fn visit_unit<E>(self) -> Result<UniqueKeys, E> {
+                Ok(UniqueKeys)
+            }
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(
+                self,
+                mut a: A,
+            ) -> Result<UniqueKeys, A::Error> {
+                while a.next_element::<UniqueKeys>()?.is_some() {}
+                Ok(UniqueKeys)
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut a: A,
+            ) -> Result<UniqueKeys, A::Error> {
+                let mut seen = BTreeSet::new();
+                while let Some(k) = a.next_key::<String>()? {
+                    if !seen.insert(k) {
+                        return Err(serde::de::Error::custom("duplicate member name"));
+                    }
+                    a.next_value::<UniqueKeys>()?;
+                }
+                Ok(UniqueKeys)
+            }
+        }
+        d.deserialize_any(V)
+    }
+}
 fn validate_document(kind: LegacyKind, key: ExportKey, doc: &[u8]) -> Result<(), LegacyError> {
     let invalid = LegacyError::Invalid("legacy document");
+    serde_json::from_slice::<UniqueKeys>(doc).map_err(|_| invalid.clone())?;
     let value: Value = serde_json::from_slice(doc).map_err(|_| invalid.clone())?;
     let o = value.as_object().ok_or(invalid.clone())?;
     if o.get("_id").is_some_and(|v| !oid(v))
@@ -502,7 +556,7 @@ fn validate_document(kind: LegacyKind, key: ExportKey, doc: &[u8]) -> Result<(),
     {
         return Err(invalid);
     }
-    if kind.station() {
+    if kind.is_station() {
         let id = o.get("stnId").and_then(ext_number);
         if !row_ok(&value, STATION_FIELDS)
             || id
@@ -602,6 +656,9 @@ fn ext_date_ms(v: &Value) -> Option<i64> {
 }
 /// `YYYY-MM-DDTHH:MM:SS(.f{1,9})?(Z|±HH:MM)` to UTC milliseconds.
 pub fn parse_iso(s: &str) -> Option<i64> {
+    if !s.is_ascii() {
+        return None;
+    }
     let b = s.as_bytes();
     if b.len() < 20
         || b[4] != b'-'
@@ -778,7 +835,8 @@ pub fn record_documents(body: &[u8]) -> Result<ExportRecord, LegacyError> {
     })
 }
 
-/// JavaScript `JSON.stringify` number text for finite values (`null` otherwise).
+/// JavaScript `JSON.stringify` number text (`Number.prototype.toString`): shortest round-trip
+/// digits, plain notation in `[1e-6, 1e21)`, exponent form outside, `null` for non-finite.
 fn js_number(n: f64) -> String {
     if !n.is_finite() {
         return "null".into();
@@ -786,17 +844,15 @@ fn js_number(n: f64) -> String {
     if n == 0.0 {
         return "0".into();
     }
-    if n.fract() == 0.0 && n.abs() < 1e21 {
-        return format!("{n:.0}");
+    if (1e-6..1e21).contains(&n.abs()) {
+        // Rust `Display` prints the shortest round-trip digits without exponent or `.0`.
+        return format!("{n}");
     }
-    if n.abs() < 1e-6 || n.abs() >= 1e21 {
-        let s = format!("{n:e}");
-        return match s.split_once('e') {
-            Some((m, e)) if !e.starts_with('-') => format!("{m}e+{e}"),
-            _ => s,
-        };
+    let s = format!("{n:e}");
+    match s.split_once('e') {
+        Some((m, e)) if !e.starts_with('-') => format!("{m}e+{e}"),
+        _ => s,
     }
-    format!("{n}")
 }
 /// A stored field as `JSON.stringify` emits the lean Mongo value.
 fn js_value(v: &Value) -> Result<String, LegacyError> {
@@ -924,6 +980,10 @@ mod tests {
             (-0.0, "0"),
             (1e21, "1e+21"),
             (1.5e-7, "1.5e-7"),
+            (1_000_000_000_000_000_128.0, "1000000000000000100"),
+            (123456789012345680.0, "123456789012345680"),
+            (0.1 + 0.2, "0.30000000000000004"),
+            (1e-6, "0.000001"),
             (f64::NAN, "null"),
         ] {
             assert_eq!(js_number(n), s, "{n}");
@@ -944,6 +1004,9 @@ mod tests {
         assert_eq!(format_iso(1_790_215_800_500), "2026-09-24T02:10:00.500Z");
         assert_eq!(parse_iso("2026-09-24 02:10:00Z"), None);
         assert_eq!(parse_iso("2026-02-30T00:00:00Z"), None);
+        // Multibyte input never slices inside a character.
+        assert_eq!(parse_iso("2026-09-24T02:10:00+\u{e9}\u{e9}x"), None);
+        assert_eq!(parse_iso("2026-09-24T02:10:00.\u{e9}Z"), None);
     }
     #[test]
     fn compact_scanner_splits_exact_values() {

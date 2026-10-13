@@ -90,6 +90,9 @@ pub struct PushCell {
 #[serde(deny_unknown_fields)]
 struct PushRecord {
     schema: u8,
+    /// Time the push aggregate was observed; every cell carries it as its last demand.
+    #[serde(rename = "lastDemandMs")]
+    last_demand_ms: i64,
     cells: Vec<PushCell>,
 }
 
@@ -134,27 +137,34 @@ fn encode_request(grid: Grid, last_demand_ms: i64) -> Vec<u8> {
     })
     .expect("demand serialization")
 }
-fn parse_push(body: &[u8]) -> Result<Vec<PushCell>, DemandError> {
+fn parse_push(body: &[u8]) -> Result<PushRecord, DemandError> {
     let invalid = DemandError::Invalid("push demand aggregate");
     if body.len() > PUSH_BYTES {
         return Err(invalid);
     }
     let record: PushRecord = serde_json::from_slice(body).map_err(|_| invalid.clone())?;
     if record.schema != 1
+        || !time_ok(record.last_demand_ms)
         || record.cells.len() > PUSH_CELLS
         || record.cells.windows(2).any(|w| w[0].grid >= w[1].grid)
         || record.cells.iter().any(|c| {
             !c.grid.valid()
-                || !time_ok(c.last_demand_ms)
+                || c.last_demand_ms != record.last_demand_ms
                 || c.expires_ms <= c.last_demand_ms
                 || c.expires_ms - c.last_demand_ms > DEMAND_WINDOW_MS
         })
     {
         return Err(invalid);
     }
-    Ok(record.cells)
+    Ok(record)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PushOutcome {
+    Replaced,
+    /// A newer snapshot was already durable; it was kept and adopted.
+    Superseded,
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DemandChange {
     /// No valid durable record existed.
@@ -194,6 +204,7 @@ struct Memory {
     /// grid -> (latest demand seen by this process, durable lastDemandMs if known)
     request: BTreeMap<Grid, (i64, Option<i64>)>,
     push: Vec<PushCell>,
+    push_snapshot: Option<i64>,
 }
 pub struct DemandStore<T> {
     transport: Arc<T>,
@@ -267,13 +278,14 @@ impl<T: DemandTransport> DemandStore<T> {
         Err(DemandError::Conflict)
     }
     /// Replace the aggregate push demand with `cells` observed at `snapshot_ms`. The caller
-    /// (the S18 push reconciler) supplies grid identities only.
+    /// (the S18 push reconciler) supplies grid identities only. An older snapshot never
+    /// replaces a newer durable one, also after a conflict retry or a reordered completion.
     pub async fn replace_push(
         &self,
         cells: &[Grid],
         snapshot_ms: i64,
         ttl_ms: i64,
-    ) -> Result<(), DemandError> {
+    ) -> Result<PushOutcome, DemandError> {
         if !time_ok(snapshot_ms)
             || ttl_ms <= 0
             || ttl_ms > DEMAND_WINDOW_MS
@@ -293,15 +305,24 @@ impl<T: DemandTransport> DemandStore<T> {
                 expires_ms: snapshot_ms + ttl_ms,
             })
             .collect();
-        let body = serde_json::to_vec(&PushRecord {
+        let record = PushRecord {
             schema: 1,
-            cells: cells.clone(),
-        })
-        .expect("push serialization");
+            last_demand_ms: snapshot_ms,
+            cells,
+        };
+        let body = serde_json::to_vec(&record).expect("push serialization");
         for _ in 0..self.config.attempts {
             let condition = match self.transport.get_demand(PUSH_KEY).await? {
                 None => WriteCondition::Absent,
-                Some(object) => WriteCondition::Match(object.etag),
+                Some(object) => {
+                    if let Ok(stored) = parse_push(&object.body)
+                        && stored.last_demand_ms > snapshot_ms
+                    {
+                        self.adopt_push(stored);
+                        return Ok(PushOutcome::Superseded);
+                    }
+                    WriteCondition::Match(object.etag)
+                }
             };
             match self
                 .transport
@@ -309,14 +330,22 @@ impl<T: DemandTransport> DemandStore<T> {
                 .await?
             {
                 200 => {
-                    self.memory().push = cells;
-                    return Ok(());
+                    self.adopt_push(record);
+                    return Ok(PushOutcome::Replaced);
                 }
                 409 | 412 => continue,
                 status => return Err(DemandError::Status(status)),
             }
         }
         Err(DemandError::Conflict)
+    }
+    /// Keep the newest push aggregate in memory regardless of completion order.
+    fn adopt_push(&self, record: PushRecord) {
+        let mut m = self.memory();
+        if m.push_snapshot.is_none_or(|s| s <= record.last_demand_ms) {
+            m.push_snapshot = Some(record.last_demand_ms);
+            m.push = record.cells;
+        }
     }
     /// Reload every durable record (after a replacement). Invalid objects are counted and ignored.
     pub async fn rebuild(&self) -> Result<RebuildReport, DemandError> {
@@ -353,23 +382,32 @@ impl<T: DemandTransport> DemandStore<T> {
             }
         }
         let push = match self.transport.get_demand(PUSH_KEY).await? {
-            None => Vec::new(),
+            None => None,
             Some(object) => match parse_push(&object.body) {
-                Ok(cells) => cells,
+                Ok(record) => Some(record),
                 Err(_) => {
                     report.invalid += 1;
-                    Vec::new()
+                    None
                 }
             },
         };
-        report.push_cells = push.len();
+        report.push_cells = push.as_ref().map_or(0, |r| r.cells.len());
         let mut m = self.memory();
         for (grid, (last, durable)) in request {
             let entry = m.request.entry(grid).or_insert((last, durable));
             entry.0 = entry.0.max(last);
             entry.1 = Some(entry.1.map_or(last, |d| d.max(last)));
         }
-        m.push = push;
+        match push {
+            Some(record) => {
+                m.push_snapshot = Some(record.last_demand_ms);
+                m.push = record.cells;
+            }
+            None => {
+                m.push_snapshot = None;
+                m.push = Vec::new();
+            }
+        }
         Ok(report)
     }
     /// Cells with request demand in the last 8 days or unexpired push demand at `now_ms`.

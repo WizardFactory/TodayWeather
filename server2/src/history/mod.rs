@@ -11,6 +11,7 @@ pub mod legacy;
 pub mod metrics;
 pub mod schedule;
 mod transport;
+pub use transport::IndexListing;
 
 use crate::storage::ProviderKey;
 use serde::{Deserialize, Serialize};

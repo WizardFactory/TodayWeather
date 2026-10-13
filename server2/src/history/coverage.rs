@@ -183,10 +183,12 @@ pub fn coverage(
             (Target::National, station)
         };
         // A listing that could not be read completely cannot prove presence or absence.
-        if required
-            .iter()
-            .any(|p| index.is_incomplete(family.kind(), p.date()))
-        {
+        if required.iter().any(|p| {
+            index.is_incomplete(family.kind(), p.date())
+                || export_kinds(family)
+                    .iter()
+                    .any(|k| index.is_incomplete(k.kind(), p.date()))
+        }) {
             return legacy(LegacyReason::IndexIncomplete, ColdCell::NotCold, Vec::new());
         }
         let slots: Vec<SlotInput> = required
@@ -214,13 +216,27 @@ pub fn coverage(
         gaps.extend(family_gaps);
         families.insert(family, slots);
     }
+    if let Some(anchor) = request.minute_anchor {
+        let (after, through) = schedule::minute_window(anchor);
+        if [after.date(), through.date()].iter().any(|d| {
+            index.is_incomplete(Family::AwsMinute.kind(), *d)
+                || (station.is_some() && index.is_incomplete(LegacyKind::StnMinute2.kind(), *d))
+        }) {
+            return legacy(LegacyReason::IndexIncomplete, ColdCell::NotCold, Vec::new());
+        }
+    }
     let minute = request.minute_anchor.map(|anchor| {
         let (after, through) = schedule::minute_window(anchor);
+        // An export snapshot holds the whole window only if it was taken at or after the anchor
+        // and the legacy one-day minute retention still includes the window start.
         let exports: Vec<i64> = station
             .map(|s| index.exports(LegacyKind::StnMinute2, s))
             .unwrap_or_default()
             .into_iter()
-            .filter(|e| *e >= schedule::to_ms(through))
+            .filter(|e| {
+                *e >= schedule::to_ms(through)
+                    && *e - legacy::retention_ms(Family::AwsMinute) <= schedule::to_ms(after)
+            })
             .collect();
         let captured: Vec<Publication> = index
             .minutes()

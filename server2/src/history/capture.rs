@@ -3,7 +3,6 @@
 //! S08 and publication S06 (O-9); a publication is marked captured only after its group is
 //! published. One owner per scope in a process; multi-host capture needs the section 9 gate.
 use super::{
-    Grid,
     demand::{DemandStore, DemandTransport},
     index::CaptureIndex,
     metrics::HistoryMetrics,
@@ -19,7 +18,7 @@ use crate::providers::{ProviderTransport, PublicTransport};
 use crate::resolver::Acquisition;
 use crate::storage::{CatalogStore, CatalogTransport, Error as StorageError};
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeSet, HashSet},
     future::Future,
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
@@ -111,21 +110,31 @@ impl Drop for CaptureOwner {
 
 #[derive(Debug, Clone)]
 pub struct CaptureConfig {
-    /// data.go.kr calls per tick (each is funded by the S08 key-ring budgets).
-    pub max_funded: usize,
-    /// Keyless KMA page calls per tick (national hourly pages).
-    pub max_web: usize,
+    /// Funded data.go.kr HTTP attempts per tick. Each acquisition is charged its worst case
+    /// (family page cap x two attempts) before it starts, so actual attempts never exceed this.
+    /// Spending is additionally bounded by the S08 key-ring budgets.
+    pub max_funded_attempts: usize,
+    /// Keyless KMA page HTTP attempts per tick (two per page, worst case).
+    pub max_web_attempts: usize,
+    /// Acquisitions in flight at once.
+    pub concurrency: usize,
     /// Deadline of one acquisition plus publication.
     pub call_timeout: Duration,
 }
 impl Default for CaptureConfig {
     fn default() -> Self {
         Self {
-            max_funded: 64,
-            max_web: 8,
+            max_funded_attempts: 2560,
+            max_web_attempts: 64,
+            concurrency: 4,
             call_timeout: Duration::from_secs(3),
         }
     }
+}
+/// Worst-case HTTP attempts of one acquisition (S13: at most two attempts per page).
+const WEB_CHARGE: usize = 2;
+fn funded_charge(family: DataGoKrFamily) -> usize {
+    family.max_pages() as usize * 2
 }
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TickReport {
@@ -170,12 +179,13 @@ pub struct CaptureRunner<S, P, D> {
     minute_bucket: Mutex<Option<i64>>,
     backfill: Mutex<BackfillState>,
 }
-/// Per-cell backfill runs once per KST hour for every active cell and at once for a cell that
-/// became active since the last pass, so persistent provider gaps are not retried every tick.
+/// Each backfill publication is attempted at most once per KST hour (like the hourly legacy
+/// past-condition pass), so a persistent provider gap is not retried every tick. Backfill left
+/// unattempted by a cap or funding stop is carried over to the next tick.
 #[derive(Default)]
 struct BackfillState {
     hour: Option<Publication>,
-    cells: BTreeSet<Grid>,
+    attempted: HashSet<(Family, Target, Publication)>,
 }
 impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> {
     pub fn new(
@@ -187,8 +197,9 @@ impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> 
         config: CaptureConfig,
         metrics: Arc<HistoryMetrics>,
     ) -> Result<Self, DomesticError> {
-        if config.max_funded > 1024
-            || config.max_web > 256
+        if config.max_funded_attempts > 1 << 20
+            || config.max_web_attempts > 1 << 16
+            || !(1..=64).contains(&config.concurrency)
             || config.call_timeout.is_zero()
             || config.call_timeout > Duration::from_secs(9)
         {
@@ -264,80 +275,111 @@ impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> 
             _ => Err(DomesticError::Invalid("capture plan item")),
         }
     }
+    async fn capture_one(
+        &self,
+        item: Planned,
+        request: Request,
+    ) -> (Planned, Outcome, Option<Publication>) {
+        let deadline = Instant::now() + self.config.call_timeout;
+        let acquired = match &request {
+            Request::Funded(q) => self.source.acquire(q, deadline).await,
+            Request::Web(q) => self.source.acquire_web(q, deadline).await,
+        };
+        let (outcome, period) = self.publish(acquired, deadline).await;
+        (item, outcome, period)
+    }
     /// One hourly-family pass at `now_ms`: latest publications first, then backfill, under the
-    /// per-tick caps. A funding error stops further data.go.kr calls in this pass.
+    /// per-tick attempt caps, `concurrency` acquisitions at a time. A funding error stops further
+    /// data.go.kr launches in this pass; capped work stays planned for the next tick.
     pub async fn tick(&self, now_ms: i64) -> TickReport {
         HistoryMetrics::add(&self.metrics.ticks, 1);
         let active = self.demand.active(now_ms);
-        let backfill_cells = {
+        let planned: Vec<Planned> = {
             let mut b = self.backfill.lock().unwrap_or_else(|e| e.into_inner());
             let hour = schedule::hour_of(now_ms);
             if b.hour != Some(hour) {
                 b.hour = Some(hour);
-                b.cells = active.clone();
-                active.clone()
-            } else {
-                let new: BTreeSet<Grid> = active.difference(&b.cells).copied().collect();
-                b.cells.extend(new.iter().copied());
-                new
+                b.attempted.clear();
             }
+            schedule::plan(now_ms, &active, &self.lock_index())
+                .into_iter()
+                .filter(|x| {
+                    !x.backfill || !b.attempted.contains(&(x.family, x.target, x.publication))
+                })
+                .collect()
         };
-        let planned = schedule::plan_with(now_ms, &active, &self.lock_index(), &backfill_cells);
         let mut r = TickReport {
             planned: planned.len(),
             ..TickReport::default()
         };
         let (mut funded, mut web) = (0usize, 0usize);
-        for item in &planned {
-            if self
-                .lock_index()
-                .has(item.family, item.target, item.publication)
-            {
-                r.present_skipped += 1;
-                continue;
-            }
-            let request = match Self::request(item) {
-                Ok(request) => request,
-                Err(_) => {
-                    r.failed += 1;
+        let mut pending = planned.into_iter();
+        loop {
+            let mut batch = Vec::new();
+            for item in pending.by_ref() {
+                if self
+                    .lock_index()
+                    .has(item.family, item.target, item.publication)
+                {
+                    r.present_skipped += 1;
                     continue;
                 }
-            };
-            let used = match request {
-                Request::Funded(_) => &mut funded,
-                Request::Web(_) => &mut web,
-            };
-            let cap = match request {
-                Request::Funded(_) if r.budget_denied => 0,
-                Request::Funded(_) => self.config.max_funded,
-                Request::Web(_) => self.config.max_web,
-            };
-            if *used >= cap {
-                r.capped += 1;
-                continue;
-            }
-            *used += 1;
-            r.attempted += 1;
-            let deadline = Instant::now() + self.config.call_timeout;
-            let acquired = match &request {
-                Request::Funded(q) => self.source.acquire(q, deadline).await,
-                Request::Web(q) => self.source.acquire_web(q, deadline).await,
-            };
-            let (outcome, period) = self.publish(acquired, deadline).await;
-            match outcome {
-                Outcome::Published => {
-                    r.published += 1;
-                    self.lock_index().insert(
-                        item.family,
-                        item.target,
-                        period.unwrap_or(item.publication),
-                    );
+                let request = match Self::request(&item) {
+                    Ok(request) => request,
+                    Err(_) => {
+                        r.failed += 1;
+                        continue;
+                    }
+                };
+                let (used, cap, charge) = match &request {
+                    Request::Funded(q) => (
+                        &mut funded,
+                        if r.budget_denied {
+                            0
+                        } else {
+                            self.config.max_funded_attempts
+                        },
+                        funded_charge(q.family()),
+                    ),
+                    Request::Web(_) => (&mut web, self.config.max_web_attempts, WEB_CHARGE),
+                };
+                if *used + charge > cap {
+                    r.capped += 1;
+                    continue;
                 }
-                Outcome::NotPublished => r.not_published += 1,
-                Outcome::Stale => r.stale += 1,
-                Outcome::NoData => r.no_data += 1,
-                Outcome::Funding => r.budget_denied = true,
-                Outcome::Failed => r.failed += 1,
+                *used += charge;
+                r.attempted += 1;
+                if item.backfill {
+                    self.backfill
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .attempted
+                        .insert((item.family, item.target, item.publication));
+                }
+                batch.push(self.capture_one(item, request));
+                if batch.len() >= self.config.concurrency {
+                    break;
+                }
+            }
+            if batch.is_empty() {
+                break;
+            }
+            for (item, outcome, period) in join_all(batch).await {
+                match outcome {
+                    Outcome::Published => {
+                        r.published += 1;
+                        self.lock_index().insert(
+                            item.family,
+                            item.target,
+                            period.unwrap_or(item.publication),
+                        );
+                    }
+                    Outcome::NotPublished => r.not_published += 1,
+                    Outcome::Stale => r.stale += 1,
+                    Outcome::NoData => r.no_data += 1,
+                    Outcome::Funding => r.budget_denied = true,
+                    Outcome::Failed => r.failed += 1,
+                }
             }
         }
         let m = &self.metrics;
@@ -455,4 +497,27 @@ impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> 
 enum Request {
     Funded(DataGoKrRequest),
     Web(WebRequest),
+}
+/// Await every future, polling them concurrently (bounded by the caller's batch size).
+async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
+    let mut futures: Vec<std::pin::Pin<Box<F>>> = futures.into_iter().map(Box::pin).collect();
+    let mut out: Vec<Option<F::Output>> = futures.iter().map(|_| None).collect();
+    std::future::poll_fn(|cx| {
+        let mut pending = false;
+        for (f, slot) in futures.iter_mut().zip(out.iter_mut()) {
+            if slot.is_none() {
+                match f.as_mut().poll(cx) {
+                    std::task::Poll::Ready(v) => *slot = Some(v),
+                    std::task::Poll::Pending => pending = true,
+                }
+            }
+        }
+        if pending {
+            std::task::Poll::Pending
+        } else {
+            std::task::Poll::Ready(())
+        }
+    })
+    .await;
+    out.into_iter().flatten().collect()
 }

@@ -53,6 +53,19 @@ class Invalid(ValueError):
     pass
 
 
+GROUP_DOCUMENTS = 20000          # Rust importer bound per group
+RECORD_BYTES = 8 * 1024 * 1024   # S05 raw record limit (manifest + group line)
+SEED_BYTES = 64 * 1024 * 1024    # Rust importer seed bound
+
+
+def unique_pairs(pairs):
+    names = [name for name, _ in pairs]
+    if len(names) != len(set(names)):
+        duplicate = sorted({n for n in names if names.count(n) > 1})
+        raise Invalid(f'duplicate member name {duplicate[0]!r}')
+    return dict(pairs)
+
+
 def parse_iso(text):
     match = ISO.match(text) if isinstance(text, str) else None
     if not match:
@@ -152,8 +165,8 @@ def validate(collection, doc):
     if collection in STATION:
         row(doc, STATION_FIELDS, collection)
         station = number(doc.get('stnId'))
-        if station is None or station != int(station) or station < 1:
-            raise Invalid('station document needs a positive integer stnId')
+        if station is None or station != int(station) or not 1 <= station <= 4294967295:
+            raise Invalid('station document needs a positive 32-bit integer stnId')
         if date_ms(doc.get('date')) is None:
             raise Invalid('station document needs an Extended JSON date')
         return ('station', int(station))
@@ -218,9 +231,11 @@ def convert(collection, version, exported_at, source):
             raise Invalid(f'line {number_} has surrounding whitespace')
         try:
             text = raw.decode('utf-8')
-            doc = json.loads(text)
+            doc = json.loads(text, object_pairs_hook=unique_pairs)
         except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise Invalid(f'line {number_} is not a JSON document') from error
+        except Invalid as error:
+            raise Invalid(f'line {number_}: {error}') from error
         try:
             key = validate(collection, doc)
         except Invalid as error:
@@ -243,9 +258,16 @@ def convert(collection, version, exported_at, source):
             key_text = '{"type":"grid","nx":%d,"ny":%d}' % (key[1], key[2])
         else:
             key_text = '{"type":"station","id":%d}' % key[1]
+        if len(documents) > GROUP_DOCUMENTS:
+            raise Invalid(f'more than {GROUP_DOCUMENTS} documents for one key')
         lines.append('{"key":' + key_text + ',"lines":' + json.dumps(numbers, separators=(',', ':'))
                      + ',"documents":[' + ','.join(documents) + ']}')
-    return ('\n'.join(lines) + '\n').encode('utf-8'), count, len(order)
+        if len(lines[0].encode()) + len(lines[-1].encode()) + 2 > RECORD_BYTES:
+            raise Invalid('one key group exceeds the 8 MiB raw record limit')
+    output = ('\n'.join(lines) + '\n').encode('utf-8')
+    if len(output) > SEED_BYTES:
+        raise Invalid('seed exceeds 64 MiB; split the export')
+    return output, count, len(order)
 
 
 def main(argv=None):

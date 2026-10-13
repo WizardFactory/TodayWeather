@@ -17,7 +17,7 @@ use server2::history::legacy::{self, ExportKey, LegacyKind};
 use server2::history::metrics::HistoryMetrics;
 use server2::history::schedule::{self, Family, Target};
 use server2::providers::{HttpProviderTransport, HttpPublicTransport, ProviderKey};
-use server2::storage::{CatalogLimits, CatalogStore};
+use server2::storage::{CatalogLimits, CatalogStore, Limits, RawRecordStore};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::{Arc, Mutex},
@@ -118,8 +118,8 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
         demand.clone(),
         Arc::new(Mutex::new(CaptureIndex::default())),
         CaptureConfig {
-            max_funded: 3,
-            max_web: 0,
+            max_funded_attempts: 30,
+            max_web_attempts: 0,
             ..CaptureConfig::default()
         },
         metrics.clone(),
@@ -133,6 +133,21 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
     assert_eq!(captured_minute.len(), 1);
     println!("{}", metrics.render());
     drop(runner);
+
+    // An interrupted publication: a raw object for 12:00 without any catalog entry.
+    let orphan = super::support::acquisition(
+        "data-go-kr",
+        "ultra-srt-ncst",
+        &cell.provider_key(),
+        p(20261013, 1200),
+        1_790_000_000_000,
+        b"orphan page",
+    );
+    RawRecordStore::new(peer.transport(), Limits::default())
+        .unwrap()
+        .publish(orphan.records.into_iter().next().unwrap())
+        .await
+        .unwrap();
 
     // Legacy export seed for the same grid, imported into the peer.
     let exported = "2026-10-13T04:00:00.000Z";
@@ -175,6 +190,8 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
     assert!(index.has(Family::Current, target, p(20261013, 1300)));
     assert!(index.has(Family::Shortest, target, p(20261013, 1300)));
     assert!(index.has(Family::Short, target, p(20261013, 1400)));
+    // Raw presence alone is not publication: the orphan is not counted as captured.
+    assert!(!index.has(Family::Current, target, p(20261013, 1200)));
     assert_eq!(index.minutes().collect::<Vec<_>>(), captured_minute);
     assert_eq!(
         index.exports(LegacyKind::TownCurrent, ExportKey::Grid(cell)),
