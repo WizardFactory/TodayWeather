@@ -1311,31 +1311,38 @@ marker and the response are derived in memory and never persisted. Per-cell memo
 keeps only records that can still affect a later request.
 
 The legacy chain is preserved: combined/recent/forecast selection, the no-yesterday
-marker, 10-minute provider-down after a VC 401/403, 2-second and 15-minute failure
-backoff, 2.5-second waiter budget with an owned fetch that continues to publish,
-stale serving up to 6 hours and 503 `EWEATHERUNAVAILABLE` retry times. VC HTTP is
-funded through S08 (49/25/1 units, two attempts reserved); a range that cannot be
-funded follows the legacy daily-budget path (forecast-only, then stale or 503 with
-the window end). VC requests, S3 keys, catalogs, metadata and bodies carry only the
-cell centre; the response still echoes the requested `location`.
+marker, 10-minute provider-down after a VC 401/403 or a daily/usage-limit 429, one
+retry of a concurrency 429, 2-second failure backoff and a 15-minute backoff after a
+billed 200 body that is unusable (both measured from failure handling), waiters behind
+an active fetch that use stored current/today or fall back, stale serving up to 6
+hours and 503 `EWEATHERUNAVAILABLE` retry times. VC HTTP is funded through S08 before
+sending (98/50/2 units reserved for two attempts of a 49/25/1-unit range); a range
+that cannot be funded follows the legacy daily-budget path (forecast-only, then stale
+or 503 with the window end), and an observed exhausted window is checked before the
+cell lock as legacy `_selectRange` is. Busy cells are never evicted from the bounded
+cell map, so one owner fetches per cell. VC requests, S3 keys, catalogs, metadata and
+bodies carry only the cell centre; the response still echoes the requested `location`.
 
 Byte parity is tested against pinned Node v16.20.2 legacy-oracle recordings
 (`server2/tests/world/fixtures`), the S02 world goldens and the S10 gateway world
 goldens, including negative coordinates, cell boundaries, date line, poles, DST,
-half-hour zones, missing fields, provider failures and WAQI air rendering. Restore
-tests rebuild every recorded response from the S3 test peer with empty memory and
-providers disabled.
+half-hour zones, missing fields, malformed route inputs, provider failures and WAQI
+air rendering. Restore tests rebuild every recorded 200 weather response from the S3
+test peer with empty memory and providers disabled; the air observation is supplied
+by the same recorded WAQI fixture, because air raw persistence is not implemented.
 
-Known differences and gates: the native handler has the single 3-second S10
-attempt, while legacy can succeed on a gateway retry after a slow fetch; the S08
-executor retries a transient 5xx/invalid body once, cannot distinguish a VC
-concurrency 429 from a limit 429 (no global provider-down for 429), and a 200 body
-that is not JSON backs off 2 seconds instead of 15 minutes; a cell in backoff with
-exhausted funding returns the backoff error class. IANA offsets come from bundled
-`chrono-tz` data rather than Node 16 ICU data, and the process zone is UTC as in
-the S02 oracle. Live air acquisition (Google, OpenWeather, WAQI, VC air), its S08
-funding identities and air raw persistence are undecided; the native default is the
-legacy no-provider air output, with tested rendering for a supplied observation.
-Cold loads of busy cells read up to seven days of forecast fetches and remain a
-pre-cutover measurement item. No production route, AWS resource, live provider or
-shadow comparison is changed by S11.
+Known differences and gates: the S10 dispatcher gives a native family one attempt of
+at most 3 seconds, so the world waiter uses that attempt deadline instead of the
+legacy 2.5-second answer plus gateway retry; a VC fetch slower than the attempt
+returns the provider error while its owned fetch still publishes for the next request
+(legacy could succeed on a gateway retry). A slow air branch is released as
+`airStatus` pending just before the attempt deadline rather than at 4 seconds. A
+socket reset is not retried. Before a funding window has been observed exhausted, a
+cell in backoff returns the backoff error class. IANA offsets come from bundled
+`chrono-tz` data rather than Node 16 ICU data, and the process zone is UTC as in the
+S02 oracle. Live air acquisition (Google, OpenWeather, WAQI, VC air), its S08 funding
+identities and air raw persistence are undecided; the native default is the legacy
+no-provider air output, with tested rendering for a supplied observation. Cold loads
+read 21 catalogs (at most four at a time) and, for busy cells, up to seven days of
+forecast fetches; this remains a pre-cutover measurement item. No production route,
+AWS resource, live provider or shadow comparison is changed by S11.

@@ -4,12 +4,14 @@ use crate::{
     budget::{BudgetError, BudgetStore, BudgetTransport, Provider},
     gateway::BoxFuture,
     providers::{
-        AcquisitionError, AcquisitionOutcome, Candidate, Disposition, FundedExecutor, ProviderKey,
-        ProviderTransport,
+        AcquisitionError, ProviderKey, ProviderTransport, ProviderTransportError, Request,
     },
 };
-use std::sync::Arc;
-use tokio::time::Instant;
+use std::{sync::Arc, time::Duration};
+use tokio::{
+    sync::Semaphore,
+    time::{Instant, sleep, timeout_at},
+};
 
 pub const ELEMENTS: [&str; 25] = [
     "datetime",
@@ -81,17 +83,33 @@ pub fn timeline_url(base: &str, cell: Cell, range: Range) -> String {
         ELEMENTS.join(",")
     )
 }
-fn validator(json: &serde_json::Value) -> bool {
-    json.is_object()
+/// Legacy `vcRequester` retry constants: one retry after 300 ms for a concurrency 429 seen
+/// within 1.5 s of the call start.
+const RETRY_DELAY: Duration = Duration::from_millis(300);
+const RETRY_WINDOW: Duration = Duration::from_millis(1500);
+fn concurrency_429(body: &[u8]) -> bool {
+    String::from_utf8_lossy(body)
+        .to_ascii_lowercase()
+        .contains("concurren")
 }
-/// S08-funded Visual Crossing source. One key; 49/25/1 units per attempt, two attempts reserved.
+fn limit_429(body: &[u8]) -> bool {
+    let text = String::from_utf8_lossy(body).to_ascii_lowercase();
+    [
+        "daily", "monthly", "per day", "usage", "quota", "cost", "records",
+    ]
+    .iter()
+    .any(|w| text.contains(w))
+}
+/// S08-funded Visual Crossing source with the legacy `vcRequester` status policy. Two attempts
+/// (98/50/2 units) are reserved before any HTTP; only a concurrency 429 is retried, a 401/403 or
+/// a limit 429 marks the provider down, and every 200 body is returned for engine validation
+/// (an unusable billed body backs off 15 minutes there).
 pub struct FundedVc<P, T> {
     base: String,
     budget: Arc<BudgetStore<T>>,
     key: String,
-    combined: FundedExecutor<P, fn(&serde_json::Value) -> bool>,
-    recent: FundedExecutor<P, fn(&serde_json::Value) -> bool>,
-    forecast: FundedExecutor<P, fn(&serde_json::Value) -> bool>,
+    transport: Arc<P>,
+    admission: Arc<Semaphore>,
 }
 impl<P: ProviderTransport + 'static, T: BudgetTransport + 'static> FundedVc<P, T> {
     pub fn new(
@@ -114,24 +132,12 @@ impl<P: ProviderTransport + 'static, T: BudgetTransport + 'static> FundedVc<P, T
             return Err(AcquisitionError::Invalid);
         }
         ProviderKey::new(key.clone())?;
-        let v: Arc<fn(&serde_json::Value) -> bool> = Arc::new(validator);
         Ok(Self {
             base: base.to_owned(),
             budget,
             key,
-            combined: FundedExecutor::new(
-                Provider::VisualCrossing,
-                49,
-                transport.clone(),
-                v.clone(),
-            )?,
-            recent: FundedExecutor::new(
-                Provider::VisualCrossing,
-                25,
-                transport.clone(),
-                v.clone(),
-            )?,
-            forecast: FundedExecutor::new(Provider::VisualCrossing, 1, transport, v)?,
+            transport,
+            admission: Arc::new(Semaphore::new(4)),
         })
     }
 }
@@ -143,37 +149,67 @@ impl<P: ProviderTransport + 'static, T: BudgetTransport + 'static> VcSource for 
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Vec<u8>, VcError>> {
         Box::pin(async move {
-            let url = reqwest::Url::parse(&timeline_url(&self.base, cell, range))
-                .map_err(|_| VcError::Failed)?;
-            let executor = match range {
-                Range::Combined => &self.combined,
-                Range::Recent => &self.recent,
-                Range::Forecast => &self.forecast,
+            let units = match range {
+                Range::Combined => 49,
+                Range::Recent => 25,
+                Range::Forecast => 1,
             };
-            let key = ProviderKey::new(self.key.clone()).map_err(|_| VcError::Failed)?;
-            let result = executor
-                .execute(
-                    url,
-                    vec![Candidate {
-                        budget: self.budget.clone(),
-                        key,
-                    }],
-                    deadline,
-                )
-                .await;
-            match result {
-                Ok(AcquisitionOutcome::Data(body)) => Ok(body.body),
-                Ok(AcquisitionOutcome::NoData(_)) => Err(VcError::Failed),
+            let endpoint = reqwest::Url::parse(&timeline_url(&self.base, cell, range))
+                .map_err(|_| VcError::Failed)?;
+            let _admission = timeout_at(deadline, self.admission.clone().acquire_owned())
+                .await
+                .map_err(|_| VcError::Failed)?
+                .map_err(|_| VcError::Failed)?;
+            let started = Instant::now();
+            // Fund both permitted attempts before any HTTP; no refunds or late reservations.
+            let mut funds = match self.budget.reserve(units * 2, deadline).await {
+                Ok(r) => r,
                 // A range larger than the remaining units or the policy block cannot be funded
                 // in this window: the legacy daily-budget (EVCBUDGET) path.
-                Err(AcquisitionError::Funding(
-                    BudgetError::Exhausted | BudgetError::Invalid(_),
-                )) => Err(VcError::Exhausted {
-                    retry_at_ms: self.budget.policy().ends_at_ms as f64,
-                }),
-                Err(AcquisitionError::Provider(Disposition::Auth)) => Err(VcError::ProviderDown),
-                Err(_) => Err(VcError::Failed),
+                Err(BudgetError::Exhausted | BudgetError::Invalid(_)) => {
+                    return Err(VcError::Exhausted {
+                        retry_at_ms: self.budget.policy().ends_at_ms as f64,
+                    });
+                }
+                Err(_) => return Err(VcError::Failed),
+            };
+            for attempt in 1..=2 {
+                funds
+                    .consume(units, deadline)
+                    .map_err(|_| VcError::Failed)?;
+                let request = Request {
+                    endpoint: endpoint.clone(),
+                    key: ProviderKey::new(self.key.clone()).map_err(|_| VcError::Failed)?,
+                    provider: Provider::VisualCrossing,
+                };
+                let response = match timeout_at(deadline, self.transport.send(&request)).await {
+                    Err(_) => return Err(VcError::Failed),
+                    Ok(Err(ProviderTransportError::Response { status })) => {
+                        return Err(if matches!(status, 401 | 403) {
+                            VcError::ProviderDown
+                        } else {
+                            VcError::Failed
+                        });
+                    }
+                    Ok(Err(_)) => return Err(VcError::Failed),
+                    Ok(Ok(r)) => r,
+                };
+                match response.status {
+                    429 if concurrency_429(&response.body) => {
+                        let left = deadline.saturating_duration_since(Instant::now());
+                        if attempt == 1 && started.elapsed() < RETRY_WINDOW && left > RETRY_DELAY {
+                            sleep(RETRY_DELAY).await;
+                            continue;
+                        }
+                        return Err(VcError::Failed);
+                    }
+                    429 if limit_429(&response.body) => return Err(VcError::ProviderDown),
+                    401 | 403 => return Err(VcError::ProviderDown),
+                    200..=299 => return Ok(response.body),
+                    _ => return Err(VcError::Failed),
+                }
             }
+            Err(VcError::Failed)
         })
     }
 }

@@ -65,7 +65,9 @@ impl Default for WorldConfig {
             max_cells: 4096,
             load: Duration::from_secs(8),
             fetch: Duration::from_secs(8),
-            response: Duration::from_millis(2_500),
+            // Legacy answered within 2.5 s and relied on a gateway retry; the native S10 attempt
+            // is single, so the waiter uses the attempt deadline up to 3 s.
+            response: Duration::from_millis(3_000),
         }
     }
 }
@@ -93,6 +95,8 @@ struct CellEntry {
     cell: Cell,
     db: Mutex<Option<Db>>,
     op: tokio::sync::Mutex<()>,
+    /// Set while an owner is acquiring from the provider (the legacy fetch lock holder).
+    fetching: std::sync::atomic::AtomicBool,
     backoff_until: Mutex<f64>,
 }
 type CellMap = HashMap<(i64, i64), (u64, Arc<CellEntry>)>;
@@ -104,6 +108,8 @@ struct Inner {
     config: WorldConfig,
     cells: Mutex<(u64, CellMap)>,
     provider_down_until: Mutex<f64>,
+    /// Funding windows already observed exhausted per range (never refunded, so monotonic).
+    exhausted: Mutex<HashMap<Range, f64>>,
     metrics: Metrics,
 }
 /// Native world weather engine. Cheap to clone; owned tasks hold their own references.
@@ -166,6 +172,7 @@ impl World {
                 config,
                 cells: Mutex::new((0, HashMap::new())),
                 provider_down_until: Mutex::new(f64::NEG_INFINITY),
+                exhausted: Mutex::new(HashMap::new()),
                 metrics: Metrics::default(),
             }),
         }
@@ -194,8 +201,14 @@ impl World {
             *used = *tick;
             return e.clone();
         }
+        // Evict only idle cells: an entry referenced by an owned load/fetch keeps its lock
+        // identity, so a cell never has two concurrent single-flight owners.
         if map.len() >= self.inner.config.max_cells
-            && let Some(oldest) = map.iter().min_by_key(|(_, (u, _))| *u).map(|(k, _)| *k)
+            && let Some(oldest) = map
+                .iter()
+                .filter(|(_, (_, e))| Arc::strong_count(e) == 1)
+                .min_by_key(|(_, (u, _))| *u)
+                .map(|(k, _)| *k)
         {
             map.remove(&oldest);
         }
@@ -203,6 +216,7 @@ impl World {
             cell,
             db: Mutex::new(None),
             op: tokio::sync::Mutex::new(()),
+            fetching: std::sync::atomic::AtomicBool::new(false),
             backoff_until: Mutex::new(f64::NEG_INFINITY),
         });
         map.insert(key, (*tick, e.clone()));
@@ -275,11 +289,21 @@ impl World {
             .unwrap_or_else(|e| e.into_inner());
         (until > now).then_some(until)
     }
-    fn back_off(&self, entry: &CellEntry, now: f64, ms: f64) {
+    /// Backoff and provider-down windows start when the failure is handled (legacy `Date.now()`).
+    fn back_off(&self, entry: &CellEntry, ms: f64) {
         *entry
             .backoff_until
             .lock()
-            .unwrap_or_else(|e| e.into_inner()) = now + ms;
+            .unwrap_or_else(|e| e.into_inner()) = self.inner.clock.now_ms() + ms;
+    }
+    fn exhausted(&self, range: Range, now: f64) -> Option<f64> {
+        self.inner
+            .exhausted
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(&range)
+            .copied()
+            .filter(|until| *until > now)
     }
     /// One owned acquisition attempt for the cell (lock + re-read + fetch + publication).
     async fn flight(
@@ -287,32 +311,59 @@ impl World {
         entry: Arc<CellEntry>,
         now: f64,
         mut range: Range,
-        no_yesterday: bool,
+        mut forecast_only: bool,
         mut output: Found,
     ) -> Flight {
-        let _op = entry.op.lock().await;
+        // Another owner is fetching (legacy lock held elsewhere): this request waits for it.
+        let (_op, waiter) = match entry.op.try_lock() {
+            Ok(guard) => (guard, false),
+            Err(_) => {
+                let fetching = entry.fetching.load(Ordering::Acquire);
+                (entry.op.lock().await, fetching)
+            }
+        };
+        let mut no_yesterday = false;
         if let Some(db) = entry.db.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
-            output.merge(&db.classify(now));
+            let found = db.classify(now);
+            output.merge(&found);
+            no_yesterday = db.no_yesterday(now, &output);
         }
-        // A failed fetch keeps the cell's lock (legacy backoff): waiters fall back at once.
-        if now
+        // A failed fetch keeps the cell's lock (legacy backoff), so this is also a waiter.
+        let backoff = now
             < *entry
                 .backoff_until
                 .lock()
-                .unwrap_or_else(|e| e.into_inner())
-        {
-            return Flight::Failed(output, Failure::Error);
+                .unwrap_or_else(|e| e.into_inner());
+        if waiter || backoff {
+            // `_waitForRecords`: stored current and today complete the request; otherwise fall back.
+            return if output.current.is_some() && output.today.is_some() {
+                Flight::Complete(output)
+            } else {
+                Flight::Failed(output, Failure::Error)
+            };
         }
-        if output.has_all(no_yesterday) {
+        if output.has_all(no_yesterday || forecast_only) {
             return Flight::Complete(output);
         }
         let deadline = Instant::now() + self.inner.config.fetch;
-        let mut forecast_only = false;
+        struct Fetching<'a>(&'a std::sync::atomic::AtomicBool);
+        impl Drop for Fetching<'_> {
+            fn drop(&mut self) {
+                self.0.store(false, Ordering::Release);
+            }
+        }
+        entry.fetching.store(true, Ordering::Release);
+        let _fetching = Fetching(&entry.fetching);
         let body = loop {
             self.inner.metrics.fetches[range as usize].fetch_add(1, Ordering::Relaxed);
             match self.inner.source.fetch(entry.cell, range, deadline).await {
                 Ok(body) => break body,
                 Err(VcError::Exhausted { retry_at_ms }) => {
+                    self.inner
+                        .exhausted
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .insert(range, retry_at_ms);
                     if range != Range::Forecast && output.current.is_none() && !forecast_only {
                         forecast_only = true;
                         range = Range::Forecast;
@@ -332,8 +383,9 @@ impl World {
                         .inner
                         .provider_down_until
                         .lock()
-                        .unwrap_or_else(|e| e.into_inner()) = now + PROVIDER_DOWN_MS;
-                    self.back_off(&entry, now, FAILURE_BACKOFF_MS);
+                        .unwrap_or_else(|e| e.into_inner()) =
+                        self.inner.clock.now_ms() + PROVIDER_DOWN_MS;
+                    self.back_off(&entry, FAILURE_BACKOFF_MS);
                     return Flight::Failed(output, Failure::Error);
                 }
                 Err(VcError::Failed) => {
@@ -341,7 +393,7 @@ impl World {
                         .metrics
                         .provider_failures
                         .fetch_add(1, Ordering::Relaxed);
-                    self.back_off(&entry, now, FAILURE_BACKOFF_MS);
+                    self.back_off(&entry, FAILURE_BACKOFF_MS);
                     return Flight::Failed(output, Failure::Error);
                 }
                 Err(VcError::Disabled) => return Flight::Failed(output, Failure::Error),
@@ -353,7 +405,7 @@ impl World {
             convert(&v, now, range).ok().map(|c| (first, c))
         });
         let Some((first_date, converted)) = checked else {
-            self.back_off(&entry, now, BAD_RESPONSE_BACKOFF_MS);
+            self.back_off(&entry, BAD_RESPONSE_BACKOFF_MS);
             return Flight::Failed(output, Failure::Error);
         };
         let fetch = RawFetch {
@@ -375,7 +427,7 @@ impl World {
                 .metrics
                 .publication_failures
                 .fetch_add(1, Ordering::Relaxed);
-            self.back_off(&entry, now, FAILURE_BACKOFF_MS);
+            self.back_off(&entry, FAILURE_BACKOFF_MS);
             return Flight::Failed(output, Failure::Error);
         }
         self.inner
@@ -414,7 +466,7 @@ impl World {
         if found.has_all(no_yesterday) {
             return Ok(found);
         }
-        let range = if no_yesterday {
+        let mut range = if no_yesterday {
             Range::Forecast
         } else if found.two_days_ago.is_none() {
             Range::Combined
@@ -430,10 +482,25 @@ impl World {
         if let Some(until) = self.provider_down(now) {
             return fallback(found, Failure::Unavailable(until));
         }
+        // `_selectRange` before the lock: a window already observed exhausted needs no HTTP.
+        let mut forecast_only = no_yesterday;
+        if let Some(until) = self.exhausted(range, now) {
+            if range == Range::Forecast || found.current.is_some() {
+                return fallback(found, Failure::Unavailable(until));
+            }
+            if let Some(until) = self.exhausted(Range::Forecast, now) {
+                return fallback(found, Failure::Unavailable(until));
+            }
+            range = Range::Forecast;
+            forecast_only = true;
+            if found.has_all(true) {
+                return Ok(found);
+            }
+        }
         let task =
             tokio::spawn(
                 self.clone()
-                    .flight(entry, now, range, no_yesterday, found.clone()),
+                    .flight(entry, now, range, forecast_only, found.clone()),
             );
         let waiter = deadline.min(started + self.inner.config.response);
         match timeout_at(waiter, task).await {
@@ -442,11 +509,17 @@ impl World {
             _ => fallback(found, Failure::Error),
         }
     }
-    /// The air branch with the legacy 4 s release.
-    pub async fn air(&self, lat: f64, lon: f64, now: f64) -> AirOutcome {
+    /// The air branch with the legacy 4 s release, bounded by the request attempt so a slow air
+    /// provider releases the weather (`airStatus` pending) instead of failing it.
+    pub async fn air(&self, lat: f64, lon: f64, now: f64, deadline: Instant) -> AirOutcome {
         let source = self.inner.air.clone();
         let task = tokio::spawn(async move { source.current(lat, lon, now).await });
-        match timeout_at(Instant::now() + AIR_DEADLINE, task).await {
+        let release = (Instant::now() + AIR_DEADLINE).min(
+            deadline
+                .checked_sub(Duration::from_millis(100))
+                .unwrap_or(deadline),
+        );
+        match timeout_at(release, task).await {
             Ok(Ok(outcome)) => outcome,
             Ok(Err(_)) => AirOutcome::None,
             Err(_) => AirOutcome::Pending,

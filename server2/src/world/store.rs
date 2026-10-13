@@ -15,6 +15,7 @@ use tokio::{task::JoinSet, time::Instant};
 pub const SOURCE: &str = "vc";
 pub const KIND: &str = "timeline";
 const DAY_MS: i64 = 86_400_000;
+const LOAD_FANOUT: usize = 4;
 
 /// One complete raw provider acquisition.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -182,15 +183,19 @@ impl<T: CatalogTransport + 'static> WorldStore for CatalogWorldStore<T> {
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Vec<RawFetch>, StoreError>> {
         Box::pin(async move {
+            // Bounded fan-out: a few catalog reads at a time rather than all 21 at once.
+            let gate = Arc::new(tokio::sync::Semaphore::new(LOAD_FANOUT));
             let mut tasks = JoinSet::new();
             for (date, range) in partitions(now_ms) {
                 let id = catalog(cell, date, range).map_err(StoreError::Storage)?;
-                tasks.spawn(load_partition(
-                    self.catalogs.clone(),
-                    id,
-                    period(date, range),
-                    deadline,
-                ));
+                let (store, gate) = (self.catalogs.clone(), gate.clone());
+                tasks.spawn(async move {
+                    let _slot = gate
+                        .acquire_owned()
+                        .await
+                        .map_err(|_| StoreError::Incomplete)?;
+                    load_partition(store, id, period(date, range), deadline).await
+                });
             }
             let mut out = Vec::new();
             while let Some(joined) = tasks.join_next().await {

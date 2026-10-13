@@ -56,18 +56,21 @@ default and key fallback. The process clock zone is UTC, as in the S02 oracle.
 Order matches `_requestDatas`: complete set -> no-yesterday marker (derived
 from stored combined/recent fetches lacking yesterday or the day before,
 expiring at that fetch's today record + 24 h) -> range combined/recent/forecast
--> provider-down marker (10 min after a VC 401/403) -> S08 funding for the
-range (49/25/1 units, two attempts reserved); funding exhaustion retries with
-`forecast` only when the range was not already forecast and no current record
-exists, else falls back -> per-cell owned single flight and failure backoff
-(2 s; 15 min after a funded 200 body that is unusable) -> VC request at the cell
-centre (legacy URL path/query except key handling) -> validation (days,
-timezone, tzoffset or hours) and conversion -> S06 publication -> merge. A
-waiter answers within 2.5 s of request start or the attempt deadline; the owned
-fetch may continue to 8 s and publish for the next request. Failures use
+-> provider-down marker (10 min after a VC 401/403 or limit 429) -> an observed
+exhausted funding window (`_selectRange`) -> per-cell owner: a request behind an
+active fetch is a legacy waiter (stored current and today complete it, otherwise
+fall back), as is a request during the failure backoff (2 s; 15 min after a
+funded 200 body that is unusable) -> S08 funding of both attempts before HTTP
+(98/50/2 units); an unfundable range retries with `forecast` only when no current
+record exists -> VC request at the cell centre with the legacy requester policy
+(one retry of a concurrency 429 within 1.5 s; 401/403 and limit 429 mark the
+provider down; other statuses fail) -> validation (JSON, days, timezone, tzoffset
+or hours) and conversion -> S06 publication -> merge. Control windows start when
+the failure is handled. The waiter uses the gateway attempt deadline (at most 3 s);
+the owned fetch may continue to 8 s and publish for the next request. Failures use
 `_fallback`: serve current or stale (<= 6 h) records, else error; a provider-down
-or exhausted funding without a stored current returns Unavailable with the
-marker or window end as `retryAt`.
+or exhausted funding without a stored current returns Unavailable with the marker
+or window end as `retryAt`. Busy cells are not evicted from the bounded cell map.
 
 ## Assembly
 
@@ -97,8 +100,9 @@ persistence are not implemented: they require a recorded decision.
 | S3 read failure, cell cold in memory | Provider error (no unfunded/unproved fetch) |
 | S3 read failure, cell warm in memory | Serve from memory state |
 | VC success, publication failure or ambiguity | No new success; fallback to stored records or error; 2 s backoff |
-| VC 401/403 | Provider down 10 min; fallback or Unavailable |
-| VC 429/5xx/transport/deadline | 2 s backoff; fallback or error |
+| VC 401/403 or limit 429 | Provider down 10 min; fallback or Unavailable |
+| VC concurrency 429 | One retry after 300 ms within 1.5 s; then 2 s backoff |
+| VC other status/transport/deadline | 2 s backoff; fallback or error |
 | Unusable funded 200 body | 15 min backoff; fallback or error |
 | Funding exhausted | Forecast funding retry when permitted; else fallback or Unavailable(window end) |
 

@@ -393,3 +393,272 @@ async fn unreadable_s3_on_a_cold_cell_never_authorizes_a_provider_call() {
         WorldReply::Error
     ));
 }
+
+fn native(peer: &Peer, stub: &Stub, clock: Arc<FixedClock>) -> WorldBackend {
+    WorldBackend::new(World::new(
+        peer.store(),
+        funded(peer, stub, clock.clone(), 1000),
+        Arc::new(Unconfigured),
+        clock,
+        WorldConfig::default(),
+    ))
+}
+
+/// S11-R1-F02: a concurrency 429 is retried once inside the funded call; a limit 429 marks the
+/// provider down so another cell gets the legacy 503 retry time without HTTP.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn vc_429_classes_follow_the_legacy_requester() {
+    let peer = Peer::new();
+    let stub = stub().await;
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let (r, body) = request_body("london-recorded", 0, 0);
+    stub.queue.lock().unwrap().push_back((
+        429,
+        br#"{"message":"Maximum concurrency exceeded"}"#.to_vec(),
+    ));
+    stub.queue.lock().unwrap().push_back((200, body));
+    let backend = native(&peer, &stub, clock.clone());
+    matches(r, &backend.reply(&path(r), "ko", deadline()).await).unwrap();
+    assert_eq!(
+        stub.seen.lock().unwrap().len(),
+        2,
+        "one retry after a concurrency 429"
+    );
+    stub.queue
+        .lock()
+        .unwrap()
+        .push_back((429, br#"{"message":"Daily record limit reached"}"#.to_vec()));
+    let other = "/v000903/dsf/coord/34.7,135.5?temperatureUnit=C";
+    assert!(matches!(
+        backend.reply(other, "en", deadline()).await,
+        WorldReply::Error
+    ));
+    let third = "/v000903/dsf/coord/43.06,141.35?temperatureUnit=C";
+    match backend.reply(third, "en", deadline()).await {
+        WorldReply::Unavailable(at) => assert_eq!(at, ms("2026-09-26T07:14:30.000Z")),
+        other => panic!("{other:?}"),
+    }
+    assert_eq!(stub.seen.lock().unwrap().len(), 3);
+}
+
+/// S11-R1-F03: a billed 200 body that is not usable JSON backs off 15 minutes, not 2 seconds.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn unusable_billed_body_backs_off_fifteen_minutes() {
+    let peer = Peer::new();
+    let stub = stub().await;
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let (r, body) = request_body("london-recorded", 0, 0);
+    stub.queue
+        .lock()
+        .unwrap()
+        .push_back((200, b"<html>busy</html>".to_vec()));
+    let backend = native(&peer, &stub, clock.clone());
+    assert!(matches!(
+        backend.reply(&path(r), "ko", deadline()).await,
+        WorldReply::Error
+    ));
+    clock.set(ms("2026-09-26T07:14:30.000Z"));
+    assert!(matches!(
+        backend.reply(&path(r), "ko", deadline()).await,
+        WorldReply::Error
+    ));
+    assert_eq!(
+        stub.seen.lock().unwrap().len(),
+        1,
+        "no call inside the 15 min backoff"
+    );
+    clock.set(ms("2026-09-26T07:19:31.000Z"));
+    stub.queue.lock().unwrap().push_back((200, body));
+    assert!(matches!(
+        backend.reply(&path(r), "ko", deadline()).await,
+        WorldReply::Body(_)
+    ));
+    assert_eq!(stub.seen.lock().unwrap().len(), 2);
+}
+
+/// Provider that advances the request clock while it works, then fails.
+struct ClockAdvancing {
+    clock: Arc<FixedClock>,
+    by: f64,
+    calls: AtomicUsize,
+}
+impl VcSource for ClockAdvancing {
+    fn fetch(&self, _: Cell, _: Range, _: Instant) -> BoxFuture<'_, Result<Vec<u8>, VcError>> {
+        Box::pin(async move {
+            use server2::world::Clock;
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            self.clock.set(self.clock.now_ms() + self.by);
+            Err(VcError::Failed)
+        })
+    }
+}
+
+/// S11-R1-F07: backoff starts when the failure is handled, not at the request instant.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn backoff_window_starts_at_failure_time() {
+    let start = ms("2026-09-26T07:04:30.000Z");
+    let clock = Arc::new(FixedClock::new(start));
+    let source = Arc::new(ClockAdvancing {
+        clock: clock.clone(),
+        by: 5_000.,
+        calls: AtomicUsize::new(0),
+    });
+    let backend = WorldBackend::new(World::new(
+        memory(),
+        source.clone(),
+        Arc::new(Unconfigured),
+        clock.clone(),
+        WorldConfig::default(),
+    ));
+    let p = "/v000903/dsf/coord/35.68,139.76?temperatureUnit=C";
+    assert!(matches!(
+        backend.reply(p, "en", deadline()).await,
+        WorldReply::Error
+    ));
+    clock.set(start + 6_000.);
+    assert!(matches!(
+        backend.reply(p, "en", deadline()).await,
+        WorldReply::Error
+    ));
+    assert_eq!(
+        source.calls.load(Ordering::SeqCst),
+        1,
+        "still inside failure+2 s"
+    );
+    clock.set(start + 7_100.);
+    let _ = backend.reply(p, "en", deadline()).await;
+    assert_eq!(source.calls.load(Ordering::SeqCst), 2);
+}
+
+/// S11-R1-F05/F06: a busy cell is never evicted into a second owner, and concurrent requests for
+/// a cell whose reply lacks yesterday complete from one fetch (legacy waiters).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn busy_cells_keep_one_owner_and_waiters_use_stored_current() {
+    let (r, body) = request_body("no-yesterday", 0, 0);
+    let source = Arc::new(Slow {
+        body,
+        delay: Duration::from_millis(300),
+        calls: AtomicUsize::new(0),
+    });
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let config = WorldConfig {
+        max_cells: 1,
+        ..WorldConfig::default()
+    };
+    let backend = Arc::new(WorldBackend::new(World::new(
+        memory(),
+        source.clone(),
+        Arc::new(Unconfigured),
+        clock,
+        config,
+    )));
+    let mut tasks = Vec::new();
+    for i in 0..8u64 {
+        let b = backend.clone();
+        let p = path(r);
+        tasks.push(tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(20 * i)).await;
+            b.reply(&p, "en", deadline()).await
+        }));
+    }
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    // Another cell while the first is busy: the busy entry must not be evicted.
+    let other = backend
+        .reply(
+            "/v000903/dsf/coord/1.87,-157.36?temperatureUnit=C",
+            "en",
+            deadline(),
+        )
+        .await;
+    assert!(matches!(other, WorldReply::Body(_) | WorldReply::Error));
+    for t in tasks {
+        matches(r, &t.await.unwrap()).unwrap();
+    }
+    // One fetch for the no-yesterday cell plus one for the other cell.
+    assert_eq!(source.calls.load(Ordering::SeqCst), 2);
+}
+
+/// S11-R1-F08: once a funding window is observed exhausted, a backed-off cell still returns the
+/// legacy 503 budget retry time instead of the backoff error class.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn observed_exhaustion_precedes_cell_backoff() {
+    let peer = Peer::new();
+    let stub = stub().await;
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let backend = WorldBackend::new(World::new(
+        peer.store(),
+        funded(&peer, &stub, clock.clone(), 4),
+        Arc::new(Unconfigured),
+        clock.clone(),
+        WorldConfig::default(),
+    ));
+    let a = "/v000903/dsf/coord/35.68,139.76?temperatureUnit=C";
+    let b = "/v000903/dsf/coord/34.7,135.5?temperatureUnit=C";
+    stub.queue.lock().unwrap().push_back((500, Vec::new()));
+    stub.queue.lock().unwrap().push_back((500, Vec::new()));
+    // Combined is unfundable (limit 4); forecast is funded and fails: cell A backs off 2 s.
+    assert!(matches!(
+        backend.reply(a, "en", deadline()).await,
+        WorldReply::Error
+    ));
+    // Cell B uses the remaining forecast units.
+    assert!(matches!(
+        backend.reply(b, "en", deadline()).await,
+        WorldReply::Error
+    ));
+    clock.set(ms("2026-09-26T07:04:31.000Z"));
+    let c = "/v000903/dsf/coord/43.06,141.35?temperatureUnit=C";
+    match backend.reply(c, "en", deadline()).await {
+        WorldReply::Unavailable(at) => assert_eq!(at, ms("2026-09-27T00:00:00.000Z")),
+        other => panic!("{other:?}"),
+    }
+    match backend.reply(a, "en", deadline()).await {
+        WorldReply::Unavailable(at) => assert_eq!(at, ms("2026-09-27T00:00:00.000Z")),
+        other => panic!("cell in backoff: {other:?}"),
+    }
+    assert_eq!(stub.seen.lock().unwrap().len(), 2);
+}
+
+struct SlowAir;
+impl server2::world::AirSource for SlowAir {
+    fn current(&self, _: f64, _: f64, _: f64) -> BoxFuture<'_, server2::world::AirOutcome> {
+        Box::pin(async {
+            tokio::time::sleep(Duration::from_secs(10)).await;
+            server2::world::AirOutcome::None
+        })
+    }
+}
+
+/// S11-R1-F04: a slow air branch releases the weather as `airStatus` pending within the attempt.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn slow_air_releases_weather_within_the_attempt() {
+    let (r, body) = request_body("london-recorded", 0, 0);
+    let source = Arc::new(Slow {
+        body,
+        delay: Duration::ZERO,
+        calls: AtomicUsize::new(0),
+    });
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let backend = WorldBackend::new(World::new(
+        memory(),
+        source,
+        Arc::new(SlowAir),
+        clock,
+        WorldConfig::default(),
+    ));
+    let started = Instant::now();
+    let reply = backend
+        .reply(&path(r), "ko", Instant::now() + Duration::from_secs(3))
+        .await;
+    assert!(started.elapsed() < Duration::from_secs(3));
+    match reply {
+        WorldReply::Body(v) => {
+            let t = text(&v);
+            assert!(
+                t.contains(r#""airStatus":{"state":"pending","retryAfterSeconds":3}"#),
+                "{t}"
+            );
+        }
+        other => panic!("{other:?}"),
+    }
+}

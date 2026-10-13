@@ -17,7 +17,7 @@ async fn all_oracle_scenarios_replay_byte_for_byte() {
             .sum::<usize>();
         errors.extend(replay(sc, memory(), NoStep).await);
     }
-    assert!(requests >= 180, "{requests}");
+    assert!(requests >= 190, "{requests}");
     assert!(
         errors.is_empty(),
         "{} mismatches:\n{}",
@@ -54,6 +54,7 @@ fn oracle_covers_the_issue_edge_classes() {
         "stale-fallback",
         "budget",
         "air-waqi",
+        "invalid-input",
     ] {
         assert!(ids.contains(&required), "{required}");
     }

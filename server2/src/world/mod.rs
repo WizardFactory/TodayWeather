@@ -146,7 +146,7 @@ impl World {
         let now = self.now_ms();
         let (records, air) = tokio::join!(
             self.records(lat, lon, now, deadline),
-            self.air(lat, lon, now)
+            self.air(lat, lon, now, deadline)
         );
         let found = match records {
             Ok(found) => found,

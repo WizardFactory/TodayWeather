@@ -142,6 +142,10 @@ impl VcSource for BudgetedVc {
 }
 pub fn expect_calls(vc: &ScriptedVc, request: &serde_json::Value) {
     for c in request["calls"].as_array().unwrap() {
+        // The legacy requester rejects a non-finite coordinate before HTTP; native never calls.
+        if c["error"]["invalid_coordinate"].as_bool() == Some(true) {
+            continue;
+        }
         let call = Call {
             range: Range::parse(c["range"].as_str().unwrap()).unwrap(),
             lat: c["lat"].as_f64().unwrap(),

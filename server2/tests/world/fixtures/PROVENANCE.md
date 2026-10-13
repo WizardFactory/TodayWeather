@@ -1,6 +1,6 @@
 # S11 world oracle fixtures
 
-`oracle.json.gz` (sha256 `9c5486eea0790d508e9d387573da34daf4d1eef034556bd732247b33b181267c`)
+`oracle.json.gz` (sha256 `54825f967c5cd422fd9b625e8c863ab6c519657697f944198ba22524f92fe864`)
 holds pinned legacy-oracle recordings for the native world backend tests. It is test data
 only; the server2 runtime never reads it or any legacy file.
 
@@ -15,28 +15,30 @@ only; the server2 runtime never reads it or any legacy file.
 - Harness: the maintained legacy offline harness `test/offline/vc-weather-smoke.js` (and its
   `vc-synthetic.js` DST-aware body generator) loaded exactly as the S02 recorder does,
   with the real `/v000901`-`/v000903` DSF coordinate routers and i18n translation.
-- Driver: the script below (sha256
-  `351d79e960e7c4c4cbd5bc7cc5861339d663d98b8c264958b9c171b0b06093c8`), run as
+- Driver: the script below (sha256 `4c999ed74c2b436952c2a60cdf7d8a843965bd9ecffdc6cbb532bc9d8422a187`), run as
   `TZ=UTC NODE_ENV=production NODE_PATH=<deps>/node_modules node record-world.js <repo> <out.json.gz>`.
   It is retained here as documentation rather than as an executable repository tool,
   because a new server2-located script reading legacy source would be a new placement
-  exception; the S02 recorder remains the only legacy-oracle path.
+  exception; the S02 recorder remains the only legacy-oracle path. Recording twice gives
+  identical scenario content.
 - Cross-check: the Tokyo recordings equal the S02 `world-v000901/2/3` and
   `world-locale-*` golden bodies byte for byte, and the London recordings equal the S02
   gateway world bodies after the gateway's geographic merge (asserted in tests).
 
 ## Content
 
-36 scenarios, 180 route requests and 76 distinct provider bodies: recorded Tokyo, London and
-New York Visual Crossing fixtures; legacy synthetic DST sequences (London and New York
-fall-back, Auckland and Sydney spring-forward); +5:30, +5:45, +14, -11 and -2:30 zones;
-negative coordinates; 0.02-degree cell boundaries around zero and Tokyo; date line
-(+/-179.99 clamp) and both poles (+/-89.99 clamp, polar day/night); calm/clear, missing
-fields, precipitation types, missing current conditions; provider 500 with and without
-stored records (including the 2 s backoff), provider 401 (10 min provider-down 503),
-an unusable billed body (15 min backoff), a reply without yesterday (no-yesterday marker),
-the daily record budget path (forecast fallback, stale serving, 503), and WAQI air
-observations for every air unit (fresh, high, PM-only, stale, too far, no PM).
+37 scenarios, 190 route requests and 81 distinct provider/air bodies: recorded
+Tokyo, London and New York Visual Crossing fixtures; legacy synthetic DST sequences (London
+and New York fall-back, Auckland and Sydney spring-forward); +5:30, +5:45, +14, -11 and
+-2:30 zones; negative coordinates; 0.02-degree cell boundaries around zero and Tokyo; date
+line (+/-179.99 clamp) and both poles (+/-89.99 clamp, polar day/night); calm/clear,
+missing fields, precipitation types, missing current conditions; malformed route inputs
+(one or three parts, non-numeric, bad escape, empty, padded, exponent, hex, Infinity);
+provider 500 with and without stored records (including the 2 s backoff), provider 401
+(10 min provider-down 503), an unusable billed body (15 min backoff), a reply without
+yesterday (no-yesterday marker), the daily record budget path (forecast fallback, stale
+serving, 503), and WAQI air observations for every air unit (fresh, high, PM-only, stale,
+too far, no PM).
 
 Each request records its path, Accept-Language, status, content type, exact body and the
 provider calls with the served body (by sha256) or the injected error.
@@ -47,6 +49,8 @@ provider calls with the served body (by sha256) or the injected error.
   set to the requested cell centre, as Visual Crossing echoes the request; the legacy
   converter does not read them. The original recorded fixtures echoed the precise
   pre-#2585 coordinate.
+- The fixture requester emulates the real requester's rejection of a non-finite
+  coordinate before HTTP (recorded as `invalid_coordinate`, never a provider call).
 - The WAQI request token is redacted in recorded request URLs; WAQI bodies drop the
   fixture `_comment` field.
 
@@ -236,6 +240,12 @@ add('cell-boundary', 'Africa/Abidjan', synthetic('Africa/Abidjan'), [
     {at: '2026-09-26T07:05:30Z', requests: [R('v000903', '-0.0199999,-0.0199999', 'MS', 'ko'), R('v000903', '0.01,0.03', 'MS', 'ko')]}]);
 add('cell-boundary-tokyo', 'Asia/Tokyo', synthetic('Asia/Tokyo'), [{at: '2026-09-26T07:04:30Z', requests: [R('v000903', '35.6799995,139.76', 'SI', 'ko'), R('v000903', '35.68,139.7600004', 'SI', 'ko'),
     R('v000903', '35.679999,139.76', 'SI', 'ko'), R('v000903', '35.7,139.7799999', 'SI', 'ko')]}]);
+// Malformed route inputs (the gateway never forwards them; legacy route behavior is recorded).
+add('invalid-input', 'Asia/Tokyo', synthetic('Asia/Tokyo'), [{at: '2026-09-26T07:04:30Z', requests: [
+    R('v000903', 'abc', 'MS', 'en'), R('v000903', '1,2,3', 'MS', 'en'), R('v000903', 'abc,def', 'MS', 'en'),
+    R('v000903', '%E0%A4%A', 'MS', 'en'), R('v000903', ',', 'MS', 'en'), R('v000901', '35.68,', 'F', 'en'),
+    R('v000903', '%2035.68%20,%20139.76%20', 'SI', 'ko'), R('v000902', '1e1,2e1', 'MS', 'en'),
+    R('v000903', 'Infinity,0', 'MS', 'en'), R('v000903', '0x10,10', 'MS', 'en')]}]);
 // Errors and chain states.
 add('provider-500-cold', 'Asia/Tokyo', synthetic('Asia/Tokyo'), [{at: '2026-09-26T07:04:30Z', fail: 500, requests: [R('v000903', '35.0,135.0', 'MS', 'en')]},
     {at: '2026-09-26T07:04:31Z', requests: [R('v000903', '35.0,135.0', 'MS', 'en')]}, {at: '2026-09-26T07:04:33Z', requests: [R('v000903', '35.0,135.0', 'MS', 'en')]}]);
@@ -302,6 +312,11 @@ async function run() {
                 if (failing === 401) e.providerDown = true;
                 served.push({range: params.range, lat: params.lat, lon: params.lon, error: {status: failing, provider_down: failing === 401}});
                 return e;
+            }
+            // The real vcRequester rejects a non-finite coordinate before HTTP (no billed call).
+            if (!isFinite(Number(params.lat)) || !isFinite(Number(params.lon))) {
+                served.push({range: params.range, lat: String(params.lat), lon: String(params.lon), error: {status: 0, invalid_coordinate: true}});
+                return new W.__realmError('VC> invalid coordinate');
             }
             const body = echo(sc.provider(params, W.getNow()), params);
             const text = JSON.stringify(body);
