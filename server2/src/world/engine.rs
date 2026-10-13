@@ -255,49 +255,50 @@ impl World {
         let owned = self.clone();
         let task_entry = entry.clone();
         let task = tokio::spawn(async move {
-            // Declared before the entry so the entry is released first, then idle cells trim.
+            // The entry moves into the load and is released before idle cells trim.
             let _trim = Trim(owned.clone());
-            let task_entry = task_entry;
-            let _op = task_entry.op.lock().await;
-            if let Some(db) = task_entry
-                .db
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .clone()
-            {
-                return Ok(db);
-            }
-            owned
-                .inner
-                .metrics
-                .cold_loads
-                .fetch_add(1, Ordering::Relaxed);
-            let load_deadline = Instant::now() + owned.inner.config.load;
-            match owned
-                .inner
-                .store
-                .load(task_entry.cell, now, load_deadline)
-                .await
-            {
-                Ok(fetches) => {
-                    let mut db = replay(&fetches);
-                    db.prune(now);
-                    *task_entry.db.lock().unwrap_or_else(|e| e.into_inner()) = Some(db.clone());
-                    Ok(db)
-                }
-                Err(_) => {
-                    owned
-                        .inner
-                        .metrics
-                        .load_failures
-                        .fetch_add(1, Ordering::Relaxed);
-                    Err(Failure::Error)
-                }
-            }
+            owned.load_cell(task_entry, now).await
         });
         match timeout_at(deadline, task).await {
             Ok(Ok(result)) => result,
             _ => Err(Failure::Error),
+        }
+    }
+    /// The owned cold load of one cell (single flight under the cell lock).
+    async fn load_cell(self, task_entry: Arc<CellEntry>, now: f64) -> Result<Db, Failure> {
+        let _op = task_entry.op.lock().await;
+        if let Some(db) = task_entry
+            .db
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+        {
+            return Ok(db);
+        }
+        self.inner
+            .metrics
+            .cold_loads
+            .fetch_add(1, Ordering::Relaxed);
+        let load_deadline = Instant::now() + self.inner.config.load;
+        match self
+            .inner
+            .store
+            .load(task_entry.cell, now, load_deadline)
+            .await
+        {
+            Ok(fetches) => {
+                let mut db = replay(&fetches);
+                db.prune(now);
+                *task_entry.db.lock().unwrap_or_else(|e| e.into_inner()) = Some(db.clone());
+                Ok(db)
+            }
+            Err(_) => {
+                self.inner
+                    .metrics
+                    .load_failures
+                    .fetch_add(1, Ordering::Relaxed);
+                Err(Failure::Error)
+            }
         }
     }
     fn provider_down(&self, now: f64) -> Option<f64> {
@@ -333,9 +334,6 @@ impl World {
         mut forecast_only: bool,
         mut output: Found,
     ) -> Flight {
-        // A detached owned fetch trims idle cells when it finishes, after releasing its cell.
-        let _trim = Trim(self.clone());
-        let entry = entry;
         // Another owner is fetching (legacy lock held elsewhere): this request waits for it.
         let (_op, waiter) = match entry.op.try_lock() {
             Ok(guard) => (guard, false),
@@ -533,11 +531,13 @@ impl World {
                 return Ok(found);
             }
         }
-        let task =
-            tokio::spawn(
-                self.clone()
-                    .flight(entry, now, range, forecast_only, found.clone()),
-            );
+        let world = self.clone();
+        let output = found.clone();
+        let task = tokio::spawn(async move {
+            // A detached owned fetch releases its cell, then trims idle cells when it finishes.
+            let _trim = Trim(world.clone());
+            world.flight(entry, now, range, forecast_only, output).await
+        });
         let waiter = deadline.min(started + self.inner.config.response);
         match timeout_at(waiter, task).await {
             Ok(Ok(Flight::Complete(out))) => Ok(out),
