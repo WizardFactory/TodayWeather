@@ -97,15 +97,19 @@ fn is_tz_iso(s: &str) -> bool {
     {
         return false;
     }
+    // `.*` matches no line terminator.
+    if s.contains(['\n', '\r', '\u{2028}', '\u{2029}']) {
+        return false;
+    }
     if s.ends_with('Z') {
         return true;
     }
     let n = b.len();
     n >= 17
         && (b[n - 6] == b'+' || b[n - 6] == b'-')
-        && digits(&s[n - 5..n - 3], 2)
+        && dig(n - 5..n - 3)
         && b[n - 3] == b':'
-        && digits(&s[n - 2..], 2)
+        && dig(n - 2..n)
 }
 /// `midPolicy.date(value)` (a number is an instant).
 pub fn date(v: &V) -> Option<String> {
@@ -668,9 +672,16 @@ mod tests {
             "한글날짜T00:00Z",
             "2026-09-24T한",
             "가나다라마바사아",
+            "2026-09-24T00:00:00+aé00",
+            "2026-09-24T00:00:00+0é:0",
+            "2026-09-24T00:00:00\nZ",
         ] {
             assert!(timestamp(&V::s(s)).is_nan(), "{s}");
             assert!(!is_tz_iso(s), "{s}");
+        }
+        // Matching the pattern but rejected by V8 (S15-R10).
+        for s in ["2026-09-24T08:00:00+99:99", "2026-09-24T24:00:00.001Z"] {
+            assert!(is_tz_iso(s) && timestamp(&V::s(s)).is_nan(), "{s}");
         }
         assert!(timestamp(&V::s("2026-09-24T08:00:00Z")).is_finite());
     }

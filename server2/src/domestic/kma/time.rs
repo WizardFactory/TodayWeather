@@ -107,109 +107,118 @@ pub fn new_date(v: &V) -> f64 {
         other => parse_date(&to_str(other)),
     }
 }
-/// V8 `Date.parse` for the forms the chain produces: ISO dates (UTC), ISO date-times with or
-/// without an offset (no offset is local), and the legacy `YYYY.MM.DD[ HH:MM]` and
-/// `YYYY-MM-DD HH:MM` forms (local). Local is UTC in the oracle process.
+/// V8 `Date.parse` (process zone UTC, so local equals UTC) for the forms whose result this port
+/// reproduces exactly:
+/// - `YYYY-MM-DD` (month 1-12, day 1-31; day overflow rolls over as in V8);
+/// - `YYYY-MM-DD{T|t| }HH:MM[:SS[.fraction]][Z|z|+-HH:MM|+-HHMM]` (hour 24 only at exactly
+///   midnight, offsets up to 23:59; with `T` an out-of-range field is `NaN` as in V8);
+/// - the legacy dotted `YYYY.MM.DD[ HH:MM]` forms with in-range fields;
+/// - strings without an ASCII digit and digit-only strings of 7 or more digits (`NaN`).
+///
+/// Any other string with digits may be accepted by V8's permissive legacy parser; the request is
+/// forwarded to legacy rather than guessing.
 pub fn parse_date(s: &str) -> f64 {
     let b = s.as_bytes();
     let num = |r: std::ops::Range<usize>| -> Option<f64> {
-        let t = s.get(r)?;
-        (!t.is_empty() && t.bytes().all(|c| c.is_ascii_digit()))
-            .then(|| t.parse::<f64>().ok())
+        let t = b.get(r)?;
+        (!t.is_empty() && t.iter().all(u8::is_ascii_digit))
+            .then(|| std::str::from_utf8(t).ok()?.parse::<f64>().ok())
             .flatten()
     };
-    let ymd = |sep: u8| -> Option<(f64, f64, f64)> {
-        if b.len() < 10 || b[4] != sep || b[7] != sep {
-            return None;
-        }
-        Some((num(0..4)?, num(5..7)?, num(8..10)?))
-    };
-    let valid = |y: f64, m: f64, d: f64, h: f64, mi: f64, sec: f64| {
-        (1. ..=12.).contains(&m)
-            && d >= 1.
-            && d <= wjs::days_in_month(y as i64, m as i64) as f64
-            && h <= 24.
-            && mi <= 59.
-            && sec <= 59.
-            && (h < 24. || (mi == 0. && sec == 0.))
-    };
-    // Legacy dotted form.
-    if let Some((y, m, d)) = ymd(b'.') {
-        let (h, mi) = if b.len() == 10 {
-            (0., 0.)
-        } else if b.len() == 16 && b[10] == b' ' && b[13] == b':' {
-            match (num(11..13), num(14..16)) {
-                (Some(h), Some(mi)) => (h, mi),
-                _ => return f64::NAN,
-            }
-        } else {
-            return wjs::parse_dot(s);
+    // Legacy dotted form (exact shapes, in range; anything else is decided below).
+    if b.len() >= 10 && b[4] == b'.' && b[7] == b'.' {
+        let dotted = || -> Option<f64> {
+            let (y, m, d) = (num(0..4)?, num(5..7)?, num(8..10)?);
+            let (h, mi) = match b.len() {
+                10 => (0., 0.),
+                16 if b[10] == b' ' && b[13] == b':' => (num(11..13)?, num(14..16)?),
+                _ => return None,
+            };
+            ((1. ..=12.).contains(&m)
+                && (1. ..=31.).contains(&d)
+                && mi <= 59.
+                && (h < 24. || (h == 24. && mi == 0.)))
+                .then(|| make_date(y, m - 1., d, h, mi, 0.))
         };
-        if !(1. ..=12.).contains(&m) || !(1. ..=31.).contains(&d) || h > 24. || mi > 59. {
-            return f64::NAN;
-        }
-        return make_date(y, m - 1., d, h, mi, 0.);
-    }
-    if let Some((y, m, d)) = ymd(b'-') {
-        if b.len() == 10 {
-            return if valid(y, m, d, 0., 0., 0.) {
-                make_date(y, m - 1., d, 0., 0., 0.)
-            } else {
-                f64::NAN
-            };
-        }
-        if b.len() >= 16 && (b[10] == b'T' || b[10] == b' ') && b[13] == b':' {
-            let (Some(h), Some(mi)) = (num(11..13), num(14..16)) else {
-                return f64::NAN;
-            };
-            let mut i = 16;
-            let mut sec = 0.;
-            let mut milli = 0.;
-            if b.len() > i && b[i] == b':' {
-                let Some(x) = num(i + 1..i + 3) else {
-                    return f64::NAN;
-                };
-                sec = x;
-                i += 3;
-                if b.len() > i && b[i] == b'.' {
-                    let mut j = i + 1;
-                    while j < b.len() && b[j].is_ascii_digit() {
-                        j += 1;
-                    }
-                    let frac = &s[i + 1..j];
-                    let digits: String = frac.chars().take(3).collect();
-                    milli = format!("{digits:0<3}").parse::<f64>().unwrap_or(0.);
-                    i = j;
-                }
-            }
-            if !valid(y, m, d, h, mi, sec) {
-                return f64::NAN;
-            }
-            let base = make_date(y, m - 1., d, h, mi, sec) + milli;
-            let rest = &s[i..];
-            if rest.is_empty() {
-                return base;
-            }
-            if rest == "Z" && b[10] == b'T' {
-                return base;
-            }
-            let rb = rest.as_bytes();
-            if rb.len() == 6 && (rb[0] == b'+' || rb[0] == b'-') && rb[3] == b':' {
-                let (Ok(oh), Ok(om)) = (rest[1..3].parse::<f64>(), rest[4..6].parse::<f64>())
-                else {
-                    return f64::NAN;
-                };
-                let off = (oh * 60. + om) * 60_000.;
-                return if rb[0] == b'+' {
-                    base - off
-                } else {
-                    base + off
-                };
-            }
-            return f64::NAN;
+        if let Some(ms) = dotted() {
+            return ms;
         }
     }
-    f64::NAN
+    if let Some(ms) = iso_date_time(b, &num) {
+        return ms;
+    }
+    let digits = b.iter().filter(|c| c.is_ascii_digit()).count();
+    if digits == 0 || (digits == b.len() && digits >= 7) {
+        return f64::NAN;
+    }
+    super::js::forward(format!(
+        "date string form not reproduced (V8 legacy Date.parse): {s:?}"
+    ))
+}
+/// The ISO family of [`parse_date`]; None when `b` is not of that exact shape.
+fn iso_date_time(b: &[u8], num: &dyn Fn(std::ops::Range<usize>) -> Option<f64>) -> Option<f64> {
+    if b.len() < 10 || b[4] != b'-' || b[7] != b'-' {
+        return None;
+    }
+    let (y, m, d) = (num(0..4)?, num(5..7)?, num(8..10)?);
+    let date_ok = (1. ..=12.).contains(&m) && (1. ..=31.).contains(&d);
+    if b.len() == 10 {
+        return Some(if date_ok {
+            make_date(y, m - 1., d, 0., 0., 0.)
+        } else {
+            f64::NAN
+        });
+    }
+    let strict = matches!(b[10], b'T' | b't');
+    if !(strict || b[10] == b' ') || b.len() < 16 || b[13] != b':' {
+        return None;
+    }
+    let (h, mi) = (num(11..13)?, num(14..16)?);
+    let (mut i, mut sec, mut milli) = (16, 0., 0.);
+    if b.get(i) == Some(&b':') {
+        sec = num(i + 1..i + 3)?;
+        i += 3;
+        if b.get(i) == Some(&b'.') {
+            let mut j = i + 1;
+            while j < b.len() && b[j].is_ascii_digit() {
+                j += 1;
+            }
+            if j == i + 1 {
+                return None;
+            }
+            let mut frac = b[i + 1..j.min(i + 4)].to_vec();
+            frac.resize(3, b'0');
+            milli = std::str::from_utf8(&frac).ok()?.parse::<f64>().ok()?;
+            i = j;
+        }
+    }
+    let rest = &b[i..];
+    let (sign, oh, om) = match rest {
+        [] | [b'Z' | b'z'] => (0., 0., 0.),
+        [s @ (b'+' | b'-'), _, _, b':', _, _] => (
+            if *s == b'+' { 1. } else { -1. },
+            num(i + 1..i + 3)?,
+            num(i + 4..i + 6)?,
+        ),
+        [s @ (b'+' | b'-'), _, _, _, _] => (
+            if *s == b'+' { 1. } else { -1. },
+            num(i + 1..i + 3)?,
+            num(i + 3..i + 5)?,
+        ),
+        _ => return None,
+    };
+    let in_range = date_ok
+        && h <= 24.
+        && mi <= 59.
+        && sec <= 59.
+        && (h < 24. || (mi == 0. && sec == 0. && milli == 0.))
+        && oh <= 23.
+        && om <= 59.;
+    if !in_range {
+        // V8's ISO parser rejects it; with a space the legacy parser decides (not reproduced).
+        return strict.then_some(f64::NAN);
+    }
+    Some(make_date(y, m - 1., d, h, mi, sec) + milli - sign * (oh * 60. + om) * 60_000.)
 }
 /// `kmaTimeLib.convertDateToYYYYMMDD(date)`.
 pub fn yyyymmdd(v: &V) -> String {
@@ -385,5 +394,201 @@ mod tests {
             2.
         );
         assert_eq!(weekday(&V::s("2026.09.24 00:00")), 4.);
+    }
+    /// Pinned Node 16.20.2 `Date.parse` (TZ=UTC) results; a forwarded string is one whose
+    /// result the port does not reproduce (legacy answers it).
+    #[test]
+    fn date_parse_matches_v8_or_forwards() {
+        let table: &[(&str, f64)] = &[
+            ("2026-09-24", 1790208000000.0),
+            ("2026-09-24T08:00", 1790236800000.0),
+            ("2026-09-24T08:00Z", 1790236800000.0),
+            ("2026-09-24T08:00:00", 1790236800000.0),
+            ("2026-09-24T08:00:00Z", 1790236800000.0),
+            ("2026-09-24T08:00:00.5Z", 1790236800500.0),
+            ("2026-09-24T08:00:00.123456Z", 1790236800123.0),
+            ("2026-09-24T08:00:00.Z", f64::NAN),
+            ("2026-09-24T24:00:00Z", 1790294400000.0),
+            ("2026-09-24T24:00:00.000Z", 1790294400000.0),
+            ("2026-09-24T24:00:00.001Z", f64::NAN),
+            ("2026-09-24T24:01Z", f64::NAN),
+            ("2026-09-24T23:60Z", f64::NAN),
+            ("2026-09-24T23:59:60Z", f64::NAN),
+            ("2026-09-24T08:00:00+09:00", 1790204400000.0),
+            ("2026-09-24T08:00:00+23:59", 1790150460000.0),
+            ("2026-09-24T08:00:00+24:00", f64::NAN),
+            ("2026-09-24T08:00:00+99:99", f64::NAN),
+            ("2026-09-24T08:00:00+09:60", f64::NAN),
+            ("2026-09-24T08:00:00+0900", 1790204400000.0),
+            ("2026-09-24T08:00:00+09", f64::NAN),
+            ("2026-09-24T08:00:00 +09:00", f64::NAN),
+            ("2026-09-24T08:00+09:00", 1790204400000.0),
+            ("2026-09-24 08:00", 1790236800000.0),
+            ("2026-09-24 08:00:00", 1790236800000.0),
+            ("2026-09-24 08:00Z", 1790236800000.0),
+            ("2026-09-24 08:00:00+09:00", 1790204400000.0),
+            ("2026-09-24 08:00:00Z", 1790236800000.0),
+            ("2026-02-29", 1772323200000.0),
+            ("2026-02-30T00:00Z", 1772409600000.0),
+            ("2026-13-01", f64::NAN),
+            ("2026-00-10", f64::NAN),
+            ("2026-09-31", 1790812800000.0),
+            ("2026-9-24", 1790208000000.0),
+            ("2026-09-24T8:00", f64::NAN),
+            ("2026-09", 1788220800000.0),
+            ("2026", 1767225600000.0),
+            ("+002026-09-24T00:00:00Z", 1790208000000.0),
+            ("2026-09-24T08:00:00+aé00", f64::NAN),
+            ("2026-09-24T08:00:00z", 1790236800000.0),
+            ("2026-09-24t08:00:00Z", 1790236800000.0),
+            ("2026.09.24", 1790208000000.0),
+            ("2026.09.24 08:00", 1790236800000.0),
+            ("202609240800", f64::NAN),
+            ("20260924", f64::NAN),
+            ("2026/09/24", 1790208000000.0),
+            ("2026/09/24 08:00", 1790236800000.0),
+            ("Sep 24 2026", 1790208000000.0),
+            ("한글날짜", f64::NAN),
+            ("", f64::NAN),
+            ("   2026-09-24", 1790208000000.0),
+            ("2026-09-24T08:00:00.000+09:00", 1790204400000.0),
+            ("2026-09-24T08:00:00-03:30", 1790249400000.0),
+            ("2026-09-24T08:00:00.1234+09:00", 1790204400123.0),
+            ("2026-09-24T08", f64::NAN),
+            ("2026-09-24T08:00:0", f64::NAN),
+            ("2026-09-24T08:00:00.", f64::NAN),
+            ("2026-09-24T08:00:00.000ZZ", f64::NAN),
+            ("2026-09-24T08:00:00.000+09:00Z", f64::NAN),
+            ("1970-01-01T00:00:00Z", 0.0),
+            ("0000-01-01T00:00:00Z", -62167219200000.0),
+            ("9999-12-31T23:59:59.999Z", 253402300799999.0),
+            ("2026-09-24T08:00:00.000Z ", f64::NAN),
+            ("2026-09-24 24:00", 1790294400000.0),
+            ("2026-09-24 24:00:00.001", f64::NAN),
+            ("2026-09-24T08:00:00+1:00", f64::NAN),
+            ("2026-09-24T08:00:00+.5:00", f64::NAN),
+            ("2026-09-24T08:00:00+-1:00", f64::NAN),
+            ("2026-09-24T08:00:00+0a:00", f64::NAN),
+            ("2026-09-24T08:00:00.1e3Z", f64::NAN),
+            ("2026-09-24T08:00:00,5Z", f64::NAN),
+            ("2026-09-24T08:00:00.000-00:00", 1790236800000.0),
+            ("2026-09-24T00:00:00+00:00", 1790208000000.0),
+            ("2026-02-29T00:00:00Z", 1772323200000.0),
+            ("2028-02-29T00:00:00Z", 1835395200000.0),
+            ("2026-09-24T25:00Z", f64::NAN),
+            ("2026-09-24T08:5Z", f64::NAN),
+            ("2026-09-24T08:00:00.9999Z", 1790236800999.0),
+            ("1", 978307200000.0),
+            ("12", 1007164800000.0),
+            ("123", -58285699200000.0),
+            ("20260", 577176624000000.0),
+            ("202609", 6331555296000000.0),
+            ("2026092", f64::NAN),
+            ("2026092408", f64::NAN),
+            ("20260924080000", f64::NAN),
+            ("2026-09-24 08:00:00+0900", 1790204400000.0),
+            ("2026-09-24 08:00+09:00", 1790204400000.0),
+            ("2026-09-24T08:00+0900", 1790204400000.0),
+            ("2026-09-31T00:00:00Z", 1790812800000.0),
+            ("2026-02-30T00:00:00.000Z", 1772409600000.0),
+            ("2026-09-24T24:00:00+09:00", 1790262000000.0),
+            ("2026-09-24t08:00z", 1790236800000.0),
+            ("2026-09-24 08:00z", 1790236800000.0),
+            ("2026-09-24T08:00:00.5", 1790236800500.0),
+            ("2026-09-24 08:00:00.5", 1790236800500.0),
+            ("2026-09-24 08:00:00.5Z", 1790236800500.0),
+            ("2026-09-32", f64::NAN),
+            ("2026-09-00", f64::NAN),
+            ("2026-09-24 ", 1790208000000.0),
+            ("2026-09-24T08:00 ", f64::NAN),
+            (" 2026-09-24T08:00:00Z", f64::NAN),
+            ("2026-09-24T08:00:00+09:00 ", f64::NAN),
+            ("2026-09T08:00Z", 1788249600000.0),
+            ("2026T08:00Z", 1767254400000.0),
+            ("-002026-09-24T00:00:00Z", -126078595200000.0),
+            ("+2026-09-24", 1790208000000.0),
+            ("02026-09-24", 1790208000000.0),
+            ("2026-09-24T08:00:00-24:00", f64::NAN),
+            ("2026-09-24T08:00:00-23:59", 1790323140000.0),
+            ("Sep", f64::NAN),
+            ("Tue Sep", f64::NAN),
+            ("today", f64::NAN),
+            ("now", f64::NAN),
+            ("Z", f64::NAN),
+            ("T", f64::NAN),
+            ("-", f64::NAN),
+            (".", f64::NAN),
+            ("NaN", f64::NAN),
+            ("Infinity", f64::NAN),
+            ("2026-09-24T08:00:00.000000000000Z", 1790236800000.0),
+            ("2026-09-24T08:00:60Z", f64::NAN),
+            ("2026-09-24T08:60:00Z", f64::NAN),
+            ("2026-09-24T-1:00Z", f64::NAN),
+            ("2026-09-24T08:00:00+09:00:00", f64::NAN),
+            ("2026-09-24 08", f64::NAN),
+            ("2026-09-24 8:00", 1790236800000.0),
+            ("2026-09-24 08:00:00 +09:00", 1790204400000.0),
+            ("2026-09-24T08:00:00 Z", f64::NAN),
+            ("2026-09-24TZ", f64::NAN),
+            ("2026-09-24T", f64::NAN),
+            ("2026-09-24 T08:00", f64::NAN),
+            ("2026-13-01T00:00Z", f64::NAN),
+            ("2026-09-32T00:00Z", f64::NAN),
+            ("2026-09-00T00:00Z", f64::NAN),
+            ("2026-00-01 00:00", f64::NAN),
+            ("2026-09-32 08:00", f64::NAN),
+            ("202609240", f64::NAN),
+            ("20260924080", f64::NAN),
+            ("2026092408000", f64::NAN),
+            ("2026.9.24", 1790208000000.0),
+            ("2026.09.24 24:00", 1790294400000.0),
+            ("2026.13.01", f64::NAN),
+            ("2026.09.24 08:00:00", 1790236800000.0),
+            ("2026.09.24 8:00", 1790236800000.0),
+            ("2026.09.31", 1790812800000.0),
+            ("2026-09-24T08:00:00+09:00\n", f64::NAN),
+            ("2026-09-24T08:00\n00Z", f64::NAN),
+            ("2026-09-24T08:00:00 Z", f64::NAN),
+            ("2026-09-24T08:00:00.000+23:59", 1790150460000.0),
+            ("2026-09-24T08:00:00.000-23:59", 1790323140000.0),
+            ("2026-09-24 08:00:00-0330", 1790249400000.0),
+            ("2026-09-24T24:00Z", 1790294400000.0),
+            ("2026-09-24 24:00:00.000Z", 1790294400000.0),
+            ("2026-09-24 08:00:00+24:00", 1790150400000.0),
+            ("2026-09-24 08:00:00+09:60", f64::NAN),
+            ("2026-09-24T08:00:00+2400", f64::NAN),
+            ("2026-09-24T08:00:00+0960", f64::NAN),
+            ("2026-09-24T08:00:00.000z", 1790236800000.0),
+            ("2026-09-24t24:00z", 1790294400000.0),
+        ];
+        let mut forwarded = Vec::new();
+        for (s, expected) in table {
+            match std::panic::catch_unwind(|| parse_date(s)) {
+                Ok(v) => assert!(
+                    v == *expected || (v.is_nan() && expected.is_nan()),
+                    "{s:?}: native {v}, V8 {expected}"
+                ),
+                Err(p) => {
+                    assert!(
+                        p.downcast_ref::<super::super::js::Forward>().is_some(),
+                        "{s:?}"
+                    );
+                    forwarded.push(*s);
+                }
+            }
+        }
+        // The shapes the chain and the S15-R9/R10 reviews use are reproduced, not forwarded.
+        for s in [
+            "2026-09-24T08:00:00+99:99",
+            "2026-09-24T24:00:00.001Z",
+            "2026-09-24T08:00:00+09:00",
+            "2026-09-24 08:00",
+            "2026-09-24",
+            "2026.09.24 08:00",
+            "202609240800",
+            "한글날짜",
+        ] {
+            assert!(!forwarded.contains(&s), "{s:?} forwarded");
+        }
     }
 }

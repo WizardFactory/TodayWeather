@@ -1618,11 +1618,13 @@ and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by def
   store answers.
 
 Parity uses a pinned Node 16.20.2 oracle recording ([provenance](../../server2/tests/domestic/fixtures/PROVENANCE.md)):
-61 requests through the real router and harness, with every store answer recorded in order. They
+66 requests through the real router and harness, with every store answer and its arguments recorded in order. They
 include the 15 S02 direct-route v000903 goldens (bodies and Express ETags), the 5 gateway domestic
 v000903 backend inputs, and supplementary DB 1.0, RSS, station, rain-category, air-list, KAQ
-forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error and clock-boundary cases.
-All 61 recordings match byte for byte, with the dependency calls in legacy order. The 5 gateway goldens match on
+forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error, clock-boundary and invalid
+DB 1.0 RSS publication cases. All 66 recordings match byte for byte, with the dependency calls in legacy order.
+`Date.parse` is reproduced for the ISO, dotted and digit-only forms (checked against the pinned V8);
+any other date string forwards to legacy. The 5 gateway goldens match on
 the wire with the native switch (status, body and headers except `date`/`connection`). The legacy
 default, forward and rollback paths are tested. The recorded store is a test double: it checks each
 call's method, order and complete arguments and that every recorded call was used, forwarding on

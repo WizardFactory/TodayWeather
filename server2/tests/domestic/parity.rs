@@ -62,7 +62,7 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
 }
 
 /// The pinned recording, in order (unique ids); change deliberately with the recording.
-const SCENARIOS: [&str; 61] = [
+const SCENARIOS: [&str; 66] = [
     "domestic-v000903",
     "domestic-locale-en",
     "domestic-locale-ko",
@@ -124,6 +124,11 @@ const SCENARIOS: [&str; 61] = [
     "clock-kst-1110",
     "clock-kst-0605",
     "clock-kst-1535",
+    "rss-pub-invalid-offset",
+    "rss-pub-hour24-fraction",
+    "rss-pub-non-ascii-offset",
+    "rss-pub-non-ascii",
+    "rss-pub-iso-offset",
 ];
 
 #[test]
