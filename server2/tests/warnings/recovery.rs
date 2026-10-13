@@ -2,14 +2,23 @@
 use super::common::*;
 use server2::{
     gateway::OrderedJson,
-    storage::{CatalogLimits, HttpS3Transport},
+    storage::{
+        CatalogLimits, CatalogTransport, ControlObject, Error as StorageError, HttpS3Transport,
+        Object, ObjectTransport, PreparedRecord, WriteCondition,
+    },
     warnings::{
         ServiceConfig, StoreConfig, Town, WarningService, WarningStore,
         provider::Operation,
         records::{self, Member},
     },
 };
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering::SeqCst},
+    },
+    time::Duration,
+};
 use tokio::time::Instant;
 
 fn member(op: Operation, body: &[u8], fetched: &str) -> Member {
@@ -612,4 +621,97 @@ async fn zone_refresh_timeout_serves_valid_memory() {
     }
     let again = service.special_info(&jongno()).await.unwrap();
     assert_eq!(again.len(), 1);
+}
+
+/// Counts concurrent S3 operations reaching the peer (S12 integration fix regression).
+struct Counting {
+    inner: HttpS3Transport,
+    now: AtomicUsize,
+    peak: Arc<AtomicUsize>,
+}
+impl Counting {
+    async fn run<F: std::future::Future>(&self, f: F) -> F::Output {
+        let n = self.now.fetch_add(1, SeqCst) + 1;
+        self.peak.fetch_max(n, SeqCst);
+        let out = f.await;
+        self.now.fetch_sub(1, SeqCst);
+        out
+    }
+}
+impl ObjectTransport for Counting {
+    async fn put(&self, r: &PreparedRecord) -> Result<u16, StorageError> {
+        self.run(self.inner.put(r)).await
+    }
+    async fn head(&self, k: &str) -> Result<Object, StorageError> {
+        self.run(self.inner.head(k)).await
+    }
+    async fn get(&self, k: &str, m: usize) -> Result<Object, StorageError> {
+        self.run(self.inner.get(k, m)).await
+    }
+}
+impl CatalogTransport for Counting {
+    async fn get_control(&self, k: &str, m: usize) -> Result<ControlObject, StorageError> {
+        self.run(self.inner.get_control(k, m)).await
+    }
+    async fn put_control(
+        &self,
+        k: &str,
+        b: &[u8],
+        c: &WriteCondition,
+    ) -> Result<u16, StorageError> {
+        self.run(self.inner.put_control(k, b, c)).await
+    }
+    async fn list_raw_document(
+        &self,
+        p: &str,
+        t: Option<&str>,
+        k: usize,
+        b: usize,
+    ) -> Result<Vec<u8>, StorageError> {
+        self.run(self.inner.list_raw_document(p, t, k, b)).await
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_walks_stay_within_the_store_read_bound() {
+    // A full zone replay and four bulletin walks at once never exceed `reads` S3 operations;
+    // the loopback peer (like any S3 endpoint) refuses connections beyond its admission.
+    let peer = Peer::new();
+    publish_recorded(&peer.store()).await;
+    let peak = Arc::new(AtomicUsize::new(0));
+    let transport = Counting {
+        inner: peer.transport(),
+        now: AtomicUsize::new(0),
+        peak: peak.clone(),
+    };
+    let limits = CatalogLimits {
+        deadline: Duration::from_secs(9),
+        ..CatalogLimits::default()
+    };
+    let config = StoreConfig::default();
+    let reads = config.reads;
+    let store = Arc::new(WarningStore::new(transport, limits, config).unwrap());
+    let now = ms("2026-10-04T00:10:00.000Z");
+    let zones = {
+        let store = store.clone();
+        tokio::spawn(async move { store.zone_state(now, deadline()).await })
+    };
+    let mut walks = Vec::new();
+    for kind in 1..=4u8 {
+        let store = store.clone();
+        walks.push(tokio::spawn(async move {
+            store.latest(kind, now, None, deadline()).await
+        }));
+    }
+    zones.await.unwrap().unwrap();
+    let mut found = 0;
+    for w in walks {
+        found += usize::from(w.await.unwrap().unwrap().is_some());
+    }
+    assert_eq!(found, 3, "types 1-3 found; the weather flash has expired");
+    let peak = peak.load(SeqCst);
+    assert!(
+        peak <= reads,
+        "peak {peak} concurrent S3 operations exceeds bound {reads}"
+    );
+    assert!(peak > 1, "walks still run concurrently");
 }

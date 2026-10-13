@@ -18,7 +18,11 @@ use std::{
         atomic::{AtomicU64, Ordering},
     },
 };
-use tokio::{task::JoinSet, time::Instant};
+use tokio::{
+    sync::{OwnedSemaphorePermit, Semaphore},
+    task::JoinSet,
+    time::Instant,
+};
 
 /// Days the collector may still (re)publish: `planDays` covers today - 59 .. today.
 pub const ZONE_LOOKBACK_DAYS: i64 = 59;
@@ -31,8 +35,11 @@ const PAGE_RESTARTS: usize = 3;
 
 #[derive(Clone, Debug)]
 pub struct StoreConfig {
-    /// Concurrent day lookups per wave; the first wave is also the recent repair window.
+    /// Days per walk wave; the first wave is also the recent repair window.
     pub wave: usize,
+    /// Store-wide bound on concurrent S3 read operations (day reads and discovery LISTs),
+    /// shared by every walk, zone refresh and collector check of this store.
+    pub reads: usize,
     /// Complete acquisitions materialized per paged read when a day exceeds one read.
     pub page_acquisitions: usize,
     /// LIST pages allowed per discovery year (1000 keys each).
@@ -42,6 +49,7 @@ impl Default for StoreConfig {
     fn default() -> Self {
         Self {
             wave: 8,
+            reads: 4,
             page_acquisitions: 8,
             list_pages: 256,
         }
@@ -50,6 +58,7 @@ impl Default for StoreConfig {
 impl StoreConfig {
     pub fn validate(&self) -> Result<(), Error> {
         if !(1..=16).contains(&self.wave)
+            || !(1..=16).contains(&self.reads)
             || !(1..=64).contains(&self.page_acquisitions)
             || !(1..=4096).contains(&self.list_pages)
         {
@@ -123,11 +132,18 @@ impl<T: CatalogTransport> CatalogTransport for Shared<T> {
             .await
     }
 }
+async fn acquire(reads: &Arc<Semaphore>, deadline: Instant) -> Result<OwnedSemaphorePermit, Error> {
+    tokio::time::timeout_at(deadline, reads.clone().acquire_owned())
+        .await
+        .map_err(|_| Error::Timeout)?
+        .map_err(|_| Error::Transport)
+}
 type Map<R> = Arc<dyn Fn(&[RawRecord]) -> Result<R, Error> + Send + Sync>;
 struct Reader<T> {
     catalogs: Arc<CatalogStore<Shared<T>>>,
     counters: Arc<Counters>,
     page: usize,
+    reads: Arc<Semaphore>,
 }
 impl<T> Clone for Reader<T> {
     fn clone(&self) -> Self {
@@ -135,6 +151,7 @@ impl<T> Clone for Reader<T> {
             catalogs: self.catalogs.clone(),
             counters: self.counters.clone(),
             page: self.page,
+            reads: self.reads.clone(),
         }
     }
 }
@@ -218,6 +235,9 @@ impl<T: CatalogTransport> Reader<T> {
         map: &Map<R>,
         deadline: Instant,
     ) -> Result<Day<R>, Error> {
+        // Each day read holds one store-wide slot for its whole lookup/repair sequence, so
+        // concurrent walks never exceed `reads` S3 operations (S3 admission is finite).
+        let _slot = acquire(&self.reads, deadline).await?;
         self.counters.day_lookups.fetch_add(1, Ordering::Relaxed);
         let id = records::catalog(kind, date)?;
         if let Some(items) = self.read(&id, map, deadline).await? {
@@ -301,6 +321,7 @@ impl<T: CatalogTransport> WarningStore<T> {
                 )?),
                 counters: counters.clone(),
                 page: config.page_acquisitions,
+                reads: Arc::new(Semaphore::new(config.reads)),
             },
             transport,
             limits,
@@ -381,6 +402,7 @@ impl<T: CatalogTransport> WarningStore<T> {
         let mut token: Option<String> = None;
         let mut tokens = BTreeSet::new();
         for _ in 0..self.config.list_pages {
+            let _slot = acquire(&self.reader.reads, deadline).await?;
             let list = tokio::time::timeout_at(
                 deadline,
                 self.transport.list_raw_document(
