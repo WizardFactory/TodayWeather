@@ -193,7 +193,7 @@ async fn metrics(State(s): State<Arc<SharedState>>) -> Response {
         s.config.cpu_limit,
         s.memory_bytes(),
         s.config.cache_bytes
-    );
+    ) + &gateway::metrics::render();
     (
         [
             ("content-type", "text/plain; version=0.0.4; charset=utf-8"),

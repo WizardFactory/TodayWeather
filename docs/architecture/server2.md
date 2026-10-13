@@ -185,6 +185,21 @@ cutover approval. Whole-gateway gates remain: 501 rate <= legacy, p95 <= legacy
 + 10%, >= 99.9% within 9s, and cache-aware rollback. This design executes none
 of those cutover checks and asserts no production response parity.
 
+S19 ([#2704](https://github.com/WizardFactory/TodayWeather/issues/2704)) provides
+the local tooling that these gates consume, one family module at a time; the
+gateway/geocode family is first. `server2/deploy/smoke.sh` runs the actual release
+binary against recorded providers, a frozen legacy origin and the local S3 peer. It
+asserts aggregate gateway/geocoder counters on the loopback metrics listener.
+Offline paired replay classifies every difference as declared or unexplained
+and records revision, workload and cold/warm percentiles. The rollback rehearsal
+switches `/weather` and `/geocode` together while checking the cache and deadline
+contracts. These are local fixture results, not seven-day shadow, production
+latency or quota evidence. Live shadow configuration and traffic mirroring
+need separate operational authority. The rehearsal pins open gap S19-GAP-1: the
+default 9-second foundation connection lifetime closes the socket before the
+gateway's 9-second deadline `501` is written. See the
+[smoke/shadow guide](../operations/server2-smoke-shadow.md).
+
 ## 3. Rust runtime and memory lookup
 
 One API process per host uses Tokio's multithreaded runtime for HTTP/S3/provider

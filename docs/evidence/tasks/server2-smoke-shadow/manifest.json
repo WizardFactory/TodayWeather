@@ -1,0 +1,97 @@
+{
+  "binary_sha256": "a40a18f7ba1fda9ffc97ca08b69cafeb6949a456b1f5bec1b487c7e114aa3d07",
+  "capture_kind": "terminal result rendered from an actual isolated release-binary smoke.sh execution",
+  "captured_at_utc": "2026-10-13T06:41:57+00:00",
+  "command": "bash server2/deploy/smoke.sh --binary <release server2>",
+  "environment": "macOS, release binary, loopback recorded providers, frozen legacy origin, S03 local S3 peer",
+  "execution_log_sha256": "337249b9955a54efe7f03792cbe8de0e4e6813750f45a5fec42c2cdc9e66ad92",
+  "limitations": "Loopback fixtures only; no live provider/AWS/production latency/quota/shadow or cutover proof",
+  "new_file_link_policy": "Repository-relative references rendered as text when absent from the pinned commit; Markdown keeps local clickable links",
+  "observed": {
+    "peer_totals": {
+      "backend": 52,
+      "google": 2,
+      "kakao": 600,
+      "s3": 0
+    },
+    "replay": {
+      "percentiles_ms": {
+        "baseline": {
+          "cold_miss": {
+            "max": 1.26,
+            "n": 11,
+            "p50": 0.91,
+            "p95": 1.26,
+            "p99": 1.26
+          },
+          "cold_pass": {
+            "max": 1.26,
+            "n": 15,
+            "p50": 0.8,
+            "p95": 1.26,
+            "p99": 1.26
+          },
+          "warm_pass": {
+            "max": 1.0,
+            "n": 15,
+            "p50": 0.27,
+            "p95": 1.0,
+            "p99": 1.0
+          }
+        },
+        "candidate": {
+          "cold_miss": {
+            "max": 2.21,
+            "n": 4,
+            "p50": 0.75,
+            "p95": 2.21,
+            "p99": 2.21
+          },
+          "cold_pass": {
+            "max": 2.31,
+            "n": 15,
+            "p50": 1.41,
+            "p95": 2.31,
+            "p99": 2.31
+          },
+          "warm_pass": {
+            "max": 1.39,
+            "n": 15,
+            "p50": 0.3,
+            "p95": 1.39,
+            "p99": 1.39
+          }
+        }
+      },
+      "revision": {
+        "commit": "40d6aed0f36fbf76ccc9e60208d7423ced64a857",
+        "dirty": true
+      },
+      "self_check": {
+        "detected": true,
+        "perturbation": "baseline legacy ko coordinate name changed",
+        "unexplained": 30
+      },
+      "unexplained": 0,
+      "workload_sha256": "4de37182e4c289126e0a8bdd764b53d4a13f3fdc483ac854d65ba0e238aa978b"
+    },
+    "rollback_known_gaps": [
+      "S19-GAP-1"
+    ],
+    "scenarios": [
+      "GW-COLD-WARM",
+      "GW-EMPTY-RESTORE",
+      "GW-SINGLE-FLIGHT",
+      "GW-CANCEL",
+      "GW-OUTAGE",
+      "GW-BUDGET",
+      "GW-PRESSURE",
+      "GW-DRAIN"
+    ]
+  },
+  "pdf_link_revision": "40d6aed0f36fbf76ccc9e60208d7423ced64a857",
+  "pdf_sha256": "4535e751cadf953d94440e8bbcc0f20a79fc23f4c49704897ad28c2c6c55bb3f",
+  "schema": 1,
+  "screenshot_sha256": "822417c0868b92fc8c5f7e9dba74cca9aaada4d55e2c7e5b1d3508ae8793467a",
+  "source_sha256": "7a85799346bc10c3163bd46a1f04d1dd9615de08b90b14fb09896920547af816"
+}
