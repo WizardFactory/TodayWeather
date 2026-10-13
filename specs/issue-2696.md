@@ -56,13 +56,14 @@ default and key fallback. The process clock zone is UTC, as in the S02 oracle.
 Order matches `_requestDatas`: complete set -> no-yesterday marker (derived
 from stored combined/recent fetches lacking yesterday or the day before,
 expiring at that fetch's today record + 24 h) -> range combined/recent/forecast
--> provider-down marker (10 min after a VC 401/403 or limit 429) -> an observed
-exhausted funding window (`_selectRange`) -> per-cell owner: a request behind an
+-> provider-down marker (10 min after a VC 401/403 or limit 429) -> per-cell
+owner: a request behind an
 active fetch is a legacy waiter (stored current and today complete it), as is a
 request during the failure backoff (2 s; 15 min after a funded 200 body that is
 unusable); a waiter that would otherwise fail first checks funding eligibility
 without HTTP (pooled funds, or a new reservation pooled for later fetches of any
-range; concurrent checks share the outcome) and answers 503 with the window end
+range; concurrent checks share the outcome; awaited until the response deadline;
+no exhaustion is cached outside the ledger) and answers 503 with the window end
 when exhausted -> S08 funding of both attempts before HTTP (98/50/2 units, one
 window per UTC day, serialized per window; unconsumed units are pooled and used
 before a new reservation); an unfundable range retries with `forecast` only when no

@@ -4,7 +4,7 @@ use super::{
     air::{AirOutcome, AirSource},
     js::Val,
     records::{Db, Found},
-    source::{VcError, VcSource},
+    source::{Eligibility, VcError, VcSource},
     store::{RawFetch, WorldStore},
     vc::convert,
 };
@@ -108,8 +108,6 @@ struct Inner {
     config: WorldConfig,
     cells: Mutex<(u64, CellMap)>,
     provider_down_until: Mutex<f64>,
-    /// Funding windows already observed exhausted per range (never refunded, so monotonic).
-    exhausted: Mutex<HashMap<Range, f64>>,
     metrics: Metrics,
 }
 /// Native world weather engine. Cheap to clone; owned tasks hold their own references.
@@ -172,7 +170,6 @@ impl World {
                 config,
                 cells: Mutex::new((0, HashMap::new())),
                 provider_down_until: Mutex::new(f64::NEG_INFINITY),
-                exhausted: Mutex::new(HashMap::new()),
                 metrics: Metrics::default(),
             }),
         }
@@ -218,25 +215,21 @@ impl World {
         trim(&mut guard.1, self.inner.config.max_cells);
     }
     /// The funding-window part of `_selectRange` for a request that would otherwise fail
-    /// behind the cell lock: an exhausted window answers 503 with the window end.
-    async fn unfundable(&self, range: Range, output: &Found) -> Option<f64> {
-        let until = self.probe(range).await?;
+    /// behind a busy or backed-off cell: an exhausted window answers 503 with the window end.
+    /// The source ledger is authoritative (returned units can fund a window again), so no
+    /// exhaustion is cached here.
+    async fn unfundable(&self, range: Range, output: &Found, until: Instant) -> Option<f64> {
+        let first = match self.inner.source.eligible(range, until).await {
+            Eligibility::Exhausted { retry_at_ms } => retry_at_ms,
+            Eligibility::Funded | Eligibility::Unknown => return None,
+        };
         if range == Range::Forecast || output.current.is_some() {
-            return Some(until);
+            return Some(first);
         }
-        self.probe(Range::Forecast).await
-    }
-    async fn probe(&self, range: Range) -> Option<f64> {
-        if let Some(until) = self.exhausted(range, self.inner.clock.now_ms()) {
-            return Some(until);
+        match self.inner.source.eligible(Range::Forecast, until).await {
+            Eligibility::Exhausted { retry_at_ms } => Some(retry_at_ms),
+            Eligibility::Funded | Eligibility::Unknown => None,
         }
-        let until = self.inner.source.eligible(range).await?;
-        self.inner
-            .exhausted
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(range, until);
-        Some(until)
     }
     async fn loaded(
         &self,
@@ -316,15 +309,6 @@ impl World {
             .lock()
             .unwrap_or_else(|e| e.into_inner()) = self.inner.clock.now_ms() + ms;
     }
-    fn exhausted(&self, range: Range, now: f64) -> Option<f64> {
-        self.inner
-            .exhausted
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(&range)
-            .copied()
-            .filter(|until| *until > now)
-    }
     /// One owned acquisition attempt for the cell (lock + re-read + fetch + publication).
     async fn flight(
         self,
@@ -333,12 +317,22 @@ impl World {
         mut range: Range,
         mut forecast_only: bool,
         mut output: Found,
+        respond_by: Instant,
     ) -> Flight {
+        let complete = |o: &Found| o.current.is_some() && o.today.is_some();
         // Another owner is fetching (legacy lock held elsewhere): this request waits for it.
+        // Legacy `_selectRange` runs before the lock, so a waiter that cannot complete from
+        // stored records first learns whether the window is exhausted.
         let (_op, waiter) = match entry.op.try_lock() {
             Ok(guard) => (guard, false),
             Err(_) => {
                 let fetching = entry.fetching.load(Ordering::Acquire);
+                if fetching
+                    && !complete(&output)
+                    && let Some(until) = self.unfundable(range, &output, respond_by).await
+                {
+                    return Flight::Failed(output, Failure::Unavailable(until));
+                }
                 (entry.op.lock().await, fetching)
             }
         };
@@ -356,11 +350,11 @@ impl World {
                 .unwrap_or_else(|e| e.into_inner());
         if waiter || backoff {
             // `_waitForRecords`: stored current and today complete the request; otherwise fall back.
-            if output.current.is_some() && output.today.is_some() {
+            if complete(&output) {
                 return Flight::Complete(output);
             }
             // Legacy checks the funding window before the lock, so exhaustion outranks backoff.
-            return match self.unfundable(range, &output).await {
+            return match self.unfundable(range, &output, respond_by).await {
                 Some(until) => Flight::Failed(output, Failure::Unavailable(until)),
                 None => Flight::Failed(output, Failure::Error),
             };
@@ -382,11 +376,6 @@ impl World {
             match self.inner.source.fetch(entry.cell, range, deadline).await {
                 Ok(body) => break body,
                 Err(VcError::Exhausted { retry_at_ms }) => {
-                    self.inner
-                        .exhausted
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .insert(range, retry_at_ms);
                     if range != Range::Forecast && output.current.is_none() && !forecast_only {
                         forecast_only = true;
                         range = Range::Forecast;
@@ -500,7 +489,7 @@ impl World {
         if found.has_all(no_yesterday) {
             return Ok(found);
         }
-        let mut range = if no_yesterday {
+        let range = if no_yesterday {
             Range::Forecast
         } else if found.two_days_ago.is_none() {
             Range::Combined
@@ -516,29 +505,24 @@ impl World {
         if let Some(until) = self.provider_down(now) {
             return fallback(found, Failure::Unavailable(until));
         }
-        // `_selectRange` before the lock: a window already observed exhausted needs no HTTP.
-        let mut forecast_only = no_yesterday;
-        if let Some(until) = self.exhausted(range, now) {
-            if range == Range::Forecast || found.current.is_some() {
-                return fallback(found, Failure::Unavailable(until));
-            }
-            if let Some(until) = self.exhausted(Range::Forecast, now) {
-                return fallback(found, Failure::Unavailable(until));
-            }
-            range = Range::Forecast;
-            forecast_only = true;
-            if found.has_all(true) {
-                return Ok(found);
-            }
-        }
+        // Funding (the budget part of `_selectRange`) is decided by the source ledger: the owner
+        // falls back to `forecast` on an unfundable range, and a request behind a busy or
+        // backed-off cell checks eligibility before failing.
+        let forecast_only = no_yesterday;
+        let waiter = deadline.min(started + self.inner.config.response);
+        // Leave time to turn a funding outcome into the response before the attempt ends.
+        let respond_by = waiter
+            .checked_sub(Duration::from_millis(50))
+            .unwrap_or(waiter);
         let world = self.clone();
         let output = found.clone();
         let task = tokio::spawn(async move {
             // A detached owned fetch releases its cell, then trims idle cells when it finishes.
             let _trim = Trim(world.clone());
-            world.flight(entry, now, range, forecast_only, output).await
+            world
+                .flight(entry, now, range, forecast_only, output, respond_by)
+                .await
         });
-        let waiter = deadline.min(started + self.inner.config.response);
         match timeout_at(waiter, task).await {
             Ok(Ok(Flight::Complete(out))) => Ok(out),
             Ok(Ok(Flight::Failed(out, failure))) => fallback(out, failure),

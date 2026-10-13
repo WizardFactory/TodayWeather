@@ -1327,7 +1327,9 @@ and a denied amount marks larger needs exhausted for that window. As legacy
 `_selectRange` checks the budget before the lock, a request that would fail behind a
 busy or backed-off cell first establishes funding eligibility without HTTP: pooled
 funds or a new pooled reservation prove eligibility, a denial answers 503 with the
-window end, and concurrent checks share that outcome. Busy cells are never evicted
+window end, and concurrent checks share that outcome. The check is awaited until the
+response deadline without cancelling the owned S08 step, and exhaustion is decided only
+by the ledger (returned units make a window fundable again the same day). Busy cells are never evicted
 from the bounded cell map, so one owner fetches per cell; idle cells are trimmed back
 to capacity when a request or a detached owned load/fetch finishes. VC requests, S3 keys, catalogs, metadata and
 bodies carry only the cell centre; the response still echoes the requested `location`.

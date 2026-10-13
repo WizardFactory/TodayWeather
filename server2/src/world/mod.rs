@@ -16,7 +16,7 @@ pub mod vc;
 
 pub use air::{AirOutcome, AirSource, RecordedWaqi, Unconfigured};
 pub use engine::{Clock, Failure, FixedClock, SystemClock, World, WorldConfig};
-pub use source::{Disabled, FundedVc, VcError, VcFunding, VcSource};
+pub use source::{Disabled, Eligibility, FundedVc, VcError, VcFunding, VcSource};
 pub use store::{CatalogWorldStore, MemoryWorldStore, RawFetch, StoreError, WorldStore};
 pub use transport::{HttpVcTransport, VcResponse, VcTransport, VcTransportError};
 

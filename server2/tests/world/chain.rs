@@ -7,9 +7,9 @@ use server2::{
     gateway::{BackendHandler, BoxFuture, GatewayError},
     storage::{Error as StorageError, WriteCondition},
     world::{
-        Cell, Disabled, FixedClock, FundedVc, HttpVcTransport, MemoryWorldStore, Range, RawFetch,
-        StoreError, Unconfigured, VcError, VcFunding, VcSource, World, WorldBackend, WorldConfig,
-        WorldReply, WorldStore,
+        Cell, Disabled, Eligibility, FixedClock, FundedVc, HttpVcTransport, MemoryWorldStore,
+        Range, RawFetch, StoreError, Unconfigured, VcError, VcFunding, VcSource, World,
+        WorldBackend, WorldConfig, WorldReply, WorldStore,
     },
 };
 use std::{
@@ -28,16 +28,19 @@ struct Stub {
     endpoint: String,
     seen: Arc<Mutex<Vec<String>>>,
     queue: Queue,
+    /// Response delay in milliseconds (default 30).
+    delay: Arc<std::sync::atomic::AtomicU64>,
 }
 async fn stub() -> Stub {
     let seen = Arc::new(Mutex::new(Vec::new()));
     let queue: Queue = Arc::new(Mutex::new(VecDeque::new()));
-    let (s, q) = (seen.clone(), queue.clone());
+    let delay = Arc::new(std::sync::atomic::AtomicU64::new(30));
+    let (s, q, d) = (seen.clone(), queue.clone(), delay.clone());
     let app = Router::new().fallback(move |req: Request| {
-        let (s, q) = (s.clone(), q.clone());
+        let (s, q, d) = (s.clone(), q.clone(), d.clone());
         async move {
             s.lock().unwrap().push(req.uri().to_string());
-            tokio::time::sleep(Duration::from_millis(30)).await;
+            tokio::time::sleep(Duration::from_millis(d.load(Ordering::SeqCst))).await;
             let (status, body) = q.lock().unwrap().pop_front().unwrap_or((599, Vec::new()));
             (
                 StatusCode::from_u16(status).unwrap(),
@@ -54,6 +57,7 @@ async fn stub() -> Stub {
         endpoint: format!("http://{addr}/timeline/"),
         seen,
         queue,
+        delay,
     }
 }
 pub(crate) struct ScenarioClock(pub(crate) Arc<FixedClock>);
@@ -978,7 +982,12 @@ async fn pooled_funds_serve_any_range_and_roll_over() {
         Err(VcError::Failed)
     );
     // Eligibility for combined reserves the window's other 98 units.
-    assert_eq!(source.eligible(Range::Combined).await, None);
+    assert_eq!(
+        source
+            .eligible(Range::Combined, Instant::now() + Duration::from_secs(3))
+            .await,
+        Eligibility::Funded
+    );
     stub.queue.lock().unwrap().push_back((200, b"{}".to_vec()));
     assert!(source.fetch(cell, Range::Forecast, soon()).await.is_ok());
     stub.queue.lock().unwrap().push_back((200, b"{}".to_vec()));
@@ -1034,4 +1043,97 @@ async fn detached_burst_is_trimmed_after_owned_work_finishes() {
     tokio::time::sleep(Duration::from_millis(900)).await;
     assert!(world.cached_cells() <= 1, "{}", world.cached_cells());
     assert_eq!(source.calls.load(Ordering::SeqCst), 3);
+}
+
+/// S11-R4-F01: a funding outcome slower than 1.5 s is still awaited within the attempt, and a
+/// queued caller gets the same 503.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn slow_funding_outcome_is_awaited_within_the_attempt() {
+    let peer = Peer::new();
+    let stub = stub().await;
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let source = funded_with(
+        Delayed(peer.transport(), Duration::from_millis(2000)),
+        &stub.endpoint,
+        clock.clone(),
+        4,
+        4,
+    );
+    let backend = Arc::new(WorldBackend::new(World::new(
+        peer.store(),
+        source,
+        Arc::new(Unconfigured),
+        clock.clone(),
+        WorldConfig::default(),
+    )));
+    let a = "/v000903/dsf/coord/35.68,139.76?temperatureUnit=C";
+    let b = "/v000903/dsf/coord/34.7,135.5?temperatureUnit=C";
+    stub.queue.lock().unwrap().push_back((500, Vec::new()));
+    stub.queue.lock().unwrap().push_back((500, Vec::new()));
+    let _ = backend.reply(a, "en", deadline()).await;
+    let _ = backend.reply(b, "en", deadline()).await;
+    // Both owned fetches have run (each reached HTTP once) and backed off.
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert_eq!(stub.seen.lock().unwrap().len(), 2);
+    clock.set(ms("2026-09-26T07:04:31.000Z"));
+    let attempt = || Instant::now() + Duration::from_secs(3);
+    let tasks: Vec<_> = [a, b]
+        .into_iter()
+        .map(|p| {
+            let backend = backend.clone();
+            let until = attempt();
+            tokio::spawn(async move { backend.fetch(p.to_owned(), "en".to_owned(), until).await })
+        })
+        .collect();
+    for t in tasks {
+        match t.await.unwrap() {
+            Err(GatewayError::Unavailable(_)) => {}
+            other => panic!("{:?}", other.map(|_| ())),
+        }
+    }
+    assert_eq!(stub.seen.lock().unwrap().len(), 2);
+}
+
+/// S11-R4-F02: a denial observed while another cell holds the window's funds does not outlive
+/// the units that cell returns; the next request is funded from the pool the same day.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn returned_units_fund_a_cell_after_an_observed_denial() {
+    let peer = Peer::new();
+    let stub = stub().await;
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let (r, body) = request_body("london-recorded", 0, 0);
+    let backend = Arc::new(WorldBackend::new(World::new(
+        peer.store(),
+        funded(&peer, &stub, clock.clone(), 98),
+        Arc::new(Unconfigured),
+        clock.clone(),
+        WorldConfig::default(),
+    )));
+    stub.delay.store(600, Ordering::SeqCst);
+    stub.queue.lock().unwrap().push_back((200, body.clone()));
+    let a = {
+        let backend = backend.clone();
+        let p = path(r);
+        tokio::spawn(async move { backend.reply(&p, "ko", deadline()).await })
+    };
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    // A holds the whole window (98 units) during HTTP: B is denied combined and forecast.
+    let b = "/v000903/dsf/coord/48.85,2.35?temperatureUnit=C";
+    match backend.reply(b, "en", deadline()).await {
+        WorldReply::Unavailable(at) => assert_eq!(at, ms("2026-09-27T00:00:00.000Z")),
+        other => panic!("{other:?}"),
+    }
+    assert!(matches!(a.await.unwrap(), WorldReply::Body(_)));
+    // A consumed one 49-unit attempt and returned 49 units to the pool.
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    stub.delay.store(30, Ordering::SeqCst);
+    stub.queue.lock().unwrap().push_back((200, body));
+    assert!(
+        matches!(
+            backend.reply(b, "en", deadline()).await,
+            WorldReply::Body(_)
+        ),
+        "returned units fund B's forecast without waiting for the next day"
+    );
+    assert_eq!(stub.seen.lock().unwrap().len(), 2);
 }

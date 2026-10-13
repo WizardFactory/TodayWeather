@@ -65,11 +65,22 @@ pub trait VcSource: Send + Sync + 'static {
         range: Range,
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Vec<u8>, VcError>>;
-    /// Funding eligibility for `range` without provider HTTP: `Some(retry_at_ms)` when the
-    /// funding window is exhausted (legacy `_checkProvider` budget check), else `None`.
-    fn eligible(&self, _range: Range) -> BoxFuture<'_, Option<f64>> {
-        Box::pin(async { None })
+    /// Funding eligibility for `range` without provider HTTP (the legacy `_checkProvider`
+    /// budget check), awaited until `until`; sources without funding are always funded.
+    fn eligible(&self, _range: Range, _until: Instant) -> BoxFuture<'_, Eligibility> {
+        Box::pin(async { Eligibility::Funded })
     }
+}
+/// Outcome of a funding eligibility check.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Eligibility {
+    /// Pooled or newly reserved funds cover both attempts.
+    Funded,
+    /// The window cannot fund the range; `retry_at_ms` is the window end.
+    Exhausted { retry_at_ms: f64 },
+    /// Not established before the caller's deadline (or S08 failed); never treated as funded
+    /// evidence, the caller keeps its own failure class.
+    Unknown,
 }
 /// No provider access: S3/memory only.
 pub struct Disabled;
@@ -97,8 +108,6 @@ pub fn timeline_url(base: &str, cell: Cell, range: Range) -> String {
 /// within 1.5 s of the call start or for a reset socket, when more than 300 ms remain.
 const RETRY_DELAY: Duration = Duration::from_millis(300);
 const RETRY_WINDOW: Duration = Duration::from_millis(1500);
-/// Bound on how long an eligibility check may hold a waiter (the funding task continues).
-const PROBE_WAIT: Duration = Duration::from_millis(1500);
 /// Pooled reservations kept per window; smaller leftovers beyond this are dropped.
 const POOL_MAX: usize = 8;
 const DAY_MS: i64 = 86_400_000;
@@ -392,13 +401,17 @@ impl<P: VcTransport, T: BudgetTransport + 'static> VcSource for FundedVc<P, T> {
     }
     /// `_checkProvider` budget part without HTTP: pooled funds or a new reservation (pooled for
     /// the next fetch of any range) prove eligibility; a denial proves exhaustion. Concurrent
-    /// callers queue on the window lock and see the earlier outcome.
-    fn eligible(&self, range: Range) -> BoxFuture<'_, Option<f64>> {
+    /// callers queue on the window lock and see the earlier outcome; the pool is consulted
+    /// before any denial, so returned units make a window fundable again.
+    fn eligible(&self, range: Range, until: Instant) -> BoxFuture<'_, Eligibility> {
         Box::pin(async move {
+            // The owned task is never cancelled by the caller's deadline; a later caller queues
+            // on the window lock and sees its outcome.
             let task = self.spawn_acquire(units(range) * 2, Want::Probe);
-            match timeout_at(Instant::now() + PROBE_WAIT, task).await {
-                Ok(Ok(Got::Exhausted(end))) => Some(end),
-                _ => None,
+            match timeout_at(until, task).await {
+                Ok(Ok(Got::Exhausted(end))) => Eligibility::Exhausted { retry_at_ms: end },
+                Ok(Ok(Got::Funded)) => Eligibility::Funded,
+                _ => Eligibility::Unknown,
             }
         })
     }
