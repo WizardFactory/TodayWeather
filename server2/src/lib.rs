@@ -22,6 +22,9 @@ use std::{
 };
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
+/// Default connection lifetime when the gateway is enabled (AK decision, 2026-10-13).
+pub const GATEWAY_CONNECTION_SECONDS: usize = 12;
+
 #[derive(Clone, Debug)]
 pub struct Config {
     pub public_addr: SocketAddr,
@@ -71,7 +74,36 @@ impl Config {
         value!("SERVER2_CONNECTION_LIMIT", connection_limit);
         value!("SERVER2_CONNECTION_SECONDS", connection_seconds);
         c.validate()?;
+        // Same presence test as `gateway::runtime::configured_gateway`.
+        c.select_connection_lifetime(
+            env::var_os("SERVER2_GATEWAY_LEGACY_URL").is_some(),
+            env::var_os("SERVER2_CONNECTION_SECONDS").is_some(),
+        )?;
         Ok(c)
+    }
+    /// The absolute connection lifetime must outlive the gateway deadline so its
+    /// legacy `501` is written before the socket closes (#2730). With the gateway
+    /// enabled, an unset lifetime becomes `GATEWAY_CONNECTION_SECONDS` and a
+    /// configured lifetime at or below the deadline is rejected. Without the
+    /// gateway the foundation value is kept unchanged.
+    pub fn select_connection_lifetime(
+        &mut self,
+        gateway_enabled: bool,
+        lifetime_configured: bool,
+    ) -> Result<(), String> {
+        if !gateway_enabled {
+            return Ok(());
+        }
+        if !lifetime_configured {
+            self.connection_seconds = GATEWAY_CONNECTION_SECONDS;
+        }
+        let deadline = gateway::PUBLIC_DEADLINE.as_secs();
+        if self.connection_seconds as u64 <= deadline {
+            return Err(format!(
+                "SERVER2_CONNECTION_SECONDS must exceed the {deadline}-second gateway deadline when SERVER2_GATEWAY_LEGACY_URL is set"
+            ));
+        }
+        Ok(())
     }
     pub fn validate(&self) -> Result<(), String> {
         if !self.metrics_addr.ip().is_loopback() {
@@ -239,3 +271,4 @@ pub fn public_router_with_gateway(
         })
         .with_state(state)
 }
+pub mod warnings;

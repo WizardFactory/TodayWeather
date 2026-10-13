@@ -38,3 +38,7 @@ tower = { version = "0.5", features = ["util"] }
 [[bin]]
 name = "server2-feasibility"
 path = "benches/feasibility.rs"
+
+[[example]]
+name = "warning_seed_import"
+path = "tools/migration/warning_seed_import.rs"

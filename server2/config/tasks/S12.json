@@ -1,0 +1,37 @@
+{
+  "task": "S12",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2697",
+  "server2_paths": [
+    "server2/config/tasks/S12.json",
+    "server2/src/lib.rs",
+    "server2/Cargo.toml",
+    "server2/src/warnings/",
+    "server2/tests/warnings.rs",
+    "server2/tests/warnings/",
+    "server2/tools/migration/",
+    "server2/examples/warnings_smoke.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2697.md",
+      "category": "documentation",
+      "reason": "S12 governing intent record; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2697.md",
+      "category": "documentation",
+      "reason": "S12 governing specification record; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2697.md",
+      "category": "documentation",
+      "reason": "S12 governing plan and user scenarios; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain only the warning sections of the server2 architecture contract; no implementation outside server2"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2697#issuecomment-6139341451"
+}

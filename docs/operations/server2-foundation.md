@@ -39,12 +39,18 @@ including IPv6 ::1 if used. Invalid values and listener collisions fail startup.
 | SERVER2_INFLIGHT_LIMIT | 40 | 1..1024 |
 | SERVER2_CACHE_BYTES | 16777216 | 1..1073741824 |
 | SERVER2_CONNECTION_LIMIT | 128 | 1..1024 public connections |
-| SERVER2_CONNECTION_SECONDS | 9 | 1..30 seconds maximum connection age |
+| SERVER2_CONNECTION_SECONDS | 9; 12 with the gateway enabled | 1..30 seconds maximum connection age; 10..30 with the gateway enabled |
 
 Metrics connections have a separate fixed limit 16. Socket limits bound slow headers
 and body draining; a connection expires at its maximum age even with keep-alive.
-This is an absolute connection lifetime, distinct from the later S10 per-request
-9-second gateway deadline. These foundation limits require S10 assessment before cutover.
+This is an absolute connection lifetime, distinct from the S10 per-request
+9-second gateway deadline. When `SERVER2_GATEWAY_LEGACY_URL` is set, the default lifetime
+is 12 seconds, and a configured value of 9 or less fails startup before any listener binds.
+This keeps the deadline `501` inside the connection lifetime
+([#2730](https://github.com/WizardFactory/TodayWeather/issues/2730)). The guarantee covers a
+request that starts within lifetime minus 9 seconds of the connection being accepted; a later
+keep-alive request can still outlive its connection. Without the gateway the 9-second default
+and socket behavior are unchanged.
 The volatile cache is a single byte-bounded slot; keyed/sharded cache algorithms
 are S07. CPU permits remain reserved until blocking work ends after caller cancellation.
 
