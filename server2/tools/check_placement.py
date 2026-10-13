@@ -23,6 +23,41 @@ def clean(path):
     return bool(path) and not p.is_absolute() and '..' not in p.parts and str(p) == path.rstrip('/')
 
 
+HOST_READ_SOURCE = 'server2/tools/benchmark/aws.rs'
+HOST_READ_ROLES = {
+    ('Path::new', '/opt/server2-s09', 'private-owned-manifest'),
+    ('Path::new', '/opt/server2-s09/run', 'private-owned-manifest'),
+    ('read_to_string', '/proc/self/status', 'read-only-system'),
+    ('read_to_string', '/proc/self/stat', 'read-only-system'),
+}
+
+
+def runtime_host_policy(d):
+    """A declaration records fixed reviewed roles; it cannot invent an exemption."""
+    if 'runtime_host_reads' not in d:
+        return set(), []
+    records = d['runtime_host_reads']
+    if (d.get('task') != 'S09' or
+            d.get('issue') != 'https://github.com/WizardFactory/TodayWeather/issues/2694' or
+            not isinstance(records, list) or len(records) != 4):
+        return set(), ['invalid exact runtime host-read policy']
+    found = set()
+    for record in records:
+        if (not isinstance(record, dict) or
+                set(record) != {'source', 'operation', 'path', 'category', 'reason'} or
+                record.get('source') != HOST_READ_SOURCE or
+                not isinstance(record.get('reason'), str) or not record['reason'].strip() or
+                any(not isinstance(record.get(k), str) for k in ('operation', 'path', 'category'))):
+            return set(), ['invalid exact runtime host-read record']
+        role = (record['operation'], record['path'], record['category'])
+        if role not in HOST_READ_ROLES or role in found:
+            return set(), ['runtime host-read role is not a unique reviewed role']
+        found.add(role)
+    if found != HOST_READ_ROLES or HOST_READ_SOURCE not in d.get('server2_paths', []):
+        return set(), ['runtime host-read policy requires every exact reviewed role/source']
+    return {(HOST_READ_SOURCE, operation, path) for operation, path, _ in found}, []
+
+
 def declaration_errors(d):
     errors = []
     if not d.get('task') or not d.get('issue'):
@@ -40,6 +75,7 @@ def declaration_errors(d):
             errors.append(f'invalid exact outside exception: {p}')
         elif not any(p == prefix or (prefix.endswith('/') and p.startswith(prefix)) for prefix in allowed[category]):
             errors.append(f'category does not permit outside path: {p}')
+    errors.extend(runtime_host_policy(d)[1])
     return errors
 
 
@@ -198,7 +234,7 @@ def direct_literal(masked, literals, start, wrappers=False):
     return literals.get(start)
 
 
-def audit_source(root, path, body):
+def audit_source(root, path, body, host_reads=None):
     masked, literals, lexical = rust_tokens(body)
     errors = [f'{path}: incomplete Rust literal check: {error}' for error in lexical]
     # All valid Rust macro delimiters and comment separators are recognized.
@@ -234,7 +270,9 @@ def audit_source(root, path, body):
         if parsed['encoded']:
             errors.append(f'{path}: unsupported/encoded runtime filesystem argument')
         elif '..' in PurePosixPath(value).parts or not inside(root,root/'server2'/'runtime',value):
-            errors.append(f'{path}: runtime filesystem escape: {value}')
+            operation = re.sub(r'\s+', '', m.group(0).split('(', 1)[0])
+            if (path, operation, value) not in (host_reads or set()):
+                errors.append(f'{path}: runtime filesystem escape: {value}')
     # Preserve the previous Rust-wide legacy reference rule, plus sibling assets.
     # Path constructors and command arguments cannot silently weaken that boundary.
     for token in literals.values():
@@ -350,7 +388,9 @@ def audit_workflow(body):
         expected_foundation='name: Server2\non:\n  pull_request:\n    paths:\n      - "server2/**"\n      - ".github/workflows/server2.yml"\npermissions:\n  contents: read\njobs:\n  foundation:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n'
         expected_goldens="  goldens:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
         # Exact job/source wiring; no env, expressions, arbitrary actions or run steps.
-        if body.strip() in {expected_foundation.strip(), (expected_foundation+expected_goldens).strip()}:
+        artifact_upload = '      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 7\n'
+        if body.strip() in {expected_foundation.strip(), (expected_foundation+expected_goldens).strip(),
+                            (expected_foundation+artifact_upload+expected_goldens).strip()}:
             return []
         return ['server2 workflow differs from exact reviewed foundation/goldens wiring']
     runs = re.findall(r'^[ \t]*-?[ \t]*run:[ \t]*([^\r\n]+)$', body, re.M)
@@ -370,6 +410,24 @@ def check(root, declaration, base):
     root = Path(root).resolve()
     errors = declaration_errors(declaration)
     if errors: return errors
+    # S09 approved reads stay explicitly audited in every later task's whole tree.
+    # The canonical file is never a blanket source, compiler or encoded exception.
+    host_reads = set()
+    policy_path = root / 'server2/config/tasks/S09.json'
+    if policy_path.exists() or policy_path.is_symlink():
+        if policy_path.is_symlink():
+            return ['canonical runtime host-read policy cannot be a symlink']
+        try:
+            canonical = json.loads(policy_path.read_text())
+            if not isinstance(canonical, dict):
+                return ['invalid canonical runtime host-read declaration']
+            policy_errors = declaration_errors(canonical)
+            host_reads, role_errors = runtime_host_policy(canonical)
+            policy_errors.extend(role_errors)
+            if policy_errors:
+                return ['canonical S09 policy: ' + e for e in policy_errors]
+        except (OSError, ValueError, TypeError):
+            return ['incomplete canonical runtime host-read policy']
     for path in changed_paths(root, base):
         if not declared(path, declaration): errors.append(f'undeclared changed path: {path}')
     # Audit every tracked asset, including unchanged files; untracked owned files too.
@@ -402,7 +460,7 @@ def check(root, declaration, base):
                 continue
             if file.name == 'Cargo.toml' or path.startswith('server2/.cargo/'):
                 errors.extend(audit_manifest(root, path, body))
-            if file.suffix == '.rs': errors.extend(audit_source(root, path, body))
+            if file.suffix == '.rs': errors.extend(audit_source(root, path, body, host_reads))
             elif file.name != 'Cargo.toml': errors.extend(audit_nonrust(path, body))
     return errors
 

@@ -1,0 +1,62 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RequireTLS",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::server2-s09-141248341265-apne2-20261008",
+        "arn:aws:s3:::server2-s09-141248341265-apne2-20261008/*"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      }
+    },
+    {
+      "Sid": "KeepEveryTestVersion",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": [
+        "s3:DeleteObject",
+        "s3:DeleteObjectVersion"
+      ],
+      "Resource": "arn:aws:s3:::server2-s09-141248341265-apne2-20261008/*"
+    },
+    {
+      "Sid": "ImmutableRawGroupsAndWitnesses",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": [
+        "arn:aws:s3:::server2-s09-141248341265-apne2-20261008/raw/v2/*",
+        "arn:aws:s3:::server2-s09-141248341265-apne2-20261008/index/v2/groups/*",
+        "arn:aws:s3:::server2-s09-141248341265-apne2-20261008/budgets/v2/*/*/*/blocks/*"
+      ],
+      "Condition": {
+        "StringNotEquals": {
+          "s3:if-none-match": "*"
+        }
+      }
+    },
+    {
+      "Sid": "ConditionalMutableIdentityAndAuthority",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": [
+        "arn:aws:s3:::server2-s09-141248341265-apne2-20261008/index/v2/*",
+        "arn:aws:s3:::server2-s09-141248341265-apne2-20261008/budgets/v2/*/*/*/authority.json"
+      ],
+      "Condition": {
+        "Null": {
+          "s3:if-match": "true",
+          "s3:if-none-match": "true"
+        }
+      }
+    }
+  ]
+}

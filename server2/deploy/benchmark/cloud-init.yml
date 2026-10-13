@@ -1,0 +1,269 @@
+#cloud-config
+# Inert template: controller validates all substitutions and decoded size <=16KiB.
+package_update: false
+package_upgrade: false
+packages: []
+# The network-stage bootcmd runs before sysinit on Ubuntu. Starting timers
+# there synchronously deadlocks against their default After=sysinit ordering.
+# Final-stage runcmd runs after multi-user; SG egress remains closed throughout.
+runcmd:
+  - |
+    set -eu
+    umask 077
+    export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+    fail() { echo 'S09_GUARD_FAILED' >/dev/console; systemctl poweroff --no-block; exit 1; }
+    for tool in systemctl systemd-run date nft python3 ip sha256sum; do command -v "$tool" >/dev/null || fail; done
+    test "$(date +%s)" -lt $((@@DEADLINE_MS@@ / 1000)) || fail
+    mkdir -p /opt/server2-s09/private
+    chmod 700 /opt/server2-s09 /opt/server2-s09/private
+    # No outbound SG rule exists during these first stock-only actions.
+    cat >/etc/systemd/system/server2-s09-expiry.service <<'EOF'
+    [Unit]
+    Description=Owned S09 host expiry
+    [Service]
+    Type=oneshot
+    ExecStart=/usr/bin/systemctl poweroff --no-block
+    EOF
+    cat >/etc/systemd/system/server2-s09-expiry.timer <<'EOF'
+    [Unit]
+    Description=Owned S09 absolute and uptime expiry
+    [Timer]
+    OnBootSec=110min
+    OnCalendar=@@DEADLINE_UTC@@
+    AccuracySec=1s
+    RandomizedDelaySec=0
+    Persistent=true
+    Unit=server2-s09-expiry.service
+    [Install]
+    WantedBy=timers.target
+    EOF
+    systemctl daemon-reload
+    systemctl enable --now server2-s09-expiry.timer
+    systemctl is-active --quiet server2-s09-expiry.timer || fail
+    systemctl mask --now apt-daily.service apt-daily-upgrade.service apt-daily.timer apt-daily-upgrade.timer snapd.service snapd.socket
+    # Require a stock SSM unit; no agent installation or SSH fallback.
+    agent=''
+    for unit in amazon-ssm-agent.service snap.amazon-ssm-agent.amazon-ssm-agent.service; do
+      if systemctl list-unit-files "$unit" --no-legend | grep -q "$unit"; then agent="$unit"; break; fi
+    done
+    ordinary_fail() { echo 'S09_BOOTSTRAP_FAILED' >/dev/console; exit 1; }
+    test -n "$agent" || ordinary_fail
+    systemctl stop "$agent" || ordinary_fail
+    if systemctl is-active --quiet "$agent"; then ordinary_fail; fi
+    test ! -e /opt/server2-s09/private/guard-started || fail
+    : >/opt/server2-s09/private/guard-started
+    cat >/opt/server2-s09/private/guard.nft <<'EOF'
+    create table inet server2_s09
+    add counter inet server2_s09 observed_rx
+    add quota inet server2_s09 global_rx { over 30064771072 bytes; }
+    add quota inet server2_s09 bootstrap_rx { over 2147483648 bytes; }
+    add chain inet server2_s09 input_guard { type filter hook input priority -300; policy accept; }
+    add rule inet server2_s09 input_guard iifname != "lo" counter name observed_rx
+    add rule inet server2_s09 input_guard iifname != "lo" quota name "global_rx" drop
+    add rule inet server2_s09 input_guard iifname != "lo" quota name "bootstrap_rx" drop comment "bootstrap_phase"
+    EOF
+    nft -c -f /opt/server2-s09/private/guard.nft || fail
+    nft -f /opt/server2-s09/private/guard.nft || fail
+    nft -j list table inet server2_s09 >/opt/server2-s09/private/guard-installed.json || fail
+    # Stock-only isolated netns check; failure powers off before HTTPS is enabled.
+    ip netns add s09probe || fail
+    ip netns exec s09probe nft -f - <<'EOF' || fail
+    table inet s09probe {
+      quota tiny { over 1024 bytes; }
+      chain input { type filter hook input priority -300; policy accept;
+        quota name "tiny" drop
+      }
+    }
+    EOF
+    ip netns exec s09probe ip link set lo up
+    ip netns exec s09probe python3 - <<'PY' || fail
+    import socket,subprocess,json
+    for family,addr in [(socket.AF_INET,'127.0.0.1'),(socket.AF_INET6,'::1')]:
+        s=socket.socket(family,socket.SOCK_DGRAM); s.settimeout(.2); s.bind((addr,0))
+        s.sendto(b'x'*32,s.getsockname())
+        assert s.recv(128)==b'x'*32
+        s.close()
+    before=json.loads(subprocess.check_output(['nft','-j','list','quota','inet','s09probe','tiny']))
+    # Both address families must reject after the shared threshold, including concurrent arrivals.
+    import concurrent.futures
+    def rejected(family,addr):
+        s=socket.socket(family,socket.SOCK_DGRAM);s.settimeout(.2);s.bind((addr,0))
+        s.sendto(b'x'*2048,s.getsockname())
+        try: s.recv(4096); raise AssertionError('quota did not stop delivery')
+        except TimeoutError: return True
+        finally: s.close()
+    assert rejected(socket.AF_INET,'127.0.0.1')
+    assert rejected(socket.AF_INET6,'::1')
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        assert all(pool.map(lambda n:rejected(socket.AF_INET6 if n%2 else socket.AF_INET,'::1' if n%2 else '127.0.0.1'),range(8)))
+    after=json.loads(subprocess.check_output(['nft','-j','list','quota','inet','s09probe','tiny']))
+    used=lambda d:next(x['quota']['used'] for x in d['nftables'] if 'quota' in x)
+    assert used(after)>used(before) and used(after)>=1024
+    PY
+    ip netns delete s09probe || fail
+    # Persistent stock Python guard stops on quota/counter inconsistency or deadline.
+    cat >/opt/server2-s09/private/monitor.py <<'PY'
+    import json,subprocess,time,pathlib,os
+    deadline=@@DEADLINE_MS@@/1000
+    previous={}
+    while time.time()<deadline:
+      try:
+        d=json.loads(subprocess.check_output(['nft','-j','list','table','inet','server2_s09'],timeout=2))
+        objects={x['quota']['name']:x['quota'] for x in d['nftables'] if 'quota' in x}
+        for name,obj in objects.items():
+          used=obj['used']; assert used>=previous.get(name,0) and used<obj['bytes']
+          previous[name]=used
+        assert 'global_rx' in objects
+        fs=os.statvfs('/opt/server2-s09'); assert fs.f_bavail*fs.f_frsize>=4294967296
+        pathlib.Path('/opt/server2-s09/private/meter-last.json').write_text(json.dumps({'time_ms':int(time.time()*1000),'used':previous}))
+      except Exception: break
+      time.sleep(.2)
+    subprocess.run(['systemctl','poweroff','--no-block'])
+    PY
+    cat >/etc/systemd/system/server2-s09-meter.service <<'EOF'
+    [Unit]
+    Description=Owned S09 monotonic quota observer
+    FailureAction=poweroff
+    [Service]
+    ExecStart=/usr/bin/python3 /opt/server2-s09/private/monitor.py
+    Restart=no
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+    systemctl daemon-reload
+    systemctl enable --now server2-s09-meter.service || fail
+    systemctl is-active --quiet server2-s09-meter.service || fail
+    python3 - <<'PY' >/dev/console || fail
+    import json,pathlib,subprocess
+    d=json.loads(pathlib.Path('/opt/server2-s09/private/guard-installed.json').read_text())
+    quotas={x['quota']['name']:x['quota'] for x in d['nftables'] if 'quota' in x}
+    assert quotas['global_rx']['bytes']==30064771072
+    assert quotas['bootstrap_rx']['bytes']==2147483648
+    rx=sum(int(p.read_text()) for p in pathlib.Path('/sys/class/net').glob('*/statistics/rx_bytes') if p.parts[-3]!='lo')
+    assert rx<=1048576
+    print('S09_GUARD_V1 '+json.dumps({'status':'guarded','run_id':'@@RUN_ID@@','nonce':'@@NONCE@@','source_revision':'@@SOURCE_REVISION@@','deadline_ms':@@DEADLINE_MS@@,'timer_active':True,'nft_active':True,'ssm_present':True,'observed_before_guard_bytes':rx}))
+    PY
+    # Maintained recovery bytes are bound by the same exact-head source map.
+    python3 - <<'PY' || ordinary_fail
+    import base64,pathlib
+    pathlib.Path('/opt/server2-s09/private/ssm-recovery.py').write_bytes(base64.b64decode('@@RECOVERY_SCRIPT_B64@@'))
+    PY
+    python3 - <<'PY' || ordinary_fail
+    import json,os
+    fd=os.open('/opt/server2-s09/private/readiness-context.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    with os.fdopen(fd,'w') as f: json.dump({'run_id':'@@RUN_ID@@','nonce':'@@NONCE@@','source_revision':'@@SOURCE_REVISION@@','key':'@@READINESS_KEY@@'},f)
+    PY
+    timeout -k 2 510 python3 /opt/server2-s09/private/ssm-recovery.py --unit "$agent" --role server2-s09-benchmark-20261008 --deadline-ms @@DEADLINE_MS@@ >/dev/console 2>/dev/null || { echo 'S09_SSM_RECOVERY_V1 {"status":"failed","reason":"supervisor_timeout_or_failure","probes":null,"restarts":null}' >/dev/console; exit 1; }
+write_files:
+  - path: /opt/server2-s09/private/bootstrap.sh
+    permissions: '0700'
+    content: |
+      #!/bin/sh
+      set -eu
+      umask 077
+      trap 'systemctl stop server2-s09-cargo-build.service 2>/dev/null || true' EXIT HUP INT TERM
+      stage() { printf '%s\n' "$1" >/opt/server2-s09/private/bootstrap-stage; }
+      stage guard
+      emergency_fail() { systemctl poweroff --no-block; exit 1; }
+      fail() { echo 'S09_BOOTSTRAP_FAILED' >/dev/console; exit 1; }
+      systemctl is-active --quiet server2-s09-expiry.timer || emergency_fail
+      systemctl is-active --quiet server2-s09-meter.service || emergency_fail
+      nft -j list table inet server2_s09 >/opt/server2-s09/private/before-download.json || emergency_fail
+      # Wait for controller guard readback/owned SG443 opening; no retrying downloads.
+      stage controller_start
+      test -e /opt/server2-s09/private/controller-start || fail
+      stage apt_sources
+      python3 - <<'PY' || fail
+      from pathlib import Path
+      p=Path('/etc/apt/sources.list.d/ubuntu.sources')
+      t=p.read_text()
+      import re
+      t=re.sub(r'^URIs:.*$', 'URIs: https://archive.ubuntu.com/ubuntu', t, flags=re.M|re.I)
+      blocks=re.split(r'\n[ \t]*\n',t)
+      for i,block in enumerate(blocks):
+          fields={}; key=None
+          for line in block.splitlines():
+              if not line.strip() or line.lstrip().startswith('#'): continue
+              if line[0] in ' \t':
+                  assert key is not None
+                  fields[key]+=line.split()
+              else:
+                  name,colon,value=line.partition(':'); key=name.lower()
+                  assert colon and re.fullmatch(r'[a-z][a-z0-9-]*',key) and key not in fields
+                  fields[key]=value.split()
+          if not fields: continue
+          assert fields.get('suites')
+          uris=fields.get('uris',[])
+          assert uris and all(uri in {'https://archive.ubuntu.com/ubuntu','https://security.ubuntu.com/ubuntu'} for uri in uris)
+          assert fields.get('signed-by')==['/usr/share/keyrings/ubuntu-archive-keyring.gpg']
+          if 'resolute-security' in fields['suites']:
+              blocks[i]=re.sub(r'^URIs:.*$', 'URIs: https://security.ubuntu.com/ubuntu',block,flags=re.M|re.I)
+      p.write_text('\n\n'.join(blocks)+'\n')
+      PY
+      export DEBIAN_FRONTEND=noninteractive
+      stage apt_update
+      timeout 300 apt-get update
+      stage apt_install
+      timeout 600 apt-get -y --no-install-recommends install build-essential musl-tools musl-dev binutils ca-certificates curl git python3 time pkg-config
+      command -v musl-gcc >/dev/null || fail
+      cd /opt/server2-s09
+      stage rustup_download
+      curl --fail --proto '=https' --tlsv1.2 --max-time 120 --max-filesize 22000000 '@@RUSTUP_URL@@' -o rustup-init
+      echo '@@RUSTUP_SHA256@@  rustup-init' | sha256sum --check --status
+      chmod 700 rustup-init
+      export RUSTUP_HOME=/opt/server2-s09/rustup CARGO_HOME=/opt/server2-s09/cargo
+      stage rustup_install
+      ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.99.0
+      export PATH="$CARGO_HOME/bin:$PATH"
+      stage target_install
+      rustup target add --toolchain 1.99.0 x86_64-unknown-linux-musl
+      # Checkout only server2; no legacy source/data dependency.
+      stage source_checkout
+      git init source
+      cd source
+      git remote add origin https://github.com/WizardFactory/TodayWeather.git
+      git sparse-checkout set --no-cone /server2/
+      git -c protocol.version=2 fetch --filter=blob:none --depth 1 origin '@@SOURCE_REVISION@@'
+      # Add only the source-map's declared documentation/intent paths, never legacy assets.
+      python3 - <<'PY'
+      import json,base64,pathlib
+      files=json.loads(base64.b64decode('@@SOURCE_MAP_B64@@'))
+      with pathlib.Path('.git/info/sparse-checkout').open('a') as out:
+        for name in files: out.write('/'+name+'\n')
+      PY
+      git checkout --detach '@@SOURCE_REVISION@@'
+      git read-tree -mu HEAD
+      stage source_verify
+      test "$(git rev-parse HEAD)" = '@@SOURCE_REVISION@@'
+      python3 - <<'PY' || fail
+      import base64,json,pathlib,hashlib
+      files=json.loads(base64.b64decode('@@SOURCE_MAP_B64@@'))
+      for file,sha in files.items():
+        p=pathlib.Path(file)
+        assert p.is_file() and not p.is_symlink() and hashlib.sha256(p.read_bytes()).hexdigest()==sha
+      PY
+      cd server2
+      export S09_SOURCE_REVISION=@@SOURCE_REVISION@@ RUSTUP_TOOLCHAIN=1.99.0
+      test "$(df --output=avail -B1 . | tail -1)" -ge 4294967296
+      stage cargo_build
+      systemd-run --wait --pipe --collect --unit=server2-s09-cargo-build --property=MemoryMax=3221225472 --property=MemorySwapMax=0 --property=RuntimeMaxSec=1500 --working-directory="$PWD" --setenv=RUSTUP_HOME="$RUSTUP_HOME" --setenv=CARGO_HOME="$CARGO_HOME" --setenv=PATH="$PATH" --setenv=CC_x86_64_unknown_linux_musl=musl-gcc --setenv=CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc --setenv=RUSTUP_TOOLCHAIN=1.99.0 --setenv=S09_SOURCE_REVISION=@@SOURCE_REVISION@@ timeout 1500 cargo +1.99.0 build --locked --release --bin server2-feasibility --message-format=json --target x86_64-unknown-linux-musl --jobs 1 >/opt/server2-s09/private/host-build.log 2>&1
+      stage binary_verify
+      # Controller verifies exact executable path/digest from a bounded build receipt.
+      python3 - <<'PY'
+      import pathlib,hashlib,json,subprocess
+      artifacts=[]
+      for line in pathlib.Path('/opt/server2-s09/private/host-build.log').read_text().splitlines():
+        try: item=json.loads(line)
+        except ValueError: continue
+        if item.get('reason')=='compiler-artifact' and item.get('target',{}).get('name')=='server2-feasibility' and item.get('executable'): artifacts.append(pathlib.Path(item['executable']))
+      assert len(artifacts)==1
+      binaries=artifacts
+      raw=binaries[0].read_bytes()
+      assert raw[:5]==b'\x7fELF\x02' and raw[5]==1 and int.from_bytes(raw[18:20],'little')==62
+      assert b'INTERP' not in subprocess.check_output(['readelf','-lW',str(binaries[0])])
+      assert b'NEEDED' not in subprocess.check_output(['readelf','-dW',str(binaries[0])])
+      out={'status':'built','source_revision':'@@SOURCE_REVISION@@','binary_path':str(binaries[0].resolve()),'binary_sha256':hashlib.sha256(binaries[0].read_bytes()).hexdigest(),'metadata_download_allocation_bytes':536870912,'clock_ticks_per_second':int(subprocess.check_output(['getconf','CLK_TCK']).strip())}
+      pathlib.Path('/opt/server2-s09/private/build.json').write_text(json.dumps(out))
+      PY
+      stage complete
+      # No benchmark starts here; controller must verify receipts and create one-use manifest.

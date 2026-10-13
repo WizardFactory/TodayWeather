@@ -30,7 +30,12 @@ def main():
         if not provided: raise SystemExit('no changed task declaration; set SERVER2_DECLARATION for a reviewed task')
         declared=[Path(provided)]
     if len(declared)!=1: raise SystemExit('one reviewed task declaration is required per PR')
-    commands=[[sys.executable,'tools/check_placement.py','--root','..','--declaration',str(declared[0]),'--base',base],[sys.executable,'tools/test_placement.py'],['cargo','fmt','--check'],['cargo','clippy','--locked','--workspace','--all-targets','--','-D','warnings'],['cargo','test','--locked','--workspace'],['cargo','build','--locked','--release'],[sys.executable,'tools/smoke.py','--binary','target/release/server2']]
+    commands=[[sys.executable,'tools/check_placement.py','--root','..','--declaration',str(declared[0]),'--base',base],[sys.executable,'tools/test_placement.py'],[sys.executable,'tools/test_verify_artifact.py'],['cargo','fmt','--check'],['cargo','clippy','--locked','--workspace','--all-targets','--','-D','warnings'],['cargo','test','--locked','--workspace'],['cargo','build','--locked','--release'],[sys.executable,'tools/smoke.py','--binary','target/release/server2']]
+    # Operational tests must never run on the CI host. Missing bubblewrap or
+    # namespaces fail closed; no direct unittest fallback is permitted.
+    sandbox = 'deploy/benchmark/run_isolated.py'
+    commands[2:2] = [[sys.executable, sandbox, selection] for selection in
+        ('safety', 'test_*.py', 'functional', 'imds-functional', 'online-functional')]
     local_tests = Path('deploy/local/test_local.py')
     local_smoke = Path('deploy/local/smoke.py')
     if local_tests.exists() != local_smoke.exists():
@@ -38,6 +43,20 @@ def main():
     if local_tests.exists():
         commands.insert(2, [sys.executable, str(local_tests)])
         commands.append([sys.executable, str(local_smoke), '--binary', 'target/release/server2'])
+    # Uses the just-built GNU binary: real private_manifest, then the non-musl
+    # fence, without worker claims or any AWS/IMDS network path.
+    commands.append([sys.executable, sandbox, 'manifest-functional'])
+    if sys.platform.startswith('linux'):
+        # Intended c6i host artifact is verified here, rather than built on EC2.
+        target = 'x86_64-unknown-linux-musl'
+        reports = root/'reports/verification/server2-local-first'
+        reports.mkdir(parents=True, exist_ok=True)
+        revision = event.get('pull_request', {}).get('head', {}).get('sha') or output('git', 'rev-parse', 'HEAD')
+        commands.extend([
+            ['cargo', 'build', '--locked', '--release', '--target', target],
+            ['readelf', '-h', f'target/{target}/release/server2'],
+            [sys.executable, 'tools/verify_artifact.py', '--binary-dir', f'target/{target}/release', '--output', str(reports/'artifact-native'), '--source-revision', revision],
+        ])
     for command in commands:
         print('+',' '.join(command),flush=True);subprocess.run(command,check=True)
 
