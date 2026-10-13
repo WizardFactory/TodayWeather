@@ -161,6 +161,8 @@ fn plain_key(key: &str) -> bool {
     ];
     !key.is_empty() && !key.contains(['[', ']', '.']) && !PROTO.contains(&key)
 }
+/// `qs` `parameterLimit` of the pinned Express query parser.
+const QS_PARAMETER_LIMIT: usize = 1000;
 /// Parse a gateway backend path `/v000903/kma/addr/{region}[/{city}[/{town}]][?query]`.
 /// None means the native port does not handle it (forward to legacy).
 pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
@@ -176,7 +178,13 @@ pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
         decoded.push(decode_param(part)?);
     }
     let mut query = Vec::new();
-    for pair in q.split('&').filter(|s| !s.is_empty()) {
+    // Express `qs` (parameterLimit 1000) splits at most 1,000 raw fields, empty ones included;
+    // later fields are ignored and an empty field yields no key.
+    for pair in q
+        .split('&')
+        .take(QS_PARAMETER_LIMIT)
+        .filter(|s| !s.is_empty())
+    {
         let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
         let key = decode_query(k);
         if !plain_key(&key) {
@@ -220,5 +228,33 @@ mod tests {
         assert!(parse_path("/v000903/kma/addr/%ZZ", "en").is_none());
         assert!(parse_path("/v000903/kma/addr/a?x[y]=1", "en").is_none());
         assert!(parse_path("/v000901/kma/addr/a", "en").is_none());
+    }
+    #[test]
+    fn query_fields_beyond_the_qs_parameter_limit_are_ignored() {
+        let unit = |fields: Vec<String>| {
+            let path = format!("/v000903/kma/addr/a?{}", fields.join("&"));
+            let r = parse_path(&path, "en").unwrap();
+            r.query
+                .iter()
+                .find(|(k, _)| k == "temperatureUnit")
+                .map(|(_, v)| v.clone())
+        };
+        let filler = |n: usize| (0..n).map(|i| format!("p{i}=1")).collect::<Vec<_>>();
+        let with = |mut f: Vec<String>, extra: &[&str]| {
+            f.extend(extra.iter().map(|s| s.to_string()));
+            f
+        };
+        // Field 1,000 is parsed; field 1,001 is not (legacy keeps the default Celsius).
+        assert_eq!(
+            unit(with(filler(999), &["temperatureUnit=F"])),
+            Some("F".into())
+        );
+        assert_eq!(unit(with(filler(1000), &["temperatureUnit=F"])), None);
+        // Empty fields count toward the limit.
+        assert_eq!(
+            unit(with(filler(998), &["", "temperatureUnit=F"])),
+            Some("F".into())
+        );
+        assert_eq!(unit(with(filler(999), &["", "temperatureUnit=F"])), None);
     }
 }

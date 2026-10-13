@@ -1636,9 +1636,9 @@ S15b.
 
 O-2 checkpoint (Rust adoption is settled; this records correctness and cost). `kma_checkpoint`
 assembles every recorded request from memory, and `tools/kma_checkpoint.py` reads process rusage.
-On an Apple M4 release build (2,440 assemblies) the mean per assembly is 3.61 ms (p50 3.72, p95 4.01,
-p99 4.45, max 4.79 ms, including JSON encoding and store-answer conversion), CPU is 3.9 ms per request
-and peak RSS is 113 MiB, 109 MiB of which is the decoded fixture. The server2 CI entrypoint records
+On an Apple M4 release build (2,440 assemblies) the mean per assembly is 3.62 ms (p50 3.72, p95 4.10,
+p99 4.44, max 7.10 ms, including JSON encoding and store-answer conversion), CPU is 3.6 ms per request
+and peak RSS is 140 MiB, 139 MiB of which is the decoded fixture (both test views). The server2 CI entrypoint records
 the Linux values. The legacy oracle took about 7 ms per request on the same host, including loopback
 HTTP and Express. These are local fixture measurements, not production latency, concurrency or
 memory evidence. The S10 3-second native attempt and the 9-second gateway deadline are unchanged.

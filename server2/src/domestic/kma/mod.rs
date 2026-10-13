@@ -168,7 +168,7 @@ pub struct KmaRequest {
     pub region: Option<String>,
     pub city: Option<String>,
     pub town: Option<String>,
-    /// Decoded query pairs in order (Express `qs` without bracket syntax).
+    /// Decoded query pairs in order (Express `qs`: the first 1,000 raw fields, no bracket syntax).
     pub query: Vec<(String, String)>,
     pub locale: Locale,
 }
