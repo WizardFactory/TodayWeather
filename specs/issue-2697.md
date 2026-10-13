@@ -131,7 +131,7 @@ S06 and refuses non-loopback S3 endpoints. Neither tool runs against production.
 | Raw PUT, descriptor or catalog CAS interrupted | Not acknowledged; previous acknowledged latest still served |
 | Ambiguous catalog CAS | Reported as ambiguous; later reads use actual catalogs |
 | Provider quota/auth | Cycle ends (quota) or step fails (auth); nothing published |
-| Status-200 JSON gateway envelope (`OpenAPI_ServiceResponse`, code 30) | Shared S08 classifier returns retryable/rejected, not auth rotation as legacy did; nothing published. HTTP 401/403 still rotate as auth |
+| Status-200 JSON gateway envelope (`OpenAPI_ServiceResponse`, code 30) | Classified as auth (key rotation), as in legacy; S13 (#2726) aligned the shared S08 classifier. Nothing published. HTTP 401/403 also rotate as auth |
 
 ## Verification strategy
 

@@ -271,14 +271,14 @@ async fn funded_source_uses_s08_budgets_and_rejection_rules_on_loopback() {
             .unwrap_err(),
         FetchError::Quota
     );
-    // A status-200 JSON gateway envelope is never data. The shared S08 classifier treats
-    // it as retryable (legacy kmaWarningRequester classified code 30 as auth).
+    // A status-200 JSON gateway envelope is never data. Code 30 is an auth rejection,
+    // as in legacy kmaWarningRequester; S13 aligned the shared S08 classifier.
     assert_eq!(
         source
             .fetch(Operation::PwnCd, params.clone(), deadline())
             .await
             .unwrap_err(),
-        FetchError::Rejected
+        FetchError::Auth
     );
     assert!(
         source
